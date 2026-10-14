@@ -1,0 +1,141 @@
+# ICE-STRUCT-PAIRING-1 (U-6, R-016): one rule pairs struct fields on every write door     grade: A   engine: Claude Opus 5.5 high, self-directed   release: 1.5.6
+
+**Status:** order, dispatchable unchanged once the owner accepts [sketch.md](sketch.md) and
+answers its Q1 to Q3. Written by Claude (claude-opus-5-5), lane B of the Iceberg closeout, on
+2026-10-13, from registry row ICE-TSNS-SQL-1-R-016 (audit item PA-07), ledger clause C-037 and
+question Q8 of `task/ledgers/staging/ice-tsns-merge-wall-1-ledger.md`. Main at writing:
+`018d0efd`. The sketch is part of this order: where the order says §n it means the sketch's
+section n.
+
+## 0. Why, and what is out of scope
+
+Which source field feeds which field of a struct column depends on the cast that happens to
+run on a door's route, so RePark differs from Spark 4.1.2 in 279 of 512 measured cells on each
+format version and stores a NULL nobody wrote in 48 of them (§2). The owner ruled on
+2026-10-13 that a silent NULL for a renamed field disqualifies the v2 label. This unit puts
+one rule, `pair_store_value`, in front of every cast on the write path (§4).
+
+Out of scope, by name: any leaf conversion (R-011, R-015, ICE-TSNS-NESTED-1 and its gate
+`refuse_nested_ns_supply`, which stays first and unchanged); `UPDATE` with no `WHERE`
+assigning a nested column (R-014; list L2 of §6); the `VALUES` spellings that fail before any
+store (R-018; list L1); R-017 and ICE-TSNS-TYPE-PLANNER-1; whether a nested leaf pair is
+store-assignable on the INSERT doors; `CREATE TABLE … AS SELECT` and `REPLACE TABLE … AS
+SELECT`, which pair nothing; an explicit `CAST` of a struct in a query; the cost of the
+`INSERT … BY NAME` route. No plan walk, no list of statement spellings, no marker function, no
+reading of how a value was produced: the unit is refused at review if one appears.
+
+## 1. Rulings already made
+
+- **Owner, 2026-10-13:** Iceberg is the priority until the v2 and v3 labels read PRODUCTION;
+  a silent NULL for a renamed field disqualifies the v2 label.
+- **Owner, 2026-10-13:** R-016 targets 1.5.6 if the sketch names one seam, else 1.5.7. The
+  sketch names one; halts H2, H3, H4 and H7 of §8 are the events that undo that.
+- **Owner, 2026-10-13:** where the rule cannot be met, the fallback is a refusal with a hint,
+  never a store. One rule at one conform point, decided by the door's mode and the two struct
+  types. Cost medians within 1.05 of main.
+- **Spark's rule (§2, measured 2026-10-09 and 2026-10-13):** by position on `INSERT … VALUES`,
+  `INSERT … SELECT`, `INSERT OVERWRITE`, `REPLACE WHERE`, `insertInto` with and without
+  overwrite; by name on `INSERT … BY NAME`, every MERGE arm, `UPDATE`, `writeTo().append()`,
+  `overwritePartitions()`, `saveAsTable` (append). The same at every depth and in every
+  container. By name follows `spark.sql.caseSensitive`.
+- **Lessons 2026-10-12 and 2026-10-13** (`task/lessons.md`): rounds are counted against the
+  finding class; a census cell's expected category comes from the harness; a provisional
+  decision ships with a revert-alone run and its pasted test count.
+- **Sketch Q1, Q2, Q3:** the owner's answers are pasted here before dispatch. The order is
+  written to the leans: follow Spark with no switch; register the kernel as the store kernels
+  are registered and add its name to R-013's row; refuse with hint H-1 below the router.
+
+## 2. Files
+
+Ceilings are those of `scripts/check_rust_file_size.py` (default 1,000 lines; the script's
+exception list for the rest). Every `.rs`, `.py` and `.toml` change updates its directory's
+`map.md` in the same commit.
+
+| Path | Change |
+|---|---|
+| `crates/repark-iceberg/src/write/struct_pairing.rs` | new: `StructPairing`, `pair_store_value`, `StorePairs`, `StorePairKernel`, the Spark texts, the in-module table test |
+| `crates/repark-iceberg/src/write/store_overflow.rs` (949 lines) | `pairing` in `ConformStoreFlags`; `conform_one_store_expr` calls the kernel; `wrap_store_outputs` takes the mode; `transform_store_dml` reads the statement's mode. Split first if the ceiling is near |
+| `crates/repark-iceberg/src/write/update_cast.rs` | `store_assignment_cast_sql` renders the kernel; the struct and map arms of `incompatible_nested_message` and `struct_member` deleted |
+| `crates/repark-iceberg/src/write/store_assign.rs` | `struct_fields_store_assignable`, `map_entries_store_assignable` and the `is_flat` return replaced by the seam |
+| `crates/repark-iceberg/src/write/conform.rs`, `overwrite.rs`, `partition_overwrite.rs` | the guard of hint H-1 before the three casts |
+| `crates/repark-iceberg/src/write/merge/insert.rs`, `predicate_dml.rs` | pass by name to `wrap_store_outputs` |
+| `crates/repark-spark/src/spark_ast.rs`, `router.rs`, `insert_by_name.rs`, `insert_overwrite.rs`, `insert_overwrite/store.rs`, `append_with_options.rs`, `router/insert_positional/replace_where.rs` | carry the door's mode to the conform |
+| `crates/repark-spark/src/merge/nested_assign.rs`, `merge/nested_assign/expand.rs`, `merge/nested_assign/render.rs` | deletions of §5 |
+| `crates/repark-spark/src/insert_by_name/nested.rs` | deleted |
+| `python/repark/src/repark/spark/dataframe/` (the writers that call `run_through_temp_view`) | `source_by_name=True` for `append`, `overwritePartitions`, `saveAsTable` (append); its own commit |
+| `python/repark/tests/_record_ice_struct_pairing_1.py`, `ice_struct_pairing_1_spark_oracle.json`, `ice_struct_pairing_1_main.json`, `test_ice_struct_pairing_1.py` | new: the fixture of §7 |
+| `crates/repark-spark/tests/struct_pairing_doors.rs` | new |
+| `docs/spark-sql-iceberg-parity.md`, `task/ledgers/staging/ice-struct-pairing-1-ledger.md`, `STATUS.md` | row R-016 closed with its pins; the unit ledger; the status line |
+
+## 3. Skeletons
+
+Grade A: none beyond the signatures of §4, which are binding.
+
+## 4. Steps
+
+0. **Measure, no product code.** Commit as `step-0.md` beside this order:
+   (a) the route table: for each of the 16 doors of §2 plus `overwrite(condition)`, the
+   functions from the door's entry to the batch cast it ends in (S1, S2 or S3), and which of
+   the two call sites of §4 it passes; (b) the eight cast-holding files §3 did not read, each
+   cleared or reported; (c) the probes of H2, H3, H4, H5 and H7 with their printed results;
+   (d) on both engines, the cells §11 owes: `overwrite(condition)`, a write with
+   `mergeSchema`, two source fields that differ only in case, a required struct field;
+   (e) whether `refuse_insert_source_types` holds both types for list L1; (f) the write-cost
+   medians of main on the write set under `docs/perf/`, as the bar for step 5. Any halt of §8
+   ends the round here.
+1. **Fixture, red.** The recorder, the two JSON files, `test_ice_struct_pairing_1.py` and
+   `struct_pairing_doors.rs`, with step 0's added cells. Expected red on main: 460 cells plus
+   the added ones; paste the count. Commit.
+2. **The seam, no caller.** `struct_pairing.rs` with its table test. The fixture count does
+   not move. Commit.
+3. **The callers and the deletions.** The two call sites, the three guards, the mode from
+   each door, the deletions of §5, the gate change of S8. The fixture goes green outside L1
+   and L2; L1, L2 and the 233 unchanged cells answer as recorded. Commit.
+4. **The facade flag.** `source_by_name=True` on the three by-name DataFrame doors. Commit.
+5. **Proof.** The nine mutant families of §9, each with the cell it turns red. The two
+   revert-alone runs of §9 on throwaway branches, with pasted test counts. The cost medians
+   against step 0's bar. The `EXPLAIN` byte-compare of H6.
+6. **Records.** Row R-016 rewritten as closed with its pins; rows R-014 and R-018 gain the
+   cells of L2 and L1; the unit ledger with one clause per sentence of the rule of §4, each
+   pinned; `STATUS.md`; the map rows. Commit.
+
+## 5. Gates and their expected output
+
+| Command | Green means |
+|---|---|
+| `make verify` | exit 0 |
+| `make preflight` | exit 0; the facade suite includes `test_ice_struct_pairing_1.py` |
+| `cargo test -p repark-iceberg struct_pairing` and `cargo test -p repark-spark --test struct_pairing_doors` | every test passes |
+| `python3 scripts/check_rust_file_size.py` | `files clean` |
+| `make check-docs-links check-docs-compaction check-ledger-grammar`, `make spell-check` | exit 0 |
+| `python3 scripts/sync_map_md.py --check`, `bash scripts/check_map_md.sh --base origin/main` | exit 0 |
+| the 842-cell Spark and Iceberg matrix, live; the parity-live job on the branch | no cell moved outside §2's doors |
+| write-cost medians on the write set | each within 1.05 of step 0's bar |
+
+One cargo build at a time, `CARGO_BUILD_JOBS=6`, inside `repark.slice`; probes under
+`ulimit -v 67108864`, in the foreground. CI green on the branch before any verifier. Then one
+fresh Opus 5.5 high verifier, scoped to the fixture, the mutants and the gates above. A FAIL
+that names a route the guard refused is one fold; a FAIL that shows a value stored by a rule
+other than §4's parks the unit, and the owner hears first.
+
+## 6. Halt rules
+
+Stop, commit what is green, and hand back with the evidence on any of: H1 to H7 of §8; a
+fixture cell whose Spark answer differs between two recordings; a need for a plan walk or a
+list of spellings to make a cell green; a control cell (the 233, L1, L2) that moves; a change
+needed in a product file §2 does not list; a second seam.
+A decision the order does not make is a halt with the question, its premise and a lean, never
+a choice made in the round.
+
+## 7. Hand-back
+
+One JSON object: `status` (`CONCLUDED`, `HALT` or `BLOCKED`); `head`; `commits` (full sha and
+subject, in order); `fixture` (`red_on_main`, `green_on_head`, `l1`, `l2`, `controls`);
+`mutants` (family, the cell that died); `revert_alone` (the two test counts); `cost` (each
+median over its bar); `gates` (command and exit code); `halts` (letter and evidence);
+`questions` (id, class, question, premise, lean); `out_of_scope_observed`.
+
+Standing rules inherited from [TEMPLATE.md](../TEMPLATE.md): no code comments from Anthropic
+models and relocated code sheds its comments; map.md lockstep; the scratch clone, never the
+live worktree; never push, never open a pull request; the TRO-Wolf identity and exactly one
+trailer, `Authored-By: Claude (claude-opus-5-5) <noreply@anthropic.com>`.
