@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use datafusion::logical_expr::planner::TypePlanner;
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension};
@@ -102,6 +103,10 @@ impl SessionExtension for SparkExtension {
         config: SessionConfig,
     ) -> datafusion::error::Result<SessionConfig> {
         install_spark_session_conf(session, config).map_err(mask_session_conf_configuration)
+    }
+
+    fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
+        Some(repark_functions::spark_type_planner())
     }
 
     fn configure_analyzer_rules(

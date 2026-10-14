@@ -26,6 +26,7 @@ use crate::spark_string_timestamp::{
     StringCastFailure, cast_columnar_strings_to_ltz, is_string_type, rewrite_string_try_cast,
     spark_string_literal,
 };
+use crate::spark_type_planner::planned_instant_cast;
 use crate::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
@@ -605,6 +606,9 @@ fn rewrite_cast(
             DataType::Timestamp(TimeUnit::Second, _)
         );
         if let Ok(source) = cast.expr.get_type(schema) {
+            if let Some(planned) = planned_instant_cast(cast, &source, schema, false) {
+                return Transformed::yes(planned);
+            }
             if matches!(source, DataType::Timestamp(TimeUnit::Nanosecond, _))
                 && (matches!(
                     cast.field.data_type(),
@@ -670,7 +674,7 @@ fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
         )
 }
 
-fn is_ltz_timestamp(data_type: &DataType) -> bool {
+pub(crate) fn is_ltz_timestamp(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Timestamp(TimeUnit::Microsecond, Some(zone))
@@ -742,6 +746,9 @@ fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
             return Transformed::no(expr);
         }
         if let Ok(source) = cast.expr.get_type(schema) {
+            if let Some(planned) = planned_instant_cast(cast, &source, schema, true) {
+                return Transformed::yes(planned);
+            }
             if targeting_timestamp && is_ltz_timestamp(&source) {
                 return wrap_as_ntz(*cast.expr.clone(), schema);
             }

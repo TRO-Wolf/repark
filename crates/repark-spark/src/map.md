@@ -261,6 +261,11 @@ pins: rp-4-fork-repin/C-005, C-006
   baseline): `conform_types` resolves the positional targets and runs
   `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
   through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
+- `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkExtension::type_planner`
+  hands the session builder `repark_functions::SparkTypePlanner`, so every `CAST(… AS T)`
+  and typed literal the Spark door plans takes its unit from the written name. The DDL
+  column type and `Column.cast("timestamp")` do not go through it; both already answer
+  microseconds and are pinned there. pins: ice-tsns-type-planner-1/C-011
 - `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the
   extension registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules
   (it consumes `SparkExprSemantics`' guarded division shape, so it must run after it —

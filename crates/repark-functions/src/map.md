@@ -396,6 +396,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
   pins: fnp-win-1/C-003
+- `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
+  the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
+  written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
+  are the microsecond instant (`Timestamp(µs, "UTC")`, the type `instant_ts` already
+  gives Spark's `TIMESTAMP`), `TIMESTAMP_NTZ` is the naive microsecond wall,
+  `timestamp_ns` and `timestamptz_ns` are nanoseconds; every other name returns `None`
+  and keeps DataFusion's mapping (`TIMESTAMP(3)`, `TIMESTAMP WITH TIME ZONE`, …). A
+  `Timestamp(ns, _)` cast target therefore means nanoseconds. DataFusion's planner read an
+  `Int64` cast to its nanosecond `TIMESTAMP` as seconds; that special case no longer fires,
+  so `integer_cast_to_instant` (in `instant_ts.rs`) writes the same two casts by type, and
+  `PlannedTimestampCast` is that one rewrite as an analyzer rule for the doors that do not
+  run the Spark session rule (`install_planned_timestamp_cast`: the Rust `AnsiDialect`
+  door and the Python native door). The zone label is `"UTC"`, not the session zone: the
+  instant type carries no session zone anywhere in the engine.
+  pins: ice-tsns-type-planner-1/C-011
 - `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
   `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
   plus the `__repark_session_gap__` / `__repark_ts_micros__` /
