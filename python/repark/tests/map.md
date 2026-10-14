@@ -10175,3 +10175,4 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   and [main-cells.md](../../../task/wo/ice-tsns-floor-doors-1/evidence/main-cells.md).
   No module docstring beyond the one line: the lane's no-comments ruling
   covers the new file; the contract lives here.
+  pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
