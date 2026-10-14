@@ -3,6 +3,7 @@
   {
    "meta": {
     "label": "main",
+    "safe_setting": "n/a",
     "base_sha": "293896ce",
     "zone": "UTC",
     "live": false
@@ -19,24 +20,32 @@
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_ticks": [
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '1'"
@@ -52,24 +61,32 @@
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_ticks": [
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
@@ -83,6 +100,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
      "traceback": [
       {
        "file": "table.pxi",
@@ -135,6 +153,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
      "traceback": [
       {
        "file": "table.pxi",
@@ -189,24 +208,32 @@
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_ticks": [
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '1'"
@@ -222,24 +249,32 @@
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_ticks": [
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ],
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
@@ -253,6 +288,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
      "traceback": [
       {
        "file": "table.pxi",
@@ -305,6 +341,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
      "traceback": [
       {
        "file": "table.pxi",
@@ -357,6 +394,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -409,6 +447,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us]>, actual list<item: timestamp[ns]>).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -461,6 +500,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -513,6 +553,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -565,6 +606,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -617,6 +659,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us]>, actual list<item: timestamp[ns]>).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -669,6 +712,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -721,6 +765,7 @@
      "error": "PySparkRuntimeError",
      "condition": "RESULT_COLUMN_TYPES_MISMATCH",
      "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -773,6 +818,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "mapInArrow schema mismatch on field 'v': expected type list<item: timestamp[us, tz=UTC]> (array<timestamp>), got list<item: timestamp[us]>",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -827,14 +873,18 @@
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_ticks": [
       [
        1767323045123456,
        1767323045000000,
-       1767323045000000
+       1767323045000000,
+       -1,
+       -2
       ]
      ],
      "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
@@ -848,6 +898,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us, tz=UTC] (timestamp), got timestamp[ns]",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -900,6 +951,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -952,6 +1004,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "mapInArrow schema mismatch on field 'v': expected type list<item: timestamp[us, tz=UTC]> (array<timestamp>), got list<item: timestamp[ns]>",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -1004,6 +1057,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "mapInArrow schema mismatch on field 'v': expected type list<item: timestamp[us]> (array<timestamp_ntz>), got list<item: timestamp[ns]>",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -1056,6 +1110,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us, tz=UTC] (timestamp), got timestamp[ns]",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -1108,6 +1163,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -1170,9 +1226,25 @@
       [
        1767323045123456,
        null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
       ]
      ],
      "stored_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
       [
        1767323045123456,
        null
@@ -1207,9 +1279,25 @@
       [
        1767323045123456,
        null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
       ]
      ],
      "stored_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
       [
        1767323045123456,
        null
@@ -1234,6 +1322,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "pandas_udf 'func' failed converting result to declared type timestamp[us, tz=UTC] (timestamp): Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -1286,6 +1375,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "pandas_udf 'func' failed converting result to declared type timestamp[us] (timestamp_ntz): Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/dataframe/core.py",
@@ -1396,6 +1486,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
      "traceback": [
       {
        "file": "table.pxi",
@@ -1448,6 +1539,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "inner_line": "",
      "traceback": [
       {
        "file": "table.pxi",
@@ -1500,6 +1592,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "arrow_udf 'func' failed converting result to declared type list<item: timestamp[us, tz=UTC]>: Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/qualified_names.py",
@@ -1552,6 +1645,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "arrow_udf 'func' failed converting result to declared type list<item: timestamp[us]>: Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/qualified_names.py",
@@ -1604,6 +1698,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "arrow_udf 'func' failed converting result to declared type timestamp[us, tz=UTC]: Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/qualified_names.py",
@@ -1656,6 +1751,7 @@
      "error": "PySparkException",
      "condition": "None",
      "first_line": "arrow_udf 'func' failed converting result to declared type timestamp[us]: Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "inner_line": "",
      "traceback": [
       {
        "file": "repark/spark/qualified_names.py",
@@ -1707,6 +1803,7 @@
     "base_sha": "none",
     "zone": "UTC",
     "live": true,
+    "safe_setting": "false",
     "banner": "spark 4.1.2 zone UTC"
    },
    "cells": [
@@ -1715,44 +1812,1302 @@
      "kind": "array",
      "declared": "tz",
      "schema": "v array<timestamp>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 133,
-       "func": "run_grouped_applyin"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "grouped_applyin",
      "kind": "array",
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1,
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1,
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1,
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1,
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "mapinpan",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "mapinpan",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "mapinpan",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
      "traceback": [
       {
        "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
+       "line": 325,
        "func": "measure_cell"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 133,
-       "func": "run_grouped_applyin"
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1813,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
+      },
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       }
      ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 325,
+       "func": "measure_cell"
+      },
+      {
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1813,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
+      },
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 325,
+       "func": "measure_cell"
+      },
+      {
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1813,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
+      },
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 325,
+       "func": "measure_cell"
+      },
+      {
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1813,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
+      },
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "answer",
+     "result_arrow": "v: timestamp[us]",
+     "frame_ticks": [
+      1767323045123456,
+      null,
+      1767323045000000,
+      0,
+      -1
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      1767323045123456,
+      1767323045123456
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: timestamp[us]",
+     "frame_ticks": [
+      1767323045123456,
+      1767323045123456
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
+      },
+      {
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
+      },
+      {
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
+      },
+      {
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
+      },
+      {
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
+      },
+      {
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
+      },
+      {
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
+     "traceback": [
+      {
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
+      },
+      {
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
+      },
+      {
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
+      },
+      {
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "meta": {
+    "label": "spark412",
+    "base_sha": "none",
+    "zone": "UTC",
+    "live": true,
+    "safe_setting": "true",
+    "banner": "spark 4.1.2 zone UTC"
+   },
+   "cells": [
+    {
+     "door": "grouped_applyin",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "grouped_applyin",
@@ -1760,19 +3115,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'v' with type 'datetime64[ns, UTC]' to Arrow type 'timestamp[us, tz=UTC]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow sa",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 133,
-       "func": "run_grouped_applyin"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -1782,19 +3168,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'v' with type 'datetime64[ns]' to Arrow type 'timestamp[us]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow safe type check",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 133,
-       "func": "run_grouped_applyin"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -1803,44 +3220,52 @@
      "kind": "array",
      "declared": "tz",
      "schema": "v array<timestamp>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 151,
-       "func": "run_cogroup_applyin"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "cogroup_applyin",
      "kind": "array",
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 151,
-       "func": "run_cogroup_applyin"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "cogroup_applyin",
@@ -1848,19 +3273,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'v' with type 'datetime64[ns, UTC]' to Arrow type 'timestamp[us, tz=UTC]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow sa",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 151,
-       "func": "run_cogroup_applyin"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -1870,19 +3326,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'v' with type 'datetime64[ns]' to Arrow type 'timestamp[us]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow safe type check",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 151,
-       "func": "run_cogroup_applyin"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -1892,34 +3379,50 @@
      "declared": "tz",
      "schema": "v array<timestamp>",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 184,
-       "func": "run_grouped_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 940,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -1929,34 +3432,50 @@
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us]>, actual list<item: timestamp[ns]>).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 184,
-       "func": "run_grouped_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 940,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -1966,34 +3485,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 184,
-       "func": "run_grouped_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 940,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -2003,34 +3538,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 187,
+       "func": "dump_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 184,
-       "func": "run_grouped_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 121,
+       "func": "dump_stream"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 940,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 697,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -2040,34 +3591,50 @@
      "declared": "tz",
      "schema": "v array<timestamp>",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 202,
-       "func": "run_cogroup_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1171,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -2077,34 +3644,50 @@
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<element: timestamp[us]>, actual list<item: timestamp[ns]>).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 202,
-       "func": "run_cogroup_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1171,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -2114,34 +3697,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 202,
-       "func": "run_cogroup_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1171,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -2151,34 +3750,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 3386, in main process() File <scratch> line 3377, in process serializer.dump_stream(out_iter, outfile) File <scratch> line 333, in dump_stream super(ArrowStreamGro",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkRuntimeError: [RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 167,
+       "func": "wrap_and_init_stream"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 202,
-       "func": "run_cogroup_applyinarrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 322,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1171,
-       "func": "applyInArrow"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 315,
+       "func": "<genexpr>"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 3270,
+       "func": "mapper"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 555,
+       "func": "<lambda>"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 551,
+       "func": "wrapped"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 657,
+       "func": "verify_arrow_table"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/worker.py",
+       "line": 634,
+       "func": "verify_arrow_result"
       }
      ]
     },
@@ -2187,44 +3802,38 @@
      "kind": "array",
      "declared": "tz",
      "schema": "v array<timestamp>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 206,
-       "func": "run_mapinpan"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "mapinpan",
      "kind": "array",
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 206,
-       "func": "run_mapinpan"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000,
+       -1,
+       -2
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "mapinpan",
@@ -2232,19 +3841,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'v' with type 'datetime64[ns, UTC]' to Arrow type 'timestamp[us, tz=UTC]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow sa",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 206,
-       "func": "run_mapinpan"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2254,19 +3894,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'v' with type 'datetime64[ns]' to Arrow type 'timestamp[us]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow safe type check",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 206,
-       "func": "run_mapinpan"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2276,39 +3947,40 @@
      "declared": "tz",
      "schema": "v array<timestamp>",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
      "traceback": [
       {
        "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
+       "line": 325,
        "func": "measure_cell"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 244,
-       "func": "run_mapinarrow"
-      },
-      {
        "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1810,
-       "func": "mapInArrow"
+       "line": 1813,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 72,
-       "func": "mapInArrow"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       }
      ]
     },
@@ -2318,39 +3990,40 @@
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
      "traceback": [
       {
        "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
+       "line": 325,
        "func": "measure_cell"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 244,
-       "func": "run_mapinarrow"
-      },
-      {
        "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1810,
-       "func": "mapInArrow"
+       "line": 1813,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 72,
-       "func": "mapInArrow"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       }
      ]
     },
@@ -2360,39 +4033,40 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
      "traceback": [
       {
        "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
+       "line": 325,
        "func": "measure_cell"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 244,
-       "func": "run_mapinarrow"
-      },
-      {
        "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1810,
-       "func": "mapInArrow"
+       "line": 1813,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 72,
-       "func": "mapInArrow"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       }
      ]
     },
@@ -2402,39 +4076,40 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "error": "UnsupportedOperationException",
+     "condition": "UNSUPPORTED_ARROWTYPE",
+     "first_line": "[UNSUPPORTED_ARROWTYPE] Unsupported arrow type Timestamp(NANOSECOND, null). SQLSTATE: 0A000",
+     "inner_line": "",
      "traceback": [
       {
        "file": "_record_ns_array_floor_1_output.py",
-       "line": 331,
+       "line": 325,
        "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 244,
-       "func": "run_mapinarrow"
       },
       {
        "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1810,
-       "func": "mapInArrow"
+       "line": 1813,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 72,
-       "func": "mapInArrow"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 240,
+       "func": "toArrow"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       }
      ]
     },
@@ -2443,44 +4118,64 @@
      "kind": "array",
      "declared": "tz",
      "schema": "v array<timestamp>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 248,
-       "func": "run_scalar_pandas_udf"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "scalar_pandas_udf",
      "kind": "array",
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 248,
-       "func": "run_scalar_pandas_udf"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "scalar_pandas_udf",
@@ -2488,19 +4183,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'None' with type 'datetime64[ns, UTC]' to Arrow type 'timestamp[us, tz=UTC]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 248,
-       "func": "run_scalar_pandas_udf"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2510,19 +4236,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'None' with type 'datetime64[ns]' to Arrow type 'timestamp[us]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow safe type ch",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 248,
-       "func": "run_scalar_pandas_udf"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
+      },
+      {
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2531,54 +4288,40 @@
      "kind": "array",
      "declared": "tz",
      "schema": "v array<timestamp>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 270,
-       "func": "run_groupedagg_pandas_udf"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 58,
-       "func": "ns_stamps"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "groupedagg_pandas_udf",
      "kind": "array",
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
-     "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 270,
-       "func": "run_groupedagg_pandas_udf"
-      },
-      {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 58,
-       "func": "ns_stamps"
-      }
-     ]
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: list<element: timestamp[us]> child 0, element: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": null,
+     "store_note": "live cells read frame ticks only"
     },
     {
      "door": "groupedagg_pandas_udf",
@@ -2586,24 +4329,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'None' with type 'datetime64[ns, UTC]' to Arrow type 'timestamp[us, tz=UTC]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 270,
-       "func": "run_groupedagg_pandas_udf"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 58,
-       "func": "ns_stamps"
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2613,24 +4382,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "ModuleNotFoundError",
-     "condition": "",
-     "first_line": "No module named 'pandas'",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File <scratch> line 473, in _create_array return pa.Array.from_pandas( ^^^^^^^^^^^^^^^^^^^^^ File \"pyarrow/array.pxi\", line 1327, in pyarrow.lib.Array.from_pandas File \"pyarrow/array.",
+     "inner_line": "pyspark.errors.exceptions.base.PySparkValueError: Failed to convert the value of the column 'None' with type 'datetime64[ns]' to Arrow type 'timestamp[us]'. It can be caused by overflows or other unsafe conversions warned by Arrow. Arrow safe type ch",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "pyspark/sql/pandas/conversion.py",
+       "line": 306,
+       "func": "_collect_as_arrow"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 270,
-       "func": "run_groupedagg_pandas_udf"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 58,
-       "func": "ns_stamps"
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
+      },
+      {
+       "file": "pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py",
+       "line": 473,
+       "func": "_create_array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 1327,
+       "func": "pyarrow.lib.Array.from_pandas"
+      },
+      {
+       "file": "array.pxi",
+       "line": 408,
+       "func": "pyarrow.lib.array"
+      },
+      {
+       "file": "array.pxi",
+       "line": 91,
+       "func": "pyarrow.lib._ndarray_to_array"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2640,44 +4435,50 @@
      "declared": "tz",
      "schema": "v array<timestamp>",
      "outcome": "error",
-     "error": "PySparkNotImplementedError",
-     "condition": "UNSUPPORTED_SIGNATURE",
-     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 304,
-       "func": "run_scalar_arrow_udf"
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 329,
-       "func": "arrow_udf"
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 741,
-       "func": "vectorized_udf"
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 889,
-       "func": "_create_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 805,
-       "func": "_validate_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
       },
       {
-       "file": "pyspark/sql/pandas/typehints.py",
-       "line": 279,
-       "func": "infer_eval_type"
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2687,44 +4488,50 @@
      "declared": "ntz",
      "schema": "v array<timestamp_ntz>",
      "outcome": "error",
-     "error": "PySparkNotImplementedError",
-     "condition": "UNSUPPORTED_SIGNATURE",
-     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 304,
-       "func": "run_scalar_arrow_udf"
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 329,
-       "func": "arrow_udf"
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 741,
-       "func": "vectorized_udf"
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 889,
-       "func": "_create_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 805,
-       "func": "_validate_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
       },
       {
-       "file": "pyspark/sql/pandas/typehints.py",
-       "line": 279,
-       "func": "infer_eval_type"
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2734,44 +4541,50 @@
      "declared": "tz",
      "schema": "v timestamp",
      "outcome": "error",
-     "error": "PySparkNotImplementedError",
-     "condition": "UNSUPPORTED_SIGNATURE",
-     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 304,
-       "func": "run_scalar_arrow_udf"
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 329,
-       "func": "arrow_udf"
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 741,
-       "func": "vectorized_udf"
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 889,
-       "func": "_create_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 805,
-       "func": "_validate_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
       },
       {
-       "file": "pyspark/sql/pandas/typehints.py",
-       "line": 279,
-       "func": "infer_eval_type"
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     },
@@ -2781,44 +4594,50 @@
      "declared": "ntz",
      "schema": "v timestamp_ntz",
      "outcome": "error",
-     "error": "PySparkNotImplementedError",
-     "condition": "UNSUPPORTED_SIGNATURE",
-     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "error": "PythonException",
+     "condition": "None",
+     "first_line": "An exception was thrown from the Python worker. Please see the stack trace below. Traceback (most recent call last): File \"pyarrow/array.pxi\", line 1203, in pyarrow.lib.Array.cast File <scratch> line 414, in cast return call_function(\"cast\", [arr], options, memory_pool) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+     "inner_line": "",
      "traceback": [
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 329,
-       "func": "measure_cell"
+       "file": "contextlib.py",
+       "line": 158,
+       "func": "__exit__"
       },
       {
-       "file": "_record_ns_array_floor_1_output.py",
-       "line": 304,
-       "func": "run_scalar_arrow_udf"
+       "file": "pyspark/errors/exceptions/captured.py",
+       "line": 292,
+       "func": "unwrap_spark_exception"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 329,
-       "func": "arrow_udf"
+       "file": "array.pxi",
+       "line": 1203,
+       "func": "pyarrow.lib.Array.cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 741,
-       "func": "vectorized_udf"
+       "file": "pyarrow/compute.py",
+       "line": 414,
+       "func": "cast"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 889,
-       "func": "_create_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 610,
+       "func": "pyarrow._compute.call_function"
       },
       {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 805,
-       "func": "_validate_vectorized_udf"
+       "file": "_compute.pyx",
+       "line": 405,
+       "func": "pyarrow._compute.Function.call"
       },
       {
-       "file": "pyspark/sql/pandas/typehints.py",
-       "line": 279,
-       "func": "infer_eval_type"
+       "file": "error.pxi",
+       "line": 155,
+       "func": "pyarrow.lib.pyarrow_internal_check_status"
+      },
+      {
+       "file": "error.pxi",
+       "line": 92,
+       "func": "pyarrow.lib.check_status"
       }
      ]
     }

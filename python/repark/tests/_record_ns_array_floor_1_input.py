@@ -20,18 +20,20 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import re
 import sys
 import tempfile
 import traceback
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import pyarrow as pa
 
 ZONE = "UTC"
-SEED_NS = [1767323045123456789, None, 1767323045000000001]
-SEED_US = [1767323045123456, None, 1767323045000000]
-KEYS = [1, 0, 1]
+SEED_NS = [1767323045123456789, None, 1767323045000000001, -1, -1500]
+SEED_US = [1767323045123456, None, 1767323045000000, -1, -2]
+KEYS = [1, 0, 1, 0, 1]
 
 SOURCES_TO_SQL = {
     "ns": "ns",
@@ -64,9 +66,12 @@ def scrub_path(path: str, roots: list[str]) -> str:
 
 
 def scrub_text(text: str) -> str:
+    scratch = tempfile.gettempdir()
+    home = str(Path.home())
     out = []
     for token in text.split():
-        if token.startswith("/tmp/") or token.startswith("/home/"):
+        stripped = token.lstrip("\"'(")
+        if stripped.startswith(scratch) or stripped.startswith(home):
             out.append("<scratch>")
         else:
             out.append(token)
@@ -101,10 +106,13 @@ def error_record(error: BaseException) -> dict[str, Any]:
         except Exception:
             condition = ""
     text = scrub_text(str(error))
+    lines = [line for line in text.splitlines() if line.strip()]
+    match = re.search(r"[A-Za-z_.]*Error\s*:\s*.{0,200}", text)
     return {
         "error": type(error).__name__,
         "condition": condition,
-        "first_line": text.splitlines()[0] if text.splitlines() else "",
+        "first_line": lines[0][:300] if lines else "",
+        "inner_line": match.group(0)[:300] if match else "",
         "traceback": frames,
     }
 
@@ -133,7 +141,7 @@ def open_repark_session(warehouse: str) -> Any:
 
     table = pa.table(
         {
-            "id": pa.array([1, 2, 3], pa.int32()),
+            "id": pa.array([1, 2, 3, 4, 5], pa.int32()),
             "k": pa.array(KEYS, pa.int32()),
             "ns": pa.array(SEED_NS, type=pa.timestamp("ns")),
             "tzns": pa.array(SEED_NS, type=pa.timestamp("ns", tz="UTC")),
@@ -145,17 +153,18 @@ def open_repark_session(warehouse: str) -> Any:
     return spark
 
 
-def open_live_session() -> Any:
+def open_live_session(safe: str | None = None) -> Any:
     from pyspark.sql import SparkSession
 
-    spark = (
+    builder = (
         SparkSession.builder.appName("ns-array-floor-1-input-live")
         .master("local[1]")
         .config("spark.sql.session.timeZone", ZONE)
         .config("spark.sql.ansi.enabled", "false")
-        .getOrCreate()
     )
-    return spark
+    if safe is not None:
+        builder = builder.config("spark.sql.execution.pandas.convertToArrowArraySafely", safe)
+    return builder.getOrCreate()
 
 
 def live_seed(spark: Any) -> Any:
@@ -168,7 +177,7 @@ def live_seed(spark: Any) -> Any:
             stamps.append(None)
         else:
             stamps.append(base + datetime.timedelta(microseconds=micros))
-    rows = [(1, 1, stamps[0]), (2, 0, stamps[1]), (3, 1, stamps[2])]
+    rows = [(index + 1, KEYS[index], stamps[index]) for index in range(5)]
     return spark.createDataFrame(rows, "id int, k int, us timestamp")
 
 
@@ -277,9 +286,7 @@ def run_mapinarrow(frame: Any, seen: dict[str, Any]) -> Any:
 def run_scalar_pandas_udf(frame: Any, seen: dict[str, Any]) -> Any:
     pandas_udf, _, _ = udf_libs()
 
-    def func(series: Any) -> Any:
-        import pandas as pd
-
+    def func(series: pd.Series) -> pd.Series:
         seen["dtype"] = str(series.dtype)
         seen["values"] = short_values(list(series))
         return pd.Series([1] * len(series), dtype="int64")
@@ -291,7 +298,7 @@ def run_scalar_pandas_udf(frame: Any, seen: dict[str, Any]) -> Any:
 def run_groupedagg_pandas_udf(frame: Any, seen: dict[str, Any]) -> Any:
     pandas_udf, _, token = udf_libs()
 
-    def func(series: Any) -> Any:
+    def func(series: pd.Series) -> int:
         seen["dtype"] = str(series.dtype)
         seen["values"] = short_values(list(series))
         return len(series)
@@ -303,7 +310,7 @@ def run_groupedagg_pandas_udf(frame: Any, seen: dict[str, Any]) -> Any:
 def run_scalar_arrow_udf(frame: Any, seen: dict[str, Any]) -> Any:
     _, arrow_udf, _ = udf_libs()
 
-    def func(array: Any) -> pa.Array:
+    def func(array: pa.Array) -> pa.Array:
         seen["arrow"] = str(array.type)
         seen["values"] = short_values(array.to_pylist())
         return pa.array([1] * len(array), type=pa.int64())
@@ -327,6 +334,56 @@ COGROUP_RUNNERS = {
     "cogroup_applyinarrow": run_cogroup_applyinarrow,
 }
 
+_LIVE_SEEN: dict[str, dict[str, str]] = {}
+
+PANDAS_FRAME_DOORS = ("grouped_applyin", "cogroup_applyin", "mapinpan")
+PANDAS_SERIES_DOORS = ("scalar_pandas_udf", "groupedagg_pandas_udf")
+ARROW_DOORS = ("grouped_applyinarrow", "cogroup_applyinarrow", "mapinarrow", "scalar_arrow_udf")
+
+
+def live_pandas_dtype(spark: Any, level: str) -> str:
+    frame = frame_for(spark, "us", level, True)
+
+    def func(pdf: Any) -> Any:
+        return pd.DataFrame({"k": pdf["k"], "seen": str(pdf["v"].dtype)})
+
+    rows = frame.groupBy("k").applyInPandas(func, "k int, seen string").collect()
+    return ",".join(sorted({str(row["seen"]) for row in rows}))
+
+
+def live_arrow_schema(spark: Any, level: str) -> str:
+    frame = frame_for(spark, "us", level, True)
+
+    def func(batches: Any) -> Any:
+        for batch in batches:
+            yield pa.RecordBatch.from_arrays(
+                [batch.column("k"), pa.array([str(batch.schema)] * batch.num_rows)],
+                names=["k", "seen"],
+            )
+
+    rows = frame.mapInArrow(func, "k int, seen string").collect()
+    return ",".join(sorted({str(row["seen"]) for row in rows}))
+
+
+def fill_live_seen(cell: dict[str, Any], door: str, level: str) -> None:
+    diag = _LIVE_SEEN.get(level, {})
+    if door in PANDAS_FRAME_DOORS:
+        cell["seen"] = {
+            "dtype": diag.get("pandas", "unknown"),
+            "via": "shared batch conversion diagnostic",
+        }
+    elif door in PANDAS_SERIES_DOORS:
+        cell["seen"] = {
+            "dtype": diag.get("pandas", "unknown"),
+            "via": "derived: Series slice of the same converted batch",
+        }
+    elif door in ARROW_DOORS:
+        cell["seen"] = {
+            "arrow": diag.get("arrow", "unknown"),
+            "via": "shared batch stream diagnostic",
+        }
+
+
 ALL_DOORS = DOORS
 
 
@@ -348,6 +405,8 @@ def measure_cell(spark: Any, door: str, source: str, level: str, live: bool) -> 
             rows = RUNNERS[door](frame, seen)
         cell["outcome"] = "answer"
         cell["seen"] = seen
+        if live:
+            fill_live_seen(cell, door, level)
         cell["returned"] = rows_repr(rows)
     except Exception as error:
         cell["outcome"] = "error"
@@ -368,6 +427,8 @@ def write_markdown(path: str, meta: dict[str, Any], cells: list[dict[str, Any]])
         + meta["zone"]
         + " live "
         + str(meta["live"])
+        + " safe "
+        + str(meta.get("safe_setting", "n/a"))
         + ".",
         "",
     ]
@@ -390,6 +451,8 @@ def write_markdown(path: str, meta: dict[str, Any], cells: list[dict[str, Any]])
                     + cell.get("condition", "")
                     + " "
                     + cell.get("first_line", "")[:160]
+                    + " / "
+                    + cell.get("inner_line", "")[:160]
                 )
             lines.append(
                 "| "
@@ -415,20 +478,38 @@ def main() -> None:
     parser.add_argument("--label", required=True)
     parser.add_argument("--base-sha", default="")
     parser.add_argument("--live", action="store_true")
+    parser.add_argument("--safe-setting", default=None)
     args = parser.parse_args()
     if args.live:
-        spark = open_live_session()
+        spark = open_live_session(args.safe_setting)
         meta: dict[str, Any] = {
             "label": args.label,
             "base_sha": args.base_sha,
             "zone": ZONE,
             "live": True,
+            "safe_setting": (
+                args.safe_setting
+                if args.safe_setting is not None
+                else str(spark.conf.get("spark.sql.execution.pandas.convertToArrowArraySafely"))
+            ),
             "banner": "spark "
             + str(spark.version)
             + " zone "
             + str(spark.conf.get("spark.sql.session.timeZone")),
         }
         sources = LIVE_SOURCES
+        for level in ("top", "arr"):
+            try:
+                _LIVE_SEEN[level] = {
+                    "pandas": live_pandas_dtype(spark, level),
+                    "arrow": live_arrow_schema(spark, level),
+                }
+            except Exception as error:
+                _LIVE_SEEN[level] = {
+                    "pandas": "diagnostic failed: " + type(error).__name__,
+                    "arrow": "diagnostic failed: " + type(error).__name__,
+                }
+        meta["live_seen"] = _LIVE_SEEN
     else:
         warehouse = tempfile.mkdtemp(prefix="ns-array-floor-1-in-")
         spark = open_repark_session(warehouse)
@@ -437,6 +518,7 @@ def main() -> None:
             "base_sha": args.base_sha,
             "zone": ZONE,
             "live": False,
+            "safe_setting": "n/a",
         }
         sources = list(SOURCES_TO_SQL)
     cells = []

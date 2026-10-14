@@ -5,7 +5,8 @@
     "label": "main",
     "base_sha": "293896ce",
     "zone": "UTC",
-    "live": false
+    "live": false,
+    "safe_setting": "n/a"
    },
    "cells": [
     {
@@ -21,12 +22,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -50,12 +53,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -72,12 +77,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -95,12 +102,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -125,11 +134,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -148,11 +158,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -171,8 +182,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -189,14 +201,15 @@
       "dtype": "datetime64[ns]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -215,8 +228,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -236,12 +250,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -265,12 +281,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -287,12 +305,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns]> not null child 0, element: timestamp[ns]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -310,12 +330,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns]> not null child 0, element: timestamp[ns]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -340,11 +362,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -363,11 +386,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -386,8 +410,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -404,14 +429,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -430,8 +456,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -451,12 +478,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -480,12 +509,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -502,12 +533,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns, tz=UTC] -- field metadata -- PARQUET:field_id: '4'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -525,12 +558,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns, tz=UTC] -- field metadata -- PARQUET:field_id: '4'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -555,11 +590,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -578,11 +614,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -601,8 +638,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -619,14 +657,15 @@
       "dtype": "datetime64[ns, UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -645,8 +684,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -666,12 +706,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -695,12 +737,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -717,12 +761,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns, tz=UTC]> not null child 0, element: timestamp[ns, tz=UTC]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -740,12 +786,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns, tz=UTC]> not null child 0, element: timestamp[ns, tz=UTC]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -770,11 +818,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -793,11 +842,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -816,8 +866,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -834,14 +885,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -860,8 +912,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -881,12 +934,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -910,12 +965,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -932,12 +989,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
-       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))",
+       "datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(key"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -955,12 +1014,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
-       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))",
+       "datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(key"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -985,11 +1046,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1008,11 +1070,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1031,8 +1094,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1049,14 +1113,15 @@
       "dtype": "datetime64[us, UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -1075,8 +1140,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1096,12 +1162,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1125,12 +1193,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1147,12 +1217,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
-       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]"
+       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]",
+       "[datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(ke"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1170,12 +1242,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
-       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]"
+       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]",
+       "[datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(ke"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1200,11 +1274,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1223,11 +1298,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1246,8 +1322,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1264,14 +1341,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -1290,8 +1368,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1311,12 +1390,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
+       "NaT",
        "NaT"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1340,12 +1421,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
+       "NaT",
        "NaT"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1362,12 +1445,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
+       "None",
        "None"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1385,12 +1470,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC]",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
+       "None",
        "None"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1415,11 +1502,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1438,11 +1526,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1461,8 +1550,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1479,14 +1569,15 @@
       "dtype": "datetime64[us, UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
+       "NaT",
        "NaT"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -1505,8 +1596,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1526,12 +1618,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
+       "array(['NaT'], dtype='datetime64[us]')",
        "array(['NaT'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1555,12 +1649,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
+       "array(['NaT'], dtype='datetime64[us]')",
        "array(['NaT'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1577,12 +1673,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
+       "[None]",
        "[None]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1600,12 +1698,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
+       "[None]",
        "[None]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1630,11 +1730,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1653,11 +1754,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1676,8 +1778,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1694,14 +1797,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
+       "array(['NaT'], dtype='datetime64[us]')",
        "array(['NaT'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -1720,8 +1824,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1741,12 +1846,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1770,12 +1877,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1792,12 +1901,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
-       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))",
+       "datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(key"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1815,12 +1926,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
-       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))",
+       "datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(key"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1845,11 +1958,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1868,11 +1982,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -1891,8 +2006,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1909,14 +2025,15 @@
       "dtype": "datetime64[us, UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -1935,8 +2052,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -1956,12 +2074,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -1985,12 +2105,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2007,12 +2129,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
-       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]"
+       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]",
+       "[datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(ke"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2030,12 +2154,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
-       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]"
+       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]",
+       "[datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(ke"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2060,11 +2186,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2083,11 +2210,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2106,8 +2234,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2124,14 +2253,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -2150,8 +2280,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2165,7 +2296,8 @@
     "label": "u1",
     "base_sha": "07cbe563",
     "zone": "UTC",
-    "live": false
+    "live": false,
+    "safe_setting": "n/a"
    },
    "cells": [
     {
@@ -2181,12 +2313,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2210,12 +2344,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2232,12 +2368,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2255,12 +2393,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns] -- field metadata -- PARQUET:field_id: '3'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2285,11 +2425,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2308,11 +2449,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2331,8 +2473,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2349,14 +2492,15 @@
       "dtype": "datetime64[ns]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
-       "Timestamp('2026-01-02 03:04:05.000000001')"
+       "Timestamp('2026-01-02 03:04:05.000000001')",
+       "Timestamp('1969-12-31 23:59:59.999998500')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -2375,8 +2519,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2396,12 +2541,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2425,12 +2572,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2447,12 +2596,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns]> not null child 0, element: timestamp[ns]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2470,12 +2621,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns]> not null child 0, element: timestamp[ns]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2500,11 +2653,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2523,11 +2677,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2546,8 +2701,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2564,14 +2720,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -2590,8 +2747,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2611,12 +2769,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2640,12 +2800,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2662,12 +2824,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns, tz=UTC] -- field metadata -- PARQUET:field_id: '4'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2685,12 +2849,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns, tz=UTC] -- field metadata -- PARQUET:field_id: '4'",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2715,11 +2881,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2738,11 +2905,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2761,8 +2929,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2779,14 +2948,15 @@
       "dtype": "datetime64[ns, UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -2805,8 +2975,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2826,12 +2997,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2855,12 +3028,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2877,12 +3052,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns, tz=UTC]> not null child 0, element: timestamp[ns, tz=UTC]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2900,12 +3077,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns, tz=UTC]> not null child 0, element: timestamp[ns, tz=UTC]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -2930,11 +3109,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2953,11 +3133,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -2976,8 +3157,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -2994,14 +3176,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -3020,8 +3203,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3041,12 +3225,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3070,12 +3256,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3092,12 +3280,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns, tz=UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3115,12 +3305,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns, tz=UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3145,11 +3337,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3168,11 +3361,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3191,8 +3385,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3209,14 +3404,15 @@
       "dtype": "datetime64[ns, UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -3235,8 +3431,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3256,12 +3453,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3285,12 +3484,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3307,12 +3508,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns, tz=UTC]> not null child 0, element: timestamp[ns, tz=UTC]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3330,12 +3533,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns, tz=UTC]> not null child 0, element: timestamp[ns, tz=UTC]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789+0000', tz='UTC')]",
-       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]"
+       "[Timestamp('2026-01-02 03:04:05.000000001+0000', tz='UTC')]",
+       "[Timestamp('1969-12-31 23:59:59.999998500+0000', tz='UTC')]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3360,11 +3565,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3383,11 +3589,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3406,8 +3613,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3424,14 +3632,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
-       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')"
+       "array(['2026-01-02T03:04:05.000000001'], dtype='datetime64[ns]')",
+       "array(['1969-12-31T23:59:59.999998500'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -3450,8 +3659,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3471,12 +3681,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
+       "NaT",
        "NaT"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3500,12 +3712,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
+       "NaT",
        "NaT"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3522,12 +3736,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
+       "None",
        "None"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3545,12 +3761,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[ns]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
+       "None",
        "None"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3575,11 +3793,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3598,11 +3817,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3621,8 +3841,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3639,14 +3860,15 @@
       "dtype": "datetime64[ns]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456789')",
+       "NaT",
        "NaT"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -3665,8 +3887,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3686,12 +3909,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
+       "array(['NaT'], dtype='datetime64[ns]')",
        "array(['NaT'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3715,12 +3940,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
+       "array(['NaT'], dtype='datetime64[ns]')",
        "array(['NaT'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3737,12 +3964,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns]> not null child 0, element: timestamp[ns]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789')]",
+       "[None]",
        "[None]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3760,12 +3989,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[ns]> not null child 0, element: timestamp[ns]",
       "values": [
        "[Timestamp('2026-01-02 03:04:05.123456789')]",
+       "[None]",
        "[None]"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3790,11 +4021,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3813,11 +4045,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -3836,8 +4069,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3854,14 +4088,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456789'], dtype='datetime64[ns]')",
+       "array(['NaT'], dtype='datetime64[ns]')",
        "array(['NaT'], dtype='datetime64[ns]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -3880,8 +4115,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -3901,12 +4137,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3930,12 +4168,14 @@
       },
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3952,12 +4192,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
-       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))",
+       "datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(key"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -3975,12 +4217,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '5'",
       "values": [
        "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC",
-       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))",
+       "datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(key"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -4005,11 +4249,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -4028,11 +4273,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -4051,8 +4297,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -4069,14 +4316,15 @@
       "dtype": "datetime64[us, UTC]",
       "values": [
        "Timestamp('2026-01-02 03:04:05.123456+0000', tz='UTC')",
-       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')"
+       "Timestamp('2026-01-02 03:04:05+0000', tz='UTC')",
+       "Timestamp('1969-12-31 23:59:59.999998+0000', tz='UTC')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -4095,8 +4343,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -4116,12 +4365,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -4145,12 +4396,14 @@
       },
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -4167,12 +4420,14 @@
       "arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
-       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]"
+       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]",
+       "[datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(ke"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -4190,12 +4445,14 @@
       "right_arrow": "k: int32 -- field metadata -- PARQUET:field_id: '2' v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
       "values": [
        "[datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UT",
-       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]"
+       "[datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=zoneinfo.ZoneInfo(key='UTC'))]",
+       "[datetime.datetime(1969, 12, 31, 23, 59, 59, 999998, tzinfo=zoneinfo.ZoneInfo(ke"
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(k=0)",
        "Row(k=0)",
        "Row(k=1)",
        "Row(k=1)"
@@ -4220,11 +4477,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -4243,11 +4501,12 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
        "Row(k=1)",
        "Row(k=0)",
-       "Row(k=1)"
+       "Row(k=1)",
+       "Row(k=0)"
       ]
      }
     },
@@ -4266,8 +4525,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -4284,14 +4544,15 @@
       "dtype": "object",
       "values": [
        "array(['2026-01-02T03:04:05.123456'], dtype='datetime64[us]')",
-       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')"
+       "array(['2026-01-02T03:04:05.000000'], dtype='datetime64[us]')",
+       "array(['1969-12-31T23:59:59.999998'], dtype='datetime64[us]')"
       ]
      },
      "returned": {
       "count": 2,
       "rows": [
-       "Row(k=0, r=1)",
-       "Row(k=1, r=2)"
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
       ]
      }
     },
@@ -4310,8 +4571,9 @@
       ]
      },
      "returned": {
-      "count": 3,
+      "count": 5,
       "rows": [
+       "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)",
        "Row(r=1)"
@@ -4326,7 +4588,18 @@
     "base_sha": "none",
     "zone": "UTC",
     "live": true,
-    "banner": "spark 4.1.2 zone UTC"
+    "safe_setting": "false",
+    "banner": "spark 4.1.2 zone UTC",
+    "live_seen": {
+     "top": {
+      "pandas": "datetime64[ns]",
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]"
+     },
+     "arr": {
+      "pandas": "object",
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]"
+     }
+    }
    },
    "cells": [
     {
@@ -4334,704 +4607,734 @@
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 221,
-       "func": "run_grouped_applyin"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 300,
-       "func": "applyInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "cogroup_applyin",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 346,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 231,
-       "func": "run_cogroup_applyin"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1073,
-       "func": "applyInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "grouped_applyinarrow",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 240,
-       "func": "run_grouped_applyinarrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 940,
-       "func": "applyInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "cogroup_applyinarrow",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 346,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 250,
-       "func": "run_cogroup_applyinarrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1171,
-       "func": "applyInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "mapinpan",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 261,
-       "func": "run_mapinpan"
-      },
-      {
-       "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1801,
-       "func": "mapInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 50,
-       "func": "mapInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
     },
     {
      "door": "mapinarrow",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 274,
-       "func": "run_mapinarrow"
-      },
-      {
-       "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1810,
-       "func": "mapInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 72,
-       "func": "mapInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
     },
     {
      "door": "scalar_pandas_udf",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 287,
-       "func": "run_scalar_pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
     },
     {
      "door": "groupedagg_pandas_udf",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 299,
-       "func": "run_groupedagg_pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 2,
+      "rows": [
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
+      ]
+     }
     },
     {
      "door": "scalar_arrow_udf",
      "source": "us",
      "level": "top",
      "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkNotImplementedError",
-     "condition": "UNSUPPORTED_SIGNATURE",
-     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 311,
-       "func": "run_scalar_arrow_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 329,
-       "func": "arrow_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 741,
-       "func": "vectorized_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 889,
-       "func": "_create_vectorized_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 805,
-       "func": "_validate_vectorized_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/typehints.py",
-       "line": 279,
-       "func": "infer_eval_type"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
     },
     {
      "door": "grouped_applyin",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 221,
-       "func": "run_grouped_applyin"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 300,
-       "func": "applyInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "cogroup_applyin",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 346,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 231,
-       "func": "run_cogroup_applyin"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1073,
-       "func": "applyInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "grouped_applyinarrow",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 240,
-       "func": "run_grouped_applyinarrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 940,
-       "func": "applyInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "cogroup_applyinarrow",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 346,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 250,
-       "func": "run_cogroup_applyinarrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/group_ops.py",
-       "line": 1171,
-       "func": "applyInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
     },
     {
      "door": "mapinpan",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 261,
-       "func": "run_mapinpan"
-      },
-      {
-       "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1801,
-       "func": "mapInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 50,
-       "func": "mapInPandas"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
     },
     {
      "door": "mapinarrow",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 274,
-       "func": "run_mapinarrow"
-      },
-      {
-       "file": "pyspark/sql/classic/dataframe.py",
-       "line": 1810,
-       "func": "mapInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/map_ops.py",
-       "line": 72,
-       "func": "mapInArrow"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
     },
     {
      "door": "scalar_pandas_udf",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 287,
-       "func": "run_scalar_pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
     },
     {
      "door": "groupedagg_pandas_udf",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkImportError",
-     "condition": "PACKAGE_NOT_INSTALLED",
-     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 299,
-       "func": "run_groupedagg_pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 647,
-       "func": "pandas_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/utils.py",
-       "line": 43,
-       "func": "require_minimum_pandas_version"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 2,
+      "rows": [
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
+      ]
+     }
     },
     {
      "door": "scalar_arrow_udf",
      "source": "us",
      "level": "arr",
      "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
-     "outcome": "error",
-     "seen": {},
-     "error": "PySparkNotImplementedError",
-     "condition": "UNSUPPORTED_SIGNATURE",
-     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
-     "traceback": [
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 348,
-       "func": "measure_cell"
-      },
-      {
-       "file": "_record_ns_array_floor_1_input.py",
-       "line": 311,
-       "func": "run_scalar_arrow_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 329,
-       "func": "arrow_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 741,
-       "func": "vectorized_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 889,
-       "func": "_create_vectorized_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/functions.py",
-       "line": 805,
-       "func": "_validate_vectorized_udf"
-      },
-      {
-       "file": "pyspark/sql/pandas/typehints.py",
-       "line": 279,
-       "func": "infer_eval_type"
-      }
-     ]
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "meta": {
+    "label": "spark412",
+    "base_sha": "none",
+    "zone": "UTC",
+    "live": true,
+    "safe_setting": "true",
+    "banner": "spark 4.1.2 zone UTC",
+    "live_seen": {
+     "top": {
+      "pandas": "datetime64[ns]",
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]"
+     },
+     "arr": {
+      "pandas": "object",
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]"
+     }
+    }
+   },
+   "cells": [
+    {
+     "door": "grouped_applyin",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "mapinpan",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
+    },
+    {
+     "door": "mapinarrow",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "datetime64[ns]",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 2,
+      "rows": [
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
+      ]
+     }
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "us",
+     "level": "top",
+     "input_arrow": "k: int32 v: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
+    },
+    {
+     "door": "grouped_applyin",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "cogroup_applyin",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=0)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=1)"
+      ]
+     }
+    },
+    {
+     "door": "mapinpan",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "shared batch conversion diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
+    },
+    {
+     "door": "mapinarrow",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(k=1)",
+       "Row(k=0)",
+       "Row(k=1)",
+       "Row(k=0)"
+      ]
+     }
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "dtype": "object",
+      "via": "derived: Series slice of the same converted batch"
+     },
+     "returned": {
+      "count": 2,
+      "rows": [
+       "Row(k=0, r=2)",
+       "Row(k=1, r=3)"
+      ]
+     }
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "source": "us",
+     "level": "arr",
+     "input_arrow": "k: int32 v: list<element: timestamp[us, tz=UTC]> not null child 0, element: timestamp[us, tz=UTC]",
+     "outcome": "answer",
+     "seen": {
+      "arrow": "k: int32\nv: list<element: timestamp[us, tz=UTC]> not null\n  child 0, element: timestamp[us, tz=UTC]",
+      "via": "shared batch stream diagnostic"
+     },
+     "returned": {
+      "count": 5,
+      "rows": [
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)",
+       "Row(r=1)"
+      ]
+     }
     }
    ]
   }

@@ -13,8 +13,6 @@ Usage with a repark module under test, then with live Spark:
 pins: ns-array-floor-1/C-003, C-004, C-005
 """
 
-from __future__ import annotations
-
 import argparse
 import contextlib
 import json
@@ -23,16 +21,31 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import pyarrow as pa
 
 sys.path.insert(0, str(Path(__file__).parent))
 import _record_ns_array_floor_1_input as base
 
 ZONE = base.ZONE
-SEED_PAIRS = [[1767323045123456789, 1767323045000000001], [1767323045000000001]]
-SEED_TOP = [1767323045123456789, None, 1767323045000000001]
-EXPECT_FLOOR_PAIRS = [[1767323045123456, 1767323045000000], [1767323045000000]]
-EXPECT_FLOOR_TOP = [1767323045123456, None, 1767323045000000]
+SEED_PAIRS = [
+    [1767323045123456789, 1767323045000000001],
+    [1767323045000000001],
+    [-1, -1500],
+]
+SEED_TOP = [1767323045123456789, None, 1767323045000000001, -1, -1500]
+EXPECT_FLOOR_PAIRS = [
+    [1767323045123456, 1767323045000000],
+    [1767323045000000],
+    [-1, -2],
+]
+EXPECT_FLOOR_TOP = [1767323045123456, None, 1767323045000000, -1, -2]
+EXPECT_TRUNC_PAIRS = [
+    [1767323045123456, 1767323045000000],
+    [1767323045000000],
+    [0, -1],
+]
+EXPECT_TRUNC_TOP = [1767323045123456, None, 1767323045000000, 0, -1]
 
 DOORS = [
     "grouped_applyin",
@@ -60,51 +73,35 @@ def ns_stamps(values: list[Any]) -> list[Any]:
     return [pd.to_datetime(v, unit="ns") if v is not None else None for v in values]
 
 
-def open_session(warehouse: str, live: bool) -> Any:
+def open_session(warehouse: str, live: bool, safe: str | None = None) -> Any:
     if live:
-        return base.open_live_session()
+        return base.open_live_session(safe)
     return base.open_repark_session(warehouse)
 
 
 def seed_frame(spark: Any, live: bool) -> Any:
     if live:
-        rows = [(1, 1), (2, 0), (3, 1)]
+        rows = [(1, 1), (2, 0), (3, 1), (4, 0), (5, 1)]
         return spark.createDataFrame(rows, "id int, k int")
     spark._ensure_alive().register_arrow_stream_as_temp_view(
         "ns_out_seed",
-        pa.table({"id": pa.array([1, 2, 3], pa.int32()), "k": pa.array([1, 0, 1], pa.int32())}),
+        pa.table(
+            {
+                "id": pa.array([1, 2, 3, 4, 5], pa.int32()),
+                "k": pa.array([1, 0, 1, 0, 1], pa.int32()),
+            }
+        ),
     )
     return spark.table("ns_out_seed")
 
 
-def datetime_to_micros(value: Any) -> int:
-    import datetime
-
-    if value.tzinfo is not None:
-        value = value.astimezone(datetime.UTC).replace(tzinfo=None)
-    delta = value - datetime.datetime(1970, 1, 1)
-    return (delta.days * 86400 + delta.seconds) * 1000000 + delta.microseconds
-
-
-def tick_value(value: Any) -> Any:
-    if value is None:
-        return None
-    if isinstance(value, int):
-        return value
-    return datetime_to_micros(value)
-
-
 def frame_ticks(table: Any) -> Any:
+    import pyarrow.compute as pc
+
     column = table.column("v")
     if pa.types.is_list(column.type) or pa.types.is_large_list(column.type):
-        out = []
-        for row in column.to_pylist():
-            if row is None:
-                out.append(None)
-            else:
-                out.append([tick_value(v) for v in row])
-        return out
-    return [tick_value(v) for v in column.to_pylist()]
+        return pc.cast(column, pa.list_(pa.int64())).to_pylist()
+    return pc.cast(column, pa.int64()).to_pylist()
 
 
 def store_roundtrip(spark: Any, frame: Any, ddl: str, live: bool) -> dict[str, Any]:
@@ -245,20 +242,18 @@ def run_mapinarrow(frame: Any, kind: str, schema: str) -> Any:
 
 
 def run_scalar_pandas_udf(frame: Any, kind: str, return_type: str) -> Any:
-    import pandas as pd
-
     pandas_udf, _, _ = base.udf_libs()
     stamps = ns_stamps(SEED_TOP)
     first_two = stamps[:2]
 
     if kind == "array":
 
-        def func(series: Any) -> Any:
+        def func(series: pd.Series) -> pd.Series:
             return pd.Series([first_two] * len(series))
 
     else:
 
-        def func(series: Any) -> Any:
+        def func(series: pd.Series) -> pd.Series:
             return pd.Series((stamps * 2)[: len(series)], dtype="datetime64[ns]")
 
     udf = pandas_udf(func, return_type)
@@ -271,12 +266,12 @@ def run_groupedagg_pandas_udf(frame: Any, kind: str, return_type: str) -> Any:
 
     if kind == "array":
 
-        def func(series: Any) -> Any:
+        def func(series: pd.Series) -> list:
             return stamps[:2]
 
     else:
 
-        def func(series: Any) -> Any:
+        def func(series: pd.Series) -> pd.Timestamp:
             return stamps[0]
 
     udf = pandas_udf(func, return_type, token)
@@ -287,19 +282,17 @@ def run_scalar_arrow_udf(frame: Any, kind: str, return_type: str) -> Any:
     _, arrow_udf, _ = base.udf_libs()
 
     if kind == "array":
-        out = pa.array(
-            [[1767323045123456789, 1767323045000000001]] * 3,
-            type=pa.list_(pa.timestamp("ns")),
-        )
 
-        def func(array: Any) -> pa.Array:
-            return out.slice(0, len(array))
+        def func(array: pa.Array) -> pa.Array:
+            return pa.array(
+                [[1767323045123456789, 1767323045000000001]] * len(array),
+                type=pa.list_(pa.timestamp("ns")),
+            )
 
     else:
-        out = pa.array(SEED_TOP, type=pa.timestamp("ns"))
 
-        def func(array: Any) -> pa.Array:
-            return out.slice(0, len(array))
+        def func(array: pa.Array) -> pa.Array:
+            return pa.array((SEED_TOP * 2)[: len(array)], type=pa.timestamp("ns"))
 
     udf = arrow_udf(func, return_type)
     return frame.select(udf("id").alias("v"))
@@ -352,6 +345,8 @@ def write_markdown(path: str, meta: dict[str, Any], cells: list[dict[str, Any]])
         + meta["zone"]
         + " live "
         + str(meta["live"])
+        + " safe "
+        + str(meta.get("safe_setting", "n/a"))
         + ".",
         "",
     ]
@@ -374,6 +369,8 @@ def write_markdown(path: str, meta: dict[str, Any], cells: list[dict[str, Any]])
                 + cell.get("condition", "")
                 + " "
                 + cell.get("first_line", "")[:200]
+                + " / "
+                + cell.get("inner_line", "")[:200]
             )
         lines.append(
             "| "
@@ -399,14 +396,20 @@ def main() -> None:
     parser.add_argument("--label", required=True)
     parser.add_argument("--base-sha", default="")
     parser.add_argument("--live", action="store_true")
+    parser.add_argument("--safe-setting", default=None)
     args = parser.parse_args()
     if args.live:
-        spark = open_session("", True)
+        spark = open_session("", True, args.safe_setting)
         meta: dict[str, Any] = {
             "label": args.label,
             "base_sha": args.base_sha,
             "zone": ZONE,
             "live": True,
+            "safe_setting": (
+                args.safe_setting
+                if args.safe_setting is not None
+                else str(spark.conf.get("spark.sql.execution.pandas.convertToArrowArraySafely"))
+            ),
             "banner": "spark "
             + str(spark.version)
             + " zone "
@@ -417,6 +420,7 @@ def main() -> None:
         spark = open_session(warehouse, False)
         meta = {
             "label": args.label,
+            "safe_setting": "n/a",
             "base_sha": args.base_sha,
             "zone": ZONE,
             "live": False,
