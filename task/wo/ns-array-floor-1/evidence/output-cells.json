@@ -1,0 +1,2828 @@
+{
+ "runs": [
+  {
+   "meta": {
+    "label": "main",
+    "base_sha": "293896ce",
+    "zone": "UTC",
+    "live": false
+   },
+   "cells": [
+    {
+     "door": "grouped_applyin",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "v: list<item: timestamp[us, tz=UTC]> child 0, item: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<item: timestamp[us]> child 0, item: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 146,
+       "func": "_apply_in_pandas_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 146,
+       "func": "_apply_in_pandas_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "v: list<item: timestamp[us, tz=UTC]> child 0, item: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<item: timestamp[us]> child 0, item: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ],
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 127,
+       "func": "_cogrouped_pandas_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 127,
+       "func": "_cogrouped_pandas_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 371,
+       "func": "_apply_in_arrow_group_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 371,
+       "func": "_apply_in_arrow_group_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 371,
+       "func": "_apply_in_arrow_group_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 371,
+       "func": "_apply_in_arrow_group_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us, tz=UTC]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 178,
+       "func": "_cogrouped_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected list<item: timestamp[us]>, actual list<item: timestamp[ns]>).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 178,
+       "func": "_cogrouped_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us, tz=UTC], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 178,
+       "func": "_cogrouped_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkRuntimeError",
+     "condition": "RESULT_COLUMN_TYPES_MISMATCH",
+     "first_line": "[RESULT_COLUMN_TYPES_MISMATCH] Column types of the returned data do not match specified schema. Mismatch: column 'v' (expected timestamp[us], actual timestamp[ns]).",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/cogroup.py",
+       "line": 178,
+       "func": "_cogrouped_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 293,
+       "func": "_verify_arrow_table_result"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 271,
+       "func": "_verify_arrow_result_schema"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type list<item: timestamp[us, tz=UTC]> (array<timestamp>), got list<item: timestamp[us]>",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<item: timestamp[us]> child 0, item: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       1767323045000000,
+       1767323045000000
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "mapinpan",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us, tz=UTC] (timestamp), got timestamp[ns]",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type list<item: timestamp[us, tz=UTC]> (array<timestamp>), got list<item: timestamp[ns]>",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type list<item: timestamp[us]> (array<timestamp_ntz>), got list<item: timestamp[ns]>",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us, tz=UTC] (timestamp), got timestamp[ns]",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "mapInArrow schema mismatch on field 'v': expected type timestamp[us] (timestamp_ntz), got timestamp[ns]",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3264,
+       "func": "to_arrow"
+      },
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 484,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_schema.py",
+       "line": 60,
+       "func": "_validate_map_in_arrow_batch"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "v: list<item: timestamp[us, tz=UTC]> child 0, item: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "v: list<item: timestamp[us]> child 0, item: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "pandas_udf 'func' failed converting result to declared type timestamp[us, tz=UTC] (timestamp): Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 313,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 262,
+       "func": "_emit_pandas_udf_batch"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 140,
+       "func": "_pandas_udf_series_to_arrow"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "pandas_udf 'func' failed converting result to declared type timestamp[us] (timestamp_ntz): Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "traceback": [
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 313,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 262,
+       "func": "_emit_pandas_udf_batch"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 140,
+       "func": "_pandas_udf_series_to_arrow"
+      }
+     ]
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: list<item: timestamp[us, tz=UTC]> child 0, item: timestamp[us, tz=UTC]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us, tz=UTC]> child 0, element: timestamp[us, tz=UTC] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "answer",
+     "result_arrow": "k: int32 v: list<item: timestamp[us]> child 0, item: timestamp[us]",
+     "frame_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_ticks": [
+      [
+       1767323045123456,
+       null
+      ],
+      [
+       1767323045123456,
+       null
+      ]
+     ],
+     "stored_arrow": "v: list<element: timestamp[us]> child 0, element: timestamp[us] -- field metadata -- PARQUET:field_id: '1'"
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 146,
+       "func": "_apply_in_pandas_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "applyInPandas failed converting pandas output to declared schema: ('Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789', 'Conversion failed for column v with type datetime64[ns]')",
+     "traceback": [
+      {
+       "file": "table.pxi",
+       "line": 6250,
+       "func": "pyarrow.lib.table"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 3056,
+       "func": "__arrow_c_stream__"
+      },
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 146,
+       "func": "_apply_in_pandas_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/grouped_arrow.py",
+       "line": 103,
+       "func": "_pandas_result_to_arrow_batches"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "arrow_udf 'func' failed converting result to declared type list<item: timestamp[us, tz=UTC]>: Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789",
+     "traceback": [
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 312,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 152,
+       "func": "_run_pandas_udf_scalar_on_batch"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 141,
+       "func": "__call__"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 121,
+       "func": "_normalize_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "arrow_udf 'func' failed converting result to declared type list<item: timestamp[us]>: Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "traceback": [
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 312,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 152,
+       "func": "_run_pandas_udf_scalar_on_batch"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 141,
+       "func": "__call__"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 121,
+       "func": "_normalize_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "arrow_udf 'func' failed converting result to declared type timestamp[us, tz=UTC]: Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: 1767323045123456789",
+     "traceback": [
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 312,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 152,
+       "func": "_run_pandas_udf_scalar_on_batch"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 141,
+       "func": "__call__"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 121,
+       "func": "_normalize_arrow_result"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkException",
+     "condition": "None",
+     "first_line": "arrow_udf 'func' failed converting result to declared type timestamp[us]: Casting from timestamp[ns] to timestamp[us] would lose data: 1767323045123456789",
+     "traceback": [
+      {
+       "file": "repark/spark/qualified_names.py",
+       "line": 67,
+       "func": "_arrow_c_stream_with_display"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 384,
+       "func": "_action_inner"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 556,
+       "func": "_execute_map_in_arrow_bridge"
+      },
+      {
+       "file": "repark/spark/dataframe/core.py",
+       "line": 478,
+       "func": "_iter_map_in_arrow_output"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 312,
+       "func": "_run_pandas_udf_arrow_batches"
+      },
+      {
+       "file": "repark/spark/dataframe/udf_bridge.py",
+       "line": 152,
+       "func": "_run_pandas_udf_scalar_on_batch"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 141,
+       "func": "__call__"
+      },
+      {
+       "file": "repark/spark/functions_arrow_udf.py",
+       "line": 121,
+       "func": "_normalize_arrow_result"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "meta": {
+    "label": "spark412",
+    "base_sha": "none",
+    "zone": "UTC",
+    "live": true,
+    "banner": "spark 4.1.2 zone UTC"
+   },
+   "cells": [
+    {
+     "door": "grouped_applyin",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 133,
+       "func": "run_grouped_applyin"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 133,
+       "func": "run_grouped_applyin"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 133,
+       "func": "run_grouped_applyin"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyin",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 133,
+       "func": "run_grouped_applyin"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 151,
+       "func": "run_cogroup_applyin"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 151,
+       "func": "run_cogroup_applyin"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 151,
+       "func": "run_cogroup_applyin"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyin",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 151,
+       "func": "run_cogroup_applyin"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 184,
+       "func": "run_grouped_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 940,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 184,
+       "func": "run_grouped_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 940,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 184,
+       "func": "run_grouped_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 940,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "grouped_applyinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 184,
+       "func": "run_grouped_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 940,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 202,
+       "func": "run_cogroup_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 1171,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 202,
+       "func": "run_cogroup_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 1171,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 202,
+       "func": "run_cogroup_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 1171,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "cogroup_applyinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 202,
+       "func": "run_cogroup_applyinarrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/group_ops.py",
+       "line": 1171,
+       "func": "applyInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 206,
+       "func": "run_mapinpan"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 206,
+       "func": "run_mapinpan"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 206,
+       "func": "run_mapinpan"
+      }
+     ]
+    },
+    {
+     "door": "mapinpan",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 206,
+       "func": "run_mapinpan"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 244,
+       "func": "run_mapinarrow"
+      },
+      {
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1810,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/map_ops.py",
+       "line": 72,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 244,
+       "func": "run_mapinarrow"
+      },
+      {
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1810,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/map_ops.py",
+       "line": 72,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 244,
+       "func": "run_mapinarrow"
+      },
+      {
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1810,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/map_ops.py",
+       "line": 72,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "mapinarrow",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkImportError",
+     "condition": "PACKAGE_NOT_INSTALLED",
+     "first_line": "[PACKAGE_NOT_INSTALLED] Pandas >= 2.2.0 must be installed; however, it was not found.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 331,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 244,
+       "func": "run_mapinarrow"
+      },
+      {
+       "file": "pyspark/sql/classic/dataframe.py",
+       "line": 1810,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/map_ops.py",
+       "line": 72,
+       "func": "mapInArrow"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 647,
+       "func": "pandas_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/utils.py",
+       "line": 43,
+       "func": "require_minimum_pandas_version"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 248,
+       "func": "run_scalar_pandas_udf"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 248,
+       "func": "run_scalar_pandas_udf"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 248,
+       "func": "run_scalar_pandas_udf"
+      }
+     ]
+    },
+    {
+     "door": "scalar_pandas_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 248,
+       "func": "run_scalar_pandas_udf"
+      }
+     ]
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 270,
+       "func": "run_groupedagg_pandas_udf"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 58,
+       "func": "ns_stamps"
+      }
+     ]
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 270,
+       "func": "run_groupedagg_pandas_udf"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 58,
+       "func": "ns_stamps"
+      }
+     ]
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 270,
+       "func": "run_groupedagg_pandas_udf"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 58,
+       "func": "ns_stamps"
+      }
+     ]
+    },
+    {
+     "door": "groupedagg_pandas_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "ModuleNotFoundError",
+     "condition": "",
+     "first_line": "No module named 'pandas'",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 270,
+       "func": "run_groupedagg_pandas_udf"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 58,
+       "func": "ns_stamps"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "array",
+     "declared": "tz",
+     "schema": "v array<timestamp>",
+     "outcome": "error",
+     "error": "PySparkNotImplementedError",
+     "condition": "UNSUPPORTED_SIGNATURE",
+     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 304,
+       "func": "run_scalar_arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 329,
+       "func": "arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 741,
+       "func": "vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 889,
+       "func": "_create_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 805,
+       "func": "_validate_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/typehints.py",
+       "line": 279,
+       "func": "infer_eval_type"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "array",
+     "declared": "ntz",
+     "schema": "v array<timestamp_ntz>",
+     "outcome": "error",
+     "error": "PySparkNotImplementedError",
+     "condition": "UNSUPPORTED_SIGNATURE",
+     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 304,
+       "func": "run_scalar_arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 329,
+       "func": "arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 741,
+       "func": "vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 889,
+       "func": "_create_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 805,
+       "func": "_validate_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/typehints.py",
+       "line": 279,
+       "func": "infer_eval_type"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "top",
+     "declared": "tz",
+     "schema": "v timestamp",
+     "outcome": "error",
+     "error": "PySparkNotImplementedError",
+     "condition": "UNSUPPORTED_SIGNATURE",
+     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 304,
+       "func": "run_scalar_arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 329,
+       "func": "arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 741,
+       "func": "vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 889,
+       "func": "_create_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 805,
+       "func": "_validate_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/typehints.py",
+       "line": 279,
+       "func": "infer_eval_type"
+      }
+     ]
+    },
+    {
+     "door": "scalar_arrow_udf",
+     "kind": "top",
+     "declared": "ntz",
+     "schema": "v timestamp_ntz",
+     "outcome": "error",
+     "error": "PySparkNotImplementedError",
+     "condition": "UNSUPPORTED_SIGNATURE",
+     "first_line": "[UNSUPPORTED_SIGNATURE] Unsupported signature: (array: 'Any') -> 'pa.Array'.",
+     "traceback": [
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 329,
+       "func": "measure_cell"
+      },
+      {
+       "file": "_record_ns_array_floor_1_output.py",
+       "line": 304,
+       "func": "run_scalar_arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 329,
+       "func": "arrow_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 741,
+       "func": "vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 889,
+       "func": "_create_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/functions.py",
+       "line": 805,
+       "func": "_validate_vectorized_udf"
+      },
+      {
+       "file": "pyspark/sql/pandas/typehints.py",
+       "line": 279,
+       "func": "infer_eval_type"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

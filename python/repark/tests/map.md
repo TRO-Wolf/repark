@@ -10214,3 +10214,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   cell measures the input side. Evidence
   `task/wo/ns-array-floor-1/evidence/input-cells.md` plus JSON.
   pins: ns-array-floor-1/C-001, ns-array-floor-1/C-002
+- [_record_ns_array_floor_1_output.py](_record_ns_array_floor_1_output.py) —
+  **NS-ARRAY-FLOOR-1 D2 (2026-10-14):** the output-side recorder: nine doors
+  return datetime64[ns] arrays under array-timestamp declarations and
+  datetime64[ns] columns under top-level timestamp declarations. Frame ticks
+  and Iceberg read-back ticks are both recorded. Evidence
+  `task/wo/ns-array-floor-1/evidence/output-cells.md` plus JSON.
+  pins: ns-array-floor-1/C-003, ns-array-floor-1/C-004
