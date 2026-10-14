@@ -8245,6 +8245,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sparkenv interpreter with the release module on PYTHONPATH; the unit
   ledger records the exact command.
   pins: ice-spark-cross-read-1/C-002, C-003
+- [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) —
+  **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the AWS cross-read leg, not run:
+  two cells discover every testing_ table under the scratch namespace on
+  Glue and on S3 Tables and read each on both engines through the shared
+  helper (direct catalog reads both sides, no adoption; the Spark session
+  carries the pinned Iceberg runtime plus the AWS bundle jars). Same
+  module-level REPARK_AWS_ACCEPTANCE skip as the AWS legs plus a PySpark
+  importorskip; never drops anything. Collects cleanly with the variable
+  unset; the owner wires the workflow step from the unit order.
+  pins: ice-spark-cross-read-1/C-004
 
 ## I want to...
 
