@@ -1686,6 +1686,29 @@ repark-core's error map.
   carrying only session snapshot properties under `wap.id` instead of
   committing on main; re-exported through `write/mod.rs`.
   pins: ice-write-options-1/C-014, C-016, C-017
+- `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 step 2 (2026-10-14), parity row R-016:** the one
+  rule that pairs a struct source with a struct target on a write. `pair_store_value(pairing,
+  table, column, source, target)` walks both types: two structs pair by the door's
+  `StructPairing` (`ByPosition`: the i-th source field feeds the i-th target field, a longer
+  source refuses `EXTRA_STRUCT_FIELDS`, a shorter one `STRUCT_MISSING_FIELDS`; `ByName`: each
+  target field takes the one source field of its name under the case rule, none refuses
+  `CANNOT_FIND_DATA`, two refuse `AMBIGUOUS_COLUMN_NAME` (hint H-2), a leftover refuses
+  `EXTRA_STRUCT_FIELDS`); a list pairs its element (`element`), a map its key and value
+  (`key`, `value`), a dictionary or run-end-encoded value its values, at every depth with the
+  same mode; a `Union` that holds a struct refuses (hint H-3); anything else is a leaf, listed
+  in `StorePairs::leaves` with its path and never converted. The texts are Spark's, with the
+  table label the door prints. `StorePairs::apply` re-labels and re-orders child data with no
+  buffer copied and every validity kept; `is_identity` is true exactly when nothing moves, and
+  pairing a paired value is the identity in either mode. `StorePairKernel`
+  (`__repark_store_pair__(value, target type, pairing, table, column)`) refuses in its
+  planning hook and pairs in `invoke`; `store_pair_expr` and `store_pair_sql` build it for a
+  struct-holding target only. `refuse_unpaired_struct` is hint H-1, the guard of a batch
+  cast: a struct whose names are not the target's in order is refused, with a hint for the
+  entry (`StoreEntry::Batch`, `StoreEntry::StaticPartition`). `StatementPairing` is the
+  configuration extension a statement's state snapshot carries for the DataFusion-planned
+  INSERT; `statement_pairing` reads it (absent: by position for an INSERT, by name for an
+  UPDATE). The table test in `struct_pairing/tests.rs` runs three modes × eight field shapes ×
+  ten layouts with NULL structs and NULL elements, and the idempotence property.
 - `summary_collision.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `for_changes(table, added, removed, branch)` is the general shape — the fork's
   collector over BOTH sides plus the fork's own total arithmetic
