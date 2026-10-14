@@ -3794,6 +3794,44 @@ still open is `isModifiable`.
   NS-NESTED-PANDAS-1. Measured cells from the #1047 verdict and from the ledger of
   `fix/ns-array-apply-in-pandas-refuse-1` (verifier round names, not paths, by the clerk rule).
 
+### ICE-TSNS-SQL-1-R-021 — OPEN (measured 2026-10-14): a BY NAME struct write with case-twin source fields stores where Spark refuses
+
+- **repark** — `INSERT INTO t BY NAME SELECT 2 AS id, named_struct('a', 1, 'A', 2) AS st`
+  into `(id INT, st STRUCT<a: INT, b: INT>)`, format v2, seed `(10,20)`, stores
+  `[[1,10,20],[2,1,2]]` on main: the source struct carries two fields differing only in
+  letter case and both land, no refusal.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses: `AnalysisException:
+  [INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME] Cannot write incompatible data for
+  the table `ora`.`ns`.`step0_twins`: Ambiguous column name in the input data `st`.`a`.
+  SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  Hadoop catalog, 2026-10-14, U-6 step 0.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. A BY NAME write whose source struct carries two
+  fields differing only in case is stored; Spark refuses the ambiguous input field.
+  Next step: [STRUCT-CASE-TWIN-1](../task/roadmap/mid-term/struct-case-twin-1-card-2026-10-14.md)
+  (owner ruling, question 37, 2026-10-14). Measured in ICE-STRUCT-PAIRING-1 step 0 (U-6),
+  cell `by_name_case_twin_fields`.
+
+### ICE-TSNS-SQL-1-R-022 — OPEN (measured 2026-10-14): a merge-schema write with a surplus struct field stores where Spark refuses
+
+- **repark** — `writeTo(t).option("merge-schema","true")` with a surplus struct field `c`
+  into `(id INT, st STRUCT<a: INT, b: INT>)`, format v2, seed `(10,20)`, stores
+  `[[1,10,20],[2,1,2]]` on main: the extra field is dropped, no refusal.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses: `AnalysisException:
+  [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for
+  the table `ora`.`ns`.`step0_msge`: Cannot write extra fields `c` to the struct `st`.
+  SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  Hadoop catalog, 2026-10-14, U-6 step 0.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. A surplus struct field under merge-schema is
+  dropped; Spark refuses the extra field. Home: ICE-STRUCT-PAIRING-1 (U-6): the
+  EXTRA_STRUCT_FIELDS class is already inside that unit (owner ruling, question 37,
+  2026-10-14) — one cell on U-6's head decides it; if U-6's single seam closes it, it
+  closes in U-6, otherwise it gets a card then. No card in this change. The write
+  statement text is not recorded in the step-0 JSON; the measured door was
+  `writeTo(t).option("merge-schema","true")` on both engines. Measured in
+  ICE-STRUCT-PAIRING-1 step 0 (U-6), cell `merge_schema_surplus_struct_field`.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers
