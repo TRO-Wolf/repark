@@ -396,6 +396,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
   pins: fnp-win-1/C-003
+- `instant_ts.rs`, `spark_string_timestamp.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
+  the session timestamp rule no longer reads a nanosecond cast target as the SQL
+  `TIMESTAMP`. Deleted from `rewrite_cast`: the arm that peeled a cast of an instant to a
+  nanosecond target, the arm that wrapped an integer, NULL or seconds cast to a nanosecond
+  target as the instant, and the arm that narrowed a nanosecond source cast to a naive
+  nanosecond target; their `TIMESTAMP_NTZ`-mode twins in `rewrite_cast_as_ntz`; and both
+  nanosecond-literal rewrites (`wrap_ns_literal`, `wrap_ns_literal_as_ntz`). A cast of a
+  string, DATE or `TIMESTAMP_NTZ` value to a nanosecond target is no longer sent to
+  `to_timestamp`, `peel_naive_cast_of_ltz_producer` peels a naive **microsecond** cast
+  only, and `rewrite_string_try_cast` leaves a nanosecond `TRY_CAST` target alone. What
+  stays: a nanosecond source cast to the instant type (a written `CAST(ns AS TIMESTAMP)`)
+  takes the narrowing kernel and floors. The module's SQL unit tests, and those of
+  `temporal_ctor/`, `timestamp_ntz_cast/` and `tests/`, build their session with the
+  planner (`spark_type_planner::planned_context`), as every door does.
+  pins: ice-tsns-type-planner-1/C-013
 - `timestamp_unit_widen.rs` — **ICE-TSNS-TYPE-PLANNER-1 amendment 1 (2026-10-13):**
   `SparkTimestampUnitWiden`, the unit lattice rule. DataFusion 54.1 joins two timestamp
   units to the coarser one (`timeunit_coercion`, a free function with no hook), which

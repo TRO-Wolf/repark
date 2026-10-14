@@ -3,12 +3,11 @@ use std::ops::ControlFlow;
 
 use datafusion::error::DataFusionError;
 use datafusion::sql::sqlparser::ast::{
-    CastKind, DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
+    DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
     FunctionArguments, Ident, ObjectName, ObjectNamePart, Query, Statement, TimezoneInfo,
     UnaryOperator, Value, ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
-use repark_functions::timestamp_ns_cast::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
 
 mod ltz_values_cast;
 mod ntz_cast_lower;
@@ -44,42 +43,6 @@ fn function_call(name: &str, args: Vec<Expr>) -> Expr {
     })
 }
 
-fn timestamp_ns_cast_name(data_type: &DataType) -> Option<&'static str> {
-    let DataType::Custom(name, modifiers) = data_type else {
-        return None;
-    };
-    if !modifiers.is_empty() {
-        return None;
-    }
-    let spelled = name.to_string();
-    if spelled.eq_ignore_ascii_case("timestamp_ns") {
-        Some(TIMESTAMP_NS_CAST_NAME)
-    } else if spelled.eq_ignore_ascii_case("timestamptz_ns") {
-        Some(TIMESTAMPTZ_NS_CAST_NAME)
-    } else {
-        None
-    }
-}
-
-fn lower_timestamp_ns_cast(node: &mut Expr) -> bool {
-    let Expr::Cast {
-        kind: CastKind::Cast | CastKind::DoubleColon,
-        expr,
-        data_type,
-        array: false,
-        format: None,
-    } = node
-    else {
-        return false;
-    };
-    let Some(name) = timestamp_ns_cast_name(data_type) else {
-        return false;
-    };
-    let value = std::mem::replace(expr, Box::new(null_expr()));
-    *node = function_call(name, vec![*value]);
-    true
-}
-
 fn is_empty_map_call(node: &Expr) -> bool {
     let Expr::Function(function) = node else {
         return false;
@@ -112,10 +75,7 @@ fn lower_empty_map_call(node: &mut Expr) -> bool {
 }
 
 fn lower_expression(node: &mut Expr) {
-    if ntz_cast_lower::lower_timestamp_ntz_cast(node)
-        || lower_timestamp_ns_cast(node)
-        || lower_empty_map_call(node)
-    {
+    if ntz_cast_lower::lower_timestamp_ntz_cast(node) || lower_empty_map_call(node) {
         return;
     }
     if let Expr::RLike {
@@ -174,10 +134,7 @@ impl VisitorMut for TimestampNsCastLower {
     type Break = Infallible;
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        if !ntz_cast_lower::lower_timestamp_ntz_cast(expr)
-            && !lower_timestamp_ns_cast(expr)
-            && self.empty_maps
-        {
+        if !ntz_cast_lower::lower_timestamp_ntz_cast(expr) && self.empty_maps {
             lower_empty_map_call(expr);
         }
         ControlFlow::Continue(())
@@ -226,13 +183,6 @@ impl Visitor for TimestampNsCastProbe {
 
     fn pre_visit_expr(&mut self, expr: &Expr) -> ControlFlow<Self::Break> {
         match expr {
-            Expr::Cast {
-                kind: CastKind::Cast | CastKind::DoubleColon,
-                data_type,
-                array: false,
-                format: None,
-                ..
-            } if timestamp_ns_cast_name(data_type).is_some() => ControlFlow::Break(()),
             Expr::Cast {
                 data_type: DataType::TimestampNtz(_),
                 array: false,
@@ -328,29 +278,25 @@ mod tests {
     }
 
     #[test]
-    fn ns_casts_lower_to_the_embedded_cast_calls() {
-        let text = lowered(
-            "SELECT CAST('2026-01-02' AS TIMESTAMP_NS) AS a, '2026-01-02'::timestamptz_ns AS b",
-        )
-        .to_string();
-        assert!(
-            text.contains("__repark_cast_timestamp_ns__('2026-01-02')")
-                && text.contains("__repark_cast_timestamptz_ns__('2026-01-02')"),
-            "{text}"
-        );
+    fn ns_casts_are_left_to_the_type_planner() {
+        let before =
+            "SELECT CAST('2026-01-02' AS TIMESTAMP_NS) AS a, '2026-01-02'::timestamptz_ns AS b";
+        let text = lowered(before).to_string();
+        assert_eq!(text, before);
+        assert!(!text.contains("__repark_cast_timestamp"), "{text}");
     }
 
     #[test]
-    fn the_probe_finds_ns_and_ntz_casts_and_empty_map_calls() {
+    fn the_probe_finds_ntz_casts_and_empty_map_calls_and_no_ns_cast() {
         let parse = |sql: &str| {
             Parser::parse_sql(&DatabricksDialect {}, sql)
                 .unwrap()
                 .remove(0)
         };
-        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+        assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
             "SELECT id FROM t WHERE ts > CAST('2026-01-02' AS timestamptz_ns)"
         )));
-        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+        assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
             "SELECT '2026-01-02'::TIMESTAMP_NS AS v"
         )));
         assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
