@@ -131,7 +131,9 @@ Spark column, as the card rules.
 - **Q3 (C-004, OWNER, answered).** The refusal omits Spark's `(line, pos)`
   suffix. *Owner, 2026-10-14:* (a), accepted and recorded: class, condition,
   SQLSTATE and keyword match Spark; the position is omitted, because the parser
-  does not report the keyword's position.
+  does not report the keyword's position. *Fold 1, ruling 45 (a):* the keyword
+  is always upper case on head while Spark 4.1.2 echoes the token as typed
+  (`'insert'`, `'InSeRt'`); recorded here, no product change.
 
 ## 6. Build round 1 (2026-10-14)
 
@@ -236,3 +238,46 @@ COVERAGE_ATTESTATION:
       justification: Step 0 adds no product branches and no tests; its clauses are pinned by citation to the two fixtures, which the fix step's pins will read.
   complete: true
 ```
+
+## 7. Fold 1 (2026-10-14, round 2 for the class)
+
+Branch `fix/write-body-carriers-1`. F1 is `3c765da4` (tests only): 4 new
+Python tests with 44 cells (20 `IF NOT EXISTS` over 5 bodies x new/existing x
+versions 2 and 3, 10 doubly parenthesised over 5 bodies x 2 versions, 4
+WITH-prefixed bare and parenthesised over 2 versions, 10 missing-target
+`REPLACE TABLE` over 5 bodies x 2 versions) and 4 new Rust tests with 18 cells
+(`IF NOT EXISTS` new and existing over the 4 body kinds, doubly parenthesised
+over the 4 kinds, WITH-prefixed bare and parenthesised, missing-target
+`REPLACE TABLE` over the 4 kinds). Every refusal cell reads back the source
+table and the target unchanged. Expected values come from the scoped
+verifier's recorded Spark 4.1.2 cells (`A_if_not_exists_*`, `A_paren2_*`,
+`D_cte_prefixed_insert`, `D_cte_prefixed_paren_insert`, `D_replace_missing_*`:
+class `ParseException`, condition `PARSE_SYNTAX_ERROR`, SQLSTATE 42601, the
+body's keyword) and the card's rule; no new live Spark recording ran in this
+fold. F2 is `33e0988f` (ruling 44 (a)): `execute_inner` in
+`crates/repark-spark/src/router.rs` runs `refuse_ctas_write_body` ahead of
+`refuse_missing_replace_target`, so `REPLACE TABLE <missing> AS <write>`
+answers the parse refusal with the body's keyword for a missing and an
+existing target; non-write bodies still reach the catalog check. The
+missing-target `REPLACE` cells are red until F2. Ruling 45 (a) is recorded on
+the Q3 entry above with no product change. Ruling 46 (a): write bodies deeper
+down (a set-operation arm, a CTE member, a subquery, `CREATE VIEW ... AS
+<write>`, `CACHE TABLE ... AS <write>`) are untouched here.
+
+Mutant runs against the Rust battery (`cargo test -p repark-spark --lib --
+write_body_carriers`, 9 passed on head):
+
+| Mutant | Killing test |
+|---|---|
+| M6 (single-paren unwrap) | `double_parenthesised_ctas_write_body_refuses_before_any_write` (NotImplemented `Query INSERT ... not implemented yet` vs the parse refusal) |
+| M7 (skip refusal when `IF NOT EXISTS`) | `ctas_if_not_exists_write_body_refuses_before_any_write` (commit-then-fail `DataInvalid => UInt64 is not supported ...` vs the parse refusal) |
+| M8 (skip refusal when `WITH` present) | `with_prefixed_ctas_write_body_refuses_before_any_write` (NotImplemented `Query INSERT ... SELECT * FROM c not implemented yet` vs the parse refusal) |
+| M10 (refuse ahead of the missing-target check) | survives 9/9: after F2 the edit duplicates the early refusal and changes no answer; the reverse (early refusal removed) fails `replace_missing_write_body_refuses_before_any_write` with `TABLE_OR_VIEW_NOT_FOUND` 42P01, which is the F2 bite-proof |
+
+Gate counts on the rebuilt head module: the Python fixture passes 10/10 and
+the Rust battery passes 9/9. The same fixture file against the main module
+fails 7 (the 3 carried refusal tests plus the 4 new ones) and passes 3 (the
+wrappers, the ANSI door and the plain-CTAS neighbours), so every new cell is
+red on main and green on head. No neighbour answer changed: the early refusal
+returns `Ok` for any non-write body, and the wrapper, ANSI and neighbour tests
+pass unchanged on head.
