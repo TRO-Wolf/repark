@@ -3821,6 +3821,37 @@ still open is `isModifiable`.
   `writeTo(t).option("merge-schema","true")` on both engines. Measured in
   ICE-STRUCT-PAIRING-1 step 0 (U-6), cell `merge_schema_surplus_struct_field`.
 
+### ICE-TSNS-SQL-1-R-023 — OPEN (measured 2026-10-14): a write body below the top of a CTAS, a view or a cached table refuses with main's text, not Spark's
+
+- **repark** — a write body below the top of a CTAS, a view body or a cached table body
+  refuses on main; one line per shape, the statement is the representative cell and the
+  class and first line are main's exactly as recorded; no table moved in any of the
+  fourteen cells (`moved` is empty on main):
+| Shape | Representative statement | Main class | Main first line | Table moved |
+|---|---|---|---|---|
+| set-operation arm | `CREATE TABLE wbc1.ns.z_d_setop_right_paren_insert AS SELECT * FROM wbc1.ns.t_d_setop_right_paren_insert UNION ALL (INSERT INTO wbc1.ns.t_d_setop_right_paren_insert VALUES (3, 'c'))` | `UnsupportedOperationException` | `This feature is not implemented: Query INSERT INTO wbc1.ns.t_d_setop_right_paren_insert VALUES (3, 'c') not implemented yet` | no |
+| CTE member | `CREATE TABLE wbc1.ns.z_d_cte_insert AS WITH c AS (INSERT INTO wbc1.ns.t_d_cte_insert VALUES (3, 'c')) SELECT * FROM c` | `UnsupportedOperationException` | `This feature is not implemented: Query INSERT INTO wbc1.ns.t_d_cte_insert VALUES (3, 'c') not implemented yet` | no |
+| subquery | `CREATE TABLE wbc1.ns.z_d_subq_from_insert AS SELECT * FROM (INSERT INTO wbc1.ns.t_d_subq_from_insert VALUES (3, 'c')) s` | `UnsupportedOperationException` | `This feature is not implemented: Query INSERT INTO wbc1.ns.t_d_subq_from_insert VALUES (3, 'c') not implemented yet` | no |
+| `CREATE VIEW … AS <write>` | `CREATE VIEW wbc1.ns.z_x_view_insert AS INSERT INTO wbc1.ns.t_x_view_insert VALUES (3, 'c')` | `AnalysisException` | `Error during planning: a view body must hold a single query statement` | no |
+| `CACHE TABLE … AS <write>` | `CACHE TABLE zx_cache AS INSERT INTO wbc1.ns.t_x_cache_table_insert VALUES (3, 'c')` | `UnsupportedOperationException` | `This feature is not implemented: Unsupported SQL statement: CACHE TABLE zx_cache AS INSERT INTO wbc1.ns.t_x_cache_table_insert VALUES (3, 'c')` | no |
+- **Apache Spark** — the same shapes refuse with a parse error; one line per shape, the
+  class, condition, SQLSTATE and first line exactly as recorded:
+| Shape | Class | Condition | SQLSTATE | First line |
+|---|---|---|---|---|
+| set-operation arm | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 115)` |
+| CTE member | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 50)` |
+| subquery | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'wbc1': missing ')'. SQLSTATE: 42601 (line 1, pos 72)` |
+| `CREATE VIEW … AS <write>` | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 39)` |
+| `CACHE TABLE … AS <write>` | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 24)` |
+  *(oracle: live PySpark 4.1.2 + Iceberg, 2026-10-14, the scoped verifier of PR #1057.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. Nothing is written on either engine in these
+  shapes: every one of the fourteen cells answers refusal, `moved` is empty and the
+  before and after table states are equal on main and on Spark. The top-level and
+  parenthesised shapes are WRITE-BODY-CARRIERS-1's (PR #1057), outside U-7; this row
+  records only the shapes outside that unit. Owner ruling, question 46, 2026-10-14.
+  Unscheduled; no card in this change.
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers
