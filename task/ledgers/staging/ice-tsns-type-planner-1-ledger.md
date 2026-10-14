@@ -106,3 +106,8 @@ Step 0 is measured; step 1 needs three rulings before it opens:
 - Q1 (H1): does the scalar `range`-over-timestamps row halt the unit, or does Spark's integer-relation `range` clear it? Lean: clear it by refusing the scalar `range`/`generate_series` names with the other DataFusion-only names, since no Spark spelling calls them with timestamps.
 - Q2 (H2): does the DDL column-type row halt the unit, or does the planner proceed while DDL keeps resolving through the catalog mapping? Lean: proceed; the sketch never claims DDL for the planner.
 - Q3 (H3): what is the one custom timestamp-lattice coercion rule (name and placement) that step 1 adds for the twenty narrowing cells? Lean: a single analyzer rule before coercion that widens any microsecond/nanosecond mix to nanoseconds, by type, on `coalesce`, `UNION`, `array`, `CASE` and join keys, leaving comparisons to execution.
+- **Ruled 2026-10-13 (owner):** Q1 to Q3 are answered by
+  [amendment 1](../../wo/ice-tsns-type-planner-1/amendment-1.md): scalar `range` and
+  `generate_series` over timestamps refuse by name; the planner proceeds with DDL and
+  `Column.cast` pinned at microseconds; the lattice rule is `SparkTimestampUnitWiden`. Step 1
+  opens from this head after the owner's triage.
