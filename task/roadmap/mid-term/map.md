@@ -835,3 +835,5 @@ declines it (a dated ruling in the intake, then the archive).
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
+  **2026-10-14:** the measured shape closed by ICE-STRUCT-PAIRING-1 (R-021 CLOSED, cell
+  `by_name_case_twins`); the card's wider scope waits on the owner.

@@ -1447,7 +1447,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nested binding shapes (`append_nested_missing_subfield`, `append_nested_extra_subfield`,
   `op_nested_missing_subfield`, `oc_nested_upper_subfield`) answer Spark's recorded value in
   every observation, refusals under the R-4 prefix, through
-  `test_nested_binding_answers_as_spark`.
+  `test_nested_binding_answers_as_spark`. pins: ice-struct-pairing-1/C-019
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
   oracle entry through the helpers of `test_ice_write_df_1.py`: the missing bucket column
@@ -10297,4 +10297,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   to main; `test_l2_case_cells_keep_an_internal_refusal` names the four cells (v2 and v3,
   array, `case` and `case_reordered`) that moved from `Unsupported CAST` to the raw
   `arguments need to have the same data type`, and pins that text. All 36 non-refusal cells
-  stay open on parity row R-014. 2,458 tests pass on the head.
+  stay open on parity row R-014. 2,458 tests pass on the head. The fixture is also the evidence
+  of the unit's two revert-alone runs (facade flag: 141 red, all three by-name DataFrame doors;
+  callers: 573 red, the fixture's 566 and the seven retired residues) and of the registry rows
+  and 1.5.6 notes lines it closes. pins: ice-struct-pairing-1/C-001, C-003, C-004, C-005, C-008,
+  C-011, C-016, C-017, C-018, C-021, C-022, C-023

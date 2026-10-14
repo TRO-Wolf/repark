@@ -21,5 +21,6 @@ ICE-STRUCT-PAIRING-1 (2026-10-14, parity row R-016).
   `the_positional_overwrite_cast_s2_refuses_an_unpaired_struct_with_hint_h1` drives
   `positional_map_overwrite_batch` (S2) with and without a column list. S3 is pinned at the
   Spark door by `repark-spark/tests/struct_pairing_doors.rs`.
+  pins: ice-struct-pairing-1/C-001, C-002, C-003, C-006, C-007, C-009, C-010, C-013
 
 Up: [../map.md](../map.md).

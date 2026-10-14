@@ -107,7 +107,7 @@ holds behavior observed from outside the crate.
   row R-013:** at session build the ANSI door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
   entry names its own kernel, and the wall names equal `repark-functions`' constants. The
-  Spark door's twin is `repark-spark/tests/store_kernel_registry.rs`.
+  Spark door's twin is `repark-spark/tests/store_kernel_registry.rs`. pins: ice-struct-pairing-1/C-014
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

@@ -68,7 +68,7 @@ pins: rp-4-fork-repin/C-005, C-006
   refusal raised inside the rule reaches Python with its Spark condition on the head. The
   `overwrite(condition)` cells of `test_ice_write_df_2_overwrite.py` pin it.
   `install_statement_pairing` and the one-line source SQL of `append_with_options.rs` keep both
-  functions under clippy's line ceiling.
+  functions under clippy's line ceiling. pins: ice-struct-pairing-1/C-015
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)

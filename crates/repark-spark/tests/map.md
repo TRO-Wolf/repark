@@ -117,7 +117,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
   entry names its own kernel, and the wall names equal `repark-functions`' constants. The ANSI
-  door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`.
+  door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`. pins: ice-struct-pairing-1/C-014
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
@@ -135,6 +135,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   refuses with the static-partition hint and `PARTITION (p)` (S2 through
   `write_overwrite_staged_files_from_stream`) with the batch hint, the seeded row kept; the
   same static statement with the struct in the table's field order stores.
+  pins: ice-struct-pairing-1/C-002, C-008, C-009, C-011, C-013
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,
