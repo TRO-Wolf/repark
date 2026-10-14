@@ -9,5 +9,8 @@ recorder derives every reference from the rule at record time.
   DIFFERS label.
 - [main-cells.md](main-cells.md) — the readable counts by door and target and
   the verdict on the registry row's 72 cells.
+- [seams.md](seams.md) — the per-door Rust chain to the narrowing expression,
+  the narrowing kind and wall-localisation site per door, the EXPLAIN
+  cross-check, and the distinct-point count.
 
 Up: [../map.md](../map.md).
