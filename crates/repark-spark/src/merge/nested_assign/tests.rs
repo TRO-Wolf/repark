@@ -317,9 +317,8 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
     ]);
     assert_eq!(
         value_sql_for("v", &reordered, &required, &path, false).unwrap(),
-        "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
-         arrow_cast((get_field((v), 'x')), 'Int32'), 'y', \
-         arrow_cast((get_field((v), 'y')), 'Utf8')) END"
+        "arrow_cast((__repark_store_pair__((v), 'Struct(\"x\": non-null Int32, \"y\": Utf8)', \
+         'by_name', '``', '`st`.`inner`')), 'Struct(\"x\": non-null Int32, \"y\": Utf8)')"
     );
 }
 
