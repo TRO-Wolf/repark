@@ -968,6 +968,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
   TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
   pins: rp-5-fork-repin/C-004
+- `write_body_carriers.rs` — **WRITE-BODY-CARRIERS-1 build (2026-10-14):** CTAS with
+  an INSERT, UPDATE, DELETE or MERGE body refuses `PARSE_SYNTAX_ERROR` 42601 naming the
+  body's leading keyword before any write, over the `CREATE TABLE`, `CREATE OR REPLACE
+  TABLE` and `REPLACE TABLE` creators and the parenthesised body, with `t` row counts
+  and `z` presence unchanged; a SELECT-body CTAS still answers.
+  **Fold 1 (2026-10-14):** the same refusal is pinned for `IF NOT EXISTS` targets
+  new and existing, the doubly parenthesised body, the WITH-prefixed body bare and
+  parenthesised, and the missing-target `REPLACE TABLE` body.
+  pins: write-body-carriers-1/C-004
 - `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** short-VALUES arity pins on the
   inventory 3-col table. The e2e pin stamps `Plan` +
   `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` / `21S01` with the backticked
