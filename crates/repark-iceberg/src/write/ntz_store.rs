@@ -72,6 +72,10 @@ pub fn wall_kernel_reads(source: &DataType, target: &DataType) -> bool {
                     DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64
                 )
         }
+        (
+            DataType::Timestamp(TimeUnit::Microsecond, None),
+            DataType::Timestamp(TimeUnit::Nanosecond, None),
+        ) => true,
         _ => matches!(source, DataType::Timestamp(_, Some(_))),
     }
 }
@@ -94,7 +98,10 @@ pub fn ltz_instant_cast_sql(expr_sql: &str) -> String {
 pub fn needs_ltz_instant_cast(source: &DataType) -> bool {
     matches!(
         source,
-        DataType::Timestamp(TimeUnit::Microsecond, None) | DataType::Date32 | DataType::Date64
+        DataType::Timestamp(TimeUnit::Microsecond, None)
+            | DataType::Timestamp(TimeUnit::Nanosecond, _)
+            | DataType::Date32
+            | DataType::Date64
     )
 }
 
@@ -285,8 +292,9 @@ mod tests {
     use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 
     use super::{
-        NS_INSTANT_CAST_UDF_NAME, NS_WALL_CAST_UDF_NAME, NTZ_WALL_CAST_UDF_NAME, store_kernel_sql,
-        store_kernel_udf_name, wall_cast_udf_name, wall_kernel_input, wall_kernel_reads,
+        NS_INSTANT_CAST_UDF_NAME, NS_WALL_CAST_UDF_NAME, NTZ_WALL_CAST_UDF_NAME,
+        needs_ltz_instant_cast, store_kernel_sql, store_kernel_udf_name, wall_cast_udf_name,
+        wall_kernel_input, wall_kernel_reads,
     };
 
     #[test]
@@ -352,7 +360,7 @@ mod tests {
             (instant.clone(), true, true),
             (micros.clone(), false, true),
             (DataType::Date32, false, true),
-            (nanos.clone(), false, false),
+            (nanos.clone(), true, false),
             (DataType::Utf8, false, false),
             (DataType::Int64, false, false),
             (runs(&instant), false, true),
@@ -363,6 +371,19 @@ mod tests {
         ] {
             assert_eq!(wall_kernel_reads(&source, &micros), into_micros, "{source}");
             assert_eq!(wall_kernel_reads(&source, &nanos), into_nanos, "{source}");
+        }
+        for (source, cast) in [
+            (instant.clone(), false),
+            (micros.clone(), true),
+            (nanos.clone(), true),
+            (
+                DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC"))),
+                true,
+            ),
+            (DataType::Date32, true),
+            (DataType::Utf8, false),
+        ] {
+            assert_eq!(needs_ltz_instant_cast(&source), cast, "{source}");
         }
         assert_eq!(wall_kernel_input(&runs(&instant)), Some(&instant));
         assert_eq!(wall_kernel_input(&keyed(&micros)), Some(&micros));

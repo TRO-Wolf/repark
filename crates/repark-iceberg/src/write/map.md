@@ -597,6 +597,16 @@ repark-core's error map.
   stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
   fold); the ANSI door and bare sessions read it as UTC as before.
   pins: ntz-store-doors-1/C-002, C-003, C-004
+- `ntz_store.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the two router predicates
+  gain one arm each, so every staged door reaches `repark-functions`'
+  `timestamp_ns_cast::store_micros` by type, as INSERT does. `needs_ltz_instant_cast` accepts
+  `Timestamp(Nanosecond, _)`: `zone_store_frame` (every INSERT OVERWRITE spelling, the static
+  `PARTITION` door, INSERT … BY NAME, `overwritePartitions`, `insertInto(overwrite=True)`) and
+  the MERGE insert wrapper (`merge/insert.rs`) emit the cast to the column type that INSERT
+  plans, and the analyzer turns it into the narrowing kernel. `wall_kernel_reads` accepts a
+  naive nanosecond source for a `TIMESTAMP_NTZ` target, which then goes through the NTZ wall
+  kernel. Why: those doors narrowed in the write-side Arrow cast, toward zero and reading a
+  naive wall as UTC. pins: ice-tsns-floor-doors-1/C-010
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
   `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
   write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix
