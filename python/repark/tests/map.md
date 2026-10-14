@@ -8232,6 +8232,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   skipped (registry ICE-TSNS-SQL-1-R-002 evidence). No expectation is typed
   per table: the rule is Spark's rows equal RePark's rows.
   pins: ice-spark-cross-read-1/C-001
+- [test_acceptance_cross_read_local.py](test_acceptance_cross_read_local.py) —
+  **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the local cross-read leg: three
+  live cells (MOR, create-or-replace-twice, v3 DV plus adopted twin) run the
+  offline acceptance runners unchanged, assert their own outcomes, then
+  adopt every written table into a private live Spark catalog and assert
+  Spark rows equal RePark rows. Gated on the live flag plus a PySpark
+  importorskip; follows the live-cell rules (the shared session is never
+  stopped, one private catalog per test, no env reads in the body;
+  single-file seeding does not apply — the runners' multi-file layouts are
+  the point and rows, not file shapes, are compared). Runs under the
+  sparkenv interpreter with the release module on PYTHONPATH; the unit
+  ledger records the exact command.
+  pins: ice-spark-cross-read-1/C-002, C-003
 
 ## I want to...
 
