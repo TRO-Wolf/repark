@@ -11,21 +11,22 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.4 (2026-10-10):** R-007 (one nanosecond wall on every write door; nested `timestamp_ns` leaves refuse), ENC-1 (a keyed table refuses its first write), CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0. Tagged `v1.5.4` at `f4e424c1`; on PyPI 2026-10-10 12:23 UTC. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
+**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (pandas and polars nanosecond frames enter as floored microseconds, R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (carried; no fresh scoreboard run since `e845b73b`). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md).
 
-**v1.5.3 (2026-10-07):** SOURCE-URL-REDACT-1, -1-FN and -2 (credentials never displayed), ATTR-ID-1 (STAMP-2 gate 1.0812), the TA single-series slices, the ANSI -0.0 division, GROWN-STACK-GATE-1. Matrix 705/132/5/0. Tagged `v1.5.3` at `7a8fcf1a`. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
+**v1.5.4 (2026-10-10):** R-007, ENC-1, CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
 
-**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. Matrix 705/132/5/0. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
+**v1.5.3 (2026-10-07):** credential redaction, ATTR-ID-1, TA slices, ANSI -0.0 division, GROWN-STACK-GATE-1. Matrix 705/132/5/0. Tagged `v1.5.3` at `7a8fcf1a`. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
 
-**v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, the TIMESTAMP/NTZ/DATE/numeric store-assignment fixes, INTDIV-1. Matrix 705/132/5/0. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
+**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, the write-door and cast fixes. Matrix 705/132/5/0. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
+
+**v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, the store-assignment fixes, INTDIV-1. Matrix 705/132/5/0. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
 
 **v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The v1.5.0 gate is met: zero non-EQUAL cells that Spark
 4.1.2 answers on the 842-cell Spark + Iceberg matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`).
 Carved out: C-1 structured streaming (now 1.7) and C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5
 count EQUAL under dated harness rules (commit order, `_row_id` order). It covers inspection and nested DDL,
 metadata-table and time-travel reads, DataFrame and SQL writes, MERGE/UPDATE/DELETE, procedures and table
-properties, `TIMESTAMP_NTZ` literals and casts; the UUID refusal no longer panics on non-ASCII SQL. S3 path writes
-(U12) moved to v1.5.1. Additive under the API freeze. Notes:
+properties, `TIMESTAMP_NTZ` literals and casts; the UUID refusal no longer panics on non-ASCII SQL. Notes:
 [v1-5-0-release-notes-draft-2026-09-27.md](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
 
 **v1.4.2 (2026-09-15) — the second patch on 1.4.0, cut so DECIMAL-CACHE-1 (#632) reaches PyPI.**
