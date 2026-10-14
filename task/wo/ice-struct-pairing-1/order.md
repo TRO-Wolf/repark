@@ -1,7 +1,7 @@
 # ICE-STRUCT-PAIRING-1 (U-6, R-016): one rule pairs struct fields on every write door     grade: A   engine: Claude Opus 5.5 high, self-directed   release: 1.5.6
 
 **Status:** order, dispatched for the build on 2026-10-14 after step 0 and the owner's answers
-of the same day (§1). Written by Claude (claude-opus-5-5), lane B of the Iceberg closeout, on
+of the same day (§1); build round 2 dispatched the same day after questions 47 and 48. Written by Claude (claude-opus-5-5), lane B of the Iceberg closeout, on
 2026-10-13, from registry row ICE-TSNS-SQL-1-R-016 (audit item PA-07), ledger clause C-037 and
 question Q8 of `task/ledgers/staging/ice-tsns-merge-wall-1-ledger.md`. Main at writing:
 `018d0efd`. The sketch is part of this order: where the order says §n it means the sketch's
@@ -72,6 +72,27 @@ reading of how a value was produced: the unit is refused at review if one appear
   guard (owner lean A, pending). The H-1 guard may then be one check there for all three casts.
   If the owner strikes lean A, U-3's revert restores the three casts and the guard goes back to
   the three places §2 lists. Merge `origin/main` once U-3 lands; never rebase.
+- **Build round 1 (2026-10-14, Opus lane A) halted** on two §6 rules: 18 cells of list L2
+  moved (refusal to refusal, none stores), and the ANSI door's struct MERGE refused
+  `Invalid function '__repark_store_pair__'` where main stores, because the shared MERGE and
+  UPDATE text names the kernel and that door does not register it. Round 2 continues from
+  `6b59b5b2`; the round count for the class "a struct field paired by a rule other than
+  Spark's" is build round 2, and the rest of §4 (steps 5 and 6) runs inside it.
+- **Owner, 2026-10-14, question 47 (one registration table):** one table of the by-name store
+  kernels (the pairing kernel and the integer store casts) in
+  `crates/repark-iceberg/src/write/store_cast.rs`, called by both doors: the Spark door's
+  `SparkExtension::register` and the ANSI door's `AnsiDialect::on_session_built`. The
+  nanosecond wall kernels stay in `repark-functions` and are listed in one constant that the
+  pin reads. The pin proves that every name on R-013's row resolves on both doors at session
+  build; it is the gate for U-1's kernel retirement later. `repark-sql/src/dialect.rs` and
+  `repark-spark/src/extension.rs` join §2. One table owning the wall kernels too is not a U-6
+  matter.
+- **Owner, 2026-10-14, question 48 (list L2):** L2 is re-pinned. The 14 cells that now give
+  Spark's refusal pin it; the 4 that moved from one internal error to another are listed by
+  name in R-014's row as still internal, so the row records that they are not refusals with a
+  hint. R-014 stays open for the shapes Spark stores. The `is_flat` return of
+  `refuse_unless_write_store_assignable` stays. The H-1 guard is one check inside
+  `conform::strict_store_cast` for S1, S2 and S3.
 
 ## 2. Files
 
@@ -87,6 +108,8 @@ exception list for the rest). Every `.rs`, `.py` and `.toml` change updates its 
 | `crates/repark-iceberg/src/write/store_assign.rs` | `struct_fields_store_assignable`, `map_entries_store_assignable` and the `is_flat` return replaced by the seam |
 | `crates/repark-iceberg/src/write/conform.rs`, `overwrite.rs`, `partition_overwrite.rs` | the guard of hint H-1 before the three casts |
 | `crates/repark-iceberg/src/write/merge/insert.rs`, `predicate_dml.rs` | pass by name to `wrap_store_outputs` |
+| `crates/repark-iceberg/src/write/store_cast.rs` | the one table of by-name store kernels and the function that registers it (question 47) |
+| `crates/repark-sql/src/dialect.rs`, `crates/repark-spark/src/extension.rs` | each door calls the table's registration at session build (question 47) |
 | `crates/repark-spark/src/spark_ast.rs`, `router.rs`, `insert_by_name.rs`, `insert_overwrite.rs`, `insert_overwrite/store.rs`, `append_with_options.rs`, `router/insert_positional/replace_where.rs` | carry the door's mode to the conform |
 | `crates/repark-spark/src/merge/nested_assign.rs`, `merge/nested_assign/expand.rs`, `merge/nested_assign/render.rs` | deletions of §5 |
 | `crates/repark-spark/src/insert_by_name/nested.rs` | deleted |
