@@ -1,0 +1,1370 @@
+{
+ "provenance": {
+  "engine": "spark",
+  "spark": "4.1.2",
+  "iceberg": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "date": "2026-10-14"
+ },
+ "cells": [
+  {
+   "id": "create_insert_z_new",
+   "creator": "create",
+   "body": "insert",
+   "z_state": "z_new",
+   "statement": "CREATE TABLE wbc1.ns.z_create_insert_z_new AS INSERT INTO wbc1.ns.t_create_insert_z_new VALUES (3, 'c')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 46)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 46)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_insert_z_new AS INSERT INTO wbc1.ns.t_create_insert_z_new VALUES (3, 'c')\n----------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_insert_z_exists",
+   "creator": "create",
+   "body": "insert",
+   "z_state": "z_exists",
+   "statement": "CREATE TABLE wbc1.ns.z_create_insert_z_exists AS INSERT INTO wbc1.ns.t_create_insert_z_exists VALUES (3, 'c')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 49)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 49)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_insert_z_exists AS INSERT INTO wbc1.ns.t_create_insert_z_exists VALUES (3, 'c')\n-------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "create_overwrite_z_new",
+   "creator": "create",
+   "body": "overwrite",
+   "z_state": "z_new",
+   "statement": "CREATE TABLE wbc1.ns.z_create_overwrite_z_new AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_new VALUES (10, 'w')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 49)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 49)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_overwrite_z_new AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_new VALUES (10, 'w')\n-------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_overwrite_z_exists",
+   "creator": "create",
+   "body": "overwrite",
+   "z_state": "z_exists",
+   "statement": "CREATE TABLE wbc1.ns.z_create_overwrite_z_exists AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_exists VALUES (10, 'w')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 52)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 52)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_overwrite_z_exists AS INSERT OVERWRITE wbc1.ns.t_create_overwrite_z_exists VALUES (10, 'w')\n----------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "create_update_z_new",
+   "creator": "create",
+   "body": "update",
+   "z_state": "z_new",
+   "statement": "CREATE TABLE wbc1.ns.z_create_update_z_new AS UPDATE wbc1.ns.t_create_update_z_new SET v = 'x' WHERE id = 1",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'UPDATE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 46)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 46)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_update_z_new AS UPDATE wbc1.ns.t_create_update_z_new SET v = 'x' WHERE id = 1\n----------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_update_z_exists",
+   "creator": "create",
+   "body": "update",
+   "z_state": "z_exists",
+   "statement": "CREATE TABLE wbc1.ns.z_create_update_z_exists AS UPDATE wbc1.ns.t_create_update_z_exists SET v = 'x' WHERE id = 1",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'UPDATE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 49)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 49)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_update_z_exists AS UPDATE wbc1.ns.t_create_update_z_exists SET v = 'x' WHERE id = 1\n-------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "create_delete_z_new",
+   "creator": "create",
+   "body": "delete",
+   "z_state": "z_new",
+   "statement": "CREATE TABLE wbc1.ns.z_create_delete_z_new AS DELETE FROM wbc1.ns.t_create_delete_z_new WHERE id = 2",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'DELETE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 46)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 46)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_delete_z_new AS DELETE FROM wbc1.ns.t_create_delete_z_new WHERE id = 2\n----------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_delete_z_exists",
+   "creator": "create",
+   "body": "delete",
+   "z_state": "z_exists",
+   "statement": "CREATE TABLE wbc1.ns.z_create_delete_z_exists AS DELETE FROM wbc1.ns.t_create_delete_z_exists WHERE id = 2",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'DELETE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 49)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 49)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_delete_z_exists AS DELETE FROM wbc1.ns.t_create_delete_z_exists WHERE id = 2\n-------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "create_merge_z_new",
+   "creator": "create",
+   "body": "merge",
+   "z_state": "z_new",
+   "statement": "CREATE TABLE wbc1.ns.z_create_merge_z_new AS MERGE INTO wbc1.ns.t_create_merge_z_new USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'MERGE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 45)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 45)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_merge_z_new AS MERGE INTO wbc1.ns.t_create_merge_z_new USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_new.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)\n---------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "create_merge_z_exists",
+   "creator": "create",
+   "body": "merge",
+   "z_state": "z_exists",
+   "statement": "CREATE TABLE wbc1.ns.z_create_merge_z_exists AS MERGE INTO wbc1.ns.t_create_merge_z_exists USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_exists.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'MERGE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 48)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 48)\n\n== SQL ==\nCREATE TABLE wbc1.ns.z_create_merge_z_exists AS MERGE INTO wbc1.ns.t_create_merge_z_exists USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_create_merge_z_exists.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)\n------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "or_replace_insert_z_new",
+   "creator": "or_replace",
+   "body": "insert",
+   "z_state": "z_new",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_new AS INSERT INTO wbc1.ns.t_or_replace_insert_z_new VALUES (3, 'c')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 61)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 61)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_new AS INSERT INTO wbc1.ns.t_or_replace_insert_z_new VALUES (3, 'c')\n-------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_insert_z_exists",
+   "creator": "or_replace",
+   "body": "insert",
+   "z_state": "z_exists",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_exists AS INSERT INTO wbc1.ns.t_or_replace_insert_z_exists VALUES (3, 'c')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 64)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 64)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_insert_z_exists AS INSERT INTO wbc1.ns.t_or_replace_insert_z_exists VALUES (3, 'c')\n----------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "or_replace_overwrite_z_new",
+   "creator": "or_replace",
+   "body": "overwrite",
+   "z_state": "z_new",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_new AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_new VALUES (10, 'w')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 64)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 64)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_new AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_new VALUES (10, 'w')\n----------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_overwrite_z_exists",
+   "creator": "or_replace",
+   "body": "overwrite",
+   "z_state": "z_exists",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_exists AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_exists VALUES (10, 'w')",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'INSERT'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 67)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 67)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_overwrite_z_exists AS INSERT OVERWRITE wbc1.ns.t_or_replace_overwrite_z_exists VALUES (10, 'w')\n-------------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "or_replace_update_z_new",
+   "creator": "or_replace",
+   "body": "update",
+   "z_state": "z_new",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_new AS UPDATE wbc1.ns.t_or_replace_update_z_new SET v = 'x' WHERE id = 1",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'UPDATE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 61)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 61)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_new AS UPDATE wbc1.ns.t_or_replace_update_z_new SET v = 'x' WHERE id = 1\n-------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_update_z_exists",
+   "creator": "or_replace",
+   "body": "update",
+   "z_state": "z_exists",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_exists AS UPDATE wbc1.ns.t_or_replace_update_z_exists SET v = 'x' WHERE id = 1",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'UPDATE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 64)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'UPDATE'. SQLSTATE: 42601 (line 1, pos 64)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_update_z_exists AS UPDATE wbc1.ns.t_or_replace_update_z_exists SET v = 'x' WHERE id = 1\n----------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "or_replace_delete_z_new",
+   "creator": "or_replace",
+   "body": "delete",
+   "z_state": "z_new",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_new AS DELETE FROM wbc1.ns.t_or_replace_delete_z_new WHERE id = 2",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'DELETE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 61)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 61)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_new AS DELETE FROM wbc1.ns.t_or_replace_delete_z_new WHERE id = 2\n-------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_delete_z_exists",
+   "creator": "or_replace",
+   "body": "delete",
+   "z_state": "z_exists",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_exists AS DELETE FROM wbc1.ns.t_or_replace_delete_z_exists WHERE id = 2",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'DELETE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 64)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'DELETE'. SQLSTATE: 42601 (line 1, pos 64)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_delete_z_exists AS DELETE FROM wbc1.ns.t_or_replace_delete_z_exists WHERE id = 2\n----------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "id": "or_replace_merge_z_new",
+   "creator": "or_replace",
+   "body": "merge",
+   "z_state": "z_new",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_new AS MERGE INTO wbc1.ns.t_or_replace_merge_z_new USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'MERGE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 60)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 60)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_new AS MERGE INTO wbc1.ns.t_or_replace_merge_z_new USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_new.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)\n------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": false
+    }
+   }
+  },
+  {
+   "id": "or_replace_merge_z_exists",
+   "creator": "or_replace",
+   "body": "merge",
+   "z_state": "z_exists",
+   "statement": "CREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_exists AS MERGE INTO wbc1.ns.t_or_replace_merge_z_exists USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)",
+   "outcome": {
+    "answered": false,
+    "class": "ParseException",
+    "error_class": "PARSE_SYNTAX_ERROR",
+    "condition": "PARSE_SYNTAX_ERROR",
+    "sqlstate": "42601",
+    "parameters": {
+     "error": "'MERGE'",
+     "hint": ""
+    },
+    "first_line": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 63)",
+    "message": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near 'MERGE'. SQLSTATE: 42601 (line 1, pos 63)\n\n== SQL ==\nCREATE OR REPLACE TABLE wbc1.ns.z_or_replace_merge_z_exists AS MERGE INTO wbc1.ns.t_or_replace_merge_z_exists USING (SELECT 2 AS id, 'm' AS v UNION ALL SELECT 9 AS id, 'n' AS v) s ON wbc1.ns.t_or_replace_merge_z_exists.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)\n---------------------------------------------------------------^^^\n"
+   },
+   "before": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   },
+   "after": {
+    "t": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 2,
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ]
+     ]
+    },
+    "z": {
+     "exists": true,
+     "snapshots": 1,
+     "row_count": 1,
+     "rows": [
+      [
+       100,
+       "z"
+      ]
+     ]
+    }
+   }
+  }
+ ]
+}
