@@ -5,8 +5,6 @@ session zone, a wall is stored as it is, and no digit below the microsecond is d
 every door. Spark 4.1.2 with Iceberg 1.11.0 cannot read or write the type, so the expectation is
 the rule INSERT already follows (ICE-TSNS-SQL-1), computed here with ``zoneinfo``.
 
-Every other target type is a control: its cells must answer exactly what main ``40fc916f``
-answered, recorded in ``ice_tsns_merge_wall_1_main.json`` for one zone, the one with a DST rule.
 The carries and the other zones' controls are pinned at the Rust door
 (``crates/repark-spark/tests/timestamp_ns_wall_doors.rs``).
 
@@ -24,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import _ice_tsns_merge_wall_1_doors as doors
+import _record_ice_tsns_floor_doors_1_main as floors
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
@@ -49,6 +48,19 @@ INSTANT_WRONG_DOORS = (
 UNFILTERED_UPDATE_SOURCES = ("l", "n", "tzns")
 CONTROL_TARGETS = tuple(target for target in doors.TARGETS if target not in ("ts_ns", "tz_ns"))
 CONTROL_ZONE = doors.CONTROL_ZONE
+FLOORED_SOURCES = floors.SOURCES
+MOVED_CONTROL_CELLS = 94
+
+
+def floored_values(target: str, source: str) -> list[int]:
+    return [floors.rule_expected(source, target, tick, CONTROL_ZONE) for tick in doors.NANOS]
+
+
+def control_cell(target: str, door: str, source: str) -> dict[str, Any]:
+    recorded = main_cell(CONTROL_ZONE, target, door, source)
+    if source not in FLOORED_SOURCES or "error" in recorded:
+        return recorded
+    return {**recorded, "values": floored_values(target, source)}
 
 
 def main_cell(zone: str, target: str, door: str, part: str) -> dict[str, Any]:
@@ -127,11 +139,24 @@ def test_every_door_stores_the_session_wall_in_timestamp_ns(
 @pytest.mark.parametrize("door", list(doors.DOORS))
 @pytest.mark.parametrize("target", CONTROL_TARGETS)
 def test_control_targets_answer_what_main_answered(tmp_path: Path, target: str, door: str) -> None:
-    """The microsecond targets, v3 and v2, do not move (``timestamptz_ns``: ICE-TSTZNS-WALL-1)."""
     cells = measured(tmp_path, CONTROL_ZONE, target, door)
     for source in doors.SOURCES:
-        recorded = main_cell(CONTROL_ZONE, target, door, source)
-        assert cells[source] == recorded, (target, door, source)
+        assert cells[source] == control_cell(target, door, source), (target, door, source)
+
+
+def test_main_held_the_floor_on_every_nanosecond_control_cell_but_the_moved_ones() -> None:
+    moved = held = refused = 0
+    for target in CONTROL_TARGETS:
+        for door in doors.DOORS:
+            for source in FLOORED_SOURCES:
+                recorded = main_cell(CONTROL_ZONE, target, door, source)
+                if "error" in recorded:
+                    refused += 1
+                elif recorded == control_cell(target, door, source):
+                    held += 1
+                else:
+                    moved += 1
+    assert (moved, held, refused) == (MOVED_CONTROL_CELLS, 46, 12)
 
 
 @pytest.mark.parametrize("zone", doors.ZONES)

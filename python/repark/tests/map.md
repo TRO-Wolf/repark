@@ -3231,7 +3231,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
   microsecond controls are unchanged.
   pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
-- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-MERGE-WALL-1
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-FLOOR-DOORS-1
+  (2026-10-14), the re-pin:** the control test no longer holds a `timestamp_ns` or
+  `timestamptz_ns` source into a microsecond target as main answered it. `control_cell` takes
+  those cells' ticks from `_record_ice_tsns_floor_doors_1_main.rule_expected` (the floor and the
+  New York wall) and keeps main's recorded type, ids and refusals; every other source stays main's
+  recording. `test_main_held_the_floor_on_every_nanosecond_control_cell_but_the_moved_ones`
+  counts what moved: 94 of main's 152 such cells differed from the rule (24 `TIMESTAMP` cells on
+  the six overwrite and MERGE insert doors, 70 `TIMESTAMP_NTZ` cells), 46 held it, 12 are
+  refusals (4 the v2 `UPDATE` of a nanosecond column, 8 R-010's `UPDATE` literal). `ice_tsns_merge_wall_1_main.json` is unchanged: re-recorded on main's
+  module (`293896ce`) its 384 control cells are byte-equal, and its nanosecond-target cells are
+  the `40fc916f` history the first test counts. The module docstring's sentence that every
+  control answers main was deleted, as was the control test's docstring.
+  pins: ice-tsns-floor-doors-1/C-011
+  **ICE-TSNS-MERGE-WALL-1
   fold 1 (2026-10-09), the pin budget:** the module is cut from 464 tests to 179. Kept: the 57
   `timestamp_ns` door tests in all three zones, and the control doors in **one** zone,
   America/New_York (95 tests); they are the pins that kill the lane's mutant M5 and the
@@ -10204,3 +10217,42 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   when the box lane is absent. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: parity-live-infra-2/C-001
+- [_record_ice_tsns_floor_doors_1_main.py](_record_ice_tsns_floor_doors_1_main.py) —
+  **ICE-TSNS-FLOOR-DOORS-1 step 0 (2026-10-14):** the door-matrix recorder for
+  parity row R-009. It reuses the merge-wall door helpers by import and writes
+  eleven probe ticks (sub-microsecond negatives around the epoch, New York
+  repeated- and skipped-hour walls, int64 nanosecond extremes) from
+  `timestamp_ns` and `timestamptz_ns` sources into `TIMESTAMP` and
+  `TIMESTAMP_NTZ` targets over nine doors, two format versions and three
+  zones. Each cell stores the read-back microsecond ticks beside the
+  harness-derived floor and session-zone references with an EQUAL-RULE or
+  DIFFERS label. Evidence:
+  [main-cells.json](../../../task/wo/ice-tsns-floor-doors-1/evidence/main-cells.json)
+  and [main-cells.md](../../../task/wo/ice-tsns-floor-doors-1/evidence/main-cells.md).
+  No module docstring beyond the one line: the lane's no-comments ruling
+  covers the new file; the contract lives here.
+  pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
+- [test_ice_tsns_floor_doors_1.py](test_ice_tsns_floor_doors_1.py) —
+  **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14), parity row R-009:** one floor on every
+  door into a microsecond `TIMESTAMP` or `TIMESTAMP_NTZ` column, 246 tests.
+  `test_every_step0_door_stores_the_floor_in_the_session_zone`: step 0's 216
+  combinations (nine doors, `TIMESTAMP` and `TIMESTAMP_NTZ` on format versions 2
+  and 3, three zones, eleven ticks) plus a `TIMESTAMP_NTZ` and a `TIMESTAMP`
+  source on every door. `test_every_added_door_and_layout_stores_the_floor_in_the_session_zone`:
+  INSERT BY NAME, INSERT OVERWRITE BY NAME and with a column list, INSERT
+  OVERWRITE with a static `PARTITION`, REPLACE WHERE, `overwrite(cond)`,
+  `saveAsTable` append and the star and literal MERGE spellings, each unpartitioned
+  and partitioned by `k`, copy-on-write and merge-on-read (the static `PARTITION`
+  door partitioned only). Every expected tick comes from the recorder's
+  `rule_expected` (floor by `//`, the wall through `zoneinfo`); a microsecond
+  source runs through the same rule on its nanosecond twin, and every microsecond
+  cell is green on main, so the head must store what main stores there. The only
+  expected refusal is the v2 UPDATE of a nanosecond sibling column (`not supported
+  until v3`). `test_the_ntz_read_cast_of_a_nanosecond_source_floors` pins the
+  read `CAST(ns AS TIMESTAMP_NTZ)` on its own name (built on the orchestrator's
+  lean B: `-1 ns` reads `-1 µs`, main `0`);
+  `test_the_ltz_read_cast_of_a_nanosecond_source_floors` is its control. Red
+  first on main: 180 of 246 tests, 4400 ticks; green on the head. It is the pin of
+  registry row R-009 (FIXED 2026-10-14) and of the 1.5.6 notes draft's stored-value lines.
+  No module docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. pins: ice-tsns-floor-doors-1/C-008, C-013

@@ -15,6 +15,7 @@ use crate::catalog::uuid_presentation::{
 };
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency as write_partitioned;
 use crate::write::concurrency::WriteConcurrency;
+use crate::write::conform::strict_store_cast;
 use crate::write::merge::write_data_files_from_stream_with_concurrency;
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 
@@ -104,18 +105,13 @@ pub fn positional_map_overwrite_batch(
     table_schema: &SchemaRef,
     column_names: &[String],
 ) -> Result<RecordBatch> {
-    use datafusion::arrow::compute::CastOptions;
     use datafusion::arrow::datatypes::Field;
 
-    let strict = CastOptions {
-        safe: false,
-        ..CastOptions::default()
-    };
     let field_count = table_schema.fields().len();
     let columns: Vec<datafusion::arrow::array::ArrayRef> = if column_names.is_empty() {
-        positional_map_all_columns(batch, table_schema, field_count, &strict)?
+        positional_map_all_columns(batch, table_schema, field_count)?
     } else {
-        positional_map_column_list(batch, table_schema, column_names, field_count, &strict)?
+        positional_map_column_list(batch, table_schema, column_names, field_count)?
     };
     let fields: Vec<Field> = table_schema
         .fields()
@@ -145,10 +141,7 @@ fn positional_map_all_columns(
     batch: &RecordBatch,
     table_schema: &SchemaRef,
     field_count: usize,
-    strict: &datafusion::arrow::compute::CastOptions<'static>,
 ) -> Result<Vec<datafusion::arrow::array::ArrayRef>> {
-    use datafusion::arrow::compute::cast_with_options;
-
     if batch.num_columns() != field_count {
         return Err(DataFusionError::Plan(format!(
             "INSERT OVERWRITE column count mismatch: source has {} columns, target table \
@@ -168,13 +161,17 @@ fn positional_map_all_columns(
                 batch.column(index).data_type(),
                 field.data_type(),
             )?;
-            cast_with_options(batch.column(index), field.data_type(), strict).map_err(|error| {
-                DataFusionError::Execution(format!(
-                    "INSERT OVERWRITE cast of source column {index} to `{}` ({}) failed: {error}",
-                    field.name(),
-                    field.data_type()
-                ))
-            })
+            strict_store_cast(field.name(), batch.column(index), field.data_type()).map_err(
+                |error| match error {
+                    DataFusionError::ArrowError(error, _) => DataFusionError::Execution(format!(
+                        "INSERT OVERWRITE cast of source column {index} to `{}` ({}) failed: \
+                         {error}",
+                        field.name(),
+                        field.data_type()
+                    )),
+                    other => other,
+                },
+            )
         })
         .collect()
 }
@@ -185,10 +182,8 @@ fn positional_map_column_list(
     table_schema: &SchemaRef,
     column_names: &[String],
     field_count: usize,
-    strict: &datafusion::arrow::compute::CastOptions<'static>,
 ) -> Result<Vec<datafusion::arrow::array::ArrayRef>> {
     use datafusion::arrow::array::new_null_array;
-    use datafusion::arrow::compute::cast_with_options;
 
     if batch.num_columns() != column_names.len() {
         return Err(DataFusionError::Plan(format!(
@@ -225,14 +220,15 @@ fn positional_map_column_list(
             batch.column(source_index).data_type(),
             field.data_type(),
         )?;
-        let casted = cast_with_options(batch.column(source_index), field.data_type(), strict)
-            .map_err(|error| {
-                DataFusionError::Execution(format!(
+        let casted = strict_store_cast(field.name(), batch.column(source_index), field.data_type())
+            .map_err(|error| match error {
+                DataFusionError::ArrowError(error, _) => DataFusionError::Execution(format!(
                     "INSERT OVERWRITE cast of list column `{}` to `{}` ({}) failed: {error}",
                     column_names[source_index],
                     field.name(),
                     field.data_type()
-                ))
+                )),
+                other => other,
             })?;
         columns[target_index] = Some(casted);
     }

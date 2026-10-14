@@ -77,6 +77,7 @@ use crate::catalog::uuid_presentation::{convert_uuid_column, presented_arrow_sch
 #[cfg(test)]
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::conflict_filter::from_merge_on;
+use crate::write::conform::refuse_coarser_timestamp;
 pub(crate) use crate::write::name_resolution::{
     CaseInsensitiveColumnIndex, SourceMatch, dedup_key, resolve_write_column,
 };
@@ -558,7 +559,11 @@ pub(super) fn cast_one_batch_to_write_schema(
     let columns = write_schema
         .fields()
         .iter()
-        .map(|field| convert_uuid_column(named_column(batch, field.name())?, field.data_type()))
+        .map(|field| {
+            let column = named_column(batch, field.name())?;
+            refuse_coarser_timestamp(field.name(), column.data_type(), field.data_type())?;
+            convert_uuid_column(column, field.data_type())
+        })
         .collect::<Result<Vec<_>>>()?;
     Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
 }
