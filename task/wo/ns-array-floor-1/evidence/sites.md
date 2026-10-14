@@ -1,37 +1,37 @@
-# NS-ARRAY-FLOOR-1 refusal sites (D3)
+# NS-ARRAY-FLOOR-1 refusal sites (D3, restated in F3 from F1 and F2)
 
 D1 input side: zero cells error on main and on the U-1 head, so no input
 refusal site exists. Every door receives a nanosecond frame or batch; the
 only main-vs-U-1 difference is the dtype seen for the two widened shapes
-(microseconds on main, nanoseconds on the U-1 head).
+(microseconds on main, nanoseconds on the U-1 head). On live Spark 4.1.2 a
+microsecond TIMESTAMP arrives as `datetime64[ns]` in pandas and as
+`timestamp[us, tz=UTC]` in Arrow batches.
 
-D2 output side on main: 9 cells floor to microseconds, 27 refuse. Spark
-4.1.2 behavior below is the card's recorded verdict 2 of draft PR 1047
-(parity row ICE-TSNS-SQL-1-R-020), not a lane re-measurement: under
-`array<timestamp>` Spark floors to ticks `[1767323045123456,
-1767323045000000]`; under `array<timestamp_ntz>` Spark refuses with
-`ArrowNotImplementedError: Expected np.datetime64 but got: timestamp[ns]`;
-a top-level `datetime64[ns]` column under `timestamp` raises
-`PySparkValueError`.
-
-## Main vs Spark on the card-measured doors
-
-| Door | array plus timestamp | array plus timestamp_ntz | top-level control |
-|---|---|---|---|
-| grouped applyInPandas | floors, ticks match Spark | floors where Spark refuses | refuses, as Spark does |
-| cogroup applyInPandas | floors, ticks match Spark | floors where Spark refuses | refuses, as Spark does |
-
-Main behavior on the other doors (Spark not measured in this lane):
+D2 output side, main against live Spark 4.1.2 at the default safe setting
+(true in the lane environment), per door as same or differs. Joint answers
+store equal ticks everywhere; stored ticks equal frame ticks everywhere
+either engine stores.
 
 | Door | array plus timestamp | array plus timestamp_ntz | top-level |
 |---|---|---|---|
-| grouped applyInArrow | refuses | refuses | refuses |
-| cogroup applyInArrow | refuses | refuses | refuses |
-| mapInPandas | refuses (inferred naive us vs declared tz) | floors | refuses |
-| mapInArrow | refuses | refuses | refuses |
-| scalar pandas_udf | floors | floors | refuses |
-| grouped-aggregate pandas_udf | floors | floors | refuses |
-| scalar arrow_udf | refuses | refuses | refuses |
+| grouped applyInPandas | same, floor | same, floor | same, both refuse |
+| cogroup applyInPandas | same, floor | same, floor | same, both refuse |
+| grouped applyInArrow | same, both refuse | same, both refuse | same, both refuse |
+| cogroup applyInArrow | same, both refuse | same, both refuse | same, both refuse |
+| mapInPandas | differs: main refuses, Spark floors | same, floor | same, both refuse |
+| mapInArrow | same, both refuse | same, both refuse | same, both refuse |
+| scalar pandas_udf | same, floor | same, floor | same, both refuse |
+| grouped-aggregate pandas_udf | same, floor | same, floor | same, both refuse |
+| scalar arrow_udf | same, both refuse | same, both refuse | same, both refuse |
+
+Spark's own split under safe=false, measured: arrays floor to
+`[1767323045123456, 1767323045000000, 1767323045000000, -1, -2]`,
+top-level columns truncate toward zero to `[1767323045123456, None,
+1767323045000000, 0, -1]`. Under safe=true the top-level cells raise the
+worker `PySparkValueError: Failed to convert the value of the column 'v'`,
+and a whole-microsecond value answers. The card's verdict-2 refusal under
+`array<timestamp_ntz>` does not reproduce on this lane's pandas 3.0.6:
+Spark floors there under both settings.
 
 ## Door to site
 
@@ -56,3 +56,4 @@ grouped caller and the cogroup caller, and grouped and cogroup applyInArrow
 share the `:271` function through the grouped caller and the cogroup caller.
 
 sites: 6 (python/repark/src/repark/spark/dataframe/grouped_arrow.py:103, python/repark/src/repark/spark/dataframe/grouped_arrow.py:271, python/repark/src/repark/spark/dataframe/udf_schema.py:60, python/repark/src/repark/spark/dataframe/udf_bridge.py:140, python/repark/src/repark/spark/functions_arrow_udf.py:121, python/repark/src/repark/spark/dataframe/udf_bridge.py:38)
+rule per site: grouped_arrow.py:103 floors nanoseconds inside arrays and refuses a top-level nanosecond column; grouped_arrow.py:271 refuses every nanosecond-versus-microsecond mismatch; udf_schema.py:60 refuses every yielded batch mismatch; udf_bridge.py:140 floors nanoseconds inside list Series and refuses a top-level nanosecond Series; functions_arrow_udf.py:121 refuses every unsafe nanosecond cast; udf_bridge.py:38 infers naive nanosecond arrays as microseconds before validation
