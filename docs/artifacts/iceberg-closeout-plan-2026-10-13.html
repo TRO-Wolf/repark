@@ -1,0 +1,112 @@
+<title>Iceberg Closeout Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--ground:#F2F5F7;--paper:#FFFFFF;--ink:#16232B;--muted:#56666F;--line:#D3DCE1;--accent:#0E6C88;--accent-ink:#FFFFFF;--warn:#9A5B00;--warn-bg:#FFF4DE;--ok:#1E6E3C;--ok-bg:#E3F3E8;--bad:#9B2C2C;--bad-bg:#FBE7E7;--exp:#6B4C9A;--exp-bg:#EFE8F8;--code-bg:#E8EEF1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#0E1418;--paper:#151D22;--ink:#E4ECF0;--muted:#9BAAB2;--line:#2A363D;--accent:#4DB1CF;--accent-ink:#0E1418;--warn:#F0B35A;--warn-bg:#2E2411;--ok:#6CCB8E;--ok-bg:#12291B;--bad:#F08C8C;--bad-bg:#331717;--exp:#B79CE6;--exp-bg:#241B33;--code-bg:#1C262C;color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#0E1418;--paper:#151D22;--ink:#E4ECF0;--muted:#9BAAB2;--line:#2A363D;--accent:#4DB1CF;--accent-ink:#0E1418;--warn:#F0B35A;--warn-bg:#2E2411;--ok:#6CCB8E;--ok-bg:#12291B;--bad:#F08C8C;--bad-bg:#331717;--exp:#B79CE6;--exp-bg:#241B33;--code-bg:#1C262C;color-scheme:dark}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;margin:0;padding-block:28px;padding-inline:16px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;text-wrap:balance;margin:0}
+h1{font-size:2rem;font-weight:600;line-height:1.1}
+h2{font-size:1.3rem;font-weight:600;border-bottom:2px solid var(--accent);padding-bottom:6px;margin-bottom:12px}
+h3{font-size:1.05rem;font-weight:600;margin-top:14px;margin-bottom:6px}
+p{margin:0 0 10px;max-width:72ch}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:500}
+.lede{color:var(--muted);max-width:72ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
+.card h3{margin-top:0}
+.tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.06em;padding:2px 8px;border-radius:3px;font-weight:500;white-space:nowrap}
+.t-prod{background:var(--ok-bg);color:var(--ok)}.t-hn{background:var(--warn-bg);color:var(--warn)}.t-exp{background:var(--exp-bg);color:var(--exp)}.t-bad{background:var(--bad-bg);color:var(--bad)}.t-opus{background:var(--accent);color:var(--accent-ink)}.t-muse{background:var(--code-bg);color:var(--ink)}.t-clerk{background:var(--code-bg);color:var(--muted)}
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;background:var(--code-bg);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n{font-family:"IBM Plex Mono",monospace;white-space:nowrap;font-variant-numeric:tabular-nums}
+code{font-family:"IBM Plex Mono",monospace;font-size:.86em;background:var(--code-bg);padding:1px 4px;border-radius:3px}
+ul,ol{margin:0 0 10px;padding-left:22px}li{margin-bottom:4px;max-width:72ch}
+.week{display:grid;grid-template-columns:120px 1fr;gap:10px;border-top:1px solid var(--line);padding:10px 0}
+.week:last-child{border-bottom:1px solid var(--line)}
+.week .w{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600}
+.week .w small{display:block;font-family:"IBM Plex Mono",monospace;font-weight:400;color:var(--muted);font-size:.75rem}
+.note{border-left:3px solid var(--accent);padding:8px 12px;background:var(--paper);max-width:72ch}
+footer{color:var(--muted);font-size:.8rem;font-family:"IBM Plex Mono",monospace}
+@media (max-width:520px){.week{grid-template-columns:1fr}}
+</style>
+<div class="wrap">
+<header>
+<div class="kicker">RePark · Iceberg v2 and v3 · plan of record proposal · 2026-10-13</div>
+<h1>Iceberg Closeout Plan</h1>
+<p class="lede">The work that moves the two format-version labels from HARDENED-NARROW to PRODUCTION under the per-capability definition in PR #1044, drawn as thirteen units with a lane, a grade and an exit proof each, ordered over four weeks with two Opus 5.5 lanes. Main is <code>be011012</code>; v1.5.5 is on the merge queue behind the quinn-proto lock bump.</p>
+</header>
+
+<section>
+<h2>1. What each tag has to prove</h2>
+<p>Production grade is granted per capability and never averaged. A label moves when every row below for that label is green on main with a dated pin, or carries a dated owner carve-out. Silent values disqualify; a refusal with a hint does not.</p>
+<div class="grid">
+<div class="card"><h3>v2 <span class="tag t-hn">HARDENED-NARROW</span> → <span class="tag t-prod">PRODUCTION</span></h3>
+<ul>
+<li><b>No silent value from any door.</b> R-016 struct pairing conformed to Spark's rule or struct writes refused with a hint (U-6); the CTAS write body refuses at parse (U-7); the nested microsecond NTZ wall, R-011, refused or fixed (U-8).</li>
+<li><b>Boundary and secrecy.</b> PA-01 to PA-04 closed (U-5); ENC-1 residue items 1 to 6 ruled (U-12).</li>
+<li><b>Integrity under failure.</b> Kill-mid-write pin, the unknown-commit-outcome drill run live on Glue and S3 Tables, a cross-release read pin (U-9).</li>
+<li><b>A second engine reads what we write.</b> Spark 4.1.2 reads every table the eleven acceptance legs write (U-10).</li>
+<li><b>A stated resource bound.</b> Ordered writes and MoR MERGE measured, the bound written down, exceeded means refused (U-11).</li>
+<li><b>Truth-up.</b> Fresh 842-cell count on the release build, registry rows re-dated, STATUS maturity section (U-13).</li>
+</ul></div>
+<div class="card"><h3>v3 core <span class="tag t-hn">HARDENED-NARROW</span> → <span class="tag t-prod">PRODUCTION</span></h3>
+<ul>
+<li><b>Everything on the v2 list, measured on v3 tables too.</b> Every U-5 to U-11 pin runs on both format versions; the matrix cells are per version already.</li>
+<li><b>v3 features exercised stay green.</b> Row lineage, deletion vectors, default values, the twenty north-star rows (all ✅ or DECLARED on 10-13).</li>
+<li><b>Nanosecond columns leave EXPERIMENTAL.</b> R-017 by the type planner (U-1), R-020 by the dtype floor (U-2), R-009 one floor on every door (U-3), R-012 message class (U-4), then R-010, R-013, R-018(1) and R-001 measured on the planner head.</li>
+<li><b>Dated carve-outs the label carries.</b> R-002: no second engine reads a nanosecond column, so nanosecond columns are labelled HARDENED-NARROW on their own row, not PRODUCTION, until one does. Nested nanosecond leaves refused by name (R-015, card ICE-TSNS-NESTED-1). Variant to 1.6. Streaming sink under C-1.</li>
+</ul></div>
+</div>
+<p class="note" style="margin-top:14px"><b>The honest line for v3.</b> The format-version label can reach PRODUCTION for the workloads we exercise. The nanosecond sub-capability cannot, by the definition's own cross-engine attribute, while Spark cannot read the column. The plan therefore ships v3 PRODUCTION with a dated R-002 carve-out row, which the owner signs (decision T-2), rather than waiting on an engine we do not control.</p>
+</section>
+
+<section>
+<h2>2. The units</h2>
+<div class="tbl"><table>
+<tr><th>Unit</th><th>Closes</th><th>What it does</th><th>Lane</th><th>Exit proof</th><th>Target</th></tr>
+<tr><td class="n">U-1<br>ICE-TSNS-TYPE-PLANNER-1</td><td>R-017; R-010, R-013, R-018(1) expected</td><td>A DataFusion <code>TypePlanner</code> maps SQL timestamp names to Spark's units at parse; the three rewrite-cast arms and the by-name lowering are deleted. Step 0 inventory is running.</td><td><span class="tag t-muse">Muse xhigh</span> step 0<br><span class="tag t-opus">Opus 5.5 high</span> step 1 + verifier</td><td>9,600-cell census derived by the harness, mutants M1 to M5 dead, cost medians ≤1.05</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-2<br>NS-ARRAY-FLOOR-1 + NS-NESTED-PANDAS-1</td><td>R-020</td><td>At the one pandas conversion point, floor a <code>datetime64[ns]</code> array to microseconds under <code>array&lt;timestamp&gt;</code> and refuse under <code>array&lt;timestamp_ntz&gt;</code>, by dtype as Spark 4.1.2 does; nanosecond values inside struct and map refuse with a hint. Two Muse folds on #1047 failed on an integer heuristic, so this is an Opus build.</td><td><span class="tag t-opus">Opus 5.5 high</span> executor + verifier</td><td>289 A/B/C cells + stage D 45 from #1047 re-pinned; F-1 to F-9 as named cells; Spark oracle rows</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-3<br>R-009</td><td>R-009</td><td>Every door floors a nanosecond source into a microsecond column as INSERT does and as ruling Q-21c-8 says; the truncate-toward-zero doors (INSERT OVERWRITE, MERGE insert, overwritePartitions, insertInto overwrite, every NTZ door) conform. Order written tonight, read at triage.</td><td><span class="tag t-muse">Muse xhigh</span> executor<br><span class="tag t-opus">Opus 5.5 high</span> scoped verifier</td><td>72 merge-wall control cells re-pinned to the floor, both versions, UTC included; session-zone wall equal across doors</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-4<br>R-012</td><td>R-012</td><td>The unfiltered UPDATE reports an out-of-range typed literal as overflow, not malformed. Measured on the U-1 head first: typed literals go through the planner, so the peel that reaches the string may be gone.</td><td><span class="tag t-muse">Muse xhigh</span> cell on the U-1 head, fold only if still red</td><td>16 cells report CAST_OVERFLOW</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-5<br>PA-01 to PA-04</td><td>Audit S1/S2 boundary items</td><td>dbt profile mismatch stops echoing both profiles' values; <code>EXPLAIN ANALYZE COPY</code> and PREPARE obey the local-file DDL policy; a missing destination parent cannot defeat warehouse containment through a symlink; non-ASCII local paths classify without a panic. Two narrow units, both doors each.</td><td><span class="tag t-muse">Muse xhigh</span> × 2<br><span class="tag t-opus">Opus 5.5 high</span> one scoped verifier</td><td>Each item's repro from the audit refuses or passes; the panic-ban lint stays green</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-6<br>R-016 struct pairing</td><td>R-016 (PA-07)</td><td>One pairing rule at the write conform: Spark pairs by position on INSERT, INSERT OVERWRITE and insertInto overwrite, by name on BY NAME, MERGE and UPDATE; RePark varies by door today and a renamed field stores NULL silently. Sketch names the single seam (the struct cast in the conform), then the build. The hardest v2 item.</td><td><span class="tag t-opus">Opus 5.5 high</span> sketch, executor, verifier</td><td>Door × shape × leaf matrix against the Spark oracle rows measured 10-09; no NULL-for-renamed cell left; cost ≤1.05</td><td class="n">1.5.6 or 1.5.7 (T-4)</td></tr>
+<tr><td class="n">U-7<br>WRITE-BODY-CARRIERS-1</td><td>Card from R-008</td><td>CREATE TABLE AS with a write body refuses at parse before any file; EXPLAIN ANALYZE and PREPARE of a write stay as documented. Spark measured first.</td><td><span class="tag t-muse">Muse xhigh</span><br><span class="tag t-opus">Opus 5.5 high</span> scoped verifier</td><td>Refusal names the statement; zero files and zero snapshots after the refusal on both versions</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-8<br>R-011 nested NTZ wall</td><td>R-011 (PA-06); #1037/#1038 stay parked</td><td>Decision T-3: refuse a nested microsecond NTZ write with a hint now, exactly as R-015 does for nanosecond leaves, and let ICE-TSNS-NESTED-1 lift both refusals as one design later. The un-park option re-enters the conform the two parked PRs failed in.</td><td><span class="tag t-opus">Opus 5.5 high</span> sketch; <span class="tag t-muse">Muse xhigh</span> build if refusal</td><td>Every door that stored two walls refuses before a file; the top-level NTZ column unchanged</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-9<br>ICE-INTEGRITY-PINS-1</td><td>No kill-mid-write pin, ICE-COMMIT-UNKNOWN-1 never live, no cross-release pin</td><td>Three pins. Kill the writer between data-file write and commit, reopen, the table is unchanged and the orphan count is reported. Cut the network after the commit request on Glue and on S3 Tables, then resolve the outcome on reopen. The v1.5.4 wheel writes and head reads, and the reverse, both versions.</td><td><span class="tag t-opus">Opus 5.5 high</span> harness design + verifier; <span class="tag t-muse">Muse xhigh</span> runs</td><td>Three new acceptance legs green on the AWS workflow; local kill pin in the Rust suite</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-10<br>ICE-SPARK-CROSS-READ-1</td><td>No Spark read on Glue or S3 Tables</td><td>A twelfth acceptance leg: Spark 4.1.2 with Iceberg 1.11 reads every table the eleven legs wrote and answers row-equal; the Python acceptance file has zero Spark calls today.</td><td><span class="tag t-muse">Muse xhigh</span>; tests only, no Opus</td><td>Leg green on the acceptance workflow for both catalogs; nanosecond tables recorded as unreadable (R-002 evidence)</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-11<br>ICE-RESOURCE-BOUND-1</td><td>PP-01, PP-02, PA-10, PA-11</td><td>Measure the ordered write and the MoR MERGE at 1×, 4×, 16× the acceptance sizes with RSS outside the pool; write the bound into docs; refuse above it with a message; cgroup v2 nested detection and non-Linux RAM.</td><td><span class="tag t-muse">Muse xhigh</span> measurement; <span class="tag t-opus">Opus 5.5 high</span> bound design + verifier</td><td>A bound table in docs with the run ids; a refusal cell above the bound; detection unit tests</td><td class="n">1.5.6</td></tr>
+<tr><td class="n">U-12<br>ENC-1-RESIDUE-1</td><td>Items 1 to 6</td><td>Owner rules accept or close per item at triage; a closed item gets a pin from a Muse cell; the docs lane records the rulings.</td><td>Owner; <span class="tag t-clerk">clerk</span></td><td>Card retired</td><td class="n">triage</td></tr>
+<tr><td class="n">U-13<br>Truth-up and labels</td><td>Phase 0 and 7 of the production plan</td><td>Matrix re-run on the release build (tonight), registry rows re-dated, STATUS per-capability maturity section once #1044 merges, the two label moves with the dated carve-out rows, release note lines.</td><td><span class="tag t-muse">Muse</span> runs; <span class="tag t-clerk">Haiku 5.5</span> docs</td><td>Count in the v1.5.5 note; STATUS section; labels moved on the day the last unit lands</td><td class="n">rolling</td></tr>
+</table></div>
+</section>
+
+<section>
+<h2>3. Lanes and order</h2>
+<p>Two Opus 5.5 high lanes run at once for the closeout: lane A executes, lane B sketches and verifies, and they never both build (one cargo job per orchestrator, <code>CARGO_BUILD_JOBS=6</code>, inside the slice). Muse stays under its cap of four for measurement, censuses, narrow builds and runs. Everything outside the table keeps the standing tiers. This is the Tuesday re-evaluation of the Opus split: the Iceberg closeout is where the Opus allowance goes.</p>
+<div class="week"><div class="w">Week 1<small>10-14 → 10-18</small></div><div><b>A:</b> U-1 step 1 after the H1 to H4 paragraph. <b>B:</b> U-6 sketch, then U-1 verifier. <b>Muse:</b> U-3, U-7, U-10, U-13 matrix. <b>Owner:</b> T-1 to T-7, U-12 rulings. v1.5.5 tags.</div></div>
+<div class="week"><div class="w">Week 2<small>10-19 → 10-25</small></div><div><b>A:</b> U-2, then U-6 build. <b>B:</b> U-9 harness design, U-8 sketch, verifiers for U-3, U-5, U-7. <b>Muse:</b> U-5 both units, U-11 measurement, U-4 cell on the U-1 head.</div></div>
+<div class="week"><div class="w">Week 3<small>10-26 → 11-01</small></div><div><b>A:</b> U-9 build and the three legs. <b>B:</b> U-11 bound, U-6 verifier. <b>Muse:</b> U-8 build, U-9 runs, R-010 / R-013 / R-018(1) / R-001 cells on the planner head. <b>Label:</b> v2 PRODUCTION when U-5 to U-11 are on main with pins.</div></div>
+<div class="week"><div class="w">Week 4<small>11-02 → 11-08</small></div><div><b>A:</b> residue folds only. <b>B:</b> final verifier per stack. <b>Clerk:</b> U-13 label moves, carve-out rows, STATUS section. <b>Label:</b> v3 core PRODUCTION with the dated R-002 row; nanosecond columns HARDENED-NARROW. v1.5.6 ships with both labels.</div></div>
+<p style="margin-top:12px">Dependencies that fix the order: U-4, R-010, R-013, R-018(1) and R-001 are measured on the U-1 head, not before; U-8 waits on T-3; U-9's live drills need the acceptance credentials window; U-11's bound needs the U-9 kill pin so an exceeded bound and a crash are told apart.</p>
+</section>
+
+<section>
+<h2>4. Decisions for the owner</h2>
+<ol>
+<li><b>T-1 Opus allocation.</b> Two Opus 5.5 high lanes for the Iceberg closeout through 11-08; non-Iceberg lanes stay on Muse and Grok as ruled.</li>
+<li><b>T-2 v3 label wording.</b> v3 PRODUCTION for the exercised workloads with a dated R-002 carve-out row; nanosecond columns labelled on their own row, HARDENED-NARROW, until a second engine reads them.</li>
+<li><b>T-3 R-011.</b> Refuse the nested microsecond NTZ write with a hint now; #1037 and #1038 stay parked; the lift is ICE-TSNS-NESTED-1's design.</li>
+<li><b>T-4 R-016 target.</b> 1.5.6 if the sketch names one seam; otherwise 1.5.7 and v2 waits on it, since a silent NULL for a renamed field disqualifies.</li>
+<li><b>T-5 PA-01 to PA-04 inside the closeout.</b> They are the audit's own production gate; the two Muse units run in week 2.</li>
+<li><b>T-6 ENC-1 residue.</b> Accept or close items 1 to 6 at triage.</li>
+<li><b>T-7 Tonight.</b> The matrix re-run on the release build and the R-009 order, as the orchestrator proposed; nothing else opens.</li>
+</ol>
+</section>
+
+<footer>Proposal by the Frontier agent (Claude, claude-fable-5-1) for the owner, 2026-10-13 late. Sources: PR #1044 definition, the 10-13 re-rating and production plan pages, the registry on main at be011012, the 10-11 production audit, cards ICE-TSNS-NESTED-1, WRITE-BODY-CARRIERS-1, ENC-1-RESIDUE-1, NS-ARRAY-FLOOR-1, NS-NESTED-PANDAS-1, ICE-TSNS-TYPE-PLANNER-1.</footer>
+</div>
