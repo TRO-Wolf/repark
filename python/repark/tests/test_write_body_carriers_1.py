@@ -248,8 +248,7 @@ def test_double_parenthesised_write_body_refuses_before_any_write(spark: ReparkS
 def test_with_prefixed_write_body_refuses_before_any_write(spark: ReparkSession) -> None:
     """A WITH-prefixed write body refuses with Spark text and moves no table."""
     templates: tuple[str, str] = (
-        "CREATE TABLE {z} AS WITH c AS (SELECT 3 AS id, 'c' AS v) "
-        "INSERT INTO {t} SELECT * FROM c",
+        "CREATE TABLE {z} AS WITH c AS (SELECT 3 AS id, 'c' AS v) INSERT INTO {t} SELECT * FROM c",
         "CREATE TABLE {z} AS (WITH c AS (SELECT 3 AS id, 'c' AS v) "
         "INSERT INTO {t} SELECT * FROM c)",
     )
