@@ -40,6 +40,7 @@ where the narrowing is decided.
 | C-011 | The merge-wall control cells of a nanosecond source into a microsecond target move from main's recording to the rule; no other control cell moves. | The re-pin commit; the unchanged control test run on the routers commit. | **PROVEN** | §6: unchanged, the control test fails 47 tests (94 cells) on the routers commit; re-pinned, all 988 tests of the fixture and the three neighbours pass. 94 of main's 152 nanosecond control cells moved (24 `TIMESTAMP`, 70 `TIMESTAMP_NTZ`), 46 held the rule, 12 are refusals; the 384 microsecond-source control cells are byte-equal to a fresh recording on main. pins: ice-tsns-floor-doors-1/C-011 |
 | C-012 | Write cost stays within 1.05 of main. | Ratios of five interleaved set medians on the write set, same build profile both sides. | **PROVEN** | §8: every ratio at or below 1.038; the overwrite doors fell to 0.75 to 0.79 of main. pins: ice-tsns-floor-doors-1/C-012 |
 | C-013 | The 1.5.6 release note carries one line per stored-value change, for a reader who will not open the registry, and registry row R-009 is FIXED with its pins. | The notes draft and the registry row. | **PROVEN** | `task/roadmap/mid-term/v1-5-6-release-notes-draft.md` (three lines: the overwrite doors' wall, the floor on every door, the NTZ read; tables already written keep their values); `docs/spark-sql-iceberg-parity.md` R-009 FIXED 2026-10-14 with the door count restated (ten `TIMESTAMP` doors of the fixture's twenty, all twenty into `TIMESTAMP_NTZ`). pins: ice-tsns-floor-doors-1/C-013 |
+| C-014 | Provisional (lean A): the five batch casts that narrowed a nanosecond source on main refuse, with an internal error naming the column, a top-level timestamp whose unit would get coarser, and are today's strict cast otherwise; no fixture cell reaches the refusal, and reverting the commit alone leaves the fixture and the neighbours green. | The guard's commit, mutants M5, M6 and M9, and the revert-alone run on `probe/floor-doors-guard-revert`. | **PROVEN** | §10. pins: ice-tsns-floor-doors-1/C-014 |
 
 ## 1. The matrix (C-001)
 
@@ -187,6 +188,36 @@ own overwrite staging (`crates/repark-sql/src/insert_overwrite.rs`, which never 
 Asia/Kolkata in the fixture; the write cost of the provisional guard's commit (a type
 comparison per column per batch, not timed); any planner head (U-1 rebases over this unit).
 
+## 10. The provisional guard (C-014)
+
+`conform::strict_store_cast(name, column, target)` and `refuse_coarser_timestamp` beside
+`strict_cast`; the five sites of sketch section 3 use them (`conform.rs`, both positional maps
+of `overwrite.rs`, `partition_overwrite.rs`; `merge/mod.rs` refuses before
+`convert_uuid_column`). The name parameter is an addition to the sketch's signature: the error
+names the column. On the guard's release module: the fixture and the three neighbours 988
+passed (H2 not hit: no cell raises the refusal); the whole facade suite 16983 passed, 1 failed
+(`test_pg_acceptance.py::test_acceptance_battery_or_skip`, `FileNotFoundError` on
+`task/pg-integration-report.md`, which fails the same way on main's module), 488 skipped, 151
+xfailed.
+
+| Mutant | Edit | Failed | Dies on | How |
+|---|---|---|---|---|
+| M5 | `Nanosecond` leaves `needs_ltz_instant_cast`, guard present | 72 of 602 | `test_every_step0_door_stores_the_floor_in_the_session_zone` (24), the added-door test (36), the control test (12) | the guard's internal error (60 lines) |
+| M6 | the naive arm leaves `wall_kernel_reads`, guard present | 48 of 602 | `test_every_step0_door_stores_the_floor_in_the_session_zone` (18), the added-door test (24), the control test (6) | the guard's internal error (42 lines) |
+| M9 | the guard refuses a widening pair (`<` becomes `!=`) | 1 of 2 | `write::conform::tests::a_store_cast_refuses_only_a_coarser_timestamp_unit` | the 602 fixture and merge-wall tests pass: no fixture cell sends a widening pair through these casts |
+
+**Revert-alone.** The guard's commit reverted alone on the local branch
+`probe/floor-doors-guard-revert` (never pushed): its `crates/` and `python/` trees equal the
+records commit's. Run with a release module built from the same product sources (they differ
+from the build's tree only in `timestamp_ns_cast/tests.rs`, test code outside the module):
+`test_ice_tsns_floor_doors_1.py`, `test_ice_tstzns_wall_1.py`, `test_ice_tsns_merge_wall_1.py`,
+`test_ice_tsns_frame_door_1.py`: **988 passed, 0 failed** (`-n 8`, 62.6 s), the count the guard's
+head gives. `check-rust-file-size` is clean on the reverted tree (the baseline is back at 1053).
+
+The guard shrinks `overwrite.rs` from 1053 to 1049 lines, so the commit ratchets the file-size
+baseline in `scripts/check_rust_file_size.py` and its mirror
+`python/repark-parity/tests/test_cap_1_source_file_line_cap.py` (Q6); the revert restores both.
+
 ## Gates
 
 Gates run before the final hand-back per the brief; exit codes are recorded there, not here.
@@ -269,4 +300,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 13 clauses, 13 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 14 clauses, 14 PROVEN, 0 OPEN, 0 REJECTED.

@@ -6,7 +6,6 @@ use std::sync::Arc;
 use datafusion::arrow::array::{
     ArrayRef, BooleanArray, Int32Array, Int64Array, RecordBatch, StringArray, new_null_array,
 };
-use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{FieldRef, SchemaRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{
@@ -20,6 +19,7 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
+use crate::write::conform::strict_store_cast;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::overwrite_scope::replace_partitions_is_noop;
 use crate::write::static_value::{cast_constant_array, cast_datum};
@@ -98,14 +98,7 @@ fn store_assign_source_column(source: &ArrayRef, field: &FieldRef) -> Result<Arr
         source.data_type(),
         field.data_type(),
     )?;
-    Ok(cast_with_options(
-        source,
-        field.data_type(),
-        &CastOptions {
-            safe: false,
-            ..CastOptions::default()
-        },
-    )?)
+    strict_store_cast(field.name(), source, field.data_type())
 }
 
 struct StaticPartitionPlan<'a> {

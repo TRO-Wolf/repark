@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/merge/
 
+ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional): `cast_one_batch_to_write_schema` asks `conform::refuse_coarser_timestamp` before `convert_uuid_column`, so the merge staging cast cannot coarsen a top-level timestamp (internal error naming the column). pins: ice-tsns-floor-doors-1/C-014
+
 MERGE-MOD-SPLIT-1 (owner, 2026-10-12): `mod.rs` splits at its planned boundary into `merge_sql.rs`, `copy_on_write.rs` and `merge_on_read.rs`; a move with no behaviour change, and `mod.rs` leaves the file-size exception table. An older entry below that names `mod.rs` describes the file as it was on that entry's date; the Contents rows for the three new files say where each item lives now.
 
 ICE-MIXED-CASE-1 (2026-09-17): the MERGE executor carries the door's case-sensitivity flag on the spec (`mod.rs`, `insert.rs`, `not_matched_by_source.rs`); UPDATE SET rejects case-insensitive duplicate targets instead of first-winning. pins: ice-mixed-case-1/C-004

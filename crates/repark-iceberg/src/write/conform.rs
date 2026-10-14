@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{ArrayRef, RecordBatch};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef};
+use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
 
 use crate::catalog::uuid_presentation::{convert_uuid_column, presents_uuid};
@@ -171,10 +171,10 @@ pub(crate) fn conform_batch_scoped(
                         column.data_type(),
                         field.data_type(),
                     )?;
-                    Ok(Some(cast_with_options(
+                    Ok(Some(strict_store_cast(
+                        field.name(),
                         column,
                         field.data_type(),
-                        &strict_cast(),
                     )?))
                 }
                 SourceMatch::Missing => {
@@ -247,12 +247,75 @@ fn strict_cast() -> CastOptions<'static> {
     }
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn strict_store_cast(
+    name: &str,
+    column: &ArrayRef,
+    target: &DataType,
+) -> Result<ArrayRef> {
+    refuse_coarser_timestamp(name, column.data_type(), target)?;
+    Ok(cast_with_options(column, target, &strict_cast())?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn refuse_coarser_timestamp(
+    name: &str,
+    source: &DataType,
+    target: &DataType,
+) -> Result<()> {
+    if let (DataType::Timestamp(from, _), DataType::Timestamp(to, _)) = (source, target)
+        && ticks_per_second(*to) < ticks_per_second(*from)
+    {
+        return Err(DataFusionError::Internal(format!(
+            "store of column `{name}` would coarsen a timestamp from {source} to {target} outside \
+             the narrowing kernel"
+        )));
+    }
+    Ok(())
+}
+
+const fn ticks_per_second(unit: TimeUnit) -> i64 {
+    match unit {
+        TimeUnit::Second => 1,
+        TimeUnit::Millisecond => 1_000,
+        TimeUnit::Microsecond => 1_000_000,
+        TimeUnit::Nanosecond => 1_000_000_000,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use datafusion::arrow::array::StringArray;
     use datafusion::arrow::datatypes::DataType;
     use std::collections::HashMap;
+
+    #[test]
+    fn a_store_cast_refuses_only_a_coarser_timestamp_unit() {
+        let nanos = DataType::Timestamp(TimeUnit::Nanosecond, None);
+        let micros = DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("+00:00")));
+        let millis = DataType::Timestamp(TimeUnit::Millisecond, None);
+        for (source, target, refused) in [
+            (&nanos, &micros, true),
+            (&micros, &millis, true),
+            (&micros, &nanos, false),
+            (&millis, &micros, false),
+            (&micros, &micros, false),
+            (&DataType::Int64, &micros, false),
+        ] {
+            let outcome = refuse_coarser_timestamp("v", source, target);
+            assert_eq!(
+                matches!(outcome, Err(DataFusionError::Internal(_))),
+                refused,
+                "{source} -> {target}"
+            );
+        }
+        let column: ArrayRef = Arc::new(datafusion::arrow::array::TimestampMicrosecondArray::from(
+            vec![-1_i64, 0, 1],
+        ));
+        let widened = strict_store_cast("v", &column, &nanos).expect("widening stores");
+        assert_eq!(widened.data_type(), &nanos);
+    }
 
     #[test]
     fn retaining_unmapped_identity_attaches_write_schema_field_ids() {
