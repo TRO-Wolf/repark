@@ -161,6 +161,122 @@ Notes on the counts, as measured:
 - The join-key pin reads the optimized plan in Rust (`into_optimized_plan`), on both doors,
   for `=`, `<` and `<=>`.
 
+## 5. Step 1, the build: four product commits, then a halt
+
+Commits on `fix/ice-tsns-type-planner-1` over `d997e2cc`, in the ordered sequence:
+`17a6b171` the fixture; `aeed9261` the planner; `4c28bc5b` `SparkTimestampUnitWiden`;
+`6c3688af` the deletions; `07cbe563` the wall kernels by cast target type. Commits 5
+(P5 dispositions and P15) and 6 (registry rows, cost table) are **not built**: the unit
+stopped at the halt below.
+
+**How the planner is registered.** `repark-core` sits below `repark-functions`, so
+`df_guards.rs` cannot name `SparkTypePlanner`, and `Cargo.toml` was not to be edited. The
+session builder registers the planner once and each door hands it in: `SparkExtension`
+(`SessionExtension::type_planner`), `AnsiDialect` (`SqlDialect::type_planner`), and the
+Python native door's own extension (the door behind `repark.sql` builds with no dialect,
+and the binding cannot implement the async dialect trait without a new dependency). The
+two traits each gained one defaulted hook; `SqlDialect` also gained
+`configure_analyzer_rules`, which is how the ANSI dialect places the lattice rule.
+
+**Order of commits.** The order of the brief holds, with one move: the by-name
+registration of the two wall kernels was to go with the deletions and did not go at all.
+The Iceberg store doors in `repark-iceberg` look the kernel up with `ctx.udf(name)` and
+render it in generated SQL; that crate cannot link `repark-functions`, and moving those
+doors to the cast spelling is R-009's surface. R-013 keeps its row.
+
+### 5.1 The fixture on the head (`07cbe563`, release module)
+
+| Family | Cells | Green on main | Green on head | Red on head |
+|---|---|---|---|---|
+| census | 9,600 | 2,619 | 9,570 | 30 |
+| cache | 420 | 60 | 420 | 0 |
+| reads | 117 | 0 | 117 | 0 |
+| consumer doors | 92 | 0 | 92 | 0 |
+| parking repros | 348 | 135 | 288 | 60 |
+| lattice, both doors, three zones | 120 | 0 | 120 | 0 |
+| positions | 576 | 193 | 473 | 103 |
+| doors | 19 | 5 of 15 | 11 | 8 |
+| Postgres | 2 | 2 | 2 | 0 |
+
+The door family grew by four out-of-range cells after commit 0 (a microsecond value
+outside the nanosecond range beside a nanosecond value, both ANSI modes); main's count is
+of the original fifteen.
+
+What is red on the head, by cause, as measured:
+
+- **Census, 30:** door `df_functions_append`, form `array`, every zone and pair. The
+  statement stores what the other doors store; its **twin** errors
+  (`array(UserDefined)`) because the twin goes through the expression-string session
+  with a written nanosecond cast inside `array(…)`. A twin-side refusal, not a narrowed
+  value.
+- **Positions, 103:** `nvl2` (18, `nvl2(UserDefined)` on statement or twin),
+  `array_contains` (18), `array_concat` (12), `array_append` (8), `array_prepend` (8),
+  `array_position` and `array_remove` beside a NULL (12), `INTERSECT` and `EXCEPT`
+  beside a microsecond branch (24), `UNION` beside a `TIMESTAMP` branch for the naive
+  source (3, an internal DataFusion error; these three answered on main). The
+  list-and-element functions are RePark's own overrides with their own coercion; the
+  rule's cast does not reach a result there, or the override refuses the widened pair.
+- **Parking repros, 60:** the six container shapes of #1027 verify 1
+  (`coalesce(array(ns), array(ts))`, `array_append`, `array_prepend`, `array_union`,
+  `flatten`, `CASE` over arrays: 24 cells) stay narrowed; `array_except` and
+  `array_intersect` (8); the three-branch `UNION ALL` with a NULL first branch (8, still
+  microseconds); `aggregate` with a typed microsecond NULL (4, now refused);
+  `concat_ws(c, NULL)` (4, errors on main too); a map-element site (4, the
+  Arrow `list array` panic of R-018(2)); the qualified `UPDATE` with a scalar subquery
+  (4, a schema error on both roles' text); four single cells.
+- **Doors, 8:** the four H1 refusals and the `read_csv` P15 cell (commit 5, not built);
+  the out-of-range cell with ANSI off, twice (the widened value is NULL, as the written
+  nanosecond cast is on main with ANSI off: the kernel follows the ANSI mode, the
+  amendment asks for a raise in both); one R-010 `DELETE` cell whose harness reads every
+  Parquet file under the table and so cannot see a copy-on-write delete (a fixture
+  defect, not a product reading).
+- **Rust pins, both doors:** 5 of 6 green
+  (`cargo test -p repark-sql --test ice_tsns_type_planner_1_lattice`); the R-013 cell is
+  red, as ruled above.
+
+### 5.2 The halt
+
+**Halt: a statement main answers that the head errors on and that is not a ruled
+refusal.** 218 statements of the non-census families answered on main's module and error
+on the head; none of the 9,600 census statements does. All 218 are one shape: a NULL or a
+microsecond value beside a nanosecond value is now nanoseconds (the first and third
+clauses), and the consumer above it refuses nanoseconds.
+
+| Consumer | Cells | Head's error |
+|---|---|---|
+| `sequence(site, …)` in SQL and the functions API (the 117 reads: 95; repros: 8) | 103 | `ListArray expected data type Timestamp(ns) got Timestamp(µs, "UTC")` |
+| pandas and Arrow doors over a site: `applyInPandas`, cogrouped `applyInPandas`, `mapInArrow`, `mapInPandas`, `pandas_udf`, `arrow_udf`, `applyInArrow` (reads: 20; consumer cells: 88) | 108 | the door's own schema or conversion error |
+| `aggregate(array(ns), CAST(NULL AS TIMESTAMP), …)` | 4 | `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` |
+| `UNION` of a naive nanosecond column and a `TIMESTAMP` column | 3 | an internal DataFusion error |
+
+Each of the first three rows equals its typed twin, and the twin errors on main too:
+`sequence(ns, ns)` and the pandas doors over a plain `timestamp_ns` column refuse on
+main. The fixture's own cells for these families are therefore green (statement equals
+twin) while its main-answers check is red. This is the finding #1042's verify-slice1b
+parked on (G-1), reached now by the type itself rather than by a rewrite. The unit did
+not design around it: no consumer was taught nanoseconds and no site was narrowed back.
+
+### 5.3 Other suites on the head
+
+- Rust, the five touched crates
+  (`cargo test --no-fail-fast -p repark-functions -p repark-sql -p repark-spark -p repark-core -p repark-python`):
+  5,930 passed, 55 failed. By module: `tests::ntz_values_mix` 19, `tests::ntz_store` 15,
+  `tests::v3_timestamp_ns_door` 6, `pins_report` 3, `spark_nullability::tests` 2, and one
+  each in `u9_timestamp_ltz`, `session_write_conf`, `plan_partitioning`, `ltz_store`,
+  `extension::tests`, three integration files, and the R-013 cell. Not triaged one by
+  one: the `VALUES` conform (P12), the store doors and the pins that spell the lowered
+  kernel name are the expected movers; the three `pins_report` tests and the two
+  benchmark-shaped tests may be unrelated.
+- The facade suite was **not** run to completion on any head of this unit: one run on
+  the planner commit was stopped in its long tail to free the module for the next build.
+
+### 5.4 Not built, not measured
+
+Commit 5 (P5 dispositions, the H1 refusal text, P15); commit 6 (registry rows, the cost
+table); the eight mutants; the cost ratios; the whole facade suite; live Spark cells; the
+`TIMESTAMP_NTZ` session mode beyond the unit tests; the 842-cell Spark and Iceberg
+matrix; the parity-live job.
+
 ## Q. Questions
 
 Step 0 is measured; step 1 needs three rulings before it opens:
@@ -173,3 +289,31 @@ Step 0 is measured; step 1 needs three rulings before it opens:
   `generate_series` over timestamps refuse by name; the planner proceeds with DDL and
   `Column.cast` pinned at microseconds; the lattice rule is `SparkTimestampUnitWiden`. Step 1
   opens from this head after the owner's triage.
+- **Step 1 questions (2026-10-13, executor lane A), open:**
+  - Q4 (halt): the 218 statements of section 5.2. Do `sequence` and the pandas and Arrow
+    doors learn to take a nanosecond value (their own units), does the site stay
+    nanoseconds and the refusal stand as ruled, or does the rule not apply under those
+    consumers? Lean: the type stays nanoseconds and each consumer gets its own unit of
+    work; a consumer-by-consumer exception in the rule would be the reader accounting the
+    owner refused.
+  - Q5 (H5): the rule's table does not reach a list beside a list (`coalesce`, `CASE`,
+    `array_union`, `flatten`, `array_except`, `array_intersect` over arrays of mixed
+    units) and RePark's own list-and-element overrides. Extend the table to an element
+    type, or leave these narrowed and registered? Lean: extend to the element type of a
+    list operand at the positions already listed, nothing else.
+  - Q6: out of range with ANSI off. The widened cast is the wall kernel, which answers
+    NULL with ANSI off exactly as a written `CAST(us AS timestamp_ns)` does on main; the
+    amendment asks for a raise in both modes and halt H7 asks the widened value to equal
+    the written cast. Both cannot hold. Lean: the kernel raises in both modes for a
+    timestamp source, written or widened.
+  - Q7: the zone label. The sketch's table says `Timestamp(µs, Some(session zone))`; the
+    planner types `Timestamp(µs, "UTC")`, the instant type the engine already uses
+    everywhere. Lean: keep `"UTC"`.
+  - Q8: the ANSI doors. `TIMESTAMP` is now the microsecond instant there (a string cast
+    reads the wall as UTC, where main answered a naive nanosecond wall), `TIMESTAMP_NTZ`,
+    `TIMESTAMP_LTZ` and the two nanosecond names now plan in expressions where main
+    refused them, and `CREATE TABLE` keeps main's mapping and refusals. Is that the
+    intended ANSI door? Lean: yes for the two nanosecond names and `TIMESTAMP`, as the
+    sketch's table says; the owner should see it stated.
+  - Q9: R-013. Retiring the by-name registration means moving the Iceberg store doors to
+    the cast spelling. In this unit, or in R-009's? Lean: R-009's.

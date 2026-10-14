@@ -407,22 +407,22 @@ mod tests {
 
     const FAR_MICROS: i64 = 253_402_214_400_000_000;
 
-    fn zone() -> Option<Arc<str>> {
-        Some(Arc::<str>::from("UTC"))
+    fn zone() -> Arc<str> {
+        Arc::<str>::from("UTC")
     }
 
     fn batch() -> RecordBatch {
         let schema = Arc::new(Schema::new(vec![
             Field::new(
                 "us_tz",
-                DataType::Timestamp(TimeUnit::Microsecond, zone()),
+                DataType::Timestamp(TimeUnit::Microsecond, Some(zone())),
                 true,
             ),
             Field::new("us", DataType::Timestamp(TimeUnit::Microsecond, None), true),
             Field::new("ns", DataType::Timestamp(TimeUnit::Nanosecond, None), true),
             Field::new(
                 "ns_tz",
-                DataType::Timestamp(TimeUnit::Nanosecond, zone()),
+                DataType::Timestamp(TimeUnit::Nanosecond, Some(zone())),
                 true,
             ),
             Field::new(
