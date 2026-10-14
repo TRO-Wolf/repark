@@ -1212,8 +1212,18 @@ repark-core's error map.
   treats a fetch-less literal OFFSET of 1 or more over a single-row constant source
   (`limit_input_is_single_row` through Projection/SubqueryAlias/Sort to a one-row
   EmptyRelation) like `LIMIT 0`. A Filter or JOIN between keeps the refusal.
-- `store_cast.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `register_store_cast_udfs` registers `__repark_store_pair__` beside
-  the store-cast kernels (owner, question 35): the MERGE and UPDATE rewrite text names it.
+- `store_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), parity rows R-016 and
+  R-013, owner question 47:** `BY_NAME_STORE_KERNELS` is the one table of the by-name store
+  kernels (`__repark_store_int{8,16,32,64}__`, `__repark_store_int_guard__` and the pairing
+  kernel `__repark_store_pair__`), and `register_store_cast_udfs` registers it and nothing
+  else. Both doors call it at session build: `repark_spark::SparkExtension::register` and
+  `repark_sql::AnsiDialect::on_session_built`, because the shared MERGE and UPDATE rewrite text
+  names the pairing kernel. `NS_WALL_KERNEL_NAMES` lists the nanosecond and NTZ wall kernels,
+  which stay registered by `repark-functions` and the ANSI door; it spells them through
+  `ntz_store`'s constants, since this crate has no edge to `repark-functions`, and each door's
+  pin asserts they equal that crate's constants. The pins:
+  `repark-spark/tests/store_kernel_registry.rs` and
+  `repark-sql/tests/ansi_store_kernel_registry.rs`, which read both constants.
 - `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
   checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
   out-of-range floats with the overflow message and store in-range values truncated like

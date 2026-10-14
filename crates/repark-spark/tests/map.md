@@ -113,6 +113,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
   The two nested store pins of fold 1 left with the split; the nested pins are the next row.
   pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
+- [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2
+  (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
+  `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
+  entry names its own kernel, and the wall names equal `repark-functions`' constants. The ANSI
+  door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`.
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
