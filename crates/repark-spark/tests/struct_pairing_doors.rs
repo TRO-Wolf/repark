@@ -163,6 +163,8 @@ const R014: &str = "update_no_where";
 
 const R014_RAW: &str = "arguments need to have the same data type";
 
+const R018_RAW: &str = "type mismatch and can't cast";
+
 #[derive(Debug, PartialEq, Eq)]
 enum Expected {
     Stored(Option<i32>, Option<i32>),
@@ -320,6 +322,8 @@ async fn every_door_pairs_struct_fields_by_spark_rule() {
             let written = if UPDATING.contains(&name) { 0 } else { 1 };
             let expected = if name == R014 && shape == "reordered" {
                 Expected::Refused(R014_RAW.to_string())
+            } else if name == "insert_values" && fields.len() != TARGET.len() {
+                Expected::Refused(R018_RAW.to_string())
             } else {
                 rule(mode, fields, &label)
             };

@@ -121,7 +121,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   Spark's rule in the test (by position on `INSERT`, `VALUES`, `INSERT OVERWRITE`, `REPLACE
   WHERE` and `insertInto`; by name elsewhere), with the refusal's full text and table label.
   `UPDATE` with no `WHERE` keeps main's raw refusal for the reordered shape (parity row
-  R-014). Red on main: 34 of 64 cells.
+  R-014). Red on main: 34 of 64 cells. **Correction (2026-10-14):** `INSERT … VALUES` with a
+  surplus or a missing field keeps main's raw planner refusal (list L1, parity row R-018), as
+  the facade fixture holds it; red on main is 32 of 64 cells.
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,
