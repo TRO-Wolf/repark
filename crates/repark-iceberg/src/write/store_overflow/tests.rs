@@ -238,3 +238,63 @@ async fn divisor_guards_swap_under_a_store() {
     assert!(text.contains("StoreIntGuard"), "{text}");
     assert!(!text.contains("DummyGuard"), "{text}");
 }
+
+async fn stored_pair(config: datafusion::prelude::SessionConfig) -> (i32, i32) {
+    use datafusion::arrow::array::AsArray;
+    use datafusion::arrow::datatypes::{Fields, Int32Type};
+    let ctx = SessionContext::new_with_config(config);
+    ctx.add_analyzer_rule(Arc::new(StoreOverflowCast));
+    crate::write::store_cast::register_store_cast_udfs(&ctx);
+    let fields = Fields::from(vec![
+        Field::new("a", DataType::Int32, true),
+        Field::new("b", DataType::Int32, true),
+    ]);
+    let target = Arc::new(Schema::new(vec![Field::new(
+        "st",
+        DataType::Struct(fields),
+        true,
+    )]));
+    ctx.register_table(
+        "pairs",
+        Arc::new(MemTable::try_new(target, vec![vec![]]).unwrap()),
+    )
+    .unwrap();
+    run(
+        &ctx,
+        "INSERT INTO pairs SELECT named_struct('b', CAST(2 AS INT), 'a', CAST(1 AS INT))",
+    )
+    .await
+    .unwrap();
+    let batches = ctx
+        .sql("SELECT st FROM pairs")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let stored = batches[0].column(0).as_struct();
+    let field = |name: &str| -> i32 {
+        stored
+            .column_by_name(name)
+            .unwrap()
+            .as_primitive::<Int32Type>()
+            .value(0)
+    };
+    (field("a"), field("b"))
+}
+
+#[tokio::test]
+async fn an_insert_pairs_struct_fields_by_position_unless_its_statement_says_by_name() {
+    let positional = stored_pair(datafusion::prelude::SessionConfig::new()).await;
+    assert_eq!(positional, (2, 1));
+    let by_name = stored_pair(
+        datafusion::prelude::SessionConfig::new().with_option_extension(
+            crate::write::struct_pairing::StatementPairing {
+                source_by_name: true,
+                case_sensitive: false,
+            },
+        ),
+    )
+    .await;
+    assert_eq!(by_name, (1, 2));
+}

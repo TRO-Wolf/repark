@@ -16,7 +16,8 @@ ICE-STRUCT-PAIRING-1 (2026-10-14, parity row R-016).
   and pairing at run time. **Build round 2 (2026-10-14):** the guard of hint H-1 is pinned at
   its call sites, not only in `refuse_unpaired_struct`:
   `the_append_batch_cast_s1_refuses_an_unpaired_struct_with_hint_h1` drives `conform_batch`
-  (S1, the Rust append API and the streaming sink stage through it) and
+  (S1; the Rust `append` API stages through it, and the streaming sink through S1 or S2 by
+  way of `stage_overwrite_files_with`) and
   `the_positional_overwrite_cast_s2_refuses_an_unpaired_struct_with_hint_h1` drives
   `positional_map_overwrite_batch` (S2) with and without a column list. S3 is pinned at the
   Spark door by `repark-spark/tests/struct_pairing_doors.rs`.
