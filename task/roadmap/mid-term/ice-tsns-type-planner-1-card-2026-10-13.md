@@ -12,6 +12,19 @@ PR #1027, closed unmerged 2026-10-13) and card ICE-TSNS-COERCION-1
 PR #1042, closed unmerged 2026-10-13).
 Parity row: ICE-TSNS-SQL-1-R-017 in [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
 
+## Status 2026-10-13: step 0 round 1 accepted, amendment 1 filed
+
+Step 0 round 1 accepted by the owner: H1, H2 and H3 met, H4 not met.
+[Amendment 1](../../wo/ice-tsns-type-planner-1/amendment-1.md) resolves them: H1, scalar
+`range` and `generate_series` over timestamps refuse by name, naming `sequence` as Spark's
+spelling; H2, proceed, with DDL and `Column.cast` pinned at microseconds; H3, the
+`SparkTimestampUnitWiden` rule as the amendment states it (finest unit wins, never narrows,
+overflow raises in both ANSI modes); H4, producer P15 added. Step 1 also covers what step 0
+could not measure: Postgres cells with the rootless Docker socket inside the lane, join keys
+in the optimized plan, NULL beside a nanosecond value in every position, non-default session
+zones. Step 1 opens on Opus lane A after the owner's triage. R-009
+([order](../../wo/ice-tsns-floor-doors-1.md)) builds after this unit lands.
+
 ## Why
 
 DataFusion 54.1 maps the SQL type name `TIMESTAMP` to `Timestamp(Nanosecond, None)`.

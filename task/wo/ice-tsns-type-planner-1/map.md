@@ -8,5 +8,6 @@ source; no product code. Closes unmerged #1027 (ICE-TSNS-NARROW-REFUSE-1) and
 - [sketch.md](sketch.md) — the sketch, filed byte for byte (2026-10-13).
 - [evidence/map.md](evidence/map.md) — step 0 measurement outputs (P5 walk,
   H2 and H3 probes, reader types), recorded on main, never edited by hand.
+- [amendment-1.md](amendment-1.md) — amendment 1, filed byte for byte (2026-10-13): step 0 halts H1 to H4; H1 to H3 resolved, H4 not met with producer P15 added; §4 and §5 amended for step 1.
 
 Up: [../map.md](../map.md).

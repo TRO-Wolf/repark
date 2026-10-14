@@ -2762,7 +2762,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4888,9 +4888,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.16"
+version = "0.11.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f4bfc015262b9df63c8845072ce59068853ff5872180c2ce2f13038b970e560"
+checksum = "0e750cca55fe4f0439a15d0bb529da9651e79993e8e72c61a899a36d462befbe"
 dependencies = [
  "bytes",
  "getrandom 0.4.3",
@@ -4919,7 +4919,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5134,7 +5134,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "repark-common"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "chrono",
  "thiserror 2.0.21",
@@ -5142,7 +5142,7 @@ dependencies = [
 
 [[package]]
 name = "repark-connect"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "arrow",
  "async-trait",
@@ -5160,7 +5160,7 @@ dependencies = [
 
 [[package]]
 name = "repark-core"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "arrow",
  "async-trait",
@@ -5195,7 +5195,7 @@ dependencies = [
 
 [[package]]
 name = "repark-distributed"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "arrow",
  "async-trait",
@@ -5215,7 +5215,7 @@ dependencies = [
 
 [[package]]
 name = "repark-functions"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "arrow",
  "chrono",
@@ -5230,7 +5230,7 @@ dependencies = [
 
 [[package]]
 name = "repark-iceberg"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5255,14 +5255,14 @@ dependencies = [
 
 [[package]]
 name = "repark-ml"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "repark-python"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "arrow",
  "datafusion",
@@ -5282,7 +5282,7 @@ dependencies = [
 
 [[package]]
 name = "repark-spark"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5304,7 +5304,7 @@ dependencies = [
 
 [[package]]
 name = "repark-sql"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "async-trait",
  "datafusion",
@@ -5322,7 +5322,7 @@ dependencies = [
 
 [[package]]
 name = "repark-ta"
-version = "1.5.4"
+version = "1.5.5"
 dependencies = [
  "criterion",
  "datafusion",
@@ -5463,7 +5463,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6071,10 +6071,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6597,7 +6597,7 @@ version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8464ec13c3691491391d9fce00f6416c9a48e46972f72d7865688be2080192c9"
 dependencies = [
- "rand 0.10.2",
+ "rand 0.9.5",
 ]
 
 [[package]]
@@ -6952,7 +6952,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
