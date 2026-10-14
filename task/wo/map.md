@@ -30,5 +30,6 @@ them.
 - [ice-tsns-type-planner-1/](ice-tsns-type-planner-1/map.md) — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the Fable 5.1 sketch that fixes parity row R-017 by the SQL type name (docs only, no product code); closes unmerged #1027 and #1042.
 - [ice-tsns-floor-doors-1.md](ice-tsns-floor-doors-1.md) — **ICE-TSNS-FLOOR-DOORS-1 (U-3, R-009, grade B, 2026-10-13):** the order of record for U-3 of the Iceberg closeout: one floor on every door into microsecond TIMESTAMP and TIMESTAMP_NTZ columns; measurement step 0 may run now, the build waits for the planner head.
 - [ice-spark-cross-read-1/](ice-spark-cross-read-1/map.md) — **ICE-SPARK-CROSS-READ-1 (U-10, 2026-10-14):** Spark reads what RePark writes (tests only): the shared cross-read helper, the local leg green on live Spark, the AWS leg written but not run, and the order carrying the workflow step the owner wires.
+- [ns-array-floor-1/](ns-array-floor-1/map.md) — **NS-ARRAY-FLOOR-1 (2026-10-14):** the pandas and Arrow doors input and output measurement for parity row R-020. No product code. The input cells, the output cells and the refusal sites sit in the directory.
 
 Up: [../map.md](../map.md).

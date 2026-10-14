@@ -10204,3 +10204,13 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   when the box lane is absent. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: parity-live-infra-2/C-001
+- [_record_ns_array_floor_1_input.py](_record_ns_array_floor_1_input.py) —
+  **NS-ARRAY-FLOOR-1 D1 (2026-10-14):** the input-side recorder: nine doors
+  (grouped applyInPandas, cogroup applyInPandas, grouped applyInArrow, cogroup
+  applyInArrow, mapInPandas, mapInArrow, scalar pandas_udf, grouped-aggregate
+  pandas_udf, scalar arrow_udf) over a timestamp_ns column, a timestamptz_ns
+  column, the two U-1 widened shapes and a microsecond control, at top level
+  and inside an array. The probe answers a trivial integer frame, so an answer
+  cell measures the input side. Evidence
+  `task/wo/ns-array-floor-1/evidence/input-cells.md` plus JSON.
+  pins: ns-array-floor-1/C-001, ns-array-floor-1/C-002
