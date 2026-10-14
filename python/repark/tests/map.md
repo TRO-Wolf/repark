@@ -10218,3 +10218,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   OVERWRITE); writes `main-cells.json` and `main-cells.md` into
   `task/wo/write-body-carriers-1/evidence/`. Takes an optional warehouse path.
   pins: write-body-carriers-1/C-002, C-003
+- [test_write_body_carriers_1.py](test_write_body_carriers_1.py) —
+  **WRITE-BODY-CARRIERS-1 build (2026-10-14):** the 40 step-0 CTAS cells (2
+  creators x 5 bodies x z new and existing x format versions 2 and 3) refuse
+  with Spark 4.1.2's measured class, condition, SQLSTATE and leading keyword
+  with ``t`` and ``z`` unchanged, plus one ``REPLACE TABLE`` cell per body and
+  one parenthesised-body cell per body; the 14 wrapper cells, the 5 ANSI-door
+  cells and the plain-CTAS neighbours pin main's measured answers.
+  pins: write-body-carriers-1/C-004, C-005
