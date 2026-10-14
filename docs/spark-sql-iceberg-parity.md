@@ -15048,11 +15048,13 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `::test_validate_from_snapshot_shapes_match_spark`, `::test_validate_from_snapshot_residues`,
   `::test_overwrite_condition_divergences_where_one_engine_answers`,
   `::test_overwrite_condition_divergences_on_the_row_filter`;
-  `python/repark/tests/test_ice_write_df_2_doors.py::test_nested_binding_residues_beside_spark`,
+  `python/repark/tests/test_ice_write_df_2_doors.py::test_nested_binding_answers_as_spark`,
   `::test_store_assignment_residues_beside_spark`;
   Rust `crates/repark-iceberg/src/tests/filter_validation.rs`,
   `crates/repark-spark/src/tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`,
-  `crates/repark-spark/src/insert_by_name/nested.rs` (the sub-field resolver's units).
+  `crates/repark-iceberg/src/write/struct_pairing/tests.rs` (the pairing seam that replaced
+  the sub-field resolver of `insert_by_name/nested.rs` on 2026-10-14, ICE-TSNS-SQL-1-R-016;
+  residues R-15 and R-16 retired with it).
 - **Rationale** — FIXED 2026-09-24 (U7 PR2), on U8's REPLACE WHERE kernel. Filed BACKLOG
   2026-09-04 from the EX-22 measurement; the example still does not teach the name.
   pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010, C-013, C-014, C-015, C-016

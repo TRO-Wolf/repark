@@ -2813,8 +2813,9 @@ name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDAT
 matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
 `nested_assign_oracle.rs` replays
 [`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
-(read with `include_str!`). It covers 152 of its 177 keys (150 until U9-TYPES-1 retired the
-`U2-order` / `U2-order2` R-16 residues, 2026-09-26), counted exactly: every key without a
+(read with `include_str!`). It covers 154 of its 177 keys (150 until U9-TYPES-1 retired the
+`U2-order` / `U2-order2` R-16 residues, 2026-09-26; 152 until ICE-STRUCT-PAIRING-1 retired the
+two `E6-evo-*-reorder-noprop` R-18 residues, 2026-10-14), counted exactly: every key without a
 residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
 `map` constructors, and the facade replays every key. Each case runs on the test context rebuilt
 with a core `ReparkSession`'s optimizer rules (fix round 4), so the DataFusion 54.1 guards apply

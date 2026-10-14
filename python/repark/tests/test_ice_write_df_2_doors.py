@@ -129,72 +129,40 @@ def _nested(action: Action) -> tuple[str, str, str, int, Action]:
     return ("nested", "", "", 2, action)
 
 
-def test_nested_binding_residues_beside_spark(spark: ReparkSession, warehouse: Path) -> None:
-    """Residues R-15 and R-16, each beside Spark's recorded answer.
+_NESTED_BINDING: dict[str, Action] = {
+    "append_nested_missing_subfield": lambda s, f, o: (
+        _struct_frame(s, "a: INT", (9,)).writeTo(_T).append()
+    ),
+    "append_nested_extra_subfield": lambda s, f, o: (
+        _struct_frame(s, "a: INT, b: STRING, c: INT", (9, "g", 5)).writeTo(_T).append()
+    ),
+    "op_nested_missing_subfield": lambda s, f, o: (
+        _struct_frame(s, "a: INT", (9,)).writeTo(_T).overwritePartitions()
+    ),
+    "oc_nested_upper_subfield": lambda s, f, o: (
+        _struct_frame(s, "A: INT, b: STRING", (9, "g"))
+        .writeTo(_T)
+        .overwrite(functions.col("id") >= 1)
+    ),
+}
 
-    R-15: the append doors do not run the by-name sub-field resolver, so a struct missing
-    ``b`` or carrying an extra ``c`` commits where Spark refuses, and
-    ``overwritePartitions`` refuses the missing ``b`` in the engine's cast text. R-16: a
-    case-only sub-field spelling (``A`` for ``a``) under the default case-insensitive setting
-    writes ``a`` NULL through ``overwrite(condition)`` where Spark writes 9.
+
+@pytest.mark.parametrize("name", list(_NESTED_BINDING))
+def test_nested_binding_answers_as_spark(spark: ReparkSession, warehouse: Path, name: str) -> None:
+    """Residues R-15 and R-16 are retired (ICE-STRUCT-PAIRING-1, 2026-10-14): Spark's answer.
+
+    The append doors and ``overwritePartitions`` pair a struct by name, so a struct missing
+    ``b`` refuses ``CANNOT_FIND_DATA`` and one carrying an extra ``c`` refuses
+    ``EXTRA_STRUCT_FIELDS``, in Spark's condition and text with RePark's class prefix (R-4),
+    and the table keeps its two rows. A case-only sub-field spelling (``A`` for ``a``) under
+    the default case-insensitive setting writes 9 through ``overwrite(condition)``.
 
     pins: u7-write-df-2/C-013, C-016
     """
-    missing = _run(
-        spark,
-        warehouse,
-        _nested(lambda s, f, o: _struct_frame(s, "a: INT", (9,)).writeTo(_T).append()),
-    )
-    assert _MEASURED["append_nested_missing_subfield"]["error"]["condition"] == (
-        "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
-    )
-    assert missing["rows"] == [[1, [1, "x"]], [2, [2, "y"]], [7, [9, None]]]
-    spark.sql(f"DROP TABLE {_T}")
-    extra = _run(
-        spark,
-        warehouse,
-        _nested(
-            lambda s, f, o: (
-                _struct_frame(s, "a: INT, b: STRING, c: INT", (9, "g", 5)).writeTo(_T).append()
-            )
-        ),
-    )
-    assert _MEASURED["append_nested_extra_subfield"]["error"]["condition"] == (
-        "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS"
-    )
-    assert extra["rows"] == [[1, [1, "x"]], [2, [2, "y"]], [7, [9, "g"]]]
-    spark.sql(f"DROP TABLE {_T}")
-    partitions = _run(
-        spark,
-        warehouse,
-        _nested(lambda s, f, o: _struct_frame(s, "a: INT", (9,)).writeTo(_T).overwritePartitions()),
-    )
-    spark_partitions = _MEASURED["op_nested_missing_subfield"]
-    assert spark_partitions["error"]["condition"] == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
-    assert partitions["rows"] == spark_partitions["rows"]
-    assert partitions["error"]["type"] == "PySparkException"
-    assert partitions["error"]["message"].startswith(
-        "datafusion engine error: Execution error: INSERT OVERWRITE cast of list column `s` to `s`"
-    )
-    assert partitions["error"]["message"].endswith(
-        "Incorrect number of arrays for StructArray fields, expected 2 got 1"
-    )
-    spark.sql(f"DROP TABLE {_T}")
-    folded = _run(
-        spark,
-        warehouse,
-        _nested(
-            lambda s, f, o: (
-                _struct_frame(s, "A: INT, b: STRING", (9, "g"))
-                .writeTo(_T)
-                .overwrite(functions.col("id") >= 1)
-            )
-        ),
-    )
-    spark_folded = _MEASURED["oc_nested_upper_subfield"]
-    assert spark_folded["rows"] == [[7, [9, "g"]]]
-    assert folded["operations"] == spark_folded["operations"]
-    assert folded["rows"] == [[7, [None, "g"]]]
+    expected = _sorted_rows(_MEASURED[name])
+    if "error" in expected:
+        expected["error"] = _analysis_class(expected["error"])
+    assert _run(spark, warehouse, _nested(_NESTED_BINDING[name])) == expected
 
 
 def test_store_assignment_residues_beside_spark(spark: ReparkSession, warehouse: Path) -> None:
