@@ -10161,3 +10161,17 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   when the box lane is absent. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: parity-live-infra-2/C-001
+- [_record_ice_tsns_floor_doors_1_main.py](_record_ice_tsns_floor_doors_1_main.py) —
+  **ICE-TSNS-FLOOR-DOORS-1 step 0 (2026-10-14):** the door-matrix recorder for
+  parity row R-009. It reuses the merge-wall door helpers by import and writes
+  eleven probe ticks (sub-microsecond negatives around the epoch, New York
+  repeated- and skipped-hour walls, int64 nanosecond extremes) from
+  `timestamp_ns` and `timestamptz_ns` sources into `TIMESTAMP` and
+  `TIMESTAMP_NTZ` targets over nine doors, two format versions and three
+  zones. Each cell stores the read-back microsecond ticks beside the
+  harness-derived floor and session-zone references with an EQUAL-RULE or
+  DIFFERS label. Evidence:
+  [main-cells.json](../../../task/wo/ice-tsns-floor-doors-1/evidence/main-cells.json)
+  and [main-cells.md](../../../task/wo/ice-tsns-floor-doors-1/evidence/main-cells.md).
+  No module docstring beyond the one line: the lane's no-comments ruling
+  covers the new file; the contract lives here.
