@@ -516,6 +516,15 @@ repark-core's error map.
   where they refuse earlier and more clearly; nothing depends on them for safety: the
   guard in `../catalog/encryption_guard.rs` holds without them.
   pins: enc-1/C-008
+- `conform.rs`, `overwrite.rs`, `partition_overwrite.rs`, `merge/mod.rs` — **ICE-TSNS-FLOOR-DOORS-1
+  guard (2026-10-14, provisional, the order's lean A):** `conform::strict_store_cast(name, column,
+  target)` is today's strict cast unless a top-level timestamp's unit would get coarser, where
+  `refuse_coarser_timestamp` returns an internal error naming the column. The five batch casts
+  that narrowed a nanosecond source on main use it (`conform.rs`, both `overwrite.rs` positional
+  maps, `partition_overwrite.rs`'s store assignment; `merge/mod.rs` calls the refusal before
+  `convert_uuid_column`). A door that misses the routers fails instead of storing a second answer.
+  Nested leaves stay as on main. Ships as its own last commit with a revert-alone run.
+  pins: ice-tsns-floor-doors-1/C-014
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
   assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
   append.rs baseline 1886). A missing
@@ -597,6 +606,17 @@ repark-core's error map.
   stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
   fold); the ANSI door and bare sessions read it as UTC as before.
   pins: ntz-store-doors-1/C-002, C-003, C-004
+- `ntz_store.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the two router predicates
+  gain one arm each, so every staged door reaches `repark-functions`'
+  `timestamp_ns_cast::store_micros` by type, as INSERT does. `needs_ltz_instant_cast` accepts
+  `Timestamp(Nanosecond, _)`: `zone_store_frame` (every INSERT OVERWRITE spelling, the static
+  `PARTITION` door, INSERT … BY NAME, `overwritePartitions`, `insertInto(overwrite=True)`) and
+  the MERGE insert wrapper (`merge/insert.rs`) emit the cast to the column type that INSERT
+  plans, and the analyzer turns it into the narrowing kernel. `wall_kernel_reads` accepts a
+  naive nanosecond source for a `TIMESTAMP_NTZ` target, which then goes through the NTZ wall
+  kernel. Why: those doors narrowed in the write-side Arrow cast, toward zero and reading a
+  naive wall as UTC. Write cost against main, five interleaved sets of 2,000,000 rows: 0.75 to
+  1.04 (the ledger's cost table). pins: ice-tsns-floor-doors-1/C-010, C-012
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
   `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
   write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix

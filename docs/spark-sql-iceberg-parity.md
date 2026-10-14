@@ -3320,21 +3320,32 @@ still open is `isModifiable`.
   conform no longer skips zoned targets, and the zoned kernel may answer NULL where the naive
   one may. Ledger `task/ledgers/staging/ice-tstzns-wall-1-ledger.md`.
 
-### ICE-TSNS-SQL-1-R-009 — OPEN (measured 2026-10-09): a nanosecond source into a microsecond column truncates toward zero on some doors
+### ICE-TSNS-SQL-1-R-009 — FIXED 2026-10-14 (ICE-TSNS-FLOOR-DOORS-1): a nanosecond source into a microsecond column floors and reads the session wall on every door
 
-- **repark** — into a microsecond `TIMESTAMP` column, `INSERT OVERWRITE`, MERGE insert,
-  `overwritePartitions` and `insertInto(overwrite=True)` store a `timestamp_ns` or
-  `timestamptz_ns` value truncated toward zero (`-1 ns` stores `0 µs`) and read a wall as
-  UTC, where INSERT floors (`-1 µs`) and reads a wall in the session zone: 36 cells on each
-  format version, UTC included. Into a `TIMESTAMP_NTZ` column every door, INSERT included,
-  truncates a `timestamp_ns` value toward zero.
+- **repark** — into a microsecond `TIMESTAMP` or `TIMESTAMP_NTZ` column every measured write door
+  now stores what INSERT stores into `TIMESTAMP`: the floor (`-1 ns` stores `-1 µs`), a naive wall
+  localised in the session zone, an instant shifted to the session wall for `TIMESTAMP_NTZ`. One
+  function makes the tick (`timestamp_ns_cast::store_micros`), deciding by source type, target
+  type and session zone; the staged doors reach it through the two router predicates of
+  `write/ntz_store.rs`. Before (main `293896ce`): into `TIMESTAMP`, `INSERT OVERWRITE`, the MERGE
+  insert arm, `overwritePartitions` and `insertInto(overwrite=True)` truncated toward zero and read
+  a naive wall as UTC (36 cells on each format version over six doors, the three MERGE insert
+  spellings counted apart, UTC included). The door count is restated: four more doors did the
+  same (INSERT … BY NAME, INSERT OVERWRITE `BY NAME`, with a column list and with a static
+  `PARTITION`), ten in all of the fixture's twenty. Into `TIMESTAMP_NTZ` all twenty, INSERT
+  included, truncated toward zero, and the read `CAST(ns AS TIMESTAMP_NTZ)` answered `0` for
+  `-1 ns`; both floor now. Microsecond sources and INSERT's stored value into `TIMESTAMP` do not
+  move. Tables already written keep their values.
 - **Apache Spark** — cannot read the source types. *(oracle: documented — ruling Q-21c-8
   floors a nanosecond value narrowed to microseconds.)*
-- **Pin** — the recorded cells in `ice_tsns_merge_wall_1_main.json`, held as they are by the
-  control test of `test_ice_tsns_merge_wall_1.py`.
-- **Rationale** — OPEN, dated 2026-10-09. Only values before the epoch with digits below
-  the microsecond differ by the truncation. Microsecond targets were a control of
-  ICE-TSNS-MERGE-WALL-1. Ledger question Q2.
+- **Pin** — `python/repark/tests/test_ice_tsns_floor_doors_1.py` (246 tests, 26928 ticks; red
+  on main on 4400 ticks; every expected tick is the recorder's rule), and the nanosecond control
+  cells of `test_ice_tsns_merge_wall_1.py` held to the same rule (94 of main's cells moved).
+- **Rationale** — FIXED 2026-10-14 by the owner's go of that day on the one-chokepoint sketch
+  (`task/wo/ice-tsns-floor-doors-1/sketch.md`). The NTZ change moves INSERT itself, by Q-21c-8.
+  The release note carries one line per stored-value change
+  (`task/roadmap/mid-term/v1-5-6-release-notes-draft.md`). Ledger
+  `task/ledgers/staging/ice-tsns-floor-doors-1-ledger.md`.
 
 ### ICE-TSNS-SQL-1-R-010 — OPEN (measured 2026-10-09): `UPDATE` and `DELETE` do not lower the nanosecond cast spellings
 
