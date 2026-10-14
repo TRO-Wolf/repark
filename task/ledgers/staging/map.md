@@ -2406,3 +2406,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixed) (C-004). `risk_tier: standard`. Branch
   `test/parity-live-infra-2`.
   pins: parity-live-infra-2/C-001, C-002, C-003, C-004
+- [write-body-carriers-1-ledger.md](write-body-carriers-1-ledger.md) —
+  **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** measurement only, no product
+  code. Spark 4.1.2 refuses all 20 CTAS-with-write-body cells at parse and
+  moves nothing (C-001); main's 40 CTAS cells commit the inner write then fail
+  on 24, refuse already-exists on 10 and the MERGE body on 6, identically on
+  format versions 2 and 3 (C-002); the 14 wrapper cells run their write except
+  EXPLAIN ANALYZE of MERGE (C-003). The fix-time refusal (C-004) and the ANSI
+  door (C-005) stay OPEN. `risk_tier: standard`. Branch
+  `fix/write-body-carriers-1`.

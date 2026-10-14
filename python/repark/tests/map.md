@@ -10167,9 +10167,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   recorded from live Spark 4.1.2 with the Iceberg GAV of `_oracle_pins`; writes
   `spark-cells.json` and `spark-cells.md` into
   `task/wo/write-body-carriers-1/evidence/`. Takes an optional warehouse path.
+  pins: write-body-carriers-1/C-001
 - [_record_write_body_carriers_1_main.py](_record_write_body_carriers_1_main.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 54 main cells on the release
   module over a memory catalog (the 20 CTAS cells on format versions 2 and 3,
   `EXPLAIN ANALYZE` of each body, `PREPARE` / `EXECUTE` of INSERT and INSERT
   OVERWRITE); writes `main-cells.json` and `main-cells.md` into
   `task/wo/write-body-carriers-1/evidence/`. Takes an optional warehouse path.
+  pins: write-body-carriers-1/C-002, C-003
