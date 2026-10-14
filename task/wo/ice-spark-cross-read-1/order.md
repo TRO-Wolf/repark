@@ -39,10 +39,11 @@ per-table outcome table live in the unit ledger:
 
 The leg needs one interpreter with both engines: the sparkenv interpreter
 (PySpark 4.1.2, no RePark) with the release module on `PYTHONPATH`. From the
-repo root, with `JAVA_HOME` on a Java 17 home:
+repo root, with `JAVA_HOME` on a Java 17 home (fill the three bracketed
+paths for this box):
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 PYTHONPATH=/tmp/sb-main/python/repark/src:/tmp/sb-main/.venv/lib/python3.12/site-packages /tmp/sparkenv/bin/python -m pytest python/repark/tests/test_acceptance_cross_read_local.py -q -rA -s
+JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 PYTHONPATH=<repark release module's src>:<its site-packages> <the PySpark interpreter> -m pytest python/repark/tests/test_acceptance_cross_read_local.py -q -rA -s
 ```
 
 Result 2026-10-14: 3 passed. Four tables EQUAL (`mw4mor` 20 rows,

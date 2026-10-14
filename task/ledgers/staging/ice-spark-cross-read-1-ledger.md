@@ -38,10 +38,11 @@ session zone UTC, ANSI on, `spark.jars.packages`
 `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`. RePark came from
 the release module built off `293896ce` (main has moved by docs only since).
 The leg needs one interpreter with both engines: the sparkenv interpreter
-with the release module on `PYTHONPATH`, from the repo root:
+with the release module on `PYTHONPATH`, from the repo root (fill the
+three bracketed paths for this box):
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 PYTHONPATH=/tmp/sb-main/python/repark/src:/tmp/sb-main/.venv/lib/python3.12/site-packages /tmp/sparkenv/bin/python -m pytest python/repark/tests/test_acceptance_cross_read_local.py -q -rA -s
+JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 PYTHONPATH=<repark release module's src>:<its site-packages> <the PySpark interpreter> -m pytest python/repark/tests/test_acceptance_cross_read_local.py -q -rA -s
 ```
 
 The `-s` only shows the printed outcome tables; without it the run passes
