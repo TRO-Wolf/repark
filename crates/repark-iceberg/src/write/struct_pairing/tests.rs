@@ -523,3 +523,57 @@ async fn the_kernel_refuses_at_plan_time_and_pairs_at_run_time() {
         "{refused}"
     );
 }
+
+fn unpaired_batch() -> (
+    datafusion::arrow::datatypes::SchemaRef,
+    datafusion::arrow::record_batch::RecordBatch,
+) {
+    use datafusion::arrow::datatypes::Schema;
+    let reordered = shape_struct(&[("b", 2), ("a", 1)], 1, None);
+    let source = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, true),
+        Field::new("st", reordered.data_type().clone(), true),
+    ]));
+    let batch = datafusion::arrow::record_batch::RecordBatch::try_new(
+        source,
+        vec![
+            Arc::new(Int32Array::from(vec![1])) as ArrayRef,
+            Arc::new(reordered) as ArrayRef,
+        ],
+    )
+    .expect("batch");
+    let table = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, true),
+        Field::new("st", target_struct(), true),
+    ]));
+    (table, batch)
+}
+
+const HINT_H1_BATCH: &str = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write \
+     incompatible data for the table ``: the struct `st` has the fields `b`, `a` and the table \
+     has `a`, `b`. This entry does not pair struct fields; give the value the table's field \
+     names in the table's order.";
+
+#[test]
+fn the_append_batch_cast_s1_refuses_an_unpaired_struct_with_hint_h1() {
+    let (table, batch) = unpaired_batch();
+    let text =
+        crate::write::conform::conform_batch(&table, &std::collections::HashSet::new(), &batch)
+            .expect_err("S1 refuses")
+            .to_string();
+    assert!(text.contains(HINT_H1_BATCH), "{text}");
+}
+
+#[test]
+fn the_positional_overwrite_cast_s2_refuses_an_unpaired_struct_with_hint_h1() {
+    let (table, batch) = unpaired_batch();
+    let text = crate::write::overwrite::positional_map_overwrite_batch(&batch, &table, &[])
+        .expect_err("S2 refuses")
+        .to_string();
+    assert!(text.contains(HINT_H1_BATCH), "{text}");
+    let listed = ["id".to_string(), "st".to_string()];
+    let text = crate::write::overwrite::positional_map_overwrite_batch(&batch, &table, &listed)
+        .expect_err("S2 with a column list refuses")
+        .to_string();
+    assert!(text.contains(HINT_H1_BATCH), "{text}");
+}

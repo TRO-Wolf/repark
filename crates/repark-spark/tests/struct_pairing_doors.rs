@@ -353,3 +353,67 @@ async fn every_door_pairs_struct_fields_by_spark_rule() {
         failures.join("\n")
     );
 }
+
+const HINT_H1_PARTITION: &str = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write \
+     incompatible data for the table ``: the struct `st` has the fields `b`, `a` and the table \
+     has `a`, `b`. INSERT OVERWRITE with a static PARTITION value does not pair struct fields; \
+     write the struct with the table's field names in the table's field order.";
+
+const HINT_H1_BATCH: &str = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write \
+     incompatible data for the table ``: the struct `st` has the fields `b`, `a` and the table \
+     has `a`, `b`. This entry does not pair struct fields; give the value the table's field \
+     names in the table's order.";
+
+#[tokio::test]
+async fn the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1() {
+    let session = session();
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    run(&session, "CREATE NAMESPACE ice.ns").await;
+    let table = "ice.ns.static_part";
+    run(
+        &session,
+        &format!(
+            "CREATE TABLE {table} (id INT, p INT, st STRUCT<a: INT, b: INT>) USING iceberg \
+             PARTITIONED BY (p)"
+        ),
+    )
+    .await;
+    run(
+        &session,
+        &format!("INSERT INTO {table} VALUES (0, 1, named_struct('a', 10, 'b', 20))"),
+    )
+    .await;
+    for (statement, hint) in [
+        (
+            format!(
+                "INSERT OVERWRITE {table} PARTITION (p = 1) SELECT 1, named_struct('b', 2, 'a', 1)"
+            ),
+            HINT_H1_PARTITION,
+        ),
+        (
+            format!(
+                "INSERT OVERWRITE {table} PARTITION (p) SELECT 1, 1, named_struct('b', 2, 'a', 1)"
+            ),
+            HINT_H1_BATCH,
+        ),
+    ] {
+        let refusal = attempt(&session, Door::Sql("{t}"), &statement, "")
+            .await
+            .expect_err("the partition route refuses an unpaired struct");
+        assert!(refusal.contains(hint), "{statement}: {refusal}");
+        assert_eq!(stored(&session, table, 0).await, Some((Some(10), Some(20))));
+    }
+    run(
+        &session,
+        &format!(
+            "INSERT OVERWRITE {table} PARTITION (p = 1) SELECT 1, named_struct('a', 1, 'b', 2)"
+        ),
+    )
+    .await;
+    assert_eq!(stored(&session, table, 1).await, Some((Some(1), Some(2))));
+    assert_eq!(stored(&session, table, 0).await, None);
+}
