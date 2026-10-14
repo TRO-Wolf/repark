@@ -21,8 +21,8 @@ owner ruling 2026-10-10.
 | C-001 | Spark 4.1.2 refuses all 20 CTAS cells at parse with PARSE_SYNTAX_ERROR and SQLSTATE 42601, and no table reads back different. | The Spark fixture and its recorder. | **PROVEN** | §1; [spark-cells.json](../../wo/write-body-carriers-1/evidence/spark-cells.json): 20 refused, 0 moved. |
 | C-002 | Main's 40 CTAS cells: 24 commit the inner write then fail, 10 refuse already-exists, 6 refuse the MERGE body; format versions 2 and 3 answer identically. | The main fixture and its recorder. | **PROVEN** | §2; [main-cells.json](../../wo/write-body-carriers-1/evidence/main-cells.json): 24 commit-before-fail, 16 fail-before-write, 0 answered, `z` never moves. |
 | C-003 | Main's 14 wrapper cells: EXPLAIN ANALYZE runs the four non-MERGE writes and refuses MERGE; PREPARE plus EXECUTE run both writes. | The main fixture and its recorder. | **PROVEN** | §3; 8 answered with the write committed, 2 MERGE refusals with nothing written, 4 prepare pairs answered with the write committed. |
-| C-004 | The fix refuses the CTAS shape before any file is written, with Spark's measured class and text. | A later step. | **OPEN** | Q1: error precedence against the already-exists check. |
-| C-005 | The ANSI door takes or declines the same refusal. | A later step. | **OPEN** | Q2: step 0 read the ANSI path but ran no ANSI cell (§4). |
+| C-004 | The fix refuses the CTAS shape before any file is written, with Spark's measured class and text. | The build battery (§6). | **PROVEN** | Q1 taken with the orchestrator's lean (parse wins over already-exists); owner-pending. |
+| C-005 | The ANSI door takes or declines the same refusal. | The ANSI pins (§6). | **PROVEN** | Q2 taken with the orchestrator's lean (door declined, already refuses pre-commit); owner-pending. |
 
 ## 1. Spark's answer (C-001)
 
@@ -118,12 +118,77 @@ Spark column, as the card rules.
   before reaching the body (§2), because the existence check precedes it. A
   refusal placed after that check keeps the divergence on 10 of 40 cells.
   *Lean:* Spark's text at parse altitude, since the card rules the text follows
-  Spark's measured answer.
+  Spark's measured answer. *Build round 1 (2026-10-14):* taken with the lean;
+  the owner has not yet answered.
 - **Q2 (C-005, RULING).** Should the ANSI door take the same named refusal?
   *Premise:* the card's refusal is a Spark-parity refusal and the ANSI door
   carries no Spark claim; the reading of §4 says it already refuses before any
   file is written, unverified. *Lean:* run one ANSI cell in the fix step and
   refuse by name only if it commits; otherwise leave the door untouched.
+  *Build round 1 (2026-10-14):* five ANSI cells ran on main and head; no cell
+  commits, so the door is untouched, with the lean; the owner has not yet
+  answered.
+
+## 6. Build round 1 (2026-10-14)
+
+Branch `fix/write-body-carriers-1` at `367b3df2` (D2; D1 is `7a7de903`).
+
+The refusal sits at the ruled point: the `Statement::CreateTable` arm at
+`crates/repark-spark/src/router.rs:326`, via `refuse_ctas_write_body` beside
+the arm. The test is the body's statement kind — `SetExpr::Insert`, `Update`,
+`Delete` or `Merge` — unwrapping any `SetExpr::Query` layers the parser
+produces for a parenthesised body (single and double parens measured; a
+parenthesised `SELECT` still answers). Top-level `SELECT` and `VALUES` bodies
+pass through unchanged; set-operation bodies were not run. No text search and
+no new exception type: the
+refusal reuses `view_ddl::temp_parse::spark_parse_error` with
+`spark_error::message(PARSE_SYNTAX_ERROR, near)`, so Python raises the existing
+`ParseException` path with the bare message `[PARSE_SYNTAX_ERROR] Syntax error
+at or near '<KEYWORD>'. SQLSTATE: 42601`. The `(line, pos)` suffix Spark
+appends is omitted: the parser does not report the keyword position.
+
+Head battery (`python/repark/tests/test_write_body_carriers_1.py` on the head
+release module): 6 of 6 tests pass — the 40 CTAS cells, 5 `REPLACE TABLE`
+cells and 5 parenthesised cells refuse with Spark's class, condition, SQLSTATE
+and keyword with `t` and `z` unchanged, and the 14 wrapper cells, 5 ANSI cells
+and 6 neighbour cells answer as on main. Rust battery
+(`crates/repark-spark/src/tests/write_body_carriers.rs`): 5 passed, 0 failed.
+
+C-004 is PROVEN. The five `CREATE TABLE <existing> AS <write>` cells refuse
+with the parse text: the arm runs before `execute_ctas`, so the refusal wins
+over the already-exists check by construction. `REPLACE TABLE <missing> AS
+<write>` still answers the pre-existing `TABLE_OR_VIEW_NOT_FOUND` from
+`refuse_missing_replace_target`
+(`crates/repark-spark/src/normalize/replace_table.rs:31`), which runs before
+the arm; the body never runs and `t` never moves. `CREATE TABLE IF NOT EXISTS
+<existing> AS <write>` moves from ANSWERED (no-op) on main to the parse
+refusal on head: Spark refuses at parse regardless of `IF NOT EXISTS`, so the
+change is Spark-correct.
+
+C-005 is PROVEN with the door declined: the five ANSI-door cells refuse
+identically on main and head with `UnsupportedOperationException`, `Query
+<WRITE> not implemented yet` (DataFusion plans a DML `SetExpr` as a query only
+at plan time, and nothing collects before the refusal), with the target rows
+unchanged. No ANSI product change.
+
+Parenthesised bodies: on main `CREATE TABLE z AS (<write>)` refused with
+`UnsupportedOperationException`, `Query <WRITE> not implemented yet`, writing
+nothing; on head the same shape refuses with the ruled `PARSE_SYNTAX_ERROR`.
+The wrapping found is `SetExpr::Query`, one layer per paren pair.
+
+Remaining differences against Spark's measured cells: the omitted `(line,
+pos)` suffix; native `ParseException.getMessageParameters()` returns `None`
+(the facade attaches no parameter map; Spark carries `{'error': '<KEYWORD>',
+'hint': ''}`). Class, condition, SQLSTATE and the first line match.
+
+Not changed this round: `EXPLAIN ANALYZE CREATE TABLE z AS <write>` and
+`PREPARE p AS CREATE TABLE z AS <write>` refuse on main with
+`UnsupportedOperationException`, `Query <WRITE> not implemented yet`, writing
+nothing (`PREPARE` stores nothing, so `EXECUTE` answers `Prepared statement
+... does not exist`); the re-run on the head module answers identically. The
+Explain and Prepare statements never match the refused arm. No registry row
+exists for this shape (searched `docs/spark-sql-iceberg-parity.md`
+2026-10-14); none added.
 
 ## Coverage attestation
 

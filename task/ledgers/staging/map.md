@@ -2412,9 +2412,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   moves nothing (C-001); main's 40 CTAS cells commit the inner write then fail
   on 24, refuse already-exists on 10 and the MERGE body on 6, identically on
   format versions 2 and 3 (C-002); the 14 wrapper cells run their write except
-  EXPLAIN ANALYZE of MERGE (C-003). The fix-time refusal (C-004) and the ANSI
-  door (C-005) stay OPEN. `risk_tier: standard`. Branch
-  `fix/write-body-carriers-1`.
+  EXPLAIN ANALYZE of MERGE (C-003). **Build round 1 (2026-10-14):** the CTAS
+  arm refuses the four write-body kinds with Spark's text before any write
+  (C-004); the ANSI door already refuses pre-commit and is untouched (C-005).
+  `risk_tier: standard`. Branch `fix/write-body-carriers-1`.
 - [ice-spark-cross-read-1-ledger.md](ice-spark-cross-read-1-ledger.md) —
   **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the cross-read helper (C-001),
   the local leg over the MOR, replace-twice and v3 scenarios with four
