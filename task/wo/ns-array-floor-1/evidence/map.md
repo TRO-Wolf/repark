@@ -9,5 +9,8 @@
   D2: what each door stores for a returned datetime64[ns] array or column
   under array and top-level timestamp declarations, on main and live Spark
   4.1.2, frame ticks and read-back ticks.
+- [sites.md](sites.md) — D3: the refusal and copy site of every erroring and
+  every floor-answering output cell, with the door-to-site table and the
+  one-line site count.
 
 Up: [../map.md](../map.md).
