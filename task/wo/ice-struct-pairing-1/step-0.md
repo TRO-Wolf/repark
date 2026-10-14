@@ -6,19 +6,19 @@ Product tree is unchanged since the sketch read at `018d0efd`
 (`git log --oneline 018d0efd..HEAD -- crates/repark-iceberg/src crates/repark-spark/src python/repark/src`
 prints nothing), so sketch §3 line numbers still hold; lines re-verified at HEAD are marked `ok`.
 
-## 0. Halt table (provisional; H2-H7 complete in the probes section)
+## 0. Halt table
 
 | Halt | Verdict | Evidence |
 |---|---|---|
-| H1 unlisted struct-pairing place | NOT MET (reading; §1b) | eight unclear files cleared by reading, §1b |
-| H2 mode via state snapshot | pending probe | see §3 |
-| H3 DataFusion raises before the rule | pending probe | see §3 |
-| H4 kernel visible to user SQL | pending probe | see §3 |
-| H5 source_by_name moves route or cost | reading done, probe pending | readers `router/nested_ns.rs:28`, `router/insert_positional/replace_where.rs:294`, see §3 |
-| H6 cost above 1.05 or EXPLAIN differs | pending cost bar | see §5 |
-| H7 route to S1/S2/S3 past neither call site | reading done, probe pending | static-partition spelling is the candidate, see §1a/§3 |
+| H1 unlisted struct-pairing place | NOT MET | eight unclear files cleared by reading, §1b |
+| H2 mode via state snapshot | NOT MET | probe hands by name, then by position, §2 |
+| H3 DataFusion raises before the rule | NOT MET | stored pairs never raise early; recased raises at execution, §2 |
+| H4 kernel visible to user SQL | MET | both names resolve in user SQL; Q2 open, §2 |
+| H5 source_by_name moves route or cost | NOT MET | two readers; flag true vs false identical rows, §2 |
+| H6 cost above 1.05 or EXPLAIN differs | pending cost bar | see §4 |
+| H7 route to S1/S2/S3 past neither call site | MET | static-partition route stages with no wrap call, §2 |
 
-Seams: one so far (H1 NOT MET, H2-H7 pending).
+Seams: more than one (H4, H7).
 
 ## 1a. Route table (order item a)
 
@@ -96,7 +96,103 @@ cannot render L1 refusals and L1 stands as named.
 
 ## 2. Probes of H2, H3, H4, H5, H7
 
-Pending; runs on the probe branch `probe/struct-pairing-h2` (D2 commit).
+### H2: NOT MET (the snapshot carries the mode; no leak)
+
+Temporary product change on the throwaway local branch `probe/struct-pairing-h2`
+(commits `77117a5a` and `17ae50f0`, never pushed, never merged): a `ProbePairingMode`
+extension on `ConfigOptions`; `execute_passthrough_inner`
+(`crates/repark-spark/src/spark_ast.rs:152`) sets by name on the statement's own
+state snapshot when the SQL carries `probe_by_name`; `StoreOverflowCast::analyze`
+threads its `config` into `transform_store_dml` and `conform_store_exprs`
+(`crates/repark-iceberg/src/write/store_overflow.rs`), which refuses
+`probe handed={mode}` on a struct target. `cargo check -p repark-iceberg
+-p repark-spark` green; release module built into a second venv
+(`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 uvx maturin@1.14.1 develop --release`).
+
+Probe, one session, table `(id INT, st STRUCT<a: INT, b: INT>)`, printed results:
+
+```text
+marked REFUSED: repark_store_overflow_cast
+caused by
+Error during planning: probe handed=by_name for column `st`
+unmarked REFUSED: repark_store_overflow_cast
+caused by
+Error during planning: probe handed=by_position for column `st`
+```
+
+The marked `INSERT ... SELECT` of a reordered struct is handed by name; the second,
+unmarked statement on the same session is handed by position. The mode reaches
+`conform_store_exprs` through the statement snapshot and does not leak.
+
+One lesson for the unit from the first probe run: with a source-mismatch condition
+the probe never fired, because the plan reaching `conform_store_exprs` already
+carries DataFusion's own struct cast to the target type. The pairing at this call
+site must look through the planner cast (`unwrap_cast` exists for this); H2 itself
+only asks about the mode, which arrives.
+
+### H3: NOT MET
+
+On main's module (no probe change needed):
+
+- Reordered `INSERT ... SELECT` stores `[[2,2,1]]`: no raise anywhere, so the rule
+  would get its chance. The SELECT source EXPLAINs clean.
+- Recased `INSERT ... SELECT` refuses `UnsupportedOperationException: This feature
+  is not implemented: Unsupported CAST from Struct("A": Int32, "B": Int32) to
+  Struct("a": Int32, "b": Int32)` at execution; the source EXPLAINs clean, so the
+  raise sits at or after physical planning, after `StoreOverflowCast` runs at
+  analysis.
+- Surplus-field top-level `INSERT ... SELECT` stores `[[2,1,2]]`, dropping `c`:
+  no raise at all.
+
+Only pairs both engines refuse (L1, logical planning) raise before any rule runs.
+
+### H4: MET (names are user-visible; needs the Q2 ruling)
+
+Reading: the MERGE and UPDATE rewrites are planned with the same function registry
+as user SQL (`ctx.sql`), and registry row R-013 already records that the shared
+sites render the wall kernel by name, forcing registration, which publishes it.
+One probe each on main's module, printed results:
+
+- `SELECT arrow_cast('x', 'Utf8')` resolves and answers `x`.
+- `SELECT __repark_cast_timestamp_ns__('2024-01-01 00:00:00')` resolves and answers
+  the timestamp.
+
+Answer: no. A function registered by name cannot be called from the rewrite's SQL
+text but hidden from user SQL. Q2 for the owner: publish `StorePairKernel` the same
+way and extend R-013's row (the sketch lean), or carry the mode in a planning state
+private to the rewrite.
+
+### H5: NOT MET
+
+Readers of `StatementWriteOptions.source_by_name` at HEAD: exactly two,
+`crates/repark-spark/src/router/nested_ns.rs:28` (nested-supply gate strictness)
+and `crates/repark-spark/src/router/insert_positional/replace_where.rs:294`
+(`by_name_source`, REPLACE WHERE statements only). No reader sits on the
+plain-INSERT append, `overwritePartitions` or `saveAsTable` executor route.
+Behavior on main, same reordered struct on fresh tables, printed rows:
+
+- Plain INSERT through `_native.session_sql_with_write_options` with the flag true
+  vs false: identical `[[1,10,20],[2,2,1]]`.
+- REPLACE WHERE with the flag true vs the SQL spelling: identical `[[2,2,1]]`.
+
+No route move and no answer change observed. Caveat: with the flag true on a
+REPLACE WHERE statement, `by_name_source` adds a by-name projection to the plan;
+answers match the SQL route, timings not compared here.
+
+### H7: MET
+
+Static-partition overwrite (`INSERT OVERWRITE t PARTITION (p='x') SELECT ...`):
+`execute_partition_overwrite` (`crates/repark-spark/src/insert_overwrite.rs:189`)
+plans the filled source through passthrough (site 1a runs struct-blind), then
+`stage_partition_overwrite_files` (`:275`) stages with no `conform_types` or wrap
+call — contrast the dynamic path, which calls `store::conform_types` at `:433` —
+and the S3 batch cast (`crates/repark-iceberg/src/write/partition_overwrite.rs:91`,
+cast at `:101`) pairs. Behavioral probe on main: a reordered struct stores
+`{p: x, id: 2, a: 2, b: 1}`, i.e. Arrow's by-name rule, past neither pairing call
+site. Second seam; the unit must give this route a call or a guard.
+
+Halt verdicts: H1 NOT MET; H2 NOT MET; H3 NOT MET; H4 MET; H5 NOT MET; H7 MET.
+Seams: more than one (H4, H7).
 
 ## 3. Added cells, both engines (order item d)
 
