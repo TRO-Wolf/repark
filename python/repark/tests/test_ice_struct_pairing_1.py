@@ -31,6 +31,16 @@ ADDED_RULES = {
     "by_name_recased": ("insert_by_name", "case"),
 }
 TWINS = (("a", 1), ("A", 2))
+R014_RAW = (
+    "datafusion engine error: Arrow error: Invalid argument error: "
+    "arguments need to have the same data type"
+)
+L2_RAW_CELLS = (
+    ("v2", "update_no_where", "array", "case"),
+    ("v2", "update_no_where", "array", "case_reordered"),
+    ("v3", "update_no_where", "array", "case"),
+    ("v3", "update_no_where", "array", "case_reordered"),
+)
 
 
 def in_l1(door: str, container: str, field: str) -> bool:
@@ -175,6 +185,8 @@ ALL_CELLS = [key for group in MATRIX_GROUPS for key in matrix_keys(group)]
 RULED_CELLS = [key for key in ALL_CELLS if not in_l1(*key[1:]) and not in_l2(key[1])]
 L1_CELLS = [key for key in ALL_CELLS if in_l1(*key[1:])]
 L2_CELLS = [key for key in ALL_CELLS if in_l2(key[1])]
+L2_REFUSED_CELLS = [key for key in L2_CELLS if "error" in matrix_rule(*key)]
+L2_MAIN_CELLS = [key for key in L2_CELLS if key not in L2_REFUSED_CELLS and key not in L2_RAW_CELLS]
 PARQUET_DOORS = [door for door in recorder.DOOR_ORDER if not in_l2(door)]
 
 
@@ -264,10 +276,28 @@ def test_l1_refuses_and_writes_no_file(replayed: dict[str, Any], key: tuple[str,
     assert replayed["files"][key] == 1
 
 
-@pytest.mark.parametrize("key", L2_CELLS, ids=cell_id)
+@pytest.mark.parametrize("key", L2_REFUSED_CELLS, ids=cell_id)
+def test_l2_refuses_as_spark_where_spark_refuses(
+    replayed: dict[str, Any], key: tuple[str, ...]
+) -> None:
+    actual = replayed["cells"][key]
+    expected = matrix_rule(*key)
+    assert answers(expected, actual), f"expected {expected}, engine {actual}"
+
+
+@pytest.mark.parametrize("key", L2_MAIN_CELLS, ids=cell_id)
 def test_l2_answers_as_main(replayed: dict[str, Any], key: tuple[str, ...]) -> None:
     group, door, container, field = key
     assert replayed["cells"][key] == MAIN[group][f"{door}|{container}|{field}"]
+
+
+@pytest.mark.parametrize("key", L2_RAW_CELLS, ids=cell_id)
+def test_l2_case_cells_keep_an_internal_refusal(
+    replayed: dict[str, Any], key: tuple[str, ...]
+) -> None:
+    group, door, container, field = key
+    assert "rows" in ORACLE[group][f"{door}|{container}|{field}"]
+    assert replayed["cells"][key] == {"error": R014_RAW}
 
 
 def test_the_required_field_cell_refuses_as_main(replayed: dict[str, Any]) -> None:

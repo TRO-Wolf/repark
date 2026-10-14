@@ -10283,4 +10283,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   main; `test_the_stored_fields_are_read_from_the_parquet_file` reads the reordered top-level
   cell of fifteen doors from the live Parquet files. One module fixture replays every cell on
   one session. Red on main: 548 tests (230 matrix cells on each format version, 80 under
-  `caseSensitive`, two added cells, six Parquet reads).
+  `caseSensitive`, two added cells, six Parquet reads). **Build round 2 (2026-10-14, owner
+  question 48):** L2 is re-pinned in three parts of its 76 cells.
+  `test_l2_refuses_as_spark_where_spark_refuses` holds the 40 cells whose Spark answer is a
+  refusal to the rule's refusal (14 of them moved there from a raw error with the seam);
+  `test_l2_answers_as_main` holds the 32 cells Spark stores and the engine still refuses raw
+  to main; `test_l2_case_cells_keep_an_internal_refusal` names the four cells (v2 and v3,
+  array, `case` and `case_reordered`) that moved from `Unsupported CAST` to the raw
+  `arguments need to have the same data type`, and pins that text. All 36 non-refusal cells
+  stay open on parity row R-014. 2,458 tests pass on the head.
