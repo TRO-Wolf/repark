@@ -319,7 +319,7 @@ async fn every_door_pairs_struct_fields_by_spark_rule() {
             } else {
                 format!("`ice`.`ns`.`{name}_{shape}`")
             };
-            let written = if UPDATING.contains(&name) { 0 } else { 1 };
+            let written = i32::from(!UPDATING.contains(&name));
             let expected = if name == R014 && shape == "reordered" {
                 Expected::Refused(R014_RAW.to_string())
             } else if name == "insert_values" && fields.len() != TARGET.len() {

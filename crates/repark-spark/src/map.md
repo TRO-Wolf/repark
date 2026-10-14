@@ -62,7 +62,13 @@ pins: rp-4-fork-repin/C-005, C-006
   (`source_by_name`, `case_sensitive`) on the statement's own state snapshot, where
   `StoreOverflowCast` reads it; `execute_passthrough_by` and `execute_insert_source` take the
   flag, and the plain-INSERT route of `execute_insert_routed` and the write-options append pass
-  it.
+  it. **Build round 2 (2026-10-14):** both passthrough entries map their error through
+  `door_error`, which first peels the `StoreOverflowCast` rule's own analyzer context (the
+  label is the rule's `name()`, `repark_store_overflow_cast`; no message is read), so a
+  refusal raised inside the rule reaches Python with its Spark condition on the head. The
+  `overwrite(condition)` cells of `test_ice_write_df_2_overwrite.py` pin it.
+  `install_statement_pairing` and the one-line source SQL of `append_with_options.rs` keep both
+  functions under clippy's line ceiling.
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)

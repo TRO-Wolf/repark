@@ -9,6 +9,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
 use datafusion::sql::sqlparser::ast::{
@@ -19,6 +20,7 @@ use datafusion::sql::sqlparser::ast::{
 use crate::void_type::refuse_insert_void_values;
 use crate::{local_fs_ddl, window_range};
 use repark_core::CatalogRegistry;
+use repark_iceberg::StoreOverflowCast;
 use repark_iceberg::write::insert_defaults;
 
 /// Plan + execute one passthrough statement with Spark's ORDER BY null-placement defaults.
@@ -53,8 +55,8 @@ pub(crate) async fn execute_passthrough_by(
             &mut sort_rewrite_fired,
         ))
         .await
-        .map_err(crate::keyword_lower::map_door_keyword_errors),
-        outcome => outcome.map_err(crate::keyword_lower::map_door_keyword_errors),
+        .map_err(door_error),
+        outcome => outcome.map_err(door_error),
     }
 }
 
@@ -79,9 +81,30 @@ pub(crate) async fn execute_insert_source(
             &mut sort_rewrite_fired,
         ))
         .await
-        .map_err(crate::keyword_lower::map_door_keyword_errors),
-        outcome => outcome.map_err(crate::keyword_lower::map_door_keyword_errors),
+        .map_err(door_error),
+        outcome => outcome.map_err(door_error),
     }
+}
+
+fn door_error(error: DataFusionError) -> DataFusionError {
+    crate::keyword_lower::map_door_keyword_errors(peel_store_rule_context(error))
+}
+
+fn peel_store_rule_context(error: DataFusionError) -> DataFusionError {
+    match error {
+        DataFusionError::Context(rule, inner) if rule == StoreOverflowCast.name() => *inner,
+        other => other,
+    }
+}
+
+fn install_statement_pairing(state: &mut SessionState, source_by_name: bool) {
+    let case_sensitive = !crate::spark_door_case_insensitive(state.config().options());
+    state.config_mut().options_mut().extensions.insert(
+        repark_iceberg::write::struct_pairing::StatementPairing {
+            source_by_name,
+            case_sensitive,
+        },
+    );
 }
 
 #[derive(Clone, Copy)]
@@ -173,13 +196,7 @@ async fn execute_passthrough_inner(
     sort_rewrite_fired: &mut bool,
 ) -> Result<DataFrame> {
     let mut state = Box::new(ctx.state());
-    let case_sensitive = !crate::spark_door_case_insensitive(state.config().options());
-    state.config_mut().options_mut().extensions.insert(
-        repark_iceberg::write::struct_pairing::StatementPairing {
-            source_by_name: mode.source_by_name,
-            case_sensitive,
-        },
-    );
+    install_statement_pairing(&mut state, mode.source_by_name);
     let session_dialect = state.config().options().sql_parser.dialect;
     let dialect = crate::dialect_for_executing_parse(sql, session_dialect);
     // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
