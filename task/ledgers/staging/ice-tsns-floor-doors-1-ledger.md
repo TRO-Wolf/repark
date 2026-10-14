@@ -28,6 +28,7 @@ where the narrowing is decided.
 | C-006 | There is one seam where every door's narrowing is decided, by target column type. | The sketch owed before step 1. | **OPEN** | Q1: step 0 counts three distinct narrowing points (floor-plus-zone kernel, write-side Arrow cast, store-assignment cast), and the overwrite EXPLAIN displays N1 while storing N2/N3 values. The order halts on more than one seam. |
 | C-007 | Step 0 measures only the listed surface and changes no product file. | The diff and the not-measured list of §4. | **PROVEN** | §4; `git diff --stat origin/main HEAD -- 'crates/*/src' python/repark/src` prints nothing. pins: ice-tsns-floor-doors-1/C-007 |
 | C-008 | The build's fixture derives every expected tick from the recorder's rule and is red first on main's release module. | `test_ice_tsns_floor_doors_1.py` run on main's module, with a tick count per door and target. | **PROVEN** | §6: 180 of 246 tests red on main; 4400 of 26928 ticks red, 1976 `TIMESTAMP` and 2424 `TIMESTAMP_NTZ`, every one from a nanosecond source; the step 0 subset is red on 712 ticks (304 and 408), as the sketch counted. pins: ice-tsns-floor-doors-1/C-008 |
+| C-009 | One function, `store_micros` in `timestamp_ns_cast.rs`, makes the tick of every narrowing into a microsecond `TIMESTAMP` or `TIMESTAMP_NTZ`, by source type, target type and session zone; its callers are the LTZ kernel and `ntz_single`. | The seam commit, the fixture's NTZ slice on it, and the mutants of §7. | **OPEN** | Built in the seam commit; proven in the records commit. |
 
 ## 1. The matrix (C-001)
 
@@ -156,4 +157,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 8 clauses, 7 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 7 PROVEN, 2 OPEN, 0 REJECTED.

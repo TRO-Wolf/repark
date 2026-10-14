@@ -361,7 +361,7 @@ pub(crate) fn wall_without_zone(text: &str) -> &str {
     text
 }
 
-fn unlocalize_to_walls(ltz: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
+pub(crate) fn unlocalize_to_walls(ltz: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
     let instants = cast(ltz.as_ref(), &ltz_timestamp_type())?;
     let instants = instants.as_primitive::<TimestampMicrosecondType>();
     let mut builder = TimestampMicrosecondArray::builder(instants.len());
@@ -431,17 +431,9 @@ pub(crate) fn ntz_single(
             }
             Ok(ColumnarValue::Array(Arc::new(builder.finish())))
         }
-        DataType::Timestamp(_, timezone) => {
-            if timezone.is_some() {
-                let instants = cast(input.as_ref(), &ltz_timestamp_type())?;
-                Ok(ColumnarValue::Array(unlocalize_to_walls(&instants, zone)?))
-            } else {
-                Ok(ColumnarValue::Array(cast(
-                    input.as_ref(),
-                    &ntz_timestamp_type(),
-                )?))
-            }
-        }
+        DataType::Timestamp(_, _) => Ok(ColumnarValue::Array(
+            crate::timestamp_ns_cast::store_micros(input, &ntz_timestamp_type(), zone)?,
+        )),
         _ => {
             let arrays = ColumnarValue::values_to_arrays(std::slice::from_ref(
                 &forward_to_timestamp(Arc::clone(input), args)

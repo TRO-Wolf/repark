@@ -12,6 +12,11 @@ into a nanosecond wall for every write door, not INSERT's only. `repark-iceberg`
 MERGE, UPDATE and overwrite sites; the ANSI door registers it beside the NTZ kernel. The
 kernel itself did not change. pins: ice-tsns-merge-wall-1/C-008
 
+**ICE-TSNS-FLOOR-DOORS-1 (2026-10-14):** the parent's `narrow` became `store_micros(array,
+target, zone)`, the one function that makes the tick when a timestamp goes into microseconds.
+`tests.rs` calls it with the LTZ kernel's return type where it called `narrow`; what those
+tests assert did not change. pins: ice-tsns-floor-doors-1/C-009
+
 **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel's return field is nullable whenever the
 source is not already a zoned nanosecond timestamp, the rule the naive kernel got in R-007's
 fold 1 (`already_stored` decides for both). The shared MERGE, UPDATE and overwrite sites now
