@@ -113,6 +113,15 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
   The two nested store pins of fold 1 left with the split; the nested pins are the next row.
   pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
+- [struct_pairing_doors.rs](struct_pairing_doors.rs) —
+  **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
+  the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
+  writers' SQL, overwrite intent and `source_by_name`) × the shapes `reordered`, `renamed`,
+  `extra`, `missing` of a top-level `STRUCT<a: INT, b: INT>`. The expected answer comes from
+  Spark's rule in the test (by position on `INSERT`, `VALUES`, `INSERT OVERWRITE`, `REPLACE
+  WHERE` and `insertInto`; by name elsewhere), with the refusal's full text and table label.
+  `UPDATE` with no `WHERE` keeps main's raw refusal for the reordered shape (parity row
+  R-014). Red on main: 34 of 64 cells.
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,

@@ -10256,3 +10256,31 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   registry row R-009 (FIXED 2026-10-14) and of the 1.5.6 notes draft's stored-value lines.
   No module docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: ice-tsns-floor-doors-1/C-008, C-013
+- [_record_ice_struct_pairing_1.py](_record_ice_struct_pairing_1.py) —
+  **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the door × shape recorder.
+  Sixteen write doors (six Spark pairs by position, ten by name) × four containers (the top
+  level, a struct in a struct, an array element, a map value) × eight field shapes (`same`,
+  `reordered`, `renamed`, `renamed_first`, `extra`, `missing`, `case`, `case_reordered`) on
+  format versions 2 and 3, the three case shapes again under `spark.sql.caseSensitive=true`,
+  and step 0's six added cells (`overwrite(condition)` reordered and renamed, a `merge-schema`
+  append with a surplus field, BY NAME case twins and recased fields, a NULL into a required
+  struct). Every table is seeded `(0, (10, 20))` and written `(1, 2)`. It records live Spark
+  4.1.2 into `ice_struct_pairing_1_spark_oracle.json` and a RePark module (main `293896ce`)
+  into `ice_struct_pairing_1_main.json`, one cell per line; the test module imports its door
+  table and shapes. The Spark recording of 2026-10-14 equals the lane's recording of
+  2026-10-13 in all 1,216 matrix cells; main's equals it too. No module docstring beyond the
+  usage block: the lane's no-comments ruling covers the new file; the contract lives here.
+- [test_ice_struct_pairing_1.py](test_ice_struct_pairing_1.py) —
+  **ICE-STRUCT-PAIRING-1 (2026-10-14), parity row R-016:** one rule pairs struct fields on
+  every write door. The expected answer of a cell is computed from the rule (the door's mode,
+  the shape, the session's case rule), never written per cell:
+  `test_the_rule_reproduces_spark_in_every_cell` holds the rule to the oracle in all 1,216
+  matrix cells and five added cells; `test_the_engine_answers_the_rule` holds the engine to
+  it outside lists L1 (28 cells per format version: an array or map struct with a surplus or
+  missing field on the DataFusion-planned INSERT, and the `VALUES` spellings; both engines
+  refuse before any store) and L2 (`UPDATE` with no `WHERE`, parity row R-014);
+  `test_l1_refuses_and_writes_no_file` and `test_l2_answers_as_main` hold those lists to
+  main; `test_the_stored_fields_are_read_from_the_parquet_file` reads the reordered top-level
+  cell of fifteen doors from the live Parquet files. One module fixture replays every cell on
+  one session. Red on main: 548 tests (230 matrix cells on each format version, 80 under
+  `caseSensitive`, two added cells, six Parquet reads).
