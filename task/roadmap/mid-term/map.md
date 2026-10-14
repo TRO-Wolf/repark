@@ -834,3 +834,11 @@ declines it (a dated ruling in the intake, then the archive).
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
+- [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
+  **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
+  carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a
+  nanosecond leaf in a struct, list or map source, into a microsecond `TIMESTAMP` or
+  `TIMESTAMP_NTZ` leaf and read its wall in the session zone, the rule of R-009 (parity row
+  R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
+  #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
+  `timestamp_ns` target leaf.
