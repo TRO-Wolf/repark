@@ -33,6 +33,7 @@ parity row ICE-TSNS-SQL-1-R-017.
 | C-011 | One planner types the five written names on both doors, and a join key in the optimized plan carries one unit. | The Rust pins green on the head. | **OPEN** | `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`. |
 | C-012 | `SparkTimestampUnitWiden` runs before type coercion on every door and widens mixed timestamp units to the finest, by the types at the position, never narrowing and never touching equal units. | The rule's unit tests plus the lattice and position cells on the head. | **OPEN** | `crates/repark-functions/src/timestamp_unit_widen.rs` (7 unit tests); the fixture cells of C-010. |
 | C-013 | No rule reads a `Timestamp(ns, _)` cast target or literal as the SQL `TIMESTAMP`: the three `rewrite_cast` arms, their NTZ-mode twins, the nanosecond-literal rewrites and the AST lowering of the two nanosecond names are deleted. | The deletion commit plus the census green on the head. | **OPEN** | `crates/repark-functions/src/instant_ts.rs`, `crates/repark-spark/src/keyword_lower.rs`; `test_census_cell_equals_its_typed_twin`. |
+| C-014 | The wall kernels are applied by the analyzer from the type of a cast target on every door, so a written, a coerced and a widened cast to a nanosecond type are one expression. | The lattice cells on both doors and halt H7's Rust cell green on the head. | **OPEN** | `crates/repark-functions/src/timestamp_ns_cast.rs` `wall_kernel_by_target`; `test_mixed_units_widen_to_the_finest_on_both_doors`. |
 
 ## 1. The completed producer table (P1 to P15)
 
