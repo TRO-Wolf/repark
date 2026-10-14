@@ -4,7 +4,7 @@ Measured 2026-10-14 on the main release module (repark 1.5.5, memory catalog),
 session zone `America/New_York`, into a top-level `timestamptz_ns` column of a
 format-version-3 table from the naive nanosecond wall
 `CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns)`.
-Recorder: `/tmp/wbc1_d4.py` (scratch, uncommitted). Ticks are the stored
+Recorder: a scratch script, not committed. Ticks are the stored
 `timestamp[ns, tz=UTC]` values cast to int64, one row per route.
 
 | route | statement | stored tick |
