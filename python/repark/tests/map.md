@@ -10359,6 +10359,28 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (`test_list_l2_answers_as_main_where_spark_stores`, nine leaf cells, main's raw `arguments need
   to have the same data type`); where Spark refuses it answers as Spark.
   pins: ice-struct-pairing-1/C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031
+- [_record_ice_struct_pairing_1_exception.py](_record_ice_struct_pairing_1_exception.py) —
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), rulings 73, 74 and 90:** extends
+  `_record_ice_struct_pairing_1.py` with two groups merged into the same two recordings (live
+  Spark 4.1.2; main `293896ce`). `x_update` (48 cells, V2-01 and its flat-INT twins):
+  `UPDATE … SET col = (SELECT … FROM src)` and the subquery with its own `WHERE`, for a flat
+  INT column and a struct column fed reordered and in order, with `WHERE true`, an `IN` list,
+  no `WHERE` and the identity control `WHERE id = 0`, through the Spark SQL door and the ANSI
+  `repark.sql()` door (`PyReparkSession.native()`; Spark answers both). `x_rows` (26 cells,
+  V2-02): a multi-row `INSERT … VALUES` whose rows disagree on a struct's field names, on the
+  three column-list spellings, with the agreeing controls (names reordered from the table, in
+  table order), rows that disagree only in order, in case (both `caseSensitive` settings), in
+  field count, at depth, in an array and in a map value, plus three shapes Spark refuses or
+  stores for another reason (leaf types, `INSERT OVERWRITE`, `UNION ALL`). No module
+  docstring: the lane's no-comments ruling covers the new file; the contract lives here.
+- [test_ice_struct_pairing_1_exception.py](test_ice_struct_pairing_1_exception.py) —
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), rulings 73, 74 and 90:** replays the 74
+  exception cells on one session. `x_rows` answers as Spark, the refusal carrying Spark's
+  `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE]` text up to its SQLSTATE and the
+  table unchanged; the three shapes outside the agreement rule still refuse with the table
+  unchanged. `x_update`: the Spark door's identity shape (`WHERE id = 0`) stores Spark's value;
+  every other cell refuses with the ruling 90 text and writes nothing, the flat-INT cells under
+  the ruling 74 test name. Red on the head before the fix: 55 of 76; on main: 68 of 76.
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)
