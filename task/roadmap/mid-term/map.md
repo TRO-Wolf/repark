@@ -865,3 +865,10 @@ declines it (a dated ruling in the intake, then the archive).
   disjoint keys with no target-only conjunct through a barrier (ledger clause C-012 of
   the ice-occ-scoped-1 ledger); two winners fit a check-then-commit timing window.
   Open question: product race or test assumption. Unmeasured until N repeated runs.
+- [mtime-metadata-pick-1-card-2026-10-14.md](mtime-metadata-pick-1-card-2026-10-14.md) — **card
+  MTIME-METADATA-PICK-1 (2026-10-14, open, not scheduled):** every remaining file under
+  `python/repark/tests/` that orders or picks Iceberg metadata files by `st_mtime` /
+  `st_mtime_ns`, with path, line and whether the use picks a metadata file (the
+  `f8f1d252` flake shape) or does something else. Proposed fix is one shared helper
+  that picks by the version number in the file name, as `f8f1d252`'s
+  `_metadata_version` does. Retires when every listed use is converted.
