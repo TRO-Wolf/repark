@@ -137,13 +137,13 @@ struct SharedTarget {
 }
 
 impl SharedTarget {
-    fn of(types: &[DataType], units: &[Option<TimeUnit>], dates: bool) -> Option<Self> {
+    fn of(types: &[DataType], units: &[Option<TimeUnit>], peers_join: bool) -> Option<Self> {
         let zone = types
             .iter()
             .zip(units)
             .filter(|(_, unit)| unit.is_some())
             .find_map(|(data_type, _)| timestamp_zone(data_type));
-        let dated = dates && zone.is_some() && types.iter().any(joins_a_zoned_timestamp);
+        let dated = peers_join && zone.is_some() && types.iter().any(joins_a_zoned_timestamp);
         let unit = match finest(units) {
             Some(unit) => unit,
             None if dated => units
@@ -160,7 +160,7 @@ impl SharedTarget {
         if self.dated && joins_a_zoned_timestamp(data_type) {
             return Some(DataType::Timestamp(self.unit, self.zone.clone()));
         }
-        if !unit.is_some_and(|unit| unit != self.unit) {
+        if unit.is_none_or(|unit| unit == self.unit) {
             return None;
         }
         Some(match (data_type, &self.zone) {
