@@ -383,6 +383,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the New York gap wall stores `2024-03-10 03:30:00`. Its `divergence` and `spark_rows`
   keys are gone, and two divergence steps remain: the UPDATE refusal texts.
   pins: ntz-store-doors-1/C-006
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (ruling 100, the planner sketch, 2026-10-15):**
+  `w_ref_cast` (`UPDATE … SET id = CAST(c AS TIMESTAMP_NTZ)` into an INT column) now refuses
+  with Spark's recorded text (`CANNOT_SAFELY_CAST … "TIMESTAMP_NTZ" to "INT"`) instead of the
+  nested-target gate's `UNSUPPORTED_TIMESTAMP_NTZ` (divergence R-NTZ-S2-10): with the planner
+  the gate no longer fires, as for the nested NTZ cast. The step drops its divergence; a step
+  with only `spark_error` asserts Spark's text.
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) +
   [ntz_store_doors_1_spark_oracle.json](ntz_store_doors_1_spark_oracle.json) —
   **WO NTZ-STORE-DOORS-1 (2026-09-28):** 66 door cells (UTC, New York, Kolkata ×
