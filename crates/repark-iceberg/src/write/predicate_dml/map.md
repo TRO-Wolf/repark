@@ -30,8 +30,9 @@ works, so the attribute is gone rather than documented.
   pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-009
 - `lineage.rs`, `../predicate_dml.rs` — **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):**
   an identity `UPDATE … WHERE` into a `TIMESTAMP` (the microsecond instant) narrows its SET
-  value as the MERGE insert arm does. `collect_identity_update_rows` analyzes the plain
-  projection once; `instant_store_columns` names each instant target whose analyzed value
+  value as the MERGE insert arm does. `analyzed_identity_update` (here, called by the
+  parent's `collect_identity_update_rows`) analyzes the plain projection once;
+  `instant_store_columns` names each instant target whose analyzed value
   `ntz_store::needs_ltz_instant_cast` flags (a nanosecond, NTZ or date value); the
   projection is planned again with `update_cast::store_assignment_cast_sql` around those
   values. Before, the raw nanosecond value reached U-3's guard (`store of column v would

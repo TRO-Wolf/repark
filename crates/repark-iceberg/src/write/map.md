@@ -199,10 +199,12 @@ repark-core's error map.
     green; the two-loads assertions are re-measured.
   pins: mb-2c/C-002, C-006, C-008, C-009, C-010
 - `predicate_dml.rs` — **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):**
-  `collect_identity_update_rows` analyzes the identity `UPDATE … WHERE` projection, then
-  plans it again with the MERGE insert arm's cast around a nanosecond, NTZ or date value bound
-  for a `TIMESTAMP` column. The row is in [predicate_dml/map.md](predicate_dml/map.md)
-  (`lineage.rs`). pins: ice-tsns-type-planner-1/C-019
+  `collect_identity_update_rows` takes its analyzed identity `UPDATE … WHERE` projection from
+  the child `lineage::analyzed_identity_update`, which plans it again with the MERGE insert
+  arm's cast around a nanosecond, NTZ or date value bound for a `TIMESTAMP` column. The work
+  sits in the child so this file stays under its ceiling beside ICE-STRUCT-PAIRING-1's lines.
+  Row: [predicate_dml/map.md](predicate_dml/map.md) (`lineage.rs`).
+  pins: ice-tsns-type-planner-1/C-019
 - `sink_offsets.rs`, `sink_offsets_isolation_tests.rs`, `sink_offsets_probe_tests.rs`,
   `predicate_dml.rs` — **MB-2c fold 1, K2, MBE-15 (2026-10-07, ruling Q3):**
   `SiteStamp::claim_isolated` is the claim at the two MERGE sites in `merge/snapshot_commit.rs`.

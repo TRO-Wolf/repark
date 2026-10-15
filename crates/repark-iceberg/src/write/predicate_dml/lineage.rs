@@ -75,6 +75,34 @@ pub(super) fn update_values_schema(
     Arc::new(ArrowSchema::new(fields))
 }
 
+pub(super) async fn analyzed_identity_update(
+    ctx: &datafusion::prelude::SessionContext,
+    target_name: &str,
+    spec: &super::PredicateDmlSpec,
+    assignments: &[(String, String)],
+    values_schema: &datafusion::arrow::datatypes::SchemaRef,
+) -> Result<datafusion::logical_expr::LogicalPlan> {
+    let identity_sql = |instant: &[usize]| {
+        format!(
+            "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
+            file = quote_ident(FILE_PATH_COL),
+            pos = quote_ident(POS_COL),
+            projections =
+                update_projection_sql(values_schema, &spec.target_alias, assignments, instant),
+            scratch = crate::write::merge::cow_scratch::quote_scratch_name(target_name),
+            alias = quote_ident(&spec.target_alias),
+            selection = spec.selection_sql,
+        )
+    };
+    let analyze = crate::write::store_overflow::analyzed_store_source;
+    let raw = analyze(ctx, &identity_sql(&[])).await?;
+    let instant = instant_store_columns(raw.schema(), values_schema);
+    if instant.is_empty() {
+        return Ok(raw);
+    }
+    analyze(ctx, &identity_sql(&instant)).await
+}
+
 pub(super) fn instant_store_columns(
     analyzed: &datafusion::common::DFSchema,
     values_schema: &datafusion::arrow::datatypes::SchemaRef,
