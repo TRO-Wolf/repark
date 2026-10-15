@@ -10377,8 +10377,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), rulings 73, 74 and 90:** replays the 74
   exception cells on one session. `x_rows` answers as Spark, the refusal carrying Spark's
   `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE]` text up to its SQLSTATE and the
-  table unchanged; the three shapes outside the agreement rule still refuse with the table
-  unchanged. `x_update`: the Spark door's identity shape (`WHERE id = 0`) stores Spark's value;
+  table unchanged; the four shapes outside the agreement rule (a field count that differs, which
+  list L1 refuses first with main's raw planner text, leaf types, `INSERT OVERWRITE`, `UNION ALL`)
+  still refuse with the table unchanged. `x_update`: the Spark door's identity shape (`WHERE id = 0`) stores Spark's value;
   every other cell refuses with the ruling 90 text and writes nothing, the flat-INT cells under
   the ruling 74 test name. Red on the head before the fix: 55 of 76; on main: 68 of 76.
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —

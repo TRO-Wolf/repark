@@ -246,6 +246,9 @@ fn values_row_type(expr: &Expr) -> Option<DataType> {
         Expr::Cast(cast) => cast.expr.as_ref(),
         other => other,
     };
+    if matches!(written, Expr::Literal(value, _) if value.is_null()) {
+        return None;
+    }
     written.get_type(&DFSchema::empty()).ok()
 }
 

@@ -20,6 +20,7 @@ UPDATE_REFUSAL = (
 )
 SEEDED = [[0, 10, {"a": 10, "b": 20}], [3, 30, {"a": 30, "b": 40}]]
 ROWS_REFUSED_ELSEWHERE = (
+    "nocol|field_count_differs",
     "nocol|leaf_types_differ",
     "overwrite_nocol|names_differ",
     "select_union|names_differ",

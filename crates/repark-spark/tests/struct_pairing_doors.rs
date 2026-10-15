@@ -480,7 +480,13 @@ fn inline_table_refusal(column: usize) -> String {
     )
 }
 
-const VALUES_ROWS_CASES: [(&str, &str, bool, Option<usize>); 8] = [
+const VALUES_ROWS_CASES: [(&str, &str, bool, Option<usize>); 9] = [
+    (
+        "rows_null",
+        "INSERT INTO {t} VALUES (1, named_struct('b', 2, 'a', 1)), (2, NULL)",
+        false,
+        None,
+    ),
     (
         "rows_nocol",
         "INSERT INTO {t} VALUES (1, named_struct('b', 2, 'a', 1)), \
@@ -578,11 +584,12 @@ async fn multi_row_values_refuse_as_spark_when_rows_disagree_on_struct_names() {
                 Some((Some(2), Some(1))),
                 "{name}"
             );
-            assert_eq!(
-                stored(&session, &table, 2).await,
-                Some((Some(8), Some(7))),
-                "{name}"
-            );
+            let second = if name == "rows_null" {
+                (None, None)
+            } else {
+                (Some(8), Some(7))
+            };
+            assert_eq!(stored(&session, &table, 2).await, Some(second), "{name}");
         }
         assert_eq!(
             stored(&session, &table, 0).await,
