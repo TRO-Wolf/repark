@@ -104,6 +104,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   names/hex (`'Infinityd'`, `'infd'`, `'1dd'`, `'0x10'`) keep today's refuse/NULL. The shared
   SQL `CAST` kernel is untouched. pins: fnp-bitmap-facade-1/C-012, C-013, C-014,
   C-017, C-018
+  **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the unit tests build their session on
+  `spark_type_planner::planned_context`, as every door does, so
+  `degrees_refuses_every_non_double_family_type` reads a written `TIMESTAMP` as the door types
+  it.
 - `spark_math.rs` + [`spark_math/`](spark_math/map.md) — **DOOR-CONVERGE-1
   (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
   doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
@@ -270,6 +274,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST_OVERFLOW` (SQLSTATE 22003) detected per row from the source array;
   `FixedSizeBinary` folds as BINARY.
   pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, refusal texts (ruling 100, 2026-10-15):**
+  `spark_type_name` names every `Timestamp(_, _)` `TIMESTAMP`, Spark 4.1.2's name in its
+  refusal texts (`however "x" has the type "TIMESTAMP"`, measured live). With the planner a
+  written `TIMESTAMP` is the zoned microsecond type, which the name rendered `TIMESTAMP_LTZ`,
+  a name Spark never prints; `spark_degrees.rs` and `spark_startswith.rs` share it. pins:
+  `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs`'s unit tests
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable

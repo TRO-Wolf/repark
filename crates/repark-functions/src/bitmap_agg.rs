@@ -288,8 +288,7 @@ pub(crate) fn spark_type_name(data_type: &DataType) -> String {
         | DataType::Time64(_)
         | DataType::Duration(_)
         | DataType::Union(_, _) => data_type.to_string(),
-        DataType::Timestamp(_, None) => "TIMESTAMP".to_string(),
-        DataType::Timestamp(_, Some(_)) => "TIMESTAMP_LTZ".to_string(),
+        DataType::Timestamp(_, _) => "TIMESTAMP".to_string(),
         DataType::Interval(_) => "INTERVAL".to_string(),
         DataType::List(field)
         | DataType::LargeList(field)

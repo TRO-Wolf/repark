@@ -7960,6 +7960,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SQL-nonansi refusal and alias malformed cells the critic found unused are pinned
   (309 tests).
   pins: fnp-bitmap-facade-1/C-012, C-013, C-014, C-016, C-017, C-018
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):** the Python door's
+  timestamp refusal now names `TIMESTAMP`, the recorded oracle cell's name, so the
+  `TIMESTAMP_LTZ` divergence map is gone and
+  `test_refusal_timestamp_python_door_names_sparks_type` (was
+  `test_refusal_timestamp_ltz_is_expected_divergence`) pins Spark's name; the SQL door's four
+  cells are green again.
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND

@@ -62,7 +62,6 @@ REFUSAL_TAGS: tuple[tuple[str, str], ...] = (
     ("binary", "BINARY"),
 )
 MALFORMED_TAGS: tuple[str, ...] = ("str-abc", "str-empty")
-PYTHON_DOOR_DIVERGENT_TYPE_NAMES: dict[str, str] = {"timestamp": "TIMESTAMP_LTZ"}
 WARNINGS: dict[str, str] = {
     "toDegrees": "Deprecated in 2.1, use degrees instead.",
     "toRadians": "Deprecated in 2.1, use radians instead.",
@@ -210,8 +209,6 @@ def test_refusal_matches_oracle(spark: ReparkSession, function: str, tag: str, d
     cell = _cell(cell_id)
     assert cell["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
     spark_type = next(known for known_tag, known in REFUSAL_TAGS if known_tag == tag)
-    if door == "python":
-        spark_type = PYTHON_DOOR_DIVERGENT_TYPE_NAMES.get(tag, spark_type)
     literal = LITERALS[tag]
     with pytest.raises(Exception) as caught:
         if door == "sql":
@@ -262,7 +259,9 @@ def test_wrapper_builds_without_cast_node(
 
 
 @pytest.mark.parametrize("function", ["degrees", "radians", "toDegrees", "toRadians"])
-def test_refusal_timestamp_ltz_is_expected_divergence(spark: ReparkSession, function: str) -> None:
+def test_refusal_timestamp_python_door_names_sparks_type(
+    spark: ReparkSession, function: str
+) -> None:
     """pins: fnp-bitmap-facade-1/C-013"""
     cell = _cell(_refusal_cell_id(function, "timestamp", "python"))
     assert cell["condition"] == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
@@ -273,7 +272,7 @@ def test_refusal_timestamp_ltz_is_expected_divergence(spark: ReparkSession, func
     message = str(caught.value)
     assert "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]" in message
     assert 'The first parameter requires the "DOUBLE" type, however' in message
-    assert 'has the type "TIMESTAMP_LTZ"' in message
+    assert 'has the type "TIMESTAMP"' in message
     assert "SQLSTATE: 42K09" in message
 
 
