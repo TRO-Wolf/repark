@@ -401,6 +401,15 @@ impl repark_core::SessionExtension for NativeDoorTypes {
     ) -> Option<std::sync::Arc<dyn datafusion::logical_expr::planner::TypePlanner>> {
         Some(repark_functions::spark_type_planner())
     }
+
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<std::sync::Arc<dyn datafusion::optimizer::AnalyzerRule + Send + Sync>>,
+    ) -> datafusion::error::Result<
+        Vec<std::sync::Arc<dyn datafusion::optimizer::AnalyzerRule + Send + Sync>>,
+    > {
+        repark_functions::analyzer_rules_with_timestamp_unit_widen(rules)
+    }
 }
 
 pub(crate) fn register_native_door_functions(ctx: &datafusion::prelude::SessionContext) {

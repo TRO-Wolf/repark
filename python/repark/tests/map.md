@@ -3383,7 +3383,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_ice_tsns_type_planner_1_pins.py](_ice_tsns_type_planner_1_pins.py) —
   **ICE-TSNS-TYPE-PLANNER-1:** the amended pins: the lattice cells on the Spark door and
   on `repark.sql` (zone set with `SET TIME ZONE`), the positions, the refusal texts
-  (they must name the function and `sequence`), the microsecond pins of the DDL column
+  (they must name the function and `sequence`), a microsecond value outside the
+  nanosecond range beside a nanosecond value in both ANSI modes (it must raise the
+  overflow class), the microsecond pins of the DDL column
   and `Column.cast`, the inferred CSV unit through `read_csv` and `read.csv`, the
   R-010 `UPDATE` and `DELETE` statements against their `INSERT` twins, R-013 on
   `repark.sql`, R-018(1)'s three `VALUES` shapes against their `SELECT` twins, and the
