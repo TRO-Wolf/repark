@@ -9,6 +9,7 @@ use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::struct_pairing::StructPairing;
 
 use crate::catalog_ops::{name_parts, namespace_schema_name, reregister};
 use crate::parse_single_normalized;
@@ -228,6 +229,8 @@ async fn append_by_name_projection(
         true,
         true,
         Some("append"),
+        StructPairing::by_name(case_sensitive_insert(ctx)),
+        &display_table_name(catalog_name, table),
     )?;
     let source_df = ctx.execute_logical_plan(plan).await?;
     let stream = source_df.execute_stream().await?;
@@ -386,16 +389,6 @@ pub(crate) async fn by_name_source_query(
     source_names::refuse_underived(table, &source_names, &table_display, case_sensitive)?;
     let fields = schema_fields(table);
     let mapping = name_mapping(&fields, &source_names, &table_display, case_sensitive)?;
-    nested::refuse_nested_mismatch(
-        ctx,
-        catalogs,
-        table,
-        source,
-        &mapping,
-        &table_display,
-        case_sensitive,
-    )
-    .await?;
     let names: Vec<String> = fields.into_iter().map(|(name, _)| name).collect();
     parse_projection_query(&null_filled_projection(
         source,
@@ -988,7 +981,6 @@ pub(crate) fn token_span_offsets(
 }
 
 pub(crate) mod evolution;
-mod nested;
 mod source_names;
 pub(crate) mod spark_names;
 

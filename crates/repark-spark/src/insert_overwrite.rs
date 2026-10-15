@@ -17,6 +17,7 @@ use iceberg::Catalog;
 use iceberg::{NamespaceIdent, TableIdent};
 
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::struct_pairing::StructPairing;
 
 use crate::catalog_ops::{
     name_parts, namespace_schema_name, refuse_read_only_dml_table_sql, reregister,
@@ -430,7 +431,17 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
         overwrite_source_with_default_fills(table, &column_names, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
     let source_df = repark_iceberg::write::zone_stores(ctx, source_df, table, &column_names, &[])?;
-    let source_df = store::conform_types(ctx, table, &column_names, source_df).await?;
+    let pairing = StructPairing::from_source_by_name(
+        options.source_by_name,
+        !crate::spark_door_case_insensitive(ctx.state().config().options()),
+    );
+    let label = format!(
+        "`{catalog_name}`.`{}`.`{}`",
+        namespace_schema_name(table.identifier().namespace()),
+        table.identifier().name()
+    );
+    let source_df =
+        store::conform_types(ctx, table, &column_names, source_df, (pairing, &label)).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);

@@ -291,7 +291,8 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
     ]);
     assert_eq!(
         value_sql_for("v", &reordered, &target, &path, false).unwrap(),
-        "arrow_cast((v), 'Struct(\"x\": Int32, \"y\": Utf8)')"
+        "arrow_cast((__repark_store_pair__((v), 'Struct(\"x\": Int32, \"y\": Utf8)', 'by_name', \
+         '``', '`st`.`inner`')), 'Struct(\"x\": Int32, \"y\": Utf8)')"
     );
     let recased = struct_type(vec![
         Field::new("X", DataType::Int64, true),
@@ -299,9 +300,8 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
     ]);
     assert_eq!(
         value_sql_for("v", &recased, &target, &path, false).unwrap(),
-        "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
-         arrow_cast((get_field((v), 'X')), 'Int32'), 'y', \
-         arrow_cast((get_field((v), 'Y')), 'Utf8')) END"
+        "arrow_cast((__repark_store_pair__((v), 'Struct(\"x\": Int32, \"y\": Utf8)', 'by_name', \
+         '``', '`st`.`inner`')), 'Struct(\"x\": Int32, \"y\": Utf8)')"
     );
     assert_eq!(
         value_sql_for("v", &recased, &target, &path, true)
@@ -317,9 +317,8 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
     ]);
     assert_eq!(
         value_sql_for("v", &reordered, &required, &path, false).unwrap(),
-        "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
-         arrow_cast((get_field((v), 'x')), 'Int32'), 'y', \
-         arrow_cast((get_field((v), 'y')), 'Utf8')) END"
+        "arrow_cast((__repark_store_pair__((v), 'Struct(\"x\": non-null Int32, \"y\": Utf8)', \
+         'by_name', '``', '`st`.`inner`')), 'Struct(\"x\": non-null Int32, \"y\": Utf8)')"
     );
 }
 
@@ -402,8 +401,10 @@ async fn a_top_level_struct_value_folds_through_the_by_name_check() {
     assert_eq!(rendered[0], "id = 3");
     assert_eq!(
         rendered[1],
-        "`st` = arrow_cast((named_struct('inner', named_struct('y', 'v', 'x', 3), 'a', 7)), \
-         'Struct(\"a\": Int32, \"inner\": Struct(\"x\": Int32, \"y\": Utf8))')"
+        "`st` = arrow_cast((__repark_store_pair__((named_struct('inner', named_struct('y', 'v', \
+         'x', 3), 'a', 7)), 'Struct(\"a\": Int32, \"inner\": Struct(\"x\": Int32, \"y\": \
+         Utf8))', 'by_name', '``', '`st`')), 'Struct(\"a\": Int32, \"inner\": Struct(\"x\": \
+         Int32, \"y\": Utf8))')"
     );
 }
 

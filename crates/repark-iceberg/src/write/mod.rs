@@ -66,6 +66,7 @@ pub(crate) mod store_assign;
 pub mod store_cast;
 pub(crate) mod store_fold;
 pub mod store_overflow;
+pub mod struct_pairing;
 pub mod summary_collision;
 pub mod table_admin;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).

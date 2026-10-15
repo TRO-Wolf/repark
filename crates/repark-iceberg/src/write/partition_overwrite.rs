@@ -19,7 +19,7 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
 use crate::write::commit_error::{commit_with_keyed_sweep, operation_id_and_summary};
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
-use crate::write::conform::strict_store_cast;
+use crate::write::conform::strict_partition_store_cast;
 use crate::write::encryption::written_file_paths;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::overwrite_scope::replace_partitions_is_noop;
@@ -99,7 +99,7 @@ fn store_assign_source_column(source: &ArrayRef, field: &FieldRef) -> Result<Arr
         source.data_type(),
         field.data_type(),
     )?;
-    strict_store_cast(field.name(), source, field.data_type())
+    strict_partition_store_cast(field.name(), source, field.data_type())
 }
 
 struct StaticPartitionPlan<'a> {

@@ -738,6 +738,26 @@ declines it (a dated ruling in the intake, then the archive).
   one orphan Parquet, an unkeyed table placed under a keyed table's location, ref-only commits that publish rows staged
   before the key, the thirteen shapes whose clean refusal rests on entry checks, the textual gate and the
   caller-built catalog, and the Glue metadata-directory limit. Ruled: items 1 and 5 closed with pins, items 2, 3, 4 and 6 accepted.
+  caller-built catalog, and the Glue metadata-directory limit. Each needs an owner call.
+- [enc-ctas-replace-1-card-2026-10-15.md](enc-ctas-replace-1-card-2026-10-15.md) **card ENC-CTAS-REPLACE-1
+  (2026-10-15, open, not scheduled, clerk under owner ruling 98 (a)):** a key landing between `begin_replace`
+  and the publish of `CREATE OR REPLACE TABLE … AS SELECT` leaves an orphan unencrypted file under the keyed
+  table's `data/`, referenced by no snapshot, so never served. Retires with staged-file removal or a
+  pre-staging refusal plus a pin; Spark-side behaviour not measured; main the same.
+- [repark-sql-local-ddl-1-card-2026-10-15.md](repark-sql-local-ddl-1-card-2026-10-15.md) **card
+  REPARK-SQL-LOCAL-DDL-1 (2026-10-15, open, not scheduled, clerk under owner ruling 104 (a)):** once
+  PA-LOCAL-FS-POLICY-1 lands, `repark.sql()` cannot run any local `COPY` or `CREATE EXTERNAL TABLE`,
+  read-only registration included, and has no opt-in. Retires with an opt-in path (or read-only
+  registration allowed) plus pins; the owner field on closing before 1.5.6 ships stays open.
+- [local-fs-create-table-location-1-card-2026-10-15.md](local-fs-create-table-location-1-card-2026-10-15.md)
+  **card LOCAL-FS-CREATE-TABLE-LOCATION-1 (2026-10-15, open, clerk under owner ruling 105 (a)):**
+  a Spark-door `CREATE TABLE … LOCATION '<outside>'` writes data and metadata outside every registered
+  warehouse with the opt-in off. Same class as PA-02: the next U-5-kind unit on that lane after the
+  PA-LOCAL-FS-POLICY-1 re-verifier. Retires with the location held to the `COPY` policy, door pins.
+- [local-fs-write-root-1-card-2026-10-15.md](local-fs-write-root-1-card-2026-10-15.md) **card
+  LOCAL-FS-WRITE-ROOT-1 (2026-10-15, open, not scheduled, clerk under owner ruling 105 (a)):** one
+  DataFrame write to a path makes later SQL writes to that path allowed. Retires when a DataFrame
+  write no longer widens the SQL allow-list, or the widening is an explicit, documented opt-in.
 - [fork-tablecommit-updates-1-card-2026-10-09.md](fork-tablecommit-updates-1-card-2026-10-09.md) **card
   FORK-TABLECOMMIT-UPDATES-1 (2026-10-09, open, fork work):** a read accessor for `TableCommit`'s updates, so the
   ENC-1 commit guard matches on values and stops reading `Debug` text.
@@ -835,6 +855,8 @@ declines it (a dated ruling in the intake, then the archive).
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
+  **2026-10-14:** the measured shape closed by ICE-STRUCT-PAIRING-1 (R-021 CLOSED, cell
+  `by_name_case_twins`); the card's wider scope waits on the owner.
 - [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
   **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
   carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a
@@ -857,6 +879,17 @@ declines it (a dated ruling in the intake, then the archive).
   `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
   0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
   or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
+- [update-subquery-store-1-card-2026-10-15.md](update-subquery-store-1-card-2026-10-15.md) — **card
+  UPDATE-SUBQUERY-STORE-1 (2026-10-15, open, not scheduled):** store Spark's value for
+  `UPDATE … SET col = (SELECT …)` where the identity path does not run (`WHERE true`, an `IN`
+  list, no `WHERE`, every non-comparison predicate; every `WHERE` on `repark.sql()`), which
+  refuse under owner ruling 90(a) at `PreExecute::guard` where they reported success and wrote
+  nothing. Names the step-0 causes with `path:line`: the admission in `predicate_dml/plain.rs`,
+  `scalar_set_assignments`, the fall-through to `execute_passthrough`, and DataFusion's
+  `extract_update_assignments` dropping a decorrelated same-name column as an identity
+  assignment. Registry row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY; since owner ruling 95
+  (2026-10-15) it also retires row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE, the cells
+  that match no row.
 - [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
   OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
   `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of

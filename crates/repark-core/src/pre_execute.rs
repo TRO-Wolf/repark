@@ -1,7 +1,7 @@
 //! Shared pre-execute sequencing for every SQL door: plan, guard, then execute.
 
 use datafusion::error::{DataFusionError, Result as DfResult};
-use datafusion::logical_expr::LogicalPlan;
+use datafusion::logical_expr::{Expr, LogicalPlan, WriteOp};
 use datafusion::prelude::{DataFrame, SessionContext};
 
 use crate::catalog_state::CatalogRegistry;
@@ -42,6 +42,7 @@ impl<'a> PreExecute<'a> {
     pub fn guard(&self, plan: &LogicalPlan) -> DfResult<()> {
         refuse_iceberg_create_of_tightened_ddl(plan, self.ctx, self.catalogs)
             .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+        refuse_update_from_subquery(plan)?;
         crate::named_sources::refuse_source_ddl(plan, self.ctx, self.catalogs)
     }
 
@@ -59,6 +60,48 @@ impl<'a> PreExecute<'a> {
         let plan = self.plan(sql).await?;
         self.guard(&plan)?;
         self.execute(plan).await
+    }
+}
+
+const UPDATE_SUBQUERY_REFUSAL: &str = "UPDATE with SET column = (SELECT ...) is not \
+     supported on this statement: RePark cannot write the subquery value here, so it refuses \
+     before any write.";
+
+fn refuse_update_from_subquery(plan: &LogicalPlan) -> DfResult<()> {
+    let LogicalPlan::Dml(dml) = plan else {
+        return Ok(());
+    };
+    if !matches!(dml.op, WriteOp::Update) {
+        return Ok(());
+    }
+    let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
+        return Ok(());
+    };
+    if projection.expr.iter().any(assigns_a_subquery) {
+        return Err(DataFusionError::Plan(UPDATE_SUBQUERY_REFUSAL.to_string()));
+    }
+    Ok(())
+}
+
+fn wraps_a_stored_value(name: &str) -> bool {
+    name == "arrow_cast" || name.starts_with("__repark_")
+}
+
+fn assigns_a_subquery(mut expr: &Expr) -> bool {
+    loop {
+        expr = match expr {
+            Expr::Alias(alias) => alias.expr.as_ref(),
+            Expr::Cast(cast) => cast.expr.as_ref(),
+            Expr::TryCast(cast) => cast.expr.as_ref(),
+            Expr::ScalarFunction(function) if wraps_a_stored_value(function.name()) => {
+                match function.args.first() {
+                    Some(value) => value,
+                    None => return false,
+                }
+            }
+            Expr::ScalarSubquery(_) => return true,
+            _ => return false,
+        };
     }
 }
 

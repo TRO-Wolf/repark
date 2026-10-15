@@ -1,0 +1,257 @@
+{
+ "cells": {
+  "by_name_case_twin_fields": {
+   "repark": {
+    "rows": [
+     [
+      1,
+      10,
+      20
+     ],
+     [
+      2,
+      1,
+      2
+     ]
+    ],
+    "statement": "INSERT INTO mem.ns.step0_twins BY NAME SELECT 2 AS id, named_struct('a', 1, 'A', 2) AS st"
+   },
+   "spark": {
+    "error": "AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME] Cannot write incompatible data for the table `ora`.`ns`.`step0_twins`: Ambiguous column name in the input data `st`.`a`. SQLSTATE: KD000",
+    "seed": "SELECT 1 AS id, named_struct('a', 10, 'b', 20) AS st",
+    "statement": "INSERT INTO ora.ns.step0_twins BY NAME SELECT 2 AS id, named_struct('a', 1, 'A', 2) AS st",
+    "table_ddl": "CREATE TABLE <t> (id INT, st STRUCT<a: INT, b: INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+   }
+  },
+  "by_name_recased_fields": {
+   "repark": {
+    "rows": [
+     [
+      1,
+      10,
+      20
+     ],
+     [
+      2,
+      1,
+      2
+     ]
+    ],
+    "statement": "INSERT INTO mem.ns.step0_recase BY NAME SELECT 2 AS id, named_struct('A', 1, 'B', 2) AS st"
+   },
+   "spark": {
+    "rows": [
+     [
+      1,
+      10,
+      20
+     ],
+     [
+      2,
+      1,
+      2
+     ]
+    ],
+    "schema": "struct<id:int,st:struct<a:int,b:int>>",
+    "seed": "SELECT 1 AS id, named_struct('a', 10, 'b', 20) AS st",
+    "statement": "INSERT INTO ora.ns.step0_recase BY NAME SELECT 2 AS id, named_struct('A', 1, 'B', 2) AS st",
+    "table_ddl": "CREATE TABLE <t> (id INT, st STRUCT<a: INT, b: INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+   }
+  },
+  "merge_schema_surplus_struct_field": {
+   "repark": {
+    "rows": [
+     [
+      1,
+      10,
+      20
+     ],
+     [
+      2,
+      1,
+      2
+     ]
+    ],
+    "schema": "id: int32\n  -- field metadata --\n  PARQUET:field_id: '1'\nst: struct<a: int32, b: int32>\n  child 0, a: int32\n  child 1, b: int32\n  -- field metadata --\n  PARQUET:field_id: '2'"
+   },
+   "spark": {
+    "error": "AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `ora`.`ns`.`step0_msge`: Cannot write extra fields `c` to the struct `st`. SQLSTATE: KD000",
+    "seed": "SELECT 1 AS id, named_struct('a', 10, 'b', 20) AS st",
+    "table_ddl": "CREATE TABLE <t> (id INT, st STRUCT<a: INT, b: INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+   }
+  },
+  "overwrite_condition_renamed": {
+   "repark": {
+    "error": "AnalysisException: Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `mem`.`ns`.`step0_owrn`: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000"
+   },
+   "spark": {
+    "error": "AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `ora`.`ns`.`step0_owrn`: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000",
+    "seed": "SELECT 1 AS id, named_struct('a', 10, 'b', 20) AS st",
+    "table_ddl": "CREATE TABLE <t> (id INT, st STRUCT<a: INT, b: INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+   }
+  },
+  "overwrite_condition_reordered": {
+   "repark": {
+    "rows": [
+     [
+      2,
+      2,
+      1
+     ]
+    ]
+   },
+   "spark": {
+    "rows": [
+     [
+      2,
+      2,
+      1
+     ]
+    ],
+    "schema": "struct<id:int,st:struct<a:int,b:int>>",
+    "seed": "SELECT 1 AS id, named_struct('a', 10, 'b', 20) AS st",
+    "statement": "SELECT 2 AS id, named_struct('b', 1, 'a', 2) AS st writeTo(<t>).overwrite('id > 0')",
+    "table_ddl": "CREATE TABLE <t> (id INT, st STRUCT<a: INT, b: INT>) USING iceberg TBLPROPERTIES ('format-version'='2')"
+   }
+  },
+  "required_struct_field_null_supplied": {
+   "repark": {
+    "error": "PySparkException: datafusion engine error: Arrow error: Invalid argument error: Column 'st' is declared as non-nullable but contains null valuesfailed to convert uuid text columns into bytes",
+    "seed": "stored"
+   },
+   "spark": {
+    "error": "SparkRuntimeException: [NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: ",
+    "seed": "SELECT 1 AS id, named_struct('a', 10, 'b', 20) AS st",
+    "statement": "INSERT INTO ora.ns.step0_req SELECT 2 AS id, CAST(NULL AS STRUCT<a: INT, b: INT>) AS st",
+    "table_ddl": "CREATE TABLE <t> (id INT, st STRUCT<a: INT, b: INT> NOT NULL) USING iceberg"
+   }
+  }
+ },
+ "halt_probes": {
+  "h2_probe_branch": "probe/struct-pairing-h2",
+  "h2_snapshot_mode": {
+   "marked_by_name": {
+    "error_full": "repark_store_overflow_cast\ncaused by\nError during planning: probe handed=by_name for column `st`",
+    "statement": "INSERT INTO mem.ns.h2s SELECT 2 AS id, named_struct('b', 1, 'a', 2) AS st /*probe_by_name*/",
+    "stored": false
+   },
+   "unmarked_second": {
+    "error_full": "repark_store_overflow_cast\ncaused by\nError during planning: probe handed=by_position for column `st`",
+    "statement": "INSERT INTO mem.ns.h2s SELECT 2 AS id, named_struct('b', 1, 'a', 2) AS st",
+    "stored": false
+   }
+  },
+  "h3_recased_insert_select": {
+   "error": "UnsupportedOperationException: This feature is not implemented: Unsupported CAST from Struct(\"A\": Int32, \"B\": Int32) to Struct(\"a\": Int32, \"b\": Int32)",
+   "statement": "INSERT INTO mem.ns.step0_h3rc SELECT 2 AS id, named_struct('A', 1, 'B', 2) AS st"
+  },
+  "h3_recased_source_explains": {
+   "planned": true,
+   "statement": "EXPLAIN SELECT 2 AS id, named_struct('A', 1, 'B', 2) AS st"
+  },
+  "h3_reordered_insert_select": {
+   "explain_ok": true,
+   "rows": [
+    [
+     2,
+     2,
+     1
+    ]
+   ],
+   "statement": "INSERT INTO mem.ns.step0_h3re SELECT 2 AS id, named_struct('b', 1, 'a', 2) AS st"
+  },
+  "h3_surplus_insert_select": {
+   "rows": [
+    [
+     2,
+     1,
+     2
+    ]
+   ],
+   "statement": "INSERT INTO mem.ns.step0_h3ex SELECT 2 AS id, named_struct('a', 1, 'b', 2, 'c', 3) AS st"
+  },
+  "h3_surplus_source_explains": {
+   "planned": true,
+   "statement": "EXPLAIN SELECT 2 AS id, named_struct('a', 1, 'b', 2, 'c', 3) AS st"
+  },
+  "h4_arrow_cast_user_sql": {
+   "rows": [
+    {
+     "arrow_cast(Utf8(\"x\"),Utf8(\"Utf8\"))": "x"
+    }
+   ],
+   "statement": "SELECT arrow_cast('x', 'Utf8')"
+  },
+  "h4_wall_kernel_user_sql": {
+   "rows": [
+    {
+     "__repark_cast_timestamp_ns__(Utf8(\"2024-01-01 00:00:00\"))": "2024-01-01 00:00:00"
+    }
+   ],
+   "statement": "SELECT __repark_cast_timestamp_ns__('2024-01-01 00:00:00')"
+  },
+  "h5_flag_on_plain_insert": {
+   "by_name_false_rows": [
+    [
+     1,
+     10,
+     20
+    ],
+    [
+     2,
+     2,
+     1
+    ]
+   ],
+   "by_name_true_rows": [
+    [
+     1,
+     10,
+     20
+    ],
+    [
+     2,
+     2,
+     1
+    ]
+   ]
+  },
+  "h5_replace_where_flagged": {
+   "replace_where_by_name_true": [
+    [
+     2,
+     2,
+     1
+    ]
+   ]
+  },
+  "h5_replace_where_sql_route": {
+   "replace_where_by_name_true": "TypeError: 'ReparkSession' object is not an instance of 'PyReparkSession'",
+   "replace_where_sql": [
+    [
+     2,
+     2,
+     1
+    ]
+   ]
+  },
+  "h7_static_partition_overwrite": {
+   "rows": [
+    {
+     "a": 2,
+     "b": 1,
+     "id": 2,
+     "p": "x"
+    }
+   ],
+   "statement": "INSERT OVERWRITE mem.ns.step0_h7p PARTITION (p='x') SELECT 2 AS id, named_struct('b', 1, 'a', 2) AS st"
+  }
+ },
+ "repark_module": "main 293896ce line (product-identical to unit base)",
+ "spark_banner": {
+  "timezone": "UTC",
+  "version": "4.1.2 f0bb2e6a47d0ebda424ffd633fcea8644a597954"
+ },
+ "spark_oracle": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "unit": "ICE-STRUCT-PAIRING-1 step 0"
+}

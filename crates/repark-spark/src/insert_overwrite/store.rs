@@ -1,12 +1,14 @@
 use datafusion::error::Result;
 use datafusion::prelude::{DataFrame, SessionContext};
 use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
+use repark_iceberg::write::struct_pairing::StructPairing;
 
 pub(crate) async fn conform_types(
     ctx: &SessionContext,
     table: &iceberg::table::Table,
     column_names: &[String],
     source_df: DataFrame,
+    door: (StructPairing, &str),
 ) -> Result<DataFrame> {
     let arrow =
         presented_arrow_schema(table.metadata().current_schema()).map_err(crate::iceberg_err)?;
@@ -36,6 +38,8 @@ pub(crate) async fn conform_types(
         false,
         true,
         Some("INSERT OVERWRITE"),
+        door.0,
+        door.1,
     )?;
     ctx.execute_logical_plan(plan).await
 }

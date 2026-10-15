@@ -364,6 +364,18 @@ repark-core's error map.
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `selection_sql`
   renders through `sql_text::render_for_reparse` so string values re-parse
   exactly. pins: string-literal-escape-1/C-010
+- `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-04, parity row R-016:** `scalar_set_assignments` admits a SET value whose every subquery is
+  an uncorrelated `(SELECT col FROM <table> …)` (the same test the identity DELETE uses for `IN`,
+  `is_simple_uncorrelated_in_subquery`, applied by `subquery_outside`), also when the Spark
+  door's struct fold has wrapped it in the pairing kernel, so `UPDATE t SET st = (SELECT st FROM
+  src) WHERE …` runs on the identity UPDATE path, which pairs the struct by name and stores
+  Spark's value. Before, any subquery in a SET value left this path and the statement
+  reached the fork's provider `update`, which re-resolved the subquery's output column against
+  the target and wrote the row back unchanged with no error. Any other subquery in a SET value
+  still leaves this path, unchanged. pins: ice-struct-pairing-1/C-030
+- `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the identity UPDATE hands `wrap_store_outputs` the by-name mode
+  under the statement's case rule (`spec.case_insensitive`) and Spark's empty table label.
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
   scratch refs quote through the split-aware scratch quoter (982 → 983, under the default ceiling).
   **WO U5 PR2b round 2 (2026-09-25):** merge-on-read DELETE/UPDATE on a v1 table raise Spark's
@@ -532,6 +544,13 @@ repark-core's error map.
   a historical snapshot references), `merge/snapshot_commit.rs`
   `keyed_refused_merge_overwrite_keeps_a_snapshot_referenced_file`,
   `keyed_refused_row_delta_keeps_a_snapshot_referenced_file`
+- `conform.rs`, `partition_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the guard of hint H-1 is one check in front
+  of the three batch casts: `strict_store_cast` (S1 `conform_batch_scoped`, S2 the two
+  positional maps of `overwrite.rs`) and `strict_partition_store_cast` (S3, the static-partition
+  overwrite) call `struct_pairing::refuse_unpaired_struct` before the leaf cast, so a struct whose
+  field names are not the target's in order is refused and no batch cast pairs fields by a rule
+  of its own. The static-partition hint names the route and the workaround (owner, question 34).
+  `overwrite.rs` is unchanged: its two casts already go through `strict_store_cast`.
 - `conform.rs`, `overwrite.rs`, `partition_overwrite.rs`, `merge/mod.rs` — **ICE-TSNS-FLOOR-DOORS-1
   guard (2026-10-14, provisional, the order's lean A):** `conform::strict_store_cast(name, column,
   target)` is today's strict cast unless a top-level timestamp's unit would get coarser, where
@@ -614,6 +633,12 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `store_assignment_cast_sql` renders `__repark_store_pair__` (by
+  name, case-insensitive) in front of the leaf cast when the target holds a struct;
+  `paired_assignment_cast_sql` and `paired_nested_cast_sql` take the mode and the column path
+  from the MERGE and UPDATE fold. The struct and map arms of `incompatible_nested_message` and
+  `struct_member` are deleted: a nested pair is paired by the seam (`incompatible_paired_message`)
+  and its leaves are judged by the flat matrix with their paths.
 - `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
   home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids
   stripped from the type name. MERGE's `insert.rs` and the Spark door's nested-assignment fold
@@ -1192,6 +1217,25 @@ repark-core's error map.
   gate (`repark-spark/src/void_type/insert_source_types.rs`). This rule is unchanged.
   Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `store_overflow.rs` + [store_overflow/](store_overflow/map.md) — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** call site 1 of the
+  seam. `ConformStoreFlags` carries the door's `StructPairing` and table label;
+  `conform_one_store_expr` asks `pair_store_output` first: a struct-holding target whose source
+  does not pair as the identity is wrapped in the kernel, under DataFusion's own cast when the
+  planner added one (the leaf conversion stays with that cast). `transform_store_dml` reads the
+  statement's mode from its state snapshot (`statement_pairing`: by position for an INSERT
+  unless the DataFrame door carried `source_by_name`, by name for an UPDATE) and labels the
+  table (`table_label`; Spark's empty label for an UPDATE); `conform_values_rows` pairs a
+  `VALUES` row the same way. `wrap_store_outputs` takes the mode and the label from its
+  caller. The test module moved to `store_overflow/tests.rs` (file-size ceiling).
+  **Exception round (2026-10-15, verifier 2's V2-02):** `conform_values_rows` first runs
+  `refuse_disagreeing_values_rows`. When two rows of a multi-row `VALUES` give a column struct
+  types whose field names disagree (by position, at every depth, inside arrays and map
+  entries, a different field count included, names compared under the statement's
+  `spark.sql.caseSensitive` carried in `StatementPairing`), the statement refuses with Spark's
+  `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE]` text, naming the column `colN` by
+  its position in the row, before any write. A NULL row and a row with no struct are skipped;
+  leaf types are not compared here. Rows that agree on the names in an order other than the
+  table's still pair by position, as Spark stores them.
 - `store_overflow.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `StoreOverflowCast`, an
   `AnalyzerRule` over `LogicalPlan::Dml` that maps out-of-range fractional/decimal stores
   into integer columns to Spark's `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003), naming
@@ -1227,6 +1271,18 @@ repark-core's error map.
   treats a fetch-less literal OFFSET of 1 or more over a single-row constant source
   (`limit_input_is_single_row` through Projection/SubqueryAlias/Sort to a one-row
   EmptyRelation) like `LIMIT 0`. A Filter or JOIN between keeps the refusal.
+- `store_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), parity rows R-016 and
+  R-013, owner question 47:** `BY_NAME_STORE_KERNELS` is the one table of the by-name store
+  kernels (`__repark_store_int{8,16,32,64}__`, `__repark_store_int_guard__` and the pairing
+  kernel `__repark_store_pair__`), and `register_store_cast_udfs` registers it and nothing
+  else. Both doors call it at session build: `repark_spark::SparkExtension::register` and
+  `repark_sql::AnsiDialect::on_session_built`, because the shared MERGE and UPDATE rewrite text
+  names the pairing kernel. `NS_WALL_KERNEL_NAMES` lists the nanosecond and NTZ wall kernels,
+  which stay registered by `repark-functions` and the ANSI door; it spells them through
+  `ntz_store`'s constants, since this crate has no edge to `repark-functions`, and each door's
+  pin asserts they equal that crate's constants. The pins:
+  `repark-spark/tests/store_kernel_registry.rs` and
+  `repark-sql/tests/ansi_store_kernel_registry.rs`, which read both constants.
 - `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
   checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
   out-of-range floats with the overflow message and store in-range values truncated like
@@ -1726,6 +1782,75 @@ repark-core's error map.
   carrying only session snapshot properties under `wap.id` instead of
   committing on main; re-exported through `write/mod.rs`.
   pins: ice-write-options-1/C-014, C-016, C-017
+- `store_assign.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `struct_fields_store_assignable` and `map_entries_store_assignable`
+  are replaced by the seam: two structs, two maps or two lists are store-assignable when they
+  pair by name and every leaf pair is (`nested_store_assignable`), through lists too.
+  `refuse_unless_write_store_assignable` keeps its nested return: its INSERT callers run before
+  the pairing, and the batch casts carry hint H-1 instead.
+- `store_overflow.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 57(a),
+  verifier 1's F-02, parity row R-016:** `INSERT INTO t (cols) VALUES (…)` pairs by position like
+  every other INSERT door. DataFusion plans a column list as a projection over the `VALUES` node
+  (`column2 AS id, column1 AS st`); `projected_values_targets` reads that one projection to give
+  each `VALUES` column its target field, so `conform_values_rows` pairs the struct against the
+  column it is written to, not the column at its position in the table. A column the list leaves
+  out keeps no target; with no projection the `VALUES` columns map to the table's in order
+  (`positional_values_targets`), as before. pins: ice-struct-pairing-1/C-027
+- `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-03, parity row R-016:** by-name pairing under `spark.sql.caseSensitive=false` compares names
+  as Java's `String.equalsIgnoreCase` does, Spark's resolver: one function,
+  `spark_names_equal_ignoring_case`, the only name compare of `StructPairing`. Two names match when
+  they have the same length in UTF-16 code units and, per character, the characters are equal,
+  or their `Character.toUpperCase` are equal, or the `Character.toLowerCase` of those are equal
+  (Unicode simple case mapping: a full mapping that expands, `ß` to `SS`, maps the character to
+  itself; the Greek iota-subscript letters and `İ` take their simple mapping). Not a full Unicode
+  fold: É/é and ẞ/ß match, ß/SS does not, as on Spark 4.1.2. pins: ice-struct-pairing-1/C-028
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-05, parity row R-016:** `incompatible_paired_update_message` and
+  `incompatible_paired_store_message` take the statement's `StructPairing`; the struct arm pairs
+  under it (`incompatible_paired_message`). `incompatible_update_message` and
+  `incompatible_store_message` keep their by-name, case-insensitive behaviour for their other
+  callers. pins: ice-struct-pairing-1/C-029
+- `struct_pairing.rs`, `store_overflow.rs`, `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build
+  round 3 (2026-10-14), owner ruling 56(a), verifier 1's F-01 and F-06, parity row R-016:** every
+  paired field passes the store-assignment judge flat columns use. `update_cast.rs` holds the one
+  leaf judge, `unassignable_leaf_message` / `refuse_unassignable_leaves`: each leaf pair of a
+  `StorePairs` is held to `ansi_store_assignable` (the flat matrix) and the first one Spark refuses
+  answers Spark's `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` text with the table label
+  and the leaf's path; a nested leaf type is named as Spark names it (its catalog string upper-cased,
+  `"STRUCT<A:INT,B:INT>"`, `"ARRAY<…>"`, `"MAP<…,…>"`, `"DECIMAL(p,s)"`); a type Spark cannot name
+  is not judged here, as before. `incompatible_paired_message` (the MERGE and UPDATE text) now calls
+  it. `store_overflow.rs`: `pair_store_output` judges the leaves of every pairing before the
+  identity shortcut, so an in-order struct is judged as a reordered one is; where the expression is
+  the user's own `CAST` (call site 1b, `unwrap_cast` false) the cast's output is judged, not its
+  operand. `struct_pairing.rs`: the batch-cast guard (`refuse_unpaired_struct`, S1, S2, S3) pairs
+  by position (the two routes that reach it unpaired are `INSERT OVERWRITE … PARTITION`), so a
+  surplus or missing field answers Spark's `EXTRA_STRUCT_FIELDS` / `STRUCT_MISSING_FIELDS`, a leaf
+  Spark refuses answers `CANNOT_SAFELY_CAST`, and only a struct Spark stores keeps hint H-1 (the
+  dated carve-out of ruling 58). No second judge and no new pairing site.
+  pins: ice-struct-pairing-1/C-024, C-025, C-026
+- `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 step 2 (2026-10-14), parity row R-016:** the one
+  rule that pairs a struct source with a struct target on a write. `pair_store_value(pairing,
+  table, column, source, target)` walks both types: two structs pair by the door's
+  `StructPairing` (`ByPosition`: the i-th source field feeds the i-th target field, a longer
+  source refuses `EXTRA_STRUCT_FIELDS`, a shorter one `STRUCT_MISSING_FIELDS`; `ByName`: each
+  target field takes the one source field of its name under the case rule, none refuses
+  `CANNOT_FIND_DATA`, two refuse `AMBIGUOUS_COLUMN_NAME` (hint H-2), a leftover refuses
+  `EXTRA_STRUCT_FIELDS`); a list pairs its element (`element`), a map its key and value
+  (`key`, `value`), a dictionary or run-end-encoded value its values, at every depth with the
+  same mode; a `Union` that holds a struct refuses (hint H-3); anything else is a leaf, listed
+  in `StorePairs::leaves` with its path and never converted. The texts are Spark's, with the
+  table label the door prints. `StorePairs::apply` re-labels and re-orders child data with no
+  buffer copied and every validity kept; `is_identity` is true exactly when nothing moves, and
+  pairing a paired value is the identity in either mode. `StorePairKernel`
+  (`__repark_store_pair__(value, target type, pairing, table, column)`) refuses in its
+  planning hook and pairs in `invoke`; `store_pair_expr` and `store_pair_sql` build it for a
+  struct-holding target only. `refuse_unpaired_struct` is hint H-1, the guard of a batch
+  cast: a struct whose names are not the target's in order is refused, with a hint for the
+  entry (`StoreEntry::Batch`, `StoreEntry::StaticPartition`). `StatementPairing` is the
+  configuration extension a statement's state snapshot carries for the DataFusion-planned
+  INSERT; `statement_pairing` reads it (absent: by position for an INSERT, by name for an
+  UPDATE). The table test in `struct_pairing/tests.rs` runs three modes × eight field shapes ×
+  ten layouts with NULL structs and NULL elements, and the idempotence property.
 - `summary_collision.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `for_changes(table, added, removed, branch)` is the general shape — the fork's
   collector over BOTH sides plus the fork's own total arithmetic
