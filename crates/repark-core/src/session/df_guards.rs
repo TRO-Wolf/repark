@@ -12,6 +12,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 
 use repark_common::Error;
 
+use crate::dialect::SqlDialect;
 use crate::extension::SessionExtension;
 
 pub(crate) mod attr_id;
@@ -66,11 +67,17 @@ pub(super) fn apply_df_54_1_config_guards(config: &mut SessionConfig) {
 pub(super) fn context_with_df_54_1_rule_guards(
     config: SessionConfig,
     runtime: Arc<RuntimeEnv>,
-    extension: &dyn SessionExtension,
+    extension: &Arc<dyn SessionExtension>,
+    dialect: &Arc<dyn SqlDialect>,
 ) -> DataFusionResult<SessionContext> {
     let analyzer_rules =
         extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards())?;
-    let state = SessionStateBuilder::new()
+    let analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
+    let mut builder = SessionStateBuilder::new();
+    if let Some(type_planner) = extension.type_planner().or_else(|| dialect.type_planner()) {
+        builder = builder.with_type_planner(type_planner);
+    }
+    let state = builder
         .with_config(config)
         .with_runtime_env(runtime)
         .with_default_features()

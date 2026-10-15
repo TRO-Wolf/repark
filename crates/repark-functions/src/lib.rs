@@ -71,6 +71,7 @@ pub mod spark_split_part;
 pub mod spark_startswith;
 mod spark_string_timestamp;
 pub mod spark_time_window;
+pub mod spark_type_planner;
 pub mod spark_window_time;
 pub mod spark_year_pad;
 pub mod string;
@@ -92,6 +93,7 @@ pub use grouping::ResolveGroupingId;
 pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
 pub use registration::analyze_eagerly;
 pub use registration::analyzer_rules;
+pub use spark_type_planner::{SparkTypePlanner, spark_type_planner};
 
 use datafusion::prelude::SessionContext;
 

@@ -392,7 +392,19 @@ pub(crate) fn prepare_session_sql(query: &str) -> PyResult<std::borrow::Cow<'_, 
         .map_or(std::borrow::Cow::Borrowed(query), std::borrow::Cow::Owned))
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct NativeDoorTypes;
+
+impl repark_core::SessionExtension for NativeDoorTypes {
+    fn type_planner(
+        &self,
+    ) -> Option<std::sync::Arc<dyn datafusion::logical_expr::planner::TypePlanner>> {
+        Some(repark_functions::spark_type_planner())
+    }
+}
+
 pub(crate) fn register_native_door_functions(ctx: &datafusion::prelude::SessionContext) {
+    repark_functions::spark_type_planner::install_planned_timestamp_cast(ctx);
     repark_functions::spark_log1p::register(ctx);
     repark_functions::cast_map::register(ctx);
 }
