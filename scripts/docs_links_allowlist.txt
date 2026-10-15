@@ -5,6 +5,7 @@
 # an unrelated edit that shifts lines never reds the gate; two identical broken links in
 # one file collapse to a single entry.
 task/ledgers/archive/2026-08/2026-08-13-y3-getdatabase-ledger.md:../python/repark/src/repark/catalog.py
+task/ledgers/archive/2026-08/2026-08-15-m14-abort-cleanup-ledger.md:../../../../crates/repark-iceberg/src/write/merge/abort.rs
 task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:../crates/repark-iceberg/src/write/predicate_dml_tests.rs
 task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:../crates/repark-iceberg/src/write/predicate_dml_update_tests.rs
 task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md:../../../../skills/sepmo/SKILL.md
