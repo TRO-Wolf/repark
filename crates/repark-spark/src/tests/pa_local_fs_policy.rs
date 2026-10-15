@@ -239,3 +239,193 @@ async fn pa04_non_ascii_locations_outside_write_under_the_opt_in() {
     .await;
     assert!(count_objects(&dest) > 0, "the opt-in control must write");
 }
+
+const CHILD_ENV: &str = "REPARK_PA_LOCAL_FS_CHILD";
+
+fn runs_here(test: &str) -> bool {
+    if std::env::var(CHILD_ENV).as_deref() == Ok(test) {
+        return true;
+    }
+    let status = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([test, "--exact", "--test-threads=1"])
+        .env(CHILD_ENV, test)
+        .status()
+        .unwrap();
+    assert!(status.success(), "{test} failed in its own process");
+    false
+}
+
+struct CwdGuard(std::path::PathBuf);
+
+impl CwdGuard {
+    fn enter(dir: &std::path::Path) -> Self {
+        let home = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir).unwrap();
+        Self(home)
+    }
+}
+
+impl Drop for CwdGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.0);
+    }
+}
+
+fn nested_warehouse() -> (TempDir, TempDir) {
+    let base = TempDir::new().unwrap();
+    let wh = TempDir::new_in(base.path()).unwrap();
+    std::fs::create_dir_all(wh.path().join("a/b")).unwrap();
+    std::os::unix::fs::symlink(wh.path().join("a/b"), wh.path().join("deep")).unwrap();
+    (base, wh)
+}
+
+#[tokio::test]
+async fn v01_symlink_then_dot_dot_writes_outside_on_todays_head_and_now_refuses() {
+    let (base, wh) = nested_warehouse();
+    let (ctx, catalogs) = setup(&wh).await;
+    let w = wh.path().to_str().unwrap();
+    for sql in [
+        copy_to(&format!("{w}/deep/../../out/bare")),
+        copy_to(&format!("file://{w}/deep/../../out/url")),
+        format!(
+            "EXPLAIN ANALYZE {}",
+            copy_to(&format!("{w}/deep/../../out/ea"))
+        ),
+    ] {
+        let err = refusal(&ctx, &catalogs, &sql).await;
+        assert_policy_refusal(&err, "COPY TO");
+    }
+    assert_eq!(
+        count_objects(&base.path().join("out")),
+        0,
+        "nothing may land outside"
+    );
+}
+
+#[tokio::test]
+async fn v02_percent_encoded_dot_segments_write_outside_on_todays_head_and_now_refuse() {
+    let (base, wh) = nested_warehouse();
+    let (ctx, catalogs) = setup(&wh).await;
+    let w = wh.path().to_str().unwrap();
+    for sql in [
+        copy_to(&format!("file://{w}/%2e%2e/out/p1")),
+        copy_to(&format!("file://{w}/%2E%2E/out/p2")),
+        copy_to(&format!("file://{w}/.%2e/out/p3")),
+        copy_to(&format!("file:{w}/%2e%2e/out/p4")),
+        copy_to(&format!("file://localhost{w}/%2e%2e/out/p5")),
+        format!(
+            "EXPLAIN ANALYZE {}",
+            copy_to(&format!("file://{w}/%2e%2e/out/p6"))
+        ),
+    ] {
+        let err = refusal(&ctx, &catalogs, &sql).await;
+        assert_policy_refusal(&err, "COPY TO");
+    }
+    let create = format!(
+        "CREATE EXTERNAL TABLE v02_ext (a INT) STORED AS PARQUET LOCATION 'file://{w}/%2e%2e/out/pc/'"
+    );
+    let plan = ctx.state().create_logical_plan(&create).await.unwrap();
+    let err = crate::local_fs_ddl::refuse_local_filesystem_plan(&ctx, &catalogs, &plan)
+        .unwrap_err()
+        .to_string();
+    assert_policy_refusal(&err, "CREATE EXTERNAL TABLE");
+    assert_eq!(
+        count_objects(&base.path().join("out")),
+        0,
+        "nothing may land outside"
+    );
+}
+
+#[tokio::test]
+async fn v03_file_relative_with_the_cwd_in_a_warehouse_writes_outside_on_todays_head() {
+    if !runs_here(
+        "tests::pa_local_fs_policy::v03_file_relative_with_the_cwd_in_a_warehouse_writes_outside_on_todays_head",
+    ) {
+        return;
+    }
+    let (base, wh) = nested_warehouse();
+    let (ctx, catalogs) = setup(&wh).await;
+    let relative = base.path().to_str().unwrap().trim_start_matches('/');
+    let home = std::env::current_dir().unwrap();
+    {
+        let _cwd = CwdGuard::enter(wh.path());
+        for location in [
+            format!("file:{relative}/out/fc"),
+            format!("file:./{relative}/out/fc4"),
+        ] {
+            let err = refusal(&ctx, &catalogs, &copy_to(&location)).await;
+            assert_policy_refusal(&err, "COPY TO");
+        }
+    }
+    assert_eq!(
+        std::env::current_dir().unwrap(),
+        home,
+        "the cwd is restored"
+    );
+    assert_eq!(
+        count_objects(&base.path().join("out")),
+        0,
+        "nothing may land outside"
+    );
+}
+
+#[tokio::test]
+async fn a_leading_space_is_read_from_the_cwd_and_writes_outside_on_todays_head() {
+    if !runs_here(
+        "tests::pa_local_fs_policy::a_leading_space_is_read_from_the_cwd_and_writes_outside_on_todays_head",
+    ) {
+        return;
+    }
+    let (base, wh) = nested_warehouse();
+    let (ctx, catalogs) = setup(&wh).await;
+    let cwd = base.path().join("cwd");
+    std::fs::create_dir(&cwd).unwrap();
+    let home = std::env::current_dir().unwrap();
+    {
+        let _cwd = CwdGuard::enter(&cwd);
+        let location = format!(" {}/trap", wh.path().to_str().unwrap());
+        let err = refusal(&ctx, &catalogs, &copy_to(&location)).await;
+        assert_policy_refusal(&err, "COPY TO");
+    }
+    assert_eq!(
+        std::env::current_dir().unwrap(),
+        home,
+        "the cwd is restored"
+    );
+    assert_eq!(count_objects(&cwd), 0, "nothing may land outside");
+}
+
+#[tokio::test]
+async fn a_warehouse_registered_through_a_symlink_still_writes_inside_it() {
+    let scratch = TempDir::new().unwrap();
+    let (ctx, mut catalogs) = setup(&scratch).await;
+    let base = TempDir::new().unwrap();
+    let real = base.path().join("real");
+    std::fs::create_dir_all(real.join("r2")).unwrap();
+    let linked = base.path().join("whl");
+    std::os::unix::fs::symlink(&real, &linked).unwrap();
+    std::os::unix::fs::symlink(real.join("r2"), real.join("inner")).unwrap();
+    catalogs.note_local_warehouse_root(linked.to_str().unwrap());
+    for (location, landed) in [
+        (linked.join("direct"), real.join("direct")),
+        (linked.join("inner/x"), real.join("r2/x")),
+        (linked.join("m1/m2/m3/x"), real.join("m1/m2/m3/x")),
+    ] {
+        answer(&ctx, &catalogs, &copy_to(location.to_str().unwrap())).await;
+        assert!(
+            count_objects(&landed) > 0,
+            "{} must write",
+            location.display()
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_ancestor_whose_metadata_read_fails_refuses_with_the_policy_error() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    std::fs::write(wh.path().join("plain"), b"x").unwrap();
+    let dest = wh.path().join("plain/child/x");
+    let err = refusal(&ctx, &catalogs, &copy_to(dest.to_str().unwrap())).await;
+    assert_policy_refusal(&err, "COPY TO");
+}

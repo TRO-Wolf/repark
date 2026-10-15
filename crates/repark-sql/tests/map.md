@@ -23,6 +23,11 @@ holds behavior observed from outside the crate.
   main 5 of 8; the opt-in control of the PA-04 test is red on main because the ANSI door's
   conf reader never matched the real extension's key.
   pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-005, C-006, C-008, C-009, C-011, C-012, C-013, C-014, C-015, C-017
+  **Fix round (2026-10-15, owner ruling 103):** the ANSI twins of the Spark door's `v01_*`,
+  `v02_*`, `v03_*`, leading-space, symlinked-root and metadata-error pins, each outside pin
+  named "writes outside on today's head", each asserting no file in the sibling `out/`; the cwd
+  pins run in a child process of the test binary and restore the cwd.
+  pins: pa-local-fs-policy-1/C-012, C-019, C-020, C-021, C-022, C-024
 - `ansi_door_u9_types.rs` — **WO U9-TYPES-1 (2026-09-25):** the native door's row for the
   Spark door's new type spellings: `TIMESTAMP_LTZ` in a column definition refuses
   `Unsupported SQL type TIMESTAMP_LTZ` and creates nothing. pins: u9-types-1/C-004

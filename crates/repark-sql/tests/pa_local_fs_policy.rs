@@ -13,8 +13,7 @@ struct Door {
     warehouse: TempDir,
 }
 
-async fn ansi_door(allow: bool) -> Door {
-    let warehouse = TempDir::new().unwrap();
+async fn ansi_session(allow: bool, warehouse: &Path) -> ReparkSession {
     let dialect: Arc<dyn SqlDialect> = Arc::new(AnsiDialect);
     let mut builder = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))
@@ -24,10 +23,26 @@ async fn ansi_door(allow: bool) -> Door {
     }
     let session = builder.build().unwrap();
     session
-        .register_memory_catalog("ice", warehouse.path().to_str().unwrap())
+        .register_memory_catalog("ice", warehouse.to_str().unwrap())
         .await
         .unwrap();
+    session
+}
+
+async fn ansi_door(allow: bool) -> Door {
+    let warehouse = TempDir::new().unwrap();
+    let session = ansi_session(allow, warehouse.path()).await;
     Door { session, warehouse }
+}
+
+async fn nested_ansi_door() -> (TempDir, Door) {
+    let base = TempDir::new().unwrap();
+    let warehouse = TempDir::new_in(base.path()).unwrap();
+    std::fs::create_dir_all(warehouse.path().join("a/b")).unwrap();
+    std::os::unix::fs::symlink(warehouse.path().join("a/b"), warehouse.path().join("deep"))
+        .unwrap();
+    let session = ansi_session(false, warehouse.path()).await;
+    (base, Door { session, warehouse })
 }
 
 impl Door {
@@ -235,4 +250,185 @@ async fn pa04_ansi_non_ascii_controls() {
     )))
     .await;
     assert!(files_under(&dest) > 0, "the opt-in control must write");
+}
+
+const CHILD_ENV: &str = "REPARK_PA_LOCAL_FS_CHILD";
+
+fn runs_here(test: &str) -> bool {
+    if std::env::var(CHILD_ENV).as_deref() == Ok(test) {
+        return true;
+    }
+    let status = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([test, "--exact", "--test-threads=1"])
+        .env(CHILD_ENV, test)
+        .status()
+        .unwrap();
+    assert!(status.success(), "{test} failed in its own process");
+    false
+}
+
+struct CwdGuard(std::path::PathBuf);
+
+impl CwdGuard {
+    fn enter(dir: &Path) -> Self {
+        let home = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir).unwrap();
+        Self(home)
+    }
+}
+
+impl Drop for CwdGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.0);
+    }
+}
+
+#[tokio::test]
+async fn v01_ansi_symlink_then_dot_dot_writes_outside_on_todays_head_and_now_refuses() {
+    let (base, door) = nested_ansi_door().await;
+    let w = door.wh().to_str().unwrap().to_string();
+    door.refusal(&copy_to(&format!("{w}/deep/../../out/bare")), "COPY TO")
+        .await;
+    door.refusal(
+        &copy_to(&format!("file://{w}/deep/../../out/url")),
+        "COPY TO",
+    )
+    .await;
+    door.refusal(
+        &format!(
+            "EXPLAIN ANALYZE {}",
+            copy_to(&format!("{w}/deep/../../out/ea"))
+        ),
+        "COPY TO",
+    )
+    .await;
+    assert_eq!(
+        files_under(&base.path().join("out")),
+        0,
+        "nothing may land outside"
+    );
+}
+
+#[tokio::test]
+async fn v02_ansi_percent_encoded_dot_segments_write_outside_on_todays_head_and_now_refuse() {
+    let (base, door) = nested_ansi_door().await;
+    let w = door.wh().to_str().unwrap().to_string();
+    for location in [
+        format!("file://{w}/%2e%2e/out/p1"),
+        format!("file://{w}/%2E%2E/out/p2"),
+        format!("file://{w}/.%2e/out/p3"),
+        format!("file:{w}/%2e%2e/out/p4"),
+        format!("file://localhost{w}/%2e%2e/out/p5"),
+    ] {
+        door.refusal(&copy_to(&location), "COPY TO").await;
+    }
+    door.refusal(
+        &format!(
+            "EXPLAIN ANALYZE {}",
+            copy_to(&format!("file://{w}/%2e%2e/out/p6"))
+        ),
+        "COPY TO",
+    )
+    .await;
+    door.refusal(
+        &format!(
+            "CREATE EXTERNAL TABLE v02_ext (a INT) STORED AS PARQUET LOCATION 'file://{w}/%2e%2e/out/pc/'"
+        ),
+        "CREATE EXTERNAL TABLE",
+    )
+    .await;
+    assert_eq!(
+        files_under(&base.path().join("out")),
+        0,
+        "nothing may land outside"
+    );
+}
+
+#[tokio::test]
+async fn v03_ansi_file_relative_with_the_cwd_in_a_warehouse_writes_outside_on_todays_head() {
+    if !runs_here(
+        "v03_ansi_file_relative_with_the_cwd_in_a_warehouse_writes_outside_on_todays_head",
+    ) {
+        return;
+    }
+    let (base, door) = nested_ansi_door().await;
+    let relative = base.path().to_str().unwrap().trim_start_matches('/');
+    let home = std::env::current_dir().unwrap();
+    {
+        let _cwd = CwdGuard::enter(door.wh());
+        door.refusal(&copy_to(&format!("file:{relative}/out/fc")), "COPY TO")
+            .await;
+        door.refusal(&copy_to(&format!("file:./{relative}/out/fc4")), "COPY TO")
+            .await;
+    }
+    assert_eq!(
+        std::env::current_dir().unwrap(),
+        home,
+        "the cwd is restored"
+    );
+    assert_eq!(
+        files_under(&base.path().join("out")),
+        0,
+        "nothing may land outside"
+    );
+}
+
+#[tokio::test]
+async fn ansi_a_leading_space_is_read_from_the_cwd_and_writes_outside_on_todays_head() {
+    if !runs_here("ansi_a_leading_space_is_read_from_the_cwd_and_writes_outside_on_todays_head") {
+        return;
+    }
+    let (base, door) = nested_ansi_door().await;
+    let cwd = base.path().join("cwd");
+    std::fs::create_dir(&cwd).unwrap();
+    let home = std::env::current_dir().unwrap();
+    {
+        let _cwd = CwdGuard::enter(&cwd);
+        let location = format!(" {}/trap", door.wh().to_str().unwrap());
+        door.refusal(&copy_to(&location), "COPY TO").await;
+    }
+    assert_eq!(
+        std::env::current_dir().unwrap(),
+        home,
+        "the cwd is restored"
+    );
+    assert_eq!(files_under(&cwd), 0, "nothing may land outside");
+}
+
+#[tokio::test]
+async fn ansi_a_warehouse_registered_through_a_symlink_still_writes_inside_it() {
+    let base = TempDir::new().unwrap();
+    let real = base.path().join("real");
+    std::fs::create_dir_all(real.join("r2")).unwrap();
+    let linked = base.path().join("whl");
+    std::os::unix::fs::symlink(&real, &linked).unwrap();
+    std::os::unix::fs::symlink(real.join("r2"), real.join("inner")).unwrap();
+    let session = ansi_session(false, &linked).await;
+    for (location, landed) in [
+        (linked.join("direct"), real.join("direct")),
+        (linked.join("inner/x"), real.join("r2/x")),
+        (linked.join("m1/m2/m3/x"), real.join("m1/m2/m3/x")),
+    ] {
+        session
+            .sql(&copy_to(location.to_str().unwrap()))
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        assert!(
+            files_under(&landed) > 0,
+            "{} must write",
+            location.display()
+        );
+    }
+}
+
+#[tokio::test]
+async fn ansi_an_ancestor_whose_metadata_read_fails_refuses_with_the_policy_error() {
+    let door = ansi_door(false).await;
+    std::fs::write(door.wh().join("plain"), b"x").unwrap();
+    let dest = door.wh().join("plain/child/x");
+    door.refusal(&copy_to(dest.to_str().unwrap()), "COPY TO")
+        .await;
 }

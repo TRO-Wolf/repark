@@ -39,6 +39,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `file://localhost` forms classify. Controls write: under the warehouse, through an
   in-warehouse symlink, and under the opt-in. Red on main 6 of 15.
   pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-006, C-008, C-009, C-011, C-012, C-013, C-014, C-015
+  **Fix round (2026-10-15, owner rulings 103 and 104):** each pin named "writes outside on
+  today's head" refuses with the policy error and leaves no file in the sibling `out/`: `v01_*`
+  (`<warehouse>/deep/../../out/…` with `deep` an in-warehouse symlink, bare, `file://` and under
+  `EXPLAIN ANALYZE`), `v02_*` (`%2e%2e`, `%2E%2E`, `.%2e`, `file:` and `file://localhost` forms,
+  `EXPLAIN ANALYZE` and `CREATE EXTERNAL TABLE`), `v03_*` (`file:<relative>` and
+  `file:./<relative>` with the cwd inside the warehouse) and the leading-space location read
+  against a cwd outside. The two cwd pins re-run themselves in a child process of the test
+  binary (`runs_here`), so the `chdir` never reaches a parallel test, and restore the cwd
+  through `CwdGuard`. Controls: a warehouse registered through a symlinked path writes directly,
+  through an in-warehouse symlink and with missing middle directories; an ancestor that is a
+  plain file refuses with the policy error, not a later write error.
+  pins: pa-local-fs-policy-1/C-012, C-019, C-020, C-021, C-022, C-024
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `enc_1.rs` — **ENC-1 round 2 (2026-10-09):** 35 pins over tables carrying
   `encryption.key-id`: every write path refuses with `UnsupportedOperationException` and

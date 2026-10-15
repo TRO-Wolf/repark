@@ -101,6 +101,14 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
   `repark.sql()`: the bare and wrapped `COPY`, the symlink escape, `CREATE EXTERNAL TABLE`
   and `aaaaaaé` refuse; plain `EXPLAIN` answers. Red on main 7 of 15.
   pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-006, C-008, C-009, C-010, C-011, C-013, C-014, C-015
+  **Fix round (2026-10-15, owner rulings 103 and 104):** on the Spark door, `test_v01_*`,
+  `test_v02_*` and `test_v03_*` (each "writes outside on today's head") refuse with no file
+  outside, the cwd restored after `test_v03_*`; a warehouse registered through a symlinked path
+  writes inside. `repark.sql()` refusals now name `repark.sql() does not allow local-file DDL`
+  and not the conf; `test_repark_sql_names_no_opt_in_and_no_route_opens_it` shows `SET` of the
+  key fails, a native session built with the key set still refuses, and a read-only `CREATE
+  EXTERNAL TABLE` over an existing local parquet directory refuses.
+  pins: pa-local-fs-policy-1/C-019, C-020, C-021, C-022, C-023
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
