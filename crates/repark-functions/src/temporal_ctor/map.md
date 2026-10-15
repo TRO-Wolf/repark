@@ -44,3 +44,6 @@ parser change (EX-FN-27, run 15c owns the parser).
   unit carries its own sign from truncating division).
 
 pins: fnp-11a/C-002, C-003, C-004, C-005, C-017, C-018, C-019
+- **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the SQL test sessions here are built by
+  `spark_type_planner::planned_context`, so `TIMESTAMP` is typed by the planner as on
+  every door; no assertion moved. pins: ice-tsns-type-planner-1/C-013

@@ -269,6 +269,13 @@ pins: rp-4-fork-repin/C-005, C-006
   baseline): `conform_types` resolves the positional targets and runs
   `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
   through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
+- `keyword_lower.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the AST lowering of
+  `CAST(… AS timestamp_ns)` / `timestamptz_ns` to a kernel call is deleted
+  (`timestamp_ns_cast_name`, `lower_timestamp_ns_cast`, the probe arm). The names reach
+  DataFusion's planner as custom types and `SparkTypePlanner` types them, in every
+  statement kind, so `UPDATE` and `DELETE` plan them too (R-010). The three entry points
+  keep their names; they still lower `TIMESTAMP_NTZ` casts, mark `VALUES` casts and lower
+  empty `map()`. pins: ice-tsns-type-planner-1/C-013
 - `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkExtension::type_planner`
   hands the session builder `repark_functions::SparkTypePlanner`, so every `CAST(… AS T)`
   and typed literal the Spark door plans takes its unit from the written name. The DDL

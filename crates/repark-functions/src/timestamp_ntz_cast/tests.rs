@@ -13,7 +13,7 @@ fn array_ticks(array: &ArrayRef) -> Vec<Option<i64>> {
 
 fn ctx_at(zone: &str) -> SessionContext {
     let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
-    let ctx = SessionContext::new_with_config(config);
+    let ctx = crate::spark_type_planner::planned_context(config);
     crate::register_all(&ctx);
     for rule in crate::analyzer_rules() {
         ctx.add_analyzer_rule(rule);

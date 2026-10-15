@@ -150,6 +150,16 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
 }
 
 #[cfg(test)]
+pub(crate) fn planned_context(config: datafusion::prelude::SessionConfig) -> SessionContext {
+    let state = datafusion::execution::SessionStateBuilder::new()
+        .with_type_planner(spark_type_planner())
+        .with_config(config)
+        .with_default_features()
+        .build();
+    SessionContext::new_with_state(state)
+}
+
+#[cfg(test)]
 mod tests {
     use datafusion::sql::sqlparser::ast::{Ident, ObjectName};
 
