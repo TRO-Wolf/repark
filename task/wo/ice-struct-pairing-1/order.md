@@ -33,6 +33,8 @@ position, as every other `INSERT` door does. The out-of-scope item "whether a ne
 is store-assignable on the INSERT doors" above is struck by 56(a) on 2026-10-14; the rest of
 the list stands.
 
+**Ruling 95 (owner, 2026-10-15):** the ruling 90 refusal stays shape-based, so `WHERE false` and a declined filter that matches no row refuse too; those cells go on the dated registry row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE, closed by UPDATE-SUBQUERY-STORE-1, with pins that the refusal leaves no new snapshot and no metadata change on both doors and that the family answers one text naming no data-deleting action.
+
 ## 1. Rulings already made
 
 - **Owner, 2026-10-13:** Iceberg is the priority until the v2 and v3 labels read PRODUCTION;

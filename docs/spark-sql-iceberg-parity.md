@@ -9490,6 +9490,42 @@ the pin rather than obeying it.
   [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md),
   open, not scheduled. The refusal does not hold the label. One commit, revertable alone.
 
+### ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE — DATED REFUSAL 2026-10-15 (owner ruling 95(a)): `UPDATE … SET col = (SELECT …)` that matches no row refuses, where Spark and main succeed and leave every row as it was
+
+- **repark** — the ruling 90 refusal of row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY is decided by
+  the statement's shape, not by the rows it matches, so `WHERE false` and any filter the identity
+  path declines that matches no row refuse too. Measured on the unit head, 12 cells per door,
+  Spark SQL door and ANSI door alike: `WHERE false` (6 cells) and `WHERE id BETWEEN 100 AND 200`
+  (6 cells), each for a flat INT column and a struct column fed reordered and in order, with the
+  subquery bare and with its own `WHERE`. Every one answers the one text of the family
+  (`UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
+  write the subquery value here, so it refuses before any write.`, behind the door's
+  `Error during planning: ` prefix), and after it the table's current snapshot id, snapshot
+  count, metadata location and `metadata/` files are unchanged. `WHERE id > 100` is a scalar
+  comparison, so on the Spark SQL door the identity path runs it and it succeeds as Spark does;
+  on `repark.sql()` it refuses like every `WHERE`. With the ruling 90 commit reverted, main's
+  answer on both doors is success with the rows unchanged; `WHERE false` also commits a new
+  snapshot and metadata file there, `BETWEEN 100 AND 200` commits nothing.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 succeeds and changes no row. *(oracle: recorded,
+  the `WHERE false` cells of verifier 2's Q probe, 6 cells, 2026-10-15.)*
+- **Pin** — `crates/repark-spark/tests/update_subquery_refusal.rs`
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_spark_door`,
+  `ruling_95_the_whole_refused_family_answers_one_text_on_the_spark_door`,
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_spark_door`;
+  `crates/repark-sql/tests/ansi_update_subquery_refusal.rs`
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_ansi_door`,
+  `ruling_95_the_whole_refused_family_answers_one_text_on_both_doors`,
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_ansi_door`. Every refused cell of
+  both files holds the snapshot and metadata unchanged.
+- **Rationale** — DATED REFUSAL 2026-10-15, owner ruling 95, verbatim: "95: (a). The
+  shape-based refusal is what 90 asks for. (b) is out: "every other filter" includes filters
+  that match rows, where main's silent no-op is the F-04 critical. The 6 WHERE-false cells go on
+  a dated row beside 90's row, closed by UPDATE-SUBQUERY-STORE-1. Two conditions: the pin proves
+  no new snapshot and no metadata change after the refusal on both doors; one error text for
+  the whole family, hint names no data-deleting action." Closed by card
+  [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md):
+  when the shapes store Spark's value, these cells succeed and write nothing, as Spark's do.
+
 ### G3-E8-NULL — `NOT IN (SELECT …)` with a NULL key (3VL trap, keep after the fix)
 
 - **repark** — `DELETE … NOT IN (SELECT …)` where the subquery contains `NULL` now

@@ -4,7 +4,7 @@ ICE-STRUCT-PAIRING-1 (U-6 of the Iceberg closeout, 2026-10-13): one rule pairs s
 on every write door. Documents only; no product code and no test.
 
 - [sketch.md](sketch.md) — the measured door × shape matrix on main and on Spark 4.1.2 (512 cells on each format version), the eleven places main pairs a struct on a write, the seam `pair_store_value`, what is deleted, the hints, fixture, halts, mutants, cost.
-- [order.md](order.md) — the grade A work order for an Opus 5.5 high executor, dispatchable once the owner accepts the sketch.
+- [order.md](order.md) — the grade A work order for an Opus 5.5 high executor, dispatchable once the owner accepts the sketch. §0 records owner ruling 95 (2026-10-15): the UPDATE subquery refusal stays shape-based, its no-match cells on a dated registry row.
 - [step-0.md](step-0.md) — step 0 measurements, no product code: the 17-door route table, the eight cleared files, the L1 check, the H2-H7 probes, the added cells on both engines, the cost bar.
 - [ice_struct_pairing_1_step0.json](ice_struct_pairing_1_step0.json) — machine JSON of the added cells and halt probes, Spark 4.1.2 and main, assembled by a recorder script.
 

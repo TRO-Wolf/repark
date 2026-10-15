@@ -253,6 +253,7 @@ the round by that one change. Built on Opus 5.5 high under the owner's switch of
   nested field, `WITH … INSERT`, `UNION ALL` of disagreeing structs); every cell where the head
   stores a value Spark does not is equal to main or is ruling 75's JDK 17 note (8 cells). No
   verifier-2 probe cell outside V2-01 and V2-02 moved from the round-3 head.
+- **Ruling 95** (`b751f13a`, `297f1a32`, pins; the records commit after them): every refused cell of `update_subquery_refusal.rs` and `ansi_update_subquery_refusal.rs` holds the snapshot id, snapshot count, metadata location and `metadata/` files unchanged; `WHERE false` and `WHERE id BETWEEN 100 AND 200` refuse on both doors (12 cells per door); the family answers one text on both doors naming no data-deleting action; with `107f7c75` and `5eae71eb` reverted every new pin reds, and a guard answering more text on the `WHERE false` shape only reds only the one-text pins; registry row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE. pins: ice-struct-pairing-1/C-034, C-036
 - **Records:** ruling 75's dated note on R-016; ruling 76's carve-out workaround; card
   `task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md`; registry row
   ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY; the 1.5.6 notes line.

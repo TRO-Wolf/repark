@@ -4,7 +4,7 @@
 
 **Status:** open, not scheduled.
 
-**Retires:** when every `UPDATE … SET col = (SELECT …)` shape that now refuses stores Spark's value on both doors, the ruling 90 refusal is deleted, and its registry row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY closes with the pins turned to stores.
+**Retires:** when every `UPDATE … SET col = (SELECT …)` shape that now refuses stores Spark's value on both doors, the ruling 90 refusal is deleted, and its registry rows ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY and ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE (the cells that match no row, owner ruling 95) close with the pins turned to stores, the no-match cells succeeding with nothing written.
 
 ## Why
 

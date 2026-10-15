@@ -50,7 +50,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   reach it (the kernel, the mode, the H-1 guards, the one registration table, the condition),
   C-016 to C-019 the controls (L1, L2, the unmoved cells, the retired residues), C-021 to C-023
   the revert-alone runs and the records; C-020 (cost) is OPEN on which bar the gate reads.
-  `risk_tier: standard`. Branch `fix/ice-struct-pairing-1`, build round 2.
+  `risk_tier: standard`. Branch `fix/ice-struct-pairing-1`, build round 2. §8 records the
+  exception round, ruling 95's pins included.
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
   `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
