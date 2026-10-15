@@ -150,6 +150,18 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE` text for `col2` (`col1` for the
   swapped list) and writes neither row; rows that agree, in case-insensitive mode or in an order
   other than the table's, store by position as Spark does.
+  **Exception round (2026-10-15, verifier 2's V2-03): the four mutant pins.**
+  `a_paired_struct_leaf_spark_refuses_refuses_on_every_insert_spelling` (`INSERT … SELECT`,
+  `VALUES`, column-list `VALUES` and `INSERT OVERWRITE` of `named_struct('b', '5', 'a', 1)`
+  into `STRUCT<a: BIGINT, b: STRING>` refuse Spark's `CANNOT_SAFELY_CAST` for `` `st`.`a` ``,
+  nothing written; kills `V2_L1`, the door-level leaf judge off);
+  `a_column_list_values_row_maps_each_value_to_its_listed_column` (`(st, id)` and `(id, st)`
+  lists store by position into their listed columns; kills `V2_N3`);
+  `the_update_refusal_pairs_under_the_session_case_rule` (case twins under
+  `caseSensitive=true`, with and without `WHERE`, refuse `CANNOT_FIND_DATA` for `` `st`.`b` ``;
+  kills `V2_N4`); `an_update_from_a_column_subquery_with_a_comparison_stores_spark_value`
+  (`WHERE id = 0` from a reordered and an in-order source stores `{a: 1, b: 2}`; kills
+  `V2_N5`).
   **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
   `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
   `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE

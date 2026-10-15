@@ -591,3 +591,197 @@ async fn multi_row_values_refuse_as_spark_when_rows_disagree_on_struct_names() {
         );
     }
 }
+
+async fn seeded_table(session: &ReparkSession, table: &str, column: &str, seed: &str) {
+    run(
+        session,
+        &format!("CREATE TABLE {table} (id INT, st {column}) USING iceberg"),
+    )
+    .await;
+    run(session, &format!("INSERT INTO {table} VALUES (0, {seed})")).await;
+}
+
+async fn catalog_session() -> (ReparkSession, TempDir) {
+    let session = session();
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    run(&session, "CREATE NAMESPACE ice.ns").await;
+    (session, warehouse)
+}
+
+#[tokio::test]
+async fn a_paired_struct_leaf_spark_refuses_refuses_on_every_insert_spelling() {
+    let (session, _warehouse) = catalog_session().await;
+    for (name, template) in [
+        (
+            "leaf_select",
+            "INSERT INTO {t} SELECT 1, named_struct('b', '5', 'a', 1)",
+        ),
+        (
+            "leaf_values",
+            "INSERT INTO {t} VALUES (1, named_struct('b', '5', 'a', 1))",
+        ),
+        (
+            "leaf_collist_values",
+            "INSERT INTO {t} (st, id) VALUES (named_struct('b', '5', 'a', 1), 1)",
+        ),
+        (
+            "leaf_overwrite",
+            "INSERT OVERWRITE {t} SELECT 1, named_struct('b', '5', 'a', 1)",
+        ),
+    ] {
+        let table = format!("ice.ns.{name}");
+        seeded_table(
+            &session,
+            &table,
+            "STRUCT<a: BIGINT, b: STRING>",
+            "named_struct('a', CAST(10 AS BIGINT), 'b', 'x')",
+        )
+        .await;
+        let refusal = attempt(&session, Door::Sql(template), &table, "")
+            .await
+            .expect_err(name);
+        let expected = format!(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `ice`.`ns`.`{name}`: Cannot safely cast `st`.`a` \"STRING\" to \
+             \"BIGINT\". SQLSTATE: KD000"
+        );
+        assert!(refusal.contains(&expected), "{name}: {refusal}");
+        let rows = session
+            .sql(&format!("SELECT id FROM {table}"))
+            .await
+            .expect("read")
+            .collect()
+            .await
+            .expect("collect");
+        let count: usize = rows.iter().map(|batch| batch.num_rows()).sum();
+        assert_eq!(
+            count, 1,
+            "{name}: the seed row stays and nothing is written"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_column_list_values_row_maps_each_value_to_its_listed_column() {
+    let (session, _warehouse) = catalog_session().await;
+    for (name, template, expected) in [
+        (
+            "collist_swapped",
+            "INSERT INTO {t} (st, id) VALUES (named_struct('b', 2, 'a', 1), 1)",
+            (Some(2), Some(1)),
+        ),
+        (
+            "collist_in_order",
+            "INSERT INTO {t} (id, st) VALUES (1, named_struct('b', 2, 'a', 1))",
+            (Some(2), Some(1)),
+        ),
+        (
+            "collist_swapped_table_order",
+            "INSERT INTO {t} (st, id) VALUES (named_struct('a', 3, 'b', 4), 1)",
+            (Some(3), Some(4)),
+        ),
+    ] {
+        let table = format!("ice.ns.{name}");
+        seeded_table(
+            &session,
+            &table,
+            "STRUCT<a: INT, b: INT>",
+            "named_struct('a', 10, 'b', 20)",
+        )
+        .await;
+        attempt(&session, Door::Sql(template), &table, "")
+            .await
+            .unwrap_or_else(|error| panic!("{name}: {error}"));
+        assert_eq!(stored(&session, &table, 1).await, Some(expected), "{name}");
+    }
+}
+
+#[tokio::test]
+async fn the_update_refusal_pairs_under_the_session_case_rule() {
+    let (session, _warehouse) = catalog_session().await;
+    for (name, case_sensitive, where_sql, expected) in [
+        (
+            "update_twins_case_sensitive",
+            true,
+            " WHERE id = 0",
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for \
+             the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000",
+        ),
+        (
+            "update_no_where_twins_case_sensitive",
+            true,
+            "",
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for \
+             the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000",
+        ),
+    ] {
+        let table = format!("ice.ns.{name}");
+        seeded_table(
+            &session,
+            &table,
+            "STRUCT<a: INT, b: INT>",
+            "named_struct('a', 10, 'b', 20)",
+        )
+        .await;
+        set_case_sensitive(&session, case_sensitive);
+        let outcome = attempt(
+            &session,
+            Door::Sql("UPDATE {t} SET st = named_struct('a', 1, 'A', 2){s}"),
+            &table,
+            where_sql,
+        )
+        .await;
+        set_case_sensitive(&session, false);
+        let refusal = outcome.expect_err(name);
+        assert!(refusal.contains(expected), "{name}: {refusal}");
+        assert_eq!(
+            stored(&session, &table, 0).await,
+            Some((Some(10), Some(20))),
+            "{name}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_update_from_a_column_subquery_with_a_comparison_stores_spark_value() {
+    let (session, _warehouse) = catalog_session().await;
+    for (name, source_type, source_value) in [
+        (
+            "subquery_reordered",
+            "STRUCT<b: INT, a: INT>",
+            "named_struct('b', 2, 'a', 1)",
+        ),
+        (
+            "subquery_in_order",
+            "STRUCT<a: INT, b: INT>",
+            "named_struct('a', 1, 'b', 2)",
+        ),
+    ] {
+        let table = format!("ice.ns.{name}");
+        seeded_table(
+            &session,
+            &table,
+            "STRUCT<a: INT, b: INT>",
+            "named_struct('a', 10, 'b', 20)",
+        )
+        .await;
+        seeded_table(&session, &format!("{table}_src"), source_type, source_value).await;
+        attempt(
+            &session,
+            Door::Sql("UPDATE {t} SET st = (SELECT st FROM {t}_src) WHERE id = 0"),
+            &table,
+            "",
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{name}: {error}"));
+        assert_eq!(
+            stored(&session, &table, 0).await,
+            Some((Some(1), Some(2))),
+            "{name}"
+        );
+    }
+}
