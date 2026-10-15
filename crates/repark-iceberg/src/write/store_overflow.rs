@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
+use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, TableReference};
@@ -124,13 +124,12 @@ fn transform_store_dml(
         WriteOp::Update => false,
         _ => return Ok(Transformed::no(LogicalPlan::Dml(dml))),
     };
-    if matches!(dml.input.as_ref(), LogicalPlan::Values(_)) {
-        let LogicalPlan::Values(values) = dml.input.as_ref() else {
+    let target_schema = dml.target.schema();
+    if let LogicalPlan::Values(values) = dml.input.as_ref() {
+        let Some(targets) = positional_values_targets(values, target_schema.as_ref()) else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
-        let Some(rewritten) =
-            conform_values_rows(values, dml.target.schema().as_ref(), fold, site)?
-        else {
+        let Some(rewritten) = conform_values_rows(values, &targets, fold, site)? else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
         dml.input = Arc::new(rewritten);
@@ -138,8 +137,8 @@ fn transform_store_dml(
     }
     if let LogicalPlan::Projection(projection) = dml.input.as_ref()
         && let LogicalPlan::Values(values) = projection.input.as_ref()
-        && let Some(rewritten) =
-            conform_values_rows(values, dml.target.schema().as_ref(), fold, site)?
+        && let Some(targets) = projected_values_targets(projection, values, target_schema.as_ref())
+        && let Some(rewritten) = conform_values_rows(values, &targets, fold, site)?
     {
         dml.input = Arc::new(LogicalPlan::Projection(Projection::try_new(
             projection.expr.clone(),
@@ -199,23 +198,60 @@ fn rewrap_aliases(mut inner: Expr, frames: &[(Option<TableReference>, String)]) 
     inner
 }
 
+fn positional_values_targets<'a>(
+    values: &datafusion::logical_expr::Values,
+    target: &'a ArrowSchema,
+) -> Option<Vec<Option<&'a Field>>> {
+    (target.fields().len() == values.schema.fields().len()).then(|| {
+        target
+            .fields()
+            .iter()
+            .map(|field| Some(field.as_ref()))
+            .collect()
+    })
+}
+
+fn projected_values_targets<'a>(
+    projection: &Projection,
+    values: &datafusion::logical_expr::Values,
+    target: &'a ArrowSchema,
+) -> Option<Vec<Option<&'a Field>>> {
+    if projection.expr.len() != target.fields().len() {
+        return None;
+    }
+    let mut targets = vec![None; values.schema.fields().len()];
+    for (expr, field) in projection.expr.iter().zip(target.fields()) {
+        let (mut inner, _) = split_aliases(expr);
+        if let Expr::Cast(cast) = inner {
+            inner = cast.expr.as_ref();
+        }
+        let Expr::Column(column) = inner else {
+            continue;
+        };
+        let index = values.schema.index_of_column_by_name(None, &column.name)?;
+        targets[index] = Some(field.as_ref());
+    }
+    Some(targets)
+}
+
 fn conform_values_rows(
     values: &datafusion::logical_expr::Values,
-    target: &ArrowSchema,
+    targets: &[Option<&Field>],
     fold: bool,
     site: PairSite<'_>,
 ) -> Result<Option<LogicalPlan>> {
-    if target.fields().len() != values.schema.fields().len() {
-        return Ok(None);
-    }
     let mut changed = false;
     let mut rows = Vec::with_capacity(values.values.len());
     for row in &values.values {
-        if row.len() != target.fields().len() {
+        if row.len() != targets.len() {
             return Ok(None);
         }
         let mut out = Vec::with_capacity(row.len());
-        for (expr, target_field) in row.iter().zip(target.fields()) {
+        for (expr, target_field) in row.iter().zip(targets) {
+            let Some(target_field) = target_field else {
+                out.push(expr.clone());
+                continue;
+            };
             let (inner, frames) = split_aliases(expr);
             if let Some(paired) = pair_store_output(
                 inner,

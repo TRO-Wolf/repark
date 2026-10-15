@@ -1728,6 +1728,14 @@ repark-core's error map.
   pair by name and every leaf pair is (`nested_store_assignable`), through lists too.
   `refuse_unless_write_store_assignable` keeps its nested return: its INSERT callers run before
   the pairing, and the batch casts carry hint H-1 instead.
+- `store_overflow.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 57(a),
+  verifier 1's F-02, parity row R-016:** `INSERT INTO t (cols) VALUES (…)` pairs by position like
+  every other INSERT door. DataFusion plans a column list as a projection over the `VALUES` node
+  (`column2 AS id, column1 AS st`); `projected_values_targets` reads that one projection to give
+  each `VALUES` column its target field, so `conform_values_rows` pairs the struct against the
+  column it is written to, not the column at its position in the table. A column the list leaves
+  out keeps no target; with no projection the `VALUES` columns map to the table's in order
+  (`positional_values_targets`), as before.
 - `struct_pairing.rs`, `store_overflow.rs`, `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build
   round 3 (2026-10-14), owner ruling 56(a), verifier 1's F-01 and F-06, parity row R-016:** every
   paired field passes the store-assignment judge flat columns use. `update_cast.rs` holds the one
