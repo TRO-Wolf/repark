@@ -181,14 +181,30 @@ async fn concurrent_same_name_registration_publishes_one_matching_winner() {
         .unwrap();
     let expected = "catalog 'race' is already registered";
     assert!(matches!(loser, Error::DataFusion(message) if message == expected));
-    let (winner, winner_namespace) = if first_won {
+    let (_winner, winner_namespace) = if first_won {
         (first, "repark-race-first")
     } else {
         (second, "repark-race-second")
     };
     let registered_handle = session.catalog_handle("race").unwrap();
     let provider = session.context().catalog("race").unwrap();
-    assert!(Arc::ptr_eq(&registered_handle, &winner));
+    assert!(
+        registered_handle
+            .namespace_exists(&NamespaceIdent::new(winner_namespace.to_string()))
+            .await
+            .unwrap()
+    );
+    let loser_namespace = if first_won {
+        "repark-race-second"
+    } else {
+        "repark-race-first"
+    };
+    assert!(
+        !registered_handle
+            .namespace_exists(&NamespaceIdent::new(loser_namespace.to_string()))
+            .await
+            .unwrap()
+    );
     assert_eq!(provider.schema_names(), vec![winner_namespace]);
 }
 
