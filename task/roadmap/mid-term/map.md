@@ -743,6 +743,20 @@ declines it (a dated ruling in the intake, then the archive).
   and the publish of `CREATE OR REPLACE TABLE … AS SELECT` leaves an orphan unencrypted file under the keyed
   table's `data/`, referenced by no snapshot, so never served. Retires with staged-file removal or a
   pre-staging refusal plus a pin; Spark-side behaviour not measured; main the same.
+- [repark-sql-local-ddl-1-card-2026-10-15.md](repark-sql-local-ddl-1-card-2026-10-15.md) **card
+  REPARK-SQL-LOCAL-DDL-1 (2026-10-15, open, not scheduled, clerk under owner ruling 104 (a)):** once
+  PA-LOCAL-FS-POLICY-1 lands, `repark.sql()` cannot run any local `COPY` or `CREATE EXTERNAL TABLE`,
+  read-only registration included, and has no opt-in. Retires with an opt-in path (or read-only
+  registration allowed) plus pins; the owner field on closing before 1.5.6 ships stays open.
+- [local-fs-create-table-location-1-card-2026-10-15.md](local-fs-create-table-location-1-card-2026-10-15.md)
+  **card LOCAL-FS-CREATE-TABLE-LOCATION-1 (2026-10-15, open, clerk under owner ruling 105 (a)):**
+  a Spark-door `CREATE TABLE … LOCATION '<outside>'` writes data and metadata outside every registered
+  warehouse with the opt-in off. Same class as PA-02: the next U-5-kind unit on that lane after the
+  PA-LOCAL-FS-POLICY-1 re-verifier. Retires with the location held to the `COPY` policy, door pins.
+- [local-fs-write-root-1-card-2026-10-15.md](local-fs-write-root-1-card-2026-10-15.md) **card
+  LOCAL-FS-WRITE-ROOT-1 (2026-10-15, open, not scheduled, clerk under owner ruling 105 (a)):** one
+  DataFrame write to a path makes later SQL writes to that path allowed. Retires when a DataFrame
+  write no longer widens the SQL allow-list, or the widening is an explicit, documented opt-in.
 - [fork-tablecommit-updates-1-card-2026-10-09.md](fork-tablecommit-updates-1-card-2026-10-09.md) **card
   FORK-TABLECOMMIT-UPDATES-1 (2026-10-09, open, fork work):** a read accessor for `TableCommit`'s updates, so the
   ENC-1 commit guard matches on values and stops reading `Debug` text.
