@@ -677,7 +677,9 @@ fn scalar_set_assignments(
         if !seen.insert(column.to_ascii_lowercase()) {
             return None;
         }
-        if expression_contains_subquery(&assignment.value) {
+        let scalar = matches!(&assignment.value, Expr::Subquery(query)
+            if is_simple_uncorrelated_in_subquery(query));
+        if !scalar && expression_contains_subquery(&assignment.value) {
             return None;
         }
         let mut value = assignment.value.clone();

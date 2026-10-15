@@ -364,6 +364,15 @@ repark-core's error map.
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `selection_sql`
   renders through `sql_text::render_for_reparse` so string values re-parse
   exactly. pins: string-literal-escape-1/C-010
+- `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-04, parity row R-016:** `scalar_set_assignments` admits a SET value that is exactly an
+  uncorrelated `(SELECT col FROM <table> …)` (the same test the identity DELETE uses for `IN`,
+  `is_simple_uncorrelated_in_subquery`), so `UPDATE t SET st = (SELECT st FROM src) WHERE …`
+  runs on the identity UPDATE path, whose `wrap_store_outputs` pairs the struct by name and
+  stores Spark's value. Before, any subquery in a SET value left this path and the statement
+  reached the fork's provider `update`, which re-resolved the subquery's output column against
+  the target and wrote the row back unchanged with no error. Any other subquery in a SET value
+  still leaves this path, unchanged.
 - `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the identity UPDATE hands `wrap_store_outputs` the by-name mode
   under the statement's case rule (`spec.case_insensitive`) and Spark's empty table label.
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
