@@ -500,6 +500,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   twin does. pins: the fixture's `position|array_append|ntz|tzns|…`,
   `position|array_prepend|ntz|tzns|…`, `repro|v2_array_except|tzns|…`,
   `repro|v2_array_intersect|tzns|…`
+  **Carry-over fix, mixed VALUES (ruling 100, 2026-10-15):** a `VALUES` column DataFusion
+  typed `Timestamp(ns, None)` only because a `DATE` sat beside a non-nanosecond timestamp
+  (`widen_values_dates`, no cell of nanoseconds) is retyped by the same position rule before
+  `type_coercion`: beside a zoned timestamp the column takes its unit and zone; beside a naive
+  expression that is not a written wall (`date_trunc` over `TIMESTAMP_NTZ`, which Spark types
+  `TIMESTAMP`) it is read as the instant, as the deleted rules read it. Parents of a retyped
+  `VALUES` recompute their schema. The pinned Spark walls are main's pins (`ntz_store_doors_1`
+  mixed oracle, `ntz_values_mix.rs`). pins: `test_ntz_store_doors_1.py`,
+  `tests/ntz_values_mix.rs`
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
@@ -1361,6 +1370,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by `instant_ts`) the
   `TIMESTAMP`-keyword forms are walls, since Spark types them `TIMESTAMP_NTZ` there.
   pins: ntz-store-doors-1/C-009
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, mixed VALUES (ruling 100, 2026-10-15):**
+  `is_values_wall_cell` exposes the `VALUES` evidence's wall test to the widen rule's `VALUES`
+  retype.
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

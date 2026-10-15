@@ -8,7 +8,9 @@ use datafusion::logical_expr::expr::{
     Between, BinaryExpr, Case, HigherOrderFunction, InList, ScalarFunction,
 };
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan, Operator, Projection, Union};
+use datafusion::logical_expr::{
+    Expr, ExprSchemable, LogicalPlan, Operator, Projection, Union, Values,
+};
 use datafusion::optimizer::AnalyzerRule;
 
 const SHARED_ARGUMENTS: [&str; 7] = [
@@ -37,7 +39,9 @@ pub struct SparkTimestampUnitWiden;
 
 impl AnalyzerRule for SparkTimestampUnitWiden {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(widen_plan).data()
+        let mut retyped = false;
+        plan.transform_up_with_subqueries(|node| widen_node(node, &mut retyped))
+            .data()
     }
 
     fn name(&self) -> &'static str {
@@ -471,6 +475,123 @@ fn widen_union(union: &Union) -> Result<Option<LogicalPlan>> {
     Ok(Some(LogicalPlan::Union(Union::try_new_with_loose_types(
         inputs,
     )?)))
+}
+
+fn values_cell_source(cell: &Expr, declared: &DataType) -> Expr {
+    match cell {
+        Expr::Cast(cast) if cast.field.data_type() == declared => cast.expr.as_ref().clone(),
+        other => other.clone(),
+    }
+}
+
+fn retyped_values_column(values: &Values, column: usize) -> Option<(DataType, Vec<Expr>)> {
+    let declared = values.schema.field(column).data_type();
+    if declared != &DataType::Timestamp(TimeUnit::Nanosecond, None) {
+        return None;
+    }
+    let empty = DFSchema::empty();
+    let mut sources = Vec::with_capacity(values.values.len());
+    let mut types = Vec::with_capacity(values.values.len());
+    for row in &values.values {
+        let source = values_cell_source(row.get(column)?, declared);
+        let data_type = source.get_type(&empty).ok()?;
+        let joins = matches!(data_type, DataType::Null)
+            || is_date(&data_type)
+            || matches!(data_type, DataType::Timestamp(unit, _) if unit != TimeUnit::Nanosecond);
+        if !joins {
+            return None;
+        }
+        sources.push(source);
+        types.push(data_type);
+    }
+    let units: Vec<Option<TimeUnit>> = types.iter().map(timestamp_unit).collect();
+    let target = SharedTarget::of(&types, &units, true)
+        .filter(|target| target.dated)
+        .or_else(|| naive_expression_beside_a_date(&sources, &types, &units))?;
+    let retyped = DataType::Timestamp(target.unit, target.zone);
+    let mut cells = Vec::with_capacity(sources.len());
+    for (source, data_type) in sources.into_iter().zip(&types) {
+        cells.push(if data_type == &retyped {
+            source
+        } else {
+            source.cast_to(&retyped, &empty).ok()?
+        });
+    }
+    Some((retyped, cells))
+}
+
+fn naive_expression_beside_a_date(
+    sources: &[Expr],
+    types: &[DataType],
+    units: &[Option<TimeUnit>],
+) -> Option<SharedTarget> {
+    let read_as_instant = types.iter().any(is_date)
+        && sources.iter().zip(types).any(|(source, data_type)| {
+            matches!(data_type, DataType::Timestamp(_, None))
+                && !crate::timestamp_ns_cast::is_values_wall_cell(source)
+        });
+    if !read_as_instant {
+        return None;
+    }
+    let unit = units
+        .iter()
+        .flatten()
+        .copied()
+        .max_by_key(|unit| unit_rank(*unit))?;
+    Some(SharedTarget {
+        unit,
+        zone: Some(Arc::<str>::from("UTC")),
+        dated: true,
+    })
+}
+
+fn widen_values_dates(values: Values) -> Result<Transformed<LogicalPlan>> {
+    let width = values.schema.fields().len();
+    let retyped: Vec<(usize, DataType, Vec<Expr>)> = (0..width)
+        .filter_map(|column| {
+            retyped_values_column(&values, column)
+                .map(|(data_type, cells)| (column, data_type, cells))
+        })
+        .collect();
+    if retyped.is_empty() {
+        return Ok(Transformed::no(LogicalPlan::Values(values)));
+    }
+    let Values { schema, mut values } = values;
+    let mut fields: Vec<_> = schema
+        .iter()
+        .map(|(qualifier, field)| (qualifier.cloned(), Arc::clone(field)))
+        .collect();
+    for (column, data_type, cells) in retyped {
+        for (row, cell) in values.iter_mut().zip(cells) {
+            row[column] = cell;
+        }
+        let field = &mut fields[column].1;
+        *field = Arc::new(field.as_ref().clone().with_data_type(data_type));
+    }
+    let schema = DFSchema::new_with_metadata(fields, schema.metadata().clone())?;
+    Ok(Transformed::yes(LogicalPlan::Values(Values {
+        schema: Arc::new(schema),
+        values,
+    })))
+}
+
+fn widen_node(plan: LogicalPlan, retyped: &mut bool) -> Result<Transformed<LogicalPlan>> {
+    let (plan, dated) = match plan {
+        LogicalPlan::Values(values) => {
+            let widened = widen_values_dates(values)?;
+            (widened.data, widened.transformed)
+        }
+        other => (other, false),
+    };
+    *retyped |= dated;
+    let widened = widen_plan(plan)?;
+    if widened.transformed || dated {
+        return Ok(Transformed::yes(widened.data));
+    }
+    if !*retyped {
+        return Ok(widened);
+    }
+    widened.data.recompute_schema().map(Transformed::yes)
 }
 
 fn widen_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {

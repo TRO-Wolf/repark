@@ -66,6 +66,13 @@ pins: ice-tsns-merge-wall-1/C-018, C-031
   `NamedInstant` (`from_utc_timestamp`, `to_utc_timestamp`) or `None`. The parent pairs the
   `Timestamp` and `NamedInstant` answers with the rewritten type before it trusts them.
   pins: ntz-store-doors-1/C-009
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, mixed VALUES (ruling 100, 2026-10-15):** a written
+  `TIMESTAMP` is recognized by the planner's microsecond instant type as well as DataFusion's
+  naive nanosecond one (`is_written_timestamp`): with the planner `TIMESTAMP '…'` plans as
+  `Timestamp(µs, "UTC")`, so an `INSERT … VALUES` mixing it with `TIMESTAMP_NTZ` cells into a
+  `TIMESTAMP_NTZ` column lost its instant evidence and stored a New York gap wall as `02:30`
+  where Spark stores `03:30` (`test_ntz_9_verify.py`, `test_ntz_store_doors_1.py` `ins_values`
+  / `ins_sel`).
 
 ## Pointers
 

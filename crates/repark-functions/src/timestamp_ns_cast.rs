@@ -561,6 +561,10 @@ pub(crate) fn store_micros(array: &ArrayRef, target: &DataType, zone: Tz) -> Res
     }
 }
 
+pub(crate) fn is_values_wall_cell(cell: &Expr) -> bool {
+    values_evidence::values_cell_evidence(cell) == Evidence::Wall
+}
+
 pub(crate) fn conform_values_timestamp_columns(plan: LogicalPlan) -> Result<LogicalPlan> {
     let LogicalPlan::Values(values) = plan else {
         return Ok(plan);
