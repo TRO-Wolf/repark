@@ -1850,6 +1850,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   BUG-001 valve, the **FROM-less** `DELETE <table> WHERE …` family + its negative (the panel's
   live bypass — that spelling fails the router's Databricks parse and reaches the executor
   through the passthrough's own parse), and the CTE-prefixed `WITH … DELETE` refusal.
+  **Exception round (2026-10-15, owner ruling 90(a)):**
+  `g3e8_update_set_subquery_without_where_subquery_refuses_before_any_write` replaces the
+  negative that held `UPDATE … SET name = (SELECT max(name) …)` storing on this harness's bare
+  context (no `SparkExtension`); the product doors refuse that statement with `No field named
+  "max(…)"` on main, and now every door refuses it with the ruling 90 text before any write.
 - `g3e8_delete_in_subquery_deletes_exactly_the_matching_row` pins executable IN-DELETE forms and
   the residual refusal family.
   Ledger: [`../../../../task/z1-g3e8-pr1-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-z1-g3e8-pr1-ledger.md).

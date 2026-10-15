@@ -964,43 +964,28 @@ async fn g3e8_insert_and_merge_with_subqueries_still_execute() {
 
 /// An `UPDATE … SET col =` with a NON-subquery WHERE.
 #[tokio::test]
-async fn g3e8_update_set_subquery_without_where_subquery_still_executes() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = g3e8_setup(&wh).await;
-    run(
-        &ctx,
-        &catalogs,
+async fn g3e8_update_set_subquery_without_where_subquery_refuses_before_any_write() {
+    for sql in [
         "UPDATE ice.sales.tgt SET name = (SELECT max(name) FROM ice.sales.keys) WHERE id = 2",
-    )
-    .await;
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-        vec![
-            (1, "a".to_string()),
-            (2, "K".to_string()),
-            (3, "c".to_string()),
-        ],
-        "only the matching row takes the assignment"
-    );
-
-    // The same assignment with NO `WHERE`: a genuine match-all, which the valve must not gate.
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = g3e8_setup(&wh).await;
-    run(
-        &ctx,
-        &catalogs,
         "UPDATE ice.sales.tgt SET name = (SELECT max(name) FROM ice.sales.keys)",
-    )
-    .await;
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-        vec![
-            (1, "K".to_string()),
-            (2, "K".to_string()),
-            (3, "K".to_string()),
-        ],
-        "an assignment subquery with no WHERE rewrites every row — deliberately ungated"
-    );
+    ] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = g3e8_setup(&wh).await;
+        let Err(err) = execute(&ctx, &catalogs, sql).await else {
+            panic!("ruling 90(a) must refuse: {sql}")
+        };
+        assert!(
+            err.to_string().contains(
+                "UPDATE with SET column = (SELECT ...) is not supported on this statement"
+            ),
+            "{sql}: {err}"
+        );
+        assert_eq!(
+            table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+            g3e8_seed(),
+            "{sql}"
+        );
+    }
 }
 
 /// CTE-prefixed DML is a known un-valved attachment that is loud today.

@@ -160,6 +160,17 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   answer must differ from plain `INSERT` in a UTC session. The verify's mutants M2 (the MERGE
   insert arm reads the wall as UTC) and M10 (the wall is not localised) each red it.
   pins: ice-tsns-floor-doors-1/C-015
+- [update_subquery_refusal.rs](update_subquery_refusal.rs) —
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), owner rulings 74(a) and 90(a):** the
+  Spark SQL door. `UPDATE t SET col = (SELECT col FROM t_src)` and the subquery with its own
+  `WHERE`, under `WHERE true`, `WHERE id IN (0, 3)` and no `WHERE`, refuse with the ruling 90
+  text and leave both rows as seeded: for a flat INT column
+  (`ruling_74_a_flat_int_update_from_a_subquery_refuses_on_the_spark_door`) and a struct
+  column fed reordered and in order
+  (`ruling_90_a_struct_update_from_a_subquery_refuses_on_the_spark_door`).
+  `the_identity_update_from_a_subquery_still_stores_on_the_spark_door` holds `WHERE id = 0` to
+  Spark's value on the same three columns. The ANSI door's twin is
+  `repark-sql/tests/ansi_update_subquery_refusal.rs`.
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,
