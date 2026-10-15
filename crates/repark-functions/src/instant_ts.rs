@@ -45,6 +45,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         now_udf(),
         current_timestamp_udf(),
         to_timestamp_udf(),
+        crate::nested_wall::localize_nested_ntz_udf(),
         current_timezone_udf(),
         crate::timestamp_ltz_ntz::to_timestamp_ltz_udf(),
         crate::timestamp_ltz_ntz::to_timestamp_ntz_udf(),
@@ -595,6 +596,9 @@ fn rewrite_cast(
         if targeting_naive_us && child_is_to_timestamp {
             return Transformed::yes(*cast.expr.clone());
         }
+        if let Some(rewritten) = crate::nested_wall::rewrite_struct_wall_cast(cast, schema) {
+            return Transformed::yes(rewritten);
+        }
         let targeting_timestamp = matches!(cast.field.data_type(), DataType::Timestamp(_, _));
         let targeting_ns = matches!(
             cast.field.data_type(),
@@ -670,7 +674,7 @@ fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
         )
 }
 
-fn is_ltz_timestamp(data_type: &DataType) -> bool {
+pub(crate) fn is_ltz_timestamp(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Timestamp(TimeUnit::Microsecond, Some(zone))
@@ -785,202 +789,5 @@ fn wrap_ns_literal_as_ntz(expr: Expr) -> Transformed<Expr> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use datafusion::arrow::array::AsArray;
-    use datafusion::arrow::datatypes::TimestampMicrosecondType;
-    use datafusion::prelude::SessionContext;
-
-    fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    #[tokio::test]
-    async fn now_and_current_timestamp_are_microsecond_utc_non_null() {
-        let ctx = ctx();
-        for sql in ["SELECT now() AS ts", "SELECT current_timestamp() AS ts"] {
-            let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-            let schema = batches[0].schema();
-            let field = schema.field(0);
-            assert_eq!(field.data_type(), &ltz_timestamp_type(), "{sql}: type");
-            assert!(!field.is_nullable(), "{sql}: Spark marks now() not-null");
-        }
-    }
-
-    #[tokio::test]
-    async fn to_timestamp_of_a_zone_suffixed_string_is_microsecond_utc() {
-        let ctx = ctx();
-        let sql = "SELECT to_timestamp('2024-03-10T01:30:00-05:00') AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        let schema = batches[0].schema();
-        assert_eq!(schema.field(0).data_type(), &ltz_timestamp_type());
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, 1_710_052_200_000_000);
-    }
-
-    #[tokio::test]
-    async fn zoneless_to_timestamp_under_utc_session_keeps_wall_as_utc() {
-        let ctx = ctx();
-        let sql = "SELECT to_timestamp('2024-06-15 12:00:00') AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ltz_timestamp_type()
-        );
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, 1_718_452_800_000_000);
-    }
-
-    fn ctx_at(zone: &str) -> SessionContext {
-        use datafusion::prelude::SessionConfig;
-        let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
-        let ctx = SessionContext::new_with_config(config);
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    #[tokio::test]
-    async fn zoneless_inputs_localize_in_the_session_zone() {
-        let ctx = ctx_at("America/New_York");
-        let expected = 1_718_467_200_000_000_i64;
-        for sql in [
-            "SELECT to_timestamp('2024-06-15 12:00:00') AS ts",
-            "SELECT CAST('2024-06-15 12:00:00' AS TIMESTAMP) AS ts",
-            "SELECT TIMESTAMP '2024-06-15 12:00:00' AS ts",
-        ] {
-            let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-            assert_eq!(
-                batches[0].schema().field(0).data_type(),
-                &ltz_timestamp_type(),
-                "{sql}"
-            );
-            let ticks = batches[0]
-                .column(0)
-                .as_primitive::<TimestampMicrosecondType>()
-                .value(0);
-            assert_eq!(ticks, expected, "{sql}");
-        }
-    }
-
-    #[tokio::test]
-    async fn zone_suffixed_to_timestamp_is_not_localized_again() {
-        let ctx = ctx_at("America/New_York");
-        let sql = "SELECT to_timestamp('2024-06-15T12:00:00Z') AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, 1_718_452_800_000_000);
-    }
-
-    #[tokio::test]
-    async fn integer_cast_to_timestamp_is_microsecond_utc_seconds() {
-        let ctx = ctx();
-        let sql = "SELECT CAST(CAST(-1800 AS BIGINT) AS TIMESTAMP) AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        let schema = batches[0].schema();
-        assert_eq!(schema.field(0).data_type(), &ltz_timestamp_type());
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, -1_800_000_000);
-    }
-
-    fn ctx_ntz_at(zone: &str) -> SessionContext {
-        use datafusion::prelude::SessionConfig;
-        let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
-        let config = crate::timestamp_type::with_spark_timestamp_type(
-            config,
-            crate::timestamp_type::SparkTimestampType::Ntz,
-        );
-        let ctx = SessionContext::new_with_config(config);
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    #[tokio::test]
-    async fn ntz_opt_in_bare_timestamp_is_naive_microseconds() {
-        let ctx = ctx_ntz_at("America/New_York");
-        let expected = 1_718_452_800_000_000_i64;
-        for sql in [
-            "SELECT TIMESTAMP '2024-06-15 12:00:00' AS ts",
-            "SELECT CAST('2024-06-15 12:00:00' AS TIMESTAMP) AS ts",
-        ] {
-            let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-            assert_eq!(
-                batches[0].schema().field(0).data_type(),
-                &ntz_timestamp_type(),
-                "{sql}"
-            );
-            let ticks = batches[0]
-                .column(0)
-                .as_primitive::<TimestampMicrosecondType>()
-                .value(0);
-            assert_eq!(ticks, expected, "{sql}");
-        }
-    }
-
-    #[tokio::test]
-    async fn ntz_opt_in_does_not_retarget_to_timestamp_or_now() {
-        let ctx = ctx_ntz_at("UTC");
-        let batches = ctx
-            .sql("SELECT to_timestamp('2024-06-15 12:00:00') AS ts")
-            .await
-            .expect("to_timestamp")
-            .collect()
-            .await
-            .expect("collect");
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ltz_timestamp_type(),
-            "to_timestamp stays LTZ; the knob is the SQL type name TIMESTAMP"
-        );
-        let batches = ctx
-            .sql("SELECT current_timestamp() AS ts")
-            .await
-            .expect("current_timestamp")
-            .collect()
-            .await
-            .expect("collect");
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ltz_timestamp_type(),
-            "current_timestamp is an instant, not the SQL type name"
-        );
-    }
-
-    #[tokio::test]
-    async fn ntz_opt_in_integer_cast_is_naive_microseconds_seconds() {
-        let ctx = ctx_ntz_at("UTC");
-        let sql = "SELECT CAST(CAST(-1800 AS BIGINT) AS TIMESTAMP) AS ts";
-        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
-        assert_eq!(
-            batches[0].schema().field(0).data_type(),
-            &ntz_timestamp_type()
-        );
-        let ticks = batches[0]
-            .column(0)
-            .as_primitive::<TimestampMicrosecondType>()
-            .value(0);
-        assert_eq!(ticks, -1_800_000_000);
-    }
-}
+#[path = "instant_ts_tests.rs"]
+mod tests;

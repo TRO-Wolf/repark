@@ -1,0 +1,47 @@
+[
+ {
+  "label": "struct-case",
+  "ok": true,
+  "sql": "SELECT mixed FROM (SELECT a.id AS id, CASE WHEN a.id = 2 THEN b.st ELSE a.st END AS mixed FROM ice.ns.a a JOIN ice.ns.b b ON a.id = b.id) s",
+  "plans": [
+   {
+    "plan_type": "logical_plan",
+    "plan": "SubqueryAlias: s Projection: CASE WHEN a.id = Int32(2) THEN b.st ELSE CAST(__repark_localize_nested_ntz__(a.st, Utf8(\"v\")) AS Struct(\"v\": Timestamp(\u00b5s, \"UTC\"), \"n\": Int32)) END AS mixed Inner Join: a.id = b.id SubqueryAlias: a TableScan: ice.ns.a projection=[id, st] SubqueryAlias: b TableScan: ice.ns.b projection=[id, st]"
+   },
+   {
+    "plan_type": "physical_plan",
+    "plan": "ProjectionExec: expr=[CASE WHEN id@0 = 2 THEN st@3 ELSE __repark_localize_nested_ntz__(st@1, v) END as mixed] RepartitionExec: partitioning=RoundRobinBatch(16), input_partitions=2 HashJoinExec: mode=CollectLeft, join_type=Inner, on=[(id@0, id@0)] CoalescePartitionsExec IcebergTableScan projection:[id,st] predicate:[] N=2 IcebergTableScan projection:[id,st] predicate:[] N=2"
+   }
+  ]
+ },
+ {
+  "label": "struct-cast",
+  "ok": true,
+  "sql": "SELECT id, CAST(st AS STRUCT<v: TIMESTAMP, n: INT>) AS mixed FROM ice.ns.a",
+  "plans": [
+   {
+    "plan_type": "logical_plan",
+    "plan": "Projection: ice.ns.a.id, CAST(ice.ns.a.st AS Struct(\"v\": Timestamp(ns), \"n\": Int32)) AS mixed TableScan: ice.ns.a projection=[id, st]"
+   },
+   {
+    "plan_type": "physical_plan",
+    "plan": "ProjectionExec: expr=[id@0 as id, CAST(st@1 AS Struct(\"v\": Timestamp(ns), \"n\": Int32)) as mixed] CooperativeExec IcebergTableScan projection:[id,st] predicate:[] N=2"
+   }
+  ]
+ },
+ {
+  "label": "top-case",
+  "ok": true,
+  "sql": "SELECT mixed FROM (SELECT a.id AS id, CASE WHEN a.id = 2 THEN b.v ELSE a.v END AS mixed FROM ice.ns.at a JOIN ice.ns.bt b ON a.id = b.id) s",
+  "plans": [
+   {
+    "plan_type": "logical_plan",
+    "plan": "SubqueryAlias: s Projection: CASE WHEN a.id = Int32(2) THEN b.v ELSE to_timestamp(a.v) END AS mixed Inner Join: a.id = b.id SubqueryAlias: a TableScan: ice.ns.at projection=[id, v] SubqueryAlias: b TableScan: ice.ns.bt projection=[id, v]"
+   },
+   {
+    "plan_type": "physical_plan",
+    "plan": "ProjectionExec: expr=[CASE WHEN id@0 = 2 THEN v@3 ELSE to_timestamp(v@1) END as mixed] RepartitionExec: partitioning=RoundRobinBatch(16), input_partitions=2 HashJoinExec: mode=CollectLeft, join_type=Inner, on=[(id@0, id@0)] CoalescePartitionsExec IcebergTableScan projection:[id,v] predicate:[] N=2 IcebergTableScan projection:[id,v] predicate:[] N=2"
+   }
+  ]
+ }
+]
