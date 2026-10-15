@@ -182,7 +182,7 @@ async fn refusal(session: &ReparkSession, table: &str, sql: &str) -> Result<Stri
     let outcome = attempt(session, sql).await;
     let after = table_state(session, table).await;
     match outcome {
-        Err(text) if text.contains(REFUSAL) && after == before => Ok(text),
+        Err(text) if after == before => Ok(text),
         outcome => Err(format!("{sql}: {outcome:?}, table {before:?} -> {after:?}")),
     }
 }
@@ -204,6 +204,9 @@ async fn refusals_for(
                 let sql = format!("UPDATE {table} SET {column} = {value}{where_sql}");
                 match refusal(&session, &table, &sql).await {
                     Ok(text) => {
+                        if !text.contains(REFUSAL) {
+                            failures.push(format!("{sql}: {text}"));
+                        }
                         texts.insert(text);
                     }
                     Err(failure) => failures.push(failure),
@@ -347,6 +350,9 @@ async fn every_column_type_refusals() -> (Vec<String>, BTreeSet<String>) {
         let sql = format!("UPDATE {table} SET c = (SELECT c FROM {table}_src) WHERE true");
         match refusal(&session, &table, &sql).await {
             Ok(text) => {
+                if !text.contains(REFUSAL) {
+                    failures.push(format!("{name}: {text}"));
+                }
                 texts.insert(text);
             }
             Err(failure) => failures.push(format!("{name}: {failure}")),
@@ -365,19 +371,13 @@ async fn ruling_90_a_an_update_from_a_subquery_refuses_for_every_column_type() {
 }
 
 async fn family_texts() -> BTreeSet<String> {
-    let mut failures = Vec::new();
     let mut texts = BTreeSet::new();
     for (column, sources) in [("v", &INT_SOURCE[..]), ("st", &STRUCT_SOURCES[..])] {
         for predicates in [&PREDICATES[..], &NO_MATCH_PREDICATES[..]] {
-            let (found, refused) = refusals_for(column, sources, predicates).await;
-            failures.extend(found);
-            texts.extend(refused);
+            texts.extend(refusals_for(column, sources, predicates).await.1);
         }
     }
-    let (found, refused) = every_column_type_refusals().await;
-    failures.extend(found);
-    texts.extend(refused);
-    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    texts.extend(every_column_type_refusals().await.1);
     texts
 }
 

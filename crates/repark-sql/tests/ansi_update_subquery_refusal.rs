@@ -195,7 +195,7 @@ async fn refusal(session: &ReparkSession, table: &str, sql: &str) -> Result<Stri
     let outcome = attempt(session, sql).await;
     let after = table_state(session, table).await;
     match outcome {
-        Err(text) if text.contains(REFUSAL) && after == before => Ok(text),
+        Err(text) if after == before => Ok(text),
         outcome => Err(format!("{sql}: {outcome:?}, table {before:?} -> {after:?}")),
     }
 }
@@ -217,6 +217,9 @@ async fn refusals_on(
                 let sql = format!("UPDATE {table} SET {column} = {value}{where_sql}");
                 match refusal(session, &table, &sql).await {
                     Ok(text) => {
+                        if !text.contains(REFUSAL) {
+                            failures.push(format!("{sql}: {text}"));
+                        }
                         texts.insert(text);
                     }
                     Err(failure) => failures.push(failure),
@@ -261,16 +264,12 @@ async fn ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_
 }
 
 async fn family_texts(session: &ReparkSession) -> BTreeSet<String> {
-    let mut failures = Vec::new();
     let mut texts = BTreeSet::new();
     for (column, sources) in [("v", &STRUCT_SOURCES[1..]), ("st", &STRUCT_SOURCES[..])] {
         for predicates in [&PREDICATES[..], &NO_MATCH_PREDICATES[..]] {
-            let (found, refused) = refusals_on(session, column, sources, predicates).await;
-            failures.extend(found);
-            texts.extend(refused);
+            texts.extend(refusals_on(session, column, sources, predicates).await.1);
         }
     }
-    assert!(failures.is_empty(), "{}", failures.join("\n"));
     texts
 }
 
