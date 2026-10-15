@@ -738,6 +738,11 @@ declines it (a dated ruling in the intake, then the archive).
   one orphan Parquet, an unkeyed table placed under a keyed table's location, ref-only commits that publish rows staged
   before the key, the thirteen shapes whose clean refusal rests on entry checks, the textual gate and the
   caller-built catalog, and the Glue metadata-directory limit. Each needs an owner call.
+- [enc-ctas-replace-1-card-2026-10-15.md](enc-ctas-replace-1-card-2026-10-15.md) **card ENC-CTAS-REPLACE-1
+  (2026-10-15, open, not scheduled, clerk under owner ruling 98 (a)):** a key landing between `begin_replace`
+  and the publish of `CREATE OR REPLACE TABLE … AS SELECT` leaves an orphan unencrypted file under the keyed
+  table's `data/`, referenced by no snapshot, so never served. Retires with staged-file removal or a
+  pre-staging refusal plus a pin; Spark-side behaviour not measured; main the same.
 - [fork-tablecommit-updates-1-card-2026-10-09.md](fork-tablecommit-updates-1-card-2026-10-09.md) **card
   FORK-TABLECOMMIT-UPDATES-1 (2026-10-09, open, fork work):** a read accessor for `TableCommit`'s updates, so the
   ENC-1 commit guard matches on values and stops reading `Debug` text.
