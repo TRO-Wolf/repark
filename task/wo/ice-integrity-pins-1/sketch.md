@@ -359,3 +359,185 @@ pins (PR-5A) cover it, named here and not run. Count: (5 + 2) × 3 doors × 2 fo
   forwarding, and fails `load_table` for the status-check window or not: U-1 to U-4, three doors,
   v2 and v3, 24 cells, asserting the same answers (the class through `engine_err`, the id present
   or `None`) and the same resolution. U-5 has no offline twin: it is the SDK's behaviour.
+
+## 5. Pin X: the previous release and the head read each other's tables
+
+### 5.1 Where it sits today
+
+- **No pin.** No test runs two RePark releases against one table. The acceptance job builds only
+  the head (`maturin develop`, `.github/workflows/aws-acceptance.yml:77`).
+- **The wheels.** Every tag builds one manylinux wheel, checks that its version matches the tag,
+  and publishes it to PyPI through the `release` environment (`.github/workflows/release.yml`).
+  `v1.5.4` is tagged at `f4e424c1` (`STATUS.md`, release state). Whether PyPI serves
+  `repark==1.5.4` is unmeasured: this round fetched nothing, and the local package cache holds
+  PyPI wheels up to 1.5.3 only. The plan names 1.5.4 because it was written before 1.5.5 shipped
+  (Q3).
+- **What can be reused.** U-10's comparison of two engines' reads, `compare_schemas` and
+  `compare_row_sets` (`python/repark/tests/_acceptance_cross_read.py:166`, `:193`); the newest
+  metadata file, `current_metadata_location` (`python/repark/tests/_acceptance_v3.py:264`); delete
+  files, `delete_file_rows` (`_acceptance_v3.py:185`); the S3 Tables v3 create classifier,
+  `classify_v3_create_outcome` (`_acceptance_v3.py:288`).
+
+### 5.2 How the two releases run in one job
+
+- **Install, before credentials.** In the build step, a second interpreter:
+  `uv venv --python 3.12 .venv-previous`, then `uv pip install --only-binary :all:
+  --require-hashes -r python/repark/tests/previous_release_requirements.txt` into it. The
+  requirements file (new, written in the build round by `uv pip compile --generate-hashes` from
+  `repark==1.5.4`) pins the wheel and its dependencies by hash, so a re-published or squatted file
+  cannot enter. The step ends with an import check of the version. The wheel tag is
+  `cp312-abi3`, so Python 3.12 serves both releases.
+- **Run.** The leg runs in the head's interpreter and starts the previous release as a child,
+  `$REPARK_PREVIOUS_RELEASE_PYTHON _acceptance_cross_release_runner.py <json>`. The runner (new,
+  not collected) is one script both releases execute; it uses only calls 1.5.4 has (the builder,
+  `sql`, `to_arrow`), runs one operation (create, insert, delete, merge, append or read), writes
+  the table it reads to an Arrow IPC file, and prints its `repark.__version__`. The head side runs
+  the same runner in the head's interpreter, so both sides take the same path.
+- **Tables.** Fixed names under the scratch namespace, `testing_xrel_<kind>_v<f>_<writer>`. The
+  writer starts each run with `CREATE OR REPLACE TABLE … AS SELECT`, so the run's writer is the
+  table's creator and nothing accumulates but snapshots.
+
+| Kind | Shape | What it proves |
+|---|---|---|
+| X-P plain | the ten columns of M5, 1,000 rows | data files, manifests, stats |
+| X-T partitioned | X-P `PARTITIONED BY (days(ts), bucket(4, id))` | partition specs and manifest partition summaries |
+| X-D deletes | X-P with merge-on-read modes; the writer runs `DELETE … WHERE id % 10 = 0` and a `MERGE` that updates 50 rows | v2 position delete files; v3 deletion vectors |
+| X-E evolved | X-P, then `ALTER TABLE … ADD COLUMN`, `RENAME COLUMN`, and one more insert | field ids across schema versions |
+
+Nanosecond columns are out (§0 lists what changed between 1.5.4 and the head; R-008 and R-019
+moved nanosecond writes in 1.5.5). Step 0 records one nanosecond table as a cell that is printed,
+not asserted (X-NS), so the gap is visible.
+
+### 5.3 The cells
+
+Every kind on Glue and S3 Tables, v2 and v3, in both directions: the previous release writes and
+the head reads; the head writes and the previous release reads (4 × 2 × 2 × 2 = 32 cells). Each
+asserts:
+
+1. **The right releases ran.** The writer and the reader each printed the version their role
+   names (`1.5.4` and the head's); a cell where both print the same version fails.
+2. **Equal.** The reader's Arrow table equals the writer's own read-back: `compare_schemas` and
+   `compare_row_sets` find nothing (values and types).
+3. **Counted.** The current snapshot's `total-records` equals the rows each side read.
+4. **Deletes seen alike** (X-D). Both sides list the same delete files.
+
+**Mixed-writer cells** (M5's second half), on X-P, both directions, both formats, both catalogs
+(8 cells): the reader appends 3 rows, and the writer reads again and equals the appender's read.
+
+**Controls.** X-C0: head writes, head reads, through the runner (the runner adds nothing). X-C1:
+the runner refuses when its version is not the one its role names (a mutant of 1 must go red).
+S3 Tables v3: if the service refuses `format-version` 3 at create, the cell records the
+refusal through `classify_v3_create_outcome`, as the acceptance legs already do.
+
+## 6. The legs
+
+### 6.1 Files and markers
+
+| File (all new) | Kind | Runs |
+|---|---|---|
+| `python/repark/tests/test_aws_acceptance_integrity_kill.py` | leg K, 12 cells | AWS workflow only |
+| `python/repark/tests/test_aws_acceptance_commit_unknown.py` | leg U, 84 statements | AWS workflow only |
+| `python/repark/tests/test_aws_acceptance_cross_release.py` | leg X, 40 cells | AWS workflow only |
+| `python/repark/tests/_acceptance_commit_gate.py` | the gate (§4.2) | helper, not collected |
+| `python/repark/tests/_acceptance_integrity_child.py` | the writer child of leg K | helper, not collected |
+| `python/repark/tests/_acceptance_cross_release_runner.py` | the runner of leg X | helper, not collected |
+| `python/repark/tests/previous_release_requirements.txt` | hash-pinned 1.5.4 | read by the workflow |
+| `python/repark/tests/test_acceptance_commit_gate.py` | the gate against a loopback fake endpoint with dummy keys (M3's shape): commit detection on both catalogs, the scratch-namespace refusal, every script (forward, reset, hold), SigV4 against fixed test vectors | every pull request, no AWS |
+| `crates/repark-spark/src/tests/kill_mid_write.rs` | pin K, 18 cells (§3.4) | every pull request |
+| `crates/repark-spark/src/tests/commit_unknown_doors.rs` | U's offline twin, 24 cells (§4.5) | every pull request |
+
+Markers: each leg module carries the same module-level
+`pytestmark = pytest.mark.skipif(os.environ.get("REPARK_AWS_ACCEPTANCE") != "1", …)` as
+`python/repark/tests/test_aws_acceptance.py:84`. The S3 Tables tests skip when `TABLE_BUCKET_ARN`
+is absent, as `python/repark/tests/test_aws_acceptance_cross_read.py` does. Leg X fails, never
+skips, when `REPARK_PREVIOUS_RELEASE_PYTHON` is unset with the gate on: a skip would hide a
+missing install. Every new `.py` and `.rs` file updates its directory's `map.md` in its commit.
+
+### 6.2 The scratch-only rule
+
+- Namespace `testing_repark_acceptance`, tables prefixed `testing_`; nothing is dropped; the
+  placeholder-bucket refusal runs first (`assert_real_buckets_configured`,
+  `python/repark/tests/_acceptance.py:42`); account ids are masked in every message.
+- The gate refuses a request whose Glue `DatabaseName` or S3 Tables namespace is not the scratch
+  one, and forwards only to the Glue and S3 Tables endpoints of the job's region. It never logs a
+  header (they carry credentials).
+- The orphans legs K and U-3 leave sit under the warehouse scratch prefix, which the bucket's
+  lifecycle policy already cleans (the workflow's header comment). No deletion is added.
+
+### 6.3 Order in the job
+
+After the dbt gold step and before U-10's cross-read step if the owner has wired it, so every
+table exists before Spark's discovery and Spark also reads the integrity tables. The legs need
+the same environment as the acceptance step plus `REPARK_PREVIOUS_RELEASE_PYTHON`.
+
+### 6.4 Run time added (estimates, unmeasured)
+
+| Leg | Work | Estimate |
+|---|---|---|
+| K | 12 kills, each a child start, a write, a reopen and the orphan listing | 3 to 5 min |
+| U | 84 statements (cut-read cells bounded by the 5 s status-check budget), each with a reopen | 12 to 15 min |
+| X | 40 cells, each one or two child runs | 6 to 8 min |
+| install of 1.5.4 | before credentials | under 1 min |
+| local Rust pins (CI, not the AWS job) | 18 kills + 24 offline cells | under 1 min |
+
+The `live-aws` job's `timeout-minutes` is 90 today (`.github/workflows/aws-acceptance.yml:49`);
+about 25 minutes more suggests 120. Step 4 replaces these estimates with the first run's
+numbers.
+
+### 6.5 The workflow change the owner would make (a proposal; the file is untouched)
+
+Against `.github/workflows/aws-acceptance.yml` on `37d60eaf`. It applies with or without U-10's
+proposed step; with it, the new step goes before the cross-read step.
+
+```diff
+--- a/.github/workflows/aws-acceptance.yml
++++ b/.github/workflows/aws-acceptance.yml
+@@ -46,7 +46,7 @@
+     name: tier-2 live AWS acceptance (Glue + S3 Tables, scratch-only)
+     if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
+     runs-on: ubuntu-latest
+-    timeout-minutes: 90
++    timeout-minutes: 120
+     environment: aws-acceptance
+     permissions:
+       id-token: write   # OIDC exchange — scoped to this job only
+@@ -81,6 +81,11 @@
+           uv sync --locked
+           (cd python/repark && uvx maturin@1.14.1 develop)
+           VIRTUAL_ENV="$PWD/.venv" uv pip install --quiet dbt-core==1.9.11 dbt-spark==1.9.3
++          uv venv --python 3.12 .venv-previous
++          VIRTUAL_ENV="$PWD/.venv-previous" uv pip install --only-binary :all: --require-hashes \
++            -r python/repark/tests/previous_release_requirements.txt
++          .venv-previous/bin/python -c \
++            "import repark; assert repark.__version__ == '1.5.4', repark.__version__"
+       # Credentials mint HERE, last, immediately before the only step that needs them.
+       - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c  # v6.2.3
+         with:
+@@ -115,6 +120,21 @@
+         run: >
+           VIRTUAL_ENV="$PWD/.venv"
+           uv run --no-project python -m pytest python/dbt-repark/tests/test_aws_acceptance_gold.py -q -rA
++      - name: integrity legs (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
++        if: ${{ !cancelled() }}
++        env:
++          REPARK_AWS_ACCEPTANCE: "1"
++          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
++          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
++          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
++          REPARK_PREVIOUS_RELEASE_PYTHON: ${{ github.workspace }}/.venv-previous/bin/python
++        run: >
++          VIRTUAL_ENV="$PWD/.venv"
++          uv run --no-project python -m pytest
++          python/repark/tests/test_aws_acceptance_integrity_kill.py
++          python/repark/tests/test_aws_acceptance_commit_unknown.py
++          python/repark/tests/test_aws_acceptance_cross_release.py
++          -q -rA
+ 
+   ice-read-perf-bench:
+     name: ICE-READ-PERF bench (S3 Tables + Glue, dispatch-only, scratch-only)
+```
+
+No IAM change is expected: the legs call `UpdateTable`, `GetTable`, the S3 Tables table calls
+and object reads the acceptance role already uses (unmeasured until the first run; a denial is
+reported through `format_denial_failure` as today). The version literal in the import check moves
+with Q3's answer.
