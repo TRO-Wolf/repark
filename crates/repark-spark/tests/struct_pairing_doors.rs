@@ -664,7 +664,10 @@ async fn a_paired_struct_leaf_spark_refuses_refuses_on_every_insert_spelling() {
             .collect()
             .await
             .expect("collect");
-        let count: usize = rows.iter().map(|batch| batch.num_rows()).sum();
+        let count: usize = rows
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum();
         assert_eq!(
             count, 1,
             "{name}: the seed row stays and nothing is written"
