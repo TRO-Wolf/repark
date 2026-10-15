@@ -52,19 +52,72 @@ async fn born_keyed_table(handle: &Arc<dyn Catalog>) -> TableIdent {
     ident()
 }
 
-async fn refused_write_text(handle: &Arc<dyn Catalog>, ident: &TableIdent) -> String {
-    let table = handle.load_table(ident).await.expect("keyed table loads");
+fn one_row_batch() -> RecordBatch {
     let schema = Arc::new(ArrowSchema::new(vec![Field::new(
         "id",
         DataType::Int32,
         false,
     )]));
-    let batch = RecordBatch::try_new(schema, vec![Arc::new(Int32Array::from(vec![1])) as _])
-        .expect("batch builds");
-    repark_iceberg::write::write_data_files(&table, vec![batch])
+    RecordBatch::try_new(schema, vec![Arc::new(Int32Array::from(vec![1])) as _])
+        .expect("batch builds")
+}
+
+async fn refused_write_text(handle: &Arc<dyn Catalog>, ident: &TableIdent) -> String {
+    let table = handle.load_table(ident).await.expect("keyed table loads");
+    repark_iceberg::write::write_data_files(&table, vec![one_row_batch()])
         .await
         .expect_err("the keyed write refuses")
         .to_string()
+}
+
+async fn assert_unkeyed_write_reaches_disk(handle: &Arc<dyn Catalog>, warehouse: &TempDir) {
+    let plain = TableIdent::new(ident().namespace().clone(), "plain".to_string());
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![
+            NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+        ])
+        .build()
+        .expect("id schema builds");
+    handle
+        .create_table(
+            plain.namespace(),
+            TableCreation::builder()
+                .name(plain.name().to_string())
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .expect("unkeyed table creates");
+    let table = handle
+        .load_table(&plain)
+        .await
+        .expect("unkeyed table loads");
+    let staged = repark_iceberg::write::write_data_files(&table, vec![one_row_batch()])
+        .await
+        .expect("the unkeyed write runs");
+    assert!(!staged.is_empty());
+    for file in staged {
+        let path = file.file_path();
+        let path = path.strip_prefix("file://").unwrap_or(path);
+        assert!(
+            std::path::Path::new(path).starts_with(warehouse.path()),
+            "{path} is not under the warehouse"
+        );
+        let bytes = std::fs::read(path).expect("the unkeyed file reads back from disk");
+        assert!(
+            bytes.starts_with(b"PAR1") && bytes.ends_with(b"PAR1"),
+            "{path}"
+        );
+    }
+}
+
+fn keyed_table_parquet(warehouse: &TempDir) -> BTreeSet<String> {
+    let keyed = warehouse.path().join("db").join("t");
+    parquet_names(warehouse)
+        .into_iter()
+        .filter(|path| std::path::Path::new(path).starts_with(&keyed))
+        .collect()
 }
 
 fn parquet_names(warehouse: &TempDir) -> BTreeSet<String> {
@@ -191,31 +244,22 @@ async fn session_registration_wraps_a_builder_catalog_twice_with_one_refusal_tex
     let single_text = refused_write_text(&single, &ident).await;
     let session = registered_session("ice", Arc::clone(&single)).await;
     let handle = session.catalog_handle("ice").expect("handle resolves");
+    assert!(!Arc::ptr_eq(&handle, &single));
+    assert_unkeyed_write_reaches_disk(&handle, &warehouse).await;
     let double_text = refused_write_text(&handle, &ident).await;
     assert_eq!(double_text, single_text);
-    assert!(double_text.contains(expected_text().as_str()));
-    assert!(parquet_names(&warehouse).is_empty());
+    assert_refused(&double_text);
+    let found = keyed_table_parquet(&warehouse);
+    assert!(found.is_empty(), "unencrypted files on disk: {found:?}");
 }
 
 #[tokio::test]
 async fn session_registration_guards_a_directly_built_catalog() {
     let warehouse = TempDir::new().expect("temp warehouse");
-    let mut properties = HashMap::new();
-    properties.insert(
-        MEMORY_CATALOG_WAREHOUSE.to_string(),
-        warehouse
-            .path()
-            .to_str()
-            .expect("warehouse path is utf8")
-            .to_string(),
-    );
-    let direct = MemoryCatalogBuilder::default()
-        .load("memory", properties)
-        .await
-        .expect("direct catalog builds");
-    let session = registered_session("ice", Arc::new(direct)).await;
+    let session = registered_session("ice", disk_catalog(&warehouse).await).await;
     let handle = session.catalog_handle("ice").expect("handle resolves");
     let ident = born_keyed_table(&handle).await;
+    assert_unkeyed_write_reaches_disk(&handle, &warehouse).await;
     let direct_text = refused_write_text(&handle, &ident).await;
     let comparison = TempDir::new().expect("comparison warehouse");
     let builder = repark_iceberg::catalog::memory_catalog(
@@ -226,8 +270,9 @@ async fn session_registration_guards_a_directly_built_catalog() {
     let builder_ident = born_keyed_table(&builder).await;
     let builder_text = refused_write_text(&builder, &builder_ident).await;
     assert_eq!(direct_text, builder_text);
-    assert!(direct_text.contains(expected_text().as_str()));
-    assert!(parquet_names(&warehouse).is_empty());
+    assert_refused(&direct_text);
+    let found = keyed_table_parquet(&warehouse);
+    assert!(found.is_empty(), "unencrypted files on disk: {found:?}");
 }
 
 #[tokio::test]
