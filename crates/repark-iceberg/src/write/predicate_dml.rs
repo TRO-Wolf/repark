@@ -677,9 +677,7 @@ fn scalar_set_assignments(
         if !seen.insert(column.to_ascii_lowercase()) {
             return None;
         }
-        let scalar = matches!(&assignment.value, Expr::Subquery(query)
-            if is_simple_uncorrelated_in_subquery(query));
-        if !scalar && expression_contains_subquery(&assignment.value) {
+        if subquery_outside(&assignment.value, true) {
             return None;
         }
         let mut value = assignment.value.clone();
@@ -713,19 +711,22 @@ fn assignment_column_name(
 }
 
 fn expression_contains_subquery(expr: &Expr) -> bool {
-    struct Nested {
-        seen: bool,
-    }
+    subquery_outside(expr, false)
+}
+
+fn subquery_outside(expr: &Expr, scalar: bool) -> bool {
+    struct Nested(bool);
     impl Visitor for Nested {
         type Break = ();
 
-        fn pre_visit_query(&mut self, _query: &Query) -> std::ops::ControlFlow<Self::Break> {
-            self.seen = true;
+        fn pre_visit_query(&mut self, query: &Query) -> std::ops::ControlFlow<Self::Break> {
+            if self.0 && is_simple_uncorrelated_in_subquery(query) {
+                return std::ops::ControlFlow::Continue(());
+            }
             std::ops::ControlFlow::Break(())
         }
     }
-    let mut visitor = Nested { seen: false };
-    expr.visit(&mut visitor).is_break() || visitor.seen
+    expr.visit(&mut Nested(scalar)).is_break()
 }
 
 fn update_target_and_alias(

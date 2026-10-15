@@ -365,11 +365,12 @@ repark-core's error map.
   renders through `sql_text::render_for_reparse` so string values re-parse
   exactly. pins: string-literal-escape-1/C-010
 - `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
-  F-04, parity row R-016:** `scalar_set_assignments` admits a SET value that is exactly an
-  uncorrelated `(SELECT col FROM <table> …)` (the same test the identity DELETE uses for `IN`,
-  `is_simple_uncorrelated_in_subquery`), so `UPDATE t SET st = (SELECT st FROM src) WHERE …`
-  runs on the identity UPDATE path, whose `wrap_store_outputs` pairs the struct by name and
-  stores Spark's value. Before, any subquery in a SET value left this path and the statement
+  F-04, parity row R-016:** `scalar_set_assignments` admits a SET value whose every subquery is
+  an uncorrelated `(SELECT col FROM <table> …)` (the same test the identity DELETE uses for `IN`,
+  `is_simple_uncorrelated_in_subquery`, applied by `subquery_outside`), also when the Spark
+  door's struct fold has wrapped it in the pairing kernel, so `UPDATE t SET st = (SELECT st FROM
+  src) WHERE …` runs on the identity UPDATE path, which pairs the struct by name and stores
+  Spark's value. Before, any subquery in a SET value left this path and the statement
   reached the fork's provider `update`, which re-resolved the subquery's output column against
   the target and wrote the row back unchanged with no error. Any other subquery in a SET value
   still leaves this path, unchanged.
