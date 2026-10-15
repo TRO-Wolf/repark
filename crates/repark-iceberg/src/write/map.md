@@ -1736,6 +1736,15 @@ repark-core's error map.
   column it is written to, not the column at its position in the table. A column the list leaves
   out keeps no target; with no projection the `VALUES` columns map to the table's in order
   (`positional_values_targets`), as before.
+- `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-03, parity row R-016:** by-name pairing under `spark.sql.caseSensitive=false` compares names
+  as Java's `String.equalsIgnoreCase` does, Spark's resolver: one function,
+  `spark_names_equal_ignoring_case`, the only name compare of `StructPairing`. Two names match when
+  they have the same length in UTF-16 code units and, per character, the characters are equal,
+  or their `Character.toUpperCase` are equal, or the `Character.toLowerCase` of those are equal
+  (Unicode simple case mapping: a full mapping that expands, `ß` to `SS`, maps the character to
+  itself; the Greek iota-subscript letters and `İ` take their simple mapping). Not a full Unicode
+  fold: É/é and ẞ/ß match, ß/SS does not, as on Spark 4.1.2.
 - `struct_pairing.rs`, `store_overflow.rs`, `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build
   round 3 (2026-10-14), owner ruling 56(a), verifier 1's F-01 and F-06, parity row R-016:** every
   paired field passes the store-assignment judge flat columns use. `update_cast.rs` holds the one

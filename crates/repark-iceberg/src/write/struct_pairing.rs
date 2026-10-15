@@ -65,9 +65,49 @@ impl StructPairing {
             Self::ByName {
                 case_sensitive: true,
             } => source == target,
-            _ => source.eq_ignore_ascii_case(target),
+            _ => spark_names_equal_ignoring_case(source, target),
         }
     }
+}
+
+fn single(mut mapped: impl Iterator<Item = char>) -> Option<char> {
+    let first = mapped.next()?;
+    mapped.next().is_none().then_some(first)
+}
+
+fn java_upper(c: char) -> char {
+    match c {
+        '\u{1F80}'..='\u{1F87}' | '\u{1F90}'..='\u{1F97}' | '\u{1FA0}'..='\u{1FA7}' => {
+            char::from_u32(u32::from(c) + 8).unwrap_or(c)
+        }
+        '\u{1FB3}' => '\u{1FBC}',
+        '\u{1FC3}' => '\u{1FCC}',
+        '\u{1FF3}' => '\u{1FFC}',
+        _ => single(c.to_uppercase()).unwrap_or(c),
+    }
+}
+
+fn java_lower(c: char) -> char {
+    match c {
+        '\u{130}' => 'i',
+        _ => single(c.to_lowercase()).unwrap_or(c),
+    }
+}
+
+#[must_use]
+pub fn spark_names_equal_ignoring_case(source: &str, target: &str) -> bool {
+    if source.encode_utf16().count() != target.encode_utf16().count()
+        || source.chars().count() != target.chars().count()
+    {
+        return false;
+    }
+    source.chars().zip(target.chars()).all(|(left, right)| {
+        if left == right {
+            return true;
+        }
+        let (upper_left, upper_right) = (java_upper(left), java_upper(right));
+        upper_left == upper_right || java_lower(upper_left) == java_lower(upper_right)
+    })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -9,7 +9,7 @@ use datafusion::arrow::datatypes::{DataType, Field, Fields, Int32Type};
 
 use super::{
     STORE_PAIR_KERNEL_NAME, StoreEntry, StructPairing, pair_store_value, refuse_unpaired_struct,
-    store_pair_sql,
+    spark_names_equal_ignoring_case, store_pair_sql,
 };
 
 const SHAPES: [(&str, &[(&str, i32)]); 8] = [
@@ -664,6 +664,57 @@ fn every_paired_leaf_is_judged_as_a_flat_column_is() {
         .to_string();
     assert!(
         text.contains("[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]"),
+        "{text}"
+    );
+}
+
+#[test]
+fn case_insensitive_names_match_as_java_equals_ignore_case() {
+    for (source, target) in [
+        ("É", "é"),
+        ("ẞ", "ß"),
+        ("ß", "ẞ"),
+        ("A", "a"),
+        ("İ", "i"),
+        ("ᾀ", "ᾈ"),
+        ("ſ", "s"),
+    ] {
+        assert!(
+            spark_names_equal_ignoring_case(source, target),
+            "{source} {target}"
+        );
+    }
+    for (source, target) in [
+        ("SS", "ß"),
+        ("ß", "SS"),
+        ("é", "e"),
+        ("ab", "a"),
+        ("ſ", "ss"),
+    ] {
+        assert!(
+            !spark_names_equal_ignoring_case(source, target),
+            "{source} {target}"
+        );
+    }
+    let target = named(&[("é", DataType::Int32), ("b", DataType::Int32)]);
+    let source = named(&[("b", DataType::Int32), ("É", DataType::Int32)]);
+    let pairs = pair_store_value(StructPairing::by_name(false), "`t`", "st", &source, &target)
+        .expect("É pairs with é");
+    assert!(!pairs.is_identity());
+    let text = pair_store_value(StructPairing::by_name(true), "`t`", "st", &source, &target)
+        .expect_err("case-sensitive")
+        .to_string();
+    assert!(
+        text.contains("Cannot find data for the output column `st`.`é`"),
+        "{text}"
+    );
+    let sharp = named(&[("ß", DataType::Int32), ("b", DataType::Int32)]);
+    let doubled = named(&[("SS", DataType::Int32), ("b", DataType::Int32)]);
+    let text = pair_store_value(StructPairing::by_name(false), "`t`", "st", &doubled, &sharp)
+        .expect_err("SS is not ß")
+        .to_string();
+    assert!(
+        text.contains("Cannot find data for the output column `st`.`ß`"),
         "{text}"
     );
 }

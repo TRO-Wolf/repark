@@ -26,5 +26,9 @@ ICE-STRUCT-PAIRING-1 (2026-10-14, parity row R-016).
   holds the guard and the leaf judge to Spark's text: an in-order STRING leaf into BIGINT, an INT
   into a STRUCT two deep (`"STRUCT<A:INT,B:INT>"`) on both batch entries and inside a list, a
   widened leaf passing, and a surplus field answering `EXTRA_STRUCT_FIELDS` by position.
+  **Build round 3 (2026-10-14, ruling 55(a) F-03):**
+  `case_insensitive_names_match_as_java_equals_ignore_case` pins É/é, ẞ/ß both ways, İ/i, ᾀ/ᾈ and
+  ſ/s matching and ß/SS, é/e and ſ/ss not, then pairs É into é by name and refuses ß from SS with
+  `CANNOT_FIND_DATA`.
 
 Up: [../map.md](../map.md).
