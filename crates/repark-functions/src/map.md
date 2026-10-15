@@ -490,6 +490,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   as `TIMESTAMP`; after the deletions the by-target kernel stored it as a nanosecond column
   the writer refused (`cannot convert text Timestamp(ns) into byte Timestamp(µs, "UTC")`).
   Beside a naive timestamp the pair is left to DataFusion. pins: `test_store_ts_doors_2.py`
+  **Carry-over fix, ruling 101 (2026-10-15):** eight list cells green on today's main and red
+  on the carry-over head. `array_except` and `array_intersect` join the two-list positions
+  (with `array_concat` / `concat`), so a written `CAST(c AS TIMESTAMP)` array beside a
+  nanosecond array is widened instead of narrowing the result to microseconds. A naive
+  timestamp widened to nanoseconds beside a zoned operand takes that zone (the zoned wall
+  kernel then localizes it in the session zone), so `array_append` / `array_prepend` of a
+  `TIMESTAMP_NTZ` value to a `timestamptz_ns` array keeps the value's wall the way its typed
+  twin does. pins: the fixture's `position|array_append|ntz|tzns|…`,
+  `position|array_prepend|ntz|tzns|…`, `repro|v2_array_except|tzns|…`,
+  `repro|v2_array_intersect|tzns|…`
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`

@@ -3369,6 +3369,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   head of 2026-10-15 no statement main answers is lost outside ruling 38's carve-out
   (C-023). The round's records, registry row R-017 and the 1.5.6 notes draft, are C-024.
   pins: ice-tsns-type-planner-1/C-006, C-007, C-008, C-009, C-010, C-023, C-024
+  **Carry-over fix, ruling 101 (2026-10-15):** the eight list cells red on the head and green
+  on today's main are green; the four `repro|v2_array_except|ns|…` /
+  `repro|v2_array_intersect|ns|…` residue rows turned green with them and are retired.
 - [ice_tsns_type_planner_1_dated.json](ice_tsns_type_planner_1_dated.json) —
   **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the dated rows: cells a ruling keeps red, each
   with its date, ruling and owner. A dated cell may be red or lose a statement main

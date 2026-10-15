@@ -29,7 +29,7 @@ const LIST_AND_ELEMENT: [&str; 6] = [
     "array_remove",
     "element_at",
 ];
-const LISTS: [&str; 2] = ["array_concat", "concat"];
+const LISTS: [&str; 4] = ["array_concat", "concat", "array_except", "array_intersect"];
 const TYPE_COERCION_RULE: &str = "type_coercion";
 
 #[derive(Debug, Default)]
@@ -159,7 +159,12 @@ impl SharedTarget {
         if !unit.is_some_and(|unit| unit != self.unit) {
             return None;
         }
-        Some(with_unit(data_type, self.unit))
+        Some(match (data_type, &self.zone) {
+            (DataType::Timestamp(_, None), Some(zone)) if self.unit == TimeUnit::Nanosecond => {
+                DataType::Timestamp(self.unit, Some(Arc::clone(zone)))
+            }
+            _ => with_unit(data_type, self.unit),
+        })
     }
 }
 
