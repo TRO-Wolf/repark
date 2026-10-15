@@ -463,6 +463,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   door and the Python native door). The zone label is `"UTC"`, not the session zone: the
   instant type carries no session zone anywhere in the engine.
   pins: ice-tsns-type-planner-1/C-011
+  **Ruling 94 (Q6, 2026-10-15):** `AnsiTypePlanner` is the one ANSI variant, handed in by
+  `repark_sql::AnsiDialect` only. It plans `TIMESTAMP` as the naive microsecond wall
+  (`Timestamp(µs, None)`) and `TIMESTAMPTZ` as the microsecond instant
+  (`Timestamp(µs, "UTC")`); every other name takes `SparkTypePlanner`'s answer. The Spark
+  door keeps `TIMESTAMP` as the instant. `install_ansi_planned_timestamp_cast` adds the
+  naive target to `PlannedTimestampCast`, so an `Int64` cast to the ANSI `TIMESTAMP` still
+  reads seconds, as it did when DataFusion typed it nanoseconds. A side effect: an `Int64`
+  cast to `TIMESTAMP(6)` on that door now reads seconds too, since both spell one type.
+  The Python `repark.sql()` callable still builds `DataFusionDialect` with the Spark
+  planner; its cell is a dated row for PA-02's routing fix. pins: ice-tsns-type-planner-1/C-013
 - `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
   `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
   plus the `__repark_session_gap__` / `__repark_ts_micros__` /

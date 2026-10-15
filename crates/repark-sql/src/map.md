@@ -167,16 +167,18 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
-- `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `AnsiDialect::type_planner`
-  hands the session builder `repark_functions::SparkTypePlanner`, so the ANSI door types
-  `TIMESTAMP` as the microsecond instant, `TIMESTAMP_NTZ` as the naive microsecond wall and
-  the two nanosecond names as nanoseconds; `on_session_built` installs
-  `PlannedTimestampCast` so an `Int64` cast to `TIMESTAMP` still reads seconds.
+- `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13; ruling 94, 2026-10-15):**
+  `AnsiDialect::type_planner` hands the session builder the ANSI variant
+  (`spark_type_planner::ansi_type_planner`), so the ANSI door types `TIMESTAMP` as the naive
+  microsecond wall, `TIMESTAMPTZ` and `TIMESTAMP_LTZ` as the microsecond instant,
+  `TIMESTAMP_NTZ` as the naive microsecond wall and the two nanosecond names as
+  nanoseconds; `on_session_built` installs the ANSI `PlannedTimestampCast` so an `Int64`
+  cast to `TIMESTAMP` or `TIMESTAMPTZ` still reads seconds.
   `configure_analyzer_rules` places `SparkTimestampUnitWiden` before `type_coercion`
   (amendment 1). `create_table.rs` resolves declared column types on a copy of the
   session state whose planner answers nothing (`declared_type_state`), so `CREATE TABLE`
   keeps DataFusion's mapping and its refusals of a nanosecond `TIMESTAMP` column and of
-  `TIMESTAMP_LTZ`. pins: ice-tsns-type-planner-1/C-011, C-012
+  `TIMESTAMP_LTZ`. pins: ice-tsns-type-planner-1/C-011, C-012, C-013
 - `dialect.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `on_session_built` registers the zoned
   nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
   and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this

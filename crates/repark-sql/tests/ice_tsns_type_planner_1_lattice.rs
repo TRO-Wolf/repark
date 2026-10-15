@@ -166,30 +166,40 @@ async fn written_type_names_plan_to_the_spark_types_on_both_doors() {
             format!("SELECT CAST('{wall}' AS TIMESTAMP)"),
             TimeUnit::Microsecond,
             true,
+            false,
         ),
         (
             format!("SELECT TIMESTAMP '{wall}'"),
             TimeUnit::Microsecond,
             true,
+            false,
         ),
         (
             format!("SELECT CAST('{wall}' AS TIMESTAMP_NTZ)"),
             TimeUnit::Microsecond,
+            false,
             false,
         ),
         (
             format!("SELECT CAST('{wall}' AS timestamp_ns)"),
             TimeUnit::Nanosecond,
             false,
+            false,
         ),
         (
             format!("SELECT CAST('{wall}' AS timestamptz_ns)"),
             TimeUnit::Nanosecond,
             true,
+            true,
         ),
     ];
     for (door, session) in doors() {
-        for (sql, unit, zoned) in &cells {
+        for (sql, unit, spark_zoned, ansi_zoned) in &cells {
+            let zoned = if door == "spark" {
+                spark_zoned
+            } else {
+                ansi_zoned
+            };
             let got = result_type(&session, sql).await;
             let DataType::Timestamp(got_unit, got_zone) = &got else {
                 panic!("{door}: `{sql}` answered {got:?}");
@@ -197,6 +207,62 @@ async fn written_type_names_plan_to_the_spark_types_on_both_doors() {
             assert_eq!(got_unit, unit, "{door}: unit of `{sql}`");
             assert_eq!(got_zone.is_some(), *zoned, "{door}: zone of `{sql}`");
         }
+    }
+}
+
+async fn first_micros(session: &ReparkSession, sql: &str) -> (DataType, i64) {
+    let batches = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("plan `{sql}`: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("collect `{sql}`: {error}"));
+    let column = batches[0].column(0);
+    let ticks = column
+        .as_any()
+        .downcast_ref::<TimestampMicrosecondArray>()
+        .unwrap_or_else(|| panic!("`{sql}` answered {:?}", column.data_type()))
+        .value(0);
+    (column.data_type().clone(), ticks)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant() {
+    let session = ansi_door();
+    let wall = "2024-01-02 03:04:05.123456789";
+    let wall_micros = 1_704_164_645_123_456;
+    let cells = [
+        (
+            format!("SELECT CAST('{wall}' AS TIMESTAMP)"),
+            column_type(TimeUnit::Microsecond, false),
+            wall_micros,
+        ),
+        (
+            format!("SELECT TIMESTAMP '{wall}'"),
+            column_type(TimeUnit::Microsecond, false),
+            wall_micros,
+        ),
+        (
+            format!("SELECT CAST('{wall}' AS TIMESTAMPTZ)"),
+            column_type(TimeUnit::Microsecond, true),
+            wall_micros,
+        ),
+        (
+            "SELECT CAST(1 AS TIMESTAMP)".to_owned(),
+            column_type(TimeUnit::Microsecond, false),
+            1_000_000,
+        ),
+        (
+            "SELECT CAST(1 AS TIMESTAMPTZ)".to_owned(),
+            column_type(TimeUnit::Microsecond, true),
+            1_000_000,
+        ),
+    ];
+    for (sql, expected_type, expected_ticks) in &cells {
+        let (got_type, got_ticks) = first_micros(&session, sql).await;
+        assert_eq!(&got_type, expected_type, "type of `{sql}`");
+        assert_eq!(got_ticks, *expected_ticks, "ticks of `{sql}`");
     }
 }
 

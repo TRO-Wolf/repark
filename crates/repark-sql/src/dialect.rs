@@ -15,7 +15,7 @@ pub struct AnsiDialect;
 #[async_trait(?Send)]
 impl SqlDialect for AnsiDialect {
     fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
-        Some(repark_functions::spark_type_planner())
+        Some(repark_functions::spark_type_planner::ansi_type_planner())
     }
 
     fn configure_analyzer_rules(
@@ -26,7 +26,7 @@ impl SqlDialect for AnsiDialect {
     }
 
     fn on_session_built(&self, ctx: &SessionContext) {
-        repark_functions::spark_type_planner::install_planned_timestamp_cast(ctx);
+        repark_functions::spark_type_planner::install_ansi_planned_timestamp_cast(ctx);
         repark_functions::integer_spark::install_integer_overflow(ctx);
         repark_functions::spark_log1p::register(ctx);
         repark_functions::cast_map::register(ctx);

@@ -25,6 +25,14 @@ pub fn spark_type_planner() -> Arc<dyn TypePlanner> {
     Arc::new(SparkTypePlanner)
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct AnsiTypePlanner;
+
+#[must_use]
+pub fn ansi_type_planner() -> Arc<dyn TypePlanner> {
+    Arc::new(AnsiTypePlanner)
+}
+
 #[must_use]
 pub fn timestamp_ns_type(zoned: bool) -> DataType {
     DataType::Timestamp(TimeUnit::Nanosecond, zoned.then(|| Arc::<str>::from("UTC")))
@@ -50,10 +58,27 @@ fn planned_type(sql_type: &SqlDataType) -> Option<DataType> {
     }
 }
 
+fn ansi_planned_type(sql_type: &SqlDataType) -> Option<DataType> {
+    match sql_type {
+        SqlDataType::Timestamp(None, TimezoneInfo::None) => Some(ntz_timestamp_type()),
+        SqlDataType::Timestamp(None, TimezoneInfo::Tz) => Some(ltz_timestamp_type()),
+        _ => planned_type(sql_type),
+    }
+}
+
+fn planned_field(data_type: Option<DataType>) -> Option<FieldRef> {
+    data_type.map(|data_type| Arc::new(Field::new("", data_type, true)) as FieldRef)
+}
+
 impl TypePlanner for SparkTypePlanner {
     fn plan_type_field(&self, sql_type: &SqlDataType) -> Result<Option<FieldRef>> {
-        Ok(planned_type(sql_type)
-            .map(|data_type| Arc::new(Field::new("", data_type, true)) as FieldRef))
+        Ok(planned_field(planned_type(sql_type)))
+    }
+}
+
+impl TypePlanner for AnsiTypePlanner {
+    fn plan_type_field(&self, sql_type: &SqlDataType) -> Result<Option<FieldRef>> {
+        Ok(planned_field(ansi_planned_type(sql_type)))
     }
 }
 
@@ -99,11 +124,14 @@ pub(crate) fn planned_instant_cast(
 }
 
 #[derive(Debug, Default)]
-pub struct PlannedTimestampCast;
+pub struct PlannedTimestampCast {
+    naive_seconds: bool,
+}
 
 impl AnalyzerRule for PlannedTimestampCast {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_plan).data()
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, self.naive_seconds))
+            .data()
     }
 
     fn name(&self) -> &'static str {
@@ -112,10 +140,16 @@ impl AnalyzerRule for PlannedTimestampCast {
 }
 
 pub fn install_planned_timestamp_cast(ctx: &SessionContext) {
-    ctx.add_analyzer_rule(Arc::new(PlannedTimestampCast));
+    ctx.add_analyzer_rule(Arc::new(PlannedTimestampCast::default()));
 }
 
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+pub fn install_ansi_planned_timestamp_cast(ctx: &SessionContext) {
+    ctx.add_analyzer_rule(Arc::new(PlannedTimestampCast {
+        naive_seconds: true,
+    }));
+}
+
+fn rewrite_plan(plan: LogicalPlan, naive_seconds: bool) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -124,7 +158,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| {
-            rewrite_cast(node, &schema).transform_data(|typed| {
+            rewrite_cast(node, &schema, naive_seconds).transform_data(|typed| {
                 crate::timestamp_ns_cast::wall_kernel_by_target(typed, &schema)
             })
         })?;
@@ -137,7 +171,24 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
 }
 
-fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn naive_seconds_cast(cast: &Cast, schema: &DFSchema) -> Option<Expr> {
+    if cast.field.data_type() != &ntz_timestamp_type() {
+        return None;
+    }
+    let nullable = cast.expr.nullable(schema).unwrap_or(true);
+    let seconds = retargeted(
+        cast.expr.clone(),
+        DataType::Timestamp(TimeUnit::Second, None),
+        nullable,
+    );
+    Some(retargeted(
+        Box::new(seconds),
+        ntz_timestamp_type(),
+        nullable,
+    ))
+}
+
+fn rewrite_cast(expr: Expr, schema: &DFSchema, naive_seconds: bool) -> Transformed<Expr> {
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
     };
@@ -147,7 +198,12 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     if !matches!(source, DataType::Int64) {
         return Transformed::no(expr);
     }
-    match planned_instant_cast(cast, &source, schema, false) {
+    let planned = planned_instant_cast(cast, &source, schema, false).or_else(|| {
+        naive_seconds
+            .then(|| naive_seconds_cast(cast, schema))
+            .flatten()
+    });
+    match planned {
         Some(planned) => Transformed::yes(planned),
         None => Transformed::no(expr),
     }
@@ -224,6 +280,36 @@ mod tests {
             custom("timestamp_s"),
         ] {
             assert_eq!(planned(&sql_type), None, "{sql_type}");
+        }
+    }
+
+    fn ansi_planned(sql_type: &SqlDataType) -> Option<DataType> {
+        AnsiTypePlanner
+            .plan_type_field(sql_type)
+            .unwrap_or_else(|error| panic!("plan {sql_type}: {error}"))
+            .map(|field| field.data_type().clone())
+    }
+
+    #[test]
+    fn the_ansi_variant_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant() {
+        assert_eq!(
+            ansi_planned(&SqlDataType::Timestamp(None, TimezoneInfo::None)),
+            Some(ntz_timestamp_type())
+        );
+        assert_eq!(
+            ansi_planned(&SqlDataType::Timestamp(None, TimezoneInfo::Tz)),
+            Some(ltz_timestamp_type())
+        );
+        for sql_type in [
+            SqlDataType::TimestampNtz(None),
+            custom("TIMESTAMP_LTZ"),
+            custom("timestamp_ns"),
+            custom("timestamptz_ns"),
+            SqlDataType::Timestamp(Some(3), TimezoneInfo::None),
+            SqlDataType::Timestamp(None, TimezoneInfo::WithTimeZone),
+            SqlDataType::Date,
+        ] {
+            assert_eq!(ansi_planned(&sql_type), planned(&sql_type), "{sql_type}");
         }
     }
 }

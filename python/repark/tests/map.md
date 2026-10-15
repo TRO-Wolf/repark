@@ -3358,6 +3358,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   statements, and the two Postgres read cells (they skip without `REPARK_PG_URL`). A
   statement that answered on main's module must answer here.
   pins: ice-tsns-type-planner-1/C-006, C-007, C-008, C-009, C-010
+- [ice_tsns_type_planner_1_dated.json](ice_tsns_type_planner_1_dated.json) —
+  **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the dated rows: cells a ruling keeps red, each
+  with its date, ruling and owner. A dated cell may be red or lose a statement main
+  answers; once it turns green the fixture fails until the row is retired. The first row is
+  ruling 94's `repark.sql()` cell (`q6|repark_sql|timestamp_spellings`): that callable
+  still builds `DataFusionDialect`, and PA-02's routing fix (`pa-local-fs-policy-1`)
+  closes it. pins: ice-tsns-type-planner-1/C-013
 - [_ice_tsns_type_planner_1_rule.py](_ice_tsns_type_planner_1_rule.py) —
   **ICE-TSNS-TYPE-PLANNER-1:** the rule as a harness. `statement_of` and `twin_of` write
   the two texts of a cell from one marked text (`{N}` is the NULL, `<<x>>` an operand
@@ -3389,7 +3396,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `Column.cast`, the inferred CSV unit through `read_csv` and `read.csv`, the
   R-010 `UPDATE` and `DELETE` statements against their `INSERT` twins, R-013 on
   `repark.sql`, R-018(1)'s three `VALUES` shapes against their `SELECT` twins, and the
-  Postgres cells. pins: ice-tsns-type-planner-1/C-010
+  Postgres cells. `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
+  callable: `TIMESTAMP` and its literal as `timestamp[us]`, `TIMESTAMPTZ` as
+  `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-013
 - [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
   [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
   **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,

@@ -114,11 +114,15 @@ holds behavior observed from outside the crate.
   filter operands of the **optimized** join for `=`, `<` and `<=>`;
   `equal_units_plan_no_cast_on_both_doors` holds the rule off equal units;
   `the_ansi_door_resolves_no_nanosecond_kernel_by_name` is R-013's cell;
+  `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` is ruling 94
+  (Q6, 2026-10-15): type and ticks of `TIMESTAMP`, the `TIMESTAMP '…'` literal and
+  `TIMESTAMPTZ` over a nanosecond-precision wall, and `CAST(1 AS …)` reading seconds; the
+  type-name cells expect the naive wall for `TIMESTAMP` on the ANSI door only;
   `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7's cell.
   Result types are read from the optimized plan: a frame's own schema is the unanalyzed
   one. On head `07cbe563` five of the six are green; the R-013 cell is red because the
   by-name registration stays (the unit ledger, section 5).
-  pins: ice-tsns-type-planner-1/C-010, C-011
+  pins: ice-tsns-type-planner-1/C-010, C-011, C-013
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

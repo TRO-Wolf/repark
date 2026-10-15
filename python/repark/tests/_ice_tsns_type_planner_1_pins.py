@@ -75,6 +75,7 @@ POSITIONS: tuple[tuple[str, str], ...] = (
 )
 REFUSED = ("range", "generate_series")
 OUT_OF_RANGE = {"us_first": "coalesce(far, ns)", "ns_first": "greatest(ns, far)"}
+Q6_CELL = "q6|repark_sql|timestamp_spellings"
 SERIES = "TIMESTAMP '2024-01-01 00:00:00', TIMESTAMP '2024-01-03 00:00:00', INTERVAL '1' DAY"
 
 
@@ -348,6 +349,33 @@ def _door_run(scratch: Path) -> dict[str, str]:
 def door_groups() -> list[rule.Group]:
     """Return the refusal, microsecond-pin, CSV and registry-row cells."""
     return [rule.Group(name="doors|UTC", family="doors", zone="UTC", run=_door_run, cells=19)]
+
+
+def _q6_run(_scratch: Path) -> dict[str, str]:
+    wall = "2024-01-02 03:04:05.123456789"
+    micros = [[1_704_164_645_123_456]]
+    want = {
+        f"SELECT CAST('{wall}' AS TIMESTAMP) AS v": ("timestamp[us]", micros),
+        f"SELECT TIMESTAMP '{wall}' AS v": ("timestamp[us]", micros),
+        f"SELECT CAST('{wall}' AS TIMESTAMPTZ) AS v": ("timestamp[us, tz=UTC]", micros),
+    }
+    reasons = []
+    outcomes = []
+    for text, (kind, ticks) in want.items():
+        outcome = _native(text)
+        outcomes.append(outcome)
+        if not rule.answered(outcome):
+            reasons.append(f"{text}: {outcome}")
+        elif outcome["types"] != [kind] or outcome["rows"] != ticks:
+            reasons.append(f"{text}: {outcome['types']} {outcome['rows']}, ruled {kind} {ticks}")
+    failed = [outcome for outcome in outcomes if not rule.answered(outcome)]
+    rule.note(Q6_CELL, failed[0] if failed else outcomes[0])
+    return {Q6_CELL: "; ".join(reasons)[:300]}
+
+
+def q6_groups() -> list[rule.Group]:
+    """Return the ruling-94 cell on the Python ``repark.sql()`` callable."""
+    return [rule.Group(name="q6|repark_sql", family="q6", zone="UTC", run=_q6_run, cells=1)]
 
 
 def _postgres_run(scratch: Path) -> dict[str, str]:

@@ -20,6 +20,7 @@ import _ice_tsns_type_planner_1_rule as rule
 import pytest
 
 MAIN = Path(__file__).resolve().parent / "ice_tsns_type_planner_1_main.json"
+DATED = Path(__file__).resolve().parent / "ice_tsns_type_planner_1_dated.json"
 CENSUS_CELLS = 9600
 CACHE_CELLS = 420
 READ_CELLS = 117
@@ -38,6 +39,7 @@ def all_groups() -> list[rule.Group]:
         *pins.position_groups(),
         *pins.door_groups(),
         *pins.postgres_groups(),
+        *pins.q6_groups(),
     ]
 
 
@@ -52,14 +54,25 @@ def _main_errored() -> frozenset[str]:
     return frozenset(json.loads(MAIN.read_text(encoding="utf-8"))["errored"])
 
 
+def dated_rows() -> dict[str, dict[str, str]]:
+    """Return the dated rows: cells ruled to stay red, each with its date and owner."""
+    return json.loads(DATED.read_text(encoding="utf-8"))["rows"]
+
+
 def _check(group: rule.Group, scratch: Path) -> None:
     results, answered = run_group(group, scratch)
     assert len(results) == group.cells, group.name
+    dated = dated_rows()
     red = {cell: reason for cell, reason in results.items() if reason and reason != "skip"}
-    assert red == {}, f"{len(red)} of {len(results)} cells red in {group.name}"
+    open_red = {cell: reason for cell, reason in red.items() if cell not in dated}
+    assert open_red == {}, f"{len(open_red)} of {len(results)} cells red in {group.name}"
     errored = _main_errored()
-    lost = sorted(cell for cell, ok in answered.items() if cell not in errored and not ok)
-    assert lost == [], f"main answers, this module errors: {lost[:10]}"
+    lost = {cell for cell, ok in answered.items() if cell not in errored and not ok}
+    open_lost = sorted(lost - dated.keys())
+    assert open_lost == [], f"main answers, this module errors: {open_lost[:10]}"
+    seen = results.keys() | answered.keys()
+    retired = sorted(cell for cell in dated if cell in seen and cell not in red.keys() | lost)
+    assert retired == [], f"dated rows now green, retire them: {retired[:10]}"
 
 
 def test_family_sizes() -> None:
@@ -120,6 +133,18 @@ def test_every_lattice_position_equals_its_typed_twin(group: rule.Group, tmp_pat
 def test_refusals_microsecond_pins_and_registry_rows(group: rule.Group, tmp_path: Path) -> None:
     """pins: ice-tsns-type-planner-1/C-010 — H1, H2, P15, R-010, R-013, R-018(1)."""
     _check(group, tmp_path)
+
+
+@pytest.mark.parametrize("group", pins.q6_groups(), ids=lambda group: group.name)
+def test_repark_sql_plans_timestamp_as_the_wall(group: rule.Group, tmp_path: Path) -> None:
+    """pins: ice-tsns-type-planner-1/C-013 — ruling 94 measured on ``repark.sql()``."""
+    _check(group, tmp_path)
+
+
+def test_every_dated_row_names_its_date_and_owner() -> None:
+    """pins: ice-tsns-type-planner-1/C-013 — a dated row carries its date, ruling and owner."""
+    for cell, row in dated_rows().items():
+        assert {"date", "ruling", "owner"} <= row.keys(), cell
 
 
 @pytest.mark.parametrize("group", pins.postgres_groups(), ids=lambda group: group.name)

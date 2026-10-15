@@ -1,0 +1,10 @@
+{
+ "rows": {
+  "q6|repark_sql|timestamp_spellings": {
+   "date": "2026-10-15",
+   "ruling": "94",
+   "owner": "pa-local-fs-policy-1 (PA-02): its routing fix sends repark.sql() through AnsiDialect",
+   "class": "q6-routing"
+  }
+ }
+}
