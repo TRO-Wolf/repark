@@ -10217,6 +10217,30 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   when the box lane is absent. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: parity-live-infra-2/C-001
+- [_record_ns_array_floor_1_input.py](_record_ns_array_floor_1_input.py) —
+  **NS-ARRAY-FLOOR-1 D1 (2026-10-14):** the input-side recorder: nine doors
+  (grouped applyInPandas, cogroup applyInPandas, grouped applyInArrow, cogroup
+  applyInArrow, mapInPandas, mapInArrow, scalar pandas_udf, grouped-aggregate
+  pandas_udf, scalar arrow_udf) over a timestamp_ns column, a timestamptz_ns
+  column, the two U-1 widened shapes and a microsecond control, at top level
+  and inside an array. The probe answers a trivial integer frame, so an answer
+  cell measures the input side. Evidence
+  `task/wo/ns-array-floor-1/evidence/input-cells.md` plus JSON.
+  pins: ns-array-floor-1/C-001, C-002
+- [_record_ns_array_floor_1_output.py](_record_ns_array_floor_1_output.py) —
+  **NS-ARRAY-FLOOR-1 D2 (2026-10-14):** the output-side recorder: nine doors
+  return datetime64[ns] arrays under array-timestamp declarations and
+  datetime64[ns] columns under top-level timestamp declarations. Frame ticks
+  and Iceberg read-back ticks are both recorded. Evidence
+  `task/wo/ns-array-floor-1/evidence/output-cells.md` plus JSON.
+  pins: ns-array-floor-1/C-003, C-004, C-005
+- [_record_ns_array_floor_1_lane_a.py](_record_ns_array_floor_1_lane_a.py) —
+  **NS-ARRAY-FLOOR-1 F2 (2026-10-14):** the Lane A echo recorder: the function
+  returns its input frame unchanged under the frame's own schema, over a plain
+  timestamp_ns column, coalesce(ns, NULL), and a microsecond control (on live
+  Spark the control plus a datetime64[ns] pandas frame). Evidence
+  `task/wo/ns-array-floor-1/evidence/lane-a-cells.md` plus JSON.
+  pins: ns-array-floor-1/C-006, C-007
 - [_record_ice_tsns_floor_doors_1_main.py](_record_ice_tsns_floor_doors_1_main.py) —
   **ICE-TSNS-FLOOR-DOORS-1 step 0 (2026-10-14):** the door-matrix recorder for
   parity row R-009. It reuses the merge-wall door helpers by import and writes

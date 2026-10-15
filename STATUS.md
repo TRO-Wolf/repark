@@ -11,7 +11,7 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (pandas and polars nanosecond frames enter as floored microseconds, R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (carried; no fresh scoreboard run since `e845b73b`). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md).
+**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (pandas and polars nanosecond frames enter as floored microseconds, R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (fresh 2026-10-13 run on release build `293896ce`). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md).
 
 **v1.5.4 (2026-10-10):** R-007, ENC-1, CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
 

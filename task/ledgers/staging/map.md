@@ -2435,3 +2435,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pending the owner wire-up (C-005). `risk_tier: standard`. Branch
   `test/ice-spark-cross-read-1`.
   pins: ice-spark-cross-read-1/C-001, C-002, C-003, C-004
+- [ns-array-floor-1-ledger.md](ns-array-floor-1-ledger.md) —
+  **NS-ARRAY-FLOOR-1 (2026-10-14):** step 0 measures whether the pandas and
+  Arrow doors refuse nanoseconds at one site or one per door (C-001 input
+  cells on main and the U-1 head, C-002 live input control, C-003 output cells
+  on main, C-004 live output cells, C-005 the six sites). `risk_tier:
+  standard`. Branch `fix/ns-array-floor-1`.
