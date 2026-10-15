@@ -9479,8 +9479,7 @@ the pin rather than obeying it.
   `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
   write the subquery value here, so it refuses before any write.` The identity path still
   stores Spark's value for a scalar-comparison `WHERE` (`WHERE id = 0`, `id >= 0`, `1 = 1`,
-  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door. A subquery inside a larger expression (`(SELECT …) + 1`,
-  `COALESCE((SELECT …), 0)`, a `CASE` arm) is not this guard's shape and answers as before.
+  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door. Of the larger expressions around a subquery, only the arithmetic shapes with the subquery as the first operand refuse: `(SELECT …) + 1` (also `- 1`, `* 1`, with `WHERE true` or no `WHERE`) answers the ruling-90 text on both doors, because the guard walks into the first argument of the arithmetic wrapper. `1 + (SELECT …)`, `-(SELECT …)`, `abs((SELECT …))`, a `CASE` arm and `COALESCE((SELECT …), 0)` are not this guard's shape: they report success and write a value taken from the target row, or write nothing, exactly as main does, where Spark stores a value computed from the subquery. `COALESCE` refuses `No field named …` on `repark.sql()` and the ANSI door. These cells are pending an owner ruling (re-verifier 3, 2026-10-15).
   Before 2026-10-15 the same statements reported success and left every row unchanged when the
   subquery's column had the target column's name, wrote the target's own column of the
   subquery column's name when it named another target column, and refused `No field named …`
@@ -9502,7 +9501,7 @@ the pin rather than obeying it.
   is a silent failure (ruling 74(a)), so main's behavior blocks v2 PRODUCTION; storing the
   value is card
   [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md),
-  open, not scheduled. The refusal does not hold the label. One commit, revertable alone.
+  open, not scheduled. The refusal does not hold the label. Revert set (orchestrator ruling, provisional, re-verifier 3, 2026-10-15): the refusal no longer reverts alone — revert `refuse_update_from_subquery` and its call in `crates/repark-core/src/pre_execute.rs`, `crates/repark-spark/tests/update_subquery_refusal.rs` and `crates/repark-sql/tests/ansi_update_subquery_refusal.rs` with their map rows, and the CAP-1 exception-table row (PR #1062 branch commits `107f7c75`, `5eae71eb`, `b751f13a`, `297f1a32`, plus the `update_subquery_refusal.rs` row of `crates/repark-spark/tests/map.md`).
 
 ### ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE — DATED REFUSAL 2026-10-15 (owner ruling 95(a)): `UPDATE … SET col = (SELECT …)` that matches no row refuses, where Spark and main succeed and leave every row as it was
 
@@ -9518,8 +9517,11 @@ the pin rather than obeying it.
   count, metadata location and `metadata/` files are unchanged. `WHERE id > 100` is a scalar
   comparison, so on the Spark SQL door the identity path runs it and it succeeds as Spark does;
   on `repark.sql()` it refuses like every `WHERE`. With the ruling 90 commit reverted, main's
-  answer on both doors is success with the rows unchanged; `WHERE false` also commits a new
-  snapshot and metadata file there, `BETWEEN 100 AND 200` commits nothing.
+  answer on the Spark SQL door is success with the rows unchanged in all 12 cells; on the ANSI
+  door and `repark.sql()` main already refused 2 of the 12 (`WHERE id BETWEEN 100 AND 200`
+  with a reordered struct source, `No field named …`), so 10 ANSI-door cells moved from a
+  no-op success to the refusal while all 12 did on the Spark SQL door. `WHERE false` also
+  commits a new snapshot and metadata file there, `BETWEEN 100 AND 200` commits nothing.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 succeeds and changes no row. *(oracle: recorded,
   the `WHERE false` cells of verifier 2's Q probe, 6 cells, 2026-10-15.)*
 - **Pin** — `crates/repark-spark/tests/update_subquery_refusal.rs`
