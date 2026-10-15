@@ -872,3 +872,11 @@ declines it (a dated ruling in the intake, then the archive).
   `f8f1d252` flake shape) or does something else. Proposed fix is one shared helper
   that picks by the version number in the file name, as `f8f1d252`'s
   `_metadata_version` does. Retires when every listed use is converted.
+- [stack-linear-flake-1-card-2026-10-15.md](stack-linear-flake-1-card-2026-10-15.md) — **card
+  STACK-LINEAR-FLAKE-1 (2026-10-15, open, not scheduled):**
+  `test_stack_is_linear_in_columns` failed on CI (2026-10-15, facade shard 1,
+  run `38665297618` attempt 1; re-run passed) with exponent 1.128 over the 1.1
+  bound at medians 0.004 s / 0.024 s / 0.056 s, roughly 380x under the 21.5 s
+  bridge wall the bound guards (ledger clause C-002 of the perf-unpivot-1
+  ledger). Open question: loaded-runner timing noise at millisecond medians
+  (test) or a real slope change (product). Unmeasured until N quiet runs.
