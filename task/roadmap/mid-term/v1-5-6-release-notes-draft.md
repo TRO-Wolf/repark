@@ -52,9 +52,15 @@ the release PR to edit into the notes.
   on `INSERT … BY NAME`, `writeTo().append()`, `saveAsTable`, `overwritePartitions()`, every
   MERGE arm and `UPDATE`; before, MERGE and `UPDATE` refused and the DataFrame writers stored
   NULL or paired the wrong field. `ß` and `SS` still do not match, as on Spark.
-- **`UPDATE t SET st = (SELECT st FROM src) WHERE …` stores the subquery's struct.** An
-  uncorrelated `(SELECT column FROM table …)` assigned in `SET` now stores its value, its struct
-  fields paired by name; before, the statement succeeded and left the row unchanged.
+- **`UPDATE t SET st = (SELECT st FROM src) WHERE id = 0` stores the subquery's struct.** With a
+  `WHERE` that compares a column to a value, on the Spark SQL door, an uncorrelated
+  `(SELECT column FROM table …)` assigned in `SET` now stores its value, its struct fields
+  paired by name; before, the statement succeeded and left the row unchanged.
+- **`UPDATE … SET col = (SELECT …)` with `WHERE true`, an `IN` list or no `WHERE` now refuses,
+  for every column type, where it reported success and wrote nothing.** The refusal reads
+  `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
+  write the subquery value here, so it refuses before any write.` and no row changes. On
+  `repark.sql()` every `UPDATE` whose `SET` value is a subquery refuses this way.
 - **`writeTo().append()` and `saveAsTable` in append mode refuse a struct they cannot pair by
   name, where they stored NULL.** A source struct missing one of the column's fields, or
   carrying one it lacks, now refuses `CANNOT_FIND_DATA` or `EXTRA_STRUCT_FIELDS` and writes

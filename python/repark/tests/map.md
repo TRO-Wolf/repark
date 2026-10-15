@@ -10381,7 +10381,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   list L1 refuses first with main's raw planner text, leaf types, `INSERT OVERWRITE`, `UNION ALL`)
   still refuse with the table unchanged. `x_update`: the Spark door's identity shape (`WHERE id = 0`) stores Spark's value;
   every other cell refuses with the ruling 90 text and writes nothing, the flat-INT cells under
-  the ruling 74 test name. Red on the head before the fix: 55 of 76; on main: 68 of 76.
+  the ruling 74 test name. Red on the head before the fix: 55 of 76 (before the NULL-row fix
+  forward reclassified `nocol|field_count_differs`); on main: 67 of 76; green on the head: 76.
+  pins: ice-struct-pairing-1/C-033, C-034, C-035, C-036
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

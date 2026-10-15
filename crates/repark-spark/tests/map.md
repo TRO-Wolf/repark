@@ -149,7 +149,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   under each value of the session's case carrier: each disagreement refuses with Spark's
   `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE` text for `col2` (`col1` for the
   swapped list) and writes neither row; rows that agree, in case-insensitive mode or in an order
-  other than the table's, store by position as Spark does.
+  other than the table's, store by position as Spark does. pins: ice-struct-pairing-1/C-033
   **Exception round (2026-10-15, verifier 2's V2-03): the four mutant pins.**
   `a_paired_struct_leaf_spark_refuses_refuses_on_every_insert_spelling` (`INSERT … SELECT`,
   `VALUES`, column-list `VALUES` and `INSERT OVERWRITE` of `named_struct('b', '5', 'a', 1)`
@@ -161,7 +161,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `caseSensitive=true`, with and without `WHERE`, refuse `CANNOT_FIND_DATA` for `` `st`.`b` ``;
   kills `V2_N4`); `an_update_from_a_column_subquery_with_a_comparison_stores_spark_value`
   (`WHERE id = 0` from a reordered and an in-order source stores `{a: 1, b: 2}`; kills
-  `V2_N5`).
+  `V2_N5`). pins: ice-struct-pairing-1/C-037
   **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
   `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
   `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE
@@ -181,8 +181,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   column fed reordered and in order
   (`ruling_90_a_struct_update_from_a_subquery_refuses_on_the_spark_door`).
   `the_identity_update_from_a_subquery_still_stores_on_the_spark_door` holds `WHERE id = 0` to
-  Spark's value on the same three columns. The ANSI door's twin is
-  `repark-sql/tests/ansi_update_subquery_refusal.rs`.
+  Spark's value on the same three columns.
+  `ruling_90_a_an_update_from_a_subquery_refuses_for_every_column_type` holds the refusal and
+  the unchanged table for twelve column types (STRING, BIGINT, DOUBLE, DECIMAL, BOOLEAN, DATE,
+  TIMESTAMP, TIMESTAMP_NTZ, ARRAY, MAP, a nested struct, an array of structs) under
+  `WHERE true`. The ANSI door's twin is `repark-sql/tests/ansi_update_subquery_refusal.rs`.
+  pins: ice-struct-pairing-1/C-034, C-035, C-036
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,

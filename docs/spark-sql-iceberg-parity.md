@@ -3531,7 +3531,24 @@ still open is `isModifiable`.
   every other INSERT door (F-02). Under `spark.sql.caseSensitive=false` names compare as Java's
   `equalsIgnoreCase` (É/é and ẞ/ß match, ß/SS does not; F-03); the UPDATE refusal pairs under
   the session's case rule (F-05); `UPDATE … SET st = (SELECT st FROM src) WHERE …` stores
-  Spark's value instead of writing nothing (F-04).
+  Spark's value instead of writing nothing (F-04) where the `WHERE` is a scalar comparison;
+  every other `UPDATE` from a subquery refuses before any write since 2026-10-15 (row
+  ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY).
+  **Exception round (2026-10-15, verifier 2's V2-02).** A multi-row `INSERT … VALUES` whose
+  rows give a struct column different field names (by position, at any depth, inside arrays
+  and map entries, a different field count, names compared under `spark.sql.caseSensitive`)
+  refuses with Spark's `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE] Invalid
+  inline table. Found incompatible types in the column `col2` for inline table. SQLSTATE:
+  42000` (the column named by its position in the row) on all three column-list spellings,
+  writing nothing; rows that agree on the names, in the table's order or another, store by
+  position as Spark does. Rows that agree on names but differ in a leaf type Spark cannot
+  widen still refuse with `CANNOT_SAFELY_CAST`, not Spark's inline-table text.
+  **Note (2026-10-15, owner ruling 75(a)).** The case-insensitive name compare is pinned to
+  the answer of JDK 17, the JVM of this repository's Spark oracle (`zulu-17`). A letter that
+  Unicode added after version 13 (Glagolitic `Ⱟ`/`ⱟ`, Vithkuqi U+10570/U+10597) does not
+  fold on Spark 4.1.2 under JDK 17, so Spark refuses `CANNOT_FIND_DATA` where RePark, whose
+  case tables are newer, pairs the field (verifier 2's V2-04); under JDK 21 Spark pairs it as
+  RePark does. No code follows this note.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0: the rule above, at every depth and in every
   container. *(oracle: live, 1,216 matrix cells and five added cells,
   `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`, recorded 2026-10-13 and
@@ -3586,9 +3603,9 @@ still open is `isModifiable`.
   `case_mixed_reordered`, `case_two_deep`, `case_map_key`, `case_array` and `twins` under
   `caseSensitive` false and again under true) and 14 are cells where main stored another
   value. Verifier 1's probe counts the same 38 per route.
-- **Workaround** — write the struct with the table's field names in the table's field order
-  (`named_struct('a', 1, 'b', 2)`), or use `INSERT OVERWRITE t SELECT …` with no `PARTITION`
-  clause, which pairs by position as Spark does.
+- **Workaround** — write the struct fields in table order. *(Owner ruling 76(a), 2026-10-15:
+  the only workaround this row names; dropping the `PARTITION` clause is not one, because it
+  replaces every partition of the table.)*
 - **Pin** — `crates/repark-spark/tests/struct_pairing_doors.rs`
   `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1`;
   `python/repark/tests/test_ice_struct_pairing_1_round3.py`
@@ -9402,7 +9419,9 @@ the pin rather than obeying it.
   doors via the A1-identity path (`execute_predicate_dml` / `try_allowed_update_in`) and
   match Spark (FROM and FROM-less). `UPDATE NOT IN` / `[NOT] EXISTS`, **correlated** UPDATE
   IN, every `ANY` / `ALL` spelling, scalars, nested, mixed AND/OR remain refused.
-  SET-assignment / `INSERT` / `MERGE` source still unaffected.
+  `INSERT` / `MERGE` source still unaffected. A `SET` value that is a scalar subquery refuses
+  since 2026-10-15 wherever the identity path does not run (row
+  ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY).
 - **Apache Spark** — runs all of them, deleting/updating exactly the matching rows.
   *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`,
@@ -9435,6 +9454,41 @@ the pin rather than obeying it.
   `[NOT] EXISTS`, correlated UPDATE IN and every `ANY` / `ALL` stay valved (`ANY` / `ALL` are a
   permanent v1 valve — Spark 4.1.2 parse-fails quantified comparisons). Delete this row only when
   the claimed surface is actually re-enabled.
+
+### ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY — DATED REFUSAL 2026-10-15 (owner ruling 90(a)): `UPDATE … SET col = (SELECT …)` that the identity path does not run refuses before any write, where it reported success and wrote nothing
+
+- **repark** — an `UPDATE` whose `SET` value is a scalar subquery and that the identity path
+  does not run (`WHERE true`, an `IN` list, no `WHERE`, `IS NOT NULL`, `BETWEEN` and every other
+  predicate that is not a scalar comparison; on `repark.sql()`, every `WHERE`) refuses at
+  `PreExecute::guard` (`crates/repark-core/src/pre_execute.rs`, `refuse_update_from_subquery`)
+  for every column type, on every door, before anything is written:
+  `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
+  write the subquery value here, so it refuses before any write.` The identity path still
+  stores Spark's value for a scalar-comparison `WHERE` (`WHERE id = 0`, `id >= 0`, `1 = 1`,
+  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door. A subquery inside a larger expression (`(SELECT …) + 1`,
+  `COALESCE((SELECT …), 0)`, a `CASE` arm) is not this guard's shape and answers as before.
+  Before 2026-10-15 the same statements reported success and left every row unchanged when the
+  subquery's column had the target column's name, wrote the target's own column of the
+  subquery column's name when it named another target column, and refused `No field named …`
+  otherwise, on main and on the unit head alike.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 stores the subquery's value in every matched
+  row, for a flat INT column and a struct column fed in order or reordered (by name).
+  *(oracle: live, the `x_update` group of
+  `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`, 48 cells, recorded
+  2026-10-15.)*
+- **Pin** — `python/repark/tests/test_ice_struct_pairing_1_exception.py`
+  `test_ruling_74_a_flat_int_update_from_a_subquery_refuses_before_any_write` and
+  `test_ruling_90_a_struct_update_from_a_subquery_refuses_before_any_write` (both doors),
+  `test_the_identity_update_from_a_subquery_stores_spark_value`;
+  `crates/repark-spark/tests/update_subquery_refusal.rs`,
+  `crates/repark-sql/tests/ansi_update_subquery_refusal.rs`,
+  `crates/repark-core/src/pre_execute/tests.rs`
+  `guard_refuses_an_update_whose_set_value_is_a_scalar_subquery`.
+- **Rationale** — DATED REFUSAL 2026-10-15, owner ruling 90(a): a success that writes nothing
+  is a silent failure (ruling 74(a)), so main's behavior blocks v2 PRODUCTION; storing the
+  value is card
+  [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md),
+  open, not scheduled. The refusal does not hold the label. One commit, revertable alone.
 
 ### G3-E8-NULL — `NOT IN (SELECT …)` with a NULL key (3VL trap, keep after the fix)
 

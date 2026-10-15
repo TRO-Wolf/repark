@@ -859,6 +859,15 @@ declines it (a dated ruling in the intake, then the archive).
   `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
   0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
   or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
+- [update-subquery-store-1-card-2026-10-15.md](update-subquery-store-1-card-2026-10-15.md) — **card
+  UPDATE-SUBQUERY-STORE-1 (2026-10-15, open, not scheduled):** store Spark's value for
+  `UPDATE … SET col = (SELECT …)` where the identity path does not run (`WHERE true`, an `IN`
+  list, no `WHERE`, every non-comparison predicate; every `WHERE` on `repark.sql()`), which
+  refuse under owner ruling 90(a) at `PreExecute::guard` where they reported success and wrote
+  nothing. Names the step-0 causes with `path:line`: the admission in `predicate_dml/plain.rs`,
+  `scalar_set_assignments`, the fall-through to `execute_passthrough`, and DataFusion's
+  `extract_update_assignments` dropping a decorrelated same-name column as an identity
+  assignment. Registry row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY.
 - [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
   OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
   `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of

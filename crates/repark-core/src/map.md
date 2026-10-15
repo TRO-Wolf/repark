@@ -958,7 +958,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   at a door — per-door wiring missed the native door twice (measured).
   **ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)):** `guard` also
   runs `refuse_update_from_subquery`. An `UPDATE` plan whose input projection assigns a scalar
-  subquery (under an alias and any cast) refuses with one text, `UPDATE with SET column =
+  subquery (under an alias, a cast, `arrow_cast` or one of RePark's `__repark_*` store kernels,
+  the wrappers the Spark door's struct fold adds) refuses with one text, `UPDATE with SET column =
   (SELECT ...) is not supported on this statement: RePark cannot write the subquery value
   here, so it refuses before any write.` The plan only reaches `guard` when no identity path
   ran first (the Spark door's `try_execute_identity_dml`, the ANSI door's

@@ -113,7 +113,7 @@ holds behavior observed from outside the crate.
   `repark-spark/tests/update_subquery_refusal.rs`. Tables seeded by CTAS; `UPDATE … SET col =
   (SELECT …)` and the subquery with its own `WHERE`, under `WHERE true`, an `IN` list and no
   `WHERE`, refuse with the ruling 90 text for a flat INT column and a struct column fed
-  reordered and in order, the rows unchanged.
+  reordered and in order, the rows unchanged. pins: ice-struct-pairing-1/C-034
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

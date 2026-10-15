@@ -17,7 +17,9 @@ every door's planned statement passes through before it executes (Z-2 / Z-3).
   parentheses beside a second assignment, a cast inside the subquery) and holds `guard` to the
   refusal text; `guard_passes_an_update_whose_set_value_only_contains_a_subquery` holds it
   silent for a literal, an expression of the column, a subquery inside `+` and `COALESCE`, and
-  a subquery in the `WHERE` only.
+  a subquery in the `WHERE` only. Both pass through `arrow_cast` and RePark's `__repark_*`
+  store kernels, the wrappers the Spark door's struct fold adds around the value.
+  pins: ice-struct-pairing-1/C-034, C-035
 
 ## Pointers
 

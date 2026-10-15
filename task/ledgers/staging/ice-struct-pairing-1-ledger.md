@@ -1,7 +1,7 @@
 # Unit ledger — ICE-STRUCT-PAIRING-1 · one rule pairs struct fields on every write door
 
 **Date:** 2026-10-14 · **Branch:** `fix/ice-struct-pairing-1` · **Base:** `018d0efd`, stacked on
-U-3 at `fb325e57` · **Model:** Claude (claude-opus-5-5), lane B; build rounds 1, 2 and 3 ·
+U-3 at `fb325e57` · **Model:** Claude (claude-opus-5-5), lane B; build rounds 1, 2 and 3 and the exception round ·
 **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.** Target: the next bug release (1.5.6).
 
@@ -14,7 +14,9 @@ order's §6 (list L2 moved; the ANSI door's struct MERGE refused where main stor
 answered questions 47 and 48 the same day and build round 2 finished the order. Verifier 1
 returned FAIL on `e3fc32ab`; the owner's rulings 54 to 59 of the same night scoped build round 3
 (§7). Round count for the class "a struct field paired by a rule other than Spark's": build
-round 3, and there is no round 4.
+round 3, and there is no round 4. The owner's ruling 73 allowed one exception round after verifier 2's
+FAIL (2026-10-15), widened by ruling 90 by one named change outside the class (§8); there is no
+further round.
 
 **Why.** Which source field fed which field of a struct column depended on the cast that
 happened to run on a door's route, so RePark differed from Spark 4.1.2 in 279 of 512 measured
@@ -27,7 +29,7 @@ kernel applies it.
 The rule of the sketch's §4 is clauses C-001 to C-009, one per sentence; C-010 to C-015 are how
 the doors reach it; C-016 to C-020 are the controls and the residues; C-021 to C-023 are the
 proof and the records. Build round 3 adds C-024 to C-032, one per sentence of the owner's rulings
-55(a) to 58(a).
+55(a) to 58(a). The exception round (2026-10-15, rulings 73, 74, 76 and 90) adds C-033 to C-037.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
@@ -60,9 +62,14 @@ proof and the records. Build round 3 adds C-024 to C-032, one per sentence of th
 | C-027 | `INSERT INTO t (cols) VALUES (…)` with a column list pairs by position, like every other INSERT door (ruling 57(a)). | Verifier 1's F-02 repros and three more. | **PROVEN** | `r3_misc` `values_collist_swapped`, `_swapped_renamed`, `_partial`, `_swapped_two_rows`, `_in_order`, `_swapped_leaf`, `overwrite_values_collist_swapped`: seven cells as Spark. pins: ice-struct-pairing-1/C-027 |
 | C-028 | Under `spark.sql.caseSensitive=false`, by-name pairing compares names as Java's `equalsIgnoreCase`: same UTF-16 length, and per character equal, equal upper-cased, or equal lower-cased after upper-casing; not a full Unicode fold (ruling 55(a) F-03). | É/é, ẞ/ß and the non-matching ß/SS on live Spark; a unit test. | **PROVEN** | `r3_misc` `e_acute_*` (nine cells, every by-name door, MERGE and UPDATE included), `sharp_s_from_capital`, `capital_sharp_s_from_small` store as Spark; `sharp_s_from_ss` refuses `CANNOT_FIND_DATA` as Spark; `e_acute_case_sensitive` refuses as Spark; `case_insensitive_names_match_as_java_equals_ignore_case`. pins: ice-struct-pairing-1/C-028 |
 | C-029 | The Spark door's `UPDATE` refusal pairs a struct SET value under the session's `spark.sql.caseSensitive` (ruling 55(a) F-05). | Verifier 1's eight cells. | **PROVEN** | `r3_misc` `cs_update_twins_v2/v3`, `cs_update_twins_plus_b_v2/v3`, `cs_update_no_where_twins_v2/v3`, `cs_update_no_where_twins_plus_b_v2/v3` answer Spark's `CANNOT_FIND_DATA` / `EXTRA_STRUCT_FIELDS`. pins: ice-struct-pairing-1/C-029 |
-| C-030 | `UPDATE t SET st = (SELECT st FROM src) WHERE …` stores Spark's value with the source struct reordered and in order; it is never a success that writes nothing (ruling 55(a) F-04). | Both shapes on live Spark. | **PROVEN** | `r3_misc` `update_subquery_reordered` and `update_subquery_in_order` store `{a: 1, b: 2}` as Spark (main refused the first raw and wrote nothing for the second). pins: ice-struct-pairing-1/C-030 |
+| C-030 | `UPDATE t SET st = (SELECT st FROM src) WHERE …` stores Spark's value with the source struct reordered and in order; it is never a success that writes nothing (ruling 55(a) F-04). Verifier 2 (V2-01) found this held for a scalar-comparison `WHERE` only; the other predicates refuse since 2026-10-15 (C-034). | Both shapes on live Spark. | **PROVEN** | `r3_misc` `update_subquery_reordered` and `update_subquery_in_order` store `{a: 1, b: 2}` as Spark (main refused the first raw and wrote nothing for the second). pins: ice-struct-pairing-1/C-030 |
 | C-031 | Both `INSERT OVERWRITE … PARTITION` spellings refuse a struct Spark stores whose field names are not the table's, in order, with hint H-1 naming the workaround, as a carve-out dated 2026-10-14 and closed by the routing unit of question 34(b) (ruling 58(a)). | The `r3_part` cells Spark stores. | **PROVEN** | `test_the_partition_carve_out_refuses_with_the_workaround` (104 cells: 52 per route, 38 of them where main stored Spark's value); registry row ICE-STRUCT-PAIRING-1-STATIC-PARTITION. pins: ice-struct-pairing-1/C-031 |
 | C-032 | Verifier 1's surviving mutants O1 (the ambiguity check off) and O5 (the passthrough drops `caseSensitive`) die on Rust tests (ruling 55(a) F-07). | Each mutant run against the Rust suites. | **PROVEN** | O1 dies on `case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive`, O5 on `a_by_name_frame_door_pairs_under_the_session_case_rule` (§7). pins: ice-struct-pairing-1/C-032 |
+| C-033 | When the rows of a multi-row `INSERT … VALUES` give a struct column field names that disagree (by position, at any depth, inside arrays and map entries, a different field count included, under `spark.sql.caseSensitive`), the statement refuses with Spark's `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE]` text naming the column `colN` by its position in the row, and writes nothing, on all three column-list spellings; rows that agree on the names, in the table's order or another, store by position as Spark does (verifier 2's V2-02, inside the class). | The `x_rows` cells on live Spark; a Rust door test. | **PROVEN** | `test_ice_struct_pairing_1_exception.py::test_multi_row_values_answer_as_spark` (22 cells: 12 refusals with Spark's text up to its SQLSTATE and the table unchanged, 10 stores as Spark, a NULL row among them) and `test_multi_row_values_outside_the_agreement_rule_still_refuse` (4 cells: a field count that differs, which list L1 refuses first, leaf types, `INSERT OVERWRITE`, `UNION ALL`); `struct_pairing_doors.rs` `multi_row_values_refuse_as_spark_when_rows_disagree_on_struct_names` (red with the check off). pins: ice-struct-pairing-1/C-033 |
+| C-034 | An `UPDATE` whose `SET` value is a scalar subquery and that no identity path runs (`WHERE true`, an `IN` list, no `WHERE`, every other predicate that is not a scalar comparison; every `WHERE` on `repark.sql()`) refuses at `PreExecute::guard`, the one place every door's planned statement passes, with one text for every column type, before anything is written (owner rulings 74(a) and 90(a), the one named change outside the class). | The `x_update` cells on both doors; a pin per door. | **PROVEN** | `test_ruling_74_a_flat_int_update_from_a_subquery_refuses_before_any_write` (14 cells) and `test_ruling_90_a_struct_update_from_a_subquery_refuses_before_any_write` (28 cells); `update_subquery_refusal.rs`, `ansi_update_subquery_refusal.rs`, `pre_execute/tests.rs` `guard_refuses_an_update_whose_set_value_is_a_scalar_subquery`. pins: ice-struct-pairing-1/C-034 |
+| C-035 | The identity path is untouched: `UPDATE … SET col = (SELECT col FROM src) WHERE id = 0` and the other scalar comparisons store Spark's value on the Spark SQL door as before, and a subquery inside a larger `SET` expression is not this refusal's shape. | The identity cells; verifier 2's 24 fixed cells re-run. | **PROVEN** | `test_the_identity_update_from_a_subquery_stores_spark_value` (6 cells); `update_subquery_refusal.rs` `the_identity_update_from_a_subquery_still_stores_on_the_spark_door`; `pre_execute/tests.rs` `guard_passes_an_update_whose_set_value_only_contains_a_subquery`. pins: ice-struct-pairing-1/C-035 |
+| C-036 | The refusal names the unsupported shape and names no action that deletes data; the carve-out row's only workaround is "write the struct fields in table order" and both partition hints name no data-deleting action (ruling 76(a)). | The text and the two hints read. | **PROVEN** | The text is pinned verbatim in the three Rust pins and the fixture; registry row ICE-STRUCT-PAIRING-1-STATIC-PARTITION. pins: ice-struct-pairing-1/C-036 |
+| C-037 | Verifier 2's surviving mutants `V2_L1` (the door-level leaf judge off), `V2_N3` (the column-list `VALUES` mapping positional), `V2_N4` (the UPDATE refusal's case rule fixed) and `V2_N5` (the identity path admitting no `SET` subquery) die on Rust tests. | Each mutant run with verifier 2's runner. | **PROVEN** | §8. pins: ice-struct-pairing-1/C-037 |
 
 ## 1. Build round 2 (2026-10-14)
 
@@ -202,6 +209,53 @@ them. The owner's rulings 54 to 59 (order §1, scope change in §0) scoped this 
   cast, the `WITH … INSERT` door, `UPDATE SET col = (SELECT literal)`, and the flat
   `VALUES ('5')` into a BIGINT column), none is in the unit's class, and verifier 1 named them
   out of scope.
+
+## 8. The exception round (2026-10-15, rulings 73 to 76 and 90)
+
+Verifier 2 returned FAIL on `5b97a250` with V2-01 (an `UPDATE` from a subquery that the identity
+path does not run reports success and writes nothing) and V2-02 (multi-row `VALUES` whose rows
+disagree on a struct's field names stores by position), and four surviving mutants (V2-03).
+Step 0 (`ecf22e42`) showed V2-01 writes nothing for a flat INT column too, so ruling 90 widened
+the round by that one change. Built on Opus 5.5 high under the owner's switch of 2026-10-15.
+
+- **Fixture first** (`bf439f58`): `_record_ice_struct_pairing_1_exception.py` adds `x_update`
+  (48 cells) and `x_rows` (26) to both recordings, live on Spark 4.1.2 and on main `293896ce`.
+  Red on the head before any fix: 55 of 76 (13 `x_rows`, 42 `x_update`); on main 67 of 76.
+  Green on the head after the fixes: 76 of 76; the round-1 file 2,458 and the round-3 file 411
+  stay green, U-3's `test_ice_tsns_floor_doors_1.py` 246.
+- **V2-02** (`261464de`, one fix forward `72f32945` for a NULL row, which the analyzer sees as a
+  typed null literal of the table's struct): C-033.
+- **The ruling 90 refusal** (`107f7c75`, one commit): `PreExecute::guard`, the one choke point
+  every door's planned statement passes after its identity path declined; the admission side
+  could not serve `repark.sql()`, which has no identity path, nor the identity path's
+  schema-dependent declines. The guard sees through an alias, a cast, `arrow_cast` and RePark's
+  `__repark_*` store kernels, because the Spark door's struct fold wraps a struct `SET` value
+  in `__repark_store_pair__` and `arrow_cast`. Measured first on main's module and Spark over
+  every shape it reaches (flat INT and struct, WHERE true, `IN` lists, no `WHERE`,
+  `IS NOT NULL`, `BETWEEN`, a struct predicate, `IN (SELECT …)`, aggregates, `FROM`-less,
+  correlated, aliased, multi-assignment, self-referencing subqueries): main never stores
+  Spark's value through the provider on a product door. It writes nothing, writes the target's
+  own column of the subquery column's name, or refuses `No field named …`. The one equality is
+  `WHERE false`, where neither engine has a row to write (6 cells of verifier 2's Q probe).
+  The Spark door's test harness context (no `SparkExtension`) stored an aggregate subquery
+  through the provider; its negative `g3e8_update_set_subquery_without_where_subquery_still_executes`
+  is replaced by the refusal pin, the product doors having refused that statement on main.
+- **Mutants** (`ccb23364`, verifier 2's runner `v2_mutants.py` on a clone of the head): `V2_L1`
+  dies on `a_paired_struct_leaf_spark_refuses_refuses_on_every_insert_spelling`, `V2_N3` on
+  `a_column_list_values_row_maps_each_value_to_its_listed_column` (and two more), `V2_N4` on
+  `the_update_refusal_pairs_under_the_session_case_rule`, `V2_N5` on
+  `an_update_from_a_column_subquery_with_a_comparison_stores_spark_value` (after the ruling 90
+  commit the mutant's declined `WHERE id = 0` reaches the guard and refuses, so the store pin
+  still reds).
+- **Never worse than main.** Over the fixture and verifier 2's probes re-run on the head
+  module: every cell where the head refuses and Spark stores is the ruling 58 carve-out, the
+  ruling 90 refusal, or a cell the round-3 head answered the same (lists L1, L2, the required
+  nested field, `WITH … INSERT`, `UNION ALL` of disagreeing structs); every cell where the head
+  stores a value Spark does not is equal to main or is ruling 75's JDK 17 note (8 cells). No
+  verifier-2 probe cell outside V2-01 and V2-02 moved from the round-3 head.
+- **Records:** ruling 75's dated note on R-016; ruling 76's carve-out workaround; card
+  `task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md`; registry row
+  ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY; the 1.5.6 notes line.
 
 ```
 COVERAGE_ATTESTATION:
