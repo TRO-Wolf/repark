@@ -126,6 +126,14 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   `Table`). The gate stays textual: it matches spellings, not resolved paths, so a new
   alias can still walk past it. Recorded on card ENC-1-RESIDUE-1.
   pins: enc-1/C-009, C-010
+  **ENC-1-RESIDUE-1 (2026-10-15):** the census
+  `every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal` reuses this
+  file's test-code exclusion (`product_sources`): it finds every function under
+  `src/write/` that stages (`.add_data_files(` / `.add_files(`) and commits
+  (`.commit(` / `.commit_append(`) and fails when one lacks the sweep call, and fails
+  when the found set differs from the listed 15 sites — so a new unswept site, and a
+  new swept site without a list update, both go red. `SWEEP_SITES` names the 13 wired
+  sites plus the two merge sites.
 
 ## Pointers
 

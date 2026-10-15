@@ -9,9 +9,9 @@ use iceberg::table::Table;
 use iceberg::transaction::RowDeltaAction;
 
 use super::KnownPartitions;
-use super::abort;
 use super::iceberg_err;
 use crate::write::concurrency::WriteConcurrency;
+use crate::write::encryption::written_file_paths;
 use crate::write::position_delete::PositionDeletePair;
 
 pub(super) struct PreparedDeletes {
@@ -49,7 +49,7 @@ pub(super) async fn prepare_row_delta_deletes(
                 staging,
             )
             .await?;
-            let abort_paths = abort::written_file_paths(&delete_files);
+            let abort_paths = written_file_paths(&delete_files);
             Ok(PreparedDeletes {
                 referenced,
                 abort_paths,

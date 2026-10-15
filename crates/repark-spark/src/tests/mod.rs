@@ -65,6 +65,7 @@ mod dyn_by_name_overwrite;
 mod dyn_partition_overwrite;
 mod enc_1;
 mod enc_1_fold;
+mod enc_1_sweep;
 mod float_agg;
 mod hadoop_rename;
 mod ice_ddl_clauses_1;

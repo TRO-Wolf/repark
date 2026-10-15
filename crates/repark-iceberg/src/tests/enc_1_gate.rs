@@ -261,6 +261,142 @@ fn every_catalog_table_handle_and_file_io_is_built_inside_the_guarded_wrappers()
     );
 }
 
+const SWEEP_SITES: &[(&str, &str)] = &[
+    ("repark-iceberg/src/write/append_commit.rs", "commit_append"),
+    (
+        "repark-iceberg/src/write/commit_target.rs",
+        "commit_append_to",
+    ),
+    (
+        "repark-iceberg/src/write/write_options.rs",
+        "append_staged_with_options",
+    ),
+    (
+        "repark-iceberg/src/write/write_options.rs",
+        "commit_append_with_summary",
+    ),
+    (
+        "repark-iceberg/src/write/write_options.rs",
+        "commit_replace_write_with_summary",
+    ),
+    (
+        "repark-iceberg/src/write/write_options.rs",
+        "commit_overwrite_replace_all_with_summary",
+    ),
+    (
+        "repark-iceberg/src/write/write_options.rs",
+        "commit_overwrite_by_row_filter_with_summary",
+    ),
+    (
+        "repark-iceberg/src/write/write_options.rs",
+        "commit_replace_partitions_with_summary",
+    ),
+    (
+        "repark-iceberg/src/write/overwrite_commit.rs",
+        "commit_overwrite_replace_all_to",
+    ),
+    (
+        "repark-iceberg/src/write/overwrite_commit.rs",
+        "commit_replace_write",
+    ),
+    (
+        "repark-iceberg/src/write/partition_overwrite.rs",
+        "commit_overwrite_by_row_filter_to",
+    ),
+    (
+        "repark-iceberg/src/write/partition_overwrite.rs",
+        "commit_replace_partitions_to",
+    ),
+    (
+        "repark-iceberg/src/write/overwrite_filter.rs",
+        "commit_overwrite_by_filter_with_summary",
+    ),
+    (
+        "repark-iceberg/src/write/merge/snapshot_commit.rs",
+        "commit_overwrite_on_ref",
+    ),
+    (
+        "repark-iceberg/src/write/merge/snapshot_commit.rs",
+        "commit_row_delta_kind_on_ref",
+    ),
+];
+
+const STAGING_MARKERS: &[&str] = &[".add_data_files(", ".add_files("];
+const COMMIT_MARKERS: &[&str] = &[".commit(", ".commit_append("];
+const SWEEP_MARKERS: &[&str] = &[
+    "commit_with_keyed_sweep",
+    "sweep_staged_files_on_keyed_refusal",
+    "sweep_after_rejected_commit",
+];
+
+fn function_name(line: &str) -> Option<String> {
+    let mut rest = line.trim();
+    loop {
+        let mut stripped = false;
+        for prefix in [
+            "pub(crate) ",
+            "pub(super) ",
+            "pub ",
+            "async ",
+            "unsafe ",
+            "const ",
+        ] {
+            if let Some(after) = rest.strip_prefix(prefix) {
+                rest = after;
+                stripped = true;
+                break;
+            }
+        }
+        if !stripped {
+            break;
+        }
+    }
+    let rest = rest.strip_prefix("fn ")?;
+    let end = rest
+        .find(|character: char| character == '(' || character == '<' || character.is_whitespace())
+        .unwrap_or(rest.len());
+    if end == 0 {
+        return None;
+    }
+    Some(rest[..end].to_string())
+}
+
+fn function_bodies(text: &str) -> Vec<(String, String)> {
+    let mut functions = Vec::new();
+    let mut current: Option<(String, i64, String, bool)> = None;
+    let mut depth: i64 = 0;
+    for raw in text.lines() {
+        let line = raw.split("//").next().unwrap_or_default();
+        if let Some(name) = function_name(line) {
+            if depth <= 1 {
+                if let Some((open, _, body, _)) = current.take() {
+                    functions.push((open, body));
+                }
+                current = Some((name, depth, String::new(), false));
+            }
+        }
+        if let Some((_, start, body, entered)) = current.as_mut() {
+            body.push_str(line);
+            body.push('\n');
+            if depth > *start {
+                *entered = true;
+            }
+        }
+        depth += brace_delta(line);
+        if let Some((_, start, _, entered)) = current.as_ref() {
+            if *entered && depth <= *start {
+                if let Some((open, _, body, _)) = current.take() {
+                    functions.push((open, body));
+                }
+            }
+        }
+    }
+    if let Some((open, _, body, _)) = current.take() {
+        functions.push((open, body));
+    }
+    functions
+}
+
 #[test]
 fn every_catalog_builder_returns_through_the_encryption_guard() {
     let builders = product_sources()
@@ -308,5 +444,43 @@ fn the_scan_skips_test_code_and_keeps_product_code() {
         nested
             .child_modules
             .contains(&PathBuf::from("crates/k/src/write/plain.rs"))
+    );
+}
+
+#[test]
+fn every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal() {
+    let mut found: Vec<(String, String)> = Vec::new();
+    let mut unswept: Vec<String> = Vec::new();
+    for (file, text) in product_sources() {
+        if !file.starts_with("repark-iceberg/src/write/") {
+            continue;
+        }
+        for (name, body) in function_bodies(&text) {
+            let stages = STAGING_MARKERS.iter().any(|marker| body.contains(marker));
+            let commits = COMMIT_MARKERS.iter().any(|marker| body.contains(marker));
+            if !stages || !commits {
+                continue;
+            }
+            found.push((file.clone(), name.clone()));
+            if !SWEEP_MARKERS.iter().any(|marker| body.contains(marker)) {
+                unswept.push(format!("{file}::{name}"));
+            }
+        }
+    }
+    assert!(
+        unswept.is_empty(),
+        "ENC-1 residue item 1: a stage-then-commit site without the keyed sweep:\n{}",
+        unswept.join("\n")
+    );
+    let mut seen = found;
+    seen.sort();
+    let mut expected: Vec<(String, String)> = SWEEP_SITES
+        .iter()
+        .map(|(file, name)| ((*file).to_string(), (*name).to_string()))
+        .collect();
+    expected.sort();
+    assert_eq!(
+        seen, expected,
+        "ENC-1 residue item 1: the stage-then-commit census changed"
     );
 }

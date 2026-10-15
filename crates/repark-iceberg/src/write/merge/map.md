@@ -37,8 +37,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `commit_overwrite` and `commit_row_delta_kind` mint
   the commit's `engine.operation-id` via `write::commit_error::operation_id_and_summary` and
   route the `tx.commit` `Err` through `commit_err`, so a `CommitStateUnknown` surfaces
-  stamped for `error_map`'s wrapper downcast — after `abort.rs`'s file cleanup still ran
-  (the cleanup carve-out lives in `abort.rs` itself).
+  stamped for `error_map`'s wrapper downcast — after the staged-file cleanup still ran
+  (the carve-out lives in `snapshot_commit.rs::sweep_after_rejected_commit`, which calls
+  the shared `../encryption.rs` sweep on a keyed refusal and keeps the old shape —
+  unknown state skips, other errors sweep — otherwise).
   pins: ice-commit-unknown-1/C-003
   **V3-9:** `referenced` / `abort_paths` are moved out of the prepared deletes with
   `std::mem::take` instead of deep-cloned once per row-delta commit.
@@ -122,8 +124,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   orphan MATCHED-UPDATE parquet. Identity DELETE/UPDATE share
   `write_position_deletes` via `commit_row_delta_kind`; their refuse-before-IO
   lives in `../predicate_dml.rs` `resolve_write_mode`.
-  `mod abort;` is T5-owned. On `tx.commit` `Err`, `commit_overwrite` /
-  `commit_row_delta_kind` best-effort-delete writer-result paths (M14 design A).
+  `snapshot_commit.rs::sweep_after_rejected_commit` is T5-owned. On `tx.commit` `Err`,
+  `commit_overwrite` / `commit_row_delta_kind` best-effort-delete writer-result paths
+  (M14 design A).
   **M11:** `fold_discovery_batch_into_affected` / `consume_matched_work_batch`
   take a precomputed `skip_cardinality` (lone unconditional MATCHED DELETE);
   `match_count > 1` still folds mutations / pos-deletes (double-delete is
@@ -255,7 +258,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   base `e6ebd40` and tip, N=8 and N=192: scan-to-puffin 1 × N, close 0, commit 1 × N.
   pins: rp-7-f18-repin/C-002
   pins: perf-scan-1-plan-once/C-001, C-002, C-004
-- `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
+- `snapshot_commit.rs::sweep_after_rejected_commit` — the merge commit-error funnel
+  (was `abort.rs`, hoisted to `../encryption.rs` on 2026-10-15 for ENC-1-RESIDUE-1 item
+  1; `abort.rs` deleted). Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have
   persisted — Java's `CommitStateUnknownException` rethrow-before-cleanup rule);
@@ -489,7 +494,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 | Change v3 MERGE `_row_id` carry | `row_lineage.rs` |
 | Change MERGE snapshot commit / `to_branch` | `snapshot_commit.rs` |
 | Change what a concurrent commit must touch to conflict with a DML | `../conflict_filter.rs` (derivation) + `CommitScope` in `snapshot_commit.rs` (threading) |
-| Change rejected-commit file cleanup | `abort.rs` + `commit_overwrite` / `commit_row_delta_kind` |
+| Change rejected-commit file cleanup | `snapshot_commit.rs` (`sweep_after_rejected_commit`) + `commit_overwrite` / `commit_row_delta_kind` |
 | Add a unit pin for SQL shape | `tests/merge.rs` |
 | Touch OCC commit behavior | `tests/occ.rs` / `tests/occ_conflict.rs` |
 | Touch MERGE OCC onto a named branch | `tests/occ_branch.rs` |
@@ -508,7 +513,8 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   a `WHEN NOT MATCHED BY SOURCE` clause?). Spark refuses the same shapes; see the
   `ICE-OCC-SCOPED-1` rows in `docs/spark-sql-iceberg-parity.md` before "fixing" one.
 - Rejected MERGE left new Parquet files: cleanup is `tx.commit` `Err` only in
-  `commit_overwrite` / `commit_row_delta_kind` via [`abort.rs`](abort.rs). A catch
+  `commit_overwrite` / `commit_row_delta_kind` via `snapshot_commit.rs`
+  (`sweep_after_rejected_commit`). A catch
   that can fire after a successful commit is a HALT.
 - Pub `write_data_files*` re-exported from the write module root (`../mod.rs`) and the crate
   root (`lib.rs`).

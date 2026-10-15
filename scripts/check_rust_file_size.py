@@ -83,7 +83,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "in table_admin.rs.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
-        1737,
+        1719,
         "Append planning, file writing, and commit assembly share one entry module.",
         "Extract writer preparation from transaction commit assembly; "
         "partitioned file writing now lives in partitioned_files.rs.",

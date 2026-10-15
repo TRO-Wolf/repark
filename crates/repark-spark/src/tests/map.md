@@ -50,6 +50,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   a property value or column comment that spells `AddSnapshot {`, `SetStatistics {` or
   `SetPartitionStatistics {` leaves ALTER, expiry and UNSET working on a keyed table.
   pins: enc-1/C-010
+  **ENC-1-RESIDUE-1 item 1 (2026-10-15):** the shared freeze / refusal-text / key-adding
+  helpers go `pub(super)` for the sweep battery; the pins themselves live in
+  `enc_1_sweep.rs`.
+- `enc_1_sweep.rs` — **ENC-1-RESIDUE-1 item 1 (2026-10-15):** one pin per operation
+  family, each a stale handle on a keyed table that refuses with the one text and
+  leaves the warehouse listing exactly as before: append, branch append, the six
+  write-options doors, overwrite × 2, partition overwrite × 2, overwrite-by-filter.
+  Control: the same staged append on an unkeyed table still stores (snapshot + file).
 - `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
   pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
   source/target/column named and nothing written; in-range, int-to-int and string stores

@@ -10,8 +10,9 @@ use iceberg::spec::{DataFile, Datum, NestedFieldRef, PrimitiveType, Schema, Type
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
-use crate::write::commit_error::commit_result;
+use crate::write::commit_error::commit_with_keyed_sweep;
 use crate::write::commit_target::{FilterValidation, maybe_to_branch};
+use crate::write::encryption::written_file_paths;
 use crate::write::illegal_argument::illegal_argument_error;
 use crate::write::overwrite::OverwriteIsolation;
 use crate::write::summary_collision::{EngineSummary, extras_need_removed_files};
@@ -89,6 +90,7 @@ pub async fn commit_overwrite_by_filter_with_summary(
     }
     let isolation = validation.isolation(table)?;
     let start = validation.start(table, branch)?;
+    let staged_paths = written_file_paths(&staged_files);
     let engine = EngineSummary::for_overwrite(table, &staged_files, branch);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
@@ -110,7 +112,13 @@ pub async fn commit_overwrite_by_filter_with_summary(
     let tx = action
         .apply(tx)
         .map_err(crate::catalog::iceberg_to_datafusion)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_with_keyed_sweep(
+        table,
+        &staged_paths,
+        tx.commit(catalog.as_ref()).await,
+        &operation_id,
+    )
+    .await
 }
 
 fn cannot_convert(rendered: impl std::fmt::Display) -> DataFusionError {

@@ -1,5 +1,7 @@
 # map — scripts/
 
+ENC-1-RESIDUE-1 (2026-10-15): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1737 → 1719 (`commit_append` moves to the new `append_commit.rs`, shrink-only).
+
 ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional): `check_rust_file_size.py` ratchets the `repark-iceberg/src/write/overwrite.rs` baseline 1053 → 1049, shrink-only, with the CAP-1 mirror; the guard's commit removed the file's local strict-cast options when its two batch casts moved to `conform::strict_store_cast`. pins: ice-tsns-floor-doors-1/C-014
 
 MERGE-MOD-SPLIT-1 (owner, 2026-10-12): `check_rust_file_size.py` retires the `repark-iceberg/src/write/merge/mod.rs` row (1569, under the default after the split; the SQL builders and the copy-on-write and merge-on-read arms move verbatim to `merge/merge_sql.rs`, `merge/copy_on_write.rs` and `merge/merge_on_read.rs`), shrink-only, with the CAP-1 mirror.

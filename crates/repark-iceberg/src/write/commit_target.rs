@@ -6,7 +6,8 @@ use iceberg::spec::DataFile;
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
-use crate::write::commit_error::{commit_result, operation_id_and_summary};
+use crate::write::commit_error::{commit_with_keyed_sweep, operation_id_and_summary};
+use crate::write::encryption::written_file_paths;
 use crate::write::illegal_argument::number_format_error;
 use crate::write::overwrite::OverwriteIsolation;
 use crate::write::write_options::isolation_with_override;
@@ -101,6 +102,7 @@ pub async fn commit_append_to(
 ) -> Result<Table> {
     crate::write::refuse_encrypted_table(table)?;
     let (operation_id, summary) = operation_id_and_summary();
+    let staged_paths = written_file_paths(&new_files);
     let tx = Transaction::new(table);
     let action = tx
         .merge_append()
@@ -110,5 +112,11 @@ pub async fn commit_append_to(
     let tx = action
         .apply(tx)
         .map_err(crate::catalog::iceberg_to_datafusion)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_with_keyed_sweep(
+        table,
+        &staged_paths,
+        tx.commit(catalog.as_ref()).await,
+        &operation_id,
+    )
+    .await
 }

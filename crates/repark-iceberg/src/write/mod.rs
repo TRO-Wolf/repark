@@ -2,6 +2,7 @@
 
 pub mod alter;
 pub mod append;
+pub mod append_commit;
 mod append_fanout_serial;
 pub mod column_move;
 mod commit_error;
@@ -112,10 +113,11 @@ pub use scan_prune::{
 };
 
 pub use append::{
-    append, commit_append, write_partitioned_data_files, write_partitioned_data_files_from_stream,
+    append, write_partitioned_data_files, write_partitioned_data_files_from_stream,
     write_partitioned_data_files_from_stream_with_concurrency,
     write_partitioned_data_files_with_concurrency,
 };
+pub use append_commit::commit_append;
 pub use concurrency::{
     DEFAULT_MAX_CONCURRENT_FILES, MAX_CONCURRENT_FILES_KEY, WriteConcurrency,
     concurrency_from_config_map, concurrency_from_ctx, with_write_concurrency,

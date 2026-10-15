@@ -20,11 +20,12 @@ use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
 use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
 use uuid::Uuid;
 
-use crate::write::commit_error::commit_result;
+use crate::write::commit_error::commit_with_keyed_sweep;
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::write_default_column_names;
 use crate::write::data_format::resolve_data_format;
+use crate::write::encryption::written_file_paths;
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::output_spec::staging_table;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
@@ -411,6 +412,7 @@ where
     };
     let engine = EngineSummary::for_append(table, &new_files, None);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
+    let staged_paths = written_file_paths(&new_files);
     let tx = Transaction::new(table);
     let action = tx
         .fast_append()
@@ -418,7 +420,13 @@ where
         .set_snapshot_properties(summary)
         .stage_only();
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_with_keyed_sweep(
+        table,
+        &staged_paths,
+        tx.commit(catalog.as_ref()).await,
+        &operation_id,
+    )
+    .await
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -434,6 +442,7 @@ pub async fn commit_append_with_summary(
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = EngineSummary::for_append(table, &new_files, branch);
     let (operation_id, summary) = summary_with_extras(&summary_extra, &engine)?;
+    let staged_paths = written_file_paths(&new_files);
     let tx = Transaction::new(table);
     let action = tx
         .merge_append()
@@ -441,7 +450,8 @@ pub async fn commit_append_with_summary(
         .set_snapshot_properties(summary);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
-    let committed = commit_result(stamp.commit_append(tx, catalog).await?, &operation_id)?;
+    let outcome = stamp.commit_append(tx, catalog).await?;
+    let committed = commit_with_keyed_sweep(table, &staged_paths, outcome, &operation_id).await?;
     stamp.record(&committed)?;
     Ok(committed)
 }
@@ -456,6 +466,7 @@ pub async fn commit_replace_write_with_summary(
     crate::write::refuse_encrypted_table(table)?;
     let engine = EngineSummary::for_overwrite(table, &staged_files, None);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
+    let staged_paths = written_file_paths(&staged_files);
     let tx = Transaction::new(table);
     let action = tx
         .overwrite_files()
@@ -464,7 +475,13 @@ pub async fn commit_replace_write_with_summary(
         .allow_empty_commit()
         .set_snapshot_properties(summary);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_with_keyed_sweep(
+        table,
+        &staged_paths,
+        tx.commit(catalog.as_ref()).await,
+        &operation_id,
+    )
+    .await
 }
 
 async fn engine_summary_for_replace_all(
@@ -499,6 +516,7 @@ pub async fn commit_overwrite_replace_all_with_summary(
     let engine =
         engine_summary_for_replace_all(table, &staged_files, branch, summary_extra).await?;
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
+    let staged_paths = written_file_paths(&staged_files);
     let tx = Transaction::new(table);
     let mut action = tx
         .overwrite_files()
@@ -516,7 +534,13 @@ pub async fn commit_overwrite_replace_all_with_summary(
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_with_keyed_sweep(
+        table,
+        &staged_paths,
+        tx.commit(catalog.as_ref()).await,
+        &operation_id,
+    )
+    .await
 }
 
 async fn engine_summary_for_row_filter(
@@ -560,6 +584,7 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
         &overwrite.equalities,
     )
     .await?;
+    let staged_paths = written_file_paths(&staged_files);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let mut action = tx
@@ -579,7 +604,13 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_with_keyed_sweep(
+        table,
+        &staged_paths,
+        tx.commit(catalog.as_ref()).await,
+        &operation_id,
+    )
+    .await
 }
 
 async fn engine_summary_for_replace_partitions(
@@ -618,6 +649,7 @@ pub async fn commit_replace_partitions_with_summary(
     let engine =
         engine_summary_for_replace_partitions(table, &staged_files, branch, summary_extra).await?;
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
+    let staged_paths = written_file_paths(&staged_files);
     let tx = Transaction::new(table);
     let mut action = tx
         .replace_partitions()
@@ -634,7 +666,13 @@ pub async fn commit_replace_partitions_with_summary(
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_with_keyed_sweep(
+        table,
+        &staged_paths,
+        tx.commit(catalog.as_ref()).await,
+        &operation_id,
+    )
+    .await
 }
 
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {

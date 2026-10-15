@@ -516,6 +516,12 @@ repark-core's error map.
   where they refuse earlier and more clearly; nothing depends on them for safety: the
   guard in `../catalog/encryption_guard.rs` holds without them.
   pins: enc-1/C-008
+  **ENC-1-RESIDUE-1 item 1 (2026-10-15):** `written_file_paths` /
+  `delete_staged_files_best_effort` / `sweep_staged_files_on_keyed_refusal`, hoisted
+  here from `merge/abort.rs` (deleted). The sweep deletes only the staged paths it is
+  handed — never a directory listing, never a snapshot-referenced file — and only on a
+  keyed refusal found through `EncryptedTableRefusal::find`; any other error, including
+  unknown commit state, returns unchanged.
 - `conform.rs`, `overwrite.rs`, `partition_overwrite.rs`, `merge/mod.rs` — **ICE-TSNS-FLOOR-DOORS-1
   guard (2026-10-14, provisional, the order's lean A):** `conform::strict_store_cast(name, column,
   target)` is today's strict cast unless a top-level timestamp's unit would get coarser, where
@@ -576,6 +582,21 @@ repark-core's error map.
   pins: write-order-dist-1/C-008
   **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_partitioned_data_files*`
   family moved to `partitioned_files.rs` (re-exported here; baseline 1804 → 1737).
+  **ENC-1-RESIDUE-1 item 1 (2026-10-15):** `commit_append` moved to
+  [`append_commit.rs`](append_commit.rs) (pure move; re-exported from `append.rs` so
+  callers keep their paths; baseline 1737 → 1719). Every stage-then-commit site in
+  this directory — `append_commit.rs::commit_append`,
+  `commit_target.rs::commit_append_to`, the six `write_options.rs` doors,
+  `overwrite_commit.rs` × 2, `partition_overwrite.rs` × 2,
+  `overwrite_filter.rs::commit_overwrite_by_filter_with_summary` — commits through
+  `commit_error.rs::commit_with_keyed_sweep`, which deletes exactly the staged paths
+  when the commit refuses because the table is keyed and returns the refusal
+  unchanged (a failed delete is named in it). The two merge sites call the same
+  helper through `merge/snapshot_commit.rs::sweep_after_rejected_commit`, which keeps
+  the merge-only shape for other errors (unknown state still skips, conflicts still
+  sweep). Pins: one per operation family in the Spark `enc_1_sweep.rs` battery and in
+  `merge/snapshot_commit.rs`, plus the census in the iceberg `enc_1_gate.rs` gate that
+  lists the 15 sites so a new unswept site fails the suite.
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
   `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
   `commit_truncate_to` commits onto a named branch.
@@ -811,7 +832,8 @@ repark-core's error map.
   overwrite, write options, MERGE) drop the table argument and the `?`.
   pins: ice-nested-evo-1/C-060
 - **ICE-MERGE-APPEND-1 (2026-09-19):** every append commit site in this directory —
-  `append.rs::commit_append`, `commit_target.rs::commit_append_to`,
+  `append_commit.rs::commit_append` (in `append.rs` until 2026-10-15),
+  `commit_target.rs::commit_append_to`,
   `write_options.rs::commit_append_with_summary` — commits through the fork's
   `merge_append()` (Java `MergeAppend`, what `Table.newAppend()` returns), not
   `fast_append()`. The 1.11.0 bytecode of `SparkWrite$BatchAppend.commit` calls
@@ -823,8 +845,9 @@ repark-core's error map.
   row-delta sites are untouched — Spark never merges there. A bare `INSERT INTO` does NOT
   reach these functions: it plans on the fork's `IcebergCommitExec`, which merges since
   RP-54 (fork #361; `ICE-MERGE-APPEND-INSERT-1` FIXED).
-  `append.rs` carries no module banner and `commit_append` no summary doc line under the
-  comment ban: the merge contract is stated here instead.
+  `append.rs` carries no module banner; `commit_append` carries no summary doc line
+  under the comment ban (it moved to `append_commit.rs` on 2026-10-15): the merge
+  contract is stated here instead.
   The routing needs no dependency movement: `Transaction::merge_append()` is already in the
   pinned fork `44834673`, and `Cargo.toml` / `Cargo.lock` are untouched by the unit.
   pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-007, C-010
@@ -849,6 +872,11 @@ repark-core's error map.
   `docs/cutover/inventory.md` §8 ruling-8 cell carry the same shape table and the Airflow
   alert/retry guidance. `commit_append_to` mints its own id the same way.
   pins: ice-commit-unknown-1/C-001, C-003, C-005, C-006
+  **ENC-1-RESIDUE-1 item 1 (2026-10-15):** `commit_with_keyed_sweep(table, staged_paths,
+  result, operation_id)` is the one funnel every stage-then-commit site calls instead
+  of `commit_result`: on `Ok` it folds exactly as `commit_result` does; on `Err` it
+  runs the keyed sweep over the staged paths, then folds. Sites hand it paths
+  collected before the staged vec moves into the action.
 - `overwrite_commit.rs` — full-table overwrite commit, optional `to_branch`.
   pins: rp-5-fork-repin/C-004
   **ICE-RTAS-OPS-2 round 2 (2026-09-18):** `commit_replace_write` is the RTAS commit for
@@ -1821,7 +1849,7 @@ repark-core's error map.
 | A partitioned CTAS writes writers × values data files | `hash_distribution` must wrap the input when the spec is partitioned and `writers > 1`; check `IcebergPartitionWriteExec`'s child is a `RepartitionExec` with `Partitioning::Hash` |
 | Parallel write left partial files after a failed MERGE | abort flag must skip `finish()`/`close()` |
 | A DML aborts on a concurrent write to another partition | the commit's conflict filter printed `TRUE`: see `conflict_filter.rs`'s widening rules and [merge/map.md](merge/map.md) Debug |
-| Rejected MERGE OCC commit left new Parquet files in the warehouse | commit-error abort must `FileIO::delete` writer-result paths only (`merge/abort.rs`); never re-derive from manifests; never delete `affected` |
+| Rejected MERGE OCC commit left new Parquet files in the warehouse | commit-error abort must `FileIO::delete` writer-result paths only (shared keyed sweep in `encryption.rs`, merge funnel in `merge/snapshot_commit.rs`); never re-derive from manifests; never delete `affected` |
 | MERGE OOMs on a large target | target must register as a `StreamingTable` (`(_file, _pos)` identity), never a full-target `MemTable` |
 | MERGE produces duplicates | multiple-source-match must **error** (like Spark); serializable (default) commit arms carry `validate_no_conflicting_data`; snapshot isolation drops it (`write.merge.isolation-level`) |
 | Conflict-retry corrupts data | on commit conflicts re-read the target; don't cache stale file lists |
