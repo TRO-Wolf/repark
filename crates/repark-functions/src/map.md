@@ -447,6 +447,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the nanosecond range raises when the cast runs. Seven unit tests over a plain
   DataFusion session with the rule placed.
   pins: ice-tsns-type-planner-1/C-012
+  **M3 rule gaps, aggregate zero (2026-10-15):** `aggregate`'s zero joins the position
+  table beside the element unit of its array (`widen_aggregate_zero`): a microsecond zero
+  beside nanosecond elements is cast to nanoseconds, keeping its own zone, so the merge
+  lambda and the zero agree and `check_merge_types` no longer refuses the pair. The plan's
+  lambda variables are resolved again after a rewrite, so `acc` takes the widened type.
+  pins: ice-tsns-type-planner-1/C-015
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`

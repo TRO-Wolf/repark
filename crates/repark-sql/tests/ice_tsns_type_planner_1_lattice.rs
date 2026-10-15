@@ -394,3 +394,44 @@ async fn a_widened_position_equals_its_written_nanosecond_cast_on_both_doors() {
         }
     }
 }
+
+async fn first_column(session: &ReparkSession, sql: &str) -> ArrayRef {
+    let batches = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("plan `{sql}`: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("collect `{sql}`: {error}"));
+    let columns: Vec<ArrayRef> = batches
+        .iter()
+        .map(|batch| Arc::clone(batch.column(0)))
+        .collect();
+    let parts: Vec<&dyn datafusion::arrow::array::Array> =
+        columns.iter().map(AsRef::as_ref).collect();
+    datafusion::arrow::compute::concat(&parts)
+        .unwrap_or_else(|error| panic!("concat `{sql}`: {error}"))
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_aggregate_zero_takes_the_unit_of_its_array_elements() {
+    let session = spark_door();
+    for column in ["a_ns", "a_ns_tz"] {
+        let sql = format!(
+            "SELECT aggregate(array({column}), CAST(NULL AS TIMESTAMP), \
+             (acc, x) -> coalesce(x, acc)) AS v FROM t ORDER BY a_us"
+        );
+        let typed = format!(
+            "SELECT aggregate(array({column}), CAST(NULL AS timestamptz_ns), \
+             (acc, x) -> coalesce(x, acc)) AS v FROM t ORDER BY a_us"
+        );
+        let got = first_column(&session, &sql).await;
+        let want = first_column(&session, &typed).await;
+        assert_eq!(
+            unit_of(got.data_type()),
+            Some(TimeUnit::Nanosecond),
+            "`{sql}`"
+        );
+        assert_eq!(&got, &want, "`{sql}` against `{typed}`");
+    }
+}

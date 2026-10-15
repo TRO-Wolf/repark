@@ -119,11 +119,14 @@ holds behavior observed from outside the crate.
   type-name cells expect the naive wall for `TIMESTAMP` on the ANSI door only; the carried
   R-013 cell that held the ANSI door off the by-name kernels is gone (2026-10-15): the
   by-name registration stays, as main and U-6 pin it;
+  `an_aggregate_zero_takes_the_unit_of_its_array_elements` is the M3 aggregate cell (a
+  `TIMESTAMP` zero beside nanosecond elements answers nanoseconds, equal to a
+  `timestamptz_ns` zero; pins: ice-tsns-type-planner-1/C-015);
   `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7's cell.
   Result types are read from the optimized plan: a frame's own schema is the unanalyzed
   one. On head `07cbe563` five of the six are green; the R-013 cell is red because the
   by-name registration stays (the unit ledger, section 5).
-  pins: ice-tsns-type-planner-1/C-010, C-011, C-013
+  pins: ice-tsns-type-planner-1/C-010, C-011, C-013, C-015
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

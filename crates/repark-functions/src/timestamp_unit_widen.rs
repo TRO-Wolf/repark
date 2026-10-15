@@ -4,7 +4,9 @@ use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{Column, DFSchema, Result, internal_datafusion_err, plan_err};
-use datafusion::logical_expr::expr::{Between, BinaryExpr, Case, InList, ScalarFunction};
+use datafusion::logical_expr::expr::{
+    Between, BinaryExpr, Case, HigherOrderFunction, InList, ScalarFunction,
+};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan, Operator, Projection, Union};
 use datafusion::optimizer::AnalyzerRule;
@@ -180,6 +182,33 @@ fn widen_function(function: ScalarFunction, schema: &DFSchema) -> Result<Transfo
     Ok(rebuilt.update_data(|args| Expr::ScalarFunction(ScalarFunction { func, args })))
 }
 
+fn aggregate_zero_unit(index: usize, data_type: &DataType) -> Option<TimeUnit> {
+    if index == 0 {
+        list_unit(data_type)
+    } else {
+        timestamp_unit(data_type)
+    }
+}
+
+fn widen_aggregate_zero(
+    function: HigherOrderFunction,
+    schema: &DFSchema,
+) -> Result<Transformed<Expr>> {
+    let HigherOrderFunction { func, mut args } = function;
+    if args.len() < 2 || matches!(args[1], Expr::Lambda(_)) {
+        return Ok(Transformed::no(Expr::HigherOrderFunction(
+            HigherOrderFunction::new(func, args),
+        )));
+    }
+    let lambdas = args.split_off(2);
+    share_unit(args, schema, aggregate_zero_unit)?.map_data(|mut shared| {
+        shared.extend(lambdas);
+        Ok(Expr::HigherOrderFunction(HigherOrderFunction::new(
+            func, shared,
+        )))
+    })
+}
+
 fn widen_case(case: Case, schema: &DFSchema) -> Result<Transformed<Expr>> {
     let Case {
         expr,
@@ -263,6 +292,9 @@ fn widen_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     match expr {
         Expr::ScalarFunction(function) => widen_function(function, schema),
         Expr::Case(case) => widen_case(case, schema),
+        Expr::HigherOrderFunction(function) if function.func.name() == "aggregate" => {
+            widen_aggregate_zero(function, schema)
+        }
         Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_comparison(op) => {
             share_unit(vec![*left, *right], schema, scalar_unit)?.map_data(|operands| {
                 let [left, right] = exactly(operands)?;
@@ -386,7 +418,9 @@ fn widen_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     if transformed.transformed {
-        transformed.map_data(LogicalPlan::recompute_schema)
+        transformed
+            .map_data(LogicalPlan::recompute_schema)?
+            .map_data(|plan| plan.resolve_lambda_variables().data())
     } else {
         Ok(transformed)
     }
