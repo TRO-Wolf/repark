@@ -997,6 +997,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `register_spark_decimal_planner`; shared helpers use `pub(super)` visibility and re-exports.
   CASESENS-1 final fold (2026-09-28): `disable_case_sensitive` mirrors
   `enable_case_sensitive` for the same-session toggle pin. pins: casesens-1/C-005
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, the harness (ruling 100, 2026-10-15):** `setup`'s
+  session is built the way the Spark door builds every session: the `SparkTypePlanner`
+  (`with_type_planner`) and `SparkTimestampUnitWiden` before `type_coercion`
+  (`analyzer_rules_with_timestamp_unit_widen`). Without them, after the carried deletions, a
+  written `TIMESTAMP` stayed DataFusion's nanosecond type and `timestamp_ns` was `Unsupported
+  SQL type` here while the product door typed both (`v3_timestamp_ns_door.rs`,
+  `u9_timestamp_ltz.rs`, `ntz_store.rs`, `ntz_values_mix.rs`, `plan_partitioning.rs`,
+  `session_write_conf.rs`). No pinned value moves.
 - `create_table.rs` pins `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
