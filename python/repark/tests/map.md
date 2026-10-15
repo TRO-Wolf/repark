@@ -3241,6 +3241,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
   microsecond controls are unchanged.
   pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-010, ruling 100, 2026-10-15):** the `update_literal`
+  door with a `timestamp_ns` or `timestamptz_ns` literal stores now that the planner types
+  both names in `UPDATE`; `STILL_REFUSED` is gone and the cells assert R-010's rule, the
+  instant `INSERT` stores, nine digits exact (`expected_instants`, `value % 1_000`).
 - [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-TYPE-PLANNER-1
   (2026-10-15), R-010's re-pin:** `r010_answers` names the `update_literal` door with a
   `timestamp_ns` or `timestamptz_ns` literal, which main refused by name (`Unsupported SQL
