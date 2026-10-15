@@ -162,7 +162,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`NULL_SIBLING_UPDATES`) store what `SET v = c` stores, nine digits, for a `timestamp_ns`
   and a `timestamptz_ns` source. Oracle: Spark 4.1.2's microsecond twin of the four statements
   (Iceberg 1.11.0, New York, 2026-10-15) stores `c` unchanged; a NULL takes its sibling's
-  type.
+  type. pins: ice-tsns-type-planner-1/C-033
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

@@ -42,9 +42,18 @@ the release PR to edit into the notes.
   microsecond wall and `TIMESTAMPTZ` as the microsecond instant.** `CAST('…789' AS
   TIMESTAMP)` answers `timestamp[us]` without the last three digits, where it answered
   `timestamp[ns]`.
-- **The Python `repark.sql()` callable types `TIMESTAMP` as the microsecond instant.**
-  `CAST('2024-01-02 03:04:05.123456789' AS TIMESTAMP)` answers `timestamp[us, tz=UTC]`
-  `…123456`, where it answered `timestamp[ns]` `…123456789`; the routing fix of PA-02 moves
-  it to the naive wall of ruling 94.
+- **The Python `repark.sql()` callable types `TIMESTAMP` as the naive microsecond wall and
+  `TIMESTAMPTZ` as the microsecond instant.** `CAST('2024-01-02 03:04:05.123456789' AS
+  TIMESTAMP)` answers `timestamp[us]` `…123456`, where it answered `timestamp[ns]`
+  `…123456789`; `CAST(DATE '2020-01-01' AS TIMESTAMP)` answers `timestamp[us]`.
+- **An `INT`, `SMALLINT` or `TINYINT` cast to `TIMESTAMP` reads seconds, as Spark does.**
+  `CAST(CAST(1 AS INT) AS TIMESTAMP)` answers `1970-01-01 00:00:01`, where it answered
+  `1970-01-01 00:00:00`.
+- **A refusal on the Python door names a timestamp argument `TIMESTAMP`.** `degrees` and
+  `radians` over a timestamp column said `TIMESTAMP_LTZ`; they now say `TIMESTAMP`, as Spark.
+- **A `TIMESTAMP_NTZ` inside an `ARRAY` or `STRUCT` cast target answers.**
+  `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` answers
+  `[2024-01-01 00:00:00]` where it refused `UNSUPPORTED_TIMESTAMP_NTZ`, and `UPDATE … SET
+  int_column = CAST(c AS TIMESTAMP_NTZ)` refuses with Spark's `CANNOT_SAFELY_CAST` text.
 
 Tables already written keep the values they hold; this release ships no migration.

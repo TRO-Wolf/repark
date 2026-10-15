@@ -72,7 +72,7 @@ pins: ice-tsns-merge-wall-1/C-018, C-031
   `Timestamp(µs, "UTC")`, so an `INSERT … VALUES` mixing it with `TIMESTAMP_NTZ` cells into a
   `TIMESTAMP_NTZ` column lost its instant evidence and stored a New York gap wall as `02:30`
   where Spark stores `03:30` (`test_ntz_9_verify.py`, `test_ntz_store_doors_1.py` `ins_values`
-  / `ins_sel`).
+  / `ins_sel`). pins: ice-tsns-type-planner-1/C-032
 
 ## Pointers
 

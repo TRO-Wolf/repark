@@ -835,6 +835,11 @@ declines it (a dated ruling in the intake, then the archive).
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
+- [ice-tsns-update-ntz-cast-1-card-2026-10-15.md](ice-tsns-update-ntz-cast-1-card-2026-10-15.md) —
+  card ICE-TSNS-UPDATE-NTZ-CAST-1 (2026-10-15, filed by U-1's carry-over fix round from Q1 and
+  the orchestrator's provisional ruling on it): a written `CAST(ns AS TIMESTAMP_NTZ)` in
+  `UPDATE … WHERE` truncates where the no-`WHERE` form floors; outside ruling 91, four dated
+  rows on U-1's branch (red on today's main), no code in U-1.
 - [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
   **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
   carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a

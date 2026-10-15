@@ -16,8 +16,8 @@ Rust implementation of the `_native` PyO3 module. The modules below keep the Pyt
 and hand execution, SQL, and ML semantics to the engine crates.
 - `session_runtime.rs`, `session.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the native
   door (`PyReparkSession.native`, behind `repark.sql`) builds with the `NativeDoorTypes`
-  extension, whose only hook is `type_planner` (`repark_functions::SparkTypePlanner`), and
-  `register_native_door_functions` installs `PlannedTimestampCast` so an `Int64` cast to
+  extension, whose only hook is `type_planner` (the ANSI variant `AnsiTypePlanner` since
+  2026-10-15, below), and `register_native_door_functions` installs `PlannedTimestampCast` so an `Int64` cast to
   `TIMESTAMP` still reads seconds. The Spark door takes the planner from `SparkExtension`.
   `NativeDoorTypes::configure_analyzer_rules` places `SparkTimestampUnitWiden` before
   `type_coercion` (amendment 1). pins: ice-tsns-type-planner-1/C-011, C-012
@@ -47,7 +47,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   Q6 contract, ruling 94), and `CAST(<bigint> AS TIMESTAMP)` reads seconds. With the Spark
   planner it answered the instant where today's main answers the wall
   (`test_ice_tt_resolve_1.py`'s native cells, `test_nullability_2.py`). pins: ice-tsns-type-
-  planner-1/C-015
+  planner-1/C-015 pins: ice-tsns-type-planner-1/C-029
 
 ## Modules
 

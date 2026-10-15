@@ -710,14 +710,14 @@
   },
   "encoded|TIMESTAMP|dictionary": {
    "date": "2026-10-15",
-   "ruling": "92",
-   "owner": "NS-ENCODED-NESTED-FLOOR-1 (R-024): an encoded ns value into a microsecond column truncates where the plain value floors, on today's main too; question Q3 of the 2026-10-15 hand-back",
+   "ruling": "102",
+   "owner": "NS-ENCODED-NESTED-FLOOR-1 (R-024): ruling 102, an encoded ns value into a microsecond column keeps today's behaviour (it truncates where the plain value floors, on today's main too)",
    "class": "residue"
   },
   "encoded|TIMESTAMP|run_end_encoded": {
    "date": "2026-10-15",
-   "ruling": "92",
-   "owner": "NS-ENCODED-NESTED-FLOOR-1 (R-024): an encoded ns value into a microsecond column truncates where the plain value floors, on today's main too; question Q3 of the 2026-10-15 hand-back",
+   "ruling": "102",
+   "owner": "NS-ENCODED-NESTED-FLOOR-1 (R-024): ruling 102, an encoded ns value into a microsecond column keeps today's behaviour (it truncates where the plain value floors, on today's main too)",
    "class": "residue"
   },
   "h1|ansi|generate_series": {
@@ -1457,6 +1457,30 @@
    "ruling": "38",
    "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
    "class": "carve-out"
+  },
+  "repro|r017_update_nowhere_ntz_cast|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
+  },
+  "repro|r017_update_nowhere_ntz_cast|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
+  },
+  "repro|r017_update_nowhere_ntz_cast|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
+  },
+  "repro|r017_update_nowhere_ntz_cast|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
   },
   "repro|s1b_concat_ws_null|ns|America/New_York": {
    "date": "2026-10-15",

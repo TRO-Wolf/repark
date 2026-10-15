@@ -1004,7 +1004,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   written `TIMESTAMP` stayed DataFusion's nanosecond type and `timestamp_ns` was `Unsupported
   SQL type` here while the product door typed both (`v3_timestamp_ns_door.rs`,
   `u9_timestamp_ltz.rs`, `ntz_store.rs`, `ntz_values_mix.rs`, `plan_partitioning.rs`,
-  `session_write_conf.rs`). No pinned value moves.
+  `session_write_conf.rs`). No pinned value moves. pins: ice-tsns-type-planner-1/C-031
 - `create_table.rs` pins `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
@@ -2132,7 +2132,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `nested_ntz_cast_target_keeps_the_r4_refusal`) pins Spark 4.1.2's answer to
   `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` and `CAST(named_struct('a',
   '2024-01-01') AS STRUCT<a: TIMESTAMP_NTZ>)`: a naive microsecond list or field holding
-  midnight, `1704067200000000`.
+  midnight, `1704067200000000`. pins: ice-tsns-type-planner-1/C-033
 
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** store assignment into `TIMESTAMP_NTZ`
   columns — LTZ VALUES/SELECT storing the session-zone wall (UTC and New York), UPDATE
@@ -2433,7 +2433,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `InsertStoreAssignment` right after `type_coercion`, where the Spark door seats it, instead
   of after the Spark expression rules; with the planner a written `CAST(int AS TIMESTAMP)` and
   an INSERT's store cast have one type, so the store gate must run first, as it does on the
-  product door.
+  product door. pins: ice-tsns-type-planner-1/C-027
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

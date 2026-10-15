@@ -107,7 +107,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the unit tests build their session on
   `spark_type_planner::planned_context`, as every door does, so
   `degrees_refuses_every_non_double_family_type` reads a written `TIMESTAMP` as the door types
-  it.
+  it. pins: ice-tsns-type-planner-1/C-028
 - `spark_math.rs` + [`spark_math/`](spark_math/map.md) — **DOOR-CONVERGE-1
   (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
   doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
@@ -279,7 +279,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   refusal texts (`however "x" has the type "TIMESTAMP"`, measured live). With the planner a
   written `TIMESTAMP` is the zoned microsecond type, which the name rendered `TIMESTAMP_LTZ`,
   a name Spark never prints; `spark_degrees.rs` and `spark_startswith.rs` share it. pins:
-  `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs`'s unit tests
+  `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs`'s unit tests pins: ice-tsns-type-planner-1/C-028
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
@@ -489,7 +489,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   _)` (`temporal_coercion`, `string_temporal_coercion`), which the deleted rules used to read
   as `TIMESTAMP`; after the deletions the by-target kernel stored it as a nanosecond column
   the writer refused (`cannot convert text Timestamp(ns) into byte Timestamp(µs, "UTC")`).
-  Beside a naive timestamp the pair is left to DataFusion. pins: `test_store_ts_doors_2.py`
+  Beside a naive timestamp the pair is left to DataFusion. pins: `test_store_ts_doors_2.py` pins: ice-tsns-type-planner-1/C-027
   **Carry-over fix, ruling 101 (2026-10-15):** eight list cells green on today's main and red
   on the carry-over head. `array_except` and `array_intersect` join the two-list positions
   (with `array_concat` / `concat`), so a written `CAST(c AS TIMESTAMP)` array beside a
@@ -499,7 +499,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `TIMESTAMP_NTZ` value to a `timestamptz_ns` array keeps the value's wall the way its typed
   twin does. pins: the fixture's `position|array_append|ntz|tzns|…`,
   `position|array_prepend|ntz|tzns|…`, `repro|v2_array_except|tzns|…`,
-  `repro|v2_array_intersect|tzns|…`
+  `repro|v2_array_intersect|tzns|…` pins: ice-tsns-type-planner-1/C-030
   **Carry-over fix, mixed VALUES (ruling 100, 2026-10-15):** a `VALUES` column DataFusion
   typed `Timestamp(ns, None)` only because a `DATE` sat beside a non-nanosecond timestamp
   (`widen_values_dates`, no cell of nanoseconds) is retyped by the same position rule before
@@ -508,7 +508,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `TIMESTAMP`) it is read as the instant, as the deleted rules read it. Parents of a retyped
   `VALUES` recompute their schema. The pinned Spark walls are main's pins (`ntz_store_doors_1`
   mixed oracle, `ntz_values_mix.rs`). pins: `test_ntz_store_doors_1.py`,
-  `tests/ntz_values_mix.rs`
+  `tests/ntz_values_mix.rs` pins: ice-tsns-type-planner-1/C-032
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
@@ -533,14 +533,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   naive target to `PlannedTimestampCast`, so an `Int64` cast to the ANSI `TIMESTAMP` still
   reads seconds, as it did when DataFusion typed it nanoseconds. A side effect: an `Int64`
   cast to `TIMESTAMP(6)` on that door now reads seconds too, since both spell one type.
-  The Python `repark.sql()` callable still builds `DataFusionDialect` with the Spark
-  planner; its cell is a dated row for PA-02's routing fix. pins: ice-tsns-type-planner-1/C-015
+  The Python `repark.sql()` callable takes the same ANSI variant through `NativeDoorTypes`
+  since the carry-over fix round (2026-10-15); its Q6 cell is green. pins: ice-tsns-type-planner-1/C-015
   **Carry-over fix, the three errors (ruling 100, 2026-10-15):** `planned_instant_cast` reads
   an integer of any width as seconds (`Timestamp(s, None)`, then the instant), as Spark 4.1.2
   does for `CAST(CAST(1 AS INT) AS TIMESTAMP)`; it read a non-`BIGINT` integer as nanosecond
   ticks, and that inner nanosecond `Cast` then met the by-target wall kernel (`cannot cast
   "Int32" to "TIMESTAMP_NS"`). pins: the read-perf bench pins, `test_stamp_2_r5p6_1.py`,
-  `tests/ltz_store.rs`
+  `tests/ltz_store.rs` pins: ice-tsns-type-planner-1/C-027
 - `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
   `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
   plus the `__repark_session_gap__` / `__repark_ts_micros__` /
@@ -1372,7 +1372,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: ntz-store-doors-1/C-009
   **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, mixed VALUES (ruling 100, 2026-10-15):**
   `is_values_wall_cell` exposes the `VALUES` evidence's wall test to the widen rule's `VALUES`
-  retype.
+  retype. pins: ice-tsns-type-planner-1/C-032
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

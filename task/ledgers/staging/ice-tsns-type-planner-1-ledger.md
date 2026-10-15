@@ -7,8 +7,17 @@ Target: 1.5.6.
 
 **Order:** the [sketch](../../wo/ice-tsns-type-planner-1/sketch.md) and
 [amendment 1](../../wo/ice-tsns-type-planner-1/amendment-1.md) (U-1, R-017), the
-[fresh step 0](../../wo/ice-tsns-type-planner-1/step0-fresh-2026-10-15.md) and the owner's
-rulings 91 to 94 of 2026-10-15. **This ledger closes when the unit's pull request merges.**
+[fresh step 0](../../wo/ice-tsns-type-planner-1/step0-fresh-2026-10-15.md), the owner's
+rulings 91 to 94 of 2026-10-15, and the carry-over fix round under the owner's rulings 100,
+101 and 102 of 2026-10-15 with the orchestrator's provisional rulings on Q1 and Q4 (§11, the
+[trace](../../wo/ice-tsns-type-planner-1/carryfix-trace-2026-10-15.md)). Ruling 100: a moved
+pin is re-pinned only to the Spark oracle's answer (Spark door) or the Q6 contract (ANSI
+doors), never to what the head prints, and each names its ruling; a carried commit that
+serves none of the three mechanisms is dropped. Ruling 101: green on main and red on the head
+is a regression, fixed in the same round; H5 owns a cell only when main is red on it. Ruling
+102: the two encoded cells stay dated rows under R-024 with a red pin on main; ruling 92's
+condition reads "encoded into a microsecond column keeps today's behaviour", and the 92 fix
+touches nanosecond targets only. **This ledger closes when the unit's pull request merges.**
 The old branch `fix/ice-tsns-type-planner-1` (`fc85b24c`) keeps the old ledger, whose
 clauses C-001 to C-005 are step-0 evidence that this branch does not carry (the P5, H2, H3
 and H4 records). This ledger keeps the old numbers C-006 to C-014 for the carried work, so
@@ -27,8 +36,8 @@ as `TIMESTAMP` are deleted.
 | C-006 | The fixture is committed before the mechanism code, its expectations are derived by the harness from the rule, and its main side is recorded on today's main. | The fixture commits and §3. | **PROVEN** | `python/repark/tests/test_ice_tsns_type_planner_1.py`, `_ice_tsns_type_planner_1_rule.py`; `ice_tsns_type_planner_1_main.json` recorded on `01796857` (after U-3): 952 of 11,288 statements error, 7,827 cells red (§3). pins: ice-tsns-type-planner-1/C-006 |
 | C-007 | Every census cell (9,600) and every cache cell (420) stores what its typed twin stores, outside the dated residue rows. | The census and cache tests on the head. | **PROVEN** | §5: census 9,570 green, 30 red, all 30 dated residue rows red on main; cache 420 green. pins: ice-tsns-type-planner-1/C-007 |
 | C-008 | The 117 reads and the 92 consumer-door cells answer what their twin answers, and every statement main answers answers here outside ruling 38's carve-out. | The two tests on the head. | **PROVEN** | §5: reads 117 and consumer 92 green as cells; the 108 statements main answers that the head loses are exactly the carve-out (consumer 88, `reads|m_udf:…` 20). pins: ice-tsns-type-planner-1/C-008 |
-| C-009 | The parking repros of R-017's seven verifier rounds, by name, equal their twins. | The repro test on the head. | **OPEN** | §5: 289 green, 59 red; 51 are dated residue rows. Eight are open: `r017_update_nowhere_ntz_cast` 4 (Q1) and `v2_array_except` / `v2_array_intersect` over `tzns` 4 (Q2). |
-| C-010 | The amended pins hold: the twenty mixed-unit cells on both doors in three zones, every lattice position, the H1 refusals, the H2 microsecond pins, P15, R-010, R-013, R-018(1), the Postgres reads. | The pin tests on the head. | **OPEN** | §5: lattice 120 green; doors 12 green, 7 dated residue rows; positions 476 green, 100 red, 96 dated residue rows, 4 open (`array_append` / `array_prepend` beside a `TIMESTAMP_NTZ` value over a `tzns` site in New York and Kolkata, Q2); Postgres 2 skipped (no `REPARK_PG_URL`). |
+| C-009 | The parking repros of R-017's seven verifier rounds, by name, equal their twins. | The repro test on the head. | **PROVEN** | §11: 297 green, 51 red, every red cell a dated row: 47 residue rows of ruling 93 and the four `r017_update_nowhere_ntz_cast` rows of the Q1 ruling (card ICE-TSNS-UPDATE-NTZ-CAST-1, red on today's main). `v2_array_except` / `v2_array_intersect` over `tzns` are green (ruling 101), and the four over `ns` turned green with them and are retired. pins: ice-tsns-type-planner-1/C-009 |
+| C-010 | The amended pins hold: the twenty mixed-unit cells on both doors in three zones, every lattice position, the H1 refusals, the H2 microsecond pins, P15, R-010, R-013, R-018(1), the Postgres reads. | The pin tests on the head. | **PROVEN** | §11: lattice 120 green (the ANSI door spells its zoned microsecond operand `TIMESTAMPTZ`, the Q6 contract); doors 12 green, 7 dated residue rows; positions 480 green, 96 red, all dated residue rows (the four `array_append` / `array_prepend` cells of ruling 101 are green); Postgres 2 skipped (no `REPARK_PG_URL`). pins: ice-tsns-type-planner-1/C-010 |
 | C-011 | One planner types the written names on both SQL doors, and a join key in the optimized plan carries one unit. | The Rust pins on the head. | **PROVEN** | `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`, 10 tests green (§6). pins: ice-tsns-type-planner-1/C-011 |
 | C-012 | `SparkTimestampUnitWiden` runs before type coercion on every door and widens mixed timestamp units to the finest, by the types at the position, never narrowing and never touching equal units. | The rule's unit tests and the lattice cells. | **PROVEN** | `crates/repark-functions/src/timestamp_unit_widen.rs` unit tests; lattice 120 green. pins: ice-tsns-type-planner-1/C-012 |
 | C-013 | No rule reads a `Timestamp(ns, _)` cast target or literal as the SQL `TIMESTAMP`; the AST lowering of the two nanosecond names is gone. | The deletion commit and the census on the head. | **PROVEN** | Commit `7dfb04c3` (from `6c3688af`); census as in C-007. pins: ice-tsns-type-planner-1/C-013 |
@@ -38,11 +47,21 @@ as `TIMESTAMP` are deleted.
 | C-017 | M3: an `aggregate` zero joins the position table beside the element unit of its array. | The Rust pin, the 4 repros, the revert check. | **PROVEN** | §5: `v3_fold_typed_null` 4 green; `an_aggregate_zero_takes_the_unit_of_its_array_elements`; §7. pins: ice-tsns-type-planner-1/C-017 |
 | C-018 | M3: `UNION` (DISTINCT) of a nanosecond branch and a widened or zone-coerced branch answers when a branch field carries `PARQUET:field_id`. | The Rust pin, the 3 positions, the revert check. | **PROVEN** | §5: `union|ts|ns` 3 green; `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors`; §7. The seam is the kernel's return field, not the rule (§2). pins: ice-tsns-type-planner-1/C-018 |
 | C-019 | Ruling 91: an identity `UPDATE … WHERE` into `TIMESTAMP` narrows its SET value through the MERGE insert arm's cast family; `WHERE`, no `WHERE` and a written `CAST(… AS TIMESTAMP)` store one value; U-3's guard stays. | The Python and Rust pins, the census cells, U-3's merge wall, the revert check. | **PROVEN** | §5: census `update_where` 80 green, `update_forms` 8 green; `an_identity_update_stores_what_its_other_forms_store` (Rust); U-3's merge wall `ltz_v2` and `ltz_v3` green; §7. pins: ice-tsns-type-planner-1/C-019 |
-| C-020 | Ruling 92: the nanosecond kernel's gate looks through dictionary and run-end encoding and gives the encoded source the plain value type's verdict and value. | The kernel unit test, the encoded cells, U-3's merge wall, the revert check. | **PROVEN** | §5: `encoded|timestamp_ns|…` and `encoded|timestamptz_ns|…` 4 green; U-3's 8 encoded cells green; `an_encoded_source_gets_the_verdict_and_the_value_of_its_value_type`; §7. The microsecond target is Q3. pins: ice-tsns-type-planner-1/C-020 |
-| C-021 | Rulings 38 and 93: the dated rows are ruling 38's 108 door cells and residue cells red on the head with a red pin on today's main; a dated row that turns green fails the fixture until it is retired. | The dated-row tests and the main record. | **PROVEN** | `ice_tsns_type_planner_1_dated.json`: 108 carve-out, 186 residue (184 of ruling 93, 2 of ruling 92 under Q3), 1 Q6; every residue row is in the main record's `red`. pins: ice-tsns-type-planner-1/C-021 |
+| C-020 | Ruling 92: the nanosecond kernel's gate looks through dictionary and run-end encoding and gives the encoded source the plain value type's verdict and value. | The kernel unit test, the encoded cells, U-3's merge wall, the revert check. | **PROVEN** | §5: `encoded|timestamp_ns|…` and `encoded|timestamptz_ns|…` 4 green; U-3's 8 encoded cells green; `an_encoded_source_gets_the_verdict_and_the_value_of_its_value_type`; §7. Ruling 102: encoded into a microsecond column keeps today's behaviour; the two cells stay dated rows under R-024. pins: ice-tsns-type-planner-1/C-020 |
+| C-021 | Rulings 38 and 93: the dated rows are ruling 38's 108 door cells and residue cells red on the head with a red pin on today's main; a dated row that turns green fails the fixture until it is retired. | The dated-row tests and the main record. | **PROVEN** | `ice_tsns_type_planner_1_dated.json` after the carry-over fix round: 294 rows, 108 carve-out and 186 residue (180 of ruling 93, 4 of the Q1 ruling, 2 of ruling 102); the Q6 row and four ruling-93 rows are retired, green; every residue row is in the main record's `red`. pins: ice-tsns-type-planner-1/C-021 |
 | C-022 | R-010: the fixture's `DELETE` harness reads stored rows through the table, and U-3's `update_literal` cells that main refused by name are re-pinned to the rule. | The harness commit's before and after counts; U-3's merge wall. | **PROVEN** | §3: doors family 11 green / 8 red before, 12 / 7 after; U-3's merge wall 356 green with `r010_answers`. pins: ice-tsns-type-planner-1/C-022 |
 | C-023 | No statement today's main answers errors on the head outside ruling 38's carve-out and the `repark.sql()` cell of ruling 94. | The fixture's main-answers check on the head. | **PROVEN** | §5: 108 lost statements, all carve-out rows; the Q6 cell answers. pins: ice-tsns-type-planner-1/C-023 |
-| C-025 | No pin of an existing test moves without a ruling. | `cargo test` of the five crates and the facade suite on the head, set against today's main. | **OPEN** | §10: 51 Rust tests in `repark-spark` and 27 facade tests fail on the head and pass on main; every one fails on the carry-over head `ca385f17` already (module `c7809e68`, step 0's scratch module byte for byte), none comes from this round's commits (Q5). |
+| C-025 | No pin of an existing test moves without a ruling. | `cargo test` of the five crates and the facade suite on the head, set against today's main. | **OPEN** | §11: of the 78 breaks of the carry-over, 77 are green again: fixed (the pinned value is the oracle's or main's) or re-pinned, each to a recorded Spark 4.1.2 answer, the Q6 contract or R-010's rule, naming its ruling. One is open: `extension::tests::analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion` pins the Spark door's analyzer list, which now holds `spark_timestamp_unit_widen` (`203f9821`); no Spark answer or Q6 contract exists for an internal rule list, so ruling 100 allows no re-pin (question Q1 of §Q). |
+| C-026 | Each of the 78 carry-over breaks and the 8 ruling-101 cells is attributed to the first carried commit at which it is red, and every carried commit serves at least one of M1, M2 and M3. | The trace: builds at each carried commit, the fixture's main-answers check per state, `git revert` of each carried commit at the head. | **PROVEN** | [carryfix-trace-2026-10-15.md](../../wo/ice-tsns-type-planner-1/carryfix-trace-2026-10-15.md): planner 4 + 21 + 4, widen rule 1, deletions 44 + 6, kernels by target 2 + 4, every row monotone; no carried commit is dropped. pins: ice-tsns-type-planner-1/C-026 |
+| C-027 | The three errors are fixed: an integer cast to `TIMESTAMP` reads seconds at every width, and a `DATE` or a string beside a zoned timestamp in a shared position or a `UNION` column takes that timestamp's type. | The bench pins, `ltz_store.rs`, `test_stamp_2_r5p6_1.py`, `test_store_ts_doors_2.py`; revert checks V1a and V1b. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-027 |
+| C-028 | A refusal text names a zoned timestamp `TIMESTAMP`, as Spark 4.1.2 does, on the SQL and the Python door. | `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs` unit tests; revert check V2. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-028 |
+| C-029 | `repark.sql()` types `TIMESTAMP` as the microsecond wall and `TIMESTAMPTZ` as the microsecond instant (the Q6 contract), so the five cells where main answers the wall answer it. | `test_ice_tt_resolve_1.py` native cells, `test_nullability_2.py`, the fixture's Q6 cell and ANSI-door lattice; revert check V3. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-029 |
+| C-030 | Ruling 101: the eight list cells green on today's main are green on the head. | The fixture's positions and repros; revert check V4. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-030 |
+| C-031 | `repark-spark`'s test harness builds its session with the planner and the widen rule, as the Spark door does, and no pinned value moves. | The 44 harness tests; revert check V5. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-031 |
+| C-032 | A mixed `VALUES` column types and stores Spark 4.1.2's recorded walls, which are main's pins. | `test_ntz_store_doors_1.py`, `test_ntz_9_verify.py`, `ntz_values_mix.rs`, `ntz_store.rs`; revert checks V6 and V6b. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-032 |
+| C-033 | The re-pins of the round each take their value from a recorded Spark 4.1.2 run or R-010's rule and name their ruling: the nested `TIMESTAMP_NTZ` cast, the `timestamptz_ns` literal `UPDATE`, R-017's no-`WHERE` `UPDATE`, the `UPDATE` NTZ-into-INT refusal. | The re-pin commits and their oracle records. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-033 |
+| C-034 | The five read-perf bench pins pass, and the read bench's medians on the head are at or under 1.05x of today's main. | The bench pins and the timed run under the build lock. | **PROVEN** | §11: pins green; 90-sample warm medians 0.97x to 1.04x, cold 0.95x to 1.02x. pins: ice-tsns-type-planner-1/C-034 |
+| C-035 | The Q1 cells and ruling 102's two cells are dated rows with a red pin on today's main. | `test_every_residue_row_is_red_on_main`, the dated-row file. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-035 |
 | C-024 | The 1.5.6 notes draft carries one line per stored-value change and registry row R-017 carries the round's status. | The notes draft and the registry row. | **PROVEN** | `task/roadmap/mid-term/v1-5-6-release-notes-draft.md`; `docs/spark-sql-iceberg-parity.md` R-017 status 2026-10-15. pins: ice-tsns-type-planner-1/C-024 |
 
 ## 1. The carry-over (C-011 to C-014)
@@ -239,37 +258,118 @@ into byte Timestamp(µs, "UTC")`). All 27 fail on the carry-over module too.
 commit closes). The two `spark_nullability` pins that also went red were a test-harness gap
 of the carried deletions and hold again (`f65cb5b8`).
 
+## 11. The carry-over fix round (C-025 to C-035; rulings 100, 101, 102)
+
+**Trace (C-026).** [carryfix-trace-2026-10-15.md](../../wo/ice-tsns-type-planner-1/carryfix-trace-2026-10-15.md)
+attributes each break to the first carried commit at which it is red. Every carried commit
+serves a mechanism, so none is dropped.
+
+**The groups and what was done** (each fix commit's own pins named in its message):
+
+| Group (ruling 100 / 101) | Rows | First red at | Oracle or contract | Done |
+|---|---|---|---|---|
+| the three errors | Rust 1 + facade 3 (+ the 5 bench pins) | `62089e59`, `7dfb04c3`, `ca385f17` | Spark 4.1.2: `CAST(CAST(1 AS INT) AS TIMESTAMP)` is one second; a `DATE` in a `UNION` into `TIMESTAMP` stores the session midnight | fixed (`932bc5df`) |
+| `TIMESTAMP_LTZ` refusal texts | facade 5 | `62089e59` | Spark 4.1.2 says `TIMESTAMP` | fixed (`f60fc0c6`); the Python door's divergence pin moves to the oracle |
+| `repark.sql()` instant | facade 5 | `62089e59` | the Q6 contract; main answers the wall on all five, none an instant | fixed (`59ae414c`); `test_nullability_2` re-pinned to `timestamp[us]`, the ANSI lattice spells `TIMESTAMPTZ`, the Q6 dated row retired |
+| ruling 101 | fixture 8 | `62089e59`, `ca385f17` | the twin rule, green on main | fixed (`31be2588`); four ruling-93 `ns` rows retired |
+| the Spark-door harness | Rust 44 | `7dfb04c3` | the pins unchanged | fixed (`4e60b2e5`) |
+| mixed `VALUES` | facade 7, Rust (with the harness) 34 | `62089e59`, `7dfb04c3` | Spark 4.1.2's recorded walls, which are main's pins | fixed (`ad52bcdc`) |
+| nested NTZ cast | facade 2 (+ Rust twin, + `w_ref_cast`) | `62089e59` | Spark 4.1.2 answers | re-pinned (`3623fe1b`, `563c61a9`), the planner sketch |
+| `timestamptz_ns` literal `UPDATE` | facade 5 | `62089e59` | R-010's rule, nine digits exact | re-pinned (`5b00a2ae`), R-010 |
+| R-017's no-`WHERE` `UPDATE` pin | Rust 1 | `7dfb04c3` | Spark 4.1.2's microsecond twin: a NULL takes its sibling's type | re-pinned (`89d6c706`), R-017 |
+| analyzer-list pin | Rust 1 | `203f9821` | none | open, question Q1 below |
+| read-perf bench pins | Rust 5 | `62089e59`, `ca385f17` | the 1.05x gate | the error fixed; measured, never re-pinned (below) |
+
+**Revert checks** (each fix's product code reverted alone on a scratch clone of the head,
+its pins kept, then restored; every one red): V1a integer seconds — the five bench pins and
+`ltz_store::legal_sources_into_timestamp_still_store` (`cannot cast "Int32" to
+"TIMESTAMP_NS"`), `test_stamp_2_r5p6_1` (`('TIMESTAMP', 1)`); V1b `DATE`/string beside a
+zoned timestamp — `test_store_ts_doors_2` 2 (`cannot convert text Timestamp(ns) into byte
+Timestamp(µs, "UTC")`); V2 the renderer — `test_fnp_degrees_rust_1` 12 and
+`test_fnp_6d_followup_1` 1 (`has the type "TIMESTAMP_LTZ"`); V3 the native door — the four
+`TT-SQL-*` cells (a zoned datetime) and `test_nullability_2`; V4 ruling 101 — the eight
+cells; V5 the harness — `v3_timestamp_ns_door` (`Unsupported SQL type timestamp_ns`); V6
+the `VALUES` evidence — `ins_values`, `ins_sel`, `r_wide`; V6b the `VALUES` retype — four
+`ntz_values_mix` tests and `test_mixed_values_column_types_timestamp` (`timestamp_ntz`).
+
+**Ruling 102 and Q1 (C-035).** The two `encoded|TIMESTAMP|…` rows name ruling 102: encoded
+into a microsecond column keeps today's behaviour; the ruling-92 fix touches nanosecond
+targets only. The four `r017_update_nowhere_ntz_cast` cells are dated rows of the Q1
+ruling, owned by card
+[ICE-TSNS-UPDATE-NTZ-CAST-1](../../roadmap/mid-term/ice-tsns-update-ntz-cast-1-card-2026-10-15.md).
+
+**The head after the round** (the fixture on the final module, `--jobs 8`): census 9,570 /
+30 red, cache 420 / 0, reads 117 / 0, consumer 92 / 0, repros 297 / 51, lattice 120 / 0,
+positions 480 / 96, doors 12 / 7, encoded 4 / 2, update_forms 8 / 0, q6 1 / 0; every red
+cell is a dated row; statements today's main answers that the head loses: 108, all ruling
+38's carve-out. `cargo test` of the five crates: one test red, the analyzer-list pin. The
+facade suite: 17,045 passed, 0 failed.
+
+**The read-perf bench (C-034).** The five pins (`benches/ice_read_perf/pins.rs`) failed
+on the carry-over on the integer-cast error and pass on the head; they are not re-pinned.
+Timing: `ice_read_perf` built for the head (`563c61a9`, product code final) and for main
+`fa1e4274` alike (bench profile, `CARGO_PROFILE_BENCH_CODEGEN_UNITS=16` for both), one bed of
+200 files and 1.43 GB written by main's binary, every timed run inside the shared cargo lock
+(so no lock-holding build ran beside it), runs on cores 32 to 47, head and main interleaved. First
+pass, warm and cold `--repeat 5`, three rounds each:
+
+| mode | query | head median total ms (15 samples) | main median total ms (15 samples) | head / main |
+|---|---|---:|---:|---:|
+| warm | Q1 | 3.11 | 2.84 | 1.092 |
+| warm | Q2 | 23.84 | 24.66 | 0.967 |
+| warm | Q3 | 8.96 | 8.64 | 1.037 |
+| warm | Q4 | 11.89 | 11.96 | 0.995 |
+| warm | Q5 | 42.60 | 43.65 | 0.976 |
+| warm | Q6 | 654.55 | 656.64 | 0.997 |
+| warm | Q7 | 6.62 | 6.35 | 1.043 |
+| cold | Q1 | 11.00 | 10.83 | 1.016 |
+| cold | Q2 | 41.68 | 41.58 | 1.002 |
+| cold | Q3 | 15.21 | 16.04 | 0.948 |
+| cold | Q4 | 15.93 | 16.16 | 0.986 |
+| cold | Q5 | 60.49 | 60.95 | 0.992 |
+| cold | Q6 | 663.26 | 667.64 | 0.993 |
+| cold | Q7 | 13.95 | 14.10 | 0.989 |
+
+Warm Q1 (`count(*)`, 3 ms, all planning) read 1.09x; its per-round medians ranged 2.3 to
+3.6 ms on the head and 2.6 to 3.0 ms on main, so warm mode was timed again inside the lock,
+six interleaved rounds of `--repeat 15` (90 samples a query a side):
+
+| query | head median total ms (6 x 15 samples) | main median total ms (6 x 15) | head / main | per-round ratios |
+|---|---:|---:|---:|---|
+| Q1 | 2.96 | 3.05 | 0.971 | [0.98, 1.02, 0.92, 1.11, 1.08, 0.94] |
+| Q2 | 24.49 | 24.31 | 1.007 | [0.92, 1.01, 1.01, 1.0, 1.0, 1.07] |
+| Q3 | 9.52 | 9.16 | 1.039 | [1.01, 1.3, 1.13, 1.01, 1.05, 0.96] |
+| Q4 | 11.80 | 11.60 | 1.017 | [1.02, 1.13, 1.0, 0.98, 1.04, 1.0] |
+| Q5 | 40.59 | 40.09 | 1.013 | [0.88, 1.14, 1.16, 0.98, 0.9, 0.99] |
+| Q6 | 658.03 | 657.88 | 1.000 | [1.01, 1.0, 1.0, 0.98, 1.01, 1.01] |
+| Q7 | 6.34 | 6.40 | 0.991 | [0.88, 0.96, 1.01, 1.03, 1.04, 0.99] |
+
+Every query is at or under 1.05x of main on the 90-sample timing (largest Q3, 1.039x); the
+gate holds, and no pin moves.
+
 ## Q. Questions for the hand-back
 
-- **Q1 (ruling 91's written NTZ cast).** `UPDATE T SET v = CAST(c AS TIMESTAMP_NTZ) WHERE
-  id >= 0` over a nanosecond `c` truncates (`-1 ns` stores `0`), while the same SET with no
-  `WHERE` floors (`-1000` into `timestamp_ns`); 4 repros. Today's main refuses the `WHERE`
-  form (TZ-6). The identity `UPDATE … WHERE` re-plans the SET text with plain DataFusion
-  SQL, where a written NTZ cast over nanoseconds is an Arrow cast; the floor lives in the
-  Spark door's lowering. Closing it needs a second seam (the analyzer's NTZ half in
-  `repark-functions`). Lean: its own card beside R-017's NTZ line; the 4 repros become
-  dated rows, since they are red on today's main too.
-- **Q2 (eight residue cells green on main).** `array_append` / `array_prepend` beside a
-  `TIMESTAMP_NTZ` value over a `timestamptz_ns` site (New York, Kolkata) and
-  `v2_array_except` / `v2_array_intersect` over `tzns` (UTC, New York) are red on the head
-  and green on today's main. They are residue of ruling 93, so U-1 builds nothing for
-  them, and they have no red pin on main, so they cannot be dated rows. Lean: dated rows
-  owned by the H5 card, with the green-on-main fact on the row.
-- **Q3 (ruling 92's microsecond premise).** "Encoded ns into a µs column stays what plain
-  ns into µs is today": measured, it is not. On today's main and the head, an encoded
-  `-1500 ns` into `TIMESTAMP` stores `-1 µs` and the plain value `-2 µs`. The two cells are
-  dated rows under R-024 / NS-ENCODED-NESTED-FLOOR-1. Lean: keep them there.
-- **Q4 (the UNION seam).** The UNION fix is one function in the kernel's return field, not
-  the rule's union projection the brief named (§2). Lean: it stands as the rule-gap round's
-  UNION commit.
-- **Q5 (the carry-over moves existing pins).** Step 0 measured the fixture, not the
-  existing suites. On the carry-over head, before any round of this brief, 51 Rust tests and
-  27 facade tests that pass on main fail (§10); three of the facade tests are statements
-  main answers that now error, which is this brief's halt. Their causes sit in the carried
-  planner, deletions and by-target kernels (the `TIMESTAMP_LTZ` naming, the native door's
-  instant, `VALUES` conform, the nested NTZ refusal, the by-target kernel on an integer
-  coercion cast). Lean: rule which of the six groups are intended moves to re-pin (the
-  `timestamptz_ns` literal family is R-010's fix; the `repark.sql()` group is ruling 94's
-  PA-02 row) and open one carry-over fix round for the rest, beginning with the three
-  errors.
+The fresh build's Q1 to Q5 are answered: Q1 by the orchestrator's provisional ruling (its own
+card and four dated rows), Q2 by ruling 101 (fixed, §11), Q3 by ruling 102, Q4 by the
+orchestrator's provisional ruling (the UNION fix stands at the kernel's return field), Q5 by
+ruling 100 (§11). The carry-over fix round asks:
 
+- **Q1 (the analyzer-list pin).** `extension::tests::analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion`
+  asserts that the Spark door's analyzer list, minus a named set of insertions, is
+  DataFusion's default list. The carried widen rule (`203f9821`) is one more insertion
+  before `type_coercion` (C-012). Spark has no answer for an internal rule list and the Q6
+  contract does not cover it, so ruling 100 allows no re-pin, and no fix keeps the pin
+  without removing M3's seam. Lean: add `spark_timestamp_unit_widen` to the test's named
+  insertions and pin its seat right before `type_coercion`, naming C-012 and the sketch.
+- **Q2 (R-017's pin, re-pinned to a microsecond twin).** R-017's own pin refused the defect;
+  the fix makes the statements store. Spark has no nanosecond type, so the value was taken
+  from Spark 4.1.2's run of the same four statements over a microsecond column (a NULL takes
+  its sibling's type, R-017's documented oracle). Lean: it stands.
+- **Q3 (PA-02's premise).** Ruling 94 left the `repark.sql()` cell to PA-02's routing fix;
+  PA-02's branch routes `repark.sql()` through `LocalFsGuardedDialect`, which hands in no type
+  planner, so that fix would not have closed the cell. Ruling 100 made the five cells where
+  main answers the wall a fix, and the fix is the Q6 contract on the native door, so the Q6
+  cell is green and its dated row retired. The two branches touch the same line of
+  `crates/repark-python/src/session.rs` (`.with_extension(NativeDoorTypes)` and
+  `.with_sql_dialect(LocalFsGuardedDialect)`): a textual conflict whose resolution keeps
+  both calls. Lean: it stands.

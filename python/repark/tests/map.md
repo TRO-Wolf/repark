@@ -360,7 +360,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nested name, and the R4 refusal (TZ-6) no longer fires.
   `test_nested_cast_target_keeps_the_r4_refusal` is gone; `ntz_1_spark_oracle.json` gains
   `cast_nested_ntz_array` and `cast_nested_ntz_struct`, recorded live on Spark 4.1.2 (UTC,
-  ANSI on, 2026-10-15), and `test_select_cells_replay_spark` replays them.
+  ANSI on, 2026-10-15), and `test_select_cells_replay_spark` replays them. pins: ice-tsns-type-planner-1/C-033
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -388,7 +388,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with Spark's recorded text (`CANNOT_SAFELY_CAST … "TIMESTAMP_NTZ" to "INT"`) instead of the
   nested-target gate's `UNSUPPORTED_TIMESTAMP_NTZ` (divergence R-NTZ-S2-10): with the planner
   the gate no longer fires, as for the nested NTZ cast. The step drops its divergence; a step
-  with only `spark_error` asserts Spark's text.
+  with only `spark_error` asserts Spark's text. pins: ice-tsns-type-planner-1/C-033
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) +
   [ntz_store_doors_1_spark_oracle.json](ntz_store_doors_1_spark_oracle.json) —
   **WO NTZ-STORE-DOORS-1 (2026-09-28):** 66 door cells (UTC, New York, Kolkata ×
@@ -2832,7 +2832,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):**
   `test_cast_nullability_native_door_keeps_datafusion` pins `CAST(DATE … AS TIMESTAMP)` on
   `repark.sql()` as `timestamp[us]`, the Q6 contract's wall (ruling 94), where main answered
-  DataFusion's `timestamp[ns]` wall; the nullability it pins is unchanged.
+  DataFusion's `timestamp[ns]` wall; the nullability it pins is unchanged. pins: ice-tsns-type-planner-1/C-029
 - [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — **CSV-INFER-PERF-1 (2026-09-06):**
   plan-time `to_arrow`/`collect` stay ≤ 1 on inferSchema (one `try_cast` aggregation)
   and 0 when `inferSchema=False`; wall pin on a 300k × 8 CSV is a 0.5 s regression
@@ -3250,7 +3250,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-010, ruling 100, 2026-10-15):** the `update_literal`
   door with a `timestamp_ns` or `timestamptz_ns` literal stores now that the planner types
   both names in `UPDATE`; `STILL_REFUSED` is gone and the cells assert R-010's rule, the
-  instant `INSERT` stores, nine digits exact (`expected_instants`, `value % 1_000`).
+  instant `INSERT` stores, nine digits exact (`expected_instants`, `value % 1_000`). pins: ice-tsns-type-planner-1/C-033
 - [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-TYPE-PLANNER-1
   (2026-10-15), R-010's re-pin:** `r010_answers` names the `update_literal` door with a
   `timestamp_ns` or `timestamptz_ns` literal, which main refused by name (`Unsupported SQL
@@ -3387,7 +3387,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-tsns-type-planner-1/C-006, C-007, C-008, C-009, C-010, C-023, C-024
   **Carry-over fix, ruling 101 (2026-10-15):** the eight list cells red on the head and green
   on today's main are green; the four `repro|v2_array_except|ns|…` /
-  `repro|v2_array_intersect|ns|…` residue rows turned green with them and are retired.
+  `repro|v2_array_intersect|ns|…` residue rows turned green with them and are retired. pins: ice-tsns-type-planner-1/C-030, C-026
 - [ice_tsns_type_planner_1_dated.json](ice_tsns_type_planner_1_dated.json) —
   **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the dated rows: cells a ruling keeps red, each
   with its date, ruling and owner. A dated cell may be red or lose a statement main
@@ -3402,6 +3402,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   an encoded nanosecond source into `TIMESTAMP` truncates where the plain one floors, on
   today's main too (R-024). pins: ice-tsns-type-planner-1/C-015,
   C-021
+  **Carry-over fix round (2026-10-15):** the four `repro|r017_update_nowhere_ntz_cast|…` cells
+  are dated rows (orchestrator ruling on Q1, card ICE-TSNS-UPDATE-NTZ-CAST-1, red on today's
+  main), and the two `encoded|TIMESTAMP|…` rows name ruling 102 (an encoded ns value into a
+  microsecond column keeps today's behaviour, R-024). pins: ice-tsns-type-planner-1/C-035
 - [_ice_tsns_type_planner_1_rule.py](_ice_tsns_type_planner_1_rule.py) —
   **ICE-TSNS-TYPE-PLANNER-1:** the rule as a harness. `statement_of` and `twin_of` write
   the two texts of a cell from one marked text (`{N}` is the NULL, `<<x>>` an operand
@@ -3447,7 +3451,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Carry-over fix (ruling 100, 2026-10-15):** the ANSI-door lattice (`repark.sql()`) spells
   the zoned microsecond operand `TIMESTAMPTZ '…'` (`ANSI_OPERANDS`): with the ANSI planner on
   that door `TIMESTAMP` is the wall, per the Q6 contract. The Q6 cell is green, so its dated
-  row is retired.
+  row is retired. pins: ice-tsns-type-planner-1/C-029
 - [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
   [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
   **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,
@@ -7992,7 +7996,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `TIMESTAMP_LTZ` divergence map is gone and
   `test_refusal_timestamp_python_door_names_sparks_type` (was
   `test_refusal_timestamp_ltz_is_expected_divergence`) pins Spark's name; the SQL door's four
-  cells are green again.
+  cells are green again. pins: ice-tsns-type-planner-1/C-028
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND
