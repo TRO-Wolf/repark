@@ -10302,6 +10302,29 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   callers: 573 red, the fixture's 566 and the seven retired residues) and of the registry rows
   and 1.5.6 notes lines it closes. pins: ice-struct-pairing-1/C-001, C-003, C-004, C-005, C-008,
   C-011, C-016, C-017, C-018, C-021, C-022, C-023
+- [_record_ice_struct_pairing_1_round3.py](_record_ice_struct_pairing_1_round3.py) —
+  **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), parity row R-016:** extends
+  `_record_ice_struct_pairing_1.py` with three groups merged into the same two recordings
+  (`ice_struct_pairing_1_spark_oracle.json`, live Spark 4.1.2; `ice_struct_pairing_1_main.json`,
+  main `293896ce`): `r3_leaf` (twelve struct leaf cases, from a STRING into a BIGINT to an INT
+  against a STRUCT, through the sixteen matrix doors and both `INSERT OVERWRITE … PARTITION`
+  spellings: 216 cells, verifier 1's F-01 and F-06), `r3_part` (24 shapes and eight case
+  shapes through both `PARTITION` spellings, format versions 2 and 3, `caseSensitive` both
+  ways for the case shapes: 160 cells, F-08 and the carve-out of ruling 58) and `r3_misc`
+  (34 cells: the column-list `VALUES` door, F-02; É/é, ẞ/ß and the non-matching ß/SS by name,
+  F-03; `UPDATE` from a scalar subquery reordered and in order, F-04; the case-sensitive
+  `UPDATE` twins with and without `WHERE`, F-05; an explicit `CAST` of a struct on five
+  doors). A refusal also records the table after it. Merges into an existing recording, so
+  the matrix groups are not re-recorded.
+- [test_ice_struct_pairing_1_round3.py](test_ice_struct_pairing_1_round3.py) —
+  **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), parity row R-016:** replays the 410
+  round-3 cells on one session and holds each to the Spark recording: a store stores Spark's
+  rows; a refusal carries Spark's condition, Spark's detail text and leaves the table as
+  Spark left it. The one exception is the dated carve-out of ruling 58: on the two
+  `PARTITION` spellings a struct whose field names differ from the table's, where Spark
+  stores, refuses with hint H-1 (its condition, the workaround phrase "the table's field
+  names in the table's", the table unchanged). The cells main cannot seed (a required nested
+  field, verifier 1's out-of-scope note) are pinned as still unseedable.
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)
