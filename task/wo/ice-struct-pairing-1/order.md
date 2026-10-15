@@ -138,6 +138,26 @@ the list stands.
 - **Owner, 2026-10-14, ruling 57 (a):** "Column-list VALUES pairs by position." `INSERT INTO t
   (st, id) VALUES (…)` takes the positional mode like every other INSERT door (F-02's three
   repros). The scope change is recorded in §0.
+
+**Exception round (owner, 2026-10-15, rulings 73 and 74).** Ruling 73 (a): "as the one named
+exception to ruling 55, on three conditions: the two failures are named in the hand-back with
+their shape before the round opens; both are inside the pairing class, or the lane parks; Muse
+xhigh builds, the Opus verifier re-runs those cells and the four mutants only. A FAIL from that
+verifier parks U-6 with no further round and the v2 date is re-planned the same day." Ruling 74
+(a): "An UPDATE that reports success and writes nothing is a silent failure. The whole family
+stores Spark's value or refuses loudly, in-order shapes included." The scoped re-verifier of
+build round 3 returned FAIL on `5b97a250` (2026-10-15 02:15); the two failures, re-measured
+2026-10-15 on the head module byte-identical to `verify2/out/Q-*.json` and `R2-*.json`, are:
+V2-01, `UPDATE t SET st = (SELECT st FROM t_src) WHERE true` (also `WHERE id IN (0, 3)`, no
+`WHERE`, and `(SELECT st FROM t_src WHERE id = 1)`), reordered and in-order source: head
+succeeds and writes nothing where Spark stores `{a:1,b:2}` in every row, main refusing the
+reordered shapes loudly and the same silent success in order; V2-02, `INSERT INTO t VALUES (1,
+named_struct('b', 2, 'a', 1)), (2, named_struct('x', 7, 'y', 8))` (also with the `(id, st)` and
+`(st, id)` lists): head stores by position where Spark refuses
+`[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE]` with nothing written, main refusing.
+Scope of the exception round: V2-01's family, V2-02, Rust pins that kill the four surviving
+mutants of verdict finding V2-03 (`V2_L1`, `V2_N3`, `V2_N4`, `V2_N5`), the ruling 75 note and the
+ruling 76 row edit.
 - **Owner, 2026-10-14, ruling 58 (a), as a dated carve-out row:** "both PARTITION spellings, 38
   cells per route, refusal with a hint naming the workaround (fields in table order), closed by
   the routing unit from question 34(b)." The static-partition row
