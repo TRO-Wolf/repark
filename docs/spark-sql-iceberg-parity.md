@@ -1733,7 +1733,11 @@ perfectly good read.
   kinds (an unknown kind refuses), read from the structure of the commit and not from its
   text, so no property value or column comment can lock a keyed table; table-metadata JSON
   is writable only in the table's metadata directory. Open residue: card ENC-1-RESIDUE-1
-  (`../task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md`).
+  (`../task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md`). As of 2026-10-15
+  (rulings 96, 97): a refused keyed write deletes the files it staged but never a file a
+  snapshot references, and every catalog provider RePark builds is guarded; the census of
+  stage-then-commit sites is held on an uncarded ANSI CREATE OR REPLACE TABLE AS SELECT
+  site.
   Implementing envelope encryption stays fork work (GAP_MATRIX R130) and is not on the
   v1.0 slate.
 - **Divergence (2026-10-09, by ruling, owner can overturn):** the ruling's phrase "as Spark

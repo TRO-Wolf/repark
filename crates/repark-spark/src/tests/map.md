@@ -58,6 +58,24 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   leaves the warehouse listing exactly as before: append, branch append, the six
   write-options doors, overwrite × 2, partition overwrite × 2, overwrite-by-filter.
   Control: the same staged append on an unkeyed table still stores (snapshot + file).
+  Fix round (2026-10-15, ruling 96 F4):
+  `keyed_refusal_names_an_undeletable_staged_file_through_engine_err` stages through a
+  stale handle, makes the data directory read-only, and requires `engine_err`'s message
+  to start with the refusal text and name the file it could not delete.
+- `enc_1_referenced.rs` — **ENC-1-RESIDUE-1 fix round (2026-10-15, ruling 96 F1):** one
+  pin per public family (append, branch append, five write-options doors, overwrite × 2,
+  partition overwrite × 2, overwrite by filter), each on v2 and v3: a file only the first
+  snapshot references (an INSERT OVERWRITE removed it from the current one) goes into the
+  door beside a fresh staged file; after the keyed refusal the referenced file still
+  reads back its one row, the fresh one is gone, and the table reads. The streaming
+  `append_staged_with_options` door takes no file list, so it has no row here.
+- `enc_1_registry.rs` — **ENC-1-RESIDUE-1 item 5 (2026-10-15, ruling 97):** the
+  `CatalogRegistry::insert` entry-check pin: an unguarded catalog inserted straight into
+  the registry still refuses a keyed INSERT through `crate::execute` with the one text
+  and writes no Parquet.
+- `enc_1_paths.rs` — **ENC-1-RESIDUE-1 fix round (2026-10-15, ruling 96 F6):** compile pin
+  naming `repark_iceberg::write::append::commit_append`, the same item as
+  `write::commit_append`.
 - `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
   pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
   source/target/column named and nothing written; in-range, int-to-int and string stores

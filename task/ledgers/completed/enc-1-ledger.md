@@ -1,3 +1,31 @@
+> **Errata (2026-10-15, ENC-1-RESIDUE-1 fix round, owner rulings 96 and 97):** the
+> verifier failed PR #1071 at `c7713000` (F1 to F6). Owner ruling 96, verbatim: "96: (a), as
+> listed. One fix round on Opus 5.5 high on the same branch, then the scoped re-verifier.
+> Not green means park; no third round without the delegate's look. F3 is the ruling-71
+> census pin, not a marker scan. F5's tests must be able to fail." Owner ruling 97,
+> verbatim: "97: (a), installed once. The guard goes into
+> ReparkCatalogProvider::try_new (catalog/provider.rs:35); repark_iceberg's
+> register_iceberg_catalog and the Session door both build through it and inherit. No
+> second copy. Three door pins: a keyed INSERT refuses and leaves no unencrypted file
+> through each public entry. CatalogRegistry::insert keeps its entry-check pin. Same
+> round as 96." What now holds:
+>
+> - F1 closed: the keyed sweep skips every path any snapshot's manifests reference. Pins
+>   in `enc_1_referenced.rs` (six public families) and `snapshot_commit.rs` (merge
+>   overwrite, row delta).
+> - Ruling 97 closed: the guard is installed in `ReparkCatalogProvider::try_new` and
+>   nowhere else; the session registry holds the provider's guarded handle. Door pins in
+>   `iceberg_guard_registration.rs`; `CatalogRegistry::insert` entry-check pin in
+>   `enc_1_registry.rs`.
+> - F5 closed: the item-5 pins measure on disk and fail with the install removed.
+> - F4 closed at the session (`engine_err`); open for the micro-batch `engine_error` and
+>   the Python cell (hand-back questions Q2, Q3).
+> - F6 closed: `write::append::commit_append` resolves again (`enc_1_paths.rs`).
+> - F3 open: the census by the commit call finds
+>   `repark-sql/src/create_table.rs::{execute_staged_create, publish_staged_with_summary}`
+>   with no card; held for a ruling (hand-back question Q1). The committed census is
+>   still the marker scan.
+
 > **Errata (2026-10-15):** Residue items from card ENC-1-RESIDUE-1.
 >
 > - Item 1 closed: a refused keyed commit deletes the files its write staged. Pin `keyed_table_refused_write_options_doors_sweep_their_staged_files` with one pin per operation family in `enc_1_sweep.rs` and `snapshot_commit.rs`, plus the census `every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal`.

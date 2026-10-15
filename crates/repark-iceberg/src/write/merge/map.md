@@ -258,6 +258,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   base `e6ebd40` and tip, N=8 and N=192: scan-to-puffin 1 × N, close 0, commit 1 × N.
   pins: rp-7-f18-repin/C-002
   pins: perf-scan-1-plan-once/C-001, C-002, C-004
+- `snapshot_commit.rs` keyed-sweep pins — **ENC-1-RESIDUE-1 fix round (2026-10-15,
+  ruling 96 F1):** `keyed_refused_merge_overwrite_keeps_a_snapshot_referenced_file` and
+  `keyed_refused_row_delta_keeps_a_snapshot_referenced_file` hand a file the current
+  snapshot references in beside a fresh one; after the keyed refusal the referenced file
+  reads back its two rows and the fresh one is gone.
 - `snapshot_commit.rs::sweep_after_rejected_commit` — the merge commit-error funnel
   (was `abort.rs`, hoisted to `../encryption.rs` on 2026-10-15 for ENC-1-RESIDUE-1 item
   1; `abort.rs` deleted). Delete

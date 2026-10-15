@@ -29,8 +29,12 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **A refused write to a table carrying `encryption.key-id` no longer leaves its staged
   Parquet behind.** When the commit refuses because the table is keyed, every file the
-  write staged is deleted before the refusal returns; the refusal text is unchanged.
+  write staged is deleted before the refusal returns; the refusal text is unchanged. A
+  file that any snapshot of the table references is never deleted, and a staged file
+  that could not be deleted is named in the error the session returns.
 - **Every catalog registered on a session is now guarded, including one a Rust embedder
-  builds directly.** `Session::register_iceberg_catalog` installs the encryption guard
-  itself, so a directly-built catalog refuses a keyed write exactly as a builder's
-  catalog does.
+  builds directly.** `ReparkCatalogProvider::try_new` installs the encryption guard, so
+  `Session::register_iceberg_catalog`, `repark_iceberg::catalog::register_iceberg_catalog`
+  and a provider registered by hand all refuse a keyed write on a directly-built catalog
+  exactly as on a builder's catalog. `repark_iceberg::write::append::commit_append`
+  resolves again.

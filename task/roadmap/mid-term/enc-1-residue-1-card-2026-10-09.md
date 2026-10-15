@@ -2,8 +2,10 @@
 
 **Date:** 2026-10-09. **Filed by:** Claude (Opus 5.5), ENC-1 fold 2, from the Opus re-verify of PR #1019 head `78349722`.
 
-**Status:** retired 2026-10-15. Every item below is ruled: items 1 and 5 closed by a
-change with pins, items 2, 3, 4 and 6 accepted in words.
+**Status:** reopened 2026-10-15 by the verifier's FAIL of PR #1071 (F1 to F6) and owner
+rulings 96 and 97; one fix round ran. Items 2, 3, 4 and 6 stay accepted in words. Item 5
+is closed. Item 1 is closed except the F3 census, which is held for a ruling on an
+uncarded site (see "Fix round" below).
 
 **Retires:** when every item below is ruled (accepted in words, or closed by a change with a pin).
 
@@ -66,3 +68,38 @@ These refuse on a keyed table and are kept until the owner says otherwise: `CREA
 6. **Accepted 2026-10-14.** A commit that moves a keyed table's metadata directory
    refuses on Glue, and that stays a documented refusal, with one acceptance cell to
    add when U-9's legs are built.
+
+## Fix round (owner rulings 96 and 97, 2026-10-15)
+
+Ruling 96, verbatim: "96: (a), as listed. One fix round on Opus 5.5 high on the same
+branch, then the scoped re-verifier. Not green means park; no third round without the
+delegate's look. F3 is the ruling-71 census pin, not a marker scan. F5's tests must be
+able to fail."
+
+Ruling 97, verbatim: "97: (a), installed once. The guard goes into
+ReparkCatalogProvider::try_new (catalog/provider.rs:35); repark_iceberg's
+register_iceberg_catalog and the Session door both build through it and inherit. No
+second copy. Three door pins: a keyed INSERT refuses and leaves no unencrypted file
+through each public entry. CatalogRegistry::insert keeps its entry-check pin. Same round
+as 96."
+
+- **Item 1, F1 (closed):** the sweep never deletes a file any snapshot references; pins
+  `enc_1_referenced.rs` (six public families) and the two merge pins in
+  `snapshot_commit.rs`.
+- **Item 1, F4 (session closed, two parts open):** `engine_err` keeps the refusal's class
+  and the " failed to delete staged file …" suffix (pin
+  `keyed_refusal_names_an_undeletable_staged_file_through_engine_err`). Open: the
+  micro-batch `engine_error` (its `EncryptedSinkRefused { sink }` cannot carry the suffix
+  without a public type change) and the Python cell (no facade path can make a staged
+  file undeletable between staging and commit).
+- **Item 1, F3 (held):** the census by the commit call finds, besides the 13 ruled sites
+  and the two merge sites, `repark-spark/src/ctas.rs::finish_ctas_staged_commit`
+  (excepted under card ENC-CTAS-REPLACE-1, owner ruling 98) and
+  `repark-sql/src/create_table.rs::execute_staged_create` and
+  `::publish_staged_with_summary`, which no card names.
+- **Item 1, F6 (closed):** `write::append::commit_append` resolves again.
+- **Item 5 (closed):** the guard is installed once, in `ReparkCatalogProvider::try_new`;
+  the session's registry holds the provider's guarded handle. Door pins, registry-handle
+  pin and every-door double-wrap pin in `iceberg_guard_registration.rs`;
+  `CatalogRegistry::insert` entry-check pin in `enc_1_registry.rs`. F5: the item-5 pins
+  measure on disk and fail with the install removed.

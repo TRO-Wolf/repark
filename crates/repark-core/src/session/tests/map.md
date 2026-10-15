@@ -428,6 +428,18 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `session_registration_guards_a_directly_built_catalog` builds a memory catalog
   straight from the fork builder, registers it through the session, and refuses
   exactly as the builder's catalog does, writing no Parquet.
+  Fix round (2026-10-15, rulings 96 F5 and 97): both pins now prove the disk is
+  reachable (an unkeyed sibling table's Parquet is read back from the `TempDir` with its
+  `PAR1` magic) before asserting no file under the keyed table; the direct catalog is
+  built with `storage_factory_for_location`, not the fork builder's in-memory `FileIO`;
+  the double-wrap pin also requires a fresh wrap. Door pins: a keyed INSERT refuses and
+  writes no Parquet through the session, the free `register_iceberg_catalog` on a plain
+  `SessionContext`, and `ReparkCatalogProvider::try_new` + `register_catalog`;
+  `session_registry_holds_the_provider_guarded_handle` (`Arc::ptr_eq` of registry and
+  provider handles, a refused write on the registry path);
+  `every_door_wraps_a_guarded_catalog_again_with_one_refusal_text` (each door's
+  double-wrapped text equals its single-wrapped text). Removing the install from
+  `try_new` turns all seven red.
 - `conf_unread.rs` — **CONF-UNREAD-1 step 1 (2026-09-11):** the four
   accepted-but-unread keys. `coalesce_batches` refuses loud at build and at
   runtime `SET`, naming the key and the reason (DataFusion 54.1.0 defines the

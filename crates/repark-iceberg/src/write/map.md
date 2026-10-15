@@ -522,6 +522,16 @@ repark-core's error map.
   handed — never a directory listing, never a snapshot-referenced file — and only on a
   keyed refusal found through `EncryptedTableRefusal::find`; any other error, including
   unknown commit state, returns unchanged.
+  **ENC-1-RESIDUE-1 fix round (2026-10-15, owner ruling 96 F1):** before deleting, the
+  sweep drops every path that a data or delete manifest of any snapshot in the held
+  table's metadata references (`snapshot_referenced_paths`, every snapshot, each
+  manifest read once), so a caller that hands a public door a referenced file never
+  loses it; if those manifests cannot be read nothing is deleted and each staged path is
+  named in the refusal. The refusal text is unchanged when every unreferenced path goes.
+  pins: `repark-spark/src/tests/enc_1_referenced.rs` (one per public family, a file only
+  a historical snapshot references), `merge/snapshot_commit.rs`
+  `keyed_refused_merge_overwrite_keeps_a_snapshot_referenced_file`,
+  `keyed_refused_row_delta_keeps_a_snapshot_referenced_file`
 - `conform.rs`, `overwrite.rs`, `partition_overwrite.rs`, `merge/mod.rs` — **ICE-TSNS-FLOOR-DOORS-1
   guard (2026-10-14, provisional, the order's lean A):** `conform::strict_store_cast(name, column,
   target)` is today's strict cast unless a top-level timestamp's unit would get coarser, where
@@ -583,8 +593,10 @@ repark-core's error map.
   **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_partitioned_data_files*`
   family moved to `partitioned_files.rs` (re-exported here; baseline 1804 → 1737).
   **ENC-1-RESIDUE-1 item 1 (2026-10-15):** `commit_append` moved to
-  [`append_commit.rs`](append_commit.rs) (pure move; re-exported from `append.rs` so
-  callers keep their paths; baseline 1737 → 1719). Every stage-then-commit site in
+  [`append_commit.rs`](append_commit.rs) (pure move; baseline 1737 → 1719). Fix round
+  (2026-10-15, ruling 96 F6): `append.rs` now `pub use`s it, so
+  `write::append::commit_append` resolves again with no line-count change; pin
+  `repark-spark/src/tests/enc_1_paths.rs`. Every stage-then-commit site in
   this directory — `append_commit.rs::commit_append`,
   `commit_target.rs::commit_append_to`, the six `write_options.rs` doors,
   `overwrite_commit.rs` × 2, `partition_overwrite.rs` × 2,

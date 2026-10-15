@@ -134,8 +134,15 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   when the found set differs from the listed 15 sites — so a new unswept site, and a
   new swept site without a list update, both go red. `SWEEP_SITES` names the 13 wired
   sites plus the two merge sites.
-  `session_registration_installs_the_encryption_guard` holds the installer spelling
-  `EncryptionGuardCatalog::install` in `repark-core/src/session.rs`.
+  `the_catalog_provider_installs_the_encryption_guard_once` (ruling 97, 2026-10-15,
+  replacing `session_registration_installs_the_encryption_guard`) holds the installer
+  spelling `EncryptionGuardCatalog::install(` inside `ReparkCatalogProvider::try_new` and
+  its absence from `repark-core/src/session.rs` (no second copy).
+  Fix round (2026-10-15, ruling 96 F3): this census is still the marker-textual,
+  `src/write/`-only scan. The rewrite by the commit call (all three crates, helper
+  splits, the staged-path provenance check) is held: it finds
+  `repark-sql/src/create_table.rs::execute_staged_create` and
+  `::publish_staged_with_summary`, which no card names (hand-back question Q1).
 
 ## Pointers
 
