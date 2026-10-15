@@ -714,7 +714,7 @@ mod tests {
         )
         .await
         .expect("seed write succeeds");
-        let table = crate::write::commit_append(&catalog, &table, seeded)
+        let table = crate::write::append::commit_append(&catalog, &table, seeded)
             .await
             .expect("seed commit");
         let live = warehouse_data_files(&warehouse);

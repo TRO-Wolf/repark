@@ -65,6 +65,7 @@ mod dyn_by_name_overwrite;
 mod dyn_partition_overwrite;
 mod enc_1;
 mod enc_1_fold;
+mod enc_1_paths;
 mod enc_1_referenced;
 mod enc_1_registry;
 mod enc_1_sweep;

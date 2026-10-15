@@ -9,7 +9,7 @@ use iceberg::spec::DataFile;
 use iceberg::table::Table;
 use iceberg::{Catalog, TableIdent};
 
-use crate::write::append_commit::commit_append;
+pub use crate::write::append_commit::commit_append;
 use crate::write::conform::{conform_batches, write_default_column_names};
 use crate::write::distribution::{route_partitioned_stream, send_routed};
 use crate::write::merge::write_data_files_with_concurrency;
