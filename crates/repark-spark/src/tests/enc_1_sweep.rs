@@ -99,122 +99,163 @@ async fn keyed_table_refused_branch_append_sweeps_its_staged_file() {
     assert!(faults.is_empty(), "{}", faults.join("\n"));
 }
 
+async fn write_options_append_doors_sweep(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    warehouse: &TempDir,
+    stale: &iceberg::table::Table,
+    version: &str,
+    before: &Frozen,
+    faults: &mut Vec<String>,
+) {
+    let catalog = catalogs.get("ice").expect("ice catalog is registered");
+    let staged = stage_stale_batch(ctx, stale).await;
+    let result =
+        repark_iceberg::write::commit_append_with_summary(catalog, stale, staged, &[], None).await;
+    check_swept(
+        faults,
+        version,
+        "staged append",
+        result,
+        before,
+        &freeze(ctx, warehouse, catalogs, "t").await,
+    );
+    let batches = ctx
+        .sql("SELECT 9 AS id, 'z' AS name")
+        .await
+        .expect("staging source frames")
+        .collect()
+        .await
+        .expect("staging source collects");
+    let stream = futures::stream::iter(batches.into_iter().map(Ok::<_, DataFusionError>));
+    let result = repark_iceberg::write::append_staged_with_options(
+        catalog,
+        stale,
+        stream,
+        &[],
+        &repark_iceberg::write::WriterStagingOverrides::none(),
+        repark_iceberg::write::WriteConcurrency::default(),
+        None,
+    )
+    .await;
+    check_swept(
+        faults,
+        version,
+        "streaming staged append",
+        result,
+        before,
+        &freeze(ctx, warehouse, catalogs, "t").await,
+    );
+    let staged = stage_stale_batch(ctx, stale).await;
+    let result =
+        repark_iceberg::write::commit_replace_write_with_summary(catalog, stale, staged, &[]).await;
+    check_swept(
+        faults,
+        version,
+        "replace write",
+        result,
+        before,
+        &freeze(ctx, warehouse, catalogs, "t").await,
+    );
+}
+
+async fn write_options_overwrite_doors_sweep(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    warehouse: &TempDir,
+    stale: &iceberg::table::Table,
+    version: &str,
+    before: &Frozen,
+    faults: &mut Vec<String>,
+) {
+    let catalog = catalogs.get("ice").expect("ice catalog is registered");
+    let staged = stage_stale_batch(ctx, stale).await;
+    let result = repark_iceberg::write::commit_overwrite_replace_all_with_summary(
+        catalog,
+        stale,
+        staged,
+        None,
+        &[],
+        None,
+    )
+    .await;
+    check_swept(
+        faults,
+        version,
+        "replace-all overwrite",
+        result,
+        before,
+        &freeze(ctx, warehouse, catalogs, "t").await,
+    );
+    let staged = stage_stale_batch(ctx, stale).await;
+    let overwrite = repark_iceberg::write::StaticPartitionOverwrite {
+        predicate: iceberg::expr::Predicate::AlwaysTrue,
+        equalities: Vec::new(),
+    };
+    let result = repark_iceberg::write::commit_overwrite_by_row_filter_with_summary(
+        catalog,
+        stale,
+        staged,
+        overwrite,
+        None,
+        &[],
+        None,
+    )
+    .await;
+    check_swept(
+        faults,
+        version,
+        "row-filter overwrite",
+        result,
+        before,
+        &freeze(ctx, warehouse, catalogs, "t").await,
+    );
+    let staged = stage_stale_batch(ctx, stale).await;
+    let result = repark_iceberg::write::commit_replace_partitions_with_summary(
+        catalog,
+        stale,
+        staged,
+        None,
+        &[],
+        None,
+    )
+    .await;
+    check_swept(
+        faults,
+        version,
+        "replace partitions",
+        result,
+        before,
+        &freeze(ctx, warehouse, catalogs, "t").await,
+    );
+}
+
 #[tokio::test]
 async fn keyed_table_refused_write_options_doors_sweep_their_staged_files() {
     let mut faults = Vec::new();
     for version in VERSIONS {
         let (ctx, catalogs, warehouse, stale) = sweep_fixture(version).await;
-        let catalog = catalogs.get("ice").expect("ice catalog is registered");
         let before = freeze(&ctx, &warehouse, &catalogs, "t").await;
-        let staged = stage_stale_batch(&ctx, &stale).await;
-        let result =
-            repark_iceberg::write::commit_append_with_summary(catalog, &stale, staged, &[], None)
-                .await;
-        check_swept(
-            &mut faults,
-            version,
-            "staged append",
-            result,
-            &before,
-            &freeze(&ctx, &warehouse, &catalogs, "t").await,
-        );
-        let batches = ctx
-            .sql("SELECT 9 AS id, 'z' AS name")
-            .await
-            .expect("staging source frames")
-            .collect()
-            .await
-            .expect("staging source collects");
-        let stream = futures::stream::iter(batches.into_iter().map(Ok::<_, DataFusionError>));
-        let result = repark_iceberg::write::append_staged_with_options(
-            catalog,
+        write_options_append_doors_sweep(
+            &ctx,
+            &catalogs,
+            &warehouse,
             &stale,
-            stream,
-            &[],
-            &repark_iceberg::write::WriterStagingOverrides::none(),
-            repark_iceberg::write::WriteConcurrency::default(),
-            None,
+            version,
+            &before,
+            &mut faults,
         )
         .await;
-        check_swept(
-            &mut faults,
-            version,
-            "streaming staged append",
-            result,
-            &before,
-            &freeze(&ctx, &warehouse, &catalogs, "t").await,
-        );
-        let staged = stage_stale_batch(&ctx, &stale).await;
-        let result =
-            repark_iceberg::write::commit_replace_write_with_summary(catalog, &stale, staged, &[])
-                .await;
-        check_swept(
-            &mut faults,
-            version,
-            "replace write",
-            result,
-            &before,
-            &freeze(&ctx, &warehouse, &catalogs, "t").await,
-        );
-        let staged = stage_stale_batch(&ctx, &stale).await;
-        let result = repark_iceberg::write::commit_overwrite_replace_all_with_summary(
-            catalog,
+        write_options_overwrite_doors_sweep(
+            &ctx,
+            &catalogs,
+            &warehouse,
             &stale,
-            staged,
-            None,
-            &[],
-            None,
+            version,
+            &before,
+            &mut faults,
         )
         .await;
-        check_swept(
-            &mut faults,
-            version,
-            "replace-all overwrite",
-            result,
-            &before,
-            &freeze(&ctx, &warehouse, &catalogs, "t").await,
-        );
-        let staged = stage_stale_batch(&ctx, &stale).await;
-        let overwrite = repark_iceberg::write::StaticPartitionOverwrite {
-            predicate: iceberg::expr::Predicate::AlwaysTrue,
-            equalities: Vec::new(),
-        };
-        let result = repark_iceberg::write::commit_overwrite_by_row_filter_with_summary(
-            catalog,
-            &stale,
-            staged,
-            overwrite,
-            None,
-            &[],
-            None,
-        )
-        .await;
-        check_swept(
-            &mut faults,
-            version,
-            "row-filter overwrite",
-            result,
-            &before,
-            &freeze(&ctx, &warehouse, &catalogs, "t").await,
-        );
-        let staged = stage_stale_batch(&ctx, &stale).await;
-        let result = repark_iceberg::write::commit_replace_partitions_with_summary(
-            catalog,
-            &stale,
-            staged,
-            None,
-            &[],
-            None,
-        )
-        .await;
-        check_swept(
-            &mut faults,
-            version,
-            "replace partitions",
-            result,
-            &before,
-            &freeze(&ctx, &warehouse, &catalogs, "t").await,
-        );
     }
     assert!(faults.is_empty(), "{}", faults.join("\n"));
 }

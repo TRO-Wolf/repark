@@ -367,13 +367,13 @@ fn function_bodies(text: &str) -> Vec<(String, String)> {
     let mut depth: i64 = 0;
     for raw in text.lines() {
         let line = raw.split("//").next().unwrap_or_default();
-        if let Some(name) = function_name(line) {
-            if depth <= 1 {
-                if let Some((open, _, body, _)) = current.take() {
-                    functions.push((open, body));
-                }
-                current = Some((name, depth, String::new(), false));
+        if let Some(name) = function_name(line)
+            && depth <= 1
+        {
+            if let Some((open, _, body, _)) = current.take() {
+                functions.push((open, body));
             }
+            current = Some((name, depth, String::new(), false));
         }
         if let Some((_, start, body, entered)) = current.as_mut() {
             body.push_str(line);
@@ -383,12 +383,12 @@ fn function_bodies(text: &str) -> Vec<(String, String)> {
             }
         }
         depth += brace_delta(line);
-        if let Some((_, start, _, entered)) = current.as_ref() {
-            if *entered && depth <= *start {
-                if let Some((open, _, body, _)) = current.take() {
-                    functions.push((open, body));
-                }
-            }
+        if let Some((_, start, _, entered)) = current.as_ref()
+            && *entered
+            && depth <= *start
+            && let Some((open, _, body, _)) = current.take()
+        {
+            functions.push((open, body));
         }
     }
     if let Some((open, _, body, _)) = current.take() {

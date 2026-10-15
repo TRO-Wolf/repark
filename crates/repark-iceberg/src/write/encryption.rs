@@ -259,7 +259,9 @@ mod sweep_tests {
         let (_catalog, table) = plain_table(&warehouse).await;
         let listed = warehouse_file(&warehouse, "listed.parquet");
         let kept = warehouse_file(&warehouse, "kept.parquet");
-        let swept = sweep_staged_files_on_keyed_refusal(&table, &[listed.clone()], refusal()).await;
+        let swept =
+            sweep_staged_files_on_keyed_refusal(&table, std::slice::from_ref(&listed), refusal())
+                .await;
         assert_eq!(swept.message(), expected_text().as_str());
         assert!(!std::path::Path::new(&listed).exists());
         assert!(std::path::Path::new(&kept).exists());
@@ -272,7 +274,9 @@ mod sweep_tests {
         let directory = warehouse.path().join("sweep-probe-dir");
         std::fs::create_dir(&directory).expect("probe directory creates");
         let path = directory.to_str().expect("probe path is utf8").to_string();
-        let swept = sweep_staged_files_on_keyed_refusal(&table, &[path.clone()], refusal()).await;
+        let swept =
+            sweep_staged_files_on_keyed_refusal(&table, std::slice::from_ref(&path), refusal())
+                .await;
         assert!(swept.message().contains(expected_text().as_str()));
         assert!(swept.message().contains(path.as_str()));
         assert!(EncryptedTableRefusal::find(&swept).is_some());
@@ -286,7 +290,8 @@ mod sweep_tests {
         let (_catalog, table) = plain_table(&warehouse).await;
         let listed = warehouse_file(&warehouse, "listed.parquet");
         let error = iceberg::Error::new(iceberg::ErrorKind::DataInvalid, "conflict");
-        let swept = sweep_staged_files_on_keyed_refusal(&table, &[listed.clone()], error).await;
+        let swept =
+            sweep_staged_files_on_keyed_refusal(&table, std::slice::from_ref(&listed), error).await;
         assert_eq!(swept.message(), "conflict");
         assert!(std::path::Path::new(&listed).exists());
     }
@@ -297,7 +302,8 @@ mod sweep_tests {
         let (_catalog, table) = plain_table(&warehouse).await;
         let listed = warehouse_file(&warehouse, "listed.parquet");
         let error = iceberg::Error::new(iceberg::ErrorKind::CommitStateUnknown, "unknown");
-        let swept = sweep_staged_files_on_keyed_refusal(&table, &[listed.clone()], error).await;
+        let swept =
+            sweep_staged_files_on_keyed_refusal(&table, std::slice::from_ref(&listed), error).await;
         assert_eq!(swept.message(), "unknown");
         assert!(std::path::Path::new(&listed).exists());
     }

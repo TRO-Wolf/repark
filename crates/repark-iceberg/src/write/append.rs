@@ -7,7 +7,6 @@ use futures::{Stream, StreamExt};
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, TableIdent};
 
 use crate::write::append_commit::commit_append;
@@ -172,6 +171,7 @@ mod tests {
         NestedField, Operation, PrimitiveType, Schema, Struct, Transform, Type,
         UnboundPartitionSpec,
     };
+    use iceberg::transaction::{ApplyTransactionAction, Transaction};
     use iceberg::{CatalogBuilder, Namespace, NamespaceIdent, TableCommit, TableCreation};
     use tempfile::TempDir;
 
