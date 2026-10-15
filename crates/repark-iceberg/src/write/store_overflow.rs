@@ -4,7 +4,7 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, TableReference};
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::{Alias, ScalarFunction};
 use datafusion::logical_expr::{
     Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection, WriteOp,
@@ -21,7 +21,8 @@ use crate::write::store_cast::{
     is_overflow_store_pair, spark_store_type_name, store_cast_udf_for_target, store_int_target,
 };
 use crate::write::struct_pairing::{
-    StructPairing, holds_struct_type, pair_store_value, statement_pairing, store_pair_expr,
+    StatementPairing, StructPairing, holds_struct_type, pair_store_value,
+    spark_names_equal_ignoring_case, statement_pairing, store_pair_expr,
 };
 
 pub const STORE_DIVISOR_GUARD_NAME: &str = "__repark_ansi_nonzero_divisor__";
@@ -108,6 +109,10 @@ fn transform_store_dml(
         return Ok(Transformed::no(plan));
     };
     let pairing = statement_pairing(config, &dml.op);
+    let case_sensitive = config
+        .extensions
+        .get::<StatementPairing>()
+        .is_some_and(|carried| carried.case_sensitive);
     let table = match dml.op {
         WriteOp::Update => "``".to_string(),
         _ => table_label(&dml.table_name),
@@ -129,7 +134,8 @@ fn transform_store_dml(
         let Some(targets) = positional_values_targets(values, target_schema.as_ref()) else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
-        let Some(rewritten) = conform_values_rows(values, &targets, fold, site)? else {
+        let Some(rewritten) = conform_values_rows(values, &targets, fold, site, case_sensitive)?
+        else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
         dml.input = Arc::new(rewritten);
@@ -138,7 +144,7 @@ fn transform_store_dml(
     if let LogicalPlan::Projection(projection) = dml.input.as_ref()
         && let LogicalPlan::Values(values) = projection.input.as_ref()
         && let Some(targets) = projected_values_targets(projection, values, target_schema.as_ref())
-        && let Some(rewritten) = conform_values_rows(values, &targets, fold, site)?
+        && let Some(rewritten) = conform_values_rows(values, &targets, fold, site, case_sensitive)?
     {
         dml.input = Arc::new(LogicalPlan::Projection(Projection::try_new(
             projection.expr.clone(),
@@ -234,12 +240,87 @@ fn projected_values_targets<'a>(
     Some(targets)
 }
 
+fn values_row_type(expr: &Expr) -> Option<DataType> {
+    let (inner, _) = split_aliases(expr);
+    let written = match inner {
+        Expr::Cast(cast) => cast.expr.as_ref(),
+        other => other,
+    };
+    written.get_type(&DFSchema::empty()).ok()
+}
+
+fn struct_names_agree(first: &DataType, other: &DataType, case_sensitive: bool) -> bool {
+    match (first, other) {
+        (DataType::Struct(left), DataType::Struct(right)) => {
+            left.len() == right.len()
+                && left.iter().zip(right.iter()).all(|(left, right)| {
+                    let named_alike = if case_sensitive {
+                        left.name() == right.name()
+                    } else {
+                        spark_names_equal_ignoring_case(left.name(), right.name())
+                    };
+                    named_alike
+                        && struct_names_agree(left.data_type(), right.data_type(), case_sensitive)
+                })
+        }
+        (DataType::List(left), DataType::List(right))
+        | (DataType::LargeList(left), DataType::LargeList(right))
+        | (DataType::FixedSizeList(left, _), DataType::FixedSizeList(right, _)) => {
+            struct_names_agree(left.data_type(), right.data_type(), case_sensitive)
+        }
+        (DataType::Map(left, _), DataType::Map(right, _)) => {
+            match (left.data_type(), right.data_type()) {
+                (DataType::Struct(left), DataType::Struct(right)) if left.len() == right.len() => {
+                    left.iter().zip(right.iter()).all(|(left, right)| {
+                        struct_names_agree(left.data_type(), right.data_type(), case_sensitive)
+                    })
+                }
+                _ => true,
+            }
+        }
+        _ => true,
+    }
+}
+
+fn refuse_disagreeing_values_rows(
+    values: &datafusion::logical_expr::Values,
+    case_sensitive: bool,
+) -> Result<()> {
+    let width = values.values.first().map_or(0, Vec::len);
+    for column in 0..width {
+        let mut first: Option<DataType> = None;
+        for row in &values.values {
+            let Some(written) = row.get(column).and_then(values_row_type) else {
+                continue;
+            };
+            if !holds_struct_type(&written) {
+                continue;
+            }
+            match &first {
+                None => first = Some(written),
+                Some(seen) if !struct_names_agree(seen, &written, case_sensitive) => {
+                    return Err(DataFusionError::Plan(format!(
+                        "[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE] Invalid inline \
+                         table. Found incompatible types in the column `col{}` for inline table. \
+                         SQLSTATE: 42000",
+                        column + 1
+                    )));
+                }
+                Some(_) => {}
+            }
+        }
+    }
+    Ok(())
+}
+
 fn conform_values_rows(
     values: &datafusion::logical_expr::Values,
     targets: &[Option<&Field>],
     fold: bool,
     site: PairSite<'_>,
+    case_sensitive: bool,
 ) -> Result<Option<LogicalPlan>> {
+    refuse_disagreeing_values_rows(values, case_sensitive)?;
     let mut changed = false;
     let mut rows = Vec::with_capacity(values.values.len());
     for row in &values.values {

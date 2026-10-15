@@ -1187,6 +1187,15 @@ repark-core's error map.
   table (`table_label`; Spark's empty label for an UPDATE); `conform_values_rows` pairs a
   `VALUES` row the same way. `wrap_store_outputs` takes the mode and the label from its
   caller. The test module moved to `store_overflow/tests.rs` (file-size ceiling).
+  **Exception round (2026-10-15, verifier 2's V2-02):** `conform_values_rows` first runs
+  `refuse_disagreeing_values_rows`. When two rows of a multi-row `VALUES` give a column struct
+  types whose field names disagree (by position, at every depth, inside arrays and map
+  entries, a different field count included, names compared under the statement's
+  `spark.sql.caseSensitive` carried in `StatementPairing`), the statement refuses with Spark's
+  `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE]` text, naming the column `colN` by
+  its position in the row, before any write. A NULL row and a row with no struct are skipped;
+  leaf types are not compared here. Rows that agree on the names in an order other than the
+  table's still pair by position, as Spark stores them.
 - `store_overflow.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `StoreOverflowCast`, an
   `AnalyzerRule` over `LogicalPlan::Dml` that maps out-of-range fractional/decimal stores
   into integer columns to Spark's `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003), naming

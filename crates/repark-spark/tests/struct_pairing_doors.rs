@@ -472,3 +472,122 @@ async fn a_by_name_frame_door_pairs_under_the_session_case_rule() {
         }
     }
 }
+
+fn inline_table_refusal(column: usize) -> String {
+    format!(
+        "[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE] Invalid inline table. Found \
+         incompatible types in the column `col{column}` for inline table. SQLSTATE: 42000"
+    )
+}
+
+const VALUES_ROWS_CASES: [(&str, &str, bool, Option<usize>); 8] = [
+    (
+        "rows_nocol",
+        "INSERT INTO {t} VALUES (1, named_struct('b', 2, 'a', 1)), \
+         (2, named_struct('x', 7, 'y', 8))",
+        false,
+        Some(2),
+    ),
+    (
+        "rows_in_order",
+        "INSERT INTO {t} (id, st) VALUES (1, named_struct('b', 2, 'a', 1)), \
+         (2, named_struct('x', 7, 'y', 8))",
+        false,
+        Some(2),
+    ),
+    (
+        "rows_swapped",
+        "INSERT INTO {t} (st, id) VALUES (named_struct('b', 2, 'a', 1), 1), \
+         (named_struct('x', 7, 'y', 8), 2)",
+        false,
+        Some(1),
+    ),
+    (
+        "rows_order",
+        "INSERT INTO {t} VALUES (1, named_struct('b', 2, 'a', 1)), \
+         (2, named_struct('a', 7, 'b', 8))",
+        false,
+        Some(2),
+    ),
+    (
+        "rows_case_sensitive",
+        "INSERT INTO {t} VALUES (1, named_struct('B', 2, 'a', 1)), \
+         (2, named_struct('b', 8, 'a', 7))",
+        true,
+        Some(2),
+    ),
+    (
+        "rows_case_insensitive",
+        "INSERT INTO {t} VALUES (1, named_struct('B', 2, 'a', 1)), \
+         (2, named_struct('b', 8, 'a', 7))",
+        false,
+        None,
+    ),
+    (
+        "rows_agree",
+        "INSERT INTO {t} VALUES (1, named_struct('b', 2, 'a', 1)), \
+         (2, named_struct('b', 8, 'a', 7))",
+        false,
+        None,
+    ),
+    (
+        "rows_agree_swapped",
+        "INSERT INTO {t} (st, id) VALUES (named_struct('b', 2, 'a', 1), 1), \
+         (named_struct('b', 8, 'a', 7), 2)",
+        false,
+        None,
+    ),
+];
+
+#[tokio::test]
+async fn multi_row_values_refuse_as_spark_when_rows_disagree_on_struct_names() {
+    let session = session();
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    run(&session, "CREATE NAMESPACE ice.ns").await;
+    for (name, template, case_sensitive, refused_column) in VALUES_ROWS_CASES {
+        let table = format!("ice.ns.{name}");
+        run(
+            &session,
+            &format!("CREATE TABLE {table} (id INT, st STRUCT<a: INT, b: INT>) USING iceberg"),
+        )
+        .await;
+        run(
+            &session,
+            &format!("INSERT INTO {table} VALUES (0, named_struct('a', 10, 'b', 20))"),
+        )
+        .await;
+        set_case_sensitive(&session, case_sensitive);
+        let outcome = attempt(&session, Door::Sql(template), &table, "").await;
+        set_case_sensitive(&session, false);
+        if let Some(column) = refused_column {
+            let refusal = outcome.expect_err("rows that disagree on struct names refuse");
+            assert!(
+                refusal.contains(&inline_table_refusal(column)),
+                "{name}: {refusal}"
+            );
+            assert_eq!(stored(&session, &table, 1).await, None, "{name}");
+            assert_eq!(stored(&session, &table, 2).await, None, "{name}");
+        } else {
+            outcome.unwrap_or_else(|error| panic!("{name}: {error}"));
+            assert_eq!(
+                stored(&session, &table, 1).await,
+                Some((Some(2), Some(1))),
+                "{name}"
+            );
+            assert_eq!(
+                stored(&session, &table, 2).await,
+                Some((Some(8), Some(7))),
+                "{name}"
+            );
+        }
+        assert_eq!(
+            stored(&session, &table, 0).await,
+            Some((Some(10), Some(20))),
+            "{name}"
+        );
+    }
+}

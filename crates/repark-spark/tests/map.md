@@ -142,6 +142,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   case-insensitive it stores `{a:1, b:2}`, case-sensitive it refuses with Spark's
   `CANNOT_FIND_DATA` for `` `st`.`a` `` and stores nothing (kills verifier 1's mutant O5, the
   passthrough dropping `caseSensitive`). pins: ice-struct-pairing-1/C-032
+  **Exception round (2026-10-15, V2-02):**
+  `multi_row_values_refuse_as_spark_when_rows_disagree_on_struct_names` drives a two-row
+  `VALUES` through the three column-list spellings (none, `(id, st)`, `(st, id)`) with field
+  names that disagree, rows that disagree only in order, and rows that differ only in case
+  under each value of the session's case carrier: each disagreement refuses with Spark's
+  `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE` text for `col2` (`col1` for the
+  swapped list) and writes neither row; rows that agree, in case-insensitive mode or in an order
+  other than the table's, store by position as Spark does.
   **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
   `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
   `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE
