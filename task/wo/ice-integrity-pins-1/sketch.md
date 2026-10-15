@@ -614,7 +614,7 @@ Each question has its premise and a lean. RULING: the orchestrator can rule. OWN
   append twice. Lean: a halt of the live leg and a fork card that sets the SDK's retry to one
   attempt on the two commit calls (`UpdateTable`, `UpdateTableMetadataLocation`), so the fork's
   classifier owns the outcome; the v2 label waits on it, since a duplicate append is a silent
-  value.
+  value. Ruling 84 widens this: the drill runs the sequence lost reply, SDK re-send, stale rejection, fork re-base (see the card ice-commit-rebase-dup-1).
 - **Q7 (RULING), the plain `INSERT` raises with `operation_id = None`.** Premise: the fork mints
   and stamps an id (`fork:crates/integrations/datafusion/src/physical_plan/commit.rs:372`) but
   does not hand it to RePark; a user can then resolve only by the snapshot-set difference, sound
@@ -632,6 +632,53 @@ Each question has its premise and a lean. RULING: the orchestrator can rule. OWN
 - **Q10 (RULING), how the gate signs again.** Premise: botocore is not in `uv.lock`; SigV4 is
   about 80 lines of the standard library (`hmac`, `hashlib`). Lean: the standard library, held by
   the fixed-vector unit test; no new dependency.
+
+## Owner rulings (2026-10-15)
+
+Questions 79 to 81, 84 and 86 were the owner's; 82, 83, 85, 87 and 88 were the orchestrator's provisional rulings, which the owner confirmed with the additions quoted below.
+
+```
+79. No. Nothing in the product exists for a test.
+80. No. Same rule; the offline twin's hook stays test-only.
+81. Yes. PyPI, exact version, hash-checked, installed before any credential
+    is in the environment. Keep 1.5.4. One release-checklist line moves the
+    pin at each tag.
+84. Yes, and the card is wider than turning the SDK retry off. The fork
+    already re-bases and re-appends after a CAS rejection
+    (append.rs:1685). A lost reply, an SDK re-send, a stale rejection, and
+    that re-base appends the same rows twice. The drill must run that
+    exact sequence. The fork card: after any CAS rejection, refresh and
+    check whether the table already holds our snapshot id before
+    re-basing; then switch the SDK retry off on the two commit calls. If
+    the drill shows a double append, the live leg stops and v2 waits.
+86. Yes. Wire it as the plan writes it; I merge the .github change. The
+    first run is the proof. One clerk PR carries U-9's step and U-10's AWS
+    leg together.
+82. Confirmed, with a ceiling: the count is asserted at most the files the
+    crashed commit wrote, and the table's visible rows equal pre-crash.
+83. Confirmed as the local catalog's rule only. The pin names it so; Glue
+    and REST follow the catalog pointer, and the AWS drill pins that.
+85. Confirmed. The error text still tells the user what to read back
+    (the table's snapshot list). The operation id card is dated.
+87. Confirmed. The changed check compares snapshot ids we wrote, never the
+    metadata location, so a maintenance snapshot is tolerated. If
+    maintenance fires mid-drill, retry once and log it.
+88. Confirmed. Signer is test-only; the published AWS test vectors sit
+    beside it and run in the offline twin. The moto venv's boto3 is not a
+    dependency, so the hand-back cross-checks one signed request against
+    it once and records the match.
+```
+
+- 79 answers Q1: §3.2 keeps K-E rejected, so the kill point needs no product hook.
+- 80 answers Q2: §4.5 keeps the offline twin's hook test-only; the legs keep the gate.
+- 81 answers Q3: §5.2 and §6.5 keep the PyPI exact-version hash-checked install before credentials, and keep 1.5.4.
+- 84 answers Q6: §4.4 cell U-5, §7 H-U5 and Q6 now drill the full lost-reply sequence, and the fork card checks for our snapshot id before re-basing.
+- 86 answers Q8: §6.5 is wired as written, and one clerk pull request carries U-9's step with U-10's AWS leg.
+- 82 touches Q4: §3.3 item 3 asserts the orphan count at most the crashed commit's files, with visible rows equal to pre-crash.
+- 83 touches Q5: §3.1 and the §3.3 controls keep the newest-metadata-file rule as the local catalog's only.
+- 85 touches Q7: §4.3 keeps the snapshot-list read-back in the error text, and the operation id card is dated.
+- 87 touches Q9: §4.1 and §4.3 compare snapshot ids the drill wrote, never the metadata location, and retry once on mid-drill maintenance.
+- 88 answers Q10: §4.2 and §6.1 keep the signer test-only with the published vectors beside it, and the moto cross-check happens once in the hand-back.
 
 ## 9. The order's outline (grade A; the runs as a grade-C card)
 
