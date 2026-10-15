@@ -195,6 +195,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the DataFusion conf refusal moved to `df_guards::invalid_datafusion_config`,
   which masks the echoed value. pins: source-url-redact-1/C-017
   **SOURCE-URL-REDACT-2 (2026-10-06):** `build()` registers every config-map value (builder pairs plus the merged `repark.toml` pairs) before validation, in one line (the file sits at the 1000-line ceiling). pins: source-url-redact-1/C-058
+  **ENC-1-RESIDUE-1 item 5 (2026-10-15):** `register_iceberg_catalog` wraps the
+  received catalog in `EncryptionGuardCatalog::install`, so every session-registered
+  catalog is guarded; detail lives in `session/map.md`.
+  pins: `session/tests/iceberg_guard_registration.rs`, `enc_1_gate.rs`
+  `session_registration_installs_the_encryption_guard`.
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
