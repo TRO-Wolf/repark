@@ -46,6 +46,7 @@ const GROUPING_UNSUPPORTED_HEAD: &str = "[UNSUPPORTED_GROUPING_EXPRESSION]";
 const JOIN_NONDET_HEAD: &str = "[INVALID_NON_DETERMINISTIC_EXPRESSIONS]";
 const JOIN_NOT_BOOLEAN_HEAD: &str = "[JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE]";
 const JOIN_RULE_HEADER: &str = "join_condition_refusals\ncaused by\n";
+const KEYED_REFUSAL_SOURCE_DEPTH: usize = 32;
 const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
 const SQLSTATE_MARKER: &str = "SQLSTATE: ";
 const SQLSTATE_LEN: usize = 5;
@@ -208,12 +209,26 @@ pub fn engine_err_for_sql(sql: &str, err: DataFusionError) -> Error {
     engine_err(err)
 }
 
+fn keyed_refusal_message(
+    err: &DataFusionError,
+    refusal: &repark_iceberg::write::EncryptedTableRefusal,
+) -> String {
+    let text = refusal.to_string();
+    std::iter::successors(Some(err as &(dyn std::error::Error + 'static)), |link| {
+        link.source()
+    })
+    .take(KEYED_REFUSAL_SOURCE_DEPTH)
+    .filter_map(|link| link.downcast_ref::<iceberg::Error>())
+    .find(|found| found.message().starts_with(text.as_str()))
+    .map_or(text.clone(), |found| found.message().to_string())
+}
+
 /// Convert one DataFusion error into the crate-wide [`Error`] taxonomy.
 #[allow(clippy::needless_pass_by_value)]
 #[must_use]
 pub fn engine_err(err: DataFusionError) -> Error {
     if let Some(refusal) = repark_iceberg::write::EncryptedTableRefusal::find(&err) {
-        return Error::NotImplemented(refusal.to_string());
+        return Error::NotImplemented(keyed_refusal_message(&err, &refusal));
     }
     match classify_datafusion_error(&err) {
         EngineErrorKind::Parse => Error::Parse(spark_parse_message(&err)),

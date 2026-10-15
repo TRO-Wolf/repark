@@ -402,3 +402,51 @@ async fn unkeyed_table_append_stores_its_staged_file() {
     }
     assert!(faults.is_empty(), "{}", faults.join("\n"));
 }
+
+#[tokio::test]
+async fn keyed_refusal_names_an_undeletable_staged_file_through_engine_err() {
+    use std::os::unix::fs::PermissionsExt;
+    let refusal = "Table sales.t carries property 'encryption.key-id': RePark has no table \
+                   encryption and refuses to write plaintext into a table that asks for it \
+                   (ENC-1).";
+    let mut faults = Vec::new();
+    for version in VERSIONS {
+        let (ctx, catalogs, _warehouse, stale) = sweep_fixture(version).await;
+        let catalog = catalogs.get("ice").expect("ice catalog is registered");
+        let staged = stage_stale_batch(&ctx, &stale).await;
+        let named = staged[0].file_path().to_string();
+        let path = named.strip_prefix("file://").unwrap_or(&named).to_string();
+        let directory = std::path::Path::new(&path)
+            .parent()
+            .expect("a staged file has a directory")
+            .to_path_buf();
+        let original = std::fs::metadata(&directory)
+            .expect("the data directory reads")
+            .permissions();
+        std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o555))
+            .expect("the data directory locks");
+        let result = repark_iceberg::write::commit_append(catalog, &stale, staged).await;
+        std::fs::set_permissions(&directory, original).expect("the data directory unlocks");
+        let Err(error) = result else {
+            faults.push(format!("v{version}: the keyed append ran"));
+            continue;
+        };
+        let mapped = repark_core::engine_err(error);
+        let message = mapped.to_string();
+        if !matches!(&mapped, repark_core::Error::NotImplemented(_)) {
+            faults.push(format!("v{version}: class is not Unsupported: {mapped:?}"));
+        }
+        if !message.starts_with(refusal) {
+            faults.push(format!("v{version}: the refusal text is lost: {message}"));
+        }
+        if !message.contains(&format!(" failed to delete staged file '{named}'")) {
+            faults.push(format!(
+                "v{version}: the undeletable {named} is not named: {message}"
+            ));
+        }
+        if !std::path::Path::new(&path).exists() {
+            faults.push(format!("v{version}: {path} was deleted after all"));
+        }
+    }
+    assert!(faults.is_empty(), "{}", faults.join("\n"));
+}
