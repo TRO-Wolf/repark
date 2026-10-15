@@ -17,7 +17,7 @@ parent keeps the UDF plumbing, dispatch (scalar/column paths), shaping and the
   `timestamp_row` takes the element's `TimeUnit` (ICE-TSNS-TYPE-PLANNER-1 M1,
   2026-10-15): the stride turns into ticks of that unit, a month or day step shifts the
   wall read from those ticks (`datetime_from_ticks`, `ticks_from_datetime`), and a step
-  finer than the unit refuses as a sub-microsecond step does. pins: ice-tsns-type-planner-1/C-014
+  finer than the unit refuses as a sub-microsecond step does. pins: ice-tsns-type-planner-1/C-016
 
 ## Contracts pinned
 

@@ -465,11 +465,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   beside nanosecond elements is cast to nanoseconds, keeping its own zone, so the merge
   lambda and the zero agree and `check_merge_types` no longer refuses the pair. The plan's
   lambda variables are resolved again after a rewrite, so `acc` takes the widened type.
-  pins: ice-tsns-type-planner-1/C-015
+  pins: ice-tsns-type-planner-1/C-017
   **M3 rule gaps, UNION DISTINCT (2026-10-15):** the gap was not in this rule. See
   `timestamp_ns_cast.rs`: the wall kernel that replaces a nanosecond `Cast` after type
   coercion dropped the source field's metadata, so a `UNION`'s stale logical schema kept a
-  `PARQUET:field_id` its physical plan lacked. pins: ice-tsns-type-planner-1/C-016
+  `PARQUET:field_id` its physical plan lacked. pins: ice-tsns-type-planner-1/C-018
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
@@ -495,7 +495,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   reads seconds, as it did when DataFusion typed it nanoseconds. A side effect: an `Int64`
   cast to `TIMESTAMP(6)` on that door now reads seconds too, since both spell one type.
   The Python `repark.sql()` callable still builds `DataFusionDialect` with the Spark
-  planner; its cell is a dated row for PA-02's routing fix. pins: ice-tsns-type-planner-1/C-013
+  planner; its cell is a dated row for PA-02's routing fix. pins: ice-tsns-type-planner-1/C-015
 - `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
   `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
   plus the `__repark_session_gap__` / `__repark_ts_micros__` /
@@ -1109,7 +1109,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   built as the element type (`shape_timestamps`). A nanosecond `sequence` therefore keeps
   its digits below the microsecond and floors nothing; a microsecond one answers as before.
   Before, every row was built as `Timestamp(µs, "UTC")`, so a nanosecond or naive element
-  type failed with `ListArray expected data type …`. pins: ice-tsns-type-planner-1/C-014
+  type failed with `ListArray expected data type …`. pins: ice-tsns-type-planner-1/C-016
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,

@@ -121,7 +121,7 @@ holds behavior observed from outside the crate.
   by-name registration stays, as main and U-6 pin it;
   `an_aggregate_zero_takes_the_unit_of_its_array_elements` is the M3 aggregate cell (a
   `TIMESTAMP` zero beside nanosecond elements answers nanoseconds, equal to a
-  `timestamptz_ns` zero; pins: ice-tsns-type-planner-1/C-015);
+  `timestamptz_ns` zero; pins: ice-tsns-type-planner-1/C-017);
   `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors` is the M3
   UNION cell: a branch over fields that carry `PARQUET:field_id` against an untagged one,
   in both orders, equals `SELECT DISTINCT` over the `UNION ALL` (pins:
@@ -130,7 +130,7 @@ holds behavior observed from outside the crate.
   Result types are read from the optimized plan: a frame's own schema is the unanalyzed
   one. On head `07cbe563` five of the six are green; the R-013 cell is red because the
   by-name registration stays (the unit ledger, section 5).
-  pins: ice-tsns-type-planner-1/C-010, C-011, C-013, C-015, C-018
+  pins: ice-tsns-type-planner-1/C-010, C-011, C-015, C-017, C-018
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

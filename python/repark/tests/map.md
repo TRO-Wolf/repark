@@ -3236,7 +3236,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `timestamp_ns` or `timestamptz_ns` literal, which main refused by name (`Unsupported SQL
   type`). The planner types those names, so the cells store: a `timestamp_ns` target takes
   `rule_cell`, a control target the floored values under the type main recorded for
-  `insert_select`. pins: ice-tsns-type-planner-1/C-020
+  `insert_select`. pins: ice-tsns-type-planner-1/C-022
   **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14), the re-pin:** the control test no longer holds a `timestamp_ns` or
   `timestamptz_ns` source into a microsecond target as main answered it. `control_cell` takes
   those cells' ticks from `_record_ice_tsns_floor_doors_1_main.rule_expected` (the floor and the
@@ -3361,8 +3361,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   position of the lattice table beside a NULL and beside each microsecond kind, the H1
   refusals, the H2 microsecond pins, the P15 cells, the R-010, R-013 and R-018(1)
   statements, and the two Postgres read cells (they skip without `REPARK_PG_URL`). A
-  statement that answered on main's module must answer here.
-  pins: ice-tsns-type-planner-1/C-006, C-007, C-008, C-009, C-010
+  statement that answered on main's module must answer here, outside the dated rows: on the
+  head of 2026-10-15 no statement main answers is lost outside ruling 38's carve-out
+  (C-023). The round's records, registry row R-017 and the 1.5.6 notes draft, are C-024.
+  pins: ice-tsns-type-planner-1/C-006, C-007, C-008, C-009, C-010, C-023, C-024
 - [ice_tsns_type_planner_1_dated.json](ice_tsns_type_planner_1_dated.json) —
   **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the dated rows: cells a ruling keeps red, each
   with its date, ruling and owner. A dated cell may be red or lose a statement main
@@ -3375,8 +3377,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   repros 51, H1 4, P15 1, out of range with ANSI off 2). Eight residue cells are red on
   the head and green on main, so they carry no row. Two rows of ruling 92's scope follow:
   an encoded nanosecond source into `TIMESTAMP` truncates where the plain one floors, on
-  today's main too (R-024). pins: ice-tsns-type-planner-1/C-013,
-  C-019
+  today's main too (R-024). pins: ice-tsns-type-planner-1/C-015,
+  C-021
 - [_ice_tsns_type_planner_1_rule.py](_ice_tsns_type_planner_1_rule.py) —
   **ICE-TSNS-TYPE-PLANNER-1:** the rule as a harness. `statement_of` and `twin_of` write
   the two texts of a cell from one marked text (`{N}` is the NULL, `<<x>>` an operand
@@ -3418,7 +3420,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   OVERWRITE` into `timestamp_ns`, `timestamptz_ns` and `TIMESTAMP` stores what the plain
   source stores (C-020). `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
   callable: `TIMESTAMP` and its literal as `timestamp[us]`, `TIMESTAMPTZ` as
-  `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-013, C-020
+  `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-015, C-019, C-020, C-022
 - [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
   [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
   **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,
@@ -3429,7 +3431,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cells, U-3's guard); 7,821 cells are red. The `encoded` and `update_forms` groups were
   recorded on the same module later that day and merged in: 952 of 11,288 statements error
   and 7,827 cells are red (both encoded cells into `TIMESTAMP`, and the four merge-on-read
-  `update_forms` cells, where every form errors on main). pins: ice-tsns-type-planner-1/C-006, C-019
+  `update_forms` cells, where every form errors on main). pins: ice-tsns-type-planner-1/C-006, C-021
 - [_record_ice_tsns_coercion_1_spark_lattice.py](_record_ice_tsns_coercion_1_spark_lattice.py) +
   [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) —
   **ICE-TSNS-COERCION-1 slice 0:** Spark 4.1.2, five zones, both ANSI modes. `timestamp_ns`

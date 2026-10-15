@@ -3681,6 +3681,24 @@ still open is `isModifiable`.
     path (stores main's).
   - Narrow: an UPDATE-over-site refusal becomes the internal `No field named
     __common_expr_3` schema error.
+- **Status 2026-10-15 (ICE-TSNS-TYPE-PLANNER-1 fresh build, branch
+  `fix/ice-tsns-type-planner-1-fresh`, not merged):** OPEN. On the branch head a written
+  `TIMESTAMP` plans as the microsecond instant on the Spark door (the naive microsecond wall
+  on the Rust ANSI door, ruling 94), `timestamp_ns` and `timestamptz_ns` plan as
+  nanoseconds, and a NULL or a coarser timestamp beside a nanosecond value takes the
+  nanosecond type: `coalesce(ns, NULL)` keeps nine digits on every door of the 9,600-cell
+  census. `sequence` over a nanosecond site answers nanoseconds; an `aggregate` zero, a
+  `UNION` over field-id-tagged branches, an identity `UPDATE … WHERE` into `TIMESTAMP`
+  (ruling 91) and an encoded source through the staged doors (ruling 92) answer. No
+  statement today's main (`01796857`) answers errors on the head outside ruling 38's 108
+  pandas and Arrow door cells. Open: a written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE …
+  WHERE` truncates (4 repros), eight list-function cells are red on the head and green on
+  main, and an encoded nanosecond value into `TIMESTAMP` truncates where the plain one
+  floors (R-024); the unit ledger's questions Q1 to Q4. Pins:
+  `python/repark/tests/test_ice_tsns_type_planner_1.py`,
+  `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`,
+  `crates/repark-spark/tests/ice_tsns_type_planner_1_update_forms.rs`. Ledger:
+  `task/ledgers/staging/ice-tsns-type-planner-1-ledger.md` (on the branch).
 
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 
