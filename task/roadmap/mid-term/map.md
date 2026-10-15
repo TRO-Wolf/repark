@@ -843,3 +843,10 @@ declines it (a dated ruling in the intake, then the archive).
   R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
   #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
   `timestamp_ns` target leaf.
+- [facade-hang-98-1-card-2026-10-14.md](facade-hang-98-1-card-2026-10-14.md) — **card
+  FACADE-HANG-98-1 (2026-10-14, open, not scheduled):** the facade suite (`pytest -n 8`
+  over `python/repark/tests/`) sometimes stalls at 98–99 % with idle xdist workers on CI
+  and locally until the job timeout, and a re-run passes; not reproduced on demand. First
+  step is a branch run with `--durations=0` and a per-test timeout to name the test that
+  never returns; a CI-only change is the owner's. Retires when the named test is fixed or
+  marked with a dated row.
