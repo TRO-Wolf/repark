@@ -150,6 +150,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: u9-types-1/C-016
   **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14):** R-36 is retired; the positional struct
   literal stores `Row(u='x')` as the r8 recording does, and the oracle's `revised` field says so.
+  **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14, ruling 56(a)):** residue R-9's
+  `map/v2/insert-wrong-type` (`map(1, 'a')` into `MAP<STRING, INT>`) now refuses with Spark's
+  condition, SQLSTATE and text (`` Cannot safely cast `c`.`value` "STRING" to "INT" ``) behind
+  the planner's `Error during planning: ` prefix, where it refused with DataFusion's raw cast
+  error; the residue's RePark answer is re-pinned to it. The null-key and duplicate-key steps of
+  R-9 are unchanged.
   The VOID groups: `void-write` (a value into VOID on every door; R-23) and `void-create`
   (DataFrame create and CTAS of a NULL column on v3; v2 refuses, R-22). pins: u9-types-1/C-014,
   C-015

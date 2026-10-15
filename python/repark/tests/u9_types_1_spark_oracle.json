@@ -2629,19 +2629,19 @@
     "repark": [
      [
       "cond",
-      null
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
      ],
      [
       "error",
-      "PySparkException"
+      "AnalysisException"
      ],
      [
       "msg",
-      "datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast string 'a' to value of Int32 type"
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`m2`: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
      ],
      [
       "state",
-      null
+      "KD000"
      ]
     ]
    }
