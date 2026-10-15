@@ -851,10 +851,8 @@ class DataFrameWriterV2:
         """Append rows to an existing table by column name."""
         session, table_ref = self._existing_table_ref()
         writer_layout._refuse_duplicate_output_columns(self._dataframe)
-        self._run_through_temp_view(
-            writer_schema.append_statement(session, self._dataframe, table_ref),
-            self._options,
-        )
+        statement = writer_schema.append_statement(session, self._dataframe, table_ref)
+        writer_layout.run_by_name_append(self, statement, "_repark_writer_v2_")
 
     def overwritePartitions(self) -> None:  # noqa: N802 — PySpark method name
         """Replace only the partitions present in this DataFrame (Spark dynamic overwrite)."""

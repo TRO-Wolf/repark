@@ -69,10 +69,6 @@
     "U-missing-top",
     "U-table-qualified",
     "M2-two-clauses"
-   ],
-   "R-18": [
-    "E6-evo-setstar-reorder-noprop",
-    "E6-evo-insstar-reorder-noprop"
    ]
   }
  },
@@ -4938,34 +4934,7 @@
       "b": "w"
      }
     ]
-   ],
-   "residue": {
-    "id": "R-18",
-    "repark": {
-     "step": {
-      "type": "AnalysisException",
-      "condition": null,
-      "sqlstate": null,
-      "message": "MERGE UPDATE SET cannot store-assign column `st`: source type Struct(\"b\": Utf8, \"a\": Int64) is not ANSI-store-assignable to target type Struct(\"a\": Int64, \"b\": Utf8) (Spark INCOMPATIBLE_DATA_FOR_TABLE; add an explicit CAST only if the reinterpretation is intended semantics)"
-     },
-     "rows": [
-      [
-       1,
-       {
-        "a": 1,
-        "b": "p"
-       }
-      ],
-      [
-       2,
-       {
-        "a": 2,
-        "b": "q"
-       }
-      ]
-     ]
-    }
-   }
+   ]
   },
   "pr2/E6-evo-insstar-reorder-noprop": {
    "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
@@ -4999,34 +4968,7 @@
       "b": "w"
      }
     ]
-   ],
-   "residue": {
-    "id": "R-18",
-    "repark": {
-     "step": {
-      "type": "AnalysisException",
-      "condition": null,
-      "sqlstate": null,
-      "message": "MERGE INSERT cannot store-assign column `st`: source type Struct(\"b\": Utf8, \"a\": Int64) is not ANSI-store-assignable to target type Struct(\"a\": Int64, \"b\": Utf8) (Spark INCOMPATIBLE_DATA_FOR_TABLE; add an explicit CAST only if the reinterpretation is intended semantics)"
-     },
-     "rows": [
-      [
-       1,
-       {
-        "a": 1,
-        "b": "p"
-       }
-      ],
-      [
-       2,
-       {
-        "a": 2,
-        "b": "q"
-       }
-      ]
-     ]
-    }
-   }
+   ]
   },
   "pr2/B6-merge-setstar-plus-v": {
    "columns": "id BIGINT, v INT",

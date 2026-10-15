@@ -8,6 +8,8 @@ conformance it calls before staging.
 
 ## Contents
 
+- `store.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `conform_types` takes the door's `StructPairing` and table label
+  and passes them to `wrap_store_outputs`.
 - `store.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `conform_types` resolves the
   positional targets and runs `wrap_store_outputs` over the analyzed source plan, so an
   out-of-range fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column

@@ -854,6 +854,8 @@ declines it (a dated ruling in the intake, then the archive).
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
+  **2026-10-14:** the measured shape closed by ICE-STRUCT-PAIRING-1 (R-021 CLOSED, cell
+  `by_name_case_twins`); the card's wider scope waits on the owner.
 - [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
   **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
   carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a
@@ -876,6 +878,17 @@ declines it (a dated ruling in the intake, then the archive).
   `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
   0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
   or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
+- [update-subquery-store-1-card-2026-10-15.md](update-subquery-store-1-card-2026-10-15.md) — **card
+  UPDATE-SUBQUERY-STORE-1 (2026-10-15, open, not scheduled):** store Spark's value for
+  `UPDATE … SET col = (SELECT …)` where the identity path does not run (`WHERE true`, an `IN`
+  list, no `WHERE`, every non-comparison predicate; every `WHERE` on `repark.sql()`), which
+  refuse under owner ruling 90(a) at `PreExecute::guard` where they reported success and wrote
+  nothing. Names the step-0 causes with `path:line`: the admission in `predicate_dml/plain.rs`,
+  `scalar_set_assignments`, the fall-through to `execute_passthrough`, and DataFusion's
+  `extract_update_assignments` dropping a decorrelated same-name column as an identity
+  assignment. Registry row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY; since owner ruling 95
+  (2026-10-15) it also retires row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE, the cells
+  that match no row.
 - [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
   OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
   `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of

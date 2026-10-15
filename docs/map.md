@@ -223,6 +223,10 @@ repo.
   rows (Spark 4.1.2 measured printing both) and the Oracle, JSON, YAML and wider-name shapes.
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `CONNECT-DIV-url-userinfo` states the storage-location carve-out, the key rule
   matched to Spark 4.1.2 and beyond, and the known limits.
+  **ICE-STRUCT-PAIRING-1 ruling 95 (2026-10-15):** row
+  `ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE`, dated beside the ruling 90 row: an
+  `UPDATE … SET col = (SELECT …)` that matches no row refuses (12 cells per door), closed by
+  UPDATE-SUBQUERY-STORE-1.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

@@ -206,7 +206,8 @@ pub(crate) async fn execute_replace_where(
     let (catalog_name, catalog, table, branch) = match resolved {
         Ok(Some(target)) => target,
         Ok(None) => {
-            spark_ast::execute_insert_source(ctx, catalogs, &prepared.sql).await?;
+            spark_ast::execute_insert_source(ctx, catalogs, &prepared.sql, options.source_by_name)
+                .await?;
             return Err(DataFusionError::Plan(format!(
                 "INSERT INTO … REPLACE WHERE requires an Iceberg table, got `{table_sql}`"
             )));
@@ -242,7 +243,9 @@ pub(crate) async fn execute_replace_where(
     )
     .await?;
     crate::void_type::refuse_insert_source_types(ctx, catalogs, &insert, false).await?;
-    let source_df = spark_ast::execute_insert_source(ctx, catalogs, &planning_sql).await?;
+    let source_df =
+        spark_ast::execute_insert_source(ctx, catalogs, &planning_sql, options.source_by_name)
+            .await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     let base_table = format!(
         "`{catalog_name}`.`{namespace}`.`{}`",
