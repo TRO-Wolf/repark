@@ -394,16 +394,24 @@ async fn collect_identity_update_rows(
     let assignments = spec.assignments.as_ref().ok_or_else(|| {
         DataFusionError::Internal("identity UPDATE SELECT requires SET assignments".to_string())
     })?;
-    let projections = update_projection_sql(values_schema, &spec.target_alias, assignments);
-    let sql = format!(
-        "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
-        file = quote_ident(FILE_PATH_COL),
-        pos = quote_ident(POS_COL),
-        scratch = crate::write::merge::cow_scratch::quote_scratch_name(target_name),
-        alias = quote_ident(&spec.target_alias),
-        selection = spec.selection_sql,
-    );
-    let raw = crate::write::store_overflow::analyzed_store_source(ctx, &sql).await?;
+    let identity_sql = |instant: &[usize]| {
+        format!(
+            "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
+            file = quote_ident(FILE_PATH_COL),
+            pos = quote_ident(POS_COL),
+            projections =
+                update_projection_sql(values_schema, &spec.target_alias, assignments, instant),
+            scratch = crate::write::merge::cow_scratch::quote_scratch_name(target_name),
+            alias = quote_ident(&spec.target_alias),
+            selection = spec.selection_sql,
+        )
+    };
+    let analyze = crate::write::store_overflow::analyzed_store_source;
+    let mut raw = analyze(ctx, &identity_sql(&[])).await?;
+    let instant = lineage::instant_store_columns(raw.schema(), values_schema);
+    if !instant.is_empty() {
+        raw = analyze(ctx, &identity_sql(&instant)).await?;
+    }
     let targets: Vec<(String, datafusion::arrow::datatypes::DataType)> = values_schema
         .fields()
         .iter()

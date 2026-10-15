@@ -3408,7 +3408,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `repark.sql`, R-018(1)'s three `VALUES` shapes against their `SELECT` twins, and the
   Postgres cells. The R-010 cells read the stored rows through the table
   (`_live_pairs`, 2026-10-15), not from every Parquet file, so a copy-on-write `DELETE`
-  shows. `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
+  shows. `update_form_groups` is ruling 91: in UTC and New York, for a `timestamp_ns` and
+  a `timestamptz_ns` source, copy-on-write and merge-on-read, `UPDATE … SET v = c`, the
+  same with `WHERE id >= 0`, and `SET v = CAST(c AS TIMESTAMP) WHERE id >= 0` into a
+  `TIMESTAMP` column store one value (C-019). `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
   callable: `TIMESTAMP` and its literal as `timestamp[us]`, `TIMESTAMPTZ` as
   `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-013, C-020
 - [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +

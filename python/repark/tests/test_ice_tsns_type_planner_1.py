@@ -41,6 +41,7 @@ def all_groups() -> list[rule.Group]:
         *pins.door_groups(),
         *pins.postgres_groups(),
         *pins.q6_groups(),
+        *pins.update_form_groups(),
     ]
 
 
@@ -133,6 +134,14 @@ def test_every_lattice_position_equals_its_typed_twin(group: rule.Group, tmp_pat
 @pytest.mark.parametrize("group", pins.door_groups(), ids=lambda group: group.name)
 def test_refusals_microsecond_pins_and_registry_rows(group: rule.Group, tmp_path: Path) -> None:
     """pins: ice-tsns-type-planner-1/C-010 — H1, H2, P15, R-010, R-013, R-018(1)."""
+    _check(group, tmp_path)
+
+
+@pytest.mark.parametrize("group", pins.update_form_groups(), ids=lambda group: group.name)
+def test_an_identity_update_stores_what_its_other_forms_store(
+    group: rule.Group, tmp_path: Path
+) -> None:
+    """pins: ice-tsns-type-planner-1/C-019 — ruling 91, WHERE, no WHERE and a written CAST."""
     _check(group, tmp_path)
 
 

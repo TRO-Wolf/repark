@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +77,12 @@ POSITIONS: tuple[tuple[str, str], ...] = (
 REFUSED = ("range", "generate_series")
 OUT_OF_RANGE = {"us_first": "coalesce(far, ns)", "ns_first": "greatest(ns, far)"}
 Q6_CELL = "q6|repark_sql|timestamp_spellings"
+UPDATE_SOURCES = {"ns": "timestamp_ns", "tzns_utc": "timestamptz_ns"}
+UPDATE_FORMS = (
+    "UPDATE {T} SET v = c",
+    "UPDATE {T} SET v = c WHERE id >= 0",
+    "UPDATE {T} SET v = CAST(c AS TIMESTAMP) WHERE id >= 0",
+)
 SERIES = "TIMESTAMP '2024-01-01 00:00:00', TIMESTAMP '2024-01-03 00:00:00', INTERVAL '1' DAY"
 
 
@@ -358,6 +365,67 @@ def _door_run(scratch: Path) -> dict[str, str]:
 def door_groups() -> list[rule.Group]:
     """Return the refusal, microsecond-pin, CSV and registry-row cells."""
     return [rule.Group(name="doors|UTC", family="doors", zone="UTC", run=_door_run, cells=19)]
+
+
+def _update_form_store(
+    spark: Any, scratch: Path, source: str, mode: str, statement: str
+) -> dict[str, Any]:
+    table = doors.fresh_table()
+    properties = doors.MOR if mode == "mor" else ""
+    result: dict[str, Any] = {}
+    try:
+        spark.sql(
+            f"CREATE TABLE {table} (id INT, v TIMESTAMP, k INT, c {UPDATE_SOURCES[source]}) "
+            f"USING iceberg TBLPROPERTIES ('format-version' = '3'{properties})"
+        )
+        spark.sql(
+            f"INSERT INTO {table} (id, k, c) SELECT id, 0, {source} FROM {rule.SRC}"
+        ).toArrow()
+        try:
+            spark.sql(statement.replace("{T}", table)).toArrow()
+        except Exception as error:
+            result["error"] = doors.error_text(error)
+            result["error_type"] = type(error).__name__
+        result["stored"] = _live_pairs(spark, table)
+    finally:
+        doors.cleanup(spark, scratch, table)
+    return result
+
+
+def _update_forms_run(zone: str, scratch: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    spark = doors.open_session(zone, scratch)
+    try:
+        for source in UPDATE_SOURCES:
+            for mode in ("cow", "mor"):
+                cell = f"update_forms|{zone}|{source}|{mode}"
+                outcomes = [
+                    _update_form_store(spark, scratch, source, mode, statement)
+                    for statement in UPDATE_FORMS
+                ]
+                failed = [outcome for outcome in outcomes if not rule.answered(outcome)]
+                rule.note(cell, failed[0] if failed else outcomes[0])
+                reasons = [rule.differ(outcome, outcomes[0]) for outcome in outcomes[1:]]
+                if failed:
+                    reasons.insert(0, repr(failed[0])[:260])
+                out[cell] = "; ".join(reason for reason in reasons if reason)[:300]
+    finally:
+        spark.stop()
+    return out
+
+
+def update_form_groups() -> list[rule.Group]:
+    """Return the ruling-91 cells: WHERE, no WHERE and a written CAST store one value."""
+    return [
+        rule.Group(
+            name=f"update_forms|{zone}",
+            family="update_forms",
+            zone=zone,
+            run=partial(_update_forms_run, zone),
+            cells=len(UPDATE_SOURCES) * 2,
+        )
+        for zone in ("UTC", "America/New_York")
+    ]
 
 
 def _q6_run(_scratch: Path) -> dict[str, str]:
