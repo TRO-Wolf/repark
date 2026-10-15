@@ -1,6 +1,6 @@
 {
  "module": "01796857",
- "cells": 11274,
+ "cells": 11288,
  "errored": [
   "cache|America/New_York|ts_ns|ns|ifnull",
   "cache|America/New_York|ts_ns|ns|nvl",
@@ -949,7 +949,11 @@
   "repro|v2_map_element_site|ns|America/New_York",
   "repro|v2_map_element_site|ns|UTC",
   "repro|v2_map_element_site|tzns|America/New_York",
-  "repro|v2_map_element_site|tzns|UTC"
+  "repro|v2_map_element_site|tzns|UTC",
+  "update_forms|America/New_York|ns|mor",
+  "update_forms|America/New_York|tzns_utc|mor",
+  "update_forms|UTC|ns|mor",
+  "update_forms|UTC|tzns_utc|mor"
  ],
  "red": {
   "cache|America/New_York|ts_ns|ns|array_literal": "{'stored': [[1, 1767341045123456000], [2, 17999999999000]], 'parquet_type': 'timestamp[ns]'} != {'stored': [[1, 1767305045123456789], [2, -18000000000001]], 'parquet_type': 'timestamp[ns]'}",
@@ -7925,6 +7929,8 @@
   "consumer|tzns|udf|pandas_udf_ret_ntz|UTC": "{'types': ['int32', 'timestamp[us]'], 'rows': [['1', '1', '2'], [0, 1767323045123456, None]]} != {'error_type': 'PySparkException', 'error': \"pandas_udf '<lambda>' failed converting result to declared type timestamp[us] (timestamp_ntz): Casting from timestamp[ns] to timestamp[us] would lose data: -1\"}",
   "consumer|tzns|udf|pandas_udf_ret_ts|America/New_York": "{'types': ['int32', 'timestamp[us, tz=UTC]'], 'rows': [['1', '1', '2'], [0, 1767323045123456, None]]} != {'error_type': 'PySparkException', 'error': \"pandas_udf '<lambda>' failed converting result to declared type timestamp[us, tz=UTC] (timestamp): Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: -1\"}",
   "consumer|tzns|udf|pandas_udf_ret_ts|UTC": "{'types': ['int32', 'timestamp[us, tz=UTC]'], 'rows': [['1', '1', '2'], [0, 1767323045123456, None]]} != {'error_type': 'PySparkException', 'error': \"pandas_udf '<lambda>' failed converting result to declared type timestamp[us, tz=UTC] (timestamp): Casting from timestamp[ns] to timestamp[us, tz=UTC] would lose data: -1\"}",
+  "encoded|TIMESTAMP|dictionary": "{'stored': [[1, 1767323045123456], [2, -1]], 'parquet_type': 'timestamp[us, tz=UTC]'} != {'stored': [[1, 1767323045123456], [2, -2]], 'parquet_type': 'timestamp[us, tz=UTC]'}",
+  "encoded|TIMESTAMP|run_end_encoded": "{'stored': [[1, 1767323045123456], [2, -1]], 'parquet_type': 'timestamp[us, tz=UTC]'} != {'stored': [[1, 1767323045123456], [2, -2]], 'parquet_type': 'timestamp[us, tz=UTC]'}",
   "h1|ansi|generate_series": "generate_series over timestamps answered: {'types': ['list<item: timestamp[ns]>'], 'rows': [[[1704067200000000000, 1704153600000000000, 1704240000000000000]]]}",
   "h1|ansi|range": "range over timestamps answered: {'types': ['list<item: timestamp[ns]>'], 'rows': [[[1704067200000000000, 1704153600000000000]]]}",
   "h1|spark|generate_series": "generate_series over timestamps answered: {'types': ['list<item: timestamp[ns, tz=UTC]>'], 'rows': [[[1704067200000000000, 1704153600000000000, 1704240000000000000]]]}",
@@ -8772,6 +8778,10 @@
   "repro|v3_union_ntz_null|tzns|America/New_York": "{'types': ['int32', 'timestamp[us, tz=UTC]'], 'rows': [['2', '2', '1', '1', '2', '1'], [None, 17999999999, None, 1767341045123456, 17999999999, 1767341045123456]]} != {'types': ['int32', 'timestamp[ns, tz=UTC]'], 'rows': [['2', '2', '1', '1', '1', '2'], [17999999999999, None, 1767341045123456789, 1767341045123456000, None, 17999999999000]]}",
   "repro|v3_union_ntz_null|tzns|UTC": "{'types': ['int32', 'timestamp[us, tz=UTC]'], 'rows': [['2', '1', '2', '2', '1', '1'], [-1, 1767323045123456, None, -1, 1767323045123456, None]]} != {'types': ['int32', 'timestamp[ns, tz=UTC]'], 'rows': [['2', '1', '1', '2', '1', '2'], [None, 1767323045123456789, 1767323045123456000, -1000, None, -1]]}",
   "repro|v3_values_relation|tzns|America/New_York": "{'stored': [[1, 1767323045123456789]], 'parquet_type': 'timestamp[ns, tz=UTC]'} != {'stored': [[1, 1767323045123456000]], 'parquet_type': 'timestamp[ns, tz=UTC]'}",
-  "repro|v3_values_relation|tzns|UTC": "{'stored': [[1, 1767323045123456789]], 'parquet_type': 'timestamp[ns, tz=UTC]'} != {'stored': [[1, 1767323045123456000]], 'parquet_type': 'timestamp[ns, tz=UTC]'}"
+  "repro|v3_values_relation|tzns|UTC": "{'stored': [[1, 1767323045123456789]], 'parquet_type': 'timestamp[ns, tz=UTC]'} != {'stored': [[1, 1767323045123456000]], 'parquet_type': 'timestamp[ns, tz=UTC]'}",
+  "update_forms|America/New_York|ns|mor": "{'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to resolve this by filing a bug report in our issue tracker: https:<X>\", 'error_type': 'PySparkException', 'stored': []}; {'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to res",
+  "update_forms|America/New_York|tzns_utc|mor": "{'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to resolve this by filing a bug report in our issue tracker: https:<X>\", 'error_type': 'PySparkException', 'stored': []}; {'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to res",
+  "update_forms|UTC|ns|mor": "{'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to resolve this by filing a bug report in our issue tracker: https:<X>\", 'error_type': 'PySparkException', 'stored': []}; {'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to res",
+  "update_forms|UTC|tzns_utc|mor": "{'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to resolve this by filing a bug report in our issue tracker: https:<X>\", 'error_type': 'PySparkException', 'stored': []}; {'error': \"This issue was likely caused by a bug in DataFusion's code. Please help us to res"
  }
 }

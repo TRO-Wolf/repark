@@ -82,6 +82,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   refuses, as the kernel refuses an encoded argument). Kills the mutant that stops seeing
   through `Dictionary` for the zoned target at the store.
   pins: ice-tstzns-wall-1/C-003, C-004, C-005, C-010
+- [ice_tsns_type_planner_1_update_forms.rs](ice_tsns_type_planner_1_update_forms.rs) —
+  **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):** in an America/New_York session, a
+  `timestamp_ns` and a `timestamptz_ns` source into a `TIMESTAMP` column, copy-on-write and
+  merge-on-read: `UPDATE … SET v = c`, the same with `WHERE id >= 0`, and `SET v = CAST(c
+  AS TIMESTAMP) WHERE id >= 0` store one value (a pre-1970 value with digits below the
+  microsecond among them). Red with the identity UPDATE seam reverted alone.
+  pins: ice-tsns-type-planner-1/C-019
 - [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
   (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
   an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`

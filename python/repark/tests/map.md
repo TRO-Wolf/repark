@@ -3373,7 +3373,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the pandas and Arrow doors (`consumer` 88, `reads|m_udf:…` 20), and 184 rows of ruling
   93's residue, each red on today's main in the main record (census 30, positions 96,
   repros 51, H1 4, P15 1, out of range with ANSI off 2). Eight residue cells are red on
-  the head and green on main, so they carry no row. pins: ice-tsns-type-planner-1/C-013,
+  the head and green on main, so they carry no row. Two rows of ruling 92's scope follow:
+  an encoded nanosecond source into `TIMESTAMP` truncates where the plain one floors, on
+  today's main too (R-024). pins: ice-tsns-type-planner-1/C-013,
   C-019
 - [_ice_tsns_type_planner_1_rule.py](_ice_tsns_type_planner_1_rule.py) —
   **ICE-TSNS-TYPE-PLANNER-1:** the rule as a harness. `statement_of` and `twin_of` write
@@ -3424,7 +3426,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's module, the list behind the fixture's main-answers-so-this-answers check, and the
   cells red there. **Re-recorded 2026-10-15 on today's main `01796857` (after U-3):** 948
   of 11,274 statements error, 10 more than on `293896ce` (all `update_where_mor` array
-  cells, U-3's guard); 7,821 cells are red. pins: ice-tsns-type-planner-1/C-006, C-019
+  cells, U-3's guard); 7,821 cells are red. The `encoded` and `update_forms` groups were
+  recorded on the same module later that day and merged in: 952 of 11,288 statements error
+  and 7,827 cells are red (both encoded cells into `TIMESTAMP`, and the four merge-on-read
+  `update_forms` cells, where every form errors on main). pins: ice-tsns-type-planner-1/C-006, C-019
 - [_record_ice_tsns_coercion_1_spark_lattice.py](_record_ice_tsns_coercion_1_spark_lattice.py) +
   [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) —
   **ICE-TSNS-COERCION-1 slice 0:** Spark 4.1.2, five zones, both ANSI modes. `timestamp_ns`
