@@ -212,11 +212,14 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
             }
             None => true,
         };
-        Ok(Arc::new(Field::new(
-            self.name(),
-            target_type(self.zoned),
-            nullable,
-        )))
+        let metadata = args
+            .arg_fields
+            .first()
+            .map(|field| field.metadata().clone())
+            .unwrap_or_default();
+        Ok(Arc::new(
+            Field::new(self.name(), target_type(self.zoned), nullable).with_metadata(metadata),
+        ))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {

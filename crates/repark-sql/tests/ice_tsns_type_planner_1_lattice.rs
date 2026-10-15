@@ -435,3 +435,56 @@ async fn an_aggregate_zero_takes_the_unit_of_its_array_elements() {
         assert_eq!(&got, &want, "`{sql}` against `{typed}`");
     }
 }
+
+fn with_field_ids(session: ReparkSession) -> ReparkSession {
+    let batch = fixture_batch();
+    let fields: Vec<Field> = batch
+        .schema()
+        .fields()
+        .iter()
+        .enumerate()
+        .map(|(index, field)| {
+            field
+                .as_ref()
+                .clone()
+                .with_metadata([("PARQUET:field_id".to_owned(), (index + 1).to_string())].into())
+        })
+        .collect();
+    let tagged = RecordBatch::try_new(Arc::new(Schema::new(fields)), batch.columns().to_vec())
+        .unwrap_or_else(|error| panic!("tag field ids: {error}"));
+    session
+        .context()
+        .register_batch("m", tagged)
+        .unwrap_or_else(|error| panic!("register m: {error}"));
+    session
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors() {
+    for (door, session) in doors() {
+        let session = with_field_ids(session);
+        for (left, right) in [
+            ("a_ns", "a_us_tz"),
+            ("a_us", "a_ns_tz"),
+            ("a_ns_tz", "a_us"),
+        ] {
+            for (first, second) in [("m", "t"), ("t", "m"), ("m", "m")] {
+                let sql = format!(
+                    "SELECT {left} AS v FROM {first} UNION SELECT {right} AS v FROM {second}"
+                );
+                let all = format!(
+                    "SELECT DISTINCT v FROM (SELECT {left} AS v FROM {first} \
+                     UNION ALL SELECT {right} AS v FROM {second})"
+                );
+                let got = first_column(&session, &format!("{sql} ORDER BY v")).await;
+                let want = first_column(&session, &format!("{all} ORDER BY v")).await;
+                assert_eq!(
+                    unit_of(got.data_type()),
+                    Some(TimeUnit::Nanosecond),
+                    "{door}: `{sql}`"
+                );
+                assert_eq!(&got, &want, "{door}: `{sql}`");
+            }
+        }
+    }
+}

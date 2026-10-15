@@ -409,6 +409,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   The kernel stays registered by name: the Iceberg store doors in `repark-iceberg` look
   it up with `ctx.udf(name)` and render it in generated SQL, and that crate cannot link
   this one, so R-013 keeps its row. pins: ice-tsns-type-planner-1/C-014
+  **M3, UNION DISTINCT (2026-10-15):** the kernel's return field carries the source
+  field's metadata, as the `Cast` it replaces does. Without it, a `UNION` branch whose
+  coercion cast became the kernel lost its `PARQUET:field_id` in the physical plan while
+  the union's logical schema, built before the swap, kept it, and `UNION` (DISTINCT)
+  refused the plan. pins: ice-tsns-type-planner-1/C-018
 - `instant_ts.rs`, `spark_string_timestamp.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   the session timestamp rule no longer reads a nanosecond cast target as the SQL
   `TIMESTAMP`. Deleted from `rewrite_cast`: the arm that peeled a cast of an instant to a
@@ -453,6 +458,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   lambda and the zero agree and `check_merge_types` no longer refuses the pair. The plan's
   lambda variables are resolved again after a rewrite, so `acc` takes the widened type.
   pins: ice-tsns-type-planner-1/C-015
+  **M3 rule gaps, UNION DISTINCT (2026-10-15):** the gap was not in this rule. See
+  `timestamp_ns_cast.rs`: the wall kernel that replaces a nanosecond `Cast` after type
+  coercion dropped the source field's metadata, so a `UNION`'s stale logical schema kept a
+  `PARQUET:field_id` its physical plan lacked. pins: ice-tsns-type-planner-1/C-016
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
