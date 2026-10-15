@@ -1742,6 +1742,20 @@ perfectly good read.
   version, per the owner's ES-3 words and the never-write-plaintext rule: writing plaintext
   into a table that asked for encryption is the outcome the ruling forbids.
 
+#### ENC-CTAS-REPLACE-1 — DATED ROW 2026-10-15 (owner ruling 98 (a)): a key landing mid-statement leaves an orphan unencrypted file
+
+- **repark** — `CREATE OR REPLACE TABLE … AS SELECT` on the Spark SQL door: when an encryption key
+  lands on the table between `begin_replace` and the publish, the staged table still carries the old
+  unkeyed properties and a plain `FileIO`, so staging writes an unencrypted Parquet file; the guard's
+  `refuse_keyed_publish` checks the staged (unkeyed) table and passes; the inner `publish_replace_table`
+  then fails on the moved base metadata location (a `CommitFailed`, not a keyed refusal); nothing removes
+  the staged file. Result: an orphan unencrypted file under the keyed table's `data/`, referenced by no
+  snapshot, so never served. Main behaves the same. Read in the code, not run.
+- **Apache Spark** — not measured.
+- **Card** — [ENC-CTAS-REPLACE-1](../task/roadmap/mid-term/enc-ctas-replace-1-card-2026-10-15.md)
+  (2026-10-15, open, not scheduled). Retires when the staged files are removed on that failure, or the
+  publish refuses before staging, with a pin that a key landing mid-statement leaves no unencrypted file.
+
 #### D-SHOW-TBLPROPERTIES — `SHOW TBLPROPERTIES t` answers Spark's rows on Iceberg tables — **FIXED 2026-09-26**
 
 - **Before** — `SHOW TBLPROPERTIES cat.ns.t` on a table fell through to DataFusion and
