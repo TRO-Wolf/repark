@@ -1,4 +1,4 @@
-# PA-LOCAL-FS-POLICY-1 (U-5 part 2, audit PA-02 to PA-04): the local-file write policy holds below the root, through missing parents, and for every UTF-8 path     grade: B   engine: Muse xhigh, guided   release: 1.5.6
+# PA-LOCAL-FS-POLICY-1 (U-5 part 2, audit PA-02 to PA-04): the local-file write policy holds below the root, through missing parents, and for every UTF-8 path     grade: B   engine: Opus 5.5 high (owner switch 2026-10-15)   release: 1.5.6
 
 **Status:** order of record for the second of U-5's two units in the Iceberg closeout (closeout
 plan row U-5; owner ruling T-5, 2026-10-13; ruling 69, 2026-10-14 night: "Both U-5 orders written
@@ -32,6 +32,12 @@ writing.
 
 - **The audit's required results** for PA-02, PA-03 and PA-04 are the charter (quoted in the
   audit; read them in full).
+- **Owner, 2026-10-15 (amending the order at launch, #1065):** "the public Python repark.sql()
+  entry gets the guard. It is in scope, not a halt. The only halt on it is a public signature
+  change outside the two guard files."; "The symlink-change race stays a dated row. One
+  implementation in repark-core beside CatalogRegistry is approved; check-crate-dag proves no
+  new edge."; "Both units run on Opus 5.5 high under today's switch; the records commit updates
+  each order's engine line."
 - **Orchestrator, at writing (the owner may overrule at triage):**
   - **One implementation.** The two guards become one: the classification, prefix strip,
     canonicalization and containment helpers move to `crates/repark-core` beside

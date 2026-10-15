@@ -20,18 +20,18 @@ and the public `repark.sql()` entry, under
 | C-003 | Main panics on a multibyte character across byte 5, 7 or 9 of a location on both doors, and classifies `file://localhost/<outside>` as local and refuses it. | Step 0 probes, §1. | **PROVEN** | §1.1, §1.2. |
 | C-004 | `PREPARE … AS COPY …` does not parse on either door, so no prepared statement can carry a `COPY`; `EXECUTE` of it answers "does not exist". | Step 0 probes, §1; the `Prepare` unit pin. | **PROVEN** | §1.1, §1.2; DataFusion keeps the prepared plan behind `pub(crate)` `get_prepared`, so the walk checks a `Prepare` node's input at `PREPARE`. |
 | C-005 | Main's ANSI door ignores the explicit opt-in: its reader looks up `repark.sql.allow_local_filesystem_ddl` among `ConfigOptions::entries()`, which reports the real `repark.sql` extension's field unprefixed, so a session built with `repark.sql.allowLocalFilesystemDDL=true` still refuses outside. | Step 1 run on main, §2. | **PROVEN** | §2: the opt-in cell of `pa04_ansi_non_ascii_controls` refuses on main. |
-| C-006 | PA-02: the guard walks the plan and checks every `Copy` and `CreateExternalTable` node at any depth before execution, so `EXPLAIN ANALYZE COPY … TO '<outside>'` refuses with the named policy error and writes no file on the Spark door, the ANSI door and `repark.sql()`. | The PA-02 pins on all three entries. | **OPEN** | Step 4. |
-| C-007 | PA-02: a `Prepare` node's input is walked, so a prepared write is checked when it is prepared; `EXECUTE` cannot carry a `COPY` (C-004). | The `Prepare`-wrapped unit pin in `local_fs_policy.rs`. | **OPEN** | Step 4. |
-| C-008 | PA-02: plain `EXPLAIN` of a `COPY` outside still answers and writes nothing on all three entries. | The plain-EXPLAIN pins. | **OPEN** | Step 4. |
-| C-009 | PA-02: the warehouse control and the explicit opt-in control still write through `EXPLAIN ANALYZE COPY` on both doors and on the native dialect. | The PA-02 control pins. | **OPEN** | Step 4. |
-| C-010 | PA-02, owner ruling 2026-10-15: `repark.sql()` gets the guard: `PyReparkSession.native()` installs `LocalFsGuardedDialect`, which plans, applies the guard, applies the shared belt and executes; no public signature changes. | The `repark.sql()` pins and the native-dialect pins. | **OPEN** | Step 3. |
-| C-011 | PA-03: containment resolves the nearest existing ancestor with `canonicalize` and joins the missing tail, so `<warehouse>/link/new/export` and `<warehouse>/link/m1/m2/m3/export` with `link -> <outside>` refuse on all three entries, for `COPY` and for `CREATE EXTERNAL TABLE`. | The PA-03 pins and the resolver unit pins. | **OPEN** | Step 3. |
-| C-012 | PA-03: an unsafe or indeterminate destination refuses: a `..` in the missing tail, a dangling symlink, an ancestor whose metadata read fails for any reason but not-found, and an empty location. | The PA-03 indeterminate pins. | **OPEN** | Step 3. |
-| C-013 | PA-03: a symlink that stays inside the warehouse, missing parents under the warehouse, and the opt-in through an outside symlink still write. | The PA-03 control pins. | **OPEN** | Step 3. |
-| C-014 | PA-04: the prefix strip is checked (`str::get`), so a character across byte 5, 7 or 9 classifies as a local path and the statement refuses with the named policy error, not a panic, on all three entries. | The PA-04 pins and the classification unit pins. | **OPEN** | Step 3. |
-| C-015 | PA-04: ordinary non-ASCII names and the `file://localhost` forms classify: outside refuses, under the warehouse writes, and the opt-in writes outside. | The PA-04 control pins. | **OPEN** | Step 3. |
-| C-016 | One implementation: classification, the checked prefix strip, containment, the plan walk and the conf read live in `repark_core::local_fs_policy` beside `CatalogRegistry`; both doors' private copies are deleted; `catalog_state.rs` uses the same strip; no new crate edge. | `make check-crate-dag`; the door files. | **OPEN** | Steps 2 and 3. |
-| C-017 | The conf read is scoped to the `repark.sql` config extension and accepts its field unprefixed or prefixed, so the ANSI door's explicit opt-in writes (C-005 fixed) and an absent extension stays closed. | The ANSI opt-in control pins; the existing `conf_true_opens_the_gate` and `missing_conf_extension_is_closed`. | **OPEN** | Step 3. |
+| C-006 | PA-02: the guard walks the plan and checks every `Copy` and `CreateExternalTable` node at any depth before execution, so `EXPLAIN ANALYZE COPY … TO '<outside>'` refuses with the named policy error and writes no file on the Spark door, the ANSI door and `repark.sql()`. | The PA-02 pins on all three entries. | **PROVEN** | §6, §7: green on head on all three entries; the M-PA02 revert reds it. |
+| C-007 | PA-02: a `Prepare` node's input is walked, so a prepared write is checked when it is prepared; `EXECUTE` cannot carry a `COPY` (C-004). | The `Prepare`-wrapped unit pin in `local_fs_policy.rs`. | **PROVEN** | §7: `the_walk_checks_a_write_below_every_carrier_but_plain_explain` refuses the `Prepare`-wrapped `COPY`; the M-PA02 revert reds it. |
+| C-008 | PA-02: plain `EXPLAIN` of a `COPY` outside still answers and writes nothing on all three entries. | The plain-EXPLAIN pins. | **PROVEN** | §6: the plain-EXPLAIN pins pass on main and on head. |
+| C-009 | PA-02: the warehouse control and the explicit opt-in control still write through `EXPLAIN ANALYZE COPY` on both doors and on the native dialect. | The PA-02 control pins. | **PROVEN** | §6: the controls pass on head; the M-C017 revert reds every opt-in control. |
+| C-010 | PA-02, owner ruling 2026-10-15: `repark.sql()` gets the guard: `PyReparkSession.native()` installs `LocalFsGuardedDialect`, which plans, applies the guard, applies the shared belt and executes; no public signature changes. | The `repark.sql()` pins and the native-dialect pins. | **PROVEN** | §5, §7: the `repark.sql()` pins pass on head; the M-C010 revert reds them. |
+| C-011 | PA-03: containment resolves the nearest existing ancestor with `canonicalize` and joins the missing tail, so `<warehouse>/link/new/export` and `<warehouse>/link/m1/m2/m3/export` with `link -> <outside>` refuse on all three entries, for `COPY` and for `CREATE EXTERNAL TABLE`. | The PA-03 pins and the resolver unit pins. | **PROVEN** | §7: the M-PA03 revert reds the symlink-escape pins of both doors and the resolver unit pins. |
+| C-012 | PA-03: an unsafe or indeterminate destination refuses: a `..` in the missing tail, a dangling symlink, an ancestor whose metadata read fails for any reason but not-found, and an empty location. | The PA-03 indeterminate pins. | **PROVEN** | §7: the M-PA03 revert reds the `..`, dangling-symlink and empty-location pins. |
+| C-013 | PA-03: a symlink that stays inside the warehouse, missing parents under the warehouse, and the opt-in through an outside symlink still write. | The PA-03 control pins. | **PROVEN** | §6: the controls pass on head. |
+| C-014 | PA-04: the prefix strip is checked (`str::get`), so a character across byte 5, 7 or 9 classifies as a local path and the statement refuses with the named policy error, not a panic, on all three entries. | The PA-04 pins and the classification unit pins. | **PROVEN** | §7: the M-PA04 revert panics at byte 5 in the unit pins and reds both doors' byte-boundary pins. |
+| C-015 | PA-04: ordinary non-ASCII names and the `file://localhost` forms classify: outside refuses, under the warehouse writes, and the opt-in writes outside. | The PA-04 control pins. | **PROVEN** | §6: the PA-04 controls pass on head. |
+| C-016 | One implementation: classification, the checked prefix strip, containment, the plan walk and the conf read live in `repark_core::local_fs_policy` beside `CatalogRegistry`; both doors' private copies are deleted; `catalog_state.rs` uses the same strip; no new crate edge. | `make check-crate-dag`; the door files. | **PROVEN** | §4, §6: both doors re-export the one function; `make check-crate-dag` reports the same 25 internal edges as main. |
+| C-017 | The conf read is scoped to the `repark.sql` config extension and accepts its field unprefixed or prefixed, so the ANSI door's explicit opt-in writes (C-005 fixed) and an absent extension stays closed. | The ANSI opt-in control pins; the existing `conf_true_opens_the_gate` and `missing_conf_extension_is_closed`. | **PROVEN** | §7: the M-C017 revert reds the conf-read unit pin, the ANSI opt-in controls and the Spark door's existing opt-in tests. |
 | C-018 | One fresh Opus 5.5 high verifier, scoped to the pins, the audit's reproductions on both doors and a mutant per finding, finds no defect. | The closeout verifier (order §5). | **OPEN** | After CI; not this round. |
 
 ## 1. Step 0 — main measured on both doors (C-001 … C-004)
@@ -211,3 +211,48 @@ Rust session and the repark-core tests that `COPY` into temporary directories ke
 behaviour. The native session registers no `repark.sql` config extension, so `repark.sql()`
 has no opt-in and refuses closed; the typed writer's `note_local_write_root` grandfathers its
 own destination on this entry as on the Spark door.
+
+## 6. Step 5 — gates on head `83147df1` and the records
+
+The release module was built from `83147df1` with an empty `git status --short`.
+
+| Command | Result |
+|---|---|
+| `cargo test --no-fail-fast -p repark-core -p repark-spark -p repark-sql` (inside the build lock) | 48 test binaries, 4906 passed, 0 failed, 11 ignored |
+| `.venv/bin/python -m pytest python/repark/tests/test_pa_local_fs_policy_1.py -q` | 15 passed |
+| every `python/repark/tests` file that calls `repark.sql()`, plus `test_sec_boundaries.py` | 1361 passed, 130 skipped, 5 xfailed |
+| `python -m pytest python/repark/tests -n 16` (the whole suite) | 17009 passed, 488 skipped, 151 xfailed |
+| `make rust-clippy`, `make rust-panic-ban`, `cargo fmt --all -- --check` | exit 0 |
+| `make check-rust-file-size check-crate-dag` | clean; 25 internal edges, as on main |
+| `make check-docs-links check-docs-compaction check-ledger-grammar spell-check` | exit 0 |
+| `python3 scripts/sync_map_md.py --check`, `bash scripts/check_map_md.sh --base origin/main` | exit 0 |
+| `comment_ban.py` over `origin/main..HEAD` | 0 hits |
+
+`microbatch::lifecycle_tests::two_sessions_on_one_sink_wait_for_the_scope` failed once in
+the first, fail-fast run (`the query ends within the bound: Elapsed(())`) and passed alone
+and in the full `--no-fail-fast` run. It is the audit's own PA-15 (the micro-batch completion
+fails its test bound), and this unit does not touch micro-batch code.
+
+Records: the three dated amendments under PA-02, PA-03 and PA-04 of the audit; five lines in
+the 1.5.6 release-notes draft; the order's engine line and the owner's dated amendment line.
+
+### Dated rows
+
+| Date | Row |
+|---|---|
+| 2026-10-15 | **The concurrent symlink-change race, out of scope by owner ruling.** In the audit's words: "a pathname-only precheck can still have a check/use race when another actor controls the directory." The policy resolves the destination when the statement is planned and DataFusion opens the file later; an actor who can change a symlink inside a registered warehouse between those two moments can still redirect the write. The owner ruled on 2026-10-15 that this "stays a dated row". Closing it needs an open-relative-to-a-directory-handle write path (for example `openat2` with `RESOLVE_BENEATH`), which DataFusion's object store does not offer. |
+| 2026-10-15 | **`repark.sql()` has no opt-in.** The native session registers no `repark.sql` config extension, so the entry refuses closed; enabling one would also let a SQL `SET` on that entry open the gate at runtime, which the Spark door deliberately does not allow. |
+
+## 7. Revert checks (one mutant per finding)
+
+Each mutant re-introduces the defect in `repark_core::local_fs_policy` (or removes the native
+wiring), runs the unit, Spark, ANSI and guard suites, and is restored with `git checkout`; the
+restored head is the green run of §6.
+
+| Mutant | Re-introduces | Killing tests | Failing assertion (first) |
+|---|---|---|---|
+| M-PA02 | the walk stops at the root (`TreeNodeRecursion::Jump` after the first node) | 4: `the_walk_checks_a_write_below_every_carrier_but_plain_explain`, `the_native_door_refuses_every_executing_write_outside`, Spark `pa02_explain_analyze_copy_outside_refuses_and_writes_nothing`, ANSI `pa02_ansi_explain_analyze_copy_outside_refuses_and_writes_nothing` | ``called `Result::unwrap_err()` on an `Ok` value: ()`` |
+| M-PA03 | main's resolver (the target, else its parent, else lexical) | 11: the four resolver unit pins, the native refusal pin, Spark `pa03_create_external_table_through_a_warehouse_symlink_refuses`, `pa03_dangling_symlink_in_the_warehouse_refuses`, `pa03_one_missing_parent_through_a_warehouse_symlink_refuses`, `pa03_three_missing_parents_through_a_warehouse_symlink_refuse`, ANSI `pa03_ansi_missing_parents_through_a_warehouse_symlink_refuse`, `pa03_ansi_dot_dot_and_dangling_symlink_refuse` | ``assertion `left == right` failed`` (`a_dot_dot_after_the_nearest_existing_ancestor_is_indeterminate`) |
+| M-PA04 | main's unchecked byte slice in `strip_ascii_prefix_ci` | 5: both classification unit pins, the native refusal pin, Spark and ANSI `pa04_*_non_ascii_relative_locations_refuse_with_the_policy_error` | `end byte index 5 is not a char boundary; it is inside 'é' (bytes 4..6 of string)` |
+| M-C017 | main's ANSI conf read (only the prefixed key matches) | 10: the conf-read unit pin, Spark `allow_conf_true_permits_outside`, `bare_copy_to_applies_without_collect`, `copy_to_applies_exactly_once_across_a_later_collect`, the three Spark opt-in pins, the three ANSI control pins | `assertion failed: allow_local_filesystem_ddl(&unprefixed_ctx(true))` |
+| M-C010 | `PyReparkSession.native()` without `with_sql_dialect` (main's `DataFusionDialect`), release module rebuilt | 1 of 15: `test_repark_sql_refuses_executing_writes_outside` (the plain-EXPLAIN control stays green) | `Failed: DID NOT RAISE AnalysisException` |
