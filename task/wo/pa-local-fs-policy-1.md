@@ -38,6 +38,19 @@ writing.
   implementation in repark-core beside CatalogRegistry is approved; check-crate-dag proves no
   new edge."; "Both units run on Opus 5.5 high under today's switch; the records commit updates
   each order's engine line."
+- **Owner, 2026-10-15 (after the verifier's FAIL, findings V-01 to V-06):** "103: (a). V-02
+  comes into scope with the cause. One condition: the textual-vs-followed check is judged on the
+  part of the path under the warehouse, after the warehouse root and the target are
+  canonicalised the same way. Pin that a warehouse whose root is itself a symlink (macOS /tmp)
+  still accepts writes inside it. Pin V-01, V-02 and V-03 each as "writes outside on today's
+  head, no file on disk after". Scoped re-verifier; not green means park."; "104: (a) this
+  round. The message names a real opt-in path for repark.sql() if one exists. If none exists,
+  the card is filed now and the 1.5.6 note carries the exact statement as a dated loss."; "105:
+  (a). Card and dated row for each now; U-5 does not grow. The CREATE TABLE ... LOCATION
+  outside finding is the same class as PA-02: its card is the next U-5-kind unit on that lane
+  after the re-verifier, and the 1.5.6 local-file policy line does not read clean until it
+  lands. The df.write row says plainly that one write to a path makes later SQL writes to that
+  path allowed."
 - **Orchestrator, at writing (the owner may overrule at triage):**
   - **One implementation.** The two guards become one: the classification, prefix strip,
     canonicalization and containment helpers move to `crates/repark-core` beside

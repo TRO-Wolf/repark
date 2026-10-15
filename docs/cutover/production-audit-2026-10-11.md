@@ -70,6 +70,17 @@ The task fixture created `<warehouse>/link -> <outside>`. A direct COPY to `<war
 
 **Amendment (2026-10-15, PA-LOCAL-FS-POLICY-1):** containment now resolves the nearest existing ancestor with `canonicalize` and joins the missing tail. A `..` in that tail, a dangling symlink, an ancestor whose metadata read fails other than not-found, or an empty location is indeterminate and refuses. By the owner's ruling of 2026-10-15, the concurrent symlink-change race between the check and the write stays out of scope as a dated row in the unit ledger. Pins: the `pa03_*` tests of both doors' `pa_local_fs_policy.rs` and of `test_pa_local_fs_policy_1.py`, and the resolver tests of `crates/repark-core/src/local_fs_policy.rs`.
 
+**Amendment (2026-10-15, PA-LOCAL-FS-POLICY-1 fix round, owner ruling 103):** the guard now reads
+a location the way the write reads it, through DataFusion's own `ListingTableUrl::parse`, so a
+symlink followed by `..`, a percent-encoded dot segment (`%2e%2e`, `%2E%2E`, `.%2e`) and a
+relative `file:` URL, each of which wrote outside every warehouse on the first head of this unit,
+refuse on both doors and write nothing. A `..` that steps back over a symlink under the
+warehouse refuses, and so does any location whose as-typed reading, with symlinks followed,
+resolves elsewhere than the written one; both checks use the warehouse root and the target
+resolved the same way, so a warehouse registered through a symlinked path still accepts writes
+inside it. Pins: the `v01_*`, `v02_*` and `v03_*` tests of both doors' `pa_local_fs_policy.rs`
+and of `test_pa_local_fs_policy_1.py`, and `crates/repark-core/src/local_fs_policy/tests.rs`.
+
 ## PA-04 — Unicode location classification panics
 
 `strip_ascii_prefix_ci` in [Spark](../../crates/repark-spark/src/local_fs_ddl.rs), line 53, slices `value[..prefix_len]` without checking a UTF-8 character boundary. `strip_prefix_ci` in [ANSI](../../crates/repark-sql/src/guards.rs), line 403, repeats it. The prefix is ASCII; the candidate path is not necessarily ASCII.
