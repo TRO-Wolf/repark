@@ -14,6 +14,15 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
+  the ANSI door's twin of the Spark pins, through `AnsiDialect` on a `ReparkSession` with
+  `SparkExtension` (the opt-in session sets `repark.sql.allowLocalFilesystemDDL=true` at
+  build): the wrapped `COPY`, the symlink escapes, the `..` and dangling-symlink destinations
+  and the byte-5/7/9 locations refuse with the policy error and write nothing; plain
+  `EXPLAIN` answers; the warehouse, in-warehouse-symlink and opt-in controls write. Red on
+  main 5 of 8; the opt-in control of the PA-04 test is red on main because the ANSI door's
+  conf reader never matched the real extension's key.
+  pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-005, C-006, C-008, C-009, C-011, C-012, C-013, C-014, C-015, C-017
 - `ansi_door_u9_types.rs` — **WO U9-TYPES-1 (2026-09-25):** the native door's row for the
   Spark door's new type spellings: `TIMESTAMP_LTZ` in a column definition refuses
   `Unsupported SQL type TIMESTAMP_LTZ` and creates nothing. pins: u9-types-1/C-004

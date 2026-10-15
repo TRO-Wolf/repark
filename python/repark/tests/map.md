@@ -91,6 +91,16 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 
 ## Contents
 
+- `test_pa_local_fs_policy_1.py` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to
+  PA-04):** the audit's public reproductions. Spark door (`ReparkSession.sql`, a registered
+  memory-catalog warehouse with `link -> <outside>`): `EXPLAIN ANALYZE COPY` outside and the
+  one- and three-missing-parent symlink escapes raise `AnalysisException` naming
+  `repark.sql.allowLocalFilesystemDDL` with no file outside; the byte-5/7/9 locations raise it
+  instead of a caught panic; plain `EXPLAIN` answers without writing; the warehouse, the
+  in-warehouse symlink, the `file://localhost` forms and the opt-in session write.
+  `repark.sql()`: the bare and wrapped `COPY`, the symlink escape, `CREATE EXTERNAL TABLE`
+  and `aaaaaaé` refuse; plain `EXPLAIN` answers. Red on main 7 of 15.
+  pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-006, C-008, C-009, C-010, C-011, C-013, C-014, C-015
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 

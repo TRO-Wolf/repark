@@ -29,6 +29,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 ## Contents
 
+- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
+  the Spark door's local-file write policy at default conf: `EXPLAIN ANALYZE COPY` outside
+  refuses naming `repark.sql.allowLocalFilesystemDDL` with no file written; plain `EXPLAIN`
+  answers without writing; `COPY` and `CREATE EXTERNAL TABLE` through `<warehouse>/link ->
+  <outside>` with one and three missing parents refuse; a `..` after a missing parent and a
+  dangling warehouse symlink refuse; locations `aaaaé`, `aaaaaaé` and `file://aaaaaaaaé` (a
+  character across bytes 5, 7, 9) refuse with the policy error, not a panic; the
+  `file://localhost` forms classify. Controls write: under the warehouse, through an
+  in-warehouse symlink, and under the opt-in. Red on main 6 of 15.
+  pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-006, C-008, C-009, C-011, C-012, C-013, C-014, C-015
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `enc_1.rs` — **ENC-1 round 2 (2026-10-09):** 35 pins over tables carrying
   `encryption.key-id`: every write path refuses with `UnsupportedOperationException` and
