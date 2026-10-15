@@ -33,6 +33,7 @@ OPERANDS = {
     "ns": (f"CAST('{WALL}789' AS timestamp_ns)", "ns", False),
     "ns_tz": (f"CAST('{WALL}789+00:00' AS timestamptz_ns)", "ns", True),
 }
+ANSI_OPERANDS = {**OPERANDS, "us_tz": (f"TIMESTAMPTZ '{WALL}'", "us", True)}
 FIRST_FORMS = {
     "coalesce": "SELECT coalesce({l}, {r}) AS v",
     "union": "SELECT {l} AS v UNION ALL SELECT {r} AS v",
@@ -107,9 +108,10 @@ def _lattice_cells(door: str) -> list[tuple[str, str, str, str]]:
 
 def _lattice_check(run: Callable[[str], dict[str, Any]], door: str) -> dict[str, str]:
     out: dict[str, str] = {}
+    operands = ANSI_OPERANDS if door == "ansi" else OPERANDS
     for form, left, right, text in _lattice_cells(door):
-        left_sql, left_unit, left_zoned = OPERANDS[left]
-        right_sql, right_unit, right_zoned = OPERANDS[right]
+        left_sql, left_unit, left_zoned = operands[left]
+        right_sql, right_unit, right_zoned = operands[right]
         want_unit = rule.finest([left_unit, right_unit])
         name = rule.site_type("ns", left_zoned or right_zoned)
         statement = run(text.format(l=left_sql, r=right_sql))

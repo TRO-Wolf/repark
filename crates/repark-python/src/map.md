@@ -40,6 +40,14 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `INVALID_CONF_VALUE.TYPE_MISMATCH` text with `mask_value_credentials` of the raw
   value (`spark.sql.caseSensitive`, `spark.sql.ansi.enabled`,
   `spark.sql.iceberg.merge-schema`). pins: source-url-redact-1/C-055
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, `repark.sql()` (ruling 100, 2026-10-15):**
+  `NativeDoorTypes` hands the native door the ANSI planner variant (`ansi_type_planner`) and
+  `register_native_door_functions` installs the ANSI `PlannedTimestampCast`, so `repark.sql()`
+  types `TIMESTAMP` as the microsecond wall and `TIMESTAMPTZ` as the microsecond instant (the
+  Q6 contract, ruling 94), and `CAST(<bigint> AS TIMESTAMP)` reads seconds. With the Spark
+  planner it answered the instant where today's main answers the wall
+  (`test_ice_tt_resolve_1.py`'s native cells, `test_nullability_2.py`). pins: ice-tsns-type-
+  planner-1/C-015
 
 ## Modules
 

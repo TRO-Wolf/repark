@@ -2817,6 +2817,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):**
+  `test_cast_nullability_native_door_keeps_datafusion` pins `CAST(DATE … AS TIMESTAMP)` on
+  `repark.sql()` as `timestamp[us]`, the Q6 contract's wall (ruling 94), where main answered
+  DataFusion's `timestamp[ns]` wall; the nullability it pins is unchanged.
 - [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — **CSV-INFER-PERF-1 (2026-09-06):**
   plan-time `to_arrow`/`collect` stay ≤ 1 on inferSchema (one `try_cast` aggregation)
   and 0 when `inferSchema=False`; wall pin on a 300k × 8 CSV is a 0.5 s regression
@@ -3421,6 +3425,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   source stores (C-020). `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
   callable: `TIMESTAMP` and its literal as `timestamp[us]`, `TIMESTAMPTZ` as
   `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-015, C-019, C-020, C-022
+  **Carry-over fix (ruling 100, 2026-10-15):** the ANSI-door lattice (`repark.sql()`) spells
+  the zoned microsecond operand `TIMESTAMPTZ '…'` (`ANSI_OPERANDS`): with the ANSI planner on
+  that door `TIMESTAMP` is the wall, per the Q6 contract. The Q6 cell is green, so its dated
+  row is retired.
 - [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
   [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
   **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,

@@ -399,7 +399,7 @@ impl repark_core::SessionExtension for NativeDoorTypes {
     fn type_planner(
         &self,
     ) -> Option<std::sync::Arc<dyn datafusion::logical_expr::planner::TypePlanner>> {
-        Some(repark_functions::spark_type_planner())
+        Some(repark_functions::spark_type_planner::ansi_type_planner())
     }
 
     fn configure_analyzer_rules(
@@ -413,7 +413,7 @@ impl repark_core::SessionExtension for NativeDoorTypes {
 }
 
 pub(crate) fn register_native_door_functions(ctx: &datafusion::prelude::SessionContext) {
-    repark_functions::spark_type_planner::install_planned_timestamp_cast(ctx);
+    repark_functions::spark_type_planner::install_ansi_planned_timestamp_cast(ctx);
     repark_functions::spark_log1p::register(ctx);
     repark_functions::cast_map::register(ctx);
 }
