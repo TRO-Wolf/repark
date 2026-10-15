@@ -37,7 +37,8 @@ counted and reported. Local: one Rust pin per write door. Live: one acceptance l
 S3 Tables.
 
 **U, unknown outcome.** Let the catalog commit request leave the process, then cut the network
-in four ways (the request lands or not; the follow-up reads pass or not). The statement either
+in four ways (the request lands or not; the follow-up reads pass or not), and once more letting
+the SDK's own resend through (U-5). The statement either
 succeeds through the fork's reconciliation or raises `CommitStateUnknownException`. A fresh
 session then resolves the outcome by the operation id: committed or not committed, and rows are
 present exactly once or not at all. Live on Glue and S3 Tables; an offline Rust twin of the same
