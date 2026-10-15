@@ -486,14 +486,26 @@ fn every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal() {
 }
 
 #[test]
-fn session_registration_installs_the_encryption_guard() {
-    let session = product_sources()
+fn the_catalog_provider_installs_the_encryption_guard_once() {
+    let sources = product_sources();
+    let text = |wanted: &str| {
+        sources
+            .iter()
+            .find(|(file, _)| file == wanted)
+            .map(|(_, text)| text.clone())
+            .expect("the file is scanned")
+    };
+    let try_new = function_bodies(&text("repark-iceberg/src/catalog/provider.rs"))
         .into_iter()
-        .find(|(file, _)| file == "repark-core/src/session.rs")
-        .map(|(_, text)| text)
-        .expect("the session file is scanned");
+        .find(|(name, _)| name == "try_new")
+        .map(|(_, body)| body)
+        .expect("ReparkCatalogProvider::try_new is scanned");
     assert!(
-        session.contains("EncryptionGuardCatalog::install"),
-        "ENC-1 residue item 5: Session::register_iceberg_catalog must install the guard"
+        try_new.contains("EncryptionGuardCatalog::install("),
+        "ENC-1 residue item 5: ReparkCatalogProvider::try_new must install the guard"
+    );
+    assert!(
+        !text("repark-core/src/session.rs").contains("EncryptionGuardCatalog::install"),
+        "ENC-1 residue item 5: the guard is installed once, in ReparkCatalogProvider::try_new"
     );
 }

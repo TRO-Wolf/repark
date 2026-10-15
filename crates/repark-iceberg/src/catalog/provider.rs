@@ -26,6 +26,7 @@ pub struct ReparkCatalogProvider {
     catalog: Arc<dyn Catalog>,
     /// Namespace → schema provider snapshot (fork `IcebergSchemaProvider` behind the trait).
     schemas: RwLock<HashMap<String, Arc<dyn SchemaProvider>>>,
+    built_from: Arc<dyn Catalog>,
 }
 
 impl ReparkCatalogProvider {
@@ -33,10 +34,12 @@ impl ReparkCatalogProvider {
     /// # Errors
     /// Propagates Iceberg listing failures as DataFusion plan errors.
     pub async fn try_new(catalog: Arc<dyn Catalog>) -> Result<Self> {
-        let schemas = snapshot_all_schemas(catalog.clone()).await?;
+        let guarded = super::EncryptionGuardCatalog::install(catalog.clone());
+        let schemas = snapshot_all_schemas(guarded.clone()).await?;
         Ok(Self {
-            catalog,
+            catalog: guarded,
             schemas: RwLock::new(schemas),
+            built_from: catalog,
         })
     }
 
@@ -147,7 +150,7 @@ pub async fn rebuild_catalog_provider(
     // Prefer in-place full refresh when this provider is registered and bound to the same handle.
     if let Some(existing) = ctx.catalog(name)
         && let Some(repark) = existing.as_ref().downcast_ref::<ReparkCatalogProvider>()
-        && Arc::ptr_eq(&repark.catalog_handle(), &catalog)
+        && (Arc::ptr_eq(&repark.catalog, &catalog) || Arc::ptr_eq(&repark.built_from, &catalog))
     {
         repark.refresh_all().await?;
         return Ok(());
