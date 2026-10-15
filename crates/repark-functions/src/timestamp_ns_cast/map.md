@@ -51,6 +51,10 @@ pins: ice-tsns-merge-wall-1/C-018, C-031
   localizes walls, a microsecond input keeps its ticks, same-kind widening overflows as the row
   path does, and a `VALUES` node with no nanosecond column is left alone.
   pins: ice-tsns-sql-1/C-001, C-002, C-009
+  `an_encoded_source_gets_the_verdict_and_the_value_of_its_value_type` (ruling 92,
+  2026-10-15): a dictionary and a run-end encoded instant plan to the type and convert to
+  the values of the plain instant, naive and zoned kernels; an encoded integer refuses.
+  pins: ice-tsns-type-planner-1/C-020
 - `values_evidence.rs` — **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):**
   the syntactic evidence the parent's `VALUES` widening reads per cell. `values_cell_evidence`
   peels the `Alias` / non-null wrappers, at most one planner coercion `CAST` to a naive

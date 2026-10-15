@@ -414,6 +414,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   coercion cast became the kernel lost its `PARQUET:field_id` in the physical plan while
   the union's logical schema, built before the swap, kept it, and `UNION` (DISTINCT)
   refused the plan. pins: ice-tsns-type-planner-1/C-018
+  **Ruling 92, encoded sources (2026-10-15):** the kernel's gate (`checked_source`) looks
+  through dictionary and run-end encoding to the value type (`encoded_value_type`) and
+  gives the encoded source the verdict that value type gets; `Conversion::convert` decodes
+  first, so the encoded value converts as the plain one does. Before, the staged doors'
+  `CAST(value AS timestamp_ns)` text met the gate once the AST lowering was gone, and an
+  encoded instant was refused. An encoded value into a microsecond column is untouched
+  here and stores what the plain value stores (R-024 and NS-ENCODED-NESTED-FLOOR-1 keep
+  their scope). pins: ice-tsns-type-planner-1/C-020
 - `instant_ts.rs`, `spark_string_timestamp.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   the session timestamp rule no longer reads a nanosecond cast target as the SQL
   `TIMESTAMP`. Deleted from `rewrite_cast`: the arm that peeled a cast of an instant to a

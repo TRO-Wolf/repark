@@ -41,6 +41,7 @@ def all_groups() -> list[rule.Group]:
         *pins.door_groups(),
         *pins.postgres_groups(),
         *pins.q6_groups(),
+        *pins.encoded_groups(),
         *pins.update_form_groups(),
     ]
 
@@ -142,6 +143,14 @@ def test_an_identity_update_stores_what_its_other_forms_store(
     group: rule.Group, tmp_path: Path
 ) -> None:
     """pins: ice-tsns-type-planner-1/C-019 — ruling 91, WHERE, no WHERE and a written CAST."""
+    _check(group, tmp_path)
+
+
+@pytest.mark.parametrize("group", pins.encoded_groups(), ids=lambda group: group.name)
+def test_an_encoded_source_stores_what_its_value_type_stores(
+    group: rule.Group, tmp_path: Path
+) -> None:
+    """pins: ice-tsns-type-planner-1/C-020 — ruling 92, dictionary and run-end sources."""
     _check(group, tmp_path)
 
 

@@ -109,6 +109,14 @@ pub fn is_temporal_source(data_type: &DataType) -> bool {
     )
 }
 
+fn encoded_value_type(data_type: &DataType) -> &DataType {
+    match data_type {
+        DataType::Dictionary(_, values) => encoded_value_type(values),
+        DataType::RunEndEncoded(_, values) => encoded_value_type(values.data_type()),
+        other => other,
+    }
+}
+
 fn is_string_source(data_type: &DataType) -> bool {
     matches!(
         data_type,
@@ -154,9 +162,10 @@ impl SparkTimestampNsCast {
     }
 
     fn checked_source(&self, data_type: &DataType) -> Result<()> {
-        if matches!(data_type, DataType::Null)
-            || is_string_source(data_type)
-            || is_temporal_source(data_type)
+        let value_type = encoded_value_type(data_type);
+        if matches!(value_type, DataType::Null)
+            || is_string_source(value_type)
+            || is_temporal_source(value_type)
         {
             return Ok(());
         }
@@ -257,6 +266,10 @@ struct Conversion {
 
 impl Conversion {
     fn convert(&self, array: &ArrayRef) -> Result<ArrayRef> {
+        let value_type = encoded_value_type(array.data_type());
+        if value_type != array.data_type() {
+            return self.convert(&cast(array.as_ref(), value_type)?);
+        }
         let target = target_type(self.zoned);
         match array.data_type() {
             DataType::Null => Ok(new_null_array(&target, array.len())),

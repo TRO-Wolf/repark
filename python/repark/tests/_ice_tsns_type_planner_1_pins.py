@@ -77,12 +77,14 @@ POSITIONS: tuple[tuple[str, str], ...] = (
 REFUSED = ("range", "generate_series")
 OUT_OF_RANGE = {"us_first": "coalesce(far, ns)", "ns_first": "greatest(ns, far)"}
 Q6_CELL = "q6|repark_sql|timestamp_spellings"
+ENCODED_TARGETS = ("timestamp_ns", "timestamptz_ns", "TIMESTAMP")
 UPDATE_SOURCES = {"ns": "timestamp_ns", "tzns_utc": "timestamptz_ns"}
 UPDATE_FORMS = (
     "UPDATE {T} SET v = c",
     "UPDATE {T} SET v = c WHERE id >= 0",
     "UPDATE {T} SET v = CAST(c AS TIMESTAMP) WHERE id >= 0",
 )
+ENCODED_INSTANTS = (1_767_323_045_123_456_789, -1_500)
 SERIES = "TIMESTAMP '2024-01-01 00:00:00', TIMESTAMP '2024-01-03 00:00:00', INTERVAL '1' DAY"
 
 
@@ -425,6 +427,69 @@ def update_form_groups() -> list[rule.Group]:
             cells=len(UPDATE_SOURCES) * 2,
         )
         for zone in ("UTC", "America/New_York")
+    ]
+
+
+def _encoded_source(encoding: str) -> pa.Array:
+    instants = pa.array(list(ENCODED_INSTANTS), pa.timestamp("ns", tz="UTC"))
+    if encoding == "dictionary":
+        return instants.dictionary_encode()
+    if encoding == "run_end_encoded":
+        return pa.RunEndEncodedArray.from_arrays(pa.array([1, 2], pa.int32()), instants)
+    return instants
+
+
+def _encoded_store(spark: Any, scratch: Path, target: str, encoding: str) -> dict[str, Any]:
+    table = doors.fresh_table()
+    view = f"encoded_{table.rsplit('.', 1)[-1]}_{encoding}"
+    frame = pa.table({"id": pa.array([1, 2], pa.int32()), "v": _encoded_source(encoding)})
+    result: dict[str, Any] = {}
+    try:
+        spark.sql(
+            f"CREATE TABLE {table} (id INT, v {target}) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '3')"
+        )
+        spark._ensure_alive().register_arrow_stream_as_temp_view(view, frame)
+        try:
+            spark.sql(f"INSERT OVERWRITE {table} SELECT id, v FROM {view}").toArrow()
+        except Exception as error:
+            result["error"] = doors.error_text(error)
+            result["error_type"] = type(error).__name__
+        _, parquet_type = doors.stored(scratch, table)
+        result["stored"] = _live_pairs(spark, table)
+        result["parquet_type"] = parquet_type
+    finally:
+        doors.cleanup(spark, scratch, table)
+    return result
+
+
+def _encoded_run(scratch: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    spark = doors.open_session("America/New_York", scratch)
+    try:
+        for target in ENCODED_TARGETS:
+            plain = _encoded_store(spark, scratch, target, "plain")
+            for encoding in ("dictionary", "run_end_encoded"):
+                cell = f"encoded|{target}|{encoding}"
+                outcome = _encoded_store(spark, scratch, target, encoding)
+                rule.note(cell, outcome)
+                out[cell] = rule.differ(outcome, plain)
+    finally:
+        spark.stop()
+    return out
+
+
+def encoded_groups() -> list[rule.Group]:
+    """Return the ruling-92 cells: an encoded instant stores what the plain one stores."""
+    cells = len(ENCODED_TARGETS) * 2
+    return [
+        rule.Group(
+            name="encoded|New_York",
+            family="encoded",
+            zone="America/New_York",
+            run=_encoded_run,
+            cells=cells,
+        )
     ]
 
 

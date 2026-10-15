@@ -3411,7 +3411,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   shows. `update_form_groups` is ruling 91: in UTC and New York, for a `timestamp_ns` and
   a `timestamptz_ns` source, copy-on-write and merge-on-read, `UPDATE … SET v = c`, the
   same with `WHERE id >= 0`, and `SET v = CAST(c AS TIMESTAMP) WHERE id >= 0` into a
-  `TIMESTAMP` column store one value (C-019). `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
+  `TIMESTAMP` column store one value (C-019). `encoded_groups` is ruling 92: in New
+  York, a dictionary and a run-end encoded `timestamptz_ns` source through `INSERT
+  OVERWRITE` into `timestamp_ns`, `timestamptz_ns` and `TIMESTAMP` stores what the plain
+  source stores (C-020). `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
   callable: `TIMESTAMP` and its literal as `timestamp[us]`, `TIMESTAMPTZ` as
   `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-013, C-020
 - [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
