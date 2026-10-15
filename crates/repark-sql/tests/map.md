@@ -113,7 +113,16 @@ holds behavior observed from outside the crate.
   `repark-spark/tests/update_subquery_refusal.rs`. Tables seeded by CTAS; `UPDATE … SET col =
   (SELECT …)` and the subquery with its own `WHERE`, under `WHERE true`, an `IN` list and no
   `WHERE`, refuse with the ruling 90 text for a flat INT column and a struct column fed
-  reordered and in order, the rows unchanged. pins: ice-struct-pairing-1/C-034
+  reordered and in order, the rows unchanged. **Owner ruling 95 (2026-10-15):** every refused
+  cell also holds the table's current snapshot id, snapshot count, metadata location and the
+  file names under its `metadata/` directory unchanged, read through the session's own catalog;
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_ansi_door` adds
+  `WHERE false` and `WHERE id BETWEEN 100 AND 200` for both columns (12 cells);
+  `ruling_95_the_whole_refused_family_answers_one_text_on_both_doors` runs the file's 30-cell
+  family on this door and on a Spark SQL door session and holds both sets of texts, the
+  `Error during planning: ` prefix removed, to the one ruling 90 text;
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_ansi_door` holds that the text
+  names no data-deleting action. pins: ice-struct-pairing-1/C-034, C-036
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

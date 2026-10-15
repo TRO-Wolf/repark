@@ -1,8 +1,11 @@
+use std::collections::BTreeSet;
+use std::path::Path;
 use std::sync::Arc;
 
 use datafusion::arrow::array::AsArray;
 use datafusion::arrow::datatypes::Int32Type;
 use datafusion::arrow::util::pretty::pretty_format_batches;
+use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::ReparkSession;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
@@ -10,12 +13,30 @@ use tempfile::TempDir;
 const REFUSAL: &str = "UPDATE with SET column = (SELECT ...) is not supported on this \
      statement: RePark cannot write the subquery value here, so it refuses before any write.";
 
+const DOOR_PREFIX: &str = "Error during planning: ";
+
 const SEEDED: [(i32, i32, i32, i32); 2] = [(0, 10, 10, 20), (3, 30, 30, 40)];
 
 const PREDICATES: [(&str, &str); 3] = [
     ("where_true", " WHERE true"),
     ("where_in_list", " WHERE id IN (0, 3)"),
     ("no_where", ""),
+];
+
+const NO_MATCH_PREDICATES: [(&str, &str); 2] = [
+    ("where_false", " WHERE false"),
+    ("where_no_match", " WHERE id BETWEEN 100 AND 200"),
+];
+
+const DATA_DELETING_ACTIONS: [&str; 8] = [
+    "drop",
+    "delete",
+    "truncate",
+    "overwrite",
+    "replace",
+    "purge",
+    "expire",
+    "remove_orphan",
 ];
 
 const VALUES: [(&str, &str); 2] = [
@@ -122,48 +143,107 @@ async fn attempt(session: &ReparkSession, sql: &str) -> Result<(), String> {
     }
 }
 
-async fn refusals_for(column: &str, sources: &[(&str, &str, &str)]) -> Vec<String> {
+type TableState = (Option<i64>, usize, Option<String>, BTreeSet<String>);
+
+async fn table_state(session: &ReparkSession, table: &str) -> TableState {
+    let name = table.rsplit('.').next().expect("table name");
+    let catalogs = session.catalogs_snapshot();
+    let loaded = catalogs
+        .get("ice")
+        .expect("catalog")
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("ns".to_string()),
+            name.to_string(),
+        ))
+        .await
+        .expect("load table");
+    let metadata = loaded.metadata();
+    let directory = Path::new(metadata.location().trim_start_matches("file://")).join("metadata");
+    let files = std::fs::read_dir(&directory)
+        .expect("metadata directory")
+        .map(|entry| {
+            entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    (
+        metadata.current_snapshot_id(),
+        metadata.snapshots().count(),
+        loaded.metadata_location().map(str::to_string),
+        files,
+    )
+}
+
+async fn refusal(session: &ReparkSession, table: &str, sql: &str) -> Result<String, String> {
+    let before = table_state(session, table).await;
+    let outcome = attempt(session, sql).await;
+    let after = table_state(session, table).await;
+    match outcome {
+        Err(text) if text.contains(REFUSAL) && after == before => Ok(text),
+        outcome => Err(format!("{sql}: {outcome:?}, table {before:?} -> {after:?}")),
+    }
+}
+
+async fn refusals_for(
+    column: &str,
+    sources: &[(&str, &str, &str)],
+    predicates: &[(&str, &str)],
+) -> (Vec<String>, BTreeSet<String>) {
     let (session, _warehouse) = catalog_session().await;
     let mut failures = Vec::new();
+    let mut texts = BTreeSet::new();
     for (source, source_type, source_value) in sources {
-        for (predicate, where_sql) in PREDICATES {
+        for (predicate, where_sql) in predicates {
             for (form, value) in VALUES {
                 let table = format!("ice.ns.{column}_{source}_{predicate}_{form}");
                 seed(&session, &table, source_type, source_value).await;
                 let value = value.replace("{c}", column).replace("{t}", &table);
                 let sql = format!("UPDATE {table} SET {column} = {value}{where_sql}");
-                let outcome = attempt(&session, &sql).await;
+                match refusal(&session, &table, &sql).await {
+                    Ok(text) => {
+                        texts.insert(text);
+                    }
+                    Err(failure) => failures.push(failure),
+                }
                 let after = rows(&session, &table).await;
-                let refused = outcome
-                    .as_ref()
-                    .err()
-                    .is_some_and(|text| text.contains(REFUSAL));
-                if !refused || after != SEEDED {
-                    failures.push(format!("{sql}: {outcome:?}, rows {after:?}"));
+                if after != SEEDED {
+                    failures.push(format!("{sql}: rows {after:?}"));
                 }
             }
         }
     }
-    failures
+    (failures, texts)
 }
+
+const INT_SOURCE: [(&str, &str, &str); 1] = [(
+    "int",
+    "STRUCT<a: INT, b: INT>",
+    "named_struct('a', 1, 'b', 2)",
+)];
 
 #[tokio::test]
 async fn ruling_74_a_flat_int_update_from_a_subquery_refuses_on_the_spark_door() {
-    let failures = refusals_for(
-        "v",
-        &[(
-            "int",
-            "STRUCT<a: INT, b: INT>",
-            "named_struct('a', 1, 'b', 2)",
-        )],
-    )
-    .await;
+    let (failures, _) = refusals_for("v", &INT_SOURCE, &PREDICATES).await;
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
 #[tokio::test]
 async fn ruling_90_a_struct_update_from_a_subquery_refuses_on_the_spark_door() {
-    let failures = refusals_for("st", &STRUCT_SOURCES).await;
+    let (failures, _) = refusals_for("st", &STRUCT_SOURCES, &PREDICATES).await;
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[tokio::test]
+async fn ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_spark_door() {
+    let (mut failures, _) = refusals_for("v", &INT_SOURCE, &NO_MATCH_PREDICATES).await;
+    failures.extend(
+        refusals_for("st", &STRUCT_SOURCES, &NO_MATCH_PREDICATES)
+            .await
+            .0,
+    );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
@@ -203,10 +283,10 @@ async fn printed(session: &ReparkSession, table: &str) -> String {
     pretty_format_batches(&batches).expect("format").to_string()
 }
 
-#[tokio::test]
-async fn ruling_90_a_an_update_from_a_subquery_refuses_for_every_column_type() {
+async fn every_column_type_refusals() -> (Vec<String>, BTreeSet<String>) {
     let (session, _warehouse) = catalog_session().await;
     let mut failures = Vec::new();
+    let mut texts = BTreeSet::new();
     for (name, column_type, seed, source) in [
         ("string", "STRING", "'x'", "'y'"),
         (
@@ -265,14 +345,60 @@ async fn ruling_90_a_an_update_from_a_subquery_refuses_for_every_column_type() {
         .await;
         let before = printed(&session, &table).await;
         let sql = format!("UPDATE {table} SET c = (SELECT c FROM {table}_src) WHERE true");
-        let outcome = attempt(&session, &sql).await;
-        let refused = outcome
-            .as_ref()
-            .err()
-            .is_some_and(|text| text.contains(REFUSAL));
-        if !refused || printed(&session, &table).await != before {
-            failures.push(format!("{name}: {outcome:?}"));
+        match refusal(&session, &table, &sql).await {
+            Ok(text) => {
+                texts.insert(text);
+            }
+            Err(failure) => failures.push(format!("{name}: {failure}")),
+        }
+        if printed(&session, &table).await != before {
+            failures.push(format!("{name}: rows changed"));
         }
     }
+    (failures, texts)
+}
+
+#[tokio::test]
+async fn ruling_90_a_an_update_from_a_subquery_refuses_for_every_column_type() {
+    let (failures, _) = every_column_type_refusals().await;
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+async fn family_texts() -> BTreeSet<String> {
+    let mut failures = Vec::new();
+    let mut texts = BTreeSet::new();
+    for (column, sources) in [("v", &INT_SOURCE[..]), ("st", &STRUCT_SOURCES[..])] {
+        for predicates in [&PREDICATES[..], &NO_MATCH_PREDICATES[..]] {
+            let (found, refused) = refusals_for(column, sources, predicates).await;
+            failures.extend(found);
+            texts.extend(refused);
+        }
+    }
+    let (found, refused) = every_column_type_refusals().await;
+    failures.extend(found);
+    texts.extend(refused);
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    texts
+}
+
+#[tokio::test]
+async fn ruling_95_the_whole_refused_family_answers_one_text_on_the_spark_door() {
+    let texts = family_texts().await;
+    let stripped: BTreeSet<&str> = texts
+        .iter()
+        .map(|text| text.strip_prefix(DOOR_PREFIX).unwrap_or(text))
+        .collect();
+    assert_eq!(stripped, BTreeSet::from([REFUSAL]), "{texts:?}");
+}
+
+#[tokio::test]
+async fn ruling_95_the_refusal_names_no_data_deleting_action_on_the_spark_door() {
+    let texts = family_texts().await;
+    assert!(!texts.is_empty());
+    for text in &texts {
+        let lowered = text.to_lowercase();
+        for action in DATA_DELETING_ACTIONS {
+            assert!(!lowered.contains(action), "{action} in {text}");
+        }
+    }
 }

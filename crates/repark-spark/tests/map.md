@@ -186,6 +186,20 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   the unchanged table for twelve column types (STRING, BIGINT, DOUBLE, DECIMAL, BOOLEAN, DATE,
   TIMESTAMP, TIMESTAMP_NTZ, ARRAY, MAP, a nested struct, an array of structs) under
   `WHERE true`. The ANSI door's twin is `repark-sql/tests/ansi_update_subquery_refusal.rs`.
+  **Owner ruling 95 (2026-10-15):** every refused cell also reads, before and after the
+  statement, the table's current snapshot id, its snapshot count, its metadata location and the
+  file names under its `metadata/` directory, through the session's own catalog, and fails on
+  any change.
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_spark_door` holds the
+  same refusal under `WHERE false` and `WHERE id BETWEEN 100 AND 200` (a filter the identity
+  path declines that matches no row; `WHERE id > 100` is a scalar comparison the identity path
+  runs) for the INT column and both struct sources: 12 cells.
+  `ruling_95_the_whole_refused_family_answers_one_text_on_the_spark_door` collects the text of
+  every refused cell of the file (42 cells) and holds them, the door's
+  `Error during planning: ` prefix removed, to the one ruling 90 text;
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_spark_door` holds that no text
+  names `DROP`, `DELETE`, `TRUNCATE`, `OVERWRITE`, `REPLACE`, `PURGE`, `expire` or
+  `remove_orphan`, in any case.
   pins: ice-struct-pairing-1/C-034, C-035, C-036
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
