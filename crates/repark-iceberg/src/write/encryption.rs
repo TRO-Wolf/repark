@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::DataFile;
@@ -151,6 +151,61 @@ pub(crate) async fn delete_staged_files_best_effort(
     failures
 }
 
+async fn snapshot_referenced_paths(
+    table: &Table,
+    paths: &[String],
+) -> iceberg::Result<HashSet<String>> {
+    let mut pending: HashSet<&str> = paths.iter().map(String::as_str).collect();
+    let mut referenced = HashSet::new();
+    let mut loaded_manifests = HashSet::new();
+    let metadata = table.metadata();
+    for snapshot in metadata.snapshots() {
+        if pending.is_empty() {
+            break;
+        }
+        let manifest_list = snapshot
+            .load_manifest_list(table.file_io(), metadata)
+            .await?;
+        for manifest_file in manifest_list.entries() {
+            if !loaded_manifests.insert(manifest_file.manifest_path.clone()) {
+                continue;
+            }
+            let manifest = manifest_file.load_manifest(table.file_io()).await?;
+            for entry in manifest.entries() {
+                let path = entry.data_file().file_path();
+                if pending.remove(path) {
+                    referenced.insert(path.to_string());
+                }
+            }
+        }
+    }
+    Ok(referenced)
+}
+
+async fn delete_unreferenced_staged_files(
+    table: &Table,
+    paths: &[String],
+) -> Vec<(String, iceberg::Error)> {
+    let referenced = match snapshot_referenced_paths(table, paths).await {
+        Ok(referenced) => referenced,
+        Err(read) => {
+            return paths
+                .iter()
+                .map(|path| {
+                    let reason = format!("snapshot references could not be read: {read}");
+                    (path.clone(), iceberg::Error::new(read.kind(), reason))
+                })
+                .collect();
+        }
+    };
+    let unreferenced: Vec<String> = paths
+        .iter()
+        .filter(|path| !referenced.contains(path.as_str()))
+        .cloned()
+        .collect();
+    delete_staged_files_best_effort(table, &unreferenced).await
+}
+
 pub(crate) async fn sweep_staged_files_on_keyed_refusal(
     table: &Table,
     paths: &[String],
@@ -166,7 +221,7 @@ pub(crate) async fn sweep_staged_files_on_keyed_refusal(
     if EncryptedTableRefusal::find(&error).is_none() {
         return error;
     }
-    let failures = delete_staged_files_best_effort(table, paths).await;
+    let failures = delete_unreferenced_staged_files(table, paths).await;
     if failures.is_empty() {
         return error;
     }

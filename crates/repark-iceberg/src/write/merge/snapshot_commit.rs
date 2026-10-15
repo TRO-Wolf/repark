@@ -514,7 +514,7 @@ mod keyed_sweep_pins {
         crate::write::encryption::refusal_text("sweep.t")
     }
 
-    async fn keyed_fixture(warehouse: &TempDir) -> (Arc<dyn Catalog>, Table) {
+    async fn v2_table(warehouse: &TempDir) -> Arc<dyn Catalog> {
         let catalog =
             crate::memory_catalog(warehouse.path().to_str().expect("warehouse path is utf8"))
                 .await
@@ -554,10 +554,10 @@ mod keyed_sweep_pins {
             .commit(catalog.as_ref())
             .await
             .expect("version commits");
-        let stale = catalog
-            .load_table(&ident())
-            .await
-            .expect("stale handle loads");
+        catalog
+    }
+
+    async fn add_key(catalog: &Arc<dyn Catalog>) {
         let fresh = catalog
             .load_table(&ident())
             .await
@@ -569,7 +569,70 @@ mod keyed_sweep_pins {
         );
         let keyed = action.apply(base).expect("key action applies");
         keyed.commit(catalog.as_ref()).await.expect("key commits");
+    }
+
+    async fn keyed_fixture(warehouse: &TempDir) -> (Arc<dyn Catalog>, Table) {
+        let catalog = v2_table(warehouse).await;
+        let stale = catalog
+            .load_table(&ident())
+            .await
+            .expect("stale handle loads");
+        add_key(&catalog).await;
         (catalog, stale)
+    }
+
+    async fn keyed_fixture_with_referenced_file(
+        warehouse: &TempDir,
+    ) -> (Arc<dyn Catalog>, Table, Vec<DataFile>) {
+        let catalog = v2_table(warehouse).await;
+        let created = catalog
+            .load_table(&ident())
+            .await
+            .expect("created handle loads");
+        let referenced = stage_one_batch(&created).await;
+        crate::write::commit_append(&catalog, &created, referenced.clone())
+            .await
+            .expect("the referenced file commits");
+        let stale = catalog
+            .load_table(&ident())
+            .await
+            .expect("stale handle loads");
+        add_key(&catalog).await;
+        (catalog, stale, referenced)
+    }
+
+    fn local_path(file: &DataFile) -> String {
+        let path = file.file_path();
+        path.strip_prefix("file://").unwrap_or(path).to_string()
+    }
+
+    fn parquet_rows(file: &DataFile) -> usize {
+        let opened = std::fs::File::open(local_path(file)).expect("the referenced file opens");
+        parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder::try_new(opened)
+            .expect("the referenced file is parquet")
+            .build()
+            .expect("the referenced reader builds")
+            .map(|batch| batch.expect("a referenced batch reads").num_rows())
+            .sum()
+    }
+
+    fn assert_referenced_kept_and_fresh_swept(
+        error: &DataFusionError,
+        referenced: &[DataFile],
+        fresh: &[DataFile],
+    ) {
+        assert!(EncryptedTableRefusal::find(error).is_some(), "{error}");
+        assert!(error.to_string().contains(expected_text().as_str()));
+        for file in referenced {
+            assert_eq!(parquet_rows(file), 2, "referenced {}", file.file_path());
+        }
+        for file in fresh {
+            assert!(
+                !std::path::Path::new(&local_path(file)).exists(),
+                "fresh {} was left behind",
+                file.file_path()
+            );
+        }
     }
 
     async fn stage_one_batch(table: &Table) -> Vec<DataFile> {
@@ -646,5 +709,42 @@ mod keyed_sweep_pins {
         assert!(EncryptedTableRefusal::find(&error).is_some());
         assert!(error.to_string().contains(expected_text().as_str()));
         assert!(directory_names(&directory).is_empty());
+    }
+
+    #[tokio::test]
+    async fn keyed_refused_merge_overwrite_keeps_a_snapshot_referenced_file() {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let (catalog, stale, referenced) = keyed_fixture_with_referenced_file(&warehouse).await;
+        let fresh = stage_one_batch(&stale).await;
+        let mut new_files = referenced.clone();
+        new_files.extend(fresh.clone());
+        let scope = CommitScope::scoped(IsolationLevel::Serializable, Predicate::AlwaysTrue);
+        let error = commit_overwrite(&catalog, &stale, None, Vec::new(), new_files, &scope, &[])
+            .await
+            .expect_err("the keyed merge overwrite refuses");
+        assert_referenced_kept_and_fresh_swept(&error, &referenced, &fresh);
+    }
+
+    #[tokio::test]
+    async fn keyed_refused_row_delta_keeps_a_snapshot_referenced_file() {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let (catalog, stale, referenced) = keyed_fixture_with_referenced_file(&warehouse).await;
+        let fresh = stage_one_batch(&stale).await;
+        let mut new_files = referenced.clone();
+        new_files.extend(fresh.clone());
+        let scope = CommitScope::scoped(IsolationLevel::Serializable, Predicate::AlwaysTrue);
+        let policy = scope.row_delta(RowDeltaKind::Merge);
+        let error = commit_row_delta_kind(
+            &catalog,
+            &stale,
+            None,
+            Vec::new(),
+            new_files,
+            WriteConcurrency::default(),
+            &policy,
+        )
+        .await
+        .expect_err("the keyed row delta refuses");
+        assert_referenced_kept_and_fresh_swept(&error, &referenced, &fresh);
     }
 }
