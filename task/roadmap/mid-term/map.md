@@ -857,3 +857,11 @@ declines it (a dated ruling in the intake, then the archive).
   `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
   0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
   or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
+- [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
+  OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
+  `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of
+  8 on CI (2026-10-07) where Spark's recording commits 1; losers keep the expected
+  `Found conflicting files … matching TRUE` shape. The test fires eight MERGEs on
+  disjoint keys with no target-only conjunct through a barrier (ledger clause C-012 of
+  the ice-occ-scoped-1 ledger); two winners fit a check-then-commit timing window.
+  Open question: product race or test assumption. Unmeasured until N repeated runs.
