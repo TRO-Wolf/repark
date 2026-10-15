@@ -1080,6 +1080,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
   pins: door-converge-2/C-007, C-009
+  **ICE-TSNS-TYPE-PLANNER-1 M1 (2026-10-15):** the timestamp arm works in the element's
+  unit and zone. The bounds are cast to the element type (the first non-NULL bound's
+  type) and read as ticks (`as_ticks`), the row steps in those ticks, and the values are
+  built as the element type (`shape_timestamps`). A nanosecond `sequence` therefore keeps
+  its digits below the microsecond and floors nothing; a microsecond one answers as before.
+  Before, every row was built as `Timestamp(µs, "UTC")`, so a nanosecond or naive element
+  type failed with `ListArray expected data type …`. pins: ice-tsns-type-planner-1/C-014
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,
