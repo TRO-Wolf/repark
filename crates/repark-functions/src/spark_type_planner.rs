@@ -105,13 +105,12 @@ pub(crate) fn planned_instant_cast(
         ltz_timestamp_type()
     };
     if source.is_integer() {
-        let unit = if matches!(source, DataType::Int64) {
-            TimeUnit::Second
-        } else {
-            TimeUnit::Nanosecond
-        };
-        let ticks = retargeted(cast.expr.clone(), DataType::Timestamp(unit, None), nullable);
-        return Some(retargeted(Box::new(ticks), target, nullable));
+        let seconds = retargeted(
+            cast.expr.clone(),
+            DataType::Timestamp(TimeUnit::Second, None),
+            nullable,
+        );
+        return Some(retargeted(Box::new(seconds), target, nullable));
     }
     if !session_ntz {
         return None;

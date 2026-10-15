@@ -104,6 +104,65 @@ fn with_unit(data_type: &DataType, unit: TimeUnit) -> DataType {
     }
 }
 
+fn timestamp_zone(data_type: &DataType) -> Option<Arc<str>> {
+    match data_type {
+        DataType::Timestamp(_, zone) => zone.clone(),
+        DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
+            timestamp_zone(field.data_type())
+        }
+        _ => None,
+    }
+}
+
+const fn is_date(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Date32 | DataType::Date64)
+}
+
+const fn joins_a_zoned_timestamp(data_type: &DataType) -> bool {
+    is_date(data_type)
+        || matches!(
+            data_type,
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+        )
+}
+
+struct SharedTarget {
+    unit: TimeUnit,
+    zone: Option<Arc<str>>,
+    dated: bool,
+}
+
+impl SharedTarget {
+    fn of(types: &[DataType], units: &[Option<TimeUnit>], dates: bool) -> Option<Self> {
+        let zone = types
+            .iter()
+            .zip(units)
+            .filter(|(_, unit)| unit.is_some())
+            .find_map(|(data_type, _)| timestamp_zone(data_type));
+        let dated = dates && zone.is_some() && types.iter().any(joins_a_zoned_timestamp);
+        let unit = match finest(units) {
+            Some(unit) => unit,
+            None if dated => units
+                .iter()
+                .flatten()
+                .copied()
+                .max_by_key(|unit| unit_rank(*unit))?,
+            None => return None,
+        };
+        Some(Self { unit, zone, dated })
+    }
+
+    fn operand_type(&self, data_type: &DataType, unit: Option<TimeUnit>) -> Option<DataType> {
+        if self.dated && joins_a_zoned_timestamp(data_type) {
+            return Some(DataType::Timestamp(self.unit, self.zone.clone()));
+        }
+        if !unit.is_some_and(|unit| unit != self.unit) {
+            return None;
+        }
+        Some(with_unit(data_type, self.unit))
+    }
+}
+
 fn finest(units: &[Option<TimeUnit>]) -> Option<TimeUnit> {
     let mut present = units.iter().flatten().copied();
     let first = present.next()?;
@@ -124,6 +183,7 @@ fn share_unit(
     operands: Vec<Expr>,
     schema: &DFSchema,
     unit_of: impl Fn(usize, &DataType) -> Option<TimeUnit>,
+    dates: bool,
 ) -> Result<Transformed<Vec<Expr>>> {
     let mut types = Vec::with_capacity(operands.len());
     for operand in &operands {
@@ -137,15 +197,14 @@ fn share_unit(
         .enumerate()
         .map(|(index, data_type)| unit_of(index, data_type))
         .collect();
-    let Some(target) = finest(&units) else {
+    let Some(target) = SharedTarget::of(&types, &units, dates) else {
         return Ok(Transformed::no(operands));
     };
     let mut widened = Vec::with_capacity(operands.len());
     for ((operand, data_type), unit) in operands.into_iter().zip(&types).zip(&units) {
-        if unit.is_some_and(|unit| unit != target) {
-            widened.push(operand.cast_to(&with_unit(data_type, target), schema)?);
-        } else {
-            widened.push(operand);
+        match target.operand_type(data_type, *unit) {
+            Some(widened_type) => widened.push(operand.cast_to(&widened_type, schema)?),
+            None => widened.push(operand),
         }
     }
     Ok(Transformed::yes(widened))
@@ -167,15 +226,18 @@ fn widen_function(function: ScalarFunction, schema: &DFSchema) -> Result<Transfo
     let name = function.func.name().to_ascii_lowercase();
     let ScalarFunction { func, args } = function;
     let rebuilt = if SHARED_ARGUMENTS.contains(&name.as_str()) {
-        share_unit(args, schema, scalar_unit)?
+        share_unit(args, schema, scalar_unit, true)?
     } else if SHARED_AFTER_FIRST.contains(&name.as_str()) {
-        share_unit(args, schema, |index, data_type| {
-            (index > 0).then(|| timestamp_unit(data_type)).flatten()
-        })?
+        share_unit(
+            args,
+            schema,
+            |index, data_type| (index > 0).then(|| timestamp_unit(data_type)).flatten(),
+            true,
+        )?
     } else if LIST_AND_ELEMENT.contains(&name.as_str()) {
-        share_unit(args, schema, list_or_element_unit)?
+        share_unit(args, schema, list_or_element_unit, false)?
     } else if LISTS.contains(&name.as_str()) {
-        share_unit(args, schema, only_list_unit)?
+        share_unit(args, schema, only_list_unit, false)?
     } else {
         Transformed::no(args)
     };
@@ -201,7 +263,7 @@ fn widen_aggregate_zero(
         )));
     }
     let lambdas = args.split_off(2);
-    share_unit(args, schema, aggregate_zero_unit)?.map_data(|mut shared| {
+    share_unit(args, schema, aggregate_zero_unit, false)?.map_data(|mut shared| {
         shared.extend(lambdas);
         Ok(Expr::HigherOrderFunction(HigherOrderFunction::new(
             func, shared,
@@ -230,9 +292,9 @@ fn widen_case(case: Case, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if let Some(otherwise) = else_expr {
         results.push(*otherwise);
     }
-    let results = share_unit(results, schema, scalar_unit)?;
+    let results = share_unit(results, schema, scalar_unit, true)?;
     let subjects = if simple {
-        share_unit(subjects, schema, scalar_unit)?
+        share_unit(subjects, schema, scalar_unit, true)?
     } else {
         Transformed::no(subjects)
     };
@@ -296,7 +358,7 @@ fn widen_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
             widen_aggregate_zero(function, schema)
         }
         Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_comparison(op) => {
-            share_unit(vec![*left, *right], schema, scalar_unit)?.map_data(|operands| {
+            share_unit(vec![*left, *right], schema, scalar_unit, true)?.map_data(|operands| {
                 let [left, right] = exactly(operands)?;
                 Ok(Expr::BinaryExpr(BinaryExpr {
                     left: Box::new(left),
@@ -310,15 +372,17 @@ fn widen_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
             negated,
             low,
             high,
-        }) => share_unit(vec![*expr, *low, *high], schema, scalar_unit)?.map_data(|operands| {
-            let [expr, low, high] = exactly(operands)?;
-            Ok(Expr::Between(Between {
-                expr: Box::new(expr),
-                negated,
-                low: Box::new(low),
-                high: Box::new(high),
-            }))
-        }),
+        }) => {
+            share_unit(vec![*expr, *low, *high], schema, scalar_unit, true)?.map_data(|operands| {
+                let [expr, low, high] = exactly(operands)?;
+                Ok(Expr::Between(Between {
+                    expr: Box::new(expr),
+                    negated,
+                    low: Box::new(low),
+                    high: Box::new(high),
+                }))
+            })
+        }
         Expr::InList(InList {
             expr,
             list,
@@ -327,7 +391,7 @@ fn widen_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
             let mut operands = Vec::with_capacity(list.len() + 1);
             operands.push(*expr);
             operands.extend(list);
-            share_unit(operands, schema, scalar_unit)?.map_data(|mut operands| {
+            share_unit(operands, schema, scalar_unit, true)?.map_data(|mut operands| {
                 let list = operands.split_off(1);
                 let [expr] = exactly(operands)?;
                 Ok(Expr::InList(InList {
@@ -341,40 +405,44 @@ fn widen_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     }
 }
 
-fn union_targets(union: &Union) -> Option<Vec<Option<TimeUnit>>> {
+fn union_targets(union: &Union) -> Option<Vec<Option<SharedTarget>>> {
     let width = union.schema.fields().len();
     let mut targets = Vec::with_capacity(width);
     for index in 0..width {
-        let mut units = Vec::with_capacity(union.inputs.len());
+        let mut types = Vec::with_capacity(union.inputs.len());
         for input in &union.inputs {
             let fields = input.schema().fields();
             if fields.len() != width {
                 return None;
             }
-            units.push(timestamp_unit(fields[index].data_type()));
+            types.push(fields[index].data_type().clone());
         }
-        targets.push(finest(&units));
+        let units: Vec<Option<TimeUnit>> = types.iter().map(timestamp_unit).collect();
+        targets.push(SharedTarget::of(&types, &units, true));
     }
     targets.iter().any(Option::is_some).then_some(targets)
 }
 
 fn widen_union_input(
     input: &Arc<LogicalPlan>,
-    targets: &[Option<TimeUnit>],
+    targets: &[Option<SharedTarget>],
 ) -> Result<Arc<LogicalPlan>> {
     let schema = input.schema();
     let mut changed = false;
     let mut columns = Vec::with_capacity(targets.len());
     for ((qualifier, field), target) in schema.iter().zip(targets) {
         let column = Expr::Column(Column::from((qualifier, field)));
-        let widened = match (target, timestamp_unit(field.data_type())) {
-            (Some(target), Some(unit)) if unit != *target => {
+        let widened_type = target.as_ref().and_then(|target| {
+            target.operand_type(field.data_type(), timestamp_unit(field.data_type()))
+        });
+        let widened = match widened_type {
+            Some(widened_type) => {
                 changed = true;
                 column
-                    .cast_to(&with_unit(field.data_type(), *target), schema)?
+                    .cast_to(&widened_type, schema)?
                     .alias_qualified(qualifier.cloned(), field.name())
             }
-            _ => column,
+            None => column,
         };
         columns.push(widened);
     }

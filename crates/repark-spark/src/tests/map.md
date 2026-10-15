@@ -2415,6 +2415,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   new-string `replace`-casts into `TIMESTAMP` with Spark's wall. Spark answers:
   re-verify2 `rn31-spark.json` plus the `rn31b` live run (2026-09-29).
   pins: ltz-store-int-1/C-001
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):** `door()` seats
+  `InsertStoreAssignment` right after `type_coercion`, where the Spark door seats it, instead
+  of after the Spark expression rules; with the planner a written `CAST(int AS TIMESTAMP)` and
+  an INSERT's store cast have one type, so the store gate must run first, as it does on the
+  product door.
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

@@ -9,7 +9,19 @@ use super::common::{load_sales_table, run, setup};
 async fn door() -> (TempDir, SessionContext, CatalogRegistry) {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
-    ctx.add_analyzer_rule(Arc::new(repark_iceberg::InsertStoreAssignment));
+    let mut builder = datafusion::execution::SessionStateBuilder::new_from_existing(ctx.state());
+    if let Some(analyzer) = builder.analyzer() {
+        let coercion = analyzer
+            .rules
+            .iter()
+            .position(|rule| rule.name() == "type_coercion")
+            .unwrap();
+        analyzer.rules.insert(
+            coercion + 1,
+            Arc::new(repark_iceberg::InsertStoreAssignment),
+        );
+    }
+    let ctx = SessionContext::new_with_state(builder.build());
     ctx.register_udf(
         repark_functions::timestamp_ntz_cast::timestamp_ntz_literal_udf()
             .as_ref()

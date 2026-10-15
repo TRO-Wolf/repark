@@ -472,6 +472,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `timestamp_ns_cast.rs`: the wall kernel that replaces a nanosecond `Cast` after type
   coercion dropped the source field's metadata, so a `UNION`'s stale logical schema kept a
   `PARQUET:field_id` its physical plan lacked. pins: ice-tsns-type-planner-1/C-018
+  **Carry-over fix, the three errors (ruling 100, 2026-10-15):** a `DATE` or a string beside a
+  zoned timestamp at a shared position (the scalar positions and `UNION` columns) is cast to
+  that timestamp's unit and zone before `type_coercion` (`SharedTarget`), as Spark types
+  `DATE`/`STRING` beside `TIMESTAMP`. DataFusion's own coercion of the pair is `Timestamp(ns,
+  _)` (`temporal_coercion`, `string_temporal_coercion`), which the deleted rules used to read
+  as `TIMESTAMP`; after the deletions the by-target kernel stored it as a nanosecond column
+  the writer refused (`cannot convert text Timestamp(ns) into byte Timestamp(µs, "UTC")`).
+  Beside a naive timestamp the pair is left to DataFusion. pins: `test_store_ts_doors_2.py`
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
@@ -498,6 +506,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   cast to `TIMESTAMP(6)` on that door now reads seconds too, since both spell one type.
   The Python `repark.sql()` callable still builds `DataFusionDialect` with the Spark
   planner; its cell is a dated row for PA-02's routing fix. pins: ice-tsns-type-planner-1/C-015
+  **Carry-over fix, the three errors (ruling 100, 2026-10-15):** `planned_instant_cast` reads
+  an integer of any width as seconds (`Timestamp(s, None)`, then the instant), as Spark 4.1.2
+  does for `CAST(CAST(1 AS INT) AS TIMESTAMP)`; it read a non-`BIGINT` integer as nanosecond
+  ticks, and that inner nanosecond `Cast` then met the by-target wall kernel (`cannot cast
+  "Int32" to "TIMESTAMP_NS"`). pins: the read-perf bench pins, `test_stamp_2_r5p6_1.py`,
+  `tests/ltz_store.rs`
 - `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
   `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
   plus the `__repark_session_gap__` / `__repark_ts_micros__` /
