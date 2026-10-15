@@ -155,6 +155,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
   `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
   pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
+  R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
+  (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that
+  `UPDATE … SET v = CASE WHEN id > 0 THEN c ELSE NULL END` and its three sibling spellings
+  (`NULL_SIBLING_UPDATES`) store what `SET v = c` stores, nine digits, for a `timestamp_ns`
+  and a `timestamptz_ns` source. Oracle: Spark 4.1.2's microsecond twin of the four statements
+  (Iceberg 1.11.0, New York, 2026-10-15) stores `c` unchanged; a NULL takes its sibling's
+  type.
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to
