@@ -1688,6 +1688,9 @@ perfectly good read.
   (byte-magic `PAR1`, readable with no key — measured 2026-09-18) with no error raised;
   `SELECT` returns the rows; table-metadata `encryption-keys` stays empty. There is no
   KMS client and no file encryption. Dated DECLARED exclusion, owner 2026-08-24.
+  Accepted 2026-10-14 (ENC-1-RESIDUE-1 item 2): an unkeyed table placed under a keyed
+  table's location still writes plaintext there — nothing is written into the keyed
+  table itself, so the refusal does not cover it.
 - **After** — the first write to a table carrying `encryption.key-id` refuses with
   `UnsupportedOperationException` and one sentence naming the table, the property, no
   table encryption, no plaintext and ENC-1, never echoing the key value (owner ruling

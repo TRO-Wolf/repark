@@ -484,3 +484,16 @@ fn every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal() {
         "ENC-1 residue item 1: the stage-then-commit census changed"
     );
 }
+
+#[test]
+fn session_registration_installs_the_encryption_guard() {
+    let session = product_sources()
+        .into_iter()
+        .find(|(file, _)| file == "repark-core/src/session.rs")
+        .map(|(_, text)| text)
+        .expect("the session file is scanned");
+    assert!(
+        session.contains("EncryptionGuardCatalog::install"),
+        "ENC-1 residue item 5: Session::register_iceberg_catalog must install the guard"
+    );
+}

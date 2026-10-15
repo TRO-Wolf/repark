@@ -131,7 +131,11 @@ Source comments retain only API and safety contracts; implementation narration i
 - `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the two places every Iceberg write
   passes, guarded by construction. `EncryptionGuardCatalog::install(inner)` wraps a catalog;
   the three builders in `builders.rs` return through it, so every catalog a session holds is
-  guarded. Reason: the round-2 lane guarded some forty call sites one by one and the verifier
+  guarded. **ENC-1-RESIDUE-1 item 5 (2026-10-15):** the guard is also installed by the
+  public session registration entry, always — a directly-built catalog gets one layer, a
+  builder's catalog two, and the layers refuse with byte-identical text because the outer
+  layer sees the key first and the inner layer is never reached.
+  Reason: the round-2 lane guarded some forty call sites one by one and the verifier
   walked around them (branch targets, WAP sessions, `run_maintenance`, cherry-pick, the
   micro-batch sink); the owned fork's `IcebergTableProvider` also writes and commits inside
   the fork, where RePark has no call site to guard.

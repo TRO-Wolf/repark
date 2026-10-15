@@ -134,6 +134,8 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   when the found set differs from the listed 15 sites — so a new unswept site, and a
   new swept site without a list update, both go red. `SWEEP_SITES` names the 13 wired
   sites plus the two merge sites.
+  `session_registration_installs_the_encryption_guard` holds the installer spelling
+  `EncryptionGuardCatalog::install` in `repark-core/src/session.rs`.
 
 ## Pointers
 

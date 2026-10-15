@@ -24,3 +24,13 @@ the release PR to edit into the notes.
   answered `0`, as `CAST(… AS TIMESTAMP)` already did.
 
 Tables already written keep the values they hold; this release ships no migration.
+
+## Keyed-table refusal follow-ups (ENC-1-RESIDUE-1, items 1 and 5)
+
+- **A refused write to a table carrying `encryption.key-id` no longer leaves its staged
+  Parquet behind.** When the commit refuses because the table is keyed, every file the
+  write staged is deleted before the refusal returns; the refusal text is unchanged.
+- **Every catalog registered on a session is now guarded, including one a Rust embedder
+  builds directly.** `Session::register_iceberg_catalog` installs the encryption guard
+  itself, so a directly-built catalog refuses a keyed write exactly as a builder's
+  catalog does.

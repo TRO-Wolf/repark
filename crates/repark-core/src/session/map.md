@@ -277,6 +277,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `TempFallbackAllowed` because an in-memory LocalFs catalog keeps the offline CTAS fallback,
   and real warehouses fail loud. The warehouse is noted as a local write root (the SEC-02
   grandfather), so COPY TO and CREATE EXTERNAL under it stay allowed.
+- `session.rs::register_iceberg_catalog` — **ENC-1-RESIDUE-1 item 5 (2026-10-15):**
+  the public registration entry installs `EncryptionGuardCatalog` around whatever
+  catalog it receives, always — so a Rust embedder's directly-built catalog is
+  guarded, and a builder's catalog is guarded twice with byte-identical refusals.
+  The internal memory / Glue / S3 Tables spec paths keep their single builder guard;
+  the free `catalog::register_iceberg_catalog`, `CatalogRegistry::insert` and
+  `ReparkCatalogProvider::try_new` do not wrap.
+  pins: `tests/iceberg_guard_registration.rs`, `enc_1_gate.rs`
+  `session_registration_installs_the_encryption_guard`.
 - `iceberg_caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session's view of its Iceberg
   cache handles. `memory_catalog_handle` is what `session.rs::register_memory_catalog` reaches
   (since PR-B through `memory_catalog.rs::register_memory_catalog_with_props`, which also

@@ -446,7 +446,7 @@ impl ReparkSession {
         // An external catalog is a real warehouse: location-less namespace CTAS must fail loud.
         self.register_iceberg_catalog_with_policy(
             name,
-            catalog,
+            repark_iceberg::catalog::EncryptionGuardCatalog::install(catalog),
             LocationPolicy::RequireExplicitLocation,
         )
         .await

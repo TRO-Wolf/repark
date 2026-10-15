@@ -17,6 +17,7 @@ mod duplicate_names;
 mod footer_cache_report;
 mod frame_lineage;
 mod hadoop_naming;
+mod iceberg_guard_registration;
 mod io_stats;
 mod join_qualifiers;
 mod metadata_cache_report;

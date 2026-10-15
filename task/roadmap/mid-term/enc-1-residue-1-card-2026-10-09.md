@@ -2,7 +2,8 @@
 
 **Date:** 2026-10-09. **Filed by:** Claude (Opus 5.5), ENC-1 fold 2, from the Opus re-verify of PR #1019 head `78349722`.
 
-**Status:** open. Not scheduled. Each item needs an owner call: accept, or close.
+**Status:** retired 2026-10-15. Every item below is ruled: items 1 and 5 closed by a
+change with pins, items 2, 3, 4 and 6 accepted in words.
 
 **Retires:** when every item below is ruled (accepted in words, or closed by a change with a pin).
 
@@ -27,3 +28,41 @@ The ENC-1 refusal holds: 862 keyed write attempts, 0 plaintext data, delete, man
 ## Interim rulings to confirm (orchestrator, 2026-10-09)
 
 These refuse on a keyed table and are kept until the owner says otherwise: `CREATE BRANCH` on a table with no snapshot, `compute_table_stats`, `compute_partition_stats`, `rewrite_table_path`.
+
+## Owner rulings (2026-10-14, questions 22 to 27, ruling 32; 2026-10-15, rulings 71 and 72)
+
+1. **Closed 2026-10-15.** When the commit refuses because the table is keyed, every file
+   the write staged is deleted before the refusal returns; the refusal is unchanged and
+   names a file it could not delete. The shared helper is the seam with 13 call sites
+   of wiring (ruling 71a). Pins: one per operation family
+   (`keyed_table_refused_append_sweeps_its_staged_file`,
+   `keyed_table_refused_branch_append_sweeps_its_staged_file`,
+   `keyed_table_refused_write_options_doors_sweep_their_staged_files`,
+   `keyed_table_refused_overwrite_sweeps_its_staged_files`,
+   `keyed_table_refused_partition_overwrite_sweeps_its_staged_files`,
+   `keyed_table_refused_overwrite_by_filter_sweeps_its_staged_file`,
+   the two merge pins in `snapshot_commit.rs`) plus the census
+   `every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal`, which lists
+   the 13 stage-then-commit sites so a new site without the clean-up fails the suite.
+2. **Accepted 2026-10-14.** An unkeyed table placed under a keyed table's location writes
+   plaintext there, and that is accepted: nothing is written into the keyed table; the
+   files belong to the other table. Documented with one docs line where the ENC-1
+   behaviour is documented for users.
+3. **Accepted 2026-10-14.** Ref-only commits stay as they are, naming `publish_changes`
+   as the one exception: it refuses, and only by its entry check, while its twins run
+   pointer moves.
+4. **Accepted 2026-10-14.** Unchanged state resting on the entry checks is accepted:
+   plaintext safety does not depend on them and the refused shapes stay clean through
+   them.
+5. **Closed 2026-10-15.** The public registration entry installs the guard itself, so
+   every catalog a session registers is guarded, wrapping always (ruling 72a). Pins: a
+   builder's catalog registered through the session (wrapped twice) refuses a keyed
+   write exactly once with the same text, byte for byte, as a single wrap, and writes
+   no file (`session_registration_wraps_a_builder_catalog_twice_with_one_refusal_text`);
+   a directly-built catalog registered through `Session::register_iceberg_catalog`
+   refuses exactly as a builder's catalog does
+   (`session_registration_guards_a_directly_built_catalog`); the gate names the
+   registration entry (`session_registration_installs_the_encryption_guard`).
+6. **Accepted 2026-10-14.** A commit that moves a keyed table's metadata directory
+   refuses on Glue, and that stays a documented refusal, with one acceptance cell to
+   add when U-9's legs are built.

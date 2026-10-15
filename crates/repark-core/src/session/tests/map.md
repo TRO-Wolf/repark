@@ -421,6 +421,13 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `rename_error_mapping_keeps_the_engine_error_class`: after `unsupported_message_error`,
   `engine_err` still answers `NotImplemented` with the bare message, `Analysis` for
   `TableNotFound`, and `Iceberg` for `Unexpected`.
+- `iceberg_guard_registration.rs` — **ENC-1-RESIDUE-1 item 5 (2026-10-15):**
+  `session_registration_wraps_a_builder_catalog_twice_with_one_refusal_text` registers
+  a builder (already guarded) catalog through the session and refuses a keyed write
+  with byte-identical text to the single-wrapped catalog, writing no Parquet;
+  `session_registration_guards_a_directly_built_catalog` builds a memory catalog
+  straight from the fork builder, registers it through the session, and refuses
+  exactly as the builder's catalog does, writing no Parquet.
 - `conf_unread.rs` — **CONF-UNREAD-1 step 1 (2026-09-11):** the four
   accepted-but-unread keys. `coalesce_batches` refuses loud at build and at
   runtime `SET`, naming the key and the reason (DataFusion 54.1.0 defines the
