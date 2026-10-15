@@ -850,3 +850,10 @@ declines it (a dated ruling in the intake, then the archive).
   step is a branch run with `--durations=0` and a per-test timeout to name the test that
   never returns; a CI-only change is the owner's. Retires when the named test is fixed or
   marked with a dated row.
+- [spill-reach-fair-pool-flake-1-card-2026-10-14.md](spill-reach-fair-pool-flake-1-card-2026-10-14.md) — **card
+  SPILL-REACH-FAIR-POOL-FLAKE-1 (2026-10-14, open, not scheduled):**
+  `test_sort_merge_join_spills_under_small_fair_pool` (64 MiB fair pool, two 400,000-row
+  md5 series, spill count above zero asserted) refuses intermittently on CI with
+  `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
+  0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
+  or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
