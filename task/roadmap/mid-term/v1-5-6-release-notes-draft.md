@@ -31,6 +31,30 @@ the release PR to edit into the notes.
   `INSERT INTO … REPLACE WHERE` and `insertInto` with and without `overwrite=True`, at every
   depth and inside arrays and maps. A struct with more or fewer fields than the column now
   refuses (`EXTRA_STRUCT_FIELDS`, `STRUCT_MISSING_FIELDS`).
+- **A struct field Spark's store assignment refuses now refuses, where it was stored.** After
+  a struct pairs, each of its fields is held to the same rule a plain column is:
+  `INSERT INTO t SELECT 1, named_struct('a', '5', 'b', 'y')` into
+  `st STRUCT<a: BIGINT, b: STRING>` now refuses `CANNOT_SAFELY_CAST` (``Cannot safely cast
+  `st`.`a` "STRING" to "BIGINT"``) and writes nothing; before it stored `a = 5`. The same
+  holds for a BOOLEAN into an INT field, a STRING into a DATE field, a field that meets a
+  struct where the table has a plain value (or the reverse), at every depth and inside arrays
+  and maps, on every door, `INSERT OVERWRITE … PARTITION (…)` included. A struct with more or
+  fewer fields than the column refuses there with `EXTRA_STRUCT_FIELDS` or
+  `STRUCT_MISSING_FIELDS`, as on the other doors. Widening (`INT` into `BIGINT`) and any value
+  into a STRING field still store.
+- **`INSERT INTO t (st, id) VALUES (…)` with a column list pairs a struct by position.** The
+  struct written to `st` feeds `st`'s fields in order, as every other `INSERT` door does:
+  `INSERT INTO t (st, id) VALUES (named_struct('b', 2, 'a', 1), 1)` stores `a = 2, b = 1`, and a
+  renamed field stores its value; before, this spelling paired by name and stored NULL for a
+  renamed field.
+- **By-name struct fields match letter case as Spark does, beyond ASCII.** Under
+  `spark.sql.caseSensitive=false` a source field `É` feeds the table's `é` and `ẞ` feeds `ß`
+  on `INSERT … BY NAME`, `writeTo().append()`, `saveAsTable`, `overwritePartitions()`, every
+  MERGE arm and `UPDATE`; before, MERGE and `UPDATE` refused and the DataFrame writers stored
+  NULL or paired the wrong field. `ß` and `SS` still do not match, as on Spark.
+- **`UPDATE t SET st = (SELECT st FROM src) WHERE …` stores the subquery's struct.** An
+  uncorrelated `(SELECT column FROM table …)` assigned in `SET` now stores its value, its struct
+  fields paired by name; before, the statement succeeded and left the row unchanged.
 - **`writeTo().append()` and `saveAsTable` in append mode refuse a struct they cannot pair by
   name, where they stored NULL.** A source struct missing one of the column's fields, or
   carrying one it lacks, now refuses `CANNOT_FIND_DATA` or `EXTRA_STRUCT_FIELDS` and writes

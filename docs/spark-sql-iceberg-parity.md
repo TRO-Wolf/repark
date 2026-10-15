@@ -3518,10 +3518,25 @@ still open is `isModifiable`.
   family, Arrow's by name-else-position on the overwrite doors) and 48 cells per format
   version stored a NULL nobody wrote. A route that reaches a batch cast without the kernel
   refuses with hint H-1 (row ICE-STRUCT-PAIRING-1-STATIC-PARTITION).
+  **Build round 3 (2026-10-14, owner rulings 56(a) and 57(a)).** Every paired field passes the
+  store-assignment judge flat columns use (`ansi_store_assignable`): after pairing, by position
+  or by name, each leaf pair is judged at every depth and inside arrays and maps, and the first
+  leaf Spark refuses answers Spark's `CANNOT_SAFELY_CAST` with the leaf's path and Spark's type
+  names (`` Cannot safely cast `st`.`o`.`p` "INT" to "STRUCT<A:INT,B:INT>" ``), writing
+  nothing; an in-order struct is judged as a reordered one is. One leaf judge serves the
+  conform seam, the MERGE and UPDATE text and the batch-cast guard. This closes verifier 1's
+  F-01 (a STRING into a BIGINT field and the like were stored: 4 cells that main refused, 24
+  that main stored by name, 33 that main stored the same) and F-06 (42 such refusals carried
+  raw Arrow text). `INSERT INTO t (cols) VALUES (…)` with a column list pairs by position, like
+  every other INSERT door (F-02). Under `spark.sql.caseSensitive=false` names compare as Java's
+  `equalsIgnoreCase` (É/é and ẞ/ß match, ß/SS does not; F-03); the UPDATE refusal pairs under
+  the session's case rule (F-05); `UPDATE … SET st = (SELECT st FROM src) WHERE …` stores
+  Spark's value instead of writing nothing (F-04).
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0: the rule above, at every depth and in every
   container. *(oracle: live, 1,216 matrix cells and five added cells,
   `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`, recorded 2026-10-13 and
-  re-recorded 2026-10-14 with no cell changed.)*
+  re-recorded 2026-10-14 with no cell changed; 410 build-round-3 cells, groups `r3_leaf`,
+  `r3_part` and `r3_misc`, recorded live 2026-10-14.)*
 - **Pin** — `python/repark/tests/test_ice_struct_pairing_1.py` (2,458 tests: the rule against
   the oracle in every cell, the engine against the rule, lists L1 and L2, the stored Parquet
   field names); `crates/repark-spark/tests/struct_pairing_doors.rs` (sixteen doors × four
@@ -3529,38 +3544,64 @@ still open is `isModifiable`.
   `crates/repark-iceberg/src/write/struct_pairing/tests.rs` (three modes × eight shapes × ten
   layouts, and hint H-1 at S1 and S2);
   `crates/repark-iceberg/src/write/store_overflow/tests.rs`
-  `an_insert_pairs_struct_fields_by_position_unless_its_statement_says_by_name`.
+  `an_insert_pairs_struct_fields_by_position_unless_its_statement_says_by_name`; build round 3:
+  `python/repark/tests/test_ice_struct_pairing_1_round3.py` (411 tests over the 410 round-3
+  cells), `struct_pairing/tests.rs` `every_paired_leaf_is_judged_as_a_flat_column_is`,
+  `case_insensitive_names_match_as_java_equals_ignore_case` and
+  `case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive`, and
+  `struct_pairing_doors.rs` `a_by_name_frame_door_pairs_under_the_session_case_rule`.
 - **Rationale** — CLOSED 2026-10-14 by ICE-STRUCT-PAIRING-1 (U-6), owner rulings of
-  2026-10-13 and 2026-10-14 (questions 34, 35, 37, 47, 48), target 1.5.6. Lists L1 (row
-  R-018) and L2 (row R-014) are held as recorded there. Ledger
-  `task/ledgers/staging/ice-struct-pairing-1-ledger.md` C-001 to C-023; the order's §0 names
-  what stays out of scope.
+  2026-10-13 and 2026-10-14 (questions 34, 35, 37, 47, 48; rulings 55 to 59 after verifier 1),
+  target 1.5.6. Lists L1 (row R-018) and L2 (row R-014) are held as recorded there. Ledger
+  `task/ledgers/staging/ice-struct-pairing-1-ledger.md` C-001 to C-032; the order's §0 names
+  what stays out of scope, with the scope change of 56(a) and 57(a) dated 2026-10-14.
 
-### ICE-STRUCT-PAIRING-1-STATIC-PARTITION — DATED 2026-10-14: `INSERT OVERWRITE … PARTITION` refuses a struct whose fields are not the table's, in order (hint H-1)
+### ICE-STRUCT-PAIRING-1-STATIC-PARTITION — DATED CARVE-OUT 2026-10-14 (owner ruling 58(a)): both `INSERT OVERWRITE … PARTITION` spellings refuse a struct whose fields are not the table's, in order, with a hint naming the workaround
 
-- **repark** — `INSERT OVERWRITE t PARTITION (p = 1) SELECT 1, named_struct('b', 2, 'a', 1)`
-  into `(id INT, p INT, st STRUCT<a: INT, b: INT>)` refuses and keeps the table:
+- **repark** — the two `PARTITION` spellings of `INSERT OVERWRITE` reach the batch casts with
+  no pairing, so a struct whose field names differ from the table's (reordered, renamed, in
+  another letter case, at any depth or inside an array or a map) refuses with hint H-1 and the
+  table keeps its rows. The static spelling, `INSERT OVERWRITE t PARTITION (p = 1) SELECT 1,
+  named_struct('b', 2, 'a', 1)` into `(id INT, p INT, st STRUCT<a: INT, b: INT>)`, answers
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the
   table ``: the struct `st` has the fields `b`, `a` and the table has `a`, `b`. INSERT
   OVERWRITE with a static PARTITION value does not pair struct fields; write the struct with
-  the table's field names in the table's field order.` The dynamic spelling
-  `PARTITION (p) SELECT 1, 1, named_struct('b', 2, 'a', 1)` shares the route and refuses with
-  the batch hint: `… This entry does not pair struct fields; give the value the table's field
-  names in the table's order.` The same statements with `named_struct('a', …, 'b', …)` store.
-  On main both spellings stored by name (`{a: 1, b: 2}`).
+  the table's field names in the table's field order.` The dynamic spelling, `PARTITION (p)
+  SELECT 1, 1, named_struct('b', 2, 'a', 1)`, answers the same head with the batch hint: `…
+  This entry does not pair struct fields; give the value the table's field names in the
+  table's order.` Both hints name the workaround. Where Spark refuses, these spellings now
+  refuse with Spark's condition, not H-1 (build round 3, ruling 56(a)): a surplus or missing
+  field answers `EXTRA_STRUCT_FIELDS` / `STRUCT_MISSING_FIELDS` (by position, as Spark pairs
+  an INSERT), and a field Spark's store assignment refuses answers `CANNOT_SAFELY_CAST` with
+  its path. A struct in the table's field order stores, as Spark stores it.
 - **Apache Spark** — stores by position on both spellings: `[[1, 1, {a: 2, b: 1}]]`.
   *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog,
-  2026-10-14, U-6 build round 2.)*
-- **Workaround** — write the struct with the table's field names in the table's order
+  2026-10-14; the `r3_part` group of `ice_struct_pairing_1_spark_oracle.json`, 160 cells.)*
+- **The carve-out, counted** — on the `r3_part` cells (24 shapes and 8 case shapes, format
+  versions 2 and 3, `caseSensitive` both ways for the case shapes), per route (static and
+  dynamic, v2 and v3 together): 52 cells where Spark stores and repark refuses with hint H-1,
+  of which **38** are cells where main (`293896ce`) stored Spark's value (19 per format
+  version: `renamed`, `two_deep_renamed`, `map_key_renamed`, `null_struct` and
+  `case_mixed_reordered`, then the seven case shapes `case`, `case_reordered`,
+  `case_mixed_reordered`, `case_two_deep`, `case_map_key`, `case_array` and `twins` under
+  `caseSensitive` false and again under true) and 14 are cells where main stored another
+  value. Verifier 1's probe counts the same 38 per route.
+- **Workaround** — write the struct with the table's field names in the table's field order
   (`named_struct('a', 1, 'b', 2)`), or use `INSERT OVERWRITE t SELECT …` with no `PARTITION`
   clause, which pairs by position as Spark does.
 - **Pin** — `crates/repark-spark/tests/struct_pairing_doors.rs`
-  `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1`.
-- **Rationale** — DATED 2026-10-14, owner ruling of question 34: the static-partition route
-  (`insert_overwrite.rs` `execute_partition_overwrite`) stages through `zone_stores` with no
-  conform, so it gets one guard and the H-1 refusal, not a second pairing site. The guard is
-  one check in `conform::entry_store_cast` in front of S1, S2 and S3 (owner, question 48);
-  the Rust `append` API and the streaming sink take the batch hint the same way.
+  `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1`;
+  `python/repark/tests/test_ice_struct_pairing_1_round3.py`
+  `test_the_partition_carve_out_refuses_with_the_workaround` (104 cells) and, for the shapes
+  Spark refuses, `test_the_engine_answers_as_spark`.
+- **Rationale** — DATED CARVE-OUT 2026-10-14, owner ruling 58(a) on question 34: the static
+  route (`insert_overwrite.rs` `execute_partition_overwrite`) stages through `zone_stores` with
+  no conform, and the dynamic spelling reaches S2 the same way, so both get one guard and the
+  H-1 refusal, not a second pairing site. The guard is one check in `conform::entry_store_cast`
+  in front of S1, S2 and S3 (owner, question 48); the Rust `append` API and the streaming sink
+  take the batch hint the same way. **Closed by** the routing unit of owner question 34(b),
+  which routes `INSERT OVERWRITE … PARTITION` through the common store stage so it pairs by
+  position as the other INSERT doors do (no card filed at this date).
 
 ### ICE-TSNS-SQL-1-R-017 — OPEN, PARKED 2026-10-13 (measured 2026-10-09): a nanosecond value beside an untyped NULL is typed as microseconds
 

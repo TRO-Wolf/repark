@@ -625,6 +625,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `caseSensitive=true`, `named_struct('a', 1, 'A', 2)` answers Spark's `CANNOT_FIND_DATA` for
   `` `st`.`b` `` and `named_struct('a', 1, 'b', 2, 'A', 3)` its `EXTRA_STRUCT_FIELDS`, not
   `AMBIGUOUS_COLUMN_NAME` (verifier 1's eight cells, v2 and v3, with and without `WHERE`).
+  pins: ice-struct-pairing-1/C-029
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `execute_update` calls
   `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR
   refusals and before `execute_passthrough`: bare-column SET targets resolve on the

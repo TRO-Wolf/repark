@@ -1,7 +1,7 @@
 # Unit ledger — ICE-STRUCT-PAIRING-1 · one rule pairs struct fields on every write door
 
 **Date:** 2026-10-14 · **Branch:** `fix/ice-struct-pairing-1` · **Base:** `018d0efd`, stacked on
-U-3 at `fb325e57` · **Model:** Claude (claude-opus-5-5), lane B; build rounds 1 and 2 ·
+U-3 at `fb325e57` · **Model:** Claude (claude-opus-5-5), lane B; build rounds 1, 2 and 3 ·
 **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.** Target: the next bug release (1.5.6).
 
@@ -11,8 +11,10 @@ C-037 and question Q8 of `ice-tsns-merge-wall-1-ledger.md`. **This ledger closes
 unit's pull request merges.** Step 0 changed no product file
 ([step-0.md](../../wo/ice-struct-pairing-1/step-0.md)). Build round 1 halted on two rules of the
 order's §6 (list L2 moved; the ANSI door's struct MERGE refused where main stored); the owner
-answered questions 47 and 48 the same day and build round 2 finished the order. Round count for
-the class "a struct field paired by a rule other than Spark's": build round 2.
+answered questions 47 and 48 the same day and build round 2 finished the order. Verifier 1
+returned FAIL on `e3fc32ab`; the owner's rulings 54 to 59 of the same night scoped build round 3
+(§7). Round count for the class "a struct field paired by a rule other than Spark's": build
+round 3, and there is no round 4.
 
 **Why.** Which source field fed which field of a struct column depended on the cast that
 happened to run on a door's route, so RePark differed from Spark 4.1.2 in 279 of 512 measured
@@ -24,7 +26,8 @@ kernel applies it.
 
 The rule of the sketch's §4 is clauses C-001 to C-009, one per sentence; C-010 to C-015 are how
 the doors reach it; C-016 to C-020 are the controls and the residues; C-021 to C-023 are the
-proof and the records.
+proof and the records. Build round 3 adds C-024 to C-032, one per sentence of the owner's rulings
+55(a) to 58(a).
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
@@ -51,6 +54,15 @@ proof and the records.
 | C-021 | Reverting the callers alone leaves the tree compiling and only the unit's own pins red; reverting the facade flag alone reds only the by-name DataFrame doors' cells. | The two revert-alone runs of the sketch's §9. | **PROVEN** | §4. pins: ice-struct-pairing-1/C-021 |
 | C-022 | Registry rows: R-016, R-021 and R-022 closed with their pins; R-013, R-014 and R-018 carry this unit's names and cells; the static-partition route has its dated row. | The registry. | **PROVEN** | `docs/spark-sql-iceberg-parity.md`. pins: ice-struct-pairing-1/C-022 |
 | C-023 | The 1.5.6 notes carry one line per stored-value change for a reader who will not open the registry. | The notes draft. | **PROVEN** | `task/roadmap/mid-term/v1-5-6-release-notes-draft.md`. pins: ice-struct-pairing-1/C-023 |
+| C-024 | After pairing, by position or by name, every leaf pair passes the store-assignment judge flat columns use (`ansi_store_assignable`), at every depth and inside arrays and maps; the first leaf Spark refuses answers Spark's `CANNOT_SAFELY_CAST` with the leaf's path and Spark's type names, and nothing is written (ruling 56(a)). | The `r3_leaf` cells on the sixteen doors and both `PARTITION` spellings; the seam's unit test. | **PROVEN** | `test_ice_struct_pairing_1_round3.py::test_the_engine_answers_as_spark` over `r3_leaf` (118 Spark refusals answered with Spark's condition and detail, the table unchanged); `struct_pairing/tests.rs` `every_paired_leaf_is_judged_as_a_flat_column_is`. Verifier 1's F-01: its 4 regressions, 24 and 33 all refuse as Spark; its F-06 42 raw refusals carry Spark's text (§7). pins: ice-struct-pairing-1/C-024 |
+| C-025 | A struct already in the table's field order is judged as a reordered one is, and a user's own `CAST` of a struct is judged on its output, not its operand. | The in-order leaf cases; five explicit-`CAST` cells. | **PROVEN** | `r3_leaf` `str5_to_bigint_inorder` and `bool_to_int_inorder` refuse on all eighteen doors as Spark; `r3_misc` `explicit_cast_values`, `_select`, `_overwrite`, `_by_name`, `_df_append` store Spark's `{a: 5, b: 'y'}`. pins: ice-struct-pairing-1/C-025 |
+| C-026 | A struct that reaches a batch cast unpaired is judged by position before hint H-1: a surplus or missing field answers Spark's `EXTRA_STRUCT_FIELDS` / `STRUCT_MISSING_FIELDS`, a refused leaf `CANNOT_SAFELY_CAST`; only a struct Spark stores keeps H-1. | The `r3_part` shapes Spark refuses; the seam's unit test. | **PROVEN** | `test_the_engine_answers_as_spark` over `r3_part` (36 Spark refusals, Spark's condition and detail); `every_paired_leaf_is_judged_as_a_flat_column_is` (surplus field, INT into STRUCT on both entries). pins: ice-struct-pairing-1/C-026 |
+| C-027 | `INSERT INTO t (cols) VALUES (…)` with a column list pairs by position, like every other INSERT door (ruling 57(a)). | Verifier 1's F-02 repros and three more. | **PROVEN** | `r3_misc` `values_collist_swapped`, `_swapped_renamed`, `_partial`, `_swapped_two_rows`, `_in_order`, `_swapped_leaf`, `overwrite_values_collist_swapped`: seven cells as Spark. pins: ice-struct-pairing-1/C-027 |
+| C-028 | Under `spark.sql.caseSensitive=false`, by-name pairing compares names as Java's `equalsIgnoreCase`: same UTF-16 length, and per character equal, equal upper-cased, or equal lower-cased after upper-casing; not a full Unicode fold (ruling 55(a) F-03). | É/é, ẞ/ß and the non-matching ß/SS on live Spark; a unit test. | **PROVEN** | `r3_misc` `e_acute_*` (nine cells, every by-name door, MERGE and UPDATE included), `sharp_s_from_capital`, `capital_sharp_s_from_small` store as Spark; `sharp_s_from_ss` refuses `CANNOT_FIND_DATA` as Spark; `e_acute_case_sensitive` refuses as Spark; `case_insensitive_names_match_as_java_equals_ignore_case`. pins: ice-struct-pairing-1/C-028 |
+| C-029 | The Spark door's `UPDATE` refusal pairs a struct SET value under the session's `spark.sql.caseSensitive` (ruling 55(a) F-05). | Verifier 1's eight cells. | **PROVEN** | `r3_misc` `cs_update_twins_v2/v3`, `cs_update_twins_plus_b_v2/v3`, `cs_update_no_where_twins_v2/v3`, `cs_update_no_where_twins_plus_b_v2/v3` answer Spark's `CANNOT_FIND_DATA` / `EXTRA_STRUCT_FIELDS`. pins: ice-struct-pairing-1/C-029 |
+| C-030 | `UPDATE t SET st = (SELECT st FROM src) WHERE …` stores Spark's value with the source struct reordered and in order; it is never a success that writes nothing (ruling 55(a) F-04). | Both shapes on live Spark. | **PROVEN** | `r3_misc` `update_subquery_reordered` and `update_subquery_in_order` store `{a: 1, b: 2}` as Spark (main refused the first raw and wrote nothing for the second). pins: ice-struct-pairing-1/C-030 |
+| C-031 | Both `INSERT OVERWRITE … PARTITION` spellings refuse a struct Spark stores whose field names are not the table's, in order, with hint H-1 naming the workaround, as a carve-out dated 2026-10-14 and closed by the routing unit of question 34(b) (ruling 58(a)). | The `r3_part` cells Spark stores. | **PROVEN** | `test_the_partition_carve_out_refuses_with_the_workaround` (104 cells: 52 per route, 38 of them where main stored Spark's value); registry row ICE-STRUCT-PAIRING-1-STATIC-PARTITION. pins: ice-struct-pairing-1/C-031 |
+| C-032 | Verifier 1's surviving mutants O1 (the ambiguity check off) and O5 (the passthrough drops `caseSensitive`) die on Rust tests (ruling 55(a) F-07). | Each mutant run against the Rust suites. | **PROVEN** | O1 dies on `case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive`, O5 on `a_by_name_frame_door_pairs_under_the_session_case_rule` (§7). pins: ice-struct-pairing-1/C-032 |
 
 ## 1. Build round 2 (2026-10-14)
 
@@ -156,13 +168,48 @@ narrowing, `BY NAME`, `INSERT OVERWRITE`, a partitioned `INSERT`, and two struct
 table's field order. The 20 answers are byte-identical on head and main (171,674 bytes, one
 sha256 `9c2f0b9eb799…`); `EXPLAIN INSERT … BY NAME` fails to parse identically on both.
 
+## 7. Build round 3 (2026-10-14)
+
+Verifier 1 (head `e3fc32ab`) returned FAIL on F-01, F-02 and F-03, with F-04 to F-09 beside
+them. The owner's rulings 54 to 59 (order §1, scope change in §0) scoped this round:
+
+- **Fixture first.** A recorder extension adds three groups to both recordings, never
+  re-recording the matrix: `r3_leaf` (216 cells), `r3_part` (160) and `r3_misc` (34), live on
+  Spark 4.1.2 and on main `293896ce`. No struct cell moves between `293896ce` and `37d60eaf`
+  (U-3) in the 1,222 matrix cells or the 410 new ones. Red on the head before any fix: 166 of
+  411, nine of them list L2's leaf cells, which that commit classed as Spark cells and the
+  next classes as main's. Red on main: 566 of the round-1 fixture's 2,458 (the 548 of the PR body and
+  the 18 L2 re-pins, verifier 1's F-09) and 294 of the round-3 file. Green on the head after
+  the fixes: 2,869 of 2,869.
+- **One commit per finding**, the fixture re-run after each: 56(a) (C-024 to C-026) leaves 25
+  red, 57(a) (C-027) 20, F-03 (C-028) 10, F-05 (C-029) 2, F-04 (C-030) 0 after one fix forward
+  (the Spark door's struct fold wraps the subquery, so the identity path's test reads every
+  subquery in the value).
+- **Mutants (C-032 and the sketch's §9 re-run).** O1 and O5 die on their new Rust pins. Family
+  1 (by position pairs by name), 2 (case rule ignored), 3 (missing field NULL), 4 (surplus
+  dropped, both modes), 5 (walk stops at a list, a map value, a map key, a nested struct, a
+  dictionary), 6 (guard removed at S1, S2, S3), 7 (a door handed the other mode: the
+  passthrough, `insert_by_name`, MERGE update, MERGE insert), 8 (`WriteOp::Insert` default by
+  name) and 9 (`is_identity` true, and identity ignoring names) all die on named Rust tests
+  and door cells. The `WriteOp::Update` arm of `statement_pairing` handed by position survives
+  every test, as in verifier 1's run: equivalent, since an UPDATE's struct value is paired by
+  the rewrite text before that arm is read (verifier 1's probe `C-M6d-probe.txt`).
+- **Never worse than main.** Over the fixture and verifier 1's own probes re-run on the head
+  (L, B, X, Y, R, D): the only cells where main answered as Spark and the head does not are the
+  152 carve-out cells of C-031 (76 in the fixture, 76 in verifier 1's B probe, 38 per route
+  each). 40 cells refuse where Spark stores outside the carve-out and one stores where Spark
+  refuses; all 41 answer as main does (the required nested field that cannot be seeded or
+  cast, the `WITH … INSERT` door, `UPDATE SET col = (SELECT literal)`, and the flat
+  `VALUES ('5')` into a BIGINT column), none is in the unit's class, and verifier 1 named them
+  out of scope.
+
 ```
 COVERAGE_ATTESTATION:
   pr_unit: ice-struct-pairing-1
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every clause walked against the order (sections 0, 1, 4 and 6), the sketch (sections 4, 6 and 9) and the owner's answers to questions 34, 35, 37, 47 and 48; C-020 stays OPEN on the bar question.
+      evidence: Every clause walked against the order (sections 0, 1, 4 and 6), the sketch (sections 4, 6 and 9), the owner's answers to questions 34, 35, 37, 47 and 48 and rulings 54 to 59 after verifier 1; C-020 stays OPEN on the bar question.
       artifacts: [task/ledgers/staging/ice-struct-pairing-1-ledger.md, task/wo/ice-struct-pairing-1/order.md]
     - id: AT-2
       status: ATTACKED
@@ -180,7 +227,7 @@ COVERAGE_ATTESTATION:
       justification: No credentials, network, paths or secret-bearing output are touched.
     - id: AT-6
       status: ATTACKED
-      evidence: The fixture was red on main (548 tests); the nine mutant families of section 2 each die on a named cell, two of them only after the pins they exposed were added.
+      evidence: The fixture was red on main (566 tests, and 294 of the round-3 file); the nine mutant families of section 2 each die on a named cell, two of them only after the pins they exposed were added; in build round 3 verifier 1's survivors O1 and O5 die on new pins and the families die again on this head (section 7).
       artifacts: [python/repark/tests/test_ice_struct_pairing_1.py, crates/repark-spark/tests/struct_pairing_doors.rs]
     - id: AT-7
       status: ATTACKED

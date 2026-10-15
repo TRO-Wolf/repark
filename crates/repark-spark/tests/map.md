@@ -141,7 +141,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`source_by_name`) with a recased struct under each value of the session's case carrier:
   case-insensitive it stores `{a:1, b:2}`, case-sensitive it refuses with Spark's
   `CANNOT_FIND_DATA` for `` `st`.`a` `` and stores nothing (kills verifier 1's mutant O5, the
-  passthrough dropping `caseSensitive`).
+  passthrough dropping `caseSensitive`). pins: ice-struct-pairing-1/C-032
   **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
   `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
   `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE

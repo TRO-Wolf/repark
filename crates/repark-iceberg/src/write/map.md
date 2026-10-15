@@ -373,7 +373,7 @@ repark-core's error map.
   Spark's value. Before, any subquery in a SET value left this path and the statement
   reached the fork's provider `update`, which re-resolved the subquery's output column against
   the target and wrote the row back unchanged with no error. Any other subquery in a SET value
-  still leaves this path, unchanged.
+  still leaves this path, unchanged. pins: ice-struct-pairing-1/C-030
 - `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the identity UPDATE hands `wrap_store_outputs` the by-name mode
   under the statement's case rule (`spec.case_insensitive`) and Spark's empty table label.
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
@@ -1745,7 +1745,7 @@ repark-core's error map.
   each `VALUES` column its target field, so `conform_values_rows` pairs the struct against the
   column it is written to, not the column at its position in the table. A column the list leaves
   out keeps no target; with no projection the `VALUES` columns map to the table's in order
-  (`positional_values_targets`), as before.
+  (`positional_values_targets`), as before. pins: ice-struct-pairing-1/C-027
 - `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
   F-03, parity row R-016:** by-name pairing under `spark.sql.caseSensitive=false` compares names
   as Java's `String.equalsIgnoreCase` does, Spark's resolver: one function,
@@ -1754,13 +1754,13 @@ repark-core's error map.
   or their `Character.toUpperCase` are equal, or the `Character.toLowerCase` of those are equal
   (Unicode simple case mapping: a full mapping that expands, `ß` to `SS`, maps the character to
   itself; the Greek iota-subscript letters and `İ` take their simple mapping). Not a full Unicode
-  fold: É/é and ẞ/ß match, ß/SS does not, as on Spark 4.1.2.
+  fold: É/é and ẞ/ß match, ß/SS does not, as on Spark 4.1.2. pins: ice-struct-pairing-1/C-028
 - `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
   F-05, parity row R-016:** `incompatible_paired_update_message` and
   `incompatible_paired_store_message` take the statement's `StructPairing`; the struct arm pairs
   under it (`incompatible_paired_message`). `incompatible_update_message` and
   `incompatible_store_message` keep their by-name, case-insensitive behaviour for their other
-  callers.
+  callers. pins: ice-struct-pairing-1/C-029
 - `struct_pairing.rs`, `store_overflow.rs`, `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build
   round 3 (2026-10-14), owner ruling 56(a), verifier 1's F-01 and F-06, parity row R-016:** every
   paired field passes the store-assignment judge flat columns use. `update_cast.rs` holds the one
@@ -1778,6 +1778,7 @@ repark-core's error map.
   surplus or missing field answers Spark's `EXTRA_STRUCT_FIELDS` / `STRUCT_MISSING_FIELDS`, a leaf
   Spark refuses answers `CANNOT_SAFELY_CAST`, and only a struct Spark stores keeps hint H-1 (the
   dated carve-out of ruling 58). No second judge and no new pairing site.
+  pins: ice-struct-pairing-1/C-024, C-025, C-026
 - `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 step 2 (2026-10-14), parity row R-016:** the one
   rule that pairs a struct source with a struct target on a write. `pair_store_value(pairing,
   table, column, source, target)` walks both types: two structs pair by the door's
