@@ -227,6 +227,15 @@ def _unit(outcome: dict[str, Any], want: str, index: int = 0) -> str:
     return "" if f"[{want}" in got else f"type {got}, wanted unit {want}"
 
 
+def _live_pairs(spark: Any, table: str) -> list[list[Any]]:
+    rows = spark.sql(f"SELECT id, v FROM {table} WHERE v IS NOT NULL").toArrow()
+    ticks = rule.ticks_of(rows.column(1))
+    return sorted(
+        ([row, tick] for row, tick in zip(rows.column(0).to_pylist(), ticks, strict=True)),
+        key=repr,
+    )
+
+
 def _equal_statements(spark: Any, scratch: Path, name: str, left: str, right: str) -> str:
     seeded = "INSERT INTO {T} (id, k) VALUES (1, 0), (2, 0)"
     outcomes = []
@@ -245,8 +254,8 @@ def _equal_statements(spark: Any, scratch: Path, name: str, left: str, right: st
             except Exception as error:
                 result["error"] = doors.error_text(error)
                 result["error_type"] = type(error).__name__
-            pairs, parquet_type = doors.stored(scratch, table)
-            result["stored"] = pairs
+            _, parquet_type = doors.stored(scratch, table)
+            result["stored"] = _live_pairs(spark, table)
             result["parquet_type"] = parquet_type
         finally:
             doors.cleanup(spark, scratch, table)

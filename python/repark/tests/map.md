@@ -3406,9 +3406,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `Column.cast`, the inferred CSV unit through `read_csv` and `read.csv`, the
   R-010 `UPDATE` and `DELETE` statements against their `INSERT` twins, R-013 on
   `repark.sql`, R-018(1)'s three `VALUES` shapes against their `SELECT` twins, and the
-  Postgres cells. `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
+  Postgres cells. The R-010 cells read the stored rows through the table
+  (`_live_pairs`, 2026-10-15), not from every Parquet file, so a copy-on-write `DELETE`
+  shows. `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
   callable: `TIMESTAMP` and its literal as `timestamp[us]`, `TIMESTAMPTZ` as
-  `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-013
+  `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-013, C-020
 - [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
   [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
   **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,
