@@ -18,7 +18,7 @@ and the public `repark.sql()` entry, under
 | C-001 | Main writes an `EXPLAIN ANALYZE COPY` outside every warehouse on both doors and on `repark.sql()`, refuses the bare `COPY` on both doors, and lets `repark.sql()` write the bare `COPY`, the wrapped `COPY` and a `CREATE EXTERNAL TABLE` outside. | Step 0 probes, §1. | **PROVEN** | §1.1, §1.2, §1.3. |
 | C-002 | Main writes `<warehouse>/link/new1/export` and `<warehouse>/link/m1/m2/m3/export` into the symlink's outside target on both doors. | Step 0 probes, §1. | **PROVEN** | §1.1, §1.2. |
 | C-003 | Main panics on a multibyte character across byte 5, 7 or 9 of a location on both doors, and classifies `file://localhost/<outside>` as local and refuses it. | Step 0 probes, §1. | **PROVEN** | §1.1, §1.2. |
-| C-004 | `PREPARE … AS COPY …` does not parse on either door, so no prepared statement can carry a `COPY`; `EXECUTE` of it answers "does not exist". | Step 0 probes, §1; the `Prepare` unit pin. | **OPEN** (measured §1; pinned at step 4) | §1.1, §1.2; DataFusion keeps the prepared plan behind `pub(crate)` `get_prepared`, so the walk checks a `Prepare` node's input at `PREPARE`. |
+| C-004 | `PREPARE … AS COPY …` does not parse on either door, so no prepared statement can carry a `COPY`; `EXECUTE` of it answers "does not exist". | Step 0 probes, §1; the `Prepare` unit pin. | **PROVEN** | §1.1, §1.2; DataFusion keeps the prepared plan behind `pub(crate)` `get_prepared`, so the walk checks a `Prepare` node's input at `PREPARE`. |
 | C-005 | Main's ANSI door ignores the explicit opt-in: its reader looks up `repark.sql.allow_local_filesystem_ddl` among `ConfigOptions::entries()`, which reports the real `repark.sql` extension's field unprefixed, so a session built with `repark.sql.allowLocalFilesystemDDL=true` still refuses outside. | Step 1 run on main, §2. | **PROVEN** | §2: the opt-in cell of `pa04_ansi_non_ascii_controls` refuses on main. |
 | C-006 | PA-02: the guard walks the plan and checks every `Copy` and `CreateExternalTable` node at any depth before execution, so `EXPLAIN ANALYZE COPY … TO '<outside>'` refuses with the named policy error and writes no file on the Spark door, the ANSI door and `repark.sql()`. | The PA-02 pins on all three entries. | **OPEN** | Step 4. |
 | C-007 | PA-02: a `Prepare` node's input is walked, so a prepared write is checked when it is prepared; `EXECUTE` cannot carry a `COPY` (C-004). | The `Prepare`-wrapped unit pin in `local_fs_policy.rs`. | **OPEN** | Step 4. |
@@ -168,3 +168,10 @@ DataFusion 54.1's `extensions_options!` reports entries without the extension pr
 `ConfigOptions::entries()` appends them unchanged, so the ANSI reader's
 `repark.sql.allow_local_filesystem_ddl` matched only the hand-written stand-in of
 `guards/tests.rs`, which reports its key prefixed.
+
+## 3. Step 2 — the shared module, no caller
+
+`crates/repark-core/src/local_fs_policy.rs`, declared `pub mod local_fs_policy;` in the crate
+root. The root stays at its 155-line ceiling: the declaration is one line and one blank
+separator line between the dialect re-export and the pre-execute block is gone. No door calls
+it yet. `cargo test -p repark-core --lib -- local_fs_policy`: 12 passed.

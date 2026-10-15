@@ -27,6 +27,24 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):** the one
+  local-filesystem write policy, beside `CatalogRegistry`. `local_filesystem_path` classifies a
+  location (remote schemes, `file://`, `file://localhost`, `file:`, an unknown well-formed scheme,
+  else a local path) through the checked `strip_ascii_prefix_ci` (`str::get`, never a byte
+  slice). `resolve_physical_destination` makes the path absolute, finds the nearest ancestor
+  `symlink_metadata` reports, `canonicalize`s it and joins the missing tail; a `..` in the
+  tail, a dangling symlink, an ancestor read failing other than not-found, or an empty path is
+  indeterminate (`None`), and `path_under_any_warehouse` treats indeterminate as outside.
+  `refuse_local_filesystem_writes` walks the plan with `TreeNode::apply` and checks every `Copy`
+  and `CreateExternalTable` node at any depth (`Analyze` and `Prepare` inputs included),
+  skipping below a plain `Explain`. `allow_local_filesystem_ddl` reads the opt-in from the
+  `repark.sql` config extension only, accepting its field unprefixed (the real
+  `extensions_options!` shape) or prefixed; absent means closed. `refuse_local_filesystem_plan`
+  is the read plus the walk. `LocalFsGuardedDialect` is the native door of `repark.sql()`:
+  plan, the policy, the shared belt, execute. The unit tests hold the byte-5/7/9 boundaries,
+  the resolver, the walk over a `Prepare`, an `Analyze` and an `Explain` of an `Analyze`, the
+  conf read, and the native dialect's refusals and controls.
+  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
