@@ -355,6 +355,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rows with the walls Spark 4.1.2 stored in the re-verify follow-up probe, and
   refuses `(10, 1, 1, '2024-…')` / `(11, 1, 1, - -1)` with Spark's recorded
   bodies (`STRING`, `INT`), where base stored both.
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (ruling 100, the planner sketch, 2026-10-15):** a
+  `TIMESTAMP_NTZ` inside an `ARRAY` or `STRUCT` cast target answers: the planner types the
+  nested name, and the R4 refusal (TZ-6) no longer fires.
+  `test_nested_cast_target_keeps_the_r4_refusal` is gone; `ntz_1_spark_oracle.json` gains
+  `cast_nested_ntz_array` and `cast_nested_ntz_struct`, recorded live on Spark 4.1.2 (UTC,
+  ANSI on, 2026-10-15), and `test_select_cells_replay_spark` replays them.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —

@@ -2127,6 +2127,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   garbage, numeric-source/target refusals, the LTZ epoch-seconds guard, the nested R4
   refusal, and the literal reaching INSERT VALUES / INSERT SELECT / UPDATE / DELETE /
   MERGE / CTAS. pins: ntz-1/C-001, C-002, C-004, C-005
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (ruling 100, the planner sketch, 2026-10-15):**
+  `nested_ntz_cast_targets_answer_sparks_walls` (was
+  `nested_ntz_cast_target_keeps_the_r4_refusal`) pins Spark 4.1.2's answer to
+  `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` and `CAST(named_struct('a',
+  '2024-01-01') AS STRUCT<a: TIMESTAMP_NTZ>)`: a naive microsecond list or field holding
+  midnight, `1704067200000000`.
 
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** store assignment into `TIMESTAMP_NTZ`
   columns — LTZ VALUES/SELECT storing the session-zone wall (UTC and New York), UPDATE
