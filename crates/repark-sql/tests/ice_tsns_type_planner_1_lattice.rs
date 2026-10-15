@@ -360,21 +360,6 @@ async fn equal_units_plan_no_cast_on_both_doors() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_ansi_door_resolves_no_nanosecond_kernel_by_name() {
-    let session = ansi_door();
-    for name in [
-        "__repark_cast_timestamp_ns__",
-        "__repark_cast_timestamptz_ns__",
-    ] {
-        let sql = format!("SELECT {name}('2026-01-02 03:04:05')");
-        assert!(
-            session.sql(&sql).await.is_err(),
-            "the ANSI door resolves `{name}` by name"
-        );
-    }
-}
-
-#[tokio::test(flavor = "multi_thread")]
 async fn a_widened_position_equals_its_written_nanosecond_cast_on_both_doors() {
     for (door, session) in doors() {
         for (name, zoned) in [("a_us", false), ("a_us_tz", true)] {

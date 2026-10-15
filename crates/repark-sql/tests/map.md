@@ -113,11 +113,12 @@ holds behavior observed from outside the crate.
   `join_keys_share_the_finest_unit_in_the_optimized_plan` reads the `on` keys and the
   filter operands of the **optimized** join for `=`, `<` and `<=>`;
   `equal_units_plan_no_cast_on_both_doors` holds the rule off equal units;
-  `the_ansi_door_resolves_no_nanosecond_kernel_by_name` is R-013's cell;
   `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` is ruling 94
   (Q6, 2026-10-15): type and ticks of `TIMESTAMP`, the `TIMESTAMP '…'` literal and
   `TIMESTAMPTZ` over a nanosecond-precision wall, and `CAST(1 AS …)` reading seconds; the
-  type-name cells expect the naive wall for `TIMESTAMP` on the ANSI door only;
+  type-name cells expect the naive wall for `TIMESTAMP` on the ANSI door only; the carried
+  R-013 cell that held the ANSI door off the by-name kernels is gone (2026-10-15): the
+  by-name registration stays, as main and U-6 pin it;
   `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7's cell.
   Result types are read from the optimized plan: a frame's own schema is the unanalyzed
   one. On head `07cbe563` five of the six are green; the R-013 cell is red because the

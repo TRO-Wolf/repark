@@ -2,7 +2,7 @@
 
 ``python _record_ice_tsns_type_planner_1.py --output <path> [--jobs N] [--family NAME]``
 writes each cell's reason (empty when green) and whether its statement answered.
-``--main <sha>`` writes the statements that errored to
+``--main <sha>`` writes the statements that errored, and the cells that were red, to
 ``ice_tsns_type_planner_1_main.json``; run it with main's module only.
 
 pins: ice-tsns-type-planner-1/C-006
@@ -63,7 +63,15 @@ def main() -> None:
     )
     if args.main:
         errored = sorted(cell for cell, ok in record["answered"].items() if not ok)
-        main_record = {"module": args.main, "cells": len(record["answered"]), "errored": errored}
+        red = {
+            cell: reason for cell, reason in record["cells"].items() if reason not in ("", "skip")
+        }
+        main_record = {
+            "module": args.main,
+            "cells": len(record["answered"]),
+            "errored": errored,
+            "red": dict(sorted(red.items())),
+        }
         fixture.MAIN.write_text(json.dumps(main_record, indent=1) + "\n", encoding="utf-8")
     for family, counts in sorted(record["families"].items()):
         print(f"{family}: green {counts['green']} red {counts['red']} skip {counts['skip']}")

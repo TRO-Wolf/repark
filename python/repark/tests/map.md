@@ -3231,8 +3231,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
   microsecond controls are unchanged.
   pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
-- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-FLOOR-DOORS-1
-  (2026-10-14), the re-pin:** the control test no longer holds a `timestamp_ns` or
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-TYPE-PLANNER-1
+  (2026-10-15), R-010's re-pin:** `r010_answers` names the `update_literal` door with a
+  `timestamp_ns` or `timestamptz_ns` literal, which main refused by name (`Unsupported SQL
+  type`). The planner types those names, so the cells store: a `timestamp_ns` target takes
+  `rule_cell`, a control target the floored values under the type main recorded for
+  `insert_select`. pins: ice-tsns-type-planner-1/C-020
+  **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14), the re-pin:** the control test no longer holds a `timestamp_ns` or
   `timestamptz_ns` source into a microsecond target as main answered it. `control_cell` takes
   those cells' ticks from `_record_ice_tsns_floor_doors_1_main.rule_expected` (the floor and the
   New York wall) and keeps main's recorded type, ids and refusals; every other source stays main's
@@ -3364,7 +3369,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   answers; once it turns green the fixture fails until the row is retired. The first row is
   ruling 94's `repark.sql()` cell (`q6|repark_sql|timestamp_spellings`): that callable
   still builds `DataFusionDialect`, and PA-02's routing fix (`pa-local-fs-policy-1`)
-  closes it. pins: ice-tsns-type-planner-1/C-013
+  closes it. The fixture commit (2026-10-15) adds ruling 38's carve-out, the 108 cells of
+  the pandas and Arrow doors (`consumer` 88, `reads|m_udf:…` 20), and 184 rows of ruling
+  93's residue, each red on today's main in the main record (census 30, positions 96,
+  repros 51, H1 4, P15 1, out of range with ANSI off 2). Eight residue cells are red on
+  the head and green on main, so they carry no row. pins: ice-tsns-type-planner-1/C-013,
+  C-019
 - [_ice_tsns_type_planner_1_rule.py](_ice_tsns_type_planner_1_rule.py) —
   **ICE-TSNS-TYPE-PLANNER-1:** the rule as a harness. `statement_of` and `twin_of` write
   the two texts of a cell from one marked text (`{N}` is the NULL, `<<x>>` an operand
@@ -3403,8 +3413,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
   **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,
   red and skipped cells by family; `--main <sha>` writes the statements that errored on
-  main's module (938 of 11,275 on `293896ce`), the list behind the fixture's
-  main-answers-so-this-answers check. pins: ice-tsns-type-planner-1/C-006
+  main's module, the list behind the fixture's main-answers-so-this-answers check, and the
+  cells red there. **Re-recorded 2026-10-15 on today's main `01796857` (after U-3):** 948
+  of 11,274 statements error, 10 more than on `293896ce` (all `update_where_mor` array
+  cells, U-3's guard); 7,821 cells are red. pins: ice-tsns-type-planner-1/C-006, C-019
 - [_record_ice_tsns_coercion_1_spark_lattice.py](_record_ice_tsns_coercion_1_spark_lattice.py) +
   [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) —
   **ICE-TSNS-COERCION-1 slice 0:** Spark 4.1.2, five zones, both ANSI modes. `timestamp_ns`

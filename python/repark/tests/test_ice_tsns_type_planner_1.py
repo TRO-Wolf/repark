@@ -25,6 +25,7 @@ CENSUS_CELLS = 9600
 CACHE_CELLS = 420
 READ_CELLS = 117
 CONSUMER_CELLS = 92
+CARVE_OUT_CELLS = 108
 
 
 def all_groups() -> list[rule.Group]:
@@ -145,6 +146,20 @@ def test_every_dated_row_names_its_date_and_owner() -> None:
     """pins: ice-tsns-type-planner-1/C-013 — a dated row carries its date, ruling and owner."""
     for cell, row in dated_rows().items():
         assert {"date", "ruling", "owner"} <= row.keys(), cell
+
+
+def test_the_door_carve_out_is_ruling_38s_108_cells() -> None:
+    """pins: ice-tsns-type-planner-1/C-019 — the pandas and Arrow doors stay out of U-1."""
+    carved = [cell for cell, row in dated_rows().items() if row.get("class") == "carve-out"]
+    assert len(carved) == CARVE_OUT_CELLS
+    assert all(dated_rows()[cell]["ruling"] == "38" for cell in carved)
+
+
+def test_every_residue_row_is_red_on_main() -> None:
+    """pins: ice-tsns-type-planner-1/C-019 — a residue row needs a red pin on today's main."""
+    red_on_main = json.loads(MAIN.read_text(encoding="utf-8"))["red"]
+    residue = [cell for cell, row in dated_rows().items() if row.get("class") == "residue"]
+    assert [cell for cell in residue if cell not in red_on_main] == []
 
 
 @pytest.mark.parametrize("group", pins.postgres_groups(), ids=lambda group: group.name)
