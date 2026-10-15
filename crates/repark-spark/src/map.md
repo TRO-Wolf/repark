@@ -618,6 +618,13 @@ pins: rp-4-fork-repin/C-005, C-006
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-05, parity row R-016:** `refuse_incompatible_update_cast` reads the session's
+  `spark.sql.caseSensitive` and judges a struct SET value by name under it
+  (`StructPairing::by_name`), instead of a fixed case-insensitive pairing: with
+  `caseSensitive=true`, `named_struct('a', 1, 'A', 2)` answers Spark's `CANNOT_FIND_DATA` for
+  `` `st`.`b` `` and `named_struct('a', 1, 'b', 2, 'A', 3)` its `EXTRA_STRUCT_FIELDS`, not
+  `AMBIGUOUS_COLUMN_NAME` (verifier 1's eight cells, v2 and v3, with and without `WHERE`).
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `execute_update` calls
   `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR
   refusals and before `execute_passthrough`: bare-column SET targets resolve on the

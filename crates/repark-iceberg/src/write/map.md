@@ -1745,6 +1745,12 @@ repark-core's error map.
   (Unicode simple case mapping: a full mapping that expands, `ß` to `SS`, maps the character to
   itself; the Greek iota-subscript letters and `İ` take their simple mapping). Not a full Unicode
   fold: É/é and ẞ/ß match, ß/SS does not, as on Spark 4.1.2.
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-05, parity row R-016:** `incompatible_paired_update_message` and
+  `incompatible_paired_store_message` take the statement's `StructPairing`; the struct arm pairs
+  under it (`incompatible_paired_message`). `incompatible_update_message` and
+  `incompatible_store_message` keep their by-name, case-insensitive behaviour for their other
+  callers.
 - `struct_pairing.rs`, `store_overflow.rs`, `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build
   round 3 (2026-10-14), owner ruling 56(a), verifier 1's F-01 and F-06, parity row R-016:** every
   paired field passes the store-assignment judge flat columns use. `update_cast.rs` holds the one

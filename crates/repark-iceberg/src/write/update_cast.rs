@@ -62,7 +62,7 @@ pub fn incompatible_update_message(
     source: &DataType,
     target: &DataType,
 ) -> Option<String> {
-    incompatible_message(table, column, source, target, false)
+    incompatible_paired_update_message(StructPairing::by_name(false), table, column, source, target)
 }
 
 #[must_use]
@@ -72,14 +72,36 @@ pub fn incompatible_store_message(
     source: &DataType,
     target: &DataType,
 ) -> Option<String> {
-    incompatible_message(table, column, source, target, true)
+    incompatible_paired_store_message(StructPairing::by_name(false), table, column, source, target)
 }
 
-fn incompatible_message(
+#[must_use]
+pub fn incompatible_paired_update_message(
+    pairing: StructPairing,
     table: &str,
     column: &str,
     source: &DataType,
     target: &DataType,
+) -> Option<String> {
+    incompatible_message(pairing, table, column, (source, target), false)
+}
+
+#[must_use]
+pub fn incompatible_paired_store_message(
+    pairing: StructPairing,
+    table: &str,
+    column: &str,
+    source: &DataType,
+    target: &DataType,
+) -> Option<String> {
+    incompatible_message(pairing, table, column, (source, target), true)
+}
+
+fn incompatible_message(
+    pairing: StructPairing,
+    table: &str,
+    column: &str,
+    (source, target): (&DataType, &DataType),
     name_decimals: bool,
 ) -> Option<String> {
     let source = normalize_for_assignment(source);
@@ -92,7 +114,7 @@ fn incompatible_message(
         || matches!(source, DataType::Map(_, _))
         || matches!(target, DataType::Map(_, _))
     {
-        return incompatible_nested_message(column, source, target);
+        return incompatible_paired_message(pairing, column, source, target);
     }
     let from = store_type_name(source, name_decimals)?;
     let to = store_type_name(target, name_decimals)?;
