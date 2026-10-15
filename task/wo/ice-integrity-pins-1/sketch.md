@@ -140,3 +140,116 @@ A reads again.
 
 Read: the mechanism works (two interpreters, one warehouse, adopt by metadata file, Arrow
 equality). It proves nothing about the real v1.5.4 wheel or about delete files; §5 carries those.
+
+## 3. Pin K: kill between the data files and the commit
+
+### 3.1 Where it sits today
+
+Every write door ends in one fork call, `Transaction::commit`
+(`fork:crates/iceberg/src/transaction/mod.rs:379`), whose `do_commit` (`:501`) asks the catalog
+to commit at `:582` (`catalog.update_table`). Before that call the statement's data files, delete
+files, manifests and manifest list are written and nothing references them.
+
+| Door | Entry (main) | Commit function | Operation id on the error |
+|---|---|---|---|
+| `INSERT … SELECT` / `VALUES`, no write option (and `writeTo().append()`, which reaches the router as `INSERT`) | `execute_insert_routed`, `crates/repark-spark/src/router.rs:414`, to `passthrough_after_p11` at `:470` (`crates/repark-spark/src/catalog_ops.rs:85`), then DataFusion's `insert_into` (`fork:crates/integrations/datafusion/src/table/mod.rs:244`) | `IcebergCommitExec` (`fork:crates/integrations/datafusion/src/physical_plan/commit.rs:84`), which mints `engine.operation-id` at `:372` and commits at `:402` | `None`: the fork mints the id and does not hand it to RePark |
+| `INSERT` with a write option, a partition clause the router owns, or a session write key | `router.rs:451`, `:459` to `execute_append_with_options`, `crates/repark-spark/src/append_with_options.rs:10` | `commit_append_with_summary`, `crates/repark-iceberg/src/write/write_options.rs:425` (from `append_with_options.rs:90`); `append_with_statement_options`, `write_options.rs:104` (from `:99`) | minted (`commit_err`, `crates/repark-iceberg/src/write/commit_error.rs:40`) |
+| Rust `append` API | `crates/repark-iceberg/src/write/append.rs:33` | `commit_append`, `append.rs:153` | minted |
+| `INSERT OVERWRITE`, `TRUNCATE` | the router's overwrite arm, `router.rs:447` | `commit_overwrite_replace_all_to`, `crates/repark-iceberg/src/write/overwrite_commit.rs:15` | minted |
+| `MERGE`, RePark `DELETE` and `UPDATE` | `crates/repark-iceberg/src/write/merge/snapshot_commit.rs` | `commit_overwrite` (`:143`), `commit_row_delta_kind` (`:319`) | minted |
+
+Where the catalog call puts the commit:
+
+| Catalog | `update_table` | Metadata file written | The commit point |
+|---|---|---|---|
+| local (memory; `type=hadoop` maps to it) | `fork:crates/iceberg/src/catalog/memory/catalog.rs:548` | `:584`, inside the call | the metadata file: the pointer lives in process memory and dies with it (M1) |
+| Glue | `fork:crates/catalog/glue/src/catalog.rs:928` | `:943`, before the request | Glue's `UpdateTable` (sent at `:955`) |
+| S3 Tables | `fork:crates/catalog/s3tables/src/catalog.rs:860` | `:872`, before the request | `UpdateTableMetadataLocation` (`fork:crates/catalog/s3tables/src/commit_transport.rs:101`) |
+
+What exists, and what does not:
+
+- **Cleanup in process.** A definite commit failure deletes the attempt's files best-effort, and
+  an unknown outcome skips that (`crates/repark-iceberg/src/write/merge/abort.rs:15`, the skip at
+  `:20`; registry BL-5). The partitioned CTAS write takes a census of the data root and sweeps
+  what appeared on a failed write (`crates/repark-iceberg/src/write/partition_write.rs:301`, pin
+  at `:696`). A killed process runs neither.
+- **Orphan reporting.** Only `remove_orphan_files` (rows ORPHAN-1 to ORPHAN-4), which refuses an
+  `older_than` under 24 hours (M2) and refuses on S3 Tables (ORPHAN-S3TABLES-1). The stream
+  path already leaves rolled files on a failed write (WRITE-ABORT-INSERT-1).
+- **Recovery on reopen.** None for a batch write: a reopen is a catalog load. The micro-batch sink
+  has its own walk, `resolve_unknown_outcome` (`crates/repark-iceberg/src/write/sink_offsets.rs:484`).
+  The local catalog reopens by adopting the newest metadata file through `CALL register_table`
+  (M1), or by a path read that follows `version-hint.text` (`crates/repark-core/src/iceberg_path.rs:99`).
+- **No crash pin.** No test kills a writer. The micro-batch "crash" pins are in-process fault
+  catalogs (`crates/repark-iceberg/src/microbatch/crash_tests.rs:50`, `UnknownAfterLanding` and
+  `UnknownWithoutLanding`). Two tests re-run their own binary as a child, which is the mechanism
+  this pin reuses: `crates/repark-python/src/dataframe/tests.rs:345` (a panic fence) and
+  `crates/repark-connect/tests/it/copy_accounting.rs:84` (an allocation limit).
+
+### 3.2 The failure to inject, and how
+
+The point: the entry of the catalog's commit call. Every data file, delete file, manifest and
+manifest list is durable; the metadata file is not yet written on the local catalog, and the
+commit request has not reached Glue or S3 Tables.
+
+| Option | Mechanism | Precision | Product hook | Cost | Verdict |
+|---|---|---|---|---|---|
+| **K-A** test catalog decorator and a re-run child | The Rust test re-runs its own binary as a child (an environment key selects the child arm). The child wraps the memory catalog in `HoldCatalog`, a test-only `Catalog` that forwards every call; its `update_table` writes a marker file holding the attempted snapshot ids and then waits forever. The child registers it as a session catalog (`register_iceberg_catalog`, the helper at `crates/repark-spark/src/tests/describe_view_routing.rs:255`) and runs the statement through the Spark door. The parent waits for the marker, kills the child (`SIGKILL`), and reopens from a fresh catalog. | exact | none (test code only) | one test file of about 250 lines; 18 children (§3.3), estimated 20 to 40 s (unmeasured) | **chosen for the Rust pin** |
+| **K-B** the catalog endpoint gate holds the commit request | The child's session points its catalog at the gate of §4.2. The gate holds `UpdateTable` (Glue) or `UpdateTableMetadataLocation` (S3 Tables) unanswered and unforwarded, and tells the parent. The parent kills the child; the gate then closes the connection without forwarding. | exact: the request is held, the metadata file is written | none | shares the gate with pin U | **chosen for the live leg** |
+| K-C kill on file observation | M1: poll the table directory, kill at a trigger file | a race of milliseconds between the manifest list and the metadata file; M1 reached both sides | none | none | rejected as a pin |
+| K-D stop at a system call | `strace --inject` or an `LD_PRELOAD` shim stops the child at the first rename onto `*.metadata.json` | exact on a local file system only | none, but a C shim or `strace` on the runner | medium; Linux only; breaks if the storage layer stops renaming | rejected |
+| K-E a fault point in product code | a `fail`-style point or a session key that pauses before `update_table` | exact on every catalog, through the released wheel | **yes** | small code, but a test seam inside the commit path, which AGENTS.md "Change discipline" names a sensitive path | rejected unless the owner wants a kill without the gate (Q1) |
+
+### 3.3 The cells
+
+**Local Rust pin**, each door on format version 2 and on 3. Doors: K-1 `INSERT … SELECT` (the
+fork's commit), K-2 `INSERT … SELECT` with a write option (`commit_append_with_summary`), K-3
+`INSERT OVERWRITE`, K-4 `MERGE` copy-on-write, K-5 `MERGE` merge-on-read (delete files), K-6
+`DELETE … WHERE` copy-on-write, K-7 `CREATE TABLE … AS SELECT`. Each cell asserts:
+
+1. **Reached and killed.** The marker exists and names the attempted snapshot id; the child died
+   of signal 9.
+2. **Unchanged.** On reopen the newest metadata file, the current snapshot id, the set of
+   snapshot ids and `SELECT * … ORDER BY` (values and Arrow types) equal the pre-state; the
+   attempted snapshot id is absent.
+3. **Orphans counted and reported.** Files under the table location minus the files any snapshot
+   reaches, split by kind; the test prints one line,
+   `K-n v<f> orphans data=<n> deletes=<n> manifests=<n> lists=<n> metadata=<n>`, and asserts
+   `data >= 1` (K-1 to K-5, K-7), `deletes >= 1` (K-5), `manifests >= 1`, `lists = 1`,
+   `metadata = 0`.
+4. **The report agrees with RePark.** After setting every file time two days back,
+   `CALL … remove_orphan_files(dry_run => true, older_than => now - 25 h)` lists exactly the set
+   of (3) (M2: 28 = 26 data files + 2 avro files).
+5. **Writable.** One more `INSERT` on the reopened table commits and reads back the pre-state
+   plus its rows.
+
+K-7 has no pre-state. Its expected answer (no table, or an empty table the create-first path left)
+is measured in step 0 and written into the cell before the pin; the cell then asserts it and (3).
+
+**Controls.** K-C0: the hook forwards at once; the statement commits, orphans are 0. K-C1: the
+hook forwards and stops after `update_table` returns; after the kill the reopen reads the new
+rows (M1's metadata-file row, declared as the local catalog's answer, Q5). Both on v2 and v3.
+Total: 7 × 2 + 2 × 2 = 18 children.
+
+**Live leg**, on Glue and S3 Tables, v2 and v3, doors `INSERT … SELECT`, `MERGE`,
+`INSERT OVERWRITE`: 12 cells (K-G-n, K-S-n). Each asserts (1') the gate held the commit request
+and closed it unforwarded after the kill; (2') on reopen the attempted snapshot id (read from the
+metadata file the held request names) is absent and the rows equal the pre-state; (3') the
+orphans are counted: the held request's metadata file is adopted into a local memory-catalog
+session (`register_table`, no AWS catalog write), its snapshot's files minus the pre-state's are
+listed, and each is confirmed present by a `HEAD` (`pyarrow.fs.S3FileSystem`); the leg prints the
+same report line with `metadata=1`; on Glue the count is checked again by listing the table
+prefix (S3 Tables refuses a listing); (4') writable. "Unchanged" is not "the same snapshot set":
+S3 Tables maintenance may commit in between (§7).
+
+### 3.4 Where the pins live
+
+- `crates/repark-spark/src/tests/kill_mid_write.rs` (new): `HoldCatalog`, the child arm, the 18
+  cells; `#[cfg(unix)]`. It joins the existing library test binary beside
+  `describe_view_routing.rs`, whose `register_catalog` it reuses, so it adds no test binary.
+  If T-1 has moved `crates/repark-spark/src/tests/` into one `tests/it` binary by then, it
+  moves with it.
+- `python/repark/tests/test_aws_acceptance_integrity_kill.py` (new): the live leg.
+- `python/repark/tests/_acceptance_commit_gate.py` (new, not collected): the gate of §4.2.
+- `python/repark/tests/_acceptance_integrity_child.py` (new, not collected): the child that runs
+  one statement through a session pointed at the gate.
