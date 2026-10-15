@@ -3694,7 +3694,9 @@ still open is `isModifiable`.
   pandas and Arrow door cells. Open: a written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE …
   WHERE` truncates (4 repros), eight list-function cells are red on the head and green on
   main, and an encoded nanosecond value into `TIMESTAMP` truncates where the plain one
-  floors (R-024); the unit ledger's questions Q1 to Q4. Pins:
+  floors (R-024); and the carried planner work moves 51 Rust and 27 facade pins that pass on
+  main, three of them statements main answers that now error. The unit ledger's questions Q1
+  to Q5. Pins:
   `python/repark/tests/test_ice_tsns_type_planner_1.py`,
   `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`,
   `crates/repark-spark/tests/ice_tsns_type_planner_1_update_forms.rs`. Ledger:

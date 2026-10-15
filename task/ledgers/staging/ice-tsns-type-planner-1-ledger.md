@@ -42,6 +42,7 @@ as `TIMESTAMP` are deleted.
 | C-021 | Rulings 38 and 93: the dated rows are ruling 38's 108 door cells and residue cells red on the head with a red pin on today's main; a dated row that turns green fails the fixture until it is retired. | The dated-row tests and the main record. | **PROVEN** | `ice_tsns_type_planner_1_dated.json`: 108 carve-out, 186 residue (184 of ruling 93, 2 of ruling 92 under Q3), 1 Q6; every residue row is in the main record's `red`. pins: ice-tsns-type-planner-1/C-021 |
 | C-022 | R-010: the fixture's `DELETE` harness reads stored rows through the table, and U-3's `update_literal` cells that main refused by name are re-pinned to the rule. | The harness commit's before and after counts; U-3's merge wall. | **PROVEN** | §3: doors family 11 green / 8 red before, 12 / 7 after; U-3's merge wall 356 green with `r010_answers`. pins: ice-tsns-type-planner-1/C-022 |
 | C-023 | No statement today's main answers errors on the head outside ruling 38's carve-out and the `repark.sql()` cell of ruling 94. | The fixture's main-answers check on the head. | **PROVEN** | §5: 108 lost statements, all carve-out rows; the Q6 cell answers. pins: ice-tsns-type-planner-1/C-023 |
+| C-025 | No pin of an existing test moves without a ruling. | `cargo test` of the five crates and the facade suite on the head, set against today's main. | **OPEN** | §10: 51 Rust tests in `repark-spark` and 27 facade tests fail on the head and pass on main; every one fails on the carry-over head `ca385f17` already (module `c7809e68`, step 0's scratch module byte for byte), none comes from this round's commits (Q5). |
 | C-024 | The 1.5.6 notes draft carries one line per stored-value change and registry row R-017 carries the round's status. | The notes draft and the registry row. | **PROVEN** | `task/roadmap/mid-term/v1-5-6-release-notes-draft.md`; `docs/spark-sql-iceberg-parity.md` R-017 status 2026-10-15. pins: ice-tsns-type-planner-1/C-024 |
 
 ## 1. The carry-over (C-011 to C-014)
@@ -67,7 +68,7 @@ every carried commit.
 |---|---|---|---|
 | M1 sequence | 1 | `cb39182b` | `spark_sequence.rs` and its child `rows.rs`: bounds cast to the element type, stepped in its ticks, built as it. |
 | M2 pandas and Arrow doors | 0 (no code) | ruling 38's dated carve-out, `fc265297` | none |
-| M3 rule gaps | 1 | `0dc4455f` aggregate zero, `7dca3bef` UNION DISTINCT, `60658fec` shape A (91), `177cef20` shape B (92), `44260545` the ruling-91 Rust pin | one seam each: `timestamp_unit_widen.rs`; `timestamp_ns_cast.rs` kernel return field; `predicate_dml.rs` + `lineage.rs`; `timestamp_ns_cast.rs` kernel gate |
+| M3 rule gaps | 1 | `0dc4455f` aggregate zero, `7dca3bef` UNION DISTINCT, `60658fec` shape A (91), `177cef20` shape B (92), `44260545` the ruling-91 Rust pin, `d33e3466` the shape-A analysis moved into `lineage.rs` (so `predicate_dml.rs`, 978 lines, stays under its 1,000 ceiling after U-6's 11 lines; merged 989) | one seam each: `timestamp_unit_widen.rs`; `timestamp_ns_cast.rs` kernel return field; `predicate_dml.rs` + `lineage.rs`; `timestamp_ns_cast.rs` kernel gate |
 
 **UNION DISTINCT, the seam moved.** Step 0 placed the gap in the widen rule's union
 projection. A probe on the head refutes it: `SELECT ns … UNION SELECT tzns …`, where the
@@ -191,9 +192,52 @@ SparkContext conf. The step-0 `pandas_udf` cell answers as at step 0: `true` ref
 |---|---|---|
 | `953ed397` (Q6) | `f294b8b7…` | none: the Q6 commit adds no string literal and the `.so` is stripped |
 | `177cef20` (mechanisms) | `1f65588f…` | `on the timestamp arm` (M1), 1 hit |
+| `ca385f17` (carry-over, for §10's attribution) | `c7809e68…` | `spark_timestamp_unit_widen`, 2 hits; equal to step 0's scratch module |
+| `f65cb5b8` (final) | `3b87cc39…` | `on the timestamp arm`, 1 hit; the fixture's cells equal `177cef20`'s |
 
 Both built with `maturin develop --release` inside the shared cargo lock, clean status
 before and after.
+
+## 10. Gates and the facade suite (head `f65cb5b8` unless named)
+
+| Gate | Exit |
+|---|---|
+| unit fixture `test_ice_tsns_type_planner_1.py` (`-n 8`) | 1: 4 groups red on the 12 open cells of Q1 and Q2, 56 passed |
+| Rust pins (lattice 10, update forms, sequence, encoded kernel, planner 5) | 0 |
+| U-3 fixtures (floor doors 246, merge wall 356) | 0, 602 passed |
+| `cargo test -p repark-functions -p repark-core -p repark-iceberg -p repark-spark -p repark-sql` (`--no-fail-fast`, `d33e3466` + the `spark_nullability` harness fix) | 101: 51 failed, all in `repark-spark` |
+| `make rust-clippy` | 0 |
+| `make rust-panic-ban` | 0 |
+| `cargo fmt --all -- --check` | 0 |
+| `make check-rust-file-size check-crate-dag` | 0 |
+| `make check-docs-links check-docs-compaction check-ledger-grammar` | 0 |
+| `make spell-check` | 0 |
+| `python3 scripts/sync_map_md.py --check` | 0 |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 |
+| `uvx ruff@0.15.22 check` / `format --check` on changed Python | 0 / 0 |
+| comment gate | 0 hits |
+| facade suite, `-n 8` | 1 on both: head 31 failed, main (`01796857`, same files) 63 failed |
+
+**Facade, set against main.** Main-only failures: 49 in the unit fixture and 10 in U-3's
+merge wall (the re-pins), as expected. Head-only failures: 27 existing tests. Grouped:
+refusal texts now name `TIMESTAMP_LTZ` where they named `TIMESTAMP` (`test_fnp_6d_followup_1`
+1, `test_fnp_degrees_rust_1` 4); `repark.sql()` answers an instant where it answered a naive
+value (`test_ice_tt_resolve_1` 4, `test_nullability_2` 1); a mixed `VALUES` column
+(`test_ntz_9_verify` 1, `test_ntz_store_doors_1` 6); `TIMESTAMP_NTZ` inside an `ARRAY` or
+`STRUCT` cast answers where it refused (`test_ntz_1` 2); a `timestamptz_ns` literal in
+`UPDATE` stores where main refused it (`test_ice_tstzns_wall_1` 5, R-010's family); and three
+statements main answers that the head errors on (`test_stamp_2_r5p6_1` 1: `cannot cast
+"Int32" to "TIMESTAMP_NS"`; `test_store_ts_doors_2` 2: `cannot convert text Timestamp(ns)
+into byte Timestamp(µs, "UTC")`). All 27 fail on the carry-over module too.
+
+**Rust, set against main.** `cargo test -p repark-spark` passes on main `fa1e4274` and fails
+51 tests on the head: `src/tests/ntz_values_mix.rs` 19, `ntz_store.rs` 15,
+`v3_timestamp_ns_door.rs` 6, `common.rs`-driven 2, `u9_timestamp_ltz.rs` 1, `ltz_store.rs` 1,
+`extension/tests.rs` 1, `benches/ice_read_perf` pins 5, `tests/timestamp_ns_nested_shapes.rs`
+1. The carry-over head `ca385f17` fails the same 51 and one more
+(`a_dictionary_encoded_wall_stores_inserts_instant_on_the_overwrite_doors`, which ruling 92's
+commit closes). The two `spark_nullability` pins that also went red were a test-harness gap
+of the carried deletions and hold again (`f65cb5b8`).
 
 ## Q. Questions for the hand-back
 
@@ -218,3 +262,14 @@ before and after.
 - **Q4 (the UNION seam).** The UNION fix is one function in the kernel's return field, not
   the rule's union projection the brief named (§2). Lean: it stands as the rule-gap round's
   UNION commit.
+- **Q5 (the carry-over moves existing pins).** Step 0 measured the fixture, not the
+  existing suites. On the carry-over head, before any round of this brief, 51 Rust tests and
+  27 facade tests that pass on main fail (§10); three of the facade tests are statements
+  main answers that now error, which is this brief's halt. Their causes sit in the carried
+  planner, deletions and by-target kernels (the `TIMESTAMP_LTZ` naming, the native door's
+  instant, `VALUES` conform, the nested NTZ refusal, the by-target kernel on an integer
+  coercion cast). Lean: rule which of the six groups are intended moves to re-pin (the
+  `timestamptz_ns` literal family is R-010's fix; the `repark.sql()` group is ruling 94's
+  PA-02 row) and open one carry-over fix round for the rest, beginning with the three
+  errors.
+
