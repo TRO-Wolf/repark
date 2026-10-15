@@ -577,3 +577,93 @@ fn the_positional_overwrite_cast_s2_refuses_an_unpaired_struct_with_hint_h1() {
         .to_string();
     assert!(text.contains(HINT_H1_BATCH), "{text}");
 }
+
+fn named(fields: &[(&str, DataType)]) -> DataType {
+    DataType::Struct(
+        fields
+            .iter()
+            .map(|(name, data_type)| Field::new(*name, data_type.clone(), true))
+            .collect::<Vec<_>>()
+            .into(),
+    )
+}
+
+#[test]
+fn every_paired_leaf_is_judged_as_a_flat_column_is() {
+    let typed = named(&[("a", DataType::Int64), ("b", DataType::Utf8)]);
+    let in_order = named(&[("a", DataType::Utf8), ("b", DataType::Utf8)]);
+    let text = refuse_unpaired_struct("`t`", StoreEntry::Batch, "st", &in_order, &typed)
+        .expect_err("a STRING leaf into BIGINT")
+        .to_string();
+    assert!(
+        text.contains(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `t`: Cannot safely cast `st`.`a` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
+        ),
+        "{text}"
+    );
+    let two_deep = named(&[(
+        "o",
+        named(&[
+            (
+                "p",
+                named(&[("a", DataType::Int32), ("b", DataType::Int32)]),
+            ),
+            ("n", DataType::Int32),
+        ]),
+    )]);
+    let swapped = named(&[(
+        "o",
+        named(&[
+            ("n", DataType::Int32),
+            (
+                "p",
+                named(&[("b", DataType::Int32), ("a", DataType::Int32)]),
+            ),
+        ]),
+    )]);
+    for entry in [StoreEntry::Batch, StoreEntry::StaticPartition] {
+        let text = refuse_unpaired_struct("`t`", entry, "st", &swapped, &two_deep)
+            .expect_err("an INT leaf into a STRUCT")
+            .to_string();
+        assert!(
+            text.contains("Cannot safely cast `st`.`o`.`p` \"INT\" to \"STRUCT<A:INT,B:INT>\""),
+            "{text}"
+        );
+    }
+    let pairs = pair_store_value(
+        StructPairing::ByPosition,
+        "`t`",
+        "st",
+        &DataType::List(element(swapped.clone())),
+        &DataType::List(element(two_deep.clone())),
+    )
+    .expect("paired by position");
+    assert_eq!(
+        crate::write::update_cast::unassignable_leaf_message("`t`", &pairs).as_deref(),
+        Some(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `t`: Cannot safely cast `st`.`element`.`o`.`p` \"INT\" to \
+             \"STRUCT<A:INT,B:INT>\". SQLSTATE: KD000"
+        )
+    );
+    let widened = named(&[("a", DataType::Int32), ("b", DataType::Utf8View)]);
+    let pairs = pair_store_value(StructPairing::by_name(false), "`t`", "st", &widened, &typed)
+        .expect("paired by name");
+    assert_eq!(
+        crate::write::update_cast::unassignable_leaf_message("`t`", &pairs),
+        None
+    );
+    let extra = named(&[
+        ("a", DataType::Int64),
+        ("b", DataType::Utf8),
+        ("c", DataType::Int32),
+    ]);
+    let text = refuse_unpaired_struct("`t`", StoreEntry::StaticPartition, "st", &extra, &typed)
+        .expect_err("a surplus field by position")
+        .to_string();
+    assert!(
+        text.contains("[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]"),
+        "{text}"
+    );
+}

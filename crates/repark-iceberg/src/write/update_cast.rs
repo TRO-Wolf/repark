@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
-use datafusion::error::DataFusionError;
+use datafusion::error::{DataFusionError, Result};
 use repark_common::spark_error;
 
 use super::store_assign::{
     ansi_store_assignable, normalize_for_assignment, without_field_metadata,
 };
-use super::struct_pairing::{StructPairing, pair_store_value_at, store_pair_sql};
+use super::struct_pairing::{StorePairs, StructPairing, pair_store_value_at, store_pair_sql};
 
 #[must_use]
 pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
@@ -142,6 +142,11 @@ pub fn incompatible_paired_message(
         Err(DataFusionError::Plan(text)) => return Some(text),
         Err(other) => return Some(other.to_string()),
     };
+    unassignable_leaf_message("``", &pairs)
+}
+
+#[must_use]
+pub fn unassignable_leaf_message(table: &str, pairs: &StorePairs) -> Option<String> {
     pairs.leaves().iter().find_map(|leaf| {
         let from = normalize_for_assignment(&leaf.source);
         let to = normalize_for_assignment(&leaf.target);
@@ -151,13 +156,84 @@ pub fn incompatible_paired_message(
         Some(spark_error::message(
             spark_error::INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
             &[
-                ("tableName", "``"),
+                ("tableName", table),
                 ("columnName", &leaf.path),
-                ("fromType", spark_update_type_name(from)?),
-                ("toType", spark_update_type_name(to)?),
+                ("fromType", &spark_leaf_type_name(from)?),
+                ("toType", &spark_leaf_type_name(to)?),
             ],
         ))
     })
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_unassignable_leaves(table: &str, pairs: &StorePairs) -> Result<()> {
+    match unassignable_leaf_message(table, pairs) {
+        Some(text) => Err(DataFusionError::Plan(text)),
+        None => Ok(()),
+    }
+}
+
+fn spark_leaf_type_name(data_type: &DataType) -> Option<Cow<'static, str>> {
+    if let Some(flat) = spark_update_type_name(data_type) {
+        return Some(Cow::Borrowed(flat));
+    }
+    spark_catalog_string(data_type).map(|text| Cow::Owned(text.to_uppercase()))
+}
+
+fn spark_quote_if_needed(name: &str) -> String {
+    let plain = !name.is_empty()
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && !name.chars().all(|c| c.is_ascii_digit());
+    if plain {
+        name.to_string()
+    } else {
+        format!("`{}`", name.replace('`', "``"))
+    }
+}
+
+fn spark_catalog_string(data_type: &DataType) -> Option<String> {
+    match data_type {
+        DataType::Struct(fields) => {
+            let members = fields
+                .iter()
+                .map(|field| {
+                    Some(format!(
+                        "{}:{}",
+                        spark_quote_if_needed(field.name()),
+                        spark_catalog_string(field.data_type())?
+                    ))
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Some(format!("struct<{}>", members.join(",")))
+        }
+        DataType::List(element)
+        | DataType::LargeList(element)
+        | DataType::ListView(element)
+        | DataType::LargeListView(element)
+        | DataType::FixedSizeList(element, _) => Some(format!(
+            "array<{}>",
+            spark_catalog_string(element.data_type())?
+        )),
+        DataType::Map(entries, _) => {
+            let DataType::Struct(pair) = entries.data_type() else {
+                return None;
+            };
+            let [key, value] = pair.iter().collect::<Vec<_>>()[..] else {
+                return None;
+            };
+            Some(format!(
+                "map<{},{}>",
+                spark_catalog_string(key.data_type())?,
+                spark_catalog_string(value.data_type())?
+            ))
+        }
+        DataType::Decimal32(precision, scale)
+        | DataType::Decimal64(precision, scale)
+        | DataType::Decimal128(precision, scale)
+        | DataType::Decimal256(precision, scale) => Some(format!("decimal({precision},{scale})")),
+        DataType::Dictionary(_, values) => spark_catalog_string(values),
+        other => spark_update_type_name(other).map(str::to_lowercase),
+    }
 }
 
 fn spark_update_type_name(data_type: &DataType) -> Option<&'static str> {

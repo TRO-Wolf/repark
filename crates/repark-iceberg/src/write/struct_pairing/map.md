@@ -22,5 +22,9 @@ ICE-STRUCT-PAIRING-1 (2026-10-14, parity row R-016).
   `positional_map_overwrite_batch` (S2) with and without a column list. S3 is pinned at the
   Spark door by `repark-spark/tests/struct_pairing_doors.rs`.
   pins: ice-struct-pairing-1/C-001, C-002, C-003, C-006, C-007, C-009, C-010, C-013
+  **Build round 3 (2026-10-14, ruling 56(a)):** `every_paired_leaf_is_judged_as_a_flat_column_is`
+  holds the guard and the leaf judge to Spark's text: an in-order STRING leaf into BIGINT, an INT
+  into a STRUCT two deep (`"STRUCT<A:INT,B:INT>"`) on both batch entries and inside a list, a
+  widened leaf passing, and a surplus field answering `EXTRA_STRUCT_FIELDS` by position.
 
 Up: [../map.md](../map.md).

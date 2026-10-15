@@ -1728,6 +1728,23 @@ repark-core's error map.
   pair by name and every leaf pair is (`nested_store_assignable`), through lists too.
   `refuse_unless_write_store_assignable` keeps its nested return: its INSERT callers run before
   the pairing, and the batch casts carry hint H-1 instead.
+- `struct_pairing.rs`, `store_overflow.rs`, `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build
+  round 3 (2026-10-14), owner ruling 56(a), verifier 1's F-01 and F-06, parity row R-016:** every
+  paired field passes the store-assignment judge flat columns use. `update_cast.rs` holds the one
+  leaf judge, `unassignable_leaf_message` / `refuse_unassignable_leaves`: each leaf pair of a
+  `StorePairs` is held to `ansi_store_assignable` (the flat matrix) and the first one Spark refuses
+  answers Spark's `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` text with the table label
+  and the leaf's path; a nested leaf type is named as Spark names it (its catalog string upper-cased,
+  `"STRUCT<A:INT,B:INT>"`, `"ARRAY<…>"`, `"MAP<…,…>"`, `"DECIMAL(p,s)"`); a type Spark cannot name
+  is not judged here, as before. `incompatible_paired_message` (the MERGE and UPDATE text) now calls
+  it. `store_overflow.rs`: `pair_store_output` judges the leaves of every pairing before the
+  identity shortcut, so an in-order struct is judged as a reordered one is; where the expression is
+  the user's own `CAST` (call site 1b, `unwrap_cast` false) the cast's output is judged, not its
+  operand. `struct_pairing.rs`: the batch-cast guard (`refuse_unpaired_struct`, S1, S2, S3) pairs
+  by position (the two routes that reach it unpaired are `INSERT OVERWRITE … PARTITION`), so a
+  surplus or missing field answers Spark's `EXTRA_STRUCT_FIELDS` / `STRUCT_MISSING_FIELDS`, a leaf
+  Spark refuses answers `CANNOT_SAFELY_CAST`, and only a struct Spark stores keeps hint H-1 (the
+  dated carve-out of ruling 58). No second judge and no new pairing site.
 - `struct_pairing.rs` — **ICE-STRUCT-PAIRING-1 step 2 (2026-10-14), parity row R-016:** the one
   rule that pairs a struct source with a struct target on a write. `pair_store_value(pairing,
   table, column, source, target)` walks both types: two structs pair by the door's

@@ -14,6 +14,7 @@ use datafusion::logical_expr::{
 use datafusion::scalar::ScalarValue;
 
 use super::store_assign::without_field_metadata;
+use super::update_cast::refuse_unassignable_leaves;
 
 pub const STORE_PAIR_KERNEL_NAME: &str = "__repark_store_pair__";
 
@@ -622,10 +623,15 @@ pub fn refuse_unpaired_struct(
         return Ok(());
     }
     let mut path = vec![backtick(column)];
-    match first_unpaired(source, target, &mut path) {
+    let unpaired = first_unpaired(source, target, &mut path);
+    if let Some(Unpaired::Layout(at, layout)) = &unpaired {
+        return Err(unpaired_layout(table, entry, at, layout));
+    }
+    let pairs = pair_store_value(StructPairing::ByPosition, table, column, source, target)?;
+    refuse_unassignable_leaves(table, &pairs)?;
+    match unpaired {
         Some(Unpaired::Fields(at, from, to)) => Err(unpaired_struct(table, entry, &at, from, to)),
-        Some(Unpaired::Layout(at, layout)) => Err(unpaired_layout(table, entry, &at, layout)),
-        None => Ok(()),
+        _ => Ok(()),
     }
 }
 

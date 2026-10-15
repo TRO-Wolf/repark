@@ -16,6 +16,7 @@ use super::store_assign::refuse_unless_write_store_assignable;
 use super::store_fold::{
     check_folded_store_input, expr_references_column, store_guard_expr, wrap_store_expr,
 };
+use super::update_cast::refuse_unassignable_leaves;
 use crate::write::store_cast::{
     is_overflow_store_pair, spark_store_type_name, store_cast_udf_for_target, store_int_target,
 };
@@ -222,6 +223,7 @@ fn conform_values_rows(
                 target_field.name(),
                 target_field.data_type(),
                 site,
+                true,
             )? {
                 out.push(rewrap_aliases(paired, &frames));
                 changed = true;
@@ -343,6 +345,7 @@ fn pair_store_output(
     column: &str,
     target: &DataType,
     site: PairSite<'_>,
+    unwrap_cast: bool,
 ) -> Result<Option<Expr>> {
     if !holds_struct_type(target) {
         return Ok(None);
@@ -355,6 +358,17 @@ fn pair_store_output(
         return Ok(None);
     };
     let pairs = pair_store_value(site.pairing, site.table, column, &source, target)?;
+    match cast {
+        Some(_) if !unwrap_cast => {
+            if let Ok(written) = inner.get_type(schema)
+                && let Ok(judged) =
+                    pair_store_value(site.pairing, site.table, column, &written, target)
+            {
+                refuse_unassignable_leaves(site.table, &judged)?;
+            }
+        }
+        _ => refuse_unassignable_leaves(site.table, &pairs)?,
+    }
     if pairs.is_identity() {
         return Ok(None);
     }
@@ -377,7 +391,14 @@ fn conform_one_store_expr(
     target_type: &DataType,
     flags: ConformStoreFlags<'_>,
 ) -> Result<Option<Expr>> {
-    if let Some(paired) = pair_store_output(inner, schema, column, target_type, flags.site)? {
+    if let Some(paired) = pair_store_output(
+        inner,
+        schema,
+        column,
+        target_type,
+        flags.site,
+        flags.unwrap_cast,
+    )? {
         return Ok(Some(paired));
     }
     if let Expr::ScalarFunction(function) = inner
