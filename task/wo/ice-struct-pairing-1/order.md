@@ -158,6 +158,16 @@ named_struct('b', 2, 'a', 1)), (2, named_struct('x', 7, 'y', 8))` (also with the
 Scope of the exception round: V2-01's family, V2-02, Rust pins that kill the four surviving
 mutants of verdict finding V2-03 (`V2_L1`, `V2_N3`, `V2_N4`, `V2_N5`), the ruling 75 note and the
 ruling 76 row edit.
+
+**The one named change outside the class (owner, 2026-10-15, ruling 90 and the Opus switch).**
+Ruling 90 (a), 2026-10-15: "Widen U-6 by exactly one named change: UPDATE ... SET col = (SELECT
+...) with WHERE true, an IN list, or no WHERE refuses loudly for every column type, one error
+text, both doors, cells for INT and struct on each shape. An UPDATE that reports success and
+writes nothing is a silent failure, so main's bug blocks v2 PRODUCTION anyway. Storing the value
+is a dated card; refusal with a hint does not hold the label. The change is one commit revertable
+alone, and the re-verifier covers it plus the two failures and the four mutants. This is the Opus
+lane A build under the switch above." The Opus switch, 2026-10-15: "this round builds on Opus 5.5
+high instead of Muse xhigh, for this week only; the rest of ruling 73 stands."
 - **Owner, 2026-10-14, ruling 58 (a), as a dated carve-out row:** "both PARTITION spellings, 38
   cells per route, refusal with a hint naming the workaround (fields in table order), closed by
   the routing unit from question 34(b)." The static-partition row
