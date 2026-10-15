@@ -435,7 +435,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   stays: a nanosecond source cast to the instant type (a written `CAST(ns AS TIMESTAMP)`)
   takes the narrowing kernel and floors. The module's SQL unit tests, and those of
   `temporal_ctor/`, `timestamp_ntz_cast/` and `tests/`, build their session with the
-  planner (`spark_type_planner::planned_context`), as every door does.
+  planner (`spark_type_planner::planned_context`), as every door does;
+  `spark_nullability.rs`'s tests joined them on 2026-10-15 (without the planner its typed
+  `TIMESTAMP` literal stayed DataFusion's nanosecond type and met the by-target kernel).
   pins: ice-tsns-type-planner-1/C-013
 - `timestamp_unit_widen.rs` — **ICE-TSNS-TYPE-PLANNER-1 amendment 1 (2026-10-13):**
   `SparkTimestampUnitWiden`, the unit lattice rule. DataFusion 54.1 joins two timestamp
