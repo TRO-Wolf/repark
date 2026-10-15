@@ -10324,7 +10324,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `PARTITION` spellings a struct whose field names differ from the table's, where Spark
   stores, refuses with hint H-1 (its condition, the workaround phrase "the table's field
   names in the table's", the table unchanged). The cells main cannot seed (a required nested
-  field, verifier 1's out-of-scope note) are pinned as still unseedable.
+  field, verifier 1's out-of-scope note) are pinned as still unseedable. List L2 (`UPDATE` with no
+  `WHERE`, parity row R-014, out of scope): where Spark stores, the cell answers as main
+  (`test_list_l2_answers_as_main_where_spark_stores`, nine leaf cells, main's raw `arguments need
+  to have the same data type`); where Spark refuses it answers as Spark.
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

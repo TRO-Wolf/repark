@@ -15,6 +15,7 @@ HERE = Path(__file__).resolve().parent
 ORACLE = json.loads((HERE / "ice_struct_pairing_1_spark_oracle.json").read_text("utf-8"))
 MAIN = json.loads((HERE / "ice_struct_pairing_1_main.json").read_text("utf-8"))
 GROUPS = tuple(recorder.GROUPS)
+L2_DOORS = ("update_no_where",)
 CARVE_OUT_HINT = "the table's field names in the table's"
 CONDITION = re.compile(r"\[([A-Z_]+(?:\.[A-Z_]+)?)\]")
 DETAIL = re.compile(r"Cannot write incompatible data for the table .*?: (.*?)\. SQLSTATE")
@@ -50,6 +51,11 @@ def pre_existing_setup(group: str, key: str) -> bool:
     return "setup_error" in MAIN[group][key]
 
 
+def in_l2(group: str, key: str) -> bool:
+    door, _ = door_and_shape(group, key)
+    return door in L2_DOORS and "rows" in ORACLE[group][key]
+
+
 def cells(group: str) -> list[tuple[str, str]]:
     return [(group, key) for key in sorted(ORACLE[group])]
 
@@ -59,8 +65,11 @@ SETUP_CELLS = [cell for cell in ALL_CELLS if pre_existing_setup(*cell)]
 CARVE_OUT_CELLS = [
     cell for cell in ALL_CELLS if in_carve_out(*cell) and not pre_existing_setup(*cell)
 ]
+L2_CELLS = [cell for cell in ALL_CELLS if in_l2(*cell) and not pre_existing_setup(*cell)]
 SPARK_CELLS = [
-    cell for cell in ALL_CELLS if not in_carve_out(*cell) and not pre_existing_setup(*cell)
+    cell
+    for cell in ALL_CELLS
+    if not in_carve_out(*cell) and not in_l2(*cell) and not pre_existing_setup(*cell)
 ]
 
 
@@ -136,6 +145,13 @@ def test_the_partition_carve_out_refuses_with_the_workaround(
     assert condition(error) == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST", actual
     assert CARVE_OUT_HINT in error, actual
     assert seed_only(actual.get("after")), actual
+
+
+@pytest.mark.parametrize("cell", L2_CELLS, ids=cell_id)
+def test_list_l2_answers_as_main_where_spark_stores(
+    replayed: dict[tuple[str, str], Any], cell: tuple[str, str]
+) -> None:
+    assert replayed[cell] == MAIN[cell[0]][cell[1]], replayed[cell]
 
 
 @pytest.mark.parametrize("cell", SETUP_CELLS, ids=cell_id)
