@@ -843,3 +843,32 @@ declines it (a dated ruling in the intake, then the archive).
   R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
   #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
   `timestamp_ns` target leaf.
+- [facade-hang-98-1-card-2026-10-14.md](facade-hang-98-1-card-2026-10-14.md) — **card
+  FACADE-HANG-98-1 (2026-10-14, open, not scheduled):** the facade suite (`pytest -n 8`
+  over `python/repark/tests/`) sometimes stalls at 98–99 % with idle xdist workers on CI
+  and locally until the job timeout, and a re-run passes; not reproduced on demand. First
+  step is a branch run with `--durations=0` and a per-test timeout to name the test that
+  never returns; a CI-only change is the owner's. Retires when the named test is fixed or
+  marked with a dated row.
+- [spill-reach-fair-pool-flake-1-card-2026-10-14.md](spill-reach-fair-pool-flake-1-card-2026-10-14.md) — **card
+  SPILL-REACH-FAIR-POOL-FLAKE-1 (2026-10-14, open, not scheduled):**
+  `test_sort_merge_join_spills_under_small_fair_pool` (64 MiB fair pool, two 400,000-row
+  md5 series, spill count above zero asserted) refuses intermittently on CI with
+  `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
+  0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
+  or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
+- [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
+  OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
+  `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of
+  8 on CI (2026-10-07) where Spark's recording commits 1; losers keep the expected
+  `Found conflicting files … matching TRUE` shape. The test fires eight MERGEs on
+  disjoint keys with no target-only conjunct through a barrier (ledger clause C-012 of
+  the ice-occ-scoped-1 ledger); two winners fit a check-then-commit timing window.
+  Open question: product race or test assumption. Unmeasured until N repeated runs.
+- [mtime-metadata-pick-1-card-2026-10-14.md](mtime-metadata-pick-1-card-2026-10-14.md) — **card
+  MTIME-METADATA-PICK-1 (2026-10-14, open, not scheduled):** every remaining file under
+  `python/repark/tests/` that orders or picks Iceberg metadata files by `st_mtime` /
+  `st_mtime_ns`, with path, line and whether the use picks a metadata file (the
+  `f8f1d252` flake shape) or does something else. Proposed fix is one shared helper
+  that picks by the version number in the file name, as `f8f1d252`'s
+  `_metadata_version` does. Retires when every listed use is converted.
