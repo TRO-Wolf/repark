@@ -563,8 +563,11 @@ fn rewrite_plan(
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten =
-            expr.transform_up(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type)))?;
+        let rewritten = expr.transform_up(|node| {
+            rewrite_cast(node, &schema, zone, timestamp_type).transform_data(|typed| {
+                crate::timestamp_ns_cast::wall_kernel_by_target(typed, &schema)
+            })
+        })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed

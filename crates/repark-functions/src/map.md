@@ -396,6 +396,19 @@ scalars live under [`try_invert/`](try_invert/map.md).
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
   pins: fnp-win-1/C-003
+- `timestamp_ns_cast.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
+  `wall_kernel_by_target` applies the nanosecond wall kernel from the **type** of a cast
+  target: an `Expr::Cast` whose target is `Timestamp(ns, _)` and whose source is another
+  type becomes the kernel call (`timestamp_ns_cast_expr`), whoever wrote the cast: the
+  user (`CAST(x AS timestamp_ns)`), DataFusion's coercion (a NULL or a zone alignment
+  beside a nanosecond value) or `SparkTimestampUnitWiden`. A same-type cast is left alone.
+  A `TRY_CAST` to a nanosecond type is refused by name (main refused the type name).
+  Called after `rewrite_cast` in the Spark session rule (`instant_ts.rs`, both
+  `timestampType` modes) and in `PlannedTimestampCast` on the other two doors, so
+  `UPDATE`, `DELETE` and the ANSI door take the kernel without any lowering (R-010).
+  The kernel stays registered by name: the Iceberg store doors in `repark-iceberg` look
+  it up with `ctx.udf(name)` and render it in generated SQL, and that crate cannot link
+  this one, so R-013 keeps its row. pins: ice-tsns-type-planner-1/C-014
 - `instant_ts.rs`, `spark_string_timestamp.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   the session timestamp rule no longer reads a nanosecond cast target as the SQL
   `TIMESTAMP`. Deleted from `rewrite_cast`: the arm that peeled a cast of an instant to a

@@ -15,7 +15,7 @@ use datafusion::arrow::datatypes::{
 };
 use datafusion::arrow::error::ArrowError;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
+use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
@@ -57,6 +57,31 @@ pub fn timestamp_ns_cast_expr(expr: Expr, zoned: bool) -> Expr {
         timestamp_ns_cast_udf(zoned),
         vec![expr],
     ))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn wall_kernel_by_target(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    match &expr {
+        Expr::Cast(cast) => {
+            let Some(zoned) = timestamp_ns_target(cast.field.data_type()) else {
+                return Ok(Transformed::no(expr));
+            };
+            match cast.expr.get_type(schema) {
+                Ok(source) if &source != cast.field.data_type() => Ok(Transformed::yes(
+                    timestamp_ns_cast_expr(*cast.expr.clone(), zoned),
+                )),
+                _ => Ok(Transformed::no(expr)),
+            }
+        }
+        Expr::TryCast(try_cast) => match timestamp_ns_target(try_cast.field.data_type()) {
+            Some(zoned) => plan_err!(
+                "TRY_CAST to {} is not supported; CAST to it raises on a value it cannot hold",
+                target_name(zoned)
+            ),
+            None => Ok(Transformed::no(expr)),
+        },
+        _ => Ok(Transformed::no(expr)),
+    }
 }
 
 #[must_use]
