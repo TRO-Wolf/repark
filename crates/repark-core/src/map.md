@@ -27,25 +27,34 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
-- `local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):** the one
-  local-filesystem write policy, beside `CatalogRegistry`. `local_filesystem_path` classifies a
-  location (remote schemes, `file://`, `file://localhost`, `file:`, an unknown well-formed scheme,
-  else a local path) through the checked `strip_ascii_prefix_ci` (`str::get`, never a byte
-  slice). `resolve_physical_destination` makes the path absolute, finds the nearest ancestor
-  `symlink_metadata` reports, `canonicalize`s it and joins the missing tail; a `..` in the
-  tail, a dangling symlink, an ancestor read failing other than not-found, or an empty path is
-  indeterminate (`None`), and `path_under_any_warehouse` treats indeterminate as outside.
-  `refuse_local_filesystem_writes` walks the plan with `TreeNode::apply` and checks every `Copy`
-  and `CreateExternalTable` node at any depth (`Analyze` and `Prepare` inputs included),
-  skipping below a plain `Explain`. `allow_local_filesystem_ddl` reads the opt-in from the
-  `repark.sql` config extension only, accepting its field unprefixed (the real
+- `local_fs_policy.rs` (+ [local_fs_policy/](local_fs_policy/map.md)) — **PA-LOCAL-FS-POLICY-1
+  (2026-10-15, audit PA-02 to PA-04; fix round of the same day, owner rulings 103 and 104):**
+  the one local-filesystem write policy, beside `CatalogRegistry`. The location is read the way
+  the write reads it: `ListingTableUrl::parse`, the call DataFusion's `COPY` planner and
+  `CREATE EXTERNAL TABLE` factory make, gives the written path (a URL's dot segments, `%2e`
+  forms included, resolved lexically; percent escapes decoded; `file:x` as `/x`, consistent
+  with `catalog_state.rs`'s `absolute_local_from_file_rest`; a bare relative path or one with
+  a leading space read against the cwd); any other scheme is remote; a parse failure or a
+  `file://<host>` is unreadable and refuses. A second, as-typed reading keeps the `..` and `.`
+  segments (a URL is reparsed with its dots shielded by a private-use stand-in so the parser
+  cannot drop them). `follow` walks a path component by component: a symlink is
+  `canonicalize`d, a missing component makes the rest lexical, a `..` after a missing
+  component, a dangling symlink, a loop or a metadata read failing other than not-found is
+  indeterminate (`None`), and a `..` that steps back over a symlink is recorded.
+  `location_under_any_warehouse` holds when both readings resolve to the same path, that path
+  is under a warehouse root read and followed the same way, and no recorded symlink lies under
+  that root; `local_filesystem_path` returns the written path, `resolve_physical_destination`
+  the followed one. `refuse_local_filesystem_writes` walks the plan with `TreeNode::apply` and
+  checks every `Copy` and `CreateExternalTable` node at any depth (`Analyze` and `Prepare`
+  inputs included), skipping below a plain `Explain`. `allow_local_filesystem_ddl` reads the
+  opt-in from the `repark.sql` config extension only, accepting its field unprefixed (the real
   `extensions_options!` shape) or prefixed; absent means closed. `refuse_local_filesystem_plan`
-  is the read plus the walk. `LocalFsGuardedDialect` is the native door of `repark.sql()`:
-  plan, the policy, the shared belt, execute. The unit tests hold the byte-5/7/9 boundaries,
-  the resolver, the walk over a `Prepare`, an `Analyze` and an `Explain` of an `Analyze`, the
-  conf read, and the native dialect's refusals and controls.
-  `catalog_state.rs` imports `strip_ascii_prefix_ci` from here; its private copy is deleted.
-  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017
+  is the read plus the walk, for the two doors. `LocalFsGuardedDialect` is the native door of
+  `repark.sql()`: plan, the walk with no conf read, the shared belt, execute; its refusal says
+  `repark.sql() does not allow local-file DDL` and that the entry has no opt-in
+  (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci` from here; its
+  private copy is deleted.
+  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-025
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
