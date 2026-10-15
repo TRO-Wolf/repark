@@ -103,6 +103,19 @@ holds behavior observed from outside the crate.
   the backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
   statements succeed; a missing table keeps its own error.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- `ice_tsns_type_planner_1_lattice.rs` — **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):**
+  the planner and lattice pins on both doors (a Spark-door session and an `AnsiDialect`
+  session over one four-column batch: microsecond and nanosecond, naive and zoned).
+  `written_type_names_plan_to_the_spark_types_on_both_doors` reads the Arrow type of
+  `CAST(… AS TIMESTAMP)`, the `TIMESTAMP '…'` literal, `TIMESTAMP_NTZ`, `timestamp_ns` and
+  `timestamptz_ns`; `mixed_unit_positions_take_the_finest_unit_on_both_doors` reads
+  `coalesce`, `UNION ALL`, `CASE` and `array` over the eight mixed ordered pairs;
+  `join_keys_share_the_finest_unit_in_the_optimized_plan` reads the `on` keys and the
+  filter operands of the **optimized** join for `=`, `<` and `<=>`;
+  `equal_units_plan_no_cast_on_both_doors` holds the rule off equal units;
+  `the_ansi_door_resolves_no_nanosecond_kernel_by_name` is R-013's cell;
+  `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7's cell.
+  pins: ice-tsns-type-planner-1/C-010, C-011
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted
