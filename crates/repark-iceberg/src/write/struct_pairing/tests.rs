@@ -718,3 +718,33 @@ fn case_insensitive_names_match_as_java_equals_ignore_case() {
         "{text}"
     );
 }
+
+#[test]
+fn case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive() {
+    let target = named(&[("a", DataType::Int32), ("b", DataType::Int32)]);
+    let twins = named(&[
+        ("a", DataType::Int32),
+        ("A", DataType::Int32),
+        ("b", DataType::Int32),
+    ]);
+    let text = pair_store_value(StructPairing::by_name(false), "`t`", "st", &twins, &target)
+        .expect_err("twins under a case-insensitive name")
+        .to_string();
+    assert!(
+        text.contains(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME] Cannot write incompatible data \
+             for the table `t`: Ambiguous column name in the input data `st`.`a`. SQLSTATE: KD000"
+        ),
+        "{text}"
+    );
+    let text = pair_store_value(StructPairing::by_name(true), "`t`", "st", &twins, &target)
+        .expect_err("a surplus field under a case-sensitive name")
+        .to_string();
+    assert!(
+        text.contains(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for \
+             the table `t`: Cannot write extra fields `A` to the struct `st`. SQLSTATE: KD000"
+        ),
+        "{text}"
+    );
+}

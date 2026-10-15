@@ -136,6 +136,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `write_overwrite_staged_files_from_stream`) with the batch hint, the seeded row kept; the
   same static statement with the struct in the table's field order stores.
   pins: ice-struct-pairing-1/C-002, C-008, C-009, C-011, C-013
+  **Build round 3 (2026-10-14, ruling 55(a) F-07):**
+  `a_by_name_frame_door_pairs_under_the_session_case_rule` drives the by-name DataFrame door
+  (`source_by_name`) with a recased struct under each value of the session's case carrier:
+  case-insensitive it stores `{a:1, b:2}`, case-sensitive it refuses with Spark's
+  `CANNOT_FIND_DATA` for `` `st`.`a` `` and stores nothing (kills verifier 1's mutant O5, the
+  passthrough dropping `caseSensitive`).
   **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
   `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
   `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE

@@ -30,5 +30,9 @@ ICE-STRUCT-PAIRING-1 (2026-10-14, parity row R-016).
   `case_insensitive_names_match_as_java_equals_ignore_case` pins É/é, ẞ/ß both ways, İ/i, ᾀ/ᾈ and
   ſ/s matching and ß/SS, é/e and ſ/ss not, then pairs É into é by name and refuses ß from SS with
   `CANNOT_FIND_DATA`.
+  **Build round 3 (2026-10-14, ruling 55(a) F-07):**
+  `case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive` pins
+  `AMBIGUOUS_COLUMN_NAME` for case twins by name and `EXTRA_STRUCT_FIELDS` for the same twins
+  case-sensitively (kills verifier 1's mutant O1, the ambiguity check off).
 
 Up: [../map.md](../map.md).

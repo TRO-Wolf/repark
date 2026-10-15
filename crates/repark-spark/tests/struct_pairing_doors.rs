@@ -417,3 +417,58 @@ async fn the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1()
     assert_eq!(stored(&session, table, 1).await, Some((Some(1), Some(2))));
     assert_eq!(stored(&session, table, 0).await, None);
 }
+
+fn set_case_sensitive(session: &ReparkSession, enabled: bool) {
+    session
+        .context()
+        .state_ref()
+        .write()
+        .config_mut()
+        .options_mut()
+        .extensions
+        .insert(repark_functions::case_sensitive::SparkCaseSensitiveConfig { enabled });
+}
+
+#[tokio::test]
+async fn a_by_name_frame_door_pairs_under_the_session_case_rule() {
+    let session = session();
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    run(&session, "CREATE NAMESPACE ice.ns").await;
+    let door = Door::Frame(
+        "INSERT INTO {t} (id, st) SELECT id, st FROM (SELECT 1 AS id, {s} AS st) v",
+        OverwriteIntent::Session,
+        true,
+    );
+    for (case_sensitive, table) in [
+        (false, "ice.ns.recased_insensitive"),
+        (true, "ice.ns.recased_sensitive"),
+    ] {
+        run(
+            &session,
+            &format!("CREATE TABLE {table} (id INT, st STRUCT<a: INT, b: INT>) USING iceberg"),
+        )
+        .await;
+        set_case_sensitive(&session, case_sensitive);
+        let outcome = attempt(&session, door, table, "named_struct('B', 2, 'A', 1)").await;
+        set_case_sensitive(&session, false);
+        if case_sensitive {
+            let refusal = outcome.expect_err("a recased field under caseSensitive=true");
+            assert!(
+                refusal.contains(
+                    "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible \
+                     data for the table `ice`.`ns`.`recased_sensitive`: Cannot find data for the \
+                     output column `st`.`a`."
+                ),
+                "{refusal}"
+            );
+            assert_eq!(stored(&session, table, 1).await, None);
+        } else {
+            outcome.expect("a recased field pairs by name under caseSensitive=false");
+            assert_eq!(stored(&session, table, 1).await, Some((Some(1), Some(2))));
+        }
+    }
+}
