@@ -404,8 +404,8 @@ pins (PR-5A) cover it, named here and not run. Count: (5 + 2) × 3 doors × 2 fo
 | X-D deletes | X-P with merge-on-read modes; the writer runs `DELETE … WHERE id % 10 = 0` and a `MERGE` that updates 50 rows | v2 position delete files; v3 deletion vectors |
 | X-E evolved | X-P, then `ALTER TABLE … ADD COLUMN`, `RENAME COLUMN`, and one more insert | field ids across schema versions |
 
-Nanosecond columns are out (§0 lists what changed between 1.5.4 and the head; R-008 and R-019
-moved nanosecond writes in 1.5.5). Step 0 records one nanosecond table as a cell that is printed,
+Nanosecond columns are out: R-008 and R-019 moved nanosecond writes in 1.5.5 (`STATUS.md`,
+release state), so the two releases do not write them alike. Step 0 records one nanosecond table as a cell that is printed,
 not asserted (X-NS), so the gap is visible.
 
 ### 5.3 The cells
@@ -541,3 +541,145 @@ No IAM change is expected: the legs call `UpdateTable`, `GetTable`, the S3 Table
 and object reads the acceptance role already uses (unmeasured until the first run; a denial is
 reported through `format_denial_failure` as today). The version literal in the import check moves
 with Q3's answer.
+
+## 7. Risks, how each is held deterministic, and the halts
+
+| Risk | Held by |
+|---|---|
+| The kill lands at a different point each run (M1's races) | The local child cannot pass the hook: `update_table` waits forever, so the kill always finds it there. The parent waits for the marker under a 60 s deadline; a missed deadline fails the cell, never skips it. The live child is held by the gate the same way. |
+| A held request hangs a session forever | The SDK has no default read timeout. Only leg K holds, and its parent kills the child under a deadline. Leg U never holds: a cut is a reset. |
+| The fork reconciles for up to 30 minutes | Every drill table sets the four `commit.status-check.*` properties (§4.4); the leg asserts they are present before the statement and fails fast if not. |
+| The SDK resends a commit whose response was lost (M3) | U-1 to U-4 reset the resend unforwarded, so they drill the fork alone. U-5 forwards it on purpose (H-U5). |
+| S3 Tables answers an old metadata location after a commit (consistency unmeasured) | The resolver answers only after the gate has closed every connection that held the commit and two reads 2 s apart agree, up to a 60 s deadline; otherwise the cell fails as "unresolved". |
+| S3 Tables maintenance commits between the pre-state and the reopen | "Unchanged" is "the attempted snapshot id is absent and the rows equal the pre-state", not "the same snapshot set". The fork's reconciliation searches the snapshot set, so a buried commit is still found. |
+| The gate's second signature is refused (clock skew, a header it drops) | The gate's AWS-free unit test checks SigV4 against fixed vectors; the first credentialed run proves AWS accepts it (H-U1). |
+| The previous release refuses or misreads a head-written feature (v3 defaults, row lineage, deletion vectors) | That is a finding, not flakiness: the cell fails with both versions' answers printed (H-X1). |
+| Two nightly runs overlap | The workflow's concurrency group serializes runs; the bench job uses other table names. |
+| T-1 moves `crates/repark-spark/src/tests/` | The two Rust pin files move with the binary; their names stay. |
+
+**A second seam would be** any of: a door whose commit does not pass `Catalog::update_table` (the
+CTAS staged path may commit through `create_table`; then the decorator holds that call too, and
+the sketch names it as a second hook point in step 0); a commit the gate cannot recognise on one
+catalog; a door that needs product code to be held. Each is a halt, not a design change inside
+the round.
+
+**Halts for the order.**
+
+- H-K1: a door's commit passes neither `update_table` nor `create_table` of the session catalog.
+- H-K2: a kill cell's reopen reads anything but the pre-state. A real defect; the owner hears first.
+- H-U1: AWS refuses the gate's re-signed requests on the first credentialed run.
+- H-U5: U-5 lands the rows twice, or leaves two snapshots carrying the id. A silent duplicate;
+  the owner hears first, and the fix is a fork card (Q6).
+- H-U2: a cell answers "unresolved" on two runs in a row.
+- H-X1: a cross-release cell is not equal.
+- H-X2: PyPI does not serve the pinned 1.5.4 wheel with the recorded hashes.
+- H-6: any change to a product file, the fork, `Cargo.toml` or a workflow. The unit adds tests and
+  records only; the workflow is the owner's (§6.5).
+
+## 8. Questions
+
+Each question has its premise and a lean. RULING: the orchestrator can rule. OWNER: the owner's.
+
+- **Q1 (OWNER), a product hook for the kill point?** Premise: §3.2 reaches the exact point with
+  no product code (a test catalog decorator locally, the gate live); a product fault point (K-E)
+  is the only way to kill at that point through the released wheel without a gate, and it puts a
+  test seam in the commit path. Lean: no product hook.
+- **Q2 (OWNER), a transport seam for the unknown-outcome drill?** Premise: the gate (U-A) cuts the
+  real network after the request leaves the SDK, with no product or fork change, and it is the
+  only option that exercises the SDK's own resend; the fork's seams are `#[cfg(test)]` and its
+  credentialed smoke never lets the SDK resend. Lean: no seam; the gate for the legs, the RePark
+  test decorator for the offline twin. The fork lane may still run its own credentialed smoke to
+  close row R157's residue; that is not U-9.
+- **Q3 (OWNER), where the previous wheel comes from, and which version.** Premise: release
+  wheels go to PyPI (`release.yml`); workflow artifacts expire; the plan names 1.5.4, written
+  before 1.5.5 shipped on 2026-10-13. Lean: PyPI, installed by exact version with
+  `--require-hashes` from a compiled requirements file, before credentials. Keep 1.5.4 for the
+  1.5.6 label as the plan says, and add one line to the release runbook (publish-pypi) that moves
+  the pin to the newest previous release at each tag.
+- **Q4 (RULING), where the orphan count is reported.** Premise: RePark has no report surface;
+  `remove_orphan_files` cannot list files younger than 24 hours (M2) and refuses on S3 Tables.
+  Lean: the pins compute the count and print it as one line per cell (§3.3); locally it is checked
+  against a dry run after the file times are set back (M2 measured the same 28), on Glue against a
+  listing of the table prefix, on S3 Tables against the attempt's own file list. No product
+  surface in U-9.
+- **Q5 (RULING), the local catalog's commit point.** Premise: the memory catalog keeps its
+  pointer in memory, so after a process death the newest metadata file is the commit: a kill
+  after that file is written reads back as committed (M1, 2,000,003 rows). This matches the Hadoop
+  catalog's rule. Lean: accept it as the local catalog's declared answer, pin it as control K-C1,
+  and record it in the registry beside ICE-COMMIT-UNKNOWN-1.
+- **Q6 (OWNER), if U-5 duplicates rows.** Premise: M3 measured three sends of a call whose
+  response was lost, the SDK's retry classifier is operation-agnostic, and the fork configures no
+  retry policy; the predicted path (a conflict on the resend, mapped retryable, re-applied) would
+  append twice. Lean: a halt of the live leg and a fork card that sets the SDK's retry to one
+  attempt on the two commit calls (`UpdateTable`, `UpdateTableMetadataLocation`), so the fork's
+  classifier owns the outcome; the v2 label waits on it, since a duplicate append is a silent
+  value.
+- **Q7 (RULING), the plain `INSERT` raises with `operation_id = None`.** Premise: the fork mints
+  and stamps an id (`fork:crates/integrations/datafusion/src/physical_plan/commit.rs:372`) but
+  does not hand it to RePark; a user can then resolve only by the snapshot-set difference, sound
+  only under the single-writer rule. Lean: U-9 pins the door as it is (U-2 asserts `None`) and
+  the harness resolves by the gate's captured snapshot id; a separate card threads the fork's id
+  to the error.
+- **Q8 (OWNER), the workflow change and the first run.** Premise: tier-2 never runs unmerged code
+  (AGENTS.md), so the legs merge skipped-by-default and their first live run is after the owner
+  wires §6.5. Lean: wire §6.5 as written; the first dispatched run is the legs' proof, and a red
+  is a fold pull request.
+- **Q9 (RULING), S3 Tables maintenance on the drill tables.** Premise: the bench disables
+  compaction with an AWS CLI step and a maintenance-configuration grant; the drill can instead
+  define "unchanged" so a service commit does not matter (§7). Lean: the robust definition; no
+  IAM change.
+- **Q10 (RULING), how the gate signs again.** Premise: botocore is not in `uv.lock`; SigV4 is
+  about 80 lines of the standard library (`hmac`, `hashlib`). Lean: the standard library, held by
+  the fixed-vector unit test; no new dependency.
+
+## 9. The order's outline (grade A; the runs as a grade-C card)
+
+**Grade:** A for the build, to an Opus 5.5 high executor: the order carries the cells, the gates
+and the halts, and the decisions are the answers to §8. The live runs are a grade-C run card for
+Muse xhigh (dispatch the workflow, paste the outputs, change nothing). One fresh Opus 5.5 high
+verifier, scoped to the cells, the mutants, the gate's scratch refusal and the first run's output.
+**Release:** 1.5.6. Steps, in the shape of the U-6 order's §4:
+
+0. **Measure, no test code** (Muse xhigh, local only). (a) For each door of §3.3, which session
+   catalog call commits it, with a throwaway decorator (H-K1), and K-7's state after a kill;
+   (b) the 1.5.4 wheel's hashes from PyPI through `uv pip compile --generate-hashes` (a read) and
+   M5 again with the real wheel, X-NS recorded; (c) the gate's SigV4 against the published AWS
+   test vectors; (d) the Rust child's start time, as the bar for §6.4. Commit `step-0.md` beside
+   the order. Any halt ends the round here.
+1. **The Rust pins** (Opus 5.5 high). `kill_mid_write.rs` and `commit_unknown_doors.rs`. Main is
+   expected to answer every cell as §3.3 and §4.4 say, so the red proof is the mutants of step 4,
+   run before this commit and pasted into it. Commit.
+2. **The gate, the child, the runner** (Opus 5.5 high). The three helpers, their AWS-free unit
+   test, the requirements file. Commit.
+3. **The three legs** (Opus 5.5 high), skipped without `REPARK_AWS_ACCEPTANCE=1`. Commit.
+4. **Proof** (Opus 5.5 high). Mutants, each turning a named cell red: the hook forwards before it
+   holds (K cells read committed rows); the orphan count skips manifests (K (3) and (4)); the gate
+   forwards in U-3 (U-3 resolves committed); the resolver answers "not committed" on a failed read
+   (the unresolved check); the status-check properties dropped (the cut-read cells miss their
+   deadline); the runner runs the head as the previous release (X-C1); the comparison ignores
+   types (X cells on `DECIMAL` and `TIMESTAMP_NTZ`). Local run times. CI green. Then the pull
+   request. After merge and the owner's wiring (Q8), the run card dispatches the workflow; a red
+   cell is a fold.
+5. **Records** (Opus 5.5 high). Registry row ICE-COMMIT-UNKNOWN-1 gains the live pins and the run
+   id; production status row K3 moves to "drilled live" with the run id; a registry note for the
+   local catalog's commit point (Q5) and, if ruled, for the plain `INSERT`'s `None` (Q7);
+   `STATUS.md`; the unit ledger `task/ledgers/staging/ice-integrity-pins-1-ledger.md` with one
+   clause per cell family; every map row. Commit.
+
+Gates of the order: `cargo test -p repark-spark kill_mid_write` and `commit_unknown_doors`;
+`make verify`; `make preflight` (the gate's unit test in the facade suite);
+`python3 scripts/check_rust_file_size.py`; `make check-docs-links check-docs-compaction
+check-ledger-grammar`; `make spell-check`; `python3 scripts/sync_map_md.py --check`;
+`bash scripts/check_map_md.sh --base origin/main`. One cargo build at a time,
+`CARGO_BUILD_JOBS=6`; probes under `ulimit -v 67108864`, in the foreground.
+
+## 10. Not measured in this round
+
+The real 1.5.4 wheel (PyPI was not read); AWS accepting a re-signed request; the S3 Tables
+commit path as the gate sees it; the SDK's resend of a commit call (only reads were measured, M3)
+and U-5's outcome; S3 Tables consistency right after a commit; the IAM coverage of the legs;
+every run time in §6.4; the Rust child's start time; K-7's expected state; whether every door
+commits through `update_table` on the memory catalog (H-K1); delete files, deletion vectors and
+schema evolution across releases; the X-NS cell; the Glue prefix listing through
+`pyarrow.fs`; adopting an S3 Tables metadata file into a local memory-catalog session to count
+the orphans.
