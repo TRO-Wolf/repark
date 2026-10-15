@@ -199,3 +199,15 @@ does. It stays red on main (lexical containment admits the path).
 | `cargo test -p repark-spark --lib -- local_fs pa_local_fs_policy` | 29 passed |
 | `cargo test -p repark-core --lib -- catalog_state local_fs_policy` | 19 passed |
 | `make rust-clippy`, `make rust-panic-ban` | exit 0 |
+
+## 5. Step 4 — `repark.sql()` gets the guard (owner ruling 2026-10-15)
+
+`PyReparkSession::native` (`crates/repark-python/src/session.rs`) builds with
+`with_sql_dialect(Arc::new(repark_core::local_fs_policy::LocalFsGuardedDialect))`. The
+dialect plans, applies `refuse_local_filesystem_plan`, applies the shared `PreExecute::guard`
+and executes: the same order as the ANSI door's delegation. No public signature changes; the
+default `DataFusionDialect` that `ReparkSession::builder()` installs is untouched, so a bare
+Rust session and the repark-core tests that `COPY` into temporary directories keep stock
+behaviour. The native session registers no `repark.sql` config extension, so `repark.sql()`
+has no opt-in and refuses closed; the typed writer's `note_local_write_root` grandfathers its
+own destination on this entry as on the Spark door.
