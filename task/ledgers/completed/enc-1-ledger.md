@@ -1,3 +1,10 @@
+> **Errata (2026-10-15):** Residue items from card ENC-1-RESIDUE-1.
+>
+> - Item 1 closed: a refused keyed commit deletes the files its write staged. Pin `keyed_table_refused_write_options_doors_sweep_their_staged_files` with one pin per operation family in `enc_1_sweep.rs` and `snapshot_commit.rs`, plus the census `every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal`.
+> - Item 5 closed: session registration installs the guard once. Pins `session_registration_guards_a_directly_built_catalog`, `session_registration_wraps_a_builder_catalog_twice_with_one_refusal_text`.
+> - Items 2, 3, 4, 6 accepted by the owner on 2026-10-14 (questions 23 to 25, 27).
+> - Items 1 and 5 closed under the owner's rulings 71 and 72 of 2026-10-15.
+
 # Unit ledger — ENC-1 · first write to a table carrying `encryption.key-id` refuses
 
 **Date:** 2026-10-09 · **Branch:** `fix/enc-1-first-write-refusal` · **Base:** `40fc916f` (main at pickup)
@@ -730,10 +737,4 @@ accessor in the fork, so the `Debug` reader can go), CLUSTER-FEATURE-CI-1.
   `RemoveEncryptionKey`. No RePark path sends them; they are off the allow-list because
   nothing proves them file-free or supported.
 - R-1, R-2, R-3 and the two choices on card ENC-1-RESIDUE-1 items 5 and 6.
-
-## Residue (2026-10-15)
-- Item 1 closed: a refused keyed commit deletes the files its write staged. Pin `keyed_table_refused_write_options_doors_sweep_their_staged_files` with one pin per operation family in `enc_1_sweep.rs` and `snapshot_commit.rs`, plus the census `every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal`.
-- Item 5 closed: session registration installs the guard once. Pins `session_registration_guards_a_directly_built_catalog`, `session_registration_wraps_a_builder_catalog_twice_with_one_refusal_text`.
-- Items 2, 3, 4, 6 accepted by the owner on 2026-10-14 (questions 23 to 25, 27).
-- Items 1 and 5 closed under the owner's rulings 71 and 72 of 2026-10-15.
 
