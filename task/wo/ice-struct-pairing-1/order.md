@@ -24,6 +24,15 @@ SELECT`, which pair nothing; an explicit `CAST` of a struct in a query; the cost
 `INSERT … BY NAME` route. No plan walk, no list of statement spellings, no marker function, no
 reading of how a value was produced: the unit is refused at review if one appears.
 
+**Scope change (owner, 2026-10-14, rulings 56(a) and 57(a) of §1).** Whether a nested leaf
+pair is store-assignable is now in scope on every door: after pairing (by position or by
+name) each leaf pair goes through the store-assignment judge flat columns use, at every depth
+and inside arrays and maps, and a leaf Spark refuses refuses with Spark's condition. The judge
+is reused, not written twice. `INSERT INTO t (cols) VALUES (…)` with a column list pairs by
+position, as every other `INSERT` door does. The out-of-scope item "whether a nested leaf pair
+is store-assignable on the INSERT doors" above is struck by 56(a) on 2026-10-14; the rest of
+the list stands.
+
 ## 1. Rulings already made
 
 - **Owner, 2026-10-13:** Iceberg is the priority until the v2 and v3 labels read PRODUCTION;
@@ -93,6 +102,51 @@ reading of how a value was produced: the unit is refused at review if one appear
   hint. R-014 stays open for the shapes Spark stores. The `is_flat` return of
   `refuse_unless_write_store_assignable` stays. The H-1 guard is one check inside
   `conform::strict_store_cast` for S1, S2 and S3.
+- **Verifier 1 (2026-10-14, fresh Opus, head `e3fc32ab`) returned FAIL** with findings F-01 to
+  F-09. The owner ruled the same night (2026-10-14), rulings 54 to 59 below. The round count
+  for the class "a struct field paired by a rule other than Spark's" is build round 3, and
+  there is no round 4: if the round-3 re-verifier is not green, U-6 parks.
+- **Owner, 2026-10-14, ruling 54 (recorded only; no code):** the NS-ENCODED-NESTED-FLOOR-1
+  card owns the MERGE refusals.
+- **Owner, 2026-10-14, ruling 55 (a):** round 3 on lane A, scoped to F-03, F-04, F-05, F-07,
+  F-09, then one scoped re-verifier.
+  - **F-03:** "match Java's equalsIgnoreCase, per character, upper-case then lower-case
+    compare, pinned with É/é and ẞ/ß. Not a full Unicode fold." Two names match when they have
+    the same length in UTF-16 code units and, per position, the chars are equal, or their
+    `Character.toUpperCase` are equal, or the `Character.toLowerCase` of those upper-cased
+    chars are equal. One Rust function, used everywhere by-name struct pairing compares names
+    under `spark.sql.caseSensitive=false`. É/é, ẞ/ß and one pair Java does not match (`ß`
+    against `SS`) are measured on live Spark and pinned.
+  - **F-04:** "refuse loudly if storing needs any new seam; otherwise store as Spark does. The
+    in-order silent no-op on main gets its pin either way." `UPDATE t SET st = (SELECT st FROM
+    src) WHERE …`, with the source struct reordered and in order: each either stores Spark's
+    value or refuses loudly, and is never a success that writes nothing. Both pinned.
+  - **F-05:** the UPDATE refusal reads the session's `spark.sql.caseSensitive` instead of a
+    fixed `StructPairing::by_name(false)`; the verifier's 8 cells give Spark's condition.
+  - **F-07:** Rust tests that kill mutants O1 (ambiguity check off) and O5 (passthrough drops
+    caseSensitive), each shown red under its mutant.
+  - **F-09:** the red-on-main count is re-measured on main's module and reported in the
+    hand-back (566 by the verifier's count, against 548 in the PR body). The orchestrator owns
+    the PR body.
+- **Owner, 2026-10-14, ruling 56 (a):** "Every paired field passes the same store-assignment
+  check flat columns use. The order records the scope change with today's date." After pairing
+  (by position or by name), each leaf pair goes through the flat columns' store-assignment
+  judge, so a leaf Spark refuses (`CANNOT_SAFELY_CAST` and the rest of Spark's
+  store-assignment refusals) refuses with Spark's condition, at every depth and inside arrays
+  and maps. This closes F-01's 4 regressions, its 24 and its 33. The judge is reused; no second
+  one is written. The scope change is recorded in §0.
+- **Owner, 2026-10-14, ruling 57 (a):** "Column-list VALUES pairs by position." `INSERT INTO t
+  (st, id) VALUES (…)` takes the positional mode like every other INSERT door (F-02's three
+  repros). The scope change is recorded in §0.
+- **Owner, 2026-10-14, ruling 58 (a), as a dated carve-out row:** "both PARTITION spellings, 38
+  cells per route, refusal with a hint naming the workaround (fields in table order), closed by
+  the routing unit from question 34(b)." The static-partition row
+  (`ICE-STRUCT-PAIRING-1-STATIC-PARTITION`) in `docs/spark-sql-iceberg-parity.md` is rewritten
+  as that carve-out, dated 2026-10-14: both spellings named, the 38 cells per route (v2 and v3)
+  counted, the hint text quoted, the closing unit named. If the hint on either spelling does not
+  name the workaround, fixing it is in scope.
+- **Owner, 2026-10-14, ruling 59:** "Closes inside 56(a). Any of the 54 refusals still carrying
+  raw Arrow text after the fold is listed by name in the hand-back."
 
 ## 2. Files
 
