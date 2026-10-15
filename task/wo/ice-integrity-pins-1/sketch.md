@@ -253,3 +253,109 @@ S3 Tables maintenance may commit in between (§7).
 - `python/repark/tests/_acceptance_commit_gate.py` (new, not collected): the gate of §4.2.
 - `python/repark/tests/_acceptance_integrity_child.py` (new, not collected): the child that runs
   one statement through a session pointed at the gate.
+
+## 4. Pin U: the unknown commit outcome, live
+
+### 4.1 Where it sits today
+
+- **The fork decides the kind.** Glue: `map_glue_commit_sdk_error`
+  (`fork:crates/catalog/glue/src/commit_transport.rs:314`) maps an SDK error by whether the
+  request may have been sent: maybe sent → `CommitStateUnknown`; never sent → `Unexpected`; a
+  response → `map_update_table_service_error` (`:343`), where `ConcurrentModificationException`
+  is a retryable `CatalogCommitConflicts` and an internal error or operation timeout is unknown.
+  S3 Tables does the same (`fork:crates/catalog/s3tables/src/commit_transport.rs:299`, `:331`).
+- **The fork never retries the unknown kind and reconciles it.** `Transaction::commit`
+  (`fork:crates/iceberg/src/transaction/mod.rs:379`) retries only retryable kinds other than
+  unknown; on unknown it calls `reconcile_unknown_commit_outcome` (`:430`), which reloads the
+  table under the `commit.status-check.*` table properties
+  (`fork:crates/iceberg/src/transaction/commit_status.rs:83`, `:90`, `:97`, `:104`; defaults
+  3 retries, 1 s, 60 s, **30 minutes** total) and searches the snapshot set for the attempted
+  snapshot ids: found → `Ok` with no re-apply; absent after a good refresh → the original error;
+  unreadable → the original error.
+- **The fork's own drills sit below RePark and below the SDK's resend.** Its transport seams are
+  `#[cfg(test)]` (`ScriptedGlueCommitTransport`, `DiscardingGlueCommitTransport` in
+  `fork:crates/catalog/glue/src/commit_transport.rs`). Its credentialed accepted-then-lost smoke
+  (`fork:crates/catalog/glue/src/commit_outcome_tests.rs:573`, gated by `ICEBERG_PR5A_CREDENTIALED`;
+  the S3 Tables twin keys the same variable at
+  `fork:crates/catalog/s3tables/src/commit_outcome_tests.rs:40`) turns a success into a lost
+  response after the SDK returned, so the SDK never resends. Row R157 still lists those smokes
+  as pending (`fork:docs/parity/GAP_MATRIX.md:159`).
+- **RePark wraps it.** `commit_err` (`crates/repark-iceberg/src/write/commit_error.rs:40`) carries
+  the id minted by `operation_id_and_summary` (`:58`); `is_commit_state_unknown` (`:65`) keeps a
+  possibly landed CTAS table; `error_map` downcasts it (`crates/repark-core/src/error_map.rs:171`;
+  the plain kind through `classify_iceberg_error`, `:274`); Python raises
+  `repark.errors.CommitStateUnknownException` with `operation_id`
+  (`python/repark/src/repark/errors.py:343`). The MERGE abort keeps the files on unknown
+  (`crates/repark-iceberg/src/write/merge/abort.rs:20`). Offline pins:
+  `crates/repark-iceberg/src/write/merge/tests/commit_unknown.rs:44` and the rest listed in the
+  registry row ICE-COMMIT-UNKNOWN-1.
+- **Resolution on reopen.** No product call. The registry row gives Airflow its guidance (alert on
+  the class, retry only `MERGE` and `CTAS IF NOT EXISTS`). M4 shows the one query that resolves a
+  stamped statement. The micro-batch sink resolves its own (`sink_offsets.rs:467`, `:484`).
+- **Live.** Nothing. Row K3: "No live drill on a real catalog is recorded."
+
+### 4.2 How the network is cut
+
+| Option | Mechanism | What it exercises | Product or fork change | Verdict |
+|---|---|---|---|---|
+| **U-A** catalog endpoint gate | A Python gate in the test process. The writer session's `uri` (Glue) or `endpoint_url` (S3 Tables) names the gate (M3). The gate reads each request, signs it again for the regional endpoint with the job's credentials (SigV4; M3 shows the signature covers the local host), forwards it over HTTPS, and for the commit call obeys the cell's script: forward or not, answer or reset. It finds the commit by `X-Amz-Target: AWSGlue.UpdateTable`, or by the S3 Tables `UpdateTableMetadataLocation` path (the exact path is a step-0 check). It refuses any request naming a namespace other than the scratch one. A cut is a reset (the connection closes), never a silent hold: the SDK sets no read timeout and would wait forever. | the real SDK with its own resend (M3), the fork's classification, retry gate and reconciliation, RePark's wrapping, the Python class, through the built module | none | **chosen for the legs** |
+| U-B the fork's transport seam | expose the fork's `#[cfg(test)]` transports behind a cargo feature; a credentialed Rust test | the fork's classifier and reconciliation; not the SDK's resend, not the wheel | fork change | rejected for U-9; the fork lane may run its own credentialed smoke (Q2) |
+| U-C a RePark-side catalog decorator | a test `Catalog` around the real catalog: forward then answer unknown; answer unknown without forwarding; fail reads for a window | the fork's reconciliation and RePark's wrapping; not the SDK, not the fork's classification | none, but a credentialed cargo step | rejected for the legs; **chosen as the offline twin** on the memory catalog (§4.5) |
+| U-D a host-level cut | toggle a firewall rule or namespace when the commit is seen | the whole stack | root on the runner | rejected: the request leaves before the toggle; a race |
+| U-E a short SDK timeout | a timeout below the commit's latency | the stack | a key RePark does not expose | rejected: sent or not sent is chance |
+
+### 4.3 What RePark reads on reopen, and what it answers
+
+The resolver is a fresh session on the real endpoint, never on the gate.
+
+- The statement raised with `operation_id = X`:
+  `SELECT count(*) FROM <t>.snapshots WHERE summary['engine.operation-id'] = 'X'`; 1 is
+  committed, 0 is not committed, more than 1 fails the cell (a duplicate commit).
+- The statement raised with `operation_id = None` (the plain `INSERT` door, §3.1): the gate kept
+  the commit request, which names the attempt's metadata file; the harness adopts that file into
+  a local memory-catalog session, reads the attempted snapshot id, and asks
+  `SELECT count(*) FROM <t>.snapshots WHERE snapshot_id = <id>`. A user holding `None` has only
+  the snapshot-set difference, sound only under the single-writer rule (inventory §2): Q7.
+- Never guessed. The resolver answers only after the gate has closed every connection that held
+  the commit (in U-3 and U-4 the request never left the gate, so nothing in flight can land) and
+  after two reads of the current metadata location, 2 s apart, agree. A failed read makes the
+  cell fail as "unresolved"; the resolver never picks an answer.
+- Rows: `SELECT * … ORDER BY` equals the pre-state plus the statement's rows once (committed), or
+  the pre-state (not committed).
+
+### 4.4 The cells
+
+Each cell runs on Glue and S3 Tables, v2 and v3, for three doors: `INSERT … SELECT` (plain),
+`INSERT … SELECT` with a write option, `MERGE`. Drill tables carry
+`commit.status-check.num-retries = 1`, `min-wait-ms = 100`, `max-wait-ms = 200`,
+`total-timeout-ms = 5000`, so a cell whose reads are cut ends in seconds.
+
+| Cell | Gate script for the commit call | Expected answer of the statement | Expected resolution |
+|---|---|---|---|
+| U-1 landed, reads open | forward; reset its response; reset any resend unforwarded; forward reads | succeeds: the fork sees unknown, reloads, finds the snapshot | committed; rows once; one snapshot with the id |
+| U-2 landed, reads cut | forward; reset its response and every later request until the statement returns | `CommitStateUnknownException`; `operation_id` a string on the option and `MERGE` doors, `None` on the plain door | committed; rows once |
+| U-3 absent, reads cut | read it, do not forward, reset; reset every later request | `CommitStateUnknownException` | not committed; rows equal the pre-state; orphans counted as in K (the attempt's metadata file included) |
+| U-4 absent, reads open | read it, do not forward, reset; forward reads | `CommitStateUnknownException`: the refresh shows the snapshot absent and the fork surfaces the original error | not committed; rows equal the pre-state |
+| U-5 landed, the SDK's resend forwarded | forward; reset its response; forward the SDK's resends and every read | succeeds or raises the class; either way rows exactly once | rows exactly once; at most one snapshot with the id |
+
+**U-5's prediction, unmeasured.** The SDK resends the commit (M3). The resend carries the base
+version (Glue `VersionId`, the S3 Tables version token), so the service answers a conflict, which
+the fork maps to a retryable `CatalogCommitConflicts`. `Transaction::commit` then re-applies the
+append on the refreshed base, which already holds the first attempt's snapshot: the rows land
+twice. If U-5 answers that, it is a silent duplicate and a halt (§7, H-U5), not a pin to record.
+
+**Controls.** U-C0: the gate forwards everything; the statement succeeds, rows once. U-C1: the
+same statement with no gate; the same answer as U-C0, so the gate adds nothing. U-C2, never sent:
+a gate cannot produce it (the request has left the SDK when the gate sees it); the fork's offline
+pins (PR-5A) cover it, named here and not run. Count: (5 + 2) × 3 doors × 2 formats × 2 catalogs
+= 84 statements.
+
+### 4.5 Where the pins live
+
+- `python/repark/tests/test_aws_acceptance_commit_unknown.py` (new): the live leg, with the gate
+  of §3.4.
+- `crates/repark-spark/src/tests/commit_unknown_doors.rs` (new): the offline twin. A test
+  `GateCatalog` on the memory catalog forwards and answers unknown, or answers unknown without
+  forwarding, and fails `load_table` for the status-check window or not: U-1 to U-4, three doors,
+  v2 and v3, 24 cells, asserting the same answers (the class through `engine_err`, the id present
+  or `None`) and the same resolution. U-5 has no offline twin: it is the SDK's behaviour.
