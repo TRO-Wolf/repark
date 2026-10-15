@@ -44,6 +44,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   plan, the policy, the shared belt, execute. The unit tests hold the byte-5/7/9 boundaries,
   the resolver, the walk over a `Prepare`, an `Analyze` and an `Explain` of an `Analyze`, the
   conf read, and the native dialect's refusals and controls.
+  `catalog_state.rs` imports `strip_ascii_prefix_ci` from here; its private copy is deleted.
   pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through

@@ -175,3 +175,27 @@ DataFusion 54.1's `extensions_options!` reports entries without the extension pr
 root. The root stays at its 155-line ceiling: the declaration is one line and one blank
 separator line between the dialect re-export and the pre-execute block is gone. No door calls
 it yet. `cargo test -p repark-core --lib -- local_fs_policy`: 12 passed.
+
+## 4. Step 3 — both doors call the shared policy; their copies go
+
+The Spark door's `local_fs_ddl.rs` and the ANSI door's `guards.rs` each re-export
+`repark_core::local_fs_policy::refuse_local_filesystem_plan`; their private classification,
+strip, canonicalization and containment copies and the ANSI conf reader are deleted, and
+`catalog_state.rs` imports the shared strip. The walk was written with the module in step 2
+(it is one function of the policy), so the doors adopting it turn the PA-02 pins green in
+this step with the PA-03 and PA-04 pins; step 4 wires `repark.sql()`.
+
+One step 1 pin changed shape: through the Spark door `CREATE EXTERNAL TABLE pa03_ext (a INT)
+…` answers `This feature is not implemented: CREATE EXTERNAL TABLE is not supported for
+Iceberg column-def CREATE yet` before any guard runs, so
+`pa03_create_external_table_through_a_warehouse_symlink_refuses` now plans with DataFusion and
+calls the door's guard, as the module's own `refuses_create_external_local_outside_warehouse`
+does. It stays red on main (lexical containment admits the path).
+
+| Suite | On this head |
+|---|---|
+| `cargo test -p repark-sql --test pa_local_fs_policy` | 8 passed |
+| `cargo test -p repark-sql --lib -- guards` | 43 passed |
+| `cargo test -p repark-spark --lib -- local_fs pa_local_fs_policy` | 29 passed |
+| `cargo test -p repark-core --lib -- catalog_state local_fs_policy` | 19 passed |
+| `make rust-clippy`, `make rust-panic-ban` | exit 0 |

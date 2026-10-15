@@ -2391,6 +2391,12 @@ pins: rp-4-fork-repin/C-005, C-006
   retired).
   pins: u9-types-1/C-010
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
+  **PA-LOCAL-FS-POLICY-1 (2026-10-15):** the module now re-exports
+  `repark_core::local_fs_policy::refuse_local_filesystem_plan` (the opt-in read scoped to the
+  `repark.sql` extension, then the walk over every `Copy` and `CreateExternalTable` node); its
+  private classification, strip, canonicalization and containment copies are deleted, and the
+  in-module tests import `local_filesystem_path` from core. The 9 tests are unchanged.
+  pins: pa-local-fs-policy-1/C-006, C-011, C-014, C-016
 - `catalog_ops.rs` — **C-2d fold 1 (2026-10-07), N5:** `catalog_handle` refuses a mounted Postgres source with
   `source_read_only_message` as `NotImplemented` (the Unsupported class), and
   `refuse_read_only_dml_table_sql` prefers that text. A legacy read-only catalog keeps the P11

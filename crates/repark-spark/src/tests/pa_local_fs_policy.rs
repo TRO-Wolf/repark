@@ -118,7 +118,10 @@ async fn pa03_create_external_table_through_a_warehouse_symlink_refuses() {
         "CREATE EXTERNAL TABLE pa03_ext (a INT) STORED AS PARQUET LOCATION '{}'",
         location.to_str().unwrap()
     );
-    let err = refusal(&ctx, &catalogs, &sql).await;
+    let plan = ctx.state().create_logical_plan(&sql).await.unwrap();
+    let err = crate::local_fs_ddl::refuse_local_filesystem_plan(&ctx, &catalogs, &plan)
+        .unwrap_err()
+        .to_string();
     assert_policy_refusal(&err, "CREATE EXTERNAL TABLE");
     assert_eq!(count_objects(outside.path()), 0, "nothing may land outside");
 }
