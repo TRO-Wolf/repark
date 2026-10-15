@@ -3917,6 +3917,70 @@ still open is `isModifiable`.
   records only the shapes outside that unit. Owner ruling, question 46, 2026-10-14.
   Unscheduled; no card in this change.
 
+### ICE-TSNS-SQL-1-R-024 — OPEN (measured 2026-10-14): an encoded or nested nanosecond source truncates into a microsecond column and reads the wall as UTC
+
+- **repark** — a nanosecond source that is dictionary-encoded or run-end-encoded at the
+  top level, or a nanosecond leaf inside a struct, list or map source, written into a
+  microsecond `TIMESTAMP` or `TIMESTAMP_NTZ` leaf, truncates toward zero and reads a
+  naive wall as UTC on every door that stores it, plain `INSERT` included, on U-3's head
+  `faf0267e` and on main alike. One line per measured shape; the value is `-1 ns`
+  (`1969-12-31 23:59:59.999999999`), the stored ticks are microseconds, and the floor
+  rule is what U-3's head stores for the plain `timestamp[ns]` array through `INSERT`
+  (the rule of R-009):
+| Source shape | Arrow source | Target column | Session zone | Head stores | Floor rule stores | Doors that store | Main |
+|---|---|---|---|---|---|---|---|
+| dictionary-encoded | `dictionary<int32, timestamp[ns]>` | `TIMESTAMP` | America/New_York | `0` (`1970-01-01 00:00:00` UTC) | `17999999999` (`1970-01-01 04:59:59.999999` UTC) | all into `TIMESTAMP` (224 cells); all but MERGE into `TIMESTAMP_NTZ` (176) | same on main |
+| run-end-encoded | `run_end_encoded<int32, timestamp[ns]>` | `TIMESTAMP` | America/New_York | `0` | `17999999999` | 14 of 18, 112 cells | same on main |
+| struct leaf | `struct<t: timestamp[ns]>` | `STRUCT<t: TIMESTAMP>` | America/New_York | `0` | `17999999999` | 18 of 18, 144 cells | same on main |
+| list element | `list<timestamp[ns]>` | `ARRAY<TIMESTAMP>` | America/New_York | `0` | `17999999999` | 14 of 18, 112 cells | same on main |
+| map value | `map<string, timestamp[ns]>` | `MAP<STRING, TIMESTAMP>` | America/New_York | `0` | `17999999999` | 18 of 18, 144 cells | same on main |
+| struct leaf, timezone-aware | `struct<t: timestamp[ns, tz=UTC]>` | `STRUCT<t: TIMESTAMP_NTZ>` | America/New_York | `0` (the UTC wall) | `-18000000001` (`1969-12-31 18:59:59.999999`) | 18 of 18, 144 cells | same on main |
+  Cell counts span both zones (UTC, America/New_York), format v2 and v3, and both
+  microsecond targets; every storing door of a shape stores one value list per zone and
+  version. In a UTC session, into `TIMESTAMP_NTZ` from a naive source and into
+  `TIMESTAMP` from the timezone-aware source, only the truncation shows: 8 of the 26
+  measured values differ from the floor (`-1`, `-999`, `-1,001` and `-1,999 ns`,
+  `1969-12-31 18:59:59.999999999`, and the 64-bit minimum, plus 1 and plus 999 ns),
+  e.g. `-1 ns` stores `0` where the floor is `-1`. In America/New_York into `TIMESTAMP`
+  from a naive source, or into `TIMESTAMP_NTZ` from the timezone-aware one, 25 of 26
+  differ (all but `NULL`). The map key and the timezone-aware list, map and encoded
+  shapes were not measured.
+  **Refusals where `INSERT` stores:** a dictionary-encoded source into `TIMESTAMP_NTZ` is
+  refused by the four MERGE doors (insert, insert `*`, update, update `*`) with
+  `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve "CAST(v AS TIMESTAMP_NTZ)"
+  due to data type mismatch: cannot cast "Dictionary(Int32, Timestamp(ns))" to
+  "TIMESTAMP_NTZ". SQLSTATE: 42K09` (the `UPDATE SET v = …` arm names `dictns` for `v`), 48 cells;
+  into `TIMESTAMP` the same doors store. A run-end-encoded or list source is refused by
+  the same four MERGE doors into either target with ``MERGE INSERT cannot store-assign
+  column `v`: source type … is not ANSI-store-assignable to target type …`` (``MERGE
+  UPDATE SET`` on the update arms), 32 cells each. Same on main.
+- **The pin, reconciled** — `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing`
+  (`crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`, rows R-014 and R-015) is
+  about a TARGET column whose type holds a `timestamp_ns` leaf: nine shapes (struct,
+  struct in struct, array of struct, array, struct of array, map value, map key, map of
+  struct, a struct with one field renamed) through seventeen doors ("insert values",
+  "insert select", "insert with a column list", "insert by name", "insert by name, star",
+  "insert overwrite", "insert overwrite values", "replace where", "merge insert", "merge
+  insert star", "merge update", "merge update star", "update where", "update with no
+  where", "insert select, an array element", "insert select from a temporary view",
+  "insert select from a subquery") in America/New_York and Asia/Kolkata, each refused by
+  name with nothing written. This row is about a SOURCE whose nanosecond value is
+  encoded or nested, written into a microsecond target leaf: R-015's gate reads the
+  target's type, never the source, so it does not fire, and the doors store the
+  truncated value (`INSERT … SELECT`, a column list, `BY NAME`, `INSERT OVERWRITE` plain,
+  with a column list, `BY NAME` and dynamic, `REPLACE WHERE`, the four MERGE arms where
+  not refused above, and the six DataFrame writers). Both hold at once: the verifier's
+  control wrote the same struct, list and map sources into `timestamp_ns` leaves and
+  every door took R-015's refusal, on head and on main.
+- **Apache Spark** — has no `timestamp_ns` type. *(oracle: none.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. Measured by the scoped verifier of PR #1059
+  (ICE-TSNS-FLOOR-DOORS-1, U-3), finding F4: 1,080 of 1,080 nested cells and every
+  dictionary-encoded cell identical on head and main. The top-level plain-array shapes
+  are ICE-TSNS-FLOOR-DOORS-1's (R-009, PR #1059). Owner ruling, question 53, 2026-10-14:
+  a v1.5.7 nanosecond carve-out with card NS-ENCODED-NESTED-FLOOR-1
+  (`task/roadmap/mid-term/ns-encoded-nested-floor-1-card-2026-10-14.md`).
+
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
 - **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers

@@ -639,3 +639,125 @@ async fn a_nested_microsecond_ntz_field_keeps_the_split_main_has() {
         assert_eq!(stored, expected, "{zone}");
     }
 }
+
+const ZONE_FLOOR_SEED: [&str; 4] = [
+    "1969-12-31 23:59:59.999999999",
+    "1969-12-31 23:59:59.999998999",
+    "1969-12-31 23:59:59.999999000",
+    "2026-03-08 02:30:00.000000001",
+];
+const ZONE_FLOOR_TARGETS: [(&str, &str); 2] = [("TIMESTAMP", "n"), ("TIMESTAMP_NTZ", "z")];
+const ZONE_FLOOR_INSERT: &str = "INSERT INTO {t} SELECT id, {s}, 0 FROM ice.ns.src";
+const ZONE_FLOOR_DOORS: [(&str, &str); 4] = [
+    (
+        "merge insert",
+        "MERGE INTO {t} t USING ice.ns.src s ON t.id = s.id \
+         WHEN NOT MATCHED THEN INSERT (id, v, k) VALUES (s.id, s.{s}, 0)",
+    ),
+    (
+        "merge insert star",
+        "MERGE INTO {t} t USING (SELECT id, {s} AS v, 0 AS k FROM ice.ns.src) s \
+         ON t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+    ),
+    (
+        "insert overwrite",
+        "INSERT OVERWRITE {t} SELECT id, {s}, 0 FROM ice.ns.src",
+    ),
+    (
+        "insert by name",
+        "INSERT INTO {t} BY NAME SELECT 0 AS k, {s} AS v, id FROM ice.ns.src",
+    ),
+];
+
+async fn zone_floor_session(zone: &str) -> (ReparkSession, TempDir) {
+    let session = session_at(zone);
+    let warehouse = catalog(&session).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.src (id INT, n timestamp_ns, z timestamptz_ns) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    let rows = ZONE_FLOOR_SEED
+        .iter()
+        .enumerate()
+        .map(|(index, text)| {
+            format!(
+                "({index}, CAST('{text}' AS timestamp_ns), CAST('{text}+00:00' AS timestamptz_ns))"
+            )
+        })
+        .chain(std::iter::once(format!(
+            "({}, NULL, NULL)",
+            ZONE_FLOOR_SEED.len()
+        )))
+        .collect::<Vec<_>>()
+        .join(", ");
+    run(&session, &format!("INSERT INTO ice.ns.src VALUES {rows}")).await;
+    (session, warehouse)
+}
+
+async fn zone_floor_store(
+    session: &ReparkSession,
+    table: &str,
+    target: &str,
+    version: u8,
+    write: &str,
+    source: &str,
+) -> Vec<Option<i64>> {
+    run(
+        session,
+        &format!(
+            "CREATE TABLE {table} (id INT, v {target}, k INT) USING iceberg PARTITIONED BY (k) \
+             TBLPROPERTIES ('format-version'='{version}')"
+        ),
+    )
+    .await;
+    run(session, &write.replace("{t}", table).replace("{s}", source)).await;
+    let (_, stored) = ticks(session, &format!("SELECT v FROM {table} ORDER BY id")).await;
+    stored
+}
+
+#[tokio::test]
+async fn every_door_stores_a_nanosecond_source_as_insert_does_in_new_york() {
+    let (utc, _utc_warehouse) = zone_floor_session("UTC").await;
+    let (new_york, _new_york_warehouse) = zone_floor_session("America/New_York").await;
+    for (target_index, (target, source)) in ZONE_FLOOR_TARGETS.into_iter().enumerate() {
+        for version in [2, 3] {
+            let label = format!("{source} into {target} v{version}");
+            let table = |door: &str| format!("ice.ns.t{target_index}_v{version}_{door}");
+            let utc_reading = zone_floor_store(
+                &utc,
+                &table("insert"),
+                target,
+                version,
+                ZONE_FLOOR_INSERT,
+                source,
+            )
+            .await;
+            let insert = zone_floor_store(
+                &new_york,
+                &table("insert"),
+                target,
+                version,
+                ZONE_FLOOR_INSERT,
+                source,
+            )
+            .await;
+            assert_eq!(insert.len(), ZONE_FLOOR_SEED.len() + 1, "{label}");
+            assert_eq!(insert.last(), Some(&None), "{label}");
+            assert_ne!(insert, utc_reading, "{label}: INSERT reads the UTC wall");
+            for (door_index, (door, write)) in ZONE_FLOOR_DOORS.into_iter().enumerate() {
+                let stored = zone_floor_store(
+                    &new_york,
+                    &table(&door_index.to_string()),
+                    target,
+                    version,
+                    write,
+                    source,
+                )
+                .await;
+                assert_eq!(stored, insert, "{label} {door}");
+            }
+        }
+    }
+}
