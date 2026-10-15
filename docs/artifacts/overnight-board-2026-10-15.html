@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overnight Board 10-15</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --fg:#16232B; --muted:#5A6B75; --rule:#D5DEE3;
+  --accent:#0E6C88; --accent-soft:#E1EEF3;
+  --ok:#1F7A4D; --ok-soft:#E3F2EA; --warn:#9A6400; --warn-soft:#FBF0D9; --bad:#B03A2E; --bad-soft:#F8E4E1;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;font-size:.95rem}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0;max-width:68ch}
+.mono,code{font-family:var(--mono);font-size:.86em}
+.sub{color:var(--muted);margin-top:6px}
+section{display:flex;flex-direction:column;gap:14px}
+.chip{display:inline-block;font-family:var(--display);font-weight:600;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.fail{background:var(--bad-soft);color:var(--bad)} .halt{background:var(--warn-soft);color:var(--warn)}
+.pass{background:var(--ok-soft);color:var(--ok)} .hold{background:var(--accent-soft);color:var(--accent)}
+.halt-card{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--bad);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.halt-card.amber{border-left-color:var(--warn)}
+.halt-card ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.tl{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.tl li{display:grid;grid-template-columns:62px 1fr auto;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule);align-items:baseline}
+.tl .t{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.86rem}
+.tl .d{min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:600;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+td.n{text-align:right;font-family:var(--mono)}
+tr.total td{font-weight:600;border-bottom:2px solid var(--fg)}
+.bar{height:8px;background:var(--accent-soft);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar>span{display:block;height:100%;background:var(--accent)}
+.q{background:var(--surface);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.q .num{font-family:var(--display);font-weight:700;color:var(--accent)}
+.q ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
+.lean{color:var(--muted)} .lean b{color:var(--fg)}
+.note{color:var(--muted);font-size:.9rem}
+@media (max-width:520px){.tl li{grid-template-columns:52px 1fr}.tl li .chip{grid-column:2}h1{font-size:1.7rem}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <h1>Overnight board, 14 → 15 October</h1>
+  <p class="sub">Iceberg closeout, lanes run 20:50 to 08:00 EDT under rulings 54–70. Main <span class="mono">fa1e4274</span>. Halts first, then every verdict by time, then spend.</p>
+</header>
+
+<section>
+  <h2>Halts</h2>
+  <div class="halt-card">
+    <h3><span class="chip fail">Fail</span> U-6 struct pairing, #1062, parked</h3>
+    <p>The one scoped re-verifier ran on <span class="mono">5b97a250</span> from 00:41 to 02:15 and returned FAIL. Under 55(a) and 70 there is no round 4, and nothing merged. I opened its evidence files: the head really does store the rows in the second item below.</p>
+    <ul>
+      <li><b>Critical, F-04 not closed.</b> <code>UPDATE t SET st = (SELECT st FROM src)</code> with <code>WHERE true</code>, <code>WHERE id IN (…)</code> or no <code>WHERE</code> reports success and writes nothing. With a reordered source, main refused loudly. That makes 6 cells worse than main; 24 other shapes now store Spark's value.</li>
+      <li><b>High.</b> A multi-row <code>INSERT … VALUES</code> whose rows name the struct's fields differently stores by position. Spark refuses it as an invalid inline table, and so did main. 3 cells worse than main.</li>
+      <li><b>Medium.</b> Four round-3 mutants survive every Rust test. The Python fixture should kill them, but that was not measured.</li>
+      <li><b>Low.</b> Name matching uses Rust's Unicode tables, and Spark on JDK 17 does not fold letters added after Unicode 13. The carve-out row's second workaround (drop the PARTITION clause) would delete other partitions. PARTITION refusals name the table as an empty string.</li>
+      <li><b>Closed:</b> F-01, F-02, F-03, F-05, F-06, F-07. F-08 measured 38 cells per route, as ruled. F-09: main is 566 red.</li>
+    </ul>
+  </div>
+  <div class="halt-card amber">
+    <h3><span class="chip halt">Halt</span> ENC-1 items 1 and 5, zero commits</h3>
+    <p>Muse lane, 21:55. Item 1 needs a shared clean-up helper wired into 13 places that stage then commit, which is a second seam. Item 5 is a 3-line change that wraps a catalog twice. Questions 71 and 72.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Verdicts by time</h2>
+  <ul class="tl">
+    <li><span class="t">19:58</span><span class="d">#1059 U-3 merged; P2 report sent; acceptance run <span class="mono">38657308459</span> green (11 AWS, dbt gold 1)</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">21:15</span><span class="d">U-9 integrity pins sketch, Opus lane B, concluded at $10.76; PR #1067, CI green, ten questions inside</span><span class="chip hold">Held</span></li>
+    <li><span class="t">21:21</span><span class="d">#1066 four flake cards and the STATUS matrix line, clerk</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">21:49</span><span class="d">#1064 U-2 records; two known flakes re-run, then green</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">21:55</span><span class="d">ENC-1 items 1 and 5, Muse, two questions</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">00:19</span><span class="d">U-6 round 3, Opus lane A, $26.52, 12 commits; stopped on two questions my brief raised. I ruled both on the leans, provisionally (question 77)</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">00:41</span><span class="d">#1062 CI green on <span class="mono">5b97a250</span> after I merged main <span class="mono">304bc4e7</span> (STATUS.md conflict only)</span><span class="chip pass">Green</span></li>
+    <li><span class="t">02:15</span><span class="d">U-6 re-verifier, Opus lane B, $10.64</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">02:39</span><span class="d">#1068 flake card for <code>test_stack_is_linear_in_columns</code> (exponent 1.128 against 1.1), clerk</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">—</span><span class="d">U-1 did not open: nothing merged before 02:00 (ruling 64). U-11 held to stay under the ceiling. ENC-1's verifier not needed.</span><span class="chip hold">Waits</span></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Spend</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Lane</th><th>Runs</th><th style="text-align:right">Opus $</th></tr></thead>
+    <tbody>
+      <tr><td>A, builds</td><td>U-6 round 3</td><td class="n">26.52</td></tr>
+      <tr><td>B, sketches and verifiers</td><td>U-9 sketch 10.76, U-6 re-verifier 10.64</td><td class="n">21.40</td></tr>
+      <tr class="total"><td>Overnight</td><td>ceiling $60</td><td class="n">47.92</td></tr>
+      <tr><td>10-14 before 20:50</td><td></td><td class="n">86.79</td></tr>
+      <tr><td>10-14 and overnight</td><td></td><td class="n">134.71</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div><span class="note">Overnight against the $60 ceiling</span><div class="bar"><span style="width:79.9%"></span></div></div>
+  <p class="note">Muse ran three lanes on the subscription: ENC-1 (halt), the flake-cards clerk (#1066) and the stack flake clerk (#1068). No Fable session was used.</p>
+</section>
+
+<section>
+  <h2>Questions 71 to 78</h2>
+
+  <div class="q"><span class="num">71 · ENC-1 item 1, the orphan file a stale handle leaves</span>
+    <p>Only MERGE cleans up staged files today. Closing item 1 means hoisting MERGE's keyed-only sweep into one shared helper and wiring it into 13 sites (append, commit target, six in write options, two overwrite commits, two partition overwrites, overwrite filter). That is a second seam.</p>
+    <ol type="a"><li>Approve the helper, one pin per operation family.</li><li>Do not approve; item 1 stays a dated row.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>.</p></div>
+
+  <div class="q"><span class="num">72 · ENC-1 item 5, guard every registered catalog</span>
+    <p>Wrapping inside <code>Session::register_iceberg_catalog</code> is a 3-line change that kept 311 existing tests green. A catalog the builders already guarded gets wrapped twice, and both layers behave identically. Avoiding the double wrap would break a test that compares a catalog's properties exactly. The no-double-wrap rule came from my brief, not from you.</p>
+    <ol type="a"><li>Approve always-wrap, double wrap allowed.</li><li>Keep wrapping once; change that test.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>.</p></div>
+
+  <div class="q"><span class="num">73 · U-6 after the FAIL</span>
+    <p>Six of nine findings closed. The two failures are narrow: 6 UPDATE cells and 3 VALUES cells are worse than main. Everything else is never-worse apart from the PARTITION carve-out you ruled. You ruled no round 4 and a v2 date re-plan at triage.</p>
+    <ol type="a"><li>One exception round, scoped to the two failures plus Rust pins for the four surviving mutants: each failing shape either stores Spark's value or refuses loudly. Then one re-verifier on those only.</li><li>Keep it parked as ruled; re-plan the v2 date today.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>. U-6 earns the v2 label (standing guidance 1), and the fix space is small. If (a), the round can run on Muse at xhigh with an Opus verifier.</p></div>
+
+  <div class="q"><span class="num">74 · How far F-04 reaches</span>
+    <p>The in-order UPDATE-subquery shapes with <code>WHERE true</code> or <code>IN (…)</code> also write nothing, and main behaves the same. Do those count against "never a success that writes nothing", or only the 6 reordered cells where main refused?</p>
+    <ol type="a"><li>All of them count: the whole statement family stores Spark's value or refuses loudly.</li><li>Only the 6 cells worse than main.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>, the re-verifier's lean too.</p></div>
+
+  <div class="q"><span class="num">75 · Unicode version in name matching</span>
+    <p>You ruled Java's <code>equalsIgnoreCase</code>. Java's answer depends on the JVM's Unicode tables. The oracle runs JDK 17, which does not fold letters added after Unicode 13; JDK 21 does, and agrees with the head.</p>
+    <ol type="a"><li>A dated note on R-016 pinned to JDK 17's answer, no code.</li><li>Change the code to match JDK 17 exactly.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>.</p></div>
+
+  <div class="q"><span class="num">76 · The carve-out row's second workaround</span>
+    <p>The PARTITION carve-out row on the U-6 branch also suggests dropping the PARTITION clause. On an overwrite, that deletes every other partition.</p>
+    <ol type="a"><li>Remove that workaround and keep only "fields in table order".</li><li>Keep it, with a warning.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>, in U-6's next commit.</p></div>
+
+  <div class="q"><span class="num">77 · My two provisional rulings on round 3</span>
+    <p>Q1: 41 cells outside the class (a required nested field 36, INSERT through a WITH CTE 1, UPDATE SET col = (SELECT literal) 3, flat <code>VALUES ('5')</code> into BIGINT 1) answer exactly as main does. The re-verifier confirmed that. I ruled they are not halts under your rule 70. Q2: I accepted the F-05 edit in <code>crates/repark-spark/src/update_cast.rs</code>, outside the order's section 2, because F-05 names that refusal.</p>
+    <ol type="a"><li>Confirm both.</li><li>Overturn one (say which).</li></ol>
+    <p class="lean">Lean: <b>(a)</b>.</p></div>
+
+  <div class="q"><span class="num">78 · The Opus split</span>
+    <p>Overnight, lane B ($21.40) found two regressions the build round missed. Lane A's one round ($26.52) closed six of nine findings and added two cells worse than main on shapes the earlier verifier had named only in part.</p>
+    <ol type="a"><li>Keep two Opus lanes. Lane B stays sketches and verifiers. Builds stay Opus only for design-heavy units (U-1, U-6 first build). Scoped fix rounds go to Muse at xhigh with an Opus verifier. Every build brief requires re-running the last verifier's probes on its own head before hand-back.</li><li>Keep the split as it is.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>.</p></div>
+</section>
+
+<section>
+  <h2>Held for triage</h2>
+  <ul class="tl">
+    <li><span class="t">#1065</span><span class="d">U-5 orders PA-01 to PA-04, docs, CI green. Launch after triage (ruling 69).</span><span class="chip hold">Held</span></li>
+    <li><span class="t">#1067</span><span class="d">U-9 sketch: kill mid-write, unknown outcome, cross-release pin. CI green. Its ten questions come to you as their own block after this one; Q6 flags that the SDK resends a commit whose response was lost three times, a duplicate-append risk.</span><span class="chip hold">Held</span></li>
+    <li><span class="t">#1062</span><span class="d">U-6, parked on the FAIL (question 73).</span><span class="chip fail">Parked</span></li>
+    <li><span class="t">#1048</span><span class="d">Held as before; CI green.</span><span class="chip hold">Held</span></li>
+  </ul>
+  <p class="note">Process slip, reported: at 00:25 I ran a <code>pkill -f</code> whose pattern matched its own shell. It killed only that shell, and I stopped the stray search with the task tool instead. Merged lane clones were removed; disk shows 224 GB free.</p>
+</section>
+</div>
+
+</body>
+</html>
