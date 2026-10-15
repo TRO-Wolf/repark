@@ -113,6 +113,16 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
   The two nested store pins of fold 1 left with the split; the nested pins are the next row.
   pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
+  **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
+  `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
+  `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE
+  insert arm (column list and `INSERT *`), `INSERT OVERWRITE` and `INSERT … BY NAME`, a
+  `timestamp_ns` source into `TIMESTAMP` and a `timestamptz_ns` source into `TIMESTAMP_NTZ`,
+  format versions 2 and 3, partitioned by a constant: 64 cells. The expected value is plain
+  `INSERT`'s answer in the same America/New_York session, read back in the test, and that
+  answer must differ from plain `INSERT` in a UTC session. The verify's mutants M2 (the MERGE
+  insert arm reads the wall as UTC) and M10 (the wall is not localised) each red it.
+  pins: ice-tsns-floor-doors-1/C-015
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,

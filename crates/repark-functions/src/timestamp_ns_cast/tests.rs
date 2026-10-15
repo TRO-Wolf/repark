@@ -196,7 +196,12 @@ fn narrowing_floors_instants_to_microseconds() {
         ])
         .with_timezone("UTC"),
     );
-    let out = narrow(&instants, Tz::from_str("America/New_York").unwrap()).unwrap();
+    let out = store_micros(
+        &instants,
+        &narrowed_type(),
+        Tz::from_str("America/New_York").unwrap(),
+    )
+    .unwrap();
     assert_eq!(
         out.data_type(),
         &DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC")))
@@ -212,9 +217,14 @@ fn narrowing_localizes_walls_in_the_session_zone() {
     let walls: ArrayRef = Arc::new(datafusion::arrow::array::TimestampNanosecondArray::from(
         vec![Some(1_767_323_045_123_456_789), Some(-1)],
     ));
-    let utc = narrow(&walls, Tz::from_str("UTC").unwrap()).unwrap();
+    let utc = store_micros(&walls, &narrowed_type(), Tz::from_str("UTC").unwrap()).unwrap();
     assert_eq!(micros(&utc), vec![Some(1_767_323_045_123_456), Some(-1)]);
-    let new_york = narrow(&walls, Tz::from_str("America/New_York").unwrap()).unwrap();
+    let new_york = store_micros(
+        &walls,
+        &narrowed_type(),
+        Tz::from_str("America/New_York").unwrap(),
+    )
+    .unwrap();
     assert_eq!(
         micros(&new_york),
         vec![Some(1_767_341_045_123_456), Some(17_999_999_999)]
@@ -269,10 +279,20 @@ fn values_without_ns_columns_are_left_alone() {
 fn narrowing_a_microsecond_input_keeps_its_ticks() {
     let instants: ArrayRef =
         Arc::new(TimestampMicrosecondArray::from(vec![Some(-1), None]).with_timezone("UTC"));
-    let out = narrow(&instants, Tz::from_str("America/New_York").unwrap()).unwrap();
+    let out = store_micros(
+        &instants,
+        &narrowed_type(),
+        Tz::from_str("America/New_York").unwrap(),
+    )
+    .unwrap();
     assert_eq!(micros(&out), vec![Some(-1), None]);
     let walls: ArrayRef = Arc::new(TimestampMicrosecondArray::from(vec![Some(-1)]));
-    let out = narrow(&walls, Tz::from_str("America/New_York").unwrap()).unwrap();
+    let out = store_micros(
+        &walls,
+        &narrowed_type(),
+        Tz::from_str("America/New_York").unwrap(),
+    )
+    .unwrap();
     assert_eq!(micros(&out), vec![Some(17_999_999_999)]);
 }
 

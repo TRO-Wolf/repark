@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-10. **Filed by:** the v1.5.4 docs lane (Claude Haiku 5.5), from the owner's ruling of 2026-10-10.
 
-**Status:** open. Target not assigned.
+**Status:** build round 1 landed 2026-10-14 on `fix/write-body-carriers-1` (refusal plus pins); `EXPLAIN ANALYZE` and `PREPARE` / `EXECUTE` measured unchanged.
 
 **Related:** the statement walk in `executed_writes` (`crates/repark-spark/src/router/nested_ns.rs`),
 which card ICE-TSNS-NESTED-1 records as the walk the nested unit must keep:

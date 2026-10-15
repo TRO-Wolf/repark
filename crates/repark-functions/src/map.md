@@ -1106,6 +1106,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`. pins: types-1/C-006
+- `timestamp_ns_cast.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** `store_micros(array,
+  target, zone)` is the one function that makes the tick when a timestamp is stored or cast into a
+  microsecond `TIMESTAMP` or `TIMESTAMP_NTZ`. It decides by source type, target type and session
+  zone, never by a value: a nanosecond source floors (`div_euclid`); a naive source into an instant
+  target is localised in the session zone; an instant source into a naive target is shifted to the
+  session wall (`timestamp_ltz_ntz::unlocalize_to_walls`); the same domain passes through. A source
+  that is not nanoseconds keeps the Arrow cast it had, so no microsecond-source cell moves. It
+  replaced `narrow`; its callers are `__repark_narrow_timestamp_ns__` and the `Timestamp` arm of
+  `timestamp_ltz_ntz::ntz_single`. Why: into `TIMESTAMP_NTZ` the old arm truncated toward zero
+  (`-1 ns` stored `0`), and the doors decided the tick in more than one place.
+  pins: ice-tsns-floor-doors-1/C-006, C-009
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
   `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a
   top-level `timestamptz_ns` column, as the naive kernel is for `timestamp_ns`. Its return
@@ -1234,6 +1245,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pass-through subquery nests, so `from_utc_timestamp` / `to_utc_timestamp` /
   `date_trunc` cells store the session wall again; the wrap skips an
   already-wrapped expression. pins: ntz-1/C-006
+- `timestamp_ltz_ntz.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the `Timestamp` arm of
+  `ntz_single` hands every timestamp source to `timestamp_ns_cast::store_micros` with the
+  `TIMESTAMP_NTZ` type; its two Arrow casts are gone, and `unlocalize_to_walls` is `pub(crate)`
+  for `store_micros`. A nanosecond value before 1970 with digits below the microsecond floors on
+  every NTZ door and in the read `CAST(… AS TIMESTAMP_NTZ)` (`-1 ns` is `-1 µs`; it was `0`).
+  pins: ice-tsns-floor-doors-1/C-009
 - `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
   `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
   parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;

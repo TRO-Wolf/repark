@@ -33,6 +33,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-004) are recorded. The gate, the temporal `nvl` rewrite and written casts
   stay OPEN (C-005..C-007). No product code.
   `risk_tier: standard`. Branch `test/ice-tsns-coercion-1-slice-0`.
+- [ice-tsns-floor-doors-1-ledger.md](ice-tsns-floor-doors-1-ledger.md) —
+  **ICE-TSNS-FLOOR-DOORS-1 step 0 (2026-10-14), parity row R-009:** measurement
+  only on main `018d0efd`, no product code. The door matrix over nine doors,
+  two sources, two microsecond targets, two versions and three zones is
+  recorded with rule-derived references (C-001); TIMESTAMP splits append-class
+  EQUAL against four overwrite doors (C-002), NTZ truncates on every door
+  (C-003), the 72 registry cells reproduce collapsed (C-004); the seam list
+  with EXPLAIN pastes counts three narrowing points (C-005), so the
+  more-than-one-seam halt fires (C-006 OPEN); scope and non-measurement stated
+  (C-007). `risk_tier: standard`. Branch `fix/ice-tsns-floor-doors-1`.
+  pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
   `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
@@ -2406,6 +2417,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixed) (C-004). `risk_tier: standard`. Branch
   `test/parity-live-infra-2`.
   pins: parity-live-infra-2/C-001, C-002, C-003, C-004
+- [write-body-carriers-1-ledger.md](write-body-carriers-1-ledger.md) —
+  **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** measurement only, no product
+  code. Spark 4.1.2 refuses all 20 CTAS-with-write-body cells at parse and
+  moves nothing (C-001); main's 40 CTAS cells commit the inner write then fail
+  on 24, refuse already-exists on 10 and the MERGE body on 6, identically on
+  format versions 2 and 3 (C-002); the 14 wrapper cells run their write except
+  EXPLAIN ANALYZE of MERGE (C-003). **Build round 1 (2026-10-14):** the CTAS
+  arm refuses the four write-body kinds with Spark's text before any write
+  (C-004); the ANSI door already refuses pre-commit and is untouched (C-005).
+  `risk_tier: standard`. Branch `fix/write-body-carriers-1`.
 - [ice-spark-cross-read-1-ledger.md](ice-spark-cross-read-1-ledger.md) —
   **ICE-SPARK-CROSS-READ-1 (2026-10-14):** the cross-read helper (C-001),
   the local leg over the MOR, replace-twice and v3 scenarios with four

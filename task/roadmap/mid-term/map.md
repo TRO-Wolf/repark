@@ -442,6 +442,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [v1-5-3-release-notes-2026-10-07.md](v1-5-3-release-notes-2026-10-07.md) — **v1.5.3 release notes (2026-10-07):** the notes for the third patch on 1.5.0, from `d0c50405` (v1.5.2) to `392f2350`: SOURCE-URL-REDACT-1, -1-FN and -2, ATTR-ID-1 with its ruled release note and the STAMP-2 gate record (1.0812), the TA single-series slices S0 to S3, the ANSI -0.0 division, GROWN-STACK-GATE-1, the connect and micro-batch groundwork that is not exposed, and the rerun matrix.
 - [v1-5-4-release-notes-2026-10-10.md](v1-5-4-release-notes-2026-10-10.md) — **v1.5.4 release notes (2026-10-10):** the notes for the fourth patch on 1.5.0, after v1.5.3 (`7a8fcf1a`): the cross-join condition fix (#1010), the pyarrow floor 25.0.1 (#1015), `COUNT(*)` over the changelog, incremental and lineage readers (#1017), the nanosecond wall on every write door with its three behaviour changes (#1018, R-007), the `encryption.key-id` refusal and its residue (#1019, ENC-1), the SQL door's `timestamp_*` family (#1012, merging), the known issues carried to v1.5.5. The tag, PyPI and the matrix are `TODO(owner)` or `TODO(orchestrator)`.
 - [v1-5-5-release-notes-2026-10-13.md](v1-5-5-release-notes-2026-10-13.md) — **v1.5.5 release notes (2026-10-13):** the notes for the fifth patch on 1.5.0, after v1.5.4 (`f4e424c1`): the `timestamptz_ns` wall on every write door (R-008), the pandas/polars nanosecond frame door with its three behaviour changes (R-019), `current_date` in the session zone, the Postgres write core with both-door routing, the merge module split, two lock-only dependency bumps, and the known issues carried to v1.5.6. The tag, PyPI and the matrix rerun are `TODO(owner)` or `TODO(orchestrator)`.
+- [v1-5-6-release-notes-draft.md](v1-5-6-release-notes-draft.md) — **v1.5.6 release notes (draft):** collects one line per stored-value change as the units of the 1.5.6 cycle land, written for a reader who will not open the registry. First lines (ICE-TSNS-FLOOR-DOORS-1, R-009): the overwrite doors read a naive nanosecond wall in the session zone as INSERT does; a nanosecond value before 1970 with digits below the microsecond floors on every door, `TIMESTAMP_NTZ` included; the read `CAST(ns AS TIMESTAMP_NTZ)` floors the same way. Tables already written keep their values. The release PR edits it into the dated notes.
 - [v1-5-3-card-2026-10-04.md](v1-5-3-card-2026-10-04.md) — **card v1.5.3 (2026-10-04):** the third patch on 1.5.0, from main after `d0c50405`. Unit PARITY-LIVE-STOP-1 (clerk grade, not a release gate): no test stops the shared live-oracle context. The nightly `parity-live` run has been red since 2026-09-16 and cascaded on 09-19; it has 162 failed and 7,565 guard errors on `3f067bee`. The card records the measured history, more than one stopper, and the out-of-scope failures. The ATTR-ID-1 stack is not scheduled here. **SOURCE-URL-REDACT-1 (2026-10-06, security, release item):** a password inside a URL- or DSN-shaped source or catalog property value is masked on every display; the card carries the Security release-note line. Fold 2 (2026-10-06): the verifier's findings closed, a corpus pin, and the follow-up row SOURCE-URL-REDACT-1-FN (the `repark-functions` knob refusals, done in this PR: the echoed value is masked, no new crate edge). Fold 3 (2026-10-06): the re-verify's findings closed (raw `getDatabase`, storage paths as Spark shows them, Spark's key rule on every property display, TNS, multi-line documents). **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the row names the general fix (masked message parameters, scrubbed cause chain, credential-shaped chain cut, registered option doors). **Readiness review 2026-10-09 (docs only):** a dated section under PARITY-LIVE-STOP-1 names the hard-coded `/tmp/sparkenv` path in seven test modules, the Hadoop race scan, the fnp8 shape pins and the compat smoke TIME cells; the unit stays closed.
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
 - [cast-overflow-in-table-insert-1.md](cast-overflow-in-table-insert-1.md) — **CAST-OVERFLOW-IN-TABLE-INSERT-1 card (2026-09-28):** an out-of-range fractional store into an integer column refuses `CAST_OVERFLOW_IN_TABLE_INSERT`, as Spark does. It is in flight as PR #891 (v1.5.2).
@@ -806,7 +807,7 @@ declines it (a dated ruling in the intake, then the archive).
   R-011). The release note must say that nested NTZ values written by INSERT before the fix hold the UTC wall. Sibling:
   ICE-TSNS-NESTED-1.
 - [write-body-carriers-1-card-2026-10-10.md](write-body-carriers-1-card-2026-10-10.md) — **card
-  WRITE-BODY-CARRIERS-1 (2026-10-10, open, target not assigned):** owner ruling 2026-10-10 that `CREATE [OR REPLACE] TABLE
+  WRITE-BODY-CARRIERS-1 (2026-10-10, build round 1 landed 2026-10-14):** owner ruling 2026-10-10 that `CREATE [OR REPLACE] TABLE
   z AS INSERT INTO t ...` refuses at parse, as Spark does; today it commits the inner INSERT and then fails with
   `UInt64 is not supported`. Measures Spark 4.1.2 on the CTAS shape before the refusal lands. `EXPLAIN ANALYZE <write>`
   and `PREPARE` / `EXECUTE` run the write body, documented with no parity claim. Records 36 of 48 top-level
@@ -827,3 +828,18 @@ declines it (a dated ruling in the intake, then the archive).
   NS-NESTED-PANDAS-1 (2026-10-13, open, unscheduled, severity S0 on main):** nanosecond
   values inside struct and map fields returned from `applyInPandas` (parity row R-020).
   Cells from the #1047 verdict and ledger; the array door itself is NS-ARRAY-FLOOR-1.
+- [struct-case-twin-1-card-2026-10-14.md](struct-case-twin-1-card-2026-10-14.md) — **card
+  STRUCT-CASE-TWIN-1 (2026-10-14, open, unscheduled, not in the closeout):** a BY NAME
+  struct write whose source carries two fields differing only in letter case stores
+  `[[1,10,20],[2,1,2]]` where Spark 4.1.2 refuses
+  `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
+  R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
+  case twins already covered by ID-1a.
+- [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
+  **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
+  carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a
+  nanosecond leaf in a struct, list or map source, into a microsecond `TIMESTAMP` or
+  `TIMESTAMP_NTZ` leaf and read its wall in the session zone, the rule of R-009 (parity row
+  R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
+  #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
+  `timestamp_ns` target leaf.

@@ -3320,21 +3320,32 @@ still open is `isModifiable`.
   conform no longer skips zoned targets, and the zoned kernel may answer NULL where the naive
   one may. Ledger `task/ledgers/staging/ice-tstzns-wall-1-ledger.md`.
 
-### ICE-TSNS-SQL-1-R-009 — OPEN (measured 2026-10-09): a nanosecond source into a microsecond column truncates toward zero on some doors
+### ICE-TSNS-SQL-1-R-009 — FIXED 2026-10-14 (ICE-TSNS-FLOOR-DOORS-1): a nanosecond source into a microsecond column floors and reads the session wall on every door
 
-- **repark** — into a microsecond `TIMESTAMP` column, `INSERT OVERWRITE`, MERGE insert,
-  `overwritePartitions` and `insertInto(overwrite=True)` store a `timestamp_ns` or
-  `timestamptz_ns` value truncated toward zero (`-1 ns` stores `0 µs`) and read a wall as
-  UTC, where INSERT floors (`-1 µs`) and reads a wall in the session zone: 36 cells on each
-  format version, UTC included. Into a `TIMESTAMP_NTZ` column every door, INSERT included,
-  truncates a `timestamp_ns` value toward zero.
+- **repark** — into a microsecond `TIMESTAMP` or `TIMESTAMP_NTZ` column every measured write door
+  now stores what INSERT stores into `TIMESTAMP`: the floor (`-1 ns` stores `-1 µs`), a naive wall
+  localised in the session zone, an instant shifted to the session wall for `TIMESTAMP_NTZ`. One
+  function makes the tick (`timestamp_ns_cast::store_micros`), deciding by source type, target
+  type and session zone; the staged doors reach it through the two router predicates of
+  `write/ntz_store.rs`. Before (main `293896ce`): into `TIMESTAMP`, `INSERT OVERWRITE`, the MERGE
+  insert arm, `overwritePartitions` and `insertInto(overwrite=True)` truncated toward zero and read
+  a naive wall as UTC (36 cells on each format version over six doors, the three MERGE insert
+  spellings counted apart, UTC included). The door count is restated: four more doors did the
+  same (INSERT … BY NAME, INSERT OVERWRITE `BY NAME`, with a column list and with a static
+  `PARTITION`), ten in all of the fixture's twenty. Into `TIMESTAMP_NTZ` all twenty, INSERT
+  included, truncated toward zero, and the read `CAST(ns AS TIMESTAMP_NTZ)` answered `0` for
+  `-1 ns`; both floor now. Microsecond sources and INSERT's stored value into `TIMESTAMP` do not
+  move. Tables already written keep their values.
 - **Apache Spark** — cannot read the source types. *(oracle: documented — ruling Q-21c-8
   floors a nanosecond value narrowed to microseconds.)*
-- **Pin** — the recorded cells in `ice_tsns_merge_wall_1_main.json`, held as they are by the
-  control test of `test_ice_tsns_merge_wall_1.py`.
-- **Rationale** — OPEN, dated 2026-10-09. Only values before the epoch with digits below
-  the microsecond differ by the truncation. Microsecond targets were a control of
-  ICE-TSNS-MERGE-WALL-1. Ledger question Q2.
+- **Pin** — `python/repark/tests/test_ice_tsns_floor_doors_1.py` (246 tests, 26928 ticks; red
+  on main on 4400 ticks; every expected tick is the recorder's rule), and the nanosecond control
+  cells of `test_ice_tsns_merge_wall_1.py` held to the same rule (94 of main's cells moved).
+- **Rationale** — FIXED 2026-10-14 by the owner's go of that day on the one-chokepoint sketch
+  (`task/wo/ice-tsns-floor-doors-1/sketch.md`). The NTZ change moves INSERT itself, by Q-21c-8.
+  The release note carries one line per stored-value change
+  (`task/roadmap/mid-term/v1-5-6-release-notes-draft.md`). Ledger
+  `task/ledgers/staging/ice-tsns-floor-doors-1-ledger.md`.
 
 ### ICE-TSNS-SQL-1-R-010 — OPEN (measured 2026-10-09): `UPDATE` and `DELETE` do not lower the nanosecond cast spellings
 
@@ -3782,6 +3793,139 @@ still open is `isModifiable`.
   (target 1.5.6, a redesign that replaces draft PR #1047); nested struct and map fields:
   NS-NESTED-PANDAS-1. Measured cells from the #1047 verdict and from the ledger of
   `fix/ns-array-apply-in-pandas-refuse-1` (verifier round names, not paths, by the clerk rule).
+
+### ICE-TSNS-SQL-1-R-021 — OPEN (measured 2026-10-14): a BY NAME struct write with case-twin source fields stores where Spark refuses
+
+- **repark** — `INSERT INTO t BY NAME SELECT 2 AS id, named_struct('a', 1, 'A', 2) AS st`
+  into `(id INT, st STRUCT<a: INT, b: INT>)`, format v2, seed `(10,20)`, stores
+  `[[1,10,20],[2,1,2]]` on main: the source struct carries two fields differing only in
+  letter case and both land, no refusal.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses: `AnalysisException:
+  [INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME] Cannot write incompatible data for
+  the table `ora`.`ns`.`step0_twins`: Ambiguous column name in the input data `st`.`a`.
+  SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  Hadoop catalog, 2026-10-14, U-6 step 0.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. A BY NAME write whose source struct carries two
+  fields differing only in case is stored; Spark refuses the ambiguous input field.
+  Next step: [STRUCT-CASE-TWIN-1](../task/roadmap/mid-term/struct-case-twin-1-card-2026-10-14.md)
+  (owner ruling, question 37, 2026-10-14). Measured in ICE-STRUCT-PAIRING-1 step 0 (U-6),
+  cell `by_name_case_twin_fields`.
+
+### ICE-TSNS-SQL-1-R-022 — OPEN (measured 2026-10-14): a merge-schema write with a surplus struct field stores where Spark refuses
+
+- **repark** — `writeTo(t).option("merge-schema","true")` with a surplus struct field `c`
+  into `(id INT, st STRUCT<a: INT, b: INT>)`, format v2, seed `(10,20)`, stores
+  `[[1,10,20],[2,1,2]]` on main: the extra field is dropped, no refusal.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses: `AnalysisException:
+  [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for
+  the table `ora`.`ns`.`step0_msge`: Cannot write extra fields `c` to the struct `st`.
+  SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  Hadoop catalog, 2026-10-14, U-6 step 0.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. A surplus struct field under merge-schema is
+  dropped; Spark refuses the extra field. Home: ICE-STRUCT-PAIRING-1 (U-6): the
+  EXTRA_STRUCT_FIELDS class is already inside that unit (owner ruling, question 37,
+  2026-10-14) — one cell on U-6's head decides it; if U-6's single seam closes it, it
+  closes in U-6, otherwise it gets a card then. No card in this change. The write
+  statement text is not recorded in the step-0 JSON; the measured door was
+  `writeTo(t).option("merge-schema","true")` on both engines. Measured in
+  ICE-STRUCT-PAIRING-1 step 0 (U-6), cell `merge_schema_surplus_struct_field`.
+
+### ICE-TSNS-SQL-1-R-023 — OPEN (measured 2026-10-14): a write body below the top of a CTAS, a view or a cached table refuses with main's text, not Spark's
+
+- **repark** — a write body below the top of a CTAS, a view body or a cached table body
+  refuses on main; one line per shape, the statement is the representative cell and the
+  class and first line are main's exactly as recorded; no table moved in any of the
+  fourteen cells (`moved` is empty on main):
+| Shape | Representative statement | Main class | Main first line | Table moved |
+|---|---|---|---|---|
+| set-operation arm | `CREATE TABLE wbc1.ns.z_d_setop_right_paren_insert AS SELECT * FROM wbc1.ns.t_d_setop_right_paren_insert UNION ALL (INSERT INTO wbc1.ns.t_d_setop_right_paren_insert VALUES (3, 'c'))` | `UnsupportedOperationException` | `This feature is not implemented: Query INSERT INTO wbc1.ns.t_d_setop_right_paren_insert VALUES (3, 'c') not implemented yet` | no |
+| CTE member | `CREATE TABLE wbc1.ns.z_d_cte_insert AS WITH c AS (INSERT INTO wbc1.ns.t_d_cte_insert VALUES (3, 'c')) SELECT * FROM c` | `UnsupportedOperationException` | `This feature is not implemented: Query INSERT INTO wbc1.ns.t_d_cte_insert VALUES (3, 'c') not implemented yet` | no |
+| subquery | `CREATE TABLE wbc1.ns.z_d_subq_from_insert AS SELECT * FROM (INSERT INTO wbc1.ns.t_d_subq_from_insert VALUES (3, 'c')) s` | `UnsupportedOperationException` | `This feature is not implemented: Query INSERT INTO wbc1.ns.t_d_subq_from_insert VALUES (3, 'c') not implemented yet` | no |
+| `CREATE VIEW … AS <write>` | `CREATE VIEW wbc1.ns.z_x_view_insert AS INSERT INTO wbc1.ns.t_x_view_insert VALUES (3, 'c')` | `AnalysisException` | `Error during planning: a view body must hold a single query statement` | no |
+| `CACHE TABLE … AS <write>` | `CACHE TABLE zx_cache AS INSERT INTO wbc1.ns.t_x_cache_table_insert VALUES (3, 'c')` | `UnsupportedOperationException` | `This feature is not implemented: Unsupported SQL statement: CACHE TABLE zx_cache AS INSERT INTO wbc1.ns.t_x_cache_table_insert VALUES (3, 'c')` | no |
+- **Apache Spark** — the same shapes refuse with a parse error; one line per shape, the
+  class, condition, SQLSTATE and first line exactly as recorded:
+| Shape | Class | Condition | SQLSTATE | First line |
+|---|---|---|---|---|
+| set-operation arm | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 115)` |
+| CTE member | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 50)` |
+| subquery | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'wbc1': missing ')'. SQLSTATE: 42601 (line 1, pos 72)` |
+| `CREATE VIEW … AS <write>` | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 39)` |
+| `CACHE TABLE … AS <write>` | `ParseException` | `PARSE_SYNTAX_ERROR` | `42601` | `[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601 (line 1, pos 24)` |
+  *(oracle: live PySpark 4.1.2 + Iceberg, 2026-10-14, the scoped verifier of PR #1057.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. Nothing is written on either engine in these
+  shapes: every one of the fourteen cells answers refusal, `moved` is empty and the
+  before and after table states are equal on main and on Spark. The top-level and
+  parenthesised shapes are WRITE-BODY-CARRIERS-1's (PR #1057), outside U-7; this row
+  records only the shapes outside that unit. Owner ruling, question 46, 2026-10-14.
+  Unscheduled; no card in this change.
+
+### ICE-TSNS-SQL-1-R-024 — OPEN (measured 2026-10-14): an encoded or nested nanosecond source truncates into a microsecond column and reads the wall as UTC
+
+- **repark** — a nanosecond source that is dictionary-encoded or run-end-encoded at the
+  top level, or a nanosecond leaf inside a struct, list or map source, written into a
+  microsecond `TIMESTAMP` or `TIMESTAMP_NTZ` leaf, truncates toward zero and reads a
+  naive wall as UTC on every door that stores it, plain `INSERT` included, on U-3's head
+  `faf0267e` and on main alike. One line per measured shape; the value is `-1 ns`
+  (`1969-12-31 23:59:59.999999999`), the stored ticks are microseconds, and the floor
+  rule is what U-3's head stores for the plain `timestamp[ns]` array through `INSERT`
+  (the rule of R-009):
+| Source shape | Arrow source | Target column | Session zone | Head stores | Floor rule stores | Doors that store | Main |
+|---|---|---|---|---|---|---|---|
+| dictionary-encoded | `dictionary<int32, timestamp[ns]>` | `TIMESTAMP` | America/New_York | `0` (`1970-01-01 00:00:00` UTC) | `17999999999` (`1970-01-01 04:59:59.999999` UTC) | all into `TIMESTAMP` (224 cells); all but MERGE into `TIMESTAMP_NTZ` (176) | same on main |
+| run-end-encoded | `run_end_encoded<int32, timestamp[ns]>` | `TIMESTAMP` | America/New_York | `0` | `17999999999` | 14 of 18, 112 cells | same on main |
+| struct leaf | `struct<t: timestamp[ns]>` | `STRUCT<t: TIMESTAMP>` | America/New_York | `0` | `17999999999` | 18 of 18, 144 cells | same on main |
+| list element | `list<timestamp[ns]>` | `ARRAY<TIMESTAMP>` | America/New_York | `0` | `17999999999` | 14 of 18, 112 cells | same on main |
+| map value | `map<string, timestamp[ns]>` | `MAP<STRING, TIMESTAMP>` | America/New_York | `0` | `17999999999` | 18 of 18, 144 cells | same on main |
+| struct leaf, timezone-aware | `struct<t: timestamp[ns, tz=UTC]>` | `STRUCT<t: TIMESTAMP_NTZ>` | America/New_York | `0` (the UTC wall) | `-18000000001` (`1969-12-31 18:59:59.999999`) | 18 of 18, 144 cells | same on main |
+  Cell counts span both zones (UTC, America/New_York), format v2 and v3, and both
+  microsecond targets; every storing door of a shape stores one value list per zone and
+  version. In a UTC session, into `TIMESTAMP_NTZ` from a naive source and into
+  `TIMESTAMP` from the timezone-aware source, only the truncation shows: 8 of the 26
+  measured values differ from the floor (`-1`, `-999`, `-1,001` and `-1,999 ns`,
+  `1969-12-31 18:59:59.999999999`, and the 64-bit minimum, plus 1 and plus 999 ns),
+  e.g. `-1 ns` stores `0` where the floor is `-1`. In America/New_York into `TIMESTAMP`
+  from a naive source, or into `TIMESTAMP_NTZ` from the timezone-aware one, 25 of 26
+  differ (all but `NULL`). The map key and the timezone-aware list, map and encoded
+  shapes were not measured.
+  **Refusals where `INSERT` stores:** a dictionary-encoded source into `TIMESTAMP_NTZ` is
+  refused by the four MERGE doors (insert, insert `*`, update, update `*`) with
+  `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve "CAST(v AS TIMESTAMP_NTZ)"
+  due to data type mismatch: cannot cast "Dictionary(Int32, Timestamp(ns))" to
+  "TIMESTAMP_NTZ". SQLSTATE: 42K09` (the `UPDATE SET v = …` arm names `dictns` for `v`), 48 cells;
+  into `TIMESTAMP` the same doors store. A run-end-encoded or list source is refused by
+  the same four MERGE doors into either target with ``MERGE INSERT cannot store-assign
+  column `v`: source type … is not ANSI-store-assignable to target type …`` (``MERGE
+  UPDATE SET`` on the update arms), 32 cells each. Same on main.
+- **The pin, reconciled** — `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing`
+  (`crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`, rows R-014 and R-015) is
+  about a TARGET column whose type holds a `timestamp_ns` leaf: nine shapes (struct,
+  struct in struct, array of struct, array, struct of array, map value, map key, map of
+  struct, a struct with one field renamed) through seventeen doors ("insert values",
+  "insert select", "insert with a column list", "insert by name", "insert by name, star",
+  "insert overwrite", "insert overwrite values", "replace where", "merge insert", "merge
+  insert star", "merge update", "merge update star", "update where", "update with no
+  where", "insert select, an array element", "insert select from a temporary view",
+  "insert select from a subquery") in America/New_York and Asia/Kolkata, each refused by
+  name with nothing written. This row is about a SOURCE whose nanosecond value is
+  encoded or nested, written into a microsecond target leaf: R-015's gate reads the
+  target's type, never the source, so it does not fire, and the doors store the
+  truncated value (`INSERT … SELECT`, a column list, `BY NAME`, `INSERT OVERWRITE` plain,
+  with a column list, `BY NAME` and dynamic, `REPLACE WHERE`, the four MERGE arms where
+  not refused above, and the six DataFrame writers). Both hold at once: the verifier's
+  control wrote the same struct, list and map sources into `timestamp_ns` leaves and
+  every door took R-015's refusal, on head and on main.
+- **Apache Spark** — has no `timestamp_ns` type. *(oracle: none.)*
+- **Pin** — none.
+- **Rationale** — OPEN, dated 2026-10-14. Measured by the scoped verifier of PR #1059
+  (ICE-TSNS-FLOOR-DOORS-1, U-3), finding F4: 1,080 of 1,080 nested cells and every
+  dictionary-encoded cell identical on head and main. The top-level plain-array shapes
+  are ICE-TSNS-FLOOR-DOORS-1's (R-009, PR #1059). Owner ruling, question 53, 2026-10-14:
+  a v1.5.7 nanosecond carve-out with card NS-ENCODED-NESTED-FLOOR-1
+  (`task/roadmap/mid-term/ns-encoded-nested-floor-1-card-2026-10-14.md`).
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 

@@ -104,7 +104,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split position-delete, rewrite, and scan-shape scenario families.",
     ),
     "crates/repark-iceberg/src/write/overwrite.rs": (
-        1053,
+        1049,
         "Overwrite planning and commit behavior share one module.",
         "Extract predicate and file-selection logic from commit assembly.",
     ),

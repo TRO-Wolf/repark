@@ -457,9 +457,13 @@ impl ScalarUDFImpl for NarrowTimestampNs {
         let zone =
             parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
         match args.args.first() {
-            Some(ColumnarValue::Array(array)) => Ok(ColumnarValue::Array(narrow(array, zone)?)),
+            Some(ColumnarValue::Array(array)) => Ok(ColumnarValue::Array(store_micros(
+                array,
+                &narrowed_type(),
+                zone,
+            )?)),
             Some(ColumnarValue::Scalar(scalar)) => {
-                let narrowed = narrow(&scalar.to_array()?, zone)?;
+                let narrowed = store_micros(&scalar.to_array()?, &narrowed_type(), zone)?;
                 Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
                     &narrowed, 0,
                 )?))
@@ -475,10 +479,15 @@ fn narrowed_type() -> DataType {
     DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::<str>::from("UTC")))
 }
 
-fn narrow(array: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
-    let DataType::Timestamp(unit, source_zone) = array.data_type() else {
+pub(crate) fn store_micros(array: &ArrayRef, target: &DataType, zone: Tz) -> Result<ArrayRef> {
+    let (
+        DataType::Timestamp(unit, source_zone),
+        DataType::Timestamp(TimeUnit::Microsecond, target_zone),
+    ) = (array.data_type(), target)
+    else {
         return Err(DataFusionError::Plan(format!(
-            "'{NARROW_TIMESTAMP_NS_NAME}' expects a timestamp, found \"{}\"",
+            "'{NARROW_TIMESTAMP_NS_NAME}' expects a timestamp into microseconds, found \"{}\" \
+             into \"{target}\"",
             array.data_type()
         )));
     };
@@ -487,24 +496,28 @@ fn narrow(array: &ArrayRef, zone: Tz) -> Result<ArrayRef> {
             .as_primitive::<TimestampNanosecondType>()
             .unary(|ticks| ticks.div_euclid(NANOS_PER_MICRO))
     } else {
-        let target = DataType::Timestamp(TimeUnit::Microsecond, source_zone.clone());
-        cast(array.as_ref(), &target)?
+        let same_domain = DataType::Timestamp(TimeUnit::Microsecond, source_zone.clone());
+        cast(array.as_ref(), &same_domain)?
             .as_primitive::<TimestampMicrosecondType>()
             .clone()
     };
-    let micros = if source_zone.is_some() {
-        micros
-    } else {
-        micros.try_unary(|wall| {
-            localize_wall_micros_in_zone(wall, zone).ok_or_else(|| {
-                ArrowError::ComputeError(
-                    "cannot localize zoneless timestamp into session timezone: out of range"
-                        .to_string(),
-                )
-            })
-        })?
-    };
-    Ok(Arc::new(micros.with_timezone("UTC")))
+    match (source_zone, target_zone) {
+        (None, Some(_)) => {
+            let instants: TimestampMicrosecondArray = micros.try_unary(|wall| {
+                localize_wall_micros_in_zone(wall, zone).ok_or_else(|| {
+                    ArrowError::ComputeError(
+                        "cannot localize zoneless timestamp into session timezone: out of range"
+                            .to_string(),
+                    )
+                })
+            })?;
+            Ok(Arc::new(instants.with_timezone_opt(target_zone.clone())))
+        }
+        (Some(_), None) => {
+            crate::timestamp_ltz_ntz::unlocalize_to_walls(&(Arc::new(micros) as ArrayRef), zone)
+        }
+        _ => Ok(Arc::new(micros.with_timezone_opt(target_zone.clone()))),
+    }
 }
 
 pub(crate) fn conform_values_timestamp_columns(plan: LogicalPlan) -> Result<LogicalPlan> {
