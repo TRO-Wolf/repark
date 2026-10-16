@@ -83,26 +83,8 @@ fn refuse_update_from_subquery(plan: &LogicalPlan) -> DfResult<()> {
     Ok(())
 }
 
-fn wraps_a_stored_value(name: &str) -> bool {
-    name == "arrow_cast" || name.starts_with("__repark_")
-}
-
-fn assigns_a_subquery(mut expr: &Expr) -> bool {
-    loop {
-        expr = match expr {
-            Expr::Alias(alias) => alias.expr.as_ref(),
-            Expr::Cast(cast) => cast.expr.as_ref(),
-            Expr::TryCast(cast) => cast.expr.as_ref(),
-            Expr::ScalarFunction(function) if wraps_a_stored_value(function.name()) => {
-                match function.args.first() {
-                    Some(value) => value,
-                    None => return false,
-                }
-            }
-            Expr::ScalarSubquery(_) => return true,
-            _ => return false,
-        };
-    }
+fn assigns_a_subquery(expr: &Expr) -> bool {
+    expr.contains_scalar_subquery()
 }
 
 #[cfg(test)]
