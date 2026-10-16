@@ -920,6 +920,8 @@ declines it (a dated ruling in the intake, then the archive).
   disjoint keys with no target-only conjunct through a barrier (ledger clause C-012 of
   the ice-occ-scoped-1 ledger); two winners fit a check-then-commit timing window.
   Open question: product race or test assumption. Unmeasured until N repeated runs.
+  Seen again 2026-10-16 as `[3-snapshot-dataframe]` (PR #1085 CI, 2 of 8); on the
+  orchestrator's list as a U-9 drill cell (an owner-relayed suggestion, not a ruling).
 - [mtime-metadata-pick-1-card-2026-10-14.md](mtime-metadata-pick-1-card-2026-10-14.md) — **card
   MTIME-METADATA-PICK-1 (2026-10-14, open, not scheduled):** every remaining file under
   `python/repark/tests/` that orders or picks Iceberg metadata files by `st_mtime` /
