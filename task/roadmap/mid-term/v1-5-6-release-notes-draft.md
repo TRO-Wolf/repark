@@ -22,6 +22,39 @@ the release PR to edit into the notes.
 - **The read `CAST(ns AS TIMESTAMP_NTZ)` floors the same way.** `CAST` of a `timestamp_ns` or
   `timestamptz_ns` value to `TIMESTAMP_NTZ` in a query answers `-1 µs` for `-1 ns`, where it
   answered `0`, as `CAST(… AS TIMESTAMP)` already did.
+- **A NULL beside a nanosecond value no longer cuts it to microseconds
+  (ICE-TSNS-TYPE-PLANNER-1, R-017).** `coalesce(ns, NULL)`, `nvl`, `array(ns, NULL)`,
+  `CASE … ELSE NULL`, `if(…, ns, NULL)` and the other positions that join two values keep
+  all nine fraction digits and the nanosecond type, so `INSERT … SELECT coalesce(ns, NULL)`
+  into a `timestamp_ns` column stores `…123456789` where it stored `…123456000`.
+- **A microsecond and a nanosecond timestamp joined in one position take nanoseconds.**
+  `coalesce(ns, TIMESTAMP '…')`, `array(ns, ts)`, `CASE`, `UNION`, comparisons and
+  `aggregate(array(ns), CAST(NULL AS TIMESTAMP), …)` answer `timestamp[ns]` with the
+  nanosecond digits kept, where they answered microseconds.
+- **A written `CAST(ns AS TIMESTAMP)` floors to microseconds on every door.** `UPDATE T SET
+  v = CAST(c AS TIMESTAMP)` with no `WHERE` into a `timestamp_ns` column stores `-1000` for
+  `-1 ns`, where it kept `-1`.
+- **`UPDATE` and `DELETE` with a `CAST('…' AS timestamp_ns)` or `timestamptz_ns` literal
+  now store (R-010).** They raised `Unsupported SQL type timestamp_ns`.
+- **`sequence` over a nanosecond column answers nanoseconds.** It raised `ListArray
+  expected data type Timestamp(ns)…`.
+- **The Rust ANSI door (`repark_sql::AnsiDialect`) types `TIMESTAMP` as the naive
+  microsecond wall and `TIMESTAMPTZ` as the microsecond instant.** `CAST('…789' AS
+  TIMESTAMP)` answers `timestamp[us]` without the last three digits, where it answered
+  `timestamp[ns]`.
+- **The Python `repark.sql()` callable types `TIMESTAMP` as the naive microsecond wall and
+  `TIMESTAMPTZ` as the microsecond instant.** `CAST('2024-01-02 03:04:05.123456789' AS
+  TIMESTAMP)` answers `timestamp[us]` `…123456`, where it answered `timestamp[ns]`
+  `…123456789`; `CAST(DATE '2020-01-01' AS TIMESTAMP)` answers `timestamp[us]`.
+- **An `INT`, `SMALLINT` or `TINYINT` cast to `TIMESTAMP` reads seconds, as Spark does.**
+  `CAST(CAST(1 AS INT) AS TIMESTAMP)` answers `1970-01-01 00:00:01`, where it answered
+  `1970-01-01 00:00:00`.
+- **A refusal on the Python door names a timestamp argument `TIMESTAMP`.** `degrees` and
+  `radians` over a timestamp column said `TIMESTAMP_LTZ`; they now say `TIMESTAMP`, as Spark.
+- **A `TIMESTAMP_NTZ` inside an `ARRAY` or `STRUCT` cast target answers.**
+  `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` answers
+  `[2024-01-01 00:00:00]` where it refused `UNSUPPORTED_TIMESTAMP_NTZ`, and `UPDATE … SET
+  int_column = CAST(c AS TIMESTAMP_NTZ)` refuses with Spark's `CANNOT_SAFELY_CAST` text.
 - **A struct value pairs its fields by position on `INSERT`, `REPLACE WHERE` and `insertInto`, as
   Spark does (ICE-STRUCT-PAIRING-1, R-016).** `INSERT INTO t SELECT 1, named_struct('b', 2, 'a', 1)`
   into `st STRUCT<a: INT, b: INT>` now stores `a = 2, b = 1`: the first source field feeds the

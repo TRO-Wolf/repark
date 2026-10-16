@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Morning Board 10-16</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --fg:#16232B; --muted:#5A6B75; --rule:#D5DEE3;
+  --accent:#0E6C88; --accent-soft:#E1EEF3;
+  --ok:#1F7A4D; --ok-soft:#E3F2EA; --warn:#9A6400; --warn-soft:#FBF0D9; --bad:#B03A2E; --bad-soft:#F8E4E1;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
+h2{font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;font-size:.95rem}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0;max-width:68ch}
+.mono,code{font-family:var(--mono);font-size:.86em}
+.sub{color:var(--muted);margin-top:6px}
+section{display:flex;flex-direction:column;gap:14px}
+.chip{display:inline-block;font-family:var(--display);font-weight:600;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.fail{background:var(--bad-soft);color:var(--bad)} .halt{background:var(--warn-soft);color:var(--warn)}
+.pass{background:var(--ok-soft);color:var(--ok)} .hold{background:var(--accent-soft);color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.bad{border-left-color:var(--bad)} .card.amber{border-left-color:var(--warn)} .card.ok{border-left-color:var(--ok)}
+.card ul,.card ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.tl{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.tl li{display:grid;grid-template-columns:62px 1fr auto;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule);align-items:baseline}
+.tl .t{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.86rem}
+.tl .d{min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:600;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+td.n{text-align:right;font-family:var(--mono)}
+tr.total td{font-weight:600;border-bottom:2px solid var(--fg)}
+.q{background:var(--surface);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.q .num{font-family:var(--display);font-weight:700;color:var(--accent)}
+.q ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
+.lean{color:var(--muted)} .lean b{color:var(--fg)}
+.note{color:var(--muted);font-size:.9rem}
+@media (max-width:520px){.tl li{grid-template-columns:52px 1fr}.tl li .chip{grid-column:2}h1{font-size:1.7rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Morning board, 16 October</h1>
+  <p class="sub">Iceberg closeout at 08:00 EDT. Main <span class="mono">60134633</span>. Verdicts by time first, then where each unit stands, today's queue, spend, and the band re-pull. Owner rulings since last night: 111, 114 to 121.</p>
+</header>
+
+<section>
+  <h2>Verdicts overnight, by time</h2>
+  <ul class="tl">
+    <li><span class="t">20:20</span><span class="d">U-1 carry-over fix round (rulings 100–102), $49.25</span><span class="chip pass">Done</span></li>
+    <li><span class="t">20:39</span><span class="d">P2 report for #1062 written (Grok clerk), $0.59</span><span class="chip pass">Done</span></li>
+    <li><span class="t">21:35</span><span class="d">U-5 fix round 1, #1075 to <span class="mono">7582546b</span>, $13.08</span><span class="chip pass">Done</span></li>
+    <li><span class="t">22:18</span><span class="d">U-1 re-pin table (Grok clerk), $3.46</span><span class="chip pass">Done</span></li>
+    <li><span class="t">00:43</span><span class="d">Q84 fork round (lost commit reply), stopped on its Q1; ruled provisionally, then by the owner as 115. $33.79 over two runs</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">01:40</span><span class="d">ENC-1 finishing round, #1071 (Grok), $14.73</span><span class="chip pass">Done</span></li>
+    <li><span class="t">02:16</span><span class="d">Ruling-110 walk: every scalar subquery in UPDATE SET refuses outside the identity path, #1083 (Grok), $14.92</span><span class="chip pass">Done</span></li>
+    <li><span class="t">03:49</span><span class="d">U-5 re-verifier, #1075 at <span class="mono">75d9caec</span>: a glob character in the warehouse path let writes out (RV-01), plus two over-refusals. $9.26. Rulings 114 and 116 gave it one last round</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">05:45</span><span class="d">#1079 merged as <span class="mono">f7b2e7ce</span></span><span class="chip pass">Merged</span></li>
+    <li><span class="t">05:55</span><span class="d">U-1 verifier, #1082 at <span class="mono">bedd799b</span>: every item on ruling 111's checklist met; F-1 (medium) and F-2 (low) became questions 119 and 120. $24.78</span><span class="chip pass">Pass</span></li>
+    <li><span class="t">06:07</span><span class="d">#1080, the server-mode page with the clerk's corrections (ruling 118), merged as <span class="mono">60134633</span></span><span class="chip pass">Merged</span></li>
+    <li><span class="t">06:18</span><span class="d">ENC-1 re-verifier, #1071 at <span class="mono">02c36ef0</span>: a door holding an older view of the table deletes a file the current table uses (R1, high), plus R2 to R4. $13.71. Parked; ruling 121 gives it a redesigned round</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">06:26</span><span class="d">Q84 fork round on ruling 115's rule: a reply lost on a closed connection is "may have been sent", a refused connection is "never sent". Two fork commits, audit clean, nothing pushed. $32.29</span><span class="chip pass">Done</span></li>
+  </ul>
+  <p class="note">The lane watcher was off from 05:56 to 07:11, so the 06:18 and 06:26 hand-backs sat about 50 minutes before I read them. It is back on and covers all four lanes.</p>
+</section>
+
+<section>
+  <h2>Where each unit stands</h2>
+  <div class="grid">
+    <div class="card ok"><h3>U-1 timestamp_ns planner, #1082 <span class="chip hold">Merging</span></h3>
+      <p>Your word "go" came at about 07:15, with 119 (a) and 120 (a). The driver brought the branch up to main (<span class="mono">f83495e9</span>), and CI is re-running. It squash-merges on green. Then the acceptance run, the P2 report, and one clerk docs PR: the two widen-rule cases go into amendment 1's table (119), and the ANSI cast-rounding card gets a dated row (120).</p></div>
+    <div class="card"><h3>110 walk, #1083 <span class="chip hold">Verifying</span></h3>
+      <p>The verifier's draft verdict is PASS, with two info notes: <code>IN (SELECT…)</code> and <code>EXISTS</code> inside a SET value fail with an internal error instead of ruling 90's text, and one CASE shape doesn't parse. When it hands back I check ruling 117's three items. If the metadata proof is missing, the follow-up is already written. Then merge, acceptance, and P2, and 106 opens after that.</p></div>
+    <div class="card amber"><h3>U-5 local-file guard, #1075 <span class="chip halt">Last round</span></h3>
+      <p>Fix round 2 on Opus xhigh has committed the fix (the guard judges where the bytes land, per 114 (b)) and its records. The glob-character pins fail on the old head and pass now. It's running the 13 mutants, then the full suite and the module build. After that comes the re-verifier. A second FAIL parks U-5 for good (116).</p></div>
+    <div class="card bad"><h3>ENC-1 residue, #1071 <span class="chip fail">Parked</span></h3>
+      <p>Per ruling 121: the clean-up deletes only what this attempt wrote; a fresh read of the table is used only for ruling 115's ambiguous outcome; the census becomes a type the compiler checks; five pins, each red today. One round on Opus xhigh, after 106. Not green parks it until v2 and v3 read PRODUCTION.</p></div>
+    <div class="card"><h3>Q84 commit retry (fork) <span class="chip hold">Running</span></h3>
+      <p>Follow-up 2 started at 07:11. It builds ruling 115's outcome table for both catalogs and settles two gaps: a 5xx with an error code the SDK doesn't know, and a dispatch error with no kind. It also pins that the snapshot id checked is the one chosen before sending. The fork push and the rev bump stay yours.</p></div>
+    <div class="card"><h3>U-5 part 1, dbt redaction <span class="chip hold">Running</span></h3>
+      <p>Launched at 07:20 on Opus high in the free slot. A dbt profile mismatch will name the changed keys, never their values (audit PA-01). The order was written for Muse, and Muse isn't available. Python only.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Today's queue, in order</h2>
+  <ol class="card" style="border-left-color:var(--rule)">
+    <li>#1082 merges on green; acceptance run; P2 report; the clerk docs for 119 and 120.</li>
+    <li>#1083: the verifier's hand-back is checked against 117, then merge, acceptance, and P2.</li>
+    <li>106 (UPDATE with a subquery in the WHERE) opens after #1083's P2 report.</li>
+    <li>U-5's re-verifier, as soon as round 2 hands back and CI is green.</li>
+    <li>ENC-1's ruling-121 round, after 106.</li>
+    <li>U-5's CREATE TABLE … LOCATION unit, after U-5 settles.</li>
+  </ol>
+  <p class="note">On Opus Max: the launcher has been capped at xhigh since your 10-15 evening cap. With your go this morning, I plan Max for two lanes: the 106 unit, which is new routing design, and U-5's re-verifier, the last word on that unit. The ENC-1 round stays on xhigh as 121 says.</p>
+</section>
+
+<section>
+  <h2>Spend, 19:45 to 07:30 EDT</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Lane</th><th>Engine</th><th style="text-align:right">USD</th></tr></thead>
+    <tbody>
+      <tr><td>U-1 carry-over fix</td><td>Opus high</td><td class="n">49.25</td></tr>
+      <tr><td>Q84 fork rounds (three runs)</td><td>Opus xhigh</td><td class="n">66.08</td></tr>
+      <tr><td>U-1 verifier</td><td>Opus xhigh</td><td class="n">24.78</td></tr>
+      <tr><td>ENC-1 re-verifier</td><td>Opus xhigh</td><td class="n">13.71</td></tr>
+      <tr><td>U-5 fix round 1</td><td>Opus xhigh</td><td class="n">13.08</td></tr>
+      <tr><td>U-5 re-verifier</td><td>Opus high</td><td class="n">9.26</td></tr>
+      <tr><td>110 walk</td><td>Grok 4.7</td><td class="n">14.92</td></tr>
+      <tr><td>ENC-1 finishing round</td><td>Grok 4.7</td><td class="n">14.73</td></tr>
+      <tr><td>U-1 re-pin, P2 report, #1080 clerk</td><td>Grok 4.7</td><td class="n">4.26</td></tr>
+      <tr class="total"><td>Finished overnight</td><td></td><td class="n">210.07</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Still running and not counted: the 110 verifier, U-5 fix round 2, Q84 follow-up 2, and the dbt unit. Usage: you said this morning there is plenty left. I can't read the meter from here.</p>
+</section>
+
+<section>
+  <h2>Box and bands</h2>
+  <div class="grid">
+    <div class="card"><h3>Disk</h3><p>207 GB free (89% used) at 07:18. The #1080 clone was removed after its merge.</p></div>
+    <div class="card"><h3>Terminal-Bench 4.0, re-pulled today</h3><p>No engine we dispatch changed band. Opus 5.5 scores 66.4 (llm-stats) and Grok 4.7 38.0, which is guided. Haiku 5.5 has its first published number, 39.2, which is guided. New on the board but not dispatched: Gemini 4 Argon 57.4 and five others.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Open questions</h2>
+  <p>None. Every question through 121 has your answer. The next new number is 122.</p>
+</section>
+</div>
+</body>
+</html>

@@ -1,8 +1,11 @@
 //! SQL dialect seam for plugging a statement front end into [`ReparkSession::sql`].
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use async_trait::async_trait;
+use datafusion::logical_expr::planner::TypePlanner;
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 
 use crate::catalog_state::CatalogRegistry;
@@ -104,6 +107,18 @@ pub trait SqlDialect: Send + Sync {
     /// Install dialect-owned hooks on the freshly built [`SessionContext`].
     fn on_session_built(&self, ctx: &SessionContext) {
         let _ = ctx;
+    }
+
+    fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
+        None
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        Ok(rules)
     }
 }
 

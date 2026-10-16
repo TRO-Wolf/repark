@@ -287,14 +287,14 @@ mod tests {
     use datafusion::prelude::{SessionConfig, SessionContext};
 
     fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
+        let ctx = crate::spark_type_planner::planned_context(SessionConfig::new());
         crate::register_all(&ctx);
         ctx
     }
 
     fn ctx_ansi_off() -> SessionContext {
         let config = crate::ansi::with_spark_ansi_config(SessionConfig::new(), false);
-        let ctx = SessionContext::new_with_config(config);
+        let ctx = crate::spark_type_planner::planned_context(config);
         crate::register_all(&ctx);
         ctx
     }

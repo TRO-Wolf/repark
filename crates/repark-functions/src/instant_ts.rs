@@ -26,6 +26,7 @@ use crate::spark_string_timestamp::{
     StringCastFailure, cast_columnar_strings_to_ltz, is_string_type, rewrite_string_try_cast,
     spark_string_literal,
 };
+use crate::spark_type_planner::planned_instant_cast;
 use crate::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
@@ -562,8 +563,11 @@ fn rewrite_plan(
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten =
-            expr.transform_up(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type)))?;
+        let rewritten = expr.transform_up(|node| {
+            rewrite_cast(node, &schema, zone, timestamp_type).transform_data(|typed| {
+                crate::timestamp_ns_cast::wall_kernel_by_target(typed, &schema)
+            })
+        })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed
@@ -605,20 +609,17 @@ fn rewrite_cast(
             DataType::Timestamp(TimeUnit::Second, _)
         );
         if let Ok(source) = cast.expr.get_type(schema) {
+            if let Some(planned) = planned_instant_cast(cast, &source, schema, false) {
+                return Transformed::yes(planned);
+            }
             if matches!(source, DataType::Timestamp(TimeUnit::Nanosecond, _))
-                && (matches!(
-                    cast.field.data_type(),
-                    DataType::Timestamp(TimeUnit::Nanosecond, None)
-                ) || is_ltz_timestamp(cast.field.data_type()))
+                && is_ltz_timestamp(cast.field.data_type())
             {
                 return Transformed::yes(crate::timestamp_ns_cast::narrow_timestamp_ns_expr(
                     *cast.expr.clone(),
                 ));
             }
-            if targeting_ns && is_ltz_timestamp(&source) {
-                return Transformed::yes(*cast.expr.clone());
-            }
-            if targeting_timestamp && is_wall_clock_cast_source(&source) {
+            if targeting_timestamp && !targeting_ns && is_wall_clock_cast_source(&source) {
                 if let Some(literal) = spark_string_literal(&cast.expr, zone) {
                     return Transformed::yes(literal);
                 }
@@ -628,16 +629,12 @@ fn rewrite_cast(
                 )));
             }
             let source_is_int_or_null = source.is_integer() || matches!(source, DataType::Null);
-            let source_is_seconds = matches!(source, DataType::Timestamp(TimeUnit::Second, _));
-            if (targeting_seconds && source_is_int_or_null)
-                || (targeting_ns && (source_is_int_or_null || source_is_seconds))
-            {
+            if targeting_seconds && source_is_int_or_null {
                 return wrap_as_ltz(expr, schema);
             }
         }
     }
-    let rewritten = wrap_ns_literal(expr, schema, zone);
-    peel_naive_cast_of_ltz_producer(rewritten.data, schema)
+    peel_naive_cast_of_ltz_producer(expr, schema)
 }
 
 /// `TypeCoercion` may wrap a `TIMESTAMP` literal in a naive µs `CAST` before this rule rewrites it.
@@ -645,7 +642,10 @@ fn peel_naive_cast_of_ltz_producer(expr: Expr, schema: &DFSchema) -> Transformed
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
     };
-    if !matches!(cast.field.data_type(), DataType::Timestamp(_, None)) {
+    if !matches!(
+        cast.field.data_type(),
+        DataType::Timestamp(TimeUnit::Microsecond, None)
+    ) {
         return Transformed::no(expr);
     }
     let is_to_timestamp = matches!(
@@ -670,7 +670,7 @@ fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
         )
 }
 
-fn is_ltz_timestamp(data_type: &DataType) -> bool {
+pub(crate) fn is_ltz_timestamp(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Timestamp(TimeUnit::Microsecond, Some(zone))
@@ -682,33 +682,6 @@ fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let nullable = expr.nullable(schema).unwrap_or(true);
     let field = Arc::new(Field::new("ts", ltz_timestamp_type(), nullable));
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
-}
-
-/// Localize zoneless nanosecond timestamp literals in the session zone.
-fn wrap_ns_literal(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Expr> {
-    let Expr::Literal(scalar, _) = &expr else {
-        return Transformed::no(expr);
-    };
-    let ScalarValue::TimestampNanosecond(ticks, literal_zone) = scalar else {
-        return Transformed::no(expr);
-    };
-    if literal_zone.is_some() {
-        return wrap_as_ltz(expr, schema);
-    }
-    let Some(nanos) = ticks else {
-        return wrap_as_ltz(expr, schema);
-    };
-    let Ok(parsed_zone) = zone.parse::<Tz>() else {
-        return wrap_as_ltz(expr, schema);
-    };
-    let wall_micros = nanos.div_euclid(1_000);
-    let Some(localized) = localize_wall_micros_in_zone(wall_micros, parsed_zone) else {
-        return wrap_as_ltz(expr, schema);
-    };
-    Transformed::yes(Expr::Literal(
-        ScalarValue::TimestampMicrosecond(Some(localized), Some(Arc::<str>::from("UTC"))),
-        None,
-    ))
 }
 
 /// `spark.sql.timestampType=TIMESTAMP_NTZ`: bare `TIMESTAMP` literals / casts become naive µs.
@@ -742,46 +715,28 @@ fn rewrite_cast_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
             return Transformed::no(expr);
         }
         if let Ok(source) = cast.expr.get_type(schema) {
-            if targeting_timestamp && is_ltz_timestamp(&source) {
+            if let Some(planned) = planned_instant_cast(cast, &source, schema, true) {
+                return Transformed::yes(planned);
+            }
+            if targeting_timestamp && !targeting_ns && is_ltz_timestamp(&source) {
                 return wrap_as_ntz(*cast.expr.clone(), schema);
             }
-            if targeting_timestamp && is_wall_clock_cast_source(&source) {
+            if targeting_timestamp && !targeting_ns && is_wall_clock_cast_source(&source) {
                 return wrap_as_ntz(*cast.expr.clone(), schema);
             }
             let source_is_int_or_null = source.is_integer() || matches!(source, DataType::Null);
-            let source_is_seconds = matches!(source, DataType::Timestamp(TimeUnit::Second, _));
-            if (targeting_seconds && source_is_int_or_null)
-                || (targeting_ns && (source_is_int_or_null || source_is_seconds))
-            {
+            if targeting_seconds && source_is_int_or_null {
                 return wrap_as_ntz(expr, schema);
-            }
-            if targeting_ns && is_ltz_timestamp(&source) {
-                return wrap_as_ntz(*cast.expr.clone(), schema);
             }
         }
     }
-    wrap_ns_literal_as_ntz(expr)
+    Transformed::no(expr)
 }
 
 fn wrap_as_ntz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let nullable = expr.nullable(schema).unwrap_or(true);
     let field = Arc::new(Field::new("ts", ntz_timestamp_type(), nullable));
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
-}
-
-/// DataFusion folds `TIMESTAMP '…'` to `Timestamp(ns, None)` literals.
-fn wrap_ns_literal_as_ntz(expr: Expr) -> Transformed<Expr> {
-    let Expr::Literal(scalar, _) = &expr else {
-        return Transformed::no(expr);
-    };
-    let ScalarValue::TimestampNanosecond(ticks, _literal_zone) = scalar else {
-        return Transformed::no(expr);
-    };
-    let micros = ticks.map(|nanos| nanos.div_euclid(1_000));
-    Transformed::yes(Expr::Literal(
-        ScalarValue::TimestampMicrosecond(micros, None),
-        None,
-    ))
 }
 
 #[cfg(test)]
@@ -792,7 +747,8 @@ mod tests {
     use datafusion::prelude::SessionContext;
 
     fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
+        let ctx =
+            crate::spark_type_planner::planned_context(datafusion::prelude::SessionConfig::new());
         crate::register_all(&ctx);
         for rule in crate::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
@@ -845,7 +801,7 @@ mod tests {
     fn ctx_at(zone: &str) -> SessionContext {
         use datafusion::prelude::SessionConfig;
         let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
-        let ctx = SessionContext::new_with_config(config);
+        let ctx = crate::spark_type_planner::planned_context(config);
         crate::register_all(&ctx);
         for rule in crate::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
@@ -909,7 +865,7 @@ mod tests {
             config,
             crate::timestamp_type::SparkTimestampType::Ntz,
         );
-        let ctx = SessionContext::new_with_config(config);
+        let ctx = crate::spark_type_planner::planned_context(config);
         crate::register_all(&ctx);
         for rule in crate::analyzer_rules() {
             ctx.add_analyzer_rule(rule);

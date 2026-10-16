@@ -71,6 +71,7 @@ pub mod spark_split_part;
 pub mod spark_startswith;
 mod spark_string_timestamp;
 pub mod spark_time_window;
+pub mod spark_type_planner;
 pub mod spark_window_time;
 pub mod spark_year_pad;
 pub mod string;
@@ -81,6 +82,7 @@ pub mod timestamp_ltz_ntz;
 pub mod timestamp_ns_cast;
 pub mod timestamp_ntz_cast;
 pub mod timestamp_type;
+pub mod timestamp_unit_widen;
 pub mod try_invert;
 pub mod url;
 pub mod validate;
@@ -92,6 +94,8 @@ pub use grouping::ResolveGroupingId;
 pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
 pub use registration::analyze_eagerly;
 pub use registration::analyzer_rules;
+pub use spark_type_planner::{SparkTypePlanner, spark_type_planner};
+pub use timestamp_unit_widen::{SparkTimestampUnitWiden, analyzer_rules_with_timestamp_unit_widen};
 
 use datafusion::prelude::SessionContext;
 

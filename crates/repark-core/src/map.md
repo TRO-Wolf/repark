@@ -982,6 +982,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
   AST rewrites) deliberately stay at the doors. New pre-execute refusals land in `guard`, never
   at a door — per-door wiring missed the native door twice (measured).
+- `dialect.rs`, `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** both seams gain
+  `type_planner()` (default `None`), and `SqlDialect` gains `configure_analyzer_rules`
+  (default identity). `session/df_guards.rs` registers the planner once on the
+  `SessionStateBuilder` (the extension's, else the dialect's) and lets the dialect place
+  rules in the analyzer list after the extension has. Core names no planner: the crate
+  sits below `repark-functions`, so each door hands its own in (the Spark extension, the
+  ANSI dialect, the Python native door's extension). `build()` now resolves the dialect
+  before the context is assembled. pins: ice-tsns-type-planner-1/C-011
   **ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)):** `guard` also
   runs `refuse_update_from_subquery`. An `UPDATE` plan whose input projection assigns a scalar
   subquery (under an alias, a cast, `arrow_cast` or one of RePark's `__repark_*` store kernels,

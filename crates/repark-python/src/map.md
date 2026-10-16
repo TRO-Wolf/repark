@@ -14,6 +14,13 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 
 Rust implementation of the `_native` PyO3 module. The modules below keep the Python facade thin
 and hand execution, SQL, and ML semantics to the engine crates.
+- `session_runtime.rs`, `session.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the native
+  door (`PyReparkSession.native`, behind `repark.sql`) builds with the `NativeDoorTypes`
+  extension, whose only hook is `type_planner` (the ANSI variant `AnsiTypePlanner` since
+  2026-10-15, below), and `register_native_door_functions` installs `PlannedTimestampCast` so an `Int64` cast to
+  `TIMESTAMP` still reads seconds. The Spark door takes the planner from `SparkExtension`.
+  `NativeDoorTypes::configure_analyzer_rules` places `SparkTimestampUnitWiden` before
+  `type_coercion` (amendment 1). pins: ice-tsns-type-planner-1/C-011, C-012
 - `session_runtime.rs` — **CATALOG-1 (2026-09-26):** `set_runtime_config` / `unset_runtime_config`
   serve `spark.sql.defaultCatalog` through `repark_spark::session_catalog::apply_default_catalog`
   (an empty value is unset); `current_catalog_checked`, `auto_session_catalog_wanted` and
@@ -33,6 +40,14 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `INVALID_CONF_VALUE.TYPE_MISMATCH` text with `mask_value_credentials` of the raw
   value (`spark.sql.caseSensitive`, `spark.sql.ansi.enabled`,
   `spark.sql.iceberg.merge-schema`). pins: source-url-redact-1/C-055
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, `repark.sql()` (ruling 100, 2026-10-15):**
+  `NativeDoorTypes` hands the native door the ANSI planner variant (`ansi_type_planner`) and
+  `register_native_door_functions` installs the ANSI `PlannedTimestampCast`, so `repark.sql()`
+  types `TIMESTAMP` as the microsecond wall and `TIMESTAMPTZ` as the microsecond instant (the
+  Q6 contract, ruling 94), and `CAST(<bigint> AS TIMESTAMP)` reads seconds. With the Spark
+  planner it answered the instant where today's main answers the wall
+  (`test_ice_tt_resolve_1.py`'s native cells, `test_nullability_2.py`). pins: ice-tsns-type-
+  planner-1/C-015 pins: ice-tsns-type-planner-1/C-029
 
 ## Modules
 

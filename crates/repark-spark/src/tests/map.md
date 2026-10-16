@@ -1027,6 +1027,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `register_spark_decimal_planner`; shared helpers use `pub(super)` visibility and re-exports.
   CASESENS-1 final fold (2026-09-28): `disable_case_sensitive` mirrors
   `enable_case_sensitive` for the same-session toggle pin. pins: casesens-1/C-005
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, the harness (ruling 100, 2026-10-15):** `setup`'s
+  session is built the way the Spark door builds every session: the `SparkTypePlanner`
+  (`with_type_planner`) and `SparkTimestampUnitWiden` before `type_coercion`
+  (`analyzer_rules_with_timestamp_unit_widen`). Without them, after the carried deletions, a
+  written `TIMESTAMP` stayed DataFusion's nanosecond type and `timestamp_ns` was `Unsupported
+  SQL type` here while the product door typed both (`v3_timestamp_ns_door.rs`,
+  `u9_timestamp_ltz.rs`, `ntz_store.rs`, `ntz_values_mix.rs`, `plan_partitioning.rs`,
+  `session_write_conf.rs`). No pinned value moves. pins: ice-tsns-type-planner-1/C-031
 - `create_table.rs` pins `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
@@ -2154,6 +2162,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   garbage, numeric-source/target refusals, the LTZ epoch-seconds guard, the nested R4
   refusal, and the literal reaching INSERT VALUES / INSERT SELECT / UPDATE / DELETE /
   MERGE / CTAS. pins: ntz-1/C-001, C-002, C-004, C-005
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (ruling 100, the planner sketch, 2026-10-15):**
+  `nested_ntz_cast_targets_answer_sparks_walls` (was
+  `nested_ntz_cast_target_keeps_the_r4_refusal`) pins Spark 4.1.2's answer to
+  `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` and `CAST(named_struct('a',
+  '2024-01-01') AS STRUCT<a: TIMESTAMP_NTZ>)`: a naive microsecond list or field holding
+  midnight, `1704067200000000`. pins: ice-tsns-type-planner-1/C-033
 
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** store assignment into `TIMESTAMP_NTZ`
   columns — LTZ VALUES/SELECT storing the session-zone wall (UTC and New York), UPDATE
@@ -2450,6 +2464,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   new-string `replace`-casts into `TIMESTAMP` with Spark's wall. Spark answers:
   re-verify2 `rn31-spark.json` plus the `rn31b` live run (2026-09-29).
   pins: ltz-store-int-1/C-001
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):** `door()` seats
+  `InsertStoreAssignment` right after `type_coercion`, where the Spark door seats it, instead
+  of after the Spark expression rules; with the planner a written `CAST(int AS TIMESTAMP)` and
+  an INSERT's store cast have one type, so the store gate must run first, as it does on the
+  product door. pins: ice-tsns-type-planner-1/C-027
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only
