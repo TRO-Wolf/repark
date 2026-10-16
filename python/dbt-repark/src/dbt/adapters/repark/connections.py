@@ -60,6 +60,18 @@ class ReparkCredentials(Credentials):
         """Fields dbt prints when it reports the connection."""
         return ("database", "schema", "warehouse", "catalog_properties")
 
+    def connection_info(self, *, with_aliases: bool = False) -> Iterator[tuple[str, Any]]:
+        """dbt's connection report, every catalog property value through RePark's redaction."""
+        for key, value in super().connection_info(with_aliases=with_aliases):
+            yield key, _redact_properties(value) if key == "catalog_properties" else value
+
+
+def _redact_properties(properties: dict[str, str]) -> dict[str, str]:
+    """Each property value as RePark's ``getAll`` shows it."""
+    from repark import _native
+
+    return {key: _native.redact_property_value(key, value) for key, value in properties.items()}
+
 
 class ReparkConnectionManager(SQLConnectionManager):
     """dbt threads share one RePark session; each statement gets its own cursor."""
