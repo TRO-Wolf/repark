@@ -1,10 +1,11 @@
-"""The profile-mismatch refusal and the dbt debug display carry no property value.
+"""The profile-mismatch refusal, the dbt debug display and the Jinja target carry no value.
 
 pins: pa-dbt-mismatch-redact-1/C-001, C-002, C-003, C-004, C-005
 """
 
 from __future__ import annotations
 
+from argparse import Namespace
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ SESSION_URL_KEY = "repark.source.pg.url"
 
 SOURCE_URL = "postgresql://u:SENTINEL_URL_PW@h/db"
 ROTATED_URL = "postgresql://u:SENTINEL_ROTATED_URL_PW@h/db"
+WAREHOUSE_URL = "s3://u:SENTINEL_WH_PW@bucket/warehouse"
 
 SENTINELS = (
     "SENTINEL_CAT_SECRET",
@@ -33,6 +35,7 @@ SENTINELS = (
     "SENTINEL_ROTATED_CAT_SECRET",
     "SENTINEL_ROTATED_SESSION_SECRET",
     "SENTINEL_ROTATED_URL_PW",
+    "SENTINEL_WH_PW",
 )
 
 
@@ -206,6 +209,35 @@ def test_connection_info_renders_catalog_properties_redacted() -> None:
     assert info["database"] == CATALOG
 
 
+def test_jinja_target_renders_identifiers_and_catalog_properties_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Jinja ``target`` dbt builds from the profile carries no sentinel."""
+    from dbt.adapters.repark.connections import ReparkCredentials
+    from dbt.config.profile import Profile
+
+    monkeypatch.setattr("dbt.flags.GLOBAL_FLAGS", Namespace(LOG_CACHE_EVENTS=False))
+
+    credentials = ReparkCredentials(
+        database=CATALOG,
+        schema=NAMESPACE,
+        warehouse=WAREHOUSE_URL,
+        catalog_properties=_catalog_properties(),
+        session_properties=_session_properties(),
+    )
+    target = Profile(
+        profile_name=PROFILE, target_name="local", threads=1, credentials=credentials
+    ).to_target_dict()
+    _assert_no_sentinel(repr(target))
+    assert target["catalog_properties"] == {
+        CATALOG_SECRET_KEY: "***",
+        CATALOG_URL_KEY: "postgresql://u:***@h/db",
+    }
+    assert target["warehouse"] == "s3://u:***@bucket/warehouse"
+    assert target["database"] == CATALOG
+    assert target["catalog"] == CATALOG
+
+
 def _write_project(root: Path) -> None:
     """A dbt project whose profile asks for the other catalog with the sentinel properties."""
     (root / "dbt_project.yml").write_text(
@@ -225,6 +257,7 @@ def _write_project(root: Path) -> None:
                             "catalog": OTHER_CATALOG,
                             "schema": NAMESPACE,
                             "threads": 1,
+                            "warehouse": WAREHOUSE_URL,
                             "catalog_properties": _catalog_properties(),
                             "session_properties": _session_properties(),
                         }
