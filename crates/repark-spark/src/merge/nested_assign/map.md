@@ -8,6 +8,9 @@ fold moves elsewhere.
 
 ## Contents
 
+- `expand.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `needs_rebuild`, `star_source`, `StarSource` and
+  `fold_insert_values` are deleted (the rebuild arms of the star expansion);
+  `refuse_unwritten_star_columns` stays.
 - `expand.rs` — fix round 3 (2026-09-25): a MERGE `UPDATE SET *` / `INSERT *` whose source
   struct differs from the target's field order or names is expanded here into explicit
   per-column values (`star_source`), so the struct goes through `value_sql_for`'s by-name
@@ -20,6 +23,8 @@ fold moves elsewhere.
   folds an unquoted alias, so its schema cannot tell `ID` from `id`) and refuses Spark's
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the suggestions sorted by name, then by the
   case-insensitive edit distance (fix round 5, V-002). pins: u8-write-sql/C-030, C-033
+- `render.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `cannot_find_data` and `extra_struct_fields` moved to the seam
+  (`struct_pairing.rs`), their one home.
 - `render.rs` — the Spark text of every refusal the fold raises, and Spark's two renderings
   of an assignment. The pretty form (`toPrettySQL`) drops qualifiers and string quotes and
   fills the `Cannot resolve "…"` list. The `.sql` form (qualified column, backticked fields)

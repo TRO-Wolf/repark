@@ -26,6 +26,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   COPY statement comes from `writer_layout.text_write_copy_sql` (plain
   inner `SELECT`, resolved `STORED AS` name, merged spec OPTIONS); the
   `_build_text_write_select` entry is gone.
+- `writer_layout.py`, `writer_readwriter.py`, `writer_save.py` — **ICE-STRUCT-PAIRING-1 step 4
+  (2026-10-14), parity row R-016:** the three DataFrame doors Spark pairs by name set
+  `source_by_name=True`: `writeTo(t).append()` and the `saveAsTable` append through the new
+  `run_by_name_append`, `overwritePartitions()` through `run_overwrite_partitions`. The flag
+  reaches the struct pairing of the conform; `insertInto` keeps by position.
 - `writer_layout.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
   `text_write_select` carries writer state to the `session_text_write_select`
   binding, which returns the COPY inner `SELECT`.

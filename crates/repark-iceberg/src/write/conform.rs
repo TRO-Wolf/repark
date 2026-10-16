@@ -14,6 +14,7 @@ use datafusion::error::{DataFusionError, Result};
 use crate::catalog::uuid_presentation::{convert_uuid_column, presents_uuid};
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
+use crate::write::struct_pairing::{StoreEntry, refuse_unpaired_struct};
 
 /// Conform batches to the Iceberg write schema: every target column takes its source column.
 /// Columns carrying an Iceberg `write-default` may be absent — the fork's `DataFileWriter::write`
@@ -253,6 +254,26 @@ pub(crate) fn strict_store_cast(
     column: &ArrayRef,
     target: &DataType,
 ) -> Result<ArrayRef> {
+    entry_store_cast(StoreEntry::Batch, "``", name, column, target)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn strict_partition_store_cast(
+    name: &str,
+    column: &ArrayRef,
+    target: &DataType,
+) -> Result<ArrayRef> {
+    entry_store_cast(StoreEntry::StaticPartition, "``", name, column, target)
+}
+
+fn entry_store_cast(
+    entry: StoreEntry,
+    table: &str,
+    name: &str,
+    column: &ArrayRef,
+    target: &DataType,
+) -> Result<ArrayRef> {
+    refuse_unpaired_struct(table, entry, name, column.data_type(), target)?;
     refuse_coarser_timestamp(name, column.data_type(), target)?;
     Ok(cast_with_options(column, target, &strict_cast())?)
 }

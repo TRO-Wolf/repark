@@ -63,7 +63,7 @@ U8 WRITE-SQL PR1 rounds 2-3 (2026-09-25): `u8_write_sql_spark_oracle.json` is th
 
 U8 WRITE-SQL PR1 round 4 (2026-09-25, critic r3): the oracle adds the critic's `r3/…` .. `r3e/…` and `r3fix/…` (584 cases after round 5, sha256 237118c9…; round 5 adds the verifier's `r4/…`, fractional comparisons rendered in refusal texts); a case whose RePark answer is a named residue carries `residue = {id, repark: {step, rows}}`. The facade replay covers 27 prefixes (451 cases, `r2fix/A-` and the `r3…` keys added) and skips none: every refusal compares its exact class, condition, SQLSTATE and message (R-1 by base class and Iceberg's `Cannot delete file …` text), and a residue case is held to RePark's recorded answer (an R-2 case also to Spark's rows). DECIMAL and DATE cells compare as their text. pins: u8-write-sql/C-015, C-019, C-021, C-022, C-023, C-024
 
-U8 WRITE-SQL PR2 (2026-09-25): `u8_write_sql_nested_spark_oracle.json` is the PR's Spark oracle (177 keys `pr2/…`, sha256 a4557506…, generator `target/probe-u8-pr2/build_oracle.py`, sources `target/probe-u8-pr2/spark*.json`). It covers nested struct-field assignment in UPDATE and MERGE: the two scoreboard cells, casts, refusals, conflicts, map and array targets, MoR tables and the whole-struct near misses. Fix round 2 adds the 14 `pr2/U4-…` / `M4-…` keys (`probe4.py`, whole-struct values of UPDATE and MERGE resolved by name, C-032) and retires R-17. Fix round 3 (critic V-001, V-002) adds the 24 `pr2/M5-…` / `U5-…` keys (`probe5.py`, `spark5.json` sha256 f36f21bb…): star-expanded and inserted struct values resolved by name (C-030) and repeated top-level keys (C-029). Fix round 4 (verifier V-001..V-005) adds the 30 `pr2/C6-…` / `N6-…` / `E6-…` / `B6-…` keys (`probe6.py`, `spark6.json` sha256 fd331448…): re-cased `INSERT *`, every shape under both `spark.sql.caseSensitive` values (a key's `conf`, set before the statement and reset after), reordered structs into a `NOT NULL` sub-field (an empty `seed`), schema-evolution stars and repeated INSERT keys. Fix round 5 (verifier V-001..V-003) adds the 16 `pr2/K-ci-…` / `K-cs-…` keys (`probe7.py`, `spark7.json` sha256 3049fc8b…): SET keys and INSERT column lists under both `spark.sql.caseSensitive` values and the star suggestion order. Its `provenance` block names the normalization and the residue keys (R-13 .. R-16 and R-18, 16 keys since `pr2/U2-order` / `U2-order2` left R-16 on 2026-09-26, WO U9-TYPES-1 round-1 fixer: the UPDATE door now prints `` as Spark does). Each residue key carries RePark's recorded answer. `test_ice_write_sql_1.py` pins the cells `W-UPDATE-NESTED-FIELD` and `W-MERGE-NESTED` (rows, schema, snapshot summary). `test_the_nested_oracle_holds_every_measurement` asserts the 161 keys, and `test_the_nested_assignment_measurements_replay_as_spark_answered` replays every key through `spark.sql` and compares the exception class name, condition, SQLSTATE, normalized message and rows. pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
+U8 WRITE-SQL PR2 (2026-09-25): `u8_write_sql_nested_spark_oracle.json` is the PR's Spark oracle (177 keys `pr2/…`, sha256 a4557506…, generator `target/probe-u8-pr2/build_oracle.py`, sources `target/probe-u8-pr2/spark*.json`). It covers nested struct-field assignment in UPDATE and MERGE: the two scoreboard cells, casts, refusals, conflicts, map and array targets, MoR tables and the whole-struct near misses. Fix round 2 adds the 14 `pr2/U4-…` / `M4-…` keys (`probe4.py`, whole-struct values of UPDATE and MERGE resolved by name, C-032) and retires R-17. Fix round 3 (critic V-001, V-002) adds the 24 `pr2/M5-…` / `U5-…` keys (`probe5.py`, `spark5.json` sha256 f36f21bb…): star-expanded and inserted struct values resolved by name (C-030) and repeated top-level keys (C-029). Fix round 4 (verifier V-001..V-005) adds the 30 `pr2/C6-…` / `N6-…` / `E6-…` / `B6-…` keys (`probe6.py`, `spark6.json` sha256 fd331448…): re-cased `INSERT *`, every shape under both `spark.sql.caseSensitive` values (a key's `conf`, set before the statement and reset after), reordered structs into a `NOT NULL` sub-field (an empty `seed`), schema-evolution stars and repeated INSERT keys. Fix round 5 (verifier V-001..V-003) adds the 16 `pr2/K-ci-…` / `K-cs-…` keys (`probe7.py`, `spark7.json` sha256 3049fc8b…): SET keys and INSERT column lists under both `spark.sql.caseSensitive` values and the star suggestion order. Its `provenance` block names the normalization and the residue keys (R-13 .. R-16 and R-18, 16 keys since `pr2/U2-order` / `U2-order2` left R-16 on 2026-09-26, WO U9-TYPES-1 round-1 fixer: the UPDATE door now prints `` as Spark does). Each residue key carries RePark's recorded answer. ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14) retires R-18: `pr2/E6-evo-setstar-reorder-noprop` and `pr2/E6-evo-insstar-reorder-noprop` replay Spark's answer, so 14 residue keys remain. `test_ice_write_sql_1.py` pins the cells `W-UPDATE-NESTED-FIELD` and `W-MERGE-NESTED` (rows, schema, snapshot summary). `test_the_nested_oracle_holds_every_measurement` asserts the 161 keys, and `test_the_nested_assignment_measurements_replay_as_spark_answered` replays every key through `spark.sql` and compares the exception class name, condition, SQLSTATE, normalized message and rows. pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 
 ## Purpose
 
@@ -166,6 +166,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   X'…'` (R-35), and a positional struct literal (R-36). New step kinds `insert_into` and
   `save_as_table` share `write_dataframe`; `decode` reads `{"bytes": <hex>}` as a `bytearray`.
   pins: u9-types-1/C-016
+  **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14):** R-36 is retired; the positional struct
+  literal stores `Row(u='x')` as the r8 recording does, and the oracle's `revised` field says so.
+  **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14, ruling 56(a)):** residue R-9's
+  `map/v2/insert-wrong-type` (`map(1, 'a')` into `MAP<STRING, INT>`) now refuses with Spark's
+  condition, SQLSTATE and text (`` Cannot safely cast `c`.`value` "STRING" to "INT" ``) behind
+  the planner's `Error during planning: ` prefix, where it refused with DataFusion's raw cast
+  error; the residue's RePark answer is re-pinned to it. The null-key and duplicate-key steps of
+  R-9 are unchanged.
   The VOID groups: `void-write` (a value into VOID on every door; R-23) and `void-create`
   (DataFrame create and CTAS of a NULL column on v3; v2 refuses, R-22). pins: u9-types-1/C-014,
   C-015
@@ -1457,9 +1465,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `saveAsTable` append and create, `insertInto` append, `create()` with `none` or `bogus`,
   EQUAL) and `test_isolation_level_refuses_on_the_overwrite_and_replace_doors`
   (`overwritePartitions`, `saveAsTable` and `insertInto` overwrite, `replace`,
-  `createOrReplace` on no table; R-4 class); `test_nested_binding_residues_beside_spark`
-  (R-15, R-16) and `test_store_assignment_residues_beside_spark` (R-17, R-18) pin RePark's
-  answer beside Spark's. pins: u7-write-df-2/C-013, C-014, C-016
+  `createOrReplace` on no table; R-4 class); `test_store_assignment_residues_beside_spark`
+  (R-17, R-18) pins RePark's answer beside Spark's. pins: u7-write-df-2/C-013, C-014, C-016
+  **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14):** R-15 and R-16 are retired; the four
+  nested binding shapes (`append_nested_missing_subfield`, `append_nested_extra_subfield`,
+  `op_nested_missing_subfield`, `oc_nested_upper_subfield`) answer Spark's recorded value in
+  every observation, refusals under the R-4 prefix, through
+  `test_nested_binding_answers_as_spark`. pins: ice-struct-pairing-1/C-019
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
   oracle entry through the helpers of `test_ice_write_df_1.py`: the missing bucket column
@@ -10298,6 +10310,98 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   registry row R-009 (FIXED 2026-10-14) and of the 1.5.6 notes draft's stored-value lines.
   No module docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: ice-tsns-floor-doors-1/C-008, C-013
+- [_record_ice_struct_pairing_1.py](_record_ice_struct_pairing_1.py) —
+  **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the door × shape recorder.
+  Sixteen write doors (six Spark pairs by position, ten by name) × four containers (the top
+  level, a struct in a struct, an array element, a map value) × eight field shapes (`same`,
+  `reordered`, `renamed`, `renamed_first`, `extra`, `missing`, `case`, `case_reordered`) on
+  format versions 2 and 3, the three case shapes again under `spark.sql.caseSensitive=true`,
+  and step 0's six added cells (`overwrite(condition)` reordered and renamed, a `merge-schema`
+  append with a surplus field, BY NAME case twins and recased fields, a NULL into a required
+  struct). Every table is seeded `(0, (10, 20))` and written `(1, 2)`. It records live Spark
+  4.1.2 into `ice_struct_pairing_1_spark_oracle.json` and a RePark module (main `293896ce`)
+  into `ice_struct_pairing_1_main.json`, one cell per line; the test module imports its door
+  table and shapes. The Spark recording of 2026-10-14 equals the lane's recording of
+  2026-10-13 in all 1,216 matrix cells; main's equals it too. No module docstring beyond the
+  usage block: the lane's no-comments ruling covers the new file; the contract lives here.
+- [test_ice_struct_pairing_1.py](test_ice_struct_pairing_1.py) —
+  **ICE-STRUCT-PAIRING-1 (2026-10-14), parity row R-016:** one rule pairs struct fields on
+  every write door. The expected answer of a cell is computed from the rule (the door's mode,
+  the shape, the session's case rule), never written per cell:
+  `test_the_rule_reproduces_spark_in_every_cell` holds the rule to the oracle in all 1,216
+  matrix cells and five added cells; `test_the_engine_answers_the_rule` holds the engine to
+  it outside lists L1 (28 cells per format version: an array or map struct with a surplus or
+  missing field on the DataFusion-planned INSERT, and the `VALUES` spellings; both engines
+  refuse before any store) and L2 (`UPDATE` with no `WHERE`, parity row R-014);
+  `test_l1_refuses_and_writes_no_file` and `test_l2_answers_as_main` hold those lists to
+  main; `test_the_stored_fields_are_read_from_the_parquet_file` reads the reordered top-level
+  cell of fifteen doors from the live Parquet files. One module fixture replays every cell on
+  one session. Red on main: 548 tests (230 matrix cells on each format version, 80 under
+  `caseSensitive`, two added cells, six Parquet reads). **Build round 2 (2026-10-14, owner
+  question 48):** L2 is re-pinned in three parts of its 76 cells.
+  `test_l2_refuses_as_spark_where_spark_refuses` holds the 40 cells whose Spark answer is a
+  refusal to the rule's refusal (14 of them moved there from a raw error with the seam);
+  `test_l2_answers_as_main` holds the 32 cells Spark stores and the engine still refuses raw
+  to main; `test_l2_case_cells_keep_an_internal_refusal` names the four cells (v2 and v3,
+  array, `case` and `case_reordered`) that moved from `Unsupported CAST` to the raw
+  `arguments need to have the same data type`, and pins that text. All 36 non-refusal cells
+  stay open on parity row R-014. 2,458 tests pass on the head. The fixture is also the evidence
+  of the unit's two revert-alone runs (facade flag: 141 red, all three by-name DataFrame doors;
+  callers: 573 red, the fixture's 566 and the seven retired residues) and of the registry rows
+  and 1.5.6 notes lines it closes. pins: ice-struct-pairing-1/C-001, C-003, C-004, C-005, C-008,
+  C-011, C-016, C-017, C-018, C-021, C-022, C-023
+- [_record_ice_struct_pairing_1_round3.py](_record_ice_struct_pairing_1_round3.py) —
+  **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), parity row R-016:** extends
+  `_record_ice_struct_pairing_1.py` with three groups merged into the same two recordings
+  (`ice_struct_pairing_1_spark_oracle.json`, live Spark 4.1.2; `ice_struct_pairing_1_main.json`,
+  main `293896ce`): `r3_leaf` (twelve struct leaf cases, from a STRING into a BIGINT to an INT
+  against a STRUCT, through the sixteen matrix doors and both `INSERT OVERWRITE … PARTITION`
+  spellings: 216 cells, verifier 1's F-01 and F-06), `r3_part` (24 shapes and eight case
+  shapes through both `PARTITION` spellings, format versions 2 and 3, `caseSensitive` both
+  ways for the case shapes: 160 cells, F-08 and the carve-out of ruling 58) and `r3_misc`
+  (34 cells: the column-list `VALUES` door, F-02; É/é, ẞ/ß and the non-matching ß/SS by name,
+  F-03; `UPDATE` from a scalar subquery reordered and in order, F-04; the case-sensitive
+  `UPDATE` twins with and without `WHERE`, F-05; an explicit `CAST` of a struct on five
+  doors). A refusal also records the table after it. Merges into an existing recording, so
+  the matrix groups are not re-recorded.
+- [test_ice_struct_pairing_1_round3.py](test_ice_struct_pairing_1_round3.py) —
+  **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), parity row R-016:** replays the 410
+  round-3 cells on one session and holds each to the Spark recording: a store stores Spark's
+  rows; a refusal carries Spark's condition, Spark's detail text and leaves the table as
+  Spark left it. The one exception is the dated carve-out of ruling 58: on the two
+  `PARTITION` spellings a struct whose field names differ from the table's, where Spark
+  stores, refuses with hint H-1 (its condition, the workaround phrase "the table's field
+  names in the table's", the table unchanged). The cells main cannot seed (a required nested
+  field, verifier 1's out-of-scope note) are pinned as still unseedable. List L2 (`UPDATE` with no
+  `WHERE`, parity row R-014, out of scope): where Spark stores, the cell answers as main
+  (`test_list_l2_answers_as_main_where_spark_stores`, nine leaf cells, main's raw `arguments need
+  to have the same data type`); where Spark refuses it answers as Spark.
+  pins: ice-struct-pairing-1/C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031
+- [_record_ice_struct_pairing_1_exception.py](_record_ice_struct_pairing_1_exception.py) —
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), rulings 73, 74 and 90:** extends
+  `_record_ice_struct_pairing_1.py` with two groups merged into the same two recordings (live
+  Spark 4.1.2; main `293896ce`). `x_update` (48 cells, V2-01 and its flat-INT twins):
+  `UPDATE … SET col = (SELECT … FROM src)` and the subquery with its own `WHERE`, for a flat
+  INT column and a struct column fed reordered and in order, with `WHERE true`, an `IN` list,
+  no `WHERE` and the identity control `WHERE id = 0`, through the Spark SQL door and the ANSI
+  `repark.sql()` door (`PyReparkSession.native()`; Spark answers both). `x_rows` (26 cells,
+  V2-02): a multi-row `INSERT … VALUES` whose rows disagree on a struct's field names, on the
+  three column-list spellings, with the agreeing controls (names reordered from the table, in
+  table order), rows that disagree only in order, in case (both `caseSensitive` settings), in
+  field count, at depth, in an array and in a map value, plus three shapes Spark refuses or
+  stores for another reason (leaf types, `INSERT OVERWRITE`, `UNION ALL`). No module
+  docstring: the lane's no-comments ruling covers the new file; the contract lives here.
+- [test_ice_struct_pairing_1_exception.py](test_ice_struct_pairing_1_exception.py) —
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), rulings 73, 74 and 90:** replays the 74
+  exception cells on one session. `x_rows` answers as Spark, the refusal carrying Spark's
+  `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE]` text up to its SQLSTATE and the
+  table unchanged; the four shapes outside the agreement rule (a field count that differs, which
+  list L1 refuses first with main's raw planner text, leaf types, `INSERT OVERWRITE`, `UNION ALL`)
+  still refuse with the table unchanged. `x_update`: the Spark door's identity shape (`WHERE id = 0`) stores Spark's value;
+  every other cell refuses with the ruling 90 text and writes nothing, the flat-INT cells under
+  the ruling 74 test name. Red on the head before the fix: 55 of 76 (before the NULL-row fix
+  forward reclassified `nocol|field_count_differs`); on main: 67 of 76; green on the head: 76.
+  pins: ice-struct-pairing-1/C-033, C-034, C-035, C-036
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

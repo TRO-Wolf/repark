@@ -409,7 +409,15 @@ async fn collect_identity_update_rows(
         .iter()
         .map(|field| (field.name().clone(), field.data_type().clone()))
         .collect();
-    let plan = crate::write::store_overflow::wrap_store_outputs(raw, &targets, true, false, None)?;
+    let plan = crate::write::store_overflow::wrap_store_outputs(
+        raw,
+        &targets,
+        true,
+        false,
+        None,
+        crate::write::struct_pairing::StructPairing::by_name(!spec.case_insensitive),
+        "``",
+    )?;
     let mut stream = ctx
         .execute_logical_plan(plan)
         .await?
@@ -669,7 +677,7 @@ fn scalar_set_assignments(
         if !seen.insert(column.to_ascii_lowercase()) {
             return None;
         }
-        if expression_contains_subquery(&assignment.value) {
+        if subquery_outside(&assignment.value, true) {
             return None;
         }
         let mut value = assignment.value.clone();
@@ -703,19 +711,22 @@ fn assignment_column_name(
 }
 
 fn expression_contains_subquery(expr: &Expr) -> bool {
-    struct Nested {
-        seen: bool,
-    }
+    subquery_outside(expr, false)
+}
+
+fn subquery_outside(expr: &Expr, scalar: bool) -> bool {
+    struct Nested(bool);
     impl Visitor for Nested {
         type Break = ();
 
-        fn pre_visit_query(&mut self, _query: &Query) -> std::ops::ControlFlow<Self::Break> {
-            self.seen = true;
+        fn pre_visit_query(&mut self, query: &Query) -> std::ops::ControlFlow<Self::Break> {
+            if self.0 && is_simple_uncorrelated_in_subquery(query) {
+                return std::ops::ControlFlow::Continue(());
+            }
             std::ops::ControlFlow::Break(())
         }
     }
-    let mut visitor = Nested { seen: false };
-    expr.visit(&mut visitor).is_break() || visitor.seen
+    expr.visit(&mut Nested(scalar)).is_break()
 }
 
 fn update_target_and_alias(

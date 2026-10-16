@@ -167,6 +167,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), owner question 47:**
+  `on_session_built` calls `repark_iceberg::write::store_cast::register_store_cast_udfs`, the
+  one registration of the by-name store kernels. The shared MERGE and UPDATE text names the
+  pairing kernel `__repark_store_pair__`; without it this door answered `Invalid function`
+  where main stored a struct. Pinned by `../tests/ansi_store_kernel_registry.rs`.
 - `dialect.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `on_session_built` registers the zoned
   nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
   and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this

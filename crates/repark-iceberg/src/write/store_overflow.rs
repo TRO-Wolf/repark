@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
+use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, TableReference};
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::expr::{Alias, ScalarFunction};
 use datafusion::logical_expr::{
     Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection, WriteOp,
@@ -16,8 +16,13 @@ use super::store_assign::refuse_unless_write_store_assignable;
 use super::store_fold::{
     check_folded_store_input, expr_references_column, store_guard_expr, wrap_store_expr,
 };
+use super::update_cast::refuse_unassignable_leaves;
 use crate::write::store_cast::{
     is_overflow_store_pair, spark_store_type_name, store_cast_udf_for_target, store_int_target,
+};
+use crate::write::struct_pairing::{
+    StatementPairing, StructPairing, holds_struct_type, pair_store_value,
+    spark_names_equal_ignoring_case, statement_pairing, store_pair_expr,
 };
 
 pub const STORE_DIVISOR_GUARD_NAME: &str = "__repark_ansi_nonzero_divisor__";
@@ -34,8 +39,8 @@ pub(crate) const CONVERTIBLE_EVAL_HEADS: [&str; 3] = [
 pub struct StoreOverflowCast;
 
 impl AnalyzerRule for StoreOverflowCast {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(transform_store_dml)
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        plan.transform_up_with_subqueries(|plan| transform_store_dml(plan, config))
             .data()
     }
 
@@ -80,9 +85,41 @@ fn store_issue(column: &str, source: &DataType, target: &DataType) -> Option<Sto
     })
 }
 
-fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+#[must_use]
+pub fn table_label(table: &TableReference) -> String {
+    let quote = |part: &str| format!("`{}`", part.replace('`', "``"));
+    match table {
+        TableReference::Bare { table } => quote(table),
+        TableReference::Partial { schema, table } => {
+            format!("{}.{}", quote(schema), quote(table))
+        }
+        TableReference::Full {
+            catalog,
+            schema,
+            table,
+        } => format!("{}.{}.{}", quote(catalog), quote(schema), quote(table)),
+    }
+}
+
+fn transform_store_dml(
+    plan: LogicalPlan,
+    config: &ConfigOptions,
+) -> Result<Transformed<LogicalPlan>> {
     let LogicalPlan::Dml(mut dml) = plan else {
         return Ok(Transformed::no(plan));
+    };
+    let pairing = statement_pairing(config, &dml.op);
+    let case_sensitive = config
+        .extensions
+        .get::<StatementPairing>()
+        .is_some_and(|carried| carried.case_sensitive);
+    let table = match dml.op {
+        WriteOp::Update => "``".to_string(),
+        _ => table_label(&dml.table_name),
+    };
+    let site = PairSite {
+        pairing,
+        table: &table,
     };
     let fold = match dml.op {
         WriteOp::Insert(
@@ -92,11 +129,12 @@ fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         WriteOp::Update => false,
         _ => return Ok(Transformed::no(LogicalPlan::Dml(dml))),
     };
-    if matches!(dml.input.as_ref(), LogicalPlan::Values(_)) {
-        let LogicalPlan::Values(values) = dml.input.as_ref() else {
+    let target_schema = dml.target.schema();
+    if let LogicalPlan::Values(values) = dml.input.as_ref() {
+        let Some(targets) = positional_values_targets(values, target_schema.as_ref()) else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
-        let Some(rewritten) = conform_values_rows(values, dml.target.schema().as_ref(), fold)?
+        let Some(rewritten) = conform_values_rows(values, &targets, fold, site, case_sensitive)?
         else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
@@ -105,7 +143,8 @@ fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
     if let LogicalPlan::Projection(projection) = dml.input.as_ref()
         && let LogicalPlan::Values(values) = projection.input.as_ref()
-        && let Some(rewritten) = conform_values_rows(values, dml.target.schema().as_ref(), fold)?
+        && let Some(targets) = projected_values_targets(projection, values, target_schema.as_ref())
+        && let Some(rewritten) = conform_values_rows(values, &targets, fold, site, case_sensitive)?
     {
         dml.input = Arc::new(LogicalPlan::Projection(Projection::try_new(
             projection.expr.clone(),
@@ -129,7 +168,7 @@ fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         ),
     };
     let Some((rewritten, input)) =
-        conform_store_exprs(&exprs, &input, dml.target.schema().as_ref(), fold)?
+        conform_store_exprs(&exprs, &input, dml.target.schema().as_ref(), fold, site)?
     else {
         return Ok(Transformed::no(LogicalPlan::Dml(dml)));
     };
@@ -165,23 +204,151 @@ fn rewrap_aliases(mut inner: Expr, frames: &[(Option<TableReference>, String)]) 
     inner
 }
 
+fn positional_values_targets<'a>(
+    values: &datafusion::logical_expr::Values,
+    target: &'a ArrowSchema,
+) -> Option<Vec<Option<&'a Field>>> {
+    (target.fields().len() == values.schema.fields().len()).then(|| {
+        target
+            .fields()
+            .iter()
+            .map(|field| Some(field.as_ref()))
+            .collect()
+    })
+}
+
+fn projected_values_targets<'a>(
+    projection: &Projection,
+    values: &datafusion::logical_expr::Values,
+    target: &'a ArrowSchema,
+) -> Option<Vec<Option<&'a Field>>> {
+    if projection.expr.len() != target.fields().len() {
+        return None;
+    }
+    let mut targets = vec![None; values.schema.fields().len()];
+    for (expr, field) in projection.expr.iter().zip(target.fields()) {
+        let (mut inner, _) = split_aliases(expr);
+        if let Expr::Cast(cast) = inner {
+            inner = cast.expr.as_ref();
+        }
+        let Expr::Column(column) = inner else {
+            continue;
+        };
+        let index = values.schema.index_of_column_by_name(None, &column.name)?;
+        targets[index] = Some(field.as_ref());
+    }
+    Some(targets)
+}
+
+fn values_row_type(expr: &Expr) -> Option<DataType> {
+    let (inner, _) = split_aliases(expr);
+    let written = match inner {
+        Expr::Cast(cast) => cast.expr.as_ref(),
+        other => other,
+    };
+    if matches!(written, Expr::Literal(value, _) if value.is_null()) {
+        return None;
+    }
+    written.get_type(&DFSchema::empty()).ok()
+}
+
+fn struct_names_agree(first: &DataType, other: &DataType, case_sensitive: bool) -> bool {
+    match (first, other) {
+        (DataType::Struct(left), DataType::Struct(right)) => {
+            left.len() == right.len()
+                && left.iter().zip(right.iter()).all(|(left, right)| {
+                    let named_alike = if case_sensitive {
+                        left.name() == right.name()
+                    } else {
+                        spark_names_equal_ignoring_case(left.name(), right.name())
+                    };
+                    named_alike
+                        && struct_names_agree(left.data_type(), right.data_type(), case_sensitive)
+                })
+        }
+        (DataType::List(left), DataType::List(right))
+        | (DataType::LargeList(left), DataType::LargeList(right))
+        | (DataType::FixedSizeList(left, _), DataType::FixedSizeList(right, _)) => {
+            struct_names_agree(left.data_type(), right.data_type(), case_sensitive)
+        }
+        (DataType::Map(left, _), DataType::Map(right, _)) => {
+            match (left.data_type(), right.data_type()) {
+                (DataType::Struct(left), DataType::Struct(right)) if left.len() == right.len() => {
+                    left.iter().zip(right.iter()).all(|(left, right)| {
+                        struct_names_agree(left.data_type(), right.data_type(), case_sensitive)
+                    })
+                }
+                _ => true,
+            }
+        }
+        _ => true,
+    }
+}
+
+fn refuse_disagreeing_values_rows(
+    values: &datafusion::logical_expr::Values,
+    case_sensitive: bool,
+) -> Result<()> {
+    let width = values.values.first().map_or(0, Vec::len);
+    for column in 0..width {
+        let mut first: Option<DataType> = None;
+        for row in &values.values {
+            let Some(written) = row.get(column).and_then(values_row_type) else {
+                continue;
+            };
+            if !holds_struct_type(&written) {
+                continue;
+            }
+            match &first {
+                None => first = Some(written),
+                Some(seen) if !struct_names_agree(seen, &written, case_sensitive) => {
+                    return Err(DataFusionError::Plan(format!(
+                        "[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE] Invalid inline \
+                         table. Found incompatible types in the column `col{}` for inline table. \
+                         SQLSTATE: 42000",
+                        column + 1
+                    )));
+                }
+                Some(_) => {}
+            }
+        }
+    }
+    Ok(())
+}
+
 fn conform_values_rows(
     values: &datafusion::logical_expr::Values,
-    target: &ArrowSchema,
+    targets: &[Option<&Field>],
     fold: bool,
+    site: PairSite<'_>,
+    case_sensitive: bool,
 ) -> Result<Option<LogicalPlan>> {
-    if target.fields().len() != values.schema.fields().len() {
-        return Ok(None);
-    }
+    refuse_disagreeing_values_rows(values, case_sensitive)?;
     let mut changed = false;
     let mut rows = Vec::with_capacity(values.values.len());
     for row in &values.values {
-        if row.len() != target.fields().len() {
+        if row.len() != targets.len() {
             return Ok(None);
         }
         let mut out = Vec::with_capacity(row.len());
-        for (expr, target_field) in row.iter().zip(target.fields()) {
+        for (expr, target_field) in row.iter().zip(targets) {
+            let Some(target_field) = target_field else {
+                out.push(expr.clone());
+                continue;
+            };
             let (inner, frames) = split_aliases(expr);
+            if let Some(paired) = pair_store_output(
+                inner,
+                &DFSchema::empty(),
+                target_field.name(),
+                target_field.data_type(),
+                site,
+                true,
+            )? {
+                out.push(rewrap_aliases(paired, &frames));
+                changed = true;
+                continue;
+            }
             let Expr::Cast(cast) = inner else {
                 out.push(expr.clone());
                 continue;
@@ -232,6 +399,7 @@ fn conform_store_exprs(
     input: &Arc<LogicalPlan>,
     target: &ArrowSchema,
     fold: bool,
+    site: PairSite<'_>,
 ) -> Result<Option<(Vec<Expr>, Arc<LogicalPlan>)>> {
     let schema = input.schema().clone();
     let mut input = Arc::clone(input);
@@ -254,6 +422,7 @@ fn conform_store_exprs(
             fold,
             in_values: false,
             unwrap_cast: true,
+            site,
         };
         let Some(rewritten) = conform_one_store_expr(
             inner,
@@ -277,10 +446,61 @@ fn conform_store_exprs(
 }
 
 #[derive(Debug, Clone, Copy)]
-struct ConformStoreFlags {
+struct PairSite<'a> {
+    pairing: StructPairing,
+    table: &'a str,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ConformStoreFlags<'a> {
     fold: bool,
     in_values: bool,
     unwrap_cast: bool,
+    site: PairSite<'a>,
+}
+
+fn pair_store_output(
+    inner: &Expr,
+    schema: &DFSchema,
+    column: &str,
+    target: &DataType,
+    site: PairSite<'_>,
+    unwrap_cast: bool,
+) -> Result<Option<Expr>> {
+    if !holds_struct_type(target) {
+        return Ok(None);
+    }
+    let (value, cast) = match inner {
+        Expr::Cast(cast) => (cast.expr.as_ref(), Some(cast)),
+        other => (other, None),
+    };
+    let Ok(source) = value.get_type(schema) else {
+        return Ok(None);
+    };
+    let pairs = pair_store_value(site.pairing, site.table, column, &source, target)?;
+    match cast {
+        Some(_) if !unwrap_cast => {
+            if let Ok(written) = inner.get_type(schema)
+                && let Ok(judged) =
+                    pair_store_value(site.pairing, site.table, column, &written, target)
+            {
+                refuse_unassignable_leaves(site.table, &judged)?;
+            }
+        }
+        _ => refuse_unassignable_leaves(site.table, &pairs)?,
+    }
+    if pairs.is_identity() {
+        return Ok(None);
+    }
+    let kernel = store_pair_expr(value.clone(), target, site.pairing, site.table, column);
+    Ok(Some(match cast {
+        Some(cast) => {
+            let mut cast = cast.clone();
+            cast.expr = Box::new(kernel);
+            Expr::Cast(cast)
+        }
+        None => kernel,
+    }))
 }
 
 fn conform_one_store_expr(
@@ -289,8 +509,18 @@ fn conform_one_store_expr(
     input: &mut Arc<LogicalPlan>,
     column: &str,
     target_type: &DataType,
-    flags: ConformStoreFlags,
+    flags: ConformStoreFlags<'_>,
 ) -> Result<Option<Expr>> {
+    if let Some(paired) = pair_store_output(
+        inner,
+        schema,
+        column,
+        target_type,
+        flags.site,
+        flags.unwrap_cast,
+    )? {
+        return Ok(Some(paired));
+    }
     if let Expr::ScalarFunction(function) = inner
         && store_int_target(function.func.name()).is_some()
     {
@@ -606,6 +836,8 @@ pub fn wrap_store_outputs(
     by_name: bool,
     fold: bool,
     gate_op: Option<&str>,
+    pairing: StructPairing,
+    table: &str,
 ) -> Result<LogicalPlan> {
     let LogicalPlan::Projection(projection) = plan else {
         return Ok(plan);
@@ -643,6 +875,7 @@ pub fn wrap_store_outputs(
             fold,
             in_values: false,
             unwrap_cast: false,
+            site: PairSite { pairing, table },
         };
         let conformed = conform_one_store_expr(
             inner,
@@ -703,247 +936,4 @@ fn judge_wrap_store_assignable(
 }
 
 #[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use datafusion::arrow::array::{Float64Array, Int64Array, RecordBatch};
-    use datafusion::arrow::datatypes::{Field, Schema};
-    use datafusion::datasource::MemTable;
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
-        ctx.add_analyzer_rule(Arc::new(StoreOverflowCast));
-        crate::write::store_cast::register_store_cast_udfs(&ctx);
-        let target = Arc::new(Schema::new(vec![
-            Field::new("id", DataType::Int64, true),
-            Field::new("v", DataType::Int64, true),
-        ]));
-        ctx.register_table(
-            "t",
-            Arc::new(MemTable::try_new(Arc::clone(&target), vec![vec![]]).unwrap()),
-        )
-        .unwrap();
-        let source = Arc::new(Schema::new(vec![
-            Field::new("id", DataType::Int64, true),
-            Field::new("d", DataType::Float64, true),
-        ]));
-        let batch = RecordBatch::try_new(
-            Arc::clone(&source),
-            vec![
-                Arc::new(Int64Array::from(vec![1, 2])),
-                Arc::new(Float64Array::from(vec![1e19, 42.0])),
-            ],
-        )
-        .unwrap();
-        ctx.register_table(
-            "s",
-            Arc::new(MemTable::try_new(source, vec![vec![batch]]).unwrap()),
-        )
-        .unwrap();
-        ctx
-    }
-
-    async fn run(ctx: &SessionContext, sql: &str) -> Result<(), String> {
-        match ctx.sql(sql).await {
-            Err(error) => Err(error.to_string()),
-            Ok(frame) => frame.collect().await.map(|_| ()).map_err(|e| e.to_string()),
-        }
-    }
-
-    fn overflow_head(message: &str, from: &str, to: &str, column: &str) {
-        assert!(
-            message.contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
-            "{message}"
-        );
-        assert!(message.contains(&format!("\"{from}\" type")), "{message}");
-        assert!(message.contains(&format!("\"{to}\" type")), "{message}");
-        assert!(message.contains(&format!("`{column}`")), "{message}");
-        assert!(message.contains("SQLSTATE: 22003"), "{message}");
-    }
-
-    #[tokio::test]
-    async fn insert_select_const_overflow_refuses_at_plan() {
-        let ctx = ctx();
-        for value in ["1e19", "-1e19", "1e100"] {
-            let message = run(&ctx, &format!("INSERT INTO t SELECT 10, {value}"))
-                .await
-                .expect_err("const overflow must refuse");
-            overflow_head(&message, "DOUBLE", "BIGINT", "v");
-        }
-    }
-
-    #[tokio::test]
-    async fn insert_select_const_overflow_refuses_over_empty_source() {
-        let ctx = ctx();
-        let empty = Arc::new(Schema::new(vec![
-            Field::new("id", DataType::Int64, true),
-            Field::new("d", DataType::Float64, true),
-        ]));
-        ctx.register_table(
-            "e",
-            Arc::new(MemTable::try_new(empty, vec![vec![]]).unwrap()),
-        )
-        .unwrap();
-        let message = run(&ctx, "INSERT INTO t SELECT id, 1e19 FROM e")
-            .await
-            .expect_err("const overflow over empty source must refuse");
-        overflow_head(&message, "DOUBLE", "BIGINT", "v");
-    }
-
-    #[tokio::test]
-    async fn insert_values_overflow_refuses_at_plan() {
-        let ctx = ctx();
-        let message = run(&ctx, "INSERT INTO t VALUES (10, 1e19)")
-            .await
-            .expect_err("values overflow must refuse");
-        overflow_head(&message, "DOUBLE", "BIGINT", "v");
-    }
-
-    #[tokio::test]
-    async fn insert_column_overflow_refuses_at_collect() {
-        let ctx = ctx();
-        let message = run(&ctx, "INSERT INTO t SELECT id, d FROM s")
-            .await
-            .expect_err("column overflow must refuse");
-        overflow_head(&message, "DOUBLE", "BIGINT", "v");
-    }
-
-    #[tokio::test]
-    async fn insert_through_a_subquery_folds_like_spark() {
-        let ctx = ctx();
-        let message = run(
-            &ctx,
-            "INSERT INTO t SELECT id, v FROM (SELECT 1 AS id, 1e19 AS v) s",
-        )
-        .await
-        .expect_err("subquery const must refuse");
-        overflow_head(&message, "DOUBLE", "BIGINT", "v");
-    }
-
-    #[tokio::test]
-    async fn in_range_fractional_values_store_truncated() {
-        let ctx = ctx();
-        run(&ctx, "INSERT INTO t SELECT 10, 42.0")
-            .await
-            .expect("42.0 stores");
-        run(&ctx, "INSERT INTO t SELECT 11, 1.5")
-            .await
-            .expect("1.5 stores");
-        run(&ctx, "INSERT INTO t SELECT 12, -1.5")
-            .await
-            .expect("-1.5 stores");
-        let rows = ctx
-            .sql("SELECT id, v FROM t ORDER BY id")
-            .await
-            .unwrap()
-            .collect()
-            .await
-            .unwrap();
-        let values: Vec<i64> = rows
-            .iter()
-            .flat_map(|batch| {
-                batch
-                    .column(1)
-                    .as_any()
-                    .downcast_ref::<Int64Array>()
-                    .unwrap()
-                    .values()
-                    .to_vec()
-            })
-            .collect();
-        assert_eq!(values, vec![42, 1, -1]);
-    }
-
-    #[tokio::test]
-    async fn two_to_the_63_stores_max_like_spark() {
-        let ctx = ctx();
-        run(&ctx, "INSERT INTO t SELECT 10, 9.223372036854776e18")
-            .await
-            .expect("2^63 stores");
-        let rows = ctx
-            .sql("SELECT v FROM t")
-            .await
-            .unwrap()
-            .collect()
-            .await
-            .unwrap();
-        let value = rows[0]
-            .column(0)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap()
-            .value(0);
-        assert_eq!(value, i64::MAX);
-    }
-
-    #[tokio::test]
-    async fn int_pairs_and_strings_keep_their_old_text() {
-        let ctx = ctx();
-        let narrow = run(&ctx, "INSERT INTO t SELECT 10, CAST(1 AS BIGINT)").await;
-        assert!(narrow.is_ok(), "widening stores");
-        let message = run(&ctx, "INSERT INTO t SELECT 'abc', 'def'")
-            .await
-            .expect_err("strings must refuse");
-        assert!(
-            !message.contains("CAST_OVERFLOW_IN_TABLE_INSERT"),
-            "{message}"
-        );
-    }
-
-    #[tokio::test]
-    async fn memtable_update_is_lazy_like_spark() {
-        let ctx = ctx();
-        run(&ctx, "INSERT INTO t VALUES (1, 0)").await.unwrap();
-        run(&ctx, "UPDATE t SET v = 1e19 WHERE false")
-            .await
-            .expect("where-false stays success");
-        let message = run(&ctx, "UPDATE t SET v = 1e19")
-            .await
-            .expect_err("matched const refuses");
-        overflow_head(&message, "DOUBLE", "BIGINT", "v");
-    }
-
-    #[tokio::test]
-    async fn divisor_guards_swap_under_a_store() {
-        use datafusion::logical_expr::{
-            ColumnarValue, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-        };
-        #[derive(Debug, PartialEq, Eq, Hash)]
-        struct DummyGuard {
-            signature: Signature,
-        }
-        impl ScalarUDFImpl for DummyGuard {
-            fn name(&self) -> &str {
-                STORE_DIVISOR_GUARD_NAME
-            }
-            fn signature(&self) -> &Signature {
-                &self.signature
-            }
-            fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-                Ok(arg_types[0].clone())
-            }
-            fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-                Ok(args.args[0].clone())
-            }
-        }
-        let guard = Arc::new(datafusion::logical_expr::ScalarUDF::from(DummyGuard {
-            signature: Signature::any(1, datafusion::logical_expr::Volatility::Immutable),
-        }));
-        let issue = store_issue("v", &DataType::Float64, &DataType::Int64).unwrap();
-        let expr = Expr::BinaryExpr(datafusion::logical_expr::BinaryExpr::new(
-            Box::new(Expr::Literal(ScalarValue::Float64(Some(0.0)), None)),
-            datafusion::logical_expr::Operator::Divide,
-            Box::new(Expr::ScalarFunction(ScalarFunction::new_udf(
-                guard,
-                vec![Expr::Literal(ScalarValue::Float64(Some(0.0)), None)],
-            ))),
-        ));
-        let swapped = swap_guards_in_expr(expr, &issue);
-        let text = format!("{swapped:?}");
-        assert!(text.contains("StoreIntGuard"), "{text}");
-        assert!(!text.contains("DummyGuard"), "{text}");
-    }
-}
+mod tests;

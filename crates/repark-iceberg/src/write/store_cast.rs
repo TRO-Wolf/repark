@@ -13,7 +13,11 @@ use datafusion::logical_expr::{
 use datafusion::prelude::SessionContext;
 use datafusion::scalar::ScalarValue;
 
+use crate::write::ntz_store::{
+    NS_INSTANT_CAST_UDF_NAME, NS_WALL_CAST_UDF_NAME, NTZ_WALL_CAST_UDF_NAME,
+};
 use crate::write::store_assign::normalize_for_assignment;
+use crate::write::struct_pairing::{STORE_PAIR_KERNEL_NAME, store_pair_udf};
 
 pub const STORE_INT8_NAME: &str = "__repark_store_int8__";
 pub const STORE_INT16_NAME: &str = "__repark_store_int16__";
@@ -481,12 +485,27 @@ pub(crate) fn store_cast_udf_for_target(target: &DataType) -> Option<Arc<ScalarU
     }
 }
 
+pub type StoreKernel = (&'static str, fn() -> Arc<ScalarUDF>);
+
+pub const BY_NAME_STORE_KERNELS: [StoreKernel; 6] = [
+    (STORE_INT8_NAME, store_int8_udf),
+    (STORE_INT16_NAME, store_int16_udf),
+    (STORE_INT32_NAME, store_int32_udf),
+    (STORE_INT64_NAME, store_int64_udf),
+    (STORE_INT_GUARD_NAME, store_int_guard_udf),
+    (STORE_PAIR_KERNEL_NAME, store_pair_udf),
+];
+
+pub const NS_WALL_KERNEL_NAMES: [&str; 3] = [
+    NTZ_WALL_CAST_UDF_NAME,
+    NS_WALL_CAST_UDF_NAME,
+    NS_INSTANT_CAST_UDF_NAME,
+];
+
 pub fn register_store_cast_udfs(ctx: &SessionContext) {
-    ctx.register_udf(store_int8_udf().as_ref().clone());
-    ctx.register_udf(store_int16_udf().as_ref().clone());
-    ctx.register_udf(store_int32_udf().as_ref().clone());
-    ctx.register_udf(store_int64_udf().as_ref().clone());
-    ctx.register_udf(store_int_guard_udf().as_ref().clone());
+    for (_, kernel) in BY_NAME_STORE_KERNELS {
+        ctx.register_udf(kernel().as_ref().clone());
+    }
 }
 
 #[cfg(test)]

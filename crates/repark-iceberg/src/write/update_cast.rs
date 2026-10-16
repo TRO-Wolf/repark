@@ -1,19 +1,43 @@
 use std::borrow::Cow;
-use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
+use datafusion::arrow::datatypes::{DataType, TimeUnit};
+use datafusion::error::{DataFusionError, Result};
 use repark_common::spark_error;
 
 use super::store_assign::{
     ansi_store_assignable, normalize_for_assignment, without_field_metadata,
 };
+use super::struct_pairing::{StorePairs, StructPairing, pair_store_value_at, store_pair_sql};
 
 #[must_use]
 pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
+    paired_assignment_cast_sql(expr, target, StructPairing::by_name(false), "``")
+}
+
+#[must_use]
+pub fn paired_assignment_cast_sql(
+    expr: &str,
+    target: &DataType,
+    pairing: StructPairing,
+    root: &str,
+) -> String {
+    let paired = store_pair_sql(expr, target, pairing, "``", root);
+    let expr = paired.as_deref().unwrap_or(expr);
     match super::ntz_store::store_kernel_sql(expr, target) {
         Some(stored) => stored,
         None => nested_leaf_cast_sql(expr, target),
     }
+}
+
+#[must_use]
+pub fn paired_nested_cast_sql(
+    expr: &str,
+    target: &DataType,
+    pairing: StructPairing,
+    root: &str,
+) -> String {
+    let paired = store_pair_sql(expr, target, pairing, "``", root);
+    nested_leaf_cast_sql(paired.as_deref().unwrap_or(expr), target)
 }
 
 #[must_use]
@@ -38,7 +62,7 @@ pub fn incompatible_update_message(
     source: &DataType,
     target: &DataType,
 ) -> Option<String> {
-    incompatible_message(table, column, source, target, false)
+    incompatible_paired_update_message(StructPairing::by_name(false), table, column, source, target)
 }
 
 #[must_use]
@@ -48,14 +72,36 @@ pub fn incompatible_store_message(
     source: &DataType,
     target: &DataType,
 ) -> Option<String> {
-    incompatible_message(table, column, source, target, true)
+    incompatible_paired_store_message(StructPairing::by_name(false), table, column, source, target)
 }
 
-fn incompatible_message(
+#[must_use]
+pub fn incompatible_paired_update_message(
+    pairing: StructPairing,
     table: &str,
     column: &str,
     source: &DataType,
     target: &DataType,
+) -> Option<String> {
+    incompatible_message(pairing, table, column, (source, target), false)
+}
+
+#[must_use]
+pub fn incompatible_paired_store_message(
+    pairing: StructPairing,
+    table: &str,
+    column: &str,
+    source: &DataType,
+    target: &DataType,
+) -> Option<String> {
+    incompatible_message(pairing, table, column, (source, target), true)
+}
+
+fn incompatible_message(
+    pairing: StructPairing,
+    table: &str,
+    column: &str,
+    (source, target): (&DataType, &DataType),
     name_decimals: bool,
 ) -> Option<String> {
     let source = normalize_for_assignment(source);
@@ -63,8 +109,12 @@ fn incompatible_message(
     if ansi_store_assignable(source, target) {
         return None;
     }
-    if matches!(source, DataType::Map(_, _)) || matches!(target, DataType::Map(_, _)) {
-        return incompatible_nested_message(column, source, target);
+    if super::struct_pairing::holds_struct_type(source)
+        || super::struct_pairing::holds_struct_type(target)
+        || matches!(source, DataType::Map(_, _))
+        || matches!(target, DataType::Map(_, _))
+    {
+        return incompatible_paired_message(pairing, column, source, target);
     }
     let from = store_type_name(source, name_decimals)?;
     let to = store_type_name(target, name_decimals)?;
@@ -99,59 +149,113 @@ pub fn incompatible_nested_message(
     source: &DataType,
     target: &DataType,
 ) -> Option<String> {
-    let source = normalize_for_assignment(source);
-    let target = normalize_for_assignment(target);
-    match (source, target) {
-        (DataType::Map(from, _), DataType::Map(to, _)) => {
-            let (DataType::Struct(from), DataType::Struct(to)) = (from.data_type(), to.data_type())
-            else {
-                return None;
-            };
-            from.iter().zip(to.iter()).zip(["key", "value"]).find_map(
-                |((source, target), label)| {
-                    incompatible_nested_message(
-                        &format!("{column}.`{label}`"),
-                        source.data_type(),
-                        target.data_type(),
-                    )
-                },
-            )
+    incompatible_paired_message(StructPairing::by_name(false), column, source, target)
+}
+
+#[must_use]
+pub fn incompatible_paired_message(
+    pairing: StructPairing,
+    column: &str,
+    source: &DataType,
+    target: &DataType,
+) -> Option<String> {
+    let pairs = match pair_store_value_at(pairing, "``", column, source, target) {
+        Ok(pairs) => pairs,
+        Err(DataFusionError::Plan(text)) => return Some(text),
+        Err(other) => return Some(other.to_string()),
+    };
+    unassignable_leaf_message("``", &pairs)
+}
+
+#[must_use]
+pub fn unassignable_leaf_message(table: &str, pairs: &StorePairs) -> Option<String> {
+    pairs.leaves().iter().find_map(|leaf| {
+        let from = normalize_for_assignment(&leaf.source);
+        let to = normalize_for_assignment(&leaf.target);
+        if ansi_store_assignable(from, to) {
+            return None;
         }
-        (DataType::Struct(from), DataType::Struct(to)) => to.iter().find_map(|target| {
-            let child = format!("{column}.`{}`", target.name());
-            match struct_member(from, target.name()) {
-                Some(source) => {
-                    incompatible_nested_message(&child, source.data_type(), target.data_type())
-                }
-                None => Some(format!(
-                    "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible \
-                     data for the table ``: Cannot find data for the output column {child}. \
-                     SQLSTATE: KD000"
-                )),
-            }
-        }),
-        _ if ansi_store_assignable(source, target) => None,
-        _ => Some(spark_error::message(
+        Some(spark_error::message(
             spark_error::INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
             &[
-                ("tableName", "``"),
-                ("columnName", column),
-                ("fromType", spark_update_type_name(source)?),
-                ("toType", spark_update_type_name(target)?),
+                ("tableName", table),
+                ("columnName", &leaf.path),
+                ("fromType", &spark_leaf_type_name(from)?),
+                ("toType", &spark_leaf_type_name(to)?),
             ],
-        )),
+        ))
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_unassignable_leaves(table: &str, pairs: &StorePairs) -> Result<()> {
+    match unassignable_leaf_message(table, pairs) {
+        Some(text) => Err(DataFusionError::Plan(text)),
+        None => Ok(()),
     }
 }
 
-fn struct_member<'a>(fields: &'a Fields, name: &str) -> Option<&'a Arc<Field>> {
-    fields
-        .iter()
-        .find(|field| field.name() == name)
-        .or_else(|| {
-            fields
+fn spark_leaf_type_name(data_type: &DataType) -> Option<Cow<'static, str>> {
+    if let Some(flat) = spark_update_type_name(data_type) {
+        return Some(Cow::Borrowed(flat));
+    }
+    spark_catalog_string(data_type).map(|text| Cow::Owned(text.to_uppercase()))
+}
+
+fn spark_quote_if_needed(name: &str) -> String {
+    let plain = !name.is_empty()
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && !name.chars().all(|c| c.is_ascii_digit());
+    if plain {
+        name.to_string()
+    } else {
+        format!("`{}`", name.replace('`', "``"))
+    }
+}
+
+fn spark_catalog_string(data_type: &DataType) -> Option<String> {
+    match data_type {
+        DataType::Struct(fields) => {
+            let members = fields
                 .iter()
-                .find(|field| field.name().eq_ignore_ascii_case(name))
-        })
+                .map(|field| {
+                    Some(format!(
+                        "{}:{}",
+                        spark_quote_if_needed(field.name()),
+                        spark_catalog_string(field.data_type())?
+                    ))
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Some(format!("struct<{}>", members.join(",")))
+        }
+        DataType::List(element)
+        | DataType::LargeList(element)
+        | DataType::ListView(element)
+        | DataType::LargeListView(element)
+        | DataType::FixedSizeList(element, _) => Some(format!(
+            "array<{}>",
+            spark_catalog_string(element.data_type())?
+        )),
+        DataType::Map(entries, _) => {
+            let DataType::Struct(pair) = entries.data_type() else {
+                return None;
+            };
+            let [key, value] = pair.iter().collect::<Vec<_>>()[..] else {
+                return None;
+            };
+            Some(format!(
+                "map<{},{}>",
+                spark_catalog_string(key.data_type())?,
+                spark_catalog_string(value.data_type())?
+            ))
+        }
+        DataType::Decimal32(precision, scale)
+        | DataType::Decimal64(precision, scale)
+        | DataType::Decimal128(precision, scale)
+        | DataType::Decimal256(precision, scale) => Some(format!("decimal({precision},{scale})")),
+        DataType::Dictionary(_, values) => spark_catalog_string(values),
+        other => spark_update_type_name(other).map(str::to_lowercase),
+    }
 }
 
 fn spark_update_type_name(data_type: &DataType) -> Option<&'static str> {
@@ -290,7 +394,8 @@ mod tests {
         );
         assert_eq!(
             store_assignment_cast_sql("s.v", &target),
-            "arrow_cast((s.v), 'Struct(\"a\": Int32)')"
+            "arrow_cast((__repark_store_pair__((s.v), 'Struct(\"a\": Int32)', 'by_name', '``', \
+             '``')), 'Struct(\"a\": Int32)')"
         );
         assert_eq!(
             store_assignment_cast_sql("'it''s'", &DataType::Utf8),

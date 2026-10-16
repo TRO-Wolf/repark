@@ -11,6 +11,15 @@ every door's planned statement passes through before it executes (Z-2 / Z-3).
   `SessionContext::sql` contrast that shows the eager path publishing a `SELECT … INTO` sink),
   `run` = plan → guard → execute, and `guard` is a no-op outside its scope
   (`#[cfg(test)] mod tests;` in `../pre_execute.rs`).
+  **Exception round (2026-10-15, ruling 90(a)):**
+  `guard_refuses_an_update_whose_set_value_is_a_scalar_subquery` plans six `UPDATE`s over two
+  `MemTable`s (`WHERE true`, an `IN` list, no `WHERE`, a subquery with its own `WHERE`, nested
+  parentheses beside a second assignment, a cast inside the subquery) and holds `guard` to the
+  refusal text; `guard_passes_an_update_whose_set_value_only_contains_a_subquery` holds it
+  silent for a literal, an expression of the column, a subquery inside `+` and `COALESCE`, and
+  a subquery in the `WHERE` only. Both pass through `arrow_cast` and RePark's `__repark_*`
+  store kernels, the wrappers the Spark door's struct fold adds around the value.
+  pins: ice-struct-pairing-1/C-034, C-035
 
 ## Pointers
 

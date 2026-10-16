@@ -467,7 +467,13 @@ async fn execute_insert_routed(
         TableObject::TableFunction(_) | TableObject::TableQuery(_) => None,
     };
     crate::catalog_ops::refuse_encrypted_write_target(ctx, catalogs, target).await?;
-    passthrough_after_p11(ctx, catalogs, sql, refusal).await
+    if !write_options.source_by_name {
+        return passthrough_after_p11(ctx, catalogs, sql, refusal).await;
+    }
+    if let Some(message) = refusal {
+        return Err(DataFusionError::Plan(message));
+    }
+    spark_ast::execute_passthrough_by(ctx, catalogs, sql, true).await
 }
 
 #[allow(clippy::missing_errors_doc)]

@@ -3,7 +3,11 @@
 **Date:** 2026-10-14. **Filed by:** the docs clerk lane, from ICE-STRUCT-PAIRING-1
 step 0 (U-6) and the owner's ruling on question 37 of 2026-10-14.
 
-**Status:** open. Unscheduled, not in the closeout.
+**Status:** open. Unscheduled, not in the closeout. **2026-10-14:** the measured shape closes in
+ICE-STRUCT-PAIRING-1 build round 2 (hint H-2: the by-name walk refuses a target field that two
+source fields match), pinned by `test_ice_struct_pairing_1.py` cell `by_name_case_twins`; row
+R-021 is CLOSED. What the card adds beyond that cell (format v3, the other by-name doors and
+containers) is for the owner to keep or retire.
 
 **Related:** parity row ICE-TSNS-SQL-1-R-021 in
 [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).

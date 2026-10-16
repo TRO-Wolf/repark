@@ -35,6 +35,10 @@ pins: rp-4-fork-repin/C-005, C-006
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s
   `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
   binding's native join door. pins: stamp-2-r5p6-2/C-002
+- `insert_by_name.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_by_name/nested.rs` (`refuse_nested_mismatch`) is
+  deleted: the BY NAME append hands `wrap_store_outputs` the by-name mode under the session's
+  case rule and the table label, and the by-name source of `REPLACE WHERE` pairs at the planned
+  INSERT.
 - `router.rs`, `catalog_ops.rs`, `merge.rs`, `insert_overwrite.rs`, `insert_by_name.rs`,
   `append_with_options.rs`, `truncate.rs`, `ctas.rs`, `spark_ast.rs` — **ENC-1 round 2
   (2026-10-09):** the Spark seats of the keyed-table refusal. `catalog_ops.rs` gains
@@ -53,6 +57,18 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark-iceberg` refuses the file and the commit without them. Pinned in
   `tests/enc_1_fold.rs`.
   pins: enc-1/C-007, C-008
+- `router.rs`, `spark_ast.rs`, `append_with_options.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the DataFrame door's
+  `source_by_name` reaches the conform: `execute_passthrough_inner` puts a `StatementPairing`
+  (`source_by_name`, `case_sensitive`) on the statement's own state snapshot, where
+  `StoreOverflowCast` reads it; `execute_passthrough_by` and `execute_insert_source` take the
+  flag, and the plain-INSERT route of `execute_insert_routed` and the write-options append pass
+  it. **Build round 2 (2026-10-14):** both passthrough entries map their error through
+  `door_error`, which first peels the `StoreOverflowCast` rule's own analyzer context (the
+  label is the rule's `name()`, `repark_store_overflow_cast`; no message is read), so a
+  refusal raised inside the rule reaches Python with its Spark condition on the head. The
+  `overwrite(condition)` cells of `test_ice_write_df_2_overwrite.py` pin it.
+  `install_statement_pairing` and the one-line source SQL of `append_with_options.rs` keep both
+  functions under clippy's line ceiling. pins: ice-struct-pairing-1/C-015
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
@@ -247,6 +263,9 @@ pins: rp-4-fork-repin/C-005, C-006
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
   before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+- `insert_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the stage-then-swap path hands `conform_types` the door's
+  mode (by name for `overwritePartitions`, by position otherwise) and the table label. The
+  static-partition route keeps no pairing site: hint H-1 guards its cast.
 - `insert_overwrite.rs` — **RP-56 (2026-09-28):** the empty-overwrite target probe reads
   through a scratch alias (engine machinery, like its sibling probes), and the
   ambiguous-overwrite read-back counts (`SELECT 1 … HAVING COUNT(*)=1`) instead of starring.
@@ -599,6 +618,14 @@ pins: rp-4-fork-repin/C-005, C-006
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-05, parity row R-016:** `refuse_incompatible_update_cast` reads the session's
+  `spark.sql.caseSensitive` and judges a struct SET value by name under it
+  (`StructPairing::by_name`), instead of a fixed case-insensitive pairing: with
+  `caseSensitive=true`, `named_struct('a', 1, 'A', 2)` answers Spark's `CANNOT_FIND_DATA` for
+  `` `st`.`b` `` and `named_struct('a', 1, 'b', 2, 'A', 3)` its `EXTRA_STRUCT_FIELDS`, not
+  `AMBIGUOUS_COLUMN_NAME` (verifier 1's eight cells, v2 and v3, with and without `WHERE`).
+  pins: ice-struct-pairing-1/C-029
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `execute_update` calls
   `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR
   refusals and before `execute_passthrough`: bare-column SET targets resolve on the
