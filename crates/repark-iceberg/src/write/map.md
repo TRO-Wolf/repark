@@ -626,8 +626,12 @@ repark-core's error map.
   helper through `merge/snapshot_commit.rs::sweep_after_rejected_commit`, which keeps
   the merge-only shape for other errors (unknown state still skips, conflicts still
   sweep). Pins: one per operation family in the Spark `enc_1_sweep.rs` battery and in
-  `merge/snapshot_commit.rs`, plus the census in the iceberg `enc_1_gate.rs` gate that
-  lists the 15 sites so a new unswept site fails the suite.
+  `merge/snapshot_commit.rs`, plus the census in the iceberg `enc_1_gate.rs` gate
+  (round 2, owner ruling 108): by the commit call, across the three crates, the 13
+  ruled sites and the two merge sites, with `ctas.rs::finish_ctas_staged_commit` and
+  `create_table.rs::execute_staged_create` / `publish_staged_with_summary` excepted
+  under ENC-CTAS-REPLACE-1. A new unswept site, or a listed site that sweeps an
+  emptied slice, fails the suite.
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
   `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
   `commit_truncate_to` commits onto a named branch.

@@ -321,13 +321,44 @@ const SWEEP_SITES: &[(&str, &str)] = &[
     ),
 ];
 
-const STAGING_MARKERS: &[&str] = &[".add_data_files(", ".add_files("];
-const COMMIT_MARKERS: &[&str] = &[".commit(", ".commit_append("];
-const SWEEP_MARKERS: &[&str] = &[
-    "commit_with_keyed_sweep",
-    "sweep_staged_files_on_keyed_refusal",
-    "sweep_after_rejected_commit",
+const CENSUS_ROOTS: &[&str] = &[
+    "repark-iceberg/src/",
+    "repark-spark/src/",
+    "repark-sql/src/",
 ];
+const STAGING_CALLS: &[&str] = &[
+    "add_data_files",
+    "add_files",
+    "add_file",
+    "add_deletes",
+    "add_delete_files",
+];
+const COMMIT_CALLS: &[&str] = &["commit", "publish_create_table", "publish_replace_table"];
+const SWEEP_CALLS: &[&str] = &[
+    "commit_with_keyed_sweep",
+    "sweep_after_rejected_commit",
+    "sweep_staged_files_on_keyed_refusal",
+];
+const EMPTY_STAGING: &[&str] = &["Vec::new()", "vec![]", "Vec::default()"];
+const CENSUS_EXCEPTIONS: &[(&str, &str, &str)] = &[
+    (
+        "repark-spark/src/ctas.rs",
+        "finish_ctas_staged_commit",
+        "ENC-CTAS-REPLACE-1",
+    ),
+    (
+        "repark-sql/src/create_table.rs",
+        "execute_staged_create",
+        "ENC-CTAS-REPLACE-1",
+    ),
+    (
+        "repark-sql/src/create_table.rs",
+        "publish_staged_with_summary",
+        "ENC-CTAS-REPLACE-1",
+    ),
+];
+const MAX_BINDING_HOPS: usize = 8;
+const TRANSACTION_API_NAMES: &[&str] = &["apply"];
 
 fn function_name(line: &str) -> Option<String> {
     let mut rest = line.trim();
@@ -447,42 +478,376 @@ fn the_scan_skips_test_code_and_keeps_product_code() {
     );
 }
 
-#[test]
-fn every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal() {
-    let mut found: Vec<(String, String)> = Vec::new();
-    let mut unswept: Vec<String> = Vec::new();
+struct CensusFunction {
+    site: String,
+    is_method: bool,
+    takes_transaction: bool,
+    returns_staged: bool,
+    body: String,
+}
+
+fn is_identifier_char(character: char) -> bool {
+    character.is_alphanumeric() || character == '_'
+}
+
+fn is_identifier(text: &str) -> bool {
+    !text.is_empty()
+        && text.chars().all(is_identifier_char)
+        && !text.starts_with(|character: char| character.is_ascii_digit())
+}
+
+fn balanced_arguments(rest: &str) -> Option<String> {
+    let mut depth = 1_i64;
+    for (index, character) in rest.char_indices() {
+        match character {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(rest[..index].to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn call_arguments(body: &str, name: &str, method: bool) -> Vec<String> {
+    let needle = format!("{name}(");
+    let mut found = Vec::new();
+    let mut from = 0;
+    while let Some(offset) = body[from..].find(&needle) {
+        let start = from + offset;
+        from = start + needle.len();
+        let before = body[..start].trim_end_matches([' ', '\t']);
+        let previous = before.chars().next_back();
+        if previous.is_some_and(is_identifier_char) {
+            continue;
+        }
+        if before.ends_with("fn") {
+            continue;
+        }
+        let dotted = before.ends_with('.') || before.ends_with(".\n");
+        let dotted = dotted || body[..start].trim_end().ends_with('.');
+        if dotted != method {
+            continue;
+        }
+        if let Some(arguments) = balanced_arguments(&body[from..]) {
+            found.push(arguments);
+        }
+    }
+    found
+}
+
+fn split_arguments(arguments: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut depth = 0_i64;
+    let mut current = String::new();
+    for character in arguments.chars() {
+        match character {
+            '(' | '[' | '{' | '<' => depth += 1,
+            ')' | ']' | '}' | '>' => depth -= 1,
+            ',' if depth == 0 => {
+                parts.push(current.trim().to_string());
+                current.clear();
+                continue;
+            }
+            _ => {}
+        }
+        current.push(character);
+    }
+    if !current.trim().is_empty() {
+        parts.push(current.trim().to_string());
+    }
+    parts
+}
+
+fn signature(body: &str) -> &str {
+    body.find('{').map_or(body, |end| &body[..end])
+}
+
+fn census_functions() -> Vec<CensusFunction> {
+    let mut functions = Vec::new();
     for (file, text) in product_sources() {
-        if !file.starts_with("repark-iceberg/src/write/") {
+        if !CENSUS_ROOTS.iter().any(|root| file.starts_with(root)) {
             continue;
         }
         for (name, body) in function_bodies(&text) {
-            let stages = STAGING_MARKERS.iter().any(|marker| body.contains(marker));
-            let commits = COMMIT_MARKERS.iter().any(|marker| body.contains(marker));
-            if !stages || !commits {
-                continue;
-            }
-            found.push((file.clone(), name.clone()));
-            if !SWEEP_MARKERS.iter().any(|marker| body.contains(marker)) {
-                unswept.push(format!("{file}::{name}"));
-            }
+            let head = signature(&body);
+            let returned = head.split_once("->").map_or("", |(_, returned)| returned);
+            functions.push(CensusFunction {
+                site: format!("{file}::{name}"),
+                is_method: head.contains("self"),
+                takes_transaction: head.contains(": Transaction"),
+                returns_staged: returned.contains("Transaction") || returned.contains("Action"),
+                body,
+            });
         }
     }
-    assert!(
-        unswept.is_empty(),
-        "ENC-1 residue item 1: a stage-then-commit site without the keyed sweep:\n{}",
-        unswept.join("\n")
+    functions
+}
+
+fn name_of(function: &CensusFunction) -> &str {
+    function
+        .site
+        .rsplit("::")
+        .next()
+        .unwrap_or(function.site.as_str())
+}
+
+fn stages_directly(function: &CensusFunction) -> bool {
+    STAGING_CALLS.iter().any(|call| {
+        call_arguments(&function.body, call, true)
+            .iter()
+            .any(|arguments| !EMPTY_STAGING.contains(&arguments.trim()))
+    })
+}
+
+fn commits_directly(function: &CensusFunction) -> bool {
+    COMMIT_CALLS.iter().any(|call| {
+        call_arguments(&function.body, call, true)
+            .iter()
+            .any(|arguments| !arguments.trim().is_empty())
+    })
+}
+
+fn calls(caller: &CensusFunction, callee: &CensusFunction) -> bool {
+    !call_arguments(&caller.body, name_of(callee), callee.is_method).is_empty()
+}
+
+fn closure(
+    functions: &[CensusFunction],
+    seed: impl Fn(&CensusFunction) -> bool,
+    step: impl Fn(&CensusFunction, &[bool]) -> bool,
+) -> Vec<bool> {
+    let mut members: Vec<bool> = functions.iter().map(&seed).collect();
+    loop {
+        let next: Vec<bool> = functions
+            .iter()
+            .zip(&members)
+            .map(|(function, member)| *member || step(function, &members))
+            .collect();
+        if next == members {
+            return members;
+        }
+        members = next;
+    }
+}
+
+fn stage_then_commit_sites(functions: &[CensusFunction]) -> BTreeSet<String> {
+    let direct_commit: Vec<bool> = functions.iter().map(commits_directly).collect();
+    let direct_stage: Vec<bool> = functions.iter().map(stages_directly).collect();
+    let calls_member = |function: &CensusFunction, members: &[bool]| {
+        functions
+            .iter()
+            .zip(members)
+            .any(|(callee, member)| *member && calls(function, callee))
+    };
+    let helpers = closure(
+        functions,
+        |function| {
+            let index = functions
+                .iter()
+                .position(|candidate| std::ptr::eq(candidate, function))
+                .unwrap_or_default();
+            direct_commit[index] && function.takes_transaction && !direct_stage[index]
+        },
+        |function, members| {
+            function.takes_transaction
+                && !stages_directly(function)
+                && calls_member(function, members)
+        },
     );
-    let mut seen = found;
-    seen.sort();
-    let mut expected: Vec<(String, String)> = SWEEP_SITES
+    let commits: Vec<bool> = functions
         .iter()
-        .map(|(file, name)| ((*file).to_string(), (*name).to_string()))
+        .enumerate()
+        .map(|(index, function)| {
+            !helpers[index] && (direct_commit[index] || calls_member(function, &helpers))
+        })
         .collect();
-    expected.sort();
-    assert_eq!(
-        seen, expected,
-        "ENC-1 residue item 1: the stage-then-commit census changed"
+    let committing: Vec<bool> = commits
+        .iter()
+        .zip(&helpers)
+        .map(|(commit, helper)| *commit || *helper)
+        .collect();
+    let stagers = closure(functions, stages_directly, |function, members| {
+        functions
+            .iter()
+            .zip(members)
+            .zip(&committing)
+            .any(|((callee, member), commit)| {
+                *member
+                    && !*commit
+                    && callee.returns_staged
+                    && !TRANSACTION_API_NAMES.contains(&name_of(callee))
+                    && calls(function, callee)
+            })
+    });
+    functions
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| commits[*index] && stagers[*index])
+        .map(|(_, function)| function.site.clone())
+        .collect()
+}
+
+fn staged_variables(body: &str) -> BTreeSet<String> {
+    STAGING_CALLS
+        .iter()
+        .flat_map(|call| call_arguments(body, call, true))
+        .map(|arguments| {
+            arguments
+                .trim()
+                .trim_start_matches('&')
+                .trim_end_matches(".clone()")
+                .to_string()
+        })
+        .filter(|argument| is_identifier(argument))
+        .collect()
+}
+
+fn binding(body: &str, variable: &str) -> Option<String> {
+    for pattern in [
+        format!("let {variable} = "),
+        format!("let mut {variable} = "),
+    ] {
+        if let Some(start) = body.find(&pattern) {
+            let rest = &body[start + pattern.len()..];
+            return rest.find(';').map(|end| rest[..end].trim().to_string());
+        }
+    }
+    None
+}
+
+fn staged_origin(body: &str, variable: &str) -> Option<String> {
+    let mut current = variable.to_string();
+    for _ in 0..MAX_BINDING_HOPS {
+        let bound = binding(body, &current)?;
+        if let Some(inner) = bound
+            .strip_prefix("written_file_paths(&")
+            .and_then(|rest| rest.strip_suffix(')'))
+        {
+            return Some(inner.trim().to_string());
+        }
+        if !is_identifier(&bound) {
+            return None;
+        }
+        current = bound;
+    }
+    None
+}
+
+fn sweep_faults(function: &CensusFunction) -> Vec<String> {
+    let sweeps: Vec<String> = SWEEP_CALLS
+        .iter()
+        .flat_map(|call| call_arguments(&function.body, call, false))
+        .collect();
+    if sweeps.is_empty() {
+        return vec![format!("{}: no call to the shared sweep", function.site)];
+    }
+    let staged = staged_variables(&function.body);
+    let mut faults = Vec::new();
+    for arguments in sweeps {
+        let parts = split_arguments(&arguments);
+        let paths = parts.get(1).map(String::as_str).unwrap_or_default();
+        let variable = paths.trim_start_matches('&').trim();
+        if !is_identifier(variable) {
+            faults.push(format!(
+                "{}: sweeps `{paths}`, not the paths it staged",
+                function.site
+            ));
+            continue;
+        }
+        match staged_origin(&function.body, variable) {
+            Some(origin) if staged.contains(&origin) => {}
+            origin => faults.push(format!(
+                "{}: sweeps `{variable}` (from {origin:?}), not the paths of {staged:?}",
+                function.site
+            )),
+        }
+    }
+    faults
+}
+
+#[test]
+fn every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal() {
+    let functions = census_functions();
+    let found = stage_then_commit_sites(&functions);
+    let listed: BTreeSet<String> = SWEEP_SITES
+        .iter()
+        .map(|(file, name)| format!("{file}::{name}"))
+        .collect();
+    let excepted: BTreeSet<String> = CENSUS_EXCEPTIONS
+        .iter()
+        .map(|(file, name, _)| format!("{file}::{name}"))
+        .collect();
+    let unlisted: Vec<&String> = found
+        .iter()
+        .filter(|site| !listed.contains(*site) && !excepted.contains(*site))
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "ENC-1 residue item 1: a stage-then-commit site outside the census: {unlisted:?}"
     );
+    let vanished: Vec<&String> = listed
+        .union(&excepted)
+        .filter(|site| !found.contains(*site))
+        .collect();
+    assert!(
+        vanished.is_empty(),
+        "ENC-1 residue item 1: a census row no longer commits staged files: {vanished:?}"
+    );
+    let faults: Vec<String> = functions
+        .iter()
+        .filter(|function| listed.contains(&function.site))
+        .flat_map(sweep_faults)
+        .collect();
+    assert!(
+        faults.is_empty(),
+        "ENC-1 residue item 1: a census site does not sweep what it staged:\n{}",
+        faults.join("\n")
+    );
+}
+
+#[test]
+fn the_census_finds_a_helper_split_site_and_an_emptied_sweep() {
+    let helper_split = CensusFunction {
+        site: "probe::split".to_string(),
+        is_method: false,
+        takes_transaction: false,
+        returns_staged: false,
+        body: "fn split(c: &C, t: &Table, files: Vec<DataFile>) -> R {\n    \
+               let tx = staged(t, files)?;\n    tx.commit(c.as_ref()).await\n}\n"
+            .to_string(),
+    };
+    let staging_helper = CensusFunction {
+        site: "probe::staged".to_string(),
+        is_method: false,
+        takes_transaction: false,
+        returns_staged: true,
+        body: "fn staged(t: &Table, files: Vec<DataFile>) -> Result<Transaction> {\n    \
+               let tx = Transaction::new(t);\n    tx.fast_append().add_data_files(files).apply(tx)\n}\n"
+            .to_string(),
+    };
+    let found = stage_then_commit_sites(&[helper_split, staging_helper]);
+    assert_eq!(found, BTreeSet::from(["probe::split".to_string()]));
+    let emptied = CensusFunction {
+        site: "probe::emptied".to_string(),
+        is_method: false,
+        takes_transaction: false,
+        returns_staged: false,
+        body: "fn emptied() {\n    let staged_paths = written_file_paths(&new_files);\n    \
+               let tx = tx.fast_append().add_data_files(new_files);\n    \
+               commit_with_keyed_sweep(table, &staged_paths[..0], outcome, &id).await\n}\n"
+            .to_string(),
+    };
+    assert_eq!(sweep_faults(&emptied).len(), 1);
+    let swept = CensusFunction {
+        body: emptied.body.replace("&staged_paths[..0]", "&staged_paths"),
+        ..emptied
+    };
+    assert!(sweep_faults(&swept).is_empty());
 }
 
 #[test]

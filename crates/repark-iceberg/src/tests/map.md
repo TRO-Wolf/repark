@@ -126,23 +126,24 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   `Table`). The gate stays textual: it matches spellings, not resolved paths, so a new
   alias can still walk past it. Recorded on card ENC-1-RESIDUE-1.
   pins: enc-1/C-009, C-010
-  **ENC-1-RESIDUE-1 (2026-10-15):** the census
+  **ENC-1-RESIDUE-1 round 2 (2026-10-15, owner ruling 108):** the census
   `every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal` reuses this
-  file's test-code exclusion (`product_sources`): it finds every function under
-  `src/write/` that stages (`.add_data_files(` / `.add_files(`) and commits
-  (`.commit(` / `.commit_append(`) and fails when one lacks the sweep call, and fails
-  when the found set differs from the listed 15 sites — so a new unswept site, and a
-  new swept site without a list update, both go red. `SWEEP_SITES` names the 13 wired
-  sites plus the two merge sites.
+  file's test-code exclusion (`product_sources`) and finds every stage-then-commit
+  site by the commit call across `repark-iceberg`, `repark-spark` and `repark-sql`,
+  including a helper that returns a `Transaction` or an action. It fails when a
+  found site is neither listed nor excepted, when a listed or excepted site no
+  longer commits staged files, and when a listed site sweeps something other than
+  the paths it staged (an emptied slice fails). `SWEEP_SITES` names the 13 ruled
+  sites and the two merge sites. `CENSUS_EXCEPTIONS` names
+  `ctas.rs::finish_ctas_staged_commit`,
+  `create_table.rs::execute_staged_create` and `publish_staged_with_summary`, one
+  defect under card ENC-CTAS-REPLACE-1.
+  `the_census_finds_a_helper_split_site_and_an_emptied_sweep` proves a helper
+  split is found and an emptied sweep fails.
   `the_catalog_provider_installs_the_encryption_guard_once` (ruling 97, 2026-10-15,
   replacing `session_registration_installs_the_encryption_guard`) holds the installer
   spelling `EncryptionGuardCatalog::install(` inside `ReparkCatalogProvider::try_new` and
   its absence from `repark-core/src/session.rs` (no second copy).
-  Fix round (2026-10-15, ruling 96 F3): this census is still the marker-textual,
-  `src/write/`-only scan. The rewrite by the commit call (all three crates, helper
-  splits, the staged-path provenance check) is held: it finds
-  `repark-sql/src/create_table.rs::execute_staged_create` and
-  `::publish_staged_with_summary`, which no card names (hand-back question Q1).
 
 ## Pointers
 
