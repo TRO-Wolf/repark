@@ -29,7 +29,9 @@ and the `EngineContext` construction contract.
   `DELETE` with `IN`, correlated `EXISTS` and `NOT IN` subqueries through a default
   `ReparkSession` (no dialect installed) over a memory catalog: each refuses with the G3-E8
   text and the rows read back as seeded. Red on main, where the first `UPDATE … IN` wrote
-  every row. pins: repark-sql-update-subquery-where-1/C-005
+  every row. Since the fix, `DataFusionDialect` intercepts this one statement class on purpose;
+  the passthrough pin's wording predates that, and its query is untouched.
+  pins: repark-sql-update-subquery-where-1/C-005
 
 ## Pointers
 

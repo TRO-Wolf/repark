@@ -995,6 +995,18 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   without owning the session. pins: ice-views-1/C-018
   `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a), the stopgap):**
+  `DataFusionDialect::execute` runs the belt's steps itself: plan, then
+  `repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate` with no
+  identity exemption on the statement parsed with the session's `sql_parser.dialect` (the parse
+  `create_logical_plan` uses), then `guard`, then execute. Every `UPDATE` or `DELETE` whose
+  `WHERE` holds a subquery now refuses with the G3-E8 text on `repark.sql()` and on any session
+  built without a dialect, where it wrote every row or emptied the table. The refusal sits
+  beside `guard`, not in it: it reads the parsed statement, and only this door has no identity
+  path, while the ANSI router calls the same function with the exemption. A plan error still
+  comes first, so a statement that does not plan keeps its text. `PreExecute::run` keeps its
+  contract and its tests; this door no longer calls it. Routing `repark.sql()` through the ANSI
+  door stays on the card. pins: repark-sql-update-subquery-where-1/C-005
 - `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1
   (2026-09-18, round 1):** `SparkRangeFunc`, RePark's `range` table function —
   non-nullable `id: Int64` column, 1–4 literal arguments (the 4th is
