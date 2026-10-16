@@ -35,6 +35,16 @@ named only as "the cutover pipeline" here.
   EDT, merged `5531311b` at 18:51 EDT), acceptance run `38820033176` (12 cells: acceptance
   module 11 passed in 456.58s, dbt gold module 1 passed in 61.87s), the write-path change,
   and the follow-up cards from U-6.
+- [p2-report-ice-tsns-type-planner-1-2026-10-16.md](p2-report-ice-tsns-type-planner-1-2026-10-16.md) —
+  **the P2 report for #1082, ICE-TSNS-TYPE-PLANNER-1 (2026-10-16):** verifier verdict PASS at
+  05:54:23 EDT, merged `c7121437` at 07:40 EDT on the owner's word, acceptance run `38895333180`
+  (12 cells: acceptance module 11 passed in 439.61s, dbt gold module 1 passed in 63.82s), the
+  write-path change, ruling 111's checklist, and the follow-up card for ruling 120.
+- [p2-report-update-set-subquery-walk-1-2026-10-16.md](p2-report-update-set-subquery-walk-1-2026-10-16.md) —
+  **the P2 report for #1083, UPDATE-SET-SUBQUERY-WALK-1 (2026-10-16):** verifier verdicts PASS at
+  08:28 and 09:16 EDT (ruling 117's items), merged `41cdd957` at 09:40 EDT, acceptance run
+  `38909759805` (12 cells: acceptance module 11 passed in 364.79s, dbt gold module 1 passed in
+  61.25s), the write-path change, ruling 117's three items, and the follow-ups (V-003, then 106).
 
 ## Pointers
 

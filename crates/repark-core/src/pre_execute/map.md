@@ -11,14 +11,16 @@ every door's planned statement passes through before it executes (Z-2 / Z-3).
   `SessionContext::sql` contrast that shows the eager path publishing a `SELECT … INTO` sink),
   `run` = plan → guard → execute, and `guard` is a no-op outside its scope
   (`#[cfg(test)] mod tests;` in `../pre_execute.rs`).
-  **Exception round (2026-10-15, ruling 90(a)):**
-  `guard_refuses_an_update_whose_set_value_is_a_scalar_subquery` plans six `UPDATE`s over two
-  `MemTable`s (`WHERE true`, an `IN` list, no `WHERE`, a subquery with its own `WHERE`, nested
-  parentheses beside a second assignment, a cast inside the subquery) and holds `guard` to the
-  refusal text; `guard_passes_an_update_whose_set_value_only_contains_a_subquery` holds it
-  silent for a literal, an expression of the column, a subquery inside `+` and `COALESCE`, and
-  a subquery in the `WHERE` only. Both pass through `arrow_cast` and RePark's `__repark_*`
-  store kernels, the wrappers the Spark door's struct fold adds around the value.
+  **Exception round (2026-10-15, ruling 90(a); walk extended 2026-10-15, rulings 99 (c) and 110):**
+  `guard_refuses_an_update_whose_set_value_is_a_scalar_subquery` plans `UPDATE`s over two
+  `MemTable`s (a direct scalar subquery under `WHERE true`, an `IN` list, no `WHERE`, a
+  subquery with its own `WHERE`, nested parentheses beside a second assignment, a cast inside
+  the subquery, `arrow_cast` of a subquery, `1 + (SELECT …)`, `(SELECT …) + 1`, `-(SELECT …)`,
+  `abs((SELECT …))`, `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)`, and a
+  `named_struct` built around a subquery) and holds `guard` to the refusal text;
+  `guard_passes_an_update_whose_set_value_has_no_scalar_subquery` holds it silent for a
+  literal, an expression of the column, a subquery in the `WHERE` only, and `arrow_cast` of
+  the column. The walk is `Expr::contains_scalar_subquery` over the whole assigned expression.
   pins: ice-struct-pairing-1/C-034, C-035
 
 ## Pointers

@@ -33,6 +33,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-004) are recorded. The gate, the temporal `nvl` rewrite and written casts
   stay OPEN (C-005..C-007). No product code.
   `risk_tier: standard`. Branch `test/ice-tsns-coercion-1-slice-0`.
+- [ice-tsns-type-planner-1-ledger.md](ice-tsns-type-planner-1-ledger.md) —
+  **ICE-TSNS-TYPE-PLANNER-1 fresh build (2026-10-15), U-1, parity row R-017:** the
+  carry-over from the old branch, ruling 94's ANSI planner variant, the fixture on today's
+  main with ruling 38's carve-out and ruling 93's residue as dated rows, the R-010 harness,
+  M1 `sequence` (round 1) and the M3 rule gaps (round 1: aggregate zero, UNION DISTINCT,
+  rulings 91 and 92). No statement main answers is lost outside the carve-outs (C-023).
+  Ruling 112 (2026-10-15) re-pins the analyzer rule list; ruling 113 records that the ANSI
+  planner variant lives once in `repark-functions`. C-025 stays OPEN. `risk_tier: standard`. Branch
+  `fix/ice-tsns-type-planner-1-fresh`.
 - [ice-tsns-floor-doors-1-ledger.md](ice-tsns-floor-doors-1-ledger.md) —
   **ICE-TSNS-FLOOR-DOORS-1 step 0 (2026-10-14), parity row R-009:** measurement
   only on main `018d0efd`, no product code. The door matrix over nine doors,

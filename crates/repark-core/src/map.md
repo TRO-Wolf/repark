@@ -27,6 +27,38 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `local_fs_policy.rs` (+ [local_fs_policy/](local_fs_policy/map.md)) — **PA-LOCAL-FS-POLICY-1
+  (2026-10-15, audit PA-02 to PA-04; fix rounds of 2026-10-15 and 2026-10-16, owner rulings 103,
+  104 and 114 (b)):** the one local-filesystem write policy, beside `CatalogRegistry`. The guard
+  judges where the bytes land. The location is read the way the write reads it:
+  `ListingTableUrl::parse`, the call DataFusion's `COPY` planner and `CREATE EXTERNAL TABLE`
+  factory make, gives the written path (a URL's dot segments, `%2e` forms included, removed
+  lexically; one percent decode; `file:x` as `/x`; a bare relative or leading-space path read
+  against the cwd; a bare path cut at its first glob character, as DataFusion cuts it); any other
+  scheme is remote; a parse failure or a `file://<host>` is unreadable and refuses.
+  `resolve_physical_destination` makes a path absolute, finds the nearest ancestor
+  `symlink_metadata` reports, `canonicalize`s it and appends the remaining components; a `..` in
+  those components, a dangling symlink, a loop or a metadata read failing other than not-found is
+  indeterminate (`None`). `location_under_any_warehouse` holds when the written path resolved so
+  lies under a warehouse root, each root read as a plain path or `file:` URL with no glob split
+  (`catalog_state::memory_warehouse_fallback_root`, the repo's one reading of a warehouse string)
+  and resolved the same way. `local_filesystem_path` returns the written path.
+  `refuse_local_filesystem_writes` walks the plan with `TreeNode::apply` and checks every `Copy`
+  and `CreateExternalTable` node at any depth (`Analyze` and `Prepare` inputs included), skipping
+  below a plain `Explain`. `allow_local_filesystem_ddl` reads the opt-in from the `repark.sql`
+  config extension only, accepting its field unprefixed (the real `extensions_options!` shape) or
+  prefixed; absent means closed. `refuse_local_filesystem_plan` is the read plus the walk, for the
+  two doors. `LocalFsGuardedDialect` (ruling 113, 2026-10-16) wraps the dialect it is handed
+  (`wrapping`): it plans the statement on the session's state, runs the walk with no conf read,
+  and on a pass hands the statement to the inner dialect; `execute_with_write_options`,
+  `on_session_built`, `type_planner` and `configure_analyzer_rules` forward to it, so the inner
+  dialect's planner and analyzer rules shape both plans. `ReparkSessionBuilder::with_local_fs_guard`
+  sets the builder's `local_fs_guard`, and `session_dialect` wraps, at build, whichever dialect the
+  builder would otherwise use (the one handed in, else `DataFusionDialect`); `repark.sql()`'s
+  native door uses it. Its refusal says `repark.sql() does not allow local-file DDL` and that the
+  entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci`
+  from here; its private copy is deleted.
+  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029, C-030, C-031
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
@@ -956,6 +988,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
   AST rewrites) deliberately stay at the doors. New pre-execute refusals land in `guard`, never
   at a door — per-door wiring missed the native door twice (measured).
+- `dialect.rs`, `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** both seams gain
+  `type_planner()` (default `None`), and `SqlDialect` gains `configure_analyzer_rules`
+  (default identity). `session/df_guards.rs` registers the planner once on the
+  `SessionStateBuilder` (the extension's, else the dialect's) and lets the dialect place
+  rules in the analyzer list after the extension has. Core names no planner: the crate
+  sits below `repark-functions`, so each door hands its own in (the Spark extension, the
+  ANSI dialect, the Python native door's extension). `build()` now resolves the dialect
+  before the context is assembled. pins: ice-tsns-type-planner-1/C-011
   **ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)):** `guard` also
   runs `refuse_update_from_subquery`. An `UPDATE` plan whose input projection assigns a scalar
   subquery (under an alias, a cast, `arrow_cast` or one of RePark's `__repark_*` store kernels,
@@ -965,8 +1005,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   ran first (the Spark door's `try_execute_identity_dml`, the ANSI door's
   `execute_identity_or_delegate`); `repark.sql()` has none. Before, the fork provider's
   `update` received the decorrelated subquery as a column of the target's own name and wrote
-  nothing. A subquery inside a larger expression is not refused here. Storing the value is
-  card `update-subquery-store-1`.
+  nothing. **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
+  `assigns_a_subquery` walks the whole assigned expression (`Expr::contains_scalar_subquery`),
+  so any scalar subquery in the `SET` value refuses with that same text, including
+  `1 + (SELECT …)`, `(SELECT …) + 1`, `-(SELECT …)`, `abs((SELECT …))`,
+  `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct built around
+  `(SELECT …)`. A subquery in the `WHERE` only stays silent. The identity path still runs
+  first and is unchanged. Storing the value is card `update-subquery-store-1`.
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2; **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**

@@ -28,6 +28,17 @@ works, so the attribute is gone rather than documented.
   one per row (600k rows on one file: 31.0 → 11.5 ms, 66,000,000 → 110 B retained). It lives
   here rather than in the parent because `predicate_dml.rs` sits at an exact line ceiling (1142 since RP-7). **RP-7 (2026-09-02):** `push_pairs_from_batch` moved here for the same reason; both identity collectors now stream and call it once per arriving batch.
   pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-009
+- `lineage.rs`, `../predicate_dml.rs` — **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):**
+  an identity `UPDATE … WHERE` into a `TIMESTAMP` (the microsecond instant) narrows its SET
+  value as the MERGE insert arm does. `analyzed_identity_update` (here, called by the
+  parent's `collect_identity_update_rows`) analyzes the plain projection once;
+  `instant_store_columns` names each instant target whose analyzed value
+  `ntz_store::needs_ltz_instant_cast` flags (a nanosecond, NTZ or date value); the
+  projection is planned again with `update_cast::store_assignment_cast_sql` around those
+  values. Before, the raw nanosecond value reached U-3's guard (`store of column v would
+  coarsen a timestamp … outside the narrowing kernel`) while the same SET without `WHERE`,
+  and with a written `CAST(… AS TIMESTAMP)`, stored the floor. U-3's guard stays.
+  pins: ice-tsns-type-planner-1/C-019
 - `lineage.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `update_projection_sql` wraps an
   assigned value whose target is `Timestamp(µs, None)` in the `ntz_store` wall-cast UDF
   call, so an identity UPDATE stores the session-zone wall; every other target keeps

@@ -504,7 +504,7 @@ def test_cast_nullability_native_door_keeps_datafusion() -> None:
     cells = [[field.name, str(field.type), field.nullable] for field in table.schema]
     assert cells == [
         ["i", "int32", False],
-        ["dt", "timestamp[ns]", False],
+        ["dt", "timestamp[us]", False],
         ["st", "struct<a: int64>", True],
     ]
 

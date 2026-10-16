@@ -60,6 +60,11 @@ def test_values_cells_store_sparks_session_wall(tmp_path: Path) -> None:
                 assert step["repark_error_contains"] in str(exc_info.value), step["key"]
                 assert step["repark_error_contains"] not in step["spark_error"], step["key"]
                 continue
+            if "spark_error" in step:
+                with pytest.raises(Exception) as exc_info:
+                    session.sql(step["sql"]).collect()
+                assert step["spark_error"] in str(exc_info.value), step["key"]
+                continue
             frame = session.sql(step["sql"])
             if "rows" in step:
                 assert _rows(frame) == step["rows"], step["key"]

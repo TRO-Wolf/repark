@@ -127,7 +127,17 @@ async fn setup_with_owner_and_settings(
     let config = repark_functions::session_time_zone::with_session_time_zone(config, zone);
     let config = repark_core::with_session_owner(config, owner);
     let config = repark_functions::case_sensitive::with_spark_case_sensitive_config(config, false);
-    let ctx = SessionContext::new_with_config(config);
+    let rules = repark_functions::analyzer_rules_with_timestamp_unit_widen(
+        datafusion::optimizer::Analyzer::new().rules,
+    )
+    .unwrap();
+    let state = datafusion::execution::SessionStateBuilder::new()
+        .with_config(config)
+        .with_default_features()
+        .with_analyzer_rules(rules)
+        .with_type_planner(repark_functions::spark_type_planner())
+        .build();
+    let ctx = SessionContext::new_with_state(state);
     repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
     repark_iceberg::write::store_cast::register_store_cast_udfs(&ctx);
     ctx.register_udf(crate::spark_as_udf().as_ref().clone());

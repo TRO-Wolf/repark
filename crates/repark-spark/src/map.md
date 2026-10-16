@@ -288,6 +288,18 @@ pins: rp-4-fork-repin/C-005, C-006
   baseline): `conform_types` resolves the positional targets and runs
   `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
   through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
+- `keyword_lower.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the AST lowering of
+  `CAST(… AS timestamp_ns)` / `timestamptz_ns` to a kernel call is deleted
+  (`timestamp_ns_cast_name`, `lower_timestamp_ns_cast`, the probe arm). The names reach
+  DataFusion's planner as custom types and `SparkTypePlanner` types them, in every
+  statement kind, so `UPDATE` and `DELETE` plan them too (R-010). The three entry points
+  keep their names; they still lower `TIMESTAMP_NTZ` casts, mark `VALUES` casts and lower
+  empty `map()`. pins: ice-tsns-type-planner-1/C-013
+- `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkExtension::type_planner`
+  hands the session builder `repark_functions::SparkTypePlanner`, so every `CAST(… AS T)`
+  and typed literal the Spark door plans takes its unit from the written name. The DDL
+  column type and `Column.cast("timestamp")` do not go through it; both already answer
+  microseconds and are pinned there. pins: ice-tsns-type-planner-1/C-011
 - `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the
   extension registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules
   (it consumes `SparkExprSemantics`' guarded division shape, so it must run after it —
@@ -2418,6 +2430,12 @@ pins: rp-4-fork-repin/C-005, C-006
   retired).
   pins: u9-types-1/C-010
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
+  **PA-LOCAL-FS-POLICY-1 (2026-10-15):** the module now re-exports
+  `repark_core::local_fs_policy::refuse_local_filesystem_plan` (the opt-in read scoped to the
+  `repark.sql` extension, then the walk over every `Copy` and `CreateExternalTable` node); its
+  private classification, strip, canonicalization and containment copies are deleted, and the
+  in-module tests import `local_filesystem_path` from core. The 9 tests are unchanged.
+  pins: pa-local-fs-policy-1/C-006, C-011, C-014, C-016
 - `catalog_ops.rs` — **C-2d fold 1 (2026-10-07), N5:** `catalog_handle` refuses a mounted Postgres source with
   `source_read_only_message` as `NotImplemented` (the Unsupported class), and
   `refuse_read_only_dml_table_sql` prefers that text. A legacy read-only catalog keeps the P11

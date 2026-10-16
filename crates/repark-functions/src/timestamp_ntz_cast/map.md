@@ -28,3 +28,6 @@ parameter here would be a second nanosecond conversion beside that one.
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the SQL test sessions here are built by
+  `spark_type_planner::planned_context`, so `TIMESTAMP` is typed by the planner as on
+  every door; no assertion moved. pins: ice-tsns-type-planner-1/C-013

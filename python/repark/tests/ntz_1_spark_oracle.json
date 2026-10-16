@@ -115,7 +115,7 @@
   }
  ],
  "provenance": {
-  "sources": "ntz-spark.json, ntz2-spark.json, ntz4-spark.json, ntz7-spark.json, ntz7c-spark.json under /tmp/oc-worker/direct/wo/ntz-1-probes/ (probes ntz_probe.py, ntz_probe2.py, ntz_probe4.py, ntz_probe7.py, ntz_probe7c.py); lit_bad msg+condition from ntz4 ntz_lit_bad; cast_str_zone_ny and try_cast_bad schema names re-measured live in ntz7c (probe1 quoted/lowercase spellings do not reproduce on Spark 4.1.2); RePark answers dropped; lit_bad_wide from ntz6-nested-spark.json (the win leg of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27); cast_nested_ntz_bigint, try_cast_ntz_bigint and cast_ntz_col_bigint from ntz6-nested-spark.json (the nested/try/col legs of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27)",
+  "sources": "ntz-spark.json, ntz2-spark.json, ntz4-spark.json, ntz7-spark.json, ntz7c-spark.json under /tmp/oc-worker/direct/wo/ntz-1-probes/ (probes ntz_probe.py, ntz_probe2.py, ntz_probe4.py, ntz_probe7.py, ntz_probe7c.py); lit_bad msg+condition from ntz4 ntz_lit_bad; cast_str_zone_ny and try_cast_bad schema names re-measured live in ntz7c (probe1 quoted/lowercase spellings do not reproduce on Spark 4.1.2); RePark answers dropped; lit_bad_wide from ntz6-nested-spark.json (the win leg of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27); cast_nested_ntz_bigint, try_cast_ntz_bigint and cast_ntz_col_bigint from ntz6-nested-spark.json (the nested/try/col legs of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27); cast_nested_ntz_array and cast_nested_ntz_struct measured live on Spark 4.1.2 (local[1], UTC, ANSI on) on 2026-10-15 for ICE-TSNS-TYPE-PLANNER-1's ruling 100 re-pin of the nested TIMESTAMP_NTZ cast",
   "spark": "Apache Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26",
   "value_styles": "norm = probe norm() (datetime isoformat + |tz=); str = probe4 str(v)"
  },
@@ -647,6 +647,48 @@
    "sql": "SELECT CAST(CAST(TIMESTAMP_NTZ'2024-11-03 01:30:00' AS TIMESTAMP) AS STRING) AS v, CAST(unix_timestamp(CAST(TIMESTAMP_NTZ'2024-11-03 01:30:00' AS TIMESTAMP)) AS STRING) AS u",
    "style": "str",
    "zone": "America/New_York"
+  },
+  {
+   "key": "cast_nested_ntz_array",
+   "spark": {
+    "rows": [
+     [
+      [
+       "2024-01-01T00:00:00|tz=None"
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "array<timestamp_ntz>"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>) AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_nested_ntz_struct",
+   "spark": {
+    "rows": [
+     [
+      {
+       "a": "2024-01-01T00:00:00|tz=None"
+      }
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "struct<a:timestamp_ntz>"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(named_struct('a', '2024-01-01') AS STRUCT<a: TIMESTAMP_NTZ>) AS v",
+   "style": "norm",
+   "zone": "UTC"
   }
  ]
 }

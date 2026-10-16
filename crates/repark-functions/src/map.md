@@ -104,6 +104,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   names/hex (`'Infinityd'`, `'infd'`, `'1dd'`, `'0x10'`) keep today's refuse/NULL. The shared
   SQL `CAST` kernel is untouched. pins: fnp-bitmap-facade-1/C-012, C-013, C-014,
   C-017, C-018
+  **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the unit tests build their session on
+  `spark_type_planner::planned_context`, as every door does, so
+  `degrees_refuses_every_non_double_family_type` reads a written `TIMESTAMP` as the door types
+  it. pins: ice-tsns-type-planner-1/C-028
 - `spark_math.rs` + [`spark_math/`](spark_math/map.md) — **DOOR-CONVERGE-1
   (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
   doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
@@ -270,6 +274,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST_OVERFLOW` (SQLSTATE 22003) detected per row from the source array;
   `FixedSizeBinary` folds as BINARY.
   pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, refusal texts (ruling 100, 2026-10-15):**
+  `spark_type_name` names every `Timestamp(_, _)` `TIMESTAMP`, Spark 4.1.2's name in its
+  refusal texts (`however "x" has the type "TIMESTAMP"`, measured live). With the planner a
+  written `TIMESTAMP` is the zoned microsecond type, which the name rendered `TIMESTAMP_LTZ`,
+  a name Spark never prints; `spark_degrees.rs` and `spark_startswith.rs` share it. pins:
+  `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs`'s unit tests pins: ice-tsns-type-planner-1/C-028
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
@@ -396,6 +406,141 @@ scalars live under [`try_invert/`](try_invert/map.md).
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
   pins: fnp-win-1/C-003
+- `timestamp_ns_cast.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
+  `wall_kernel_by_target` applies the nanosecond wall kernel from the **type** of a cast
+  target: an `Expr::Cast` whose target is `Timestamp(ns, _)` and whose source is another
+  type becomes the kernel call (`timestamp_ns_cast_expr`), whoever wrote the cast: the
+  user (`CAST(x AS timestamp_ns)`), DataFusion's coercion (a NULL or a zone alignment
+  beside a nanosecond value) or `SparkTimestampUnitWiden`. A same-type cast is left alone.
+  A `TRY_CAST` to a nanosecond type is refused by name (main refused the type name).
+  Called after `rewrite_cast` in the Spark session rule (`instant_ts.rs`, both
+  `timestampType` modes) and in `PlannedTimestampCast` on the other two doors, so
+  `UPDATE`, `DELETE` and the ANSI door take the kernel without any lowering (R-010).
+  The kernel stays registered by name: the Iceberg store doors in `repark-iceberg` look
+  it up with `ctx.udf(name)` and render it in generated SQL, and that crate cannot link
+  this one, so R-013 keeps its row. pins: ice-tsns-type-planner-1/C-014
+  **M3, UNION DISTINCT (2026-10-15):** the kernel's return field carries the source
+  field's metadata, as the `Cast` it replaces does. Without it, a `UNION` branch whose
+  coercion cast became the kernel lost its `PARQUET:field_id` in the physical plan while
+  the union's logical schema, built before the swap, kept it, and `UNION` (DISTINCT)
+  refused the plan. pins: ice-tsns-type-planner-1/C-018
+  **Ruling 92, encoded sources (2026-10-15):** the kernel's gate (`checked_source`) looks
+  through dictionary and run-end encoding to the value type (`encoded_value_type`) and
+  gives the encoded source the verdict that value type gets; `Conversion::convert` decodes
+  first, so the encoded value converts as the plain one does. Before, the staged doors'
+  `CAST(value AS timestamp_ns)` text met the gate once the AST lowering was gone, and an
+  encoded instant was refused. An encoded value into a microsecond column is untouched
+  here and stores what the plain value stores (R-024 and NS-ENCODED-NESTED-FLOOR-1 keep
+  their scope). pins: ice-tsns-type-planner-1/C-020
+- `instant_ts.rs`, `spark_string_timestamp.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
+  the session timestamp rule no longer reads a nanosecond cast target as the SQL
+  `TIMESTAMP`. Deleted from `rewrite_cast`: the arm that peeled a cast of an instant to a
+  nanosecond target, the arm that wrapped an integer, NULL or seconds cast to a nanosecond
+  target as the instant, and the arm that narrowed a nanosecond source cast to a naive
+  nanosecond target; their `TIMESTAMP_NTZ`-mode twins in `rewrite_cast_as_ntz`; and both
+  nanosecond-literal rewrites (`wrap_ns_literal`, `wrap_ns_literal_as_ntz`). A cast of a
+  string, DATE or `TIMESTAMP_NTZ` value to a nanosecond target is no longer sent to
+  `to_timestamp`, `peel_naive_cast_of_ltz_producer` peels a naive **microsecond** cast
+  only, and `rewrite_string_try_cast` leaves a nanosecond `TRY_CAST` target alone. What
+  stays: a nanosecond source cast to the instant type (a written `CAST(ns AS TIMESTAMP)`)
+  takes the narrowing kernel and floors. The module's SQL unit tests, and those of
+  `temporal_ctor/`, `timestamp_ntz_cast/` and `tests/`, build their session with the
+  planner (`spark_type_planner::planned_context`), as every door does;
+  `spark_nullability.rs`'s tests joined them on 2026-10-15 (without the planner its typed
+  `TIMESTAMP` literal stayed DataFusion's nanosecond type and met the by-target kernel).
+  pins: ice-tsns-type-planner-1/C-013
+- `timestamp_unit_widen.rs` — **ICE-TSNS-TYPE-PLANNER-1 amendment 1 (2026-10-13):**
+  `SparkTimestampUnitWiden`, the unit lattice rule. DataFusion 54.1 joins two timestamp
+  units to the coarser one (`timeunit_coercion`, a free function with no hook), which
+  drops digits once `TIMESTAMP` is planned as microseconds. This analyzer rule runs
+  before `type_coercion`, first among the pre-coercion rules
+  (`analyzer_rules_with_higher_order_preparation` on the Spark door and the
+  expression-string session, `analyzer_rules_with_timestamp_unit_widen` on the other
+  two doors). Where two or more timestamp-typed expressions must share one type and
+  their units differ, every coarser one is cast to the finest unit present and keeps its
+  own zone; DataFusion's coercion then sees equal units and decides only the zone, as
+  before. It decides by the types at the position, never by where an expression came
+  from. Positions: the arguments of `coalesce`, `nvl`, `ifnull`, `greatest`, `least`,
+  `array` / `make_array`; the value arguments of `nvl2` and `if`; a list and its element
+  in `array_append`, `array_prepend`, `array_contains`, `array_position`,
+  `array_remove`, `element_at`; the lists of `array_concat` / `concat`; the results of a
+  `CASE` and the operands of a simple `CASE`; the comparison operators, `BETWEEN`,
+  `IN (list)`, `<=>` (join `ON` keys arrive as these expressions); the inputs of a
+  `UNION`, per column, through a projection. It never narrows, and it leaves equal
+  units, a single timestamp beside a string, an integer or a NULL, and aggregates alone;
+  an untouched plan is returned without a schema recompute. A microsecond value outside
+  the nanosecond range raises when the cast runs. Seven unit tests over a plain
+  DataFusion session with the rule placed.
+  pins: ice-tsns-type-planner-1/C-012
+  **M3 rule gaps, aggregate zero (2026-10-15):** `aggregate`'s zero joins the position
+  table beside the element unit of its array (`widen_aggregate_zero`): a microsecond zero
+  beside nanosecond elements is cast to nanoseconds, keeping its own zone, so the merge
+  lambda and the zero agree and `check_merge_types` no longer refuses the pair. The plan's
+  lambda variables are resolved again after a rewrite, so `acc` takes the widened type.
+  pins: ice-tsns-type-planner-1/C-017
+  **M3 rule gaps, UNION DISTINCT (2026-10-15):** the gap was not in this rule. See
+  `timestamp_ns_cast.rs`: the wall kernel that replaces a nanosecond `Cast` after type
+  coercion dropped the source field's metadata, so a `UNION`'s stale logical schema kept a
+  `PARQUET:field_id` its physical plan lacked. pins: ice-tsns-type-planner-1/C-018
+  **Carry-over fix, the three errors (ruling 100, 2026-10-15):** a `DATE` or a string beside a
+  zoned timestamp at a shared position (the scalar positions and `UNION` columns) is cast to
+  that timestamp's unit and zone before `type_coercion` (`SharedTarget`), as Spark types
+  `DATE`/`STRING` beside `TIMESTAMP`. DataFusion's own coercion of the pair is `Timestamp(ns,
+  _)` (`temporal_coercion`, `string_temporal_coercion`), which the deleted rules used to read
+  as `TIMESTAMP`; after the deletions the by-target kernel stored it as a nanosecond column
+  the writer refused (`cannot convert text Timestamp(ns) into byte Timestamp(µs, "UTC")`).
+  Beside a naive timestamp the pair is left to DataFusion. pins: `test_store_ts_doors_2.py` pins: ice-tsns-type-planner-1/C-027
+  **Carry-over fix, ruling 101 (2026-10-15):** eight list cells green on today's main and red
+  on the carry-over head. `array_except` and `array_intersect` join the two-list positions
+  (with `array_concat` / `concat`), so a written `CAST(c AS TIMESTAMP)` array beside a
+  nanosecond array is widened instead of narrowing the result to microseconds. A naive
+  timestamp widened to nanoseconds beside a zoned operand takes that zone (the zoned wall
+  kernel then localizes it in the session zone), so `array_append` / `array_prepend` of a
+  `TIMESTAMP_NTZ` value to a `timestamptz_ns` array keeps the value's wall the way its typed
+  twin does. pins: the fixture's `position|array_append|ntz|tzns|…`,
+  `position|array_prepend|ntz|tzns|…`, `repro|v2_array_except|tzns|…`,
+  `repro|v2_array_intersect|tzns|…` pins: ice-tsns-type-planner-1/C-030
+  **Carry-over fix, mixed VALUES (ruling 100, 2026-10-15):** a `VALUES` column DataFusion
+  typed `Timestamp(ns, None)` only because a `DATE` sat beside a non-nanosecond timestamp
+  (`widen_values_dates`, no cell of nanoseconds) is retyped by the same position rule before
+  `type_coercion`: beside a zoned timestamp the column takes its unit and zone; beside a naive
+  expression that is not a written wall (`date_trunc` over `TIMESTAMP_NTZ`, which Spark types
+  `TIMESTAMP`) it is read as the instant, as the deleted rules read it. Parents of a retyped
+  `VALUES` recompute their schema. The pinned Spark walls are main's pins (`ntz_store_doors_1`
+  mixed oracle, `ntz_values_mix.rs`). pins: `test_ntz_store_doors_1.py`,
+  `tests/ntz_values_mix.rs` pins: ice-tsns-type-planner-1/C-032
+- `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
+  the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
+  written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
+  are the microsecond instant (`Timestamp(µs, "UTC")`, the type `instant_ts` already
+  gives Spark's `TIMESTAMP`), `TIMESTAMP_NTZ` is the naive microsecond wall,
+  `timestamp_ns` and `timestamptz_ns` are nanoseconds; every other name returns `None`
+  and keeps DataFusion's mapping (`TIMESTAMP(3)`, `TIMESTAMP WITH TIME ZONE`, …). A
+  `Timestamp(ns, _)` cast target therefore means nanoseconds. DataFusion's planner read an
+  `Int64` cast to its nanosecond `TIMESTAMP` as seconds; that special case no longer fires,
+  so `planned_instant_cast` writes the same two casts by type for the Spark session rule
+  (`instant_ts.rs`, both `spark.sql.timestampType` modes), and
+  `PlannedTimestampCast` is that one rewrite as an analyzer rule for the doors that do not
+  run the Spark session rule (`install_planned_timestamp_cast`: the Rust `AnsiDialect`
+  door and the Python native door). The zone label is `"UTC"`, not the session zone: the
+  instant type carries no session zone anywhere in the engine.
+  pins: ice-tsns-type-planner-1/C-011
+  **Ruling 94 (Q6, 2026-10-15):** `AnsiTypePlanner` is the one ANSI variant, handed in by
+  `repark_sql::AnsiDialect` only. It plans `TIMESTAMP` as the naive microsecond wall
+  (`Timestamp(µs, None)`) and `TIMESTAMPTZ` as the microsecond instant
+  (`Timestamp(µs, "UTC")`); every other name takes `SparkTypePlanner`'s answer. The Spark
+  door keeps `TIMESTAMP` as the instant. `install_ansi_planned_timestamp_cast` adds the
+  naive target to `PlannedTimestampCast`, so an `Int64` cast to the ANSI `TIMESTAMP` still
+  reads seconds, as it did when DataFusion typed it nanoseconds. A side effect: an `Int64`
+  cast to `TIMESTAMP(6)` on that door now reads seconds too, since both spell one type.
+  The Python `repark.sql()` callable takes the same ANSI variant through `NativeDoorTypes`
+  since the carry-over fix round (2026-10-15); its Q6 cell is green. pins: ice-tsns-type-planner-1/C-015
+  **Carry-over fix, the three errors (ruling 100, 2026-10-15):** `planned_instant_cast` reads
+  an integer of any width as seconds (`Timestamp(s, None)`, then the instant), as Spark 4.1.2
+  does for `CAST(CAST(1 AS INT) AS TIMESTAMP)`; it read a non-`BIGINT` integer as nanosecond
+  ticks, and that inner nanosecond `Cast` then met the by-target wall kernel (`cannot cast
+  "Int32" to "TIMESTAMP_NS"`). pins: the read-perf bench pins, `test_stamp_2_r5p6_1.py`,
+  `tests/ltz_store.rs` pins: ice-tsns-type-planner-1/C-027
 - `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
   `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
   plus the `__repark_session_gap__` / `__repark_ts_micros__` /
@@ -1003,6 +1148,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
   pins: door-converge-2/C-007, C-009
+  **ICE-TSNS-TYPE-PLANNER-1 M1 (2026-10-15):** the timestamp arm works in the element's
+  unit and zone. The bounds are cast to the element type (the first non-NULL bound's
+  type) and read as ticks (`as_ticks`), the row steps in those ticks, and the values are
+  built as the element type (`shape_timestamps`). A nanosecond `sequence` therefore keeps
+  its digits below the microsecond and floors nothing; a microsecond one answers as before.
+  Before, every row was built as `Timestamp(µs, "UTC")`, so a nanosecond or naive element
+  type failed with `ListArray expected data type …`. pins: ice-tsns-type-planner-1/C-016
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,
@@ -1218,6 +1370,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by `instant_ts`) the
   `TIMESTAMP`-keyword forms are walls, since Spark types them `TIMESTAMP_NTZ` there.
   pins: ntz-store-doors-1/C-009
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, mixed VALUES (ruling 100, 2026-10-15):**
+  `is_values_wall_cell` exposes the `VALUES` evidence's wall test to the widen rule's `VALUES`
+  retype. pins: ice-tsns-type-planner-1/C-032
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

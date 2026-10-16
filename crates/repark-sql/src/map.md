@@ -167,6 +167,18 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13; ruling 94, 2026-10-15):**
+  `AnsiDialect::type_planner` hands the session builder the ANSI variant
+  (`spark_type_planner::ansi_type_planner`), so the ANSI door types `TIMESTAMP` as the naive
+  microsecond wall, `TIMESTAMPTZ` and `TIMESTAMP_LTZ` as the microsecond instant,
+  `TIMESTAMP_NTZ` as the naive microsecond wall and the two nanosecond names as
+  nanoseconds; `on_session_built` installs the ANSI `PlannedTimestampCast` so an `Int64`
+  cast to `TIMESTAMP` or `TIMESTAMPTZ` still reads seconds.
+  `configure_analyzer_rules` places `SparkTimestampUnitWiden` before `type_coercion`
+  (amendment 1). `create_table.rs` resolves declared column types on a copy of the
+  session state whose planner answers nothing (`declared_type_state`), so `CREATE TABLE`
+  keeps DataFusion's mapping and its refusals of a nanosecond `TIMESTAMP` column and of
+  `TIMESTAMP_LTZ`. pins: ice-tsns-type-planner-1/C-011, C-012, C-015
 - `dialect.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), owner question 47:**
   `on_session_built` calls `repark_iceberg::write::store_cast::register_store_cast_udfs`, the
   one registration of the by-name store kernels. The shared MERGE and UPDATE text names the
@@ -220,6 +232,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   V3-COW-1 valve; MERGE and subquery-WHERE DML still refuse. `dml_target_ident` reads
   the AST and completes short names.
   pins: rp-6-fork-repin/C-002
+  **PA-LOCAL-FS-POLICY-1 (2026-10-15):** guard 5 re-exports
+  `repark_core::local_fs_policy::refuse_local_filesystem_plan`; the door's own conf keys,
+  entries reader, classification, strip and canonicalization are deleted. The shared reader
+  matches the real `repark.sql` extension's unprefixed field, so the ANSI door's explicit
+  opt-in now opens (it never did on main). pins: pa-local-fs-policy-1/C-005, C-016, C-017
 - `guards.rs`, `router.rs`, `merge.rs`, `insert_overwrite.rs`, `truncate.rs`, `create_table.rs` —
   **ENC-1 round 2 (2026-10-09):** the ANSI seats of the keyed-table refusal. `guards.rs` gains
   `refuse_encrypted_write_target` / `refuse_encrypted_dml_target` (short names completed
