@@ -313,17 +313,17 @@ impl ReparkSessionBuilder {
         runtime = runtime.with_object_list_cache_limit(0);
         let runtime = runtime.build_arc().map_err(engine_err)?;
         // Avoid `SessionContext::new_with_config_rt`: DF-54.1 guard 2 replaces one optimizer rule.
-        let context =
-            context_with_df_54_1_rule_guards(config, runtime, ext.as_ref()).map_err(engine_err)?;
+        let dialect = self
+            .sql_dialect
+            .unwrap_or_else(|| Arc::new(DataFusionDialect));
+        let context = context_with_df_54_1_rule_guards(config, runtime, &ext, &dialect)
+            .map_err(engine_err)?;
         // Capture the final build-time home and its provider identity once; calls re-check it.
         let temp_view_home = build_temp_view_home(&context);
         ext.register(&context).map_err(engine_err)?;
         crate::range_table::register_spark_range(&context);
         text_write_format::file_format::register_text_write_formats(&context)
             .map_err(engine_err)?;
-        let dialect = self
-            .sql_dialect
-            .unwrap_or_else(|| Arc::new(DataFusionDialect));
         dialect.on_session_built(&context);
         let session = ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),

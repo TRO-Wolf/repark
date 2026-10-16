@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::execution::{SessionState, SessionStateBuilder};
+use datafusion::logical_expr::planner::TypePlanner;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     ColumnOption, CreateTable, CreateTableOptions, ObjectName, SqlOption,
@@ -856,8 +858,7 @@ async fn column_def_schema(
         } else if let Some(arrow) = iceberg_v3_named_arrow_type(&column.data_type) {
             arrow
         } else {
-            let plan = ctx
-                .state()
+            let plan = declared_type_state(ctx)
                 .create_logical_plan(&format!("SELECT CAST(NULL AS {}) AS c", column.data_type))
                 .await
                 .map_err(|err| {
@@ -906,6 +907,17 @@ fn refuse_nanosecond_timestamp_columns(
     Ok(())
 }
 
+#[derive(Debug)]
+struct DeclaredColumnTypes;
+
+impl TypePlanner for DeclaredColumnTypes {}
+
+fn declared_type_state(ctx: &SessionContext) -> SessionState {
+    SessionStateBuilder::new_from_existing(ctx.state())
+        .with_type_planner(Arc::new(DeclaredColumnTypes))
+        .build()
+}
+
 fn geospatial_sql_type(data_type: &datafusion::sql::sqlparser::ast::DataType) -> bool {
     let upper = data_type.to_string().to_ascii_uppercase();
     let head = upper.split(['(', ' ', ',']).next().unwrap_or("");
@@ -946,8 +958,7 @@ async fn cast_type_to_iceberg(
     if let Some(primitive) = iceberg_v3_named_primitive(data_type) {
         return Ok(Type::Primitive(primitive));
     }
-    let plan = ctx
-        .state()
+    let plan = declared_type_state(ctx)
         .create_logical_plan(&format!("SELECT CAST(NULL AS {data_type}) AS c"))
         .await
         .map_err(|err| {

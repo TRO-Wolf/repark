@@ -167,6 +167,18 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13; ruling 94, 2026-10-15):**
+  `AnsiDialect::type_planner` hands the session builder the ANSI variant
+  (`spark_type_planner::ansi_type_planner`), so the ANSI door types `TIMESTAMP` as the naive
+  microsecond wall, `TIMESTAMPTZ` and `TIMESTAMP_LTZ` as the microsecond instant,
+  `TIMESTAMP_NTZ` as the naive microsecond wall and the two nanosecond names as
+  nanoseconds; `on_session_built` installs the ANSI `PlannedTimestampCast` so an `Int64`
+  cast to `TIMESTAMP` or `TIMESTAMPTZ` still reads seconds.
+  `configure_analyzer_rules` places `SparkTimestampUnitWiden` before `type_coercion`
+  (amendment 1). `create_table.rs` resolves declared column types on a copy of the
+  session state whose planner answers nothing (`declared_type_state`), so `CREATE TABLE`
+  keeps DataFusion's mapping and its refusals of a nanosecond `TIMESTAMP` column and of
+  `TIMESTAMP_LTZ`. pins: ice-tsns-type-planner-1/C-011, C-012, C-015
 - `dialect.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), owner question 47:**
   `on_session_built` calls `repark_iceberg::write::store_cast::register_store_cast_udfs`, the
   one registration of the by-name store kernels. The shared MERGE and UPDATE text names the

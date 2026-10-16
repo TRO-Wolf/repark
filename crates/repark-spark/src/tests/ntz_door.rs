@@ -312,21 +312,38 @@ async fn ltz_numeric_cast_stays_epoch_seconds() {
 }
 
 #[tokio::test]
-async fn nested_ntz_cast_target_keeps_the_r4_refusal() {
+async fn nested_ntz_cast_targets_answer_sparks_walls() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_ntz(&warehouse).await;
-    for sql in [
+    let midnight = 1_704_067_200_000_000_i64;
+    let listed = batches(
+        &ctx,
+        &catalogs,
         "SELECT CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>) AS v",
+    )
+    .await;
+    let list = listed[0].column(0).as_list::<i32>();
+    assert_eq!(list.value_type(), naive_micros());
+    let walls = list.value(0);
+    assert_eq!(
+        walls
+            .as_primitive::<TimestampMicrosecondType>()
+            .values()
+            .to_vec(),
+        vec![midnight]
+    );
+    let shaped = batches(
+        &ctx,
+        &catalogs,
         "SELECT CAST(named_struct('a', '2024-01-01') AS STRUCT<a: TIMESTAMP_NTZ>) AS v",
-    ] {
-        let text = failure(&ctx, &catalogs, sql).await;
-        assert!(
-            text.contains("[UNSUPPORTED_TIMESTAMP_NTZ]")
-                && text.contains("nested cast target")
-                && text.contains("the scalar TIMESTAMP_NTZ literal and cast are"),
-            "{sql}: {text}"
-        );
-    }
+    )
+    .await;
+    let leaf = shaped[0].column(0).as_struct().column(0);
+    assert_eq!(leaf.data_type(), &naive_micros());
+    assert_eq!(
+        leaf.as_primitive::<TimestampMicrosecondType>().value(0),
+        midnight
+    );
 }
 
 #[tokio::test]

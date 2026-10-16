@@ -1,0 +1,544 @@
+{
+ "store": [
+  [
+   "v1_written_cast_beside_us",
+   "coalesce(CAST({c} AS TIMESTAMP), ts)",
+   true,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v1_written_cast_in_array",
+   "array(CAST({c} AS TIMESTAMP), ts)[0]",
+   true,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v1_container_coalesce",
+   "coalesce(array({c}), array(<<ts>>))[0]",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_container_append",
+   "array_append(array({c}), <<ts>>)[0]",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_container_prepend",
+   "array_prepend(array({c}), <<ts>>)[1]",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_container_union",
+   "array_union(array({c}), array(<<ts>>))[0]",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_container_flatten",
+   "flatten(array(array({c}), array(<<ts>>)))[0]",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_container_case",
+   "(CASE WHEN id > 0 THEN array({c}) ELSE array(<<ts>>) END)[0]",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_date_sibling",
+   "coalesce({c}, <<DATE '2001-02-03'>>)",
+   false,
+   "{c}"
+  ],
+  [
+   "v1_date_null_sibling",
+   "coalesce({c}, <<CAST(NULL AS DATE)>>)",
+   false,
+   "{c}"
+  ],
+  [
+   "v1_cast_over_ntz_site",
+   "CAST(coalesce({c}, <<ntz>>) AS TIMESTAMP)",
+   false,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v1_date_over_ntz_null_site",
+   "CAST(coalesce({c}, <<CAST(NULL AS TIMESTAMP_NTZ)>>) AS DATE)",
+   false,
+   "CAST({c} AS DATE)"
+  ],
+  [
+   "v1_cast_over_trunc_of_site",
+   "CAST(date_trunc('second', coalesce({c}, {N})) AS TIMESTAMP)",
+   false,
+   "CAST(date_trunc('second', {c}) AS TIMESTAMP)"
+  ],
+  [
+   "v1_date_over_trunc_of_site",
+   "CAST(date_trunc('second', coalesce({c}, <<ts>>)) AS DATE)",
+   true,
+   ""
+  ],
+  [
+   "v1_string_round_trip",
+   "CAST(CAST(coalesce({c}, {N}) AS STRING) AS {n})",
+   false,
+   "CAST(CAST({c} AS STRING) AS {n})"
+  ],
+  [
+   "v1_micros_round_trip",
+   "timestamp_micros(unix_micros(coalesce({c}, <<ts>>)))",
+   true,
+   "timestamp_micros(unix_micros({c}))"
+  ],
+  [
+   "v1_json_round_trip",
+   "CAST(get_json_object(to_json(named_struct('f', coalesce({c}, <<ts>>))), '$.f') AS {n})",
+   true,
+   ""
+  ],
+  [
+   "v1_nested_site",
+   "coalesce(coalesce({c}, {N}), <<ts>>)",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_greatest_over_site",
+   "greatest(coalesce({c}, {N}), <<ts>>)",
+   true,
+   ""
+  ],
+  [
+   "v1_interval_arm",
+   "coalesce({c} + INTERVAL '1' DAY, <<ts>>)",
+   true,
+   "{c} + INTERVAL '1' DAY"
+  ],
+  [
+   "v1_lambda_sibling",
+   "transform(array({c}), x -> coalesce(x, <<ts>>))[0]",
+   true,
+   "{c}"
+  ],
+  [
+   "v1_to_date_of_site",
+   "to_date(coalesce({c}, {N}))",
+   false,
+   "to_date({c})"
+  ],
+  [
+   "v1_cast_date_of_site",
+   "CAST(coalesce({c}, {N}) AS DATE)",
+   false,
+   "CAST({c} AS DATE)"
+  ],
+  [
+   "v2_try_cast_beside_us",
+   "coalesce(TRY_CAST({c} AS TIMESTAMP), ts)",
+   true,
+   "TRY_CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v2_map_lookup",
+   "element_at(map(coalesce({c}, <<ts>>), {c}), coalesce({c}, <<ts>>))",
+   true,
+   "{c}"
+  ],
+  [
+   "v2_interval_difference",
+   "{c} + (coalesce({c}, <<ts>>) - coalesce({c}, <<ts>>))",
+   true,
+   "{c}"
+  ],
+  [
+   "v2_interval_from_integer",
+   "{c} + make_dt_interval(0, 0, 0, 0 * unix_micros(coalesce({c}, <<ts>>)))",
+   true,
+   "{c}"
+  ],
+  [
+   "v2_cast_over_if",
+   "CAST(if(id > 0, {c}, <<ts>>) AS TIMESTAMP)",
+   true,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v2_cast_over_case",
+   "CAST(CASE WHEN id > 0 THEN {c} ELSE <<ts>> END AS TIMESTAMP)",
+   true,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v2_cast_over_greatest",
+   "CAST(greatest({c}, {N}) AS TIMESTAMP)",
+   false,
+   ""
+  ],
+  [
+   "v2_cast_over_array_element",
+   "CAST(array({c}, <<ts>>)[0] AS TIMESTAMP)",
+   true,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v2_cast_over_lambda",
+   "CAST(transform(array({c}), x -> coalesce(x, <<ts>>))[0] AS TIMESTAMP)",
+   true,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v2_date_over_nested_site",
+   "CAST(coalesce(coalesce({c}, {N}), <<ts>>) AS DATE)",
+   true,
+   "CAST({c} AS DATE)"
+  ],
+  [
+   "v2_struct_field_site",
+   "coalesce(named_struct('f', {c}).f, <<ts>>)",
+   true,
+   "{c}"
+  ],
+  [
+   "v2_array_element_site",
+   "coalesce(array({c})[0], <<ts>>)",
+   true,
+   "{c}"
+  ],
+  [
+   "v2_map_element_site",
+   "coalesce(element_at(map('a', {c}), 'a'), <<ts>>)",
+   true,
+   "{c}"
+  ],
+  [
+   "v3_typed_null_beside_untyped",
+   "coalesce(CAST(NULL AS {n}), {N})",
+   false,
+   ""
+  ],
+  [
+   "v3_typed_null_beside_us",
+   "coalesce(CAST(NULL AS {n}), <<ts>>)",
+   true,
+   ""
+  ],
+  [
+   "v3_cast_over_array_null",
+   "CAST(array({c}, {N})[0] AS TIMESTAMP)",
+   false,
+   "CAST({c} AS TIMESTAMP)"
+  ],
+  [
+   "v3_ltz_cast_over_array_null",
+   "CAST(array({c}, {N})[0] AS TIMESTAMP_LTZ)",
+   false,
+   "CAST({c} AS TIMESTAMP_LTZ)"
+  ],
+  [
+   "v3_date_over_array_null",
+   "CAST(array({c}, {N})[0] AS DATE)",
+   false,
+   "CAST({c} AS DATE)"
+  ],
+  [
+   "v3_try_cast_date_of_site",
+   "TRY_CAST(coalesce({c}, {N}) AS DATE)",
+   false,
+   "TRY_CAST({c} AS DATE)"
+  ],
+  [
+   "v3_integer_argument",
+   "timestampadd(MICROSECOND, unix_micros(coalesce({c}, <<ts>>)) - unix_micros(TIMESTAMP '1970-01-01 00:00:00'), TIMESTAMP '1970-01-01 00:00:00')",
+   true,
+   "timestampadd(MICROSECOND, unix_micros({c}) - unix_micros(TIMESTAMP '1970-01-01 00:00:00'), TIMESTAMP '1970-01-01 00:00:00')"
+  ],
+  [
+   "v3_fold_typed_null",
+   "aggregate(array({c}), <<CAST(NULL AS TIMESTAMP)>>, (acc, x) -> coalesce(x, acc))",
+   true,
+   "{c}"
+  ],
+  [
+   "nar_unaliased_item",
+   "coalesce({c}, {N})",
+   false,
+   "{c}"
+  ],
+  [
+   "nar_written_ns_cast_over_site",
+   "CAST(coalesce({c}, {N}) AS {n})",
+   false,
+   "{c}"
+  ]
+ ],
+ "statements": [
+  [
+   "v1_rollup_where",
+   "INSERT INTO {T} (id, v, k) SELECT id, max({c}), 0 FROM {S} WHERE coalesce({c}, <<ts>>) IS NOT NULL GROUP BY ROLLUP (id) HAVING id IS NOT NULL",
+   true,
+   "INSERT INTO {T} (id, v, k) SELECT id, max({c}), 0 FROM {S} WHERE {c} IS NOT NULL GROUP BY ROLLUP (id) HAVING id IS NOT NULL"
+  ],
+  [
+   "v1_lateral_sibling",
+   "INSERT INTO {T} (id, v, k) SELECT o.id, l.v, 0 FROM {S} o, LATERAL (SELECT o.{c} AS v, coalesce(o.{c}, <<o.ts>>) AS w) l",
+   true,
+   "INSERT INTO {T} (id, v, k) SELECT id, {c}, 0 FROM {S}"
+  ],
+  [
+   "v1_lateral_typed_null",
+   "INSERT INTO {T} (id, v, k) SELECT o.id, l.v, 0 FROM {S} o, LATERAL (SELECT coalesce(o.{c}, <<CAST(NULL AS TIMESTAMP)>>) AS v) l",
+   true,
+   "INSERT INTO {T} (id, v, k) SELECT id, {c}, 0 FROM {S}"
+  ],
+  [
+   "v1_subquery_cast",
+   "INSERT INTO {T} (id, v, k) SELECT id, CAST(v AS TIMESTAMP), 0 FROM (SELECT id, coalesce({c}, <<ts>>) AS v FROM {S}) q",
+   true,
+   "INSERT INTO {T} (id, v, k) SELECT id, CAST({c} AS TIMESTAMP), 0 FROM {S}"
+  ],
+  [
+   "v1_union_date_branch",
+   "INSERT INTO {T} (id, v, k) SELECT id, {c}, 0 FROM {S} UNION ALL SELECT 100, <<DATE '2001-02-03'>>, 0",
+   false,
+   ""
+  ],
+  [
+   "v3_values_relation",
+   "INSERT INTO {T} (id, v, k) SELECT * FROM (VALUES (1, coalesce(CAST('2026-01-02 03:04:05.123456789+00:00' AS timestamptz_ns), CAST(NULL AS timestamptz_ns)), 0)) AS q(a, b, c)",
+   true,
+   "INSERT INTO {T} (id, v, k) SELECT * FROM (VALUES (1, coalesce(CAST('2026-01-02 03:04:05.123456789+00:00' AS timestamptz_ns), NULL), 0)) AS q(a, b, c)"
+  ],
+  [
+   "v3_three_branch_union",
+   "INSERT INTO {T} (id, v, k) SELECT id, {N}, 0 FROM {S} UNION ALL SELECT id + 100, <<ts>>, 0 FROM {S} UNION ALL SELECT id + 200, {c}, 0 FROM {S}",
+   true,
+   ""
+  ],
+  [
+   "v3_aggregate_try_cast",
+   "INSERT INTO {T} (id, v, k) SELECT id, coalesce(max(TRY_CAST({c} AS TIMESTAMP)), max(ts)), 0 FROM {S} GROUP BY id",
+   true,
+   "INSERT INTO {T} (id, v, k) SELECT id, max(TRY_CAST({c} AS TIMESTAMP)), 0 FROM {S} GROUP BY id"
+  ],
+  [
+   "v3_join_side_try_cast",
+   "INSERT INTO {T} (id, v, k) SELECT a.id, coalesce(b.w, a.ts), 0 FROM {S} a JOIN (SELECT id, TRY_CAST({c} AS TIMESTAMP) AS w FROM {S}) b USING (id)",
+   true,
+   "INSERT INTO {T} (id, v, k) SELECT id, TRY_CAST({c} AS TIMESTAMP), 0 FROM {S}"
+  ],
+  [
+   "nar_correlated_reader",
+   "INSERT INTO {T} (id, v, k) SELECT id, v, 0 FROM (SELECT id, coalesce({c}, {N}) AS v FROM {S}) q WHERE EXISTS (SELECT 1 FROM ice.ns.us o WHERE CAST(o.ntz AS STRING) = CAST(q.v AS STRING))",
+   false,
+   "INSERT INTO {T} (id, v, k) SELECT id, v, 0 FROM (SELECT id, {c} AS v FROM {S}) q WHERE EXISTS (SELECT 1 FROM ice.ns.us o WHERE CAST(o.ntz AS STRING) = CAST(q.v AS STRING))"
+  ],
+  [
+   "nar_correlated_sequence",
+   "INSERT INTO {T} (id, v, k) SELECT id, v, 0 FROM (SELECT id, coalesce({c}, {N}) AS v FROM {S}) q WHERE EXISTS (SELECT 1 FROM ice.ns.us o WHERE size(sequence(q.v, q.v)) = o.id)",
+   false,
+   "INSERT INTO {T} (id, v, k) SELECT id, v, 0 FROM (SELECT id, {c} AS v FROM {S}) q WHERE EXISTS (SELECT 1 FROM ice.ns.us o WHERE size(sequence(q.v, q.v)) = o.id)"
+  ]
+ ],
+ "updates": [
+  [
+   "v1_update_alias",
+   "UPDATE {T} AS u SET u.v = coalesce(u.c, {N}) WHERE u.id >= 0",
+   false,
+   "UPDATE {T} AS u SET u.v = u.c WHERE u.id >= 0"
+  ],
+  [
+   "v1_update_qualified_us",
+   "UPDATE {T} SET v = coalesce(c, <<(SELECT max(q.ts) FROM {S} q)>>) WHERE id >= 0",
+   true,
+   "UPDATE {T} SET v = c WHERE id >= 0"
+  ],
+  [
+   "r017_update_nowhere",
+   "UPDATE {T} SET v = coalesce(c, {N})",
+   false,
+   "UPDATE {T} SET v = c"
+  ],
+  [
+   "r017_update_nowhere_cast",
+   "UPDATE {T} SET v = CAST(c AS TIMESTAMP)",
+   false,
+   "UPDATE {T} SET v = CAST(c AS TIMESTAMP) WHERE id >= 0"
+  ],
+  [
+   "r017_update_nowhere_ntz_cast",
+   "UPDATE {T} SET v = CAST(c AS TIMESTAMP_NTZ)",
+   false,
+   "UPDATE {T} SET v = CAST(c AS TIMESTAMP_NTZ) WHERE id >= 0"
+  ],
+  [
+   "r017_update_nowhere_case_cast",
+   "UPDATE {T} SET v = CASE WHEN id > 0 THEN CAST(c AS TIMESTAMP) ELSE NULL END",
+   false,
+   "UPDATE {T} SET v = CAST(c AS TIMESTAMP) WHERE id >= 0"
+  ],
+  [
+   "nar_update_where_site",
+   "UPDATE {T} SET v = coalesce(c, {N}) WHERE coalesce(c, {N}) IS NOT NULL",
+   false,
+   "UPDATE {T} SET v = c WHERE c IS NOT NULL"
+  ]
+ ],
+ "reads": [
+  [
+   "v1_union_null_branch",
+   "SELECT id, {c} AS v FROM {S} UNION ALL SELECT 0, {N}",
+   false,
+   ""
+  ],
+  [
+   "v1_union_literal_branch",
+   "SELECT id, {c} AS v FROM {S} UNION ALL SELECT 0, <<TIMESTAMP '2026-01-02 03:04:05'>>",
+   true,
+   ""
+  ],
+  [
+   "v2_array_except",
+   "SELECT id, array_except(array({c}), array(<<CAST({c} AS TIMESTAMP)>>)) AS v FROM {S}",
+   true,
+   ""
+  ],
+  [
+   "v2_array_intersect",
+   "SELECT id, array_intersect(array({c}), array(<<CAST({c} AS TIMESTAMP)>>)) AS v FROM {S}",
+   true,
+   ""
+  ],
+  [
+   "v2_array_distinct",
+   "SELECT id, array_distinct(array({c}, <<CAST({c} AS TIMESTAMP)>>)) AS v FROM {S}",
+   true,
+   ""
+  ],
+  [
+   "v2_view_cast_keeps_schema",
+   "SELECT id, CAST(ts AS TIMESTAMP) AS v FROM {S}",
+   false,
+   "SELECT id, ts AS v FROM {S}"
+  ],
+  [
+   "v3_three_branch_read",
+   "SELECT id, {N} AS v FROM {S} UNION ALL SELECT id + 100, <<ts>> FROM {S} UNION ALL SELECT id + 200, {c} FROM {S}",
+   true,
+   ""
+  ],
+  [
+   "v3_union_ntz_null",
+   "SELECT id, {c} AS v FROM {S} UNION ALL SELECT id, {N} FROM {S} UNION ALL SELECT id, <<ntz>> FROM {S}",
+   false,
+   ""
+  ],
+  [
+   "s1_convert_timezone_null",
+   "SELECT id, convert_timezone(NULL, {c}) AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_from_utc_null",
+   "SELECT id, from_utc_timestamp({c}, NULL) IS NULL AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_to_utc_null",
+   "SELECT id, to_utc_timestamp({c}, NULL) IS NULL AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_string_agg_null",
+   "SELECT string_agg({c}, NULL) AS v FROM {S}",
+   false,
+   ""
+  ],
+  [
+   "s1_lag_null_offset",
+   "SELECT id, lag({c}, NULL) OVER (ORDER BY id) AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_lead_null_offset",
+   "SELECT id, lead({c}, NULL) OVER (ORDER BY id) AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_nth_value_null",
+   "SELECT id, nth_value({c}, NULL) OVER (ORDER BY id) AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_struct_null_field",
+   "SELECT id, typeof(struct({c}, NULL)) AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_equals_null",
+   "SELECT id, {c} = NULL AS a FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "s1_site_beside_ntz_cast",
+   "SELECT id, coalesce({c}, {N}) AS v, CAST(ts AS TIMESTAMP_NTZ) AS w FROM {S} ORDER BY id",
+   false,
+   "SELECT id, {c} AS v, CAST(ts AS TIMESTAMP_NTZ) AS w FROM {S} ORDER BY id"
+  ],
+  [
+   "s1b_sequence_over_site",
+   "SELECT id, sequence(coalesce({c}, {N}), {c}) AS v FROM {S} ORDER BY id",
+   false,
+   "SELECT id, sequence({c}, {c}) AS v FROM {S} ORDER BY id"
+  ],
+  [
+   "s1b_concat_ws_null",
+   "SELECT id, concat_ws({c}, NULL) AS v FROM {S} ORDER BY id",
+   false,
+   ""
+  ],
+  [
+   "nar_where_cast_keeps_column",
+   "SELECT id, v FROM (SELECT id, coalesce({c}, {N}) AS v FROM {S}) q WHERE CAST(v AS {n}) IS NOT NULL ORDER BY id",
+   false,
+   "SELECT id, {c} AS v FROM {S} ORDER BY id"
+  ],
+  [
+   "nar_written_ns_cast_read",
+   "SELECT id, CAST(coalesce(coalesce({c}, {N}), {N}) AS {n}) AS v FROM {S} ORDER BY id",
+   false,
+   "SELECT id, {c} AS v FROM {S} ORDER BY id"
+  ],
+  [
+   "nar_frame_site",
+   "SELECT id, coalesce({c}, {N}) AS v FROM {S} ORDER BY id",
+   false,
+   "SELECT id, {c} AS v FROM {S} ORDER BY id"
+  ]
+ ],
+ "answer_only": [
+  "s1_convert_timezone_null",
+  "s1_equals_null",
+  "s1_from_utc_null",
+  "s1_lag_null_offset",
+  "s1_lead_null_offset",
+  "s1_nth_value_null",
+  "s1_string_agg_null",
+  "s1_struct_null_field",
+  "s1_to_utc_null",
+  "s1b_concat_ws_null"
+ ]
+}
