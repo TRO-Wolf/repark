@@ -474,3 +474,7 @@ sync after changes.
   binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary`
   takes the trailing columns as a vector (exact baseline 1012).
   pins: fnp-agg-1/C-002, C-003, C-004
+- **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `expr_build.rs` `build_expr_context` registers
+  `repark_functions::SparkTypePlanner` on the expression-string session, so
+  `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` take the same types as `spark.sql`.
+  pins: ice-tsns-type-planner-1/C-011

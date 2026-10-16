@@ -1,6 +1,6 @@
 """Spellings, twin kernels, and door names for ICE-TSNS-COERCION-1 slice 0.
 
-The twin writes ``__repark_cast_timestamp_ns__`` or ``__repark_cast_timestamptz_ns__``
+The twin writes ``CAST(… AS timestamp_ns)`` or ``CAST(… AS timestamptz_ns)``
 on every operand that is not already the site result type. ``nvl`` and ``ifnull``
 twins are ``coalesce``, which is the hand-written form of that rewrite. A column
 sibling on a statement that only has the target row in scope is a scalar subquery
@@ -147,10 +147,10 @@ def result_zoned(source: str, sibling: str) -> bool:
 
 
 def kernel_name(zoned: bool) -> str:
-    """Return the kernel that yields the site result type."""
+    """Return the SQL type name of the site result type."""
     if zoned:
-        return "__repark_cast_timestamptz_ns__"
-    return "__repark_cast_timestamp_ns__"
+        return "timestamptz_ns"
+    return "timestamp_ns"
 
 
 def wrap_member(expr: str, kind: str, zoned: bool) -> str:
@@ -159,7 +159,7 @@ def wrap_member(expr: str, kind: str, zoned: bool) -> str:
         return expr
     if kind == "tzns" and zoned:
         return expr
-    return f"{kernel_name(zoned)}({expr})"
+    return f"CAST({expr} AS {kernel_name(zoned)})"
 
 
 def moment_literal(source: str, index: int) -> str:

@@ -57,10 +57,10 @@ fn core_evidence(expr: &Expr) -> Evidence {
             }
         }
         Expr::Literal(ScalarValue::TimestampMicrosecond(_, None), _) => Evidence::Wall,
-        Expr::TryCast(cast) if is_naive_ns(cast.field.data_type()) && !shifted => {
+        Expr::TryCast(cast) if is_written_timestamp(cast.field.data_type()) && !shifted => {
             Evidence::Timestamp
         }
-        Expr::Cast(cast) if is_naive_ns(cast.field.data_type()) => {
+        Expr::Cast(cast) if is_written_timestamp(cast.field.data_type()) => {
             match strip_values_wrappers(&cast.expr) {
                 Expr::Literal(
                     ScalarValue::Utf8(Some(_))
@@ -68,7 +68,9 @@ fn core_evidence(expr: &Expr) -> Evidence {
                     | ScalarValue::Utf8View(Some(_)),
                     _,
                 ) => Evidence::Timestamp,
-                Expr::Cast(inner) if is_naive_ns(inner.field.data_type()) => Evidence::Timestamp,
+                Expr::Cast(inner) if is_written_timestamp(inner.field.data_type()) => {
+                    Evidence::Timestamp
+                }
                 _ if shifted => Evidence::Timestamp,
                 _ => Evidence::None,
             }
@@ -97,8 +99,9 @@ fn peel_interval_arithmetic(mut expr: &Expr) -> (&Expr, bool) {
     }
 }
 
-fn is_naive_ns(data_type: &DataType) -> bool {
+fn is_written_timestamp(data_type: &DataType) -> bool {
     data_type == &DataType::Timestamp(TimeUnit::Nanosecond, None)
+        || crate::instant_ts::is_ltz_timestamp(data_type)
 }
 
 fn is_interval_literal(expr: &Expr) -> bool {

@@ -3384,6 +3384,10 @@ still open is `isModifiable`.
 - **Apache Spark** — has no such type name. *(oracle: none.)*
 - **Pin** — the `update_literal` cells of `ice_tsns_merge_wall_1_main.json` for the `ns` and
   `tzns` sources, held as refusals by `test_ice_tsns_merge_wall_1.py`.
+- **Status 2026-10-15 (ICE-TSNS-TYPE-PLANNER-1, branch `fix/ice-tsns-type-planner-1-fresh`,
+  not merged):** the planner types both names in `UPDATE` and `DELETE`, so the cells store;
+  `test_ice_tsns_merge_wall_1.py` (`r010_answers`) and `test_ice_tstzns_wall_1.py` (the
+  `update_literal` door) are re-pinned to the instant `INSERT` stores, nine digits exact.
 - **Rationale** — OPEN, dated 2026-10-09. A lowering gap in the Spark door's `UPDATE` and
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
@@ -3818,6 +3822,41 @@ still open is `isModifiable`.
     path (stores main's).
   - Narrow: an UPDATE-over-site refusal becomes the internal `No field named
     __common_expr_3` schema error.
+- **Status 2026-10-15 (ICE-TSNS-TYPE-PLANNER-1 fresh build, branch
+  `fix/ice-tsns-type-planner-1-fresh`, not merged):** OPEN. On the branch head a written
+  `TIMESTAMP` plans as the microsecond instant on the Spark door (the naive microsecond wall
+  on the Rust ANSI door, ruling 94), `timestamp_ns` and `timestamptz_ns` plan as
+  nanoseconds, and a NULL or a coarser timestamp beside a nanosecond value takes the
+  nanosecond type: `coalesce(ns, NULL)` keeps nine digits on every door of the 9,600-cell
+  census. `sequence` over a nanosecond site answers nanoseconds; an `aggregate` zero, a
+  `UNION` over field-id-tagged branches, an identity `UPDATE … WHERE` into `TIMESTAMP`
+  (ruling 91) and an encoded source through the staged doors (ruling 92) answer. No
+  statement today's main (`01796857`) answers errors on the head outside ruling 38's 108
+  pandas and Arrow door cells. Open: a written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE …
+  WHERE` truncates (4 repros), eight list-function cells are red on the head and green on
+  main, and an encoded nanosecond value into `TIMESTAMP` truncates where the plain one
+  floors (R-024); and the carried planner work moves 51 Rust and 27 facade pins that pass on
+  main, three of them statements main answers that now error. The unit ledger's questions Q1
+  to Q5. Pins:
+  `python/repark/tests/test_ice_tsns_type_planner_1.py`,
+  `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`,
+  `crates/repark-spark/tests/ice_tsns_type_planner_1_update_forms.rs`. Ledger:
+  `task/ledgers/staging/ice-tsns-type-planner-1-ledger.md` (on the branch).
+- **Status 2026-10-15, carry-over fix round (owner rulings 100 to 102, same branch, not
+  merged):** the carried planner work no longer moves a pin without a ruling except one
+  internal analyzer-list pin (an open question). The three statements main answered that
+  errored answer (an integer cast to `TIMESTAMP` reads seconds at every width; a `DATE` or a
+  string beside a zoned timestamp in a `UNION` takes the timestamp's type); refusal texts
+  name `TIMESTAMP` as Spark does; `repark.sql()` types `TIMESTAMP` as the microsecond wall
+  and `TIMESTAMPTZ` as the microsecond instant (ruling 94's contract); mixed `VALUES`
+  columns store Spark's walls; the eight list cells green on today's main are green (ruling
+  101). **The pin moved:** this row's pin
+  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` is now
+  `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`, re-pinned to
+  Spark's typing of a NULL beside its sibling (the microsecond twin, recorded live). The
+  written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE … WHERE` above has its own card,
+  [ICE-TSNS-UPDATE-NTZ-CAST-1](../task/roadmap/mid-term/ice-tsns-update-ntz-cast-1-card-2026-10-15.md),
+  and four dated rows.
 
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 

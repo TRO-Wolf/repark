@@ -3,7 +3,9 @@
 ## Purpose
 
 WO NTZ-1 slice 1 support. The parent `keyword_lower.rs` holds the Spark-door AST keyword
-lowering (`TIMESTAMP_NS` casts, empty `map()`, `RLIKE`, `TIMESTAMP_LTZ` targets) and the
+lowering (empty `map()`, `RLIKE`, `TIMESTAMP_LTZ` targets; the `timestamp_ns` and
+`timestamptz_ns` cast names are no longer lowered since ICE-TSNS-TYPE-PLANNER-1, the type
+planner types them) and the
 `UNSUPPORTED_TIMESTAMP_NTZ` refusal mapper; this directory holds the `TIMESTAMP_NTZ` cast
 lowering it calls first.
 

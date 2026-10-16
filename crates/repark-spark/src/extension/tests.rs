@@ -36,6 +36,7 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
         .iter()
         .position(|name| name == "higher_order_preparation")
         .expect("HOF preparation is installed");
+    assert_eq!(configured_names[position - 2], "spark_timestamp_unit_widen");
     assert_eq!(configured_names[position - 1], "spark_fractional_division");
     assert_eq!(configured_names[position + 1], "spark_float_stringify");
     assert_eq!(configured_names[position + 2], "spark_decimal_precision");
@@ -52,6 +53,7 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
                 && name != "spark_decimal_precision"
                 && name != "spark_integral_literal"
                 && name != "spark_negate_null_decimal"
+                && name != "spark_timestamp_unit_widen"
         })
         .collect();
     assert_eq!(without_insertions, original_names);

@@ -17,6 +17,11 @@ table is the "before" of every later unit of the slate. No product behaviour liv
 - `pins.rs` — the `[[test]] ice_read_perf_pins` root: declares the same modules and pins them
   offline (see "Pins"). Every tested function is also on the bench's own path, so neither root
   carries dead code.
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix round (2026-10-15):** the five pins failed on the
+  carry-over head (`CAST(<seconds> AS TIMESTAMP)` of the bed's `ts` column read the narrowed
+  integer as nanosecond ticks, then met the by-target kernel) and pass once the integer reads
+  seconds; measured against main's binary on one bed under the build lock, every warm and cold
+  median is within 1.05x (unit ledger §11). Not re-pinned. pins: ice-tsns-type-planner-1/C-034
 - `pins_report.rs` — pins-only module of the `pins.rs` root (ICE-CATALOG-CACHE-1): the report's
   metadata-cache evictions in JSON and markdown. pins: ice-catalog-cache-1/C-009
   ICE-FOOTER-CACHE-1: the footer cache's per-sample counters too. pins: ice-footer-cache-1/C-008

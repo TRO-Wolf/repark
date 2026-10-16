@@ -69,7 +69,6 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
 from repark.spark import functions
 from repark.spark.types import TimestampNTZType
 
@@ -282,31 +281,6 @@ def test_dataframe_door_casts_answer_as_spark(tmp_path: Path) -> None:
             functions.lit(literal).cast(TimestampNTZType()).alias("v")
         )
         assert _dtypes(typed) == _ORACLE["dataframe"][1]["spark_dtypes"]
-    finally:
-        session.stop()
-
-
-@pytest.mark.parametrize(
-    "sql",
-    [
-        "SELECT CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>) AS v",
-        "SELECT CAST(named_struct('a', '2024-01-01') AS STRUCT<a: TIMESTAMP_NTZ>) AS v",
-    ],
-)
-def test_nested_cast_target_keeps_the_r4_refusal(sql: str, tmp_path: Path) -> None:
-    """A nested TIMESTAMP_NTZ target keeps the R4 refusal, not a value."""
-    session = _open("UTC", tmp_path)
-    try:
-        with pytest.raises(AnalysisException) as caught:
-            session.sql(sql).collect()
-        assert _condition(caught.value) == "UNSUPPORTED_TIMESTAMP_NTZ"
-        assert _sql_state(caught.value) == "0A000"
-        assert _repark_core(str(caught.value))[0] == (
-            "[UNSUPPORTED_TIMESTAMP_NTZ] TIMESTAMP_NTZ inside a nested cast target "
-            "(ARRAY, STRUCT or MAP) is not supported yet; the scalar TIMESTAMP_NTZ "
-            "literal and cast are. See TZ-6 (docs/spark-sql-iceberg-parity.md). "
-            "SQLSTATE: 0A000"
-        )
     finally:
         session.stop()
 

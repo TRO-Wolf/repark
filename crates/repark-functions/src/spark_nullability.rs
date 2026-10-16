@@ -134,7 +134,7 @@ mod tests {
     }
 
     fn ctx_ansi(ansi_enabled: bool) -> SessionContext {
-        let ctx = SessionContext::new_with_config(spark_door_config(ansi_enabled));
+        let ctx = crate::spark_type_planner::planned_context(spark_door_config(ansi_enabled));
         crate::decimal_spark::register_spark_decimal_planner(&ctx);
         for rule in analyzer_rules() {
             ctx.add_analyzer_rule(rule);

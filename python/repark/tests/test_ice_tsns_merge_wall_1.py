@@ -56,8 +56,20 @@ def floored_values(target: str, source: str) -> list[int]:
     return [floors.rule_expected(source, target, tick, CONTROL_ZONE) for tick in doors.NANOS]
 
 
+def r010_answers(door: str, source: str) -> bool:
+    """Return whether main refused ``timestamp_ns`` by name where R-010's fix now stores."""
+    return door == "update_literal" and source in ("ns", "tzns")
+
+
 def control_cell(target: str, door: str, source: str) -> dict[str, Any]:
     recorded = main_cell(CONTROL_ZONE, target, door, source)
+    if r010_answers(door, source):
+        stored = main_cell(CONTROL_ZONE, target, "insert_select", source)
+        return {
+            "ids": list(doors.IDS),
+            "type": stored["type"],
+            "values": floored_values(target, source),
+        }
     if source not in FLOORED_SOURCES or "error" in recorded:
         return recorded
     return {**recorded, "values": floored_values(target, source)}
@@ -92,7 +104,11 @@ def main_refused_an_answer(door: str, source: str) -> bool:
 def expected_wall_cell(zone: str, door: str, source: str) -> dict[str, Any]:
     """Return the expected ``timestamp_ns`` cell: the rule, or main's ratified refusal."""
     recorded = main_cell(zone, "ts_ns", door, source)
-    if "error" in recorded and not main_refused_an_answer(door, source):
+    if (
+        "error" in recorded
+        and not main_refused_an_answer(door, source)
+        and not r010_answers(door, source)
+    ):
         return recorded
     return rule_cell(zone, source)
 
