@@ -1,3 +1,17 @@
+> **Errata (2026-10-15, ENC-1-RESIDUE-1 round 2, owner rulings 108 and 109):** F3 is
+> closed by the census in `crates/repark-iceberg/src/tests/enc_1_gate.rs`. The exception
+> rows are `repark-spark/src/ctas.rs::finish_ctas_staged_commit` and
+> `repark-sql/src/create_table.rs::execute_staged_create` and
+> `::publish_staged_with_summary`, all under ENC-CTAS-REPLACE-1. Owner ruling 108,
+> verbatim: "108: (a). ENC-CTAS-REPLACE-1 names both doors. execute_staged_create and
+> publish_staged_with_summary go on the census exception list under that card, the
+> census commits, round 2 is complete." F4 is accepted as pinned under owner ruling 109,
+> verbatim: "109: (c). F4 accepted as pinned. The micro-batch error field is a card
+> parked under the streaming freeze, not a later round. The warning carries the full
+> path of the file it could not delete." The session error names the file. The
+> micro-batch error keeps its class and text. The keyed sweep's warning carries the full
+> path. Card MB-ENC-UNDELETED-FIELD-1 is parked under the streaming freeze.
+
 > **Errata (2026-10-15, ENC-1-RESIDUE-1 fix round, owner rulings 96 and 97):** the
 > verifier failed PR #1071 at `c7713000` (F1 to F6). Owner ruling 96, verbatim: "96: (a), as
 > listed. One fix round on Opus 5.5 high on the same branch, then the scoped re-verifier.

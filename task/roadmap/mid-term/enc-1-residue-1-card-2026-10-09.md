@@ -3,9 +3,8 @@
 **Date:** 2026-10-09. **Filed by:** Claude (Opus 5.5), ENC-1 fold 2, from the Opus re-verify of PR #1019 head `78349722`.
 
 **Status:** reopened 2026-10-15 by the verifier's FAIL of PR #1071 (F1 to F6) and owner
-rulings 96 and 97; one fix round ran. Items 2, 3, 4 and 6 stay accepted in words. Item 5
-is closed. Item 1 is closed except the F3 census, which is held for a ruling on an
-uncarded site (see "Fix round" below).
+rulings 96 and 97; round 2 closed the held cells under owner rulings 108 and 109.
+Items 2, 3, 4 and 6 stay accepted in words. Items 1 and 5 are closed.
 
 **Retires:** when every item below is ruled (accepted in words, or closed by a change with a pin).
 
@@ -86,17 +85,17 @@ as 96."
 - **Item 1, F1 (closed):** the sweep never deletes a file any snapshot references; pins
   `enc_1_referenced.rs` (six public families) and the two merge pins in
   `snapshot_commit.rs`.
-- **Item 1, F4 (session closed, two parts open):** `engine_err` keeps the refusal's class
-  and the " failed to delete staged file …" suffix (pin
-  `keyed_refusal_names_an_undeletable_staged_file_through_engine_err`). Open: the
-  micro-batch `engine_error` (its `EncryptedSinkRefused { sink }` cannot carry the suffix
-  without a public type change) and the Python cell (no facade path can make a staged
-  file undeletable between staging and commit).
-- **Item 1, F3 (held):** the census by the commit call finds, besides the 13 ruled sites
-  and the two merge sites, `repark-spark/src/ctas.rs::finish_ctas_staged_commit`
-  (excepted under card ENC-CTAS-REPLACE-1, owner ruling 98) and
+- **Item 1, F4 (accepted as pinned, owner ruling 109):** `engine_err` keeps the refusal's
+  class and the " failed to delete staged file …" suffix (pin
+  `keyed_refusal_names_an_undeletable_staged_file_through_engine_err`). The micro-batch
+  error keeps its class and text. The keyed sweep's warning carries the full path of the
+  file it could not delete. Card MB-ENC-UNDELETED-FIELD-1 is parked under the streaming
+  freeze, not a later round.
+- **Item 1, F3 (closed, owner ruling 108):** the census by the commit call lists the 13
+  ruled sites and the two merge sites, and excepts
+  `repark-spark/src/ctas.rs::finish_ctas_staged_commit`,
   `repark-sql/src/create_table.rs::execute_staged_create` and
-  `::publish_staged_with_summary`, which no card names.
+  `::publish_staged_with_summary` under card ENC-CTAS-REPLACE-1 (one defect, two doors).
 - **Item 1, F6 (closed):** `write::append::commit_append` resolves again.
 - **Item 5 (closed):** the guard is installed once, in `ReparkCatalogProvider::try_new`;
   the session's registry holds the provider's guarded handle. Door pins, registry-handle
