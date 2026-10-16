@@ -17,10 +17,47 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    name: code changed (ci)
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE" "$GITHUB_SHA")
+          CODE=$(printf '%s\n' "$CHANGED" \
+            | grep -vE '\.md$' \
+            | grep -vE '^(docs|task)/.*\.(json|html|txt|csv|svg|png)$' \
+            || true)
+          READ_BY_RUST=$(printf '%s\n' "$CHANGED" \
+            | grep -E '^(docs/spark-sql-iceberg-parity\.md|task/ledgers/|\.github/)' \
+            || true)
+          if [ -n "$CODE" ] || [ -n "$READ_BY_RUST" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # Separate lint and test caches prevent runner disk exhaustion. Both jobs need Python 3.12 to
   # link PyO3; discarded CI trees do not need debug data or incremental artifacts.
   rust-lint:
-    name: Rust lint (fmt + clippy + check)
+    name: Rust lint run (fmt + clippy + check)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       CARGO_PROFILE_DEV_DEBUG: "0"
@@ -67,7 +104,9 @@ jobs:
         run: df -h /
 
   rust-test:
-    name: Rust test (workspace)
+    name: Rust test run (workspace)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       CARGO_PROFILE_DEV_DEBUG: "0"
@@ -109,6 +148,8 @@ jobs:
 
   rust-test-cluster:
     name: Rust test (cluster feature)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       CARGO_PROFILE_DEV_DEBUG: "0"
@@ -140,6 +181,44 @@ jobs:
       - name: disk after
         if: always()
         run: df -h /
+
+  rust-lint-gate:
+    name: Rust lint (fmt + clippy + check)
+    needs: [changes, rust-lint]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CODE: ${{ needs.changes.outputs.code }}
+          CHANGES: ${{ needs.changes.result }}
+          RUN: ${{ needs.rust-lint.result }}
+        run: |
+          if [ "$CHANGES" = "success" ] && [ "$CODE" = "false" ]; then
+            echo "docs-only change, the Rust tree is unchanged"; exit 0
+          fi
+          if [ "$RUN" != "success" ]; then
+            echo "rust-lint=$RUN"; exit 1
+          fi
+          echo "rust-lint succeeded"
+
+  rust-test-gate:
+    name: Rust test (workspace)
+    needs: [changes, rust-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CODE: ${{ needs.changes.outputs.code }}
+          CHANGES: ${{ needs.changes.result }}
+          RUN: ${{ needs.rust-test.result }}
+        run: |
+          if [ "$CHANGES" = "success" ] && [ "$CODE" = "false" ]; then
+            echo "docs-only change, the Rust tree is unchanged"; exit 0
+          fi
+          if [ "$RUN" != "success" ]; then
+            echo "rust-test=$RUN"; exit 1
+          fi
+          echo "rust-test succeeded"
 
   guards:
     # The display name is a required status check in branch protection — keyed by this exact
