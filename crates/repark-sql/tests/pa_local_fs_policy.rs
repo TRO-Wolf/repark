@@ -432,3 +432,129 @@ async fn ansi_an_ancestor_whose_metadata_read_fails_refuses_with_the_policy_erro
     door.refusal(&copy_to(dest.to_str().unwrap()), "COPY TO")
         .await;
 }
+
+async fn copy_lands(session: &ReparkSession, location: &str, landed: &Path) {
+    session
+        .sql(&copy_to(location))
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert!(
+        files_under(landed) > 0,
+        "{location} must land at {}",
+        landed.display()
+    );
+}
+
+#[tokio::test]
+async fn rv01_ansi_a_glob_character_in_the_warehouse_path_writes_outside_on_todays_head_and_now_refuses()
+ {
+    for name in ["wh[1]", "wh?", "wh*"] {
+        let base = TempDir::new().unwrap();
+        let root = base.path().join(name);
+        std::fs::create_dir(&root).unwrap();
+        let door = Door {
+            session: ansi_session(false, &root).await,
+            warehouse: TempDir::new().unwrap(),
+        };
+        let b = base.path().to_str().unwrap();
+        door.refusal(&copy_to(&format!("{b}/out/gr")), "COPY TO")
+            .await;
+        door.refusal(&copy_to(&format!("{b}/sib/gr2")), "COPY TO")
+            .await;
+        door.refusal(
+            &format!(
+                "EXPLAIN ANALYZE {}",
+                copy_to(&format!("file://{b}/out/gea"))
+            ),
+            "COPY TO",
+        )
+        .await;
+        door.refusal(&copy_to(root.join("gin").to_str().unwrap()), "COPY TO")
+            .await;
+        assert_eq!(
+            files_under(base.path()),
+            0,
+            "{name}: nothing anywhere under the base"
+        );
+        let encoded = format!("file://{b}/{}/gin2", name.replace('?', "%3F"));
+        copy_lands(&door.session, &encoded, &root.join("gin2")).await;
+    }
+}
+
+#[tokio::test]
+async fn rv02_ansi_a_dot_dot_over_a_symlink_above_the_warehouse_writes_inside() {
+    let base = TempDir::new().unwrap();
+    std::fs::create_dir_all(base.path().join("o1/o2")).unwrap();
+    std::os::unix::fs::symlink(base.path().join("o1/o2"), base.path().join("lnk")).unwrap();
+    let wh = base.path().join("wh");
+    std::fs::create_dir(&wh).unwrap();
+    let session = ansi_session(false, &wh).await;
+    let b = base.path().to_str().unwrap();
+    copy_lands(
+        &session,
+        &format!("{b}/lnk/../wh/anc_in"),
+        &wh.join("anc_in"),
+    )
+    .await;
+    copy_lands(
+        &session,
+        &format!("file://{b}/lnk/../wh/anc_in2"),
+        &wh.join("anc_in2"),
+    )
+    .await;
+    assert_eq!(files_under(&base.path().join("o1")), 0, "nothing in o1");
+}
+
+#[tokio::test]
+async fn rv03_ansi_private_use_characters_in_a_file_url_write_inside() {
+    let door = ansi_door(false).await;
+    let w = door.wh().to_str().unwrap().to_string();
+    copy_lands(
+        &door.session,
+        &format!("file://{w}/%EE%80%80%EE%80%80/pua"),
+        &door.wh().join("\u{E000}\u{E000}/pua"),
+    )
+    .await;
+    copy_lands(
+        &door.session,
+        &format!("file://{w}/\u{E000}\u{E001}\u{E002}/pua3"),
+        &door.wh().join("\u{E000}\u{E001}\u{E002}/pua3"),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn ansi_the_cells_of_ruling_114_write_where_the_written_path_lands() {
+    let (_base, door) = nested_ansi_door().await;
+    std::fs::create_dir(door.wh().join("sib")).unwrap();
+    std::os::unix::fs::symlink(door.wh().join("sib"), door.wh().join("s2")).unwrap();
+    let w = door.wh().to_str().unwrap().to_string();
+    for (location, landed) in [
+        (format!("{w}/deep/../dd_in"), door.wh().join("dd_in")),
+        (
+            format!("{w}/deep/../m1/dd_in2"),
+            door.wh().join("m1/dd_in2"),
+        ),
+        (format!("{w}/s2/../sb_in"), door.wh().join("sb_in")),
+        (format!("file://{w}/x/%2e%2e/pin2"), door.wh().join("pin2")),
+        (format!("{w}/x/../pin_bare"), door.wh().join("pin_bare")),
+        (
+            format!("file://{w}/x/../pin_url"),
+            door.wh().join("pin_url"),
+        ),
+    ] {
+        copy_lands(&door.session, &location, &landed).await;
+    }
+    assert_eq!(
+        files_under(&door.wh().join("a")),
+        0,
+        "nothing through the symlink target"
+    );
+    assert!(
+        !door.wh().join("x").exists(),
+        "the absent directory stays absent"
+    );
+}

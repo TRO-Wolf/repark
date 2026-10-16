@@ -429,3 +429,132 @@ async fn an_ancestor_whose_metadata_read_fails_refuses_with_the_policy_error() {
     let err = refusal(&ctx, &catalogs, &copy_to(dest.to_str().unwrap())).await;
     assert_policy_refusal(&err, "COPY TO");
 }
+
+#[tokio::test]
+async fn rv01_a_glob_character_in_the_warehouse_path_writes_outside_on_todays_head_and_now_refuses()
+{
+    for name in ["wh[1]", "wh?", "wh*"] {
+        let scratch = TempDir::new().unwrap();
+        let (ctx, mut catalogs) = setup(&scratch).await;
+        let base = TempDir::new().unwrap();
+        let root = base.path().join(name);
+        std::fs::create_dir(&root).unwrap();
+        catalogs.note_local_warehouse_root(root.to_str().unwrap());
+        let b = base.path().to_str().unwrap();
+        for sql in [
+            copy_to(&format!("{b}/out/gr")),
+            copy_to(&format!("{b}/sib/gr2")),
+            format!(
+                "EXPLAIN ANALYZE {}",
+                copy_to(&format!("file://{b}/out/gea"))
+            ),
+            copy_to(root.join("gin").to_str().unwrap()),
+        ] {
+            let err = refusal(&ctx, &catalogs, &sql).await;
+            assert_policy_refusal(&err, "COPY TO");
+        }
+        assert_eq!(
+            count_objects(base.path()),
+            0,
+            "{name}: nothing anywhere under the base"
+        );
+        let encoded = format!("file://{b}/{}/gin2", name.replace('?', "%3F"));
+        answer(&ctx, &catalogs, &copy_to(&encoded)).await;
+        assert!(
+            count_objects(&root.join("gin2")) > 0,
+            "{name}: the root itself writes"
+        );
+    }
+}
+
+#[tokio::test]
+async fn rv02_a_dot_dot_over_a_symlink_above_the_warehouse_writes_inside() {
+    let base = TempDir::new().unwrap();
+    std::fs::create_dir_all(base.path().join("o1/o2")).unwrap();
+    std::os::unix::fs::symlink(base.path().join("o1/o2"), base.path().join("lnk")).unwrap();
+    let wh = TempDir::new_in(base.path()).unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let b = base.path().to_str().unwrap();
+    let name = wh.path().file_name().unwrap().to_str().unwrap();
+    for (location, landed) in [
+        (
+            format!("{b}/lnk/../{name}/anc_in"),
+            wh.path().join("anc_in"),
+        ),
+        (
+            format!("file://{b}/lnk/../{name}/anc_in2"),
+            wh.path().join("anc_in2"),
+        ),
+    ] {
+        answer(&ctx, &catalogs, &copy_to(&location)).await;
+        assert!(
+            count_objects(&landed) > 0,
+            "{location} must land at {}",
+            landed.display()
+        );
+    }
+    assert_eq!(count_objects(&base.path().join("o1")), 0, "nothing in o1");
+}
+
+#[tokio::test]
+async fn rv03_private_use_characters_in_a_file_url_write_inside() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let w = wh.path().to_str().unwrap();
+    for (location, landed) in [
+        (
+            format!("file://{w}/%EE%80%80%EE%80%80/pua"),
+            wh.path().join("\u{E000}\u{E000}/pua"),
+        ),
+        (
+            format!("file://{w}/\u{E000}\u{E001}\u{E002}/pua3"),
+            wh.path().join("\u{E000}\u{E001}\u{E002}/pua3"),
+        ),
+    ] {
+        answer(&ctx, &catalogs, &copy_to(&location)).await;
+        assert!(
+            count_objects(&landed) > 0,
+            "{location} must land at {}",
+            landed.display()
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_cells_of_ruling_114_write_where_the_written_path_lands() {
+    let (_base, wh) = nested_warehouse();
+    let (ctx, catalogs) = setup(&wh).await;
+    std::fs::create_dir(wh.path().join("sib")).unwrap();
+    std::os::unix::fs::symlink(wh.path().join("sib"), wh.path().join("s2")).unwrap();
+    let w = wh.path().to_str().unwrap();
+    for (location, landed) in [
+        (format!("{w}/deep/../dd_in"), wh.path().join("dd_in")),
+        (
+            format!("{w}/deep/../m1/dd_in2"),
+            wh.path().join("m1/dd_in2"),
+        ),
+        (format!("{w}/s2/../sb_in"), wh.path().join("sb_in")),
+        (format!("file://{w}/x/%2e%2e/pin2"), wh.path().join("pin2")),
+        (format!("{w}/x/../pin_bare"), wh.path().join("pin_bare")),
+        (
+            format!("file://{w}/x/../pin_url"),
+            wh.path().join("pin_url"),
+        ),
+    ] {
+        answer(&ctx, &catalogs, &copy_to(&location)).await;
+        assert!(
+            count_objects(&landed) > 0,
+            "{location} must land at {}",
+            landed.display()
+        );
+    }
+    assert_eq!(
+        count_objects(&wh.path().join("a")),
+        0,
+        "nothing through the symlink target"
+    );
+    assert!(
+        !wh.path().join("x").exists(),
+        "the absent directory stays absent"
+    );
+}

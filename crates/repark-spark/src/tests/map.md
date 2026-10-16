@@ -51,6 +51,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   through an in-warehouse symlink and with missing middle directories; an ancestor that is a
   plain file refuses with the policy error, not a later write error.
   pins: pa-local-fs-policy-1/C-012, C-019, C-020, C-021, C-022, C-024
+  **Fix round 2 (2026-10-16, owner ruling 114 (b), where the bytes land):** `rv01_*` (a warehouse
+  named `wh[1]`, `wh?` or `wh*`: its parent, a sibling, `EXPLAIN ANALYZE` to the parent and a bare
+  path the glob cuts all refuse with no file anywhere under the base, each "writes outside on
+  today's head"; the `file:` spelling, `?` as `%3F`, writes inside), `rv02_*` (`<base>/lnk/../wh/x`
+  with `lnk -> <base>/o1/o2` writes inside, bare and `file://`), `rv03_*` (U+E000 to U+E002 in a
+  `file:` URL write inside), `the_cells_of_ruling_114_write_where_the_written_path_lands` (the four
+  cells and the bare and URL `x/../pin` pair, each file found at its computed path).
+  pins: pa-local-fs-policy-1/C-026, C-027, C-028, C-029
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `enc_1.rs` — **ENC-1 round 2 (2026-10-09):** 35 pins over tables carrying
   `encryption.key-id`: every write path refuses with `UnsupportedOperationException` and

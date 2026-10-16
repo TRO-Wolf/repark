@@ -28,6 +28,10 @@ holds behavior observed from outside the crate.
   named "writes outside on today's head", each asserting no file in the sibling `out/`; the cwd
   pins run in a child process of the test binary and restore the cwd.
   pins: pa-local-fs-policy-1/C-012, C-019, C-020, C-021, C-022, C-024
+  **Fix round 2 (2026-10-16, owner ruling 114 (b)):** the ANSI twins `rv01_ansi_*`, `rv02_ansi_*`,
+  `rv03_ansi_*` and `ansi_the_cells_of_ruling_114_write_where_the_written_path_lands`, each
+  asserting the file at its computed path on a write and nowhere under the base on a refusal.
+  pins: pa-local-fs-policy-1/C-026, C-027, C-028, C-029
 - `ansi_door_u9_types.rs` — **WO U9-TYPES-1 (2026-09-25):** the native door's row for the
   Spark door's new type spellings: `TIMESTAMP_LTZ` in a column definition refuses
   `Unsupported SQL type TIMESTAMP_LTZ` and creates nothing. pins: u9-types-1/C-004

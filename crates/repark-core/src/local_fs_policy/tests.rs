@@ -110,7 +110,11 @@ fn a_dot_dot_after_the_nearest_existing_ancestor_is_indeterminate() {
     assert_eq!(resolve_physical_destination(&path), None);
     assert!(!under(&registry(warehouse.path()), &path));
     let inside = warehouse.path().join("missing/../kept");
-    assert!(!under(&registry(warehouse.path()), &inside));
+    assert_eq!(
+        local_filesystem_path(inside.to_str().unwrap()),
+        Some(warehouse.path().join("kept"))
+    );
+    assert!(under(&registry(warehouse.path()), &inside));
 }
 
 #[test]
@@ -182,16 +186,155 @@ fn v01_a_symlink_then_dot_dot_writes_outside_on_todays_head_and_now_refuses() {
 }
 
 #[test]
-fn a_dot_dot_that_cancels_a_symlink_under_the_warehouse_refuses_even_when_it_lands_inside() {
+fn the_cells_of_ruling_114_land_inside_where_the_written_path_lands() {
     let (_base, warehouse) = nested_warehouse();
     std::fs::create_dir(warehouse.join("sib")).unwrap();
     symlink(warehouse.join("sib"), warehouse.join("s2")).unwrap();
     std::fs::create_dir_all(warehouse.join("real/x")).unwrap();
     symlink(warehouse.join("real"), warehouse.join("inner")).unwrap();
     let catalogs = registry(&warehouse);
-    assert!(!under(&catalogs, &warehouse.join("deep/../dd_in")));
-    assert!(!under(&catalogs, &warehouse.join("s2/../sb_in")));
-    assert!(under(&catalogs, &warehouse.join("inner/x/../y")));
+    let wh = warehouse.to_str().unwrap();
+    let canonical = warehouse.canonicalize().unwrap();
+    for (location, landing) in [
+        (format!("{wh}/deep/../dd_in"), canonical.join("dd_in")),
+        (
+            format!("{wh}/deep/../m1/dd_in2"),
+            canonical.join("m1/dd_in2"),
+        ),
+        (format!("{wh}/s2/../sb_in"), canonical.join("sb_in")),
+        (format!("file://{wh}/x/%2e%2e/pin2"), canonical.join("pin2")),
+        (format!("{wh}/x/../pin_bare"), canonical.join("pin_bare")),
+        (
+            format!("file://{wh}/x/../pin_url"),
+            canonical.join("pin_url"),
+        ),
+        (format!("{wh}/inner/x/../y"), canonical.join("real/y")),
+    ] {
+        let written = local_filesystem_path(&location).unwrap();
+        assert_eq!(
+            resolve_physical_destination(&written),
+            Some(landing),
+            "{location}"
+        );
+        assert!(
+            location_under_any_warehouse(&catalogs, &location),
+            "{location}"
+        );
+    }
+}
+
+#[test]
+fn the_written_reading_never_keeps_a_dot_dot() {
+    for location in [
+        "/srv/wh/a/../b",
+        "/srv/wh/a/../../../../b",
+        "file:///srv/wh/a/../b",
+        "file:///srv/wh/a/%2e%2e/b",
+        "file:///srv/wh/a/.%2E/b",
+        "file:/srv/wh/a/..\\b",
+        "file:///srv/wh/.\t./b",
+        "file:srv/../../b",
+        "file://localhost/srv/wh/a/../../b",
+        "relative/../../b",
+    ] {
+        let written = local_filesystem_path(location).unwrap();
+        assert!(
+            !written
+                .components()
+                .any(|component| component == Component::ParentDir),
+            "{location}: {}",
+            written.display()
+        );
+    }
+}
+
+#[test]
+fn rv01_a_glob_character_in_the_warehouse_path_writes_outside_on_todays_head_and_now_refuses() {
+    for name in ["wh[1]", "wh?", "wh*"] {
+        let base = TempDir::new().unwrap();
+        let root = base.path().join(name);
+        std::fs::create_dir(&root).unwrap();
+        let catalogs = registry(&root);
+        let b = base.path().to_str().unwrap();
+        for outside in [
+            format!("{b}/out/gr"),
+            format!("{b}/sib/gr2"),
+            format!("file://{b}/out/gr3"),
+            format!("{b}/{name}x/gr4"),
+        ] {
+            assert!(
+                !location_under_any_warehouse(&catalogs, &outside),
+                "{name}: {outside}"
+            );
+        }
+        assert!(
+            !under(&catalogs, &root.join("gin")),
+            "{name}: the bare path is cut at the glob"
+        );
+        assert_eq!(
+            local_filesystem_path(root.join("gin").to_str().unwrap()),
+            Some(base.path().to_path_buf())
+        );
+        let encoded = format!("file://{b}/{}/gin2", name.replace('?', "%3F"));
+        assert_eq!(local_filesystem_path(&encoded), Some(root.join("gin2")));
+        assert!(
+            location_under_any_warehouse(&catalogs, &encoded),
+            "{name}: {encoded}"
+        );
+    }
+}
+
+#[test]
+fn rv02_a_dot_dot_over_a_symlink_above_the_warehouse_lands_inside() {
+    let base = TempDir::new().unwrap();
+    std::fs::create_dir_all(base.path().join("o1/o2")).unwrap();
+    symlink(base.path().join("o1/o2"), base.path().join("lnk")).unwrap();
+    let warehouse = base.path().join("wh");
+    std::fs::create_dir(&warehouse).unwrap();
+    let catalogs = registry(&warehouse);
+    let b = base.path().to_str().unwrap();
+    assert!(location_under_any_warehouse(
+        &catalogs,
+        &format!("{b}/lnk/../wh/anc_in")
+    ));
+    assert!(location_under_any_warehouse(
+        &catalogs,
+        &format!("file://{b}/lnk/../wh/anc_in2")
+    ));
+    assert!(!location_under_any_warehouse(
+        &catalogs,
+        &format!("{b}/lnk/../out/anc_out")
+    ));
+}
+
+#[test]
+fn rv03_private_use_characters_are_ordinary_characters() {
+    let warehouse = TempDir::new().unwrap();
+    let catalogs = registry(warehouse.path());
+    let wh = warehouse.path().to_str().unwrap();
+    for (location, landing) in [
+        (
+            format!("file://{wh}/%EE%80%80%EE%80%80/pua"),
+            "\u{E000}\u{E000}/pua",
+        ),
+        (
+            format!("file://{wh}/\u{E000}\u{E001}\u{E002}/pua3"),
+            "\u{E000}\u{E001}\u{E002}/pua3",
+        ),
+        (
+            format!("{wh}/\u{E000}\u{E000}/pua4"),
+            "\u{E000}\u{E000}/pua4",
+        ),
+    ] {
+        assert_eq!(
+            local_filesystem_path(&location),
+            Some(warehouse.path().join(landing))
+        );
+        assert!(
+            location_under_any_warehouse(&catalogs, &location),
+            "{location}"
+        );
+    }
 }
 
 #[test]
