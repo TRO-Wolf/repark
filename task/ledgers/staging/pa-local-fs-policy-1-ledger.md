@@ -39,7 +39,7 @@ and the public `repark.sql()` entry, under
 | C-022 | V-06 and the condition of ruling 103: a warehouse registered through a symlinked path (the macOS `/tmp` shape) accepts a direct write, a write through an in-warehouse symlink and a write with missing middle directories on both doors; the root and the target are resolved by the same walk. | The symlinked-root pins. | **PROVEN** | §8: M-V7 (the root made absolute, not resolved) reds them. |
 | C-023 | V-04 (ruling 104): `repark.sql()` has no real opt-in (`SET repark.sql.allowLocalFilesystemDDL = true` fails, a native session built with the key still refuses, the native session installs no `repark.sql` extension), so its refusal says "repark.sql() does not allow local-file DDL", names no conf and no data-deleting action, and the native dialect reads no conf. | The native-dialect unit pins; `test_repark_sql_*`. | **PROVEN** | §8: the probe of §8.3; M-native-opt-in-read reds the native unit pins. |
 | C-024 | The same cause as V-02, found in this round: a location with a leading space is a relative path to DataFusion (`cwd/" <warehouse>/x"`) and was trimmed by the guard; it now refuses on both doors when the cwd is outside every warehouse. | The leading-space pins. | **PROVEN** | §8: red at `506fe9ec` (and on main), green on head; M-space reds them. |
-| C-025 | Ruling 103's rule, literally: a `..` that steps back over a symlink under the warehouse refuses even when the write lands inside (`<warehouse>/deep/../dd_in`, `deep -> <warehouse>/a/b`; `<warehouse>/s2/../sb_in`, `s2 -> <warehouse>/sib`), while a `..` over a plain directory below an in-warehouse symlink stays contained. | `a_dot_dot_that_cancels_a_symlink_under_the_warehouse_refuses_even_when_it_lands_inside`. | **OPEN** | §8.4: main writes both cells inside the warehouse on the Spark door, so this trips the round's halt ("a write main allows inside a warehouse that the fix refuses"); the behaviour is pinned and the owner's acceptance is the open question. |
+| C-025 | Ruling 103's rule, literally: a `..` that steps back over a symlink under the warehouse refuses even when the write lands inside (`<warehouse>/deep/../dd_in`, `deep -> <warehouse>/a/b`; `<warehouse>/s2/../sb_in`, `s2 -> <warehouse>/sib`), while a `..` over a plain directory below an in-warehouse symlink stays contained. | `a_dot_dot_that_cancels_a_symlink_under_the_warehouse_refuses_even_when_it_lands_inside`. | **OPEN** | §8.4: main writes these cells inside the warehouse on both doors, as it writes `file://<warehouse>/x/%2e%2e/pin2` (PA-03's kept refusal of a `..` after a missing directory, now read in the URL form), so this trips the round's halt ("a write main allows inside a warehouse that the fix refuses"); the behaviour is pinned and the owner's acceptance is the open question. |
 
 ## 1. Step 0 — main measured on both doors (C-001 … C-004)
 
@@ -263,3 +263,106 @@ restored head is the green run of §6.
 | M-PA04 | main's unchecked byte slice in `strip_ascii_prefix_ci` | 5: both classification unit pins, the native refusal pin, Spark and ANSI `pa04_*_non_ascii_relative_locations_refuse_with_the_policy_error` | `end byte index 5 is not a char boundary; it is inside 'é' (bytes 4..6 of string)` |
 | M-C017 | main's ANSI conf read (only the prefixed key matches) | 10: the conf-read unit pin, Spark `allow_conf_true_permits_outside`, `bare_copy_to_applies_without_collect`, `copy_to_applies_exactly_once_across_a_later_collect`, the three Spark opt-in pins, the three ANSI control pins | `assertion failed: allow_local_filesystem_ddl(&unprefixed_ctx(true))` |
 | M-C010 | `PyReparkSession.native()` without `with_sql_dialect` (main's `DataFusionDialect`), release module rebuilt | 1 of 15: `test_repark_sql_refuses_executing_writes_outside` (the plain-EXPLAIN control stays green) | `Failed: DID NOT RAISE AnalysisException` |
+
+## 8. Fix round (2026-10-15, owner rulings 103 to 105; C-012 amended, C-019 … C-025)
+
+The verifier's FAIL (V-01 to V-06) and the owner's rulings 103, 104 and 105 are quoted in the
+order's §1. The round changes only `repark_core::local_fs_policy` (no signature outside it, no
+`Cargo.toml`, no crate edge) and adds pins; 105's findings are cards on a separate docs PR.
+
+### 8.1 The reading
+
+`ListingTableUrl::parse` is reachable from repark-core through `datafusion::datasource::listing`
+with no new dependency. The written path is `/` joined with the parts of its `prefix()`, which is
+the path DataFusion's `LocalFileSystem` (root `file:///`) writes: WHATWG dot-segment removal
+(`..`, `.%2e`, `%2e.`, `%2e%2e`, either case), one percent decode, `file:x` and `file:./x` as `/x`,
+a bare or leading-space path joined to the cwd and reparsed. The as-typed reading reparses a URL
+with every `.` and `%2e`/`%2E` replaced by a private-use stand-in, so the parser keeps the dot
+segments, then decodes and restores them; a bare path keeps its `std::path` components. Both are
+followed by one walk (`follow`); so is every warehouse root, read the same way.
+
+### 8.2 Red at `506fe9ec`, green on head
+
+The product module of `506fe9ec` alone, with the new door pins, both doors
+(`fix1/out/red_506fe9ec.txt`, the first assertion each):
+
+| Pin (Spark · ANSI) | At `506fe9ec` | Head |
+|---|---|---|
+| `v01_*symlink_then_dot_dot_writes_outside_on_todays_head_and_now_refuses` | `must refuse, but answered: COPY … TO '<wh>/deep/../../out/bare'` | green |
+| `v02_*percent_encoded_dot_segments_write_outside_on_todays_head_and_now_refuse` | `must refuse, but answered: COPY … TO 'file://<wh>/%2e%2e/out/p1'` | green |
+| `v03_*file_relative_with_the_cwd_in_a_warehouse_writes_outside_on_todays_head` | `must refuse, but answered: COPY … TO 'file:tmp/…/out/fc'` | green |
+| `*a_leading_space_is_read_from_the_cwd_and_writes_outside_on_todays_head` | `must refuse, but answered: COPY … TO ' <wh>/trap'` | green |
+| `*a_warehouse_registered_through_a_symlink_still_writes_inside_it` | green (control) | green |
+| `*an_ancestor_whose_metadata_read_fails_refuses_with_the_policy_error` | green (control) | green |
+
+Each outside pin asserts no file in the sibling `out/` (or the cwd) after the refusal; the cwd
+pins run in a child process of the test binary and assert the cwd restored.
+
+The Python pins against the verifier's release module of `506fe9ec`
+(`fix1/out/pytest_506fe9ec_pins.log`): `test_v01_*`, the five `test_v02_*` forms and both
+`test_v03_*` forms fail with `DID NOT RAISE AnalysisException`; the `repark.sql()` pins fail on
+the message (`Expected regex: 'repark.sql\(\) does not allow local-file DDL'`, actual: the
+conf-naming text); the symlinked-root control passes. All 25 pass on head.
+
+### 8.3 `repark.sql()` has no opt-in (ruling 104)
+
+`fix1/out/repark_sql_opt_in.txt`, head module: `SET repark.sql.allowLocalFilesystemDDL = true`
+and the underscore spelling answer `Could not find config namespace "repark"`;
+`PyReparkSession.native(config={…: "true"})` with either spelling still refuses; no Python
+source reads the key. So the message names no opt-in, the native dialect reads no conf, and the
+1.5.6 note carries the dated loss with REPARK-SQL-LOCAL-DDL-1.
+
+### 8.4 Never worse than main, and the halt cells
+
+The verifier's probe set plus this round's (`fix1/w/probe/`, PHYS bases) on today's main module
+and on head, Spark door, `repark.sql()` and the opt-in session (`fix1/out/never_worse_python.txt`),
+and the ANSI door through `AnsiDialect` (`fix1/out/probe_ansi_*.txt`). Nothing writes outside on
+head with the opt-in off on either door except the Spark door's `CREATE TABLE … USING parquet
+LOCATION` and its CTAS twin, which write outside identically on main (ruling 105,
+LOCAL-FS-CREATE-TABLE-LOCATION-1). The opt-in opens both doors. Every inside write main allows on
+the doors still writes, except these cells, which head refuses:
+
+| Cell (Spark and ANSI) | Main | Head | Rule |
+|---|---|---|---|
+| `<wh>/deep/../dd_in`, `<wh>/deep/../m1/dd_in2` (`deep -> <wh>/a/b`) | writes `<wh>/dd_in`, `<wh>/m1/dd_in2` | refuses | ruling 103: a `..` over a symlink under the warehouse (C-025) |
+| `<wh>/s2/../sb_in` (`s2 -> <wh>/sib`) | writes `<wh>/sb_in` | refuses | the same |
+| `file://<wh>/x/%2e%2e/pin2` (`x` absent) | writes `<wh>/pin2` | refuses | PA-03's kept refusal of a `..` after a missing directory, now applied to the URL's `%2e%2e`; the bare spelling already refused at `506fe9ec` |
+
+The adversarial pass of the xhigh continuation: `%252e%252e` (a literal `%2e%2e` directory, inside,
+as main), mixed-case `FILE:`/`FiLe:` (main's Spark door writes `FiLe:<wh>/%2E%2e/out/mc2` outside;
+head refuses), `//` and a trailing `/.` inside a `file:` path, a symlink in the warehouse root's
+own ancestry with a `..` under the root, `file://localhost` with `%2f`, and a relative path
+climbing out of a cwd inside the warehouse: nothing escapes on head on either door.
+
+### 8.5 Mutants on the fix-round head
+
+Each mutant edits `local_fs_policy.rs` (or the native wiring), runs the core, Spark, ANSI and
+guards suites, and is restored (`fix1/out/mutants*.txt`, `fix1/out/mutants/`).
+
+| Mutant | Killing tests (first) |
+|---|---|
+| M-PA02-root-only | `the_walk_checks_a_write_below_every_carrier_but_plain_explain`, both doors' `pa02_*explain_analyze_copy_outside_refuses_and_writes_nothing` |
+| M-PA03-parent-only (main's resolver) | `the_nearest_existing_ancestor_resolves_through_a_symlink`, `pa03_three_missing_parents_through_a_warehouse_symlink_refuse` |
+| M-PA04-unchecked-slice | `the_checked_prefix_strip_refuses_a_split_character` |
+| M-V2-metadata-error-continues | `an_ancestor_whose_metadata_read_fails_other_than_not_found_refuses`, both doors' metadata pins |
+| M-V7-root-not-resolved | the three symlinked-root pins |
+| M-V01-physical-reading-only | both doors' `v01_*`, the core `v01_*` |
+| M-V02-scheme-stripped-literally | both doors' `v02_*`, `the_location_is_read_the_way_the_write_reads_it` |
+| M-V03-file-relative-from-cwd | both doors' `v03_*`, the core `v03_*` |
+| M-space-trimmed | both doors' leading-space pins |
+| M-cancelled-link-ignored | `a_dot_dot_that_cancels_a_symlink_under_the_warehouse_refuses_even_when_it_lands_inside` |
+| M-native-opt-in-read | `the_native_door_refuses_every_executing_write_outside`, `the_native_door_keeps_explain_and_the_warehouse_control_and_has_no_opt_in` |
+| M-SQL-no-guarded-dialect | `test_repark_sql_refuses_executing_writes_outside`, `test_repark_sql_names_no_opt_in_and_no_route_opens_it` (`DID NOT RAISE`; release module rebuilt in a separate clone and venv) |
+
+### 8.6 Gates on head
+
+| Command | Result |
+|---|---|
+| `cargo test --no-fail-fast -p repark-core -p repark-spark -p repark-sql` (inside the build lock) | 4924 tests passed (4928 counting the four child re-runs of the cwd pins), 1 failed, 11 ignored; the failure is `microbatch::lifecycle_tests::two_sessions_on_one_sink_wait_for_the_scope` (audit PA-15, untouched code), which passes alone three times on head and three times on main's tree |
+| `pytest python/repark/tests -n 8` on head | 17019 passed, 488 skipped, 151 xfailed; exit 0; no head-only failure |
+| `make rust-clippy`, `make rust-panic-ban`, `cargo fmt --all -- --check` | exit 0 |
+| `uvx ruff@0.15.22 check` / `format --check` on the changed Python | exit 0 |
+| `comment_ban.py` over `origin/main..HEAD` | 0 hits |
+
+The release module was built from `842e92fa` with an empty `git status --short`
+(`fix1/module-build.txt`). The docs gates of the records commit are in the hand-back.
