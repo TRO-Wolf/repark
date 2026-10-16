@@ -479,3 +479,70 @@ this round's (`fix1/r2/out/mutants.txt`, `fix1/r2/out/mutants/`):
 
 The release module of the final commit, the re-runs of the PA-15 test and the remaining gates
 are recorded in the hand-back.
+
+## 10. The ruling-113 step (2026-10-16): main after U-1, the wrap (C-010 amended, C-030 … C-032)
+
+The owner's ruling 113, verbatim: "113: merge order U-1, then U-5, then 106. U-1's ANSI planner
+variant lives once in a crate both doors reach under today's DAG (repark-python →
+repark-core/repark-spark, NOT repark-sql) and both dialects call it, so 106 swaps a dialect and
+carries no planner code; 106 needing a Python→repark-sql edge halts and asks. U-5's
+LocalFsGuardedDialect WRAPS the dialect it is handed, never replaces it, with one cell proving the
+Q6 wall type survives under the guard. Every rebase in that order re-runs the Q6 cell and the
+local-file cell." Ruling 116 later set the order U-1, 106, U-5, "sound under 113's wrapper
+condition".
+
+### 10.1 The merge
+
+`origin/main` at `ae880bf6` (U-1's squash `c7121437` and its records) merged into `9b675c6b`.
+One conflict, `crates/repark-python/src/session.rs` in `PyReparkSession::native`: this branch set
+`with_sql_dialect(LocalFsGuardedDialect)`, main set `with_extension(NativeDoorTypes)` (U-1's type
+planner and analyzer rules for the native door). Both stayed. Every other file merged without a
+conflict; the map and release-notes merges keep both sides.
+
+### 10.2 The wrap
+
+`LocalFsGuardedDialect::wrapping(inner)` holds the dialect it is handed. `execute` and
+`execute_with_write_options` plan the statement on the session's state (`PreExecute::plan`, the
+same call `DataFusionDialect` makes), run the walk with no conf read, and on a pass hand the
+statement to the inner dialect's own method; `on_session_built`, `type_planner` and
+`configure_analyzer_rules` forward. `ReparkSessionBuilder::with_local_fs_guard` sets a builder
+flag, and the build wraps whichever dialect it would otherwise use (the one handed in, else
+`DataFusionDialect`), so a dialect a later unit hands the native door is wrapped too, whatever
+the order of the builder calls. `repark.sql()`'s native door builds with `NativeDoorTypes` and
+`with_local_fs_guard()`. The guard plans once and the inner dialect plans again on the same
+`SessionContext`, so both plans see the session's type planner and analyzer rules
+(`the_judgment_plan_and_the_inner_plan_see_the_same_session_state`); planning does not execute,
+so the judgment changes no answer. `session.rs` stays at its 1000-line ceiling.
+
+### 10.3 Pins
+
+| Pin | What it holds | With `9b675c6b`'s guard body |
+|---|---|---|
+| `the_guard_forwards_every_method_to_the_dialect_it_wraps` | a recording inner dialect receives all five methods; a refused `COPY` or `EXPLAIN ANALYZE COPY` outside, through either execute method, never reaches it and leaves no file | red: `assertion failed: guard.type_planner().is_some()` |
+| `the_builder_wraps_the_dialect_it_would_otherwise_use` | the build reaches the inner hooks through the guard; `session.sql` reaches the inner dialect; a refused write does not; the same dialect without the guard writes | red: `left: []`, `right: ["configure_analyzer_rules", "type_planner", "on_session_built"]` |
+| `the_judgment_plan_and_the_inner_plan_see_the_same_session_state` | both plans type `TIMESTAMP` with the inner dialect's planner; its analyzer rule is in the state | red: `left: Timestamp(Nanosecond, None)`, `right: Timestamp(Microsecond, None)` |
+| `test_repark_sql_keeps_the_q6_wall_type_under_the_guard` | on `repark.sql()` with the guard, `CAST('2024-01-02 03:04:05.123456789' AS TIMESTAMP)` answers `timestamp[us]` `1704164645123456`, mirroring U-1's `test_ice_tsns_type_planner_1.py::test_repark_sql_plans_timestamp_as_the_wall` (ice-tsns-type-planner-1/C-015); a local `COPY` still refuses | green on the merged head (exit 0) |
+
+The guard body of `9b675c6b` was swapped in with only the shims its callers need, so the pins
+compile (`fix1/r3/out/revert_9b675c6b.txt`).
+
+### 10.4 The re-runs and never worse
+
+On the merged head: the Q6 cell under the guard exit 0; U-1's Q6 cell exit 0; the local-file cell
+(`test_pa_local_fs_policy_1.py`, 26 tests) exit 0. The round-2 probe set (the RV pins, the four
+114 cells, the V pins, the adversarial seven), on the Spark and native doors with main's release
+module of `ae880bf6` and head's, and on the ANSI door on both trees
+(`fix1/r2/out/never_worse_*_r3.txt`): nothing writes outside on head with the opt-in off except
+the ruling-105 `CREATE TABLE … LOCATION` cells; every cell main answers and head refuses is a
+main write outside a warehouse; head answers every probe cell exactly as round 2's head did.
+
+### 10.5 Gates on the merged head
+
+| Command | Result |
+|---|---|
+| `cargo test --no-fail-fast -p repark-core -p repark-spark -p repark-sql -p repark-python` | exit 0; 5154 passed, 0 failed, 11 ignored |
+| `pytest python/repark/tests -n 8` (release module of `992f5cc9`) | exit 0; 20026 passed, 488 skipped, 151 xfailed |
+| `make rust-clippy` | exit 0 |
+| `comment_ban.py` over `origin/main..HEAD` | 0 hits |
+
+The remaining gates, run on the final commit, are recorded in the hand-back.
