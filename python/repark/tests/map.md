@@ -10526,7 +10526,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (P-U10, P-D10), and the two shapes main answered right only by coincidence (P-C1, P-C2).
   Five controls outside the refused class still write. On main 22 of the 27 are red: the
   statements wrote every row, emptied the table, or refused with DataFusion's planner text.
-  pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004
+  Revert checks, mutants, the never-worse census and the records are in the unit ledger.
+  pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004, C-008, C-009, C-010, C-011
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

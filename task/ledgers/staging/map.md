@@ -702,6 +702,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   coercion, loud zero-step refusal; recorded oracle plus red-first pins.
   `risk_tier: standard`. Branch `fix/range-id-1`.
   pins: range-tvf-id-1/C-001, C-002, C-003, C-004, C-005
+- [repark-sql-update-subquery-where-1-ledger.md](repark-sql-update-subquery-where-1-ledger.md) —
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)), round 2, the
+  stopgap:** `repark.sql()` refuses every `UPDATE` and `DELETE` whose `WHERE` holds a
+  subquery with the G3-E8 text and writes nothing, where it wrote every row or emptied the
+  table. The refusal moved from the ANSI door's guards to one home in `repark-iceberg`
+  (`write::predicate_dml::subquery_where`); the ANSI router calls it with the identity
+  exemption, `DataFusionDialect` without. 22 pins red on main, revert checks and six
+  mutants, never worse against Spark 4.1.2 and the four crates' suites. Routing stays on the
+  card. `risk_tier: standard`. Branch `fix/repark-sql-update-subquery-where-1`.
 - [range-tvf-id-2-ledger.md](range-tvf-id-2-ledger.md) —
   **RANGE-TVF-ID-2 (2026-09-19), in flight:** the `range(...)` argument edge
   cases answer Spark 4.1.2 — NULL bounds refuse with `UNEXPECTED_INPUT_TYPE`,

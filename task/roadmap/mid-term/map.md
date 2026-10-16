@@ -747,7 +747,10 @@ declines it (a dated ruling in the intake, then the archive).
   REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-15, open, critical, clerk under owner ruling 106 (a)):**
   through `repark.sql()`, an `UPDATE` whose `WHERE` holds a subquery updates every row and reports
   success. Retires with `repark.sql()` routed through the ANSI door's dialect, or a refusal on that
-  door as the stopgap; own unit next on the U-6 lane after #1062 merges.
+  door as the stopgap; own unit next on the U-6 lane after #1062 merges. **2026-10-16:** `DELETE`
+  is in, and the stopgap has landed (round 2: `repark.sql()` refuses every subquery-predicate
+  `UPDATE` and `DELETE` with the G3-E8 text); routing stays this card, and a later tidy unit
+  folds the Spark SQL door's G3-E8 copy into the shared home.
 - [ice-struct-inline-table-from-1-card-2026-10-15.md](ice-struct-inline-table-from-1-card-2026-10-15.md) **card
   ICE-STRUCT-INLINE-TABLE-FROM-1 (2026-10-15, open, not this round, clerk under owner ruling 107 (a),
   struct-pairing family of ruling 57):** an inline table in `FROM` stores a reordered struct by name

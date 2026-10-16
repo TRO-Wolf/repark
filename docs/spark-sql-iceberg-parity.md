@@ -9613,22 +9613,41 @@ the pin rather than obeying it.
   [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md):
   when the shapes store Spark's value, these cells succeed and write nothing, as Spark's do.
 
-### REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 — DATED ROW 2026-10-15 (owner ruling 106 (a)): `UPDATE … WHERE col IN (SELECT …)` through `repark.sql()` updates every row, where Spark updates the matching rows
+### REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 — DATED ROW 2026-10-15, STOPGAP 2026-10-16 (owner ruling 106 (a)): `UPDATE` or `DELETE` with a subquery in `WHERE` through `repark.sql()` refuses with the G3-E8 text, where it wrote every row and Spark writes the matching rows
 
 - **repark** — through the public Python `repark.sql()` only (the `DataFusionDialect` door),
   `UPDATE t SET v = 5 WHERE id IN (SELECT id FROM s)` and `WHERE id = (SELECT …)` update every
   row of the table and report success. The Spark SQL door and the Rust ANSI door refuse these
   statements. Main and PR #1062's head are the same.
+  **2026-10-16, measured (the sketch of round 1):** `DELETE` is in the row: through `repark.sql()`,
+  6 of 8 `DELETE` forms with a subquery in `WHERE` emptied the table, and a 7th deleted a row
+  that does not match. The ANSI door and the Spark SQL door answer the three-part `UPDATE … WHERE
+  id IN (SELECT …)` and `DELETE … WHERE` `IN`, `NOT IN` and `EXISTS` forms with Spark's rows
+  through their identity path and refuse the rest.
+  **2026-10-16, stopgap (round 2):** `repark.sql()` refuses every `UPDATE` and `DELETE` whose
+  `WHERE` holds a subquery with the G3-E8 text and writes nothing, the identity forms included.
+  The refusal lives once in `repark_iceberg::write::predicate_dml::subquery_where`; the ANSI
+  router calls it with the identity exemption and `DataFusionDialect` without.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 updates only the matching rows. *(measured by
-  U-6's re-verifier 3, 2026-10-15.)*
-- **Pin** — none yet.
+  U-6's re-verifier 3, 2026-10-15.)* `DELETE` deletes only the matching rows, in all eight forms
+  of the sketch. *(measured 2026-10-16, private Hadoop catalog, `local[1]`.)*
+- **Pin** — 2026-10-16:
+  `python/repark/tests/test_repark_sql_update_subquery_where_1.py` (22 refusal pins on
+  `repark.sql()`, rows and warehouse files held, and 5 controls that still write);
+  `crates/repark-core/src/dialect/tests.rs`
+  `the_default_dialect_refuses_a_subquery_in_update_or_delete_where`;
+  `crates/repark-sql/tests/ansi_subquery_where_identity.rs` (the ANSI door's identity forms
+  answer Spark's rows); `crates/repark-iceberg/src/write/predicate_dml/tests/subquery_where.rs`
+  (the shared refusal).
 - **Rationale** — DATED ROW 2026-10-15, owner ruling 106 (a): a silent wrong value, the same
   class as F-04. **Critical.** Closed by card
   [REPARK-SQL-UPDATE-SUBQUERY-WHERE-1](../task/roadmap/mid-term/repark-sql-update-subquery-where-1-card-2026-10-15.md):
   own unit next on the U-6 lane after #1062 merges; `repark.sql()` routed through the ANSI door's
   dialect so it inherits that door's refusal, with no third guard copy; if routing is more than one
   unit carries, a refusal on that door is the stopgap and routing stays the card. The 1.5.6 note
-  names it until it lands.
+  names it until it lands. **2026-10-16:** routing is more than one unit carries (it needs the
+  ruling-113 edge and makes eleven measured statements worse), so the stopgap landed; routing
+  stays the card, and the 1.5.6 note names the refusal and `DELETE`.
 
 ### ICE-STRUCT-INLINE-TABLE-FROM-1 — DATED ROW 2026-10-15 (owner ruling 107 (a)): an inline table in `FROM` stores a reordered struct by name, where Spark pairs by position
 
