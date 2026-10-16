@@ -10384,6 +10384,13 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   the ruling 74 test name. Red on the head before the fix: 55 of 76 (before the NULL-row fix
   forward reclassified `nocol|field_count_differs`); on main: 67 of 76; green on the head: 76.
   pins: ice-struct-pairing-1/C-033, C-034, C-035, C-036
+- [test_update_set_subquery_walk_1.py](test_update_set_subquery_walk_1.py) —
+  **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):** the
+  `repark.sql()` door. On a three-row Iceberg table, `SET v = 1 + (SELECT v FROM src)`,
+  `COALESCE((SELECT v FROM src), 0)` and `CASE WHEN true THEN (SELECT v FROM src) ELSE 0 END`,
+  each under `WHERE true`, raise the ruling-90 text and the rows read back as seeded. The
+  native door has no identity path, so these shapes reach `PreExecute::guard`.
+  pins: ice-struct-pairing-1/C-034
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

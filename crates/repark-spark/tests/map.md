@@ -200,6 +200,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `ruling_95_the_refusal_names_no_data_deleting_action_on_the_spark_door` holds that no text
   names `DROP`, `DELETE`, `TRUNCATE`, `OVERWRITE`, `REPLACE`, `PURGE`, `expire` or
   `remove_orphan`, in any case.
+  **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
+  `ruling_99_c_a_scalar_subquery_inside_the_set_expression_refuses_on_the_spark_door` holds
+  `SET v = 1 + (SELECT v FROM src)`, `COALESCE((SELECT v FROM src), 0)` and
+  `CASE WHEN true THEN (SELECT v FROM src) ELSE 0 END`, each under `WHERE true` (the identity
+  path does not run), to the ruling-90 text with both seeded rows unchanged.
   pins: ice-struct-pairing-1/C-034, C-035, C-036
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
