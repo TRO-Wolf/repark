@@ -55,5 +55,65 @@ the release PR to edit into the notes.
   `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` answers
   `[2024-01-01 00:00:00]` where it refused `UNSUPPORTED_TIMESTAMP_NTZ`, and `UPDATE … SET
   int_column = CAST(c AS TIMESTAMP_NTZ)` refuses with Spark's `CANNOT_SAFELY_CAST` text.
+- **A struct value pairs its fields by position on `INSERT`, `REPLACE WHERE` and `insertInto`, as
+  Spark does (ICE-STRUCT-PAIRING-1, R-016).** `INSERT INTO t SELECT 1, named_struct('b', 2, 'a', 1)`
+  into `st STRUCT<a: INT, b: INT>` now stores `a = 2, b = 1`: the first source field feeds the
+  first table field, whatever its name. Before this release these doors paired by name, so the
+  same statement stored `a = 1, b = 2`, and a renamed field stored NULL with no error. The same
+  holds for `INSERT … VALUES`, `INSERT OVERWRITE` (without a `PARTITION` clause),
+  `INSERT INTO … REPLACE WHERE` and `insertInto` with and without `overwrite=True`, at every
+  depth and inside arrays and maps. A struct with more or fewer fields than the column now
+  refuses (`EXTRA_STRUCT_FIELDS`, `STRUCT_MISSING_FIELDS`).
+- **A struct field Spark's store assignment refuses now refuses, where it was stored.** After
+  a struct pairs, each of its fields is held to the same rule a plain column is:
+  `INSERT INTO t SELECT 1, named_struct('a', '5', 'b', 'y')` into
+  `st STRUCT<a: BIGINT, b: STRING>` now refuses `CANNOT_SAFELY_CAST` (``Cannot safely cast
+  `st`.`a` "STRING" to "BIGINT"``) and writes nothing; before it stored `a = 5`. The same
+  holds for a BOOLEAN into an INT field, a STRING into a DATE field, a field that meets a
+  struct where the table has a plain value (or the reverse), at every depth and inside arrays
+  and maps, on every door, `INSERT OVERWRITE … PARTITION (…)` included. A struct with more or
+  fewer fields than the column refuses there with `EXTRA_STRUCT_FIELDS` or
+  `STRUCT_MISSING_FIELDS`, as on the other doors. Widening (`INT` into `BIGINT`) and any value
+  into a STRING field still store.
+- **`INSERT INTO t (st, id) VALUES (…)` with a column list pairs a struct by position.** The
+  struct written to `st` feeds `st`'s fields in order, as every other `INSERT` door does:
+  `INSERT INTO t (st, id) VALUES (named_struct('b', 2, 'a', 1), 1)` stores `a = 2, b = 1`, and a
+  renamed field stores its value; before, this spelling paired by name and stored NULL for a
+  renamed field.
+- **By-name struct fields match letter case as Spark does, beyond ASCII.** Under
+  `spark.sql.caseSensitive=false` a source field `É` feeds the table's `é` and `ẞ` feeds `ß`
+  on `INSERT … BY NAME`, `writeTo().append()`, `saveAsTable`, `overwritePartitions()`, every
+  MERGE arm and `UPDATE`; before, MERGE and `UPDATE` refused and the DataFrame writers stored
+  NULL or paired the wrong field. `ß` and `SS` still do not match, as on Spark.
+- **`UPDATE t SET st = (SELECT st FROM src) WHERE id = 0` stores the subquery's struct.** With a
+  `WHERE` that compares a column to a value, on the Spark SQL door, an uncorrelated
+  `(SELECT column FROM table …)` assigned in `SET` now stores its value, its struct fields
+  paired by name; before, the statement succeeded and left the row unchanged.
+- **`UPDATE … SET col = (SELECT …)` with `WHERE true`, an `IN` list or no `WHERE` now refuses,
+  for every column type, where it reported success and wrote nothing.** The refusal reads
+  `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
+  write the subquery value here, so it refuses before any write.` and no row changes. On
+  `repark.sql()` every `UPDATE` whose `SET` value is a subquery refuses this way.
+- **`writeTo().append()` and `saveAsTable` in append mode refuse a struct they cannot pair by
+  name, where they stored NULL.** A source struct missing one of the column's fields, or
+  carrying one it lacks, now refuses `CANNOT_FIND_DATA` or `EXTRA_STRUCT_FIELDS` and writes
+  nothing; before, the missing field was stored NULL and the extra one dropped, `merge-schema`
+  included. A struct whose fields differ only in order stores as before; one whose fields
+  differ only in letter case now stores by name, where it refused. `overwritePartitions()`
+  pairs the same way.
+- **`writeTo().overwrite(condition)` stores a struct field spelled in another letter case.**
+  Under the default `spark.sql.caseSensitive=false`, a source field `A` now feeds the table's
+  `a`, as Spark does; before, that field was stored NULL.
+- **The Rust append API and the streaming sink refuse a struct whose fields are not the table's,
+  in order.** They do not pair struct fields; a batch whose struct column names its fields
+  differently or in another order now refuses `CANNOT_SAFELY_CAST` with a hint to write the
+  table's field names in the table's order, where the batch cast paired it by a rule of its
+  own. `INSERT OVERWRITE … PARTITION (…)` refuses such a struct the same way, where it stored
+  by name (Spark stores it by position).
 
 Tables already written keep the values they hold; this release ships no migration.
+
+## Known issues
+
+- **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue):** through `repark.sql()`, `UPDATE … WHERE col
+  IN (SELECT …)` or `= (SELECT …)` updates every row; use the Spark SQL session until it is fixed.

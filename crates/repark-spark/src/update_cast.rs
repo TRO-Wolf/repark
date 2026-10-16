@@ -9,7 +9,10 @@ use repark_core::CatalogRegistry;
 use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 use repark_iceberg::write::negated_null_store::refuse_negated_null_writes;
 use repark_iceberg::write::ntz_store::refuse_ntz_writes;
-use repark_iceberg::write::update_cast::{incompatible_store_message, incompatible_update_message};
+use repark_iceberg::write::struct_pairing::StructPairing;
+use repark_iceberg::write::update_cast::{
+    incompatible_paired_store_message, incompatible_paired_update_message,
+};
 use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::merge::nested_assign::{self, AssignmentScope};
@@ -121,6 +124,9 @@ async fn refuse_incompatible_update_cast(
     update: &Update,
 ) -> Result<()> {
     let table_sql = object_name.to_string();
+    let pairing = StructPairing::by_name(!crate::spark_door_case_insensitive(
+        ctx.state().config().options(),
+    ));
     for assignment in &update.assignments {
         let AssignmentTarget::ColumnName(name) = &assignment.target else {
             continue;
@@ -175,12 +181,14 @@ async fn refuse_incompatible_update_cast(
         };
         let source = source_field.data_type();
         let column = format!("`{column}`");
-        let judged = incompatible_update_message("``", &column, source, field.data_type())
-            .is_some()
-            || (!is_string_type(source)
-                && source_type_is_reliable(&assignment.value, field.data_type()));
+        let judged =
+            incompatible_paired_update_message(pairing, "``", &column, source, field.data_type())
+                .is_some()
+                || (!is_string_type(source)
+                    && source_type_is_reliable(&assignment.value, field.data_type()));
         if judged
-            && let Some(text) = incompatible_store_message("``", &column, source, field.data_type())
+            && let Some(text) =
+                incompatible_paired_store_message(pairing, "``", &column, source, field.data_type())
         {
             return Err(DataFusionError::Plan(text));
         }

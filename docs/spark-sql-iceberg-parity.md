@@ -1742,6 +1742,35 @@ perfectly good read.
   version, per the owner's ES-3 words and the never-write-plaintext rule: writing plaintext
   into a table that asked for encryption is the outcome the ruling forbids.
 
+#### ENC-CTAS-REPLACE-1 — DATED ROW 2026-10-15 (owner ruling 98 (a)): a key landing mid-statement leaves an orphan unencrypted file
+
+- **repark** — `CREATE OR REPLACE TABLE … AS SELECT` on the Spark SQL door: when an encryption key
+  lands on the table between `begin_replace` and the publish, the staged table still carries the old
+  unkeyed properties and a plain `FileIO`, so staging writes an unencrypted Parquet file; the guard's
+  `refuse_keyed_publish` checks the staged (unkeyed) table and passes; the inner `publish_replace_table`
+  then fails on the moved base metadata location (a `CommitFailed`, not a keyed refusal); nothing removes
+  the staged file. Result: an orphan unencrypted file under the keyed table's `data/`, referenced by no
+  snapshot, so never served. Main behaves the same. Read in the code, not run.
+- **Apache Spark** — not measured.
+- **Card** — [ENC-CTAS-REPLACE-1](../task/roadmap/mid-term/enc-ctas-replace-1-card-2026-10-15.md)
+  (2026-10-15, open, not scheduled). Retires when the staged files are removed on that failure, or the
+  publish refuses before staging, with a pin that a key landing mid-statement leaves no unencrypted file.
+
+### MB-ENC-UNDELETED-FIELD-1 — DATED ROW 2026-10-15 (owner ruling 109 (c)): the keyed micro-batch refusal names the sink but not the staged file it could not delete
+
+- **repark** — `MicroBatchError::EncryptedSinkRefused { sink }` cannot carry the name of a staged
+  file the keyed sweep failed to delete; adding it is a public field. The sweep logs each
+  undeletable file through a `tracing::warn`, so the file's full path is in the warning only.
+  The session error already names the file. *(Measured by ENC-1's fix round, 2026-10-15.)*
+- **Apache Spark** — not measured.
+- **Pin** — F4 accepted as pinned.
+- **Rationale** — DATED ROW 2026-10-15, owner ruling 109 (c): the micro-batch error field is a
+  card parked under the streaming freeze (the track frozen 2026-10-11), not a later round. Closed
+  by card
+  [MB-ENC-UNDELETED-FIELD-1](../task/roadmap/mid-term/mb-enc-undeleted-field-1-card-2026-10-15.md):
+  the variant carries the undeleted paths, a public field needing the owner when the freeze lifts.
+  The warning carries the full path of the file it could not delete.
+
 #### D-SHOW-TBLPROPERTIES — `SHOW TBLPROPERTIES t` answers Spark's rows on Iceberg tables — **FIXED 2026-09-26**
 
 - **Before** — `SHOW TBLPROPERTIES cat.ns.t` on a table fell through to DataFusion and
@@ -3422,7 +3451,15 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-09, for the release note. The shared MERGE and UPDATE
   sites render the kernel by name, so the door must register it; the NTZ kernel set the
   precedent (WO NTZ-1). Ledger clause C-022, question Q6.
-
+- **ICE-STRUCT-PAIRING-1 (2026-10-14).** The pairing kernel `__repark_store_pair__` joins this
+  row's names: the shared MERGE and UPDATE text renders it for a struct target. One table,
+  `BY_NAME_STORE_KERNELS` in `crates/repark-iceberg/src/write/store_cast.rs`, holds it and the
+  integer store casts, and `register_store_cast_udfs` registers it on both doors
+  (`SparkExtension::register`, `AnsiDialect::on_session_built`); `NS_WALL_KERNEL_NAMES` lists
+  the wall kernels this row names. **Session-build pin:**
+  `crates/repark-spark/tests/store_kernel_registry.rs` and
+  `crates/repark-sql/tests/ansi_store_kernel_registry.rs` resolve every name of both constants
+  on each door (owner, question 47).
 ### ICE-TSNS-SQL-1-R-014 — CLOSED 2026-10-09 for a `timestamp_ns` leaf (refused by R-015); the `VALUES` spelling is row R-018
 
 - **repark** — on main `40fc916f` none of these stored a value: (1) `UPDATE t SET st = …` or
@@ -3440,7 +3477,19 @@ still open is `isModifiable`.
 - **Rationale** — Measured by fold 1 of ICE-TSNS-MERGE-WALL-1. The raw errors of the other
   nested columns are older than the unit and are not a nanosecond defect. Ledger clauses
   C-026 and C-040.
-
+- **ICE-STRUCT-PAIRING-1 (2026-10-14), list L2.** For a nested column with no nanosecond
+  leaf, `UPDATE` with no `WHERE` now pairs a struct by name before the raw failure: of the 76
+  cells of the unit's fixture (four containers, v2, v3 and `caseSensitive`), the 40 whose
+  Spark answer is a refusal give Spark's refusal (14 moved there from a raw error); the 32
+  Spark stores still refuse raw, as on main; four cells moved from one internal error to
+  another and are **not refusals with a hint**: `v2|update_no_where|array|case`,
+  `v2|update_no_where|array|case_reordered`, `v3|update_no_where|array|case`,
+  `v3|update_no_where|array|case_reordered`, which raised `Unsupported CAST from
+  List(Struct("A" …))` and now raise `Arrow error: Invalid argument error: arguments need to
+  have the same data type`, where Spark stores `[[0, [{a: 1, b: 2}]]]`. This row stays OPEN for
+  the shapes Spark stores. Pins: `test_ice_struct_pairing_1.py`
+  `test_l2_refuses_as_spark_where_spark_refuses`, `test_l2_answers_as_main`,
+  `test_l2_case_cells_keep_an_internal_refusal` (owner, question 48).
 ### ICE-TSNS-SQL-1-R-015 — DECLARED (ICE-TSNS-MERGE-WALL-1, the split, 2026-10-09): a nested `timestamp_ns` leaf refuses, ICE-TSNS-NESTED-1
 
 - **repark** — a write that supplies a value for a column whose type holds a naive
@@ -3485,36 +3534,124 @@ still open is `isModifiable`.
   (`task/roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md`). Ledger clauses C-040 to
   C-042.
 
-### ICE-TSNS-SQL-1-R-016 — OPEN (measured 2026-10-09): struct fields pair by name or by position on different doors than Spark's
+### ICE-TSNS-SQL-1-R-016 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): one rule pairs struct fields on every write door, Spark's
 
-- **repark** — which source field feeds which target field of a struct column depends on the
-  door, for every leaf type, on main and at head. `INSERT … VALUES` / `SELECT`,
-  `REPLACE WHERE`, `writeTo().append()`, `insertInto()` and `saveAsTable` pair **by name**,
-  case-sensitive (DataFusion's struct cast): swapped names store by name, a renamed field
-  stores NULL in the target field and keeps the row, no shared name refuses
-  (`Unsupported CAST from Struct …`). `INSERT OVERWRITE`, `INSERT … BY NAME`,
-  `overwritePartitions` and `insertInto(overwrite=True)` pair as Arrow's cast does: by name
-  when every target name is present, else **by position**. MERGE and `UPDATE … WHERE` pair
-  by name, case-insensitive, and refuse a missing or extra field with Spark's texts. A column
-  that holds a nested `timestamp_ns` leaf is refused whole since the split (R-015); every
-  other leaf type is as on main.
-- **Apache Spark** — 4.1.2 with Iceberg 1.11.0, `struct<a: TIMESTAMP_NTZ, b: TIMESTAMP>`,
-  measured 2026-10-09 for the pairing rule only: `INSERT … VALUES` / `SELECT`,
-  `INSERT OVERWRITE` and `insertInto(overwrite=True)` pair **by position** (a swapped source
-  stores `a` from the first field; a renamed, recased or unnamed source stores);
-  `INSERT … BY NAME`, MERGE insert and update, `UPDATE`, `writeTo().append()` and
-  `overwritePartitions()` pair **by name**, case-insensitive, and refuse a field they cannot
-  find (`[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]`). Every door refuses a missing field
-  (`STRUCT_MISSING_FIELDS` or `CANNOT_FIND_DATA`) and an extra one (`EXTRA_STRUCT_FIELDS`).
-  *(oracle: live — 80 cells, eight spellings through ten doors.)*
-- **Pin** — none; the measured cells are in the ledger's §10.1 and in card
-  ICE-TSNS-NESTED-1.
-- **Rationale** — OPEN, dated 2026-10-09. A divergence of every struct column, older than
-  the nanosecond types and wider than ICE-TSNS-MERGE-WALL-1, which changed no door's
-  pairing. Three doors differ from Spark in kind: the
-  `INSERT` family (by name, Spark by position), `INSERT … BY NAME` (Arrow's rule, Spark by
-  name) and `overwritePartitions` (Arrow's rule, Spark by name). Ledger clause C-037,
-  question Q8.
+- **repark** — one function, `pair_store_value`
+  (`crates/repark-iceberg/src/write/struct_pairing.rs`), decides which source field feeds
+  which target field of a struct, from the door's mode and the two types, at every depth and
+  in every container; one kernel, `__repark_store_pair__`, applies it at plan time (a
+  refusal writes no file). By position on `INSERT … VALUES` / `SELECT`, `INSERT OVERWRITE`,
+  `REPLACE WHERE` and `insertInto` with and without overwrite: the i-th field feeds the i-th,
+  a longer source refuses `EXTRA_STRUCT_FIELDS`, a shorter one `STRUCT_MISSING_FIELDS`. By
+  name on `INSERT … BY NAME`, every MERGE arm, `UPDATE`, `writeTo().append()`,
+  `overwritePartitions()`, `saveAsTable` append and `overwrite(condition)`, under
+  `spark.sql.caseSensitive`: a field not found refuses `CANNOT_FIND_DATA`, two found
+  `AMBIGUOUS_COLUMN_NAME`, one left over `EXTRA_STRUCT_FIELDS`. No door fills a NULL or drops
+  a field. Before, on main, the door's own cast decided (DataFusion's by name on the INSERT
+  family, Arrow's by name-else-position on the overwrite doors) and 48 cells per format
+  version stored a NULL nobody wrote. A route that reaches a batch cast without the kernel
+  refuses with hint H-1 (row ICE-STRUCT-PAIRING-1-STATIC-PARTITION).
+  **Build round 3 (2026-10-14, owner rulings 56(a) and 57(a)).** Every paired field passes the
+  store-assignment judge flat columns use (`ansi_store_assignable`): after pairing, by position
+  or by name, each leaf pair is judged at every depth and inside arrays and maps, and the first
+  leaf Spark refuses answers Spark's `CANNOT_SAFELY_CAST` with the leaf's path and Spark's type
+  names (`` Cannot safely cast `st`.`o`.`p` "INT" to "STRUCT<A:INT,B:INT>" ``), writing
+  nothing; an in-order struct is judged as a reordered one is. One leaf judge serves the
+  conform seam, the MERGE and UPDATE text and the batch-cast guard. This closes verifier 1's
+  F-01 (a STRING into a BIGINT field and the like were stored: 4 cells that main refused, 24
+  that main stored by name, 33 that main stored the same) and F-06 (42 such refusals carried
+  raw Arrow text). `INSERT INTO t (cols) VALUES (…)` with a column list pairs by position, like
+  every other INSERT door (F-02). Under `spark.sql.caseSensitive=false` names compare as Java's
+  `equalsIgnoreCase` (É/é and ẞ/ß match, ß/SS does not; F-03); the UPDATE refusal pairs under
+  the session's case rule (F-05); `UPDATE … SET st = (SELECT st FROM src) WHERE …` stores
+  Spark's value instead of writing nothing (F-04) where the `WHERE` is a scalar comparison;
+  every other `UPDATE` from a subquery refuses before any write since 2026-10-15 (row
+  ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY).
+  **Exception round (2026-10-15, verifier 2's V2-02).** A multi-row `INSERT … VALUES` whose
+  rows give a struct column different field names (by position, at any depth, inside arrays
+  and map entries, a different field count, names compared under `spark.sql.caseSensitive`)
+  refuses with Spark's `[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE] Invalid
+  inline table. Found incompatible types in the column `col2` for inline table. SQLSTATE:
+  42000` (the column named by its position in the row) on all three column-list spellings,
+  writing nothing; rows that agree on the names, in the table's order or another, store by
+  position as Spark does. Rows that agree on names but differ in a leaf type Spark cannot
+  widen still refuse with `CANNOT_SAFELY_CAST`, not Spark's inline-table text.
+  **Note (2026-10-15, owner ruling 75(a)).** The case-insensitive name compare is pinned to
+  the answer of JDK 17, the JVM of this repository's Spark oracle (`zulu-17`). A letter that
+  Unicode added after version 13 (Glagolitic `Ⱟ`/`ⱟ`, Vithkuqi U+10570/U+10597) does not
+  fold on Spark 4.1.2 under JDK 17, so Spark refuses `CANNOT_FIND_DATA` where RePark, whose
+  case tables are newer, pairs the field (verifier 2's V2-04); under JDK 21 Spark pairs it as
+  RePark does. No code follows this note.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0: the rule above, at every depth and in every
+  container. *(oracle: live, 1,216 matrix cells and five added cells,
+  `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`, recorded 2026-10-13 and
+  re-recorded 2026-10-14 with no cell changed; 410 build-round-3 cells, groups `r3_leaf`,
+  `r3_part` and `r3_misc`, recorded live 2026-10-14.)*
+- **Pin** — `python/repark/tests/test_ice_struct_pairing_1.py` (2,458 tests: the rule against
+  the oracle in every cell, the engine against the rule, lists L1 and L2, the stored Parquet
+  field names); `crates/repark-spark/tests/struct_pairing_doors.rs` (sixteen doors × four
+  shapes at the Rust door, and the partition overwrite route);
+  `crates/repark-iceberg/src/write/struct_pairing/tests.rs` (three modes × eight shapes × ten
+  layouts, and hint H-1 at S1 and S2);
+  `crates/repark-iceberg/src/write/store_overflow/tests.rs`
+  `an_insert_pairs_struct_fields_by_position_unless_its_statement_says_by_name`; build round 3:
+  `python/repark/tests/test_ice_struct_pairing_1_round3.py` (411 tests over the 410 round-3
+  cells), `struct_pairing/tests.rs` `every_paired_leaf_is_judged_as_a_flat_column_is`,
+  `case_insensitive_names_match_as_java_equals_ignore_case` and
+  `case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive`, and
+  `struct_pairing_doors.rs` `a_by_name_frame_door_pairs_under_the_session_case_rule`.
+- **Rationale** — CLOSED 2026-10-14 by ICE-STRUCT-PAIRING-1 (U-6), owner rulings of
+  2026-10-13 and 2026-10-14 (questions 34, 35, 37, 47, 48; rulings 55 to 59 after verifier 1),
+  target 1.5.6. Lists L1 (row R-018) and L2 (row R-014) are held as recorded there. Ledger
+  `task/ledgers/staging/ice-struct-pairing-1-ledger.md` C-001 to C-032; the order's §0 names
+  what stays out of scope, with the scope change of 56(a) and 57(a) dated 2026-10-14.
+
+### ICE-STRUCT-PAIRING-1-STATIC-PARTITION — DATED CARVE-OUT 2026-10-14 (owner ruling 58(a)): both `INSERT OVERWRITE … PARTITION` spellings refuse a struct whose fields are not the table's, in order, with a hint naming the workaround
+
+- **repark** — the two `PARTITION` spellings of `INSERT OVERWRITE` reach the batch casts with
+  no pairing, so a struct whose field names differ from the table's (reordered, renamed, in
+  another letter case, at any depth or inside an array or a map) refuses with hint H-1 and the
+  table keeps its rows. The static spelling, `INSERT OVERWRITE t PARTITION (p = 1) SELECT 1,
+  named_struct('b', 2, 'a', 1)` into `(id INT, p INT, st STRUCT<a: INT, b: INT>)`, answers
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the
+  table ``: the struct `st` has the fields `b`, `a` and the table has `a`, `b`. INSERT
+  OVERWRITE with a static PARTITION value does not pair struct fields; write the struct with
+  the table's field names in the table's field order.` The dynamic spelling, `PARTITION (p)
+  SELECT 1, 1, named_struct('b', 2, 'a', 1)`, answers the same head with the batch hint: `…
+  This entry does not pair struct fields; give the value the table's field names in the
+  table's order.` Both hints name the workaround. Where Spark refuses, these spellings now
+  refuse with Spark's condition, not H-1 (build round 3, ruling 56(a)): a surplus or missing
+  field answers `EXTRA_STRUCT_FIELDS` / `STRUCT_MISSING_FIELDS` (by position, as Spark pairs
+  an INSERT), and a field Spark's store assignment refuses answers `CANNOT_SAFELY_CAST` with
+  its path. A struct in the table's field order stores, as Spark stores it.
+- **Apache Spark** — stores by position on both spellings: `[[1, 1, {a: 2, b: 1}]]`.
+  *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog,
+  2026-10-14; the `r3_part` group of `ice_struct_pairing_1_spark_oracle.json`, 160 cells.)*
+- **The carve-out, counted** — on the `r3_part` cells (24 shapes and 8 case shapes, format
+  versions 2 and 3, `caseSensitive` both ways for the case shapes), per route (static and
+  dynamic, v2 and v3 together): 52 cells where Spark stores and repark refuses with hint H-1,
+  of which **38** are cells where main (`293896ce`) stored Spark's value (19 per format
+  version: `renamed`, `two_deep_renamed`, `map_key_renamed`, `null_struct` and
+  `case_mixed_reordered`, then the seven case shapes `case`, `case_reordered`,
+  `case_mixed_reordered`, `case_two_deep`, `case_map_key`, `case_array` and `twins` under
+  `caseSensitive` false and again under true) and 14 are cells where main stored another
+  value. Verifier 1's probe counts the same 38 per route.
+- **Workaround** — write the struct fields in table order. *(Owner ruling 76(a), 2026-10-15:
+  the only workaround this row names; dropping the `PARTITION` clause is not one, because it
+  replaces every partition of the table.)*
+- **Pin** — `crates/repark-spark/tests/struct_pairing_doors.rs`
+  `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1`;
+  `python/repark/tests/test_ice_struct_pairing_1_round3.py`
+  `test_the_partition_carve_out_refuses_with_the_workaround` (104 cells) and, for the shapes
+  Spark refuses, `test_the_engine_answers_as_spark`.
+- **Rationale** — DATED CARVE-OUT 2026-10-14, owner ruling 58(a) on question 34: the static
+  route (`insert_overwrite.rs` `execute_partition_overwrite`) stages through `zone_stores` with
+  no conform, and the dynamic spelling reaches S2 the same way, so both get one guard and the
+  H-1 refusal, not a second pairing site. The guard is one check in `conform::entry_store_cast`
+  in front of S1, S2 and S3 (owner, question 48); the Rust `append` API and the streaming sink
+  take the batch hint the same way. **Closed by** the routing unit of owner question 34(b),
+  which routes `INSERT OVERWRITE … PARTITION` through the common store stage so it pairs by
+  position as the other INSERT doors do (no card filed at this date).
 
 ### ICE-TSNS-SQL-1-R-017 — OPEN, PARKED 2026-10-13 (measured 2026-10-09): a nanosecond value beside an untyped NULL is typed as microseconds
 
@@ -3740,7 +3877,13 @@ still open is `isModifiable`.
 - **Rationale** — OPEN, dated 2026-10-09. The statement's own source does not evaluate, so
   no write door is reached and nothing is stored; measured by the nested matrices of
   ICE-TSNS-MERGE-WALL-1 and out of its scope. Ledger clause C-039, question Q10.
-
+- **ICE-STRUCT-PAIRING-1 (2026-10-14), list L1.** 28 cells per format version refuse before
+  any store on both engines and write no file, and the unit holds them unchanged: an array or
+  map holding a struct with a surplus or a missing field through the DataFusion-planned
+  `INSERT … SELECT`, `REPLACE WHERE`, `insertInto`, `writeTo().append()` and `saveAsTable`
+  append (RePark's planner refusal, Spark's store-assignment one), and every container
+  through `INSERT … VALUES` (`type mismatch and can't cast`). Pin:
+  `test_ice_struct_pairing_1.py::test_l1_refuses_and_writes_no_file` (56 tests).
 ### ICE-TSNS-SQL-1-R-019 — FIXED 2026-10-13 (ICE-TSNS-FRAME-DOOR-1): a pandas or polars nanosecond timestamp column enters as microseconds
 
 - **repark** — pandas / polars `datetime64[ns]` enters as microseconds, floored, as Spark
@@ -3833,43 +3976,41 @@ still open is `isModifiable`.
   NS-NESTED-PANDAS-1. Measured cells from the #1047 verdict and from the ledger of
   `fix/ns-array-apply-in-pandas-refuse-1` (verifier round names, not paths, by the clerk rule).
 
-### ICE-TSNS-SQL-1-R-021 — OPEN (measured 2026-10-14): a BY NAME struct write with case-twin source fields stores where Spark refuses
+### ICE-TSNS-SQL-1-R-021 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): a BY NAME struct write with case-twin source fields refuses as Spark does
 
 - **repark** — `INSERT INTO t BY NAME SELECT 2 AS id, named_struct('a', 1, 'A', 2) AS st`
-  into `(id INT, st STRUCT<a: INT, b: INT>)`, format v2, seed `(10,20)`, stores
-  `[[1,10,20],[2,1,2]]` on main: the source struct carries two fields differing only in
-  letter case and both land, no refusal.
-- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses: `AnalysisException:
+  into `(id INT, st STRUCT<a: INT, b: INT>)` refuses with
+  `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` for `st`.`a`, the table unchanged. On main it stored
+  `[[1,10,20],[2,1,2]]`: both case twins landed.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses the same way: `AnalysisException:
   [INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME] Cannot write incompatible data for
   the table `ora`.`ns`.`step0_twins`: Ambiguous column name in the input data `st`.`a`.
   SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
   Hadoop catalog, 2026-10-14, U-6 step 0.)*
-- **Pin** — none.
-- **Rationale** — OPEN, dated 2026-10-14. A BY NAME write whose source struct carries two
-  fields differing only in case is stored; Spark refuses the ambiguous input field.
-  Next step: [STRUCT-CASE-TWIN-1](../task/roadmap/mid-term/struct-case-twin-1-card-2026-10-14.md)
-  (owner ruling, question 37, 2026-10-14). Measured in ICE-STRUCT-PAIRING-1 step 0 (U-6),
-  cell `by_name_case_twin_fields`.
+- **Pin** — `python/repark/tests/test_ice_struct_pairing_1.py::test_the_engine_answers_the_rule_in_every_added_cell[by_name_case_twins]`.
+- **Rationale** — CLOSED 2026-10-14: hint H-2 of ICE-STRUCT-PAIRING-1 closes it, the
+  by-name walk refusing a target field that two source fields match. The unit did not grow
+  for it (owner ruling, question 37); card
+  [STRUCT-CASE-TWIN-1](../task/roadmap/mid-term/struct-case-twin-1-card-2026-10-14.md) has
+  nothing left for this shape. Measured in ICE-STRUCT-PAIRING-1 step 0 (U-6), cell
+  `by_name_case_twin_fields`.
 
-### ICE-TSNS-SQL-1-R-022 — OPEN (measured 2026-10-14): a merge-schema write with a surplus struct field stores where Spark refuses
+### ICE-TSNS-SQL-1-R-022 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): a merge-schema write with a surplus struct field refuses as Spark does
 
 - **repark** — `writeTo(t).option("merge-schema","true")` with a surplus struct field `c`
-  into `(id INT, st STRUCT<a: INT, b: INT>)`, format v2, seed `(10,20)`, stores
-  `[[1,10,20],[2,1,2]]` on main: the extra field is dropped, no refusal.
-- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses: `AnalysisException:
+  into `(id INT, st STRUCT<a: INT, b: INT>)` refuses with
+  `[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]` for `c` in `st`, the table unchanged. On main it stored
+  `[[1,10,20],[2,1,2]]`: the extra field was dropped.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 refuses the same way: `AnalysisException:
   [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for
   the table `ora`.`ns`.`step0_msge`: Cannot write extra fields `c` to the struct `st`.
   SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
   Hadoop catalog, 2026-10-14, U-6 step 0.)*
-- **Pin** — none.
-- **Rationale** — OPEN, dated 2026-10-14. A surplus struct field under merge-schema is
-  dropped; Spark refuses the extra field. Home: ICE-STRUCT-PAIRING-1 (U-6): the
-  EXTRA_STRUCT_FIELDS class is already inside that unit (owner ruling, question 37,
-  2026-10-14) — one cell on U-6's head decides it; if U-6's single seam closes it, it
-  closes in U-6, otherwise it gets a card then. No card in this change. The write
-  statement text is not recorded in the step-0 JSON; the measured door was
-  `writeTo(t).option("merge-schema","true")` on both engines. Measured in
-  ICE-STRUCT-PAIRING-1 step 0 (U-6), cell `merge_schema_surplus_struct_field`.
+- **Pin** — `python/repark/tests/test_ice_struct_pairing_1.py::test_the_engine_answers_the_rule_in_every_added_cell[merge_schema_extra]`.
+- **Rationale** — CLOSED 2026-10-14 in ICE-STRUCT-PAIRING-1 (owner ruling, question 37):
+  `writeTo().append()` now pairs by name, and a source field left over refuses
+  `EXTRA_STRUCT_FIELDS`. Measured in ICE-STRUCT-PAIRING-1 step 0 (U-6), cell
+  `merge_schema_surplus_struct_field`.
 
 ### ICE-TSNS-SQL-1-R-023 — OPEN (measured 2026-10-14): a write body below the top of a CTAS, a view or a cached table refuses with main's text, not Spark's
 
@@ -9346,7 +9487,9 @@ the pin rather than obeying it.
   doors via the A1-identity path (`execute_predicate_dml` / `try_allowed_update_in`) and
   match Spark (FROM and FROM-less). `UPDATE NOT IN` / `[NOT] EXISTS`, **correlated** UPDATE
   IN, every `ANY` / `ALL` spelling, scalars, nested, mixed AND/OR remain refused.
-  SET-assignment / `INSERT` / `MERGE` source still unaffected.
+  `INSERT` / `MERGE` source still unaffected. A `SET` value that is a scalar subquery refuses
+  since 2026-10-15 wherever the identity path does not run (row
+  ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY).
 - **Apache Spark** — runs all of them, deleting/updating exactly the matching rows.
   *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`,
@@ -9379,6 +9522,113 @@ the pin rather than obeying it.
   `[NOT] EXISTS`, correlated UPDATE IN and every `ANY` / `ALL` stay valved (`ANY` / `ALL` are a
   permanent v1 valve — Spark 4.1.2 parse-fails quantified comparisons). Delete this row only when
   the claimed surface is actually re-enabled.
+
+### ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY — DATED REFUSAL 2026-10-15 (owner ruling 90(a)): `UPDATE … SET col = (SELECT …)` that the identity path does not run refuses before any write, where it reported success and wrote nothing
+
+- **repark** — an `UPDATE` whose `SET` value is a scalar subquery and that the identity path
+  does not run (`WHERE true`, an `IN` list, no `WHERE`, `IS NOT NULL`, `BETWEEN` and every other
+  predicate that is not a scalar comparison; on `repark.sql()`, every `WHERE`) refuses at
+  `PreExecute::guard` (`crates/repark-core/src/pre_execute.rs`, `refuse_update_from_subquery`)
+  for every column type, on every door, before anything is written:
+  `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
+  write the subquery value here, so it refuses before any write.` The identity path still
+  stores Spark's value for a scalar-comparison `WHERE` (`WHERE id = 0`, `id >= 0`, `1 = 1`,
+  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door. Of the larger expressions around a subquery, only the arithmetic shapes with the subquery as the first operand refuse: `(SELECT …) + 1` (also `- 1`, `* 1`, with `WHERE true` or no `WHERE`) answers the ruling-90 text on both doors, because the guard walks into the first argument of the arithmetic wrapper. `1 + (SELECT …)`, `-(SELECT …)`, `abs((SELECT …))`, a `CASE` arm and `COALESCE((SELECT …), 0)` are not this guard's shape: they report success and write a value taken from the target row, or write nothing, exactly as main does, where Spark stores a value computed from the subquery. `COALESCE` refuses `No field named …` on `repark.sql()` and the ANSI door. These cells are pending an owner ruling (re-verifier 3, 2026-10-15).
+  Before 2026-10-15 the same statements reported success and left every row unchanged when the
+  subquery's column had the target column's name, wrote the target's own column of the
+  subquery column's name when it named another target column, and refused `No field named …`
+  otherwise, on main and on the unit head alike.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 stores the subquery's value in every matched
+  row, for a flat INT column and a struct column fed in order or reordered (by name).
+  *(oracle: live, the `x_update` group of
+  `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`, 48 cells, recorded
+  2026-10-15.)*
+- **Pin** — `python/repark/tests/test_ice_struct_pairing_1_exception.py`
+  `test_ruling_74_a_flat_int_update_from_a_subquery_refuses_before_any_write` and
+  `test_ruling_90_a_struct_update_from_a_subquery_refuses_before_any_write` (both doors),
+  `test_the_identity_update_from_a_subquery_stores_spark_value`;
+  `crates/repark-spark/tests/update_subquery_refusal.rs`,
+  `crates/repark-sql/tests/ansi_update_subquery_refusal.rs`,
+  `crates/repark-core/src/pre_execute/tests.rs`
+  `guard_refuses_an_update_whose_set_value_is_a_scalar_subquery`.
+- **Rationale** — DATED REFUSAL 2026-10-15, owner ruling 90(a): a success that writes nothing
+  is a silent failure (ruling 74(a)), so main's behavior blocks v2 PRODUCTION; storing the
+  value is card
+  [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md),
+  open, not scheduled. The refusal does not hold the label. Revert set (orchestrator ruling, provisional, re-verifier 3, 2026-10-15): the refusal no longer reverts alone — revert `refuse_update_from_subquery` and its call in `crates/repark-core/src/pre_execute.rs`, `crates/repark-spark/tests/update_subquery_refusal.rs` and `crates/repark-sql/tests/ansi_update_subquery_refusal.rs` with their map rows, and the CAP-1 exception-table row (PR #1062 branch commits `107f7c75`, `5eae71eb`, `b751f13a`, `297f1a32`, plus the `update_subquery_refusal.rs` row of `crates/repark-spark/tests/map.md`).
+
+### ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE — DATED REFUSAL 2026-10-15 (owner ruling 95(a)): `UPDATE … SET col = (SELECT …)` that matches no row refuses, where Spark and main succeed and leave every row as it was
+
+- **repark** — the ruling 90 refusal of row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY is decided by
+  the statement's shape, not by the rows it matches, so `WHERE false` and any filter the identity
+  path declines that matches no row refuse too. Measured on the unit head, 12 cells per door,
+  Spark SQL door and ANSI door alike: `WHERE false` (6 cells) and `WHERE id BETWEEN 100 AND 200`
+  (6 cells), each for a flat INT column and a struct column fed reordered and in order, with the
+  subquery bare and with its own `WHERE`. Every one answers the one text of the family
+  (`UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
+  write the subquery value here, so it refuses before any write.`, behind the door's
+  `Error during planning: ` prefix), and after it the table's current snapshot id, snapshot
+  count, metadata location and `metadata/` files are unchanged. `WHERE id > 100` is a scalar
+  comparison, so on the Spark SQL door the identity path runs it and it succeeds as Spark does;
+  on `repark.sql()` it refuses like every `WHERE`. With the ruling 90 commit reverted, main's
+  answer on the Spark SQL door is success with the rows unchanged in all 12 cells; on the ANSI
+  door and `repark.sql()` main already refused 2 of the 12 (`WHERE id BETWEEN 100 AND 200`
+  with a reordered struct source, `No field named …`), so 10 ANSI-door cells moved from a
+  no-op success to the refusal while all 12 did on the Spark SQL door. `WHERE false` also
+  commits a new snapshot and metadata file there, `BETWEEN 100 AND 200` commits nothing.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 succeeds and changes no row. *(oracle: recorded,
+  the `WHERE false` cells of verifier 2's Q probe, 6 cells, 2026-10-15.)*
+- **Pin** — `crates/repark-spark/tests/update_subquery_refusal.rs`
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_spark_door`,
+  `ruling_95_the_whole_refused_family_answers_one_text_on_the_spark_door`,
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_spark_door`;
+  `crates/repark-sql/tests/ansi_update_subquery_refusal.rs`
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_ansi_door`,
+  `ruling_95_the_whole_refused_family_answers_one_text_on_both_doors`,
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_ansi_door`. Every refused cell of
+  both files holds the snapshot and metadata unchanged.
+- **Rationale** — DATED REFUSAL 2026-10-15, owner ruling 95, verbatim: "95: (a). The
+  shape-based refusal is what 90 asks for. (b) is out: "every other filter" includes filters
+  that match rows, where main's silent no-op is the F-04 critical. The 6 WHERE-false cells go on
+  a dated row beside 90's row, closed by UPDATE-SUBQUERY-STORE-1. Two conditions: the pin proves
+  no new snapshot and no metadata change after the refusal on both doors; one error text for
+  the whole family, hint names no data-deleting action." Closed by card
+  [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md):
+  when the shapes store Spark's value, these cells succeed and write nothing, as Spark's do.
+
+### REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 — DATED ROW 2026-10-15 (owner ruling 106 (a)): `UPDATE … WHERE col IN (SELECT …)` through `repark.sql()` updates every row, where Spark updates the matching rows
+
+- **repark** — through the public Python `repark.sql()` only (the `DataFusionDialect` door),
+  `UPDATE t SET v = 5 WHERE id IN (SELECT id FROM s)` and `WHERE id = (SELECT …)` update every
+  row of the table and report success. The Spark SQL door and the Rust ANSI door refuse these
+  statements. Main and PR #1062's head are the same.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 updates only the matching rows. *(measured by
+  U-6's re-verifier 3, 2026-10-15.)*
+- **Pin** — none yet.
+- **Rationale** — DATED ROW 2026-10-15, owner ruling 106 (a): a silent wrong value, the same
+  class as F-04. **Critical.** Closed by card
+  [REPARK-SQL-UPDATE-SUBQUERY-WHERE-1](../task/roadmap/mid-term/repark-sql-update-subquery-where-1-card-2026-10-15.md):
+  own unit next on the U-6 lane after #1062 merges; `repark.sql()` routed through the ANSI door's
+  dialect so it inherits that door's refusal, with no third guard copy; if routing is more than one
+  unit carries, a refusal on that door is the stopgap and routing stays the card. The 1.5.6 note
+  names it until it lands.
+
+### ICE-STRUCT-INLINE-TABLE-FROM-1 — DATED ROW 2026-10-15 (owner ruling 107 (a)): an inline table in `FROM` stores a reordered struct by name, where Spark pairs by position
+
+- **repark** — `INSERT INTO t SELECT * FROM VALUES (…), (…)` (an inline table in `FROM`) stores
+  a struct whose fields are reordered from the table's by field name; Spark pairs by position.
+  Rows whose field names disagree refuse with a raw `Unsupported CAST` text, not Spark's
+  `INVALID_INLINE_TABLE`. Plain `INSERT … VALUES`, `SELECT` literals and `UNION ALL` store as
+  Spark on main since #1062. Main and #1062's head are the same.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 pairs the inline table's columns by position and
+  refuses disagreeing names with `INVALID_INLINE_TABLE`. *(measured by U-6's re-verifier 3,
+  2026-10-15.)*
+- **Pin** — none yet.
+- **Rationale** — DATED ROW 2026-10-15, owner ruling 107 (a): in the struct-pairing family
+  (ruling 57: column-list VALUES pairs by position), not this round. Closed by card
+  [ICE-STRUCT-INLINE-TABLE-FROM-1](../task/roadmap/mid-term/ice-struct-inline-table-from-1-card-2026-10-15.md):
+  the inline table pairs by position and disagreeing names refuse with Spark's
+  `INVALID_INLINE_TABLE`, with pins.
 
 ### G3-E8-NULL — `NOT IN (SELECT …)` with a NULL key (3VL trap, keep after the fix)
 
@@ -15182,11 +15432,13 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `::test_validate_from_snapshot_shapes_match_spark`, `::test_validate_from_snapshot_residues`,
   `::test_overwrite_condition_divergences_where_one_engine_answers`,
   `::test_overwrite_condition_divergences_on_the_row_filter`;
-  `python/repark/tests/test_ice_write_df_2_doors.py::test_nested_binding_residues_beside_spark`,
+  `python/repark/tests/test_ice_write_df_2_doors.py::test_nested_binding_answers_as_spark`,
   `::test_store_assignment_residues_beside_spark`;
   Rust `crates/repark-iceberg/src/tests/filter_validation.rs`,
   `crates/repark-spark/src/tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`,
-  `crates/repark-spark/src/insert_by_name/nested.rs` (the sub-field resolver's units).
+  `crates/repark-iceberg/src/write/struct_pairing/tests.rs` (the pairing seam that replaced
+  the sub-field resolver of `insert_by_name/nested.rs` on 2026-10-14, ICE-TSNS-SQL-1-R-016;
+  residues R-15 and R-16 retired with it).
 - **Rationale** — FIXED 2026-09-24 (U7 PR2), on U8's REPLACE WHERE kernel. Filed BACKLOG
   2026-09-04 from the EX-22 measurement; the example still does not teach the name.
   pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010, C-013, C-014, C-015, C-016

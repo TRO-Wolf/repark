@@ -1858,6 +1858,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   BUG-001 valve, the **FROM-less** `DELETE <table> WHERE …` family + its negative (the panel's
   live bypass — that spelling fails the router's Databricks parse and reaches the executor
   through the passthrough's own parse), and the CTE-prefixed `WITH … DELETE` refusal.
+  **Exception round (2026-10-15, owner ruling 90(a)):**
+  `g3e8_update_set_subquery_without_where_subquery_refuses_before_any_write` replaces the
+  negative that held `UPDATE … SET name = (SELECT max(name) …)` storing on this harness's bare
+  context (no `SparkExtension`); the product doors refuse that statement with `No field named
+  "max(…)"` on main, and now every door refuses it with the ruling 90 text before any write.
 - `g3e8_delete_in_subquery_deletes_exactly_the_matching_row` pins executable IN-DELETE forms and
   the residual refusal family.
   Ledger: [`../../../../task/z1-g3e8-pr1-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-z1-g3e8-pr1-ledger.md).
@@ -2841,8 +2846,9 @@ name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDAT
 matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
 `nested_assign_oracle.rs` replays
 [`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
-(read with `include_str!`). It covers 152 of its 177 keys (150 until U9-TYPES-1 retired the
-`U2-order` / `U2-order2` R-16 residues, 2026-09-26), counted exactly: every key without a
+(read with `include_str!`). It covers 154 of its 177 keys (150 until U9-TYPES-1 retired the
+`U2-order` / `U2-order2` R-16 residues, 2026-09-26; 152 until ICE-STRUCT-PAIRING-1 retired the
+two `E6-evo-*-reorder-noprop` R-18 residues, 2026-10-14), counted exactly: every key without a
 residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
 `map` constructors, and the facade replays every key. Each case runs on the test context rebuilt
 with a core `ReparkSession`'s optimizer rules (fix round 4), so the DataFusion 54.1 guards apply

@@ -30,6 +30,7 @@ impl SqlDialect for AnsiDialect {
         repark_functions::integer_spark::install_integer_overflow(ctx);
         repark_functions::spark_log1p::register(ctx);
         repark_functions::cast_map::register(ctx);
+        repark_iceberg::write::store_cast::register_store_cast_udfs(ctx);
         ctx.register_udf(
             repark_functions::timestamp_ntz_cast::timestamp_ntz_cast_udf(false)
                 .as_ref()

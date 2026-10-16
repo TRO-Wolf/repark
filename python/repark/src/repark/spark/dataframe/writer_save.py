@@ -92,9 +92,8 @@ def write_table(
             static_overwrite=True,
         )
         return
-    writer._run_through_temp_view(
-        writer_schema.append_statement(session, writer._dataframe, table_ref), writer._options
-    )
+    statement = writer_schema.append_statement(session, writer._dataframe, table_ref)
+    writer_layout.run_by_name_append(writer, statement, "_repark_writer_")
 
 
 def save_iceberg(writer: DataFrameWriter, target: str) -> None:

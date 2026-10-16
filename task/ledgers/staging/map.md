@@ -52,6 +52,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   more-than-one-seam halt fires (C-006 OPEN); scope and non-measurement stated
   (C-007). `risk_tier: standard`. Branch `fix/ice-tsns-floor-doors-1`.
   pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
+- [ice-struct-pairing-1-ledger.md](ice-struct-pairing-1-ledger.md) —
+  **ICE-STRUCT-PAIRING-1 (U-6, 2026-10-14), parity row R-016:** one rule pairs struct fields on
+  every write door. C-001 to C-009 are the sentences of the rule, C-010 to C-015 how the doors
+  reach it (the kernel, the mode, the H-1 guards, the one registration table, the condition),
+  C-016 to C-019 the controls (L1, L2, the unmoved cells, the retired residues), C-021 to C-023
+  the revert-alone runs and the records; C-020 (cost) is OPEN on which bar the gate reads.
+  `risk_tier: standard`. Branch `fix/ice-struct-pairing-1`, build round 2. §8 records the
+  exception round, ruling 95's pins included.
 - [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
   `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one

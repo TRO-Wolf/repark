@@ -964,6 +964,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   sits below `repark-functions`, so each door hands its own in (the Spark extension, the
   ANSI dialect, the Python native door's extension). `build()` now resolves the dialect
   before the context is assembled. pins: ice-tsns-type-planner-1/C-011
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)):** `guard` also
+  runs `refuse_update_from_subquery`. An `UPDATE` plan whose input projection assigns a scalar
+  subquery (under an alias, a cast, `arrow_cast` or one of RePark's `__repark_*` store kernels,
+  the wrappers the Spark door's struct fold adds) refuses with one text, `UPDATE with SET column =
+  (SELECT ...) is not supported on this statement: RePark cannot write the subquery value
+  here, so it refuses before any write.` The plan only reaches `guard` when no identity path
+  ran first (the Spark door's `try_execute_identity_dml`, the ANSI door's
+  `execute_identity_or_delegate`); `repark.sql()` has none. Before, the fork provider's
+  `update` received the decorrelated subquery as a column of the target's own name and wrote
+  nothing. A subquery inside a larger expression is not refused here. Storing the value is
+  card `update-subquery-store-1`.
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2; **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**

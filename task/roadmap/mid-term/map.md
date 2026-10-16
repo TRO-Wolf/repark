@@ -442,7 +442,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [v1-5-3-release-notes-2026-10-07.md](v1-5-3-release-notes-2026-10-07.md) — **v1.5.3 release notes (2026-10-07):** the notes for the third patch on 1.5.0, from `d0c50405` (v1.5.2) to `392f2350`: SOURCE-URL-REDACT-1, -1-FN and -2, ATTR-ID-1 with its ruled release note and the STAMP-2 gate record (1.0812), the TA single-series slices S0 to S3, the ANSI -0.0 division, GROWN-STACK-GATE-1, the connect and micro-batch groundwork that is not exposed, and the rerun matrix.
 - [v1-5-4-release-notes-2026-10-10.md](v1-5-4-release-notes-2026-10-10.md) — **v1.5.4 release notes (2026-10-10):** the notes for the fourth patch on 1.5.0, after v1.5.3 (`7a8fcf1a`): the cross-join condition fix (#1010), the pyarrow floor 25.0.1 (#1015), `COUNT(*)` over the changelog, incremental and lineage readers (#1017), the nanosecond wall on every write door with its three behaviour changes (#1018, R-007), the `encryption.key-id` refusal and its residue (#1019, ENC-1), the SQL door's `timestamp_*` family (#1012, merging), the known issues carried to v1.5.5. The tag, PyPI and the matrix are `TODO(owner)` or `TODO(orchestrator)`.
 - [v1-5-5-release-notes-2026-10-13.md](v1-5-5-release-notes-2026-10-13.md) — **v1.5.5 release notes (2026-10-13):** the notes for the fifth patch on 1.5.0, after v1.5.4 (`f4e424c1`): the `timestamptz_ns` wall on every write door (R-008), the pandas/polars nanosecond frame door with its three behaviour changes (R-019), `current_date` in the session zone, the Postgres write core with both-door routing, the merge module split, two lock-only dependency bumps, and the known issues carried to v1.5.6. The tag, PyPI and the matrix rerun are `TODO(owner)` or `TODO(orchestrator)`.
-- [v1-5-6-release-notes-draft.md](v1-5-6-release-notes-draft.md) — **v1.5.6 release notes (draft):** collects one line per stored-value change as the units of the 1.5.6 cycle land, written for a reader who will not open the registry. First lines (ICE-TSNS-FLOOR-DOORS-1, R-009): the overwrite doors read a naive nanosecond wall in the session zone as INSERT does; a nanosecond value before 1970 with digits below the microsecond floors on every door, `TIMESTAMP_NTZ` included; the read `CAST(ns AS TIMESTAMP_NTZ)` floors the same way. Lines of ICE-TSNS-TYPE-PLANNER-1 (R-017, 2026-10-15, drafted on its branch): a NULL or a coarser timestamp beside a nanosecond value keeps nine digits, a written `CAST(ns AS TIMESTAMP)` floors on every door, `UPDATE`/`DELETE` with a nanosecond literal and `sequence` over a nanosecond column answer, and the ANSI door and `repark.sql()` type `TIMESTAMP` in microseconds. Tables already written keep their values. The release PR edits it into the dated notes.
+- [v1-5-6-release-notes-draft.md](v1-5-6-release-notes-draft.md) — **v1.5.6 release notes (draft):** collects one line per stored-value change as the units of the 1.5.6 cycle land, written for a reader who will not open the registry. First lines (ICE-TSNS-FLOOR-DOORS-1, R-009): the overwrite doors read a naive nanosecond wall in the session zone as INSERT does; a nanosecond value before 1970 with digits below the microsecond floors on every door, `TIMESTAMP_NTZ` included; the read `CAST(ns AS TIMESTAMP_NTZ)` floors the same way. Lines of ICE-TSNS-TYPE-PLANNER-1 (R-017, 2026-10-15, drafted on its branch): a NULL or a coarser timestamp beside a nanosecond value keeps nine digits, a written `CAST(ns AS TIMESTAMP)` floors on every door, `UPDATE`/`DELETE` with a nanosecond literal and `sequence` over a nanosecond column answer, and the ANSI door and `repark.sql()` type `TIMESTAMP` in microseconds. Tables already written keep their values. It also carries a `Known issues` bullet for REPARK-SQL-UPDATE-SUBQUERY-WHERE-1. The release PR edits it into the dated notes.
 - [v1-5-3-card-2026-10-04.md](v1-5-3-card-2026-10-04.md) — **card v1.5.3 (2026-10-04):** the third patch on 1.5.0, from main after `d0c50405`. Unit PARITY-LIVE-STOP-1 (clerk grade, not a release gate): no test stops the shared live-oracle context. The nightly `parity-live` run has been red since 2026-09-16 and cascaded on 09-19; it has 162 failed and 7,565 guard errors on `3f067bee`. The card records the measured history, more than one stopper, and the out-of-scope failures. The ATTR-ID-1 stack is not scheduled here. **SOURCE-URL-REDACT-1 (2026-10-06, security, release item):** a password inside a URL- or DSN-shaped source or catalog property value is masked on every display; the card carries the Security release-note line. Fold 2 (2026-10-06): the verifier's findings closed, a corpus pin, and the follow-up row SOURCE-URL-REDACT-1-FN (the `repark-functions` knob refusals, done in this PR: the echoed value is masked, no new crate edge). Fold 3 (2026-10-06): the re-verify's findings closed (raw `getDatabase`, storage paths as Spark shows them, Spark's key rule on every property display, TNS, multi-line documents). **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the row names the general fix (masked message parameters, scrubbed cause chain, credential-shaped chain cut, registered option doors). **Readiness review 2026-10-09 (docs only):** a dated section under PARITY-LIVE-STOP-1 names the hard-coded `/tmp/sparkenv` path in seven test modules, the Hadoop race scan, the fnp8 shape pins and the compat smoke TIME cells; the unit stays closed.
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
 - [cast-overflow-in-table-insert-1.md](cast-overflow-in-table-insert-1.md) — **CAST-OVERFLOW-IN-TABLE-INSERT-1 card (2026-09-28):** an out-of-range fractional store into an integer column refuses `CAST_OVERFLOW_IN_TABLE_INSERT`, as Spark does. It is in flight as PR #891 (v1.5.2).
@@ -738,6 +738,39 @@ declines it (a dated ruling in the intake, then the archive).
   one orphan Parquet, an unkeyed table placed under a keyed table's location, ref-only commits that publish rows staged
   before the key, the thirteen shapes whose clean refusal rests on entry checks, the textual gate and the
   caller-built catalog, and the Glue metadata-directory limit. Each needs an owner call.
+- [enc-ctas-replace-1-card-2026-10-15.md](enc-ctas-replace-1-card-2026-10-15.md) **card ENC-CTAS-REPLACE-1
+  (2026-10-15, open, not scheduled, clerk under owner ruling 98 (a)):** a key landing between `begin_replace`
+  and the publish of `CREATE OR REPLACE TABLE … AS SELECT` leaves an orphan unencrypted file under the keyed
+  table's `data/`, referenced by no snapshot, so never served. Retires with staged-file removal or a
+  pre-staging refusal plus a pin; Spark-side behaviour not measured; main the same.
+- [repark-sql-update-subquery-where-1-card-2026-10-15.md](repark-sql-update-subquery-where-1-card-2026-10-15.md) **card
+  REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-15, open, critical, clerk under owner ruling 106 (a)):**
+  through `repark.sql()`, an `UPDATE` whose `WHERE` holds a subquery updates every row and reports
+  success. Retires with `repark.sql()` routed through the ANSI door's dialect, or a refusal on that
+  door as the stopgap; own unit next on the U-6 lane after #1062 merges.
+- [ice-struct-inline-table-from-1-card-2026-10-15.md](ice-struct-inline-table-from-1-card-2026-10-15.md) **card
+  ICE-STRUCT-INLINE-TABLE-FROM-1 (2026-10-15, open, not this round, clerk under owner ruling 107 (a),
+  struct-pairing family of ruling 57):** an inline table in `FROM` stores a reordered struct by name
+  where Spark stores it by position. Retires with positional pairing and Spark's `INVALID_INLINE_TABLE`
+  plus pins.
+- [mb-enc-undeleted-field-1-card-2026-10-15.md](mb-enc-undeleted-field-1-card-2026-10-15.md) **card
+  MB-ENC-UNDELETED-FIELD-1 (2026-10-15, parked under the streaming freeze, clerk under owner ruling
+  109 (c)):** the keyed micro-batch refusal names the sink but not a staged file it could not delete.
+  Retires with the variant carrying the undeleted paths when the freeze lifts.
+- [repark-sql-local-ddl-1-card-2026-10-15.md](repark-sql-local-ddl-1-card-2026-10-15.md) **card
+  REPARK-SQL-LOCAL-DDL-1 (2026-10-15, open, not scheduled, clerk under owner ruling 104 (a)):** once
+  PA-LOCAL-FS-POLICY-1 lands, `repark.sql()` cannot run any local `COPY` or `CREATE EXTERNAL TABLE`,
+  read-only registration included, and has no opt-in. Retires with an opt-in path (or read-only
+  registration allowed) plus pins; the owner field on closing before 1.5.6 ships stays open.
+- [local-fs-create-table-location-1-card-2026-10-15.md](local-fs-create-table-location-1-card-2026-10-15.md)
+  **card LOCAL-FS-CREATE-TABLE-LOCATION-1 (2026-10-15, open, clerk under owner ruling 105 (a)):**
+  a Spark-door `CREATE TABLE … LOCATION '<outside>'` writes data and metadata outside every registered
+  warehouse with the opt-in off. Same class as PA-02: the next U-5-kind unit on that lane after the
+  PA-LOCAL-FS-POLICY-1 re-verifier. Retires with the location held to the `COPY` policy, door pins.
+- [local-fs-write-root-1-card-2026-10-15.md](local-fs-write-root-1-card-2026-10-15.md) **card
+  LOCAL-FS-WRITE-ROOT-1 (2026-10-15, open, not scheduled, clerk under owner ruling 105 (a)):** one
+  DataFrame write to a path makes later SQL writes to that path allowed. Retires when a DataFrame
+  write no longer widens the SQL allow-list, or the widening is an explicit, documented opt-in.
 - [fork-tablecommit-updates-1-card-2026-10-09.md](fork-tablecommit-updates-1-card-2026-10-09.md) **card
   FORK-TABLECOMMIT-UPDATES-1 (2026-10-09, open, fork work):** a read accessor for `TableCommit`'s updates, so the
   ENC-1 commit guard matches on values and stops reading `Debug` text.
@@ -840,6 +873,8 @@ declines it (a dated ruling in the intake, then the archive).
   the orchestrator's provisional ruling on it): a written `CAST(ns AS TIMESTAMP_NTZ)` in
   `UPDATE … WHERE` truncates where the no-`WHERE` form floors; outside ruling 91, four dated
   rows on U-1's branch (red on today's main), no code in U-1.
+  **2026-10-14:** the measured shape closed by ICE-STRUCT-PAIRING-1 (R-021 CLOSED, cell
+  `by_name_case_twins`); the card's wider scope waits on the owner.
 - [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
   **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
   carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a
@@ -862,6 +897,17 @@ declines it (a dated ruling in the intake, then the archive).
   `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
   0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
   or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
+- [update-subquery-store-1-card-2026-10-15.md](update-subquery-store-1-card-2026-10-15.md) — **card
+  UPDATE-SUBQUERY-STORE-1 (2026-10-15, open, not scheduled):** store Spark's value for
+  `UPDATE … SET col = (SELECT …)` where the identity path does not run (`WHERE true`, an `IN`
+  list, no `WHERE`, every non-comparison predicate; every `WHERE` on `repark.sql()`), which
+  refuse under owner ruling 90(a) at `PreExecute::guard` where they reported success and wrote
+  nothing. Names the step-0 causes with `path:line`: the admission in `predicate_dml/plain.rs`,
+  `scalar_set_assignments`, the fall-through to `execute_passthrough`, and DataFusion's
+  `extract_update_assignments` dropping a decorrelated same-name column as an identity
+  assignment. Registry row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY; since owner ruling 95
+  (2026-10-15) it also retires row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE, the cells
+  that match no row.
 - [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
   OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
   `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of

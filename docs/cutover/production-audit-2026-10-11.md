@@ -173,6 +173,20 @@ A direct isolated execution of the exact freshly built test binary also failed: 
 
 **2026-10-12 publication check:** the complete default Rust workspace run passed: 7,433 passed, zero failed and 68 ignored, including the previously failing microbatch test. This supersedes the lack of a green full rerun above; the cause of the earlier intermittent failures remains unclassified.
 
+## Dated rows filed after the audit
+
+### REPARK-SQL-LOCAL-DDL-1 — DATED ROW 2026-10-15 (owner ruling 104 (a))
+
+Once PA-LOCAL-FS-POLICY-1 lands, the public Python `repark.sql()` refuses every local `COPY` and `CREATE EXTERNAL TABLE` outside a registered warehouse, including read-only registration of an existing local file, and that entry offers no opt-in. On main the same statement still registers the file and `SELECT` reads it, so the refusal is new with the policy unit, while the missing opt-in holds on both. Card: [REPARK-SQL-LOCAL-DDL-1](../../task/roadmap/mid-term/repark-sql-local-ddl-1-card-2026-10-15.md) (open, not scheduled).
+
+### LOCAL-FS-CREATE-TABLE-LOCATION-1 — DATED ROW 2026-10-15 (owner ruling 105 (a))
+
+A Spark-door `CREATE TABLE … USING parquet LOCATION '<outside>'` writes Iceberg data and metadata outside every registered warehouse with `repark.sql.allowLocalFilesystemDDL` off, whether followed by `INSERT` or in `… AS SELECT` form, because it is not a `Copy` or `CreateExternalTable` plan node and the local-file guard never sees it. Main behaves the same, and the PR #1075 head does too. Card: [LOCAL-FS-CREATE-TABLE-LOCATION-1](../../task/roadmap/mid-term/local-fs-create-table-location-1-card-2026-10-15.md) (open; the same class as PA-02).
+
+### LOCAL-FS-WRITE-ROOT-1 — DATED ROW 2026-10-15 (owner ruling 105 (a))
+
+One DataFrame write to a path makes later SQL writes to that path allowed: `ReparkSession::note_local_write_root` registers every DataFrame write path as a local warehouse root. Read in the code on main, not run against Spark. Card: [LOCAL-FS-WRITE-ROOT-1](../../task/roadmap/mid-term/local-fs-write-root-1-card-2026-10-15.md) (open, not scheduled).
+
 ## Conditional candidates requiring a focused follow-up
 
 ### PC-01 — optional cluster scheduler exposure

@@ -10,6 +10,9 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
 
 ## Contents
 
+- `replace_where.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the planned INSERT of the source carries the statement's
+  `source_by_name`, so `overwrite(condition)` pairs struct fields by name and SQL `REPLACE WHERE`
+  by position.
 - `replace_where.rs` — `INSERT INTO [TABLE] <name> REPLACE WHERE <predicate> <query>`.
   `parse_replace_where` tokenizes (after a cheap `replace` substring check), finds
   `REPLACE WHERE` at paren depth 0 before any query keyword, and parses the predicate with

@@ -122,9 +122,21 @@ def run_through_temp_view(
 
 
 def run_overwrite_partitions(writer: DataFrameWriterV2, build_sql: Callable[[str], str]) -> None:
-    """Run ``writeTo(t).overwritePartitions()`` SQL as a dynamic overwrite in every session mode."""
+    """Run ``writeTo(t).overwritePartitions()`` as a dynamic overwrite, its source bound by name."""
     run_through_temp_view(
-        writer._dataframe, build_sql, writer._options, "_repark_writer_v2_", dynamic_overwrite=True
+        writer._dataframe,
+        build_sql,
+        writer._options,
+        "_repark_writer_v2_",
+        dynamic_overwrite=True,
+        source_by_name=True,
+    )
+
+
+def run_by_name_append(writer: Any, build_sql: Callable[[str], str], prefix: str) -> None:
+    """Run ``writeTo(t).append()`` or a ``saveAsTable`` append with its source bound by name."""
+    run_through_temp_view(
+        writer._dataframe, build_sql, writer._options, prefix, source_by_name=True
     )
 
 

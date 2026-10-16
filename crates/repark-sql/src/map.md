@@ -179,6 +179,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   session state whose planner answers nothing (`declared_type_state`), so `CREATE TABLE`
   keeps DataFusion's mapping and its refusals of a nanosecond `TIMESTAMP` column and of
   `TIMESTAMP_LTZ`. pins: ice-tsns-type-planner-1/C-011, C-012, C-015
+- `dialect.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), owner question 47:**
+  `on_session_built` calls `repark_iceberg::write::store_cast::register_store_cast_udfs`, the
+  one registration of the by-name store kernels. The shared MERGE and UPDATE text names the
+  pairing kernel `__repark_store_pair__`; without it this door answered `Invalid function`
+  where main stored a struct. Pinned by `../tests/ansi_store_kernel_registry.rs`.
 - `dialect.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `on_session_built` registers the zoned
   nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
   and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this
