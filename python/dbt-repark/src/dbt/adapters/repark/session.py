@@ -27,6 +27,44 @@ def session_key(credentials: ReparkCredentials) -> tuple[Any, ...]:
     )
 
 
+_PROPERTY_FIELDS = (("catalog_properties", 2), ("session_properties", 3))
+
+
+def _changed_keys(live: tuple[Any, ...], requested: tuple[Any, ...]) -> list[str]:
+    """Every property key added, removed or changed between two keys, prefixed by its dictionary."""
+    changed = []
+    for name, index in _PROPERTY_FIELDS:
+        before, after = dict(live[index]), dict(requested[index])
+        changed.extend(
+            f"{name}.{key}"
+            for key in before.keys() | after.keys()
+            if key not in before or key not in after or before[key] != after[key]
+        )
+    return sorted(changed)
+
+
+def _identifiers(key: tuple[Any, ...]) -> str:
+    """The database and warehouse of a key, each through RePark's property redaction."""
+    from repark import _native
+
+    database, warehouse = (
+        repr(value if value is None else _native.redact_property_value(name, value))
+        for name, value in (("database", key[0]), ("warehouse", key[1]))
+    )
+    return f"database {database}, warehouse {warehouse}"
+
+
+def _mismatch_message(live: tuple[Any, ...], requested: tuple[Any, ...]) -> str:
+    """The refusal text: identifiers and changed key names, never a property value."""
+    changed = ", ".join(_changed_keys(live, requested)) or "none"
+    return (
+        "a RePark session is already live for a different profile; "
+        "release it before connecting with another catalog or warehouse "
+        f"(live {_identifiers(live)}; requested {_identifiers(requested)}; "
+        f"changed keys: {changed})"
+    )
+
+
 def _build_session(credentials: ReparkCredentials) -> Any:
     """Build the session from the profile, then register the memory catalog if one is named."""
     from repark import ReparkSession
@@ -69,11 +107,7 @@ def acquire_session(credentials: ReparkCredentials) -> Any:
             _ACTIVE["session"] = _build_session(credentials)
             _ACTIVE["key"] = key
         elif _ACTIVE["key"] != key:
-            raise DbtRuntimeError(
-                "a RePark session is already live for a different profile; "
-                "release it before connecting with another catalog or warehouse "
-                f"(live {_ACTIVE['key']!r}, requested {key!r})"
-            )
+            raise DbtRuntimeError(_mismatch_message(_ACTIVE["key"], key))
         return _ACTIVE["session"]
 
 
