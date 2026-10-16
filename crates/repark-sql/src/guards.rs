@@ -7,7 +7,7 @@ use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     AlterSchemaOperation, AlterTableOperation, ColumnOption, Delete, Expr, FromTable, ObjectName,
-    Query, Set, Statement, TableFactor, TableWithJoins, Update, Visit, Visitor,
+    Set, Statement, TableFactor, TableWithJoins, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
@@ -444,125 +444,12 @@ fn canonicalize_best_effort(path: &std::path::Path) -> std::path::PathBuf {
     out
 }
 
-// Guard 6: G3-E8 subquery-predicate DML valve, runs on the parsed statement.
-
-/// The DML verb a G3-E8 subquery-predicate refusal names.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DmlSubqueryVerb {
-    /// SQL `DELETE`.
-    Delete,
-    /// SQL `UPDATE`.
-    Update,
-}
-
-impl DmlSubqueryVerb {
-    /// The SQL verb, for the refusal message.
-    const fn verb(self) -> &'static str {
-        match self {
-            Self::Delete => "DELETE",
-            Self::Update => "UPDATE",
-        }
-    }
-
-    /// What the statement would silently do today, for the refusal message.
-    const fn consequence(self) -> &'static str {
-        match self {
-            Self::Delete => "delete EVERY row of the table",
-            Self::Update => "update EVERY row of the table",
-        }
-    }
-
-    /// The `MERGE INTO` arm the workaround uses, for the refusal message.
-    const fn merge_action(self) -> &'static str {
-        match self {
-            Self::Delete => "DELETE",
-            Self::Update => "UPDATE SET <assignments>",
-        }
-    }
-}
-
-/// Refuse delegated `DELETE` / `UPDATE` whose `WHERE` subquery can become a match-all write.
-pub(crate) fn refuse_dml_subquery_predicate(statement: &Statement) -> Result<()> {
-    let (verb, selection, target) = match statement {
-        Statement::Delete(delete) => (
-            DmlSubqueryVerb::Delete,
-            delete.selection.as_ref(),
-            delete_target(delete).map_or_else(|| "<table>".to_string(), ToString::to_string),
-        ),
-        Statement::Update(update) => (
-            DmlSubqueryVerb::Update,
-            update.selection.as_ref(),
-            update_target(update).map_or_else(|| update.table.to_string(), ToString::to_string),
-        ),
-        _ => return Ok(()),
-    };
-    if repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)?.is_some()
-        || repark_iceberg::write::predicate_dml::try_allowed_update_in(statement)?.is_some()
-    {
-        return Ok(());
-    }
-    let Some(selection) = selection else {
-        return Ok(());
-    };
-    if !expression_contains_subquery(selection) {
-        return Ok(());
-    }
-    Err(DataFusionError::Plan(dml_subquery_refusal_message(
-        verb, &target,
-    )))
-}
-
-/// The `ObjectName` a `DELETE` targets from the parse tree, including `FROM t` forms.
-fn delete_target(delete: &Delete) -> Option<&ObjectName> {
-    let tables = match &delete.from {
-        FromTable::WithFromKeyword(tables) | FromTable::WithoutKeyword(tables) => tables,
-    };
-    object_name_of(tables.first()?)
-}
-
-/// The `ObjectName` an `UPDATE` targets — the primary relation of its `TableWithJoins`.
-fn update_target(update: &Update) -> Option<&ObjectName> {
-    object_name_of(&update.table)
-}
-
 /// The plain table name of a `TableWithJoins`' primary relation, if it is one.
 fn object_name_of(table: &TableWithJoins) -> Option<&ObjectName> {
     match &table.relation {
         TableFactor::Table { name, .. } => Some(name),
         _ => None,
     }
-}
-
-/// Return true when a `Query` node appears inside `expr`, so the expression carries a subquery.
-fn expression_contains_subquery(expr: &Expr) -> bool {
-    struct SawSubquery;
-    struct SubqueryProbe;
-    impl Visitor for SubqueryProbe {
-        type Break = SawSubquery;
-
-        fn pre_visit_query(&mut self, _query: &Query) -> ControlFlow<Self::Break> {
-            ControlFlow::Break(SawSubquery)
-        }
-    }
-    expr.visit(&mut SubqueryProbe).is_break()
-}
-
-/// The G3-E8 refusal text is byte-identical to the Spark door's.
-fn dml_subquery_refusal_message(verb: DmlSubqueryVerb, table: &str) -> String {
-    format!(
-        "{verb_name} with a subquery in its WHERE clause is refused on `{table}`: subquery \
-         predicates are silently mis-executed today — DataFusion's DML planner decorrelates \
-         IN / NOT IN / EXISTS / ANY / ALL / correlated predicates into a semi-join and then \
-         recovers NO filter for the Iceberg writer, so this statement would \
-         {consequence} instead of only the matching ones (defect G3-E8, silent data loss). \
-         Rewrite it as `MERGE INTO {table} AS target USING (<the subquery>) AS source \
-         ON <join keys> WHEN MATCHED THEN {action}` — the RePark-owned MERGE executor never \
-         crosses that seam, and it is the dbt adapter's proven vehicle. Support returns when the \
-         underlying fix lands; non-subquery {verb_name} predicates are unaffected.",
-        verb_name = verb.verb(),
-        consequence = verb.consequence(),
-        action = verb.merge_action(),
-    )
 }
 
 // Guard: G15 collation refuse at parse altitude.

@@ -459,6 +459,10 @@ repark-core's error map.
   MoR arm before identity UPDATE/DELETE writes parquet (same refuse-before-IO
   class as `resolve_merge_mode`). Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)):** `pub mod
+  subquery_where;` declares the shared G3-E8 refusal (row in
+  [predicate_dml/map.md](predicate_dml/map.md)); the file sits at 990 of the 1000-line default
+  ceiling. pins: repark-sql-update-subquery-where-1/C-007
 - `file_order.rs` — **V3-11 (2026-09-02):** `ascending_partition_order` stable-sorts one
   commit's `Vec<DataFile>` by partition value ascending (spec-field order, nulls first,
   primitive literals ascending) before the files reach the manifest, so `first_row_id`

@@ -22,6 +22,10 @@ refusing everything.
   Spark door's bypass). **G15:** unit collation pins — expression `COLLATE`, `ORDER BY COLLATE`,
   `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET / parenthesized SET, and a
   string-literal negative. The MoR-valve wrapper test passes a parsed `Statement`.
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16):** the G3-E8 valve moved to
+  `repark_iceberg::write::predicate_dml::subquery_where`; its unit pins here call that
+  function with the identity exemption, as the router does, and their assertions are
+  unchanged. pins: repark-sql-update-subquery-where-1/C-006
 - `ansi_door.rs` — the `#[cfg(test)] mod ansi_door;` declared in `../guards.rs`. The `AnsiDoor`
   harness (a live door over a memory-catalog Iceberg table) and every end-to-end pin that drives
   it through `crate::execute`: the G3-E8 end-to-end refuse (the row that asserts the table is

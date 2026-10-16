@@ -221,6 +221,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate`, called from the
   router's named `DELETE`/`UPDATE` arm because it needs the PARSED statement — it reads both the
   `WHERE` expression and the target off the parse tree, so a quoted target renders usably).
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)):** the valve moved to
+  `repark_iceberg::write::predicate_dml::subquery_where`, its one home for this door and
+  `repark.sql()`; `router.rs` calls it at both sites with the identity exemption, and the text
+  is unchanged. pins: repark-sql-update-subquery-where-1/C-006, C-007
   SEC-02 scope: it gates DataFusion's own filesystem-as-data DDL (`CREATE EXTERNAL TABLE`,
   `COPY TO`), NOT an intercepted `CREATE TABLE … WITH (location = …)`, which the catalog's
   `LocationPolicy` governs instead.
@@ -487,7 +491,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 
 | Symptom | First check |
 |---|---|
-| A `DELETE`/`UPDATE` with a subquery `WHERE` was refused | By design (G3-E8): `guards::refuse_dml_subquery_predicate`, the twin of the Spark door's valve, same refusal text. Re-implemented rather than shared — door→door product edges are banned |
+| A `DELETE`/`UPDATE` with a subquery `WHERE` was refused | By design (G3-E8): `repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate`, called from `router.rs` with the identity exemption since 2026-10-16 (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1); `repark.sql()` calls it without one. The Spark door keeps its own twin with the same text (door→door product edges are banned) |
 | A guard fired on text inside a string literal | It cannot — the guards read `scan::blank_out_quoted_and_comments` output; check the scrubber's tests |
 | A statement was delegated that should have been intercepted | `router.rs` match arms — no text path bypasses the statement match, including `$` metadata references |
 | The wrong-door sniff fired on ANSI-legal SQL | `sniff.rs` `scope_for` / `Scope::Leading` — tokens with an ANSI reading (`USING`, `NAMESPACE`, `BRANCH`/`TAG`) fire only under their leading keyword |
