@@ -27,6 +27,7 @@ SESSION_URL_KEY = "repark.source.pg.url"
 SOURCE_URL = "postgresql://u:SENTINEL_URL_PW@h/db"
 ROTATED_URL = "postgresql://u:SENTINEL_ROTATED_URL_PW@h/db"
 WAREHOUSE_URL = "s3://u:SENTINEL_WH_PW@bucket/warehouse"
+LOGIN_CATALOG = "u:SENTINEL_DB_PW@h"
 
 SENTINELS = (
     "SENTINEL_CAT_SECRET",
@@ -36,6 +37,7 @@ SENTINELS = (
     "SENTINEL_ROTATED_SESSION_SECRET",
     "SENTINEL_ROTATED_URL_PW",
     "SENTINEL_WH_PW",
+    "SENTINEL_DB_PW",
 )
 
 
@@ -236,6 +238,14 @@ def test_jinja_target_renders_identifiers_and_catalog_properties_redacted(
     assert target["warehouse"] == "s3://u:***@bucket/warehouse"
     assert target["database"] == CATALOG
     assert target["catalog"] == CATALOG
+    login = Profile(
+        profile_name=PROFILE,
+        target_name="local",
+        threads=1,
+        credentials=ReparkCredentials(database=LOGIN_CATALOG, schema=NAMESPACE),
+    ).to_target_dict()
+    _assert_no_sentinel(repr((login["database"], login["catalog"])))
+    assert (login["database"], login["catalog"]) == ("u:***@h", "u:***@h")
 
 
 def _write_project(root: Path) -> None:
