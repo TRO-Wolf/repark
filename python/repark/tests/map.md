@@ -10527,6 +10527,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   Five controls outside the refused class still write. On main 22 of the 27 are red: the
   statements wrote every row, emptied the table, or refused with DataFusion's planner text.
   Revert checks, mutants, the never-worse census and the records are in the unit ledger.
+  **Owner ruling 131 (b), 2026-10-16:** P-E1 to P-E4, `EXPLAIN` and `EXPLAIN ANALYZE` of a
+  subquery-predicate `DELETE` and `UPDATE`, refuse with the G3-E8 text and write nothing; on
+  `ff731179` reading their result emptied the table or rewrote every row (4 red).
+  pins: repark-sql-update-subquery-where-1/C-012
   pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004, C-008, C-009, C-010, C-011
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`

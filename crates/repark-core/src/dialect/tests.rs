@@ -8,7 +8,7 @@ use datafusion::arrow::array::{Array, AsArray, Int64Array};
 use datafusion::arrow::datatypes::Int32Type;
 use datafusion::prelude::SessionContext;
 
-use super::{DataFusionDialect, EngineContext, SqlDialect};
+use super::{DataFusionDialect, EngineContext, SqlDialect, refuse_dml_subquery_where};
 use crate::catalog_state::CatalogRegistry;
 
 /// PIN — `DataFusionDialect` is a pure passthrough: a trivial query executes against a BARE
@@ -189,4 +189,68 @@ async fn the_default_dialect_refuses_a_subquery_in_update_or_delete_where() {
         );
         assert_eq!(target_rows(&session).await, SEEDED_T, "{statement}");
     }
+}
+
+#[tokio::test]
+async fn the_default_dialect_refuses_an_explained_subquery_dml() {
+    let warehouse = tempfile::TempDir::new().expect("warehouse");
+    let root = warehouse.path().to_str().expect("utf-8 path");
+    let session = seeded_default_session(root).await;
+    for (verb, statement) in [
+        (
+            "DELETE",
+            "EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
+        ),
+        (
+            "UPDATE",
+            "EXPLAIN UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)",
+        ),
+        (
+            "DELETE",
+            "EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
+        ),
+        (
+            "UPDATE",
+            "EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)",
+        ),
+        (
+            "UPDATE",
+            "EXPLAIN ANALYZE VERBOSE UPDATE ice.ns.t SET v = 5 \
+             WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)",
+        ),
+    ] {
+        let outcome = match session.sql(statement).await {
+            Ok(frame) => frame
+                .collect()
+                .await
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
+            Err(error) => Err(error.to_string()),
+        };
+        let refusal = outcome.expect_err(statement);
+        assert!(
+            refusal.contains(&format!(
+                "{verb} with a subquery in its WHERE clause is refused on `ice.ns.t`"
+            )),
+            "{statement}: {refusal}"
+        );
+        assert_eq!(target_rows(&session).await, SEEDED_T, "{statement}");
+    }
+}
+
+#[test]
+fn the_unwrap_reaches_a_nested_explain() {
+    let ctx = SessionContext::new();
+    let refusal = refuse_dml_subquery_where(
+        &ctx,
+        "EXPLAIN ANALYZE EXPLAIN DELETE FROM t WHERE id IN (SELECT id FROM s)",
+    )
+    .expect_err("a nested EXPLAIN still refuses")
+    .to_string();
+    assert!(
+        refusal.contains("DELETE with a subquery in its WHERE clause is refused on `t`"),
+        "{refusal}"
+    );
+    refuse_dml_subquery_where(&ctx, "EXPLAIN EXPLAIN DELETE FROM t WHERE id = 1")
+        .expect("no subquery, no refusal");
 }

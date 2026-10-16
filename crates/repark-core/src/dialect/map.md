@@ -32,6 +32,13 @@ and the `EngineContext` construction contract.
   every row. Since the fix, `DataFusionDialect` intercepts this one statement class on purpose;
   the passthrough pin's wording predates that, and its query is untouched.
   pins: repark-sql-update-subquery-where-1/C-005
+  **Owner ruling 131 (b), 2026-10-16:** `the_default_dialect_refuses_an_explained_subquery_dml`
+  runs `EXPLAIN` and `EXPLAIN ANALYZE` (one `VERBOSE`) of a subquery-predicate `DELETE` and
+  `UPDATE` through a default session: each refuses, the rows held.
+  `the_unwrap_reaches_a_nested_explain` calls `refuse_dml_subquery_where` on `EXPLAIN ANALYZE
+  EXPLAIN DELETE …`, which the planner refuses first at the door ("Nested EXPLAINs are not
+  supported"), so only this test reaches the second level. Both red on `ff731179`.
+  pins: repark-sql-update-subquery-where-1/C-013
 
 ## Pointers
 

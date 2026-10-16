@@ -6,7 +6,10 @@ as seeded, and no file appears under the warehouse. On main the same statements 
 emptied the table, or refused with DataFusion's planner text. Spark 4.1.2 answers each form with
 the matching rows only; the sketch records its answers.
 
-pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004
+Owner ruling 131 (b): the refusal also fires inside ``EXPLAIN`` and ``EXPLAIN ANALYZE``, where
+reading the result wrote the rows on ``repark.sql()``.
+
+pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004, C-012
 """
 
 from __future__ import annotations
@@ -64,6 +67,28 @@ COINCIDENCE_CELLS = [
         "UPDATE",
         "UPDATE ice.ns.t SET v = 5 WHERE EXISTS (SELECT 1 FROM ice.ns.s)",
         id="P-C2-update_exists_any_row",
+    ),
+]
+EXPLAINED_CELLS = [
+    pytest.param(
+        "DELETE",
+        "EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
+        id="P-E1-explain_delete",
+    ),
+    pytest.param(
+        "UPDATE",
+        "EXPLAIN UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)",
+        id="P-E2-explain_update",
+    ),
+    pytest.param(
+        "DELETE",
+        "EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
+        id="P-E3-explain_analyze_delete",
+    ),
+    pytest.param(
+        "UPDATE",
+        "EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)",
+        id="P-E4-explain_analyze_update",
     ),
 ]
 CONTROL_CELLS = [
@@ -199,3 +224,13 @@ def test_a_statement_outside_the_refused_class_still_answers(
     seeded_warehouse(tmp_path, monkeypatch)
     repark.sql(statement).collect()
     assert target_rows() == expected, statement
+
+
+@pytest.mark.parametrize(("verb", "statement"), EXPLAINED_CELLS)
+def test_an_explained_subquery_predicate_refuses(
+    verb: str, statement: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """EXPLAIN and EXPLAIN ANALYZE of either verb refuse; reading no result writes nothing."""
+    warehouse = seeded_warehouse(tmp_path, monkeypatch)
+    refuse_and_hold(statement, verb, "ice.ns.t", warehouse)
+    assert target_rows() == SEEDED_T, statement
