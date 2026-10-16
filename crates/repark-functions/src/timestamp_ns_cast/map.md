@@ -51,6 +51,10 @@ pins: ice-tsns-merge-wall-1/C-018, C-031
   localizes walls, a microsecond input keeps its ticks, same-kind widening overflows as the row
   path does, and a `VALUES` node with no nanosecond column is left alone.
   pins: ice-tsns-sql-1/C-001, C-002, C-009
+  `an_encoded_source_gets_the_verdict_and_the_value_of_its_value_type` (ruling 92,
+  2026-10-15): a dictionary and a run-end encoded instant plan to the type and convert to
+  the values of the plain instant, naive and zoned kernels; an encoded integer refuses.
+  pins: ice-tsns-type-planner-1/C-020
 - `values_evidence.rs` — **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):**
   the syntactic evidence the parent's `VALUES` widening reads per cell. `values_cell_evidence`
   peels the `Alias` / non-null wrappers, at most one planner coercion `CAST` to a naive
@@ -62,6 +66,13 @@ pins: ice-tsns-merge-wall-1/C-018, C-031
   `NamedInstant` (`from_utc_timestamp`, `to_utc_timestamp`) or `None`. The parent pairs the
   `Timestamp` and `NamedInstant` answers with the rewritten type before it trusts them.
   pins: ntz-store-doors-1/C-009
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, mixed VALUES (ruling 100, 2026-10-15):** a written
+  `TIMESTAMP` is recognized by the planner's microsecond instant type as well as DataFusion's
+  naive nanosecond one (`is_written_timestamp`): with the planner `TIMESTAMP '…'` plans as
+  `Timestamp(µs, "UTC")`, so an `INSERT … VALUES` mixing it with `TIMESTAMP_NTZ` cells into a
+  `TIMESTAMP_NTZ` column lost its instant evidence and stored a New York gap wall as `02:30`
+  where Spark stores `03:30` (`test_ntz_9_verify.py`, `test_ntz_store_doors_1.py` `ins_values`
+  / `ins_sel`). pins: ice-tsns-type-planner-1/C-032
 
 ## Pointers
 

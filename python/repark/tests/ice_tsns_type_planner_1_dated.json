@@ -1,0 +1,1768 @@
+{
+ "rows": {
+  "census|-03:30|ltz|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|-03:30|ltz|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|-03:30|ts_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|-03:30|ts_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|-03:30|tz_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|-03:30|tz_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|America/New_York|ltz|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|America/New_York|ltz|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|America/New_York|ts_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|America/New_York|ts_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|America/New_York|tz_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Asia/Kolkata|ltz|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Asia/Kolkata|ts_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Australia/Lord_Howe|ts_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|UTC|ltz|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|UTC|ltz|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|UTC|ts_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|UTC|ts_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|UTC|tz_ns|ns|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "census|UTC|tz_ns|tzns_utc|array|untyped_null|df_functions_append": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: the df_functions_append array twin errors array(UserDefined)",
+   "class": "residue"
+  },
+  "consumer|ns|+big|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+big|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+big|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+big|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+dec|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+dec|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+dec|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+dec|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+k|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+k|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+k|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+k|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+s|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+s|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+s|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|+s|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_add_float|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_add_float|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_add_str_none|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_add_str_none|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_agg_len|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_agg_len|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_ddl|timestamp|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_ddl|timestamp|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_id_int64|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_id_int64|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_reordered|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|aip_reordered|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|cog_ddl|timestamp|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|cog_ddl|timestamp|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|mia_ddl|timestamp|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|mia_ddl|timestamp|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|mia_struct|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|mia_struct|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|mip_ddl|timestamp|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|mip_ddl|timestamp|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|apply_in_arrow|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|apply_in_arrow|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|arrow_udf_ret_ntz|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|arrow_udf_ret_ntz|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|arrow_udf_ret_ts|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|arrow_udf_ret_ts|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|pandas_udf_ret_ntz|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|pandas_udf_ret_ntz|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|pandas_udf_ret_ts|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|ns|udf|pandas_udf_ret_ts|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+big|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+big|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+big|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+big|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+dec|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+dec|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+dec|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+dec|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+k|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+k|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+k|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+k|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+s|aip|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+s|aip|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+s|cog|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|+s|cog|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_add_float|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_add_float|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_add_str_none|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_add_str_none|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_agg_len|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_agg_len|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_ddl|timestamp_ntz|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_ddl|timestamp_ntz|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_id_int64|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_id_int64|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_reordered|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|aip_reordered|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|cog_ddl|timestamp_ntz|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|cog_ddl|timestamp_ntz|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|mia_struct|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|mia_struct|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|apply_in_arrow|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|apply_in_arrow|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|arrow_udf_ret_ntz|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|arrow_udf_ret_ntz|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|arrow_udf_ret_ts|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|arrow_udf_ret_ts|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|pandas_udf_ret_ntz|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|pandas_udf_ret_ntz|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|pandas_udf_ret_ts|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "consumer|tzns|udf|pandas_udf_ret_ts|UTC": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "encoded|TIMESTAMP|dictionary": {
+   "date": "2026-10-15",
+   "ruling": "102",
+   "owner": "NS-ENCODED-NESTED-FLOOR-1 (R-024): ruling 102, an encoded ns value into a microsecond column keeps today's behaviour (it truncates where the plain value floors, on today's main too)",
+   "class": "residue"
+  },
+  "encoded|TIMESTAMP|run_end_encoded": {
+   "date": "2026-10-15",
+   "ruling": "102",
+   "owner": "NS-ENCODED-NESTED-FLOOR-1 (R-024): ruling 102, an encoded ns value into a microsecond column keeps today's behaviour (it truncates where the plain value floors, on today's main too)",
+   "class": "residue"
+  },
+  "h1|ansi|generate_series": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "old commit 5 (H1, P15), out under ruling 'U-1 does not grow'",
+   "class": "residue"
+  },
+  "h1|ansi|range": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "old commit 5 (H1, P15), out under ruling 'U-1 does not grow'",
+   "class": "residue"
+  },
+  "h1|spark|generate_series": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "old commit 5 (H1, P15), out under ruling 'U-1 does not grow'",
+   "class": "residue"
+  },
+  "h1|spark|range": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "old commit 5 (H1, P15), out under ruling 'U-1 does not grow'",
+   "class": "residue"
+  },
+  "p15|read_csv|inferred_seconds": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "old commit 5 (H1, P15), out under ruling 'U-1 does not grow'",
+   "class": "residue"
+  },
+  "position|array_append|null|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_append|null|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_append|null|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_append|null|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_append|null|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_append|null|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ntz|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ntz|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ntz|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ntz|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ntz|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ntz|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ts|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ts|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ts|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ts|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ts|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_concat|ts|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ntz|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ntz|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ntz|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ntz|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ntz|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ntz|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|null|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|null|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|null|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|null|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|null|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|null|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ts|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ts|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ts|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ts|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ts|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_contains|ts|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_position|null|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_position|null|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_position|null|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_position|null|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_position|null|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_position|null|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_prepend|null|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_prepend|null|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_prepend|null|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_prepend|null|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_prepend|null|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_prepend|null|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_remove|null|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_remove|null|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_remove|null|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_remove|null|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_remove|null|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|array_remove|null|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ntz|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ntz|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ntz|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ntz|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ntz|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ntz|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ts|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ts|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ts|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ts|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ts|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|except|ts|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ntz|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ntz|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ntz|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ntz|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ntz|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ntz|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ts|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ts|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ts|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ts|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ts|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|intersect|ts|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ntz|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ntz|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ntz|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ntz|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ntz|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ntz|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|null|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|null|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|null|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|null|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|null|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|null|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ts|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ts|ns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ts|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ts|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ts|tzns|Asia/Kolkata": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "position|nvl2|ts|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "range|ns_first|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "the out-of-range raise with ANSI off (old Q6)",
+   "class": "residue"
+  },
+  "range|us_first|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "the out-of-range raise with ANSI off (old Q6)",
+   "class": "residue"
+  },
+  "reads|m_udf:udf_apply_in_pandas_site|ns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_apply_in_pandas_site|ns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_apply_in_pandas_site|tzns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_apply_in_pandas_site|tzns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_array|ns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_array|ns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_array|tzns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_array|tzns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_ddl_ltz|ns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_ddl_ltz|ns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_ddl_ltz|tzns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow_ddl_ltz|tzns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow|ns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow|ns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow|tzns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_arrow|tzns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_pandas_site|ns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_pandas_site|ns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_pandas_site|tzns|America/New_York|ansitrue": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "reads|m_udf:udf_map_in_pandas_site|tzns|UTC|ansifalse": {
+   "date": "2026-10-15",
+   "ruling": "38",
+   "owner": "NS-ARRAY-FLOOR-1 (U-2): the pandas and Arrow output doors",
+   "class": "carve-out"
+  },
+  "repro|r017_update_nowhere_ntz_cast|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
+  },
+  "repro|r017_update_nowhere_ntz_cast|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
+  },
+  "repro|r017_update_nowhere_ntz_cast|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
+  },
+  "repro|r017_update_nowhere_ntz_cast|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "Q1",
+   "owner": "ICE-TSNS-UPDATE-NTZ-CAST-1: a written CAST(ns AS TIMESTAMP_NTZ) in UPDATE ... WHERE truncates where the no-WHERE form floors; outside ruling 91 (orchestrator ruling on Q1, 2026-10-15)",
+   "class": "residue"
+  },
+  "repro|s1b_concat_ws_null|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|s1b_concat_ws_null|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|s1b_concat_ws_null|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|s1b_concat_ws_null|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_append|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_append|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_append|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_append|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_case|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_case|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_case|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_case|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_coalesce|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_coalesce|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_coalesce|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_coalesce|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_flatten|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_flatten|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_flatten|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_flatten|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_prepend|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_prepend|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_prepend|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_prepend|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_union|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_union|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_union|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_container_union|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_micros_round_trip|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_update_qualified_us|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_update_qualified_us|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_update_qualified_us|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v1_update_qualified_us|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v2_date_over_nested_site|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v2_map_element_site|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v2_map_element_site|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v2_map_element_site|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v2_map_element_site|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_integer_argument|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_read|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_read|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_read|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_read|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_union|ns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_union|ns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_union|tzns|America/New_York": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  },
+  "repro|v3_three_branch_union|tzns|UTC": {
+   "date": "2026-10-15",
+   "ruling": "93",
+   "owner": "H5 residue: a shape outside amendment 1's position table",
+   "class": "residue"
+  }
+ }
+}

@@ -50,3 +50,17 @@ readings and rules neither out.
   measured repro.
 - If one winner holds across the repetitions, re-examine what the CI run's timing
   assumed and whether the pin needs a stated tolerance with a dated row.
+
+## Seen again, 2026-10-16
+
+On 2026-10-16 at 11:52 UTC the same test failed with the parameter `[3-snapshot-dataframe]`,
+on the first CI attempt of PR #1085 (run 38895233903, facade shard 2): `assert (2, 6) == (1, 7)`,
+"RePark committed 2 of 8, Spark 1". The second attempt passed. PR #1085 changes CI only, so
+the tree was main's. The shape is the same as on 2026-10-07, now under snapshot isolation as
+well as serializable.
+
+The orchestrator has put the eight-MERGE storm on the list for U-9 (ICE-INTEGRITY-PINS-1) as a
+drill cell: repeated replays under both isolation levels and through both doors, with the
+winner count of each run. It also asks whether the retry after a commit conflict runs the
+conflict check again. This follows a suggestion the owner passed on, 2026-10-16. It is not a
+ruling, and the card stays unscheduled until U-9's brief is set.

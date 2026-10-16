@@ -97,7 +97,7 @@ fn context(session_zone: &str) -> SessionContext {
         with_session_time_zone(SessionConfig::new(), session_zone),
         true,
     );
-    let ctx = SessionContext::new_with_config(config);
+    let ctx = crate::spark_type_planner::planned_context(config);
     crate::register_all(&ctx);
     for rule in crate::analyzer_rules() {
         ctx.add_analyzer_rule(rule);

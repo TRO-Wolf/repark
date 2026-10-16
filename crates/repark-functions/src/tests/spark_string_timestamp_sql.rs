@@ -9,7 +9,7 @@ use crate::session_time_zone::with_session_time_zone;
 
 fn context(zone: &str, ansi: bool) -> SessionContext {
     let config = with_spark_ansi_config(with_session_time_zone(SessionConfig::new(), zone), ansi);
-    let ctx = SessionContext::new_with_config(config);
+    let ctx = crate::spark_type_planner::planned_context(config);
     crate::register_all(&ctx);
     for rule in crate::analyzer_rules() {
         ctx.add_analyzer_rule(rule);

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Evening Board 10-15</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --fg:#16232B; --muted:#5A6B75; --rule:#D5DEE3;
+  --accent:#0E6C88; --accent-soft:#E1EEF3;
+  --ok:#1F7A4D; --ok-soft:#E3F2EA; --warn:#9A6400; --warn-soft:#FBF0D9; --bad:#B03A2E; --bad-soft:#F8E4E1;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
+h2{font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;font-size:.95rem}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0;max-width:68ch}
+.mono,code{font-family:var(--mono);font-size:.86em}
+.sub{color:var(--muted);margin-top:6px}
+section{display:flex;flex-direction:column;gap:14px}
+.chip{display:inline-block;font-family:var(--display);font-weight:600;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.fail{background:var(--bad-soft);color:var(--bad)} .halt{background:var(--warn-soft);color:var(--warn)}
+.pass{background:var(--ok-soft);color:var(--ok)} .hold{background:var(--accent-soft);color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.bad{border-left-color:var(--bad)} .card.amber{border-left-color:var(--warn)} .card.ok{border-left-color:var(--ok)}
+.card ul,.card ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.tl{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.tl li{display:grid;grid-template-columns:62px 1fr auto;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule);align-items:baseline}
+.tl .t{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.86rem}
+.tl .d{min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:600;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+td.n{text-align:right;font-family:var(--mono)}
+tr.total td{font-weight:600;border-bottom:2px solid var(--fg)}
+.q{background:var(--surface);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.q .num{font-family:var(--display);font-weight:700;color:var(--accent)}
+.q ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
+.lean{color:var(--muted)} .lean b{color:var(--fg)}
+.note{color:var(--muted);font-size:.9rem}
+@media (max-width:520px){.tl li{grid-template-columns:52px 1fr}.tl li .chip{grid-column:2}h1{font-size:1.7rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Evening board and overnight plan, 15 → 16 October</h1>
+  <p class="sub">Iceberg closeout at 19:45 EDT. Main <span class="mono">5182ad42</span>. Verdicts by time first, then where each unit stands, the overnight plan, spend, and questions 110 and 111.</p>
+</header>
+
+<section>
+  <h2>Verdicts today, by time</h2>
+  <ul class="tl">
+    <li><span class="t">07:07</span><span class="d">U-1 step 0 (<code>convertToArrowArraySafely</code> measured on live PySpark 4.1.2), $8.72</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">10:24</span><span class="d">U-6 exception round, nine commits, $31.21</span><span class="chip pass">Done</span></li>
+    <li><span class="t">10:42</span><span class="d">ENC-1 items 1 and 5 verifier, #1071 at <span class="mono">c7713000</span>, $8.40</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">10:57</span><span class="d">U-1 fresh build on <span class="mono">fe2beec0</span>, 18 commits, stopped on the carry-over questions (rulings 100–102), $31.40</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">11:59</span><span class="d">U-6 ruling-95 pins and records, three commits, no product change, $3.83</span><span class="chip pass">Done</span></li>
+    <li><span class="t">12:50</span><span class="d">U-5 PA-02 to PA-04 build, #1075, $13.49</span><span class="chip pass">Done</span></li>
+    <li><span class="t">16:26</span><span class="d">U-5 verifier, #1075 at <span class="mono">506fe9ec</span>: two S1 escapes (a symlink followed by <code>..</code>; <code>%2e%2e</code> in a file URL), one S2, three S3. $7.82. Parked; ruling 103 gave it one fix round</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">18:29</span><span class="d">U-6 re-verifier 3, #1062 at <span class="mono">ab925ec1</span>, $10.22. Out-of-scope findings became questions 99, 106 and 107</span><span class="chip pass">Pass</span></li>
+    <li><span class="t">18:30</span><span class="d">ENC-1 fix round, six commits, stopped on two questions (rulings 108 and 109 now answer them), $15.84</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">18:51</span><span class="d">#1062 U-6 struct pairing merged as <span class="mono">5531311b</span></span><span class="chip pass">Merged</span></li>
+    <li><span class="t">19:15</span><span class="d">P2 acceptance for #1062, run <span class="mono">38820033176</span>: 11 AWS cells passed (Glue and S3 Tables), dbt gold 1 passed</span><span class="chip pass">Green</span></li>
+    <li><span class="t">19:27</span><span class="d">#1077 U-6 records, matching re-verifier 3's measurements, merged as <span class="mono">5182ad42</span></span><span class="chip pass">Merged</span></li>
+  </ul>
+  <p class="note">Also merged today: #1076, cards and dated rows for rulings 104 and 105. #1078, cards for 106, 107 and 109, is waiting on its last CI check and merges on green.</p>
+</section>
+
+<section>
+  <h2>Where each unit stands</h2>
+  <div class="grid">
+    <div class="card ok"><h3>U-6 struct pairing</h3><p>On main, and its records are on main too. The P2 report is above. Three follow-ups are filed as cards: the 99 walk (question 110), 106 <code>repark.sql()</code> UPDATE with a subquery in WHERE (critical), and 107 inline-table struct pairing.</p></div>
+    <div class="card amber"><h3>U-1 timestamp_ns type planner</h3><p>The carry-over fix round has 13 commits, with the benchmark within 1.05x. Final cargo gates and the facade suite are running now. Not pushed yet. I read the R-017 re-pin (<span class="mono">89d6c706</span>): it moves to Spark's microsecond answer, recorded live, which fits ruling 100. The verifier will check that recording.</p></div>
+    <div class="card amber"><h3>U-5 local-file policy, #1075</h3><p>Parked after the FAIL. Its one fix round under ruling 103 started 18:31. Changes are in the tree but nothing is committed yet; it is waiting for the build lock behind U-1. Not green on the re-verifier means it stays parked.</p></div>
+    <div class="card amber"><h3>ENC-1 items 1 and 5, #1071</h3><p>Main is merged in (<span class="mono">95bcbd88</span>, one import conflict). CI so far: 10 checks pass, 6 pending. The finishing round (census with the two <code>create_table.rs</code> exceptions, full-path warning pin, records) is briefed and waits for a builder slot.</p></div>
+  </div>
+  <p class="note">Held as before: #1070 is yours, after U-9 lands. #1067 (U-9 sketch) is held. #1048 waits for U-1. #1037 and #1038 are parked under the streaming freeze.</p>
+</section>
+
+<section>
+  <h2>Overnight plan</h2>
+  <p>Two Opus builders at once, four lanes at most, verifiers on Opus. A FAIL parks the unit, and you hear about it first at 08:00. Times are estimates.</p>
+  <div class="card">
+    <h3>Builder slot A: U-1, then ENC-1</h3>
+    <ol>
+      <li><b>~20:15</b> U-1 hands back. I audit the trace, the four re-pins, today's-main count and the step-0 finding.</li>
+      <li>I merge main (now with U-6) into U-1's branch and list the cells where the two units overlap. Then push, open the PR and wait for CI (~50 min).</li>
+      <li><b>~20:15</b> The freed slot starts ENC-1's finishing round from <span class="mono">95bcbd88</span>. When it hands back: audit, push, CI, then a scoped re-verifier on items 1 and 5 and rulings 108 and 109 (~00:30).</li>
+      <li><b>~21:30</b> U-1's verifier starts once CI is green (verdict ~23:00).</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h3>Builder slot B: U-5's fix, then the next unit</h3>
+    <ol>
+      <li><b>~21:30</b> U-5's fix hands back. I audit it against ruling 103: all three escapes pinned as "writes outside on today's head, no file on disk after", plus the symlinked-root pin. Then push to #1075, CI, and the scoped re-verifier (~00:15).</li>
+      <li>The freed slot takes the first runnable unit in this order:
+        <ul>
+          <li>the 99 walk, if you answer 110 with (a);</li>
+          <li>the 106 routing unit (<code>repark.sql()</code> through the ANSI door's dialect), but only once #1075 has merged. Both change how <code>repark.sql()</code> picks its dialect, so building 106 on main before then would conflict with U-5;</li>
+          <li><code>pa-dbt-mismatch-redact-1</code> (PA-01), which touches neither.</li>
+        </ul>
+      </li>
+      <li>U-5's CREATE TABLE … LOCATION unit (ruling 105) follows a U-5 PASS.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h3>Merges and reports</h3>
+    <ul>
+      <li>#1078 merges on green, as ruled for docs.</li>
+      <li>Product PRs (#1071, #1075, U-1) merge on a verifier PASS with CI green only if you choose that in question 111. Each merge then gets its P2 acceptance run, and the report comes at 08:00.</li>
+      <li>08:00 report: verdicts by time, spend by lane, usage %, and the TB4 line. This board's docs copy goes up as a docs PR for you to merge.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>Spend, 15 October</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Unit</th><th>Runs</th><th style="text-align:right">Opus $</th></tr></thead>
+    <tbody>
+      <tr><td>U-1</td><td>step 0 8.72, fresh build 31.40</td><td class="n">40.12</td></tr>
+      <tr><td>U-6</td><td>exception round 31.21, ruling 95 3.83, re-verifier 3 10.22</td><td class="n">45.26</td></tr>
+      <tr><td>ENC-1</td><td>verifier 8.40, fix round 15.84</td><td class="n">24.24</td></tr>
+      <tr><td>U-5</td><td>build 13.49, verifier 7.82</td><td class="n">21.31</td></tr>
+      <tr class="total"><td>Day, finished runs</td><td></td><td class="n">130.93</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">Not metered yet: U-1's carry-over round (running since 13:29) and U-5's fix round (since 18:31). The meter shows them when they finish. The overnight launches I have planned add about $65: the ENC finish ~15, a 106 or 99 build ~25, and three verifiers ~8–11 each. Weekly usage % isn't visible from here; please paste it with your answers (builds drop to Muse at 85 %). Muse ran three clerks on the subscription today. No Fable.</p>
+</section>
+
+<section>
+  <h2>Questions 110 and 111</h2>
+  <div class="q"><span class="num">110 · Where ruling 99's full walk goes (sent earlier, still open)</span>
+    <p>#1062 merged at 18:51, before ruling 99 reached me, so the walk can't go into that commit. On main today, <code>(SELECT …) + 1</code> refuses, but <code>1 + (SELECT …)</code>, <code>-(…)</code>, <code>abs(…)</code>, CASE and COALESCE still write silently, as main always has.</p>
+    <ol type="a"><li>A one-commit unit of its own, from main: same error text, a pin for each shape, a scoped verifier. If it needs a second seam, halt and it becomes 99(b). It runs next on the U-6 lane, ahead of the 106 routing unit.</li><li>Make it the first commit of the 106 routing unit.</li><li>99(b) now: a card that blocks the v2 PRODUCTION line.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>.</p></div>
+  <div class="q"><span class="num">111 · Product merges overnight</span>
+    <p>Up to three product PRs could reach a verifier verdict tonight: #1071 (ENC-1), #1075 (U-5) and U-1.</p>
+    <ol type="a"><li>Each merges on a verifier PASS with CI green. Its P2 acceptance runs straight after, and you get the report at 08:00. A FAIL parks the unit.</li><li>#1071 and #1075 merge on PASS. U-1, the largest write-path change, waits for your word at 08:00.</li><li>No product merge overnight. Verdicts wait for 08:00.</li></ol>
+    <p class="lean">Lean: <b>(a)</b>, with a $90 ceiling on new Opus launches overnight. If you choose (b) or (c), the verifiers still run tonight.</p></div>
+</section>
+</div>
+</body>
+</html>
