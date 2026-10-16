@@ -91,6 +91,30 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 
 ## Contents
 
+- `test_pa_local_fs_policy_1.py` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to
+  PA-04):** the audit's public reproductions. Spark door (`ReparkSession.sql`, a registered
+  memory-catalog warehouse with `link -> <outside>`): `EXPLAIN ANALYZE COPY` outside and the
+  one- and three-missing-parent symlink escapes raise `AnalysisException` naming
+  `repark.sql.allowLocalFilesystemDDL` with no file outside; the byte-5/7/9 locations raise it
+  instead of a caught panic; plain `EXPLAIN` answers without writing; the warehouse, the
+  in-warehouse symlink, the `file://localhost` forms and the opt-in session write.
+  `repark.sql()`: the bare and wrapped `COPY`, the symlink escape, `CREATE EXTERNAL TABLE`
+  and `aaaaaaé` refuse; plain `EXPLAIN` answers. Red on main 7 of 15.
+  pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-006, C-008, C-009, C-010, C-011, C-013, C-014, C-015
+  **Fix round (2026-10-15, owner rulings 103 and 104):** on the Spark door, `test_v01_*`,
+  `test_v02_*` and `test_v03_*` (each "writes outside on today's head") refuse with no file
+  outside, the cwd restored after `test_v03_*`; a warehouse registered through a symlinked path
+  writes inside. `repark.sql()` refusals now name `repark.sql() does not allow local-file DDL`
+  and not the conf; `test_repark_sql_names_no_opt_in_and_no_route_opens_it` shows `SET` of the
+  key fails, a native session built with the key set still refuses, and a read-only `CREATE
+  EXTERNAL TABLE` over an existing local parquet directory refuses.
+  pins: pa-local-fs-policy-1/C-019, C-020, C-021, C-022, C-023
+  **The ruling-113 step (2026-10-16):** `test_repark_sql_keeps_the_q6_wall_type_under_the_guard`
+  is U-1's Q6 cell (`test_ice_tsns_type_planner_1.py::test_repark_sql_plans_timestamp_as_the_wall`,
+  ice-tsns-type-planner-1/C-015) with the guard installed: `CAST('2024-01-02 03:04:05.123456789'
+  AS TIMESTAMP)` on `repark.sql()` answers `timestamp[us]` `1704164645123456`, and a local `COPY`
+  on the same entry still refuses with no file.
+  pins: pa-local-fs-policy-1/C-032
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 

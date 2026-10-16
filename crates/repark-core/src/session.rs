@@ -17,7 +17,7 @@ use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
-use crate::dialect::{DataFusionDialect, SqlDialect};
+use crate::dialect::SqlDialect;
 #[cfg(test)]
 pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
@@ -114,6 +114,7 @@ pub struct ReparkSessionBuilder {
     maintenance: Option<(String, Option<MaintenancePolicy>)>,
     source_specs: Vec<Arc<SourceSpec>>,
     parallel_single_partition: Option<bool>,
+    pub(crate) local_fs_guard: bool,
 }
 
 impl std::fmt::Debug for ReparkSessionBuilder {
@@ -313,9 +314,8 @@ impl ReparkSessionBuilder {
         runtime = runtime.with_object_list_cache_limit(0);
         let runtime = runtime.build_arc().map_err(engine_err)?;
         // Avoid `SessionContext::new_with_config_rt`: DF-54.1 guard 2 replaces one optimizer rule.
-        let dialect = self
-            .sql_dialect
-            .unwrap_or_else(|| Arc::new(DataFusionDialect));
+        let dialect =
+            crate::local_fs_policy::session_dialect(self.sql_dialect, self.local_fs_guard);
         let context = context_with_df_54_1_rule_guards(config, runtime, &ext, &dialect)
             .map_err(engine_err)?;
         // Capture the final build-time home and its provider identity once; calls re-check it.

@@ -58,6 +58,8 @@ This defeats `repark.sql.allowLocalFilesystemDDL=false`, an explicit engine poli
 
 **Required result:** check each write that an executing carrier can run, including `Analyze`, prepared statements at execution, and any supported nested write carrier. Preserve plain `EXPLAIN` behavior. Prove refusal before side effects through both SQL doors with default and explicit opt-in controls. The duplicate ANSI implementation is implicated by source, but was not independently exercised here. The public Python `repark.sql()` callable builds the default `DataFusionDialect`, not `repark_sql::AnsiDialect`; its shared `PreExecute` belt does not call this door-specific local-file guard. Follow-up qualification must trace the actual native entry point and decide its policy explicitly, rather than assuming the ANSI crate guard automatically protects that callable. This routing observation is source-confirmed, not another executed bypass in this audit.
 
+**Amendment (2026-10-15, PA-LOCAL-FS-POLICY-1):** one policy, `repark_core::local_fs_policy`, now serves both doors and `repark.sql()`. It walks every `Copy` and `CreateExternalTable` node at any depth before execution: `Analyze` and a `Prepare` input are included, and nothing below a plain `Explain` is checked. `PREPARE … AS COPY` does not parse on either door. By the owner's ruling of 2026-10-15, `repark.sql()` gets the guard through `LocalFsGuardedDialect`; that entry has no opt-in. The ANSI door's opt-in never opened on main: its reader missed the real extension's unprefixed key. It opens now. Pins: `python/repark/tests/test_pa_local_fs_policy_1.py` (`test_pa02_*`, `test_repark_sql_*`), `crates/repark-spark/src/tests/pa_local_fs_policy.rs` and `crates/repark-sql/tests/pa_local_fs_policy.rs` (`pa02_*`), and `crates/repark-core/src/local_fs_policy.rs` (`the_walk_checks_a_write_below_every_carrier_but_plain_explain`, `the_native_door_*`). Ledger: [pa-local-fs-policy-1](../../task/ledgers/staging/pa-local-fs-policy-1-ledger.md).
+
 ## PA-03 — a missing destination parent defeats warehouse containment
 
 `canonicalize_best_effort` in [the Spark guard](../../crates/repark-spark/src/local_fs_ddl.rs), line 125, and [the ANSI guard](../../crates/repark-sql/src/guards.rs), line 418, canonicalizes the target or its immediate parent. If both do not exist, it falls back to lexical normalization. It does not resolve the nearest existing ancestor.
@@ -66,6 +68,31 @@ The task fixture created `<warehouse>/link -> <outside>`. A direct COPY to `<war
 
 **Required result:** the destination containment check must account for symlinks in existing ancestors. Decide the concurrent symlink-change threat model explicitly; a pathname-only precheck can still have a check/use race when another actor controls the directory. At minimum, add tests for missing one and multiple parent directories, symlinks inside and outside the warehouse, and both SQL doors. Refuse unsafe or indeterminate destinations rather than treating lexical ancestry as proof of physical containment.
 
+**Amendment (2026-10-15, PA-LOCAL-FS-POLICY-1):** containment now resolves the nearest existing ancestor with `canonicalize` and joins the missing tail. A `..` in that tail, a dangling symlink, an ancestor whose metadata read fails other than not-found, or an empty location is indeterminate and refuses. By the owner's ruling of 2026-10-15, the concurrent symlink-change race between the check and the write stays out of scope as a dated row in the unit ledger. Pins: the `pa03_*` tests of both doors' `pa_local_fs_policy.rs` and of `test_pa_local_fs_policy_1.py`, and the resolver tests of `crates/repark-core/src/local_fs_policy.rs`.
+
+**Amendment (2026-10-15, PA-LOCAL-FS-POLICY-1 fix round, owner ruling 103):** the guard now reads
+a location the way the write reads it, through DataFusion's own `ListingTableUrl::parse`, so a
+symlink followed by `..`, a percent-encoded dot segment (`%2e%2e`, `%2E%2E`, `.%2e`) and a
+relative `file:` URL, each of which wrote outside every warehouse on the first head of this unit,
+refuse on both doors and write nothing. A `..` that steps back over a symlink under the
+warehouse refuses, and so does any location whose as-typed reading, with symlinks followed,
+resolves elsewhere than the written one; both checks use the warehouse root and the target
+resolved the same way, so a warehouse registered through a symlinked path still accepts writes
+inside it. Pins: the `v01_*`, `v02_*` and `v03_*` tests of both doors' `pa_local_fs_policy.rs`
+and of `test_pa_local_fs_policy_1.py`, and `crates/repark-core/src/local_fs_policy/tests.rs`.
+
+**Amendment (2026-10-16, PA-LOCAL-FS-POLICY-1 fix round 2, owner ruling 114 (b)):** the guard
+judges where the bytes land. The written reading of the location (DataFusion's
+`ListingTableUrl::parse`, which removes every `..` the write removes) is resolved by its nearest
+existing ancestor plus the remaining components and compared against the warehouse root, read as
+a plain path or `file:` URL with no glob split and resolved the same way. The as-typed reading
+and its whole-path comparison of the previous amendment are withdrawn: a `..` the write removes,
+over a symlink or after a missing directory, is judged after it is removed and writes where it
+lands inside the warehouse; a `[`, `?` or `*` in a warehouse path no longer widens the root to its
+parent. The V-01, V-02 and V-03 pins still refuse. The check-then-write race stays the dated row.
+Pins: the `rv01_*`, `rv02_*`, `rv03_*` and 114-cell tests of both doors' `pa_local_fs_policy.rs`
+and of `crates/repark-core/src/local_fs_policy/tests.rs`.
+
 ## PA-04 — Unicode location classification panics
 
 `strip_ascii_prefix_ci` in [Spark](../../crates/repark-spark/src/local_fs_ddl.rs), line 53, slices `value[..prefix_len]` without checking a UTF-8 character boundary. `strip_prefix_ci` in [ANSI](../../crates/repark-sql/src/guards.rs), line 403, repeats it. The prefix is ASCII; the candidate path is not necessarily ASCII.
@@ -73,6 +100,8 @@ The task fixture created `<warehouse>/link -> <outside>`. A direct COPY to `<war
 COPY to the relative location `aaaaaaé` produced a caught Rust panic at byte 7 inside `é`. The Python binding raised `PySparkException` and printed the panic hook on stderr. The review did **not** observe Python process termination. A Rust caller without the Python fence still reaches a panic rather than a normal planning error. An extracted exact helper also reproduced the boundary failure independently.
 
 **Required result:** use a checked prefix slice or ASCII-byte comparison that returns a normal classification for every valid UTF-8 path. Test non-ASCII characters spanning byte boundaries 5, 7 and 9, ordinary local filenames, and `file://localhost` forms. Verify the named policy error and the explicit opt-in success path instead of merely asserting that a panic was caught.
+
+**Amendment (2026-10-15, PA-LOCAL-FS-POLICY-1):** the one `strip_ascii_prefix_ci` compares through `str::get`, so `aaaaé`, `aaaaaaé` and `file://aaaaaaaaé` classify as local paths and refuse with the named policy error on both doors and `repark.sql()`. The `file://localhost` forms and ordinary non-ASCII names refuse outside, write under the warehouse, and write under the opt-in. Pins: the `pa04_*` tests of both doors' `pa_local_fs_policy.rs` and of `test_pa_local_fs_policy_1.py`, and the classification tests of `crates/repark-core/src/local_fs_policy.rs`.
 
 ## PA-05 — executing carriers still store the wrong timestamp instant
 

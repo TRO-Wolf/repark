@@ -15,6 +15,7 @@ use crate::catalog_config::refusal::CatalogRefusal;
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
 use crate::extension::SessionExtension;
+use crate::local_fs_policy::strip_ascii_prefix_ci;
 use crate::named_sources::RefusingSourceCatalogProvider;
 use crate::session::zone_localiser::SessionZoneLocaliser;
 
@@ -56,18 +57,6 @@ fn absolute_local_from_file_rest(rest: &str) -> PathBuf {
         PathBuf::from("/")
     } else {
         PathBuf::from(format!("/{rest}"))
-    }
-}
-
-fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
-    let prefix_len = prefix.len();
-    if value.len() >= prefix_len
-        && value.is_char_boundary(prefix_len)
-        && value[..prefix_len].eq_ignore_ascii_case(prefix)
-    {
-        Some(&value[prefix_len..])
-    } else {
-        None
     }
 }
 

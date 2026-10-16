@@ -232,6 +232,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   V3-COW-1 valve; MERGE and subquery-WHERE DML still refuse. `dml_target_ident` reads
   the AST and completes short names.
   pins: rp-6-fork-repin/C-002
+  **PA-LOCAL-FS-POLICY-1 (2026-10-15):** guard 5 re-exports
+  `repark_core::local_fs_policy::refuse_local_filesystem_plan`; the door's own conf keys,
+  entries reader, classification, strip and canonicalization are deleted. The shared reader
+  matches the real `repark.sql` extension's unprefixed field, so the ANSI door's explicit
+  opt-in now opens (it never did on main). pins: pa-local-fs-policy-1/C-005, C-016, C-017
 - `guards.rs`, `router.rs`, `merge.rs`, `insert_overwrite.rs`, `truncate.rs`, `create_table.rs` —
   **ENC-1 round 2 (2026-10-09):** the ANSI seats of the keyed-table refusal. `guards.rs` gains
   `refuse_encrypted_write_target` / `refuse_encrypted_dml_target` (short names completed
