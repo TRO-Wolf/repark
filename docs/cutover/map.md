@@ -45,6 +45,12 @@ named only as "the cutover pipeline" here.
   08:28 and 09:16 EDT (ruling 117's items), merged `41cdd957` at 09:40 EDT, acceptance run
   `38909759805` (12 cells: acceptance module 11 passed in 364.79s, dbt gold module 1 passed in
   61.25s), the write-path change, ruling 117's three items, and the follow-ups (V-003, then 106).
+- [p2-report-pa-local-fs-policy-1-2026-10-16.md](p2-report-pa-local-fs-policy-1-2026-10-16.md) —
+  **the P2 report for #1075, PA-LOCAL-FS-POLICY-1 (U-5) (2026-10-16):** verifier verdicts by time
+  (FAIL at 16:26 EDT on 2026-10-15, FAIL at 03:49 EDT on 2026-10-16, PASS at 13:01 EDT, merged
+  `14ad3c6d` at 17:28 EDT under ruling 126 (a)), acceptance run `38969694348` (12 cells:
+  acceptance module 11 passed in 415.51s, dbt gold module 1 passed in 55.60s), the write-path
+  change, and the follow-ups (ruling 105's carded findings, then 106 and EXPLAIN-DML-WRITE-1).
 
 ## Pointers
 
