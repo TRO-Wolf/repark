@@ -750,7 +750,14 @@ declines it (a dated ruling in the intake, then the archive).
   door as the stopgap; own unit next on the U-6 lane after #1062 merges. **2026-10-16:** `DELETE`
   is in, and the stopgap has landed (round 2: `repark.sql()` refuses every subquery-predicate
   `UPDATE` and `DELETE` with the G3-E8 text); routing stays this card, and a later tidy unit
-  folds the Spark SQL door's G3-E8 copy into the shared home.
+  folds the Spark SQL door's G3-E8 copy into the shared home. **2026-10-16, ruling 131 (b):**
+  `EXPLAIN` is in; the refusal fires inside `EXPLAIN` and `EXPLAIN ANALYZE`.
+- [explain-dml-write-1-card-2026-10-16.md](explain-dml-write-1-card-2026-10-16.md) **card
+  EXPLAIN-DML-WRITE-1 (2026-10-16, open, critical, filed under owner ruling 131):** reading a plain
+  `EXPLAIN` of a `DELETE` or `UPDATE` writes on `repark.sql()`, and `EXPLAIN ANALYZE` of DML writes
+  on every door. Retires when a plain `EXPLAIN` of DML never writes on any door and `EXPLAIN
+  ANALYZE` of DML refuses on every door, with pins on all three doors; the next Iceberg write unit
+  after 106.
 - [ice-struct-inline-table-from-1-card-2026-10-15.md](ice-struct-inline-table-from-1-card-2026-10-15.md) **card
   ICE-STRUCT-INLINE-TABLE-FROM-1 (2026-10-15, open, not this round, clerk under owner ruling 107 (a),
   struct-pairing family of ruling 57):** an inline table in `FROM` stores a reordered struct by name

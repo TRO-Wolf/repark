@@ -49,6 +49,12 @@ The 1.5.6 note names it until routing lands.
   with any predicate (main the same), and `EXPLAIN ANALYZE` of a subquery-predicate statement
   writes every row on `repark.sql()` and on the ANSI door; the ledger's section 9b has the cells.
   The round-2 hand-back asks the owner where this goes.
+- **2026-10-16, owner ruling 131 (b), `EXPLAIN` is in:** the `repark.sql()` refusal fires inside
+  `EXPLAIN` and `EXPLAIN ANALYZE` of a subquery-predicate `DELETE` and `UPDATE` (round 3,
+  pins P-E1 to P-E4), and `repark.sql()` absorbed U-5's merge (#1075) under ruling 126 (a)
+  with the Q6 and local-file cells green. A plain `EXPLAIN` of any DML that writes, and
+  `EXPLAIN ANALYZE` of DML on every door, belong to card
+  [EXPLAIN-DML-WRITE-1](explain-dml-write-1-card-2026-10-16.md).
 - **Later tidy unit (ruling Q7, 2026-10-16):** fold the Spark SQL door's G3-E8 copy
   (`crates/repark-spark/src/normalize.rs`) into the shared home, with its target renderer as a
   parameter.

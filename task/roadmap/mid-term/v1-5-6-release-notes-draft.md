@@ -164,5 +164,11 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-16):** `repark.sql()` refuses
   every `UPDATE` and `DELETE` whose `WHERE` holds a subquery, including the `IN`, `NOT IN` and
-  `EXISTS` forms the Spark SQL session answers with the matching rows. Run those statements
-  through the Spark SQL session until `repark.sql()` is routed through the ANSI door.
+  `EXISTS` forms the Spark SQL session answers with the matching rows, and inside `EXPLAIN` and
+  `EXPLAIN ANALYZE`. Run those statements through the Spark SQL session until `repark.sql()` is
+  routed through the ANSI door.
+- **EXPLAIN-DML-WRITE-1 (known issue, critical, 2026-10-16):** reading the result of a plain
+  `EXPLAIN DELETE` or `EXPLAIN UPDATE` through `repark.sql()` performs the write, and `EXPLAIN
+  ANALYZE` of a `DELETE` or `UPDATE` performs it on every door. Do not run `EXPLAIN` or `EXPLAIN
+  ANALYZE` over DML on a table whose rows matter; the
+  [EXPLAIN-DML-WRITE-1 card](explain-dml-write-1-card-2026-10-16.md) tracks the fix.

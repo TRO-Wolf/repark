@@ -38,7 +38,7 @@ and the `EngineContext` construction contract.
   `the_unwrap_reaches_a_nested_explain` calls `refuse_dml_subquery_where` on `EXPLAIN ANALYZE
   EXPLAIN DELETE …`, which the planner refuses first at the door ("Nested EXPLAINs are not
   supported"), so only this test reaches the second level. Both red on `ff731179`.
-  pins: repark-sql-update-subquery-where-1/C-013
+  pins: repark-sql-update-subquery-where-1/C-013, C-014
 
 ## Pointers
 

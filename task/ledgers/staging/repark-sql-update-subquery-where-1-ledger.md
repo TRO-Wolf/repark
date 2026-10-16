@@ -48,8 +48,13 @@ not block this round.
 | C-009 | Nothing that is green on main is red on the head: the four crates' suites and the facade suite. | `cargo test --no-fail-fast -p repark-iceberg -p repark-core -p repark-spark -p repark-sql` on main's tree and the head; `pytest python/repark/tests -n 8` on the head module. | **PROVEN** | §5b, §5c. |
 | C-010 | The card, the registry row and the 1.5.6 note name `DELETE` and the refusal with dated lines; the maps of every touched directory and this ledger land with the unit. | The three records; the map rows. | **PROVEN** | §8. |
 | C-011 | The mechanical gates are green and the release module is built from a clean tree at the final commit with its provenance. | §7. | **PROVEN** | §7, §9. |
+| C-012 | Owner ruling 131 (b): on `repark.sql()`, `EXPLAIN` and `EXPLAIN ANALYZE` of a subquery-predicate `DELETE` and `UPDATE` refuse with the G3-E8 text, and rows and warehouse files hold after the result is read. | P-E1 to P-E4 in `test_repark_sql_update_subquery_where_1.py`. | **PROVEN** | §11.2: 4 red on `ff731179`, green on the head and on the merged module. |
+| C-013 | `DataFusionDialect` unwraps `EXPLAIN` and `EXPLAIN ANALYZE`, with or without `VERBOSE` or `FORMAT`, at any depth, and refuses the inner statement with no exemption; the change is `dialect.rs` alone, the ANSI door and the shared function are unchanged, and a plain `EXPLAIN` of a DML without a subquery predicate behaves as on main. | `the_default_dialect_refuses_an_explained_subquery_dml`, `the_unwrap_reaches_a_nested_explain`; the census of §11.5. | **PROVEN** | §11.2, §11.5. |
+| C-014 | The round-3 pins catch the rule: with `ff731179`'s `dialect.rs` the four pins are red, and four mutants of the unwrap each die on a named test; nothing that answered on `ff731179` stops answering except `EXPLAIN` of a subquery-predicate DML and the merged local-file cells; the four crates and the facade suite are green. | §11.4, §11.5. | **PROVEN** | §11.4, §11.5. |
+| C-015 | Owner ruling 126 (a): `origin/main` (#1075) merges without conflict and no rebase, and on the release module built from the clean merge the Q6 cell under the guard, U-1's Q6 cell, U-5's local-file cell and this unit's 31 pins pass. | §11.3. | **PROVEN** | §11.3. |
+| C-016 | The records name the round: this ledger's section 11, the card's `EXPLAIN` line, the new card EXPLAIN-DML-WRITE-1 with its map row, and its 1.5.6 known-issue line; the gates are green on the final commit. | §11.6, §11.7. | **PROVEN** | §11.6, §11.7. |
 
-VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 16 clauses, 16 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 1. Red first (test commit `ef74e07d`, module of `6cb6c310`)
 
@@ -247,6 +252,134 @@ same plan, guard, execute belt before and after this unit. The refusal reads onl
 `UPDATE` or `DELETE`, so an `EXPLAIN`- or `EXPLAIN ANALYZE`-wrapped one passes it on both doors.
 Creating the frame without reading it writes nothing. The round-2 hand-back asks the owner where
 this goes.
+
+## 11. Owner rulings 131 and 126, 2026-10-16 (round 3)
+
+### 11.1 The rulings, verbatim
+
+```
+Q131 → (b), and the (a) card opens alongside it. Not (c).
+106 grows by one rule before its verifier runs: the repark.sql()
+subquery-predicate refusal fires inside EXPLAIN and inside EXPLAIN
+ANALYZE, both verbs. The router already does this for nested writes
+(executed_writes / explained_statement in nested_ns.rs), so follow that
+shape. Pins: both wrappers × DELETE and UPDATE, rows kept, red on the
+current head.
+New critical card, next Iceberg write unit after 106: a plain EXPLAIN of
+DML never writes on any door, and EXPLAIN ANALYZE of DML refuses on every
+door. Pins on all three doors, so routing repark.sql() later cannot bring
+the write back. Named in the 1.5.6 known issues. 106 does not hold for
+it: a ready refusal does not wait behind a broader fix.
+```
+
+```
+Q126 → (a). U-5 #1075 merges now: PASS at d38ac00b, CI green. Then the
+acceptance run and the P2 report, and the report lands before the EXPLAIN
+card lane opens. 106 merges main in and re-runs the Q6 cell and the
+local-file cell. Ruling 113's condition (the guard wraps the handed
+dialect) lives in U-5's build, so merge order no longer matters; the unit
+still open absorbs the merge.
+```
+
+### 11.2 The four cells
+
+Seeds as §2.1 of the sketch; `ice.ns.t` holds (1, 10), (2, 20), (3, 30), (4, 40). On
+`ff731179`'s module (sha256 `12a7b532…cacdc1`) each statement answered and its result, once
+read, wrote; on the head each refuses with the G3-E8 text and the rows and warehouse files hold.
+
+| Pin | Statement | `ff731179`, result read | Head |
+|---|---|---|---|
+| P-E1 | `EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)` | no row left | G3-E8 refusal, rows kept |
+| P-E2 | `EXPLAIN UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)` | every row 5 | G3-E8 refusal, rows kept |
+| P-E3 | `EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)` | no row left | G3-E8 refusal, rows kept |
+| P-E4 | `EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)` | every row 5 | G3-E8 refusal, rows kept |
+
+Red first (test commit `af8c59dc`): `4 failed, 27 passed`; P-E1 and P-E3 `Failed: DID NOT RAISE
+AnalysisException`. The two `repark-core` pins failed with `EXPLAIN DELETE FROM ice.ns.t WHERE id
+IN (SELECT id FROM ice.ns.s): ()` and `a nested EXPLAIN still refuses: ()`.
+
+The fix (commit `7a6f917f`, `dialect.rs` only): `refuse_dml_subquery_where` parses the statement
+and `explained_statement` recurses through DataFusion's `DFStatement::Explain` to the inner
+statement, which the shared refusal reads with no exemption. It follows the Spark router's
+`executed_writes`, but fires on plain `EXPLAIN` too, where the router skips it, because reading a
+plain `EXPLAIN` of a DML writes on this door. The parser takes `EXPLAIN EXPLAIN …`; the planner
+refuses it ("Nested EXPLAINs are not supported") before the refusal runs, so the second level is
+reached only by `the_unwrap_reaches_a_nested_explain`. `VERBOSE` and `FORMAT TREE` forms wrote on
+`ff731179` too and are covered by the same unwrap.
+
+A plain `EXPLAIN` of a DML without a subquery predicate still writes on `repark.sql()` when its
+result is read, as on main: `EXPLAIN DELETE FROM ice.ns.t WHERE id = 2` deletes id 2 and `EXPLAIN
+UPDATE ice.ns.t SET v = 5 WHERE id = 2` writes id 2, on the merged head as on `ff731179`. That is
+card EXPLAIN-DML-WRITE-1's subject, unchanged here.
+
+### 11.3 The merge and the cells
+
+`git fetch origin`; `origin/main` was `14ad3c6d` (#1075, PA-LOCAL-FS-POLICY-1). `git merge
+origin/main`, no rebase, merged without a conflict as `9bbfd11f`. The native builder line is now
+`.with_extension(Arc::new(crate::session_runtime::NativeDoorTypes)).with_local_fs_guard()`;
+`build()` wraps the held `DataFusionDialect`, which carries this unit's refusal, in
+`LocalFsGuardedDialect`, whose `execute` calls the inner dialect.
+
+On the release module built from the clean tree at `9bbfd11f` (sha256
+`4e6061d53f1743b625baf42b5f94235993baa26c1006ba032562254d3b00216b`):
+
+| Cell | Result |
+|---|---|
+| `test_pa_local_fs_policy_1.py::test_repark_sql_keeps_the_q6_wall_type_under_the_guard` | 1 passed |
+| `test_ice_tsns_type_planner_1.py::test_repark_sql_plans_timestamp_as_the_wall` | 1 passed |
+| U-5's local-file cell, `test_pa_local_fs_policy_1.py` | 26 passed |
+| `test_repark_sql_update_subquery_where_1.py` (22 pins, 4 new pins, 5 controls) | 31 passed |
+
+### 11.4 Revert check and mutants
+
+- **`dialect.rs` from `ff731179`**, module rebuilt: `4 failed, 27 passed` (P-E1 to P-E4, `DID NOT
+  RAISE AnalysisException`); both new `repark-core` pins fail. Restored.
+
+| Mutant | Change | Killed by |
+|---|---|---|
+| MA | the unwrap skipped for plain `EXPLAIN` | `the_default_dialect_refuses_an_explained_subquery_dml` (`EXPLAIN DELETE … : ()`), `the_unwrap_reaches_a_nested_explain` |
+| MB | the unwrap skipped for `EXPLAIN ANALYZE` | `the_default_dialect_refuses_an_explained_subquery_dml` (`EXPLAIN ANALYZE DELETE … : ()`), `the_unwrap_reaches_a_nested_explain` |
+| MC | only one level unwrapped | `the_unwrap_reaches_a_nested_explain` (the door cannot reach a second level: the planner refuses a nested `EXPLAIN` first) |
+| MD | the exemption passed as `true` inside the unwrap | `the_default_dialect_refuses_an_explained_subquery_dml` (`EXPLAIN DELETE … : ()`) |
+
+### 11.5 Never worse since `ff731179`
+
+The census of §5a with the coincidence shapes and the round-2 `EXPLAIN` cells, 141 statements on
+`repark.sql()`, `ff731179`'s module against the merged head's: 132 unchanged, 9 answers lost.
+
+| Statement | `ff731179` | Head | Spark 4.1.2 | Cause |
+|---|---|---|---|---|
+| `EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)` | plan; reading it left no row | G3-E8 refusal, rows kept | plan, rows kept | ruling 131 (b) |
+| `EXPLAIN ANALYZE DELETE … WHERE id IN (SELECT …)` | no row left | G3-E8 refusal, rows kept | `ParseException` | ruling 131 (b) |
+| `EXPLAIN ANALYZE UPDATE … SET v = 5 WHERE id IN (SELECT …)` | every row 5 | G3-E8 refusal, rows kept | `ParseException` | ruling 131 (b) |
+| `COPY (SELECT 1 AS a) TO '<outside>/…' STORED AS CSV` (4 cells: plain, with the builder opt-in, after either `SET` spelling) | file written | U-5's refusal, nothing written | `ParseException` | #1075 |
+| `EXPLAIN ANALYZE COPY … TO '<outside>/…'` | file written | U-5's refusal | `ParseException` | #1075 |
+| `CREATE EXTERNAL TABLE ext … LOCATION '<outside>/ext/'` | table made | U-5's refusal | `AnalysisException` (`STORED AS` CSV invalid) | #1075 |
+
+The six local-file cells carry U-5's text ("repark.sql() does not allow local-file DDL"); they
+come with the merge, under PA-02, and U-5's ledger holds them. Plain `EXPLAIN DELETE … WHERE id =
+2` and `EXPLAIN UPDATE … WHERE id = 2` still write as on `ff731179`.
+
+`cargo test --no-fail-fast -p <crate>` on the merged head: `repark-iceberg` 1017 passed;
+`repark-core` 1533 passed, 2 ignored; `repark-spark` 2871 passed, 5 ignored; `repark-sql` 576
+passed, 4 ignored. Against `ff731179`: no test missing, none green there and red here; the head
+adds the two `repark-core` pins and U-5's tests. `pytest python/repark/tests -n 8` on the merged
+release module, all 534 files once in 25 slices: 20058 passed, 488 skipped, 151 xfailed, 0 failed.
+
+### 11.6 Gates on the merged head
+
+`make rust-clippy` 0, `make rust-panic-ban` 0, `cargo fmt --check` 0, `make check-rust-file-size`
+0, `make check-crate-dag` 0 (25 internal edges, no new edge), `make check-lib-rs` 0, `make
+check-lib-py` 0, `make check-docstring-presence` 0, `make check-python-conventions` 0, `make
+check-manifest` 0, `make py-lint` 0, `make py-format-check` 0; the documentation gates and the
+comment gate run on the final commit (hand-back).
+
+### 11.7 Records
+
+The card gains its dated `EXPLAIN` line; the new critical card
+[EXPLAIN-DML-WRITE-1](../../roadmap/mid-term/explain-dml-write-1-card-2026-10-16.md) carries
+the owner's goal, the cells per door, the pins it owes and its place, with a map row and a 1.5.6
+known-issue line.
 
 ## 10. Coverage attestation
 
