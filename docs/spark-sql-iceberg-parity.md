@@ -1777,6 +1777,21 @@ perfectly good read.
   (2026-10-15, open, not scheduled). Retires when the staged files are removed on that failure, or the
   publish refuses before staging, with a pin that a key landing mid-statement leaves no unencrypted file.
 
+### MB-ENC-UNDELETED-FIELD-1 — DATED ROW 2026-10-15 (owner ruling 109 (c)): the keyed micro-batch refusal names the sink but not the staged file it could not delete
+
+- **repark** — `MicroBatchError::EncryptedSinkRefused { sink }` cannot carry the name of a staged
+  file the keyed sweep failed to delete; adding it is a public field. The sweep logs each
+  undeletable file through a `tracing::warn`, so the file's full path is in the warning only.
+  The session error already names the file. *(Measured by ENC-1's fix round, 2026-10-15.)*
+- **Apache Spark** — not measured.
+- **Pin** — F4 accepted as pinned.
+- **Rationale** — DATED ROW 2026-10-15, owner ruling 109 (c): the micro-batch error field is a
+  card parked under the streaming freeze (the track frozen 2026-10-11), not a later round. Closed
+  by card
+  [MB-ENC-UNDELETED-FIELD-1](../task/roadmap/mid-term/mb-enc-undeleted-field-1-card-2026-10-15.md):
+  the variant carries the undeleted paths, a public field needing the owner when the freeze lifts.
+  The warning carries the full path of the file it could not delete.
+
 #### D-SHOW-TBLPROPERTIES — `SHOW TBLPROPERTIES t` answers Spark's rows on Iceberg tables — **FIXED 2026-09-26**
 
 - **Before** — `SHOW TBLPROPERTIES cat.ns.t` on a table fell through to DataFusion and
@@ -9500,8 +9515,7 @@ the pin rather than obeying it.
   `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
   write the subquery value here, so it refuses before any write.` The identity path still
   stores Spark's value for a scalar-comparison `WHERE` (`WHERE id = 0`, `id >= 0`, `1 = 1`,
-  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door. A subquery inside a larger expression (`(SELECT …) + 1`,
-  `COALESCE((SELECT …), 0)`, a `CASE` arm) is not this guard's shape and answers as before.
+  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door. Of the larger expressions around a subquery, only the arithmetic shapes with the subquery as the first operand refuse: `(SELECT …) + 1` (also `- 1`, `* 1`, with `WHERE true` or no `WHERE`) answers the ruling-90 text on both doors, because the guard walks into the first argument of the arithmetic wrapper. `1 + (SELECT …)`, `-(SELECT …)`, `abs((SELECT …))`, a `CASE` arm and `COALESCE((SELECT …), 0)` are not this guard's shape: they report success and write a value taken from the target row, or write nothing, exactly as main does, where Spark stores a value computed from the subquery. `COALESCE` refuses `No field named …` on `repark.sql()` and the ANSI door. These cells are pending an owner ruling (re-verifier 3, 2026-10-15).
   Before 2026-10-15 the same statements reported success and left every row unchanged when the
   subquery's column had the target column's name, wrote the target's own column of the
   subquery column's name when it named another target column, and refused `No field named …`
@@ -9523,7 +9537,7 @@ the pin rather than obeying it.
   is a silent failure (ruling 74(a)), so main's behavior blocks v2 PRODUCTION; storing the
   value is card
   [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md),
-  open, not scheduled. The refusal does not hold the label. One commit, revertable alone.
+  open, not scheduled. The refusal does not hold the label. Revert set (orchestrator ruling, provisional, re-verifier 3, 2026-10-15): the refusal no longer reverts alone — revert `refuse_update_from_subquery` and its call in `crates/repark-core/src/pre_execute.rs`, `crates/repark-spark/tests/update_subquery_refusal.rs` and `crates/repark-sql/tests/ansi_update_subquery_refusal.rs` with their map rows, and the CAP-1 exception-table row (PR #1062 branch commits `107f7c75`, `5eae71eb`, `b751f13a`, `297f1a32`, plus the `update_subquery_refusal.rs` row of `crates/repark-spark/tests/map.md`).
 
 ### ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE — DATED REFUSAL 2026-10-15 (owner ruling 95(a)): `UPDATE … SET col = (SELECT …)` that matches no row refuses, where Spark and main succeed and leave every row as it was
 
@@ -9539,8 +9553,11 @@ the pin rather than obeying it.
   count, metadata location and `metadata/` files are unchanged. `WHERE id > 100` is a scalar
   comparison, so on the Spark SQL door the identity path runs it and it succeeds as Spark does;
   on `repark.sql()` it refuses like every `WHERE`. With the ruling 90 commit reverted, main's
-  answer on both doors is success with the rows unchanged; `WHERE false` also commits a new
-  snapshot and metadata file there, `BETWEEN 100 AND 200` commits nothing.
+  answer on the Spark SQL door is success with the rows unchanged in all 12 cells; on the ANSI
+  door and `repark.sql()` main already refused 2 of the 12 (`WHERE id BETWEEN 100 AND 200`
+  with a reordered struct source, `No field named …`), so 10 ANSI-door cells moved from a
+  no-op success to the refusal while all 12 did on the Spark SQL door. `WHERE false` also
+  commits a new snapshot and metadata file there, `BETWEEN 100 AND 200` commits nothing.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 succeeds and changes no row. *(oracle: recorded,
   the `WHERE false` cells of verifier 2's Q probe, 6 cells, 2026-10-15.)*
 - **Pin** — `crates/repark-spark/tests/update_subquery_refusal.rs`
@@ -9560,6 +9577,40 @@ the pin rather than obeying it.
   the whole family, hint names no data-deleting action." Closed by card
   [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md):
   when the shapes store Spark's value, these cells succeed and write nothing, as Spark's do.
+
+### REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 — DATED ROW 2026-10-15 (owner ruling 106 (a)): `UPDATE … WHERE col IN (SELECT …)` through `repark.sql()` updates every row, where Spark updates the matching rows
+
+- **repark** — through the public Python `repark.sql()` only (the `DataFusionDialect` door),
+  `UPDATE t SET v = 5 WHERE id IN (SELECT id FROM s)` and `WHERE id = (SELECT …)` update every
+  row of the table and report success. The Spark SQL door and the Rust ANSI door refuse these
+  statements. Main and PR #1062's head are the same.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 updates only the matching rows. *(measured by
+  U-6's re-verifier 3, 2026-10-15.)*
+- **Pin** — none yet.
+- **Rationale** — DATED ROW 2026-10-15, owner ruling 106 (a): a silent wrong value, the same
+  class as F-04. **Critical.** Closed by card
+  [REPARK-SQL-UPDATE-SUBQUERY-WHERE-1](../task/roadmap/mid-term/repark-sql-update-subquery-where-1-card-2026-10-15.md):
+  own unit next on the U-6 lane after #1062 merges; `repark.sql()` routed through the ANSI door's
+  dialect so it inherits that door's refusal, with no third guard copy; if routing is more than one
+  unit carries, a refusal on that door is the stopgap and routing stays the card. The 1.5.6 note
+  names it until it lands.
+
+### ICE-STRUCT-INLINE-TABLE-FROM-1 — DATED ROW 2026-10-15 (owner ruling 107 (a)): an inline table in `FROM` stores a reordered struct by name, where Spark pairs by position
+
+- **repark** — `INSERT INTO t SELECT * FROM VALUES (…), (…)` (an inline table in `FROM`) stores
+  a struct whose fields are reordered from the table's by field name; Spark pairs by position.
+  Rows whose field names disagree refuse with a raw `Unsupported CAST` text, not Spark's
+  `INVALID_INLINE_TABLE`. Plain `INSERT … VALUES`, `SELECT` literals and `UNION ALL` store as
+  Spark on main since #1062. Main and #1062's head are the same.
+- **Apache Spark** — 4.1.2 with Iceberg 1.11.0 pairs the inline table's columns by position and
+  refuses disagreeing names with `INVALID_INLINE_TABLE`. *(measured by U-6's re-verifier 3,
+  2026-10-15.)*
+- **Pin** — none yet.
+- **Rationale** — DATED ROW 2026-10-15, owner ruling 107 (a): in the struct-pairing family
+  (ruling 57: column-list VALUES pairs by position), not this round. Closed by card
+  [ICE-STRUCT-INLINE-TABLE-FROM-1](../task/roadmap/mid-term/ice-struct-inline-table-from-1-card-2026-10-15.md):
+  the inline table pairs by position and disagreeing names refuse with Spark's
+  `INVALID_INLINE_TABLE`, with pins.
 
 ### G3-E8-NULL — `NOT IN (SELECT …)` with a NULL key (3VL trap, keep after the fix)
 

@@ -93,3 +93,8 @@ Tables already written keep the values they hold; this release ships no migratio
   and a provider registered by hand all refuse a keyed write on a directly-built catalog
   exactly as on a builder's catalog. `repark_iceberg::write::append::commit_append`
   resolves again.
+
+## Known issues
+
+- **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue):** through `repark.sql()`, `UPDATE … WHERE col
+  IN (SELECT …)` or `= (SELECT …)` updates every row; use the Spark SQL session until it is fixed.
