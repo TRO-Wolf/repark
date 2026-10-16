@@ -612,8 +612,8 @@ fn commits_directly(function: &CensusFunction) -> bool {
     })
 }
 
-fn calls(caller: &CensusFunction, called: &CensusFunction) -> bool {
-    !call_arguments(&caller.body, name_of(called), called.is_method).is_empty()
+fn calls(invoker: &CensusFunction, target: &CensusFunction) -> bool {
+    !call_arguments(&invoker.body, name_of(target), target.is_method).is_empty()
 }
 
 fn closure(
