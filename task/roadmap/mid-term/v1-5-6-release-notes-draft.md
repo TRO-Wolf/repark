@@ -153,6 +153,14 @@ Tables already written keep the values they hold; this release ships no migratio
   `allowLocalFilesystemDDL=true` now writes outside on the ANSI door; before, the door
   refused regardless.
 
+## Messages that change
+
+- **dbt-repark's profile-mismatch refusal and `dbt debug` no longer print property values
+  (audit PA-01).** The refusal names the live and requested `database` (the profile's
+  `catalog`) and `warehouse` and the changed `catalog_properties.<key>` and
+  `session_properties.<key>` names. The connection report, and the Jinja `target` built from
+  it, show `catalog_properties` values as `getAll` does, secrets as `***`.
+
 ## Known issues
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue):** through `repark.sql()`, `UPDATE … WHERE col

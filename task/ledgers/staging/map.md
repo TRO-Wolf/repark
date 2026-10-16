@@ -2458,3 +2458,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   cells on main and the U-1 head, C-002 live input control, C-003 output cells
   on main, C-004 live output cells, C-005 the six sites). `risk_tier:
   standard`. Branch `fix/ns-array-floor-1`.
+- [pa-dbt-mismatch-redact-1-ledger.md](pa-dbt-mismatch-redact-1-ledger.md) —
+  **PA-DBT-MISMATCH-REDACT-1 (2026-10-16), audit PA-01:** step 0 measured main: the dbt
+  profile-mismatch refusal carries all three sentinels and `dbt debug` prints two through
+  `catalog_properties` (C-006). The refusal still compares the full configuration (C-001,
+  C-004) but names only the identifiers and the changed keys (C-002). The dbt error and debug
+  paths carry no sentinel (C-003). The refusal's `database` and `warehouse`, and the connection
+  report's `database`, `catalog`, `warehouse` and `catalog_properties` values, go through
+  `redact_property_value` (C-005, amended under ruling 122). `risk_tier: standard`. Branch
+  `fix/pa-dbt-mismatch-redact-1`.

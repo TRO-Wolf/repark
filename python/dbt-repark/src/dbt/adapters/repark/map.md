@@ -21,11 +21,21 @@ second reading of `file_format` beside dbt-spark's.
   dbt's `database`) and `ReparkConnectionManager`. The transaction methods are no-ops: RePark has
   no transactions, and every Iceberg commit is its own snapshot. `exception_handler` re-raises
   RePark's refusal as `DbtRuntimeError` with the message intact, because that message is what the
-  divergence registry rows quote.
+  divergence registry rows quote. `connection_info` passes `database`, its alias `catalog`,
+  `warehouse` and each `catalog_properties` value through `_native.redact_property_value`, the
+  rule `getAll` uses. Pinned for a secret key, a URL password and a warehouse URL password, in
+  `dbt debug`'s events and `dbt.log` and in the Jinja `target` `Profile.to_target_dict` builds,
+  where a login-shaped catalog is also masked in `target.database` and `target.catalog`
+  (PA-DBT-MISMATCH-REDACT-1).
+  pins: pa-dbt-mismatch-redact-1/C-003, C-005
 - `session.py` — the process-wide session, and the pyodbc-shaped cursor dbt drives it through.
   RePark's `getOrCreate` answers **one session per process**, so a second profile with a
   different catalog or warehouse would silently run against the first one's engine. That is
   refused, not reused; `release_session` is how a caller that owns the process starts over.
+  The refusal compares the full configuration but names only the live and requested `database`
+  and `warehouse` (through the same redaction) and the changed keys, never a property value
+  (audit PA-01).
+  pins: pa-dbt-mismatch-redact-1/C-002, C-005
 - `relation.py` — `ReparkRelation`. It subclasses `BaseRelation`, **not** `SparkRelation`, for two
   reasons a subclass could not work around: `SparkRelation.__post_init__` raises when `database`
   is set, and `SparkRelation.render()` raises when database and schema are both included. RePark
@@ -59,6 +69,6 @@ second reading of `file_format` beside dbt-spark's.
 | Symptom | First check |
 |---|---|
 | `No module named 'dbt.adapters.repark.__version__'` | `__version__.py` is missing; dbt reads it at registration |
-| `a RePark session is already live for a different profile` | one process, one session — call `release_session()` between profiles |
+| `a RePark session is already live for a different profile` | one process, one session — call `release_session()` between profiles; the message's `changed keys` name what differs |
 | a model builds against the wrong catalog | the profile's `catalog`, and whether a previous session was released |
 | `Cannot set database in spark!` | something built a `SparkRelation`; `ReparkRelation` is the three-part one |
