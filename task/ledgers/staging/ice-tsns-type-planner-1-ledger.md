@@ -302,8 +302,14 @@ ruling, owned by card
 30 red, cache 420 / 0, reads 117 / 0, consumer 92 / 0, repros 297 / 51, lattice 120 / 0,
 positions 480 / 96, doors 12 / 7, encoded 4 / 2, update_forms 8 / 0, q6 1 / 0; every red
 cell is a dated row; statements today's main answers that the head loses: 108, all ruling
-38's carve-out. `cargo test` of the five crates: one test red, the analyzer-list pin. The
-facade suite: 17,045 passed, 0 failed.
+38's carve-out. `cargo test` of the five crates on the final head (`c6c99e5e`): the
+analyzer-list pin red (Q1), and `repark-core`'s
+`microbatch::lifecycle_tests::two_sessions_on_one_sink_wait_for_the_scope` red on its 10 s
+bound in both loaded full runs and green run alone (no crate of this round touches
+`repark-core`). The facade suite on the final release module (`e70ffbec`): 17,051 passed,
+1 failed, `test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool`, which
+passes alone three times out of three; on the round's earlier module the suite ran 17,045
+passed, 0 failed. U-3's fixtures 246 and 356 of their counts; the unit fixture 60 of 60.
 
 **The read-perf bench (C-034).** The five pins (`benches/ice_read_perf/pins.rs`) failed
 on the carry-over on the integer-cast error and pass on the head; they are not re-pinned.
