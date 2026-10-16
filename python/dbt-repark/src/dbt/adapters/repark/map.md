@@ -24,7 +24,8 @@ second reading of `file_format` beside dbt-spark's.
   divergence registry rows quote. `connection_info` passes `database`, its alias `catalog`,
   `warehouse` and each `catalog_properties` value through `_native.redact_property_value`, the
   rule `getAll` uses. Pinned for a secret key, a URL password and a warehouse URL password, in
-  `dbt debug`'s events and `dbt.log` and in the Jinja `target` `Profile.to_target_dict` builds
+  `dbt debug`'s events and `dbt.log` and in the Jinja `target` `Profile.to_target_dict` builds,
+  where a login-shaped catalog is also masked in `target.database` and `target.catalog`
   (PA-DBT-MISMATCH-REDACT-1).
   pins: pa-dbt-mismatch-redact-1/C-003, C-005
 - `session.py` — the process-wide session, and the pyodbc-shaped cursor dbt drives it through.
