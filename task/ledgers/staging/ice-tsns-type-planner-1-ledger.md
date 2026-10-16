@@ -385,3 +385,26 @@ ruling 100 (§11). The carry-over fix round asks:
 **2026-10-15, ruling 112.** "A pin of the analyzer rule list is internal structure and re-pins to the planner sketch: the widen rule named, asserted before type_coercion, the existing entries keeping their order." The re-pin is `analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion` (`3ab3e5d9`): `spark_timestamp_unit_widen` is named among the insertions and asserted immediately before `spark_fractional_division`, before `type_coercion`, and the existing assertions keep their entries in their present order.
 
 **2026-10-15, ruling 113.** "U-1's ANSI planner variant lives once, in a crate both the ANSI door and the Python door can reach under today's crate DAG, and both dialects call it." It lives once in `repark-functions` (`ansi_type_planner`, `analyzer_rules_with_timestamp_unit_widen`, `install_ansi_planned_timestamp_cast`), and `repark_sql::AnsiDialect` and the Python door's `NativeDoorTypes` (`crates/repark-python/src/session_runtime.rs`) both call it.
+
+## 13. The merge and rulings 119 and 120 (2026-10-16)
+
+**2026-10-16, the merge.** The owner's word "U-1 merge word: go" came against ruling 111's checklist. PR #1082 merged as `c7121437` (squash), its tree equal to the PR head `f83495e9`.
+
+**2026-10-16, ruling 119 (a).** The widen rule's two extensions, a `DATE` or string beside a zoned timestamp (`932bc5df`) and the `VALUES` column retyping by an expression-shape test (`ad52bcdc`), are authorized under ruling 100 and recorded as two rows in amendment 1's position table.
+
+**2026-10-16, ruling 120 (a).** On the ANSI doors, `CAST(ns AS TIMESTAMP)` truncates toward zero instead of flooring (Q-21c-8). It has its own card, [ICE-TSNS-ANSI-CAST-FLOOR-1](../../roadmap/mid-term/ice-tsns-ansi-cast-floor-1-card-2026-10-16.md), and the dated row ICE-TSNS-SQL-1-R-025 in `docs/spark-sql-iceberg-parity.md`. It does not block U-1. Stored values equal main's.
+
+```
+Q119  U-1 verifier F-2: the timestamp-widen rule also fires beside a
+      DATE or string, and retypes VALUES columns by one expression-shape
+      test. Both restore answers main gives; no stored value loses digits.
+      (a) authorize under ruling 100, add the two rows to amendment 1's
+      position table in a clerk docs PR after the merge
+      (b) take it out of U-1 and card it
+      My lean: (a).
+Q120  U-1 verifier F-1: on the ANSI doors CAST(ns AS TIMESTAMP) truncates
+      toward zero instead of flooring (Q-21c-8). Stored values equal main's.
+      (a) its own card with a dated row, not blocking U-1
+      (b) fix it inside U-1 before the merge
+      My lean: (a).
+```

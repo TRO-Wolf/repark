@@ -28,6 +28,8 @@ Proceed. `CREATE TABLE t (c TIMESTAMP)` resolves through the catalog mapping and
 | conditionals | `CASE` (searched and simple), `if` |
 | set operations | `UNION`, `UNION ALL`, `INTERSECT`, `EXCEPT` branches, per column |
 | comparisons | `=`, `<>`, `<`, `<=`, `>`, `>=`, `BETWEEN`, `IN (list)`, `<=>`, join `ON` keys (equi and non-equi) |
+| a `DATE` or a string beside a zoned timestamp (added 2026-10-16, owner ruling 119 (a), under ruling 100) | the shared positions above and `UNION` columns: the `DATE` or string is cast to the timestamp's unit and zone, Spark's typing of a `DATE` or `STRING` beside `TIMESTAMP` (PR #1082 commit `932bc5df`; restores `test_store_ts_doors_2`) |
+| a `VALUES` column DataFusion coerced to `Timestamp(ns, None)` from a `DATE` (added 2026-10-16, owner ruling 119 (a), under ruling 100) | retyped before `type_coercion`: beside a zoned timestamp it takes that type; beside a naive expression that is not a written wall it is read as the instant, as main reads it. The choice is made by an expression-shape test (`values_evidence`), not by type (PR #1082 commit `ad52bcdc`; restores the mixed `VALUES` group, `ntz_values_mix`) |
 | aggregation and windows | nothing; a single column keeps its unit |
 
 **Semantics.** Widening a microsecond instant to nanoseconds is exact inside the nanosecond range (1677-09-21 to 2262-04-11). A microsecond value outside that range raises the overflow class in **both** ANSI modes, as the coercion ruling of 2026-10-12 requires; it never stores a floor and never yields NULL. The rule never narrows. It does not fire when units are equal, when only one side is a timestamp (string, integer and NULL coercions stay DataFusion's, and the planner's types make them microseconds or nanoseconds as written), or on a bare NULL beside a nanosecond value, which DataFusion already types as nanoseconds (pinned, since that was R-017's shape).
@@ -35,6 +37,8 @@ Proceed. `CREATE TABLE t (c TIMESTAMP)` resolves through the catalog mapping and
 **Why this is not a plan walk.** The rule decides by the types of the two sides at the position, never by where an expression came from. There is no user-cast versus planner-cast question left, because the planner has already typed every written spelling, and a cast the rule inserts is distinguishable by its type, not by provenance.
 
 **What it costs.** One analyzer pass over the plan, firing rarely. The 1.05 write and read cost medians stand as the gate.
+
+**Amended 2026-10-16 (owner ruling 119 (a)).** The two rows added to the table above go beyond this section's text, which says the rule does not fire when only one side is a timestamp and decides by type, never by where an expression came from. The owner authorized both under ruling 100: each restores answers today's main gives, and no stored value loses digits (U-1 verifier, 2026-10-16, finding F-2). The text above stays as filed.
 
 ## H4 — not met, one producer added
 
