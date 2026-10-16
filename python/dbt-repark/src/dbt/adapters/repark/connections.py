@@ -61,16 +61,23 @@ class ReparkCredentials(Credentials):
         return ("database", "schema", "warehouse", "catalog_properties")
 
     def connection_info(self, *, with_aliases: bool = False) -> Iterator[tuple[str, Any]]:
-        """dbt's connection report, every catalog property value through RePark's redaction."""
+        """dbt's connection report, the identifiers and catalog property values redacted."""
         for key, value in super().connection_info(with_aliases=with_aliases):
-            yield key, _redact_properties(value) if key == "catalog_properties" else value
+            yield key, _redact_report_value(key, value)
 
 
-def _redact_properties(properties: dict[str, str]) -> dict[str, str]:
-    """Each property value as RePark's ``getAll`` shows it."""
+_REDACTED_IDENTIFIERS = frozenset(("database", "catalog", "warehouse"))
+
+
+def _redact_report_value(key: str, value: Any) -> Any:
+    """One connection-report value as RePark's ``getAll`` shows it; other fields pass through."""
     from repark import _native
 
-    return {key: _native.redact_property_value(key, value) for key, value in properties.items()}
+    if key == "catalog_properties":
+        return {name: _native.redact_property_value(name, text) for name, text in value.items()}
+    if key in _REDACTED_IDENTIFIERS and value is not None:
+        return _native.redact_property_value(key, value)
+    return value
 
 
 class ReparkConnectionManager(SQLConnectionManager):

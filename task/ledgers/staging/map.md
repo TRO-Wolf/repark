@@ -2454,6 +2454,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   profile-mismatch refusal carries all three sentinels and `dbt debug` prints two through
   `catalog_properties` (C-006). The refusal still compares the full configuration (C-001,
   C-004) but names only the identifiers and the changed keys (C-002). The dbt error and debug
-  paths carry no sentinel (C-003), and every printed value goes through
-  `redact_property_value` (C-005). `risk_tier: standard`. Branch
+  paths carry no sentinel (C-003). The refusal's `database` and `warehouse`, and the connection
+  report's `database`, `catalog`, `warehouse` and `catalog_properties` values, go through
+  `redact_property_value` (C-005, amended under ruling 122). `risk_tier: standard`. Branch
   `fix/pa-dbt-mismatch-redact-1`.

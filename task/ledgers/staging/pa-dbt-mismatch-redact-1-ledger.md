@@ -19,7 +19,7 @@ connection report stop carrying property values; what the refusal refuses does n
 | C-002 | The refusal text names the live and requested `database` and `warehouse` and the sorted changed keys, each prefixed by its dictionary, and no property value. | Pins over a database-only change, a catalog key, a session key, both URL keys, and an added and a removed key. | **PROVEN** | `test_only_database_differs_names_both_and_no_key` (`changed keys: none`), the three tests above, `test_added_and_removed_keys_are_named`; `_mismatch_message` and `_changed_keys` in `session.py`. |
 | C-003 | The real dbt error and debug paths carry no sentinel, with sentinel secrets in both dictionaries and a source URL carrying a password in each. | `dbt debug` through `dbtRunner` and `ReparkConnectionManager.open`, both pinned. | **PROVEN** | `test_dbt_debug_reports_the_refusal_without_a_value` reads the printed events and `logs/dbt.log`; `test_refusal_still_raises_and_keeps_the_live_session` goes through `ReparkConnectionManager.open`. The §1 (b) probe re-run on the head with no live session: no sentinel in either sink. |
 | C-004 | The refusal still works: it raises `DbtRuntimeError`, the connection is marked failed, and the live session and its key are unchanged and still served to the matching profile. | A pin through `ReparkConnectionManager.open`. | **PROVEN** | `test_refusal_still_raises_and_keeps_the_live_session`, green on main and on the head. |
-| C-005 | Every value the boundary does print goes through the project's redaction, `_native.redact_property_value`: the two identifiers in the refusal and the `catalog_properties` values in dbt's connection report. | Pins on the masked warehouse userinfo and on the redacted connection report. | **PROVEN** | `test_warehouse_url_credentials_are_masked`, `test_connection_info_renders_catalog_properties_redacted`; `_identifiers` in `session.py`, `connection_info` and `_redact_properties` in `connections.py`. No new rule. |
+| C-005 | Every value the boundary does print goes through the project's redaction, `_native.redact_property_value`: the two identifiers in the refusal and the `catalog_properties` values in dbt's connection report. | Pins on the masked warehouse userinfo and on the redacted connection report. | **PROVEN** | `test_warehouse_url_credentials_are_masked`, `test_connection_info_renders_catalog_properties_redacted`; `_identifiers` in `session.py`, `connection_info` and `_redact_properties` in `connections.py`. No new rule. **Amended 2026-10-16 (ruling 122):** the connection report also shows `database`, its alias `catalog` and `warehouse` through `redact_property_value`, in `dbt debug` and in the Jinja `target` that `Profile.to_target_dict` builds; a warehouse URL shows `s3://u:***@bucket/warehouse`. Pinned by `test_jinja_target_renders_identifiers_and_catalog_properties_redacted` and by `test_dbt_debug_reports_the_refusal_without_a_value`, whose profile now carries that warehouse URL; both were red on `0203dc00`. `connection_info` and `_redact_report_value` in `connections.py`. |
 | C-006 | Step 0 measured main: the refusal and the debug display carry the sentinels named in §1, and the redaction rule's answer for each value. | §1 below, re-derived by the pins red on main. | **PROVEN** | §1; §2 records 8 of 9 pins red on main. |
 
 ## 1. Step 0 — measured on main `60134633`
@@ -84,6 +84,14 @@ The old message restored over the head (`f"(live {_ACTIVE['key']!r}, requested {
 **7 red, 2 green**. Red: the six refusal pins and the `dbt debug` pin. Green: the C-004
 control and `test_connection_info_renders_catalog_properties_redacted`, which does not read
 the message. Restored: 9 green.
+
+**Ruling 122 round (2026-10-16).** Two pins added, 10 tests. On `0203dc00` both were red on
+`SENTINEL_WH_PW`: the Jinja target pin at `_assert_no_sentinel(repr(target))` and the
+`dbt debug` pin at `_assert_no_sentinel(printed)`. Green after the fix. Hand mutant,
+`connection_info` yielding each value unredacted: **3 red, 7 green**. The target pin is red on
+`['SENTINEL_CAT_SECRET', 'SENTINEL_URL_PW', 'SENTINEL_WH_PW']`, and the connection-report and
+`dbt debug` pins are red too. The verifier's M10, redaction only when `with_aliases` is false:
+**1 red**, the target pin. Restored: 10 green.
 
 ## 4. Decisions inside the order, and what was not measured
 

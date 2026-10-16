@@ -21,9 +21,12 @@ second reading of `file_format` beside dbt-spark's.
   dbt's `database`) and `ReparkConnectionManager`. The transaction methods are no-ops: RePark has
   no transactions, and every Iceberg commit is its own snapshot. `exception_handler` re-raises
   RePark's refusal as `DbtRuntimeError` with the message intact, because that message is what the
-  divergence registry rows quote. `connection_info` renders `catalog_properties` through
-  `_native.redact_property_value`, the rule `getAll` uses, so `dbt debug` and the Jinja `target`
-  show no secret value (PA-DBT-MISMATCH-REDACT-1).
+  divergence registry rows quote. `connection_info` passes `database`, its alias `catalog`,
+  `warehouse` and each `catalog_properties` value through `_native.redact_property_value`, the
+  rule `getAll` uses. Pinned for a secret key, a URL password and a warehouse URL password, in
+  `dbt debug`'s events and `dbt.log` and in the Jinja `target` `Profile.to_target_dict` builds
+  (PA-DBT-MISMATCH-REDACT-1).
+  pins: pa-dbt-mismatch-redact-1/C-003, C-005
 - `session.py` — the process-wide session, and the pyodbc-shaped cursor dbt drives it through.
   RePark's `getOrCreate` answers **one session per process**, so a second profile with a
   different catalog or warehouse would silently run against the first one's engine. That is
