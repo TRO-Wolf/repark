@@ -121,9 +121,9 @@ td.x { color: var(--stop); font-weight: 600; }
 
   <ul class="facts">
     <li><p class="k">Posture already decided</p><p class="v">Server mode is an adapter</p><p class="n">ADR 0004: everything through Session, bindings thin, no ambient state.</p></li>
-    <li><p class="k">Roadmap order today</p><p class="v">Connect 1.12, Flight SQL 2.0</p><p class="n">Both on one server core; this page proposes the reverse.</p></li>
+    <li><p class="k">Roadmap order today</p><p class="v">Connect 1.13, Flight SQL 2.0</p><p class="n">Both on one server core; this page proposes the reverse.</p></li>
     <li><p class="k">Cancellation today</p><p class="v">None</p><p class="n">The facade's interrupt calls return empty lists by design.</p></li>
-    <li><p class="k">Sync inside async</p><p class="v">39 block_on sites</p><p class="n">Unconditional, in the session, reader and catalog doors.</p></li>
+    <li><p class="k">Sync inside async</p><p class="v">34 measured block_on sites</p><p class="n">Unconditional, in the session, reader and catalog doors.</p></li>
   </ul>
 
   <section>
@@ -131,7 +131,7 @@ td.x { color: var(--stop); font-weight: 600; }
     <div class="cols">
       <ul class="plain">
         <li><b>ADR 0004 made the right bet early.</b> Everything goes through the Session, bindings are thin adapters, and server mode was always meant to be another adapter. That is the single reason a server is tractable now.</li>
-        <li><b>The roadmap orders the protocols Connect first.</b> Spark Connect at 1.12 as protocol one, Flight SQL at 2.0 as protocol two, both on a server core built once. The 2026-09-30 external review argued for an operation lifecycle before any server, and the roadmap left that discussion open.</li>
+        <li><b>The roadmap orders the protocols Connect first.</b> Spark Connect at 1.13 as protocol one, Flight SQL at 2.0 as protocol two, both on a server core built once. The 2026-09-30 external review argued for an operation lifecycle before any server, and the roadmap left that discussion open.</li>
       </ul>
       <ul class="plain">
         <li><b>Three hard problems were deferred to the server milestone.</b> Credential vending, Python UDFs under a shared process, and per-query resource policy. None has started.</li>
@@ -150,7 +150,7 @@ td.x { color: var(--stop); font-weight: 600; }
       </div></li>
       <li><div class="body">
         <h3>Fix the sync and async boundary before writing a daemon <span class="tag stop">blocker</span></h3>
-        <p>The v1.5.2 slowdown work counted thirty-nine unconditional <code>block_on</code> sites across the session, reader and catalog doors. A tonic server runs inside a tokio runtime, and <code>block_on</code> from inside a runtime panics.</p>
+        <p>The v1.5.2 slowdown work measured 34 unconditional <code>block_on</code> sites across the session, reader and catalog doors. A tonic server runs inside a tokio runtime, and <code>block_on</code> from inside a runtime panics.</p>
         <p class="pay"><b>What it needs:</b> an audit and a plan for making those paths async-native. This is architecture, not a task list, and it deserves a design sketch before anyone builds.</p>
       </div></li>
       <li><div class="body">
@@ -187,7 +187,7 @@ td.x { color: var(--stop); font-weight: 600; }
         </tbody>
       </table>
     </div>
-    <p style="margin-top:14px">Spark Connect remains the bigger product bet, since unchanged pyspark clients are the thesis, and it loses nothing by going second on a proven core. This reverses the current 1.12 and 2.0 order, so it is the owner's call, and the migration scorecard is the evidence that should decide it.</p>
+    <p style="margin-top:14px">Spark Connect remains the bigger product bet, since unchanged pyspark clients are the thesis, and it loses nothing by going second on a proven core. This reverses the current 1.13 and 2.0 order, so it is the owner's call, and the migration scorecard is the evidence that should decide it.</p>
   </section>
 
   <section>
@@ -223,8 +223,8 @@ td.x { color: var(--stop); font-weight: 600; }
     <ul>
       <li><code>docs/adr/0004-server-prep-disciplines.md</code>: everything through Session, bindings as thin adapters, the three deferred server problems, the fleet-parallel then server then distributed posture.</li>
       <li><code>docs/adr/0005-defer-session-decomposition.md</code>: the decomposition is driver-gated; the intended service shape is recorded there.</li>
-      <li><code>task/roadmap/epic-term/release-roadmap-2026-08-29.md</code>: the 1.12 Spark Connect and 2.0 Flight SQL rows, the 2026-10-01 external-review row and its five provisional points, the authentication and deployment rows.</li>
-      <li><code>docs/production-grade.md</code> (PR #1044): the envelope rule and the per-capability label this page applies to a server.</li>
+      <li><code>task/roadmap/epic-term/release-roadmap-2026-08-29.md</code>: the Spark Connect row (1.13; the row label still says 1.12) and the 2.0 Flight SQL row, the 2026-10-01 external-review row and its five provisional points, the authentication and deployment rows.</li>
+      <li><code>docs/production-grade.md</code> (in PR #1044, still open, not on main): the envelope rule and the per-capability label this page applies to a server.</li>
       <li>The <code>block_on</code> count: the v1.5.2 slowdown analysis behind card GROWN-STACK-GATE-1 (<code>task/roadmap/mid-term/grown-stack-gate-1-card-2026-10-04.md</code>).</li>
       <li>Cancellation state: the roadmap's 2026-10-01 row records that <code>interruptAll</code> and <code>interruptTag</code> answer <code>[]</code> by design.</li>
     </ul>
