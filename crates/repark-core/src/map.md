@@ -1007,6 +1007,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   comes first, so a statement that does not plan keeps its text. `PreExecute::run` keeps its
   contract and its tests; this door no longer calls it. Routing `repark.sql()` through the ANSI
   door stays on the card. pins: repark-sql-update-subquery-where-1/C-005
+  **Owner ruling 131 (b), 2026-10-16:** `refuse_dml_subquery_where` unwraps `EXPLAIN` and
+  `EXPLAIN ANALYZE`, with or without `VERBOSE` or `FORMAT`, at any depth (`explained_statement`
+  recurses over DataFusion's `DFStatement::Explain`, bounded by the parser's recursion limit)
+  and refuses the inner statement with no exemption. It follows the Spark router's
+  `executed_writes` in `repark-spark/src/router/nested_ns.rs`, but fires on plain `EXPLAIN`
+  too, where the router skips it, because reading a plain `EXPLAIN` of a DML writes on this
+  door. A plain `EXPLAIN` of a DML without a subquery predicate still behaves as on main (card
+  EXPLAIN-DML-WRITE-1). The ANSI door and the shared function are unchanged.
+  pins: repark-sql-update-subquery-where-1/C-012, C-013
 - `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1
   (2026-09-18, round 1):** `SparkRangeFunc`, RePark's `range` table function —
   non-nullable `id: Int64` column, 1–4 literal arguments (the 4th is

@@ -146,12 +146,25 @@ impl SqlDialect for DataFusionDialect {
 fn refuse_dml_subquery_where(ctx: &SessionContext, query: &str) -> datafusion::error::Result<()> {
     let state = ctx.state();
     let dialect = state.config_options().sql_parser.dialect;
-    let Ok(DFStatement::Statement(statement)) = state.sql_to_statement(query, &dialect) else {
+    let Ok(parsed) = state.sql_to_statement(query, &dialect) else {
+        return Ok(());
+    };
+    let Some(statement) = explained_statement(&parsed) else {
         return Ok(());
     };
     repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate(
-        &statement, false,
+        statement, false,
     )
+}
+
+fn explained_statement(
+    parsed: &DFStatement,
+) -> Option<&datafusion::sql::sqlparser::ast::Statement> {
+    match parsed {
+        DFStatement::Statement(statement) => Some(statement),
+        DFStatement::Explain(explain) => explained_statement(&explain.statement),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
