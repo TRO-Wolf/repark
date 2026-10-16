@@ -3653,7 +3653,7 @@ still open is `isModifiable`.
   which routes `INSERT OVERWRITE … PARTITION` through the common store stage so it pairs by
   position as the other INSERT doors do (no card filed at this date).
 
-### ICE-TSNS-SQL-1-R-017 — OPEN, PARKED 2026-10-13 (measured 2026-10-09): a nanosecond value beside an untyped NULL is typed as microseconds
+### ICE-TSNS-SQL-1-R-017 — FIXED 2026-10-16 (ICE-TSNS-TYPE-PLANNER-1, PR #1082): a nanosecond value beside an untyped NULL is typed as microseconds
 
 - **repark** — `coalesce(ns, NULL)`, `nvl(ns, NULL)`, `array(ns, NULL)`,
   `CASE WHEN … THEN ns ELSE NULL END` and `if(…, ns, NULL)` over a `timestamp_ns` or
@@ -3857,6 +3857,9 @@ still open is `isModifiable`.
   written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE … WHERE` above has its own card,
   [ICE-TSNS-UPDATE-NTZ-CAST-1](../task/roadmap/mid-term/ice-tsns-update-ntz-cast-1-card-2026-10-15.md),
   and four dated rows.
+- **Status 2026-10-16:** merged on the owner's word as `c7121437` (PR #1082), verifier PASS at
+  `bedd799b`. The open items named above keep their own rows and cards: R-024,
+  ICE-TSNS-UPDATE-NTZ-CAST-1, and R-025 (ruling 120).
 
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 
@@ -4106,6 +4109,19 @@ still open is `isModifiable`.
   are ICE-TSNS-FLOOR-DOORS-1's (R-009, PR #1059). Owner ruling, question 53, 2026-10-14:
   a v1.5.7 nanosecond carve-out with card NS-ENCODED-NESTED-FLOOR-1
   (`task/roadmap/mid-term/ns-encoded-nested-floor-1-card-2026-10-14.md`).
+
+### ICE-TSNS-SQL-1-R-025 — DATED ROW 2026-10-16 (owner ruling 120 (a)): on the ANSI doors `CAST(ns AS TIMESTAMP)` truncates toward zero instead of flooring
+
+- **repark** — on `repark.sql()` and `repark_sql::AnsiDialect`, `CAST(ns AS TIMESTAMP)` and
+  `CAST(ns AS TIMESTAMPTZ)` narrow a pre-1970 sub-microsecond value toward zero:
+  `1969-12-31 23:59:59.999999999` answers `1970-01-01 00:00:00`. The same door's literal
+  floors, and the Spark door floors. Main typed ANSI `TIMESTAMP` as nanoseconds (-1 ns exact,
+  the wrong type under Q6), and its store into `TIMESTAMP(6)` already truncated to 0; U-1
+  stores the same 0. *(Measured by the U-1 verifier, 2026-10-16, finding F-1.)*
+- **Apache Spark** — has no nanosecond type on this path; the rule is ruling Q-21c-8, every
+  narrowing floors on every door.
+- **Card** — [ICE-TSNS-ANSI-CAST-FLOOR-1](../task/roadmap/mid-term/ice-tsns-ansi-cast-floor-1-card-2026-10-16.md)
+  (2026-10-16, open, not scheduled, does not block U-1).
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 

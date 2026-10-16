@@ -753,6 +753,10 @@ declines it (a dated ruling in the intake, then the archive).
   struct-pairing family of ruling 57):** an inline table in `FROM` stores a reordered struct by name
   where Spark stores it by position. Retires with positional pairing and Spark's `INVALID_INLINE_TABLE`
   plus pins.
+- [ice-tsns-ansi-cast-floor-1-card-2026-10-16.md](ice-tsns-ansi-cast-floor-1-card-2026-10-16.md) **card ICE-TSNS-ANSI-CAST-FLOOR-1
+  (2026-10-16, open, not scheduled, clerk under owner ruling 120 (a)):** on the ANSI doors
+  `CAST(ns AS TIMESTAMP)` truncates a pre-1970 sub-microsecond value toward zero instead of flooring
+  (Q-21c-8); stored values equal main's; register row ICE-TSNS-SQL-1-R-025.
 - [mb-enc-undeleted-field-1-card-2026-10-15.md](mb-enc-undeleted-field-1-card-2026-10-15.md) **card
   MB-ENC-UNDELETED-FIELD-1 (2026-10-15, parked under the streaming freeze, clerk under owner ruling
   109 (c)):** the keyed micro-batch refusal names the sink but not a staged file it could not delete.
