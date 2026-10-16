@@ -370,3 +370,109 @@ guards suites, and is restored (`fix1/out/mutants*.txt`, `fix1/out/mutants/`).
 
 The release module was built from `842e92fa` with an empty `git status --short`
 (`fix1/module-build.txt`). The docs gates of the records commit are in the hand-back.
+
+## 9. Fix round 2 (2026-10-16, owner rulings 114 (b) and 116 (a); C-011, C-012 amended, C-025 rejected, C-026 … C-029)
+
+The scoped re-verifier of `75d9caec` failed the first fix round on three findings, all in how the
+path is read (ruling 116 (a): one round). **RV-01 (S1):** the warehouse root was read through the
+location parser, whose glob split cut `<base>/wh[1]` to `<base>/`, so a `[`, `?` or `*` in a
+warehouse path admitted writes anywhere under its parent on both doors (main and `506fe9ec`
+refuse). **RV-02 (S2):** the textual-vs-followed comparison was judged on the whole path, so a `..`
+over a symlink above the warehouse refused a write that lands inside. **RV-03 (S4):** the
+private-use stand-ins of the as-typed reading turned U+E000 to U+E002 into dots, refusing an
+inside write.
+
+### 9.1 The rule (ruling 114 (b))
+
+The guard judges where the bytes land. The written reading is the path the door writes,
+`ListingTableUrl::parse` as in §8.1 (no spelling leaves a `..` in it:
+`the_written_reading_never_keeps_a_dot_dot`). `resolve_physical_destination` canonicalises its
+nearest existing ancestor and appends the remaining components; a `..` left there after a missing
+directory refuses, a shape no door's reading produces. The result must lie under a warehouse
+root, read by `catalog_state::memory_warehouse_fallback_root` (a plain path or `file:` URL, no
+glob split, the repo's one reading of a warehouse string) and resolved the same way. The as-typed
+reading, its stand-ins, the cancelled-link record and the whole-path comparison are deleted; the
+check-then-write race stays the dated row of §6.
+
+### 9.2 Red at `75d9caec`, green on head
+
+`local_fs_policy.rs` of `75d9caec` with the new pins (`fix1/r2/out/red_75d9caec.txt`): RV-01
+red on both doors (`must refuse, but answered: COPY (SELECT * FROM src) TO '<base>/out/gr' STORED
+AS PARQUET`, ANSI the same with `SELECT 1 AS a`) and in the core; the RV-02, RV-03 and 114-cell
+pins red on both doors and in the core (the write refuses, so the landing assertion fails);
+every earlier pin green. On head all pass: core 23, Spark door 39 (plus the two child re-runs),
+ANSI door 18 (plus two).
+
+### 9.3 The cells of ruling 114, measured (Spark door and ANSI door)
+
+| Cell | Main (`0af4b9d1`) | `75d9caec` | Head |
+|---|---|---|---|
+| `<wh>/deep/../dd_in` (`deep -> <wh>/a/b`) | writes `<wh>/dd_in` | refuses | writes `<wh>/dd_in` |
+| `<wh>/deep/../m1/dd_in2` | writes `<wh>/m1/dd_in2` | refuses | writes `<wh>/m1/dd_in2` |
+| `<wh>/s2/../sb_in` (`s2 -> <wh>/sib`) | writes `<wh>/sb_in` | refuses | writes `<wh>/sb_in` |
+| `file://<wh>/x/%2e%2e/pin2` (`x` absent) | writes `<wh>/pin2` | refuses | writes `<wh>/pin2` |
+| `<wh>/x/../pin_bare` (`x` absent) | writes `<wh>/pin_bare` | refuses | writes `<wh>/pin_bare` |
+| `file://<wh>/x/../pin_url` (`x` absent) | writes `<wh>/pin_url` | refuses | writes `<wh>/pin_url` |
+
+### 9.4 The adversarial pass on the new rule
+
+Probes under `fix1/r2/w/` (the re-verifier's set plus seven `z_*` shapes), physical bases, every
+outside target under a directory created there; main's and `75d9caec`'s release modules for the
+Spark and native doors, the ANSI door through `AnsiDialect` on each tree.
+
+| Shape | Writes outside on main | On `75d9caec` | Head |
+|---|---|---|---|
+| a symlink in the root's own ancestry (`anc -> real`, root `anc/wh2`) with `..` under the root | no | no | refuses the outside cells, no file; `sub/../za1` and `anc/../real/wh2/za2` write inside |
+| an in-warehouse symlink to outside followed by a missing tail (`link/m1/m2/zl1`, `EXPLAIN ANALYZE`, ANSI `CREATE EXTERNAL TABLE`) | yes | no | refuses, no file |
+| a missing middle directory then `..` above the root (`file://<wh>/m1/%2e%2e/%2e%2e/out/zm3`) | yes | no | refuses, no file; `m1/../zm_in` writes inside |
+| a glob character in the target (`<wh>/g*/../../out`, `<wh>/x[/..`, `<base>/w?/..`, `<base>/out/[a]/`, `<base>/wh*/zg6`) | no | no | refuses the cells whose cut lands outside, no file; `<wh>/g*` and `<wh>/q?/zg_in` land in `<wh>` |
+| `file://localhost` forms (`FILE://LOCALHOST<wh>/%2E%2E/out/zh2`) | yes | no | refuses, no file; `file://localhost<wh>/deep/../zh_in2` writes inside |
+| `%2f` inside a segment (`a%2f..%2f..%2fout`, `%2e%2e%2fout`) | no (DataFusion cannot parse the decoded `..`) | no | refuses, no file; `a%2fb` writes `<wh>/a/b` |
+| a glob-named root with a symlink above it (`<base>/lnk/../wh[1]/zs_in`, `file://<base>/wh[1]/%2e%2e/out/zs3`) | yes (the bare form lands in `<base>/`) | yes | refuses all four, no file |
+
+### 9.5 Never worse than main
+
+`fix1/r2/out/never_worse_python.txt` and `never_worse_ansi.txt`: on head nothing writes outside a
+warehouse with the opt-in off on either door, except the Spark door's `CREATE TABLE … USING parquet
+LOCATION` and its CTAS twin (ruling 105, LOCAL-FS-CREATE-TABLE-LOCATION-1, identical on main).
+Every cell main writes and head refuses is a main write outside a warehouse. Every inside write
+main makes on the doors still writes on head; head additionally writes the in-warehouse cells
+main refused (missing middle directories under a symlinked root, a relative path with the cwd in
+the warehouse, `<wh>/g*/../../out/zg1` which lands in `<wh>`). The opt-in opens both doors;
+`repark.sql()` refuses every local cell (ruling 104).
+
+### 9.6 Mutants on head
+
+The re-verifier's eleven, each re-expressed on the new code where its code still exists, and
+this round's (`fix1/r2/out/mutants.txt`, `fix1/r2/out/mutants/`):
+
+| Mutant | Result | Killing tests (first) |
+|---|---|---|
+| M-PA02-root-only | killed | `the_walk_checks_a_write_below_every_carrier_but_plain_explain`, both doors' `pa02_*`, `rv01_*` |
+| M-PA03-parent-only (main's resolver) | killed | `the_nearest_existing_ancestor_resolves_through_a_symlink`, both doors' `pa03_*` |
+| M-PA04-unchecked-slice | killed | `the_checked_prefix_strip_refuses_a_split_character` |
+| M-SQL-no-guarded-dialect | killed | `test_repark_sql_refuses_executing_writes_outside`, `test_repark_sql_names_no_opt_in_and_no_route_opens_it` |
+| M-V2-metadata-error-continues | killed | the three metadata-error pins |
+| M-V7-root-not-resolved | killed | the three symlinked-root pins |
+| M-R1-decode-skipped (the written path from the undecoded URL path) | killed | `the_location_is_read_the_way_the_write_reads_it`, `rv03_*`, both doors' `rv01_*` |
+| M-R2-dot-shield-skipped | retired | the stand-in shield is deleted |
+| M-R3-whole-path-cancelled | retired | the cancelled-link record is deleted |
+| M-R4-readings-not-compared | retired | the comparison is deleted; the cells it freed are pinned (C-027 to C-029) |
+| M-R5-written-is-typed (the location used as a path) | killed | both doors' `v01_*`, `v03_*`, `rv02_*`, `rv03_*` |
+| M-N1-root-read-through-the-location-parser | killed | the three `rv01_*` pins |
+| M-N2-whole-path-comparison-restored | killed | both doors' `rv02_*` and 114-cell pins |
+| M-N3-ancestor-not-canonicalized | killed | the symlink-escape pins of both doors |
+| M-N4-tail-dot-dot-pops | killed | `a_dot_dot_after_the_nearest_existing_ancestor_is_indeterminate` |
+| M-native-opt-in-read | killed | the two native-dialect pins |
+
+### 9.7 Gates on head
+
+| Command | Result |
+|---|---|
+| `cargo test --no-fail-fast -p repark-core -p repark-spark -p repark-sql` (inside the build lock) | 4957 passed, 1 failed, 11 ignored; the failure is `microbatch::lifecycle_tests::two_sessions_on_one_sink_wait_for_the_scope` (audit PA-15, untouched code) |
+| `pytest python/repark/tests -n 8` (release module of `31271181`) | 19967 passed, 488 skipped, 151 xfailed; exit 0 |
+| `make rust-clippy` | exit 0 |
+| `comment_ban.py` over `origin/main..HEAD` | 0 hits |
+
+The release module of the final commit, the re-runs of the PA-15 test and the remaining gates
+are recorded in the hand-back.
