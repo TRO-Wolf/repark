@@ -120,6 +120,15 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   `test_gold_models`) so a fixture-time failure cannot leave a Glue session process-wide.
   pins: dbt-1-adapter/C-005
   pins: ice-gold-twice-1/C-003, C-004, C-005, C-006
+- `test_profile_mismatch_redact.py` — **PA-DBT-MISMATCH-REDACT-1 (2026-10-16, audit PA-01):**
+  9 cases with sentinel secrets in both property dictionaries and a source URL carrying a
+  password in each. The profile-mismatch refusal names the live and requested `database` and
+  `warehouse` and the sorted changed keys (`catalog_properties.<key>`,
+  `session_properties.<key>`), and no value. It still refuses a changed value and keeps the
+  live session. dbt's connection report and `dbt debug` (events and `dbt.log`) carry no
+  sentinel. The live session is a stand-in, so nothing is built and no catalog is reached.
+  8 red on main; the step 0 measurements are in the unit ledger §1.
+  pins: pa-dbt-mismatch-redact-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **CATALOG-1 (2026-09-26):** registering a memory catalog no longer makes it current, so the
   statement-surface session sets `spark.sql.defaultCatalog` to the fixture catalog, as a Spark
   profile does; the served shapes are unchanged. The adapter qualifies every relation, so

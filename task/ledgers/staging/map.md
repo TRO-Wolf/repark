@@ -2452,4 +2452,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [pa-dbt-mismatch-redact-1-ledger.md](pa-dbt-mismatch-redact-1-ledger.md) —
   **PA-DBT-MISMATCH-REDACT-1 (2026-10-16), audit PA-01:** step 0 measured main: the dbt
   profile-mismatch refusal carries all three sentinels and `dbt debug` prints two through
-  `catalog_properties` (C-006). `risk_tier: standard`. Branch `fix/pa-dbt-mismatch-redact-1`.
+  `catalog_properties` (C-006). The refusal still compares the full configuration (C-001,
+  C-004) but names only the identifiers and the changed keys (C-002). The dbt error and debug
+  paths carry no sentinel (C-003), and every printed value goes through
+  `redact_property_value` (C-005). `risk_tier: standard`. Branch
+  `fix/pa-dbt-mismatch-redact-1`.

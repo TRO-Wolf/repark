@@ -48,6 +48,8 @@ The related [credentials class](../../python/dbt-repark/src/dbt/adapters/repark/
 
 **Required result:** compare full configuration internally, but emit only safe identifiers and changed key names. Test the real dbt error and debug paths with sentinel secrets in both property dictionaries, including a source URL containing credentials. Verify that mismatch refusal still works. This boundary should consume the project's redaction policy; a Python exception must not bypass it.
 
+**Amendment (2026-10-16, PA-DBT-MISMATCH-REDACT-1):** on main `60134633` the refusal carried all three sentinels, and the debug display was reproduced through `dbt debug`: it printed and logged the `catalog_properties` secret and URL password. The refusal now names the live and requested `database` and `warehouse` (through `redact_property_value`) and the sorted changed keys, prefixed by their dictionary, and no value. dbt's connection report renders `catalog_properties` redacted. Pins: [`test_profile_mismatch_redact.py`](../../python/dbt-repark/tests/test_profile_mismatch_redact.py), 9 cases, 8 red on main; ledger [pa-dbt-mismatch-redact-1](../../task/ledgers/staging/pa-dbt-mismatch-redact-1-ledger.md).
+
 ## PA-02 — an executing wrapper bypasses the local-file policy
 
 [Spark's guard](../../crates/repark-spark/src/local_fs_ddl.rs), lines 24–33, examines only a root `CreateExternalTable` or `Copy` plan. [ANSI's guard](../../crates/repark-sql/src/guards.rs), beginning at line 310, has the same shallow shape. Executing wrappers contain the write below the root, so the guard returns success without checking its destination.

@@ -15,12 +15,12 @@ connection report stop carrying property values; what the refusal refuses does n
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The refusal compares the full configuration: a profile that differs from the live one only in a property value, secret or URL, is still refused. | Pins that rotate one value per dictionary and expect the refusal. | OPEN | Step 1 pins, step 2 fix. |
-| C-002 | The refusal text names the live and requested `database` and `warehouse` and the sorted changed keys, each prefixed by its dictionary, and no property value. | Pins over a database-only change, a catalog key, a session key, both URL keys, and an added and a removed key. | OPEN | Step 1 pins, step 2 fix. |
-| C-003 | The real dbt error and debug paths carry no sentinel, with sentinel secrets in both dictionaries and a source URL carrying a password in each. | `dbt debug` through `dbtRunner` and `ReparkConnectionManager.open`, both pinned. | OPEN | §1 (a) and (b) measure main. |
-| C-004 | The refusal still works: it raises `DbtRuntimeError`, the connection is marked failed, and the live session and its key are unchanged and still served to the matching profile. | A pin through `ReparkConnectionManager.open`. | OPEN | Step 1 pins. |
-| C-005 | Every value the boundary does print goes through the project's redaction, `_native.redact_property_value`: the two identifiers in the refusal and the `catalog_properties` values in dbt's connection report. | Pins on the masked warehouse userinfo and on the redacted connection report. | OPEN | §1 (c) records the rule's answers. |
-| C-006 | Step 0 measured main: the refusal and the debug display carry the sentinels named in §1, and the redaction rule's answer for each value. | §1 below. | OPEN | §1. |
+| C-001 | The refusal compares the full configuration: a profile that differs from the live one only in a property value, secret or URL, is still refused. | Pins that rotate one value per dictionary and expect the refusal. | **PROVEN** | `test_catalog_secret_change_names_the_catalog_key`, `test_session_secret_change_names_the_session_key`, `test_source_url_change_names_both_url_keys_sorted`; `session_key` and the `!=` comparison are unchanged. |
+| C-002 | The refusal text names the live and requested `database` and `warehouse` and the sorted changed keys, each prefixed by its dictionary, and no property value. | Pins over a database-only change, a catalog key, a session key, both URL keys, and an added and a removed key. | **PROVEN** | `test_only_database_differs_names_both_and_no_key` (`changed keys: none`), the three tests above, `test_added_and_removed_keys_are_named`; `_mismatch_message` and `_changed_keys` in `session.py`. |
+| C-003 | The real dbt error and debug paths carry no sentinel, with sentinel secrets in both dictionaries and a source URL carrying a password in each. | `dbt debug` through `dbtRunner` and `ReparkConnectionManager.open`, both pinned. | **PROVEN** | `test_dbt_debug_reports_the_refusal_without_a_value` reads the printed events and `logs/dbt.log`; `test_refusal_still_raises_and_keeps_the_live_session` goes through `ReparkConnectionManager.open`. The §1 (b) probe re-run on the head with no live session: no sentinel in either sink. |
+| C-004 | The refusal still works: it raises `DbtRuntimeError`, the connection is marked failed, and the live session and its key are unchanged and still served to the matching profile. | A pin through `ReparkConnectionManager.open`. | **PROVEN** | `test_refusal_still_raises_and_keeps_the_live_session`, green on main and on the head. |
+| C-005 | Every value the boundary does print goes through the project's redaction, `_native.redact_property_value`: the two identifiers in the refusal and the `catalog_properties` values in dbt's connection report. | Pins on the masked warehouse userinfo and on the redacted connection report. | **PROVEN** | `test_warehouse_url_credentials_are_masked`, `test_connection_info_renders_catalog_properties_redacted`; `_identifiers` in `session.py`, `connection_info` and `_redact_properties` in `connections.py`. No new rule. |
+| C-006 | Step 0 measured main: the refusal and the debug display carry the sentinels named in §1, and the redaction rule's answer for each value. | §1 below, re-derived by the pins red on main. | **PROVEN** | §1; §2 records 8 of 9 pins red on main. |
 
 ## 1. Step 0 — measured on main `60134633`
 
@@ -71,3 +71,77 @@ not only a display.
 
 The probes ran out of tree; the step 1 pins re-run (a) and (b) through the same paths.
 Step 3 runs: (b) showed two sentinels.
+
+## 2. Pins
+
+`python/dbt-repark/tests/test_profile_mismatch_redact.py`, 9 tests. On main `60134633` (the commit that adds them): **8 red, 1 green**; the green
+one is the C-004 control. Each red fails on its sentinel or redaction assertion. After step 2,
+the two connection-report pins stay red; after step 3, all 9 are green.
+
+## 3. Hand mutant
+
+The old message restored over the head (`f"(live {_ACTIVE['key']!r}, requested {key!r})"`):
+**7 red, 2 green**. Red: the six refusal pins and the `dbt debug` pin. Green: the C-004
+control and `test_connection_info_renders_catalog_properties_redacted`, which does not read
+the message. Restored: 9 green.
+
+## 4. Decisions inside the order, and what was not measured
+
+- `database` and `warehouse` are named through `_native.redact_property_value`, under the
+  order's rule that a value that must appear goes through the project's redaction. A
+  warehouse URL with userinfo shows `s3://u:***@bucket/warehouse`.
+- Step 3 renders `catalog_properties` redacted rather than dropping it. dbt builds the Jinja
+  `target` from the same pairs, so `target.catalog_properties` now shows redacted values. A
+  macro that read a secret from it would get `***`. No macro in this repo reads it.
+- The partial-parse profile hash now covers the redacted values, so rotating a secret alone
+  no longer forces a re-parse. Parsing reads no property value.
+- Not measured: `dbt run` and `dbt test` output with a failing connection; they reach
+  `acquire_session` through the same `open` the C-004 pin drives.
+- The `dbt debug` pin passes `--no-send-anonymous-usage-stats`, so dbt sends no usage events.
+
+## 5. Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: pa-dbt-mismatch-redact-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each sentence of the PA-01 required result is a clause, and each clause is pinned in the new test file.
+      artifacts: [python/dbt-repark/tests/test_profile_mismatch_redact.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: A database-only change, a changed value per dictionary, a URL password in both dictionaries, an added and a removed key, a warehouse URL with userinfo, and a None warehouse.
+      artifacts: [python/dbt-repark/tests/test_profile_mismatch_redact.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The refusal still raises DbtRuntimeError through ReparkConnectionManager.open, marks the connection failed, and dbt debug reports it as a failed connection test.
+      artifacts: [python/dbt-repark/tests/test_profile_mismatch_redact.py]
+    - id: AT-4
+      status: N/A
+      justification: The message is built under the existing lock from two immutable key tuples; no ordering or shared state changes.
+    - id: AT-5
+      status: ATTACKED
+      evidence: Sentinel secrets only; the refusal text, the dbt debug events and dbt.log are scanned for every original and rotated sentinel.
+      artifacts: [python/dbt-repark/tests/test_profile_mismatch_redact.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The comparison keeps the full configuration, so no profile that differs is served the live session; the matching profile is still served the live one.
+      artifacts: [python/dbt-repark/tests/test_profile_mismatch_redact.py]
+    - id: AT-7
+      status: N/A
+      justification: The message is built only on the refusal path, and the connection report only when dbt asks for it; no hot path changes.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The message keeps its leading sentence, which the adapter map's debug row quotes; only the parenthetical detail changes.
+      artifacts: [python/dbt-repark/src/dbt/adapters/repark/session.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The refusal still says which identifiers and which keys differ, so a user can find the mismatch without seeing a value.
+      artifacts: [python/dbt-repark/tests/test_profile_mismatch_redact.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: 8 of 9 pins are red on main, and the hand mutant that restores the old message reds 7.
+      artifacts: [python/dbt-repark/tests/test_profile_mismatch_redact.py]
+  complete: true
+```
