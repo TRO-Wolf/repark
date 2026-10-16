@@ -29,6 +29,12 @@ named only as "the cutover pipeline" here.
   Inventory §8 carries the rulings. §12 (2026-10-09) is a readiness note: the qualified scope, the
   v3 declared subset with links to each row or card, and the two qualification gaps. The
   assessment is superseded on its own header (2026-09-16); §12 points and adds no rows.
+- [p2-report-ice-struct-pairing-1-2026-10-15.md](p2-report-ice-struct-pairing-1-2026-10-15.md) —
+  **the P2 report for #1062, ICE-STRUCT-PAIRING-1 (2026-10-15):** verifier verdicts by time
+  (FAIL at 19:00:31 EDT on 2026-10-14, FAIL at 02:14:43 EDT on 2026-10-15, PASS at 18:29:18
+  EDT, merged `5531311b` at 18:51 EDT), acceptance run `38820033176` (12 cells: acceptance
+  module 11 passed in 456.58s, dbt gold module 1 passed in 61.87s), the write-path change,
+  and the follow-up cards from U-6.
 
 ## Pointers
 

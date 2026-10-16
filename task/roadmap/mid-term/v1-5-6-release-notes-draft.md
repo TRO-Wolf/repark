@@ -79,3 +79,8 @@ the release PR to edit into the notes.
   by name (Spark stores it by position).
 
 Tables already written keep the values they hold; this release ships no migration.
+
+## Known issues
+
+- **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue):** through `repark.sql()`, `UPDATE … WHERE col
+  IN (SELECT …)` or `= (SELECT …)` updates every row; use the Spark SQL session until it is fixed.
