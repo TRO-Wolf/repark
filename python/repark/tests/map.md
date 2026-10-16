@@ -10517,6 +10517,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   each under `WHERE true`, raise the ruling-90 text and the rows read back as seeded. The
   native door has no identity path, so these shapes reach `PreExecute::guard`.
   pins: ice-struct-pairing-1/C-034
+- [test_repark_sql_update_subquery_where_1.py](test_repark_sql_update_subquery_where_1.py) —
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a), the stopgap):** the
+  `repark.sql()` door. Every `UPDATE` and `DELETE` whose `WHERE` holds a subquery raises the
+  G3-E8 text verbatim (the ANSI and Spark SQL doors' text), the rows read back as seeded, and
+  no file appears under the warehouse: eight predicate forms on an Iceberg table (P-U1 to
+  P-U8, P-D1 to P-D8), the card's unqualified spelling (P-U9, P-D9), an in-memory table
+  (P-U10, P-D10), and the two shapes main answered right only by coincidence (P-C1, P-C2).
+  Five controls outside the refused class still write. On main 22 of the 27 are red: the
+  statements wrote every row, emptied the table, or refused with DataFusion's planner text.
+  pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

@@ -156,6 +156,12 @@ holds behavior observed from outside the crate.
   `SET v = 1 + (SELECT …)`, `COALESCE((SELECT …), 0)` and `CASE … THEN (SELECT …) END` under
   `WHERE true` to the ruling-90 text with the seeded rows unchanged.
   pins: ice-struct-pairing-1/C-034, C-036
+- `ansi_subquery_where_identity.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner
+  ruling 106 (a)):** the ANSI door answers its five identity forms with Spark 4.1.2's rows:
+  `UPDATE … WHERE id IN (SELECT …)`, and `DELETE … WHERE` with `id IN (SELECT …)`, a correlated
+  `EXISTS`, `id NOT IN (SELECT …)` and an `EXISTS` that matches no row. The router passes the
+  identity exemption to the shared G3-E8 refusal; without it these five statements refuse.
+  Green on main and on the head. pins: repark-sql-update-subquery-where-1/C-006
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

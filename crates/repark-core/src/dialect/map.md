@@ -24,6 +24,13 @@ and the `EngineContext` construction contract.
   `verbatim_override: None`; `EngineContext::new` defaults it the same way.
   pins: string-literal-escape-1/C-011
 
+- `tests.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)):**
+  `the_default_dialect_refuses_a_subquery_in_update_or_delete_where` runs `UPDATE` and
+  `DELETE` with `IN`, correlated `EXISTS` and `NOT IN` subqueries through a default
+  `ReparkSession` (no dialect installed) over a memory catalog: each refuses with the G3-E8
+  text and the rows read back as seeded. Red on main, where the first `UPDATE … IN` wrote
+  every row. pins: repark-sql-update-subquery-where-1/C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
