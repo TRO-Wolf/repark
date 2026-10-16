@@ -540,6 +540,9 @@ repark-core's error map.
   manifest read once), so a caller that hands a public door a referenced file never
   loses it; if those manifests cannot be read nothing is deleted and each staged path is
   named in the refusal. The refusal text is unchanged when every unreferenced path goes.
+  A file the sweep could not delete is logged with `tracing::warn` carrying that file's
+  full staged path (absolute path or URI, not the file name). Pin:
+  `keyed_refusal_warns_the_full_path_of_a_file_it_could_not_delete` (owner ruling 109).
   pins: `repark-spark/src/tests/enc_1_referenced.rs` (one per public family, a file only
   a historical snapshot references), `merge/snapshot_commit.rs`
   `keyed_refused_merge_overwrite_keeps_a_snapshot_referenced_file`,

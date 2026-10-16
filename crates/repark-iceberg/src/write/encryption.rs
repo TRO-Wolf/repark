@@ -249,6 +249,86 @@ mod sweep_tests {
 
     use super::*;
 
+    struct FieldVisitor(String);
+
+    impl tracing::field::Visit for FieldVisitor {
+        fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+            use std::fmt::Write as _;
+            if !self.0.is_empty() {
+                self.0.push(' ');
+            }
+            let rendered = format!("{value:?}");
+            let rendered = rendered.trim_matches('"');
+            if field.name() == "message" {
+                self.0.push_str(rendered);
+            } else {
+                let _ = write!(self.0, "{}={rendered}", field.name());
+            }
+        }
+
+        fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+            use std::fmt::Write as _;
+            if !self.0.is_empty() {
+                self.0.push(' ');
+            }
+            if field.name() == "message" {
+                self.0.push_str(value);
+            } else {
+                let _ = write!(self.0, "{}={value}", field.name());
+            }
+        }
+    }
+
+    struct WarnCapture {
+        lines: std::sync::Mutex<Vec<String>>,
+    }
+
+    impl WarnCapture {
+        fn new() -> Self {
+            Self {
+                lines: std::sync::Mutex::new(Vec::new()),
+            }
+        }
+
+        fn lines(&self) -> Vec<String> {
+            self.lines
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .clone()
+        }
+    }
+
+    impl tracing::Subscriber for WarnCapture {
+        fn enabled(&self, metadata: &tracing::Metadata<'_>) -> bool {
+            *metadata.level() <= tracing::Level::WARN
+        }
+
+        fn new_span(&self, _span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            tracing::span::Id::from_u64(1)
+        }
+
+        fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+        fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+        fn event(&self, event: &tracing::Event<'_>) {
+            if *event.metadata().level() > tracing::Level::WARN {
+                return;
+            }
+            let mut visitor = FieldVisitor(String::new());
+            event.record(&mut visitor);
+            let line = format!("{}|{}", event.metadata().target(), visitor.0);
+            self.lines
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .push(line);
+        }
+
+        fn enter(&self, _span: &tracing::span::Id) {}
+
+        fn exit(&self, _span: &tracing::span::Id) {}
+    }
+
     fn ident() -> TableIdent {
         TableIdent::new(NamespaceIdent::new("sweep".to_string()), "t".to_string())
     }
@@ -337,6 +417,42 @@ mod sweep_tests {
         assert!(EncryptedTableRefusal::find(&swept).is_some());
         assert_eq!(swept.kind(), iceberg::ErrorKind::FeatureUnsupported);
         assert!(!swept.retryable());
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn keyed_refusal_warns_the_full_path_of_a_file_it_could_not_delete() {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let (_catalog, table) = plain_table(&warehouse).await;
+        let path = warehouse
+            .path()
+            .join("sales")
+            .join("t")
+            .join("data")
+            .join("part-00000.parquet");
+        std::fs::create_dir_all(&path).expect("undeletable staged path creates");
+        let staged = path.to_str().expect("probe path is utf8").to_string();
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("file name");
+        assert!(staged.starts_with('/'));
+        assert!(staged.ends_with("/sales/t/data/part-00000.parquet"));
+        assert_ne!(staged, file_name);
+        let capture = std::sync::Arc::new(WarnCapture::new());
+        let swept = {
+            let _guard = tracing::subscriber::set_default(Arc::clone(&capture));
+            sweep_staged_files_on_keyed_refusal(&table, std::slice::from_ref(&staged), refusal())
+                .await
+        };
+        assert!(swept.message().contains(staged.as_str()));
+        let lines = capture.lines();
+        assert!(
+            lines.iter().any(|line| {
+                line.contains("failed to delete a staged file after a refused commit")
+                    && line.contains(&format!("path={staged}"))
+            }),
+            "the warning must carry the staged path {staged}, got {lines:?}"
+        );
     }
 
     #[tokio::test]
