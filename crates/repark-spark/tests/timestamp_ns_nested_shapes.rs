@@ -476,7 +476,7 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
     }
 }
 
-const NARROWED_UPDATES: [&str; 4] = [
+const NULL_SIBLING_UPDATES: [&str; 4] = [
     "CASE WHEN id > 0 THEN {c} ELSE NULL END",
     "CASE WHEN id < 0 THEN NULL ELSE {c} END",
     "if(id > 0, {c}, NULL)",
@@ -484,7 +484,7 @@ const NARROWED_UPDATES: [&str; 4] = [
 ];
 
 #[tokio::test]
-async fn an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds() {
+async fn an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores() {
     let session = session("America/New_York");
     let _warehouse = catalog(&session).await;
     run(
@@ -502,17 +502,17 @@ async fn an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds() {
           CAST('2026-03-08 07:30:00.000000001+00:00' AS timestamptz_ns))",
     )
     .await;
-    for value in NARROWED_UPDATES {
+    let read = "SELECT v FROM ice.ns.u ORDER BY id";
+    for value in NULL_SIBLING_UPDATES {
         for source in ["c", "z"] {
+            run(&session, &format!("UPDATE ice.ns.u SET v = {source}")).await;
+            let plain = stored(&session, read).await;
             let write = format!("UPDATE ice.ns.u SET v = {}", value.replace("{c}", source));
-            let refused = attempt(&session, &write).await.expect_err(&write);
-            let named = refused.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]")
-                && refused.contains("Cannot safely cast `v` \"TIMESTAMP\" to \"TIMESTAMP_NS\"")
-                && refused.contains("narrowed from nanoseconds to microseconds");
-            assert!(named, "{write}: {refused}");
+            run(&session, &write).await;
+            assert_eq!(stored(&session, read).await, plain, "{write}");
         }
     }
-    let read = "SELECT v FROM ice.ns.u ORDER BY id";
+    run(&session, "UPDATE ice.ns.u SET v = NULL").await;
     assert_eq!(stored(&session, read).await, vec![None, None]);
     for kept in ["CAST(c AS TIMESTAMP)", "date_trunc('second', c)"] {
         run(

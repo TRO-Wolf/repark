@@ -28,9 +28,7 @@ use crate::write::merge::{
     register_streaming_target, reserved_name_guard, resolve_write_column, scratch_schema,
 };
 use crate::write::position_delete::PositionDeletePair;
-use crate::write::predicate_dml::lineage::{
-    project_update_data_batch, update_projection_sql, update_values_schema,
-};
+use crate::write::predicate_dml::lineage::{project_update_data_batch, update_values_schema};
 use crate::write::predicate_dml::residual::identity_scan_residual;
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use cow_commit::{commit_identity_cow, commit_identity_update_cow};
@@ -394,16 +392,8 @@ async fn collect_identity_update_rows(
     let assignments = spec.assignments.as_ref().ok_or_else(|| {
         DataFusionError::Internal("identity UPDATE SELECT requires SET assignments".to_string())
     })?;
-    let projections = update_projection_sql(values_schema, &spec.target_alias, assignments);
-    let sql = format!(
-        "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
-        file = quote_ident(FILE_PATH_COL),
-        pos = quote_ident(POS_COL),
-        scratch = crate::write::merge::cow_scratch::quote_scratch_name(target_name),
-        alias = quote_ident(&spec.target_alias),
-        selection = spec.selection_sql,
-    );
-    let raw = crate::write::store_overflow::analyzed_store_source(ctx, &sql).await?;
+    let raw = lineage::analyzed_identity_update(ctx, target_name, spec, assignments, values_schema)
+        .await?;
     let targets: Vec<(String, datafusion::arrow::datatypes::DataType)> = values_schema
         .fields()
         .iter()

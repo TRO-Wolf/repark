@@ -103,6 +103,34 @@ holds behavior observed from outside the crate.
   the backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
   statements succeed; a missing table keeps its own error.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- `ice_tsns_type_planner_1_lattice.rs` — **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):**
+  the planner and lattice pins on both doors (a Spark-door session and an `AnsiDialect`
+  session over one four-column batch: microsecond and nanosecond, naive and zoned).
+  `written_type_names_plan_to_the_spark_types_on_both_doors` reads the Arrow type of
+  `CAST(… AS TIMESTAMP)`, the `TIMESTAMP '…'` literal, `TIMESTAMP_NTZ`, `timestamp_ns` and
+  `timestamptz_ns`; `mixed_unit_positions_take_the_finest_unit_on_both_doors` reads
+  `coalesce`, `UNION ALL`, `CASE` and `array` over the eight mixed ordered pairs;
+  `join_keys_share_the_finest_unit_in_the_optimized_plan` reads the `on` keys and the
+  filter operands of the **optimized** join for `=`, `<` and `<=>`;
+  `equal_units_plan_no_cast_on_both_doors` holds the rule off equal units;
+  `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` is ruling 94
+  (Q6, 2026-10-15): type and ticks of `TIMESTAMP`, the `TIMESTAMP '…'` literal and
+  `TIMESTAMPTZ` over a nanosecond-precision wall, and `CAST(1 AS …)` reading seconds; the
+  type-name cells expect the naive wall for `TIMESTAMP` on the ANSI door only; the carried
+  R-013 cell that held the ANSI door off the by-name kernels is gone (2026-10-15): the
+  by-name registration stays, as main and U-6 pin it;
+  `an_aggregate_zero_takes_the_unit_of_its_array_elements` is the M3 aggregate cell (a
+  `TIMESTAMP` zero beside nanosecond elements answers nanoseconds, equal to a
+  `timestamptz_ns` zero; pins: ice-tsns-type-planner-1/C-017);
+  `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors` is the M3
+  UNION cell: a branch over fields that carry `PARQUET:field_id` against an untagged one,
+  in both orders, equals `SELECT DISTINCT` over the `UNION ALL` (pins:
+  ice-tsns-type-planner-1/C-018);
+  `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7's cell.
+  Result types are read from the optimized plan: a frame's own schema is the unanalyzed
+  one. On head `07cbe563` five of the six are green; the R-013 cell is red because the
+  by-name registration stays (the unit ledger, section 5).
+  pins: ice-tsns-type-planner-1/C-010, C-011, C-015, C-017, C-018
 - `ansi_store_kernel_registry.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), parity
   row R-013:** at session build the ANSI door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
