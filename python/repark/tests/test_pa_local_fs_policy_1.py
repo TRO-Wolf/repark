@@ -248,3 +248,11 @@ def test_repark_sql_names_no_opt_in_and_no_route_opens_it(spark, dirs) -> None:
     _native_refuses(
         f"CREATE EXTERNAL TABLE pa_native_read STORED AS PARQUET LOCATION '{existing}/'"
     )
+
+
+def test_repark_sql_keeps_the_q6_wall_type_under_the_guard(dirs) -> None:
+    table = repark.sql("SELECT CAST('2024-01-02 03:04:05.123456789' AS TIMESTAMP) AS v").to_arrow()
+    assert str(table.schema.field("v").type) == "timestamp[us]"
+    assert table.column("v").cast("int64").to_pylist() == [1_704_164_645_123_456]
+    _native_refuses(_copy(dirs["outside"] / "q6_guard"))
+    assert _files(dirs["outside"]) == []

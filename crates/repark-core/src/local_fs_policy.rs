@@ -1,17 +1,22 @@
+use std::collections::HashMap;
 use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::datasource::listing::ListingTableUrl;
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::planner::TypePlanner;
 use datafusion::logical_expr::{DdlStatement, LogicalPlan};
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 use url::Url;
 
 use crate::catalog_state::{CatalogRegistry, memory_warehouse_fallback_root};
-use crate::dialect::{EngineContext, SqlDialect};
+use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::pre_execute::PreExecute;
+use crate::session::ReparkSessionBuilder;
 
 pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesystemDDL";
 
@@ -21,17 +26,86 @@ const REPARK_SQL_EXTENSION_PREFIX: &str = "repark.sql";
 
 const ALLOW_LOCAL_FILESYSTEM_DDL_FIELD: &str = "allow_local_filesystem_ddl";
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct LocalFsGuardedDialect;
+#[derive(Clone)]
+pub struct LocalFsGuardedDialect {
+    inner: Arc<dyn SqlDialect>,
+}
+
+impl LocalFsGuardedDialect {
+    #[must_use]
+    pub fn wrapping(inner: Arc<dyn SqlDialect>) -> Self {
+        Self { inner }
+    }
+}
+
+impl std::fmt::Debug for LocalFsGuardedDialect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LocalFsGuardedDialect")
+            .finish_non_exhaustive()
+    }
+}
 
 #[async_trait(?Send)]
 impl SqlDialect for LocalFsGuardedDialect {
     async fn execute(&self, cx: EngineContext<'_>, query: &str) -> Result<DataFrame> {
-        let belt = PreExecute::from_engine_context(&cx);
-        let plan = belt.plan(query).await?;
-        refuse_writes(cx.catalogs, &plan, Entry::NoOptIn)?;
-        belt.guard(&plan)?;
-        belt.execute(plan).await
+        refuse_native_statement(&cx, query).await?;
+        self.inner.execute(cx, query).await
+    }
+
+    async fn execute_with_write_options(
+        &self,
+        cx: EngineContext<'_>,
+        query: &str,
+        options: &HashMap<String, String>,
+    ) -> Result<DataFrame> {
+        refuse_native_statement(&cx, query).await?;
+        self.inner
+            .execute_with_write_options(cx, query, options)
+            .await
+    }
+
+    fn on_session_built(&self, ctx: &SessionContext) {
+        self.inner.on_session_built(ctx);
+    }
+
+    fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
+        self.inner.type_planner()
+    }
+
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        self.inner.configure_analyzer_rules(rules)
+    }
+}
+
+async fn judged_plan(cx: &EngineContext<'_>, query: &str) -> Result<LogicalPlan> {
+    PreExecute::from_engine_context(cx).plan(query).await
+}
+
+async fn refuse_native_statement(cx: &EngineContext<'_>, query: &str) -> Result<()> {
+    let plan = judged_plan(cx, query).await?;
+    refuse_writes(cx.catalogs, &plan, Entry::NoOptIn)
+}
+
+impl ReparkSessionBuilder {
+    #[must_use]
+    pub fn with_local_fs_guard(mut self) -> Self {
+        self.local_fs_guard = true;
+        self
+    }
+}
+
+pub(crate) fn session_dialect(
+    dialect: Option<Arc<dyn SqlDialect>>,
+    guarded: bool,
+) -> Arc<dyn SqlDialect> {
+    let dialect = dialect.unwrap_or_else(|| Arc::new(DataFusionDialect));
+    if guarded {
+        Arc::new(LocalFsGuardedDialect::wrapping(dialect))
+    } else {
+        dialect
     }
 }
 

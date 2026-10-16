@@ -480,7 +480,7 @@ async fn native_run(
     sql: &str,
 ) -> Result<Vec<datafusion::arrow::record_batch::RecordBatch>> {
     let read_only = std::collections::HashSet::new();
-    LocalFsGuardedDialect
+    LocalFsGuardedDialect::wrapping(Arc::new(DataFusionDialect))
         .execute(EngineContext::new(ctx, catalogs, &read_only), sql)
         .await?
         .collect()
@@ -645,4 +645,274 @@ fn an_empty_location_is_not_contained() {
         &registry(warehouse.path()),
         ""
     ));
+}
+
+#[derive(Debug)]
+struct MicrosecondTimestamps;
+
+impl TypePlanner for MicrosecondTimestamps {
+    fn plan_type(
+        &self,
+        sql_type: &datafusion::sql::sqlparser::ast::DataType,
+    ) -> Result<Option<datafusion::arrow::datatypes::DataType>> {
+        Ok(matches!(
+            sql_type,
+            datafusion::sql::sqlparser::ast::DataType::Timestamp(
+                None,
+                datafusion::sql::sqlparser::ast::TimezoneInfo::None
+            )
+        )
+        .then_some(datafusion::arrow::datatypes::DataType::Timestamp(
+            datafusion::arrow::datatypes::TimeUnit::Microsecond,
+            None,
+        )))
+    }
+}
+
+#[derive(Debug)]
+struct MarkerRule;
+
+impl AnalyzerRule for MarkerRule {
+    fn analyze(
+        &self,
+        plan: LogicalPlan,
+        _config: &datafusion::common::config::ConfigOptions,
+    ) -> Result<LogicalPlan> {
+        Ok(plan)
+    }
+
+    fn name(&self) -> &'static str {
+        "local_fs_guard_inner_marker"
+    }
+}
+
+#[derive(Default)]
+struct Recording {
+    calls: std::sync::Mutex<Vec<String>>,
+}
+
+impl Recording {
+    fn note(&self, call: String) {
+        self.calls.lock().unwrap().push(call);
+    }
+
+    fn calls(&self) -> Vec<String> {
+        self.calls.lock().unwrap().clone()
+    }
+}
+
+#[async_trait(?Send)]
+impl SqlDialect for Recording {
+    async fn execute(&self, cx: EngineContext<'_>, query: &str) -> Result<DataFrame> {
+        let frame = DataFusionDialect.execute(cx, query).await?;
+        self.note(format!(
+            "execute {query} -> {}",
+            frame.schema().field(0).data_type()
+        ));
+        Ok(frame)
+    }
+
+    async fn execute_with_write_options(
+        &self,
+        cx: EngineContext<'_>,
+        query: &str,
+        options: &HashMap<String, String>,
+    ) -> Result<DataFrame> {
+        let frame = DataFusionDialect.execute(cx, query).await?;
+        self.note(format!(
+            "execute_with_write_options {query} ({}) -> {}",
+            options.len(),
+            frame.schema().field(0).data_type()
+        ));
+        Ok(frame)
+    }
+
+    fn on_session_built(&self, _ctx: &SessionContext) {
+        self.note("on_session_built".to_string());
+    }
+
+    fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
+        self.note("type_planner".to_string());
+        Some(Arc::new(MicrosecondTimestamps))
+    }
+
+    fn configure_analyzer_rules(
+        &self,
+        mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        self.note("configure_analyzer_rules".to_string());
+        rules.push(Arc::new(MarkerRule));
+        Ok(rules)
+    }
+}
+
+fn session_over(recording: &Arc<Recording>, guarded: bool) -> crate::ReparkSession {
+    let builder = crate::ReparkSession::builder()
+        .with_sql_dialect(Arc::clone(recording) as Arc<dyn SqlDialect>);
+    let builder = if guarded {
+        builder.with_local_fs_guard()
+    } else {
+        builder
+    };
+    builder.build().unwrap()
+}
+
+const WALL_CAST: &str = "SELECT CAST('2024-01-02 03:04:05.123456789' AS TIMESTAMP) AS v";
+
+fn outside_copies(out: &str) -> [String; 2] {
+    [
+        format!("COPY (SELECT 1 AS a) TO '{out}/direct' STORED AS PARQUET"),
+        format!("EXPLAIN ANALYZE COPY (SELECT 1 AS a) TO '{out}/wrapped' STORED AS PARQUET"),
+    ]
+}
+
+#[tokio::test]
+async fn the_guard_forwards_every_method_to_the_dialect_it_wraps() {
+    let recording = Arc::new(Recording::default());
+    let guard = LocalFsGuardedDialect::wrapping(Arc::clone(&recording) as Arc<dyn SqlDialect>);
+    let ctx = SessionContext::new();
+    let catalogs = CatalogRegistry::new();
+    let read_only = std::collections::HashSet::new();
+    let options = HashMap::from([("k".to_string(), "v".to_string())]);
+    guard.on_session_built(&ctx);
+    assert!(guard.type_planner().is_some());
+    assert_eq!(guard.configure_analyzer_rules(Vec::new()).unwrap().len(), 1);
+    guard
+        .execute(
+            EngineContext::new(&ctx, &catalogs, &read_only),
+            "SELECT 1 AS a",
+        )
+        .await
+        .unwrap();
+    guard
+        .execute_with_write_options(
+            EngineContext::new(&ctx, &catalogs, &read_only),
+            "SELECT 2 AS a",
+            &options,
+        )
+        .await
+        .unwrap();
+    let forwarded = [
+        "on_session_built",
+        "type_planner",
+        "configure_analyzer_rules",
+        "execute SELECT 1 AS a -> Int64",
+        "execute_with_write_options SELECT 2 AS a (1) -> Int64",
+    ];
+    assert_eq!(recording.calls(), forwarded);
+    let outside = TempDir::new().unwrap();
+    for sql in outside_copies(outside.path().to_str().unwrap()) {
+        let err = guard
+            .execute(EngineContext::new(&ctx, &catalogs, &read_only), &sql)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains(NATIVE_ENTRY_REFUSAL), "{sql}: {err}");
+        let err = guard
+            .execute_with_write_options(
+                EngineContext::new(&ctx, &catalogs, &read_only),
+                &sql,
+                &options,
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains(NATIVE_ENTRY_REFUSAL), "{sql}: {err}");
+    }
+    assert_eq!(
+        recording.calls(),
+        forwarded,
+        "a refused write never reaches the inner dialect"
+    );
+    assert_eq!(file_count(outside.path()), 0, "nothing may land outside");
+}
+
+#[tokio::test]
+async fn the_builder_wraps_the_dialect_it_would_otherwise_use() {
+    let recording = Arc::new(Recording::default());
+    let session = session_over(&recording, true);
+    assert_eq!(
+        recording.calls(),
+        [
+            "configure_analyzer_rules",
+            "type_planner",
+            "on_session_built"
+        ],
+        "the build reaches the inner dialect's hooks through the guard"
+    );
+    session
+        .sql("SELECT 1 AS a")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        recording.calls().last().unwrap(),
+        "execute_with_write_options SELECT 1 AS a (0) -> Int64"
+    );
+    let outside = TempDir::new().unwrap();
+    for sql in outside_copies(outside.path().to_str().unwrap()) {
+        let err = session.sql(&sql).await.unwrap_err().to_string();
+        assert!(err.contains(NATIVE_ENTRY_REFUSAL), "{sql}: {err}");
+    }
+    assert_eq!(
+        recording.calls().len(),
+        4,
+        "a refused write never reaches the inner dialect"
+    );
+    assert_eq!(file_count(outside.path()), 0, "nothing may land outside");
+    let unguarded = session_over(&Arc::new(Recording::default()), false);
+    let [direct, _] = outside_copies(outside.path().to_str().unwrap());
+    unguarded
+        .sql(&direct)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert!(
+        file_count(outside.path()) > 0,
+        "without the guard the same dialect writes"
+    );
+}
+
+#[tokio::test]
+async fn the_judgment_plan_and_the_inner_plan_see_the_same_session_state() {
+    let recording = Arc::new(Recording::default());
+    let session = session_over(&recording, true);
+    let catalogs = CatalogRegistry::new();
+    let read_only = std::collections::HashSet::new();
+    let judged = judged_plan(
+        &EngineContext::new(session.context(), &catalogs, &read_only),
+        WALL_CAST,
+    )
+    .await
+    .unwrap();
+    let microseconds = datafusion::arrow::datatypes::DataType::Timestamp(
+        datafusion::arrow::datatypes::TimeUnit::Microsecond,
+        None,
+    );
+    assert_eq!(judged.schema().field(0).data_type(), &microseconds);
+    session
+        .sql(WALL_CAST)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        recording.calls().last().unwrap(),
+        &format!("execute_with_write_options {WALL_CAST} (0) -> {microseconds}")
+    );
+    assert!(
+        session
+            .context()
+            .state()
+            .analyzer()
+            .rules
+            .iter()
+            .any(|rule| rule.name() == "local_fs_guard_inner_marker"),
+        "the inner dialect's analyzer rule is in the state both plans use"
+    );
 }

@@ -109,6 +109,12 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
   key fails, a native session built with the key set still refuses, and a read-only `CREATE
   EXTERNAL TABLE` over an existing local parquet directory refuses.
   pins: pa-local-fs-policy-1/C-019, C-020, C-021, C-022, C-023
+  **The ruling-113 step (2026-10-16):** `test_repark_sql_keeps_the_q6_wall_type_under_the_guard`
+  is U-1's Q6 cell (`test_ice_tsns_type_planner_1.py::test_repark_sql_plans_timestamp_as_the_wall`,
+  ice-tsns-type-planner-1/C-015) with the guard installed: `CAST('2024-01-02 03:04:05.123456789'
+  AS TIMESTAMP)` on `repark.sql()` answers `timestamp[us]` `1704164645123456`, and a local `COPY`
+  on the same entry still refuses with no file.
+  pins: pa-local-fs-policy-1/C-032
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 

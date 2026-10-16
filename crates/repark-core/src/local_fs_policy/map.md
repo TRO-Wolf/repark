@@ -28,8 +28,15 @@ refusing everything.
   a write through an in-warehouse symlink and missing middle directories. The plan walk over
   `Prepare`, `Analyze` and an `Explain` of an `Analyze`; the conf read; the native dialect's
   refusals, which name `repark.sql() does not allow local-file DDL` and no conf, and stay closed
-  even with a `repark.sql` extension set true (V-04, ruling 104).
-  pins: pa-local-fs-policy-1/C-011, C-012, C-014, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029
+  even with a `repark.sql` extension set true (V-04, ruling 104). **The wrap (ruling 113,
+  2026-10-16):** with a recording inner dialect, `the_guard_forwards_every_method_to_the_dialect_it_wraps`
+  (all five trait methods reach it; a refused write, direct or under `EXPLAIN ANALYZE`, through
+  either execute method, does not, and leaves no file), `the_builder_wraps_the_dialect_it_would_otherwise_use`
+  (the build reaches the inner hooks through the guard; the same dialect without the guard
+  writes), and `the_judgment_plan_and_the_inner_plan_see_the_same_session_state` (the guard's
+  plan and the inner plan both type `TIMESTAMP` with the inner dialect's planner, and its
+  analyzer rule is in the state).
+  pins: pa-local-fs-policy-1/C-011, C-012, C-014, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029, C-030, C-031
 
 ## Pointers
 

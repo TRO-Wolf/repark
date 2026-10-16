@@ -48,11 +48,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   below a plain `Explain`. `allow_local_filesystem_ddl` reads the opt-in from the `repark.sql`
   config extension only, accepting its field unprefixed (the real `extensions_options!` shape) or
   prefixed; absent means closed. `refuse_local_filesystem_plan` is the read plus the walk, for the
-  two doors. `LocalFsGuardedDialect` is the native door of `repark.sql()`: plan, the walk with no
-  conf read, the shared belt, execute; its refusal says `repark.sql() does not allow local-file
-  DDL` and that the entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports
-  `strip_ascii_prefix_ci` from here; its private copy is deleted.
-  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029
+  two doors. `LocalFsGuardedDialect` (ruling 113, 2026-10-16) wraps the dialect it is handed
+  (`wrapping`): it plans the statement on the session's state, runs the walk with no conf read,
+  and on a pass hands the statement to the inner dialect; `execute_with_write_options`,
+  `on_session_built`, `type_planner` and `configure_analyzer_rules` forward to it, so the inner
+  dialect's planner and analyzer rules shape both plans. `ReparkSessionBuilder::with_local_fs_guard`
+  sets the builder's `local_fs_guard`, and `session_dialect` wraps, at build, whichever dialect the
+  builder would otherwise use (the one handed in, else `DataFusionDialect`); `repark.sql()`'s
+  native door uses it. Its refusal says `repark.sql() does not allow local-file DDL` and that the
+  entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci`
+  from here; its private copy is deleted.
+  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029, C-030, C-031
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
