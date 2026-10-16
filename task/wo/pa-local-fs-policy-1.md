@@ -51,6 +51,14 @@ writing.
   after the re-verifier, and the 1.5.6 local-file policy line does not read clean until it
   lands. The df.write row says plainly that one write to a path makes later SQL writes to that
   path allowed."
+- **Owner, 2026-10-16 (after the scoped re-verifier's FAIL, findings RV-01 to RV-03):** "114: (b).
+  The guard judges where the bytes land: the followed path of the nearest existing ancestor plus
+  the remaining components, against the canonical warehouse root. The four cells free. The V-01,
+  V-02 and V-03 pins still pass under (b). The check-then-write race stays the dated row."; "116:
+  (a) if every re-verifier finding traces to how the path is read: one scoped round on Opus xhigh,
+  then the re-verifier; a second FAIL parks U-5 for good, back to a sketch, and 106 moves ahead.
+  If any finding is a new bypass unrelated to the path reading, (b) now. Order U-1, 106, U-5 is
+  sound under 113's wrapper condition."
 - **Orchestrator, at writing (the owner may overrule at triage):**
   - **One implementation.** The two guards become one: the classification, prefix strip,
     canonicalization and containment helpers move to `crates/repark-core` beside
@@ -60,9 +68,17 @@ writing.
     guard files, halt with the question.
   - **PA-03, threat model:** containment resolves the nearest existing ancestor through
     `canonicalize` and joins the missing tail; a destination whose nearest existing ancestor
-    resolves outside every warehouse refuses; a tail that contains `..` after the nearest existing
-    ancestor refuses. A concurrent actor who changes a symlink between check and write is outside
-    this unit and is recorded as a dated row with the audit's wording; the owner may rule it in.
+    resolves outside every warehouse refuses. A concurrent actor who changes a symlink between
+    check and write is outside this unit and is recorded as a dated row with the audit's wording;
+    the owner may rule it in.
+  - **PA-03, as ruled 2026-10-16 (ruling 114 (b)), replacing the clause "a tail that contains `..`
+    after the nearest existing ancestor refuses":** the guard judges where the bytes land. The
+    location is read as the door writes it (DataFusion's `ListingTableUrl::parse`, which removes
+    every `..` lexically, `%2e` forms included); the nearest existing ancestor of that path is
+    canonicalised and the remaining components are appended; the result is compared against the
+    warehouse root, read as a plain path or `file:` URL with no glob split and canonicalised the
+    same way. A `..` left in the remaining components after a missing directory, which no door's
+    reading produces, refuses.
   - **PA-02, carriers:** the guard walks the plan and checks every `Copy` and
     `CreateExternalTable` node it finds, at any depth, before execution; `Analyze` (EXPLAIN
     ANALYZE) and an executed prepared statement are the named carriers; plain `EXPLAIN` stays a

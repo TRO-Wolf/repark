@@ -93,9 +93,13 @@ Tables already written keep the values they hold; this release ships no migratio
 - **The guard reads a location the way the write reads it (owner ruling 103).** A symlink
   followed by `..` (`<warehouse>/deep/../../out`), a percent-encoded dot segment in a `file:`
   URL (`%2e%2e`, `%2E%2E`, `.%2e`) and a relative `file:` URL (read as `/x`, not against the
-  working directory) no longer write outside the warehouse. A `..` that steps back over a
-  symlink inside the warehouse now refuses even when the write would land inside it
-  (`<warehouse>/deep/../x` with `deep` an in-warehouse symlink wrote `<warehouse>/x` before).
+  working directory) no longer write outside the warehouse. The guard judges where the bytes
+  land (owner ruling 114, 2026-10-16), so a `..` that the write itself removes is judged after
+  it is removed: `<warehouse>/deep/../x`, `<warehouse>/x/../y` and `file://<warehouse>/x/%2e%2e/y`
+  keep writing inside the warehouse. A `[`, `?` or `*` in a registered warehouse path is an
+  ordinary character of the root; a bare `COPY` location under such a warehouse is cut at that
+  character by DataFusion and lands in its parent, so it now refuses (before, it wrote there);
+  the `file:` URL spelling of the same location writes inside.
 - **Not yet covered:** the policy does not yet cover a Spark-door `CREATE TABLE … LOCATION` to a
   local path outside the warehouse. Card: LOCAL-FS-CREATE-TABLE-LOCATION-1.
 - **Non-ASCII locations classify instead of panicking (audit PA-04).** A location whose

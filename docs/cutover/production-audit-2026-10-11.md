@@ -81,6 +81,18 @@ resolved the same way, so a warehouse registered through a symlinked path still 
 inside it. Pins: the `v01_*`, `v02_*` and `v03_*` tests of both doors' `pa_local_fs_policy.rs`
 and of `test_pa_local_fs_policy_1.py`, and `crates/repark-core/src/local_fs_policy/tests.rs`.
 
+**Amendment (2026-10-16, PA-LOCAL-FS-POLICY-1 fix round 2, owner ruling 114 (b)):** the guard
+judges where the bytes land. The written reading of the location (DataFusion's
+`ListingTableUrl::parse`, which removes every `..` the write removes) is resolved by its nearest
+existing ancestor plus the remaining components and compared against the warehouse root, read as
+a plain path or `file:` URL with no glob split and resolved the same way. The as-typed reading
+and its whole-path comparison of the previous amendment are withdrawn: a `..` the write removes,
+over a symlink or after a missing directory, is judged after it is removed and writes where it
+lands inside the warehouse; a `[`, `?` or `*` in a warehouse path no longer widens the root to its
+parent. The V-01, V-02 and V-03 pins still refuse. The check-then-write race stays the dated row.
+Pins: the `rv01_*`, `rv02_*`, `rv03_*` and 114-cell tests of both doors' `pa_local_fs_policy.rs`
+and of `crates/repark-core/src/local_fs_policy/tests.rs`.
+
 ## PA-04 — Unicode location classification panics
 
 `strip_ascii_prefix_ci` in [Spark](../../crates/repark-spark/src/local_fs_ddl.rs), line 53, slices `value[..prefix_len]` without checking a UTF-8 character boundary. `strip_prefix_ci` in [ANSI](../../crates/repark-sql/src/guards.rs), line 403, repeats it. The prefix is ASCII; the candidate path is not necessarily ASCII.
