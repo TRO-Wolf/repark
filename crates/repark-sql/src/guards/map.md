@@ -26,6 +26,10 @@ refusing everything.
   `repark_iceberg::write::predicate_dml::subquery_where`; its unit pins here call that
   function with the identity exemption, as the router does, and their assertions are
   unchanged. pins: repark-sql-update-subquery-where-1/C-006
+  **PA-LOCAL-FS-POLICY-1 (2026-10-15):** imports `LogicalPlan` and
+  `ALLOW_LOCAL_FILESYSTEM_DDL_KEY` (now from `repark_core::local_fs_policy`) itself, since
+  `guards.rs` no longer carries them; the SEC-02 test bodies are unchanged.
+  pins: pa-local-fs-policy-1/C-016, C-017
 - `ansi_door.rs` — the `#[cfg(test)] mod ansi_door;` declared in `../guards.rs`. The `AnsiDoor`
   harness (a live door over a memory-catalog Iceberg table) and every end-to-end pin that drives
   it through `crate::execute`: the G3-E8 end-to-end refuse (the row that asserts the table is

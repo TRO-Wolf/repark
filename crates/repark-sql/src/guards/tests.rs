@@ -3,8 +3,10 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::Catalog;
+use repark_core::local_fs_policy::ALLOW_LOCAL_FILESYSTEM_DDL_KEY;
 use repark_core::{CatalogRegistry, LocationPolicy};
 use repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate;
 use tempfile::TempDir;

@@ -120,6 +120,46 @@ the release PR to edit into the notes.
 
 Tables already written keep the values they hold; this release ships no migration.
 
+## Behaviour changes
+
+- **The local-file write policy checks writes below the root (PA-LOCAL-FS-POLICY-1, audit
+  PA-02).** With `repark.sql.allowLocalFilesystemDDL=false` (the default), `EXPLAIN ANALYZE
+  COPY … TO '<outside>'` now refuses with the policy error and writes nothing, as the bare
+  `COPY` already did; plain `EXPLAIN` still answers.
+- **Containment follows symlinks through missing parents (audit PA-03).** A destination such
+  as `<warehouse>/link/new/sub/export`, where `link` points outside and the middle
+  directories are absent, now refuses; a `..` after a missing directory and a dangling
+  symlink refuse as indeterminate.
+- **The guard reads a location the way the write reads it (owner ruling 103).** A symlink
+  followed by `..` (`<warehouse>/deep/../../out`), a percent-encoded dot segment in a `file:`
+  URL (`%2e%2e`, `%2E%2E`, `.%2e`) and a relative `file:` URL (read as `/x`, not against the
+  working directory) no longer write outside the warehouse. The guard judges where the bytes
+  land (owner ruling 114, 2026-10-16), so a `..` that the write itself removes is judged after
+  it is removed: `<warehouse>/deep/../x`, `<warehouse>/x/../y` and `file://<warehouse>/x/%2e%2e/y`
+  keep writing inside the warehouse. A `[`, `?` or `*` in a registered warehouse path is an
+  ordinary character of the root; a bare `COPY` location under such a warehouse is cut at that
+  character by DataFusion and lands in its parent, so it now refuses (before, it wrote there);
+  the `file:` URL spelling of the same location writes inside.
+- **Not yet covered:** the policy does not yet cover a Spark-door `CREATE TABLE … LOCATION` to a
+  local path outside the warehouse. Card: LOCAL-FS-CREATE-TABLE-LOCATION-1.
+- **Non-ASCII locations classify instead of panicking (audit PA-04).** A location whose
+  multibyte character straddles byte 5, 7 or 9 (`aaaaé`, `aaaaaaé`, `file://aaaaaaaaé`) now
+  gets the policy refusal (or writes, under the opt-in) instead of an internal error.
+- **`repark.sql()` applies the same policy (owner ruling 2026-10-15).** A local `COPY` or
+  `CREATE EXTERNAL TABLE` outside every registered warehouse now refuses on that entry,
+  wrapped or not; it has no opt-in. Before, it wrote anywhere the process could.
+- **Dated loss (2026-10-15, owner ruling 104): `repark.sql()` no longer runs any local-file
+  DDL.** That entry registers no warehouse, so every `COPY … TO` a local path (absolute,
+  relative, `file:`, `file://`, `file://localhost`), every `EXPLAIN ANALYZE COPY` to one, and
+  every `CREATE EXTERNAL TABLE` with a local location, the read-only registration of an existing
+  local file or directory included, now refuses with "repark.sql() does not allow local-file
+  DDL". The entry has no opt-in: `SET repark.sql.allowLocalFilesystemDDL = true` fails there,
+  and no session config reaches it. Before this release all of these ran. Card:
+  REPARK-SQL-LOCAL-DDL-1.
+- **The ANSI door's opt-in opens.** A session whose `repark.sql` extension sets
+  `allowLocalFilesystemDDL=true` now writes outside on the ANSI door; before, the door
+  refused regardless.
+
 ## Known issues
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-16):** `repark.sql()` refuses
