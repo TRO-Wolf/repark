@@ -168,7 +168,12 @@ holds behavior observed from outside the crate.
   family on this door and on a Spark SQL door session and holds both sets of texts, the
   `Error during planning: ` prefix removed, to the one ruling 90 text;
   `ruling_95_the_refusal_names_no_data_deleting_action_on_the_ansi_door` holds that the text
-  names no data-deleting action. pins: ice-struct-pairing-1/C-034, C-036
+  names no data-deleting action.
+  **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
+  `ruling_99_c_a_scalar_subquery_inside_the_set_expression_refuses_on_the_ansi_door` holds
+  `SET v = 1 + (SELECT …)`, `COALESCE((SELECT …), 0)` and `CASE … THEN (SELECT …) END` under
+  `WHERE true` to the ruling-90 text with the seeded rows unchanged.
+  pins: ice-struct-pairing-1/C-034, C-036
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

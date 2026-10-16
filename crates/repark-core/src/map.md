@@ -1005,8 +1005,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   ran first (the Spark door's `try_execute_identity_dml`, the ANSI door's
   `execute_identity_or_delegate`); `repark.sql()` has none. Before, the fork provider's
   `update` received the decorrelated subquery as a column of the target's own name and wrote
-  nothing. A subquery inside a larger expression is not refused here. Storing the value is
-  card `update-subquery-store-1`.
+  nothing. **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
+  `assigns_a_subquery` walks the whole assigned expression (`Expr::contains_scalar_subquery`),
+  so any scalar subquery in the `SET` value refuses with that same text, including
+  `1 + (SELECT …)`, `(SELECT …) + 1`, `-(SELECT …)`, `abs((SELECT …))`,
+  `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct built around
+  `(SELECT …)`. A subquery in the `WHERE` only stays silent. The identity path still runs
+  first and is unchanged. Storing the value is card `update-subquery-store-1`.
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2; **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**

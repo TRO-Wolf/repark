@@ -125,6 +125,13 @@ async fn guard_refuses_an_update_whose_set_value_is_a_scalar_subquery() {
         "UPDATE target SET n = ((SELECT n FROM src)), id = id + 1",
         "UPDATE target SET n = (SELECT CAST(n AS INT) FROM src)",
         "UPDATE target SET n = arrow_cast(((SELECT n FROM src)), 'Int64') WHERE true",
+        "UPDATE target SET n = 1 + (SELECT n FROM src) WHERE true",
+        "UPDATE target SET n = (SELECT n FROM src) + 1 WHERE true",
+        "UPDATE target SET n = -(SELECT n FROM src)",
+        "UPDATE target SET n = abs((SELECT n FROM src))",
+        "UPDATE target SET n = CASE WHEN true THEN (SELECT n FROM src) ELSE 0 END",
+        "UPDATE target SET n = COALESCE((SELECT n FROM src), 0)",
+        "UPDATE target SET n = named_struct('a', (SELECT n FROM src), 'b', 0)['a']",
     ] {
         let plan = belt.plan(sql).await.expect("plan");
         let refusal = belt.guard(&plan).expect_err(sql).to_string();
@@ -136,15 +143,13 @@ async fn guard_refuses_an_update_whose_set_value_is_a_scalar_subquery() {
 }
 
 #[tokio::test]
-async fn guard_passes_an_update_whose_set_value_only_contains_a_subquery() {
+async fn guard_passes_an_update_whose_set_value_has_no_scalar_subquery() {
     let ctx = ctx_with_update_tables();
     let catalogs = CatalogRegistry::new();
     let belt = PreExecute::new(&ctx, &catalogs);
     for sql in [
         "UPDATE target SET n = 5 WHERE true",
         "UPDATE target SET n = n + 1",
-        "UPDATE target SET n = (SELECT n FROM src) + 1 WHERE true",
-        "UPDATE target SET n = COALESCE((SELECT n FROM src), 0)",
         "UPDATE target SET n = 5 WHERE id IN (SELECT n FROM src)",
         "UPDATE target SET n = arrow_cast(n, 'Int64') WHERE true",
     ] {
