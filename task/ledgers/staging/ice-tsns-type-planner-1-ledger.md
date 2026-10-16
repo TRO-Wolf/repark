@@ -9,7 +9,7 @@ Target: 1.5.6.
 [amendment 1](../../wo/ice-tsns-type-planner-1/amendment-1.md) (U-1, R-017), the
 [fresh step 0](../../wo/ice-tsns-type-planner-1/step0-fresh-2026-10-15.md), the owner's
 rulings 91 to 94 of 2026-10-15, and the carry-over fix round under the owner's rulings 100,
-101 and 102 of 2026-10-15 with the orchestrator's provisional rulings on Q1 and Q4 (§11, the
+101 and 102 of 2026-10-15, with rulings 112 and 113 in §12, and the orchestrator's provisional rulings on Q1 and Q4 (§11, the
 [trace](../../wo/ice-tsns-type-planner-1/carryfix-trace-2026-10-15.md)). Ruling 100: a moved
 pin is re-pinned only to the Spark oracle's answer (Spark door) or the Q6 contract (ANSI
 doors), never to what the head prints, and each names its ruling; a carried commit that
@@ -51,7 +51,7 @@ as `TIMESTAMP` are deleted.
 | C-021 | Rulings 38 and 93: the dated rows are ruling 38's 108 door cells and residue cells red on the head with a red pin on today's main; a dated row that turns green fails the fixture until it is retired. | The dated-row tests and the main record. | **PROVEN** | `ice_tsns_type_planner_1_dated.json` after the carry-over fix round: 294 rows, 108 carve-out and 186 residue (180 of ruling 93, 4 of the Q1 ruling, 2 of ruling 102); the Q6 row and four ruling-93 rows are retired, green; every residue row is in the main record's `red`. pins: ice-tsns-type-planner-1/C-021 |
 | C-022 | R-010: the fixture's `DELETE` harness reads stored rows through the table, and U-3's `update_literal` cells that main refused by name are re-pinned to the rule. | The harness commit's before and after counts; U-3's merge wall. | **PROVEN** | §3: doors family 11 green / 8 red before, 12 / 7 after; U-3's merge wall 356 green with `r010_answers`. pins: ice-tsns-type-planner-1/C-022 |
 | C-023 | No statement today's main answers errors on the head outside ruling 38's carve-out and the `repark.sql()` cell of ruling 94. | The fixture's main-answers check on the head. | **PROVEN** | §5: 108 lost statements, all carve-out rows; the Q6 cell answers. pins: ice-tsns-type-planner-1/C-023 |
-| C-025 | No pin of an existing test moves without a ruling. | `cargo test` of the five crates and the facade suite on the head, set against today's main. | **OPEN** | §11: of the 78 breaks of the carry-over, 77 are green again: fixed (the pinned value is the oracle's or main's) or re-pinned, each to a recorded Spark 4.1.2 answer, the Q6 contract or R-010's rule, naming its ruling. One is open: `extension::tests::analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion` pins the Spark door's analyzer list, which now holds `spark_timestamp_unit_widen` (`203f9821`); no Spark answer or Q6 contract exists for an internal rule list, so ruling 100 allows no re-pin (question Q1 of §Q). |
+| C-025 | No pin of an existing test moves without a ruling. | `cargo test` of the five crates and the facade suite on the head, set against today's main. | **OPEN** | §11 and §12: of the 78 breaks of the carry-over, 77 were green again under rulings 100 to 102. Ruling 112 (2026-10-15) re-pins the last, `extension::tests::analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion`: `spark_timestamp_unit_widen` is named among the insertions and asserted before `type_coercion` (commit `3ab3e5d9`). The clause stays open until the five-crate suite and the facade suite are set against today's main in the closing record; this round re-ran the merged head only. |
 | C-026 | Each of the 78 carry-over breaks and the 8 ruling-101 cells is attributed to the first carried commit at which it is red, and every carried commit serves at least one of M1, M2 and M3. | The trace: builds at each carried commit, the fixture's main-answers check per state, `git revert` of each carried commit at the head. | **PROVEN** | [carryfix-trace-2026-10-15.md](../../wo/ice-tsns-type-planner-1/carryfix-trace-2026-10-15.md): planner 4 + 21 + 4, widen rule 1, deletions 44 + 6, kernels by target 2 + 4, every row monotone; no carried commit is dropped. pins: ice-tsns-type-planner-1/C-026 |
 | C-027 | The three errors are fixed: an integer cast to `TIMESTAMP` reads seconds at every width, and a `DATE` or a string beside a zoned timestamp in a shared position or a `UNION` column takes that timestamp's type. | The bench pins, `ltz_store.rs`, `test_stamp_2_r5p6_1.py`, `test_store_ts_doors_2.py`; revert checks V1a and V1b. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-027 |
 | C-028 | A refusal text names a zoned timestamp `TIMESTAMP`, as Spark 4.1.2 does, on the SQL and the Python door. | `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs` unit tests; revert check V2. | **PROVEN** | §11. pins: ice-tsns-type-planner-1/C-028 |
@@ -277,7 +277,7 @@ serves a mechanism, so none is dropped.
 | nested NTZ cast | facade 2 (+ Rust twin, + `w_ref_cast`) | `62089e59` | Spark 4.1.2 answers | re-pinned (`3623fe1b`, `563c61a9`), the planner sketch |
 | `timestamptz_ns` literal `UPDATE` | facade 5 | `62089e59` | R-010's rule, nine digits exact | re-pinned (`5b00a2ae`), R-010 |
 | R-017's no-`WHERE` `UPDATE` pin | Rust 1 | `7dfb04c3` | Spark 4.1.2's microsecond twin: a NULL takes its sibling's type | re-pinned (`89d6c706`), R-017 |
-| analyzer-list pin | Rust 1 | `203f9821` | none | open, question Q1 below |
+| analyzer-list pin | Rust 1 | `203f9821` | ruling 112, the planner sketch | re-pinned (`3ab3e5d9`), §12 |
 | read-perf bench pins | Rust 5 | `62089e59`, `ca385f17` | the 1.05x gate | the error fixed; measured, never re-pinned (below) |
 
 **Revert checks** (each fix's product code reverted alone on a scratch clone of the head,
@@ -379,3 +379,9 @@ ruling 100 (§11). The carry-over fix round asks:
   `crates/repark-python/src/session.rs` (`.with_extension(NativeDoorTypes)` and
   `.with_sql_dialect(LocalFsGuardedDialect)`): a textual conflict whose resolution keeps
   both calls. Lean: it stands.
+
+## 12. Rulings 112 and 113 (2026-10-15)
+
+**2026-10-15, ruling 112.** "A pin of the analyzer rule list is internal structure and re-pins to the planner sketch: the widen rule named, asserted before type_coercion, the existing entries keeping their order." The re-pin is `analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion` (`3ab3e5d9`): `spark_timestamp_unit_widen` is named among the insertions and asserted immediately before `spark_fractional_division`, before `type_coercion`, and the existing assertions keep their entries in their present order.
+
+**2026-10-15, ruling 113.** "U-1's ANSI planner variant lives once, in a crate both the ANSI door and the Python door can reach under today's crate DAG, and both dialects call it." It lives once in `repark-functions` (`ansi_type_planner`, `analyzer_rules_with_timestamp_unit_widen`, `install_ansi_planned_timestamp_cast`), and `repark_sql::AnsiDialect` and the Python door's `NativeDoorTypes` (`crates/repark-python/src/session_runtime.rs`) both call it.

@@ -39,7 +39,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   main with ruling 38's carve-out and ruling 93's residue as dated rows, the R-010 harness,
   M1 `sequence` (round 1) and the M3 rule gaps (round 1: aggregate zero, UNION DISTINCT,
   rulings 91 and 92). No statement main answers is lost outside the carve-outs (C-023).
-  C-009, C-010 and C-025 stay OPEN on five questions. `risk_tier: standard`. Branch
+  Ruling 112 (2026-10-15) re-pins the analyzer rule list; ruling 113 records that the ANSI
+  planner variant lives once in `repark-functions`. C-025 stays OPEN. `risk_tier: standard`. Branch
   `fix/ice-tsns-type-planner-1-fresh`.
 - [ice-tsns-floor-doors-1-ledger.md](ice-tsns-floor-doors-1-ledger.md) —
   **ICE-TSNS-FLOOR-DOORS-1 step 0 (2026-10-14), parity row R-009:** measurement
