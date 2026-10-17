@@ -1,8 +1,25 @@
-# Card EXPLAIN-DML-WRITE-1: a plain `EXPLAIN` of DML writes on `repark.sql()`, and `EXPLAIN ANALYZE` of DML writes on every door
+# Card EXPLAIN-DML-WRITE-1: `EXPLAIN ANALYZE` and `PREPARE`/`EXECUTE` run DML on every RePark door, and with a subquery predicate they change every row
 
-## 2026-10-17, owner ruling 136: the card corrected
+**Date:** 2026-10-16, corrected 2026-10-17. **Filed by:** Claude Opus 5.5, under owner rulings 131,
+136, 138 and 139.
 
-Owner ruling 136, verbatim:
+**Status:** open. **Critical** for a `DELETE` or `UPDATE` whose `WHERE` holds a subquery, run under
+`EXPLAIN ANALYZE` or `PREPARE` then `EXECUTE` (owner ruling 139). The unit takes 106's Opus slot the
+day 106 (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1) merges or parks. If 106 merges, its P2 report is filed
+first.
+
+**Retires:** when `EXPLAIN ANALYZE` of DML refuses on every door, a `PREPARE` whose body is a write
+refuses on every door while `PREPARE` of a query still works, and the wrapper pins below hold on
+every door.
+
+## 2026-10-17: owner rulings 136, 138 and 139, and the measured table
+
+The earlier text, kept as written at the end, said a plain `EXPLAIN` of DML writes on
+`repark.sql()`. A measurement on real Iceberg tables showed it does not: that write happens on
+in-memory tables only. It also showed `PREPARE`/`EXECUTE` writing on every RePark door, not only on
+the ANSI door.
+
+### The owner's rulings, verbatim
 
 ```
 Q136 → correct the card. Plain EXPLAIN of DML on an Iceberg table does
@@ -16,102 +33,143 @@ rows on all three doors and labels any in-memory-table row as such.
 You write the options from the table.
 ```
 
-- **Plain `EXPLAIN` of DML on an Iceberg table does not write.** The write this card was filed
-  for was measured on in-memory tables only: the seeds of 106's rounds 2 and 3 (`CREATE SCHEMA …
-  WITH (location = …)` and `CREATE TABLE … AS SELECT` through `repark.sql()`) made DataFusion
-  in-memory tables,
-  whose delete and update run while the physical plan is built. The CRITICAL on the Iceberg path
-  is withdrawn.
-- **The card keeps two items.**
-  1. `EXPLAIN ANALYZE` of DML executes the write on every door; Spark 4.1.2 refuses it with a
-     `ParseException`, so RePark is to refuse it too.
-  2. The `PREPARE`/`EXECUTE` path on the ANSI door: `PREPARE p AS DELETE … WHERE id IN (SELECT
-     …)` and then `EXECUTE p` empties the table, where the bare statement answers Spark's rows.
-- **The measurement lane is Muse xhigh** (item 3 of the overnight plan); no new model permission
-  is needed.
-- The text below this section stays as written on 2026-10-16.
+```
+Q138 → (a). PREPARE whose body is a write refuses on every door;
+PREPARE of a query keeps working. Spark refuses it, so RePark
+refuses it. It is not a lane of its own: it lands inside the
+EXPLAIN-DML-WRITE-1 unit from Q139, since both edit the same walks.
+The refusal text names the statement and says PREPARE of a query
+still works; it names no data-deleting action.
+```
 
-### The table, 2026-10-17
+```
+Q139 → (a), CRITICAL for the wrapper-plus-subquery form, with the
+scope corrected after I looked at main:
+  - repark-spark's two doors share one strict pregate: the
+    statement path calls one function that today matches only a
+    bare DELETE or UPDATE. 106's fix round makes that one function
+    the walk-level refusal (this is the Q135 shape, placed on the
+    function every repark-spark caller passes), so the Spark door
+    closes with 106, not later. 106's verifier pins both
+    repark-spark doors. If the Spark door turns out not to reach
+    that function, the fix-round sketch says so, and the Spark
+    door joins the ANSI door in the unit below.
+  - The ANSI door is a different crate with its own twin guard,
+    called on the bare DELETE and UPDATE paths only, and the
+    door-to-door ban means it cannot share repark-spark's walk.
+    That twin is the EXPLAIN-DML-WRITE-1 unit: the walk-level
+    refusal on the ANSI door, plus Q138's PREPARE-of-DML refusal
+    on every door.
+  - The unit takes 106's Opus slot the day 106 merges or parks.
+    If 106 merges, its P2 report is filed first, then the lane
+    opens. If 106 parks, the unit branches from main and carries
+    the repark-spark placement itself. No fourth lane, and nothing
+    branched from 106's round-4 head; (c) is refused.
+  - Step-0 sketch before step 1: it names the exact call sites per
+    door on main. Then one Opus xhigh round, then the verifier,
+    which pins each wrapper on each door in the IN-subquery form,
+    on tables created through the Iceberg catalog with the
+    provider guard, the same test shape as 106. P2 report on merge.
+  - Docs PR today, docs-only, no verifier: the measured table on
+    the card and the 1.5.6 known-issue line naming both wrappers
+    and both doors.
+```
 
-Seeds as below; every cell is an Iceberg table (`IcebergTableScan`, the rows and the snapshot
-count read back) unless its row says in-memory. "Read" means the result was collected; snapshot
-counts go from 1. `repark.sql()` main is `14ad3c6d` (the 106 verifier's Iceberg cells,
-2026-10-16) with the `PREPARE` rows re-measured on the merge of main into 106 before its round 4
-(`5a51a758`, the same path); the 106 head is round 4's module. The ANSI door is the 106
-verifier's Rust harness on Iceberg seeds (main = the 106 head; 106 does not touch that door). The
-Spark SQL door is the Python facade on the 106 head's module, measured 2026-10-17 (106 does not
-touch that door either). Spark 4.1.2 with Iceberg 1.11.0, `local[1]`, measured 2026-10-16 and
-2026-10-17.
+### Where each part lands
 
-| Statement | `repark.sql()`, main | `repark.sql()`, 106 head | ANSI door | Spark SQL door | Spark 4.1.2 |
+| Part | Lands in |
+|---|---|
+| `repark.sql()`: the subquery refusal on every statement the walk returns, `PREPARE` and `EXPLAIN ANALYZE` included | 106, ruling 135 |
+| repark-spark's two doors: the strict pregate's `refuse_dml_subquery_predicate_in_statement` becomes the walk-level refusal | 106's fix round, ruling 139. A wrapper path that does not reach that function joins this unit. |
+| The ANSI door: the walk-level refusal on its twin guard | this unit |
+| `PREPARE` whose body is a write refuses; `PREPARE` of a query works | this unit, every door, ruling 138 |
+| `EXPLAIN ANALYZE` of DML refuses, as Spark refuses it | this unit, every door, ruling 136 |
+| A plain `EXPLAIN` of DML on an in-memory table writes | not this card, ruling 136 |
+
+The orchestrator's reading of main `56057f65`, for the step-0 sketch to confirm or correct:
+- The repark-spark statement path parses in `execute_passthrough_inner`
+  (`crates/repark-spark/src/spark_ast.rs`). It tries `try_execute_identity_dml` first, then runs the
+  strict pregate, whose `refuse_dml_subquery_predicate_in_statement`
+  (`crates/repark-spark/src/normalize.rs`) matches only a bare `Statement::Delete` or
+  `Statement::Update`.
+- That function skips the refusal for the allow-listed shapes `try_allowed_delete_in` and
+  `try_allowed_update_in` accept. Those include `id IN (SELECT …)`, which the bare statement runs
+  through RePark's own executor with the matching rows. Under a wrapper, the same shape goes to
+  DataFusion's DML planner, which is where every row changes. So the allow-list exemption cannot
+  carry over to a statement reached under a wrapper.
+- A `PREPARE` arrives at that function as `Statement::Prepare` and passes its catch-all arm.
+  DataFusion's own `EXPLAIN [ANALYZE]` takes the `DfStatement::Explain` arm of
+  `execute_passthrough_inner` and does not reach that function on main.
+- The ANSI door's twin is `guards::refuse_dml_subquery_predicate` (`crates/repark-sql/src/guards.rs`),
+  called from `crates/repark-sql/src/router.rs` on its bare `DELETE` and `UPDATE` paths.
+
+### Measured cells, main `56057f65`
+
+The EXPLAIN-DML-WRITE-1 measurement lane (Muse xhigh, 2026-10-17) took the release module built
+from a clean main, sha256 `cbd7c6d7…`. Each cell had a fresh memory catalog:
+- **Seeds:** `ice.ns.t (id INT, v INT)` holds (1, 10), (2, 20), (3, 30), (4, 40), and
+  `ice.ns.s (id INT, w INT)` holds (2, 20), (3, 99). So the subquery matches ids 2 and 3.
+- **Iceberg tables:** created through the catalog (namespace, `CREATE TABLE` with columns, then
+  `INSERT`), and checked as Iceberg before each cell by an `IcebergTableScan` in the plan.
+- **In-memory column:** the `repark.sql()` cells repeated on `CREATE SCHEMA … WITH (location …)`
+  plus CTAS tables, which are in-memory tables.
+- **Doors:** the ANSI door ran from Rust through `repark_sql::AnsiDialect`, and the Spark SQL door
+  through the Python facade's `ReparkSession.sql()`.
+- **Reading:** every `EXPLAIN` cell was read to the end. Building the frame without reading it
+  wrote nothing on any RePark door or table kind. For `PREPARE`, the cell shows `EXECUTE p` read to the
+  end, and `PREPARE` alone wrote nothing on any door.
+
+101 cells were measured and none was unreached. The orchestrator re-ran nine of them by hand, and
+all nine matched.
+
+| Statement | repark.sql(), Iceberg | repark.sql(), in-memory table | ANSI door | Spark SQL door | Spark 4.1.2 |
 |---|---|---|---|---|---|
-| `EXPLAIN DELETE … WHERE id = 2`, read | plan, rows kept, 1 → 1 | plan, rows kept, 1 → 1 | plan, rows kept | plan, rows kept, 1 → 1 | plan, rows kept |
-| `EXPLAIN DELETE … WHERE id IN (SELECT id FROM ice.ns.s)`, read | plan, rows kept, 1 → 1 | plan, rows kept, 1 → 1 | plan, rows kept | plan, rows kept, 1 → 1 | plan, rows kept |
-| `EXPLAIN UPDATE … SET v = 5 WHERE id IN (SELECT …)`, read | plan, rows kept, 1 → 1 | plan, rows kept, 1 → 1 | plan, rows kept | plan, rows kept, 1 → 1 | plan, rows kept |
-| **in-memory table:** `EXPLAIN DELETE … WHERE a = 2`, read | row 2 deleted | row 2 deleted | not measured | not measured | — |
-| **in-memory table:** `EXPLAIN DELETE … WHERE a IN (SELECT …)`, read | no row left | no row left (round 3 refused it) | not measured | not measured | — |
-| **in-memory table:** `EXPLAIN UPDATE … SET a = 5 WHERE a = 2`, read | row 2 written | row 2 written | not measured | not measured | — |
-| `EXPLAIN ANALYZE DELETE … WHERE id = 2` | id 2 deleted, 1 → 2 | id 2 deleted, 1 → 2 | id 2 deleted | id 2 deleted, 1 → 2 | `ParseException`, rows kept |
-| `EXPLAIN ANALYZE UPDATE … SET v = 5 WHERE id = 2` | id 2 written, 1 → 2 | id 2 written, 1 → 2 | id 2 written | id 2 written, 1 → 2 | `ParseException`, rows kept |
-| `EXPLAIN ANALYZE DELETE … WHERE id IN (SELECT …)` | no row left, 1 → 2 | G3-E8 refusal, rows kept | no row left | no row left, 1 → 2 | `ParseException`, rows kept |
-| `EXPLAIN ANALYZE UPDATE … SET v = 5 WHERE id IN (SELECT …)` | every row 5, 1 → 2 | G3-E8 refusal, rows kept | every row 5 | every row 5, 1 → 2 | `ParseException`, rows kept |
-| `PREPARE p AS DELETE …` with a plain predicate; `EXECUTE p` | id 2 deleted, 1 → 2 | id 2 deleted, 1 → 2 | ids 1 and 3 deleted (`IN (1, 3)`) | id 2 deleted, 1 → 2 | `ParseException`, rows kept |
-| `PREPARE p AS DELETE … WHERE id IN (SELECT …)`; `EXECUTE p` | no row left, 1 → 2 | G3-E8 refusal at `PREPARE`; `EXECUTE` finds no `p`; rows kept | no row left | no row left, 1 → 2 (the bare `DELETE` keeps ids 1 and 4) | `ParseException`, rows kept |
-| `PREPARE p AS UPDATE … SET v = 5 WHERE id IN (SELECT …)`; `EXECUTE p` | every row 5, 1 → 2 | G3-E8 refusal at `PREPARE`, rows kept | every row 5 | every row 5, 1 → 2 | `ParseException`, rows kept |
-| `PREPARE p(INT) AS DELETE … WHERE id IN (SELECT id FROM ice.ns.s WHERE w > $1)`; `EXECUTE p(0)` | no row left, 1 → 2 | G3-E8 refusal at `PREPARE`, rows kept | no row left | no row left, 1 → 2 | `ParseException`, rows kept |
-| `PREPARE p AS EXPLAIN ANALYZE DELETE … WHERE id IN (SELECT …)`; `EXECUTE p` | no row left, 1 → 2 | G3-E8 refusal at `PREPARE`, rows kept | no row left | no row left, 1 → 2 | `ParseException`, rows kept |
-| `PREPARE p AS EXPLAIN DELETE … WHERE id IN (SELECT …)`; `EXECUTE p` | plan, rows kept, 1 → 1 | plan, rows kept, 1 → 1 | plan, rows kept | plan, rows kept, 1 → 1 | `ParseException`, rows kept |
+| `EXPLAIN DELETE … WHERE id = 2` | plan; no write, snapshots 1→1 | plan; 1 row deleted | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 |
+| `EXPLAIN UPDATE … WHERE id = 2` | plan; no write, snapshots 1→1 | plan; 1 row set | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 |
+| `EXPLAIN DELETE … WHERE id IN (SELECT id FROM s)` | plan; no write, snapshots 1→1 | plan; **all 4 rows deleted** | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 |
+| `EXPLAIN UPDATE … WHERE id IN (SELECT id FROM s)` | plan; no write, snapshots 1→1 | plan; **all 4 rows set** | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 |
+| `EXPLAIN ANALYZE DELETE … WHERE id = 2` | plan; 1 row deleted, snapshots 1→2 | plan; 1 row deleted | plan; 1 row deleted, snapshots 1→2 | plan; 1 row deleted, snapshots 1→2 | refused ParseException; no write, snapshots 1→1 |
+| `EXPLAIN ANALYZE UPDATE … WHERE id = 2` | plan; 1 row set, snapshots 1→2 | plan; 1 row set | plan; 1 row set, snapshots 1→2 | plan; 1 row set, snapshots 1→2 | refused ParseException; no write, snapshots 1→1 |
+| `EXPLAIN ANALYZE DELETE … WHERE id IN (SELECT id FROM s)` | plan; **all 4 rows deleted**, snapshots 1→2 | plan; **all 4 rows deleted** | plan; **all 4 rows deleted**, snapshots 1→2 | plan; **all 4 rows deleted**, snapshots 1→2 | refused ParseException; no write, snapshots 1→1 |
+| `EXPLAIN ANALYZE UPDATE … WHERE id IN (SELECT id FROM s)` | plan; **all 4 rows set**, snapshots 1→2 | plan; **all 4 rows set** | plan; **all 4 rows set**, snapshots 1→2 | plan; **all 4 rows set**, snapshots 1→2 | refused ParseException; no write, snapshots 1→1 |
+| `PREPARE p AS DELETE … WHERE id = 2; EXECUTE p` | PREPARE ok, EXECUTE ok; 1 row deleted, snapshots 1→2 | PREPARE ok, EXECUTE ok; 1 row deleted | PREPARE ok, EXECUTE ok; 1 row deleted, snapshots 1→2 | PREPARE ok, EXECUTE ok; 1 row deleted, snapshots 1→2 | PREPARE and EXECUTE refused (ParseException); no write, snapshots 1→1 |
+| `PREPARE p AS UPDATE … WHERE id = 2; EXECUTE p` | PREPARE ok, EXECUTE ok; 1 row set, snapshots 1→2 | PREPARE ok, EXECUTE ok; 1 row set | PREPARE ok, EXECUTE ok; 1 row set, snapshots 1→2 | PREPARE ok, EXECUTE ok; 1 row set, snapshots 1→2 | PREPARE and EXECUTE refused (ParseException); no write, snapshots 1→1 |
+| `PREPARE p AS DELETE … WHERE id IN (SELECT id FROM s); EXECUTE p` | PREPARE ok, EXECUTE ok; **all 4 rows deleted**, snapshots 1→2 | PREPARE ok, EXECUTE ok; **all 4 rows deleted** | PREPARE ok, EXECUTE ok; **all 4 rows deleted**, snapshots 1→2 | PREPARE ok, EXECUTE ok; **all 4 rows deleted**, snapshots 1→2 | PREPARE and EXECUTE refused (ParseException); no write, snapshots 1→1 |
+| `PREPARE p AS UPDATE … WHERE id IN (SELECT id FROM s); EXECUTE p` | PREPARE ok, EXECUTE ok; **all 4 rows set**, snapshots 1→2 | PREPARE ok, EXECUTE ok; **all 4 rows set** | PREPARE ok, EXECUTE ok; **all 4 rows set**, snapshots 1→2 | PREPARE ok, EXECUTE ok; **all 4 rows set**, snapshots 1→2 | PREPARE and EXECUTE refused (ParseException); no write, snapshots 1→1 |
+| `EXPLAIN SELECT * FROM t WHERE id = 2 (control)` | plan; no write, snapshots 1→1 | plan; no write | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 | plan; no write, snapshots 1→1 |
 
-The in-memory rows are `repark.sql()` over tables made by `CREATE TABLE … AS SELECT` outside an
-Iceberg namespace: main from the 106 verifier's MemTable cells, the 106 head from round 4's probe
-on its module, 2026-10-17; each table's scan is a `DataSourceExec`, not an `IcebergTableScan`. Round 3 refused the second one; round 4 answers a plain `EXPLAIN` again, as main does, by
-the orchestrator's reading of ruling 135, and the owner may overrule that reading.
+For comparison, the orchestrator ran the bare statements by hand on the same module:
+- On the Spark SQL door, the bare `DELETE … WHERE id IN (SELECT id FROM s)` deletes ids 2 and 3,
+  and the bare `UPDATE` sets those two rows.
+- On `repark.sql()`, the bare `DELETE` deletes all four rows; 106 refuses it.
+- The ANSI door's bare forms were not measured here.
 
-**Measured outside the two items:** the Spark SQL door carries the same `PREPARE`/`EXECUTE`
-write as the ANSI door (the rows above, 2026-10-17). Item 2 names the ANSI door; whether it
-covers the Spark SQL door too is the owner's call (option 2-D below).
+Spark 4.1.2 has neither `EXPLAIN ANALYZE` nor `PREPARE`. It refuses both at parse with
+`PARSE_SYNTAX_ERROR`, and for `EXECUTE p` it asks for `EXECUTE IMMEDIATE`.
 
-### Options, written from the table
+### Pins this unit owes
 
-Item 1, `EXPLAIN ANALYZE` of DML refuses on every door:
+The verifier pins each wrapper on each door in the `IN`-subquery form. The tables are created
+through the Iceberg catalog, and a provider guard asserts they are Iceberg, the same test shape as
+106. Each pin asserts the refusal, the rows and the snapshot count:
+- `EXPLAIN ANALYZE` of `DELETE` and `UPDATE`, with a plain and with a subquery predicate, refuses
+  on every door and writes nothing.
+- `PREPARE p AS DELETE …` and `PREPARE p AS UPDATE …` refuse on every door, with a plain and with a
+  subquery predicate. The refusal names the statement, says `PREPARE` of a query still works, and
+  names no data-deleting action. `PREPARE p AS SELECT …` then `EXECUTE p` still answers.
+- A plain `EXPLAIN` of DML on an Iceberg table answers its plan and writes nothing, on every door.
+- `EXPLAIN SELECT` answers its plan on every door (the control).
 
-- **1-A, one parse-level check on every door (lean).** The walk `repark.sql()` already uses,
-  `repark_iceberg::write::statement_writes::executed_writes`, answers the writes a statement
-  executes through `EXPLAIN ANALYZE` and `PREPARE`. Each door refuses before planning when a
-  write sits under an `EXPLAIN ANALYZE` layer (DataFusion parses a leading `EXPLAIN` itself, so
-  each door peels those layers as `repark.sql()` does). It refuses where Spark does, at parse
-  time, and reaches `PREPARE p AS EXPLAIN ANALYZE …`. Pins: the four `EXPLAIN ANALYZE` rows and
-  the `PREPARE … EXPLAIN ANALYZE` row, on all three doors.
-- **1-B, a plan-level check in the shared belt.** `PreExecute::guard` refuses a
-  `LogicalPlan::Analyze` over a `Dml` input. One check covers every door that runs the belt, but
-  a prepared plan reaches execution through `EXECUTE`, after `PREPARE` passed the guard, so 1-B
-  needs `PREPARE` checked too; and a door that does not run the belt needs its own call.
-- **1-C, answer the plan without executing.** Departs from both DataFusion and Spark (Spark
-  refuses); not recommended.
+**2026-10-17, 106 round 4:** 106 closes `repark.sql()`: its G3-E8 refusal runs on every statement
+the shared walk `repark_iceberg::write::statement_writes::executed_writes` returns, so a `DELETE` or
+`UPDATE` whose `WHERE` holds a subquery refuses bare, under `PREPARE` (alone, parameterised, or
+around `EXPLAIN ANALYZE`) and under `EXPLAIN ANALYZE`, while a plain `EXPLAIN` answers its plan; a
+`PREPARE` with a plain predicate still runs. The repark-spark placement of ruling 139 is in 106's
+fix round; ledger section 12.
 
-Item 2, the `PREPARE`/`EXECUTE` path on the ANSI door:
+## Earlier text, 2026-10-16, as written (headings one level down)
 
-- **2-A, the ANSI router's G3-E8 check over the walk, with no identity exemption under
-  `PREPARE` (lean).** The identity forms answer Spark's rows only through the router's identity
-  path; `EXECUTE` runs DataFusion's DML planner instead, which writes every row (the table). So a
-  subquery-predicate `DELETE` or `UPDATE` under `PREPARE` refuses with the G3-E8 text, and a
-  plain-predicate one still prepares and executes. It loses no answer the table shows as right.
-- **2-B, refuse `PREPARE` of any DML.** Simpler, and closer to Spark (which has no `PREPARE`),
-  but it takes away the plain-predicate `PREPARE` rows, which RePark answers right today.
-- **2-C, refuse `PREPARE` entirely.** Spark's answer, at the cost of every `PREPARE` RePark
-  answers today (`SELECT` included); a never-worse census decides how many.
-- **2-D, scope.** The Spark SQL door's `PREPARE` rows match the ANSI door's; extend item 2 to
-  that door, or leave it to its own card.
-
-### Pins it owes now
-
-- On all three doors, Iceberg tables: `EXPLAIN ANALYZE` of `DELETE` and `UPDATE`, plain and
-  subquery predicates, refuses and leaves rows and snapshots unchanged.
-- On the ANSI door (and the Spark SQL door if 2-D extends it): `PREPARE` of a subquery-predicate
-  `DELETE`, `UPDATE`, parameterised `DELETE` and `EXPLAIN ANALYZE DELETE` refuses, rows and
-  snapshots unchanged; a plain-predicate `PREPARE`/`EXECUTE` still writes the matching rows.
-- Controls: a plain `EXPLAIN` of DML answers its plan with the Iceberg table unchanged, on every
-  door; any pin on an in-memory table says so in its name.
+**Title then:** Card EXPLAIN-DML-WRITE-1: a plain `EXPLAIN` of DML writes on `repark.sql()`, and `EXPLAIN ANALYZE` of DML writes on every door
 
 **Date:** 2026-10-16. **Filed by:** Claude Opus 5.5, under owner ruling 131.
 
@@ -122,14 +180,14 @@ before this card's lane opens.
 **Retires:** when a plain `EXPLAIN` of DML never writes on any door, `EXPLAIN ANALYZE` of DML
 refuses on every door, and the pins below hold on all three doors.
 
-## The goal, in the owner's words
+### The goal, in the owner's words
 
 Owner ruling 131, verbatim: "New critical card, next Iceberg write unit after 106: a plain
 EXPLAIN of DML never writes on any door, and EXPLAIN ANALYZE of DML refuses on every door. Pins
 on all three doors, so routing repark.sql() later cannot bring the write back. Named in the 1.5.6
 known issues. 106 does not hold for it: a ready refusal does not wait behind a broader fix."
 
-## Measured cells
+### Measured cells
 
 Seeds: `ice.ns.t (id INT, v INT)` holds (1, 10), (2, 20), (3, 30), (4, 40); `ice.ns.s (id INT, w
 INT)` holds (2, 20), (3, 99); a fresh memory catalog per cell. "Read" means the frame's result is
@@ -153,7 +211,7 @@ Since 106 round 3, `repark.sql()` refuses the subquery-predicate rows with the G
 the rows; the other rows are unchanged there. Building the frame of a plain `EXPLAIN` without
 reading it writes nothing on `repark.sql()`.
 
-## Pins it owes, on all three doors
+### Pins it owes, on all three doors
 
 - A plain `EXPLAIN` of `DELETE`, `UPDATE`, `INSERT` and `MERGE` (each door's spellings), with a
   plain predicate and with a subquery predicate, read to the end: the rows, the snapshot and the
@@ -164,7 +222,7 @@ reading it writes nothing on `repark.sql()`.
 - The pins on `repark.sql()` stay when it is routed through the ANSI door, so routing cannot bring
   the write back.
 
-## Note
+### Note
 
 Named in the 1.5.6 known issues. 106 does not wait for this card; its `EXPLAIN` rule covers only
 the subquery-predicate class it already refuses.

@@ -178,11 +178,10 @@ Tables already written keep the values they hold; this release ships no migratio
   `EXISTS` forms the Spark SQL session answers with the matching rows, bare, under `PREPARE`
   and under `EXPLAIN ANALYZE`; a plain `EXPLAIN` answers its plan. Run those statements through
   the Spark SQL session until `repark.sql()` is routed through the ANSI door.
-- **EXPLAIN-DML-WRITE-1 (known issue, corrected 2026-10-17):** `EXPLAIN ANALYZE` of a `DELETE`
-  or `UPDATE` performs the write on every door, where Spark refuses it; and on the ANSI door,
-  `PREPARE` of a `DELETE` or `UPDATE` whose `WHERE` holds a subquery, then `EXECUTE`, writes every
-  row, where the statement run bare answers Spark's rows. A plain `EXPLAIN` of DML does not write
-  on an Iceberg table; through `repark.sql()` it writes on an in-memory table when its result is
-  read. Do not run `EXPLAIN ANALYZE` over DML on a table whose rows matter, or `PREPARE` such a
-  statement on the ANSI door; the
+- **EXPLAIN-DML-WRITE-1 (known issue, critical, 2026-10-17):** on the Spark SQL session and the ANSI
+  door, `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE` performs the write, and so does the same
+  statement run as `PREPARE` then `EXECUTE`. When its `WHERE` holds a subquery, either form changes
+  every row of the table instead of the matching ones. `repark.sql()` does the same until
+  REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 lands. Spark refuses both forms. A plain `EXPLAIN` shows the
+  plan and does not write on an Iceberg table. The
   [EXPLAIN-DML-WRITE-1 card](explain-dml-write-1-card-2026-10-16.md) tracks the fix.
