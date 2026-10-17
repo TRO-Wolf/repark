@@ -10543,6 +10543,47 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   each under `WHERE true`, raise the ruling-90 text and the rows read back as seeded. The
   native door has no identity path, so these shapes reach `PreExecute::guard`.
   pins: ice-struct-pairing-1/C-034
+- [test_repark_sql_update_subquery_where_1.py](test_repark_sql_update_subquery_where_1.py) —
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a), the stopgap):** the
+  `repark.sql()` door. Every `UPDATE` and `DELETE` whose `WHERE` holds a subquery raises the
+  G3-E8 text verbatim (the ANSI and Spark SQL doors' text), the rows read back as seeded, and
+  no file appears under the warehouse: eight predicate forms on an Iceberg table (P-U1 to
+  P-U8, P-D1 to P-D8), the card's unqualified spelling (P-U9, P-D9), an in-memory table
+  (P-U10, P-D10), and the two shapes main answered right only by coincidence (P-C1, P-C2).
+  Five controls outside the refused class still write. On main 22 of the 27 are red: the
+  statements wrote every row, emptied the table, or refused with DataFusion's planner text.
+  Revert checks, mutants, the never-worse census and the records are in the unit ledger.
+  **Owner ruling 131 (b), 2026-10-16:** P-E1 to P-E4, `EXPLAIN` and `EXPLAIN ANALYZE` of a
+  subquery-predicate `DELETE` and `UPDATE`, refuse with the G3-E8 text and write nothing; on
+  `ff731179` reading their result emptied the table or rewrote every row (4 red). Under ruling
+  126 (a) the unit merged main (#1075); on the merged release module the two Q6 cells and U-5's
+  `test_pa_local_fs_policy_1.py` pass, and the four pins with them.
+  pins: repark-sql-update-subquery-where-1/C-012, C-014, C-015, C-016
+  pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004, C-008, C-009, C-010, C-011
+  **Owner ruling 135 (a), 2026-10-17:** every pin seeds `ice.ns.t` and `ice.ns.s` through the
+  Iceberg catalog (`create_namespace`, `CREATE TABLE` with columns, `INSERT`), and
+  `seeded_warehouse` calls `assert_iceberg` on both, which fails unless the scan is an
+  `IcebergTableScan` (the old CTAS seed was an in-memory table); each pin checks the rows, the
+  snapshot count and the warehouse files. P-U10 and P-D10 keep `mem3`, labelled in-memory by the
+  same plan check. P-P1 to P-P4: `PREPARE` of a subquery-predicate `DELETE`, `UPDATE`, `EXPLAIN
+  ANALYZE DELETE` and a parameterised `DELETE` refuses with the G3-E8 text, and `EXECUTE` finds no
+  prepared statement. P-M1 sets `datafusion.sql_parser.dialect = 'MsSQL'` and a bracketed
+  `DELETE` refuses. P-E1 and P-E2 (plain `EXPLAIN`) now answer the plan with the rows and
+  snapshots unchanged; P-E3 and P-E4 (`EXPLAIN ANALYZE`) still refuse. On the merge of main
+  (`5a51a758`) 6 of 36 are red: the four `PREPARE` pins wrote, and the two plain `EXPLAIN` pins
+  refused.
+  pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022, C-023, C-024
+- [test_repark_sql_update_subquery_where_1_spark_door.py](test_repark_sql_update_subquery_where_1_spark_door.py) —
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139 (2026-10-17):** the Spark SQL door
+  (`ReparkSession.sql()`, the `SparkDialect` session door) on Iceberg tables made through the
+  catalog, with the same provider guard and the rows and snapshot count before and after. P-S1 to
+  P-S3: `PREPARE` of a subquery-predicate `DELETE`, `UPDATE` and `EXPLAIN ANALYZE DELETE`
+  refuses with the G3-E8 text, and `EXECUTE` finds no prepared statement. Controls: the bare
+  `id IN (SELECT …)` `DELETE` and `UPDATE` change exactly ids 2 and 3; a plain-predicate
+  `PREPARE`/`EXECUTE` writes its row; a plain `EXPLAIN` of the subquery `DELETE` answers its
+  plan. On the merge `e5dc4e4c` the three `PREPARE` pins are red (each emptied or rewrote the
+  table); the controls are green before and after.
+  pins: repark-sql-update-subquery-where-1/C-025, C-026, C-028
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

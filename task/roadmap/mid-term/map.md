@@ -747,7 +747,16 @@ declines it (a dated ruling in the intake, then the archive).
   REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-15, open, critical, clerk under owner ruling 106 (a)):**
   through `repark.sql()`, an `UPDATE` whose `WHERE` holds a subquery updates every row and reports
   success. Retires with `repark.sql()` routed through the ANSI door's dialect, or a refusal on that
-  door as the stopgap; own unit next on the U-6 lane after #1062 merges.
+  door as the stopgap; own unit next on the U-6 lane after #1062 merges. **2026-10-16:** `DELETE`
+  is in, and the stopgap has landed (round 2: `repark.sql()` refuses every subquery-predicate
+  `UPDATE` and `DELETE` with the G3-E8 text); routing stays this card, and a later tidy unit
+  folds the Spark SQL door's G3-E8 copy into the shared home. **2026-10-16, ruling 131 (b):**
+  `EXPLAIN` is in; the refusal fires inside `EXPLAIN` and `EXPLAIN ANALYZE`. **2026-10-17,
+  ruling 135 (a):** the refusal reads every write the statement executes (the shared walk), so
+  `PREPARE` and `EXPLAIN ANALYZE` refuse and a plain `EXPLAIN` answers its plan again; the pins
+  run on Iceberg tables. **2026-10-17, ruling 139:** both repark-spark doors' strict pregate
+  refuses each walked subquery-predicate `DELETE` and `UPDATE`, so `PREPARE` of one refuses there
+  too; DataFusion's own `EXPLAIN ANALYZE` on those doors goes to card EXPLAIN-DML-WRITE-1.
 - [explain-dml-write-1-card-2026-10-16.md](explain-dml-write-1-card-2026-10-16.md) **card
   EXPLAIN-DML-WRITE-1 (2026-10-16, corrected 2026-10-17, open, critical under owner ruling 139):**
   `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE`, and the same statement run as `PREPARE` then

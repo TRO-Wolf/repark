@@ -988,7 +988,6 @@ async fn g3e8_update_set_subquery_without_where_subquery_refuses_before_any_writ
     }
 }
 
-/// CTE-prefixed DML is a known un-valved attachment that is loud today.
 #[tokio::test]
 async fn g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing() {
     for sql in [
@@ -1015,9 +1014,10 @@ async fn g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing() {
             )
         };
         let text = err.to_string();
+        let want = ["not implemented yet", "defect G3-E8"][usize::from(sql.contains("IN ("))];
         assert!(
-            text.contains("not implemented yet"),
-            "today's behaviour is a LOUD NotImplemented, sql={sql:?}, got {text}"
+            text.contains(want),
+            "today's behaviour is a LOUD refusal ({want}), sql={sql:?}, got {text}"
         );
     }
 }

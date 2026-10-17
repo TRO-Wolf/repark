@@ -1714,6 +1714,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source attach
   matches the valve call inside the shared pre-gate chain.
   pins: store-ts-doors-2/C-001, C-003
+- `wrapped_subquery_dml.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139
+  (2026-10-17):** the router door (`crate::execute`) on Iceberg tables made through the catalog
+  (`ice.sales.t`, `ice.sales.s`), each seed checked for an `IcebergTableScan`, with the rows and the
+  snapshot count read before and after. Three pins, one per form: `PREPARE` of a
+  subquery-predicate `DELETE`, of an `UPDATE`, and of `EXPLAIN ANALYZE DELETE` refuses with the
+  G3-E8 text and `EXECUTE p` finds nothing; on the merge `e5dc4e4c` each answered and the table
+  was emptied or rewritten. Controls: the bare `id IN (SELECT …)` forms change exactly ids 2 and
+  3, a plain-predicate `PREPARE`/`EXECUTE` writes its row, and a plain `EXPLAIN` of the subquery
+  `DELETE` answers its plan. The Spark SQL session door's twin is
+  `python/repark/tests/test_repark_sql_update_subquery_where_1_spark_door.py`.
+  pins: repark-sql-update-subquery-where-1/C-025, C-026
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
   `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),
@@ -1893,6 +1904,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   negative that held `UPDATE … SET name = (SELECT max(name) …)` storing on this harness's bare
   context (no `SparkExtension`); the product doors refuse that statement with `No field named
   "max(…)"` on main, and now every door refuses it with the ruling 90 text before any write.
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139 (2026-10-17):**
+  `g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing` now expects the G3-E8 refusal for its
+  two subquery forms (`WITH c AS (…) DELETE … WHERE id IN (SELECT id FROM c)` and the `UPDATE`
+  twin): the walk the pregate reads reaches the DML inside the query, which is what the pin's own
+  panic text asked for before relaxing it. The subquery-free form still answers DataFusion's
+  NotImplemented, and every form still writes nothing.
+  pins: repark-sql-update-subquery-where-1/C-027
 - `g3e8_delete_in_subquery_deletes_exactly_the_matching_row` pins executable IN-DELETE forms and
   the residual refusal family.
   Ledger: [`../../../../task/z1-g3e8-pr1-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-z1-g3e8-pr1-ledger.md).

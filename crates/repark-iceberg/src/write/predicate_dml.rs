@@ -984,6 +984,7 @@ mod mor_commit;
 pub mod plain;
 pub use plain::{try_allowed_plain_update, try_allowed_update_in};
 mod residual;
+pub mod subquery_where;
 
 #[cfg(test)]
 mod tests;

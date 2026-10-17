@@ -160,6 +160,20 @@ through the Iceberg catalog, and a provider guard asserts they are Iceberg, the 
 - A plain `EXPLAIN` of DML on an Iceberg table answers its plan and writes nothing, on every door.
 - `EXPLAIN SELECT` answers its plan on every door (the control).
 
+**2026-10-17, 106 round 4:** 106 closes `repark.sql()`: its G3-E8 refusal runs on every statement
+the shared walk `repark_iceberg::write::statement_writes::executed_writes` returns, so a `DELETE` or
+`UPDATE` whose `WHERE` holds a subquery refuses bare, under `PREPARE` (alone, parameterised, or
+around `EXPLAIN ANALYZE`) and under `EXPLAIN ANALYZE`, while a plain `EXPLAIN` answers its plan; a
+`PREPARE` with a plain predicate still runs. 106 also closes both repark-spark doors (the
+`SparkDialect` session door and the router API): their strict pregate,
+`refuse_dml_subquery_predicate_in_statement`, refuses each `DELETE` and `UPDATE` the same walk
+returns, with the allow-list exemption kept for the top-level bare statement only, so `PREPARE` of
+a subquery-predicate `DELETE` or `UPDATE`, alone or around `EXPLAIN ANALYZE`, refuses there too,
+while the bare `IN` forms keep the matching rows. The sketch (106 ledger §13.2) sends one form to
+this unit: DataFusion's own `EXPLAIN ANALYZE <DML>` on both repark-spark doors takes the
+`DfStatement::Explain` arm and never reaches that function, so it still writes there. Ledger
+sections 12 and 13.
+
 ## Earlier text, 2026-10-16, as written (headings one level down)
 
 **Title then:** Card EXPLAIN-DML-WRITE-1: a plain `EXPLAIN` of DML writes on `repark.sql()`, and `EXPLAIN ANALYZE` of DML writes on every door
