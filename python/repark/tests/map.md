@@ -10572,7 +10572,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   snapshots unchanged; P-E3 and P-E4 (`EXPLAIN ANALYZE`) still refuse. On the merge of main
   (`5a51a758`) 6 of 36 are red: the four `PREPARE` pins wrote, and the two plain `EXPLAIN` pins
   refused.
-  pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022, C-023
+  pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022, C-023, C-024
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

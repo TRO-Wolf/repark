@@ -9628,6 +9628,13 @@ the pin rather than obeying it.
   `WHERE` holds a subquery with the G3-E8 text and writes nothing, the identity forms included.
   The refusal lives once in `repark_iceberg::write::predicate_dml::subquery_where`; the ANSI
   router calls it with the identity exemption and `DataFusionDialect` without.
+  *(Corrected 2026-10-17, finding V106-F6: "every" held for the bare statement; `PREPARE` and
+  then `EXECUTE` still wrote every row.)*
+  **2026-10-17, owner ruling 135 (a), round 4:** the refusal reads every write the statement
+  executes (the walk `repark_iceberg::write::statement_writes::executed_writes`, shared with
+  the Spark SQL router): bare, under `PREPARE`, and under `EXPLAIN ANALYZE`, parsed with the
+  session's SQL dialect. A plain `EXPLAIN` answers its plan and leaves an Iceberg table
+  unchanged, as on main.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 updates only the matching rows. *(measured by
   U-6's re-verifier 3, 2026-10-15.)* `DELETE` deletes only the matching rows, in all eight forms
   of the sketch. *(measured 2026-10-16, private Hadoop catalog, `local[1]`.)*
@@ -9638,7 +9645,9 @@ the pin rather than obeying it.
   `the_default_dialect_refuses_a_subquery_in_update_or_delete_where`;
   `crates/repark-sql/tests/ansi_subquery_where_identity.rs` (the ANSI door's identity forms
   answer Spark's rows); `crates/repark-iceberg/src/write/predicate_dml/tests/subquery_where.rs`
-  (the shared refusal).
+  (the shared refusal). **2026-10-17:** every pin seeds Iceberg tables and asserts an
+  `IcebergTableScan`; the `PREPARE`, `EXPLAIN ANALYZE` and MsSQL-dialect pins join the file and
+  `crates/repark-core/src/dialect/tests.rs`.
 - **Rationale** — DATED ROW 2026-10-15, owner ruling 106 (a): a silent wrong value, the same
   class as F-04. **Critical.** Closed by card
   [REPARK-SQL-UPDATE-SUBQUERY-WHERE-1](../task/roadmap/mid-term/repark-sql-update-subquery-where-1-card-2026-10-15.md):

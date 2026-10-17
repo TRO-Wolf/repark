@@ -711,6 +711,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   exemption, `DataFusionDialect` without. 22 pins red on main, revert checks and six
   mutants, never worse against Spark 4.1.2 and the four crates' suites. Routing stays on the
   card. `risk_tier: standard`. Branch `fix/repark-sql-update-subquery-where-1`.
+  **Round 3 (2026-10-16, rulings 131 and 126):** the refusal inside `EXPLAIN ANALYZE`, and the
+  merge of #1075. **Round 4 (2026-10-17, rulings 135 and 136):** the refusal reads the shared
+  walk (`PREPARE`, `EXPLAIN ANALYZE`), the pins run on Iceberg tables behind one guard, a pin on
+  the MsSQL dialect, and card EXPLAIN-DML-WRITE-1 corrected; section 12.
 - [range-tvf-id-2-ledger.md](range-tvf-id-2-ledger.md) —
   **RANGE-TVF-ID-2 (2026-09-19), in flight:** the `range(...)` argument edge
   cases answer Spark 4.1.2 — NULL bounds refuse with `UNEXPECTED_INPUT_TYPE`,

@@ -114,7 +114,8 @@ the release PR to edit into the notes.
   wrote every row (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 106 (a), 2026-10-16).**
   `IN`, `NOT IN`, `EXISTS`, `= (SELECT …)`, `= ANY (SELECT …)`, a correlated subquery, and a
   subquery beside other conditions now raise the G3-E8 refusal, the ANSI door's text, and
-  nothing is written. Before this release `UPDATE` rewrote every row and
+  nothing is written, whether the statement runs bare, under `PREPARE` (then `EXECUTE`), or
+  under `EXPLAIN ANALYZE`. A plain `EXPLAIN` of such a statement answers its plan. Before this release `UPDATE` rewrote every row and
   `DELETE` emptied the table, and both reported success: `DELETE FROM t WHERE id IN (SELECT id
   FROM s)` deleted all of `t`.
 
@@ -172,13 +173,16 @@ Tables already written keep the values they hold; this release ships no migratio
 
 ## Known issues
 
-- **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-16):** `repark.sql()` refuses
+- **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-17):** `repark.sql()` refuses
   every `UPDATE` and `DELETE` whose `WHERE` holds a subquery, including the `IN`, `NOT IN` and
-  `EXISTS` forms the Spark SQL session answers with the matching rows, and inside `EXPLAIN` and
-  `EXPLAIN ANALYZE`. Run those statements through the Spark SQL session until `repark.sql()` is
-  routed through the ANSI door.
-- **EXPLAIN-DML-WRITE-1 (known issue, critical, 2026-10-16):** reading the result of a plain
-  `EXPLAIN DELETE` or `EXPLAIN UPDATE` through `repark.sql()` performs the write, and `EXPLAIN
-  ANALYZE` of a `DELETE` or `UPDATE` performs it on every door. Do not run `EXPLAIN` or `EXPLAIN
-  ANALYZE` over DML on a table whose rows matter; the
+  `EXISTS` forms the Spark SQL session answers with the matching rows, bare, under `PREPARE`
+  and under `EXPLAIN ANALYZE`; a plain `EXPLAIN` answers its plan. Run those statements through
+  the Spark SQL session until `repark.sql()` is routed through the ANSI door.
+- **EXPLAIN-DML-WRITE-1 (known issue, corrected 2026-10-17):** `EXPLAIN ANALYZE` of a `DELETE`
+  or `UPDATE` performs the write on every door, where Spark refuses it; and on the ANSI door,
+  `PREPARE` of a `DELETE` or `UPDATE` whose `WHERE` holds a subquery, then `EXECUTE`, writes every
+  row, where the statement run bare answers Spark's rows. A plain `EXPLAIN` of DML does not write
+  on an Iceberg table; through `repark.sql()` it writes on an in-memory table when its result is
+  read. Do not run `EXPLAIN ANALYZE` over DML on a table whose rows matter, or `PREPARE` such a
+  statement on the ANSI door; the
   [EXPLAIN-DML-WRITE-1 card](explain-dml-write-1-card-2026-10-16.md) tracks the fix.

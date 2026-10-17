@@ -37,8 +37,8 @@ not block this round.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | On `repark.sql()` every `UPDATE` whose `WHERE` holds a subquery raises the G3-E8 text verbatim, the rows read back as seeded and no file appears under the warehouse: eight predicate forms on an Iceberg table, the card's unqualified spelling, an in-memory table. | `test_repark_sql_update_subquery_where_1.py` P-U1 to P-U10. | **PROVEN** | Red on main (§1), green on the head module (§3). |
-| C-002 | The same holds for `DELETE`: the eight forms, the card's spelling and an in-memory table refuse with the G3-E8 text and write nothing. | P-D1 to P-D10. | **PROVEN** | Red on main (§1: P-D1 `DID NOT RAISE`), green on the head module (§3). |
+| C-001 | On `repark.sql()` every `UPDATE` whose `WHERE` holds a subquery raises the G3-E8 text verbatim, the rows read back as seeded and no file appears under the warehouse: eight predicate forms on an Iceberg table, the card's unqualified spelling, an in-memory table. | `test_repark_sql_update_subquery_where_1.py` P-U1 to P-U10. | **PROVEN** (2026-10-17: re-proven on Iceberg tables behind the guard, §12.3 and §12.5; rounds 1 to 3 ran on in-memory tables, finding V106-F4) | Red on main (§1), green on the head module (§3). |
+| C-002 | The same holds for `DELETE`: the eight forms, the card's spelling and an in-memory table refuse with the G3-E8 text and write nothing. | P-D1 to P-D10. | **PROVEN** (2026-10-17: re-proven on Iceberg tables behind the guard, §12.3 and §12.5; P-D10 keeps its labelled in-memory table) | Red on main (§1: P-D1 `DID NOT RAISE`), green on the head module (§3). |
 | C-003 | The stopgap loses exactly the answers in its class, and only two of them were right: the two shapes main answered with Spark's rows by coincidence refuse, and every other statement main's `repark.sql()` answers keeps its answer. | P-C1, P-C2; the 138-statement census of §5a against Spark 4.1.2. | **PROVEN** | §5a: 20 lost answers, 18 wrong on main, 2 coincidence shapes, no loss outside the class. |
 | C-004 | Statements outside the refused class answer on `repark.sql()` as on main: a plain predicate and a literal `IN` list for both verbs, and an `INSERT … SELECT` that reads an `IN` subquery. | The five control cells of the test file. | **PROVEN** | Green on main and on the head (§1, §3). |
 | C-005 | `DataFusionDialect` (every session built without a dialect) refuses the class in Rust, the rows held. | `the_default_dialect_refuses_a_subquery_in_update_or_delete_where` in `crates/repark-core/src/dialect/tests.rs`. | **PROVEN** | Red on main (§1), green on the head (§3). |
@@ -48,13 +48,21 @@ not block this round.
 | C-009 | Nothing that is green on main is red on the head: the four crates' suites and the facade suite. | `cargo test --no-fail-fast -p repark-iceberg -p repark-core -p repark-spark -p repark-sql` on main's tree and the head; `pytest python/repark/tests -n 8` on the head module. | **PROVEN** | §5b, §5c. |
 | C-010 | The card, the registry row and the 1.5.6 note name `DELETE` and the refusal with dated lines; the maps of every touched directory and this ledger land with the unit. | The three records; the map rows. | **PROVEN** | §8. |
 | C-011 | The mechanical gates are green and the release module is built from a clean tree at the final commit with its provenance. | §7. | **PROVEN** | §7, §9. |
-| C-012 | Owner ruling 131 (b): on `repark.sql()`, `EXPLAIN` and `EXPLAIN ANALYZE` of a subquery-predicate `DELETE` and `UPDATE` refuse with the G3-E8 text, and rows and warehouse files hold after the result is read. | P-E1 to P-E4 in `test_repark_sql_update_subquery_where_1.py`. | **PROVEN** | §11.2: 4 red on `ff731179`, green on the head and on the merged module. |
-| C-013 | `DataFusionDialect` unwraps `EXPLAIN` and `EXPLAIN ANALYZE`, with or without `VERBOSE` or `FORMAT`, at any depth, and refuses the inner statement with no exemption; the change is `dialect.rs` alone, the ANSI door and the shared function are unchanged, and a plain `EXPLAIN` of a DML without a subquery predicate behaves as on main. | `the_default_dialect_refuses_an_explained_subquery_dml`, `the_unwrap_reaches_a_nested_explain`; the census of §11.5. | **PROVEN** | §11.2, §11.5. |
+| C-012 | Owner ruling 131 (b): on `repark.sql()`, `EXPLAIN` and `EXPLAIN ANALYZE` of a subquery-predicate `DELETE` and `UPDATE` refuse with the G3-E8 text, and rows and warehouse files hold after the result is read. | P-E1 to P-E4 in `test_repark_sql_update_subquery_where_1.py`. | **REJECTED** (2026-10-17, owner ruling 135 (a) as the orchestrator read it: a plain `EXPLAIN` answers its plan again, C-020; the `EXPLAIN ANALYZE` half holds as C-020) | §11.2: 4 red on `ff731179`, green on the head and on the merged module. |
+| C-013 | `DataFusionDialect` unwraps `EXPLAIN` and `EXPLAIN ANALYZE`, with or without `VERBOSE` or `FORMAT`, at any depth, and refuses the inner statement with no exemption; the change is `dialect.rs` alone, the ANSI door and the shared function are unchanged, and a plain `EXPLAIN` of a DML without a subquery predicate behaves as on main. | `the_default_dialect_refuses_an_explained_subquery_dml`, `the_unwrap_reaches_a_nested_explain`; the census of §11.5. | **REJECTED** (2026-10-17, superseded: only `EXPLAIN ANALYZE` reaches the inner statement, and the refusal reads the moved walk, C-021) | §11.2, §11.5. |
 | C-014 | The round-3 pins catch the rule: with `ff731179`'s `dialect.rs` the four pins are red, and four mutants of the unwrap each die on a named test; nothing that answered on `ff731179` stops answering except `EXPLAIN` of a subquery-predicate DML and the merged local-file cells; the four crates and the facade suite are green. | §11.4, §11.5. | **PROVEN** | §11.4, §11.5. |
 | C-015 | Owner ruling 126 (a): `origin/main` (#1075) merges without conflict and no rebase, and on the release module built from the clean merge the Q6 cell under the guard, U-1's Q6 cell, U-5's local-file cell and this unit's 31 pins pass. | §11.3. | **PROVEN** | §11.3. |
 | C-016 | The records name the round: this ledger's section 11, the card's `EXPLAIN` line, the new card EXPLAIN-DML-WRITE-1 with its map row, and its 1.5.6 known-issue line; the gates are green on the final commit. | §11.6, §11.7. | **PROVEN** | §11.6, §11.7. |
+| C-017 | Owner ruling 135 (a): on `repark.sql()`, `PREPARE` of a subquery-predicate `DELETE` or `UPDATE` refuses with the G3-E8 text, alone, parameterised, or around `EXPLAIN ANALYZE`, so `EXECUTE` finds no prepared statement; the Iceberg table's rows, snapshots and warehouse files hold. | P-P1 to P-P4 in `test_repark_sql_update_subquery_where_1.py`; `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute` in `crates/repark-core/src/dialect/tests.rs`. | **PROVEN** | Red on the merge `5a51a758` (§12.3), green on the head (§12.5). |
+| C-018 | Every unit pin, Python and `repark-core`, seeds its tables through the Iceberg catalog, and one helper per language fails unless the scan is an `IcebergTableScan`; each pin checks the rows and the snapshot count before and after; the helper fails on the round-3 CTAS seed. | `assert_iceberg` in both test files; mutant M5. | **PROVEN** | §12.3 (the guard on the CTAS seed), §12.6 (M5 in both languages). |
+| C-019 | The refusal parses with the session's SQL dialect: under `datafusion.sql_parser.dialect = 'MsSQL'` a bracketed subquery-predicate `DELETE` refuses with the G3-E8 text and writes nothing. | P-M1; `a_non_default_parser_dialect_still_refuses`. | **PROVEN** | Green on the merge and the head; red under mutant M4 (§12.6). |
+| C-020 | As the orchestrator read ruling 135: a plain `EXPLAIN` of a subquery-predicate `DELETE` or `UPDATE` answers its plan on `repark.sql()` with an Iceberg table's rows and snapshots unchanged, as on main; `EXPLAIN ANALYZE` of either verb refuses with the G3-E8 text. | P-E1 to P-E4; `a_plain_explain_of_a_subquery_dml_answers_its_plan`, `the_default_dialect_refuses_an_explain_analyze_of_a_subquery_dml`, `only_explain_analyze_reaches_the_statement_it_wraps`. | **PROVEN** | §12.3, §12.5. |
+| C-021 | The walk lives once: `executed_writes` moved from `repark-spark`'s `router/nested_ns.rs` to `repark_iceberg::write::statement_writes`, gained `DELETE`, and the Spark SQL router calls it with its suite unchanged; `DataFusionDialect` runs the refusal with no exemption on each statement the walk answers and peels DataFusion's own `EXPLAIN` layers under the walk's rule; `explained_statement` is gone; the change is `dialect.rs` and the moved walk, with no crate edge. | The refactor and fix commits. | **PROVEN** | §12.4, §12.5, §12.8. |
+| C-022 | The pins catch the rule: with `996f4d5c`'s `dialect.rs` the `PREPARE` pins are red, and five mutants each die on a named test. | §12.6. | **PROVEN** | §12.6. |
+| C-023 | Never worse: on Iceberg seeds, against the merge's module, `repark.sql()` loses no answer outside the subquery-predicate class, bare or under a wrapper; the four crates' suites and the facade suite are green; ruling 113's Q6 cells and U-5's local-file cells pass on the head module. | §12.7. | **PROVEN** | §12.7. |
+| C-024 | The records say what now holds: this section, the corrected "every" lines (V106-F6), card EXPLAIN-DML-WRITE-1 as ruling 136 rules, the 1.5.6 lines and the map rows; the gates are green. | §12.8, §12.9. | **PROVEN** | §12.8, §12.9. |
 
-VERDICT: 16 clauses, 16 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 24 clauses, 22 PROVEN, 0 OPEN, 2 REJECTED (C-012 and C-013, superseded 2026-10-17 by ruling 135).
 
 ## 1. Red first (test commit `ef74e07d`, module of `6cb6c310`)
 
@@ -381,6 +389,202 @@ The card gains its dated `EXPLAIN` line; the new critical card
 the owner's goal, the cells per door, the pins it owes and its place, with a map row and a 1.5.6
 known-issue line.
 
+## 12. Owner rulings 135 and 136, 2026-10-17 (round 4)
+
+The final verifier failed `996f4d5c` (findings V106-F1 to F7): `PREPARE` and then `EXECUTE`
+carried a subquery-predicate `DELETE` or `UPDATE` past the refusal and wrote every row on an
+Iceberg table (F1, F2); no test killed a refusal that parses with `GenericDialect` (F3); the pins
+ran on DataFusion in-memory tables, not Iceberg ones (F4); the card's plain-`EXPLAIN` write held
+for in-memory tables only (F5); records said "every" form refuses (F6); the Spark SQL facade's
+`EXPLAIN ANALYZE UPDATE` cell was unmeasured (F7).
+
+### 12.1 The rulings, verbatim
+
+```
+Q135 → (a) one fix round on 106, with the shape changed:
+  - The subquery refusal moves onto the executed_writes walk in
+    nested_ns.rs. Main already unwraps PREPARE there. One check then
+    covers PREPARE/EXECUTE, EXPLAIN ANALYZE and every wrapper. No
+    PREPARE-specific arm.
+  - Tests create their tables through the Iceberg catalog, and one
+    guard asserts the provider is Iceberg, so this cannot regress to
+    in-memory tables silently.
+  - One pin on a non-default dialect.
+  Then the final verifier. FAIL → park, no third round.
+```
+
+```
+Q136 → correct the card. Plain EXPLAIN of DML on an Iceberg table does
+not write; the write was on in-memory tables only, and the CRITICAL on
+the Iceberg path is withdrawn. The card keeps two items: EXPLAIN
+ANALYZE of DML executes on every door, and Spark refuses it, so RePark
+refuses it too; and the PREPARE/EXECUTE path on the ANSI door. The
+measurement lane is Muse xhigh, as item 3 of the overnight plan said.
+No new model permission is needed. The table gains PREPARE/EXECUTE
+rows on all three doors and labels any in-memory-table row as such.
+You write the options from the table.
+```
+
+### 12.2 The orchestrator's two readings (the orchestrator's, not the owner's)
+
+These are the orchestrator's readings of ruling 135, as the round-4 brief states them; the owner
+sees both and may overrule them.
+
+- **Orchestrator's reading 1, one walk for both doors, in a crate both reach.** `executed_writes`
+  lives in `crates/repark-spark/src/router/nested_ns.rs` (113-140). `repark.sql()` runs through
+  `DataFusionDialect` in `repark-core`, and `repark-core` cannot depend on `repark-spark`. So the
+  walk moves to `repark-iceberg`, beside `write::nested_ns_gate`, which `nested_ns.rs` already
+  imports. `nested_ns.rs` calls the moved walk, and its behaviour does not change. `dialect.rs`
+  runs the subquery refusal on each statement the walk returns. The round-3 `explained_statement`
+  is deleted and leaves nothing behind. Moved code sheds its comments. No new crate edge.
+- **Orchestrator's reading 2, plain `EXPLAIN` follows the walk.** The walk returns no write for a
+  plain `EXPLAIN`, so a plain `EXPLAIN` of a subquery-predicate DML answers its plan again.
+  Ruling 136 establishes that this does not write on an Iceberg table, and main answers it that
+  way; refusing it would take away an answer main gets right. The round-3 plain-`EXPLAIN` pins
+  and their `repark-core` twins become: the plan is answered, and the Iceberg table's rows and
+  snapshots are unchanged. The `EXPLAIN ANALYZE` pins keep refusing.
+
+The brief named the plain-`EXPLAIN` pins "P-E1 and P-E3"; in the file the plain ones are P-E1
+(`DELETE`) and P-E2 (`UPDATE`), and P-E3 and P-E4 are the `EXPLAIN ANALYZE` ones. The reading was
+applied by what each pin runs.
+
+### 12.3 The merge and red first
+
+`git fetch origin`; `origin/main` was `56057f65`. `git merge origin/main`, no rebase, merged
+without a conflict (the release-notes draft merged on its own) as `5a51a758`, with the default
+subject. Main brought no Rust change (the dbt adapter's redaction, docs). The merge's release
+module: sha256 `9f0102e5ea1d3bdb096ffad3de33dd17928f5ffabbe1d74c684763a146528087`.
+
+The test commit `d44dcffd` seeds every pin through the Iceberg catalog: in Python
+`native.create_namespace`, then `CREATE TABLE` with columns, then `INSERT`; in `repark-core` the
+catalog handle's `create_table` after `ReparkSession::create_namespace`, then
+`refresh_catalog_provider` and `INSERT`, the path the crate's `session/tests/io_stats.rs` uses.
+One helper per language, `assert_iceberg`, fails unless `EXPLAIN SELECT * FROM <table>` holds an
+`IcebergTableScan`; every pin's seed calls it, and every pin compares the rows and the snapshot
+count (and in Python the warehouse files) before and after. P-U10 and P-D10 keep `mem3`, a table
+labelled in-memory by the same plan check, because C-002 names an in-memory table; their Iceberg
+seed goes through the guard.
+
+On the merge's module, before any fix:
+
+- **Python:** `6 failed, 30 passed`. The four `PREPARE` pins: `Failed: DID NOT RAISE
+  AnalysisException` on `PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM
+  ice.ns.s)` (on that module `EXECUTE p` then answered `count=4` and emptied the table, snapshots
+  1 → 2). P-E1 and P-E2 failed on the round-3 refusal (`AnalysisException`, the G3-E8 text on
+  `ice.ns.t`).
+- **`repark-core`:** `3 failed, 6 passed`. `PREPARE p AS DELETE FROM ice.ns.t WHERE id IN
+  (SELECT id FROM ice.ns.s): []` (the statement answered); `EXPLAIN DELETE FROM ice.ns.t WHERE id
+  IN (SELECT id FROM ice.ns.s): "Error during planning: DELETE with a subquery…"`; `PREPARE p AS
+  EXPLAIN ANALYZE DELETE FROM t WHERE id IN (SELECT id FROM s): ()`.
+- **The dialect pin** (P-M1 and its twin) is green on the merge: the round-3 refusal already
+  parses with the session's dialect. Its red is mutant M4 (§12.6).
+- **The guard on the old seed:** with the round-3 seed (`CREATE SCHEMA … WITH (location = …)`,
+  then CTAS), `assert_iceberg("ice.ns.t")` fails: `AssertionError: ice.ns.t is not an Iceberg
+  table: TableScan: ice.ns.t projection=[id, v] / DataSourceExec: partitions=1,
+  partition_sizes=[1]`.
+
+### 12.4 The walk moves (refactor `cb5111c9`)
+
+`executed_writes` moved from `crates/repark-spark/src/router/nested_ns.rs` (lines 113 to 139 on
+the merge) to `crates/repark-iceberg/src/write/statement_writes.rs`, public and `#[must_use]`,
+with no comment; `nested_ns.rs` imports it beside `nested_ns_gate`. The moved walk also answers
+`Statement::Delete`. The router's match ignores it (`_ => {}`), and `visit_statements` visits the
+statement itself first, so the `BY NAME` index 0 is still the top `INSERT`. `cargo test
+--no-fail-fast -p repark-spark`: 2871 passed, 5 ignored before (`d44dcffd`) and after
+(`cb5111c9`), the same 2874 test outcomes; no pin moved. `make rust-clippy` 0 on the refactor.
+
+### 12.5 The fix (`3e5cc1b0`)
+
+`dialect.rs` only. `refuse_dml_subquery_where` parses with the session's `sql_parser.dialect`,
+peels DataFusion's own `EXPLAIN` layers (`DFStatement::Explain`) under the walk's rule, an
+`EXPLAIN ANALYZE` reaching the statement it wraps and a plain `EXPLAIN` answering no write, then
+runs `refuse_dml_subquery_predicate` with no exemption on every statement
+`statement_writes::executed_writes` answers. `explained_statement` is deleted. On the head's
+release module (sha256 `24c97666800c45f6cdefede74cdc4a7d5b60ee778d36efb5695a1988cba8715d`) the
+file passes 36 of 36; the `repark-core` dialect tests pass 9 of 9.
+
+| Pin | Statement | Merge `5a51a758` | Head |
+|---|---|---|---|
+| P-P1 | `PREPARE p AS DELETE … WHERE id IN (SELECT …)`; `EXECUTE p` | no row left, 1 → 2 | G3-E8 refusal at `PREPARE`; `EXECUTE`: `Prepared statement 'p' does not exist`; rows and snapshots held |
+| P-P2 | `PREPARE p AS UPDATE … SET v = 5 WHERE id IN (SELECT …)`; `EXECUTE p` | every row 5, 1 → 2 | the same, rows held |
+| P-P3 | `PREPARE p AS EXPLAIN ANALYZE DELETE …`; `EXECUTE p` | no row left, 1 → 2 | the same, rows held |
+| P-P4 | `PREPARE p(INT) AS DELETE … WHERE id IN (SELECT id FROM ice.ns.s WHERE w > $1)`; `EXECUTE p(0)` | no row left, 1 → 2 | the same, rows held |
+| P-M1 | MsSQL: `DELETE FROM [ice].[ns].[t] WHERE [id] IN (SELECT [id] FROM [ice].[ns].[s])` | G3-E8 refusal on `[ice].[ns].[t]` | the same |
+| P-E1, P-E2 | plain `EXPLAIN DELETE` and `EXPLAIN UPDATE … IN (SELECT …)`, read | G3-E8 refusal | the plan; rows and snapshots unchanged |
+| P-E3, P-E4 | `EXPLAIN ANALYZE DELETE` and `UPDATE … IN (SELECT …)` | G3-E8 refusal | G3-E8 refusal |
+
+### 12.6 Revert check and mutants
+
+- **Revert check:** `dialect.rs` from `996f4d5c` on the head: the `repark-core` dialect tests
+  `3 failed, 6 passed`, the `PREPARE` pin red with `PREPARE p AS DELETE … : []`. For Python, the
+  merge's module carries that same `dialect.rs` byte for byte (`git diff 996f4d5c 5a51a758 --
+  crates/repark-core/src/dialect.rs` is empty), and its four `PREPARE` pins are red (§12.3); no
+  separate Python module was built for the revert. Restored.
+
+| Mutant | Change | Killed by |
+|---|---|---|
+| M1 | the walk skips `Prepare` (`Statement::Prepare { .. } => Vec::new()`) | `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute` (`PREPARE p AS DELETE … : []`), `only_explain_analyze_reaches_the_statement_it_wraps` |
+| M2 | the walk skips `EXPLAIN ANALYZE` (no write under any `Explain`) | the same two (`PREPARE p AS EXPLAIN ANALYZE DELETE … : []`) |
+| M3 | the walk drops `Delete` | `the_default_dialect_refuses_a_subquery_in_update_or_delete_where`, `the_default_dialect_refuses_an_explain_analyze_of_a_subquery_dml`, `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute`, `a_non_default_parser_dialect_still_refuses`, `only_explain_analyze_reaches_the_statement_it_wraps` |
+| M4 | the refusal parses with `GenericDialect` | `a_non_default_parser_dialect_still_refuses` (the bracketed `DELETE` ran: `[RecordBatch … count …]`) |
+| M5 | one pin's seed back to CTAS | the guard: Python, P-U1 to P-D8 seeded by CTAS, 16 failed with `AssertionError: ice.ns.t is not an Iceberg table: … DataSourceExec …`; `repark-core`, a CTAS table in the seed, 5 failed with `ice.ctas.t is not an Iceberg table` |
+
+No mutant survived.
+
+### 12.7 Never worse
+
+The census of §5a and §11.5 (145 statements) on Iceberg seeds (`create_namespace`, then `CREATE
+TABLE` with columns and `INSERT`; `mem3` stays in-memory and labelled), and 41 round-4 cells:
+`PREPARE` and `EXECUTE`, plain `EXPLAIN`, `EXPLAIN ANALYZE` and the MsSQL and MySQL dialects, each
+class with controls outside it (a plain predicate, a literal `IN` list, `INSERT … SELECT` reading
+a subquery, `PREPARE` of a `SELECT`). 186 cells, the merge's module against the head's; `ice.ns.t`
+is an Iceberg table in all 108 cells that create it.
+
+| Change | Cells | Merge | Head | Spark 4.1.2 |
+|---|---|---|---|---|
+| lost, in the class | `PREPARE` of a subquery-predicate `DELETE`, `UPDATE`, parameterised `DELETE`, `EXISTS` `UPDATE`, `EXPLAIN ANALYZE DELETE` and `EXPLAIN ANALYZE UPDATE`, then `EXECUTE` (6) | the table emptied or every row rewritten, 1 → 2 | G3-E8 refusal at `PREPARE`, rows kept | `ParseException`, rows kept |
+| gained, in the class | plain `EXPLAIN` of a subquery-predicate `DELETE` (twice), `UPDATE` and `VERBOSE DELETE` (4) | G3-E8 refusal | the plan, rows kept, 1 → 1 | the plan, rows kept (`VERBOSE`: `ParseException`) |
+| other | `EXPLAIN ANALYZE PREPARE p AS DELETE … IN (SELECT …)` | refused (`Unsupported logical plan: Statement(Prepare)`) | G3-E8 refusal | `ParseException` |
+| other | `EXPLAIN ANALYZE SELECT … IN (SELECT …)`, `EXPLAIN ANALYZE INSERT … SELECT …` | answered | answered; only the timing metrics differ | — |
+
+173 cells are unchanged, the controls under every wrapper among them. No answer is lost outside the
+subquery-predicate class, bare or under a wrapper.
+
+`cargo test --no-fail-fast -p <crate>` on the head: `repark-iceberg` 1017 passed;
+`repark-core` 1536 passed, 2 ignored; `repark-spark` 2871 passed, 5 ignored; `repark-sql` 576
+passed, 4 ignored. Against the merge's Rust tree (the round-3 runs; `git diff 9bbfd11f 5a51a758 --
+crates/` changes one map), nothing is green there and red here, and nothing is missing but the two
+rewritten unit pins. `pytest python/repark/tests -n 8` on the head's module, all 534 files once in
+25 slices: 20063 passed, 488 skipped, 151 xfailed, 0 failed (round 3: 20058; this file adds 5).
+On the head's module ruling 113's Q6 cells
+(`test_pa_local_fs_policy_1.py::test_repark_sql_keeps_the_q6_wall_type_under_the_guard`,
+`test_ice_tsns_type_planner_1.py::test_repark_sql_plans_timestamp_as_the_wall`) pass 2 of 2 and
+U-5's `test_pa_local_fs_policy_1.py` 26 of 26.
+
+**What reading 2 costs on an in-memory table:** reading a plain `EXPLAIN DELETE FROM m WHERE a IN
+(SELECT a FROM ms)` through `repark.sql()` empties an in-memory `m` on the head, as on main;
+round 3 refused it. Building the frame without reading it writes nothing, and the `EXPLAIN
+ANALYZE`, `PREPARE` and bare forms refuse. Card EXPLAIN-DML-WRITE-1 labels the row.
+
+### 12.8 Gates
+
+On the code at `3e5cc1b0`: `make rust-clippy` 0, `make rust-panic-ban` 0, `cargo fmt --check`
+0, `make check-rust-file-size` 0, `make check-crate-dag` 0 (25 internal edges, no new edge),
+`make check-lib-rs` 0, `make check-lib-py` 0, `make check-docstring-presence` 0, `make
+check-python-conventions` 0, `make check-manifest` 0, `make py-lint` 0, `make py-format-check` 0.
+The documentation gates and the comment gate run on the final commit (hand-back).
+
+### 12.9 Records
+
+The "every" lines of finding V106-F6 say what now holds, with a dated correction: the card's
+round-2 line, the registry row, the 1.5.6 behaviour and known-issue lines, and
+`crates/repark-core/src/map.md`. The card gains its ruling-135 line. Card
+[EXPLAIN-DML-WRITE-1](../../roadmap/mid-term/explain-dml-write-1-card-2026-10-16.md) carries
+ruling 136 verbatim, a dated section above the 2026-10-16 text (kept as written) with the two
+items, the table with `PREPARE` rows on all three doors and its in-memory rows labelled, the
+options written from it, and the pins it now owes; its map row and the 1.5.6 known-issue line
+follow. Clauses C-012 and C-013 are REJECTED as superseded; C-017 to C-024 carry the round.
+
 ## 10. Coverage attestation
 
 ```
@@ -394,6 +598,9 @@ COVERAGE_ATTESTATION:
         card's own spelling and an in-memory table are covered; the ANSI door keeps answering
         its identity forms.
       artifacts: [python/repark/tests/test_repark_sql_update_subquery_where_1.py, crates/repark-sql/tests/ansi_subquery_where_identity.rs]
+      round_4: Every pin now runs on Iceberg tables behind one guard (an IcebergTableScan), with
+        rows and snapshot counts read before and after; PREPARE forms and a non-default parser
+        dialect join the pins (section 12).
     - id: AT-2
       status: ATTACKED
       evidence: Boundary shapes are exercised - a subquery that matches no row, a NOT IN, a
@@ -447,10 +654,13 @@ COVERAGE_ATTESTATION:
         every branch the diff adds has an input that changes the output - the flag's two values,
         the parse fallthrough.
       artifacts: [crates/repark-core/src/dialect/tests.rs, crates/repark-iceberg/src/write/predicate_dml/tests/subquery_where.rs]
+      round_4: The revert check is red and five mutants of the walk, the parse and the seed each
+        die on a named test (section 12.6).
   complete: true
 ```
 
 ## Hand-back
 
 `Model: claude-opus-5-5`. `risk_tier: standard`. Round 2 builds the stopgap. Routing, Q2 and Q3
-stay with the owner.
+stay with the owner. Round 4 (2026-10-17, rulings 135 and 136) moves the refusal onto the shared
+walk; its hand-back goes to the final verifier.

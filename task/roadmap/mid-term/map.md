@@ -751,13 +751,20 @@ declines it (a dated ruling in the intake, then the archive).
   is in, and the stopgap has landed (round 2: `repark.sql()` refuses every subquery-predicate
   `UPDATE` and `DELETE` with the G3-E8 text); routing stays this card, and a later tidy unit
   folds the Spark SQL door's G3-E8 copy into the shared home. **2026-10-16, ruling 131 (b):**
-  `EXPLAIN` is in; the refusal fires inside `EXPLAIN` and `EXPLAIN ANALYZE`.
+  `EXPLAIN` is in; the refusal fires inside `EXPLAIN` and `EXPLAIN ANALYZE`. **2026-10-17,
+  ruling 135 (a):** the refusal reads every write the statement executes (the shared walk), so
+  `PREPARE` and `EXPLAIN ANALYZE` refuse and a plain `EXPLAIN` answers its plan again; the pins
+  run on Iceberg tables.
 - [explain-dml-write-1-card-2026-10-16.md](explain-dml-write-1-card-2026-10-16.md) **card
   EXPLAIN-DML-WRITE-1 (2026-10-16, open, critical, filed under owner ruling 131):** reading a plain
   `EXPLAIN` of a `DELETE` or `UPDATE` writes on `repark.sql()`, and `EXPLAIN ANALYZE` of DML writes
   on every door. Retires when a plain `EXPLAIN` of DML never writes on any door and `EXPLAIN
   ANALYZE` of DML refuses on every door, with pins on all three doors; the next Iceberg write unit
-  after 106.
+  after 106. **2026-10-17, ruling 136:** corrected; a plain `EXPLAIN` of DML on an Iceberg table
+  does not write (the write was on in-memory tables only), and the CRITICAL on the Iceberg path is
+  withdrawn. Two items stay: `EXPLAIN ANALYZE` of DML refuses on every door, as Spark does, and the
+  ANSI door's `PREPARE`/`EXECUTE` path; the table gains `PREPARE` rows on all three doors, with
+  the options written from it. Measurement lane: Muse xhigh.
 - [ice-struct-inline-table-from-1-card-2026-10-15.md](ice-struct-inline-table-from-1-card-2026-10-15.md) **card
   ICE-STRUCT-INLINE-TABLE-FROM-1 (2026-10-15, open, not this round, clerk under owner ruling 107 (a),
   struct-pairing family of ruling 57):** an inline table in `FROM` stores a reordered struct by name
