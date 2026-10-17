@@ -5,17 +5,17 @@ use super::common::*;
 use super::wap_id::set_wap;
 
 const KEY: &str = "SEKRETKEYVAL9f3a7";
-const VERSIONS: [&str; 2] = ["2", "3"];
+pub(super) const VERSIONS: [&str; 2] = ["2", "3"];
 const MERGE_ON_READ: &str =
     ", 'write.delete.mode' = 'merge-on-read', 'write.update.mode' = 'merge-on-read'";
 const WAP_ENABLED: &str = ", 'write.wap.enabled' = 'true'";
 
 #[derive(Debug, PartialEq, Eq)]
-struct Frozen {
-    snapshots: Vec<i64>,
-    refs: String,
-    pointer: Option<String>,
-    listing: BTreeSet<String>,
+pub(super) struct Frozen {
+    pub(super) snapshots: Vec<i64>,
+    pub(super) refs: String,
+    pub(super) pointer: Option<String>,
+    pub(super) listing: BTreeSet<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -62,7 +62,7 @@ fn listing(root: &std::path::Path) -> BTreeSet<String> {
     found
 }
 
-async fn freeze(
+pub(super) async fn freeze(
     ctx: &SessionContext,
     wh: &TempDir,
     catalogs: &CatalogRegistry,
@@ -105,7 +105,10 @@ async fn outcome(
     execute(ctx, catalogs, sql).await?.collect().await
 }
 
-fn refusal_faults(error: datafusion::error::DataFusionError, table: &str) -> Vec<String> {
+pub(super) fn refusal_faults(
+    error: datafusion::error::DataFusionError,
+    table: &str,
+) -> Vec<String> {
     let mapped = repark_core::engine_err(error);
     let message = mapped.to_string();
     let mut faults = Vec::new();
@@ -125,7 +128,7 @@ fn refusal_faults(error: datafusion::error::DataFusionError, table: &str) -> Vec
     faults
 }
 
-async fn add_key(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
+pub(super) async fn add_key(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
     run(
         ctx,
         catalogs,

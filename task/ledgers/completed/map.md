@@ -356,6 +356,9 @@ else. The next pickup's `make ledger-archive` files everything here under
   (Spark ignores the key on v3, refuses CREATE on v2 — the one dated divergence), the
   23-path survey, the one-helper + seats refusal, the 35 + 15 + 2 + 9 pins with the flipped
   `v3_cow` pin, the four hand mutants, and the registry FIXED flip.
+  Residue (2026-10-15): items 1 and 5 closed with pins, items 2, 3, 4 and 6 accepted.
+  Round 2 (rulings 108 and 109): the F3 census is closed with the two
+  ENC-CTAS-REPLACE-1 exception rows, and F4 is accepted as pinned.
   `risk_tier: standard`. Branch `fix/enc-1-first-write-refusal`.
   pins: enc-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ex-15-dataframe-a-ledger.md](ex-15-dataframe-a-ledger.md) — Unit ledger — EX-15 · v1.1 example backfill, `DataFrame.*` (a)

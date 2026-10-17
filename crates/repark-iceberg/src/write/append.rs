@@ -7,10 +7,9 @@ use futures::{Stream, StreamExt};
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, TableIdent};
 
-use crate::write::commit_error::{commit_result, operation_id_and_summary};
+pub use crate::write::append_commit::commit_append;
 use crate::write::conform::{conform_batches, write_default_column_names};
 use crate::write::distribution::{route_partitioned_stream, send_routed};
 use crate::write::merge::write_data_files_with_concurrency;
@@ -147,24 +146,6 @@ where
     Ok(ascending_partition_order(files))
 }
 
-/// Single-writer fanout loop (the historical serial body of `fanout_conformed_stream`).
-/// # Errors
-/// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
-pub async fn commit_append(
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    new_files: Vec<DataFile>,
-) -> Result<Table> {
-    let (operation_id, summary) = operation_id_and_summary();
-    let tx = Transaction::new(table);
-    let action = tx
-        .merge_append()
-        .add_data_files(new_files)
-        .set_snapshot_properties(summary);
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
-}
-
 /// Fold an iceberg error into the DataFusion error this crate's callers carry.
 pub(crate) fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     crate::catalog::iceberg_to_datafusion(err)
@@ -190,6 +171,7 @@ mod tests {
         NestedField, Operation, PrimitiveType, Schema, Struct, Transform, Type,
         UnboundPartitionSpec,
     };
+    use iceberg::transaction::{ApplyTransactionAction, Transaction};
     use iceberg::{CatalogBuilder, Namespace, NamespaceIdent, TableCommit, TableCreation};
     use tempfile::TempDir;
 

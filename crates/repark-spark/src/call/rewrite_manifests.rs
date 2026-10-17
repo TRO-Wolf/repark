@@ -77,7 +77,7 @@ pub(super) async fn execute_rewrite_manifests(
             }
     });
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = match tx.commit(catalog.as_ref()).await {
+    let committed = match repark_iceberg::write::commit_unstaged(tx, catalog.as_ref()).await {
         Err(error) if is_sort_column_refusal(&error) => {
             return Err(illegal_argument_error(error.message().to_string()));
         }

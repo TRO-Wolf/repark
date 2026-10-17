@@ -22,6 +22,13 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
   `rewrite_create_column_types`), so `CREATE TABLE t AS SELECT * FROM src WHERE map < 5 AND
   id > 0` is no longer rewritten to `map ( 5 AND id ) 0`.
   pins: ice-nested-evo-1/C-022
+- `query_files.rs` — **ENC-1-RESIDUE-1, owner ruling 121 (2026-10-17):** the CTAS query
+  staging, moved out of `../create_table.rs` unchanged (`staged`: write the plan's batches
+  into Iceberg data files at the session's write concurrency, through the plan writer or the
+  stream stagers when a codec, level or target size is set). `published` stages the same way
+  and then takes the files out of RePark's unclaimed-file record
+  (`repark_iceberg::write::forget_staged_files`), because the staged create publishes them
+  outside `StagedCommit`; the service-managed create keeps `staged`, as its door claims them.
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../create_table.rs`. Clause
   refusals plus A11: `nanosecond_timestamp_columns_refuse_with_column_and_precision`,
   `nanosecond_timestamptz_columns_refuse`, `microsecond_timestamp_columns_pass_the_ns_gate`.

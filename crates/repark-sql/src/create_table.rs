@@ -205,6 +205,7 @@ async fn replacement_if_existed(
 
 /// Model: Grok 4.6 xHigh
 #[allow(clippy::too_many_arguments)] // target + schema + V3-2 version + placement travel together
+#[expect(clippy::disallowed_methods, reason = "ENC-CTAS-REPLACE-1")]
 async fn execute_staged_create(
     cx: &EngineContext<'_>,
     target: &CreateTarget,
@@ -262,7 +263,7 @@ async fn execute_staged_create(
         Some(frame) => {
             let (snapshot_extra, staging) =
                 repark_iceberg::write::resolve_empty_session_write(cx.ctx)?;
-            let files = stage_query(cx.ctx, staged.table(), frame, &staging).await?;
+            let files = query_files::published(cx.ctx, staged.table(), frame, &staging).await?;
             (snapshot_extra, files)
         }
         None => (Vec::new(), Vec::new()),
@@ -287,6 +288,7 @@ async fn execute_staged_create(
     finish(cx.ctx, target).await
 }
 
+#[expect(clippy::disallowed_methods, reason = "ENC-CTAS-REPLACE-1")]
 async fn publish_staged_with_summary(
     target: &CreateTarget,
     staged: StagedTableTransaction,
@@ -562,7 +564,7 @@ async fn create_first_service_managed(
         if let Some(frame) = query {
             let (snapshot_extra, staging) =
                 repark_iceberg::write::resolve_empty_session_write(cx.ctx)?;
-            let data_files = stage_query(cx.ctx, &table, frame, &staging).await?;
+            let data_files = query_files::staged(cx.ctx, &table, frame, &staging).await?;
             if replace_write {
                 repark_iceberg::write::commit_replace_write_with_summary(
                     &target.catalog,
@@ -605,48 +607,6 @@ async fn create_first_service_managed(
         });
     }
     finish(cx.ctx, target).await
-}
-
-/// Stream a plan's batches into Iceberg data files, honouring the session's write concurrency.
-async fn stage_query(
-    ctx: &SessionContext,
-    table: &Table,
-    query: DataFrame,
-    staging: &repark_iceberg::write::WriterStagingOverrides,
-) -> Result<Vec<iceberg::spec::DataFile>> {
-    let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    if staging.codec.is_none()
-        && staging.level.is_none()
-        && staging.target_file_size_bytes.is_none()
-    {
-        let task_ctx = Arc::new(query.task_ctx());
-        let plan = query.create_physical_plan().await?;
-        return repark_iceberg::write::write_data_files_from_plan(
-            table,
-            plan,
-            task_ctx,
-            concurrency,
-            true,
-        )
-        .await;
-    }
-    let stream = query.execute_stream().await?;
-    if table.metadata().default_partition_spec().is_unpartitioned() {
-        return repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
-            table,
-            stream,
-            concurrency,
-            staging,
-        )
-        .await;
-    }
-    repark_iceberg::write::stage_partitioned_stream_with_overrides(
-        table,
-        stream,
-        staging,
-        concurrency,
-    )
-    .await
 }
 
 /// Refresh the touched schema's name directory, then return an empty frame.
@@ -989,6 +949,7 @@ fn iceberg_v3_named_primitive(
 }
 
 mod nested_type;
+mod query_files;
 pub(crate) use nested_type::{nested_type_parse_error, rewrite_nested_create_types};
 
 #[cfg(test)]

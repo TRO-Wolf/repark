@@ -5,11 +5,12 @@ use iceberg::Catalog;
 use iceberg::expr::Predicate;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::Transaction;
 
 use super::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use super::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
+use crate::write::staged_commit::StagedFiles;
 
 #[allow(clippy::missing_errors_doc)]
 pub async fn commit_overwrite_replace_all_to(
@@ -25,7 +26,6 @@ pub async fn commit_overwrite_replace_all_to(
     let mut action = tx
         .overwrite_files()
         .overwrite_by_row_filter(Predicate::AlwaysTrue)
-        .add_files(staged_files)
         .set_snapshot_properties(summary);
     if let Some(level) = isolation {
         action = action.validate_no_conflicting_deletes();
@@ -37,8 +37,13 @@ pub async fn commit_overwrite_replace_all_to(
         }
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -53,11 +58,15 @@ pub async fn commit_replace_write(
     let action = tx
         .overwrite_files()
         .overwrite_by_row_filter(Predicate::AlwaysTrue)
-        .add_files(staged_files)
         .allow_empty_commit()
         .set_snapshot_properties(summary);
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {

@@ -15,13 +15,14 @@ use iceberg::Catalog;
 use iceberg::expr::{Predicate, Reference};
 use iceberg::spec::{DataFile, Datum, Literal, NestedField, PrimitiveType, Transform, Type};
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::Transaction;
 
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::conform::strict_partition_store_cast;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::overwrite_scope::replace_partitions_is_noop;
+use crate::write::staged_commit::StagedFiles;
 use crate::write::static_value::{cast_constant_array, cast_datum};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 
@@ -369,12 +370,16 @@ pub async fn commit_overwrite_by_row_filter_to(
         .overwrite_files()
         .overwrite_by_row_filter(predicate)
         .validate_added_files_match_overwrite_filter()
-        .add_files(staged_files)
         .set_snapshot_properties(summary);
     action = apply_overwrite_isolation(action, isolation, table, branch);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -400,10 +405,7 @@ pub async fn commit_replace_partitions_to(
     let isolation = parse_overwrite_isolation(table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
-    let mut action = tx
-        .replace_partitions()
-        .add_files(staged_files)
-        .set_snapshot_properties(summary);
+    let mut action = tx.replace_partitions().set_snapshot_properties(summary);
     if let Some(level) = isolation {
         action = action.validate_no_conflicting_deletes();
         if level == OverwriteIsolation::Serializable {
@@ -414,8 +416,13 @@ pub async fn commit_replace_partitions_to(
         }
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 enum PartitionClauseItem {

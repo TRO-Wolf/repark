@@ -39,7 +39,9 @@ pub async fn evolve_schema(
         .case_sensitive(false)
         .union_by_name_with(incoming);
     let tx = action.apply(tx).map_err(type_change_err)?;
-    tx.commit(catalog.as_ref()).await.map_err(type_change_err)
+    crate::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(type_change_err)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -67,7 +69,9 @@ pub async fn evolve_merge_schema(
         .union_by_name_with(incoming)
         .apply(tx)
         .map_err(type_change_err)?;
-    tx.commit(catalog.as_ref()).await.map_err(type_change_err)
+    crate::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(type_change_err)
 }
 
 fn type_change_err(err: IcebergError) -> datafusion::error::DataFusionError {

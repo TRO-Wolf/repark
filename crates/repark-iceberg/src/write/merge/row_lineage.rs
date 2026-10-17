@@ -29,6 +29,7 @@ use crate::write::distribution::{default_sort_is_declared, sort_batches_by_defau
 
 use super::not_matched_by_source;
 use super::{FILE_PATH_COL, MergeSql, POS_COL, iceberg_err, quote_ident};
+use crate::write::staged_commit::OwnLocations;
 
 pub(crate) fn table_carries_merge_lineage(table: &Table) -> bool {
     format_supports_row_lineage(table.metadata().format_version())
@@ -180,8 +181,9 @@ where
         )
         .map_err(iceberg_err)?
     };
-    let location_generator =
-        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
+    let location_generator = OwnLocations::new(
+        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?,
+    );
     let file_name_generator =
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(

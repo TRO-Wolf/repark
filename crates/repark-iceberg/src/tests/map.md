@@ -126,6 +126,19 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   `Table`). The gate stays textual: it matches spellings, not resolved paths, so a new
   alias can still walk past it. Recorded on card ENC-1-RESIDUE-1.
   pins: enc-1/C-009, C-010
+  **ENC-1-RESIDUE-1 ruling-121 round (2026-10-17):** the round-2 census
+  (`every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal`, its scanner and
+  `the_census_finds_a_helper_split_site_and_an_emptied_sweep`) is gone. A stage-then-commit
+  site that does not go through `../write/staged_commit.rs` now fails to compile under
+  `make rust-panic-ban`: `clippy.toml` disallows `Transaction::commit` and the fork's
+  file-adding action methods outside that module. The three ENC-CTAS-REPLACE-1 functions
+  (`ctas.rs::finish_ctas_staged_commit`, `create_table.rs::execute_staged_create` and
+  `publish_staged_with_summary`) carry the one `#[expect]` outside it, naming that card.
+  `function_bodies` stays for the item-5 pin below.
+  `the_catalog_provider_installs_the_encryption_guard_once` (ruling 97, 2026-10-15,
+  replacing `session_registration_installs_the_encryption_guard`) holds the installer
+  spelling `EncryptionGuardCatalog::install(` inside `ReparkCatalogProvider::try_new` and
+  its absence from `repark-core/src/session.rs` (no second copy).
 
 ## Pointers
 

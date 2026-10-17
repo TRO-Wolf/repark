@@ -145,7 +145,9 @@ pub(crate) async fn execute_identifier_fields_ddl(
         .case_sensitive(false)
         .set_identifier_fields(names);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(handle.as_ref()).await.map_err(iceberg_err)?;
+    repark_iceberg::write::commit_unstaged(tx, handle.as_ref())
+        .await
+        .map_err(iceberg_err)?;
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, handle.clone(), &catalog_name, &namespace).await?;
     ctx.read_empty()

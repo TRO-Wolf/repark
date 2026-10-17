@@ -565,11 +565,7 @@ async fn execute_schema_create(
         let staged = StagedTableTransaction::begin_replace(&existing, creation)
             .await
             .map_err(iceberg_err)?;
-        staged
-            .add_data_files(Vec::new())
-            .commit(catalog.as_ref())
-            .await
-            .map_err(iceberg_err)?;
+        staged.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
     } else if catalogs.location_policy(&create.catalog)
         == Some(LocationPolicy::ServiceManagedLocation)
     {
@@ -745,11 +741,7 @@ async fn commit_staged_schema_only(
             .await
             .map_err(iceberg_err)?;
     // Schema-only: no data write — empty pending files publish metadata only.
-    staged
-        .add_data_files(Vec::new())
-        .commit(catalog)
-        .await
-        .map_err(iceberg_err)?;
+    staged.commit(catalog).await.map_err(iceberg_err)?;
     Ok(())
 }
 

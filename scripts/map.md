@@ -1,5 +1,6 @@
 # map — scripts/
 
+ENC-1-RESIDUE-1 (2026-10-15): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1737 → 1719 (`commit_append` moves to the new `append_commit.rs`, shrink-only).
 ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)): `check_rust_file_size.py` ratchets `repark-spark/src/tests/dml.rs` 1154 → 1139, shrink-only, with the CAP-1 mirror in `python/repark-parity/tests/test_cap_1_source_file_line_cap.py`; the G3-E8 negative that held an `UPDATE … SET col = (SELECT …)` storing on the harness context became the two-statement refusal pin.
 
 ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional): `check_rust_file_size.py` ratchets the `repark-iceberg/src/write/overwrite.rs` baseline 1053 → 1049, shrink-only, with the CAP-1 mirror; the guard's commit removed the file's local strict-cast options when its two batch casts moved to `conform::strict_store_cast`. pins: ice-tsns-floor-doors-1/C-014

@@ -43,6 +43,8 @@ v1 crate-root re-export lists.
   recorder), installed once via a tolerant `Once`; accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.
 - `src/catalog/`, `src/microbatch/`, `src/write/` — see [src/map.md](src/map.md) and the per-module maps.
+- `tests/` — integration test binaries over the public API (ENC-1-RESIDUE-1, 2026-10-17:
+  the ruling-109 warning pin); see [tests/map.md](tests/map.md).
 
 ## I want to...
 

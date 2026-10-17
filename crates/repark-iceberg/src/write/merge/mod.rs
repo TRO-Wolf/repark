@@ -40,7 +40,6 @@ use iceberg::writer::IcebergWriter;
 use repark_common::spark_error;
 use uuid::Uuid;
 
-mod abort;
 mod copy_on_write;
 pub(crate) mod cow_scratch;
 mod dv_close;

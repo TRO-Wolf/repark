@@ -8,12 +8,13 @@ use iceberg::Catalog;
 use iceberg::expr::{Predicate, Reference};
 use iceberg::spec::{DataFile, Datum, NestedFieldRef, PrimitiveType, Schema, Type};
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::Transaction;
 
 use crate::write::commit_error::commit_result;
 use crate::write::commit_target::{FilterValidation, maybe_to_branch};
 use crate::write::illegal_argument::illegal_argument_error;
 use crate::write::overwrite::OverwriteIsolation;
+use crate::write::staged_commit::StagedFiles;
 use crate::write::summary_collision::{EngineSummary, extras_need_removed_files};
 use crate::write::write_options::summary_with_extras;
 
@@ -95,7 +96,6 @@ pub async fn commit_overwrite_by_filter_with_summary(
     let mut action = tx
         .overwrite_files()
         .overwrite_by_row_filter(predicate)
-        .add_files(staged_files)
         .set_snapshot_properties(summary);
     if let Some(level) = isolation {
         action = action.validate_no_conflicting_deletes();
@@ -107,10 +107,13 @@ pub async fn commit_overwrite_by_filter_with_summary(
         }
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action
-        .apply(tx)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
         .map_err(crate::catalog::iceberg_to_datafusion)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 fn cannot_convert(rendered: impl std::fmt::Display) -> DataFusionError {

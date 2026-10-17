@@ -5,16 +5,16 @@ use iceberg::Catalog;
 use iceberg::expr::Predicate;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::Transaction;
 use tracing::Instrument;
 
 use super::KnownPartitions;
-use super::abort;
 use super::dv_close;
 use super::iceberg_err;
 use crate::write::commit_error::commit_err;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::sink_offsets::SiteStamp;
+use crate::write::staged_commit::StagedFiles;
 
 pub(crate) const WRITE_MERGE_ISOLATION_LEVEL: &str = "write.merge.isolation-level";
 
@@ -177,7 +177,6 @@ pub(crate) async fn commit_overwrite_on_ref(
         return Ok(());
     }
     crate::write::refuse_encrypted_table(table)?;
-    let new_file_paths = abort::written_file_paths(&new_files);
     let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, scope)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
@@ -186,52 +185,36 @@ pub(crate) async fn commit_overwrite_on_ref(
     let (operation_id, summary) =
         crate::write::write_options::summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
-    let tx = if affected.is_empty() {
-        let mut action = tx
-            .overwrite_files()
-            .add_files(new_files)
-            .conflict_detection_filter(scope.conflict_filter.clone())
-            .case_sensitive(true)
-            .set_snapshot_properties(summary);
-        if scope.isolation == IsolationLevel::Serializable {
-            action = action.validate_no_conflicting_data();
-        }
-        if let Some(pin) = snapshot_id {
-            action = action.validate_from_snapshot(pin);
-        }
-        let action =
-            crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
-                action.to_branch(name)
-            });
-        action.apply(tx).map_err(iceberg_err)?
+    let action = if affected.is_empty() {
+        tx.overwrite_files()
     } else {
-        let mut action = tx
-            .overwrite_files()
+        tx.overwrite_files()
             .delete_data_files(affected)
-            .add_files(new_files)
-            .conflict_detection_filter(scope.conflict_filter.clone())
             .validate_no_conflicting_deletes()
-            .case_sensitive(true)
-            .set_snapshot_properties(summary);
-        if scope.isolation == IsolationLevel::Serializable {
-            action = action.validate_no_conflicting_data();
-        }
-        if let Some(pin) = snapshot_id {
-            action = action.validate_from_snapshot(pin);
-        }
-        let action =
-            crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
-                action.to_branch(name)
-            });
-        action.apply(tx).map_err(iceberg_err)?
     };
-    let tx = stamp.transaction(tx)?;
-    match tx.commit(catalog.as_ref()).await {
+    let mut action = action
+        .conflict_detection_filter(scope.conflict_filter.clone())
+        .case_sensitive(true)
+        .set_snapshot_properties(summary);
+    if scope.isolation == IsolationLevel::Serializable {
+        action = action.validate_no_conflicting_data();
+    }
+    if let Some(pin) = snapshot_id {
+        action = action.validate_from_snapshot(pin);
+    }
+    let action = crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
+        action.to_branch(name)
+    });
+    let staged = StagedFiles::claimed(new_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?
+        .stamped(&stamp)?;
+    match staged
+        .commit_or_abort(table, catalog.as_ref(), &operation_id)
+        .await
+    {
         Ok(committed) => stamp.record(&committed),
-        Err(error) => {
-            abort::delete_written_files_best_effort(table, &new_file_paths, &error).await;
-            Err(commit_err(error, &operation_id))
-        }
+        Err(error) => Err(commit_err(error, &operation_id)),
     }
 }
 
@@ -389,7 +372,6 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         return Ok(());
     }
     crate::write::refuse_encrypted_table(table)?;
-    let data_file_paths = abort::written_file_paths(&data_files);
     let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, &policy.scope)?;
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
@@ -407,11 +389,10 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     ))
     .await?;
     let referenced = std::mem::take(&mut prepared.referenced);
-    let delete_file_paths = std::mem::take(&mut prepared.abort_paths);
-    let delete_file_count = delete_file_paths.len() as u64;
     let arm_deleted_on_delete = prepared.arm_validate_deleted_files_on_delete;
 
     let (added_deletes, removed_deletes) = prepared.delete_file_changes();
+    let delete_file_count = added_deletes.len() as u64;
     let mut added_files = data_files.clone();
     added_files.extend(added_deletes.iter().cloned());
     let summary_extra = stamp.extras(summary_extra)?;
@@ -424,8 +405,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let (operation_id, summary) =
         crate::write::write_options::summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
-    let mut action = tx.row_delta().add_data_files(data_files);
-    action = prepared.apply(action);
+    let (mut action, added_deletes) = prepared.into_row_delta(tx.row_delta());
     action = action
         .conflict_detection_filter(policy.scope.conflict_filter.clone())
         .validate_data_files_exist(referenced)
@@ -447,9 +427,13 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let action = crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
         action.to_branch(name)
     });
-    let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
-    match tx
-        .commit(catalog.as_ref())
+    let staged = StagedFiles::claimed(data_files)
+        .with_written_deletes(added_deletes)
+        .stage(action, tx)
+        .map_err(iceberg_err)?
+        .stamped(&stamp)?;
+    match staged
+        .commit_or_abort(table, catalog.as_ref(), &operation_id)
         .instrument(tracing::info_span!(
             "merge.commit",
             data_files = data_file_count,
@@ -458,11 +442,266 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         .await
     {
         Ok(committed) => stamp.record(&committed),
-        Err(error) => {
-            let mut abort_paths = data_file_paths;
-            abort_paths.extend(delete_file_paths);
-            abort::delete_written_files_best_effort(table, &abort_paths, &error).await;
-            Err(commit_err(error, &operation_id))
+        Err(error) => Err(commit_err(error, &operation_id)),
+    }
+}
+
+#[cfg(test)]
+mod keyed_sweep_pins {
+    use std::collections::{BTreeSet, HashMap};
+    use std::sync::Arc;
+
+    use datafusion::arrow::array::{Int32Array, RecordBatch};
+    use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
+    use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
+    use iceberg::transaction::{ApplyTransactionAction, Transaction};
+    use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
+    use tempfile::TempDir;
+
+    use super::*;
+    use crate::write::encryption::{ENCRYPTION_KEY_ID_PROPERTY, EncryptedTableRefusal};
+
+    const KEY_VALUE: &str = "merge-sweep-probe-key";
+
+    fn ident() -> TableIdent {
+        TableIdent::new(NamespaceIdent::new("sweep".to_string()), "t".to_string())
+    }
+
+    fn expected_text() -> String {
+        crate::write::encryption::refusal_text("sweep.t")
+    }
+
+    async fn v2_table(warehouse: &TempDir) -> Arc<dyn Catalog> {
+        let catalog =
+            crate::memory_catalog(warehouse.path().to_str().expect("warehouse path is utf8"))
+                .await
+                .expect("memory catalog builds");
+        catalog
+            .create_namespace(ident().namespace(), HashMap::new())
+            .await
+            .expect("namespace creates");
+        let schema = Schema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![
+                NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            ])
+            .build()
+            .expect("id schema builds");
+        catalog
+            .create_table(
+                ident().namespace(),
+                TableCreation::builder()
+                    .name("t".to_string())
+                    .schema(schema)
+                    .properties(HashMap::new())
+                    .build(),
+            )
+            .await
+            .expect("table creates");
+        let created = catalog
+            .load_table(&ident())
+            .await
+            .expect("created handle loads");
+        let upgraded = Transaction::new(&created)
+            .upgrade_table_version()
+            .set_format_version(iceberg::spec::FormatVersion::V2)
+            .apply(Transaction::new(&created))
+            .expect("version action applies");
+        upgraded
+            .commit(catalog.as_ref())
+            .await
+            .expect("version commits");
+        catalog
+    }
+
+    async fn add_key(catalog: &Arc<dyn Catalog>) {
+        let fresh = catalog
+            .load_table(&ident())
+            .await
+            .expect("fresh handle loads");
+        let base = Transaction::new(&fresh);
+        let action = base.update_table_properties().set(
+            ENCRYPTION_KEY_ID_PROPERTY.to_string(),
+            KEY_VALUE.to_string(),
+        );
+        let keyed = action.apply(base).expect("key action applies");
+        keyed.commit(catalog.as_ref()).await.expect("key commits");
+    }
+
+    async fn keyed_fixture(warehouse: &TempDir) -> (Arc<dyn Catalog>, Table) {
+        let catalog = v2_table(warehouse).await;
+        let stale = catalog
+            .load_table(&ident())
+            .await
+            .expect("stale handle loads");
+        add_key(&catalog).await;
+        (catalog, stale)
+    }
+
+    async fn keyed_fixture_with_referenced_file(
+        warehouse: &TempDir,
+    ) -> (Arc<dyn Catalog>, Table, Vec<DataFile>) {
+        let catalog = v2_table(warehouse).await;
+        let created = catalog
+            .load_table(&ident())
+            .await
+            .expect("created handle loads");
+        let referenced = stage_one_batch(&created).await;
+        crate::write::commit_append(&catalog, &created, referenced.clone())
+            .await
+            .expect("the referenced file commits");
+        let stale = catalog
+            .load_table(&ident())
+            .await
+            .expect("stale handle loads");
+        add_key(&catalog).await;
+        (catalog, stale, referenced)
+    }
+
+    fn local_path(file: &DataFile) -> String {
+        let path = file.file_path();
+        path.strip_prefix("file://").unwrap_or(path).to_string()
+    }
+
+    fn parquet_rows(file: &DataFile) -> usize {
+        let opened = std::fs::File::open(local_path(file)).expect("the referenced file opens");
+        parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder::try_new(opened)
+            .expect("the referenced file is parquet")
+            .build()
+            .expect("the referenced reader builds")
+            .map(|batch| batch.expect("a referenced batch reads").num_rows())
+            .sum()
+    }
+
+    fn assert_referenced_kept_and_fresh_swept(
+        error: &DataFusionError,
+        referenced: &[DataFile],
+        fresh: &[DataFile],
+    ) {
+        assert!(EncryptedTableRefusal::find(error).is_some(), "{error}");
+        assert!(error.to_string().contains(expected_text().as_str()));
+        for file in referenced {
+            assert_eq!(parquet_rows(file), 2, "referenced {}", file.file_path());
         }
+        for file in fresh {
+            assert!(
+                !std::path::Path::new(&local_path(file)).exists(),
+                "fresh {} was left behind",
+                file.file_path()
+            );
+        }
+    }
+
+    async fn stage_one_batch(table: &Table) -> Vec<DataFile> {
+        let schema = Arc::new(ArrowSchema::new(vec![Field::new(
+            "id",
+            DataType::Int32,
+            false,
+        )]));
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(Int32Array::from(vec![1, 2])) as _])
+            .expect("batch builds");
+        crate::write::merge::write_data_files(table, vec![batch])
+            .await
+            .expect("staging writes")
+    }
+
+    fn staged_directory(staged: &[DataFile]) -> std::path::PathBuf {
+        let first = staged.first().expect("at least one staged file");
+        let path = first.file_path();
+        let root = path.strip_prefix("file://").unwrap_or(path);
+        std::path::Path::new(root)
+            .parent()
+            .expect("a staged file has a parent directory")
+            .to_path_buf()
+    }
+
+    fn directory_names(directory: &std::path::Path) -> BTreeSet<String> {
+        std::fs::read_dir(directory)
+            .expect("the staged directory lists")
+            .flatten()
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn keyed_table_refused_merge_overwrite_sweeps_its_staged_file() {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let (catalog, stale) = keyed_fixture(&warehouse).await;
+        let staged = stage_one_batch(&stale).await;
+        assert!(!staged.is_empty());
+        let directory = staged_directory(&staged);
+        let before = directory_names(&directory);
+        assert_eq!(before.len(), staged.len());
+        let scope = CommitScope::scoped(IsolationLevel::Serializable, Predicate::AlwaysTrue);
+        let error = commit_overwrite(&catalog, &stale, None, Vec::new(), staged, &scope, &[])
+            .await
+            .expect_err("the keyed merge overwrite refuses");
+        assert!(EncryptedTableRefusal::find(&error).is_some());
+        assert!(error.to_string().contains(expected_text().as_str()));
+        assert!(directory_names(&directory).is_empty());
+    }
+
+    #[tokio::test]
+    async fn keyed_table_refused_row_delta_sweeps_its_staged_file() {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let (catalog, stale) = keyed_fixture(&warehouse).await;
+        let staged = stage_one_batch(&stale).await;
+        assert!(!staged.is_empty());
+        let directory = staged_directory(&staged);
+        let before = directory_names(&directory);
+        assert_eq!(before.len(), staged.len());
+        let scope = CommitScope::scoped(IsolationLevel::Serializable, Predicate::AlwaysTrue);
+        let policy = scope.row_delta(RowDeltaKind::Merge);
+        let error = commit_row_delta_kind(
+            &catalog,
+            &stale,
+            None,
+            Vec::new(),
+            staged,
+            WriteConcurrency::default(),
+            &policy,
+        )
+        .await
+        .expect_err("the keyed row delta refuses");
+        assert!(EncryptedTableRefusal::find(&error).is_some());
+        assert!(error.to_string().contains(expected_text().as_str()));
+        assert!(directory_names(&directory).is_empty());
+    }
+
+    #[tokio::test]
+    async fn keyed_refused_merge_overwrite_keeps_a_snapshot_referenced_file() {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let (catalog, stale, referenced) = keyed_fixture_with_referenced_file(&warehouse).await;
+        let fresh = stage_one_batch(&stale).await;
+        let mut new_files = referenced.clone();
+        new_files.extend(fresh.clone());
+        let scope = CommitScope::scoped(IsolationLevel::Serializable, Predicate::AlwaysTrue);
+        let error = commit_overwrite(&catalog, &stale, None, Vec::new(), new_files, &scope, &[])
+            .await
+            .expect_err("the keyed merge overwrite refuses");
+        assert_referenced_kept_and_fresh_swept(&error, &referenced, &fresh);
+    }
+
+    #[tokio::test]
+    async fn keyed_refused_row_delta_keeps_a_snapshot_referenced_file() {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let (catalog, stale, referenced) = keyed_fixture_with_referenced_file(&warehouse).await;
+        let fresh = stage_one_batch(&stale).await;
+        let mut new_files = referenced.clone();
+        new_files.extend(fresh.clone());
+        let scope = CommitScope::scoped(IsolationLevel::Serializable, Predicate::AlwaysTrue);
+        let policy = scope.row_delta(RowDeltaKind::Merge);
+        let error = commit_row_delta_kind(
+            &catalog,
+            &stale,
+            None,
+            Vec::new(),
+            new_files,
+            WriteConcurrency::default(),
+            &policy,
+        )
+        .await
+        .expect_err("the keyed row delta refuses");
+        assert_referenced_kept_and_fresh_swept(&error, &referenced, &fresh);
     }
 }

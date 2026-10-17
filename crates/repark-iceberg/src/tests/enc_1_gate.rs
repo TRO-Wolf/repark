@@ -261,6 +261,74 @@ fn every_catalog_table_handle_and_file_io_is_built_inside_the_guarded_wrappers()
     );
 }
 
+fn function_name(line: &str) -> Option<String> {
+    let mut rest = line.trim();
+    loop {
+        let mut stripped = false;
+        for prefix in [
+            "pub(crate) ",
+            "pub(super) ",
+            "pub ",
+            "async ",
+            "unsafe ",
+            "const ",
+        ] {
+            if let Some(after) = rest.strip_prefix(prefix) {
+                rest = after;
+                stripped = true;
+                break;
+            }
+        }
+        if !stripped {
+            break;
+        }
+    }
+    let rest = rest.strip_prefix("fn ")?;
+    let end = rest
+        .find(|character: char| character == '(' || character == '<' || character.is_whitespace())
+        .unwrap_or(rest.len());
+    if end == 0 {
+        return None;
+    }
+    Some(rest[..end].to_string())
+}
+
+fn function_bodies(text: &str) -> Vec<(String, String)> {
+    let mut functions = Vec::new();
+    let mut current: Option<(String, i64, String, bool)> = None;
+    let mut depth: i64 = 0;
+    for raw in text.lines() {
+        let line = raw.split("//").next().unwrap_or_default();
+        if let Some(name) = function_name(line)
+            && depth <= 1
+        {
+            if let Some((open, _, body, _)) = current.take() {
+                functions.push((open, body));
+            }
+            current = Some((name, depth, String::new(), false));
+        }
+        if let Some((_, start, body, entered)) = current.as_mut() {
+            body.push_str(line);
+            body.push('\n');
+            if depth > *start {
+                *entered = true;
+            }
+        }
+        depth += brace_delta(line);
+        if let Some((_, start, _, entered)) = current.as_ref()
+            && *entered
+            && depth <= *start
+            && let Some((open, _, body, _)) = current.take()
+        {
+            functions.push((open, body));
+        }
+    }
+    if let Some((open, _, body, _)) = current.take() {
+        functions.push((open, body));
+    }
+    functions
+}
+
 #[test]
 fn every_catalog_builder_returns_through_the_encryption_guard() {
     let builders = product_sources()
@@ -308,5 +376,30 @@ fn the_scan_skips_test_code_and_keeps_product_code() {
         nested
             .child_modules
             .contains(&PathBuf::from("crates/k/src/write/plain.rs"))
+    );
+}
+
+#[test]
+fn the_catalog_provider_installs_the_encryption_guard_once() {
+    let sources = product_sources();
+    let text = |wanted: &str| {
+        sources
+            .iter()
+            .find(|(file, _)| file == wanted)
+            .map(|(_, text)| text.clone())
+            .expect("the file is scanned")
+    };
+    let try_new = function_bodies(&text("repark-iceberg/src/catalog/provider.rs"))
+        .into_iter()
+        .find(|(name, _)| name == "try_new")
+        .map(|(_, body)| body)
+        .expect("ReparkCatalogProvider::try_new is scanned");
+    assert!(
+        try_new.contains("EncryptionGuardCatalog::install("),
+        "ENC-1 residue item 5: ReparkCatalogProvider::try_new must install the guard"
+    );
+    assert!(
+        !text("repark-core/src/session.rs").contains("EncryptionGuardCatalog::install"),
+        "ENC-1 residue item 5: the guard is installed once, in ReparkCatalogProvider::try_new"
     );
 }

@@ -11,7 +11,7 @@ pub async fn set_table_location(
     let tx = Transaction::new(&table);
     let action = tx.update_location().set_location(location.to_string());
     let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    crate::write::commit_unstaged(tx, catalog).await?;
     Ok(())
 }
 

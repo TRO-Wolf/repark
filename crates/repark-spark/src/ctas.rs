@@ -325,6 +325,7 @@ pub(crate) async fn execute_ctas(
     ctx.read_empty()
 }
 
+#[expect(clippy::disallowed_methods, reason = "ENC-CTAS-REPLACE-1")]
 async fn finish_ctas_staged_commit(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -337,6 +338,7 @@ async fn finish_ctas_staged_commit(
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
     if options.is_empty() && session.is_empty() {
         let data_files = write_ctas_query(ctx, staged.table(), query).await?;
+        let data_files = repark_iceberg::write::forget_staged_files(data_files);
         staged
             .add_data_files(data_files)
             .commit(catalog.as_ref())
@@ -371,6 +373,7 @@ async fn finish_ctas_staged_commit(
         )
         .await?
     };
+    let data_files = repark_iceberg::write::forget_staged_files(data_files);
     let tx = Transaction::new(&staged_table);
     let tx = if replace_write {
         let engine =

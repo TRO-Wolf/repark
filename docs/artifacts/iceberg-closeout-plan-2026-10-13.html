@@ -48,7 +48,7 @@ footer{color:var(--muted);font-size:.8rem;font-family:"IBM Plex Mono",monospace}
 <div class="card"><h3>v2 <span class="tag t-hn">HARDENED-NARROW</span> → <span class="tag t-prod">PRODUCTION</span></h3>
 <ul>
 <li><b>No silent value from any door.</b> R-016 struct pairing conformed to Spark's rule or struct writes refused with a hint (U-6); the CTAS write body refuses at parse (U-7); the nested microsecond NTZ wall, R-011, refused or fixed (U-8).</li>
-<li><b>Boundary and secrecy.</b> PA-01 to PA-04 closed (U-5); ENC-1 residue items 1 to 6 ruled (U-12). ENC-CTAS-REPLACE-1 (an orphan unencrypted file under a keyed table, never served) closed or carved out (owner ruling 98, 2026-10-15).</li>
+<li><b>Boundary and secrecy.</b> PA-01 to PA-04 closed (U-5); ENC-1 residue items 1 to 6 ruled (U-12). ENC-CTAS-REPLACE-1 (an orphan unencrypted file under a keyed table, never served; both doors: Spark SQL <code>ctas.rs::finish_ctas_staged_commit</code> and ANSI <code>create_table.rs::execute_staged_create</code> and <code>publish_staged_with_summary</code>) closed or carved out (owner ruling 98, 2026-10-15; owner ruling 108 names both doors).</li>
 <li><b>Integrity under failure.</b> Kill-mid-write pin, the unknown-commit-outcome drill run live on Glue and S3 Tables, a cross-release read pin (U-9).</li>
 <li><b>A second engine reads what we write.</b> Spark 4.1.2 reads every table the eleven acceptance legs write (U-10).</li>
 <li><b>A stated resource bound.</b> Ordered writes and MoR MERGE measured, the bound written down, exceeded means refused (U-11).</li>

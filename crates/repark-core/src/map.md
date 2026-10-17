@@ -227,6 +227,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the DataFusion conf refusal moved to `df_guards::invalid_datafusion_config`,
   which masks the echoed value. pins: source-url-redact-1/C-017
   **SOURCE-URL-REDACT-2 (2026-10-06):** `build()` registers every config-map value (builder pairs plus the merged `repark.toml` pairs) before validation, in one line (the file sits at the 1000-line ceiling). pins: source-url-redact-1/C-058
+  **ENC-1-RESIDUE-1 item 5 (2026-10-15, owner ruling 97):** `register_iceberg_catalog`
+  builds through `ReparkCatalogProvider::try_new`, which installs the guard, and stores
+  the provider's guarded handle in the registry; it installs no second copy. Detail
+  lives in `session/map.md`.
+  pins: `session/tests/iceberg_guard_registration.rs`, `enc_1_gate.rs`
+  `the_catalog_provider_installs_the_encryption_guard_once`.
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -406,6 +412,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `Error::CommitStateUnknown` (operation id through), so a Postgres commit whose outcome the
   driver could not prove surfaces as `CommitStateUnknownException`, matching the
   `source_error` fold. No other producer wraps `ConnectError::CommitUnknown`. pins: c-4/C-013
+- `error_map.rs` — **ENC-1-RESIDUE-1 fix round (2026-10-15, ruling 96 F4):** a keyed
+  refusal keeps its `NotImplemented` class, and its message is the source-chain iceberg
+  error that begins with the refusal text, so a sweep's " failed to delete staged file
+  '…'" suffix reaches the session and the facade. pin:
+  `repark-spark/src/tests/enc_1_sweep.rs`
+  `keyed_refusal_names_an_undeletable_staged_file_through_engine_err`.
 - `error_map.rs` — **ENC-1 fold 1 (2026-10-09):** `engine_err` first asks
   `repark_iceberg::write::EncryptedTableRefusal::find` for the keyed-table refusal. The
   catalog guard raises it from inside a writer or a commit, wrapped by whatever layer was

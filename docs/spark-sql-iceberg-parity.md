@@ -1688,6 +1688,9 @@ perfectly good read.
   (byte-magic `PAR1`, readable with no key — measured 2026-09-18) with no error raised;
   `SELECT` returns the rows; table-metadata `encryption-keys` stays empty. There is no
   KMS client and no file encryption. Dated DECLARED exclusion, owner 2026-08-24.
+  Accepted 2026-10-14 (ENC-1-RESIDUE-1 item 2): an unkeyed table placed under a keyed
+  table's location still writes plaintext there — nothing is written into the keyed
+  table itself, so the refusal does not cover it.
 - **After** — the first write to a table carrying `encryption.key-id` refuses with
   `UnsupportedOperationException` and one sentence naming the table, the property, no
   table encryption, no plaintext and ENC-1, never echoing the key value (owner ruling
@@ -1730,7 +1733,31 @@ perfectly good read.
   kinds (an unknown kind refuses), read from the structure of the commit and not from its
   text, so no property value or column comment can lock a keyed table; table-metadata JSON
   is writable only in the table's metadata directory. Open residue: card ENC-1-RESIDUE-1
-  (`../task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md`).
+  (`../task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md`). As of 2026-10-15
+  (rulings 96, 97): a refused keyed write deletes the files it staged but never a file a
+  snapshot references, and every catalog provider RePark builds is guarded; the census of
+  stage-then-commit sites is held on an uncarded ANSI CREATE OR REPLACE TABLE AS SELECT
+  site.
+  **As of 2026-10-15 (owner rulings 108 and 109):** "108: (a). ENC-CTAS-REPLACE-1 names
+  both doors. execute_staged_create and publish_staged_with_summary go on the census
+  exception list under that card, the census commits, round 2 is complete." "109: (c).
+  F4 accepted as pinned. The micro-batch error field is a card parked under the streaming
+  freeze, not a later round. The warning carries the full path of the file it could not
+  delete." The census is committed. F3 is closed, with
+  `create_table.rs::execute_staged_create` and `publish_staged_with_summary` excepted
+  beside `ctas.rs::finish_ctas_staged_commit` under ENC-CTAS-REPLACE-1. F4 is accepted as
+  pinned: the session error names the file, the micro-batch error keeps its class and
+  text, the keyed-sweep warning carries the full path, and card
+  MB-ENC-UNDELETED-FIELD-1 is parked under the streaming freeze.
+  **As of 2026-10-17 (owner ruling 121):** a refused keyed write deletes only the files the
+  attempt itself wrote, chosen without reading the table: a file a snapshot references, the
+  same file spelled as a `file://` URL, a branch's or an older snapshot's file and a
+  concurrent writer's staged file all survive. On ruling 115's ambiguous outcome a fresh
+  read decides: a keyed table with no snapshot of this attempt loses only the attempt's own
+  unreferenced files; otherwise nothing goes. The census is a type the compiler checks:
+  outside `repark-iceberg/src/write/staged_commit.rs` a staged file cannot join a commit
+  (`clippy.toml`, `make rust-panic-ban`), and the three ENC-CTAS-REPLACE-1 functions are
+  the named exception.
   Implementing envelope encryption stays fork work (GAP_MATRIX R130) and is not on the
   v1.0 slate.
 - **Divergence (2026-10-09, by ruling, owner can overturn):** the ruling's phrase "as Spark
@@ -1744,13 +1771,17 @@ perfectly good read.
 
 #### ENC-CTAS-REPLACE-1 — DATED ROW 2026-10-15 (owner ruling 98 (a)): a key landing mid-statement leaves an orphan unencrypted file
 
-- **repark** — `CREATE OR REPLACE TABLE … AS SELECT` on the Spark SQL door: when an encryption key
-  lands on the table between `begin_replace` and the publish, the staged table still carries the old
-  unkeyed properties and a plain `FileIO`, so staging writes an unencrypted Parquet file; the guard's
-  `refuse_keyed_publish` checks the staged (unkeyed) table and passes; the inner `publish_replace_table`
-  then fails on the moved base metadata location (a `CommitFailed`, not a keyed refusal); nothing removes
-  the staged file. Result: an orphan unencrypted file under the keyed table's `data/`, referenced by no
-  snapshot, so never served. Main behaves the same. Read in the code, not run.
+- **repark** — `CREATE OR REPLACE TABLE … AS SELECT` on both doors (one defect, two spellings).
+  Spark SQL: `ctas.rs::finish_ctas_staged_commit`. ANSI: `create_table.rs::execute_staged_create` and
+  `publish_staged_with_summary`. When an encryption key lands on the table between the staged table's
+  load and the publish, the staged table still carries the old unkeyed properties and a plain `FileIO`,
+  so staging writes an unencrypted Parquet file; the guard's `refuse_keyed_publish` checks the staged
+  (unkeyed) table and passes; the inner publish then fails on the moved base metadata location (a
+  `CommitFailed`, not a keyed refusal); nothing removes the staged file. Result: an orphan unencrypted
+  file under the keyed table's `data/`, referenced by no snapshot, so never served. Main behaves the
+  same. Read in the code, not run. Owner ruling 108 (2026-10-15) names both doors; the census excepts
+  all three functions under this card. Since owner ruling 121 (2026-10-17) the exception is an
+  `#[expect(clippy::disallowed_methods)]` on each of the three functions, naming this card.
 - **Apache Spark** — not measured.
 - **Card** — [ENC-CTAS-REPLACE-1](../task/roadmap/mid-term/enc-ctas-replace-1-card-2026-10-15.md)
   (2026-10-15, open, not scheduled). Retires when the staged files are removed on that failure, or the

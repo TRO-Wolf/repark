@@ -21,6 +21,7 @@ use crate::catalog::uuid_presentation::stored_arrow_schema;
 use crate::write::append::fanout_conformed_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::{conform_batch, write_default_column_names};
+use crate::write::staged_commit::OwnLocations;
 use crate::write::write_options::WriterStagingOverrides;
 
 pub(crate) async fn write_new_data_files_from_stream_with<S>(
@@ -104,8 +105,9 @@ async fn build_unpartitioned_data_file_writer_with(
         )
         .map_err(iceberg_err)?
     };
-    let location_generator =
-        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
+    let location_generator = OwnLocations::new(
+        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?,
+    );
     let file_name_generator =
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(

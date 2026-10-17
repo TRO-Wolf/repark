@@ -137,7 +137,7 @@ pub async fn apply_schema_changes_on_table(
         };
     }
     let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    crate::write::commit_unstaged(tx, catalog).await?;
     Ok(())
 }
 

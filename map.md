@@ -38,7 +38,10 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   (the four Ballista crates and, since the BALLISTA-M2-A seed of 2026-09-11, `datafusion-proto` are
   pinned `=54.1.0` and consumed only behind `repark-distributed`'s `cluster` feature);
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
-  are in force. **IO-ORC-1 (2026-09-16):** `orc-rust 0.8.0` (`default-features = false`, sync
+  are in force. **ENC-1-RESIDUE-1, owner ruling 121 (2026-10-17):** the same list disallows the
+  fork's `Transaction::commit` and its file-adding action methods outside
+  `crates/repark-iceberg/src/write/staged_commit.rs`, so a staged write that does not commit
+  through `StagedCommit` fails `make rust-panic-ban`. **IO-ORC-1 (2026-09-16):** `orc-rust 0.8.0` (`default-features = false`, sync
   reader) in `[workspace.dependencies]` for the read-only ORC scan (owner ruling Q-15B-1),
   plus the codec crates the scan decodes with (DEFLATE/zlib, LZ4, LZO, Snappy, Zstandard).
   **ICE-READ-PERF-0 (2026-09-19):** `bytes = "1"` — already in the lock under the fork's

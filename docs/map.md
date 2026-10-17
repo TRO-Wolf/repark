@@ -41,7 +41,10 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **CASESENS-1 S3 (2026-09-27):**
+  single home for how repark differs from Apache Spark. **ENC-1-RESIDUE-1 (2026-10-15):**
+  the ENC-1 section records item 2 as accepted (an unkeyed table under a keyed
+  location still writes plaintext there).
+  **CASESENS-1 S3 (2026-09-27):**
   row `E-CASE-SENSITIVE-DF` filed FIXED (the DataFrame door binds exactly under `true`
   where written names reach Rust; residues R-CS1-9/R-CS1-10); the SQL row drops its
   temp-view sentence (R-CS1-8 closed). pins: casesens-1/C-009, C-010

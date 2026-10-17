@@ -163,6 +163,22 @@ Tables already written keep the values they hold; this release ships no migratio
   `database`, its alias `catalog` and `warehouse` through the same redaction, so a login in
   any of them shows as `u:***@host`.
 
+## Keyed-table refusal follow-ups (ENC-1-RESIDUE-1, items 1 and 5)
+
+- **A refused write to a table carrying `encryption.key-id` no longer leaves its staged
+  Parquet behind.** When the commit refuses because the table is keyed, every file the
+  write staged is deleted before the refusal returns; the refusal text is unchanged. Only
+  files the write itself staged are deleted: a file it was handed but did not write (one a
+  snapshot references, under any spelling of its path, or another writer's staged file) is
+  never deleted, and a staged file that could not be deleted is named in the error the
+  session returns.
+- **Every catalog registered on a session is now guarded, including one a Rust embedder
+  builds directly.** `ReparkCatalogProvider::try_new` installs the encryption guard, so
+  `Session::register_iceberg_catalog`, `repark_iceberg::catalog::register_iceberg_catalog`
+  and a provider registered by hand all refuse a keyed write on a directly-built catalog
+  exactly as on a builder's catalog. `repark_iceberg::write::append::commit_append`
+  resolves again.
+
 ## Known issues
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue):** through `repark.sql()`, `UPDATE … WHERE col

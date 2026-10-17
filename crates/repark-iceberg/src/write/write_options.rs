@@ -9,7 +9,7 @@ use iceberg::arrow::{FieldMatchMode, schema_to_arrow_schema};
 use iceberg::expr::Predicate;
 use iceberg::spec::{DataFile, DataFileFormat, PartitionKey, Struct};
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::Transaction;
 use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
 use iceberg::writer::file_writer::AnyFileWriterBuilder;
 use iceberg::writer::file_writer::ParquetWriterBuilder;
@@ -30,6 +30,8 @@ use crate::write::output_spec::staging_table;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::partition_overwrite::{PartitionEquality, StaticPartitionOverwrite};
 use crate::write::sink_offsets::{SCOPE_TOKEN_KEY, SiteStamp};
+use crate::write::staged_commit::OwnLocations;
+use crate::write::staged_commit::StagedFiles;
 use crate::write::summary_collision::EngineSummary;
 use crate::write::writer_props::{target_file_size_with, writer_properties_with};
 
@@ -349,8 +351,9 @@ async fn build_unpartitioned_writer_with(
         )
         .map_err(iceberg_err)?
     };
-    let location_generator =
-        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
+    let location_generator = OwnLocations::new(
+        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?,
+    );
     let file_name_generator =
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(
@@ -414,11 +417,15 @@ where
     let tx = Transaction::new(table);
     let action = tx
         .fast_append()
-        .add_data_files(new_files)
         .set_snapshot_properties(summary)
         .stage_only();
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(new_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -435,13 +442,15 @@ pub async fn commit_append_with_summary(
     let engine = EngineSummary::for_append(table, &new_files, branch);
     let (operation_id, summary) = summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
-    let action = tx
-        .merge_append()
-        .add_data_files(new_files)
-        .set_snapshot_properties(summary);
+    let action = tx.merge_append().set_snapshot_properties(summary);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
-    let committed = commit_result(stamp.commit_append(tx, catalog).await?, &operation_id)?;
+    let staged = StagedFiles::claimed(new_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?
+        .stamped(&stamp)?;
+    let fenced = stamp.fenced(catalog);
+    let outcome = staged.commit(table, fenced.as_ref(), &operation_id).await;
+    let committed = commit_result(stamp.fence_outcome(outcome)?, &operation_id)?;
     stamp.record(&committed)?;
     Ok(committed)
 }
@@ -460,11 +469,15 @@ pub async fn commit_replace_write_with_summary(
     let action = tx
         .overwrite_files()
         .overwrite_by_row_filter(Predicate::AlwaysTrue)
-        .add_files(staged_files)
         .allow_empty_commit()
         .set_snapshot_properties(summary);
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 async fn engine_summary_for_replace_all(
@@ -503,7 +516,6 @@ pub async fn commit_overwrite_replace_all_with_summary(
     let mut action = tx
         .overwrite_files()
         .overwrite_by_row_filter(Predicate::AlwaysTrue)
-        .add_files(staged_files)
         .set_snapshot_properties(summary);
     if let Some(level) = isolation {
         action = action.validate_no_conflicting_deletes();
@@ -515,8 +527,13 @@ pub async fn commit_overwrite_replace_all_with_summary(
         }
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 async fn engine_summary_for_row_filter(
@@ -566,7 +583,6 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
         .overwrite_files()
         .overwrite_by_row_filter(overwrite.predicate)
         .validate_added_files_match_overwrite_filter()
-        .add_files(staged_files)
         .set_snapshot_properties(summary);
     if let Some(level) = isolation {
         action = action.validate_no_conflicting_deletes();
@@ -578,8 +594,13 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
         }
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 async fn engine_summary_for_replace_partitions(
@@ -619,10 +640,7 @@ pub async fn commit_replace_partitions_with_summary(
         engine_summary_for_replace_partitions(table, &staged_files, branch, summary_extra).await?;
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
-    let mut action = tx
-        .replace_partitions()
-        .add_files(staged_files)
-        .set_snapshot_properties(summary);
+    let mut action = tx.replace_partitions().set_snapshot_properties(summary);
     if let Some(level) = isolation {
         action = action.validate_no_conflicting_deletes();
         if level == OverwriteIsolation::Serializable {
@@ -633,8 +651,13 @@ pub async fn commit_replace_partitions_with_summary(
         }
     }
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action.apply(tx).map_err(iceberg_err)?;
-    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+    let staged = StagedFiles::claimed(staged_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?;
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
+        &operation_id,
+    )
 }
 
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {

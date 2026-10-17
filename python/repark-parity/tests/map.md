@@ -208,6 +208,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **ENC-1-RESIDUE-1 (2026-10-15):** the mirror
+  reads `crates/repark-iceberg/src/write/append.rs` at 1719 with the script's baseline;
+  partitioned file writing moved to `partitioned_files.rs`, down from 1737.
 - `test_cap_1_source_file_line_cap.py` — **ICE-STRUCT-PAIRING-1 exception round (2026-10-15):** the
   mirror ratchets `crates/repark-spark/src/tests/dml.rs` 1154 → 1139 with the Rust gate.
 - `test_cap_1_source_file_line_cap.py` — **ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14,

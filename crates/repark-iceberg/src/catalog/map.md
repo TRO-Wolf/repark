@@ -131,7 +131,20 @@ Source comments retain only API and safety contracts; implementation narration i
 - `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the two places every Iceberg write
   passes, guarded by construction. `EncryptionGuardCatalog::install(inner)` wraps a catalog;
   the three builders in `builders.rs` return through it, so every catalog a session holds is
-  guarded. Reason: the round-2 lane guarded some forty call sites one by one and the verifier
+  guarded. **ENC-1-RESIDUE-1 item 5 (2026-10-15, owner ruling 97):** the guard is also
+  installed once, in `provider.rs::ReparkCatalogProvider::try_new`, always — so
+  `build_iceberg_catalog_provider`, the free `register_iceberg_catalog` and
+  `Session::register_iceberg_catalog` all inherit it. A directly-built catalog gets one
+  layer, a builder's catalog two, and the layers refuse with byte-identical text because
+  the outer layer sees the key first and the inner layer is never reached.
+  `ReparkCatalogProvider::catalog_handle` returns the guarded handle, which the session
+  stores in its `CatalogRegistry`; `rebuild_catalog_provider` refreshes in place when
+  handed either that handle or the catalog the provider was built from. `CatalogRegistry::insert`
+  stays an unwrapped entry: its keyed writes refuse at the per-seat entry checks
+  (`repark-spark/src/tests/enc_1_registry.rs`).
+  pins: `repark-core/src/session/tests/iceberg_guard_registration.rs` (three door pins,
+  the registry-handle pin, the every-door double-wrap pin)
+  Reason: the round-2 lane guarded some forty call sites one by one and the verifier
   walked around them (branch targets, WAP sessions, `run_maintenance`, cherry-pick, the
   micro-batch sink); the owned fork's `IcebergTableProvider` also writes and commits inside
   the fork, where RePark has no call site to guard.

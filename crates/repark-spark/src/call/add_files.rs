@@ -169,7 +169,9 @@ async fn ensure_name_mapping_pretty(table: &Table, catalog: &dyn Catalog) -> Res
         .update_table_properties()
         .set(DEFAULT_SCHEMA_NAME_MAPPING.to_string(), json);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(catalog).await.map_err(iceberg_err)
+    repark_iceberg::write::commit_unstaged(tx, catalog)
+        .await
+        .map_err(iceberg_err)
 }
 
 fn name_mapping_pretty(mapping: &NameMapping) -> String {
