@@ -1904,6 +1904,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   negative that held `UPDATE … SET name = (SELECT max(name) …)` storing on this harness's bare
   context (no `SparkExtension`); the product doors refuse that statement with `No field named
   "max(…)"` on main, and now every door refuses it with the ruling 90 text before any write.
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139 (2026-10-17):**
+  `g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing` now expects the G3-E8 refusal for its
+  two subquery forms (`WITH c AS (…) DELETE … WHERE id IN (SELECT id FROM c)` and the `UPDATE`
+  twin): the walk the pregate reads reaches the DML inside the query, which is what the pin's own
+  panic text asked for before relaxing it. The subquery-free form still answers DataFusion's
+  NotImplemented, and every form still writes nothing.
+  pins: repark-sql-update-subquery-where-1/C-027
 - `g3e8_delete_in_subquery_deletes_exactly_the_matching_row` pins executable IN-DELETE forms and
   the residual refusal family.
   Ledger: [`../../../../task/z1-g3e8-pr1-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-z1-g3e8-pr1-ledger.md).
