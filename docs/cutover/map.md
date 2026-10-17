@@ -51,6 +51,13 @@ named only as "the cutover pipeline" here.
   `14ad3c6d` at 17:28 EDT under ruling 126 (a)), acceptance run `38969694348` (12 cells:
   acceptance module 11 passed in 415.51s, dbt gold module 1 passed in 55.60s), the write-path
   change, and the follow-ups (ruling 105's carded findings, then 106 and EXPLAIN-DML-WRITE-1).
+- [p2-report-rp-58-fork-repin-2026-10-17.md](p2-report-rp-58-fork-repin-2026-10-17.md) —
+  **the P2 report for #1095, RP-58: the fork repin to `409ff330` (ICE-COMMIT-REBASE-DUP-1)
+  (2026-10-17):** fork verifier verdicts by time (FAIL, FAIL, FAIL on test gaps, PASS at 10:56
+  EDT), fork #368 merged `409ff330` at 16:49 EDT and #1095 merged `1ce895a0` at 17:27 EDT,
+  acceptance run `39071066809` (12 cells: acceptance module 11 passed in 340.82s, dbt gold module
+  1 passed in 59.07s), the write-path change, and the follow-ups (ENC-1 at the new rev, ruling
+  143's fork card, the U-9 live drill).
 
 ## Pointers
 
