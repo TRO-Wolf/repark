@@ -120,3 +120,53 @@ as 96."
   pin and every-door double-wrap pin in `iceberg_guard_registration.rs`;
   `CatalogRegistry::insert` entry-check pin in `enc_1_registry.rs`. F5: the item-5 pins
   measure on disk and fail with the install removed.
+
+## Owner rulings 141 to 145 (2026-10-17)
+
+The ruling-121 round raised four questions (142 to 145), and the owner ruled the fork bump
+(141), which sets the rev the final verifier measures at. Verbatim:
+
+```
+Q141 → (a). Push now, open the fork PR, squash-merge on Tests
+(default) and Tests (doc) green, as #367 was. Then the RePark
+rev-bump PR at once: the five rev lines and the lock edges, nothing
+else. CI, merge, acceptance run, P2 report. Then ENC-1 merges main
+and its verifier measures at the new rev. That is the combination
+that ships, so that is the one the verifier sees. If the merge-main
+shows the ambiguous-outcome arm keyed on the old rev's error type,
+re-keying it to the new one is part of the merge, not a round;
+anything beyond that parks under 121. (b) is refused: it would
+merge ENC-1 verified at a rev that never ships.
+
+Q142 → (a). Accept the clippy ban through rust-panic-ban. The gap
+you name gets a follow-up card at clerk grade, not in ENC-1: a
+ratchet that counts allow/expect sites for the disallowed-methods
+lint in lib and bin code, seeded at ENC-1's one site, so a new site
+fails CI. Main has no such site in lib or bin today; the five on
+main are test files the ban does not cover.
+
+Q143 → (a). The operation id stands in until the fork exposes the
+sent snapshot ids, then the switch and nothing else. Two conditions:
+the id is minted per attempt, never reused across attempts or
+sessions, and it is stamped in the summary before sending. Exposing
+the sent ids is a fork-side card; it does not grow into DUP-1.
+
+Q144 → (a). Keyed tables only. An unkeyed or unreadable table sweeps
+nothing, as main does today. The ICE-COMMIT-UNKNOWN-1 pins stand.
+
+Q145 → (a) for this PR. The record approach is accepted, and the
+cap's direction is right: a dropped path is never swept. The
+same-process edge is written into the door's map.md and named in
+the P2 report, so no one reads the sweep as safe against it. The
+typed-set card ranks inside the closeout, after EXPLAIN-DML-WRITE-1,
+not after it.
+```
+
+- **The merge of main** (fork pin `409ff330`, #1095) needed no re-key: the ambiguous-outcome
+  arm in `write/staged_commit.rs` keys on `ErrorKind::CommitStateUnknown`, which the new rev
+  keeps.
+- **The same-process edge** is written in `crates/repark-iceberg/src/write/map.md`, under
+  `staged_commit.rs`.
+- **Three cards follow:** the clerk-grade ratchet for `allow`/`expect` sites of the
+  disallowed-methods lint (ruling 142), the fork-side card that exposes the sent snapshot ids
+  (ruling 143), and the typed attempt set (ruling 145).

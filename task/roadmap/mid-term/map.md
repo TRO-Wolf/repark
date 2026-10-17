@@ -741,6 +741,9 @@ declines it (a dated ruling in the intake, then the archive).
   Round 2 (owner rulings 108 and 109, 2026-10-15): the F3 census is closed and F4 is accepted as pinned.
   Ruling-121 round (2026-10-17): the sweep deletes only what the attempt wrote, ruling 115's ambiguous outcome reads
   the table back once, and the census is a type `clippy.toml` holds (F1 and F3 rows say what holds).
+  Owner rulings 141 to 145 (2026-10-17): the final verifier measures at fork `409ff330`; the clippy ban, the
+  operation id, the keyed-only ambiguous sweep and the writers' record are accepted; the same-process edge is
+  written in the write module's map; three follow-up cards (allow/expect ratchet, sent snapshot ids, typed set).
 - [enc-ctas-replace-1-card-2026-10-15.md](enc-ctas-replace-1-card-2026-10-15.md) **card ENC-CTAS-REPLACE-1
   (2026-10-15, open, not scheduled, clerk under owner ruling 98 (a); ruling 108 names both doors):**
   a key landing between the staged load and the publish of `CREATE OR REPLACE TABLE … AS SELECT`

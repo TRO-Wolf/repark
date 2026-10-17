@@ -918,6 +918,12 @@ repark-core's error map.
     file under another spelling, a file another process staged) is never own.
     `with_written_deletes` adds the delete files a merge wrote in the same call.
     `stage(action, tx)` adds the files to the action here and holds the transaction.
+  - **The same-process edge (owner ruling 145, 2026-10-17).** The record is process-wide,
+    so a caller in the same process that hands its door a file another in-flight RePark
+    write produced claims that file as its own, and a refused keyed commit then deletes it.
+    The sweep is not safe against that caller. A path the 2^20 cap drops is never claimed,
+    so never swept. A typed attempt set closes the edge; its card ranks inside the Iceberg
+    closeout, after EXPLAIN-DML-WRITE-1.
   - **`StagedCommit::commit`** (the 13 doors): a refusal `EncryptedTableRefusal::find`
     recognises deletes the own set and names a file it could not delete (ruling 109
     warning with the full path); any other definitive error hands the set back for a
