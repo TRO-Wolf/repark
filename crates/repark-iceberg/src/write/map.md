@@ -761,6 +761,16 @@ repark-core's error map.
   API (below the SQL router). The one caller is `repark-spark/src/router/nested_ns.rs`.
   Its unit tests hold one case per container kind and per statement form.
   pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-047
+- `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
+  (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
+  statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to
+  the explained one, nothing for a plain `EXPLAIN` (it executes nothing), and otherwise every
+  `INSERT`, `UPDATE`, `MERGE` and `DELETE` in the statement, the statement itself first. It
+  moved here from `repark-spark/src/router/nested_ns.rs` so the Spark SQL router and
+  `repark.sql()` (`repark-core`'s `DataFusionDialect`, which cannot depend on `repark-spark`)
+  share it. `DELETE` is new to the walk; the router's match ignores it, so the Spark SQL door
+  answers as before. Its tests are the two callers' pins.
+  pins: repark-sql-update-subquery-where-1/C-021
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
   matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows
