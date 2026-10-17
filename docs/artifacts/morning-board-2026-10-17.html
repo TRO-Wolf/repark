@@ -1,0 +1,154 @@
+<title>Morning Board 10-17</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --fg:#16232B; --muted:#5A6B75; --rule:#D5DEE3;
+  --accent:#0E6C88; --accent-soft:#E1EEF3;
+  --ok:#1F7A4D; --ok-soft:#E3F2EA; --warn:#9A6400; --warn-soft:#FBF0D9; --bad:#B03A2E; --bad-soft:#F8E4E1;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --surface:#151E24; --fg:#E3EBEF; --muted:#93A5AF; --rule:#26343C;
+  --accent:#4DB1CF; --accent-soft:#16303A;
+  --ok:#5CC48E; --ok-soft:#14301F; --warn:#E3B04B; --warn-soft:#33270F; --bad:#EC7A6C; --bad-soft:#3A1A16; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
+h2{font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;font-size:.95rem}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0;max-width:68ch}
+.mono,code{font-family:var(--mono);font-size:.86em}
+.sub{color:var(--muted);margin-top:6px}
+section{display:flex;flex-direction:column;gap:14px}
+.chip{display:inline-block;font-family:var(--display);font-weight:600;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.fail{background:var(--bad-soft);color:var(--bad)} .halt{background:var(--warn-soft);color:var(--warn)}
+.pass{background:var(--ok-soft);color:var(--ok)} .hold{background:var(--accent-soft);color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.bad{border-left-color:var(--bad)} .card.amber{border-left-color:var(--warn)} .card.ok{border-left-color:var(--ok)}
+.card ul,.card ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.tl{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.tl li{display:grid;grid-template-columns:62px 1fr auto;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule);align-items:baseline}
+.tl .t{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.86rem}
+.tl .d{min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:600;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+td.n{text-align:right;font-family:var(--mono)}
+tr.total td{font-weight:600;border-bottom:2px solid var(--fg)}
+.q{background:var(--surface);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.q .num{font-family:var(--display);font-weight:700;color:var(--accent)}
+.q ol,.q ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
+.lean{color:var(--muted)} .lean b{color:var(--fg)}
+.note{color:var(--muted);font-size:.9rem}
+@media (max-width:520px){.tl li{grid-template-columns:52px 1fr}.tl li .chip{grid-column:2}h1{font-size:1.7rem}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Morning board, 17 October</h1>
+  <p class="sub">Iceberg closeout, for 08:00 EDT. Main <span class="mono">647e0f3c</span>. Written at 22:50 on 16 October, after the last two verdicts. No lane runs overnight, so it stands as the 08:00 board. Rulings since yesterday's board: 122, 123, 126 to 132. Held: 124, 125. Open: 133, plus four new questions below.</p>
+</header>
+
+<section>
+  <h2>Verdicts and merges since 07:30 yesterday, by time</h2>
+  <ul class="tl">
+    <li><span class="t">07:40</span><span class="d">U-1 timestamp_ns planner, #1082, merged as <span class="mono">c7121437</span>; acceptance run 38895333180, 12 of 12</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">09:16</span><span class="d">Ruling-110 walk, #1083: verifier PASS, including ruling 117's three items. $17.52 over two runs</span><span class="chip pass">Pass</span></li>
+    <li><span class="t">09:40</span><span class="d">#1083 merged as <span class="mono">41cdd957</span>; acceptance run 38909759805, 12 of 12; P2 report #1089</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">10:54</span><span class="d">dbt redaction, #1088: re-verifier FAIL. Two mutants survived (the database name and catalog alias were redacted but never tested). Became Q123</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">12:49</span><span class="d">106 sketch on Max: <span class="mono">repark.sql()</span> wrote wrong rows on 15 of 17 subquery-predicate UPDATE/DELETE cells; routing would make 11 statements worse. Stopgap B2 chosen. $21.43</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">13:01</span><span class="d">U-5 local-file guard, #1075: final re-verifier PASS on Max, 13 of 13 mutants killed. $21.79</span><span class="chip pass">Pass</span></li>
+    <li><span class="t">13:20</span><span class="d">Fork ICE-COMMIT-REBASE-DUP-1: verifier FAIL. A throttled commit failed where base committed, and an unreadable 2xx reply was never read back. Became Q127. $15.53</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">16:52</span><span class="d">106 stopgap build on Max: built and clean, then stopped on EXPLAIN. Became Q131. $51.33</span><span class="chip halt">Halt</span></li>
+    <li><span class="t">17:28</span><span class="d">U-5, #1075, merged as <span class="mono">14ad3c6d</span> (Q126 (a)); acceptance run 38969694348, 12 of 12; P2 report #1091</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">18:02</span><span class="d">#1088 re-verifier 3: both mutants now killed by the new assertion, C-005 claims only what is tested. $7.00</span><span class="chip pass">Pass</span></li>
+    <li><span class="t">18:25</span><span class="d">#1088 merged as <span class="mono">444dacfe</span>; acceptance run 38975673693, 12 of 12. No P2 owed (not an Iceberg write path)</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">21:14</span><span class="d">Clerk docs #1092 (V-003 wording, the 1.5.6 dbt line, the R3-F1 note) merged as <span class="mono">647e0f3c</span>. Grok, $0.32</span><span class="chip pass">Merged</span></li>
+    <li><span class="t">22:15</span><span class="d">106 verifier on Max, #1090 at <span class="mono">996f4d5c</span>: PREPARE and EXECUTE carry a subquery-predicate DELETE or UPDATE past the refusal and write a real Iceberg table (main does the same). Parked under Q132. $29.30</span><span class="chip fail">Fail</span></li>
+    <li><span class="t">22:32</span><span class="d">Fork re-verifier on Max at <span class="mono">3e3aad98</span>: an S3 Tables client built without a sleep function gets no throttle resend. Parked under Q127. $34.42</span><span class="chip fail">Fail</span></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Decisions for you</h2>
+  <div class="q"><span class="num">Q133, restated: does ENC-1 open?</span>
+    <p>Ruling 132 opens the ENC-1 ruling-121 round after 106 merges or parks, once U-5's and 106's P2 reports are filed, and only under 85 % weekly usage. 106 parked, so it has no P2 report to file. I can't read the usage meter.</p>
+    <ol type="a"><li>Give me the usage reading. If it is under 85 %, ENC-1 opens now on Opus xhigh, with main merged into its clone first.</li><li>ENC-1 waits until 106 settles.</li></ol>
+    <p class="lean"><b>Lean: (a).</b> ENC-1 doesn't depend on 106's code, and 121 placed it after 106 only for order.</p></div>
+  <div class="q"><span class="num">Q135: 106 after its FAIL</span>
+    <p>The verifier measured 24 cells and 45 shapes of its own on real Iceberg tables, and the refusal held on every one. It failed on these:</p>
+    <ul>
+      <li><b>F1, critical, also on main:</b> <code>PREPARE p AS DELETE … WHERE id IN (SELECT …)</code> then <code>EXECUTE p</code> empties the table. <code>PREPARE … AS EXPLAIN ANALYZE</code> does the same.</li>
+      <li><b>F3, high:</b> a mutant that parses with the generic dialect instead of the session's survives every test.</li>
+      <li><b>F4, medium:</b> the unit's "Iceberg table" tests run on in-memory tables, the same issue as V-003.</li>
+      <li><b>F6, low:</b> the records say "every" form refuses.</li>
+    </ul>
+    <ol type="a"><li>One fix round on the same session. It refuses PREPARE/EXECUTE and PREPARE … AS EXPLAIN on <code>repark.sql()</code>, adds tests on real Iceberg tables with snapshot counts and one test under a non-generic dialect, and corrects the records. Then a scoped re-verifier.</li><li>Merge as it stands: it is strictly better than main, and PREPARE moves to the EXPLAIN card.</li><li>It stays parked.</li></ol>
+    <p class="lean"><b>Lean: (a).</b> The refusal holds on Iceberg. The gaps are one more wrapper and tests that actually reach Iceberg.</p></div>
+  <div class="q"><span class="num">Q136: the EXPLAIN-DML-WRITE-1 card needs restating</span>
+    <p>The verifier found the card's key cell holds only for in-memory tables. On <code>repark.sql()</code>, a plain EXPLAIN of DML writes on a DataFusion in-memory table, because that table runs the delete while the plan is built. On a real Iceberg table it keeps the rows. EXPLAIN ANALYZE of DML writes on every door and both table kinds. PREPARE/EXECUTE also carries DML past the refusals on <code>repark.sql()</code> and on the ANSI door. The card, and its 1.5.6 known-issue line, exist only on #1090's branch, which is parked.</p>
+    <ol type="a"><li>Restate the card by table kind and add PREPARE/EXECUTE on all three doors. Then run the measurement table (statement × wrapper × door × table kind, with row and snapshot counts), and I write the options from it.</li><li>Keep the card as written.</li></ol>
+    <p class="lean"><b>Lean: (a).</b> Your permission for Sonnet and Haiku was for last night only. Name the engine for the measurement lane.</p></div>
+  <div class="q"><span class="num">Q137: the fork after its second FAIL</span>
+    <p>Ruling 127: no second round without Fable's look. Never worse holds: the fork passed 5,167 tests on head against 5,145 on the previous head, and RePark at <code>444dacfe</code> gave the same results with and without the override.</p>
+    <ul>
+      <li><b>R1, medium:</b> an S3 Tables client passed through <code>with_client</code> whose config has no sleep function gets one send, not three, and the message still says three. Base committed it. RePark uses the properties path, so RePark isn't affected.</li>
+      <li><b>R2, low:</b> a mutant that narrows the 2xx rule to exactly 200 survives.</li>
+    </ul>
+    <ol type="a"><li>Fable looks, then one round. It falls back to the SDK's default async sleep, which base used. It builds the message from the sends actually made, and adds a <code>with_client</code> drill cell and one 201 assertion. Then a scoped re-verifier.</li><li>Rule a client with no sleep function out of contract for <code>with_client</code>, and add only the 201 pin.</li><li>It stays parked.</li></ol>
+    <p class="lean"><b>Lean: (a).</b> The previous round's own hand-back named R1 as out of scope.</p></div>
+</section>
+
+<section>
+  <h2>Where each unit stands</h2>
+  <div class="grid">
+    <div class="card ok"><h3>Merged yesterday</h3><p>U-1 (#1082), the 110 walk (#1083), U-5 (#1075) and the dbt redaction (#1088). Each acceptance run passed 12 of 12 cells. P2 reports were filed for the three Iceberg write paths: #1087, #1089 and #1091.</p></div>
+    <div class="card bad"><h3>106, #1090 <span class="chip fail">Parked</span></h3><p>The head <span class="mono">996f4d5c</span> refuses every subquery-predicate UPDATE and DELETE on <code>repark.sql()</code>, bare or under EXPLAIN, and holds U-5 merged in. CI is green. Q135 decides it.</p></div>
+    <div class="card bad"><h3>Fork commit retry <span class="chip fail">Parked</span></h3><p>Head <span class="mono">3e3aad98</span>, nothing pushed. The throttle resend reads the SDK's list by reference, and the read-back searches every sent id. Q137 decides it. The fork push and the version bump stay yours.</p></div>
+    <div class="card amber"><h3>ENC-1 residue, #1071 <span class="chip halt">Waiting</span></h3><p>The ruling-121 round is written and ready. Q133 decides when it opens.</p></div>
+    <div class="card"><h3>EXPLAIN-DML-WRITE-1 <span class="chip hold">Card</span></h3><p>The measurement brief is written. It waits for Q136 and the engine you name.</p></div>
+    <div class="card"><h3>Clerk list</h3><p>The docstring line in <code>test_update_set_subquery_walk_1.py</code> that still says "Iceberg table" goes into the next code PR on that file. The fork outcome table for RePark's ICE-COMMIT-REBASE-DUP-1 card waits on the held #1067.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Opus spend against the 85 % line</h2>
+  <p>I can't read the usage meter. The last reading I hold is 78 % at about 18:30 yesterday. Opus spend since then is $198.86 on four runs:</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Finished</th><th>Lane</th><th>Engine</th><th style="text-align:right">USD</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">18:43</td><td>Fork round for Q128 to Q130</td><td>Opus xhigh</td><td class="n">70.92</td></tr>
+      <tr><td class="mono">19:02</td><td>106 round 3 (EXPLAIN rule, U-5 merged in)</td><td>Opus xhigh</td><td class="n">64.21</td></tr>
+      <tr><td class="mono">22:15</td><td>106 verifier</td><td>Opus max</td><td class="n">29.30</td></tr>
+      <tr><td class="mono">22:32</td><td>Fork re-verifier</td><td>Opus max</td><td class="n">34.42</td></tr>
+      <tr class="total"><td></td><td>Since 18:30</td><td></td><td class="n">198.86</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Since your Q132 ruling at about 20:20: $63.73. For the whole day from 07:30: $535.36 of Opus over 21 runs, plus $1.25 of Grok. A first fork re-verifier that I stopped at 16:50 left no meter, so it isn't counted.</p>
+</section>
+
+<section>
+  <h2>CI docs-skip, second test</h2>
+  <p>#1092 was docs-only, but it edited a ledger, and CI's filter runs the full Rust jobs for anything under <code>task/ledgers/</code>, because Rust tests read those files. The same rule covers the parity doc and <code>.github/</code>. So Rust lint ran 9 min 1 s and Rust test ran 17 min 59 s. Both aggregate checks took 3 s, and the PR was green in about 19 minutes. #1091, which touched only <code>docs/cutover/</code>, skipped Rust and was green in about 2 minutes.</p>
+  <p class="note">A records PR that edits a ledger costs a code-PR CI slot, so I'll keep ledger edits inside the unit PRs where I can.</p>
+</section>
+
+<section>
+  <h2>Box</h2>
+  <div class="grid">
+    <div class="card"><h3>Disk</h3><p>487 GB free at 22:31. Two warnings yesterday, at 136 GB and 149 GB, were cleared by deleting finished verifiers' build folders. Verdicts and probe evidence are kept.</p></div>
+    <div class="card amber"><h3>One removal for you</h3><p>U-5's local clone, 93 GB, is merged and clean. A Claude Code safety check refused my delete because I had changed into that directory, so the delete is yours. The path is in the published board.</p></div>
+  </div>
+</section>
+</div>
