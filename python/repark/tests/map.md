@@ -10573,6 +10573,17 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (`5a51a758`) 6 of 36 are red: the four `PREPARE` pins wrote, and the two plain `EXPLAIN` pins
   refused.
   pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022, C-023, C-024
+- [test_repark_sql_update_subquery_where_1_spark_door.py](test_repark_sql_update_subquery_where_1_spark_door.py) —
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139 (2026-10-17):** the Spark SQL door
+  (`ReparkSession.sql()`, the `SparkDialect` session door) on Iceberg tables made through the
+  catalog, with the same provider guard and the rows and snapshot count before and after. P-S1 to
+  P-S3: `PREPARE` of a subquery-predicate `DELETE`, `UPDATE` and `EXPLAIN ANALYZE DELETE`
+  refuses with the G3-E8 text, and `EXECUTE` finds no prepared statement. Controls: the bare
+  `id IN (SELECT …)` `DELETE` and `UPDATE` change exactly ids 2 and 3; a plain-predicate
+  `PREPARE`/`EXECUTE` writes its row; a plain `EXPLAIN` of the subquery `DELETE` answers its
+  plan. On the merge `e5dc4e4c` the three `PREPARE` pins are red (each emptied or rewrote the
+  table); the controls are green before and after.
+  pins: repark-sql-update-subquery-where-1/C-025, C-026
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

@@ -1714,6 +1714,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source attach
   matches the valve call inside the shared pre-gate chain.
   pins: store-ts-doors-2/C-001, C-003
+- `wrapped_subquery_dml.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139
+  (2026-10-17):** the router door (`crate::execute`) on Iceberg tables made through the catalog
+  (`ice.sales.t`, `ice.sales.s`), each seed checked for an `IcebergTableScan`, with the rows and the
+  snapshot count read before and after. Three pins, one per form: `PREPARE` of a
+  subquery-predicate `DELETE`, of an `UPDATE`, and of `EXPLAIN ANALYZE DELETE` refuses with the
+  G3-E8 text and `EXECUTE p` finds nothing; on the merge `e5dc4e4c` each answered and the table
+  was emptied or rewritten. Controls: the bare `id IN (SELECT …)` forms change exactly ids 2 and
+  3, a plain-predicate `PREPARE`/`EXECUTE` writes its row, and a plain `EXPLAIN` of the subquery
+  `DELETE` answers its plan. The Spark SQL session door's twin is
+  `python/repark/tests/test_repark_sql_update_subquery_where_1_spark_door.py`.
+  pins: repark-sql-update-subquery-where-1/C-025, C-026
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
   `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),
