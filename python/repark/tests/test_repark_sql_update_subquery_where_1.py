@@ -6,10 +6,18 @@ as seeded, and no file appears under the warehouse. On main the same statements 
 emptied the table, or refused with DataFusion's planner text. Spark 4.1.2 answers each form with
 the matching rows only; the sketch records its answers.
 
-Owner ruling 131 (b): the refusal also fires inside ``EXPLAIN`` and ``EXPLAIN ANALYZE``, where
-reading the result wrote the rows on ``repark.sql()``.
+Owner ruling 131 (b): the refusal also fires inside ``EXPLAIN ANALYZE``, which executes the
+statement it wraps.
+
+Owner ruling 135 (a): every pin seeds its tables through the Iceberg catalog and asserts the scan
+is an ``IcebergTableScan``, so no pin can fall back to an in-memory table unnoticed; each checks the
+rows, the snapshot count and the warehouse files. The refusal reads every write the statement
+executes, so ``PREPARE`` of a subquery-predicate ``DELETE`` or ``UPDATE`` refuses, alone or around
+``EXPLAIN ANALYZE``, while a plain ``EXPLAIN`` executes nothing and answers its plan. The refusal
+parses with the session's SQL dialect.
 
 pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004, C-012
+pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020
 """
 
 from __future__ import annotations
@@ -20,18 +28,18 @@ import pytest
 
 import repark
 from repark._native import PyReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, PySparkException
 
-T_SEED = (
-    "CREATE TABLE ice.ns.t AS SELECT CAST(id AS INT) AS id, CAST(v AS INT) AS v "
-    "FROM (VALUES (1, 10), (2, 20), (3, 30), (4, 40)) AS x(id, v)"
-)
-S_SEED = (
-    "CREATE TABLE ice.ns.s AS SELECT CAST(id AS INT) AS id, CAST(w AS INT) AS w "
-    "FROM (VALUES (2, 20), (3, 99)) AS x(id, w)"
+SEED = (
+    "CREATE TABLE ice.ns.t (id INT, v INT)",
+    "INSERT INTO ice.ns.t VALUES (1, 10), (2, 20), (3, 30), (4, 40)",
+    "CREATE TABLE ice.ns.s (id INT, w INT)",
+    "INSERT INTO ice.ns.s VALUES (2, 20), (3, 99)",
 )
 MEM_SEED = "CREATE TABLE mem3 AS SELECT * FROM (VALUES (1), (2), (3)) AS x(a)"
 SEEDED_T = [(1, 10), (2, 20), (3, 30), (4, 40)]
+SEEDED_SNAPSHOTS = 1
+UNPREPARED = "Prepared statement 'p' does not exist"
 SEEDED_MEM = [1, 2, 3]
 PREDICATES = (
     ("in", "id IN (SELECT id FROM ice.ns.s)"),
@@ -69,17 +77,17 @@ COINCIDENCE_CELLS = [
         id="P-C2-update_exists_any_row",
     ),
 ]
-EXPLAINED_CELLS = [
+PLAIN_EXPLAINED_CELLS = [
     pytest.param(
-        "DELETE",
         "EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
         id="P-E1-explain_delete",
     ),
     pytest.param(
-        "UPDATE",
         "EXPLAIN UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)",
         id="P-E2-explain_update",
     ),
+]
+ANALYZED_CELLS = [
     pytest.param(
         "DELETE",
         "EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
@@ -89,6 +97,32 @@ EXPLAINED_CELLS = [
         "UPDATE",
         "EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)",
         id="P-E4-explain_analyze_update",
+    ),
+]
+PREPARED_CELLS = [
+    pytest.param(
+        "DELETE",
+        "PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
+        "EXECUTE p",
+        id="P-P1-prepare_delete",
+    ),
+    pytest.param(
+        "UPDATE",
+        "PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)",
+        "EXECUTE p",
+        id="P-P2-prepare_update",
+    ),
+    pytest.param(
+        "DELETE",
+        "PREPARE p AS EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)",
+        "EXECUTE p",
+        id="P-P3-prepare_explain_analyze_delete",
+    ),
+    pytest.param(
+        "DELETE",
+        "PREPARE p(INT) AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s WHERE w > $1)",
+        "EXECUTE p(0)",
+        id="P-P4-prepare_parameterised_delete",
     ),
 ]
 CONTROL_CELLS = [
@@ -121,49 +155,70 @@ def g3e8_text(verb: str, table: str) -> str:
     )
 
 
-def seeded_warehouse(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Point ``repark.sql()`` at a fresh native session over a seeded memory catalog."""
-    warehouse = tmp_path / "warehouse"
-    namespace = warehouse / "ns"
-    namespace.mkdir(parents=True)
-    native = PyReparkSession.native()
-    native.register_memory_catalog("ice", str(warehouse))
-    monkeypatch.setattr(repark, "_ANSI_NATIVE", native)
-    repark.sql(f"CREATE SCHEMA ice.ns WITH (location = '{namespace}')").collect()
-    repark.sql(T_SEED).collect()
-    repark.sql(S_SEED).collect()
-    return warehouse
-
-
 def files_under(root: Path) -> list[str]:
     """Return every file below ``root`` as a sorted relative path."""
     return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
 
 
-def target_rows() -> list[tuple[int, int]]:
-    """Read ``ice.ns.t`` back through ``repark.sql()``."""
+def scan_plan(table: str) -> str:
+    """Return the plans ``repark.sql()`` builds to scan ``table``."""
+    rows = repark.sql(f"EXPLAIN SELECT * FROM {table}").to_arrow().to_pylist()
+    return "\n".join(str(row["plan"]) for row in rows)
+
+
+def assert_iceberg(table: str) -> None:
+    """Fail unless ``repark.sql()`` scans ``table`` through Iceberg, never an in-memory table."""
+    plan = scan_plan(table)
+    assert "IcebergTableScan" in plan, f"{table} is not an Iceberg table:\n{plan}"
+
+
+def target_state(
+    native: PyReparkSession, warehouse: Path
+) -> tuple[list[tuple[int, int]], int, list[str]]:
+    """Return ``ice.ns.t``'s rows, its snapshot count and every file under the warehouse."""
     table = repark.sql("SELECT id, v FROM ice.ns.t ORDER BY id").to_arrow()
-    return [(int(row["id"]), int(row["v"])) for row in table.to_pylist()]
+    rows = [(int(row["id"]), int(row["v"])) for row in table.to_pylist()]
+    return rows, len(native.testing_list_snapshots("ice.ns.t")), files_under(warehouse)
 
 
-def refuse_and_hold(statement: str, verb: str, table: str, warehouse: Path) -> None:
-    """Run one statement, expect the G3-E8 text, and hold every file under the warehouse."""
-    before = files_under(warehouse)
+def seeded_warehouse(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, PyReparkSession]:
+    """Seed ``ice.ns.t`` and ``ice.ns.s`` through the Iceberg catalog behind ``repark.sql()``."""
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    native = PyReparkSession.native()
+    native.register_memory_catalog("ice", str(warehouse))
+    monkeypatch.setattr(repark, "_ANSI_NATIVE", native)
+    native.create_namespace("ice", "ns", str(warehouse / "ns"))
+    for statement in SEED:
+        repark.sql(statement).collect()
+    assert_iceberg("ice.ns.t")
+    assert_iceberg("ice.ns.s")
+    rows, snapshots, _ = target_state(native, warehouse)
+    assert (rows, snapshots) == (SEEDED_T, SEEDED_SNAPSHOTS)
+    return warehouse, native
+
+
+def refuse_and_hold(
+    statement: str, verb: str, table: str, warehouse: Path, native: PyReparkSession
+) -> None:
+    """Run one statement, expect the G3-E8 text, and hold the rows, snapshots and files."""
+    before = target_state(native, warehouse)
     with pytest.raises(AnalysisException) as caught:
         repark.sql(statement).collect()
     assert g3e8_text(verb, table) in str(caught.value), str(caught.value)
-    assert files_under(warehouse) == before, statement
+    assert target_state(native, warehouse) == before, statement
 
 
 @pytest.mark.parametrize(("verb", "predicate"), ICEBERG_CELLS)
 def test_a_subquery_predicate_refuses_on_an_iceberg_table(
     verb: str, predicate: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Each of the eight predicate forms refuses for both verbs; rows and files hold."""
-    warehouse = seeded_warehouse(tmp_path, monkeypatch)
+    """Each of the eight predicate forms refuses for both verbs; rows, snapshots and files hold."""
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
     statement = VERB_STATEMENTS[verb].format(table="ice.ns.t", column="v", predicate=predicate)
-    refuse_and_hold(statement, verb, "ice.ns.t", warehouse)
-    assert target_rows() == SEEDED_T, statement
+    refuse_and_hold(statement, verb, "ice.ns.t", warehouse, native)
 
 
 @pytest.mark.parametrize(
@@ -181,11 +236,10 @@ def test_the_cards_unqualified_spelling_refuses(
     verb: str, statement: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The card's spelling, resolved through the session defaults, refuses and writes nothing."""
-    warehouse = seeded_warehouse(tmp_path, monkeypatch)
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
     repark.sql("SET datafusion.catalog.default_catalog = 'ice'").collect()
     repark.sql("SET datafusion.catalog.default_schema = 'ns'").collect()
-    refuse_and_hold(statement, verb, "t", warehouse)
-    assert target_rows() == SEEDED_T, statement
+    refuse_and_hold(statement, verb, "t", warehouse, native)
 
 
 @pytest.mark.parametrize(
@@ -198,10 +252,11 @@ def test_the_cards_unqualified_spelling_refuses(
 def test_a_subquery_predicate_refuses_on_an_in_memory_table(
     verb: str, statement: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The defect is not Iceberg-only: an in-memory table refuses the same way."""
-    warehouse = seeded_warehouse(tmp_path, monkeypatch)
+    """The defect is not Iceberg-only: a table labelled in-memory refuses the same way."""
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
     repark.sql(MEM_SEED).collect()
-    refuse_and_hold(statement, verb, "mem3", warehouse)
+    assert "IcebergTableScan" not in scan_plan("mem3")
+    refuse_and_hold(statement, verb, "mem3", warehouse, native)
     table = repark.sql("SELECT a FROM mem3 ORDER BY a").to_arrow()
     assert [int(value) for value in table.column("a").to_pylist()] == SEEDED_MEM, statement
 
@@ -211,9 +266,8 @@ def test_a_shape_main_answered_by_coincidence_refuses(
     verb: str, statement: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Main wrote Spark's rows here only because the predicate holds for every row."""
-    warehouse = seeded_warehouse(tmp_path, monkeypatch)
-    refuse_and_hold(statement, verb, "ice.ns.t", warehouse)
-    assert target_rows() == SEEDED_T, statement
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
+    refuse_and_hold(statement, verb, "ice.ns.t", warehouse, native)
 
 
 @pytest.mark.parametrize(("statement", "expected"), CONTROL_CELLS)
@@ -221,16 +275,56 @@ def test_a_statement_outside_the_refused_class_still_answers(
     statement: str, expected: list[tuple[int, int]], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A plain predicate, a literal IN list and an INSERT that reads a subquery still write."""
-    seeded_warehouse(tmp_path, monkeypatch)
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
     repark.sql(statement).collect()
-    assert target_rows() == expected, statement
+    rows, snapshots, _ = target_state(native, warehouse)
+    assert (rows, snapshots) == (expected, SEEDED_SNAPSHOTS + 1), statement
 
 
-@pytest.mark.parametrize(("verb", "statement"), EXPLAINED_CELLS)
-def test_an_explained_subquery_predicate_refuses(
+@pytest.mark.parametrize("statement", PLAIN_EXPLAINED_CELLS)
+def test_a_plain_explain_of_a_subquery_predicate_answers_its_plan(
+    statement: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A plain EXPLAIN executes nothing: it answers its plan and the Iceberg table holds."""
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
+    before = target_state(native, warehouse)
+    plan = repark.sql(statement).to_arrow().to_pylist()
+    assert {"logical_plan", "physical_plan"} <= {row["plan_type"] for row in plan}, plan
+    assert target_state(native, warehouse) == before, statement
+
+
+@pytest.mark.parametrize(("verb", "statement"), ANALYZED_CELLS)
+def test_an_explain_analyze_of_a_subquery_predicate_refuses(
     verb: str, statement: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """EXPLAIN and EXPLAIN ANALYZE of either verb refuse; reading no result writes nothing."""
-    warehouse = seeded_warehouse(tmp_path, monkeypatch)
-    refuse_and_hold(statement, verb, "ice.ns.t", warehouse)
-    assert target_rows() == SEEDED_T, statement
+    """EXPLAIN ANALYZE executes the statement it wraps, so either verb refuses, writing nothing."""
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
+    refuse_and_hold(statement, verb, "ice.ns.t", warehouse, native)
+
+
+@pytest.mark.parametrize(("verb", "prepare", "execute"), PREPARED_CELLS)
+def test_a_prepared_subquery_predicate_refuses(
+    verb: str, prepare: str, execute: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PREPARE refuses with the G3-E8 text, so EXECUTE finds no statement and nothing is written."""
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
+    before = target_state(native, warehouse)
+    refuse_and_hold(prepare, verb, "ice.ns.t", warehouse, native)
+    with pytest.raises(PySparkException, match=UNPREPARED):
+        repark.sql(execute).collect()
+    assert target_state(native, warehouse) == before, execute
+
+
+def test_a_non_default_parser_dialect_still_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The refusal parses with the session's SQL dialect: MsSQL's bracketed names still refuse."""
+    warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
+    repark.sql("SET datafusion.sql_parser.dialect = 'MsSQL'").collect()
+    refuse_and_hold(
+        "DELETE FROM [ice].[ns].[t] WHERE [id] IN (SELECT [id] FROM [ice].[ns].[s])",
+        "DELETE",
+        "[ice].[ns].[t]",
+        warehouse,
+        native,
+    )

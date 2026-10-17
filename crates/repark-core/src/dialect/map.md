@@ -39,6 +39,19 @@ and the `EngineContext` construction contract.
   EXPLAIN DELETE …`, which the planner refuses first at the door ("Nested EXPLAINs are not
   supported"), so only this test reaches the second level. Both red on `ff731179`.
   pins: repark-sql-update-subquery-where-1/C-013, C-014
+  **Owner ruling 135 (a), 2026-10-17:** `seeded_default_session` creates `ice.ns.t` and `ice.ns.s`
+  through the catalog handle (`create_namespace`, `create_table`, `refresh_catalog_provider`,
+  then `INSERT`), and `assert_iceberg` fails unless the scan plan holds an `IcebergTableScan`;
+  every session pin checks the rows and the snapshot count before and after. The `EXPLAIN ANALYZE`
+  forms keep refusing in `the_default_dialect_refuses_an_explain_analyze_of_a_subquery_dml`;
+  `a_plain_explain_of_a_subquery_dml_answers_its_plan` takes the plain `EXPLAIN` forms, which
+  answer the plan; `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute` runs the four
+  `PREPARE` forms; `a_non_default_parser_dialect_still_refuses` is the MsSQL twin of P-M1.
+  `only_explain_analyze_reaches_the_statement_it_wraps` replaces the nested-`EXPLAIN` test: on the
+  parsed statement, `EXPLAIN ANALYZE` (at any depth, or inside `PREPARE`) reaches the `DELETE`, a
+  plain `EXPLAIN` does not. Red on the merge of main: the plain-`EXPLAIN`, `PREPARE` and rule
+  tests.
+  pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022
 
 ## Pointers
 

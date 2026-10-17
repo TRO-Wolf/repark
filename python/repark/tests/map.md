@@ -10560,6 +10560,19 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `test_pa_local_fs_policy_1.py` pass, and the four pins with them.
   pins: repark-sql-update-subquery-where-1/C-012, C-014, C-015, C-016
   pins: repark-sql-update-subquery-where-1/C-001, C-002, C-003, C-004, C-008, C-009, C-010, C-011
+  **Owner ruling 135 (a), 2026-10-17:** every pin seeds `ice.ns.t` and `ice.ns.s` through the
+  Iceberg catalog (`create_namespace`, `CREATE TABLE` with columns, `INSERT`), and
+  `seeded_warehouse` calls `assert_iceberg` on both, which fails unless the scan is an
+  `IcebergTableScan` (the old CTAS seed was an in-memory table); each pin checks the rows, the
+  snapshot count and the warehouse files. P-U10 and P-D10 keep `mem3`, labelled in-memory by the
+  same plan check. P-P1 to P-P4: `PREPARE` of a subquery-predicate `DELETE`, `UPDATE`, `EXPLAIN
+  ANALYZE DELETE` and a parameterised `DELETE` refuses with the G3-E8 text, and `EXECUTE` finds no
+  prepared statement. P-M1 sets `datafusion.sql_parser.dialect = 'MsSQL'` and a bracketed
+  `DELETE` refuses. P-E1 and P-E2 (plain `EXPLAIN`) now answer the plan with the rows and
+  snapshots unchanged; P-E3 and P-E4 (`EXPLAIN ANALYZE`) still refuse. On the merge of main
+  (`5a51a758`) 6 of 36 are red: the four `PREPARE` pins wrote, and the two plain `EXPLAIN` pins
+  refused.
+  pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022, C-023
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)
