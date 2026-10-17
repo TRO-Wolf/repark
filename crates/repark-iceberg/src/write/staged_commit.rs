@@ -256,6 +256,12 @@ async fn commit_transaction(tx: Transaction, catalog: &dyn Catalog) -> iceberg::
     tx.commit(catalog).await
 }
 
+#[must_use]
+pub fn forget_staged_files(files: Vec<DataFile>) -> Vec<DataFile> {
+    claim(files.iter().map(DataFile::file_path));
+    files
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub async fn commit_unstaged(tx: Transaction, catalog: &dyn Catalog) -> iceberg::Result<Table> {
     commit_transaction(tx, catalog).await

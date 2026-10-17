@@ -263,6 +263,12 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `#[expect(clippy::disallowed_methods)]` for card ENC-CTAS-REPLACE-1 (owner rulings 98 and
   108): they add staged files to a staged create or replace and publish it outside
   `repark-iceberg/src/write/staged_commit.rs`, as the round-2 census excepted them.
+  The query staging moved to `create_table/query_files.rs` (a split at that boundary, which
+  keeps the file under its 1000-line ceiling): `execute_staged_create` stages through
+  `query_files::published`, which hands its files to
+  `repark_iceberg::write::forget_staged_files` so no later attempt can claim them; the
+  service-managed create stages through `query_files::staged` and commits through a door that
+  claims them.
 - `create_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):** when the target exists, the
   native door passes its CTAS or column-def schema raw to the fork's `begin_replace`, which
   re-keys it by name, so a replace keeps each column's id by name (Java's

@@ -114,6 +114,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `a_concurrent_writers_staged_files_survive_our_refused_commit` (another writer's staged,
   uncommitted files in `data/`, half handed to the door and half not, plus the streaming
   `append_staged_with_options` door; the listing ends exactly as before our own staging).
+  `a_file_a_staged_create_published_survives_a_refused_commit` hands every door the file a
+  Spark-door CTAS published through the staged create: it survives the refusal and the table
+  reads (it goes red with `ctas.rs`'s `forget_staged_files` calls removed).
   The own files go whenever the refusal is the keyed one. The three append doors refuse an
   already-current file with `DataInvalid` first (out of scope), and the pin then checks only
   that nothing foreign went. Every pin was red at the merge commit `63aac530`.

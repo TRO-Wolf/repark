@@ -932,6 +932,10 @@ repark-core's error map.
   - **`commit_unstaged`** (re-exported as `write::commit_unstaged`) is every other Iceberg
     commit (properties, schema, refs, rollbacks, stamps); nothing outside this module can
     add a file to the transaction it commits.
+  - **`forget_staged_files`** (re-exported) takes files out of the unclaimed set without a
+    sweep. The three ENC-CTAS-REPLACE-1 functions call it on the files they publish outside
+    `StagedCommit`, so a file a staged create committed can never become a later attempt's
+    own (pin `a_file_a_staged_create_published_survives_a_refused_commit`).
   pins: `repark-spark/src/tests/enc_1_own_set.rs`, `enc_1_unknown.rs`, `enc_1_sweep.rs`,
   `enc_1_referenced.rs`, `merge/snapshot_commit.rs` `keyed_sweep_pins`,
   `../../tests/enc_1_sweep_warning.rs`, and this module's tests

@@ -815,7 +815,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `Transaction::commit` outside `repark-iceberg/src/write/staged_commit.rs`). The two
   schema-only staged creates in `create_table.rs` drop a no-op `add_data_files(Vec::new())`.
   `ctas.rs::finish_ctas_staged_commit` carries the one `#[expect(clippy::disallowed_methods)]`
-  for card ENC-CTAS-REPLACE-1: its staged publish stays outside the swept commit.
+  for card ENC-CTAS-REPLACE-1: its staged publish stays outside the swept commit, and it hands
+  the files it publishes to `repark_iceberg::write::forget_staged_files` so no later attempt can
+  claim them as its own.
 - `call.rs` — **IPI-05 (2026-09-21):** `publish_changes` joins `SUPPORTED_PROCEDURES` (in
   alphabetical place) with a dispatch arm into `branch_ops::execute_publish_changes`, so the WAP
   publish is a procedure rather than one of the names the unknown-procedure refusal lists.

@@ -101,7 +101,7 @@ pub use snapshot_refs::{
     create_or_replace_snapshot_ref, create_snapshot_ref, create_snapshot_ref_with_retention,
     drop_snapshot_ref, list_snapshot_refs, replace_snapshot_ref,
 };
-pub use staged_commit::commit_unstaged;
+pub use staged_commit::{commit_unstaged, forget_staged_files};
 pub use testing_support::testing_create_ref;
 pub use unsupported::{UnsupportedMarker, unsupported_error, unsupported_message_error};
 

@@ -461,6 +461,46 @@ async fn older_snapshot_and_branch_files(version: &str, index: usize) -> Vec<Str
     faults
 }
 
+async fn staged_create_file(version: &str, index: usize) -> Vec<String> {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.t USING iceberg PARTITIONED BY (cat) TBLPROPERTIES \
+             ('format-version' = '{version}') AS SELECT 1 AS id, 'a' AS name, 'x' AS cat"
+        ),
+    )
+    .await;
+    let stale = load_sales_table(&catalogs, "t").await;
+    let created = stale.metadata().current_snapshot().expect("ctas snapshot");
+    let published = alive_files(&stale, created).await;
+    assert_eq!(published.len(), 1, "the create published one file");
+    add_key(&ctx, &catalogs, "t").await;
+    let catalog = catalogs.get("ice").expect("ice catalog").clone();
+    let own = stage_own(&ctx, &stale).await;
+    let own_paths: Vec<String> = own.iter().map(|file| local(file.file_path())).collect();
+    let mut handed = published.clone();
+    handed.extend(own);
+    let (door, result) = file_door(index, &catalog, &stale, handed).await;
+    let label = format!("v{version} {door}");
+    let mut faults = Vec::new();
+    let keyed = refusal_outcome(&label, index, result, &mut faults);
+    foreign_survives(&label, &published, &mut faults).await;
+    own_swept(&label, keyed, &own_paths, &mut faults);
+    reads(
+        &label,
+        &ctx,
+        &catalogs,
+        "SELECT * FROM ice.sales.t",
+        1,
+        &mut faults,
+    )
+    .await;
+    faults
+}
+
 fn concurrent_copy(file: &DataFile) -> DataFile {
     let source = local(file.file_path());
     let source_path = std::path::Path::new(&source);
@@ -615,6 +655,17 @@ async fn a_concurrent_writers_staged_files_survive_our_refused_commit() {
             faults.extend(concurrent_writer_door(version, index).await);
         }
         faults.extend(concurrent_writer_streaming_door(version).await);
+    }
+    assert!(faults.is_empty(), "{}", faults.join("\n"));
+}
+
+#[tokio::test]
+async fn a_file_a_staged_create_published_survives_a_refused_commit() {
+    let mut faults = Vec::new();
+    for version in VERSIONS {
+        for index in 0..FILE_DOORS {
+            faults.extend(staged_create_file(version, index).await);
+        }
     }
     assert!(faults.is_empty(), "{}", faults.join("\n"));
 }
