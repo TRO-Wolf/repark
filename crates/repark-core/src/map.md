@@ -1048,6 +1048,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   door. A plain `EXPLAIN` of a DML without a subquery predicate still behaves as on main (card
   EXPLAIN-DML-WRITE-1). The ANSI door and the shared function are unchanged.
   pins: repark-sql-update-subquery-where-1/C-012, C-013
+  **Owner ruling 135 (a), 2026-10-17:** `refuse_dml_subquery_where` runs the shared refusal,
+  with no exemption, on every statement that
+  `repark_iceberg::write::statement_writes::executed_writes` answers, the walk the Spark SQL
+  router uses: through `PREPARE`, through `EXPLAIN ANALYZE`, and every `UPDATE` and `DELETE` in
+  the statement. DataFusion parses a leading
+  `EXPLAIN` itself (`DFStatement::Explain`), so the function peels those layers first under the
+  walk's rule: `EXPLAIN ANALYZE` reaches the statement it wraps, a plain `EXPLAIN` executes
+  nothing and is not refused. `explained_statement` is gone. So `PREPARE p AS DELETE … WHERE id
+  IN (SELECT …)`, which `EXECUTE p` used to run, refuses at `PREPARE`, alone, parameterised or
+  around `EXPLAIN ANALYZE`; a plain `EXPLAIN` of a subquery-predicate `DELETE` or `UPDATE`
+  answers its plan again, as on main, and leaves an Iceberg table unchanged (on an in-memory
+  table, reading it writes, as on main). The parse still uses the session's dialect.
+  pins: repark-sql-update-subquery-where-1/C-017, C-020, C-021
 - `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1
   (2026-09-18, round 1):** `SparkRangeFunc`, RePark's `range` table function —
   non-nullable `id: Int64` column, 1–4 literal arguments (the 4th is

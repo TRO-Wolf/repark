@@ -149,22 +149,22 @@ fn refuse_dml_subquery_where(ctx: &SessionContext, query: &str) -> datafusion::e
     let Ok(parsed) = state.sql_to_statement(query, &dialect) else {
         return Ok(());
     };
-    let Some(statement) = explained_statement(&parsed) else {
+    let mut wrapped = &parsed;
+    while let DFStatement::Explain(explain) = wrapped {
+        if !explain.analyze {
+            return Ok(());
+        }
+        wrapped = explain.statement.as_ref();
+    }
+    let DFStatement::Statement(statement) = wrapped else {
         return Ok(());
     };
-    repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate(
-        statement, false,
-    )
-}
-
-fn explained_statement(
-    parsed: &DFStatement,
-) -> Option<&datafusion::sql::sqlparser::ast::Statement> {
-    match parsed {
-        DFStatement::Statement(statement) => Some(statement),
-        DFStatement::Explain(explain) => explained_statement(&explain.statement),
-        _ => None,
+    for write in repark_iceberg::write::statement_writes::executed_writes(statement) {
+        repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate(
+            &write, false,
+        )?;
     }
+    Ok(())
 }
 
 #[cfg(test)]
