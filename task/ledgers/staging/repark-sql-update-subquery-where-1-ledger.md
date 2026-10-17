@@ -585,6 +585,123 @@ items, the table with `PREPARE` rows on all three doors and its in-memory rows l
 options written from it, and the pins it now owes; its map row and the 1.5.6 known-issue line
 follow. Clauses C-012 and C-013 are REJECTED as superseded; C-017 to C-024 carry the round.
 
+## 13. Owner rulings 138 and 139, 2026-10-17 (round 4, continued)
+
+The owner widened round 4 while it ran. This part of the round carries ruling 139's first bullet,
+the repark-spark placement; ruling 138's `PREPARE`-of-a-write refusal and the ANSI door belong to
+card EXPLAIN-DML-WRITE-1.
+
+### 13.1 The rulings, verbatim
+
+```
+Q138 → (a). PREPARE whose body is a write refuses on every door;
+PREPARE of a query keeps working. Spark refuses it, so RePark
+refuses it. It is not a lane of its own: it lands inside the
+EXPLAIN-DML-WRITE-1 unit from Q139, since both edit the same walks.
+The refusal text names the statement and says PREPARE of a query
+still works; it names no data-deleting action.
+```
+
+```
+Q139 → (a), CRITICAL for the wrapper-plus-subquery form, with the
+scope corrected after I looked at main:
+  - repark-spark's two doors share one strict pregate: the
+    statement path calls one function that today matches only a
+    bare DELETE or UPDATE. 106's fix round makes that one function
+    the walk-level refusal (this is the Q135 shape, placed on the
+    function every repark-spark caller passes), so the Spark door
+    closes with 106, not later. 106's verifier pins both
+    repark-spark doors. If the Spark door turns out not to reach
+    that function, the fix-round sketch says so, and the Spark
+    door joins the ANSI door in the unit below.
+  - The ANSI door is a different crate with its own twin guard,
+    called on the bare DELETE and UPDATE paths only, and the
+    door-to-door ban means it cannot share repark-spark's walk.
+    That twin is the EXPLAIN-DML-WRITE-1 unit: the walk-level
+    refusal on the ANSI door, plus Q138's PREPARE-of-DML refusal
+    on every door.
+  - The unit takes 106's Opus slot the day 106 merges or parks.
+    If 106 merges, its P2 report is filed first, then the lane
+    opens. If 106 parks, the unit branches from main and carries
+    the repark-spark placement itself. No fourth lane, and nothing
+    branched from 106's round-4 head; (c) is refused.
+  - Step-0 sketch before step 1: it names the exact call sites per
+    door on main. Then one Opus xhigh round, then the verifier,
+    which pins each wrapper on each door in the IN-subquery form,
+    on tables created through the Iceberg catalog with the
+    provider guard, the same test shape as 106. P2 report on merge.
+  - Docs PR today, docs-only, no verifier: the measured table on
+    the card and the 1.5.6 known-issue line naming both wrappers
+    and both doors.
+```
+
+### 13.2 The sketch, written before any code
+
+The tree is the merge of main `238a5b02` (#1094) into round 4's head, `e5dc4e4c`; main changed no
+code, so every line below is main's `repark-spark` too. All paths are under
+`crates/repark-spark/src/` unless named.
+
+**repark-spark's two doors.**
+
+1. **The Spark SQL session door:** `SparkDialect::execute` and `execute_with_write_options`
+   (`dialect.rs:12-61`), the `SqlDialect` the Python facade's `ReparkSession` installs
+   (`crates/repark-python/src/session.rs:127`). Both call `router::execute_in_session`.
+2. **The router API:** `repark_spark::execute`, `execute_with_read_only`,
+   `execute_static_overwrite` and `execute_with_statement_options` (`router.rs:35-86`,
+   re-exported at `lib.rs:67`), the entry this crate's own tests drive. All four call
+   `execute_in_session` (`router.rs:88`).
+
+**The shared path into the function.** `execute_in_session` (`router.rs:88`) →
+`execute_calibrated` (`router.rs:133`) → `execute_time_travelled` (`router.rs:208`) →
+`execute_inner` (`router.rs:284`, called at `router.rs:252`). There, `parse_single_normalized`
+(`router.rs:316`) parses the statement. A bare `DELETE` takes `delete_update::execute_delete`
+(`router.rs:385`, `router/delete_update.rs:11`), a bare `UPDATE` takes
+`delete_update::execute_update` (`router.rs:388`, `router/delete_update.rs:60`), and every
+statement no dedicated arm takes falls to `spark_ast::execute_passthrough` (`router.rs:410`). Each
+of the bare arms ends in the same call (`delete_update.rs:39`, `delete_update.rs:90`). The
+passthrough runs `execute_passthrough_by` (`spark_ast.rs:37`) → `execute_passthrough_inner`
+(`spark_ast.rs:190`). For a `DfStatement::Statement` (`spark_ast.rs:210`) it runs
+`apply_pregate_rewrites_before_identity_dml` (`spark_ast.rs:211`), then `try_execute_identity_dml`
+(`spark_ast.rs:212`), which runs an allow-listed shape on RePark's own executor and returns, then
+`apply_pregate_rewrites_after_identity_dml` (`spark_ast.rs:215`) in `Strict` mode, whose first step
+is `refuse_dml_subquery_predicate_in_statement` (`spark_ast.rs:154` → `normalize.rs:368`). That
+function returns early for any statement `try_allowed_delete_in` or `try_allowed_update_in`
+accepts (`normalize.rs:370-374`), refuses a bare `Statement::Delete` or `Statement::Update` whose
+`WHERE` holds a subquery (`normalize.rs:375-387`), and answers `Ok` for every other statement
+(`normalize.rs:388`). Its only caller is `spark_ast.rs:154`.
+
+**Each form, per door.** The two doors share every step from `execute_in_session` on, so each
+row holds for both.
+
+| Form | Reaches `refuse_dml_subquery_predicate_in_statement`? | In what shape |
+|---|---|---|
+| The bare statement, `DELETE`/`UPDATE … WHERE id IN (SELECT id FROM s)` | No, in practice. `delete_update.rs:26` and `:79` skip their own G3-E8 check for an allow-listed shape, and `try_execute_identity_dml` (`spark_ast.rs:212`) then runs it and returns before the function. A subquery shape that is not allow-listed is refused at `delete_update.rs:27` or `:80`, before the passthrough. The function sees a bare statement only when the identity path declines an allow-listed shape (a target outside the catalog registry), and its allow-list exemption then lets it pass. | `Statement::Delete` / `Statement::Update` |
+| `PREPARE p AS <DML>`, then `EXECUTE p` | Yes, for `PREPARE`: the `_` arm (`router.rs:410`) sends it to the passthrough; `try_execute_identity_dml` declines it (not a `Delete` or `Update`). `EXECUTE p` reaches it too, with no body: the prepared plan is DataFusion's, stored at `PREPARE`. | `Statement::Prepare { statement: Delete/Update }`, which the catch-all answers `Ok`; then `Statement::Execute` |
+| `PREPARE p AS EXPLAIN ANALYZE <DML>` | Yes, as for `PREPARE`. | `Statement::Prepare { statement: Statement::Explain { analyze: true, statement: Delete } }` |
+| DataFusion's own `EXPLAIN ANALYZE <DML>` | **No.** `state.sql_to_statement` (`spark_ast.rs:204`) parses a leading `EXPLAIN` as `DfStatement::Explain`, whose arm (`spark_ast.rs:238-242`) only lowers `timestamp_ns` casts; the plan then runs with `Analyze` over the `Dml`. | never reaches it |
+| Plain `EXPLAIN <DML>` | **No**, the same `DfStatement::Explain` arm. It answers its plan and writes nothing on an Iceberg table (round 4's facade cells; card EXPLAIN-DML-WRITE-1). | never reaches it |
+
+**The orchestrator's reading, checked.** Confirmed: `execute_passthrough_inner` runs
+`try_execute_identity_dml` before the strict pregate; the function matches only a bare `DELETE` or
+`UPDATE` after its allow-list exemption; `id IN (SELECT …)` is allow-listed; a `PREPARE` reaches
+it as `Statement::Prepare` and passes the catch-all; DataFusion's `EXPLAIN [ANALYZE]` takes the
+`DfStatement::Explain` arm and never reaches it. One addition: the bare `DELETE` and `UPDATE` do
+not depend on the function at all. `router/delete_update.rs` runs its own G3-E8 check first, and
+the identity path runs the allow-listed shapes before the function, so the function's allow-list
+exemption, applied to a statement found under a wrapper, is the only thing that would let a walked
+`id IN (SELECT …)` through.
+
+**What this round does with each form.**
+- `PREPARE p AS <DML>` and `PREPARE p AS EXPLAIN ANALYZE <DML>` reach the function, so the fix
+  makes it refuse each `DELETE` and `UPDATE` the round-4 walk
+  (`repark_iceberg::write::statement_writes::executed_writes`) returns. The allow-list exemption
+  holds only for the top-level bare statement, and no walked statement gets it.
+- DataFusion's own `EXPLAIN ANALYZE <DML>` does not reach the function on either door. By ruling
+  139 it joins card EXPLAIN-DML-WRITE-1, and this round does not route it to the function.
+- A plain `EXPLAIN` writes nothing on an Iceberg table, and the walk returns no write for it.
+- A `PREPARE` with a plain predicate still prepares and executes: the walk returns its `DELETE`,
+  which has no subquery to refuse.
+
 ## 10. Coverage attestation
 
 ```
