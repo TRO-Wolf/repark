@@ -1,0 +1,151 @@
+<title>Iceberg Rating Status</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f6f8f9;--panel:#ffffff;--fg:#14232b;--muted:#566a75;--line:#d6e0e5;--accent:#0f6f86;--accent-soft:#e2f1f5;--ok:#1f7a4d;--ok-soft:#e3f3ea;--warn:#9a6200;--warn-soft:#fbf0dc;--bad:#a8322d;--bad-soft:#f8e4e2;--idle:#5d6b73;--idle-soft:#eceff1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0e171c;--panel:#152229;--fg:#dbe7ec;--muted:#93a7b1;--line:#27383f;--accent:#5fc3dc;--accent-soft:#16323b;--ok:#6ccf9a;--ok-soft:#143024;--warn:#e6b45a;--warn-soft:#33270f;--bad:#f08a83;--bad-soft:#3a1c1a;--idle:#a3b1b8;--idle-soft:#202d33;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e171c;--panel:#152229;--fg:#dbe7ec;--muted:#93a7b1;--line:#27383f;--accent:#5fc3dc;--accent-soft:#16323b;--ok:#6ccf9a;--ok-soft:#143024;--warn:#e6b45a;--warn-soft:#33270f;--bad:#f08a83;--bad-soft:#3a1c1a;--idle:#a3b1b8;--idle-soft:#202d33;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+h1{font-size:28px;line-height:1.2;margin:0;text-wrap:balance;font-weight:600}
+h2{font-size:18px;margin:0 0 10px;font-weight:600;text-wrap:balance}
+.kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.meta{color:var(--muted);font-size:13px}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.88em}
+p{margin:0;max-width:72ch}
+.verdict{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.verdict p{max-width:none}
+section{display:flex;flex-direction:column;gap:10px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td{font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}.bad{background:var(--bad-soft);color:var(--bad)}.idle{background:var(--idle-soft);color:var(--idle)}.acc{background:var(--accent-soft);color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .n{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.tile .l{font-size:13px;color:var(--muted)}
+ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+li{max-width:76ch}
+.note{font-size:13px;color:var(--muted)}
+.qblock{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;white-space:pre-wrap;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px;overflow-x:auto}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:6px">
+  <span class="kicker">RePark · Iceberg closeout</span>
+  <h1>Iceberg production rating: status, 2026-10-17 evening</h1>
+  <p class="meta">Read from RePark main <code>238a5b02</code>, open PRs, GitHub run history and fork main <code>409ff330</code>. Two read-only Sonnet 5.5 readers did the sweep (no builds, no edits). The orchestrator checked the material claims and added today's lane state.</p>
+</header>
+
+<div class="verdict">
+  <span class="kicker">Bottom line</span>
+  <p><strong>No label has moved since the 2026-10-13 re-rating, because no re-rating has run since.</strong> Format v2 and v3 core are still <span class="chip warn">HARDENED-NARROW</span>. v2 is <span class="chip ok">PRODUCTION</span> only for the three daily acceptance workloads, under one writer. Nanosecond columns and struct writes are <span class="chip bad">EXPERIMENTAL</span>.</p>
+  <p>Real progress since then: five of the thirteen closeout units are merged, the struct-writes blocker (R-016) is closed, and every merge passed live AWS acceptance, 12 of 12 cells. But the v2 gate needs U-5 to U-11 on main, and three of those have no code: U-8 is parked, and U-9 and U-11 have not started. <strong>v2 PRODUCTION by 11-01, as planned, is not on track.</strong></p>
+</div>
+
+<div class="grid">
+  <div class="tile"><span class="n">5 / 13</span><span class="l">closeout units merged (U-1, U-3, U-5, U-6, U-7)</span></div>
+  <div class="tile"><span class="n">4</span><span class="l">units not started (U-2, U-4, U-9, U-11)</span></div>
+  <div class="tile"><span class="n">11 / 12</span><span class="l">acceptance runs green since 10-13 (one cancelled nightly, none red)</span></div>
+  <div class="tile"><span class="n">4</span><span class="l">mornings in a row the live-parity nightly has been red (one cell)</span></div>
+</div>
+
+<section>
+  <h2>The grades, and what has changed under them</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Capability</th><th>Grade on 10-13</th><th>Since then</th></tr></thead>
+    <tbody>
+      <tr><td>Format v2, overall</td><td><span class="chip warn">H-N</span><br><span class="note">PROD for the 3 acceptance workloads, one writer</span></td><td>PA-01 to PA-04 closed (#1075, #1088). R-016 closed (#1062). Still held by: R-011 (parked), integrity evidence offline only (U-9), no stated resource bound (U-11), and the new subquery-DML items below.</td></tr>
+      <tr><td>Format v3, core</td><td><span class="chip warn">H-N</span></td><td>Same residue as v2. Its label is planned for week 4 with a dated R-002 carve-out for nanosecond columns.</td></tr>
+      <tr><td>v3 nanosecond columns</td><td><span class="chip bad">EXP</span></td><td>Both silent-loss rows fixed: R-009 (#1059, U-3) and R-017 (#1082, U-1). Still open: R-020 (U-2, not started), R-024 (carved out to 1.5.7), R-015 (declared). No second engine reads these columns (R-002), so H-N is the ceiling.</td></tr>
+      <tr><td>Struct-column writes</td><td><span class="chip bad">EXP</span></td><td>R-016, R-021 and R-022 closed by #1062. A candidate for H-N at the next re-rating. ICE-STRUCT-INLINE-TABLE-FROM-1 is still open.</td></tr>
+      <tr><td>Reads</td><td><span class="chip ok">PROD</span> / <span class="chip ok">PROD</span></td><td>Unchanged. The envelope is the measured sizes, not a stated bound (U-11).</td></tr>
+      <tr><td>Append, CTAS, overwrite</td><td><span class="chip warn">H-N</span></td><td>The CTAS body carrier refuses (#1057, U-7). The <code>EXPLAIN ANALYZE</code> and <code>PREPARE</code> carriers are still open (card EXPLAIN-DML-WRITE-1).</td></tr>
+      <tr><td>MERGE, UPDATE, DELETE</td><td><span class="chip warn">H-N</span></td><td>The SET-subquery walk merged (#1083). The WHERE-subquery fix is #1090, with its final verifier running now.</td></tr>
+      <tr><td>Concurrency and commit safety</td><td><span class="chip warn">H-N</span></td><td>The double-append on a lost reply is fixed on the fork (#368, merged today) and reaches RePark with #1095. The live unknown-outcome drill (U-9) is not built.</td></tr>
+      <tr><td>Catalogs: Glue, S3 Tables</td><td><span class="chip warn">H-N</span></td><td>The local Spark cross-read leg merged (#1056, U-10). The AWS leg is draft #1070, waiting on U-9.</td></tr>
+      <tr><td>Table encryption keys</td><td><span class="chip idle">DECL</span></td><td>ENC-1 items 2, 3, 4 and 6 were accepted on 10-14; that record is on #1071's branch, not yet on main. Items 1 and 5 are in #1071. ENC-CTAS-REPLACE-1 is to be closed or carved out (ruling 98).</td></tr>
+      <tr><td>dbt gold on Glue</td><td><span class="chip warn">H-N</span></td><td>The credential-disclosure caveat is gone (PA-01, #1088).</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Grade ladder (from the 10-13 page): PROD = contract written, failure paths tested, live evidence at the current pin; H-N = correct inside a named envelope; EXP = a silent wrong value is reachable, or no oracle exists; DECL = refused by a dated registry row. The definition itself (#1044) is still unmerged and conflicting.</p>
+</section>
+
+<section>
+  <h2>Closeout units U-1 to U-13</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Unit</th><th>What</th><th>State</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>U-1</td><td>Type planner, R-017</td><td><span class="chip ok">merged</span></td><td>#1082 <code>c7121437</code>, 10-16; acceptance 12/12</td></tr>
+      <tr><td>U-2</td><td>NS-ARRAY-FLOOR-1, NS-NESTED-PANDAS-1 (R-020)</td><td><span class="chip idle">not started</span></td><td>Step 0 only (#1064); #1047 is a stale draft</td></tr>
+      <tr><td>U-3</td><td>R-009 floor on every door</td><td><span class="chip ok">merged</span></td><td>#1059 <code>37d60eaf</code>, 10-14</td></tr>
+      <tr><td>U-4</td><td>R-012 cell on the U-1 head</td><td><span class="chip idle">not started</span></td><td>R-012 still open in the registry</td></tr>
+      <tr><td>U-5</td><td>PA-01 to PA-04</td><td><span class="chip ok">merged</span></td><td>#1075 <code>14ad3c6d</code>, #1088 <code>444dacfe</code>, 10-16</td></tr>
+      <tr><td>U-6</td><td>R-016 struct pairing</td><td><span class="chip ok">merged</span></td><td>#1062 <code>5531311b</code>, 10-15</td></tr>
+      <tr><td>U-7</td><td>Write-body carriers (CTAS)</td><td><span class="chip ok">merged</span></td><td>#1057 <code>564649b8</code>, 10-14</td></tr>
+      <tr><td>U-8</td><td>R-011 nested NTZ wall, refuse with a hint</td><td><span class="chip bad">parked</span></td><td>#1037 and #1038 parked 10-12; T-3 (refuse with a hint) not recorded as adopted</td></tr>
+      <tr><td>U-9</td><td>Integrity pins: kill mid-write, live unknown-outcome drill, cross-release</td><td><span class="chip idle">not started</span></td><td>Sketch #1067 held with ten owner questions; workflow draft #1070</td></tr>
+      <tr><td>U-10</td><td>Spark cross-read</td><td><span class="chip warn">half</span></td><td>Local leg #1056; AWS leg waits on U-9</td></tr>
+      <tr><td>U-11</td><td>Resource bound (PP-01, PP-02, PA-10, PA-11)</td><td><span class="chip idle">not started</span></td><td>No card, order or branch</td></tr>
+      <tr><td>U-12</td><td>ENC-1 residue</td><td><span class="chip acc">in flight</span></td><td>#1071: CI green, final verifier after the fork bump (ruling 141)</td></tr>
+      <tr><td>U-13</td><td>Truth-up and labels</td><td><span class="chip warn">partly</span></td><td>842-cell count merged (#1054); the STATUS.md header still reads 2026-09-12; no maturity section</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Silent-write items the 10-13 plan did not have</h2>
+  <ul>
+    <li><strong>REPARK-SQL-UPDATE-SUBQUERY-WHERE-1</strong> (critical): a subquery-predicate <code>UPDATE</code> or <code>DELETE</code> changed every row through <code>repark.sql()</code>. #1090 refuses it there, and under <code>PREPARE</code> on the repark-spark doors. Its final Max verifier is running.</li>
+    <li><strong>EXPLAIN-DML-WRITE-1</strong> (critical for the subquery form): <code>EXPLAIN ANALYZE</code> and <code>PREPARE</code>/<code>EXECUTE</code> run DML on the ANSI door, and DataFusion's own <code>EXPLAIN ANALYZE</code> does on the repark-spark doors. Under ruling 139, the unit takes 106's slot once 106 merges or parks.</li>
+    <li><strong>ICE-COMMIT-REBASE-DUP-1</strong>: a lost commit reply, the SDK's re-send and a stale rejection appended the same rows twice. Fixed on the fork (#368, <code>409ff330</code>); the RePark bump is #1095, in CI.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Live evidence</h2>
+  <ul>
+    <li><strong>AWS acceptance:</strong> 12 runs since 10-13. 11 succeeded and one nightly was cancelled (10-15); none failed. Every post-merge run was 12 of 12 cells. Latest: nightly 39018672109 on <code>56057f65</code>, 10-17.</li>
+    <li><strong>Live Spark parity nightly: red on 10-14, 10-15, 10-16 and 10-17</strong> (last green 10-13). The same single cell fails each time: <code>test_ice_meta_delete_1.py::test_live_oracle_fixture_reproduces</code>. The recorder re-runs live Spark and finds Spark's own answer drifted from the committed fixture (first drifting cell: <code>all_rows_nopred_v2_cow</code>). No RePark answer is what fails. About 20,500 other cells pass. <strong>No card or board tracks it.</strong> The evidence tier the grades lean on is degraded until it is re-recorded or explained.</li>
+    <li><strong>Fork:</strong> main <code>409ff330</code> is 2 commits ahead of RePark's pin <code>076d5f98</code> (#367 CI only, #368 DUP-1). #1095 closes that gap.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Lanes right now</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Lane</th><th>State</th><th>Next</th></tr></thead>
+    <tbody>
+      <tr><td>106, #1090</td><td><span class="chip acc">verifier running</span> Opus Max on <code>054c3fbb</code></td><td>PASS: merge, acceptance, P2 report, then EXPLAIN-DML-WRITE-1 opens. FAIL: park, and the unit branches from main.</td></tr>
+      <tr><td>Fork bump, #1095</td><td><span class="chip acc">CI running</span></td><td>Merge on green, acceptance run, P2 report.</td></tr>
+      <tr><td>ENC-1, #1071</td><td><span class="chip idle">waiting on #1095</span></td><td>Merge main, add ruling 145's map line, CI, then the final verifier at the new fork rev.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>What would move the dates</h2>
+  <ol>
+    <li><strong>U-9's ten questions</strong> (#1067, held since 10-15). U-9 gates the v2 integrity row, U-10's AWS leg, and U-11's kill pin.</li>
+    <li><strong>U-8:</strong> R-011 is a v2 "no silent value" blocker. The plan's T-3 (refuse with a hint) is the cheap path, and it is not recorded as adopted.</li>
+    <li><strong>U-11</strong> needs a card and an order. It has none.</li>
+    <li><strong>The parity nightly</strong> needs an owner, so the live-oracle tier is green again before any label moves.</li>
+    <li><strong>A dated re-plan</strong> of the v2 and v3 label weeks. The 10-15 board called for one, and the records hold none.</li>
+    <li><strong>Housekeeping that a label move needs:</strong> merge #1044 (the definition, now conflicting), refresh STATUS.md, and tag v1.5.5. GitHub's tags stop at v1.5.4; the v1.5.5 tag and PyPI upload are the owner's.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>What the orchestrator corrected in the readers' output</h2>
+  <ul>
+    <li>One reader called ENC-1's items 2, 3, 4 and 6 "unknown". They were accepted on 10-14. The record sits on #1071's card, not on main yet, which is why one reader missed it.</li>
+    <li>One reader said the fork's R1 and R2 test gaps "may remain". Ruling 140's tests-only round added both cells, the scoped re-verifier passed (each cell red under its mutant), and its four non-blocking gaps are recorded in the fork ledger.</li>
+    <li>Checked directly: the parity-live failures and their cell, the missing v1.5.5 tag, the STATUS.md date, #1044's state, the acceptance run list, the U-9 and U-11 absence on main.</li>
+  </ul>
+</section>
+
+<p class="note">Method: two Sonnet 5.5 agents in one workflow, read-only, on a fresh clone of main (plus #1044's branch); 81 tool calls, about 4.8 minutes. Raw results are kept with the session. This page is a status report, not a re-rating; a label moves only through the rubric in #1044 and the owner.</p>
+</div>
