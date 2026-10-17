@@ -167,3 +167,10 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue):** through `repark.sql()`, `UPDATE … WHERE col
   IN (SELECT …)` or `= (SELECT …)` updates every row; use the Spark SQL session until it is fixed.
+- **EXPLAIN-DML-WRITE-1 (known issue, critical, 2026-10-17):** on the Spark SQL session and the ANSI
+  door, `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE` performs the write, and so does the same
+  statement run as `PREPARE` then `EXECUTE`. When its `WHERE` holds a subquery, either form changes
+  every row of the table instead of the matching ones. `repark.sql()` does the same until
+  REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 lands. Spark refuses both forms. A plain `EXPLAIN` shows the
+  plan and does not write on an Iceberg table. The
+  [EXPLAIN-DML-WRITE-1 card](explain-dml-write-1-card-2026-10-16.md) tracks the fix.
