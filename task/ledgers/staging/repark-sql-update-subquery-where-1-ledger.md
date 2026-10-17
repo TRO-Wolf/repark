@@ -61,8 +61,12 @@ not block this round.
 | C-022 | The pins catch the rule: with `996f4d5c`'s `dialect.rs` the `PREPARE` pins are red, and five mutants each die on a named test. | §12.6. | **PROVEN** | §12.6. |
 | C-023 | Never worse: on Iceberg seeds, against the merge's module, `repark.sql()` loses no answer outside the subquery-predicate class, bare or under a wrapper; the four crates' suites and the facade suite are green; ruling 113's Q6 cells and U-5's local-file cells pass on the head module. | §12.7. | **PROVEN** | §12.7. |
 | C-024 | The records say what now holds: this section, the corrected "every" lines (V106-F6), card EXPLAIN-DML-WRITE-1 as ruling 136 rules, the 1.5.6 lines and the map rows; the gates are green. | §12.8, §12.9. | **PROVEN** | §12.8, §12.9. |
+| C-025 | Owner ruling 139: on both repark-spark doors (the `SparkDialect` session door and the router API), `PREPARE` of a subquery-predicate `DELETE` or `UPDATE`, alone or around `EXPLAIN ANALYZE`, refuses with the G3-E8 text and `EXECUTE` finds no prepared statement; the Iceberg table's rows and snapshots hold. | `crates/repark-spark/src/tests/wrapped_subquery_dml.rs` (three pins); P-S1 to P-S3 in `test_repark_sql_update_subquery_where_1_spark_door.py`. | **PROVEN** | Red on the merge `e5dc4e4c` (§13.3), green on the head (§13.4). |
+| C-026 | On both repark-spark doors the bare `id IN (SELECT …)` `DELETE` and `UPDATE` change exactly the matching rows, a plain-predicate `PREPARE`/`EXECUTE` writes its row, and a plain `EXPLAIN` of the subquery `DELETE` answers its plan and writes nothing, before and after. | The controls in both files. | **PROVEN** | §13.3, §13.4. |
+| C-027 | The fix is `normalize.rs` alone: `refuse_dml_subquery_predicate_in_statement` keeps its allow-list exemption for the top-level statement and refuses each `DELETE` and `UPDATE` the round-4 walk returns, with no exemption; the existing CTE pin moves only from DataFusion's NotImplemented to the G3-E8 refusal for its two subquery forms; with the merge's `normalize.rs` the new pins are red, and four mutants each die on a named test. | §13.4, §13.5. | **PROVEN** | §13.4, §13.5. |
+| C-028 | Never worse on the repark-spark doors: on Iceberg seeds against the merge's module every bare subquery-predicate shape that executes keeps its rows, and nothing outside the wrapped subquery class changes; the four crates' suites and the facade suite are green; the records say what holds. | §13.6, §13.7, §13.8. | **PROVEN** | §13.6 to §13.8. |
 
-VERDICT: 24 clauses, 22 PROVEN, 0 OPEN, 2 REJECTED (C-012 and C-013, superseded 2026-10-17 by ruling 135).
+VERDICT: 28 clauses, 26 PROVEN, 0 OPEN, 2 REJECTED (C-012 and C-013, superseded 2026-10-17 by ruling 135).
 
 ## 1. Red first (test commit `ef74e07d`, module of `6cb6c310`)
 
@@ -701,6 +705,109 @@ exemption, applied to a statement found under a wrapper, is the only thing that 
 - A plain `EXPLAIN` writes nothing on an Iceberg table, and the walk returns no write for it.
 - A `PREPARE` with a plain predicate still prepares and executes: the walk returns its `DELETE`,
   which has no subquery to refuse.
+
+### 13.3 Red first (test commit `a8b9b6c6`)
+
+Both doors use round 4's test shape: Iceberg tables created through the catalog (`ice.sales.t` and
+`ice.sales.s` in the router harness's `sales` namespace; `ice.ns.t` and `ice.ns.s` after `CREATE
+NAMESPACE` on the facade), each seed checked for an `IcebergTableScan`, and the rows and the
+snapshot count read before and after. The refusal pins assert the G3-E8 text's fixed parts and the
+verb, as `dml.rs`'s `assert_g3e8_message` does. On the merge `e5dc4e4c`, before any fix:
+
+| Pin | Door | Red assertion on the merge |
+|---|---|---|
+| `a_prepared_subquery_delete_refuses_on_the_router_door` | router API | `PREPARE p AS DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.s): []` (the `PREPARE` answered) |
+| `a_prepared_subquery_update_refuses_on_the_router_door` | router API | `PREPARE p AS UPDATE ice.sales.t SET v = 5 WHERE id IN (SELECT id FROM ice.sales.s): []` |
+| `a_prepared_explain_analyze_subquery_delete_refuses_on_the_router_door` | router API | `PREPARE p AS EXPLAIN ANALYZE DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.s): []` |
+| P-S1 `PREPARE p AS DELETE … IN (SELECT …)` | Spark SQL session | `Failed: DID NOT RAISE AnalysisException` |
+| P-S2 `PREPARE p AS UPDATE … IN (SELECT …)` | Spark SQL session | `Failed: DID NOT RAISE AnalysisException` |
+| P-S3 `PREPARE p AS EXPLAIN ANALYZE DELETE … IN (SELECT …)` | Spark SQL session | `Failed: DID NOT RAISE AnalysisException` |
+
+Router door 3 failed, 3 passed; Spark SQL session door 3 failed, 5 passed. The controls are green
+before and after: the bare `IN` `DELETE` leaves ids 1 and 4, the bare `UPDATE` sets ids 2 and 3,
+snapshots 1 → 2; a plain-predicate `PREPARE`/`EXECUTE` writes id 2, 1 → 2; a plain `EXPLAIN` of the
+subquery `DELETE` answers its plan, 1 → 1. On the merge each `PREPARE` cell, read through
+`EXECUTE p`, emptied the table or rewrote every row (snapshots 1 → 2).
+
+### 13.4 The fix (`34e04151`)
+
+`crates/repark-spark/src/normalize.rs` alone in product code:
+`refuse_dml_subquery_predicate_in_statement` keeps its allow-list exemption for the top-level
+statement (a bare allow-listed `DELETE` or `UPDATE` still answers `Ok`), then runs the G3-E8
+refusal through the new `refuse_written_dml_subquery_predicate`, with no exemption, on each
+statement `repark_iceberg::write::statement_writes::executed_writes` returns. The text is the
+G3-E8 text, and on the facade it names the target as `ice.ns.t`. `cargo test --no-fail-fast -p repark-spark`: 2877 passed, 5 ignored; the unit's
+Python files: 44 passed.
+
+**One existing pin moved, within its own text.** The walk also reaches a DML inside a query, so
+`WITH c AS (SELECT id FROM ice.sales.keys) DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM
+c)` and its `UPDATE` twin now refuse with the G3-E8 text, where DataFusion answered `This feature
+is not implemented: Query …`. Both refuse and write nothing either way.
+`g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing` asked for exactly this before it was
+relaxed ("route it through the G3-E8 valve before relaxing this pin"); it now expects
+`defect G3-E8` for its two subquery forms and `not implemented yet` for the subquery-free form,
+line-neutral in `dml.rs` (its exact size baseline of 1139 lines holds), and the stale
+"un-valved" doc line is gone. Spark 4.1.2 answers both CTE forms with the matching rows; RePark
+answers neither, on the merge or the head.
+
+### 13.5 Revert check and mutants
+
+- **Revert check:** `normalize.rs` from `e5dc4e4c` on the head: the three router-door pins and the
+  CTE pin red (`PREPARE p AS … : []`; `got This feature is not implemented: Query`). For Python, the
+  merge's module carries that `normalize.rs` byte for byte, and P-S1 to P-S3 are red on it (§13.3).
+  Restored.
+
+| Mutant | Change | Killed by |
+|---|---|---|
+| N1 | the walk call removed, only the bare statement checked | the three router-door `PREPARE` pins, `g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing` |
+| N2 | the allow-list exemption applied to each walked statement | the same four |
+| N3 | `Prepare` not unwrapped by the walk | the three router-door `PREPARE` pins |
+| N4 | `Delete` dropped from the walk | `a_prepared_subquery_delete_refuses_on_the_router_door`, `a_prepared_explain_analyze_subquery_delete_refuses_on_the_router_door`, the CTE pin |
+
+No mutant survived. N4 leaves the bare `DELETE` family green because `router/delete_update.rs`
+refuses a bare subquery `DELETE` before the passthrough, which the sketch shows.
+
+### 13.6 Never worse
+
+A census on the Spark SQL session door, Iceberg seeds, the merge's module (`24c97666…`, the same
+code as `e5dc4e4c`) against the head's (`df9f2196…`): 86 cells. Eleven predicates (`IN`, `NOT
+IN`, `EXISTS` uncorrelated and correlated, `NOT EXISTS` correlated, correlated `IN`, `=
+(SELECT …)`, `IN … AND v > 25`, `= ANY`, and two plain ones), each as a bare `DELETE` and
+`UPDATE`, a `PREPARE`d `DELETE` and `UPDATE`, a plain `EXPLAIN DELETE` and an `EXPLAIN ANALYZE
+DELETE`; plus `PREPARE` around `EXPLAIN [ANALYZE]`, parameterised `PREPARE`, `PREPARE` of a
+`SELECT` and of an `INSERT`, CTE-prefixed DML, `INSERT … SELECT … IN`, a MERGE over a subquery
+source, `SELECT`/`EXPLAIN [ANALYZE] SELECT` with a subquery, and CTAS. Every seed is an
+`IcebergTableScan`.
+
+| Change | Cells | Merge | Head | Spark 4.1.2 |
+|---|---|---|---|---|
+| unchanged | 63, every bare shape among them: `IN`, `NOT IN`, `EXISTS`, `NOT EXISTS`, correlated `IN` keep their rows | — | — | — |
+| lost, in the wrapped class | 21 `PREPARE` forms of a subquery-predicate `DELETE` or `UPDATE` (alone, parameterised, around `EXPLAIN ANALYZE`), then `EXECUTE` | the table emptied, every row rewritten, or the wrong rows (`IN … AND v > 25` deleted ids 3 and 4) | G3-E8 refusal at `PREPARE`, rows kept, 1 → 1 | `ParseException` |
+| other, in the wrapped class | `WITH c AS (…) DELETE`/`UPDATE … WHERE id IN (SELECT id FROM c)` | `NotImplemented`, rows kept | G3-E8 refusal, rows kept | the matching rows |
+
+No answer is lost outside the wrapped subquery class. `EXPLAIN ANALYZE` of every DML still writes
+on this door (unchanged; card EXPLAIN-DML-WRITE-1).
+
+`cargo test --no-fail-fast -p <crate>` on the head: `repark-iceberg` 1017 passed; `repark-core`
+1536 passed, 2 ignored; `repark-spark` 2877 passed, 5 ignored; `repark-sql` 576 passed, 4 ignored.
+Against round 4's runs (the merge's Rust tree), nothing is green there and red here and nothing is
+missing; `repark-spark` adds the six router-door pins. `pytest python/repark/tests -n 8` on the
+head's module, all 535 files once in 26 slices: 20071 passed, 488 skipped, 151 xfailed, 0 failed
+(round 4: 20063; the Spark-door file adds 8).
+
+### 13.7 Gates
+
+The gates run on the final commit; their exit codes are in the hand-back.
+
+### 13.8 Records
+
+- The merge took main's card as its base (#1094: rulings 136, 138 and 139 and the measured table);
+  round 4's card section of §12.9 (its table and options) gave way to main's text, and round 4's
+  card edits survive as one dated line, "2026-10-17, 106 round 4", which now says what 106 closes
+  on `repark.sql()` and on both repark-spark doors, and which form the sketch sends to the unit.
+- The 1.5.6 bullet for this unit says what holds after the round; main's EXPLAIN-DML-WRITE-1
+  bullet is kept as main wrote it.
+- The 106 card, the registry row and the map rows gain a ruling-139 line.
 
 ## 10. Coverage attestation
 

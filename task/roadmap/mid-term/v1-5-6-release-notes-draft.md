@@ -177,7 +177,10 @@ Tables already written keep the values they hold; this release ships no migratio
   every `UPDATE` and `DELETE` whose `WHERE` holds a subquery, including the `IN`, `NOT IN` and
   `EXISTS` forms the Spark SQL session answers with the matching rows, bare, under `PREPARE`
   and under `EXPLAIN ANALYZE`; a plain `EXPLAIN` answers its plan. Run those statements through
-  the Spark SQL session until `repark.sql()` is routed through the ANSI door.
+  the Spark SQL session until `repark.sql()` is routed through the ANSI door. On the Spark SQL
+  session the bare forms keep the matching rows, and `PREPARE` of such a statement, alone or
+  around `EXPLAIN ANALYZE`, now refuses with the same G3-E8 text instead of changing every row at
+  `EXECUTE`; `EXPLAIN ANALYZE` of the statement itself still writes there (EXPLAIN-DML-WRITE-1).
 - **EXPLAIN-DML-WRITE-1 (known issue, critical, 2026-10-17):** on the Spark SQL session and the ANSI
   door, `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE` performs the write, and so does the same
   statement run as `PREPARE` then `EXECUTE`. When its `WHERE` holds a subquery, either form changes

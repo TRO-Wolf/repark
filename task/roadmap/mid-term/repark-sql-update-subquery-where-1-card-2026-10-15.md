@@ -72,6 +72,15 @@ The 1.5.6 note names it until routing lands.
   The pins now seed their tables through the Iceberg catalog, and one guard fails when a seed is
   not an Iceberg table (finding V106-F4); P-U10 and P-D10 keep an in-memory table, labelled.
   Ledger section 12.
+- **2026-10-17, owner rulings 138 and 139:** 106 also closes both repark-spark doors (the
+  `SparkDialect` session door and the router API). Their strict pregate,
+  `refuse_dml_subquery_predicate_in_statement`, keeps its allow-list exemption for the top-level
+  bare statement and refuses each `DELETE` and `UPDATE` the shared walk returns, so `PREPARE` of a
+  subquery-predicate `DELETE` or `UPDATE`, alone or around `EXPLAIN ANALYZE`, refuses with the
+  G3-E8 text there too, while the bare `IN` forms keep the matching rows. DataFusion's own
+  `EXPLAIN ANALYZE` on those doors never reaches the pregate and goes to card
+  [EXPLAIN-DML-WRITE-1](explain-dml-write-1-card-2026-10-16.md), with ruling 138's
+  `PREPARE`-of-a-write refusal and the ANSI door. Ledger section 13.
 - **Later tidy unit (ruling Q7, 2026-10-16):** fold the Spark SQL door's G3-E8 copy
   (`crates/repark-spark/src/normalize.rs`) into the shared home, with its target renderer as a
   parameter.

@@ -754,7 +754,9 @@ declines it (a dated ruling in the intake, then the archive).
   `EXPLAIN` is in; the refusal fires inside `EXPLAIN` and `EXPLAIN ANALYZE`. **2026-10-17,
   ruling 135 (a):** the refusal reads every write the statement executes (the shared walk), so
   `PREPARE` and `EXPLAIN ANALYZE` refuse and a plain `EXPLAIN` answers its plan again; the pins
-  run on Iceberg tables.
+  run on Iceberg tables. **2026-10-17, ruling 139:** both repark-spark doors' strict pregate
+  refuses each walked subquery-predicate `DELETE` and `UPDATE`, so `PREPARE` of one refuses there
+  too; DataFusion's own `EXPLAIN ANALYZE` on those doors goes to card EXPLAIN-DML-WRITE-1.
 - [explain-dml-write-1-card-2026-10-16.md](explain-dml-write-1-card-2026-10-16.md) **card
   EXPLAIN-DML-WRITE-1 (2026-10-16, corrected 2026-10-17, open, critical under owner ruling 139):**
   `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE`, and the same statement run as `PREPARE` then

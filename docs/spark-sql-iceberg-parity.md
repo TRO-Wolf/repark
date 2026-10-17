@@ -9635,6 +9635,12 @@ the pin rather than obeying it.
   the Spark SQL router): bare, under `PREPARE`, and under `EXPLAIN ANALYZE`, parsed with the
   session's SQL dialect. A plain `EXPLAIN` answers its plan and leaves an Iceberg table
   unchanged, as on main.
+  **2026-10-17, owner ruling 139:** on both repark-spark doors, the strict pregate
+  (`refuse_dml_subquery_predicate_in_statement`) refuses each `DELETE` and `UPDATE` the same walk
+  returns, the allow-list exemption kept for the top-level bare statement: `PREPARE` of a
+  subquery-predicate statement, alone or around `EXPLAIN ANALYZE`, refuses there, where `EXECUTE`
+  changed every row; the bare forms keep Spark's rows. DataFusion's own `EXPLAIN ANALYZE` on those
+  doors is card EXPLAIN-DML-WRITE-1's.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 updates only the matching rows. *(measured by
   U-6's re-verifier 3, 2026-10-15.)* `DELETE` deletes only the matching rows, in all eight forms
   of the sketch. *(measured 2026-10-16, private Hadoop catalog, `local[1]`.)*

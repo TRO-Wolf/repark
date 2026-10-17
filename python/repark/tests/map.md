@@ -10583,7 +10583,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `PREPARE`/`EXECUTE` writes its row; a plain `EXPLAIN` of the subquery `DELETE` answers its
   plan. On the merge `e5dc4e4c` the three `PREPARE` pins are red (each emptied or rewrote the
   table); the controls are green before and after.
-  pins: repark-sql-update-subquery-where-1/C-025, C-026
+  pins: repark-sql-update-subquery-where-1/C-025, C-026, C-028
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

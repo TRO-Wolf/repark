@@ -164,8 +164,15 @@ through the Iceberg catalog, and a provider guard asserts they are Iceberg, the 
 the shared walk `repark_iceberg::write::statement_writes::executed_writes` returns, so a `DELETE` or
 `UPDATE` whose `WHERE` holds a subquery refuses bare, under `PREPARE` (alone, parameterised, or
 around `EXPLAIN ANALYZE`) and under `EXPLAIN ANALYZE`, while a plain `EXPLAIN` answers its plan; a
-`PREPARE` with a plain predicate still runs. The repark-spark placement of ruling 139 is in 106's
-fix round; ledger section 12.
+`PREPARE` with a plain predicate still runs. 106 also closes both repark-spark doors (the
+`SparkDialect` session door and the router API): their strict pregate,
+`refuse_dml_subquery_predicate_in_statement`, refuses each `DELETE` and `UPDATE` the same walk
+returns, with the allow-list exemption kept for the top-level bare statement only, so `PREPARE` of
+a subquery-predicate `DELETE` or `UPDATE`, alone or around `EXPLAIN ANALYZE`, refuses there too,
+while the bare `IN` forms keep the matching rows. The sketch (106 ledger §13.2) sends one form to
+this unit: DataFusion's own `EXPLAIN ANALYZE <DML>` on both repark-spark doors takes the
+`DfStatement::Explain` arm and never reaches that function, so it still writes there. Ledger
+sections 12 and 13.
 
 ## Earlier text, 2026-10-16, as written (headings one level down)
 
