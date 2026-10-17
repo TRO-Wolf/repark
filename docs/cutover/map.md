@@ -58,6 +58,12 @@ named only as "the cutover pipeline" here.
   acceptance run `39071066809` (12 cells: acceptance module 11 passed in 340.82s, dbt gold module
   1 passed in 59.07s), the write-path change, and the follow-ups (ENC-1 at the new rev, ruling
   143's fork card, the U-9 live drill).
+- [p2-report-repark-sql-update-subquery-where-1-2026-10-17.md](p2-report-repark-sql-update-subquery-where-1-2026-10-17.md) —
+  **the P2 report for #1090, REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (106) (2026-10-17):** verifier
+  verdicts by time (FAIL at 22:13 EDT on 2026-10-16, Opus Max PASS at 18:57 EDT on 2026-10-17,
+  merged `0b9195ca` at 19:24 EDT under ruling 132), acceptance run `39078930301` (12 cells:
+  acceptance module 11 passed in 382.96s, dbt gold module 1 passed in 59.94s), the write-path
+  change with owner ruling 146 verbatim, and the follow-ups (EXPLAIN-DML-WRITE-1, VF-1, VF-2).
 
 ## Pointers
 
