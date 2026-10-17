@@ -187,7 +187,9 @@ pub(super) async fn execute_fast_forward(
     let tx = Transaction::new(&table);
     let action = tx.manage_snapshots().fast_forward(&branch, &target);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let committed = repark_iceberg::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
     let updated = committed
         .metadata()
         .snapshot_for_ref(&branch)
@@ -238,7 +240,9 @@ pub(super) async fn execute_cherrypick_snapshot(
     let tx = Transaction::new(&table);
     let action = tx.cherry_pick(snapshot_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let committed = repark_iceberg::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
     let current_snapshot_id = committed.metadata().current_snapshot_id().ok_or_else(|| {
         DataFusionError::Plan("cherry-pick committed but table has no current snapshot".to_string())
     })?;
@@ -276,7 +280,9 @@ pub(super) async fn execute_publish_changes(
     let tx = Transaction::new(&table);
     let action = tx.publish_changes(&wap_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let committed = repark_iceberg::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
     let current_snapshot_id = committed.metadata().current_snapshot_id().ok_or_else(|| {
         DataFusionError::Plan("publish committed but table has no current snapshot".to_string())
     })?;
@@ -351,7 +357,9 @@ pub(super) async fn execute_set_current_snapshot(
         .manage_snapshots()
         .set_current_snapshot(target_snapshot_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let committed = repark_iceberg::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
     let current_snapshot_id = committed.metadata().current_snapshot_id().ok_or_else(|| {
         DataFusionError::Plan(
             "set_current_snapshot committed but table has no current snapshot".to_string(),
@@ -424,7 +432,9 @@ pub(super) async fn execute_rollback_to_timestamp(
     let tx = Transaction::new(&table);
     let action = tx.manage_snapshots().rollback_to(selected);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let committed = repark_iceberg::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
     let current_snapshot_id = committed.metadata().current_snapshot_id().ok_or_else(|| {
         DataFusionError::Plan("rollback committed but table has no current snapshot".to_string())
     })?;

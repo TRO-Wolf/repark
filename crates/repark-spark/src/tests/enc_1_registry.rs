@@ -1,3 +1,4 @@
+use datafusion::catalog::{CatalogProvider, MemoryCatalogProvider};
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 
 use super::super::*;
@@ -78,9 +79,17 @@ async fn registry_insert_of_an_unguarded_catalog_refuses_a_keyed_insert_at_its_e
         .to_string();
     let raw = unguarded_catalog(&location).await;
     let ctx = SessionContext::new();
-    repark_iceberg::catalog::register_iceberg_catalog(&ctx, "ice", Arc::clone(&raw))
+    let unguarded = iceberg_datafusion::IcebergCatalogProvider::try_new(Arc::clone(&raw))
         .await
-        .expect("the provider registers");
+        .expect("the unguarded provider builds");
+    let provider = MemoryCatalogProvider::new();
+    for name in unguarded.schema_names() {
+        let schema = unguarded.schema(&name).expect("a listed schema resolves");
+        provider
+            .register_schema(&name, schema)
+            .expect("the memory provider takes the schema");
+    }
+    ctx.register_catalog("ice", Arc::new(provider));
     let mut catalogs = CatalogRegistry::new();
     catalogs.insert(
         "ice".to_string(),
@@ -109,4 +118,14 @@ async fn registry_insert_of_an_unguarded_catalog_refuses_a_keyed_insert_at_its_e
     );
     let found = parquet_files(warehouse.path());
     assert!(found.is_empty(), "unencrypted files on disk: {found:?}");
+    ctx.sql("INSERT INTO ice.sales.t VALUES (2)")
+        .await
+        .expect("the provider plans the insert")
+        .collect()
+        .await
+        .expect("the unguarded provider stores past the entry check");
+    assert!(
+        !parquet_files(warehouse.path()).is_empty(),
+        "the control insert must land, or the refusal above proves nothing about the entry check"
+    );
 }

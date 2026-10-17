@@ -465,7 +465,9 @@ async fn execute_rollback_to_snapshot(
     let tx = Transaction::new(&table);
     let action = tx.manage_snapshots().rollback_to(snapshot_id);
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let committed = repark_iceberg::write::commit_unstaged(tx, catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
     let current_snapshot_id = committed.metadata().current_snapshot_id().ok_or_else(|| {
         DataFusionError::Plan("rollback committed but table has no current snapshot".to_string())
     })?;

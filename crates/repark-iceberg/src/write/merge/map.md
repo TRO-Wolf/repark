@@ -38,12 +38,15 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   the commit's `engine.operation-id` via `write::commit_error::operation_id_and_summary` and
   route the `tx.commit` `Err` through `commit_err`, so a `CommitStateUnknown` surfaces
   stamped for `error_map`'s wrapper downcast — after the staged-file cleanup still ran
-  (the carve-out lives in `snapshot_commit.rs::sweep_after_rejected_commit`, which calls
-  the shared `../encryption.rs` sweep on a keyed refusal and keeps the old shape —
-  unknown state skips, other errors sweep — otherwise).
+  (since owner ruling 121, 2026-10-17, the cleanup is `../staged_commit.rs`
+  `StagedCommit::commit_or_abort`: a definitive error deletes the attempt's own files, an
+  unknown state settles by one read-back).
   pins: ice-commit-unknown-1/C-003
-  **V3-9:** `referenced` / `abort_paths` are moved out of the prepared deletes with
-  `std::mem::take` instead of deep-cloned once per row-delta commit.
+  **V3-9:** `referenced` is moved out of the prepared deletes with
+  `std::mem::take` instead of deep-cloned once per row-delta commit. Since owner ruling 121
+  (2026-10-17) `dv_close.rs` keeps no `abort_paths`: `PreparedDeletes::into_row_delta`
+  applies the DV removals and hands back the delete files it wrote, which join the
+  attempt's own set through `StagedFiles::with_written_deletes`.
   pins: v3-9-mor-predicate-dml-dv/C-009
   pins: rp-5-fork-repin/C-004
   **WO U5 PR2b round 2 (2026-09-25):** `mod.rs` answers merge-on-read MERGE on v1 with
@@ -124,9 +127,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   orphan MATCHED-UPDATE parquet. Identity DELETE/UPDATE share
   `write_position_deletes` via `commit_row_delta_kind`; their refuse-before-IO
   lives in `../predicate_dml.rs` `resolve_write_mode`.
-  `snapshot_commit.rs::sweep_after_rejected_commit` is T5-owned. On `tx.commit` `Err`,
-  `commit_overwrite` / `commit_row_delta_kind` best-effort-delete writer-result paths
-  (M14 design A).
+  The rejected-commit cleanup is T5-owned. On a commit `Err`,
+  `commit_overwrite` / `commit_row_delta_kind` best-effort-delete the attempt's own files
+  through `../staged_commit.rs` `StagedCommit::commit_or_abort` (M14 design A).
   **M11:** `fold_discovery_batch_into_affected` / `consume_matched_work_batch`
   take a precomputed `skip_cardinality` (lone unconditional MATCHED DELETE);
   `match_count > 1` still folds mutations / pos-deletes (double-delete is
@@ -262,14 +265,20 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   ruling 96 F1):** `keyed_refused_merge_overwrite_keeps_a_snapshot_referenced_file` and
   `keyed_refused_row_delta_keeps_a_snapshot_referenced_file` hand a file the current
   snapshot references in beside a fresh one; after the keyed refusal the referenced file
-  reads back its two rows and the fresh one is gone.
-- `snapshot_commit.rs::sweep_after_rejected_commit` — the merge commit-error funnel
-  (was `abort.rs`, hoisted to `../encryption.rs` on 2026-10-15 for ENC-1-RESIDUE-1 item
-  1; `abort.rs` deleted). Delete
-  set is threaded from writer results in hand; never re-derived from the table
-  or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have
-  persisted — Java's `CommitStateUnknownException` rethrow-before-cleanup rule);
-  reclaim is orphan-file maintenance. Per-file `FileIO::delete` failures
+  reads back its two rows and the fresh one is gone. Under owner ruling 121 (2026-10-17)
+  the referenced file survives because the attempt did not write it, not because a table
+  view names it.
+- `snapshot_commit.rs` merge commit-error cleanup — was `abort.rs`, then
+  `sweep_after_rejected_commit` (2026-10-15, ENC-1-RESIDUE-1 item 1; `abort.rs` deleted),
+  since owner ruling 121 (2026-10-17) `../staged_commit.rs`
+  `StagedCommit::commit_or_abort`. The delete set is the attempt's own set: the data
+  files RePark's writers recorded and this attempt claimed, plus the delete files the
+  same call wrote; never re-derived from the table or manifests. `CommitStateUnknown` errors
+  SKIP cleanup (the commit may have persisted — Java's `CommitStateUnknownException`
+  rethrow-before-cleanup rule); reclaim is orphan-file maintenance. The one exception,
+  owner ruling 121 over ruling 115: a fresh load shows the table keyed and no snapshot
+  carrying this attempt's `engine.operation-id`, and then only the own files no snapshot
+  references go. Per-file `FileIO::delete` failures
   `tracing::warn` and never mask the original commit error.
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the keep-set is now pinned by real-file
   pins in `tests/commit_unknown.rs` — mutation-proven (deleting the early return
@@ -504,7 +513,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 | Change v3 MERGE `_row_id` carry | `row_lineage.rs` |
 | Change MERGE snapshot commit / `to_branch` | `snapshot_commit.rs` |
 | Change what a concurrent commit must touch to conflict with a DML | `../conflict_filter.rs` (derivation) + `CommitScope` in `snapshot_commit.rs` (threading) |
-| Change rejected-commit file cleanup | `snapshot_commit.rs` (`sweep_after_rejected_commit`) + `commit_overwrite` / `commit_row_delta_kind` |
+| Change rejected-commit file cleanup | `../staged_commit.rs` (`StagedCommit::commit_or_abort`) + `commit_overwrite` / `commit_row_delta_kind` |
 | Add a unit pin for SQL shape | `tests/merge.rs` |
 | Touch OCC commit behavior | `tests/occ.rs` / `tests/occ_conflict.rs` |
 | Touch MERGE OCC onto a named branch | `tests/occ_branch.rs` |
@@ -522,9 +531,9 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   predicate converted — check `../conflict_filter.rs` (bare column in an `ON`? a function call?
   a `WHEN NOT MATCHED BY SOURCE` clause?). Spark refuses the same shapes; see the
   `ICE-OCC-SCOPED-1` rows in `docs/spark-sql-iceberg-parity.md` before "fixing" one.
-- Rejected MERGE left new Parquet files: cleanup is `tx.commit` `Err` only in
-  `commit_overwrite` / `commit_row_delta_kind` via `snapshot_commit.rs`
-  (`sweep_after_rejected_commit`). A catch
+- Rejected MERGE left new Parquet files: cleanup is the commit `Err` only in
+  `commit_overwrite` / `commit_row_delta_kind` via `../staged_commit.rs`
+  (`StagedCommit::commit_or_abort`). A catch
   that can fire after a successful commit is a HALT.
 - Pub `write_data_files*` re-exported from the write module root (`../mod.rs`) and the crate
   root (`lib.rs`).

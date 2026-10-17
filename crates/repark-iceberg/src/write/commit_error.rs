@@ -7,7 +7,6 @@ use iceberg::ErrorKind;
 use iceberg::table::Table;
 use uuid::Uuid;
 
-use crate::write::encryption::sweep_staged_files_on_keyed_refusal;
 use crate::write::merge::OPERATION_ID_PROP;
 
 #[derive(Debug)]
@@ -54,22 +53,6 @@ pub(crate) fn commit_result(
     operation_id: &str,
 ) -> Result<Table, DataFusionError> {
     result.map_err(|error| commit_err(error, operation_id))
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub(crate) async fn commit_with_keyed_sweep(
-    table: &Table,
-    staged_paths: &[String],
-    result: iceberg::Result<Table>,
-    operation_id: &str,
-) -> Result<Table, DataFusionError> {
-    match result {
-        Ok(committed) => commit_result(Ok(committed), operation_id),
-        Err(error) => {
-            let error = sweep_staged_files_on_keyed_refusal(table, staged_paths, error).await;
-            Err(commit_err(error, operation_id))
-        }
-    }
 }
 
 pub(crate) fn operation_id_and_summary() -> (String, HashMap<String, String>) {

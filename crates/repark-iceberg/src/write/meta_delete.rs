@@ -157,7 +157,11 @@ pub async fn commit_metadata_delete(
         .case_sensitive(plan.case_sensitive)
         .set_snapshot_properties(summary);
     let transaction = action.apply(transaction).map_err(iceberg_err)?;
-    commit_result(transaction.commit(catalog.as_ref()).await, &operation_id).map(|_| ())
+    commit_result(
+        crate::write::commit_unstaged(transaction, catalog.as_ref()).await,
+        &operation_id,
+    )
+    .map(|_| ())
 }
 
 fn parse_selection(selection_sql: &str) -> Option<Expr> {

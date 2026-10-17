@@ -133,7 +133,7 @@ pub async fn apply_partition_spec_changes(
         };
     }
     let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    crate::write::commit_unstaged(tx, catalog).await?;
     Ok(())
 }
 

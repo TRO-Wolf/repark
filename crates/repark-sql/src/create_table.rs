@@ -205,6 +205,7 @@ async fn replacement_if_existed(
 
 /// Model: Grok 4.6 xHigh
 #[allow(clippy::too_many_arguments)] // target + schema + V3-2 version + placement travel together
+#[expect(clippy::disallowed_methods, reason = "ENC-CTAS-REPLACE-1")]
 async fn execute_staged_create(
     cx: &EngineContext<'_>,
     target: &CreateTarget,
@@ -287,6 +288,7 @@ async fn execute_staged_create(
     finish(cx.ctx, target).await
 }
 
+#[expect(clippy::disallowed_methods, reason = "ENC-CTAS-REPLACE-1")]
 async fn publish_staged_with_summary(
     target: &CreateTarget,
     staged: StagedTableTransaction,

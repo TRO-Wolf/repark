@@ -60,6 +60,7 @@ pub mod sink_offsets;
 pub mod snapshot_refs;
 pub mod sort_order;
 pub mod sql_text;
+pub(crate) mod staged_commit;
 mod static_value;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
@@ -100,6 +101,7 @@ pub use snapshot_refs::{
     create_or_replace_snapshot_ref, create_snapshot_ref, create_snapshot_ref_with_retention,
     drop_snapshot_ref, list_snapshot_refs, replace_snapshot_ref,
 };
+pub use staged_commit::commit_unstaged;
 pub use testing_support::testing_create_ref;
 pub use unsupported::{UnsupportedMarker, unsupported_error, unsupported_message_error};
 

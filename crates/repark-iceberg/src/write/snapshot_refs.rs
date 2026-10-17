@@ -78,7 +78,9 @@ pub async fn create_snapshot_ref_with_retention(
     };
     let action = apply_retention(action, name, retention);
     let tx = action.apply(tx).map_err(iceberg_to_datafusion)?;
-    tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
+    crate::write::commit_unstaged(tx, catalog)
+        .await
+        .map_err(iceberg_to_datafusion)?;
     Ok(())
 }
 
@@ -104,7 +106,9 @@ pub async fn replace_snapshot_ref(
     };
     let action = apply_retention(action, name, retention);
     let tx = action.apply(tx).map_err(iceberg_to_datafusion)?;
-    tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
+    crate::write::commit_unstaged(tx, catalog)
+        .await
+        .map_err(iceberg_to_datafusion)?;
     Ok(())
 }
 
@@ -150,7 +154,9 @@ pub async fn create_branch_on_empty_table(
         .set_snapshot_properties(summary)
         .apply(tx)
         .map_err(iceberg_to_datafusion)?;
-    let table = tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
+    let table = crate::write::commit_unstaged(tx, catalog)
+        .await
+        .map_err(iceberg_to_datafusion)?;
     if retention.is_empty() {
         return Ok(());
     }
@@ -158,7 +164,9 @@ pub async fn create_branch_on_empty_table(
     let tx = apply_retention(tx.manage_snapshots(), name, retention)
         .apply(tx)
         .map_err(iceberg_to_datafusion)?;
-    tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
+    crate::write::commit_unstaged(tx, catalog)
+        .await
+        .map_err(iceberg_to_datafusion)?;
     Ok(())
 }
 
@@ -178,7 +186,7 @@ pub async fn drop_snapshot_ref(
         SnapshotRefKind::Tag => tx.manage_snapshots().remove_tag(name),
     };
     let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    crate::write::commit_unstaged(tx, catalog).await?;
     Ok(())
 }
 

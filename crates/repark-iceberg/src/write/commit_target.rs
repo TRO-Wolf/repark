@@ -4,12 +4,12 @@ use datafusion::error::Result;
 use iceberg::Catalog;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::Transaction;
 
-use crate::write::commit_error::{commit_with_keyed_sweep, operation_id_and_summary};
-use crate::write::encryption::written_file_paths;
+use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::illegal_argument::number_format_error;
 use crate::write::overwrite::OverwriteIsolation;
+use crate::write::staged_commit::StagedFiles;
 use crate::write::write_options::isolation_with_override;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -102,21 +102,14 @@ pub async fn commit_append_to(
 ) -> Result<Table> {
     crate::write::refuse_encrypted_table(table)?;
     let (operation_id, summary) = operation_id_and_summary();
-    let staged_paths = written_file_paths(&new_files);
     let tx = Transaction::new(table);
-    let action = tx
-        .merge_append()
-        .add_data_files(new_files)
-        .set_snapshot_properties(summary);
+    let action = tx.merge_append().set_snapshot_properties(summary);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
-    let tx = action
-        .apply(tx)
+    let staged = StagedFiles::claimed(new_files)
+        .stage(action, tx)
         .map_err(crate::catalog::iceberg_to_datafusion)?;
-    commit_with_keyed_sweep(
-        table,
-        &staged_paths,
-        tx.commit(catalog.as_ref()).await,
+    commit_result(
+        staged.commit(table, catalog.as_ref(), &operation_id).await,
         &operation_id,
     )
-    .await
 }

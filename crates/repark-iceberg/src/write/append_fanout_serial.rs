@@ -22,6 +22,7 @@ use super::distribution::stamp;
 use super::file_order::ascending_partition_order;
 use super::write_options::WriterStagingOverrides;
 use super::writer_props::target_file_size_with;
+use crate::write::staged_commit::OwnLocations;
 
 pub(crate) async fn fanout_conformed_stream_serial<S>(
     table: &Table,
@@ -76,8 +77,9 @@ where
         )
         .map_err(iceberg_err)?
     };
-    let location_generator =
-        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
+    let location_generator = OwnLocations::new(
+        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?,
+    );
     let file_name_generator =
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(

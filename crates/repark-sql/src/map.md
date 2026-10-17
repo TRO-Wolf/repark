@@ -258,6 +258,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Blanks string-literal / quoted-identifier / comment CONTENT so the guards and the sniff cannot
   false-positive. Backticks are deliberately NOT treated as quoting (they are the Spark-ism the
   sniff reports). In-module tests.
+- `create_table.rs` — **ENC-1-RESIDUE-1, owner ruling 121 (2026-10-17):**
+  `execute_staged_create` and `publish_staged_with_summary` carry the
+  `#[expect(clippy::disallowed_methods)]` for card ENC-CTAS-REPLACE-1 (owner rulings 98 and
+  108): they add staged files to a staged create or replace and publish it outside
+  `repark-iceberg/src/write/staged_commit.rs`, as the round-2 census excepted them.
 - `create_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):** when the target exists, the
   native door passes its CTAS or column-def schema raw to the fork's `begin_replace`, which
   re-keys it by name, so a replace keeps each column's id by name (Java's

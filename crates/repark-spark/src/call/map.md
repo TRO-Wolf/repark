@@ -83,6 +83,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   handle and the catalog guard refuses it there (`repark-iceberg` `catalog/map.md`). The
   fast-forward cherry-pick is a ref move and runs. Pinned in `../tests/enc_1_fold.rs`.
   pins: enc-1/C-007, C-008
+- `add_files.rs`, `branch_ops.rs`, `rewrite_manifests.rs` — **ENC-1-RESIDUE-1, owner ruling
+  121 (2026-10-17):** their commits add no staged file, so they go through
+  `repark_iceberg::write::commit_unstaged`; `clippy.toml` disallows `Transaction::commit`
+  outside `repark-iceberg/src/write/staged_commit.rs`.
 - `branch_ops.rs` — **IPI-05 (2026-09-21):** `execute_publish_changes` publishes a staged WAP
   snapshot: it looks the snapshot up with the fork's `staged_snapshot_for_wap_id`, re-raising that
   error's **bare message** (never `to_string()`, which would prefix the error kind and diverge from

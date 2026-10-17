@@ -5,7 +5,7 @@ use iceberg::Catalog;
 use iceberg::expr::Predicate;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::Transaction;
 use tracing::Instrument;
 
 use super::KnownPartitions;
@@ -13,10 +13,8 @@ use super::dv_close;
 use super::iceberg_err;
 use crate::write::commit_error::commit_err;
 use crate::write::concurrency::WriteConcurrency;
-use crate::write::encryption::{
-    delete_staged_files_best_effort, sweep_staged_files_on_keyed_refusal, written_file_paths,
-};
 use crate::write::sink_offsets::SiteStamp;
+use crate::write::staged_commit::StagedFiles;
 
 pub(crate) const WRITE_MERGE_ISOLATION_LEVEL: &str = "write.merge.isolation-level";
 
@@ -76,26 +74,6 @@ impl CommitScope {
 pub(crate) struct RowDeltaPolicy {
     pub kind: RowDeltaKind,
     pub scope: CommitScope,
-}
-
-async fn sweep_after_rejected_commit(
-    table: &Table,
-    paths: &[String],
-    error: iceberg::Error,
-) -> iceberg::Error {
-    if error.kind() == iceberg::ErrorKind::CommitStateUnknown {
-        tracing::warn!(
-            files = paths.len(),
-            "MERGE commit state unknown; leaving written files in place (cleanup skipped so a \
-             possibly-successful commit is never corrupted; reclaim via orphan-file maintenance)"
-        );
-        return error;
-    }
-    if crate::write::encryption::EncryptedTableRefusal::find(&error).is_some() {
-        return sweep_staged_files_on_keyed_refusal(table, paths, error).await;
-    }
-    delete_staged_files_best_effort(table, paths).await;
-    error
 }
 
 pub(crate) fn resolve_merge_isolation(table: &Table) -> Result<IsolationLevel> {
@@ -199,7 +177,6 @@ pub(crate) async fn commit_overwrite_on_ref(
         return Ok(());
     }
     crate::write::refuse_encrypted_table(table)?;
-    let new_file_paths = written_file_paths(&new_files);
     let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, scope)?;
     let summary_extra = stamp.extras(summary_extra)?;
     let engine = crate::write::summary_collision::EngineSummary::for_changes(
@@ -208,52 +185,36 @@ pub(crate) async fn commit_overwrite_on_ref(
     let (operation_id, summary) =
         crate::write::write_options::summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
-    let tx = if affected.is_empty() {
-        let mut action = tx
-            .overwrite_files()
-            .add_files(new_files)
-            .conflict_detection_filter(scope.conflict_filter.clone())
-            .case_sensitive(true)
-            .set_snapshot_properties(summary);
-        if scope.isolation == IsolationLevel::Serializable {
-            action = action.validate_no_conflicting_data();
-        }
-        if let Some(pin) = snapshot_id {
-            action = action.validate_from_snapshot(pin);
-        }
-        let action =
-            crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
-                action.to_branch(name)
-            });
-        action.apply(tx).map_err(iceberg_err)?
+    let action = if affected.is_empty() {
+        tx.overwrite_files()
     } else {
-        let mut action = tx
-            .overwrite_files()
+        tx.overwrite_files()
             .delete_data_files(affected)
-            .add_files(new_files)
-            .conflict_detection_filter(scope.conflict_filter.clone())
             .validate_no_conflicting_deletes()
-            .case_sensitive(true)
-            .set_snapshot_properties(summary);
-        if scope.isolation == IsolationLevel::Serializable {
-            action = action.validate_no_conflicting_data();
-        }
-        if let Some(pin) = snapshot_id {
-            action = action.validate_from_snapshot(pin);
-        }
-        let action =
-            crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
-                action.to_branch(name)
-            });
-        action.apply(tx).map_err(iceberg_err)?
     };
-    let tx = stamp.transaction(tx)?;
-    match tx.commit(catalog.as_ref()).await {
+    let mut action = action
+        .conflict_detection_filter(scope.conflict_filter.clone())
+        .case_sensitive(true)
+        .set_snapshot_properties(summary);
+    if scope.isolation == IsolationLevel::Serializable {
+        action = action.validate_no_conflicting_data();
+    }
+    if let Some(pin) = snapshot_id {
+        action = action.validate_from_snapshot(pin);
+    }
+    let action = crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
+        action.to_branch(name)
+    });
+    let staged = StagedFiles::claimed(new_files)
+        .stage(action, tx)
+        .map_err(iceberg_err)?
+        .stamped(&stamp)?;
+    match staged
+        .commit_or_abort(table, catalog.as_ref(), &operation_id)
+        .await
+    {
         Ok(committed) => stamp.record(&committed),
-        Err(error) => {
-            let error = sweep_after_rejected_commit(table, &new_file_paths, error).await;
-            Err(commit_err(error, &operation_id))
-        }
+        Err(error) => Err(commit_err(error, &operation_id)),
     }
 }
 
@@ -411,7 +372,6 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         return Ok(());
     }
     crate::write::refuse_encrypted_table(table)?;
-    let data_file_paths = written_file_paths(&data_files);
     let stamp = SiteStamp::claim_isolated(table, branch, summary_extra, &policy.scope)?;
     let pair_count = pairs.len() as u64;
     let data_file_count = data_files.len() as u64;
@@ -429,11 +389,10 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     ))
     .await?;
     let referenced = std::mem::take(&mut prepared.referenced);
-    let delete_file_paths = std::mem::take(&mut prepared.abort_paths);
-    let delete_file_count = delete_file_paths.len() as u64;
     let arm_deleted_on_delete = prepared.arm_validate_deleted_files_on_delete;
 
     let (added_deletes, removed_deletes) = prepared.delete_file_changes();
+    let delete_file_count = added_deletes.len() as u64;
     let mut added_files = data_files.clone();
     added_files.extend(added_deletes.iter().cloned());
     let summary_extra = stamp.extras(summary_extra)?;
@@ -446,8 +405,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let (operation_id, summary) =
         crate::write::write_options::summary_with_extras(&summary_extra, &engine)?;
     let tx = Transaction::new(table);
-    let mut action = tx.row_delta().add_data_files(data_files);
-    action = prepared.apply(action);
+    let (mut action, added_deletes) = prepared.into_row_delta(tx.row_delta());
     action = action
         .conflict_detection_filter(policy.scope.conflict_filter.clone())
         .validate_data_files_exist(referenced)
@@ -469,9 +427,13 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let action = crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
         action.to_branch(name)
     });
-    let tx = stamp.transaction(action.apply(tx).map_err(iceberg_err)?)?;
-    match tx
-        .commit(catalog.as_ref())
+    let staged = StagedFiles::claimed(data_files)
+        .with_written_deletes(added_deletes)
+        .stage(action, tx)
+        .map_err(iceberg_err)?
+        .stamped(&stamp)?;
+    match staged
+        .commit_or_abort(table, catalog.as_ref(), &operation_id)
         .instrument(tracing::info_span!(
             "merge.commit",
             data_files = data_file_count,
@@ -480,12 +442,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         .await
     {
         Ok(committed) => stamp.record(&committed),
-        Err(error) => {
-            let mut abort_paths = data_file_paths;
-            abort_paths.extend(delete_file_paths);
-            let error = sweep_after_rejected_commit(table, &abort_paths, error).await;
-            Err(commit_err(error, &operation_id))
-        }
+        Err(error) => Err(commit_err(error, &operation_id)),
     }
 }
 
@@ -497,7 +454,7 @@ mod keyed_sweep_pins {
     use datafusion::arrow::array::{Int32Array, RecordBatch};
     use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
     use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
-    use iceberg::transaction::Transaction;
+    use iceberg::transaction::{ApplyTransactionAction, Transaction};
     use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
     use tempfile::TempDir;
 

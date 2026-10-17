@@ -126,20 +126,15 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   `Table`). The gate stays textual: it matches spellings, not resolved paths, so a new
   alias can still walk past it. Recorded on card ENC-1-RESIDUE-1.
   pins: enc-1/C-009, C-010
-  **ENC-1-RESIDUE-1 round 2 (2026-10-15, owner ruling 108):** the census
-  `every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal` reuses this
-  file's test-code exclusion (`product_sources`) and finds every stage-then-commit
-  site by the commit call across `repark-iceberg`, `repark-spark` and `repark-sql`,
-  including a helper that returns a `Transaction` or an action. It fails when a
-  found site is neither listed nor excepted, when a listed or excepted site no
-  longer commits staged files, and when a listed site sweeps something other than
-  the paths it staged (an emptied slice fails). `SWEEP_SITES` names the 13 ruled
-  sites and the two merge sites. `CENSUS_EXCEPTIONS` names
-  `ctas.rs::finish_ctas_staged_commit`,
-  `create_table.rs::execute_staged_create` and `publish_staged_with_summary`, one
-  defect under card ENC-CTAS-REPLACE-1.
-  `the_census_finds_a_helper_split_site_and_an_emptied_sweep` proves a helper
-  split is found and an emptied sweep fails.
+  **ENC-1-RESIDUE-1 ruling-121 round (2026-10-17):** the round-2 census
+  (`every_stage_then_commit_site_sweeps_staged_files_on_a_keyed_refusal`, its scanner and
+  `the_census_finds_a_helper_split_site_and_an_emptied_sweep`) is gone. A stage-then-commit
+  site that does not go through `../write/staged_commit.rs` now fails to compile under
+  `make rust-panic-ban`: `clippy.toml` disallows `Transaction::commit` and the fork's
+  file-adding action methods outside that module. The three ENC-CTAS-REPLACE-1 functions
+  (`ctas.rs::finish_ctas_staged_commit`, `create_table.rs::execute_staged_create` and
+  `publish_staged_with_summary`) carry the one `#[expect]` outside it, naming that card.
+  `function_bodies` stays for the item-5 pin below.
   `the_catalog_provider_installs_the_encryption_guard_once` (ruling 97, 2026-10-15,
   replacing `session_registration_installs_the_encryption_guard`) holds the installer
   spelling `EncryptionGuardCatalog::install(` inside `ReparkCatalogProvider::try_new` and

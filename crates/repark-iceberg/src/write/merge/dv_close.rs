@@ -11,12 +11,10 @@ use iceberg::transaction::RowDeltaAction;
 use super::KnownPartitions;
 use super::iceberg_err;
 use crate::write::concurrency::WriteConcurrency;
-use crate::write::encryption::written_file_paths;
 use crate::write::position_delete::PositionDeletePair;
 
 pub(super) struct PreparedDeletes {
     pub referenced: HashSet<String>,
-    pub abort_paths: Vec<String>,
     pub arm_validate_deleted_files_on_delete: bool,
     pub(super) kind: PreparedKind,
 }
@@ -49,10 +47,8 @@ pub(super) async fn prepare_row_delta_deletes(
                 staging,
             )
             .await?;
-            let abort_paths = written_file_paths(&delete_files);
             Ok(PreparedDeletes {
                 referenced,
-                abort_paths,
                 arm_validate_deleted_files_on_delete: false,
                 kind: PreparedKind::PositionDeletes(delete_files),
             })
@@ -61,21 +57,13 @@ pub(super) async fn prepare_row_delta_deletes(
             if pairs.is_empty() {
                 return Ok(PreparedDeletes {
                     referenced: HashSet::new(),
-                    abort_paths: Vec::new(),
                     arm_validate_deleted_files_on_delete: true,
                     kind: PreparedKind::PositionDeletes(Vec::new()),
                 });
             }
             let plan = plan_deletion_vectors(table, pairs, known_partitions, snapshot_id).await?;
-            let abort_paths = plan
-                .close
-                .added
-                .iter()
-                .map(|file| file.file_path().to_string())
-                .collect();
             Ok(PreparedDeletes {
                 referenced: plan.referenced,
-                abort_paths,
                 arm_validate_deleted_files_on_delete: true,
                 kind: PreparedKind::DeletionVectors(plan.close),
             })
@@ -96,10 +84,15 @@ impl PreparedDeletes {
         }
     }
 
-    pub(super) fn apply(self, action: RowDeltaAction) -> RowDeltaAction {
+    pub(super) fn into_row_delta(self, action: RowDeltaAction) -> (RowDeltaAction, Vec<DataFile>) {
         match self.kind {
-            PreparedKind::PositionDeletes(files) => action.add_deletes(files),
-            PreparedKind::DeletionVectors(close) => apply_close(action, close),
+            PreparedKind::PositionDeletes(files) => (action, files),
+            PreparedKind::DeletionVectors(close) if close.removed.is_empty() => {
+                (action, close.added)
+            }
+            PreparedKind::DeletionVectors(close) => {
+                (action.remove_deletes_many(close.removed), close.added)
+            }
         }
     }
 }
@@ -163,14 +156,4 @@ async fn scanned_manifest_list(
         .await
         .map(Some)
         .map_err(iceberg_err)
-}
-
-fn apply_close(mut action: RowDeltaAction, close: DvContainerClose) -> RowDeltaAction {
-    if !close.added.is_empty() {
-        action = action.add_deletes(close.added);
-    }
-    if !close.removed.is_empty() {
-        action = action.remove_deletes_many(close.removed);
-    }
-    action
 }

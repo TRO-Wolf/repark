@@ -462,7 +462,7 @@ pub async fn commit_stamp_only(
         .map_err(|error| masked(&error))?;
     let tx = claimed.stamp_transaction(tx)?;
     let fenced = AppendFence::install(catalog, &claimed);
-    let committed = match tx.commit(fenced.as_ref()).await {
+    let committed = match crate::write::commit_unstaged(tx, fenced.as_ref()).await {
         Ok(committed) => committed,
         Err(error) if error.kind() == ErrorKind::CommitStateUnknown => {
             return resolve_unknown_outcome(catalog, table, stamp, Some(&operation_id)).await;
@@ -636,18 +636,16 @@ impl SiteStamp {
         }
     }
 
-    pub(crate) async fn commit_append(
+    pub(crate) fn fence_outcome(
         &self,
-        tx: Transaction,
-        catalog: &Arc<dyn Catalog>,
+        outcome: iceberg::Result<Table>,
     ) -> datafusion::error::Result<iceberg::Result<Table>> {
-        let result = tx.commit(self.fenced(catalog).as_ref()).await;
-        match (&self.claimed, result) {
+        match (&self.claimed, outcome) {
             (Some(_), Err(error)) => match append_fence::refusal_of(&error) {
                 Some(refusal) => Err(microbatch_error(refusal)),
                 None => Ok(Err(error)),
             },
-            (_, result) => Ok(result),
+            (_, outcome) => Ok(outcome),
         }
     }
 

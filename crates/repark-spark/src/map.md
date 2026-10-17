@@ -809,6 +809,13 @@ pins: rp-4-fork-repin/C-005, C-006
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` declares `mod changelog;` — the changelog row
   transforms live under `call/` because they are `create_changelog_view`'s, and because
   `src/lib.rs` holds a 150-line ceiling. pins: ice-changelog-1/C-011, C-012, C-013
+- `call.rs`, `table_props_ddl.rs`, `create_table.rs`, `ctas.rs` — **ENC-1-RESIDUE-1, owner
+  ruling 121 (2026-10-17):** every Iceberg commit these files make that adds no staged file
+  goes through `repark_iceberg::write::commit_unstaged` (`clippy.toml` disallows
+  `Transaction::commit` outside `repark-iceberg/src/write/staged_commit.rs`). The two
+  schema-only staged creates in `create_table.rs` drop a no-op `add_data_files(Vec::new())`.
+  `ctas.rs::finish_ctas_staged_commit` carries the one `#[expect(clippy::disallowed_methods)]`
+  for card ENC-CTAS-REPLACE-1: its staged publish stays outside the swept commit.
 - `call.rs` — **IPI-05 (2026-09-21):** `publish_changes` joins `SUPPORTED_PROCEDURES` (in
   alphabetical place) with a dispatch arm into `branch_ops::execute_publish_changes`, so the WAP
   publish is a procedure rather than one of the names the unknown-procedure refusal lists.

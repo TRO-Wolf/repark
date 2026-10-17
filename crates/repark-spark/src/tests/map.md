@@ -99,10 +99,43 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   door beside a fresh staged file; after the keyed refusal the referenced file still
   reads back its one row, the fresh one is gone, and the table reads. The streaming
   `append_staged_with_options` door takes no file list, so it has no row here.
+- `enc_1_own_set.rs` — **ENC-1-RESIDUE-1, owner ruling 121 (2026-10-17):** what a refused
+  keyed commit may delete is only what the attempt wrote. Each pin runs on v2 and v3
+  through every public door that takes a file list (`file_door`, twelve doors) and hands
+  the door the attempt's own staged files beside a file it did not write:
+  `a_stale_view_keeps_the_file_a_concurrent_commit_made_current` (R1: a handle older than
+  the snapshot that added the file; the file stays and `SELECT *` answers);
+  `a_referenced_file_handed_as_a_file_url_survives` (R2: the `file://` spelling of a file
+  only the first snapshot references; `VERSION AS OF` answers);
+  `files_only_an_older_snapshot_or_a_branch_references_survive` (R4: both handed through
+  a handle older than either snapshot, on a table with `write.overwrite.isolation-level`
+  `none` so the overwrite doors reach the keyed refusal instead of a conflict on the
+  stale base; the old version and `branch_b` answer);
+  `a_concurrent_writers_staged_files_survive_our_refused_commit` (another writer's staged,
+  uncommitted files in `data/`, half handed to the door and half not, plus the streaming
+  `append_staged_with_options` door; the listing ends exactly as before our own staging).
+  The own files go whenever the refusal is the keyed one. The three append doors refuse an
+  already-current file with `DataInvalid` first (out of scope), and the pin then checks only
+  that nothing foreign went. Every pin was red at the merge commit `63aac530`.
+- `enc_1_unknown.rs` — **ENC-1-RESIDUE-1, owner rulings 115 and 121 (2026-10-17):** the
+  ambiguous outcome. `LostReply` wraps the guarded catalog and loses the reply to the
+  door's `update_table`: `a_lost_reply_whose_snapshot_lands_sweeps_nothing` lands the held
+  commit and the key only after the fork's own read-back (so RePark's fresh load is the one
+  that finds the attempt's `engine.operation-id`), and every staged file stays;
+  `a_lost_reply_whose_snapshot_never_lands_sweeps_only_unreferenced_own_files` keys the
+  table and lets another attempt commit one own file under its `file://` spelling, so that
+  file stays and the other own files go; `a_lost_reply_on_an_unkeyed_table_sweeps_nothing`
+  is the unkeyed control. All twelve file doors and the streaming door, v2 and v3; the door
+  returns the unknown outcome each time.
 - `enc_1_registry.rs` — **ENC-1-RESIDUE-1 item 5 (2026-10-15, ruling 97):** the
   `CatalogRegistry::insert` entry-check pin: an unguarded catalog inserted straight into
   the registry still refuses a keyed INSERT through `crate::execute` with the one text
-  and writes no Parquet.
+  and writes no Parquet. Since the ruling-121 round (2026-10-17, re-verifier finding R6)
+  the session context holds the fork's own `IcebergCatalogProvider` schemas over the raw
+  catalog, re-hosted in DataFusion's `MemoryCatalogProvider` so the Spark door's view
+  wrappers can register, not `register_iceberg_catalog` (which now guards), and a control INSERT
+  straight through DataFusion stores a file afterwards, so the refusal can only be the
+  entry check's; the pin goes red with that check removed.
 - `enc_1_paths.rs` — **ENC-1-RESIDUE-1 fix round (2026-10-15, ruling 96 F6):** compile pin
   naming `repark_iceberg::write::append::commit_append`, the same item as
   `write::commit_append`.

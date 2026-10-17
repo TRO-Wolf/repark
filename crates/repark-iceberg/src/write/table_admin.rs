@@ -20,7 +20,7 @@ pub async fn set_table_properties<S: BuildHasher>(
         action = action.set(key.clone(), value.clone());
     }
     let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    crate::write::commit_unstaged(tx, catalog).await?;
     Ok(())
 }
 
@@ -40,7 +40,7 @@ pub async fn unset_table_properties(
         action = action.remove(key.clone());
     }
     let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    crate::write::commit_unstaged(tx, catalog).await?;
     Ok(())
 }
 

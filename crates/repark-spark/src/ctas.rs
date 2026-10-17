@@ -325,6 +325,7 @@ pub(crate) async fn execute_ctas(
     ctx.read_empty()
 }
 
+#[expect(clippy::disallowed_methods, reason = "ENC-CTAS-REPLACE-1")]
 async fn finish_ctas_staged_commit(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,

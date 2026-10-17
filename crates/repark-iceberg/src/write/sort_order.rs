@@ -43,7 +43,7 @@ pub async fn apply_write_order(
             .set(DISTRIBUTION_MODE_PROPERTY.to_string(), mode.to_string())
             .apply(tx)?;
     }
-    tx.commit(catalog).await?;
+    crate::write::commit_unstaged(tx, catalog).await?;
     Ok(())
 }
 
