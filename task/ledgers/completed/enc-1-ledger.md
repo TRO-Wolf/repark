@@ -1,3 +1,227 @@
+> **Errata (2026-10-17, ENC-1-RESIDUE-1 ruling-121 round, Opus 5.5 xhigh, PR #1071):** the
+> scoped re-verifier failed `02c36ef0` (R1 to R4 FAIL, R5 to R7 low). The round merged
+> `origin/main` `56057f65` first (merge `63aac530`; the release-notes draft kept every line of
+> both sides and the two map rows for it became one).
+>
+> Owner ruling 121, 2026-10-16
+>
+> ```
+> 121: (a), with a different fix from the checker's. The clean-up after a
+>      refused keyed commit deletes only the paths this operation wrote in
+>      this attempt. No table view, stale or fresh, takes part in choosing
+>      that set: "unreferenced" is orphan removal and would delete a
+>      concurrent writer's staged files. The fresh catalog load and the
+>      canonical-path comparison stay for one case only, ruling 115's
+>      ambiguous outcome: if our own snapshot id is found, sweep nothing.
+>      The census becomes a type the compiler checks on the commit path;
+>      no text scan of any spelling.
+>      Pins, each red on today's head: a stale view with a concurrent
+>      commit, the current file survives; the same file spelled as a
+>      file:// URL; a file referenced only by an older snapshot and one
+>      only by a branch; a concurrent writer's staged file surviving our
+>      refused commit.
+>      One round on Opus xhigh, after 106. Not green parks it under (b).
+> ```
+>
+> Ruling 115, which 121 points to:
+>
+> ```
+> 115: (a), keep. A lost reply on a closed connection is "may have been
+>      sent": read the table back for our own snapshot id before any
+>      retry. The card lists the ambiguous outcomes (connection closed
+>      before reply, timeout, server error or unknown) against the
+>      definitive ones (a CAS conflict, which takes the re-base path with
+>      the same check). The id checked is the one chosen before sending.
+> ```
+>
+> **Step 0, the sites at the merge `63aac530`.** Each swept site held one list, built by
+> `written_file_paths` from the files it committed; the 12 file-taking doors wrote none of them.
+>
+> | Site | File | Function | The set it held |
+> |---|---|---|---|
+> | 1 | `repark-iceberg/src/write/append_commit.rs` | `commit_append` | line 20, `written_file_paths(&new_files)`: the caller's files |
+> | 2 | `repark-iceberg/src/write/commit_target.rs` | `commit_append_to` | line 105, the caller's files |
+> | 3 | `repark-iceberg/src/write/write_options.rs` | `append_staged_with_options` | line 415, the files its own `stage_*` call wrote at lines 391, 397 or 411 |
+> | 4 | `repark-iceberg/src/write/write_options.rs` | `commit_append_with_summary` | line 445, the caller's files |
+> | 5 | `repark-iceberg/src/write/write_options.rs` | `commit_replace_write_with_summary` | line 469, the caller's files |
+> | 6 | `repark-iceberg/src/write/write_options.rs` | `commit_overwrite_replace_all_with_summary` | line 519, the caller's files |
+> | 7 | `repark-iceberg/src/write/write_options.rs` | `commit_overwrite_by_row_filter_with_summary` | line 587, the caller's files |
+> | 8 | `repark-iceberg/src/write/write_options.rs` | `commit_replace_partitions_with_summary` | line 652, the caller's files |
+> | 9 | `repark-iceberg/src/write/overwrite_commit.rs` | `commit_overwrite_replace_all_to` | line 25, the caller's files |
+> | 10 | `repark-iceberg/src/write/overwrite_commit.rs` | `commit_replace_write` | line 60, the caller's files |
+> | 11 | `repark-iceberg/src/write/partition_overwrite.rs` | `commit_overwrite_by_row_filter_to` | line 368, the caller's files |
+> | 12 | `repark-iceberg/src/write/partition_overwrite.rs` | `commit_replace_partitions_to` | line 410, the caller's files |
+> | 13 | `repark-iceberg/src/write/overwrite_filter.rs` | `commit_overwrite_by_filter_with_summary` | line 93, the caller's files |
+> | M1 | `repark-iceberg/src/write/merge/snapshot_commit.rs` | `commit_overwrite_on_ref` | line 202, the `new_files` its merge or DML executor wrote |
+> | M2 | `repark-iceberg/src/write/merge/snapshot_commit.rs` | `commit_row_delta_kind_on_ref` | line 414 (`data_files`) and line 432 (`prepared.abort_paths`, the delete files `dv_close.rs` wrote) |
+> | X1 | `repark-spark/src/ctas.rs` | `finish_ctas_staged_commit` | lines 339 and 353, the files its own staging wrote; no sweep (ENC-CTAS-REPLACE-1) |
+> | X2 | `repark-sql/src/create_table.rs` | `execute_staged_create` | line 265, the files `stage_query` wrote; no sweep (ENC-CTAS-REPLACE-1) |
+> | X3 | `repark-sql/src/create_table.rs` | `publish_staged_with_summary` | its `data_files` parameter, from X2; no sweep (ENC-CTAS-REPLACE-1) |
+>
+> So no door could name "the paths this operation wrote" from what it held. The fix records
+> them where they are written: the four data-file writer builders wrap their location
+> generator (`OwnLocations`), and the path of every file a RePark writer opens enters a
+> process-wide unclaimed set. A door's own set is the handed files in that set
+> (`StagedFiles::claimed`), taken out so no second attempt can claim them; the merge adds
+> the delete files it wrote in the same call (`with_written_deletes`). No table is read.
+> The change stays inside `repark-iceberg`, `repark-spark` and `repark-sql`.
+>
+> **Ruling 115's ambiguous outcome, measured at fork rev `076d5f98`.** `Transaction::commit`
+> (`crates/iceberg/src/transaction/mod.rs`) never retries `ErrorKind::CommitStateUnknown`; its
+> match arm `Err(error) if error.kind() == crate::ErrorKind::CommitStateUnknown =>
+> tx.reconcile_unknown_commit_outcome(catalog, error).await` reloads the table and looks for the
+> snapshot ids the attempt put in its `TableCommit` (`latest_attempt_snapshot_ids`, captured
+> before `update_table`). Found: `Ok(reloaded)`, so no error reaches RePark. Not found after a
+> good read (`CommitStatus::Failure`) or no read (`CommitStatus::Unknown`): `Err(original_error)`,
+> the `iceberg::Error` of kind `CommitStateUnknown`, which RePark's `commit_err` wraps as
+> `CommitStateUnknownError` (`DataFusionError::External`). The `enc_1_unknown.rs` pins drive
+> this through `LostReply` on every door; the door returns that error each time
+> (`is_commit_state_unknown`). The ids are private to the fork: no action sets a snapshot id,
+> and `TableCommit`'s builder is `pub(crate)` with no non-consuming accessor for its updates.
+> So RePark's own read-back identifies the attempt by the `engine.operation-id` it minted before
+> sending and stamped into the snapshot summary (`commit_error::operation_id_and_summary`,
+> `write_options::summary_with_extras`). The orchestrator's reading holds in this form: on that
+> error, one fresh load; a table that is not keyed, cannot be read, or carries a snapshot with
+> the attempt's operation id sweeps nothing; a keyed table without it loses the attempt's own
+> files that no manifest of any snapshot references, paths compared with `file:` and `file://`
+> stripped. The keyed scope is what keeps ICE-COMMIT-UNKNOWN-1's pins
+> (`merge_*_commit_unknown_leaves_written_files_on_disk`, unkeyed tables) green: unscoped, the
+> reading would delete a possibly committed file on every unkeyed table. Every definitive
+> refusal uses the own set alone: the keyed refusal on the 13 doors (any other definitive error
+> hands the set back for a retry, as before), and every definitive error on the two merge sites
+> (the merge abort, as before).
+>
+> **The type.** `crates/repark-iceberg/src/write/staged_commit.rs`: `StagedFiles::claimed`,
+> `with_written_deletes` and `stage` add the files to the fork action inside the module and hold
+> the transaction in a `StagedCommit`; `commit` (doors) and `commit_or_abort` (merge) are the
+> only ways out. `StagesFiles::with_files` takes a token only the module can build.
+> `commit_unstaged` is every other Iceberg commit; a transaction outside the module cannot carry
+> a staged file. `clippy.toml` disallows `iceberg::transaction::Transaction::commit` and the
+> fork's file-adding methods (`FastAppendAction`, `MergeAppendAction`, `RowDeltaAction`
+> `add_data_files`; `OverwriteFilesAction`, `ReplacePartitionsAction` `add_file` / `add_files`;
+> `RowDeltaAction::add_deletes` / `add_delete_file_with_sequence_number`; the five
+> `RewriteFilesAction` adders; `StagedTableTransaction::add_data_files`); `make rust-panic-ban`
+> denies them on lib and bin targets. Outside the module the one `#[expect]` is on the three
+> ENC-CTAS-REPLACE-1 functions. The census test, its scanner and the helper-split test are gone;
+> `function_bodies` stays for the item-5 pin.
+>
+> **R3's five escapes** (the re-verifier's `w/escapes/` files, each dropped into the tree as a
+> `pub mod`, checked with `make rust-panic-ban`'s flags on its crate, then removed; not
+> committed):
+>
+> | Escape | Where | Result |
+> |---|---|---|
+> | Trait method in a second file (`rv_publish_trait.rs` + `rv_trait_escape.rs`) | `repark-spark/src` | `error: use of a disallowed method iceberg::transaction::Transaction::commit` at `rv_publish_trait.rs:11:14`; `error: use of a disallowed method iceberg::transaction::FastAppendAction::add_data_files` at `rv_trait_escape.rs:20:10`; `could not compile repark-spark (lib) due to 2 previous errors` |
+> | UFCS `Transaction::commit(tx, catalog)` (`rv_ufcs_escape.rs`) | `repark-spark/src` | `FastAppendAction::add_data_files` at `rv_ufcs_escape.rs:18:10`; `Transaction::commit` at `rv_ufcs_escape.rs:21:5`; 2 errors |
+> | Helper typed `iceberg::transaction::Transaction` (`rv_qualified_escape.rs`) | `repark-iceberg/src/write` | `Transaction::commit` at `rv_qualified_escape.rs:13:8`; `FastAppendAction::add_data_files` at `rv_qualified_escape.rs:25:10`; 2 errors |
+> | Singular `add_delete_file` (`rv_textonly_singular_delete.rs`) | `repark-iceberg/src/write` | `error[E0599]: no method named add_delete_file found for struct iceberg::transaction::RowDeltaAction` at `:17:10`: the pinned fork has no such method, so this file never compiled (it reached only the old text scan). Its compiling spelling, `.add_deletes(vec![delete_file])`: `RowDeltaAction::add_deletes` at `:17:10` and `Transaction::commit` at `:20:8`, 2 errors |
+> | Nested `pub mod m { impl S { fn … } }` (`rv_textonly_nested_impl.rs`) | `repark-iceberg/src/write` | `FastAppendAction::add_data_files` at `rv_textonly_nested_impl.rs:23:18`; `Transaction::commit` at `:26:16`; 2 errors |
+>
+> **Pins** (in the fix commit; each on v2 and v3; each red at the merge `63aac530` before any
+> product change, first lines per version pasted, warehouse paths shortened):
+>
+> - `enc_1_own_set.rs::a_stale_view_keeps_the_file_a_concurrent_commit_made_current` (R1, 12
+>   file doors): `v2 commit_replace_write_with_summary: <warehouse>/sales/t/data/cat=y/01a14982-d111-…-00000.parquet is gone: Error during planning: No files found at file://<warehouse>/sales/t/data/cat=y/01a14982-d111-…`;
+>   `v3 commit_replace_write_with_summary: … is gone`, and `SELECT * FROM ice.sales.t fails: … DataInvalid => Failed to open file … No such file or directory`. 36 fault lines.
+> - `enc_1_own_set.rs::a_referenced_file_handed_as_a_file_url_survives` (R2, 12 file doors):
+>   `v2 commit_append: <warehouse>/sales/t/data/cat=x/01a14982-ce12-…-00000.parquet is gone`,
+>   `v2 commit_append: SELECT * FROM ice.sales.t VERSION AS OF 2718947284376571448 fails: … Failed to open file …`; `v3 commit_append: … is gone`. 48 fault lines.
+> - `enc_1_own_set.rs::files_only_an_older_snapshot_or_a_branch_references_survive` (R4, 12
+>   file doors): `v2 commit_append: <warehouse>/sales/t/data/cat=y/01a14982-ce52-…-00000.parquet is gone`,
+>   `v2 commit_append: SELECT * FROM ice.sales.t.branch_b fails: … Failed to open file <warehouse>/sales/t/data/cat=q/…`; `v3 commit_append: … is gone`. 54 fault lines. (The pin gained
+>   `write.overwrite.isolation-level = 'none'` after this run, so the overwrite-family doors reach
+>   the keyed refusal instead of a conflict on the stale base; the revert check below is on the
+>   committed pin.)
+> - `enc_1_own_set.rs::a_concurrent_writers_staged_files_survive_our_refused_commit` (12 file
+>   doors plus `append_staged_with_options`; another writer's files copied into `data/`, half
+>   handed to the door, half not): `v2 commit_append: <warehouse>/sales/t/data/cat=w/05efa0e2-…-00000-concurrent.parquet is gone`,
+>   `v2 commit_append: deleted [… -concurrent.parquet, … -concurrent.parquet], left behind []`;
+>   `v3 commit_append: … -concurrent.parquet is gone`. 72 fault lines. Red only through the
+>   handed half: today's head deletes every handed file no snapshot of the held handle
+>   references; the half not handed survives on head and kills the `data/`-listing mutant.
+> - `enc_1_unknown.rs::a_lost_reply_whose_snapshot_never_lands_sweeps_only_unreferenced_own_files`
+>   (12 file doors plus the streaming door): `v2 commit_append NeverLands: unreferenced <warehouse>/sales/t/data/cat=x/867603ab-…-00000.parquet was left behind`;
+>   `v3 commit_append NeverLands: unreferenced <warehouse>/sales/t/data/cat=x/8998846f-…-00000.parquet was left behind`. 74 fault lines.
+>   Its two siblings were green on the merge, as head swept nothing on this error:
+>   `a_lost_reply_whose_snapshot_lands_sweeps_nothing` (the attempt's snapshot lands after the
+>   fork's own read-back, so RePark's read-back is the one that finds it) and
+>   `a_lost_reply_on_an_unkeyed_table_sweeps_nothing`.
+>
+> **Still green, unchanged:** item 1 (`enc_1_sweep.rs`, 13 doors), the six `enc_1_referenced.rs`
+> families and the four merge pins in `snapshot_commit.rs`; ruling 97's door pins
+> (`iceberg_guard_registration.rs`) and `python/repark/tests/test_enc_1.py`; F4/109
+> (`keyed_refusal_names_an_undeletable_staged_file_through_engine_err`); F5
+> (`the_catalog_provider_installs_the_encryption_guard_once` and the item-5 pins); F6
+> (`enc_1_paths.rs`); ICE-COMMIT-UNKNOWN-1's `merge_*_commit_unknown_*` pins.
+>
+> **The re-verifier's low findings.** R5: the ruling-109 warning pin is now the one test of its
+> own binary (`crates/repark-iceberg/tests/enc_1_sweep_warning.rs`) and installs the only
+> subscriber with `set_global_default`; 60 runs of that binary, 60 green. R6: the
+> `CatalogRegistry::insert` pin now serves the INSERT from the fork's unguarded provider and
+> proves it with a control INSERT that stores; with both registry entry checks the INSERT passes removed (`router.rs:469` and the
+> passthrough planner's `spark_ast.rs:277`) the pin goes red; with only the router's removed
+> it stays green, because the planner's check refuses first with the same text (mutants MR6b,
+> MR6). R7: the card's
+> ruling-72 item-5 line names `the_catalog_provider_installs_the_encryption_guard_once`.
+>
+> **Mutants** (each a source edit at the fix commit, the repark-iceberg and repark-spark lib
+> tests rebuilt, the ENC-1 modules run, the file restored):
+>
+> | Mutant | Edit | Result |
+> |---|---|---|
+> | MA | the keyed sweep lists `data/` and deletes every file no snapshot of the held table references, in place of the attempt's own set | killed: `a_concurrent_writers_staged_files_survive_our_refused_commit`, `a_stale_view_keeps_the_file_a_concurrent_commit_made_current`, `files_only_an_older_snapshot_or_a_branch_references_survive`, and the module tests `keyed_refusal_sweep_deletes_only_the_own_path`, `keyed_refusal_names_a_file_it_could_not_delete` |
+> | MB | the ambiguous outcome is swept like a refusal (no read-back) | killed: `a_lost_reply_whose_snapshot_lands_sweeps_nothing`, `a_lost_reply_on_an_unkeyed_table_sweeps_nothing`, `a_lost_reply_whose_snapshot_never_lands_…`, and ICE-COMMIT-UNKNOWN-1's `merge_overwrite_commit_unknown_leaves_written_files_on_disk`, `merge_row_delta_commit_unknown_leaves_written_files_on_disk` |
+> | MB2 | the ambiguous outcome is never read back (nothing swept) | killed: `a_lost_reply_whose_snapshot_never_lands_sweeps_only_unreferenced_own_files` |
+> | MC | the read-back looks for a fresh id instead of the one sent | survives, equivalent: when the attempt's snapshot has landed it references every own file, so the next step (keep any own file a manifest names) keeps them all and nothing is deleted; when it has not landed the two agree. The id check saves the manifest reads; it chooses no different file. No file the attempt did not write is deleted. |
+> | MD | the path comparison is textual (`canonical` returns the path) | killed: `a_lost_reply_whose_snapshot_never_lands_…` (the own file another attempt committed as `file://…` is deleted and `SELECT *` fails), and the module tests `a_file_url_and_a_bare_path_compare_equal`, `the_read_back_names_only_own_paths_a_snapshot_references` |
+> | ME | `commit_append` stages with `merge_append().add_data_files(…)` and calls `tx.commit(…)` itself (one escape spelling inside a door) | killed by the gate: `make rust-panic-ban` flags `MergeAppendAction::add_data_files` at `append_commit.rs:23:10` and `Transaction::commit` at `:27:22`; and by nine pins (item 1's append sweep, F4's `engine_err` pin, R2, R4, the concurrent writer, the never-lands leg, the append referenced pin and the two merge referenced pins, whose fixture commits through `commit_append`) |
+> | MF | the own set is every handed file (no record) | killed: R1, R2, R4, the concurrent writer, the six `enc_1_referenced.rs` families, both merge referenced pins, two module tests |
+> | MG | the writers record nothing | killed: 22 tests, among them all seven `enc_1_sweep.rs` item-1 pins and the four merge keyed pins |
+> | REV | the sweep code of `02c36ef0`: the own set is the handed list, minus the paths the held table's snapshots reference, compared as exact strings | the revert check, below |
+> | MH2 | the staged CTAS publish keeps its files claimable (`forget_staged_files` removed from `ctas.rs`) | killed: `a_file_a_staged_create_published_survives_a_refused_commit` (`v2 commit_replace_write_with_summary: <warehouse>/sales/t/data/cat=x/87b01aae-…-00000.parquet is gone`, `SELECT * FROM ice.sales.t fails: … Failed to open file …`) |
+> | MR6 | `router.rs`'s `refuse_encrypted_write_target` call removed | the R6 pin stays green: the passthrough planner's own check (`spark_ast.rs:277`, `refuse_encrypted_write` on the registry handle) refuses first with the same text |
+> | MR6b | both entry checks the INSERT passes removed (`router.rs:469` and `spark_ast.rs:277`) | killed: `registry_insert_of_an_unguarded_catalog_refuses_a_keyed_insert_at_its_entry_check` panics at `the keyed insert refuses: [RecordBatch { … name: "count" … }]`: the INSERT stored |
+>
+> No non-equivalent survivor; no mutant survives that deletes a file the attempt did not write.
+>
+> **Found by mutant ME, fixed in the round (commit `99c4d8ad`):** a path that publishes
+> RePark-written files without claiming them leaves them claimable, so a door later handed
+> such a committed file would count it as its own. The only such paths are the three
+> ENC-CTAS-REPLACE-1 functions; `write::forget_staged_files` now takes their files out of the
+> record when they publish (`ctas.rs`, and `create_table/query_files.rs::published`, split
+> out of `create_table.rs` to keep it under its 1000-line ceiling). Pin
+> `a_file_a_staged_create_published_survives_a_refused_commit` (v2, v3, every file door),
+> killed mutant MH2.
+>
+> **Revert check** (mutant REV, the committed pins, sweep code of `02c36ef0`): R1, R2 and R4 red, with the
+> concurrent writer and the never-lands leg (`17 passed; 5 failed` in the four Spark
+> modules). R1: `v2 commit_replace_write_with_summary: <warehouse>/sales/t/data/cat=y/01a14a44-e161-…-00000.parquet is gone: Error during planning: No files found at file://<warehouse>/…`;
+> `v3 commit_replace_write_with_summary: … cat=y/01a14a44-ed40-…-00000.parquet is gone` (36 fault
+> lines). R2: `v2 commit_append: <warehouse>/sales/t/data/cat=x/01a14a44-de5d-…-00000.parquet is gone`;
+> `v3 commit_append: … cat=x/01a14a44-eafc-…-00000.parquet is gone` (48). R4:
+> `v2 commit_append: <warehouse>/sales/t/data/cat=y/01a14a44-de94-…-00000.parquet is gone`;
+> `v3 commit_append: … cat=y/01a14a44-f3fb-…-00000.parquet is gone`, with `branch_b` and
+> `VERSION AS OF` reads failing on every door (96).
+>
+> **Gates** (on the fix commits; the docs commit changes no code):
+>
+> | Gate | Result |
+> |---|---|
+> | `cargo test --no-fail-fast -p repark-iceberg -p repark-core -p repark-spark -p repark-sql`, head | 6037 passed, 0 failed, 11 ignored, 62 binaries, exit 0 |
+> | the same on `origin/main` `56057f65` | 5988 passed, 1 failed, 11 ignored, 61 binaries, exit 101: `repark-core` `microbatch::lifecycle_tests::two_sessions_on_one_sink_wait_for_the_scope` (`the query ends within the bound: Elapsed(())`, a timing bound; green on head and on the merge) |
+> | the same on the merge `63aac530`, before any fix | 6025 passed, 0 failed, 11 ignored, 61 binaries, exit 0 |
+> | never worse | no test green on `origin/main` and red on head (head has no failure); head passes 6037 against main's 5988 |
+> | `make rust-clippy` | exit 0 |
+> | `make rust-panic-ban` | exit 0 |
+> | `cargo fmt --all --check` | exit 0 |
+> | `scripts/check_rust_file_size.sh` | 1227 files clean, exit 0 |
+> | the ruling-109 warning binary, 60 runs | 60 green |
+> | the comment gate (`comment_ban.py`, `origin/main` to `HEAD`) | `hits=0`, exit 0 |
+> | release module, clean tree | `maturin develop --release` (maturin 1.14.1) at `99c4d8ad`, `git status` empty before and after: exit 0; `_native.abi3.so` sha256 `f199328ee9a5ed8de24ad828122ea5a9f980701d8040232a2abd9795bed61909`, 230162896 bytes |
+> | `pytest python/repark/tests/test_enc_1.py` | 15 passed, exit 0 |
+> | `pytest python/repark/tests -k "enc or encrypt" -n 8` | 559 passed, 7 skipped, 17 xfailed, exit 0 |
+> | `make check-docs-links`, `check-ledger-grammar`, `spell-check`, `sync_map_md.py --check`, `check_map_md.sh --base origin/main` | exit 0 each |
+
 > **Errata (2026-10-15, ENC-1-RESIDUE-1 round 2, owner rulings 108 and 109):** F3 is
 > closed by the census in `crates/repark-iceberg/src/tests/enc_1_gate.rs`. The exception
 > rows are `repark-spark/src/ctas.rs::finish_ctas_staged_commit` and

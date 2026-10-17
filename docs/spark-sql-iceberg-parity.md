@@ -1749,6 +1749,15 @@ perfectly good read.
   pinned: the session error names the file, the micro-batch error keeps its class and
   text, the keyed-sweep warning carries the full path, and card
   MB-ENC-UNDELETED-FIELD-1 is parked under the streaming freeze.
+  **As of 2026-10-17 (owner ruling 121):** a refused keyed write deletes only the files the
+  attempt itself wrote, chosen without reading the table: a file a snapshot references, the
+  same file spelled as a `file://` URL, a branch's or an older snapshot's file and a
+  concurrent writer's staged file all survive. On ruling 115's ambiguous outcome a fresh
+  read decides: a keyed table with no snapshot of this attempt loses only the attempt's own
+  unreferenced files; otherwise nothing goes. The census is a type the compiler checks:
+  outside `repark-iceberg/src/write/staged_commit.rs` a staged file cannot join a commit
+  (`clippy.toml`, `make rust-panic-ban`), and the three ENC-CTAS-REPLACE-1 functions are
+  the named exception.
   Implementing envelope encryption stays fork work (GAP_MATRIX R130) and is not on the
   v1.0 slate.
 - **Divergence (2026-10-09, by ruling, owner can overturn):** the ruling's phrase "as Spark
@@ -1771,7 +1780,8 @@ perfectly good read.
   `CommitFailed`, not a keyed refusal); nothing removes the staged file. Result: an orphan unencrypted
   file under the keyed table's `data/`, referenced by no snapshot, so never served. Main behaves the
   same. Read in the code, not run. Owner ruling 108 (2026-10-15) names both doors; the census excepts
-  all three functions under this card.
+  all three functions under this card. Since owner ruling 121 (2026-10-17) the exception is an
+  `#[expect(clippy::disallowed_methods)]` on each of the three functions, naming this card.
 - **Apache Spark** — not measured.
 - **Card** — [ENC-CTAS-REPLACE-1](../task/roadmap/mid-term/enc-ctas-replace-1-card-2026-10-15.md)
   (2026-10-15, open, not scheduled). Retires when the staged files are removed on that failure, or the

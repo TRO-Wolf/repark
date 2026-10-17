@@ -739,7 +739,8 @@ declines it (a dated ruling in the intake, then the archive).
   before the key, the thirteen shapes whose clean refusal rests on entry checks, the textual gate and the
   caller-built catalog, and the Glue metadata-directory limit. Ruled: items 1 and 5 closed with pins, items 2, 3, 4 and 6 accepted.
   Round 2 (owner rulings 108 and 109, 2026-10-15): the F3 census is closed and F4 is accepted as pinned.
-  caller-built catalog, and the Glue metadata-directory limit. Each needs an owner call.
+  Ruling-121 round (2026-10-17): the sweep deletes only what the attempt wrote, ruling 115's ambiguous outcome reads
+  the table back once, and the census is a type `clippy.toml` holds (F1 and F3 rows say what holds).
 - [enc-ctas-replace-1-card-2026-10-15.md](enc-ctas-replace-1-card-2026-10-15.md) **card ENC-CTAS-REPLACE-1
   (2026-10-15, open, not scheduled, clerk under owner ruling 98 (a); ruling 108 names both doors):**
   a key landing between the staged load and the publish of `CREATE OR REPLACE TABLE … AS SELECT`

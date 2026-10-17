@@ -4,7 +4,7 @@
 
 **Round 2 (2026-10-15, owner ruling 108), verbatim:** "108: (a). ENC-CTAS-REPLACE-1 names both doors. execute_staged_create and publish_staged_with_summary go on the census exception list under that card, the census commits, round 2 is complete."
 
-**Status:** open. Not scheduled. Needs an owner call: close, or carve out. One defect, two spellings. The Spark SQL door is `crates/repark-spark/src/ctas.rs::finish_ctas_staged_commit`. The ANSI door is `crates/repark-sql/src/create_table.rs::execute_staged_create` and `publish_staged_with_summary`. The census excepts all three under this card.
+**Status:** open. Not scheduled. Needs an owner call: close, or carve out. One defect, two spellings. The Spark SQL door is `crates/repark-spark/src/ctas.rs::finish_ctas_staged_commit`. The ANSI door is `crates/repark-sql/src/create_table.rs::execute_staged_create` and `publish_staged_with_summary`. The census excepts all three under this card. Since owner ruling 121 (2026-10-17) the census is a type the compiler checks, and the exception is `#[expect(clippy::disallowed_methods, reason = "ENC-CTAS-REPLACE-1")]` on each of the three functions: they still add staged files and publish outside `crates/repark-iceberg/src/write/staged_commit.rs`.
 
 **Retires:** when the staged files are removed on that failure, or the publish refuses before staging, with a pin that a key landing mid-statement leaves no unencrypted file.
 

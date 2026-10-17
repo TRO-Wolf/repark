@@ -3,7 +3,9 @@
 **Date:** 2026-10-09. **Filed by:** Claude (Opus 5.5), ENC-1 fold 2, from the Opus re-verify of PR #1019 head `78349722`.
 
 **Status:** reopened 2026-10-15 by the verifier's FAIL of PR #1071 (F1 to F6) and owner
-rulings 96 and 97; round 2 closed the held cells under owner rulings 108 and 109.
+rulings 96 and 97; round 2 closed the held cells under owner rulings 108 and 109. The
+scoped re-verifier failed `02c36ef0` (R1 to R4); owner ruling 121 (2026-10-16) set the fix,
+and the ruling-121 round (2026-10-17) closes F1 and F3 again as below.
 Items 2, 3, 4 and 6 stay accepted in words. Items 1 and 5 are closed.
 
 **Retires:** when every item below is ruled (accepted in words, or closed by a change with a pin).
@@ -63,7 +65,8 @@ These refuse on a keyed table and are kept until the owner says otherwise: `CREA
    a directly-built catalog registered through `Session::register_iceberg_catalog`
    refuses exactly as a builder's catalog does
    (`session_registration_guards_a_directly_built_catalog`); the gate names the
-   registration entry (`session_registration_installs_the_encryption_guard`).
+   installer (`the_catalog_provider_installs_the_encryption_guard_once`, which replaced
+   `session_registration_installs_the_encryption_guard` in the fix round under ruling 97).
 6. **Accepted 2026-10-14.** A commit that moves a keyed table's metadata directory
    refuses on Glue, and that stays a documented refusal, with one acceptance cell to
    add when U-9's legs are built.
@@ -82,20 +85,35 @@ second copy. Three door pins: a keyed INSERT refuses and leaves no unencrypted f
 through each public entry. CatalogRegistry::insert keeps its entry-check pin. Same round
 as 96."
 
-- **Item 1, F1 (closed):** the sweep never deletes a file any snapshot references; pins
-  `enc_1_referenced.rs` (six public families) and the two merge pins in
-  `snapshot_commit.rs`.
+- **Item 1, F1 (closed; what holds since owner ruling 121, 2026-10-17):** the clean-up
+  after a refused keyed commit deletes only the files this attempt wrote: the handed files
+  RePark's writers recorded and no other attempt claimed, plus the delete files a merge
+  wrote in the same call. No table view chooses that set, so a file the table's current
+  snapshot references (seen through a stale handle), the same file spelled as a `file://`
+  URL, a file only an older snapshot or a branch references, and a concurrent writer's
+  staged file all survive. The fix round's referenced-file filter is gone. The one table
+  read left is ruling 115's ambiguous outcome: on a keyed table with no snapshot carrying
+  the attempt's `engine.operation-id`, only the own files no snapshot references go
+  (paths compared without the `file:` scheme); otherwise nothing is swept. Pins
+  `enc_1_own_set.rs`, `enc_1_unknown.rs`, `enc_1_referenced.rs`, `enc_1_sweep.rs` and the
+  four merge pins in `snapshot_commit.rs`.
 - **Item 1, F4 (accepted as pinned, owner ruling 109):** `engine_err` keeps the refusal's
   class and the " failed to delete staged file …" suffix (pin
   `keyed_refusal_names_an_undeletable_staged_file_through_engine_err`). The micro-batch
   error keeps its class and text. The keyed sweep's warning carries the full path of the
   file it could not delete. Card MB-ENC-UNDELETED-FIELD-1 is parked under the streaming
   freeze, not a later round.
-- **Item 1, F3 (closed, owner ruling 108):** the census by the commit call lists the 13
-  ruled sites and the two merge sites, and excepts
-  `repark-spark/src/ctas.rs::finish_ctas_staged_commit`,
+- **Item 1, F3 (closed; what holds since owner ruling 121, 2026-10-17):** the census is
+  a type the compiler checks. A staged file joins an action and a transaction commits
+  only inside `repark-iceberg/src/write/staged_commit.rs` (`StagedFiles`,
+  `StagedCommit`); `clippy.toml` disallows `Transaction::commit` and the fork's
+  file-adding action methods everywhere else, enforced by `make rust-panic-ban`. Every
+  other commit goes through `write::commit_unstaged`. The 13 ruled sites and the two merge
+  sites commit through the type; `repark-spark/src/ctas.rs::finish_ctas_staged_commit`,
   `repark-sql/src/create_table.rs::execute_staged_create` and
-  `::publish_staged_with_summary` under card ENC-CTAS-REPLACE-1 (one defect, two doors).
+  `::publish_staged_with_summary` carry the one `#[expect]` outside the module, under
+  card ENC-CTAS-REPLACE-1 (owner rulings 98 and 108). R3's five escape spellings fail
+  the gate; the text-scan census and its scanner are gone.
 - **Item 1, F6 (closed):** `write::append::commit_append` resolves again.
 - **Item 5 (closed):** the guard is installed once, in `ReparkCatalogProvider::try_new`;
   the session's registry holds the provider's guarded handle. Door pins, registry-handle
