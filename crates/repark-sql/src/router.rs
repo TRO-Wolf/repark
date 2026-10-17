@@ -8,6 +8,7 @@ use datafusion::sql::parser::Statement as DFStatement;
 use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement, TableObject};
 use repark_core::EngineContext;
 use repark_iceberg::write::insert_defaults;
+use repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate;
 
 use crate::{
     alter, create_table, guards, insert_arity, merge, ref_ddl, refusals, schema_ddl, sniff,
@@ -195,7 +196,7 @@ async fn execute_update_routed(
     sql: &str,
     statement: &Statement,
 ) -> Result<DataFrame> {
-    guards::refuse_dml_subquery_predicate(statement)?;
+    refuse_dml_subquery_predicate(statement, true)?;
     guards::refuse_mor_multi_spec_dml(cx, statement).await?;
     crate::update_cast::refuse_incompatible_update_cast(cx, statement).await?;
     execute_identity_or_delegate(cx, sql, statement).await
@@ -263,7 +264,7 @@ async fn execute_identity_or_delegate(
             return commit_identity_dml(cx, statement, allowed).await;
         }
     }
-    guards::refuse_dml_subquery_predicate(statement)?;
+    refuse_dml_subquery_predicate(statement, true)?;
     guards::refuse_mor_multi_spec_dml(cx, statement).await?;
     delegate(cx, sql, None, None).await
 }

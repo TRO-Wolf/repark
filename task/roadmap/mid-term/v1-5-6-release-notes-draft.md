@@ -110,6 +110,14 @@ the release PR to edit into the notes.
   table's field names in the table's order, where the batch cast paired it by a rule of its
   own. `INSERT OVERWRITE … PARTITION (…)` refuses such a struct the same way, where it stored
   by name (Spark stores it by position).
+- **`repark.sql()` refuses an `UPDATE` or `DELETE` whose `WHERE` holds a subquery, where it
+  wrote every row (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 106 (a), 2026-10-16).**
+  `IN`, `NOT IN`, `EXISTS`, `= (SELECT …)`, `= ANY (SELECT …)`, a correlated subquery, and a
+  subquery beside other conditions now raise the G3-E8 refusal, the ANSI door's text, and
+  nothing is written, whether the statement runs bare, under `PREPARE` (then `EXECUTE`), or
+  under `EXPLAIN ANALYZE`. A plain `EXPLAIN` of such a statement answers its plan. Before this release `UPDATE` rewrote every row and
+  `DELETE` emptied the table, and both reported success: `DELETE FROM t WHERE id IN (SELECT id
+  FROM s)` deleted all of `t`.
 
 Tables already written keep the values they hold; this release ships no migration.
 
@@ -165,8 +173,14 @@ Tables already written keep the values they hold; this release ships no migratio
 
 ## Known issues
 
-- **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue):** through `repark.sql()`, `UPDATE … WHERE col
-  IN (SELECT …)` or `= (SELECT …)` updates every row; use the Spark SQL session until it is fixed.
+- **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-17):** `repark.sql()` refuses
+  every `UPDATE` and `DELETE` whose `WHERE` holds a subquery, including the `IN`, `NOT IN` and
+  `EXISTS` forms the Spark SQL session answers with the matching rows, bare, under `PREPARE`
+  and under `EXPLAIN ANALYZE`; a plain `EXPLAIN` answers its plan. Run those statements through
+  the Spark SQL session until `repark.sql()` is routed through the ANSI door. On the Spark SQL
+  session the bare forms keep the matching rows, and `PREPARE` of such a statement, alone or
+  around `EXPLAIN ANALYZE`, now refuses with the same G3-E8 text instead of changing every row at
+  `EXECUTE`; `EXPLAIN ANALYZE` of the statement itself still writes there (EXPLAIN-DML-WRITE-1).
 - **EXPLAIN-DML-WRITE-1 (known issue, critical, 2026-10-17):** on the Spark SQL session and the ANSI
   door, `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE` performs the write, and so does the same
   statement run as `PREPARE` then `EXECUTE`. When its `WHERE` holds a subquery, either form changes

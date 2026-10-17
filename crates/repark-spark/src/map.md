@@ -2132,6 +2132,17 @@ pins: rp-4-fork-repin/C-005, C-006
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
   pins: rp-9-repin-f23/C-005
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139 (2026-10-17):**
+  `normalize.rs::refuse_dml_subquery_predicate_in_statement` keeps its allow-list exemption for
+  the top-level statement only, then refuses each `DELETE` and `UPDATE` that
+  `repark_iceberg::write::statement_writes::executed_writes` returns (through `PREPARE`, through a
+  sqlparser `EXPLAIN ANALYZE`, and a DML nested in a query), with no exemption, in the G3-E8 text.
+  Both repark-spark doors (the `SparkDialect` session door and the router API) reach it through
+  `execute_passthrough_inner`, so `PREPARE p AS DELETE … WHERE id IN (SELECT …)`, which `EXECUTE
+  p` used to run on DataFusion's DML planner over every row, refuses at `PREPARE`. DataFusion's own
+  `EXPLAIN ANALYZE` takes the `DfStatement::Explain` arm and never reaches the function; by
+  ruling 139 it stays with card EXPLAIN-DML-WRITE-1.
+  pins: repark-sql-update-subquery-where-1/C-025, C-027
   **ICE-LIST-NULL-2 (2026-09-19):** the plain-identity attach declines through
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection returns `None` to the fork DELETE path. Door battery:

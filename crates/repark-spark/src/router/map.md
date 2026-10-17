@@ -146,6 +146,12 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   reports the nested refusal, not the parser's error.
   A target that is not an Iceberg table passes through to the door, which answers as before.
   pins: ice-tsns-merge-wall-1/C-040, C-050, C-053
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a) (2026-10-17):** the walk over the
+  parsed statement, `executed_writes`, moved unchanged to
+  `repark_iceberg::write::statement_writes`, which `repark.sql()` also calls; this file calls it
+  from there. The moved walk also answers a `DELETE`, which this file's match ignores, and the
+  statement itself still comes first, so the `BY NAME` index and every answer stay as they were.
+  pins: repark-sql-update-subquery-where-1/C-021
 
 ## Pointers
 

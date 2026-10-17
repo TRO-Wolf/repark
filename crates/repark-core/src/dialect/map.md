@@ -24,6 +24,35 @@ and the `EngineContext` construction contract.
   `verbatim_override: None`; `EngineContext::new` defaults it the same way.
   pins: string-literal-escape-1/C-011
 
+- `tests.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)):**
+  `the_default_dialect_refuses_a_subquery_in_update_or_delete_where` runs `UPDATE` and
+  `DELETE` with `IN`, correlated `EXISTS` and `NOT IN` subqueries through a default
+  `ReparkSession` (no dialect installed) over a memory catalog: each refuses with the G3-E8
+  text and the rows read back as seeded. Red on main, where the first `UPDATE … IN` wrote
+  every row. Since the fix, `DataFusionDialect` intercepts this one statement class on purpose;
+  the passthrough pin's wording predates that, and its query is untouched.
+  pins: repark-sql-update-subquery-where-1/C-005
+  **Owner ruling 131 (b), 2026-10-16:** `the_default_dialect_refuses_an_explained_subquery_dml`
+  runs `EXPLAIN` and `EXPLAIN ANALYZE` (one `VERBOSE`) of a subquery-predicate `DELETE` and
+  `UPDATE` through a default session: each refuses, the rows held.
+  `the_unwrap_reaches_a_nested_explain` calls `refuse_dml_subquery_where` on `EXPLAIN ANALYZE
+  EXPLAIN DELETE …`, which the planner refuses first at the door ("Nested EXPLAINs are not
+  supported"), so only this test reaches the second level. Both red on `ff731179`.
+  pins: repark-sql-update-subquery-where-1/C-013, C-014
+  **Owner ruling 135 (a), 2026-10-17:** `seeded_default_session` creates `ice.ns.t` and `ice.ns.s`
+  through the catalog handle (`create_namespace`, `create_table`, `refresh_catalog_provider`,
+  then `INSERT`), and `assert_iceberg` fails unless the scan plan holds an `IcebergTableScan`;
+  every session pin checks the rows and the snapshot count before and after. The `EXPLAIN ANALYZE`
+  forms keep refusing in `the_default_dialect_refuses_an_explain_analyze_of_a_subquery_dml`;
+  `a_plain_explain_of_a_subquery_dml_answers_its_plan` takes the plain `EXPLAIN` forms, which
+  answer the plan; `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute` runs the four
+  `PREPARE` forms; `a_non_default_parser_dialect_still_refuses` is the MsSQL twin of P-M1.
+  `only_explain_analyze_reaches_the_statement_it_wraps` replaces the nested-`EXPLAIN` test: on the
+  parsed statement, `EXPLAIN ANALYZE` (at any depth, or inside `PREPARE`) reaches the `DELETE`, a
+  plain `EXPLAIN` does not. Red on the merge of main: the plain-`EXPLAIN`, `PREPARE` and rule
+  tests.
+  pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
