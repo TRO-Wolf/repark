@@ -145,3 +145,5 @@ Notes for the wire-up, in the operator's own runbook terms
   nightly wrote, including the gold models. Like the dbt step it runs
   unless the job was cancelled, so a red acceptance module still gets its
   tables cross-read.
+
+2026-10-15: wired in this PR with U-9's integrity legs step ahead of it, pending the owner's merge.
