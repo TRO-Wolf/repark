@@ -288,6 +288,9 @@ jobs:
 
       - name: owner-ruling preservation guard (check_owner_ruling)
         run: python3 scripts/check_owner_ruling.py
+
+      - name: model-ban guard (check_model_ban)
+        run: python3 scripts/check_model_ban.py
       # Parse first because zizmor exits successfully when broken YAML yields no auditable input.
       - name: workflow parse guard
         run: uv run --no-project --with pyyaml==6.0.3 python scripts/check_workflows_parse.py

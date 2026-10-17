@@ -1099,6 +1099,15 @@ repark-parity slice.
   Dual-wired through `make check-owner-ruling` in `make ci` and a raw guard step in ci.yml.
   Provocations:
   `python/repark-parity/tests/test_pr_247_owner_ruling.py`.
+  Since 2026-10-17 it also preserves the owner's Opus 5.0 ban block byte-for-byte in both files,
+  directly after the enforcement boundary in `AGENTS.md` and after the comment ruling in `CLAUDE.md`.
+- `check_model_ban.py` — the **2026-10-17 Opus 5.0 ban gate**: every git-tracked text file is
+  scanned for a 5.0 Opus model id in any spelling (hyphens, underscores or a dot between the
+  digits, any case); a hit fails with `path:line`. The allowed id is `claude-opus-5-5`; prose such as
+  "Opus 5.0" with a space is not an id and passes. A self-test assembles the banned spellings at
+  run time so the script never contains one, and fails closed if the pattern misses any.
+  Dual-wired through `make check-model-ban` in `make ci` and a raw guard step in ci.yml.
+  Provocations: `python/repark-parity/tests/test_model_ban.py`.
 - `check_docs_compaction.py` (AGENTS.md ceiling 27,816 B, ratcheted 2026-09-27 by READ-PATH-1) — the **live-document gate** (DL-4, `make check-docs-compaction`, in
   `make ci`, `make install-hooks`, `.pre-commit-config.yaml` and `ci.yml`'s guards job (wired under a
   one-time owner grant, 2026-08-25) at n=5 median 0.05 s: no closed campaign still in STATUS, no

@@ -322,3 +322,7 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   Case: #1042's 120 cells whose ledger category differed from what the doors stored.
 - **DO paste the test count for a claimed clean revert.** A fold that claims a clean revert
   commits the revert on a throwaway branch and pastes the test count.
+
+### 2026-10-17 — Opus means Opus 5.5; Opus 5.0 is banned forever
+
+- **DO dispatch every Opus role on `claude-opus-5-5` and verify the id from the agent transcript, never from the brief.** *Why:* the owner asked to confirm a running fork agent was 5.5 after a report typo said 5.1; the transcript proved 5.5, and the owner made the ban permanent so no dispatch can drift. Held by the ruling block in `AGENTS.md`/`CLAUDE.md` (byte-preserved by `make check-owner-ruling`) and by `make check-model-ban`.
