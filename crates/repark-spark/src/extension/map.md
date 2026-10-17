@@ -62,6 +62,11 @@ function-registry + analyzer-rule installation + the composed
   pre-coercion seat, `join_condition_refusals` between `spark_integral_literal` and
   `type_coercion`, and the filter passes it through.
   pins: cross-join-condition-1/C-008
+  **Ruling 112 (2026-10-15):** the same contract test names `spark_timestamp_unit_widen`
+  among the insertions and asserts its seat before `type_coercion` at the position the
+  configured list holds, immediately before `spark_fractional_division`. The existing
+  assertions keep their entries in their present order.
+  pins: ice-tsns-type-planner-1/C-012, C-025
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),
   `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),

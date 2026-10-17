@@ -91,6 +91,30 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 
 ## Contents
 
+- `test_pa_local_fs_policy_1.py` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to
+  PA-04):** the audit's public reproductions. Spark door (`ReparkSession.sql`, a registered
+  memory-catalog warehouse with `link -> <outside>`): `EXPLAIN ANALYZE COPY` outside and the
+  one- and three-missing-parent symlink escapes raise `AnalysisException` naming
+  `repark.sql.allowLocalFilesystemDDL` with no file outside; the byte-5/7/9 locations raise it
+  instead of a caught panic; plain `EXPLAIN` answers without writing; the warehouse, the
+  in-warehouse symlink, the `file://localhost` forms and the opt-in session write.
+  `repark.sql()`: the bare and wrapped `COPY`, the symlink escape, `CREATE EXTERNAL TABLE`
+  and `aaaaaaé` refuse; plain `EXPLAIN` answers. Red on main 7 of 15.
+  pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-006, C-008, C-009, C-010, C-011, C-013, C-014, C-015
+  **Fix round (2026-10-15, owner rulings 103 and 104):** on the Spark door, `test_v01_*`,
+  `test_v02_*` and `test_v03_*` (each "writes outside on today's head") refuse with no file
+  outside, the cwd restored after `test_v03_*`; a warehouse registered through a symlinked path
+  writes inside. `repark.sql()` refusals now name `repark.sql() does not allow local-file DDL`
+  and not the conf; `test_repark_sql_names_no_opt_in_and_no_route_opens_it` shows `SET` of the
+  key fails, a native session built with the key set still refuses, and a read-only `CREATE
+  EXTERNAL TABLE` over an existing local parquet directory refuses.
+  pins: pa-local-fs-policy-1/C-019, C-020, C-021, C-022, C-023
+  **The ruling-113 step (2026-10-16):** `test_repark_sql_keeps_the_q6_wall_type_under_the_guard`
+  is U-1's Q6 cell (`test_ice_tsns_type_planner_1.py::test_repark_sql_plans_timestamp_as_the_wall`,
+  ice-tsns-type-planner-1/C-015) with the guard installed: `CAST('2024-01-02 03:04:05.123456789'
+  AS TIMESTAMP)` on `repark.sql()` answers `timestamp[us]` `1704164645123456`, and a local `COPY`
+  on the same entry still refuses with no file.
+  pins: pa-local-fs-policy-1/C-032
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
@@ -363,6 +387,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rows with the walls Spark 4.1.2 stored in the re-verify follow-up probe, and
   refuses `(10, 1, 1, '2024-…')` / `(11, 1, 1, - -1)` with Spark's recorded
   bodies (`STRING`, `INT`), where base stored both.
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (ruling 100, the planner sketch, 2026-10-15):** a
+  `TIMESTAMP_NTZ` inside an `ARRAY` or `STRUCT` cast target answers: the planner types the
+  nested name, and the R4 refusal (TZ-6) no longer fires.
+  `test_nested_cast_target_keeps_the_r4_refusal` is gone; `ntz_1_spark_oracle.json` gains
+  `cast_nested_ntz_array` and `cast_nested_ntz_struct`, recorded live on Spark 4.1.2 (UTC,
+  ANSI on, 2026-10-15), and `test_select_cells_replay_spark` replays them. pins: ice-tsns-type-planner-1/C-033
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -385,6 +415,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the New York gap wall stores `2024-03-10 03:30:00`. Its `divergence` and `spark_rows`
   keys are gone, and two divergence steps remain: the UPDATE refusal texts.
   pins: ntz-store-doors-1/C-006
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (ruling 100, the planner sketch, 2026-10-15):**
+  `w_ref_cast` (`UPDATE … SET id = CAST(c AS TIMESTAMP_NTZ)` into an INT column) now refuses
+  with Spark's recorded text (`CANNOT_SAFELY_CAST … "TIMESTAMP_NTZ" to "INT"`) instead of the
+  nested-target gate's `UNSUPPORTED_TIMESTAMP_NTZ` (divergence R-NTZ-S2-10): with the planner
+  the gate no longer fires, as for the nested NTZ cast. The step drops its divergence; a step
+  with only `spark_error` asserts Spark's text. pins: ice-tsns-type-planner-1/C-033
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) +
   [ntz_store_doors_1_spark_oracle.json](ntz_store_doors_1_spark_oracle.json) —
   **WO NTZ-STORE-DOORS-1 (2026-09-28):** 66 door cells (UTC, New York, Kolkata ×
@@ -2829,6 +2865,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):**
+  `test_cast_nullability_native_door_keeps_datafusion` pins `CAST(DATE … AS TIMESTAMP)` on
+  `repark.sql()` as `timestamp[us]`, the Q6 contract's wall (ruling 94), where main answered
+  DataFusion's `timestamp[ns]` wall; the nullability it pins is unchanged. pins: ice-tsns-type-planner-1/C-029
 - [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — **CSV-INFER-PERF-1 (2026-09-06):**
   plan-time `to_arrow`/`collect` stay ≤ 1 on inferSchema (one `try_cast` aggregation)
   and 0 when `inferSchema=False`; wall pin on a 300k × 8 CSV is a 0.5 s regression
@@ -3243,8 +3283,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main's recorded cells. The file below no longer holds `timestamptz_ns` as a control; its
   microsecond controls are unchanged.
   pins: ice-tstzns-wall-1/C-002, C-003, C-004, C-005, C-006, C-012
-- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-FLOOR-DOORS-1
-  (2026-10-14), the re-pin:** the control test no longer holds a `timestamp_ns` or
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-010, ruling 100, 2026-10-15):** the `update_literal`
+  door with a `timestamp_ns` or `timestamptz_ns` literal stores now that the planner types
+  both names in `UPDATE`; `STILL_REFUSED` is gone and the cells assert R-010's rule, the
+  instant `INSERT` stores, nine digits exact (`expected_instants`, `value % 1_000`). pins: ice-tsns-type-planner-1/C-033
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — **ICE-TSNS-TYPE-PLANNER-1
+  (2026-10-15), R-010's re-pin:** `r010_answers` names the `update_literal` door with a
+  `timestamp_ns` or `timestamptz_ns` literal, which main refused by name (`Unsupported SQL
+  type`). The planner types those names, so the cells store: a `timestamp_ns` target takes
+  `rule_cell`, a control target the floored values under the type main recorded for
+  `insert_select`. pins: ice-tsns-type-planner-1/C-022
+  **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14), the re-pin:** the control test no longer holds a `timestamp_ns` or
   `timestamptz_ns` source into a microsecond target as main answered it. `control_cell` takes
   those cells' ticks from `_record_ice_tsns_floor_doors_1_main.rule_expected` (the floor and the
   New York wall) and keeps main's recorded type, ids and refusals; every other source stays main's
@@ -3355,6 +3404,101 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=`. Reads and range cells are in the same fixture. A value Python cannot convert stays
   a per-row `conversion_error` beside its tick.
   pins: ice-tsns-coercion-1/C-001, C-003
+- [test_ice_tsns_type_planner_1.py](test_ice_tsns_type_planner_1.py) —
+  **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):** the unit's fixture, run live. Every
+  expectation is derived by the rule module from three clauses (a NULL beside a nanosecond
+  value is nanoseconds; a written `TIMESTAMP` cast over a nanosecond value floors to
+  microseconds; mixed units widen to the finest): a cell is green when its statement and
+  its twin (the same statement with the NULL typed, or the coarser operand cast, to the
+  nanosecond type of the position) give one outcome. No test names an expected value.
+  Families: the 9,600-cell census (one test per zone, target and source), the 420 cache
+  cells, the 117 reads, the 92 consumer-door cells, the parking repros of R-017's seven
+  verifier rounds, the twenty mixed-unit cells on both SQL doors in three zones, every
+  position of the lattice table beside a NULL and beside each microsecond kind, the H1
+  refusals, the H2 microsecond pins, the P15 cells, the R-010, R-013 and R-018(1)
+  statements, and the two Postgres read cells (they skip without `REPARK_PG_URL`). A
+  statement that answered on main's module must answer here, outside the dated rows: on the
+  head of 2026-10-15 no statement main answers is lost outside ruling 38's carve-out
+  (C-023). The round's records, registry row R-017 and the 1.5.6 notes draft, are C-024.
+  pins: ice-tsns-type-planner-1/C-006, C-007, C-008, C-009, C-010, C-023, C-024
+  **Carry-over fix, ruling 101 (2026-10-15):** the eight list cells red on the head and green
+  on today's main are green; the four `repro|v2_array_except|ns|…` /
+  `repro|v2_array_intersect|ns|…` residue rows turned green with them and are retired. pins: ice-tsns-type-planner-1/C-030, C-026
+- [ice_tsns_type_planner_1_dated.json](ice_tsns_type_planner_1_dated.json) —
+  **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the dated rows: cells a ruling keeps red, each
+  with its date, ruling and owner. A dated cell may be red or lose a statement main
+  answers; once it turns green the fixture fails until the row is retired. The first row is
+  ruling 94's `repark.sql()` cell (`q6|repark_sql|timestamp_spellings`): that callable
+  still builds `DataFusionDialect`, and PA-02's routing fix (`pa-local-fs-policy-1`)
+  closes it. The fixture commit (2026-10-15) adds ruling 38's carve-out, the 108 cells of
+  the pandas and Arrow doors (`consumer` 88, `reads|m_udf:…` 20), and 184 rows of ruling
+  93's residue, each red on today's main in the main record (census 30, positions 96,
+  repros 51, H1 4, P15 1, out of range with ANSI off 2). Eight residue cells are red on
+  the head and green on main, so they carry no row. Two rows of ruling 92's scope follow:
+  an encoded nanosecond source into `TIMESTAMP` truncates where the plain one floors, on
+  today's main too (R-024). pins: ice-tsns-type-planner-1/C-015,
+  C-021
+  **Carry-over fix round (2026-10-15):** the four `repro|r017_update_nowhere_ntz_cast|…` cells
+  are dated rows (orchestrator ruling on Q1, card ICE-TSNS-UPDATE-NTZ-CAST-1, red on today's
+  main), and the two `encoded|TIMESTAMP|…` rows name ruling 102 (an encoded ns value into a
+  microsecond column keeps today's behaviour, R-024). pins: ice-tsns-type-planner-1/C-035
+- [_ice_tsns_type_planner_1_rule.py](_ice_tsns_type_planner_1_rule.py) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the rule as a harness. `statement_of` and `twin_of` write
+  the two texts of a cell from one marked text (`{N}` is the NULL, `<<x>>` an operand
+  the rule widens); `category` is what the two outcomes must share (the error class, or
+  the Arrow types and ticks, or the Parquet type and stored ticks); `note` records
+  whether a statement answered. pins: ice-tsns-type-planner-1/C-006
+- [_ice_tsns_type_planner_1_cells.py](_ice_tsns_type_planner_1_cells.py) +
+  [ice_tsns_type_planner_1_reads.json](ice_tsns_type_planner_1_reads.json) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the census (the door module of ICE-TSNS-COERCION-1, the
+  twin now spelled as a cast), the cache cells (a cached append against the same frame
+  uncached and against its twin), the 117 reads (the statements of the closed #1042's
+  verifier suites, as data) and the consumer doors (`applyInPandas`, cogrouped
+  `applyInPandas`, `mapInArrow`, `mapInPandas`, `pandas_udf`, `arrow_udf`, `applyInArrow`
+  over a site against the same door over the plain column).
+  pins: ice-tsns-type-planner-1/C-007, C-008
+- [_ice_tsns_type_planner_1_repros.py](_ice_tsns_type_planner_1_repros.py) +
+  [ice_tsns_type_planner_1_repros.json](ice_tsns_type_planner_1_repros.json) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the parking repros by name (`v1_…`, `v2_…`, `v3_…` for
+  #1027's three verifies, `s1_…`, `s1b_…`, `nar_…` for #1042's, `r017_…` for the row's
+  own three written casts), as stores into a nanosecond column, seeded updates and
+  reads, two sources, two zones. Ten read cells only ask that the statement answers.
+  pins: ice-tsns-type-planner-1/C-009
+- [_ice_tsns_type_planner_1_pins.py](_ice_tsns_type_planner_1_pins.py) —
+  **ICE-TSNS-TYPE-PLANNER-1:** the amended pins: the lattice cells on the Spark door and
+  on `repark.sql` (zone set with `SET TIME ZONE`), the positions, the refusal texts
+  (they must name the function and `sequence`), a microsecond value outside the
+  nanosecond range beside a nanosecond value in both ANSI modes (it must raise the
+  overflow class), the microsecond pins of the DDL column
+  and `Column.cast`, the inferred CSV unit through `read_csv` and `read.csv`, the
+  R-010 `UPDATE` and `DELETE` statements against their `INSERT` twins, R-013 on
+  `repark.sql`, R-018(1)'s three `VALUES` shapes against their `SELECT` twins, and the
+  Postgres cells. The R-010 cells read the stored rows through the table
+  (`_live_pairs`, 2026-10-15), not from every Parquet file, so a copy-on-write `DELETE`
+  shows. `update_form_groups` is ruling 91: in UTC and New York, for a `timestamp_ns` and
+  a `timestamptz_ns` source, copy-on-write and merge-on-read, `UPDATE … SET v = c`, the
+  same with `WHERE id >= 0`, and `SET v = CAST(c AS TIMESTAMP) WHERE id >= 0` into a
+  `TIMESTAMP` column store one value (C-019). `encoded_groups` is ruling 92: in New
+  York, a dictionary and a run-end encoded `timestamptz_ns` source through `INSERT
+  OVERWRITE` into `timestamp_ns`, `timestamptz_ns` and `TIMESTAMP` stores what the plain
+  source stores (C-020). `q6_groups` is ruling 94's one cell on the Python `repark.sql()`
+  callable: `TIMESTAMP` and its literal as `timestamp[us]`, `TIMESTAMPTZ` as
+  `timestamp[us, tz=UTC]`. pins: ice-tsns-type-planner-1/C-010, C-015, C-019, C-020, C-022
+  **Carry-over fix (ruling 100, 2026-10-15):** the ANSI-door lattice (`repark.sql()`) spells
+  the zoned microsecond operand `TIMESTAMPTZ '…'` (`ANSI_OPERANDS`): with the ANSI planner on
+  that door `TIMESTAMP` is the wall, per the Q6 contract. The Q6 cell is green, so its dated
+  row is retired. pins: ice-tsns-type-planner-1/C-029
+- [_record_ice_tsns_type_planner_1.py](_record_ice_tsns_type_planner_1.py) +
+  [ice_tsns_type_planner_1_main.json](ice_tsns_type_planner_1_main.json) —
+  **ICE-TSNS-TYPE-PLANNER-1:** runs every group on the installed module and prints green,
+  red and skipped cells by family; `--main <sha>` writes the statements that errored on
+  main's module, the list behind the fixture's main-answers-so-this-answers check, and the
+  cells red there. **Re-recorded 2026-10-15 on today's main `01796857` (after U-3):** 948
+  of 11,274 statements error, 10 more than on `293896ce` (all `update_where_mor` array
+  cells, U-3's guard); 7,821 cells are red. The `encoded` and `update_forms` groups were
+  recorded on the same module later that day and merged in: 952 of 11,288 statements error
+  and 7,827 cells are red (both encoded cells into `TIMESTAMP`, and the four merge-on-read
+  `update_forms` cells, where every form errors on main). pins: ice-tsns-type-planner-1/C-006, C-021
 - [_record_ice_tsns_coercion_1_spark_lattice.py](_record_ice_tsns_coercion_1_spark_lattice.py) +
   [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) —
   **ICE-TSNS-COERCION-1 slice 0:** Spark 4.1.2, five zones, both ANSI modes. `timestamp_ns`
@@ -7883,6 +8027,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SQL-nonansi refusal and alias malformed cells the critic found unused are pinned
   (309 tests).
   pins: fnp-bitmap-facade-1/C-012, C-013, C-014, C-016, C-017, C-018
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):** the Python door's
+  timestamp refusal now names `TIMESTAMP`, the recorded oracle cell's name, so the
+  `TIMESTAMP_LTZ` divergence map is gone and
+  `test_refusal_timestamp_python_door_names_sparks_type` (was
+  `test_refusal_timestamp_ltz_is_expected_divergence`) pins Spark's name; the SQL door's four
+  cells are green again. pins: ice-tsns-type-planner-1/C-028
 - [test_fnp_6d_bitmap_aggregates.py](test_fnp_6d_bitmap_aggregates.py) — **FNP-6D
   (2026-09-15):** Spark SQL-door pins for `bitmap_construct_agg` / `bitmap_or_agg` /
   `bitmap_and_agg` against recorded oracle cells `F6D-*` and `B8-*` (values AND
@@ -10384,6 +10534,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   the ruling 74 test name. Red on the head before the fix: 55 of 76 (before the NULL-row fix
   forward reclassified `nocol|field_count_differs`); on main: 67 of 76; green on the head: 76.
   pins: ice-struct-pairing-1/C-033, C-034, C-035, C-036
+- [test_update_set_subquery_walk_1.py](test_update_set_subquery_walk_1.py) —
+  **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):** the
+  `repark.sql()` door. On a three-row table (this door's `CREATE SCHEMA` and CTAS build
+  DataFusion in-memory tables, not Iceberg; verifier V-003, 2026-10-16), `SET v = 1 +
+  (SELECT v FROM src)`,
+  `COALESCE((SELECT v FROM src), 0)` and `CASE WHEN true THEN (SELECT v FROM src) ELSE 0 END`,
+  each under `WHERE true`, raise the ruling-90 text and the rows read back as seeded. The
+  native door has no identity path, so these shapes reach `PreExecute::guard`.
+  pins: ice-struct-pairing-1/C-034
 - [_record_write_body_carriers_1_spark.py](_record_write_body_carriers_1_spark.py) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the 20 Spark cells (`CREATE TABLE`
   and `CREATE OR REPLACE TABLE` over the five write bodies, `z` new and existing)

@@ -284,6 +284,7 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
     let state = SessionStateBuilder::new()
+        .with_type_planner(repark_functions::spark_type_planner())
         .with_config(config)
         .with_default_features()
         .with_analyzer_rules(rules)

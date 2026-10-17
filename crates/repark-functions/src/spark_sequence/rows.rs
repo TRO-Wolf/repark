@@ -1,4 +1,4 @@
-use datafusion::arrow::datatypes::IntervalMonthDayNano;
+use datafusion::arrow::datatypes::{IntervalMonthDayNano, TimeUnit};
 use datafusion::common::{DataFusionError, Result};
 
 use crate::cardinality::{
@@ -206,6 +206,7 @@ pub(crate) fn timestamp_row(
     start: i64,
     stop: i64,
     stride: Option<IntervalMonthDayNano>,
+    unit: TimeUnit,
 ) -> Result<Option<Vec<i64>>> {
     match stride {
         None => {
@@ -214,17 +215,18 @@ pub(crate) fn timestamp_row(
             } else {
                 IntervalMonthDayNano::new(0, 0, -1_000_000_000)
             };
-            Ok(Some(collect_timestamps(start, stop, &default)?))
+            Ok(Some(collect_timestamps(start, stop, &default, unit)?))
         }
         Some(interval) => {
             if interval.months == 0 && interval.days == 0 && interval.nanoseconds == 0 {
                 return Err(boundary_error(
-                    &format_micros(start)?,
-                    &format_micros(stop)?,
+                    &format_ticks(start, unit)?,
+                    &format_ticks(stop, unit)?,
                     &format_interval(&interval),
                 ));
             }
-            if interval.nanoseconds % 1_000 != 0 {
+            if interval.nanoseconds % 1_000 != 0 || interval.nanoseconds % nanos_per_tick(unit) != 0
+            {
                 return Err(DataFusionError::Execution(format!(
                     "sequence timestamp step carries sub-microsecond nanos: {}",
                     format_interval(&interval)
@@ -243,18 +245,52 @@ pub(crate) fn timestamp_row(
             let want = if stop > start { 1 } else { -1 };
             if sign != want {
                 return Err(boundary_error(
-                    &format_micros(start)?,
-                    &format_micros(stop)?,
+                    &format_ticks(start, unit)?,
+                    &format_ticks(stop, unit)?,
                     &format_interval(&interval),
                 ));
             }
-            Ok(Some(collect_timestamps(start, stop, &interval)?))
+            Ok(Some(collect_timestamps(start, stop, &interval, unit)?))
         }
     }
 }
 
-fn shift_micros_from_start(start: i64, months: i32, days: i64, nanos: i64) -> Result<i64> {
-    let naive = crate::datetime::datetime_from_micros(start)
+fn ticks_per_second(unit: TimeUnit) -> i64 {
+    match unit {
+        TimeUnit::Second => 1,
+        TimeUnit::Millisecond => 1_000,
+        TimeUnit::Microsecond => 1_000_000,
+        TimeUnit::Nanosecond => 1_000_000_000,
+    }
+}
+
+fn nanos_per_tick(unit: TimeUnit) -> i64 {
+    1_000_000_000 / ticks_per_second(unit)
+}
+
+fn datetime_from_ticks(ticks: i64, unit: TimeUnit) -> Option<chrono::NaiveDateTime> {
+    let per_second = ticks_per_second(unit);
+    let nanos = u32::try_from(ticks.rem_euclid(per_second) * nanos_per_tick(unit)).ok()?;
+    chrono::DateTime::from_timestamp(ticks.div_euclid(per_second), nanos)
+        .map(|instant| instant.naive_utc())
+}
+
+fn ticks_from_datetime(naive: chrono::NaiveDateTime, unit: TimeUnit) -> Option<i64> {
+    let instant = naive.and_utc();
+    instant
+        .timestamp()
+        .checked_mul(ticks_per_second(unit))?
+        .checked_add(i64::from(instant.timestamp_subsec_nanos()) / nanos_per_tick(unit))
+}
+
+fn shift_ticks_from_start(
+    start: i64,
+    months: i32,
+    days: i64,
+    nanos: i64,
+    unit: TimeUnit,
+) -> Result<i64> {
+    let naive = datetime_from_ticks(start, unit)
         .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))?;
     let date = if months != 0 {
         crate::datetime::spark_add_months(naive.date(), months).ok_or_else(|| {
@@ -269,14 +305,12 @@ fn shift_micros_from_start(start: i64, months: i32, days: i64, nanos: i64) -> Re
             DataFusionError::Execution("sequence timestamp out of range".to_owned())
         })?)
         .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))?;
-    shifted
-        .and_utc()
-        .timestamp_micros()
-        .checked_add(nanos / 1_000)
+    ticks_from_datetime(shifted, unit)
+        .and_then(|ticks| ticks.checked_add(nanos / nanos_per_tick(unit)))
         .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))
 }
 
-fn sequence_cardinality_from_micros(first: i64, last: i64, stride: i64) -> Option<u64> {
+fn sequence_cardinality_from_ticks(first: i64, last: i64, stride: i64) -> Option<u64> {
     if stride == 0 {
         return None;
     }
@@ -287,13 +321,19 @@ fn sequence_cardinality_from_micros(first: i64, last: i64, stride: i64) -> Optio
     u64::try_from(span).ok()?.checked_add(1)
 }
 
-fn collect_timestamps(start: i64, stop: i64, stride: &IntervalMonthDayNano) -> Result<Vec<i64>> {
+fn collect_timestamps(
+    start: i64,
+    stop: i64,
+    stride: &IntervalMonthDayNano,
+    unit: TimeUnit,
+) -> Result<Vec<i64>> {
     if stride.months == 0 {
-        let step_micros = i64::from(stride.days)
-            .checked_mul(86_400_000_000)
-            .and_then(|day_micros| day_micros.checked_add(stride.nanoseconds / 1_000));
-        if let Some(step) = step_micros
-            && let Some(cardinality) = sequence_cardinality_from_micros(start, stop, step)
+        let step_ticks = i64::from(stride.days)
+            .checked_mul(86_400)
+            .and_then(|day_seconds| day_seconds.checked_mul(ticks_per_second(unit)))
+            .and_then(|day_ticks| day_ticks.checked_add(stride.nanoseconds / nanos_per_tick(unit)));
+        if let Some(step) = step_ticks
+            && let Some(cardinality) = sequence_cardinality_from_ticks(start, stop, step)
         {
             refuse_if_over_ceiling("sequence", cardinality, DEFAULT_MAX_ARRAY_ELEMENTS)?;
             let count = usize_count(cardinality)?;
@@ -329,7 +369,7 @@ fn collect_timestamps(start: i64, stop: i64, stride: &IntervalMonthDayNano) -> R
             .ok_or_else(|| {
                 DataFusionError::Execution("sequence timestamp out of range".to_owned())
             })?;
-        let element = shift_micros_from_start(start, months, days, nanos)?;
+        let element = shift_ticks_from_start(start, months, days, nanos, unit)?;
         if previous == Some(element) {
             break;
         }
@@ -370,8 +410,8 @@ pub(crate) fn format_days(days: i32) -> Result<String> {
     Ok(ymd_from_days(days)?.to_string())
 }
 
-fn format_micros(micros: i64) -> Result<String> {
-    crate::datetime::datetime_from_micros(micros)
+fn format_ticks(ticks: i64, unit: TimeUnit) -> Result<String> {
+    datetime_from_ticks(ticks, unit)
         .map(|naive| naive.to_string())
         .ok_or_else(|| DataFusionError::Execution("sequence timestamp out of range".to_owned()))
 }

@@ -104,6 +104,7 @@ mod ntz_store;
 mod ntz_store_quotes;
 mod ntz_values_mix;
 mod overwrite_mode;
+mod pa_local_fs_policy;
 mod parquet_dictionary;
 mod partition_append;
 mod partition_overwrite;

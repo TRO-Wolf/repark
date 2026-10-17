@@ -3405,6 +3405,10 @@ still open is `isModifiable`.
 - **Apache Spark** — has no such type name. *(oracle: none.)*
 - **Pin** — the `update_literal` cells of `ice_tsns_merge_wall_1_main.json` for the `ns` and
   `tzns` sources, held as refusals by `test_ice_tsns_merge_wall_1.py`.
+- **Status 2026-10-15 (ICE-TSNS-TYPE-PLANNER-1, branch `fix/ice-tsns-type-planner-1-fresh`,
+  not merged):** the planner types both names in `UPDATE` and `DELETE`, so the cells store;
+  `test_ice_tsns_merge_wall_1.py` (`r010_answers`) and `test_ice_tstzns_wall_1.py` (the
+  `update_literal` door) are re-pinned to the instant `INSERT` stores, nine digits exact.
 - **Rationale** — OPEN, dated 2026-10-09. A lowering gap in the Spark door's `UPDATE` and
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
@@ -3670,7 +3674,7 @@ still open is `isModifiable`.
   which routes `INSERT OVERWRITE … PARTITION` through the common store stage so it pairs by
   position as the other INSERT doors do (no card filed at this date).
 
-### ICE-TSNS-SQL-1-R-017 — OPEN, PARKED 2026-10-13 (measured 2026-10-09): a nanosecond value beside an untyped NULL is typed as microseconds
+### ICE-TSNS-SQL-1-R-017 — FIXED 2026-10-16 (ICE-TSNS-TYPE-PLANNER-1, PR #1082): a nanosecond value beside an untyped NULL is typed as microseconds
 
 - **repark** — `coalesce(ns, NULL)`, `nvl(ns, NULL)`, `array(ns, NULL)`,
   `CASE WHEN … THEN ns ELSE NULL END` and `if(…, ns, NULL)` over a `timestamp_ns` or
@@ -3839,6 +3843,44 @@ still open is `isModifiable`.
     path (stores main's).
   - Narrow: an UPDATE-over-site refusal becomes the internal `No field named
     __common_expr_3` schema error.
+- **Status 2026-10-15 (ICE-TSNS-TYPE-PLANNER-1 fresh build, branch
+  `fix/ice-tsns-type-planner-1-fresh`, not merged):** OPEN. On the branch head a written
+  `TIMESTAMP` plans as the microsecond instant on the Spark door (the naive microsecond wall
+  on the Rust ANSI door, ruling 94), `timestamp_ns` and `timestamptz_ns` plan as
+  nanoseconds, and a NULL or a coarser timestamp beside a nanosecond value takes the
+  nanosecond type: `coalesce(ns, NULL)` keeps nine digits on every door of the 9,600-cell
+  census. `sequence` over a nanosecond site answers nanoseconds; an `aggregate` zero, a
+  `UNION` over field-id-tagged branches, an identity `UPDATE … WHERE` into `TIMESTAMP`
+  (ruling 91) and an encoded source through the staged doors (ruling 92) answer. No
+  statement today's main (`01796857`) answers errors on the head outside ruling 38's 108
+  pandas and Arrow door cells. Open: a written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE …
+  WHERE` truncates (4 repros), eight list-function cells are red on the head and green on
+  main, and an encoded nanosecond value into `TIMESTAMP` truncates where the plain one
+  floors (R-024); and the carried planner work moves 51 Rust and 27 facade pins that pass on
+  main, three of them statements main answers that now error. The unit ledger's questions Q1
+  to Q5. Pins:
+  `python/repark/tests/test_ice_tsns_type_planner_1.py`,
+  `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`,
+  `crates/repark-spark/tests/ice_tsns_type_planner_1_update_forms.rs`. Ledger:
+  `task/ledgers/staging/ice-tsns-type-planner-1-ledger.md` (on the branch).
+- **Status 2026-10-15, carry-over fix round (owner rulings 100 to 102, same branch, not
+  merged):** the carried planner work no longer moves a pin without a ruling except one
+  internal analyzer-list pin (an open question). The three statements main answered that
+  errored answer (an integer cast to `TIMESTAMP` reads seconds at every width; a `DATE` or a
+  string beside a zoned timestamp in a `UNION` takes the timestamp's type); refusal texts
+  name `TIMESTAMP` as Spark does; `repark.sql()` types `TIMESTAMP` as the microsecond wall
+  and `TIMESTAMPTZ` as the microsecond instant (ruling 94's contract); mixed `VALUES`
+  columns store Spark's walls; the eight list cells green on today's main are green (ruling
+  101). **The pin moved:** this row's pin
+  `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds` is now
+  `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`, re-pinned to
+  Spark's typing of a NULL beside its sibling (the microsecond twin, recorded live). The
+  written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE … WHERE` above has its own card,
+  [ICE-TSNS-UPDATE-NTZ-CAST-1](../task/roadmap/mid-term/ice-tsns-update-ntz-cast-1-card-2026-10-15.md),
+  and four dated rows.
+- **Status 2026-10-16:** merged on the owner's word as `c7121437` (PR #1082), verifier PASS at
+  `bedd799b`. The open items named above keep their own rows and cards: R-024,
+  ICE-TSNS-UPDATE-NTZ-CAST-1, and R-025 (ruling 120).
 
 ### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 
@@ -4088,6 +4130,19 @@ still open is `isModifiable`.
   are ICE-TSNS-FLOOR-DOORS-1's (R-009, PR #1059). Owner ruling, question 53, 2026-10-14:
   a v1.5.7 nanosecond carve-out with card NS-ENCODED-NESTED-FLOOR-1
   (`task/roadmap/mid-term/ns-encoded-nested-floor-1-card-2026-10-14.md`).
+
+### ICE-TSNS-SQL-1-R-025 — DATED ROW 2026-10-16 (owner ruling 120 (a)): on the ANSI doors `CAST(ns AS TIMESTAMP)` truncates toward zero instead of flooring
+
+- **repark** — on `repark.sql()` and `repark_sql::AnsiDialect`, `CAST(ns AS TIMESTAMP)` and
+  `CAST(ns AS TIMESTAMPTZ)` narrow a pre-1970 sub-microsecond value toward zero:
+  `1969-12-31 23:59:59.999999999` answers `1970-01-01 00:00:00`. The same door's literal
+  floors, and the Spark door floors. Main typed ANSI `TIMESTAMP` as nanoseconds (-1 ns exact,
+  the wrong type under Q6), and its store into `TIMESTAMP(6)` already truncated to 0; U-1
+  stores the same 0. *(Measured by the U-1 verifier, 2026-10-16, finding F-1.)*
+- **Apache Spark** — has no nanosecond type on this path; the rule is ruling Q-21c-8, every
+  narrowing floors on every door.
+- **Card** — [ICE-TSNS-ANSI-CAST-FLOOR-1](../task/roadmap/mid-term/ice-tsns-ansi-cast-floor-1-card-2026-10-16.md)
+  (2026-10-16, open, not scheduled, does not block U-1).
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
@@ -9515,7 +9570,8 @@ the pin rather than obeying it.
   `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
   write the subquery value here, so it refuses before any write.` The identity path still
   stores Spark's value for a scalar-comparison `WHERE` (`WHERE id = 0`, `id >= 0`, `1 = 1`,
-  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door. Of the larger expressions around a subquery, only the arithmetic shapes with the subquery as the first operand refuse: `(SELECT …) + 1` (also `- 1`, `* 1`, with `WHERE true` or no `WHERE`) answers the ruling-90 text on both doors, because the guard walks into the first argument of the arithmetic wrapper. `1 + (SELECT …)`, `-(SELECT …)`, `abs((SELECT …))`, a `CASE` arm and `COALESCE((SELECT …), 0)` are not this guard's shape: they report success and write a value taken from the target row, or write nothing, exactly as main does, where Spark stores a value computed from the subquery. `COALESCE` refuses `No field named …` on `repark.sql()` and the ANSI door. These cells are pending an owner ruling (re-verifier 3, 2026-10-15).
+  `id <> 99`, `OR` and `AND` of those) and for `WHERE col IN (SELECT …)` on the Spark SQL door.
+  2026-10-15, owner rulings 99 (c) and 110: every scalar subquery in the SET expression now refuses outside the identity path, with the same text, for `1 + (SELECT …)`, `-(SELECT …)`, `abs((SELECT …))`, `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct built around `(SELECT …)`. A subquery in the `WHERE` only stays silent. Until that ruling the guard walked only the outside of the assignment and the first argument of an arithmetic wrapper, so `(SELECT …) + 1` (also `- 1`, `* 1`, with `WHERE true` or no `WHERE`) already answered the ruling-90 text, while `1 + (SELECT …)`, `-(SELECT …)`, `abs((SELECT …))`, a `CASE` arm and `COALESCE((SELECT …), 0)` reported success and wrote a value taken from the target row, or wrote nothing, and `COALESCE` refused `No field named …` on `repark.sql()` and the ANSI door (re-verifier 3, 2026-10-15).
   Before 2026-10-15 the same statements reported success and left every row unchanged when the
   subquery's column had the target column's name, wrote the target's own column of the
   subquery column's name when it named another target column, and refused `No field named …`

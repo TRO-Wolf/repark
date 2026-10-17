@@ -299,6 +299,27 @@ async fn ruling_95_the_whole_refused_family_answers_one_text_on_both_doors() {
 }
 
 #[tokio::test]
+async fn ruling_99_c_a_scalar_subquery_inside_the_set_expression_refuses_on_the_ansi_door() {
+    let (session, _warehouse) = ansi_session().await;
+    for (name, value) in [
+        ("plus", "1 + (SELECT v FROM {t}_src)"),
+        ("coalesce", "COALESCE((SELECT v FROM {t}_src), 0)"),
+        (
+            "case_then",
+            "CASE WHEN true THEN (SELECT v FROM {t}_src) ELSE 0 END",
+        ),
+    ] {
+        let table = format!("ice.ns.walk_{name}");
+        seed(&session, &table, STRUCT_SOURCES[1].1).await;
+        let value = value.replace("{t}", &table);
+        let sql = format!("UPDATE {table} SET v = {value} WHERE true");
+        let text = refusal(&session, &table, &sql).await.expect(&sql);
+        assert!(text.contains(REFUSAL), "{sql}: {text}");
+        assert_eq!(rows(&session, &table).await, SEEDED, "{sql}");
+    }
+}
+
+#[tokio::test]
 async fn ruling_95_the_refusal_names_no_data_deleting_action_on_the_ansi_door() {
     let (session, _warehouse) = ansi_session().await;
     let texts = family_texts(&session).await;

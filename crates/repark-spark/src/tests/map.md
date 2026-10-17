@@ -29,6 +29,36 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 ## Contents
 
+- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
+  the Spark door's local-file write policy at default conf: `EXPLAIN ANALYZE COPY` outside
+  refuses naming `repark.sql.allowLocalFilesystemDDL` with no file written; plain `EXPLAIN`
+  answers without writing; `COPY` and `CREATE EXTERNAL TABLE` through `<warehouse>/link ->
+  <outside>` with one and three missing parents refuse; a `..` after a missing parent and a
+  dangling warehouse symlink refuse; locations `aaaaé`, `aaaaaaé` and `file://aaaaaaaaé` (a
+  character across bytes 5, 7, 9) refuse with the policy error, not a panic; the
+  `file://localhost` forms classify. Controls write: under the warehouse, through an
+  in-warehouse symlink, and under the opt-in. Red on main 6 of 15.
+  pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-006, C-008, C-009, C-011, C-012, C-013, C-014, C-015
+  **Fix round (2026-10-15, owner rulings 103 and 104):** each pin named "writes outside on
+  today's head" refuses with the policy error and leaves no file in the sibling `out/`: `v01_*`
+  (`<warehouse>/deep/../../out/…` with `deep` an in-warehouse symlink, bare, `file://` and under
+  `EXPLAIN ANALYZE`), `v02_*` (`%2e%2e`, `%2E%2E`, `.%2e`, `file:` and `file://localhost` forms,
+  `EXPLAIN ANALYZE` and `CREATE EXTERNAL TABLE`), `v03_*` (`file:<relative>` and
+  `file:./<relative>` with the cwd inside the warehouse) and the leading-space location read
+  against a cwd outside. The two cwd pins re-run themselves in a child process of the test
+  binary (`runs_here`), so the `chdir` never reaches a parallel test, and restore the cwd
+  through `CwdGuard`. Controls: a warehouse registered through a symlinked path writes directly,
+  through an in-warehouse symlink and with missing middle directories; an ancestor that is a
+  plain file refuses with the policy error, not a later write error.
+  pins: pa-local-fs-policy-1/C-012, C-019, C-020, C-021, C-022, C-024
+  **Fix round 2 (2026-10-16, owner ruling 114 (b), where the bytes land):** `rv01_*` (a warehouse
+  named `wh[1]`, `wh?` or `wh*`: its parent, a sibling, `EXPLAIN ANALYZE` to the parent and a bare
+  path the glob cuts all refuse with no file anywhere under the base, each "writes outside on
+  today's head"; the `file:` spelling, `?` as `%3F`, writes inside), `rv02_*` (`<base>/lnk/../wh/x`
+  with `lnk -> <base>/o1/o2` writes inside, bare and `file://`), `rv03_*` (U+E000 to U+E002 in a
+  `file:` URL write inside), `the_cells_of_ruling_114_write_where_the_written_path_lands` (the four
+  cells and the bare and URL `x/../pin` pair, each file found at its computed path).
+  pins: pa-local-fs-policy-1/C-026, C-027, C-028, C-029
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `enc_1.rs` — **ENC-1 round 2 (2026-10-09):** 35 pins over tables carrying
   `encryption.key-id`: every write path refuses with `UnsupportedOperationException` and
@@ -1023,6 +1053,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `register_spark_decimal_planner`; shared helpers use `pub(super)` visibility and re-exports.
   CASESENS-1 final fold (2026-09-28): `disable_case_sensitive` mirrors
   `enable_case_sensitive` for the same-session toggle pin. pins: casesens-1/C-005
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, the harness (ruling 100, 2026-10-15):** `setup`'s
+  session is built the way the Spark door builds every session: the `SparkTypePlanner`
+  (`with_type_planner`) and `SparkTimestampUnitWiden` before `type_coercion`
+  (`analyzer_rules_with_timestamp_unit_widen`). Without them, after the carried deletions, a
+  written `TIMESTAMP` stayed DataFusion's nanosecond type and `timestamp_ns` was `Unsupported
+  SQL type` here while the product door typed both (`v3_timestamp_ns_door.rs`,
+  `u9_timestamp_ltz.rs`, `ntz_store.rs`, `ntz_values_mix.rs`, `plan_partitioning.rs`,
+  `session_write_conf.rs`). No pinned value moves. pins: ice-tsns-type-planner-1/C-031
 - `create_table.rs` pins `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
@@ -2150,6 +2188,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   garbage, numeric-source/target refusals, the LTZ epoch-seconds guard, the nested R4
   refusal, and the literal reaching INSERT VALUES / INSERT SELECT / UPDATE / DELETE /
   MERGE / CTAS. pins: ntz-1/C-001, C-002, C-004, C-005
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (ruling 100, the planner sketch, 2026-10-15):**
+  `nested_ntz_cast_targets_answer_sparks_walls` (was
+  `nested_ntz_cast_target_keeps_the_r4_refusal`) pins Spark 4.1.2's answer to
+  `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` and `CAST(named_struct('a',
+  '2024-01-01') AS STRUCT<a: TIMESTAMP_NTZ>)`: a naive microsecond list or field holding
+  midnight, `1704067200000000`. pins: ice-tsns-type-planner-1/C-033
 
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** store assignment into `TIMESTAMP_NTZ`
   columns — LTZ VALUES/SELECT storing the session-zone wall (UTC and New York), UPDATE
@@ -2446,6 +2490,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   new-string `replace`-casts into `TIMESTAMP` with Spark's wall. Spark answers:
   re-verify2 `rn31-spark.json` plus the `rn31b` live run (2026-09-29).
   pins: ltz-store-int-1/C-001
+  **ICE-TSNS-TYPE-PLANNER-1 carry-over fix (ruling 100, 2026-10-15):** `door()` seats
+  `InsertStoreAssignment` right after `type_coercion`, where the Spark door seats it, instead
+  of after the Spark expression rules; with the planner a written `CAST(int AS TIMESTAMP)` and
+  an INSERT's store cast have one type, so the store gate must run first, as it does on the
+  product door. pins: ice-tsns-type-planner-1/C-027
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

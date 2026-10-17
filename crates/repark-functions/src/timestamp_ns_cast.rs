@@ -15,7 +15,7 @@ use datafusion::arrow::datatypes::{
 };
 use datafusion::arrow::error::ArrowError;
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
+use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
@@ -59,6 +59,31 @@ pub fn timestamp_ns_cast_expr(expr: Expr, zoned: bool) -> Expr {
     ))
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub fn wall_kernel_by_target(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    match &expr {
+        Expr::Cast(cast) => {
+            let Some(zoned) = timestamp_ns_target(cast.field.data_type()) else {
+                return Ok(Transformed::no(expr));
+            };
+            match cast.expr.get_type(schema) {
+                Ok(source) if &source != cast.field.data_type() => Ok(Transformed::yes(
+                    timestamp_ns_cast_expr(*cast.expr.clone(), zoned),
+                )),
+                _ => Ok(Transformed::no(expr)),
+            }
+        }
+        Expr::TryCast(try_cast) => match timestamp_ns_target(try_cast.field.data_type()) {
+            Some(zoned) => plan_err!(
+                "TRY_CAST to {} is not supported; CAST to it raises on a value it cannot hold",
+                target_name(zoned)
+            ),
+            None => Ok(Transformed::no(expr)),
+        },
+        _ => Ok(Transformed::no(expr)),
+    }
+}
+
 #[must_use]
 pub fn timestamp_ns_target(data_type: &DataType) -> Option<bool> {
     match data_type {
@@ -82,6 +107,14 @@ pub fn is_temporal_source(data_type: &DataType) -> bool {
         data_type,
         DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64
     )
+}
+
+fn encoded_value_type(data_type: &DataType) -> &DataType {
+    match data_type {
+        DataType::Dictionary(_, values) => encoded_value_type(values),
+        DataType::RunEndEncoded(_, values) => encoded_value_type(values.data_type()),
+        other => other,
+    }
 }
 
 fn is_string_source(data_type: &DataType) -> bool {
@@ -129,9 +162,10 @@ impl SparkTimestampNsCast {
     }
 
     fn checked_source(&self, data_type: &DataType) -> Result<()> {
-        if matches!(data_type, DataType::Null)
-            || is_string_source(data_type)
-            || is_temporal_source(data_type)
+        let value_type = encoded_value_type(data_type);
+        if matches!(value_type, DataType::Null)
+            || is_string_source(value_type)
+            || is_temporal_source(value_type)
         {
             return Ok(());
         }
@@ -187,11 +221,14 @@ impl ScalarUDFImpl for SparkTimestampNsCast {
             }
             None => true,
         };
-        Ok(Arc::new(Field::new(
-            self.name(),
-            target_type(self.zoned),
-            nullable,
-        )))
+        let metadata = args
+            .arg_fields
+            .first()
+            .map(|field| field.metadata().clone())
+            .unwrap_or_default();
+        Ok(Arc::new(
+            Field::new(self.name(), target_type(self.zoned), nullable).with_metadata(metadata),
+        ))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -229,6 +266,10 @@ struct Conversion {
 
 impl Conversion {
     fn convert(&self, array: &ArrayRef) -> Result<ArrayRef> {
+        let value_type = encoded_value_type(array.data_type());
+        if value_type != array.data_type() {
+            return self.convert(&cast(array.as_ref(), value_type)?);
+        }
         let target = target_type(self.zoned);
         match array.data_type() {
             DataType::Null => Ok(new_null_array(&target, array.len())),
@@ -518,6 +559,10 @@ pub(crate) fn store_micros(array: &ArrayRef, target: &DataType, zone: Tz) -> Res
         }
         _ => Ok(Arc::new(micros.with_timezone_opt(target_zone.clone()))),
     }
+}
+
+pub(crate) fn is_values_wall_cell(cell: &Expr) -> bool {
+    values_evidence::values_cell_evidence(cell) == Evidence::Wall
 }
 
 pub(crate) fn conform_values_timestamp_columns(plan: LogicalPlan) -> Result<LogicalPlan> {

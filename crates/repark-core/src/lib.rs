@@ -15,6 +15,7 @@ mod iceberg_path;
 mod idents;
 mod isnan;
 mod lineage_columns;
+pub mod local_fs_policy;
 mod metadata_columns;
 pub mod microbatch;
 mod na_fill;
@@ -71,7 +72,6 @@ pub use session_time_zone::{
 
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect, TempViewSession};
-
 // === Pre-execute belt ===
 pub use extension::{SessionBuildConf, SessionExtension};
 pub use pre_execute::PreExecute;

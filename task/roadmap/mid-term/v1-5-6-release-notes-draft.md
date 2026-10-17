@@ -22,6 +22,39 @@ the release PR to edit into the notes.
 - **The read `CAST(ns AS TIMESTAMP_NTZ)` floors the same way.** `CAST` of a `timestamp_ns` or
   `timestamptz_ns` value to `TIMESTAMP_NTZ` in a query answers `-1 µs` for `-1 ns`, where it
   answered `0`, as `CAST(… AS TIMESTAMP)` already did.
+- **A NULL beside a nanosecond value no longer cuts it to microseconds
+  (ICE-TSNS-TYPE-PLANNER-1, R-017).** `coalesce(ns, NULL)`, `nvl`, `array(ns, NULL)`,
+  `CASE … ELSE NULL`, `if(…, ns, NULL)` and the other positions that join two values keep
+  all nine fraction digits and the nanosecond type, so `INSERT … SELECT coalesce(ns, NULL)`
+  into a `timestamp_ns` column stores `…123456789` where it stored `…123456000`.
+- **A microsecond and a nanosecond timestamp joined in one position take nanoseconds.**
+  `coalesce(ns, TIMESTAMP '…')`, `array(ns, ts)`, `CASE`, `UNION`, comparisons and
+  `aggregate(array(ns), CAST(NULL AS TIMESTAMP), …)` answer `timestamp[ns]` with the
+  nanosecond digits kept, where they answered microseconds.
+- **A written `CAST(ns AS TIMESTAMP)` floors to microseconds on every door.** `UPDATE T SET
+  v = CAST(c AS TIMESTAMP)` with no `WHERE` into a `timestamp_ns` column stores `-1000` for
+  `-1 ns`, where it kept `-1`.
+- **`UPDATE` and `DELETE` with a `CAST('…' AS timestamp_ns)` or `timestamptz_ns` literal
+  now store (R-010).** They raised `Unsupported SQL type timestamp_ns`.
+- **`sequence` over a nanosecond column answers nanoseconds.** It raised `ListArray
+  expected data type Timestamp(ns)…`.
+- **The Rust ANSI door (`repark_sql::AnsiDialect`) types `TIMESTAMP` as the naive
+  microsecond wall and `TIMESTAMPTZ` as the microsecond instant.** `CAST('…789' AS
+  TIMESTAMP)` answers `timestamp[us]` without the last three digits, where it answered
+  `timestamp[ns]`.
+- **The Python `repark.sql()` callable types `TIMESTAMP` as the naive microsecond wall and
+  `TIMESTAMPTZ` as the microsecond instant.** `CAST('2024-01-02 03:04:05.123456789' AS
+  TIMESTAMP)` answers `timestamp[us]` `…123456`, where it answered `timestamp[ns]`
+  `…123456789`; `CAST(DATE '2020-01-01' AS TIMESTAMP)` answers `timestamp[us]`.
+- **An `INT`, `SMALLINT` or `TINYINT` cast to `TIMESTAMP` reads seconds, as Spark does.**
+  `CAST(CAST(1 AS INT) AS TIMESTAMP)` answers `1970-01-01 00:00:01`, where it answered
+  `1970-01-01 00:00:00`.
+- **A refusal on the Python door names a timestamp argument `TIMESTAMP`.** `degrees` and
+  `radians` over a timestamp column said `TIMESTAMP_LTZ`; they now say `TIMESTAMP`, as Spark.
+- **A `TIMESTAMP_NTZ` inside an `ARRAY` or `STRUCT` cast target answers.**
+  `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` answers
+  `[2024-01-01 00:00:00]` where it refused `UNSUPPORTED_TIMESTAMP_NTZ`, and `UPDATE … SET
+  int_column = CAST(c AS TIMESTAMP_NTZ)` refuses with Spark's `CANNOT_SAFELY_CAST` text.
 - **A struct value pairs its fields by position on `INSERT`, `REPLACE WHERE` and `insertInto`, as
   Spark does (ICE-STRUCT-PAIRING-1, R-016).** `INSERT INTO t SELECT 1, named_struct('b', 2, 'a', 1)`
   into `st STRUCT<a: INT, b: INT>` now stores `a = 2, b = 1`: the first source field feeds the
@@ -79,6 +112,56 @@ the release PR to edit into the notes.
   by name (Spark stores it by position).
 
 Tables already written keep the values they hold; this release ships no migration.
+
+## Behaviour changes
+
+- **The local-file write policy checks writes below the root (PA-LOCAL-FS-POLICY-1, audit
+  PA-02).** With `repark.sql.allowLocalFilesystemDDL=false` (the default), `EXPLAIN ANALYZE
+  COPY … TO '<outside>'` now refuses with the policy error and writes nothing, as the bare
+  `COPY` already did; plain `EXPLAIN` still answers.
+- **Containment follows symlinks through missing parents (audit PA-03).** A destination such
+  as `<warehouse>/link/new/sub/export`, where `link` points outside and the middle
+  directories are absent, now refuses; a `..` after a missing directory and a dangling
+  symlink refuse as indeterminate.
+- **The guard reads a location the way the write reads it (owner ruling 103).** A symlink
+  followed by `..` (`<warehouse>/deep/../../out`), a percent-encoded dot segment in a `file:`
+  URL (`%2e%2e`, `%2E%2E`, `.%2e`) and a relative `file:` URL (read as `/x`, not against the
+  working directory) no longer write outside the warehouse. The guard judges where the bytes
+  land (owner ruling 114, 2026-10-16), so a `..` that the write itself removes is judged after
+  it is removed: `<warehouse>/deep/../x`, `<warehouse>/x/../y` and `file://<warehouse>/x/%2e%2e/y`
+  keep writing inside the warehouse. A `[`, `?` or `*` in a registered warehouse path is an
+  ordinary character of the root; a bare `COPY` location under such a warehouse is cut at that
+  character by DataFusion and lands in its parent, so it now refuses (before, it wrote there);
+  the `file:` URL spelling of the same location writes inside.
+- **Not yet covered:** the policy does not yet cover a Spark-door `CREATE TABLE … LOCATION` to a
+  local path outside the warehouse. Card: LOCAL-FS-CREATE-TABLE-LOCATION-1.
+- **Non-ASCII locations classify instead of panicking (audit PA-04).** A location whose
+  multibyte character straddles byte 5, 7 or 9 (`aaaaé`, `aaaaaaé`, `file://aaaaaaaaé`) now
+  gets the policy refusal (or writes, under the opt-in) instead of an internal error.
+- **`repark.sql()` applies the same policy (owner ruling 2026-10-15).** A local `COPY` or
+  `CREATE EXTERNAL TABLE` outside every registered warehouse now refuses on that entry,
+  wrapped or not; it has no opt-in. Before, it wrote anywhere the process could.
+- **Dated loss (2026-10-15, owner ruling 104): `repark.sql()` no longer runs any local-file
+  DDL.** That entry registers no warehouse, so every `COPY … TO` a local path (absolute,
+  relative, `file:`, `file://`, `file://localhost`), every `EXPLAIN ANALYZE COPY` to one, and
+  every `CREATE EXTERNAL TABLE` with a local location, the read-only registration of an existing
+  local file or directory included, now refuses with "repark.sql() does not allow local-file
+  DDL". The entry has no opt-in: `SET repark.sql.allowLocalFilesystemDDL = true` fails there,
+  and no session config reaches it. Before this release all of these ran. Card:
+  REPARK-SQL-LOCAL-DDL-1.
+- **The ANSI door's opt-in opens.** A session whose `repark.sql` extension sets
+  `allowLocalFilesystemDDL=true` now writes outside on the ANSI door; before, the door
+  refused regardless.
+
+## Messages that change
+
+- **dbt-repark's profile-mismatch refusal and `dbt debug` no longer print property values
+  (audit PA-01).** The refusal names the live and requested `database` (the profile's
+  `catalog`) and `warehouse` and the changed `catalog_properties.<key>` and
+  `session_properties.<key>` names. The connection report, and the Jinja `target` built from
+  it, show `catalog_properties` values as `getAll` does, secrets as `***`. They pass
+  `database`, its alias `catalog` and `warehouse` through the same redaction, so a login in
+  any of them shows as `u:***@host`.
 
 ## Keyed-table refusal follow-ups (ENC-1-RESIDUE-1, items 1 and 5)
 

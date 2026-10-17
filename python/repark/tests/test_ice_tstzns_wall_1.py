@@ -29,7 +29,6 @@ from repark import ReparkSession
 ZONES = ("UTC", "America/New_York", "Asia/Kolkata", "Asia/Kathmandu", "Australia/Lord_Howe")
 ZONED_NS = "timestamp[ns, tz=UTC]"
 RULE_SOURCES = ("l", "n", "ns", "tzns")
-STILL_REFUSED = {("update_literal", "ns"), ("update_literal", "tzns")}
 SECOND = 1_000_000_000
 
 
@@ -76,10 +75,6 @@ def test_every_door_stores_inserts_instant_in_timestamptz_ns(
             table = f"ice.ns.t_{source}"
             extra = f", c {doors.SOURCE_SQL_TYPES[source]}" if door == "update_column" else ""
             doors.create_target(spark, table, "tz_ns", extra)
-            if (door, source) in STILL_REFUSED:
-                with pytest.raises(Exception, match="Unsupported SQL type"):
-                    doors.DOORS[door](spark, table, source)
-                continue
             doors.DOORS[door](spark, table, source)
             written = data_file_instants(spark, table)
             assert sorted(written) == sorted(expected_instants(source, zone)), (door, source)
