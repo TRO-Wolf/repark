@@ -10536,7 +10536,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   pins: ice-struct-pairing-1/C-033, C-034, C-035, C-036
 - [test_update_set_subquery_walk_1.py](test_update_set_subquery_walk_1.py) —
   **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):** the
-  `repark.sql()` door. On a three-row Iceberg table, `SET v = 1 + (SELECT v FROM src)`,
+  `repark.sql()` door. On a three-row table (this door's `CREATE SCHEMA` and CTAS build
+  DataFusion in-memory tables, not Iceberg; verifier V-003, 2026-10-16), `SET v = 1 +
+  (SELECT v FROM src)`,
   `COALESCE((SELECT v FROM src), 0)` and `CASE WHEN true THEN (SELECT v FROM src) ELSE 0 END`,
   each under `WHERE true`, raise the ruling-90 text and the rows read back as seeded. The
   native door has no identity path, so these shapes reach `PreExecute::guard`.
