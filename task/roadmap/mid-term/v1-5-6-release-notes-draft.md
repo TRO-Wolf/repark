@@ -159,7 +159,9 @@ Tables already written keep the values they hold; this release ships no migratio
   (audit PA-01).** The refusal names the live and requested `database` (the profile's
   `catalog`) and `warehouse` and the changed `catalog_properties.<key>` and
   `session_properties.<key>` names. The connection report, and the Jinja `target` built from
-  it, show `catalog_properties` values as `getAll` does, secrets as `***`.
+  it, show `catalog_properties` values as `getAll` does, secrets as `***`. They pass
+  `database`, its alias `catalog` and `warehouse` through the same redaction, so a login in
+  any of them shows as `u:***@host`.
 
 ## Known issues
 
