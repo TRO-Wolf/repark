@@ -18,6 +18,8 @@ Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
 Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
 Round 3's gates (2026-10-08, on the tree merged with the append fence) likewise.
 pins: mb-3/C-031
+MB-FENCE-BODY-FLAKE-1's gates (2026-10-18) are recorded in its ledger.
+pins: mb-fence-body-flake-1/C-007
 
 ## What each door guarantees (round 3, 2026-10-08, ledger C-002 and D-19)
 
