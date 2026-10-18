@@ -272,7 +272,7 @@ py-test-facade: ## Facade tests against the real native module (provisions extra
 	@# could re-sync over maturin's editable install.
 	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
-		uv run --no-project python -m pytest python/repark/tests -q
+		uv run --no-project python -m pytest python/repark/tests -q -n 8
 
 .PHONY: py-test-dbt
 py-test-dbt: ## dbt-adapter suite (python/dbt-repark) — needs the native module py-test-facade builds; see python/dbt-repark/tests/map.md
