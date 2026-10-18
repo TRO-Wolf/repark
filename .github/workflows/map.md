@@ -15,6 +15,12 @@ set `persist-credentials: false`. CI cargo steps use `--locked`. `cargo-deny` / 
 `cargo-nextest` / `uv` / ruff / taplo / typos / zizmor are version-pinned identically to the
 Makefile. zizmor is
 **blocking**: any finding not suppressed in [../zizmor.yml](../zizmor.yml) fails the job.
+`uv` / ruff / taplo / typos / zizmor are version-pinned identically to the Makefile. zizmor is
+**blocking**: any finding not suppressed in [../zizmor.yml](../zizmor.yml) fails the job. Measured
+2026-10-18: `zizmor --format sarif` exits 0 with findings present (plain output exits 14), so the
+job runs the plain command as the gate and a second, `always()` step writes the SARIF for upload;
+`make workflows-lint` had been red on main since 2026-09-20 on the `ci.yml` map.md guard's
+`github.base_ref` expansions while the hosted job stayed green.
 Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; top-level
 `permissions: contents: read` in every workflow.
 
