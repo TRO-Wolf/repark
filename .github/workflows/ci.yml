@@ -136,6 +136,9 @@ jobs:
         with:
           prefix-key: "v2-df54-test"
           shared-key: "test"
+      - uses: taiki-e/install-action@fcf5432d9f50d67e37ee6e29bdb7a224ff67b4a7  # v2
+        with:
+          tool: cargo-nextest@0.9.143
       - name: test
         run: make rust-test
       # This gate needs the test binaries from this job. It keeps every matrix.rs test citation
