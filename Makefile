@@ -32,6 +32,7 @@ TYPOS  := uvx typos@1.47.2
 ZIZMOR := uvx zizmor@1.26.1
 CARGO_DENY_VERSION := 0.19.9
 CARGO_AUDIT_VERSION := 0.22.1
+NEXTEST_VERSION := 0.9.143
 UV_VERSION := 0.9.5
 # Local JVM for `make parity-live` (Spark 4.1.2 needs Java 17; CI uses Temurin 17 via setup-java).
 # Defaults to the caller's JAVA_HOME so no machine-specific path is committed; set it to a Java 17
@@ -184,8 +185,11 @@ rust-check: ## cargo check
 	cargo check --locked --workspace
 
 .PHONY: rust-test
-rust-test: ## cargo test (workspace; see note above re: --all-features)
-	cargo test --locked --workspace
+rust-test: ## cargo nextest run + doctests (workspace; see note above re: --all-features)
+	@[ "$$(cargo-nextest --version 2>/dev/null | awk 'NR == 1 {print $$2}')" = "$(NEXTEST_VERSION)" ] \
+		|| cargo install cargo-nextest --locked --version $(NEXTEST_VERSION) --force
+	cargo nextest run --locked --workspace
+	cargo test --locked --workspace --doc
 
 .PHONY: rust-test-cluster
 rust-test-cluster: ## cargo test for repark-distributed with the cluster feature (Ballista executor)

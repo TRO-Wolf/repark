@@ -147,7 +147,11 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `path:link` entry per line — the line is not part of the key, so a line shift never reds
   the gate — ratchet down only: a stale entry that matched no finding fails the gate).
   Tool pins match the
-  workflow pins. The tier-2 `parity-live` target is dual-wired with
+  workflow pins. **CI-SPEED-B (2026-10-18):** `rust-test` runs `cargo nextest run --locked
+  --workspace` (profile in [.config/nextest.toml](.config/nextest.toml)) and then
+  `cargo test --locked --workspace --doc`; `NEXTEST_VERSION` is the one pin, installed on demand
+  like `cargo-audit` / `cargo-deny`. `rust-test-cluster` stays on `cargo test`.
+  The tier-2 `parity-live` target is dual-wired with
   [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
   its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing
   `--extra` silently uninstalls a facade extra and the suite skips those tests instead of failing).
@@ -260,6 +264,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Declare a new crate / doc / gate command structurally | [repo-manifest.toml](repo-manifest.toml) (validated by `make check-manifest`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |
+| Understand the nextest profile behind `make rust-test` | [.config/map.md](.config/map.md) |
 
 ## Pointers
 

@@ -20,6 +20,9 @@ read [STATUS.md](STATUS.md).
 - Linters/formatters (ruff, taplo, typos, zizmor) and the security tools (cargo-deny, cargo-audit,
   pip-audit) are all run at pinned versions by the Makefile via `uvx` / install-action — they
   never silently skip locally, and their pins match the workflow pins exactly.
+- **cargo-nextest** — the Rust test runner behind `make test`, pinned as `NEXTEST_VERSION` in the
+  Makefile. `make rust-test` runs `cargo install cargo-nextest --locked` at that version when the
+  installed one differs; CI installs the same version with `taiki-e/install-action`.
 - **Docker, only for the live database tier** — `make pg-up` starts one disposable Postgres
   from [`scripts/dev/pg/compose.yaml`](scripts/dev/pg/compose.yaml) through the stock
   `docker compose` client, bounded to two cores and two gigabytes, on a random localhost port;
@@ -39,7 +42,7 @@ The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, match
 | Command | What it does |
 |---|---|
 | `make ci` | **The canonical fast gate.** fmt-check + clippy + panic/async bans + crate dependency policy + lib.rs thinness + Rust source file-size + the parity-harness suite (`py-test`, isolated `uv` env, no native build — it carries the CAP-1 and REG-1 mirror pins that CI's Python job runs, so a ceiling ratchet or a registry-prose edit reds locally instead of on the PR) (`scripts/check_rust_file_size.py`) + Python source file-size and facade thinness (`scripts/check_lib_py.py`) + structural manifest + `cargo check` + ruff lint/format + uv-lock check + toml + spell. Mirrors the CI `ci.yml` job. |
-| `make test` | The **Rust workspace** suite (`cargo test --locked --workspace`) — and that is deliberately all of it. The Python suites need something `cargo test` cannot give them (see below). |
+| `make test` | The **Rust workspace** suite — `cargo nextest run --locked --workspace`, then the doctests with `cargo test --locked --workspace --doc`, because nextest does not run doctests — and that is deliberately all of it. nextest runs every test in its own process, across all cores and every test binary at once, and reports every failure in one run; its profile is [.config/nextest.toml](.config/nextest.toml), with the reasons in [.config/map.md](.config/map.md) (CI-SPEED-B, 2026-10-18). The Python suites need something the Rust runner cannot give them (see below). |
 | `make verify` | `ci` + `test` — full local verification. **A change is not done until `make verify` is green** and the touched directories' `map.md` files are current. |
 | `make py-test-facade` | The **facade** suite (`python/repark/tests`) against the real native module: provisions the four declared extras (`numpy`, `pandas`, `polars`, `ml-ext`) from `uv.lock`, runs `maturin develop`, then pytest under eight `pytest-xdist` workers (`-n 8`, the worker plugin comes from the root `dev` group). Run it when you touch the facade — `make verify` does not. |
 | `make py-test` | The **parity** harness (`python/repark-parity/tests`) — pyarrow + pydantic (PYC-4), no native build, no JVM. Mirrors the CI step. |
@@ -60,7 +63,9 @@ The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, match
 
 ### Test-command discipline (hard)
 
-Run tests as **`cargo test --workspace`** (what `make test` does). **Never `--all-features`:** the
+Run the workspace suite through `make test`: `cargo nextest run --locked --workspace`, then
+`cargo test --locked --workspace --doc` (since CI-SPEED-B, 2026-10-18). One crate is still
+`cargo test -p <crate>` or `cargo nextest run -p <crate>`. **Never `--all-features`:** the
 all-features flag turns on `repark-python`'s `extension-module`, which tells PyO3 not to link
 libpython and breaks a standalone test binary. The Makefile, CI, and this rule all agree. See
 [docs/testing.md](docs/testing.md) and [AGENTS.md](AGENTS.md) "PyO3 build notes". The cdylib is
