@@ -8,7 +8,14 @@ members = ["python/repark", "python/repark-parity"]
 [dependency-groups]
 # pandas is here so the facade's toPandas/to_pandas tests run; numpy arrives via pyarrow/pandas.
 # duckdb backs the bench comparison scripts.
-dev = ["ruff>=0.15.22,<0.16", "pytest>=9.1.1", "maturin>=1.14.1,<2", "pandas>=2.1", "duckdb==1.5.5"]
+dev = [
+  "ruff>=0.15.22,<0.16",
+  "pytest>=9.1.1",
+  "pytest-xdist>=3.6,<4",
+  "maturin>=1.14.1,<2",
+  "pandas>=2.1",
+  "duckdb==1.5.5",
+]
 
 [tool.ruff]
 line-length = 100
