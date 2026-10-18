@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2]
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -105,7 +105,7 @@ jobs:
           /tmp/wheeltest/bin/pip install --upgrade pip
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
           /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
-          FILES=$(ls python/repark/tests/test_*.py | sort | awk -v s="$SHARD" 'NR % 3 == s')
+          FILES=$(ls python/repark/tests/test_*.py | sort | awk -v s="$SHARD" 'NR % 4 == s')
           /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --durations=25
 
   dbt:
