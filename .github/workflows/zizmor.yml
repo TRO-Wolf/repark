@@ -30,8 +30,9 @@ jobs:
         with:
           version: "0.9.5"  # Makefile UV_VERSION
       - name: Run zizmor
-        # Findings remain blocking; suppressions live in .github/zizmor.yml. Always upload the
-        # SARIF even when this pinned command exits non-zero.
+        run: uvx zizmor@1.26.1 .
+      - name: zizmor SARIF
+        if: always()
         run: uvx zizmor@1.26.1 --format sarif . > zizmor.sarif
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         if: always()  # upload the SARIF for triage even when the gate fails
