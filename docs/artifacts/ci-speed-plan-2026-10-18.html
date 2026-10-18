@@ -1,0 +1,139 @@
+<title>CI Speed Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#F2F5F7;--fg:#13202A;--muted:#55646F;--line:#D3DCE2;--card:#FFFFFF;--accent:#0E6C88;--accent-soft:#D8EAF0;--green:#1F7A4D;--green-soft:#DCEFE4;--amber:#9A6A0B;--amber-soft:#F6EBD0;--red:#A3362C;--red-soft:#F4DCD8;--hold:#4C5A66;--hold-soft:#E2E7EB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1418;--fg:#E6EDF1;--muted:#9AAAB5;--line:#23303A;--card:#141C22;--accent:#4DB1CF;--accent-soft:#12303B;--green:#5CC28E;--green-soft:#15302A;--amber:#E0B35A;--amber-soft:#3A2E12;--red:#E57F72;--red-soft:#3B1D1A;--hold:#A5B2BC;--hold-soft:#1F2A32;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1418;--fg:#E6EDF1;--muted:#9AAAB5;--line:#23303A;--card:#141C22;--accent:#4DB1CF;--accent-soft:#12303B;--green:#5CC28E;--green-soft:#15302A;--amber:#E0B35A;--amber-soft:#3A2E12;--red:#E57F72;--red-soft:#3B1D1A;--hold:#A5B2BC;--hold-soft:#1F2A32;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;margin:0;padding-block:28px 56px;padding-inline:clamp(16px,4vw,48px)}
+main{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.1}
+h2{font-size:20px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:12px}
+h3{font-size:16px;margin-bottom:6px}
+p{margin:0 0 10px;max-width:68ch}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:6px}
+.meta{color:var(--muted);font-size:13px;margin-top:8px}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.92em}
+.chip{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.g{background:var(--green-soft);color:var(--green)}.a{background:var(--amber-soft);color:var(--amber)}.r{background:var(--red-soft);color:var(--red)}.h{background:var(--hold-soft);color:var(--hold)}.t{background:var(--accent-soft);color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.tile .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.tile .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.tile .d{font-size:12.5px;margin-top:6px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;background:var(--accent-soft)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:10px;background:var(--line);border-radius:2px;position:relative;min-width:120px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:2px}
+.bar i.r{background:var(--red)}.bar i.a{background:var(--amber)}
+ul{margin:0 0 10px;padding-left:20px}li{margin-bottom:5px;max-width:72ch}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.note{background:var(--card);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0}
+.src{font-size:12.5px;color:var(--muted)}
+.src li{margin-bottom:3px}
+</style>
+<main>
+<header>
+<div class="kicker">RePark · CI speed · status board</div>
+<h1>Where the minutes go, and the plan to take them back</h1>
+<div class="meta">Measured 2026-10-18 from the last code PR on <span class="mono">main</span> (PR #1090, head <span class="mono">0b9195ca</span>, runs 39078911972 and 39078911877) and from the local RP-59 preflight. Every figure on this page is a measurement, not an estimate, unless marked <span class="chip a">est</span>.</div>
+</header>
+
+<section>
+<h2>Headline numbers</h2>
+<div class="tiles">
+<div class="tile"><div class="n">23 min</div><div class="l">code PR critical path today</div><div class="d">wheel build 10.5 → facade shard 1 12.9</div></div>
+<div class="tile"><div class="n">~12 min</div><div class="l">after the plan <span class="chip a">est</span></div><div class="d">P0 to P2 only, no paid runners</div></div>
+<div class="tile"><div class="n">3 h</div><div class="l">local <span class="mono">make preflight</span> today</div><div class="d">facade suite runs serially</div></div>
+<div class="tile"><div class="n">~35 min</div><div class="l">local preflight after xdist <span class="chip a">est</span></div><div class="d">same mechanism CI already uses</div></div>
+<div class="tile"><div class="n">66</div><div class="l">crates recompiled per code PR</div><div class="d">despite a reported cache hit</div></div>
+<div class="tile"><div class="n">2 min</div><div class="l">docs PR today</div><div class="d">already fine, unchanged</div></div>
+</div>
+</section>
+
+<section>
+<h2>The code PR today, job by job</h2>
+<p>The two workflows that gate a code PR run in parallel. The long pole is the smoke chain, because the three facade shards cannot start until the wheel is built.</p>
+<div class="tw"><table>
+<thead><tr><th>Workflow · job</th><th class="num">Minutes</th><th>Share of a 24-minute window</th><th>What it is doing</th></tr></thead>
+<tbody>
+<tr><td>smoke · build debug wheel</td><td class="num">10.5</td><td><div class="bar"><i style="width:44%"></i></div></td><td>cache works: only the 11 workspace crates compile, at opt-level 2, then maturin packs and uploads</td></tr>
+<tr><td>smoke · facade shard 1</td><td class="num">12.9</td><td><div class="bar"><i class="r" style="width:54%"></i></div></td><td>7,884 tests with 4 workers; one fixture alone is 279 s</td></tr>
+<tr><td>smoke · facade shard 0 / 2</td><td class="num">4.7 / 4.9</td><td><div class="bar"><i style="width:20%"></i></div></td><td>6,371 and 5,740 tests; shard 2 carries a 190 s fixture</td></tr>
+<tr><td>CI · Rust test (workspace)</td><td class="num">15 to 21</td><td><div class="bar"><i class="r" style="width:75%"></i></div></td><td>cache restore 4 min · recompile 66 crates 7.3 min · run 89 binaries one after another 9.4 min</td></tr>
+<tr><td>CI · Rust lint</td><td class="num">8.2</td><td><div class="bar"><i class="a" style="width:34%"></i></div></td><td>clippy rechecks 145 crates (3.3 min), panic-ban is a second clippy pass (2 min), check 0.7 min</td></tr>
+<tr><td>CI · Rust test (cluster feature)</td><td class="num">3.5</td><td><div class="bar"><i style="width:15%"></i></div></td><td>fine</td></tr>
+<tr><td>smoke · example coverage, dbt, Python, guards, typos, taplo, zizmor, cargo-deny</td><td class="num">≤ 2.2 each</td><td><div class="bar"><i style="width:9%"></i></div></td><td>fine</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2>Three findings that explain most of it</h2>
+<div class="two">
+<div class="note"><h3>1 · The Rust caches are warmed in a different environment than they are used in <span class="chip r">new</span></h3>
+<p>The cache-warm workflow's lint and test jobs run without the Python 3.12 setup step that the CI lint and test jobs have. The build scripts of <span class="mono">pyo3</span> and <span class="mono">aws-lc-sys</span> fingerprint that environment, so on every code PR cargo discards the restored artifacts for them and everything above them: 66 crates recompiled in the test job (7.3 min, including the aws-lc C build), 145 rechecked in lint (3 to 5 min). The wheel cache, whose warm job does set up Python, works: only the 11 workspace crates compile. Three successive PR runs show the same 66-crate recompile under the same cache key.</p></div>
+<div class="note"><h3>2 · Two fixtures are the facade suite's shape <span class="chip t">your 10-03 ruling</span></h3>
+<p>The ten slowest facade tests sum to 687 s against a slowest shard of 691 s. Your 3 October ruling made CI-2 conditional on that ratio exceeding a quarter. It is 99 percent. Two thousand-filter-chain setups account for 470 s: <span class="mono">test_deep_subquery_expression_1</span> (279 s) and <span class="mono">test_deep_filter_chain_crash_1</span> (190 s). Both are setup time, not assertion time.</p></div>
+<div class="note"><h3>3 · Test execution is serial where it need not be</h3>
+<p>Locally the facade target runs one Python process for about 170 minutes; CI runs the same suite with four workers per shard in 12. In the Rust test job, cargo runs the 89 test binaries one after another; four of them hold 386 of the 544 reported seconds (<span class="mono">ddl_sessions</span> 171, <span class="mono">repark-core</span> 84, <span class="mono">repark-iceberg</span> 72, <span class="mono">timestamptz_ns_wall_doors</span> 58).</p></div>
+<div class="note"><h3>What is already right</h3>
+<p>Path-filtered <span class="mono">changes</span> gate keeps docs PRs at 2 minutes. The <span class="mono">ci</span> profile strips debuginfo and incremental state. Concurrency cancels superseded PR runs. Facade shards already use xdist. None of this needs touching.</p></div>
+</div>
+</section>
+
+<section>
+<h2>The plan, in the order to run it</h2>
+<p>Ranked by minutes saved per unit of risk. Each item is one PR, measured on the next code PR before the following item starts. The number in the PR body is the before-and-after job time and, for the cache item, the <span class="mono">Compiling</span> count.</p>
+<div class="tw"><table>
+<thead><tr><th>#</th><th>Change</th><th>Touches</th><th class="num">Saves</th><th>Risk to the gate</th><th>Grade</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>Warm the caches in the CI jobs' own environment.</strong> Give the warm-lint and warm-test jobs the identical step list to the CI lint and test jobs (Python setup, same disk-free step). Verify on the next code PR that only the workspace crates compile. If anything still rebuilds, one diagnostic run with cargo's fingerprint log names the variable.</td><td><span class="mono">cache-warm.yml</span></td><td class="num">7 to 8 min Rust test<br>3 to 5 min lint</td><td><span class="chip g">none</span> a cache can only slow a run, never pass a red; cargo's fingerprints decide what is reused</td><td>clerk</td></tr>
+<tr><td>2</td><td><strong>xdist for the local facade target.</strong> Add pytest-xdist to the dev group and lock; add the worker flag to the facade Makefile target and to the parity-live workflow line it is dual-wired with.</td><td><span class="mono">Makefile</span>, <span class="mono">parity-live.yml</span>, <span class="mono">pyproject.toml</span>, <span class="mono">uv.lock</span></td><td class="num">~2.5 h per local preflight</td><td><span class="chip g">none</span> CI has run this suite under xdist at four workers since CI-1</td><td>clerk</td></tr>
+<tr><td>3</td><td><strong>CI-2 for the two thousand-filter fixtures.</strong> Build the immutable chain once per worker (session scope), keep every assertion, move nothing between languages. Exactly the order your 3 October ruling pre-authorised once the ratio was measured.</td><td>two test files under <span class="mono">python/repark/tests</span></td><td class="num">~6 min off shard 1<br>~3 min off shard 2</td><td><span class="chip g">low</span> assertions unchanged; the fixture is read-only input</td><td>clerk, per ruling</td></tr>
+<tr><td>4</td><td><strong>cargo-nextest for <span class="mono">make rust-test</span> and the CI test job.</strong> Runs tests from all 89 binaries concurrently across the cores instead of binary by binary, each test in its own process. Pin the nextest version like every other tool. Keep <span class="mono">check_matrix_test_liveness.sh</span> working against the built binaries. Per-test slow-timeout reporting names a PA-15 stall instead of hanging the job.</td><td><span class="mono">Makefile</span>, <span class="mono">ci.yml</span>, <span class="mono">.config/nextest.toml</span></td><td class="num">~5 min Rust test <span class="chip a">est</span></td><td><span class="chip a">medium</span> per-process isolation is stricter than today; any test leaning on shared in-process state surfaces on the first run, which is a finding, not a regression</td><td>Sonnet or Muse</td></tr>
+<tr><td>5</td><td><strong>Rebalance the facade shards</strong> by measured duration (or go to four) once item 3 has landed and the durations are re-read.</td><td><span class="mono">smoke.yml</span></td><td class="num">1 to 3 min</td><td><span class="chip g">none</span></td><td>clerk</td></tr>
+<tr><td>6</td><td><strong>Only if the wheel build is still the long pole after 1 to 5:</strong> a larger runner for the wheel job, or measure the facade suite against an opt-level 1 wheel. Both are owner decisions: one costs money, the other trades compile time for test time and must be measured, not assumed.</td><td><span class="mono">smoke.yml</span>, <span class="mono">Cargo.toml</span> profile</td><td class="num">3 to 5 min <span class="chip a">est</span></td><td><span class="chip h">hold</span> owner call</td><td>held</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2>Expected shape after items 1 to 5</h2>
+<div class="tw"><table>
+<thead><tr><th>Job</th><th class="num">Today</th><th class="num">After <span class="chip a">est</span></th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Rust test (workspace)</td><td class="num">15 to 21</td><td class="num">6 to 8</td><td>no dependency recompile; tests run across cores</td></tr>
+<tr><td>Rust lint</td><td class="num">8.2</td><td class="num">3 to 4</td><td>no dependency recheck</td></tr>
+<tr><td>wheel build → slowest facade shard</td><td class="num">10.5 + 12.9</td><td class="num">10.5 + ~5</td><td>fixtures built once; shards balanced</td></tr>
+<tr><td><strong>Critical path</strong></td><td class="num"><strong>23</strong></td><td class="num"><strong>~16, ~12 with item 6</strong></td><td>the wheel build becomes the floor</td></tr>
+<tr><td>local <span class="mono">make preflight</span>, warm</td><td class="num">~180</td><td class="num">~30</td><td>facade under xdist; nextest locally too</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2>Reliability and safety guardrails</h2>
+<ul>
+<li><strong>No gate is removed, narrowed or skipped.</strong> Required checks, path filters and the test set are unchanged; every item changes how fast the same work runs.</li>
+<li><strong>Caches cannot create a false green.</strong> Cargo reuses an artifact only when its fingerprint matches; a stale or wrong cache costs time and nothing else.</li>
+<li><strong>One change per PR, measured before the next.</strong> The before-and-after numbers go in the PR body so the record is in git, not in a chat.</li>
+<li><strong>Nextest is more isolation, not less.</strong> Each test gets its own process. The first run may expose tests that relied on process-shared state; those get fixed as findings with their own regression proof, never silenced.</li>
+<li><strong>PA-15 stays exactly as it is.</strong> No bound is raised and nothing is serialised to hide it, per the 11 October audit. Nextest's slow-timeout report names it when it stalls.</li>
+<li><strong>Versions stay pinned.</strong> pytest-xdist in the lock, nextest pinned in the Makefile and the workflow, the same way every other CI tool is.</li>
+<li><strong>Fork CI is left alone.</strong> The Windows build is its 24-minute pole, but only Tests default and doc are required (14 and 3.4 min), so it does not block merges.</li>
+</ul>
+</section>
+
+<section>
+<h2>Sources</h2>
+<ul class="src">
+<li>RePark CI run 39078911972 and smoke run 39078911877 on <span class="mono">0b9195ca</span>; PR runs 39078075313 and 39077271580 for the repeated 66-crate recompile under cache key <span class="mono">v2-df54-test-test-Linux-x64-845b8a48-697000ed</span>.</li>
+<li><span class="mono">.github/workflows/ci.yml</span>, <span class="mono">cache-warm.yml</span>, <span class="mono">smoke.yml</span>, <span class="mono">parity-live.yml</span>; <span class="mono">Makefile</span> targets <span class="mono">preflight</span>, <span class="mono">rust-test</span>, <span class="mono">py-test-facade</span>; root <span class="mono">Cargo.toml</span> profiles.</li>
+<li>Local preflight log for RP-59 (<span class="mono">chore/rp-59-fork-repin</span>, 2026-10-18 05:45 EDT onward).</li>
+<li>Owner ruling 2026-10-03 on test speed (CI-1 durations, conditional CI-2, no consolidation units); production audit 2026-10-11, PA-15.</li>
+<li>Fork CI run 39114798954 on <span class="mono">d80a2884</span>.</li>
+</ul>
+</section>
+</main>
