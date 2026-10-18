@@ -990,6 +990,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   red on a new directory without a map, quiet on deletion-only, root-level file maps to `map.md`;
   staged mode exits 0 with `WARNING:` naming ci.yml's `map.md guard`; the `sync_map_md.py`
   duplicate-row rule fires on a two-row fixture and stays quiet on a single row naming a file twice.
+  C-011 pins ci.yml's guard step as PR-only with the base ref taken into `env` as `BASE_REF` and
+  expanded as `${BASE_REF}` in both run lines (since 2026-10-18; no `${{ }}` inside the run block).
 - `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
   record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;
