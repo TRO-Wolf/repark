@@ -134,6 +134,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   Isolated `make py-test` / ci.yml `parity-harness tests` pass `--with pydantic` because
   `--no-project` ignores package metadata.
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
+  **CI-SPEED-A (2026-10-18):** the `dev` group gains `pytest-xdist>=3.6,<4` (locked at 3.8.0,
+  with `execnet` 2.1.2) so `make py-test-facade` can run the facade suite under workers.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +
   `py-test-facade` + `py-test-parity-cap` + `py-test-dbt` + audit + workflow lint (G14,
@@ -153,6 +155,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
   its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing
   `--extra` silently uninstalls a facade extra and the suite skips those tests instead of failing).
+  **CI-SPEED-A (2026-10-18):** `py-test-facade` runs pytest with `-n 8` (eight `pytest-xdist`
+  workers; CI's `smoke.yml` shards already run `-n 4`). The serial run took about 170 minutes on
+  the 64-core box. `parity-live` stays serial and its dual-wire guard is unchanged.
 - `repo-manifest.toml` — the **machine-readable structural facts**: the component inventory
   (path / layer / status for every crate, delivered and planned), the current phase, the
   canonical gate commands, and the documentation index (which carries `divergences` →
