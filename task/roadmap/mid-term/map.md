@@ -946,6 +946,14 @@ declines it (a dated ruling in the intake, then the archive).
   `f8f1d252` flake shape) or does something else. Proposed fix is one shared helper
   that picks by the version number in the file name, as `f8f1d252`'s
   `_metadata_version` does. Retires when every listed use is converted.
+- [mb-fence-body-flake-1-card-2026-10-18.md](mb-fence-body-flake-1-card-2026-10-18.md) — **card
+  MB-FENCE-BODY-FLAKE-1 (2026-10-18, fixed in the unit's PR, one open question):**
+  `two_drivers_on_one_sink_land_each_epoch_exactly_once` failed on CI (run 39157958057,
+  main's tree) with `left: [0, 0, 1, 2]`: a fenced driver's `foreachBatch` body ran epoch 0.
+  Cause: `enter_scope` loaded the sink before it entered the sink's scope, against MB-3 D-19.
+  A deterministic pin reproduces it; the fix enters the scope first. Open: the same pin also
+  misses its 10 s bound on a slow disk (the PA-15 family), measured to `fsync`; the owner
+  keeps the bound or rules otherwise.
 - [stack-linear-flake-1-card-2026-10-15.md](stack-linear-flake-1-card-2026-10-15.md) — **card
   STACK-LINEAR-FLAKE-1 (2026-10-15, open, not scheduled):**
   `test_stack_is_linear_in_columns` failed on CI (2026-10-15, facade shard 1,

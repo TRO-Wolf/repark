@@ -150,6 +150,19 @@ pins: mb-3/C-031
     loaded again after each wait because the other query's
     commit moved it, and the resume-point check runs after the scope is held. A stop or a
     dropped session ends the wait with no batch run. pins: mb-3/C-016
+  - *The load under the scope* (MB-FENCE-BODY-FLAKE-1, 2026-10-18). `enter_scope` enters the
+    scope first, under the sink uuid that `register` read, and loads the sink only while it
+    holds the scope. Before this unit it loaded first and entered after, so another query in
+    the process could commit an epoch and leave the scope between the two, and the
+    resume-point check read a handle from before that commit: the body ran for the other
+    run's epoch and the trailing stamp was refused `Fenced` (CI run 39157958057). Every commit
+    of another query in the process happens inside the scope, so the handle loaded under the
+    scope shows it. A loaded table whose uuid differs from the scope's (the sink was replaced)
+    makes the batch leave that scope and enter the new uuid's scope, then load again, which is
+    the table main's order took the batch to. It enters again only if the sink is replaced
+    again between its scope entry and its load.
+    The load count per batch is unchanged (`reload_tests.rs`).
+    pins: mb-fence-body-flake-1/C-001, C-002, C-003, C-004
   - *The replay window is not durable.* A restart plans the failed batch's window again
     (registry row `MB-3-REPLAY-WINDOW-1`). pins: mb-3/C-014
   - *An unstamped batch.* The `NotCommitted` check after the door is reachable when the sink
@@ -217,6 +230,15 @@ pins: mb-3/C-031
   needs recovery); and a driver that resumed before another run committed. The restart of the
   refused query continues at the next epoch each time.
   pins: mb-3/C-002, C-030
+  MB-FENCE-BODY-FLAKE-1 (2026-10-18) adds two pins. The winner pin holds open the window the
+  two-driver pin hit by chance on CI: the second driver's batch load is parked by
+  `FaultCatalog::after_load` after the catalog answered, and if the sink's scope is free at that
+  moment the first driver runs to the end before the load returns. The two bodies together see
+  each epoch once, on both doors. The replaced-sink pin drops and recreates the sink between
+  two batches of a `ProcessingTime(0)` query; the second batch lands on the new table under
+  its own scope. The unit's replays of the two-driver pin, and its second failure on a slow
+  disk (the 10 s bound of `ended`, the PA-15 family), are recorded in its ledger.
+  pins: mb-fence-body-flake-1/C-001, C-002, C-003, C-005, C-006
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
   pins: mb-3/C-005
@@ -260,7 +282,9 @@ pins: mb-3/C-031
   catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the
   same query across two sessions. `FaultCatalog` also takes a load hook (`on_load`), which the
   fold-1 pins use to panic or to hold a table load; round 2 adds two stalling commit modes
-  and an event log of loads and commits. The door's exactly-once guarantee against a racing driver is
+  and an event log of loads and commits. MB-FENCE-BODY-FLAKE-1 (2026-10-18) adds a post-load
+  hook (`after_load`, a `LoadedHook` given the loaded `Table`), which `fence_tests.rs` uses to
+  park a load after the catalog answered. The door's exactly-once guarantee against a racing driver is
   claimed since the append fence merged (round 3, 2026-10-08, ledger C-002) and pinned in
   `fence_tests.rs`.
   pins: mb-3/C-007
