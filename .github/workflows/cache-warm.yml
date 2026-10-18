@@ -45,7 +45,7 @@ jobs:
       # Both keys must match ci.yml; rust-cache otherwise adds the job ID and misses this cache.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
-          prefix-key: "v2-df54"
+          prefix-key: "v3-df54"
           shared-key: "lint"
       - name: clippy
         run: make rust-clippy
@@ -81,7 +81,7 @@ jobs:
       # prefix-key AND shared-key MUST match ci.yml's rust-test restore (see warm-lint note).
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
-          prefix-key: "v2-df54-test"
+          prefix-key: "v3-df54-test"
           shared-key: "test"
       - name: build test artifacts (no run)
         run: cargo test --locked --workspace --no-run
