@@ -114,6 +114,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-56 (2026-09-28):** `e1d74bef` (F-SCHEMA-LCI-LAZY-1 `#364` — case-twin columns build; the lower-case index refuses only on a case-insensitive lookup, as Java does; R-CS1-12).
   **RP-57 (2026-10-05):** `076d5f98` (F-APPEND-WINDOW-FAILLOUD-1 `#365` — opt-in fail-loud and skip options on `IncrementalAppendScanBuilder`, off by default, for the micro-batch source; F-COMMIT-OFFSET-PROPERTY-1 `#366` — tests only).
   **RP-58 (2026-10-17):** `409ff330` (F-COMMIT-REBASE-DUP-1 `#368` — a lost commit reply, the SDK re-send and a stale rejection no longer append twice on Glue and S3 Tables; the commit calls send once, and an ambiguous failure is `CommitStateUnknown` after the fork reads back the sent ids; rider `#367`, CI only).
+  **RP-59 (2026-10-18):** `d80a2884` (F-INTEROP-NIGHTLY-GREEN-1 `#370` `#371` `#372` — the four red nightly-interop suites fixed as tests, oracle and workflow only; no crate source moves, the pin follows fork main; nightly 65 of 65 on the runner).
   **RP-53 uuid flag on deregistered providers (2026-09-26):** `96582bc2` (`#358` F-UUID-STATIC-2 — `IcebergSchemaProvider::deregister_table` returns the provider WITH the schema provider's `uuid_as_string` flag through the same helper `resolve_table` uses; static-provider pins for nested uuid text at every depth, text-vs-byte pushdown parity and the flag-off byte path; the duplicated `schema()` advertisement body folded into `scan_knobs::advertised_schema`, no behaviour change with the flag off). The workspace builds unchanged; `cargo update` touches only the fork packages. Closes the three follow-ups the #357 verifier recorded.
   **RP-52 uuid text on every provider (2026-09-26):** `b61c82b8` (`#357` F-UUID-STATIC-1 — `IcebergStaticTableProvider::with_uuid_as_string(bool)` and `IcebergCatalogProvider::with_uuid_as_string(bool)` (plus the schema provider's switch), default off, reusing #355's text rendering and byte pushdown, so a snapshot-pinned read (`VERSION AS OF`, `TIMESTAMP AS OF`, tag, branch, a staged WAP snapshot) and every catalog-resolved table present uuid as text on request; metadata tables pass through). The workspace built unchanged; `cargo update` touched only the six fork packages. Unblocks the U9 PR2 static-provider slice (the `IcebergStaticTableProvider` sites in repark-core `time_travel.rs` / `iceberg_path.rs` and repark-spark `time_travel.rs` / `wap.rs`) and lets RePark drop the `UuidTextSchemaProvider` shim for the catalog option.
   **CI-1 (2026-10-03, owner ruling point 5):** `[profile.ci]` gains `opt-level = 2`, chosen by measurement (the lower sum of the build step and the slowest facade shard wins, a tie keeps `1`: opt-level 1 summed 1394 s, opt-level 2 summed 1388 s); the profile still inherits `dev`, so debug assertions and overflow checks stay on. It builds the debug wheel of `smoke.yml` and `cache-warm.yml` `warm-wheel` ([.github/workflows/map.md](.github/workflows/map.md)). The facade suite runs in CI in `smoke.yml`'s three `facade` shards against that packaged `ci`-profile wheel, and `example-coverage execute` runs `check_example_coverage.py --require-execute` there. The `Makefile` and `Cargo.toml` comments that still said `wheels.yml` smoke, or called `[profile.ci]` dormant, were deleted (owner delegate, 2026-10-03, Q6).
@@ -134,6 +135,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   Isolated `make py-test` / ci.yml `parity-harness tests` pass `--with pydantic` because
   `--no-project` ignores package metadata.
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
+  **CI-SPEED-A (2026-10-18):** the `dev` group gains `pytest-xdist>=3.6,<4` (locked at 3.8.0,
+  with `execnet` 2.1.2) so `make py-test-facade` can run the facade suite under workers.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +
   `py-test-facade` + `py-test-parity-cap` + `py-test-dbt` + audit + workflow lint (G14,
@@ -145,10 +148,17 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `path:link` entry per line — the line is not part of the key, so a line shift never reds
   the gate — ratchet down only: a stale entry that matched no finding fails the gate).
   Tool pins match the
-  workflow pins. The tier-2 `parity-live` target is dual-wired with
+  workflow pins. **CI-SPEED-B (2026-10-18):** `rust-test` runs `cargo nextest run --locked
+  --workspace` (profile in [.config/nextest.toml](.config/nextest.toml)) and then
+  `cargo test --locked --workspace --doc`; `NEXTEST_VERSION` is the one pin, installed on demand
+  like `cargo-audit` / `cargo-deny`. `rust-test-cluster` stays on `cargo test`.
+  The tier-2 `parity-live` target is dual-wired with
   [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
   its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing
   `--extra` silently uninstalls a facade extra and the suite skips those tests instead of failing).
+  **CI-SPEED-A (2026-10-18):** `py-test-facade` runs pytest with `-n 8` (eight `pytest-xdist`
+  workers; CI's `smoke.yml` shards already run `-n 4`). The serial run took about 170 minutes on
+  the 64-core box. `parity-live` stays serial and its dual-wire guard is unchanged.
 - `repo-manifest.toml` — the **machine-readable structural facts**: the component inventory
   (path / layer / status for every crate, delivered and planned), the current phase, the
   canonical gate commands, and the documentation index (which carries `divergences` →
@@ -255,6 +265,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Declare a new crate / doc / gate command structurally | [repo-manifest.toml](repo-manifest.toml) (validated by `make check-manifest`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |
+| Understand the nextest profile behind `make rust-test` | [.config/map.md](.config/map.md) |
 
 ## Pointers
 

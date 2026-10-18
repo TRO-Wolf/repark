@@ -88,7 +88,7 @@ jobs:
       # warm cache.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
-          prefix-key: "v2-df54"
+          prefix-key: "v3-df54"
           shared-key: "lint"
       # Use the Makefile targets so local and CI keep the same clippy split and panic ban.
       - name: rustfmt
@@ -134,8 +134,11 @@ jobs:
       # prefix-key AND shared-key MUST match cache-warm.yml's warm-test job (see rust-lint note).
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
-          prefix-key: "v2-df54-test"
+          prefix-key: "v3-df54-test"
           shared-key: "test"
+      - uses: taiki-e/install-action@fcf5432d9f50d67e37ee6e29bdb7a224ff67b4a7  # v2
+        with:
+          tool: cargo-nextest@0.9.143
       - name: test
         run: make rust-test
       # This gate needs the test binaries from this job. It keeps every matrix.rs test citation
