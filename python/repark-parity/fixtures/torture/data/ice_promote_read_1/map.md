@@ -6,7 +6,7 @@ The recorded Spark 4.1.2 answers for ICE-PROMOTE-READ-1 — reads and DML after 
 Iceberg type promotion (`int→bigint`, `float→double`, `decimal(9,2)→(12,2)`) — and two
 Spark-created, Spark-promoted mixed-era tables the JVM-free tier adopts with
 `register_table`. Recorded 2026-09-16 by
-`python/repark/tests/_record_ice_promote_read_1.py` on PySpark 4.1.2 +
+`python/repark/tests/iceberg/_record_ice_promote_read_1.py` on PySpark 4.1.2 +
 iceberg-spark-runtime-4.1_2.13:1.11.0 (ANSI on, Hadoop catalog); two independent
 recordings produced identical answers. Re-recorded 2026-09-17 with the `inspect/*`
 cases appended: the 126 prior answers are byte-identical, the two new cases record
@@ -35,8 +35,8 @@ Never hand-edited: re-run the driver.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Cells: [../../../../../repark/tests/test_ice_promote_read_1.py](../../../../../repark/tests/test_ice_promote_read_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_promote_read_1.py](../../../../../repark/tests/_record_ice_promote_read_1.py)
+- Cells: [../../../../../repark/tests/test_ice_promote_read_1.py](../../../../../repark/tests/iceberg/test_ice_promote_read_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_promote_read_1.py](../../../../../repark/tests/iceberg/_record_ice_promote_read_1.py)
 - Ledger: `task/ledgers/staging/ice-promote-read-1-ledger.md`
 
 pins: ice-promote-read-1/C-001, C-008, C-015

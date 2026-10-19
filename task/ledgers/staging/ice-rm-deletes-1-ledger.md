@@ -108,16 +108,16 @@ Python (`test_ice_rm_deletes_1.py`): `12 failed, 4 passed`, mirroring Rust exact
   `11 passed, 0 failed` (8 in `call_manifests`, 2 new inline leg-rule pins, 1
   maintenance planner pin).
 - Release native rebuilt (`maturin develop --release`, 7m34s) +
-  `pytest python/repark/tests/test_ice_rm_deletes_1.py`: `16 passed`.
-- `pytest python/repark/tests/test_maintenance_call.py -k rewrite_manifests`: `3 passed`.
+  `pytest python/repark/tests/iceberg/test_ice_rm_deletes_1.py`: `16 passed`.
+- `pytest python/repark/tests/iceberg/test_maintenance_call.py -k rewrite_manifests`: `3 passed`.
 
 ## Gates (final tree, 2026-09-20)
 
 - `cargo test -p repark-spark rm_deletes`: `16 passed, 0 failed`.
 - `cargo test -p repark-spark rewrite_manifests` (the brief's gate command):
   `11 passed, 0 failed`.
-- `pytest python/repark/tests/test_ice_rm_deletes_1.py
-  python/repark/tests/test_maintenance_call.py`: `31 passed` (release native rebuilt
+- `pytest python/repark/tests/iceberg/test_ice_rm_deletes_1.py
+  python/repark/tests/iceberg/test_maintenance_call.py`: `31 passed` (release native rebuilt
   after the refusal-text switch).
 - `cargo fmt --all`: clean (applied twice: the step-2 pin formats, one step-3 hunk).
 - `cargo clippy --locked -p repark-spark --all-targets -- -D warnings
@@ -175,7 +175,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Walked C-001..C-006 against the diff and the runs. Every oracle success cell asserts result, manifest layout, live row ids, and op; the summary manifest keys are asserted in Rust; error cells assert class plus text end to end on both doors.
-      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs, python/repark/tests/test_ice_rm_deletes_1.py, python/repark/tests/ice_rm_deletes_1_spark_oracle.json, python/repark/tests/ice_rm_deletes_1_spark_oracle2.json]
+      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs, python/repark/tests/iceberg/test_ice_rm_deletes_1.py, python/repark/tests/iceberg/ice_rm_deletes_1_spark_oracle.json, python/repark/tests/iceberg/ice_rm_deletes_1_spark_oracle2.json]
     - id: AT-2
       status: ATTACKED
       evidence: Empty table (no snapshot), evolved specs (default and non-current ids), unknown spec 99, positional spec, quoted use_caching, single-manifest legs, the v3 empty delete manifest, and the above-target MANIFEST-3 shape (pre-existing, untouched and still green) all pinned.
@@ -194,7 +194,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Every success pin asserts live row id lists (not just counts) plus per-manifest file counts, so a dropped, duplicated, or unmasked row reds the suite; the rewrite itself is unchanged fork code.
-      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs, python/repark/tests/test_ice_rm_deletes_1.py]
+      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs, python/repark/tests/iceberg/test_ice_rm_deletes_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: One extra byte counter per manifest in the existing manifest-list scan; no new loops, scans, or retained state; the commit path is the unchanged fork action in a single transaction.
@@ -206,11 +206,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The unknown-spec path carries Spark's verbatim diagnostic (`Invalid spec id 99`) with `IllegalArgumentException` class on both doors; result columns and summary sourcing are unchanged.
-      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs::rm_deletes_unknown_spec_id_refuses, python/repark/tests/test_ice_rm_deletes_1.py::test_unknown_spec_id_refuses]
+      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs::rm_deletes_unknown_spec_id_refuses, python/repark/tests/iceberg/test_ice_rm_deletes_1.py::test_unknown_spec_id_refuses]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first held both ways: 12 Rust + 12 Python pins failed pre-fix for the named gaps while the already-correct pins stayed green; M-A reddens exactly the C-001/C-005 pins and M-B exactly the C-003 pins, both reverting green.
-      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs, python/repark/tests/test_ice_rm_deletes_1.py]
+      artifacts: [crates/repark-spark/src/tests/call_rm_deletes.rs, python/repark/tests/iceberg/test_ice_rm_deletes_1.py]
   complete: true
 ```
 

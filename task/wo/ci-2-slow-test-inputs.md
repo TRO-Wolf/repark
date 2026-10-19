@@ -30,32 +30,32 @@ Dropping the excluded 12.11 s still leaves 381.58 s, which is still above 72.25 
 
 Each line is the test id, its phase, and its seconds, from CI-1's hand-back.
 
-1. `python/repark/tests/test_deep_subquery_expression_1.py::test_thousand_filter_chain_answers_under_subqueries` (setup) 167.94
-2. `python/repark/tests/test_deep_filter_chain_crash_1.py::test_thousand_filter_chain_answers_on_dataframe_door` (setup) 96.74
-3. `python/repark/tests/test_deep_reverify_1.py::test_sql_text_or_chains_answer_on_every_door` (setup) 29.75
-4. `python/repark/tests/test_deep_reverify_1.py::test_gc_collects_deep_cycles_on_main_and_small_threads` (setup) 21.56
-5. `python/repark/tests/test_deep_expr_build_small_stack_1.py::test_six_thousand_term_or_build_refuses_through_filter` (setup) 20.58
-6. `python/repark/tests/test_h3_spill_matrix.py::test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed` (call) 17.15
-7. `python/repark/tests/test_perf_ice_catalog_io_1.py::test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget` (call) 12.11: **EXCLUDED** (memory pin)
-8. `python/repark/tests/test_ice_views_1.py::test_nested_view_depth_guard` (call) 10.09
-9. `python/repark/tests/test_ice_tt_resolve_1.py::test_reader_cells[TT-DF-VAS-INT-2-load]` (setup) 8.89
-10. `python/repark/tests/test_ice_tt_resolve_1.py::test_reader_tas_date_past_2262[table-2]` (setup) 8.88
+1. `python/repark/tests/sql/test_deep_subquery_expression_1.py::test_thousand_filter_chain_answers_under_subqueries` (setup) 167.94
+2. `python/repark/tests/sql/test_deep_filter_chain_crash_1.py::test_thousand_filter_chain_answers_on_dataframe_door` (setup) 96.74
+3. `python/repark/tests/sql/test_deep_reverify_1.py::test_sql_text_or_chains_answer_on_every_door` (setup) 29.75
+4. `python/repark/tests/sql/test_deep_reverify_1.py::test_gc_collects_deep_cycles_on_main_and_small_threads` (setup) 21.56
+5. `python/repark/tests/sql/test_deep_expr_build_small_stack_1.py::test_six_thousand_term_or_build_refuses_through_filter` (setup) 20.58
+6. `python/repark/tests/perf/test_h3_spill_matrix.py::test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed` (call) 17.15
+7. `python/repark/tests/perf/test_perf_ice_catalog_io_1.py::test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget` (call) 12.11: **EXCLUDED** (memory pin)
+8. `python/repark/tests/iceberg/test_ice_views_1.py::test_nested_view_depth_guard` (call) 10.09
+9. `python/repark/tests/iceberg/test_ice_tt_resolve_1.py::test_reader_cells[TT-DF-VAS-INT-2-load]` (setup) 8.89
+10. `python/repark/tests/iceberg/test_ice_tt_resolve_1.py::test_reader_tas_date_past_2262[table-2]` (setup) 8.88
 
 Fixture facts read at `ffee869`. Re-read the decorator and the test body. A mismatch halts the round with `halt` set to `"table-stale"` and no edit.
 
 | # | immutable input on the tree | action |
 |---|---|---|
-| 1 | [test_deep_subquery_expression_1.py](../../python/repark/tests/test_deep_subquery_expression_1.py): module fixture `worker_results` runs `_WORKER` once and returns a JSON dict. The test reads `subquery_1000_scalar` and `subquery_1000_in`. | Already once per worker. Leave the file. |
-| 2 | [test_deep_filter_chain_crash_1.py](../../python/repark/tests/test_deep_filter_chain_crash_1.py): module fixture `worker_results`, same shape. The test reads `filter_1000_df`. | Already once per worker. Leave the file. |
-| 3 | [test_deep_reverify_1.py](../../python/repark/tests/test_deep_reverify_1.py): module fixture `main_results`. The test reads `fexpr_2000_or`, `selectexpr_2000_or`, and `stringfilter_2000_or`. | Already once per worker. Leave the file. |
+| 1 | [test_deep_subquery_expression_1.py](../../python/repark/tests/sql/test_deep_subquery_expression_1.py): module fixture `worker_results` runs `_WORKER` once and returns a JSON dict. The test reads `subquery_1000_scalar` and `subquery_1000_in`. | Already once per worker. Leave the file. |
+| 2 | [test_deep_filter_chain_crash_1.py](../../python/repark/tests/sql/test_deep_filter_chain_crash_1.py): module fixture `worker_results`, same shape. The test reads `filter_1000_df`. | Already once per worker. Leave the file. |
+| 3 | [test_deep_reverify_1.py](../../python/repark/tests/sql/test_deep_reverify_1.py): module fixture `main_results`. The test reads `fexpr_2000_or`, `selectexpr_2000_or`, and `stringfilter_2000_or`. | Already once per worker. Leave the file. |
 | 4 | Same file: module fixture `gc_results`. The test reads `gc_main` and `gc_small`. | Already once per worker. Leave the file. |
-| 5 | [test_deep_expr_build_small_stack_1.py](../../python/repark/tests/test_deep_expr_build_small_stack_1.py): module fixture `worker_results`. The test reads `or_6000_main`. | Already once per worker. Leave the file. |
-| 6 | [test_h3_spill_matrix.py](../../python/repark/tests/test_h3_spill_matrix.py): the test calls `_run_join_values` three times (`"8M", 4`, `"1G", 4`, `"8M", 1`). Nothing else calls `_run_join_values`. Phase is call. | Single consumer. Leave the file. Hand the test back as `single-consumer`. |
+| 5 | [test_deep_expr_build_small_stack_1.py](../../python/repark/tests/sql/test_deep_expr_build_small_stack_1.py): module fixture `worker_results`. The test reads `or_6000_main`. | Already once per worker. Leave the file. |
+| 6 | [test_h3_spill_matrix.py](../../python/repark/tests/perf/test_h3_spill_matrix.py): the test calls `_run_join_values` three times (`"8M", 4`, `"1G", 4`, `"8M", 1`). Nothing else calls `_run_join_values`. Phase is call. | Single consumer. Leave the file. Hand the test back as `single-consumer`. |
 | 7 | Memory pin. | Do not open the file. |
-| 8 | [test_ice_views_1.py](../../python/repark/tests/test_ice_views_1.py): function-scoped `spark` builds catalog `sc` and table `t`. The test then `CREATE VIEW`s `w0` through `w100` and one more view. Every neighbouring test in the file writes through the same fixture. | The catalog is the assertion's mutable state. **H-3.** Leave the file. Hand the test back. |
-| 9 and 10 | [test_ice_tt_resolve_1.py](../../python/repark/tests/test_ice_tt_resolve_1.py): `warehouse` and `seeded` are module-scoped. `spark` and `spark_ny` are function-scoped and call `getOrCreate`. `test_reader_cells` requests both sessions on every parameter. | Run the setup-show in step 1. `seeded` or `warehouse` means already once per worker: leave the file. `spark` or `spark_ny` means **H-4**: the autouse reset stops the session, and the fix is product code. Leave the file. Hand both tests back. |
+| 8 | [test_ice_views_1.py](../../python/repark/tests/iceberg/test_ice_views_1.py): function-scoped `spark` builds catalog `sc` and table `t`. The test then `CREATE VIEW`s `w0` through `w100` and one more view. Every neighbouring test in the file writes through the same fixture. | The catalog is the assertion's mutable state. **H-3.** Leave the file. Hand the test back. |
+| 9 and 10 | [test_ice_tt_resolve_1.py](../../python/repark/tests/iceberg/test_ice_tt_resolve_1.py): `warehouse` and `seeded` are module-scoped. `spark` and `spark_ny` are function-scoped and call `getOrCreate`. `test_reader_cells` requests both sessions on every parameter. | Run the setup-show in step 1. `seeded` or `warehouse` means already once per worker: leave the file. `spark` or `spark_ny` means **H-4**: the autouse reset stops the session, and the fix is product code. Leave the file. Hand both tests back. |
 
-Files a green run may edit: `python/repark/tests/test_ice_tt_resolve_1.py`, and only by adding `scope="module"` to the `spark` and `spark_ny` decorators, and only when step 1's setup-show names those fixtures **and** a re-read shows `_reset_active_session_for_tests` no longer marks the active session stopped. On `ffee869` the reset does mark it stopped, so this edit is not available. No other path is in the edit set.
+Files a green run may edit: `python/repark/tests/iceberg/test_ice_tt_resolve_1.py`, and only by adding `scope="module"` to the `spark` and `spark_ny` decorators, and only when step 1's setup-show names those fixtures **and** a re-read shows `_reset_active_session_for_tests` no longer marks the active session stopped. On `ffee869` the reset does mark it stopped, so this edit is not available. No other path is in the edit set.
 
 ## 3. Steps
 
@@ -64,7 +64,7 @@ Files a green run may edit: `python/repark/tests/test_ice_tt_resolve_1.py`, and 
    ```bash
    PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="${VIRTUAL_ENV:-$PWD/.venv}" \
      uv run --no-project python -m pytest \
-     python/repark/tests/test_ice_tt_resolve_1.py::test_reader_cells \
+     python/repark/tests/iceberg/test_ice_tt_resolve_1.py::test_reader_cells \
      -k TT-DF-VAS-INT-2-load --setup-show --durations=10 -p no:xdist -q
    ```
 
@@ -110,7 +110,7 @@ Files a green run may edit: `python/repark/tests/test_ice_tt_resolve_1.py`, and 
 |---|---|
 | `git diff -- python/repark/tests` | empty, or only `scope="module"` on `spark` and `spark_ny` in `test_ice_tt_resolve_1.py` |
 | the `-n 8` summary | `passed`, `skipped`, and `xfailed` equal the pre-change line; no `failed`; no `error` |
-| `git diff -- crates python/repark/tests/conftest.py python/repark/tests/test_perf_ice_catalog_io_1.py .github/workflows/smoke.yml uv.lock` | empty |
+| `git diff -- crates python/repark/tests/conftest.py python/repark/tests/perf/test_perf_ice_catalog_io_1.py .github/workflows/smoke.yml uv.lock` | empty |
 | a durations run, when step 5 pushed | three `facade shard` jobs `success`, and `--durations=25` present in the log |
 
 - **H-1.** A count changes. Stop. Hand back both summary lines. Do not re-run to see if it moves, and do not edit a shard rule.
@@ -123,7 +123,7 @@ Files a green run may edit: `python/repark/tests/test_ice_tt_resolve_1.py`, and 
 ## 5. Hand-back
 
 ```json
-{"unit":"CI-2","before":{"run":37121982216,"shards_s":{"0":289,"1":193,"2":157},"slowest_shard_s":289,"quarter_s":72.25,"ten_sum_s":393.69,"tests":[{"id":"python/repark/tests/test_deep_subquery_expression_1.py::test_thousand_filter_chain_answers_under_subqueries","phase":"setup","s":167.94},{"id":"python/repark/tests/test_deep_filter_chain_crash_1.py::test_thousand_filter_chain_answers_on_dataframe_door","phase":"setup","s":96.74},{"id":"python/repark/tests/test_deep_reverify_1.py::test_sql_text_or_chains_answer_on_every_door","phase":"setup","s":29.75},{"id":"python/repark/tests/test_deep_reverify_1.py::test_gc_collects_deep_cycles_on_main_and_small_threads","phase":"setup","s":21.56},{"id":"python/repark/tests/test_deep_expr_build_small_stack_1.py::test_six_thousand_term_or_build_refuses_through_filter","phase":"setup","s":20.58},{"id":"python/repark/tests/test_h3_spill_matrix.py::test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed","phase":"call","s":17.15},{"id":"python/repark/tests/test_perf_ice_catalog_io_1.py::test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget","phase":"call","s":12.11,"excluded":true},{"id":"python/repark/tests/test_ice_views_1.py::test_nested_view_depth_guard","phase":"call","s":10.09},{"id":"python/repark/tests/test_ice_tt_resolve_1.py::test_reader_cells[TT-DF-VAS-INT-2-load]","phase":"setup","s":8.89},{"id":"python/repark/tests/test_ice_tt_resolve_1.py::test_reader_tas_date_past_2262[table-2]","phase":"setup","s":8.88}]},"after":null,"counts":{"before":{"passed":0,"skipped":0,"xfailed":0},"after":{"passed":0,"skipped":0,"xfailed":0},"equal":false},"handed_back":[],"commit":null,"halt":null}
+{"unit":"CI-2","before":{"run":37121982216,"shards_s":{"0":289,"1":193,"2":157},"slowest_shard_s":289,"quarter_s":72.25,"ten_sum_s":393.69,"tests":[{"id":"python/repark/tests/sql/test_deep_subquery_expression_1.py::test_thousand_filter_chain_answers_under_subqueries","phase":"setup","s":167.94},{"id":"python/repark/tests/sql/test_deep_filter_chain_crash_1.py::test_thousand_filter_chain_answers_on_dataframe_door","phase":"setup","s":96.74},{"id":"python/repark/tests/sql/test_deep_reverify_1.py::test_sql_text_or_chains_answer_on_every_door","phase":"setup","s":29.75},{"id":"python/repark/tests/sql/test_deep_reverify_1.py::test_gc_collects_deep_cycles_on_main_and_small_threads","phase":"setup","s":21.56},{"id":"python/repark/tests/sql/test_deep_expr_build_small_stack_1.py::test_six_thousand_term_or_build_refuses_through_filter","phase":"setup","s":20.58},{"id":"python/repark/tests/perf/test_h3_spill_matrix.py::test_never_oom_panic_1_tight_pool_join_values_match_or_refuse_typed","phase":"call","s":17.15},{"id":"python/repark/tests/perf/test_perf_ice_catalog_io_1.py::test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget","phase":"call","s":12.11,"excluded":true},{"id":"python/repark/tests/iceberg/test_ice_views_1.py::test_nested_view_depth_guard","phase":"call","s":10.09},{"id":"python/repark/tests/iceberg/test_ice_tt_resolve_1.py::test_reader_cells[TT-DF-VAS-INT-2-load]","phase":"setup","s":8.89},{"id":"python/repark/tests/iceberg/test_ice_tt_resolve_1.py::test_reader_tas_date_past_2262[table-2]","phase":"setup","s":8.88}]},"after":null,"counts":{"before":{"passed":0,"skipped":0,"xfailed":0},"after":{"passed":0,"skipped":0,"xfailed":0},"equal":false},"handed_back":[],"commit":null,"halt":null}
 ```
 
 Fill `counts` from step 4. Fill `handed_back` with each id from rows 6, 8, 9, and 10 that the table's action handed back, plus the rule id. Fill `after` only from a step 5 run: `run`, `shards_s` for the three facade jobs, and `tests` as `[id, seconds]` for the nine in-scope ids (the memory pin stays in `before` only). `equal` is true when the three counts match. `halt` is null when the round finishes.

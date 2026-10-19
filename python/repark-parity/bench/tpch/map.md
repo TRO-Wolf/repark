@@ -71,7 +71,7 @@ Sail is prior-art only — never a RePark product dependency (no pysail in uv.lo
 - `check_baseline_ratios.py` — compare a scoreboard JSON against `baseline-ratios.json`
   (fail-closed: empty scoreboard, zero ceiling checks, missing baseline query nrs, or
   null/non-finite OK ratios → exit 1)
-  (exit 1 on ratio exceed / non-OK status). Unit pins in `python/repark/tests/test_tpch_compare_unit.py`
+  (exit 1 on ratio exceed / non-OK status). Unit pins in `python/repark/tests/perf/test_tpch_compare_unit.py`
   (facade path — arrives with the facade package in the phase-3 facade PR).
 - `__init__.py` — package exports for tests importing the harness helpers.
 - `__main__.py` — package entry shim (delegates to `run_tpch.main`).
@@ -88,7 +88,7 @@ Sail is prior-art only — never a RePark product dependency (no pysail in uv.lo
 | Three-way repark+Sail+DuckDB | `…/run_tpch.py --sf 1 --engine both --sail-python /path/to/sail-venv/bin/python` |
 | Tiny smoke datagen | `ensure_parquet_sf(0.01)` or CLI `--sf 0.01` |
 | Read the human scoreboard | `../../../../task/tpch-report-2026-07-31.md` |
-| CI pin battery | `python/repark/tests/test_tpch_smoke.py` + V3/B1 unit pins in `test_tpch_compare_unit.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
+| CI pin battery | `python/repark/tests/perf/test_tpch_smoke.py` + V3/B1 unit pins in `test_tpch_compare_unit.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
 | Ratio regression gate (schedule) | `baseline-ratios.json` + `check_baseline_ratios.py` + a scheduled TPC-H workflow *(no workflow is wired in this repository yet — the tier-2 CI PR owns that decision)* |
 | Add a dialect-only rewrite | `queries.py` → `DIALECT_REWRITES` (must disclose in report) |
 

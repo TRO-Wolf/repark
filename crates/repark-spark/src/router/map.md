@@ -57,7 +57,7 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `COMMENT ON COLUMN` is not the shape and passes through. Execute sets or
   unsets the `comment` property with no reregister, like `SET TBLPROPERTIES`
   (cell `D-COMMENT-ON`). Unit pins are inline; door pins are
-  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py).
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/iceberg/test_ice_ddl_clauses_1.py).
 - `hive_change_column.rs` — **IPI-26/27 round 2 (2026-09-20); rename refusal
   (2026-09-21):** the two-name Hive `ALTER TABLE t CHANGE [COLUMN] old new TYPE
   [COMMENT 'lit']` intercept. The type parses with `SparkSqlDialect` and maps at
@@ -66,9 +66,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   name with `[PARSE_SYNTAX_ERROR]` / SQLSTATE 42601, as Spark does; execute then
   applies only `UpdateColumnType` plus an optional `UpdateColumnDoc` against the
   old name (cell `D-X-CHANGE-COLUMN-TYPE`). Unit pins are inline; door pins are
-  [test_ice_change_column_rename_1.py](../../../../python/repark/tests/test_ice_change_column_rename_1.py)
+  [test_ice_change_column_rename_1.py](../../../../python/repark/tests/iceberg/test_ice_change_column_rename_1.py)
   and
-  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/iceberg/test_ice_ddl_clauses_1.py)
   beside the `COMMENT ON` pins.
 - `table_props_ddl.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   the `ALTER TABLE <cat.ns.tbl> SET LOCATION '<literal>'` intercept (the statement does
@@ -83,7 +83,7 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   tested leg: the move changes no names, so no pin can observe it. Unit pins are
   inline; door pins are
   [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs) and
-  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/iceberg/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).
 - `pg_insert.rs` — **C-4 step 2 (2026-10-09):** Postgres-target INSERT routing on this door
   (a router child because `../router.rs` is at its line ceiling and `../lib.rs` at its

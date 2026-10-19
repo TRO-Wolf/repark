@@ -12,7 +12,7 @@ refused `ALTER TABLE … ADD COLUMN u UUID`, and `TY-MAP` failed its INSERT on t
 literal `map()` (`Function 'map' expected at least one argument but received 0`).
 
 **What Spark does (measured 2026-09-25; every measurement is committed as
-`python/repark/tests/u9_types_1_spark_oracle.json`, generator
+`python/repark/tests/timestamps/u9_types_1_spark_oracle.json`, generator
 `target/probe-u9-types-1/build_oracle.py` + `merge_oracle.py` over `steps.py`; the first sweep
 is `target/probe-u9-types-1/spark.json`, 204 probes; the verifier round r2 of 2026-09-25 added 13 steps, 208 in all, 149 EQUAL, recorded to `obs-spark-r2.json` / `obs-repark-r2.json` and merged into the observation files for the new keys only; round r3 added 41 `map/assign/*` and `map/cmp/*` steps, 249 in all, 163 EQUAL, Spark recorded to `obs-spark-r3.json` for the new keys only and RePark re-recorded on every group to `obs-repark-r3.json`; the probe of the comparison forms is `target/probe-u9-types-1/r3/cmp_probe.py`, answers `spark-cmp.json`, `repark-cmp-before.json`, `repark-cmp-after.json`; the round-3 verifier of PR2 (2026-09-26) returned PASS with V-004..V-007 (three S2 traceability findings, one out-of-scope S3), and the round-4 fold added 16 `uuid/bd/*` steps, 397 in all, Spark and RePark recorded by `target/probe-u9-types-2/measure_r8.py` to `m8-spark.json` / `m8-repark.json`, 7 EQUAL, 9 held by R-27, R-35 and R-36).** A `TIMESTAMP_LTZ` column is Iceberg
 `timestamptz` on v2 and v3, whatever `spark.sql.timestampType` says, and reads as Spark
@@ -71,7 +71,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause comes from the Spark measurement committed as the oracle; the TY cells replay through the scoreboard harness and each oracle step replays through the facade, EQUAL or held by its residue record.
-      artifacts: [python/repark/tests/u9_types_1_spark_oracle.json, python/repark/tests/test_u9_types_1.py]
+      artifacts: [python/repark/tests/timestamps/u9_types_1_spark_oracle.json, python/repark/tests/timestamps/test_u9_types_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Each type is measured at CREATE (v1/v2/v3 where they differ), ADD COLUMN, nested positions, literals and NULLs, reads, filters, ordering, casts, DataFrame appends, partition transforms, ALTER COLUMN TYPE, the files table and a non-UTC session zone. PR2 adds void printSchema/cast-rows/files-metrics/CoW-delete and uuid dtypes/printSchema/order/bucket-part/alter-to-string/invalid-literals/append/delete/update/files-metrics.
@@ -79,7 +79,7 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: Refused steps carry class, condition, SQLSTATE and text; a refused CREATE leaves no table (the replay reads the next step against the same catalog).
-      artifacts: [python/repark/tests/test_u9_types_1.py, crates/repark-sql/tests/ansi_door_u9_types.rs]
+      artifacts: [python/repark/tests/timestamps/test_u9_types_1.py, crates/repark-sql/tests/ansi_door_u9_types.rs]
     - id: AT-4
       status: N/A
       justification: No commit, isolation or concurrency path changes; the unit maps type names and rewrites literals before planning.

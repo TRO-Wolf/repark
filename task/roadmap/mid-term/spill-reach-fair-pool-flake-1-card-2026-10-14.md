@@ -8,7 +8,7 @@
 
 ## Why
 
-`python/repark/tests/test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool`
+`python/repark/tests/perf/test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool`
 fails intermittently on CI with `repark.errors.PySparkException: Resources exhausted:
 Failed to allocate additional 560.3 KB for ExternalSorterMerge[1] with 2.7 MB already
 allocated` (CI 2026-10-05 16:23 UTC, facade shard 2; CI 2026-10-13 13:27 UTC, facade

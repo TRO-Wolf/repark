@@ -54,7 +54,7 @@ rewrite under pin `41e25ba2` writes zstd.
 
 | Gate | Exit |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_perf_ice_catalog_io_1.py python/repark/tests -q -k "adapt or partition or catalog_io"` | 0 — 254 passed, 31 skipped, 6020 deselected in 85.68s |
+| `.venv/bin/python -m pytest python/repark/tests/perf/test_perf_ice_catalog_io_1.py python/repark/tests -q -k "adapt or partition or catalog_io"` | 0 — 254 passed, 31 skipped, 6020 deselected in 85.68s |
 | `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q -p no:cacheprovider` | 0 — 740 passed, 1 skipped, 11 xfailed in 79.99s |
 | `make check-docs-links` | 0 — 773 files, 4955 links |
 | `make check-ledger-grammar` | 0 — 106 live ledgers, 676 clauses, 1306 pinned clause ids |

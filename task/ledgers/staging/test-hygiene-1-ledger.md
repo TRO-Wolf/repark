@@ -68,9 +68,9 @@ zone's calendar date at that instant.
 | same, two processes concurrently | `a_exit=0 b_exit=0`, `12 passed` each |
 | `pytest python/repark-parity/tests/torture/test_torture_v3_dv.py -q -p no:cacheprovider` | `7 passed, 1 skipped` (0.61 s) |
 | same, two copies concurrently | `a_exit=0 b_exit=0`, `7 passed, 1 skipped` each |
-| `pytest python/repark/tests/test_spark_sql_grammar_1.py -q -p no:cacheprovider` | `112 passed, 2 xfailed` (0.45 s) |
+| `pytest python/repark/tests/sql/test_spark_sql_grammar_1.py -q -p no:cacheprovider` | `112 passed, 2 xfailed` (0.45 s) |
 | new pin with `--runxfail` | `2 failed` (bite proof) |
-| `pytest python/repark/tests/test_perf_ice_catalog_io_1.py -q -p no:cacheprovider` | `34 passed, 2 skipped` (72.73 s) |
+| `pytest python/repark/tests/perf/test_perf_ice_catalog_io_1.py -q -p no:cacheprovider` | `34 passed, 2 skipped` (72.73 s) |
 | `--collect-only` / `-m "not perf"` on the perf file | collected (1 line) / `35/36 collected (1 deselected)` |
 | `cargo clippy -p repark-spark --tests -- -D warnings` | reds identically on main (3670 `disallowed_methods` hits, the class `make rust-clippy` allows for tests per `clippy.toml`); the new code adds no other lint (one `duration_suboptimal_units` fixed to `from_mins(2)`) |
 | `cargo fmt -p repark-spark -- --check` | clean |
@@ -87,11 +87,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause walked against the tree and a run — both fixed-path fixtures run twice concurrently green (C-001, C-002), the session-zone pin green with its strict-xfail twin biting under --runxfail (C-003), the perf leg collected by default and deselected by -m "not perf" (C-004), the staging map scanned for duplicate blocks (C-005).
-      artifacts: [crates/repark-spark/src/tests/call_register.rs, python/repark-parity/tests/torture/test_torture_v3_dv.py, python/repark/tests/test_spark_sql_grammar_1.py, python/repark/tests/test_perf_ice_catalog_io_1.py]
+      artifacts: [crates/repark-spark/src/tests/call_register.rs, python/repark-parity/tests/torture/test_torture_v3_dv.py, python/repark/tests/sql/test_spark_sql_grammar_1.py, python/repark/tests/perf/test_perf_ice_catalog_io_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries — a killed holder (the kernel file lock releases on exit; the round-1 lock directory did not), a midnight crossing (before/after guard), two zones always on different calendar dates.
-      artifacts: [crates/repark-spark/src/tests/call_register.rs, python/repark/tests/test_spark_sql_grammar_1.py]
+      artifacts: [crates/repark-spark/src/tests/call_register.rs, python/repark/tests/sql/test_spark_sql_grammar_1.py]
     - id: AT-3
       status: N/A
       justification: Test code only; no product path changes.
@@ -127,9 +127,9 @@ OPEN. Touched files per clause: C-001 `crates/repark-spark/src/tests/call_regist
 + `crates/repark-spark/src/tests/map.md`; C-002
 `python/repark-parity/tests/torture/test_torture_v3_dv.py` +
 `python/repark-parity/tests/torture/map.md`; C-003
-`python/repark/tests/test_spark_sql_grammar_1.py` + `python/repark/tests/map.md`
+`python/repark/tests/sql/test_spark_sql_grammar_1.py` + `python/repark/tests/map.md`
 + `docs/spark-sql-iceberg-parity.md` (TZ-9); C-004
-`python/repark/tests/test_perf_ice_catalog_io_1.py` +
+`python/repark/tests/perf/test_perf_ice_catalog_io_1.py` +
 `python/repark/tests/conftest.py` + `python/repark/tests/map.md`; C-005
 `task/ledgers/staging/map.md` (dedupe) plus this ledger's own entry there.
 `Cargo.toml` / `Cargo.lock` / `.github/` / product code: untouched

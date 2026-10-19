@@ -21,12 +21,12 @@ parity row ICE-TSNS-SQL-1-R-020. The facade has the grouped-aggregate
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The input cells are recorded on main and on the U-1 head: nine doors over five sources at top level and inside an array. | The input recorder plus its evidence. | **PROVEN** | `python/repark/tests/_record_ns_array_floor_1_input.py`; `task/wo/ns-array-floor-1/evidence/input-cells.md` plus JSON: 90 main cells and 90 U-1 cells, every one an answer. |
+| C-001 | The input cells are recorded on main and on the U-1 head: nine doors over five sources at top level and inside an array. | The input recorder plus its evidence. | **PROVEN** | `python/repark/tests/timestamps/_record_ns_array_floor_1_input.py`; `task/wo/ns-array-floor-1/evidence/input-cells.md` plus JSON: 90 main cells and 90 U-1 cells, every one an answer. |
 | C-002 | The live input control is recorded with the Spark banner under both safe settings. | The live runs of the same recorder. | **PROVEN** | `input-cells.md` live runs: banner spark 4.1.2 zone UTC, pandas 3.0.6; 18 cells per setting, every one an answer, with the per-level dtype diagnostics. |
-| C-003 | The output cells are recorded on main: nine doors return nanosecond arrays and columns under the four declarations, frame ticks and read-back ticks. | The output recorder plus its evidence. | **PROVEN** | `python/repark/tests/_record_ns_array_floor_1_output.py`; `task/wo/ns-array-floor-1/evidence/output-cells.md` plus JSON: 36 cells, 9 floor to microseconds with stored ticks equal to frame ticks, 27 refuse. |
+| C-003 | The output cells are recorded on main: nine doors return nanosecond arrays and columns under the four declarations, frame ticks and read-back ticks. | The output recorder plus its evidence. | **PROVEN** | `python/repark/tests/timestamps/_record_ns_array_floor_1_output.py`; `task/wo/ns-array-floor-1/evidence/output-cells.md` plus JSON: 36 cells, 9 floor to microseconds with stored ticks equal to frame ticks, 27 refuse. |
 | C-004 | The live output cells are recorded with the Spark banner under both safe settings. | The live runs of the same recorder. | **PROVEN** | `output-cells.md` live runs: 36 cells per setting; safe=false answers 20 with floor ticks on arrays and truncation ticks on top-level columns; safe=true answers 10 array floors and refuses 26 with the worker PySparkValueError. |
 | C-005 | Every erroring input cell (none) and every floor-answering output cell names its raising or copying function with file and line, confirmed by traceback, in a door-to-site table ending in the one-line site count. | `sites.md` plus the tracebacks in the output JSON. | **PROVEN** | `task/wo/ns-array-floor-1/evidence/sites.md`: six sites in four facade files, every one output-side, two shared functions with their two callers each named. |
-| C-006 | The Lane A echo shape is recorded on main, the U-1 head, and live Spark. | The echo recorder plus its evidence. | **PROVEN** | `python/repark/tests/_record_ns_array_floor_1_lane_a.py`; `task/wo/ns-array-floor-1/evidence/lane-a-cells.md` plus JSON: 24 main cells (16 answer, 8 refuse), 24 U-1 cells (8 answer, 16 refuse), 16 live cells (16 answer). |
+| C-006 | The Lane A echo shape is recorded on main, the U-1 head, and live Spark. | The echo recorder plus its evidence. | **PROVEN** | `python/repark/tests/timestamps/_record_ns_array_floor_1_lane_a.py`; `task/wo/ns-array-floor-1/evidence/lane-a-cells.md` plus JSON: 24 main cells (16 answer, 8 refuse), 24 U-1 cells (8 answer, 16 refuse), 16 live cells (16 answer). |
 | C-007 | `sites.md` is restated from the measured Spark columns with the per-door same-or-differs table and the rule-per-site line. | `sites.md` against the output JSON. | **PROVEN** | Main against Spark at the default safe setting is same on 35 of 36 cells with equal ticks; the one differs is mapInPandas under array timestamp. |
 
 ## 1. Counts
@@ -116,7 +116,7 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: NULLs, naive and aware nanoseconds, microseconds, pre-epoch floor-vs-truncation values, top-level and array nesting, the two U-1 expression shapes, and the echo schema shapes are all exercised on all three builds.
-      artifacts: [python/repark/tests/_record_ns_array_floor_1_input.py, python/repark/tests/_record_ns_array_floor_1_lane_a.py]
+      artifacts: [python/repark/tests/timestamps/_record_ns_array_floor_1_input.py, python/repark/tests/timestamps/_record_ns_array_floor_1_lane_a.py]
     - id: AT-3
       status: ATTACKED
       evidence: All 27 main refusals, all 42 live refusals, and all 24 echo refusals carry the error class, the condition where Spark names one, the first and innermost lines, and the file and line traceback.

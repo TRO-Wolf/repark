@@ -355,11 +355,11 @@ value or refuses with Spark's class, except the two lists that follow.
 
 Committed red before the first product commit.
 
-- `python/repark/tests/_record_ice_struct_pairing_1.py`: the lane's `pair.py`, as the
+- `python/repark/tests/writes/_record_ice_struct_pairing_1.py`: the lane's `pair.py`, as the
   recorder; `ice_struct_pairing_1_spark_oracle.json` (1,024 cells and the 192 case-sensitive
   cells from Spark 4.1.2) and `ice_struct_pairing_1_main.json` (main's 1,024, for the
   controls).
-- `python/repark/tests/test_ice_struct_pairing_1.py`: the expected answer of a cell is
+- `python/repark/tests/writes/test_ice_struct_pairing_1.py`: the expected answer of a cell is
   computed by the harness from the rule of §4 (mode of the door, field shape), never written
   per cell. Test one: the rule reproduces Spark's oracle in every cell. Test two: the engine
   answers the rule in every cell outside L1 and L2. Test three: L1 refuses and writes no file;

@@ -200,7 +200,7 @@ exception list for the rest). Every `.rs`, `.py` and `.toml` change updates its 
 | `crates/repark-spark/src/merge/nested_assign.rs`, `merge/nested_assign/expand.rs`, `merge/nested_assign/render.rs` | deletions of §5 |
 | `crates/repark-spark/src/insert_by_name/nested.rs` | deleted |
 | `python/repark/src/repark/spark/dataframe/` (the writers that call `run_through_temp_view`) | `source_by_name=True` for `append`, `overwritePartitions`, `saveAsTable` (append); its own commit |
-| `python/repark/tests/_record_ice_struct_pairing_1.py`, `ice_struct_pairing_1_spark_oracle.json`, `ice_struct_pairing_1_main.json`, `test_ice_struct_pairing_1.py` | new: the fixture of §7 |
+| `python/repark/tests/writes/_record_ice_struct_pairing_1.py`, `ice_struct_pairing_1_spark_oracle.json`, `ice_struct_pairing_1_main.json`, `test_ice_struct_pairing_1.py` | new: the fixture of §7 |
 | `crates/repark-spark/tests/struct_pairing_doors.rs` | new |
 | `docs/spark-sql-iceberg-parity.md`, `task/ledgers/staging/ice-struct-pairing-1-ledger.md`, `STATUS.md` | row R-016 closed with its pins; the unit ledger; the status line |
 

@@ -8,7 +8,7 @@
 
 ## Why
 
-`python/repark/tests/test_ice_occ_scoped_1.py::test_disjoint_key_merges_refuse_like_spark`
+`python/repark/tests/writes/test_ice_occ_scoped_1.py::test_disjoint_key_merges_refuse_like_spark`
 with parameter `[3-serializable-dataframe]` failed on CI on 2026-10-07 17:40 UTC with
 `assert (2, 6) == (1, 7)`: RePark committed 2 of 8 where Spark's recording commits 1.
 The losers raise `DataInvalid => Found conflicting files that can contain records

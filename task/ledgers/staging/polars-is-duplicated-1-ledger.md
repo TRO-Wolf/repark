@@ -125,11 +125,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every brief cell pinned against the recorded polars oracle on both doors; red at base (TypeError), green at head.
-      artifacts: [python/repark/tests/test_polars_is_duplicated_1.py, python/repark/tests/polars_is_duplicated_1_polars_oracle.json]
+      artifacts: [python/repark/tests/dataframe/test_polars_is_duplicated_1.py, python/repark/tests/dataframe/polars_is_duplicated_1_polars_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: NaN/±0.0/null/decimal/empty/one-row/big-frame numeric edges pinned; mutation 2 proves the ±0.0 legs bite.
-      artifacts: [python/repark/tests/test_polars_is_duplicated_1_polars_oracle.json]
+      artifacts: [python/repark/tests/dataframe/polars_is_duplicated_1_polars_oracle.json]
     - id: AT-3
       status: ATTACKED
       evidence: Negation, conjunction, expression receivers, prefilters, nesting and literal receivers probed; join/sort/agg/groupBy positions refuse loud with user-window-matching classes.
@@ -137,7 +137,7 @@ COVERAGE_ATTESTATION:
     - id: AT-4
       status: ATTACKED
       evidence: Row order pinned order-exact on every shape including the 10k frame; no shared state (expression-local rewrite).
-      artifacts: [python/repark/tests/test_polars_is_duplicated_1.py]
+      artifacts: [python/repark/tests/dataframe/test_polars_is_duplicated_1.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, environment read or secret.
@@ -148,7 +148,7 @@ COVERAGE_ATTESTATION:
     - id: AT-7
       status: ATTACKED
       evidence: 10k-frame filter ~0.1 s against the 2 s budget on a debug build; helpers are two window passes plus one sort.
-      artifacts: [python/repark/tests/test_polars_is_duplicated_1.py]
+      artifacts: [python/repark/tests/dataframe/test_polars_is_duplicated_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: No dependency, workflow or ceiling edit; column.py and lib.rs net-zero/down, dataframe.rs shrinks 976 to 969.

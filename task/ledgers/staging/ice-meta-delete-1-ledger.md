@@ -21,7 +21,7 @@ files (copy-on-write), and a no-match DELETE committed nothing at all.
 72 cells, each holding the surviving rows, every snapshot's operation and the summary counters,
 and the live data files' record counts. Recorded by the orchestrator's
 `/tmp/oc-worker/pd-oracle/record_meta_delete.py`, committed as
-`python/repark/tests/ice_meta_delete_1_spark_oracle.json` (source SHA-256
+`python/repark/tests/writes/ice_meta_delete_1_spark_oracle.json` (source SHA-256
 `3dd30491a9d9f9c58c10a8dd61077e3c07ea8b92bb57ef2952bbff69133828c9`) with
 `_record_ice_meta_delete_1.py`, whose `--check` mode re-derives every cell on the live tier.
 **On `main` 29 of the 72 cells differed.**
@@ -84,7 +84,7 @@ branch-targeted DELETE (C-007).
 | C-006 | The decision passes the session's case sensitivity to the fork, and a lower-cased / wrong-cased column reference behaves as it does on the same door today. | Rust `the_decision_binds_columns_with_the_doors_case_sensitivity`; native door `the_ansi_door_folds_an_unquoted_column_and_stays_exact_on_a_quoted_one`. | PROVEN | What is pinned, not invented: the Spark door passes `spark_door_case_insensitive(...)` (Spark's `spark.sql.caseSensitive=false` default, the same flag Java's `SparkTable` reads) so the reference folds onto the schema column and the fork is called with `case_sensitive = false`. The native ANSI door passes `case_insensitive = false`, as `commit_identity_dml` already does, so the fork is called with `case_sensitive = true`; to bind exactly as that door's own planner binds, an UNQUOTED reference is lower-cased first (DataFusion's default ident normalization) and a QUOTED one is taken verbatim. `"ID"` therefore declines the metadata route and keeps the door's own refusal, touching no file — measured, not assumed: the first spelling of this pin asserted a refusal for unquoted `ID` and was red. |
 | C-007 | Branch writes: the branch is passed to `can_delete_using_metadata` and to the commit, or the ledger states that a door cannot target a branch today. | Reading + Rust `a_branch_selector_and_every_non_identity_clause_decline`. | PROVEN (stated, not added) | **No door can target a branch with a DELETE today, so no branch is passed and none is added here.** A branch-selector target is the four-part name `cat.ns.table.branch_x`; `try_meta_delete_target` accepts three-part names only, so such a statement declines and keeps the route it has on `main` (`plain.rs` already routes four-part names to the fork `TableProvider`). WAP is fail-closed on both doors (registry REF-3: `spark.wap.branch` / `spark.wap.id` cannot be set at all), so Java's `stageOnly()` arm of `SparkTable.deleteWhere` has no reachable counterpart either. The decision and the action consequently use `None` / `MAIN_BRANCH`, which is what every other write on these doors does. |
 | C-008 | Reverting the routing (always taking the row-level path) turns C-001 and C-002 red; the exact mutation and the failing test names are recorded. | Step 5, below. | PROVEN | See "Mutation (C-008)". |
-| C-009 | The routing changes the before-state of ICE-RM-DELETES-1's (IPI-11) partitioned `rewrite_manifests` replay cells, and it moves them toward Spark: SIX of the NINE cells IPI-11 could not replay literally now equal the recorded Spark cell on every recorded field, and each cell that still differs is named with what differs and why. | The re-measured `crates/repark-spark/src/tests/call_rm_deletes.rs` and `python/repark/tests/test_ice_rm_deletes_1.py` pins; the cell-by-cell table below; the C-009 mutation. | PROVEN | Nine Rust pins moved on the rebased branch. Six cells CLOSE (`part_mor`, `part_mor_spec`, `part_mor_nocache`, each v2 and v3): their DELETE statements each cover a whole data file, so RePark now enters the procedure with Spark's own data-only before-state and answers Spark's `(3, 1)`, layout, rows, `replace` and `manifests-created/kept/replaced` literally. Three cells still differ and keep a rule shape over RePark's measured before-state: `evolved_spec_v2/v3` (registry **MANIFEST-4**, new) and `part_mor_real_v2` (registry **ICE-META-DELETE-1-D1**, unchanged by this PR and never named in IPI-11's declared list — corrected here). `part_mor_real_v3` was already literal. The rows are read BEFORE and AFTER every CALL and are equal in all fourteen cells. |
+| C-009 | The routing changes the before-state of ICE-RM-DELETES-1's (IPI-11) partitioned `rewrite_manifests` replay cells, and it moves them toward Spark: SIX of the NINE cells IPI-11 could not replay literally now equal the recorded Spark cell on every recorded field, and each cell that still differs is named with what differs and why. | The re-measured `crates/repark-spark/src/tests/call_rm_deletes.rs` and `python/repark/tests/iceberg/test_ice_rm_deletes_1.py` pins; the cell-by-cell table below; the C-009 mutation. | PROVEN | Nine Rust pins moved on the rebased branch. Six cells CLOSE (`part_mor`, `part_mor_spec`, `part_mor_nocache`, each v2 and v3): their DELETE statements each cover a whole data file, so RePark now enters the procedure with Spark's own data-only before-state and answers Spark's `(3, 1)`, layout, rows, `replace` and `manifests-created/kept/replaced` literally. Three cells still differ and keep a rule shape over RePark's measured before-state: `evolved_spec_v2/v3` (registry **MANIFEST-4**, new) and `part_mor_real_v2` (registry **ICE-META-DELETE-1-D1**, unchanged by this PR and never named in IPI-11's declared list — corrected here). `part_mor_real_v3` was already literal. The rows are read BEFORE and AFTER every CALL and are equal in all fourteen cells. |
 
 ## Round 2 — the IPI-11 cells this routing changes (C-009)
 
@@ -102,7 +102,7 @@ asserted Spark's two-leg RULE over RePark's own before-state.
 This unit's routing removes that cause wherever the DELETE covers a whole data file. Measured
 on this rebased branch at `98faa2b6`, cell by cell, whole cell — returned row, before and
 after layout, rows, operation, and the `manifests-*` summary — against
-`python/repark/tests/ice_rm_deletes_1_spark_oracle.json` and `…_oracle2.json`:
+`python/repark/tests/iceberg/ice_rm_deletes_1_spark_oracle.json` and `…_oracle2.json`:
 
 | Cell | Outcome | Pin before round 2 | Measured now | Spark's recorded cell |
 |---|---|---|---|---|
@@ -188,7 +188,7 @@ row-level path — by inserting, as its first statement:
   `the_ansi_door_folds_an_unquoted_column_and_stays_exact_on_a_quoted_one`,
   `the_ansi_door_answers_a_string_equality_from_metadata`.
   `the_ansi_door_keeps_a_partial_delete_on_the_row_level_route` stays green, as it must.
-- `pytest python/repark/tests/test_ice_meta_delete_1.py` → **28 failed**, 44 passed, 1 xfailed:
+- `pytest python/repark/tests/writes/test_ice_meta_delete_1.py` → **28 failed**, 44 passed, 1 xfailed:
   every `*_v2_mor` / `*_v3_mor` cell of `whole_one_file`, `whole_two_files`, `all_rows_true`,
   `all_rows_nopred`, `string_eq_whole`, `partition_select`, `partition_select_bucket`,
   `partition_plus_metrics`, `prior_deletes_then_whole`, `is_null_whole`, `or_whole`,
@@ -246,7 +246,7 @@ move, on every field, and nothing else on the branch does.
 | `cargo test -p repark-iceberg` | `test result: ok. 589 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.33s` |
 | `cargo test -p repark-sql` | `test result: ok. 369 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` (lib) — 23 result lines, all `ok`, including the six `ansi_meta_delete` integration pins |
 | `cargo test -p repark-spark` | `test result: ok. 1207 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 186.15s` |
-| `pytest python/repark/tests/test_ice_meta_delete_1.py -q -p no:cacheprovider` | `72 passed, 1 skipped, 1 xfailed` |
+| `pytest python/repark/tests/writes/test_ice_meta_delete_1.py -q -p no:cacheprovider` | `72 passed, 1 skipped, 1 xfailed` |
 | `pytest <the 27 facade files that issue a DELETE>` | `841 passed, 145 skipped, 5 xfailed` (step 4 tree, after the two retired premises) |
 | `cargo fmt --all` | clean (no output) |
 | `cargo clippy -p repark-iceberg --all-targets -- -D warnings -A clippy::disallowed_methods` | `Finished \`dev\` profile [unoptimized + debuginfo] target(s)` — the repo's own `rust-clippy` spelling; `--all-targets` without the `-A` reports the pre-existing `expect` in every test module, which `make rust-panic-ban` covers on `--lib` only |
@@ -266,8 +266,8 @@ move, on every field, and nothing else on the branch does.
 | `cargo test -p repark-iceberg` | `test result: ok. 589 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 36.26s` |
 | `cargo test -p repark-sql --test ansi_meta_delete` | `test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` |
 | `maturin@1.14.1 develop --release` | `Installed repark-1.4.2` (7m 15s) |
-| `pytest python/repark/tests/test_ice_rm_deletes_1.py -q -p no:cacheprovider` | `16 passed in 22.10s` |
-| `pytest python/repark/tests/test_ice_meta_delete_1.py -q -p no:cacheprovider` | `72 passed, 1 skipped, 1 xfailed in 24.18s` |
+| `pytest python/repark/tests/iceberg/test_ice_rm_deletes_1.py -q -p no:cacheprovider` | `16 passed in 22.10s` |
+| `pytest python/repark/tests/writes/test_ice_meta_delete_1.py -q -p no:cacheprovider` | `72 passed, 1 skipped, 1 xfailed in 24.18s` |
 | `cargo clippy -p repark-spark --all-targets -- -D warnings -A clippy::disallowed_methods` | `Finished \`dev\` profile [unoptimized + debuginfo] target(s)` |
 | `cargo fmt --all` | clean (no change to the tree) |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/qa-build origin/main` | `comment-ban hits=0` |
@@ -290,7 +290,7 @@ so they still exercise the thing they were written for:
   a genuinely row-level DELETE — the fork honours `write.delete.granularity` on that path
   since RP-54 (fork #360) — and asserts on the way
   that the whole-file `DELETE … IN (1..6)` writes no delete file at all.
-- `python/repark/tests/test_rdf_schema_evo_1.py::test_rewrite_v3_deletion_vectors_after_evolution_matches_spark`
+- `python/repark/tests/iceberg/test_rdf_schema_evo_1.py::test_rewrite_v3_deletion_vectors_after_evolution_matches_spark`
   (RDF-SCHEMA-EVO-1) needed a live deletion vector for `rewrite_data_files` to drop, and made
   one by deleting from a one-row file. It now seeds three two-row files, so its DELETE is still
   a partial match and still writes the DV (rewritten files 6 → 3).
@@ -323,7 +323,7 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: 72 recorded cells on the Spark door (rows, every snapshot operation, fourteen summary counters, the live data files), 8 Rust pins on the shared decision seat, 6 native-door integration pins, and the 27 facade files that issue a DELETE re-run whole (841 passed).
-      artifacts: [python/repark/tests/test_ice_meta_delete_1.py, crates/repark-iceberg/src/write/meta_delete/tests.rs, crates/repark-sql/tests/ansi_meta_delete.rs]
+      artifacts: [python/repark/tests/writes/test_ice_meta_delete_1.py, crates/repark-iceberg/src/write/meta_delete/tests.rs, crates/repark-sql/tests/ansi_meta_delete.rs]
     - id: AT-3
       status: ATTACKED
       evidence: No unwrap, expect or panic in the product code; the module returns Option for every undecidable shape and DataFusionError for a fork error. clippy -D warnings clean on repark-iceberg --all-targets. The commit is the fork's action, so no manifest or snapshot assembly is written here.
@@ -337,7 +337,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Red-first — the 72-cell pin was committed before the implementation and failed on 29 cells for the reason the unit names. The C-008 mutation (plan_metadata_delete returns None) was run on a rebuilt release native and reds 28 cells, 5 Rust pins and 5 native-door pins; it was then reverted, rebuilt, and all three are green.
-      artifacts: [task/ledgers/staging/ice-meta-delete-1-ledger.md, python/repark/tests/test_ice_meta_delete_1.py]
+      artifacts: [task/ledgers/staging/ice-meta-delete-1-ledger.md, python/repark/tests/writes/test_ice_meta_delete_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: cargo test -p repark-iceberg, -p repark-spark and -p repark-sql all green; the facade DELETE sweep green; cargo fmt, clippy -D warnings and the comment ban clean (see Gates).
@@ -345,7 +345,7 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: The only oracle is the recorded truth; every expectation in the Python pin is read from the fixture, never hand-written, and the recorder's --check mode re-derives all 72 cells on the live tier. The Rust pins assert the same counters the fixture carries for those shapes.
-      artifacts: [python/repark/tests/ice_meta_delete_1_spark_oracle.json, python/repark/tests/_record_ice_meta_delete_1.py]
+      artifacts: [python/repark/tests/writes/ice_meta_delete_1_spark_oracle.json, python/repark/tests/writes/_record_ice_meta_delete_1.py]
     - id: AT-9
       status: ATTACKED
       evidence: Two registry rows filed — ICE-META-DELETE-1 (FIXED) and ICE-META-DELETE-1-D1 (DECLARED) — and every touched directory's map.md carries its row; the two retired premises are named in this ledger and in the maps of the files that carried them.
@@ -353,6 +353,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: The one cell that does not match is a DECLARED registry row with a STRICT xfail that reds the day it converges, not a loosened assertion; every other cell is compared on rows, all snapshot operations, all recorded counters and the live files at once. The translation declines rather than guessing wherever no cell measures the shape, and the open questions name the cells that would settle each one.
-      artifacts: [python/repark/tests/test_ice_meta_delete_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/writes/test_ice_meta_delete_1.py, docs/spark-sql-iceberg-parity.md]
   complete: true
 ```

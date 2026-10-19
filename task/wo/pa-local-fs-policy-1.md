@@ -98,7 +98,7 @@ writing.
 | `crates/repark-spark/src/local_fs_ddl.rs` | calls the shared helpers; the plan walk; its private copies deleted |
 | `crates/repark-sql/src/guards.rs` | the same |
 | `crates/repark-spark/src/tests/` and `crates/repark-sql/tests/` (beside the existing guard tests; grep `refuses_copy_to_outside_warehouse_by_default`) | the pins |
-| `python/repark/tests/test_pa_local_fs_policy_1.py` | new: the public Spark SQL pins of the audit's reproductions |
+| `python/repark/tests/session/test_pa_local_fs_policy_1.py` | new: the public Spark SQL pins of the audit's reproductions |
 | `task/ledgers/staging/pa-local-fs-policy-1-ledger.md` | new: the unit ledger |
 | `docs/cutover/production-audit-2026-10-11.md` | a dated amendment line under each of PA-02, PA-03 and PA-04 naming its pins |
 
@@ -134,7 +134,7 @@ Grade B: none.
 | Command | Green means |
 |---|---|
 | `cargo test -p repark-core -p repark-spark -p repark-sql` (inside the build lock) | every test passes |
-| `.venv/bin/python -m pytest python/repark/tests/test_pa_local_fs_policy_1.py -q` after a release module build | every test passes; paste the count |
+| `.venv/bin/python -m pytest python/repark/tests/session/test_pa_local_fs_policy_1.py -q` after a release module build | every test passes; paste the count |
 | `make rust-clippy`, `make rust-panic-ban`, `cargo fmt --all -- --check` | exit 0 |
 | `make check-rust-file-size check-crate-dag` | clean; no new crate edge |
 | `make check-docs-links check-docs-compaction check-ledger-grammar`, `make spell-check` | exit 0 |

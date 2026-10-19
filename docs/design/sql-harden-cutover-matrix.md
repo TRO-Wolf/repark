@@ -39,7 +39,7 @@ codec still do not.
   count after the second pass.
 - **Verdict** — `EQUAL` / `DIVERGES`. A DIVERGES cell is a registry row; the pin is repark's
   current answer.
-- **Pin** — `python/repark/tests/test_sql_harden_cutover.py`. Always-run repark half;
+- **Pin** — `python/repark/tests/iceberg/test_sql_harden_cutover.py`. Always-run repark half;
   live Spark behind `REPARK_PARITY_LIVE=1`. Catalog `sqlh1`.
 
 ## 3. The matrix

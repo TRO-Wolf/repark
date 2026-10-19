@@ -64,5 +64,5 @@ MAX infer — 13× on this box.
 ```
 cd python/repark && VIRTUAL_ENV=$PWD/../../.venv maturin develop --release
 # then the 300k fixture + five read.csv+to_arrow timings in
-# python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second
+# python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second
 ```

@@ -82,6 +82,7 @@ jobs:
     name: facade shard ${{ matrix.shard }}
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -104,13 +105,13 @@ jobs:
           python3 -m venv /tmp/wheeltest
           /tmp/wheeltest/bin/pip install --upgrade pip
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
-          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
-          FILES=$(ls python/repark/tests/test_*.py | sort | awk -v s="$SHARD" '
+          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist pytest-timeout ./python/repark-parity
+          FILES=$(find python/repark/tests -name 'test_*.py' | sort | awk -v s="$SHARD" '
             /\/test_deep_subquery_expression_1\.py$/ { if (s == 4) print; next }
             /\/test_deep_filter_chain_crash_1\.py$/ { if (s == 5) print; next }
             /\/test_ice_tsns_type_planner_1\.py$/ { if (s == 6) print; next }
             { n++; if (n % 4 == s) print }')
-          /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --durations=25
+          /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --dist loadgroup --maxschedchunk=8 --durations=25
 
   dbt:
     name: dbt-adapter tests
@@ -132,7 +133,7 @@ jobs:
           python3 -m venv /tmp/wheeltest
           /tmp/wheeltest/bin/pip install --upgrade pip
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
-          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
+          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist pytest-timeout ./python/repark-parity
       - name: dbt-adapter tests against the built wheel
         run: |
           /tmp/wheeltest/bin/pip install "dbt-core==1.9.11" "dbt-spark==1.9.3"
@@ -158,7 +159,7 @@ jobs:
           python3 -m venv /tmp/wheeltest
           /tmp/wheeltest/bin/pip install --upgrade pip
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
-          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
+          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist pytest-timeout ./python/repark-parity
       - name: example-coverage execute (require native)
         run: /tmp/wheeltest/bin/python -I scripts/check_example_coverage.py --require-execute
 

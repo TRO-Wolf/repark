@@ -269,7 +269,7 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: The fixture enumerates seventeen doors, four containers, the field shapes and both case rules on v2 and v3 (1,216 matrix cells, five added); the seam's table test three modes by eight shapes by ten layouts.
-      artifacts: [python/repark/tests/test_ice_struct_pairing_1.py, crates/repark-iceberg/src/write/struct_pairing/tests.rs]
+      artifacts: [python/repark/tests/writes/test_ice_struct_pairing_1.py, crates/repark-iceberg/src/write/struct_pairing/tests.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The seam and the kernel read for unwrap, panics and recursion depth; make rust-clippy and make rust-panic-ban run before hand-back.
@@ -283,15 +283,15 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The fixture was red on main (566 tests, and 294 of the round-3 file); the nine mutant families of section 2 each die on a named cell, two of them only after the pins they exposed were added; in build round 3 verifier 1's survivors O1 and O5 die on new pins and the families die again on this head (section 7).
-      artifacts: [python/repark/tests/test_ice_struct_pairing_1.py, crates/repark-spark/tests/struct_pairing_doors.rs]
+      artifacts: [python/repark/tests/writes/test_ice_struct_pairing_1.py, crates/repark-spark/tests/struct_pairing_doors.rs]
     - id: AT-7
       status: ATTACKED
       evidence: Release modules built in the lock for the head, the mutants and both revert-alone trees; the gates of the hand-back run on the head.
-      artifacts: [python/repark/tests/test_ice_struct_pairing_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_struct_pairing_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: Every expected answer is derived from the rule in the test and held to the live Spark 4.1.2 recording; the static-partition answers were recorded live on 2026-10-14.
-      artifacts: [python/repark/tests/ice_struct_pairing_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/ice_struct_pairing_1_spark_oracle.json]
     - id: AT-9
       status: ATTACKED
       evidence: Registry rows R-016, R-021 and R-022 closed, R-013, R-014 and R-018 extended, the static-partition row dated; the 1.5.6 notes carry four lines.
@@ -299,6 +299,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: The control cells (L1, L2, the cells main already answered as Spark) and the ANSI door's struct MERGE are held; both revert-alone runs red only the unit's own pins.
-      artifacts: [python/repark/tests/test_ice_struct_pairing_1.py, crates/repark-sql/tests/ansi_store_kernel_registry.rs]
+      artifacts: [python/repark/tests/writes/test_ice_struct_pairing_1.py, crates/repark-sql/tests/ansi_store_kernel_registry.rs]
   complete: true
 ```

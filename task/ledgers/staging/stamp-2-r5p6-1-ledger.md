@@ -141,15 +141,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause walked against its pin or measurement; the brief's ruled fix was measured first and found already in place (12 trace calls on 12,272 like cells), so the fallback rule was applied where the attribution puts the largest block and the reason is recorded.
-      artifacts: [task/ledgers/staging/stamp-2-r5p6-1-ledger.md, python/repark/tests/test_stamp_2_r5p6_1.py, crates/repark-core/src/session/tests/attr_id_s3b.rs]
+      artifacts: [task/ledgers/staging/stamp-2-r5p6-1-ledger.md, python/repark/tests/resolution/test_stamp_2_r5p6_1.py, crates/repark-core/src/session/tests/attr_id_s3b.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Literal boundaries probed on both doors — 0, 7, 999999999 and 2147483647 type INT, 3000000000 BIGINT, decimals DECIMAL through SQL; the shape admits only up to nine digits and no sign; ten-digit, negative and fractional literals on both arms (C-009), decimal and spaced-alias inputs are pinned to the SQL route.
-      artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/test_stamp_2_r5p6_1.py]
+      artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/resolution/test_stamp_2_r5p6_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Refusals are unchanged — the token rewrite (and its MISSING_ATTRIBUTES refusal) still runs before the route decision; a raising native attempt falls back to the SQL route (C-008), so refusal text is head's; the self-join fill and a Boolean coalesce refuse identically on both routes and are pinned.
-      artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/test_stamp_2_r5p6_1.py]
+      artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/resolution/test_stamp_2_r5p6_1.py]
     - id: AT-4
       status: ATTACKED
       evidence: The SORT_TRACES counter is thread-local so parallel test threads cannot race it; the native route registers no scratch view, so no temp-view cleanup ordering remains on that path.
@@ -160,7 +160,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Full replay corpus of 43,989 cells shows no deterministic answer change; ids, display/engine names and dtypes are compared directly in the route pins.
-      artifacts: [python/repark/tests/test_stamp_2_r5p6_1.py]
+      artifacts: [python/repark/tests/resolution/test_stamp_2_r5p6_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: The unit is a performance fix; cProfile, perf and the l4l pre-measure are recorded in attribution.md and above.
@@ -175,7 +175,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Every added branch has a pinned input that changes its output (M1–M5); guards whose removal changed no output (outer, sort marker, alias metadata, token locality) were probed and deleted.
-      artifacts: [python/repark/tests/test_stamp_2_r5p6_1.py, crates/repark-core/src/session/tests/attr_id_s3b.rs]
+      artifacts: [python/repark/tests/resolution/test_stamp_2_r5p6_1.py, crates/repark-core/src/session/tests/attr_id_s3b.rs]
   reattested:
     - id: AT-2
       evidence: Fold 1 measured every CAST target on both routes at 0, 1 and 999999999 (same-type twins and a 13-type twin matrix) and pinned the bounds on both arms (C-007, C-009).

@@ -517,7 +517,7 @@ declines it (a dated ruling in the intake, then the archive).
   ignore the materialized view from folds that use it, because the fold-count query reads the view anyway.
 - [unpivot-perf-flake-1-card-2026-10-01.md](unpivot-perf-flake-1-card-2026-10-01.md) — **card
   UNPIVOT-PERF-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, CI flake):**
-  `python/repark/tests/test_perf_unpivot_1.py::test_stack_is_linear_in_columns` is timing-based
+  `python/repark/tests/perf/test_perf_unpivot_1.py::test_stack_is_linear_in_columns` is timing-based
   and fails on shared CI runners with no product cause (hit #891 at exponent 1.224 and #892 at
   1.120); needs a noise-robust bound.
 - [spark-string-ts-functions-1-card-2026-10-01.md](spark-string-ts-functions-1-card-2026-10-01.md) — **card

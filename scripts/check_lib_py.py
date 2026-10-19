@@ -104,80 +104,80 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Live-mirror declarations and oracle helpers share one test support module.",
         "Split registry declarations from execution and comparison helpers.",
     ),
-    "python/repark/tests/test_display_styles.py": (
+    "python/repark/tests/dataframe/test_display_styles.py": (
         1175,
         "Display-format scenarios share one test module.",
         "Split text, HTML, and truncation style families.",
     ),
-    "python/repark/tests/test_dynamic_flatten.py": (
+    "python/repark/tests/dataframe/test_dynamic_flatten.py": (
         1618,
         "Dynamic-flatten parity and refusal cases share one module.",
         "Split structural flattening from list and refusal scenarios.",
     ),
-    "python/repark/tests/test_explode_rewrite.py": (
+    "python/repark/tests/dataframe/test_explode_rewrite.py": (
         1133,
         "Explode rewrite shapes share one test battery.",
         "Split scalar, nested, and multiple-generator scenarios.",
     ),
-    "python/repark/tests/test_fnp_win_1.py": (
-        1449,
-        "Window oracle pins for three names on both doors stay in one battery.",
-        "Split value pins from error and divergence pins by clause family.",
-    ),
-    "python/repark/tests/test_interchange_parity.py": (
-        1533,
-        "Dataframe-interchange parity scenarios share one module.",
-        "Split protocol export from import and type-conversion cases.",
-    ),
-    "python/repark/tests/test_join_parity.py": (
+    "python/repark/tests/dataframe/test_join_parity.py": (
         1232,
         "Join parity modes share one test module.",
         "Split equi-join, non-equi, and null-semantics scenarios.",
     ),
-    "python/repark/tests/test_mapinarrow.py": (
-        1578,
-        "Arrow map-type behavior cases share one battery.",
-        "Split construction, conversion, and nested-operation families.",
+    "python/repark/tests/functions/test_fnp_win_1.py": (
+        1449,
+        "Window oracle pins for three names on both doors stay in one battery.",
+        "Split value pins from error and divergence pins by clause family.",
     ),
-    "python/repark/tests/test_ml_boost_oracle.py": (
-        2241,
-        "Boosted-model oracle cases and fixtures share one module.",
-        "Split estimator families while retaining the independent oracle boundary.",
-    ),
-    "python/repark/tests/test_pandas_udf.py": (
-        1478,
-        "Pandas UDF modes and failure cases share one module.",
-        "Split scalar, grouped, and iterator UDF scenario families.",
-    ),
-    "python/repark/tests/test_partition_value_audit.py": (
-        1665,
-        "Partition-value audit cases share one broad parity matrix.",
-        "Split partition transforms from temporal and type-conversion cases.",
-    ),
-    "python/repark/tests/test_session_timezone_parity.py": (
-        1318,
-        "Session-timezone parity cases share one module.",
-        "Split casts from date functions and window behavior.",
-    ),
-    "python/repark/tests/test_ta.py": (
+    "python/repark/tests/functions/test_ta.py": (
         1020,
         "Technical-analysis facade cases narrowly exceed the default.",
         "Split indicator families while keeping oracle comparisons.",
     ),
-    "python/repark/tests/test_tpch_compare_unit.py": (
-        1551,
-        "TPC-H comparison-unit scenarios share one module.",
-        "Split schema, row, and reporting comparison families.",
+    "python/repark/tests/functions/test_window_parity.py": (
+        1422,
+        "Window parity frames and functions share one module.",
+        "Split frame semantics from ranking and analytic function families.",
     ),
-    "python/repark/tests/test_udf.py": (
+    "python/repark/tests/io/test_interchange_parity.py": (
+        1533,
+        "Dataframe-interchange parity scenarios share one module.",
+        "Split protocol export from import and type-conversion cases.",
+    ),
+    "python/repark/tests/io/test_mapinarrow.py": (
+        1578,
+        "Arrow map-type behavior cases share one battery.",
+        "Split construction, conversion, and nested-operation families.",
+    ),
+    "python/repark/tests/io/test_pandas_udf.py": (
+        1478,
+        "Pandas UDF modes and failure cases share one module.",
+        "Split scalar, grouped, and iterator UDF scenario families.",
+    ),
+    "python/repark/tests/io/test_udf.py": (
         1170,
         "General UDF behavior and error cases share one module.",
         "Split scalar UDF execution from registration and refusal cases.",
     ),
-    "python/repark/tests/test_window_parity.py": (
-        1422,
-        "Window parity frames and functions share one module.",
-        "Split frame semantics from ranking and analytic function families.",
+    "python/repark/tests/ml/test_ml_boost_oracle.py": (
+        2241,
+        "Boosted-model oracle cases and fixtures share one module.",
+        "Split estimator families while retaining the independent oracle boundary.",
+    ),
+    "python/repark/tests/perf/test_tpch_compare_unit.py": (
+        1551,
+        "TPC-H comparison-unit scenarios share one module.",
+        "Split schema, row, and reporting comparison families.",
+    ),
+    "python/repark/tests/timestamps/test_session_timezone_parity.py": (
+        1318,
+        "Session-timezone parity cases share one module.",
+        "Split casts from date functions and window behavior.",
+    ),
+    "python/repark/tests/writes/test_partition_value_audit.py": (
+        1665,
+        "Partition-value audit cases share one broad parity matrix.",
+        "Split partition transforms from temporal and type-conversion cases.",
     ),
 }
 

@@ -19,7 +19,7 @@ lifecycle design (option A).
 |---|---|---|
 | **1 — 4 Rust MERGE pins** | [`crates/repark-spark/src/tests/merge.rs`](../../../../crates/repark-spark/src/tests/merge.rs) | G3 pins deferred by G-4's file ban |
 | map lockstep | [`crates/repark-spark/src/tests/map.md`](../../../../crates/repark-spark/src/tests/map.md) | documents the four new pin names |
-| **4 — NIT: GAV pin CP-8** | [`python/repark/tests/test_merge_differential_parity.py`](../../../../python/repark/tests/test_merge_differential_parity.py) | Spark-minor derived from pinned pyspark |
+| **4 — NIT: GAV pin CP-8** | [`python/repark/tests/test_merge_differential_parity.py`](../../../../python/repark/tests/writes/test_merge_differential_parity.py) | Spark-minor derived from pinned pyspark |
 | **4 — NIT: dead knob** | same + `_record_merge_differential_goldens.py` | `spark_needs_cow_props` removed |
 | **4 — NIT: re-derive recipe** | module docstring + record driver + this ledger | full parity-live sync line quoted |
 | map lockstep | [`python/repark/tests/map.md`](../../../../python/repark/tests/map.md) | N-2b status + re-derive wording |
@@ -69,8 +69,8 @@ JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \
 | **2 — LifecycleScenario** | [`python/repark/tests/_live_parity.py`](../../../../python/repark/tests/_live_parity.py) | multi-statement create→seed→act→read; no `error_needle` |
 | **2 — build_spark_iceberg_engine** | same | option A: sibling of `build_spark_engine`; GAV from `_oracle_pins` |
 | **2 — 2 MERGE live rows** | `LIFECYCLE_SCENARIOS` (+ spark twin list) | budget pin == 2 |
-| **2 — lifecycle tests** | [`python/repark/tests/test_parity_live.py`](../../../../python/repark/tests/test_parity_live.py) | repark routine + live triple via `spark_iceberg_engine` fixture |
-| **2 — record driver GAV import** | [`_record_merge_differential_goldens.py`](../../../../python/repark/tests/_record_merge_differential_goldens.py) | GAV from `_oracle_pins` only (never from test module) |
+| **2 — lifecycle tests** | [`python/repark/tests/test_parity_live.py`](../../../../python/repark/tests/parity/test_parity_live.py) | repark routine + live triple via `spark_iceberg_engine` fixture |
+| **2 — record driver GAV import** | [`_record_merge_differential_goldens.py`](../../../../python/repark/tests/writes/_record_merge_differential_goldens.py) | GAV from `_oracle_pins` only (never from test module) |
 | **3 — 13 tz live Scenarios** | `_live_parity.SCENARIOS` | extraction-class equality rows with `session_conf` |
 | **3 — size pin** | `test_registry_covers_the_mandated_golden_family` | **29 → 42** (deliberate, same diff) |
 | map lockstep | [`python/repark/tests/map.md`](../../../../python/repark/tests/map.md) + [`task/map.md`](../../../map.md) | new files + status |

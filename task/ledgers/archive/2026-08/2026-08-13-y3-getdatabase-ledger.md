@@ -13,9 +13,9 @@ Charter: `planning/grok/BRIEF-y3-getdatabase.md` (conductor overnight-4; A2 boun
 | Artifact | Role |
 |---|---|
 | [`python/repark/src/repark/catalog.py`](../python/repark/src/repark/catalog.py) | `get_database` / `getDatabase`: real `locationUri` + `description`; existence is DESCRIBE (no SHOW precheck) |
-| [`python/repark/tests/test_catalog_surface.py`](../../../../python/repark/tests/test_catalog_surface.py) | value/shape, bare+qualified, SCHEMA_NOT_FOUND, FA-2 still None |
+| [`python/repark/tests/test_catalog_surface.py`](../../../../python/repark/tests/session/test_catalog_surface.py) | value/shape, bare+qualified, SCHEMA_NOT_FOUND, FA-2 still None |
 | [`python/repark/tests/_acceptance.py`](../../../../python/repark/tests/_acceptance.py) | G-6 Glue caller switched to `catalog.getDatabase` |
-| [`python/repark/tests/test_acceptance_helpers.py`](../../../../python/repark/tests/test_acceptance_helpers.py) | stub + AST pin that the wrapper calls `getDatabase` |
+| [`python/repark/tests/test_acceptance_helpers.py`](../../../../python/repark/tests/parity/test_acceptance_helpers.py) | stub + AST pin that the wrapper calls `getDatabase` |
 | [`DEVELOPMENT.md`](../../../../DEVELOPMENT.md) | authorized ridealong: `preflight` matches AGENTS roster (pointer) |
 | this ledger | linked from [`task/map.md`](../../../map.md) |
 

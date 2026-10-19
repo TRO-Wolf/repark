@@ -109,7 +109,8 @@ def test_every_deferred_id_is_absent_from_the_ported_tree() -> None:
     for node_id in _ledger_ids():
         match = _NODE_ID.match(node_id)
         assert match is not None
-        path = FACADE_TESTS.parent / match.group("path")
+        ported = sorted(FACADE_TESTS.rglob(Path(match.group("path")).name))
+        path = ported[0] if ported else FACADE_TESTS.parent / match.group("path")
         if not path.is_file():
             continue  # whole-file deferral — nothing can run
         if match.group("name") in _module_def_names(path):

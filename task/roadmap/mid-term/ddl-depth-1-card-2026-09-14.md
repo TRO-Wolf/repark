@@ -25,7 +25,7 @@ step-1 Rust parser caps DDL nesting: both raise `RecursionError` near depth 1,00
 | 0 | Devin | D-1 oracle cells and red-first pins (both doors). |
 | 1 | Devin | D-2 cap, D-3 deltas, pins green, S2-21 Rust reviewer. |
 
-**Home:** `crates/repark-spark/src/type_table/parse.rs`, `python/repark/tests/test_facade_4_census_pins.py` or a sibling
+**Home:** `crates/repark-spark/src/type_table/parse.rs`, `python/repark/tests/types/test_facade_4_census_pins.py` or a sibling
 pin file. **Gates:** `make verify`, `make preflight`; Grok critic-logic before the PR.
 
 ## Pointers

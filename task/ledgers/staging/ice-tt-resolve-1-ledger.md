@@ -90,7 +90,7 @@ VERDICT: 12 clauses, 12 PROVEN, 0 OPEN, 0 REJECTED.
 1a. Oracle file offline (`-n 4`):
 
 ```text
-$ .venv/bin/python -m pytest python/repark/tests/test_ice_tt_resolve_1.py -q -p no:cacheprovider -n 4
+$ .venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_tt_resolve_1.py -q -p no:cacheprovider -n 4
 155 passed, 1 skipped in 10.42s
 ```
 
@@ -98,7 +98,7 @@ $ .venv/bin/python -m pytest python/repark/tests/test_ice_tt_resolve_1.py -q -p 
 catalog):
 
 ```text
-$ REPARK_PARITY_LIVE=1 ... /tmp/oc-worker/_lib/jvm-lock.sh .venv/bin/python -m pytest python/repark/tests/test_ice_tt_resolve_1.py::test_live_cells_rederive_the_fixture -q -p no:cacheprovider
+$ REPARK_PARITY_LIVE=1 ... /tmp/oc-worker/_lib/jvm-lock.sh .venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_tt_resolve_1.py::test_live_cells_rederive_the_fixture -q -p no:cacheprovider
 1 passed, 1 warning in 25.41s
 ```
 
@@ -127,7 +127,7 @@ The ms-asserting pins the seconds change flips, each with its new expectation:
 - `crates/repark-spark/src/tests/time_travel.rs::time_travel_version_timestamp_branch_tag_and_errors`:
   bare-ms `TIMESTAMP AS OF` pins (s1, s2, s3, mid-interval) now expect current `[9]`; the
   earlier-than-first pin uses seconds minus an hour and matches `snapshot older than`.
-- `python/repark/tests/test_time_travel.py::test_sql_timestamp_as_of`: bare-ms pins now expect
+- `python/repark/tests/iceberg/test_time_travel.py::test_sql_timestamp_as_of`: bare-ms pins now expect
   current; the early pin uses seconds and expects `IllegalArgumentException`.
 - `test_unknown_snapshot_and_ref_name_the_pin` and `test_negative_snapshot_id_sql_is_recognized`:
   `AnalysisException` becomes `IllegalArgumentException` (Spark's class for the same text).
@@ -145,9 +145,9 @@ The ms-asserting pins the seconds change flips, each with its new expectation:
 
 | Command | Result |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_ice_tt_resolve_1.py -q -p no:cacheprovider -n 4` | 0 — 155 passed, 1 skipped |
+| `.venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_tt_resolve_1.py -q -p no:cacheprovider -n 4` | 0 — 155 passed, 1 skipped |
 | `REPARK_PARITY_LIVE=1 ... test_ice_tt_resolve_1.py::test_live_cells_rederive_the_fixture -q -p no:cacheprovider` | 0 — 1 passed |
-| `.venv/bin/python -m pytest python/repark/tests/test_time_travel.py python/repark/tests/test_v3e4_refs_time_travel.py python/repark/tests/test_facade_polish.py python/repark/tests/test_production_file_size.py -q -p no:cacheprovider -n 4` | 0 — 77 passed |
+| `.venv/bin/python -m pytest python/repark/tests/iceberg/test_time_travel.py python/repark/tests/iceberg/test_v3e4_refs_time_travel.py python/repark/tests/dataframe/test_facade_polish.py python/repark/tests/session/test_production_file_size.py -q -p no:cacheprovider -n 4` | 0 — 77 passed |
 | `.venv/bin/python -m pytest (11-file affected set) -q -p no:cacheprovider -n 4` | 0 — 189 passed, 2 skipped |
 | `cargo test -p repark-core -p repark-spark -p repark-sql time_travel` | 0 — 2 + 17 + 19 passed, 0 failed |
 | `cargo clippy --locked -p repark-core -p repark-spark -p repark-sql --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 — clean |
@@ -265,15 +265,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: The 94 cells are measured verbatim on live Spark 4.1.2 in the committed fixture (§1b, C-001) and replay green on the release native (§1a, C-005); refusal classes and Spark texts are asserted verbatim (§1c); the Rust batteries pin the resolver and evaluator units (C-002, C-003). Round 3 TT2 pins join the replay (cast, alias, selector cells) with the native exec_tests. 
-      artifacts: [python/repark/tests/test_ice_tt_resolve_1.py, python/repark/tests/ice_tt_resolve_1_spark_oracle.json, crates/repark-spark/src/tests/time_travel.rs, python/repark/tests/test_ice_tt_resolve_1_tt2.py, crates/repark-sql/src/time_travel/exec_tests.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_tt_resolve_1.py, python/repark/tests/iceberg/ice_tt_resolve_1_spark_oracle.json, crates/repark-spark/src/tests/time_travel.rs, python/repark/tests/iceberg/test_ice_tt_resolve_1_tt2.py, crates/repark-sql/src/time_travel/exec_tests.rs]
     - id: AT-2
       status: ATTACKED
       evidence: The Spark cells are the verbatim live refusals and rows, recorded by the committed _record_ice_tt_resolve_1_oracle.py driver, which re-derives every cell and exits non-zero on drift (C-001, C-006).
-      artifacts: [python/repark/tests/_record_ice_tt_resolve_1_oracle.py]
+      artifacts: [python/repark/tests/iceberg/_record_ice_tt_resolve_1_oracle.py]
     - id: AT-3
       status: ATTACKED
       evidence: Answer paths and refusal paths are both pinned: value plus type on the Arrow path for every answering cell, class plus normalized message for every refusal; no silent-answer path remains (C-002 through C-007). Round 3 TT2 cells pin rows, classes, and messages; two cast gaps pin the Spark answer as strict xfails. 
-      artifacts: [python/repark/tests/test_ice_tt_resolve_1.py, python/repark/tests/test_ice_tt_resolve_1_tt2.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_tt_resolve_1.py, python/repark/tests/iceberg/test_ice_tt_resolve_1_tt2.py]
     - id: AT-4
       status: ATTACKED
       evidence: No global mutable state added; the temp-view minter stays the one shared counter and the leak pins still pass (C-010).
@@ -285,11 +285,11 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Every pinned value is a measured value (§1 verbatim blocks), not prose: snapshot multisets, refusal first lines, SQLSTATE codes (C-005, C-006). Round 3 engine CAST probe values (NY DST gap 1772955000, overlap 1793511000) match the oracle verbatim. 
-      artifacts: [python/repark/tests/test_ice_tt_resolve_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_tt_resolve_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: Wall-clock claims are explicit and zoned: the fixture commits 2.2s apart, the NY door pins America/New_York resolution, the live leg forces TZ=UTC (C-006, F-ICE-TT-RESOLVE-1-003). Round 3 NY walls use ZoneInfo, so winter pins hold. 
-      artifacts: [python/repark/tests/test_ice_tt_resolve_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_tt_resolve_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: git status shows only the unit's resolver, doors, plumbing, pins, registry row, ledger and map entries; no Cargo.toml, lockfile, workflow or pin change.

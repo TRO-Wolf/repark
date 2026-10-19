@@ -81,7 +81,7 @@ only the redundancy rules and their texts diverge.
 The nine UPDATE-door pairs above (commit, with the PARTNAME-1 names), the exact
 duplicate (refusal text), the two CREATE-door redundant-time pairs (refusal
 texts), `(bucket(4, id), bucket(8, id))` on CREATE (refusal text), and the
-PARTNAME-1 pin suite (`python/repark/tests/test_partname_1.py`) to confirm no
+PARTNAME-1 pin suite (`python/repark/tests/iceberg/test_partname_1.py`) to confirm no
 name moves.
 
 ## Clauses (draft)
@@ -97,4 +97,4 @@ name moves.
 - Up: [map.md](map.md) · Ledger:
   [../../ledgers/staging/partname-1-ledger.md](../../ledgers/staging/partname-1-ledger.md)
   (residue R-1) · Pins:
-  [../../../python/repark/tests/test_partname_1.py](../../../python/repark/tests/test_partname_1.py)
+  [../../../python/repark/tests/iceberg/test_partname_1.py](../../../python/repark/tests/iceberg/test_partname_1.py)

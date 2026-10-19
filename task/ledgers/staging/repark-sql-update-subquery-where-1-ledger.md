@@ -74,7 +74,7 @@ The module is the round-1 build from the clean tree at `0f074aff` (`_native.abi3
 `976605d7…c3cc9`); `6cb6c310` adds only documents, so it is `6cb6c310`'s module.
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_repark_sql_update_subquery_where_1.py -q
+.venv/bin/python -m pytest python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py -q
 22 failed, 5 passed
 ```
 
@@ -821,7 +821,7 @@ COVERAGE_ATTESTATION:
         repark.sql() with the G3-E8 text and holds rows and warehouse files, for both verbs; the
         card's own spelling and an in-memory table are covered; the ANSI door keeps answering
         its identity forms.
-      artifacts: [python/repark/tests/test_repark_sql_update_subquery_where_1.py, crates/repark-sql/tests/ansi_subquery_where_identity.rs]
+      artifacts: [python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py, crates/repark-sql/tests/ansi_subquery_where_identity.rs]
       round_4: Every pin now runs on Iceberg tables behind one guard (an IcebergTableScan), with
         rows and snapshot counts read before and after; PREPARE forms and a non-default parser
         dialect join the pins (section 12).
@@ -837,7 +837,7 @@ COVERAGE_ATTESTATION:
       evidence: A refused statement writes nothing - no new file under the warehouse, the rows
         as seeded. A statement that does not plan keeps its plan error, because the refusal runs
         after planning; a parse the refusal cannot read falls through to the unchanged belt.
-      artifacts: [python/repark/tests/test_repark_sql_update_subquery_where_1.py, crates/repark-core/src/dialect.rs]
+      artifacts: [python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py, crates/repark-core/src/dialect.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The refusal is a pure function of the parsed statement and a flag; it holds no

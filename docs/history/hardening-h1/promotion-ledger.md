@@ -141,7 +141,7 @@ archival rather than re-homing the silent violation.
 
 | Still-live carry | Disposition | Authoritative home today |
 |---|---|---|
-| MERGE differential corpus (10 recorded rows) + lifecycle helper | HOMED | `python/repark/tests/test_merge_differential_parity.py` + tests map |
+| MERGE differential corpus (10 recorded rows) + lifecycle helper | HOMED | `python/repark/tests/writes/test_merge_differential_parity.py` + tests map |
 | Ready-to-paste REG-G3 rows | HOMED / pending land | Corpus + registry as orchestrator lands; ledger remains paste provenance |
 | N-2b — 4 Rust pins + 2 live-tier scenarios + `_live_parity` lifecycle abstraction | QUEUED | unit-queue **N-2b** (§9) |
 | Gate / fix-round evidence | HISTORICAL | — |

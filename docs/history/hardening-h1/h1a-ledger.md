@@ -48,7 +48,7 @@ one key spelling. `docs/port/census.md`'s record of that count moved with them.
 
 ### 1.3 The differential rows (record mode, real PySpark 4.1.2)
 
-`python/repark/tests/test_session_timezone_parity.py` — 20 recorded recipes + the
+`python/repark/tests/timestamps/test_session_timezone_parity.py` — 20 recorded recipes + the
 `current_timestamp` type row: **14 for gap G1** (budget 10–14) and **7 for gap G16** (budget 6–8).
 18 of the 20 run over scalar literals; the 2 `column_extract_*` rows run over a real tz-aware
 TIMESTAMP **column** (a two-row in-memory frame registered as a temp view) under each non-UTC
@@ -331,7 +331,7 @@ record mode: 18 rows re-derived, 0 mismatch(es)
 ```text
 $ JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \
     PYTHONPATH=python/repark-parity/src \
-    .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py
+    .venv/bin/python python/repark/tests/timestamps/_record_session_timezone_goldens.py
 ...
 [G1] column_extract_under_new_york_session [America/New_York] PASS
 [G1] column_extract_under_tokyo_session [Asia/Tokyo] PASS
@@ -345,7 +345,7 @@ EXIT=0
 The driver imports `ROWS` from the COMMITTED test module and runs each row through the SAME
 `run_row` helper the assertions use, so the recorded golden and the asserted recipe cannot drift
 apart — there is one recipe, not two copies. It is now COMMITTED
-(`python/repark/tests/_record_session_timezone_goldens.py`, §8 finding O-4): the actor left it as
+(`python/repark/tests/timestamps/_record_session_timezone_goldens.py`, §8 finding O-4): the actor left it as
 scratch outside the worktree, which made "recorded against live PySpark 4.1.2" unfalsifiable from
 inside the repo the moment that session ended. It never edits the corpus — it prints the live
 values and exits non-zero, because a driver that rewrites its own oracle launders drift.
@@ -354,7 +354,7 @@ values and exits non-zero, because a driver that rewrites its own oracle launder
 
 ```text
 $ JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 \
-    PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest python/repark/tests/test_parity_live.py -q
+    PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest python/repark/tests/parity/test_parity_live.py -q
 66 passed in 17.54s          # fix-pass re-capture; was 65 before §8 added the override pin
   (29 routine JVM-free scenario legs + 29 live triple legs + 4 live disclosure legs + the flag
    detector + the two registry pins + the `build_repark_engine` override pin added in §8; the two
@@ -442,7 +442,7 @@ $ pytest "...[year_of_instant_under_new_york_session]" -q
 **must-FAIL** — drop `session_conf` from `date_math_under_tokyo_session`:
 
 ```text
-$ pytest python/repark/tests/test_parity_live.py -q -k registry
+$ pytest python/repark/tests/parity/test_parity_live.py -q -k registry
 >       assert len(overridden) >= 2, "at least two scenarios must run under a non-UTC oracle session"
 E       AssertionError: at least two scenarios must run under a non-UTC oracle session
 E       assert 1 >= 2
@@ -452,14 +452,14 @@ E       assert 1 >= 2
 **must-PASS** — override restored:
 
 ```text
-$ pytest python/repark/tests/test_parity_live.py -q -k registry
+$ pytest python/repark/tests/parity/test_parity_live.py -q -k registry
 2 passed, 63 deselected in 0.35s
 ```
 
 **Tree check.** All three provocations were reverted by restoring a pre-provocation copy of each
 file; `git diff` against the staged tree is empty for
 `crates/repark-core/src/session_time_zone.rs`, `python/repark/tests/_live_parity.py` and
-`python/repark/tests/test_session_timezone_parity.py`, and the final `make ci` / `make test` /
+`python/repark/tests/timestamps/test_session_timezone_parity.py`, and the final `make ci` / `make test` /
 facade runs above are post-revert.
 
 *Amended in the fix pass:* a `git diff` check is NOT sufficient on its own. A stale pytest
@@ -480,7 +480,7 @@ Spark behavior / the pin / rationale). The orchestrator lands them at assembly.
 
 | Row | repark behavior | Spark behavior | Pin | Rationale |
 |---|---|---|---|---|
-| **TZ-1 — timestamp extraction ignores the session zone** | `year` / `month` / `dayofmonth` / `hour` / `date_trunc` / `date_format` over a TIMESTAMP resolve in the STORED (UTC) zone; `spark.sql.session.timeZone` does not move them | resolves every one in the session zone (the census measured a four-hour offset) | `python/repark/tests/test_session_timezone_parity.py::test_session_timezone_row_matches_spark_or_still_diverges` — **15 extraction-class disclosure rows** (the module holds 18 disclosure table rows + 2 equality controls; of the 18, two are TZ-4 and one is TZ-5), e.g. `[hour_of_instant_under_new_york_session]`, `[dst_fall_back_repeated_local_hour]`, `[year_boundary_date_trunc_under_tokyo_session]`, and the two COLUMN-path rows `[column_extract_under_new_york_session]` / `[column_extract_under_tokyo_session]` | **IN-FLIGHT FIX** (campaign decision D7; H-1a split B). Recorded as a disclosure so the CRITICAL class is measured while the fix lands; every row flips to an equality assertion with the fix, which is the fix's revert-red evidence. |
+| **TZ-1 — timestamp extraction ignores the session zone** | `year` / `month` / `dayofmonth` / `hour` / `date_trunc` / `date_format` over a TIMESTAMP resolve in the STORED (UTC) zone; `spark.sql.session.timeZone` does not move them | resolves every one in the session zone (the census measured a four-hour offset) | `python/repark/tests/timestamps/test_session_timezone_parity.py::test_session_timezone_row_matches_spark_or_still_diverges` — **15 extraction-class disclosure rows** (the module holds 18 disclosure table rows + 2 equality controls; of the 18, two are TZ-4 and one is TZ-5), e.g. `[hour_of_instant_under_new_york_session]`, `[dst_fall_back_repeated_local_hour]`, `[year_boundary_date_trunc_under_tokyo_session]`, and the two COLUMN-path rows `[column_extract_under_new_york_session]` / `[column_extract_under_tokyo_session]` | **IN-FLIGHT FIX** (campaign decision D7; H-1a split B). Recorded as a disclosure so the CRITICAL class is measured while the fix lands; every row flips to an equality assertion with the fix, which is the fix's revert-red evidence. |
 | **TZ-2 — the session-zone default is `UTC`** | `spark.conf.get("spark.sql.session.timeZone")` is `UTC` on a session that never set it | the JVM's local zone, so results depend on the host | `test_session_timezone_conf_is_readable_back_and_defaults_to_utc`; `crates/repark-core/src/session_time_zone/tests.rs::absent_key_resolves_to_the_utc_default` | **DECLARED.** A reproducible default beats a host-dependent one, and reading the host zone would be the query-time/construction-time environment read `docs/adr/0004-server-prep-disciplines.md` forbids. A job that wants host-local behavior sets the key. |
 | **TZ-3 — a runtime `conf.set` of the session zone is accepted, neither validated nor applied** | the call succeeds, warns (`accepted for source compatibility but NOT applied ... its value is NOT validated`) and stores nothing, so `conf.get` keeps reporting the engine's real zone; `conf.unset` behaves the same way. **The value is not checked at all**: `conf.set(K, "Mars/Olympus_Mons")` is swallowed, where live Spark raises `[INVALID_CONF_VALUE.TIME_ZONE] ... SQLSTATE: 22022`. **The disclosure is once per PROCESS, not per session** (the OTH-010 `_warn_master_once` idiom), so a second session in the same interpreter gets a fully SILENT no-op. | applies the new zone to the live session immediately, and validates it | `test_runtime_conf_set_of_the_session_zone_is_accepted_but_not_applied` (covers the valid leg, the warning TEXT saying "NOT validated", and the invalid-value leg under `simplefilter("error")` so a second warning would raise); `test_apache_sql_conf_context_manager_round_trips_the_session_zone`; `test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise` (the same laxness on the reuse path) | **DECLARED**, and evidence-driven: refusing broke the pinned Apache drop-in test `test_create_dataframe_from_pandas_with_dst`, which sets this key via PySpark's `sql_conf`. Accepting keeps drop-in; not storing keeps `conf.get` honest. The unvalidated half is the accepted COST of keeping exactly one validator (in the engine, at build) — repark is knowingly laxer than PySpark on this key at runtime, and the warning text now says so in as many words rather than leaving a typo'd zone to a silent no-op. Becomes fixable if split B routes the zone through DataFusion `ConfigOptions`. |
 | **TZ-4 — TIMESTAMP Arrow export is tz-naive** | `to_arrow()` yields `timestamp[ns]` (or `timestamp[us]` after `date_trunc`) with NO timezone | `toArrow()` yields `timestamp[us, tz=UTC]` | `[to_timestamp_of_zone_suffixed_string]`, `[tz_aware_to_naive_round_trip]`, `test_current_timestamp_type_and_zone_disclosure` | **IN-FLIGHT FIX** — the export-type half of TZ-1's class. A consumer that localizes a tz-naive column silently shifts it, which is why the type is asserted and not only the value. |
@@ -588,7 +588,7 @@ Gates after the fix pass are in §8.3; the provocations the fix pass altered or 
 | O-1 / S-NIT | MAJOR / NIT | The flip-don't-delete guidance sat on `assert _frames_differ(row.repark, row.spark)` — two module CONSTANTS, so no engine change can ever reach it. A real convergence red on the first assertion with a bare `FrameMismatchError`. The docstring credited the wrong assertion. | The disclosure runner now CLASSIFIES the failure before raising, on `actual` (the engine's real output): if `actual` equals the recorded Spark golden it raises the CONVERGED / flip-don't-delete message; otherwise it raises a REGRESSION message pointing at record mode. The constants assertion is KEPT and re-labelled as what it is — the row-well-formedness guard against a half-edited row — with its own message. Docstring now credits the mechanism it actually has. Both directions re-provoked (§8.2 P-2b convergence, P-4 regression), plus the must-PASS. |
 | O-2 | MAJOR | No row exercises a tz-aware timestamp COLUMN; all 19 rows are scalar-literal expressions, so the brief's own recipe wording is met by nothing. The stated reason for deferring was refuted. | Column family ADDED and RECORDED from live PySpark 4.1.2: `column_extract_under_new_york_session` and `column_extract_under_tokyo_session` run `year`/`month`/`dayofmonth`/`hour` over a two-row in-memory frame (`createDataFrame` + `createOrReplaceTempView`, schema INFERRED so both engines carry `timestamp[us, tz=UTC]` — a DDL `ts timestamp` string makes repark's column tz-NAIVE and would have weakened the row). New York moves all four fields including the YEAR across a boundary (`[2023,2024]/[12,6]/[31,15]/[23,8]`); Tokyo moves only the hour (`[13,21]`) while repark answers `[2024,2024]/[1,6]/[1,15]/[4,12]` under BOTH zones — which is what separates a session-zone bug from an offset-sign bug. Budget pins moved in the same diff (G1 12 → 14, still inside 10–14), and `test_session_timezone_row_set_covers_both_gap_budgets` now asserts the column family spans both zones. The four-entry-point matrix is stated as split B's obligation in the §3 gate table and residual §7.1 — claimed, never silent. |
 | O-3 | MAJOR | `build_repark_engine`'s `active.stop()` branch executes ZERO times under the suite (conftest clears the active session before every test), while its absence silently leaves a scenario on the wrong zone. | Pin ADDED (JVM-free): `test_build_repark_engine_override_stops_the_active_session_and_rebuilds` builds a default engine, asserts it is the process-active session, then requests a Tokyo override and asserts a NEW session was built, that it carries `Asia/Tokyo`, that it is now the active one, and that the previous handle is STOPPED (the documented cost in residual §7.5). Provoked (§8.2 P-7). |
-| O-4 | NIT | The record driver was scratch outside the worktree, so "recorded against live PySpark 4.1.2" became unfalsifiable from inside the repo the moment that session ended. | Driver COMMITTED as `python/repark/tests/_record_session_timezone_goldens.py` (not a `test_` module; never collected). It imports `ROWS` from the committed corpus and runs each row through the SAME `run_row` helper the assertions use, so recipe and oracle are one piece of code. Exit 0 = all halves reproduce; non-zero prints the live schema+rows. It never edits the corpus. Invocation is in the corpus module's docstring, in `python/repark/tests/map.md` (Contents, an `I want to…` row and a Debug row) and in §4.6. Re-run in the fix pass: **20 rows re-derived, 0 mismatch(es)**. |
+| O-4 | NIT | The record driver was scratch outside the worktree, so "recorded against live PySpark 4.1.2" became unfalsifiable from inside the repo the moment that session ended. | Driver COMMITTED as `python/repark/tests/timestamps/_record_session_timezone_goldens.py` (not a `test_` module; never collected). It imports `ROWS` from the committed corpus and runs each row through the SAME `run_row` helper the assertions use, so recipe and oracle are one piece of code. Exit 0 = all halves reproduce; non-zero prints the live schema+rows. It never edits the corpus. Invocation is in the corpus module's docstring, in `python/repark/tests/map.md` (Contents, an `I want to…` row and a Debug row) and in §4.6. Re-run in the fix pass: **20 rows re-derived, 0 mismatch(es)**. |
 | S-7 / O-6 | NIT | The "verbatim" facade count (2593) does not reproduce; both lenses got 2594 on the identical tree and command. | Corrected in §4.3 with the honest reason: collection is deterministic from the file tree, so this was not environment sensitivity — the number was captured one test before the final tree. Fix-pass re-capture recorded: **2600 passed / 36 skipped** (record provisioning) and **2564 / 46** for `make py-test-facade` verbatim, the +6 being this pass's new tests. |
 | S-8 | NIT | Stale pytest assertion-rewrite cache in the worktree produced a twice-consecutive false RED on a disclosure row. | All `*.pyc` under `python/` and `scripts/` deleted at the start of this pass (gitignored; no tracked file touched). Every gate in §8.3 was run with a cold cache. |
 | S-9 | NIT | The disclosure is once per PROCESS, so a second session in the same interpreter gets a fully silent no-op. | Kept (the OTH-010 idiom is consistent) and DISCLOSED rather than fixed: stated in the warning text itself, in the function docstring, in `python/repark/src/repark/session/map.md`'s Debug table as its own row, and in registry row TZ-3. |
@@ -649,7 +649,7 @@ $ pytest "...[year_of_instant_under_new_york_session]" -q
 `*SESSION_TIME_ZONE_KEYS` from `engine_key_set` in `session_core.py`:
 
 ```text
-$ pytest python/repark/tests/test_session_timezone_parity.py -q -k reuse
+$ pytest python/repark/tests/timestamps/test_session_timezone_parity.py -q -k reuse
 >       with pytest.warns(UserWarning, match="engine knobs are fixed at session build"):
 E       Failed: DID NOT WARN. No warnings of type (<class 'UserWarning'>,) were emitted.
 FAILED ...::test_getorcreate_reuse_with_a_different_zone_warns_and_leaves_the_conf_alone
@@ -664,7 +664,7 @@ $ (restored)  pytest ... -q -k reuse
 `normalize_session_time_zone_config(self._config)` call from `get_or_create`:
 
 ```text
-$ pytest python/repark/tests/test_session_timezone_parity.py -q -k "padded or whitespace_only"
+$ pytest python/repark/tests/timestamps/test_session_timezone_parity.py -q -k "padded or whitespace_only"
 >       assert session.conf.get(SESSION_TIME_ZONE_KEY) == ZONE_TOKYO
 E       AssertionError: assert '  Asia/Tokyo \t' == 'Asia/Tokyo'
 FAILED ...::test_padded_zone_is_normalized_so_conf_get_reports_the_engine_zone
@@ -682,7 +682,7 @@ break that — which is the correct shape (the two tests pin opposite failure mo
 `build_repark_engine` with `pass`:
 
 ```text
-$ pytest "python/repark/tests/test_parity_live.py::test_build_repark_engine_override_stops_the_active_session_and_rebuilds" -q
+$ pytest "python/repark/tests/parity/test_parity_live.py::test_build_repark_engine_override_stops_the_active_session_and_rebuilds" -q
 >       assert second.session is not first.session, "an override must BUILD, never reuse"
 E       AssertionError: an override must BUILD, never reuse
 E       assert <ReparkSession object at 0x7a8aea883900> is not <ReparkSession object at 0x7a8aea883900>
@@ -731,12 +731,12 @@ $ make py-test-facade
 2564 passed, 46 skipped, 37 warnings in 91.47s
 EXIT=0
 
-$ JAVA_HOME=zulu-17 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 pytest python/repark/tests/test_parity_live.py -q
+$ JAVA_HOME=zulu-17 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 pytest python/repark/tests/parity/test_parity_live.py -q
 66 passed in 17.54s
 $ (gate unset)
 33 passed, 33 skipped in 0.79s
 
-$ .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py   # JAVA_HOME set
+$ .venv/bin/python python/repark/tests/timestamps/_record_session_timezone_goldens.py   # JAVA_HOME set
 record mode: 20 rows re-derived, 0 mismatch(es)
 EXIT=0
 
@@ -914,7 +914,7 @@ this is the other three, against the same instants and the same expectations.
 | **native DataFrame API** | `crates/repark-spark/tests/session_timezone.rs::native_dataframe_api_extracts_in_the_session_zone` | `expr_fn::year/hour` over a registered tz-aware column, through the DataFusion `DataFrame` API — a standalone `Expr` with no session attached, the shape `F.year(col)` takes. It also asserts the Spark door on the SAME session returns the same rows, so the two cells are pinned to each other rather than to two hand-written expectations. |
 | **Spark door** | the eight family pins in the same file (`session.sql` on a `SparkDialect` session) | value AND Arrow type, two non-UTC zones, DST included |
 | **ANSI door** | `crates/repark-sql/tests/session_timezone_ansi_door.rs::ansi_door_and_spark_door_agree_under_a_non_utc_session` | ONE Spark-extended session at a non-UTC zone: `sql_with(AnsiDialect)` and the Spark door agree, value AND type. It lives in `repark-sql` because the crate-DAG policy allows `repark-sql → repark-spark` as a **dev** edge and nothing the other way, so this is the only binary where the two can meet. |
-| **facade** | `python/repark/tests/test_session_timezone_parity.py` | the recorded corpus, thirteen of whose disclosures are now equality rows |
+| **facade** | `python/repark/tests/timestamps/test_session_timezone_parity.py` | the recorded corpus, thirteen of whose disclosures are now equality rows |
 
 A **single-session** row is the right shape for the ANSI cell and the file says why: extensions are
 session-scoped, not dialect-scoped, so a two-session comparison would measure the extension (two
@@ -1079,7 +1079,7 @@ test result: FAILED. 1 passed; 1 failed; ...
 **must-FAIL — the facade cell** (native module rebuilt against the provoked engine):
 
 ```text
-$ pytest python/repark/tests/test_session_timezone_parity.py -q
+$ pytest python/repark/tests/timestamps/test_session_timezone_parity.py -q
 FAILED ...[year_of_instant_under_new_york_session]
 FAILED ...[month_of_instant_under_new_york_session]
 FAILED ...[day_of_instant_under_new_york_session]
@@ -1121,7 +1121,7 @@ for `session_time_zone.rs`, native module rebuilt, `__pycache__` cold):
 ```text
 $ cargo test --locked -p repark-spark --test session_timezone       -> ok. 14 passed; 0 failed
 $ cargo test --locked -p repark-sql --test session_timezone_ansi_door -> ok. 2 passed; 0 failed
-$ pytest python/repark/tests/test_session_timezone_parity.py -q     -> 31 passed in 0.54s
+$ pytest python/repark/tests/timestamps/test_session_timezone_parity.py -q     -> 31 passed in 0.54s
 ```
 
 #### P-B2 — the DATE negative is load-bearing (the bug that actually happened)
@@ -1230,7 +1230,7 @@ its own §8.1 finding S-7 corrected once already (2593 → 2594). Recorded rathe
 
 ```text
 $ JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src \
-    .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py
+    .venv/bin/python python/repark/tests/timestamps/_record_session_timezone_goldens.py
 record mode: 20 rows re-derived, 0 mismatch(es)
 EXIT=0
 
@@ -1444,7 +1444,7 @@ test result: FAILED. 17 passed; 3 failed
 ```
 
 ```text
-$ pytest python/repark/tests/test_session_timezone_parity.py -q     (native module rebuilt)
+$ pytest python/repark/tests/timestamps/test_session_timezone_parity.py -q     (native module rebuilt)
 FAILED …[date_trunc_of_a_date_composed_under_new_york_session]
 FAILED …[date_trunc_of_a_string_composed_under_tokyo_session]
 FAILED …[date_trunc_across_the_fall_back_hour_under_new_york_session]
@@ -1479,7 +1479,7 @@ P-B1 $ cargo test --locked -p repark-spark --test session_timezone
 P-B1 $ cargo test --locked -p repark-sql --test session_timezone_ansi_door
      test result: FAILED. 1 passed; 1 failed          (unchanged)
 
-P-B1 $ pytest python/repark/tests/test_session_timezone_parity.py -q   (native module rebuilt)
+P-B1 $ pytest python/repark/tests/timestamps/test_session_timezone_parity.py -q   (native module rebuilt)
      21 failed, 19 passed                              (was 15 failed / 16 passed)
      = the 13 flips + the 2 re-recorded date_trunc rows + the 3 TZ-7 rows + the TZ-6 row
        + the 2 DataFrame-API rows.

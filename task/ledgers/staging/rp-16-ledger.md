@@ -44,7 +44,7 @@ VERDICT: 4 clauses, 4 PROVEN, 0 OPEN, 0 REJECTED.
 ### C-002 red-first (280000 retain pin on this tree, before reshape)
 
 ```
-FAILED python/repark/tests/test_perf_ice_catalog_io_1.py::test_a_budget_sized_to_the_charged_weight_retains_every_table
+FAILED python/repark/tests/perf/test_perf_ice_catalog_io_1.py::test_a_budget_sized_to_the_charged_weight_retains_every_table
 E  repark.errors.PySparkException: Unexpected => Failed to load manifest list in cache, source:
    DataInvalid => Failed to read file …/manifest_weight/repark_ctas/ice/ns/r0/metadata/snap-….avro:
    No such file or directory
@@ -82,22 +82,22 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Retain pin at 1250000 answers r0 and r255 after every manifest is deleted. Evict pin at 280000 raises naming manifest on r0. Thrash pin untouched.
-      artifacts: [python/repark/tests/test_perf_ice_catalog_io_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_ice_catalog_io_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Bisection recorded the 1,071,000 / 1,070,000 pair; 280000 evicts 192 of 256; 1,250,000 retains in the bisection table.
-      artifacts: [python/repark/tests/test_perf_ice_catalog_io_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_ice_catalog_io_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: 280000 miss names the manifest (Failed to load manifest list / No such file). Retain pin fails loud on a miss rather than answering wrong rows.
-      artifacts: [python/repark/tests/test_perf_ice_catalog_io_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_ice_catalog_io_1.py]
     - id: AT-4
       status: N/A
       justification: No new shared state. The weigher change is fork-side inside ObjectCache; RePark only re-sizes the pin budget.
     - id: AT-5
       status: ATTACKED
       evidence: No AWS, IAM or secret handling. No .github change. This consumer commit does not edit Cargo.toml or Cargo.lock.
-      artifacts: [python/repark/tests/test_perf_ice_catalog_io_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_ice_catalog_io_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: No public API break. The session key repark.iceberg.manifestCacheBytes is unchanged; only the charged weight behind it moved.
@@ -117,7 +117,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Four clauses. Red-first of the 280000 retain pin is the designed cache miss on r0. 1,071,000 flake recorded; pin uses 1,250,000.
-      artifacts: [python/repark/tests/test_perf_ice_catalog_io_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_ice_catalog_io_1.py]
   complete: true
 ```
 
@@ -125,7 +125,7 @@ COVERAGE_ATTESTATION:
 
 | Gate | Exit |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_perf_ice_catalog_io_1.py -q` | 0 — 33 passed, 3 skipped in 147.71s |
+| `.venv/bin/python -m pytest python/repark/tests/perf/test_perf_ice_catalog_io_1.py -q` | 0 — 33 passed, 3 skipped in 147.71s |
 | `make py-test-facade` | 0 — 5929 passed, 369 skipped, 48 warnings in 756.07s |
 | `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q -p no:cacheprovider` | 0 — 740 passed, 1 skipped, 11 xfailed in 117.53s |
 | `python3 scripts/check_docs_links.py` | 0 — 762 files, 4859 links |

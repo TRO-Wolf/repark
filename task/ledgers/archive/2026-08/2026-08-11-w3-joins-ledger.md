@@ -13,8 +13,8 @@ scope (rows document; fixes are future units). The registry file is not edited f
 
 | Artifact | Path | Role |
 |---|---|---|
-| Differential corpus | [`python/repark/tests/test_join_parity.py`](../../../../python/repark/tests/test_join_parity.py) | 26 rows + lifecycle helpers + classifiers + budget pin + CP-1 monkeypatches |
-| Record driver | [`python/repark/tests/_record_join_goldens.py`](../../../../python/repark/tests/_record_join_goldens.py) | Re-derive Spark halves (order-insensitive) |
+| Differential corpus | [`python/repark/tests/test_join_parity.py`](../../../../python/repark/tests/dataframe/test_join_parity.py) | 26 rows + lifecycle helpers + classifiers + budget pin + CP-1 monkeypatches |
+| Record driver | [`python/repark/tests/_record_join_goldens.py`](../../../../python/repark/tests/dataframe/_record_join_goldens.py) | Re-derive Spark halves (order-insensitive) |
 | Tests map | [`python/repark/tests/map.md`](../../../../python/repark/tests/map.md) | lockstep entry |
 | This ledger | `task/w3-joins-ledger.md` | linked from [`task/map.md`](../../../map.md) |
 

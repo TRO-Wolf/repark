@@ -1723,7 +1723,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   was emptied or rewritten. Controls: the bare `id IN (SELECT …)` forms change exactly ids 2 and
   3, a plain-predicate `PREPARE`/`EXECUTE` writes its row, and a plain `EXPLAIN` of the subquery
   `DELETE` answers its plan. The Spark SQL session door's twin is
-  `python/repark/tests/test_repark_sql_update_subquery_where_1_spark_door.py`.
+  `python/repark/tests/writes/test_repark_sql_update_subquery_where_1_spark_door.py`.
   pins: repark-sql-update-subquery-where-1/C-025, C-026
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
@@ -1734,7 +1734,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `temporal_range_numeric_order_keys_are_untouched` (scope, incl. the mixed-statement
   fallback). Goldens are the live PySpark 4.1.2 halves recorded in the unit's section-0 recon,
   the same oracle the `temporal_range` family in
-  `python/repark/tests/test_window_parity.py` pins — one oracle, two halves. Leaf-private
+  `python/repark/tests/functions/test_window_parity.py` pins — one oracle, two halves. Leaf-private
   fixtures (`register_timestamp_seed`, `register_date_seed`, `seed_micros`,
   `days_from_civil`) stay out of `common.rs`: only this leaf uses them. Ledger:
   [`../../../../task/g5b-temporal-range-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-12-g5b-temporal-range-ledger.md).
@@ -2857,7 +2857,7 @@ and the same statement without the flag stays positional. pins: u7-write-df-2/C-
 
 U8 WRITE-SQL PR1 round 3 (2026-09-25, critic r2): `replace_where_oracle.rs` replays the Spark
 measurements committed in
-[`python/repark/tests/u8_write_sql_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_spark_oracle.json)
+[`python/repark/tests/writes/u8_write_sql_spark_oracle.json`](../../../../python/repark/tests/writes/u8_write_sql_spark_oracle.json)
 (read with `include_str!`) on the router door: it creates each case's table, runs its
 statements, and compares the rows and the outcome (the `Cannot convert …` text and the arity
 texts by equality; the R-1 Iceberg validation refusals by their message core). The Spark-bug
@@ -2893,7 +2893,7 @@ name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDAT
 `repeated_top_level_assignments_refuse_like_spark` (a repeated atomic key on UPDATE, MERGE
 matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
 `nested_assign_oracle.rs` replays
-[`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
+[`python/repark/tests/writes/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/writes/u8_write_sql_nested_spark_oracle.json)
 (read with `include_str!`). It covers 154 of its 177 keys (150 until U9-TYPES-1 retired the
 `U2-order` / `U2-order2` R-16 residues, 2026-09-26; 152 until ICE-STRUCT-PAIRING-1 retired the
 two `E6-evo-*-reorder-noprop` R-18 residues, 2026-10-14), counted exactly: every key without a

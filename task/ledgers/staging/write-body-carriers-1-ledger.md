@@ -28,7 +28,7 @@ owner ruling 2026-10-10.
 
 Recorded 2026-10-14 on live Spark 4.1.2
 (`org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`, Hadoop catalog) by
-[the Spark recorder](../../../python/repark/tests/_record_write_body_carriers_1_spark.py):
+[the Spark recorder](../../../python/repark/tests/writes/_record_write_body_carriers_1_spark.py):
 2 creators × 5 bodies × 2 `z` states. Every cell refuses identically:
 `ParseException`, error class and condition `PARSE_SYNTAX_ERROR`, SQLSTATE
 42601, message parameters `{'error': '<KEYWORD>', 'hint': ''}`, first line
@@ -48,7 +48,7 @@ and 2 rows; all 10 existing `z` tables keep 1 snapshot and 1 row; all 10 new
 ## 2. Main's CTAS cells (C-002)
 
 Recorded 2026-10-14 on the main release module (repark 1.5.5, memory catalog) by
-[the main recorder](../../../python/repark/tests/_record_write_body_carriers_1_main.py):
+[the main recorder](../../../python/repark/tests/writes/_record_write_body_carriers_1_main.py):
 the 20 Spark cells on format versions 2 and 3. Zero cells answer. Three
 failure shapes:
 
@@ -153,7 +153,7 @@ refusal reuses `view_ddl::temp_parse::spark_parse_error` with
 at or near '<KEYWORD>'. SQLSTATE: 42601`. The `(line, pos)` suffix Spark
 appends is omitted: the parser does not report the keyword position.
 
-Head battery (`python/repark/tests/test_write_body_carriers_1.py` on the head
+Head battery (`python/repark/tests/writes/test_write_body_carriers_1.py` on the head
 release module): 6 of 6 tests pass — the 40 CTAS cells, 5 `REPLACE TABLE`
 cells and 5 parenthesised cells refuse with Spark's class, condition, SQLSTATE
 and keyword with `t` and `z` unchanged, and the 14 wrapper cells, 5 ANSI cells

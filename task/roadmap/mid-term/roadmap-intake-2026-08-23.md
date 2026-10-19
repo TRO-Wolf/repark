@@ -72,7 +72,7 @@ Spark never refuses an aggregate over a frame: when an aggregate has no inverse,
 `SlidingWindowFunctionFrame` re-scans the frame per row (O(n·w)). DataFusion refuses. This
 repository has already hit that wall once — `crates/repark-functions/src/aggregate.rs` exists
 because Spark-typed `AVG` died on `ROWS BETWEEN … PRECEDING` and a retract-capable kernel was
-written by hand (pinned by `python/repark/tests/test_sliding_avg_parity.py`). Every
+written by hand (pinned by `python/repark/tests/functions/test_sliding_avg_parity.py`). Every
 `collect_list / first / last / percentile_approx / max_by / …` `.over(w.rowsBetween(…))` in a
 migrating pipeline is a loud failure today, closed one kernel at a time.
 
@@ -186,7 +186,7 @@ only in the fork; rows are cited, never restated.
 
 | Surface | Verdict | Basis |
 |---|---|---|
-| COW upsert on Glue / S3 Tables | production-grade for a bounded pilot | live-proven: CTAS → MERGE → identical MERGE idempotent, both catalogs (`python/repark/tests/test_aws_acceptance.py`) |
+| COW upsert on Glue / S3 Tables | production-grade for a bounded pilot | live-proven: CTAS → MERGE → identical MERGE idempotent, both catalogs (`python/repark/tests/parity/test_aws_acceptance.py`) |
 | MOR write path (MERGE / UPDATE / DELETE), correctness | production-grade | MW-0: 1,000 rows stay 1,000 across ten MOR merges; OCC / abort / cardinality / store-assignment batteries closed (BL-3, BL-4, BL-5) |
 | MOR operability (compact / expire / orphan) | operable since MW-1…3 (2026-08-21); **unproven at scale** | five procedures wired; only the 1,000-row demo exists and MW-5 has not re-measured it |
 | MOR on Glue | **code merged (#218); live proof pending** | the Glue leg is skip-gated locally; the post-merge `aws-acceptance` dispatch is the evidence — until it is green, the claim is unproven |

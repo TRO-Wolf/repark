@@ -32,10 +32,10 @@ The snake_case spellings are repark extensions (`hasattr` measured False on
 live PySpark 4.1.2 for every one) and are covered beside their camelCase
 twins, measured Spark-equal. The tied-key ordered default frame is §7
 [EX-WIN-1](../../spark-sql-iceberg-parity.md), pinned in
-`python/repark/tests/test_examples_window_catalog.py`.
+`python/repark/tests/parity/test_examples_window_catalog.py`.
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
 - Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/completed/ex-20-window-catalog-ledger.md)

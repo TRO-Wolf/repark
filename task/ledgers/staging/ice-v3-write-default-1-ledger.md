@@ -88,7 +88,7 @@ step.
 |---|---|---|---|---|
 | C-001 | `repro_before_fix`: `p_write_default.py` on the unfixed tree shows INSERT / MERGE column lists writing NULL for omitted `c` and `DataFrame` append refusing `missing from the DataFrame: ['c']`. | Regenerate the source table with `p_v3_types_defaults.py` via `/tmp/ib-scratch/run-probe.sh`; run `p_write_default.py`; paste the output. | **PROVEN** | Source table regenerated (`/tmp/oc-worker/jb-jvm.sh /tmp/ib-scratch/run-probe.sh p_v3_types_defaults.py`, exit 0; schema carries `initial-default: 5, write-default: 5` on `c`; Spark reads pre-add rows as 5; RePark omitted-`c` insert reads back `(6, 'f', None)`). Repro on this tree's release native (`.venv/bin/python /tmp/ib-scratch/probes/p_write_default.py`, no JVM): `INSERT (id, name)` writes `(7, 'g', None)`; MERGE NOT MATCHED writes `(13, 'm', None)`; `writeTo`/`saveAsTable` append refuse `missing from the DataFrame: ['c']`; positional-short and SELECT-short refuse at planning (`Inconsistent data length`, `Column count doesn't match`); `DEFAULT` keyword refuses (`No field named default`). pins: ice-v3-write-default-1/C-001. |
 | C-002 | `spark_oracle_recorded`: the Java-API-created v3 table ships as a checked-in fixture with relative-path-safe adoption, plus a truth JSON of Spark's answer for every cell, recorded by a script checked in beside it. | Fixture directory + truth JSON + recording script, following the `ice_spark_table_1` / `test_ice_spark_table_1.py` copy-and-register pattern. | **PROVEN** | `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/`: seven v3 tables (225,094 bytes, `.crc` stripped), `truth.json` (banner `spark=4.1.2 tz=UTC`, per-table schema plus seed outcome, 22 cells), `record.py` (Spark-only, pins C-002), `map.md`. Recorded 2026-09-17 on live PySpark 4.1.2 + Iceberg 1.11.0; adoption copies to the baked-in canonical `/tmp/repark-ice-v3-write-default-1/ns/<table>` under a lock. pins: ice-v3-write-default-1/C-002. |
-| C-003 | `pins_red_first`: `python/repark/tests/test_ice_v3_write_default_1.py` (offline tier against the fixture, live tier under `REPARK_PARITY_LIVE=1`) and the Rust fill unit tests fail on the unfixed tree. | Run the new pins on the unfixed tree; paste failures. | **PROVEN** | `## Red first` below (8 failed on the unfixed tree); the live cell never ran red-first (it was skipped offline) and its hand-written two-row expectation was repaired to the measured three rows in round 2 (audit class: stale pin, `150a820a`). |
+| C-003 | `pins_red_first`: `python/repark/tests/writes/test_ice_v3_write_default_1.py` (offline tier against the fixture, live tier under `REPARK_PARITY_LIVE=1`) and the Rust fill unit tests fail on the unfixed tree. | Run the new pins on the unfixed tree; paste failures. | **PROVEN** | `## Red first` below (8 failed on the unfixed tree); the live cell never ran red-first (it was skipped offline) and its hand-written two-row expectation was repaired to the measured three rows in round 2 (audit class: stale pin, `150a820a`). |
 | C-004 | `insert_column_list_fills`: `INSERT INTO t (id, name)` on both SQL doors fills omitted `c` from `write_default` (NULL only when the field has none); a required column with no write-default keeps Spark's error. | Offline + live pins green; Rust unit tests for the fill green. | **PROVEN** | Offline `14 passed, 1 skipped`; live `15 passed` (round 2, release native); ANSI-door Rust pins `crates/repark-sql/tests/ansi_write_defaults.rs` `2 passed` (the ANSI fill had code but no pin until round 2 — found in step 5). Required-missing refuses `non-nullable but contains null` on both doors. |
 | C-005 | `merge_not_matched_fills`: `MERGE … WHEN NOT MATCHED THEN INSERT (id, name)` fills omitted `c` from `write_default` on both SQL doors. | Offline + live pins green. | **PROVEN** | Offline + live green (same runs as C-004); Rust `insert_fill.rs` fill + required pins green (`cargo test -p repark-iceberg --lib` in step 7). |
 | C-006 | `dataframe_writers_fill`: `writeTo(t).append()` and `saveAsTable(append)` with `c` missing fill from `write_default` instead of refusing; `insertInto` stays positional (no column list) and refuses a short frame, as Spark does — corrected 2026-09-17 per the logic review (L-02): the registry and this clause wrongly listed `insertInto` as a fill door while Spark (`insertInto_missing`: `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS`) and the pin (`test_insert_into_and_extra_column_refuse`: `Column count doesn't match`) refuse. | Offline + live pins green. | **PROVEN** | Offline + live green (same runs as C-004); `check_lib_py.py` ratchets `writer_readwriter.py` 1101 → 1095. |
@@ -122,11 +122,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause C-001 … C-024 walked against its proposition; rulings Q-21b-3 … Q-21b-6 map to C-015 … C-018 and Q-21b-8 … Q-21b-10 to C-020 … C-022, the critic's pin-strength note to C-023 and the addendum guards to C-024; each clause's pins assert the recorded Spark cell, not a paraphrase.
-      artifacts: [python/repark/tests/test_ice_v3_write_default_1.py, python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json, crates/repark-sql/tests/ansi_write_defaults.rs, crates/repark-spark/src/tests/write_defaults.rs]
+      artifacts: [python/repark/tests/writes/test_ice_v3_write_default_1.py, python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json, crates/repark-sql/tests/ansi_write_defaults.rs, crates/repark-spark/src/tests/write_defaults.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised — DEFAULT in a CTE body, a derived table and the outer SELECT under WITH (refuse, nothing written); overwritePartitions with the defaulted column omitted; mixed static+dynamic PARTITION (loud refusal, OPEN); NULL partition value from an omitted dynamic partition column, static value on a column that itself carries a write-default, listed static column, arity mismatch, duplicate list entry, explicit NULL, required column without default, v2 and no-default tables, quote-free SQL on the parser fast path.
-      artifacts: [crates/repark-sql/tests/ansi_write_defaults.rs, crates/repark-spark/src/tests/spark_dialect.rs, python/repark/tests/test_ice_v3_write_default_1.py]
+      artifacts: [crates/repark-sql/tests/ansi_write_defaults.rs, crates/repark-spark/src/tests/spark_dialect.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal on the static by-name path fails before any file is staged or committed (the refusal pin reads the table back empty); the DEFAULT rewrite on overwrite leaves the statement untouched when the target is not an Iceberg table or holds no marker.
@@ -167,7 +167,7 @@ C-001 red is the matrix in `## Evidence` below (unfixed tree, release native
 `.venv`, 2026-09-17): every FILL cell reads NULL or refuses where Spark fills.
 
 C-003 red (2026-09-17, unfixed tree, `.venv/bin/python -m pytest
-python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider`):
+python/repark/tests/writes/test_ice_v3_write_default_1.py -q -p no:cacheprovider`):
 8 failed, 6 passed, 1 skipped in 1.22s. The 8 failures are exactly the FILL
 cells (`insert_column_list`, `merge_not_matched`, `dataframe_writers`,
 `default_keyword`, `no_default` DEFAULT-keyword leg, `string_temporal_differ`,
@@ -192,7 +192,7 @@ id inside one recorded error message (`o485` → `o579`, `decimal_default_insert
 so the recorder is deterministic in rows, schema and error class.
 
 Red first, unfixed tree, release native, `.venv/bin/python -m pytest
-python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider` —
+python/repark/tests/writes/test_ice_v3_write_default_1.py -q -p no:cacheprovider` —
 **3 failed, 18 passed, 1 skipped**:
 
 ```
@@ -250,14 +250,14 @@ copied verbatim from `/tmp/oc-worker/kb-oracle/wd-truth-2.json` into this unit's
 `truth.json` `cells` (six keys, `V01_*`, `V02_*`, `MIX_*`; not re-derived).
 
 Unfixed tree (`7a088085` product code), release native, `.venv/bin/python -m pytest
-python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider -k
+python/repark/tests/writes/test_ice_v3_write_default_1.py -q -p no:cacheprovider -k
 "fills_missing_defaulted or outside_the_insert or mixed_static"` — **2 failed, 1 passed**:
 
 ```
 E  repark.errors.AnalysisException: Error during planning: INSERT OVERWRITE column count mismatch: source has 2 columns, target table has 3 (SQL INSERT is positional — OV1 D9)
 E          Failed: DID NOT RAISE AnalysisException
-FAILED python/repark/tests/test_ice_v3_write_default_1.py::test_overwrite_partitions_api_fills_missing_defaulted_column
-FAILED python/repark/tests/test_ice_v3_write_default_1.py::test_default_outside_the_insert_list_refuses
+FAILED python/repark/tests/writes/test_ice_v3_write_default_1.py::test_overwrite_partitions_api_fills_missing_defaulted_column
+FAILED python/repark/tests/writes/test_ice_v3_write_default_1.py::test_default_outside_the_insert_list_refuses
 ```
 
 - `test_overwrite_partitions_api_fills_missing_defaulted_column` (V-01): the
@@ -343,7 +343,7 @@ against the recorded `nodef` fixture; live `_live_rollcall` (inside
 `test_live_write_default_parity`) builds `nodef` on live Spark, runs both
 writers there, adopts the table into RePark and runs both writers again —
 `REPARK_PARITY_LIVE=1 … /tmp/oc-worker/jb-jvm.sh .venv/bin/python -m pytest
-python/repark/tests/test_ice_v3_write_default_1.py -q -p no:cacheprovider` →
+python/repark/tests/writes/test_ice_v3_write_default_1.py -q -p no:cacheprovider` →
 **22 passed in 115.19s** (2026-09-17, release native). These pins were green on
 the unfixed round-5 tree — the decision had already moved; the pins prove it.
 

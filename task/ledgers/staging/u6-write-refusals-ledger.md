@@ -84,15 +84,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause comes from the 102-probe Spark measurement or the scoreboard record. The eight cells replay EQUAL, and the probe matrix moves from 52 divergences to 26 with none new.
-      artifacts: [python/repark/tests/test_ice_write_refusals_1.py, crates/repark-spark/src/tests/accept_any_refusals.rs]
+      artifacts: [python/repark/tests/writes/test_ice_write_refusals_1.py, crates/repark-spark/src/tests/accept_any_refusals.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Literal, mixed, short, extra, renamed, case-changed, column-list, VALUES-alias, overwrite, TABLE-keyword and view-star sources are exercised, with and without the property and the conf. MERGE runs with star, explicit, insert-only, update-only, delete-only and reordered clauses. Round 2 adds mixed-case, quoted, UNION-arm, reference and literal names; the three DataFrame writers; repeated names, exact and case-folded; the BY NAME overwrite; a failing table load and a missing table; REPLACE INTO; and the PARTITION shapes (measured, listed in R-3). Round 3 adds 84 expression and star shapes (`target/probe-u6-r2fix/`), the critic's h1..h9, and empty overwrites.
-      artifacts: [python/repark/tests/test_ice_write_refusals_1.py, crates/repark-spark/src/insert_by_name/tests.rs]
+      artifacts: [python/repark/tests/writes/test_ice_write_refusals_1.py, crates/repark-spark/src/insert_by_name/tests.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal pins class, condition, SQLSTATE and message by equality and asserts the table is unchanged. The MERGE type change fails inside the schema transaction before any data file is written.
-      artifacts: [crates/repark-iceberg/src/write/schema_evolution/tests.rs, python/repark/tests/test_ice_write_refusals_1.py]
+      artifacts: [crates/repark-iceberg/src/write/schema_evolution/tests.rs, python/repark/tests/writes/test_ice_write_refusals_1.py]
     - id: AT-4
       status: ATTACKED
       evidence: The evolving write commits the schema, then the data, which is the existing two-transaction shape. The routing check loads the table once per positional INSERT and holds no state.
@@ -103,7 +103,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Rows, Arrow types and snapshot counts are pinned for every evolving case. Positional writes on tables without the property are pinned unchanged, and the IPI-19 suite stays green apart from the superseded C-013.
-      artifacts: [python/repark/tests/test_ice_merge_schema_1.py, python/repark/tests/test_ice_write_refusals_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_merge_schema_1.py, python/repark/tests/writes/test_ice_write_refusals_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim. A positional INSERT into an Iceberg table adds one table load for the property read.

@@ -163,7 +163,7 @@ Each run sets `REPARK_CONFIG=""` before opening any session, so a developer's
 own `repark.toml` cannot register catalogs into a measurement (Q-56), and
 scrubs its work prefix to `<work>` in every plan, so two runs in a row exit 0
 with byte-identical outputs — the committed pin
-(`python/repark/tests/test_profiles1_probe_rerun.py`) asserts exactly that,
+(`python/repark/tests/session/test_profiles1_probe_rerun.py`) asserts exactly that,
 plus immunity to a poisoned discovered file. Run data stays under the system
 temporary root for the operator to delete. The scripts differ from the measuring
 worker's originals in the work directory (once script-relative `data/`, now the
