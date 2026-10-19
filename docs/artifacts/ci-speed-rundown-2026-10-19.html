@@ -1,0 +1,199 @@
+<title>CI Speed Rundown</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#F2F5F7;--fg:#13202A;--muted:#55646F;--line:#D3DCE2;--card:#FFFFFF;--accent:#0E6C88;--accent-soft:#D8EAF0;--green:#1F7A4D;--green-soft:#DCEFE4;--amber:#9A6A0B;--amber-soft:#F6EBD0;--red:#A3362C;--red-soft:#F4DCD8;--hold:#4C5A66;--hold-soft:#E2E7EB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1418;--fg:#E6EDF1;--muted:#9AAAB5;--line:#23303A;--card:#141C22;--accent:#4DB1CF;--accent-soft:#12303B;--green:#5CC28E;--green-soft:#15302A;--amber:#E0B35A;--amber-soft:#3A2E12;--red:#E57F72;--red-soft:#3B1D1A;--hold:#A5B2BC;--hold-soft:#1F2A32;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1418;--fg:#E6EDF1;--muted:#9AAAB5;--line:#23303A;--card:#141C22;--accent:#4DB1CF;--accent-soft:#12303B;--green:#5CC28E;--green-soft:#15302A;--amber:#E0B35A;--amber-soft:#3A2E12;--red:#E57F72;--red-soft:#3B1D1A;--hold:#A5B2BC;--hold-soft:#1F2A32;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;margin:0;padding-block:28px 56px;padding-inline:clamp(16px,4vw,48px)}
+main{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.1}
+h2{font-size:20px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:12px}
+h3{font-size:16px;margin-bottom:6px}
+p{margin:0 0 10px;max-width:68ch}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:6px}
+.meta{color:var(--muted);font-size:13px;margin-top:8px}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.92em}
+.chip{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.g{background:var(--green-soft);color:var(--green)}.a{background:var(--amber-soft);color:var(--amber)}.r{background:var(--red-soft);color:var(--red)}.h{background:var(--hold-soft);color:var(--hold)}.t{background:var(--accent-soft);color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.tile .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.tile .n small{font-size:16px;color:var(--muted);font-weight:500}
+.tile .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.tile .d{font-size:12.5px;margin-top:6px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;background:var(--accent-soft)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:10px;background:var(--line);border-radius:2px;position:relative;min-width:120px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:2px}
+.bar i.r{background:var(--red)}.bar i.a{background:var(--amber)}.bar i.g{background:var(--green)}
+ul,ol{margin:0 0 10px;padding-left:20px}li{margin-bottom:5px;max-width:72ch}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.note{background:var(--card);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;min-width:0}
+.note.q{border-left-color:var(--amber)}
+.src{font-size:12.5px;color:var(--muted)}
+.src li{margin-bottom:3px}
+pre{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;margin:0 0 10px}
+</style>
+<main>
+<header>
+<div class="kicker">RePark · CI speed · rundown</div>
+<h1>One day on CI speed: ten PRs, one product bug, the minutes taken back</h1>
+<div class="meta">Covers 2026-10-18 06:00 EDT to 2026-10-19 07:30 EDT. Every number is a measurement from a CI run or a local log unless marked <span class="chip a">est</span>. Follows the <a href="ci-speed-plan-2026-10-18.html">CI speed board</a> filed by PR #1101. All ten PRs are merged; the last, #1110, landed 2026-10-19 07:21 EDT.</div>
+</header>
+
+<section>
+<h2>Before and after</h2>
+<div class="tiles">
+<div class="tile"><div class="n">23 <small>→</small> 17.8</div><div class="l">minutes, hosted code PR, end to end</div><div class="d">warm run on PR #1108; the 10.7-minute wheel build is now the floor</div></div>
+<div class="tile"><div class="n">15–21 <small>→</small> 13.1</div><div class="l">minutes, Rust test job</div><div class="d">11.5 on main's own run; cache restore 17 s, 11 crates compiled</div></div>
+<div class="tile"><div class="n">8.2 <small>→</small> 6.0</div><div class="l">minutes, Rust lint job</div><div class="d">clippy rechecks 39 crates, not 145</div></div>
+<div class="tile"><div class="n">3 h <small>→</small> ~55 min</div><div class="l">local <span class="mono">make preflight</span> <span class="chip a">est</span></div><div class="d">measured parts: facade 24 min, nextest 3.7 min; the sum is the estimate</div></div>
+<div class="tile"><div class="n">170 <small>→</small> 24</div><div class="l">minutes, local facade suite</div><div class="d">serial → eight workers (69) → eight workers on the ci-profile module (24)</div></div>
+<div class="tile"><div class="n">17.4 <small>→</small> 3.7</div><div class="l">minutes, local <span class="mono">make rust-test</span></div><div class="d">cargo-nextest runs 7,669 tests across the cores</div></div>
+<div class="tile"><div class="n">66 <small>→</small> 11</div><div class="l">crates recompiled per code PR</div><div class="d">caches now warmed in the jobs' own environment</div></div>
+<div class="tile"><div class="n">1</div><div class="l">product bug found by a flake</div><div class="d">a fenced foreachBatch body could run; fixed and merged in #1108</div></div>
+</div>
+</section>
+
+<section>
+<h2>The ten PRs, in merge order</h2>
+<p>All merged by squash under main's strict branch protection, so each merge invalidated the next PR's up-to-date state and cost one CI round of about twenty minutes. The merge chain ran from 15:14 to 18:48 EDT for the first seven.</p>
+<div class="tw"><table>
+<thead><tr><th>PR</th><th>What it does</th><th>Merged (EDT)</th><th>Commit</th></tr></thead>
+<tbody>
+<tr><td>#1102</td><td>The zizmor job blocks on findings again. <span class="mono">uvx zizmor --format sarif</span> exits 0 with findings, so the hosted gate had never blocked and <span class="mono">make workflows-lint</span> had been red on main since 2026-09-20. The map.md guard reads the base ref through an env var.</td><td>10-18 15:14</td><td class="mono">99dfc21b</td></tr>
+<tr><td>#1101</td><td>Files the CI speed board (the plan page) under <span class="mono">docs/artifacts/</span>.</td><td>10-18 16:19</td><td class="mono">7fb4587b</td></tr>
+<tr><td>#1107</td><td>Seven facade shards instead of three: the two thousand-filter batteries and the tsns census file each run alone; the rest split modulo four. Slowest shard 12:51 → 5:36.</td><td>10-18 17:23</td><td class="mono">02bf6fe5</td></tr>
+<tr><td>#1106</td><td>Cache-warm jobs get the same step list as the CI lint and test jobs (the Python setup step was the missing fingerprint input). Keys bumped v2 → v3 because an existing key is never re-saved. Compiled crates 66 → 11, lint rechecks 145 → 39.</td><td>10-18 17:45</td><td class="mono">218d085e</td></tr>
+<tr><td>#1105</td><td><span class="mono">make rust-test</span> runs cargo-nextest 0.9.143 plus the doctests, locally and on CI, fail-fast off. Hosted test phase 9.4 → 7.7 min; local 17m21s → 3m39s.</td><td>10-18 18:10</td><td class="mono">ba6b5bc4</td></tr>
+<tr><td>#1104</td><td><span class="mono">make py-test-facade</span> runs the facade suite under eight pytest-xdist workers (pytest-xdist 3.8.0 in the lock). Local facade 190 → 69 min.</td><td>10-18 18:27</td><td class="mono">c765d3ac</td></tr>
+<tr><td>#1103</td><td>RP-59: the fork repinned to <span class="mono">d80a2884</span>; the four red nightly-interop suites fixed as tests and oracle only (fork #370, #371, #372). Not a speed item, carried in the same chain.</td><td>10-18 18:47</td><td class="mono">cfb20a16</td></tr>
+<tr><td>#1108</td><td><strong>MB-FENCE-BODY-FLAKE-1.</strong> A batch enters the sink's scope before it loads the sink, so a fenced foreachBatch body never runs inside one process. Product fix with a deterministic pin; see below.</td><td>10-18 20:36</td><td class="mono">476586cd</td></tr>
+<tr><td>#1109</td><td><strong>OCC-DISJOINT-MERGE-FLAKE-1.</strong> Docs only: the second winner of the disjoint MERGE storm is a serial schedule, not a race. Reading ledger, card update, and the tolerance question C-006 for you.</td><td>10-19 07:03</td><td class="mono">76f3e84b</td></tr>
+<tr><td>#1110</td><td><span class="mono">make py-test-facade</span> builds the native module with the <span class="mono">ci</span> profile (opt-level 2, what CI's wheel is built with). Local facade 69 → 24 min. <span class="mono">FACADE_PROFILE=dev</span> restores the debug build.</td><td>10-19 07:21</td><td class="mono">3beb0a61</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2>Where the hosted minutes went, before and after</h2>
+<p>Before is the 2026-10-18 morning measurement on main <span class="mono">0b9195ca</span>. After is the warm run on PR #1108, the first workspace-only code PR after the chain, which is the number a normal code PR will see.</p>
+<div class="tw"><table>
+<thead><tr><th>Job</th><th class="num">Before</th><th class="num">After</th><th>After, as a share of the old 24-minute window</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td>smoke · build wheel</td><td class="num">10.5</td><td class="num">10.7</td><td><div class="bar"><i class="a" style="width:45%"></i></div></td><td>untouched; this is the floor of the smoke chain now</td></tr>
+<tr><td>smoke · slowest facade shard</td><td class="num">12.9</td><td class="num">6.8</td><td><div class="bar"><i class="g" style="width:28%"></i></div></td><td>seven shards; the slowest is the battery shard running alone</td></tr>
+<tr><td>smoke · end to end</td><td class="num">23</td><td class="num">17.8</td><td><div class="bar"><i class="g" style="width:74%"></i></div></td><td>wheel then slowest shard</td></tr>
+<tr><td>CI · Rust test (workspace)</td><td class="num">15 to 21</td><td class="num">13.1</td><td><div class="bar"><i class="g" style="width:55%"></i></div></td><td>cache restore 4 min → 17 s; 66 → 11 crates; nextest 370 s for 7,671 tests; the free-runner-disk step still costs 2.3 min</td></tr>
+<tr><td>CI · Rust lint</td><td class="num">8.2</td><td class="num">6.0</td><td><div class="bar"><i class="g" style="width:25%"></i></div></td><td>145 → 39 crates rechecked</td></tr>
+<tr><td>docs PR</td><td class="num">2</td><td class="num">2</td><td><div class="bar"><i style="width:8%"></i></div></td><td>unchanged; a PR touching <span class="mono">task/ledgers/</span>, the parity doc or <span class="mono">.github</span> still runs full Rust by design</td></tr>
+</tbody></table></div>
+<p class="meta">Runs: main <span class="mono">cfb20a16</span> 39173787942 / 39173787971 (Rust test 11.5, smoke 19.3 with the iceberg crates recompiled after the repin); PR #1108 39176514929 / 39176515126 (the warm numbers above).</p>
+</section>
+
+<section>
+<h2>The flakes: three cards, three different answers</h2>
+<p>Five re-runs were needed during the chain: the OCC storm twice, the fence pin once, the spill pin once, and one facade shard that hung past fifty minutes and was cancelled. You authorised two Opus 5.5 executors on the first two. Each ran a measured step 0 before touching anything.</p>
+<div class="two">
+<div class="note"><h3>MB-FENCE-BODY-FLAKE-1 <span class="chip g">fixed · #1108</span></h3>
+<p><strong>Verdict: product gap, not a pin over-asserting.</strong> <span class="mono">Run::enter_scope</span> loaded the sink before entering the process-wide batch scope, so a second driver could run a foreachBatch body for an epoch the first driver had just committed. That breaks MB-3 clause D-19.</p>
+<p><strong>Fix.</strong> Enter the scope under the registered sink uuid first, load the sink under it, and re-enter if the uuid changed (a replaced sink). Deterministic pin <span class="mono">a_winner_that_commits_during_the_batch_load_never_lets_a_fenced_body_run</span> was red 4 of 4 on main and is green after the fix; a second pin covers the replaced-sink path. The existing pin is unchanged.</p>
+<p><strong>Replays.</strong> 209 timing replays never reproduced the fenced body. Every replay failure was the PA-15 10-second bound, traced to <span class="mono">fsync</span> on this box (p99 0.82 s, max 1.76 s). Card: <span class="mono">task/roadmap/mid-term/mb-fence-body-flake-1-card-2026-10-18.md</span>; ledger <span class="mono">mb-fence-body-flake-1-ledger.md</span>, C-001 to C-007.</p></div>
+<div class="note"><h3>OCC-DISJOINT-MERGE-FLAKE-1 <span class="chip t">legal · ruling needed · #1109</span></h3>
+<p><strong>Verdict: no product race.</strong> 990 natural storms gave exactly one winner of eight every time. Holding one thread back 300 ms gives two of eight in 75 of 80 runs, and live Spark 4.1.2 gives two of eight in 40 of 40 with a 3-second late starter. The second winner is a legal serial history: it loaded after the first commit and validated against the new snapshot (on v3 it rewrites the first winner's delete vector). The fork's validation is correct as read.</p>
+<p><strong>Why the DataFrame door only.</strong> GIL work before the table load delays one thread; a forced GC makes the SQL door do the same. The CI stall source is inferred, not observed: no CI trace shows it, and the assertion message does not print the v3 summary that would witness it.</p>
+<p>Pin unchanged. Ledger clause C-006 is OPEN for you; see decision 1 below. Card: <span class="mono">occ-disjoint-merge-flake-1-card-2026-10-14.md</span>, dated section added.</p></div>
+<div class="note"><h3>SPILL-REACH-FAIR-POOL-FLAKE-1 <span class="chip a">open · third card</span></h3>
+<p><span class="mono">test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool</span> reported resources exhausted under the 64 MB fair pool on #1110's first smoke run; the shard re-run passed. Not worked today. It is the next flake unit if you continue the flake work. Card: <span class="mono">spill-reach-fair-pool-flake-1-card-2026-10-14.md</span>.</p></div>
+<div class="note"><h3>A fourth signal: two lifecycle pins are load-sensitive</h3>
+<p>Under a box load average near 26, the OCC executor's first <span class="mono">make verify</span> saw <span class="mono">two_sessions_on_one_sink_wait_for_the_scope</span> and the two-driver fence pin both miss their 10-second bound; both pass in isolation (8.6 s and 19.1 s). Same PA-15 family, same disk cause. Nothing was changed; the standing rule forbids raising the bound.</p></div>
+</div>
+</section>
+
+<section>
+<h2>Decisions that are yours</h2>
+<div class="two">
+<div class="note q"><h3>1 · C-006: the storm pin's tolerance</h3>
+<p>The pin asserts exactly one winner of eight on every run. Options, with costs:</p>
+<ol>
+<li>Keep exact 1 of 8 and accept an occasional CI re-run (four sightings in twelve days).</li>
+<li>Gate the storm deterministically: a source UDF waits on a shared barrier after each MERGE's base load, like <span class="mono">spark_occ_oracle3</span>. Needs a new Spark recording with the same gate, and a check that eight blocked UDFs cannot starve the runtime's workers. The executor's lean and mine.</li>
+<li>Admit a proven-serial second winner, witnessed by the v3 <span class="mono">removed-dvs</span> summary. v3 only; v2 has no witness.</li>
+<li>Run the storm on the SQL door only.</li>
+</ol>
+<p><strong>Recommendation:</strong> option 2 as a follow-on clerk unit; option 1 until it lands.</p></div>
+<div class="note q"><h3>2 · PA-15: the 10-second bound on a slow disk</h3>
+<p>The two-driver pin and its lifecycle sibling miss the <span class="mono">ended</span> bound when the warehouse disk is slow; measured to <span class="mono">fsync</span> on this host. The rules forbid raising the bound or serialising. Either record this measurement as PA-15's classification and keep the bound, or rule for a tmpfs warehouse in the fixture, which changes what the pins measure.</p>
+<p><strong>Recommendation:</strong> keep the bound, record the classification on the card. CI's disk has not shown this; the fence pin's one CI failure was the real bug.</p></div>
+<div class="note q"><h3>3 · Ledgers to <span class="mono">completed/</span></h3>
+<p>Both flake ledgers sit in <span class="mono">task/ledgers/staging/</span>. The fence unit is complete; the OCC unit is complete as a reading but C-006 is open. Say whether either moves.</p></div>
+<div class="note q"><h3>4 · The wheel-build floor (plan item 6)</h3>
+<p>The 10.7-minute wheel build is now the smoke chain's floor. A larger runner was declined on 10-18: the repo is public under a personal account, and larger runners are billed and need an organisation. The other half of item 6, measuring the facade against an opt-level 1 wheel, is still open and costs nothing but a measurement.</p></div>
+</div>
+</section>
+
+<section>
+<h2>What changed for you day to day</h2>
+<ul>
+<li><strong><span class="mono">make rust-test</span> needs cargo-nextest.</strong> The Makefile pins 0.9.143. Install once:</li>
+</ul>
+<pre>cargo install cargo-nextest --locked --version 0.9.143</pre>
+<ul>
+<li><strong><span class="mono">make py-test-facade</span> runs eight workers</strong> and builds the module with the <span class="mono">ci</span> profile. The first run pays a cold ci-profile build (8 min 15 s here); later runs are incremental. <span class="mono">FACADE_PROFILE=dev</span> restores the debug build when you need debug symbols.</li>
+<li><strong>Local preflight</strong> should come in near 55 minutes <span class="chip a">est</span>. The measured parts: verify stage with nextest, facade 24 min, parity-cap, dbt, audit, workflows-lint.</li>
+<li><strong>Cache keys are v3.</strong> The cache-warm workflow has <span class="mono">workflow_dispatch</span>, so a branch can warm its own cache. PR runs read only the merge-ref and base caches, never a head-branch cache, so a warm is verified by a re-run after the first run saves.</li>
+<li><strong>zizmor blocks again.</strong> <span class="mono">make workflows-lint</span> is green on main for the first time since 2026-09-20; a new workflow finding now fails the PR.</li>
+<li><strong>Seven facade shards</strong> on the smoke workflow. Branch protection requires the aggregate <span class="mono">smoke</span> context, which fails on any shard.</li>
+<li><strong>The fork pin</strong> is <span class="mono">d80a2884</span>; the fork's nightly-interop runner is 65 of 65.</li>
+</ul>
+</section>
+
+<section>
+<h2>Mechanics learned, so the next chain is faster</h2>
+<ul>
+<li><strong>Strict protection means one CI round per merge.</strong> Seven PRs took 3.5 hours end to end; a merge queue would remove that but likely needs an organisation (not verified). The chain script lives at <span class="mono">scratchpad/cispeed/merge/chain3.sh</span> in the session scratchpad: update-branch API, wait, squash with the commit messages as the body, stop on any failed check.</li>
+<li><strong>GitHub's update-branch returns 422</strong> on conflicts that git merges cleanly locally (#1105 after #1106, #1109 after #1108). A local merge of main pushed to the branch is the fix; force-push and <span class="mono">git branch -f</span> are denied in this session's auto mode anyway.</li>
+<li><strong>A cache key that exists is never re-saved.</strong> Changing what a warm job produces needs a new key prefix, which is why #1106 went to v3.</li>
+<li><strong>A hung facade shard runs for six hours.</strong> There is no <span class="mono">timeout-minutes</span> on the shards; one hung past fifty minutes on #1106 and was cancelled by hand.</li>
+<li><strong>Every flake was a finding.</strong> One product bug, one legal ordering with a tolerance question, one still open. None was retried into silence.</li>
+</ul>
+</section>
+
+<section>
+<h2>Candidates not started</h2>
+<div class="tw"><table>
+<thead><tr><th>Item</th><th>Why</th><th class="num">Saves</th><th>Grade</th></tr></thead>
+<tbody>
+<tr><td>Spill flake unit (third card)</td><td>the one flake with no reading yet</td><td class="num">re-runs</td><td>Opus 5.5 step 0, as the other two</td></tr>
+<tr><td><span class="mono">timeout-minutes</span> on the facade shards</td><td>a hang fails in minutes instead of six hours</td><td class="num">up to hours, rarely</td><td>clerk, next time smoke.yml is touched</td></tr>
+<tr><td>Measure, then drop, the free-runner-disk step</td><td>2.3 min on every Rust test job; may be unneeded at the v3 cache size. Measure disk-after before removing</td><td class="num">2.3 min</td><td>clerk</td></tr>
+<tr><td>Workflows map text drift</td><td><span class="mono">.github/workflows/map.md</span> still names the <span class="mono">v2-df54</span> cache prefix after the v3 move</td><td class="num">—</td><td>fold into the next docs PR</td></tr>
+<tr><td>Opt-level 1 wheel measurement</td><td>the open half of plan item 6; compile time against test time</td><td class="num">3 to 5 min <span class="chip a">est</span></td><td>measurement only, owner call after</td></tr>
+<tr><td>Deterministic storm barrier (C-006 option 2)</td><td>removes the OCC re-runs for good</td><td class="num">re-runs</td><td>clerk, after your ruling</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2>Housekeeping</h2>
+<ul>
+<li>Scratch clones under the session scratchpad: the OCC clone and the xdist clone are deleted; the fence and prodgrade clones are already gone. The fork-ban clone goes after fork #369 merges. Disk: 514 GB free after the clones went.</li>
+<li>Opus 5.5 was the only Opus tier dispatched, verified from the task outputs; two executors ran concurrently under the 26-core cap.</li>
+<li>Slack: one message at the end of the plan (13:45 EDT) and one at the end of the merge chain (18:50 EDT).</li>
+</ul>
+</section>
+
+<section>
+<h2>Sources</h2>
+<ul class="src">
+<li>PRs #1101 to #1110 on <span class="mono">TRO-Wolf/repark</span>; merge chain log <span class="mono">chain.log</span> and <span class="mono">chain3.log</span>.</li>
+<li>CI runs 39173787942 / 39173787971 (main <span class="mono">cfb20a16</span>), 39176514929 / 39176515126 (PR #1108), 39157958057 (fence flake), 39157964851 and 39162834196 (OCC flake).</li>
+<li>Executor hand-backs for MB-FENCE-BODY-FLAKE-1 and OCC-DISJOINT-MERGE-FLAKE-1; ledgers <span class="mono">task/ledgers/staging/mb-fence-body-flake-1-ledger.md</span> and <span class="mono">occ-disjoint-merge-flake-1-ledger.md</span>; the three flake cards under <span class="mono">task/roadmap/mid-term/</span>.</li>
+<li>Local logs: ci-profile build and facade run (<span class="mono">ci-profile.log</span>), branch gate (<span class="mono">gate-facade-profile.log</span>), the OCC executor's second preflight (78 m 29 s with the debug facade).</li>
+<li>The CI speed board of 2026-10-18 (<span class="mono">docs/artifacts/ci-speed-plan-2026-10-18.html</span>) for the before numbers.</li>
+</ul>
+</section>
+</main>
