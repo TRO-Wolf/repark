@@ -26,6 +26,8 @@ import pytest
 
 from repark import ReparkSession
 
+pytestmark = pytest.mark.slow
+
 ZONES = ("UTC", "America/New_York", "Asia/Kolkata", "Asia/Kathmandu", "Australia/Lord_Howe")
 ZONED_NS = "timestamp[ns, tz=UTC]"
 RULE_SOURCES = ("l", "n", "ns", "tzns")

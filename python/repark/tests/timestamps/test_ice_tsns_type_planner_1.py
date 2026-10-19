@@ -19,6 +19,8 @@ import _ice_tsns_type_planner_1_repros as repros
 import _ice_tsns_type_planner_1_rule as rule
 import pytest
 
+pytestmark = pytest.mark.slow
+
 MAIN = Path(__file__).resolve().parent / "ice_tsns_type_planner_1_main.json"
 DATED = Path(__file__).resolve().parent / "ice_tsns_type_planner_1_dated.json"
 CENSUS_CELLS = 9600

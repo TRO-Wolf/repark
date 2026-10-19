@@ -12,6 +12,8 @@ import pytest
 
 from repark import ReparkSession, functions
 
+pytestmark = pytest.mark.slow
+
 FSRC = recorder.FSRC
 TICKS = tuple(recorder.value_ticks())
 IDS = tuple(range(1, len(TICKS) + 1))

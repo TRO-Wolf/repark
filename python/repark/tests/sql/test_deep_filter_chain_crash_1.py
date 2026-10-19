@@ -14,6 +14,8 @@ import sys
 
 import pytest
 
+pytestmark = [pytest.mark.slow, pytest.mark.xdist_group("test_deep_filter_chain_crash_1")]
+
 _WORKER = """
 import json
 import sys
