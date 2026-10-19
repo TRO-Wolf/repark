@@ -2483,3 +2483,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   report's `database`, `catalog`, `warehouse` and `catalog_properties` values, go through
   `redact_property_value` (C-005, amended under ruling 122). `risk_tier: standard`. Branch
   `fix/pa-dbt-mismatch-redact-1`.
+- [mb-fence-body-flake-1-ledger.md](mb-fence-body-flake-1-ledger.md) —
+  **MB-FENCE-BODY-FLAKE-1 (2026-10-18), the two-driver fence pin's CI failure:** step 0
+  found a product gap, not an over-asserting pin. `enter_scope` loaded the sink before it
+  entered the sink's scope, so a second driver in the process could run its `foreachBatch`
+  body for an epoch the first had just committed, then end `Fenced` (C-001, a deterministic
+  pin red on main with CI's text). The batch now enters the scope first and loads under it
+  (C-002); a replaced sink is re-entered under its new uuid as on main (C-003); the load
+  count is unchanged (C-004). Replays (C-005) and the pin's second failure, its 10 s bound on
+  a slow disk (C-006, open on the card). `risk_tier: standard`. Branch
+  `fix/mb-fence-body-flake-1`.
