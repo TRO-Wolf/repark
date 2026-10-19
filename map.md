@@ -156,6 +156,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
   its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing
   `--extra` silently uninstalls a facade extra and the suite skips those tests instead of failing).
+  **FACADE-PYTEST-CONFIG-1 (2026-10-19):** the root `dev` group gains `pytest-timeout>=2.3,<3` (`uv.lock` updated) for the facade's `timeout = 1200`; `make py-test-facade-fast` is `py-test-facade` with `-m "not slow"` (19 slow files skipped; CI and `py-test-facade` run everything).
   **CI-SPEED-A (2026-10-18):** `py-test-facade` runs pytest with `-n 8` (eight `pytest-xdist`
   workers; CI's `smoke.yml` shards already run `-n 4`). The serial run took about 170 minutes on
   the 64-core box. `parity-live` stays serial and its dual-wire guard is unchanged.

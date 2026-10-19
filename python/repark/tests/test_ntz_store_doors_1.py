@@ -9,6 +9,8 @@ import pytest
 from repark import ReparkSession
 from repark.spark.functions import col
 
+pytestmark = pytest.mark.slow
+
 ORACLE_PATH: Path = Path(__file__).with_name("ntz_store_doors_1_spark_oracle.json")
 _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
 MIXED_ORACLE_PATH: Path = Path(__file__).with_name("ntz_store_doors_1_mixed_spark_oracle.json")

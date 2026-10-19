@@ -30,6 +30,8 @@ import pytest
 
 from repark import ReparkSession
 
+pytestmark = pytest.mark.slow
+
 _TRUTH = json.loads((Path(__file__).parent / "ice_merge_append_1_truth.json").read_text())
 _CATALOG = "ma"
 _NAMESPACE = "ns"

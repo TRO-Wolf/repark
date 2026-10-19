@@ -19,7 +19,7 @@ remains the deprecation shim. Native lazy DataFrame API is not this phase.
 
 ## Contents
 
-- `pyproject.toml` — maturin build backend; `manifest-path = ../../crates/repark-python/Cargo.toml`;
+- `pyproject.toml` — also holds `[tool.pytest.ini_options]` for `tests/` (FACADE-PYTEST-CONFIG-1, 2026-10-19: strict markers and config, `xfail_strict`, `timeout = 1200`, the `perf` and `slow` markers); maturin build backend; `manifest-path = ../../crates/repark-python/Cargo.toml`;
   **Version (release PR, 2026-08-14):** `dynamic = ["version"]` — maturin injects the Cargo workspace version; never a literal here. Pin: `tests/test_version_ssot.py`.
   `module-name = repark._native`; `python-source = src`; `features = ["extension-module",
   "allocator-mimalloc"]` — the wheel ships the mimalloc global allocator (AL-1b verdict,

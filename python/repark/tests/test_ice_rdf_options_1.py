@@ -18,6 +18,8 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 
+pytestmark = pytest.mark.slow
+
 FIXTURE_PATH = Path(__file__).with_name("ice_rdf_options_1_spark_oracle.json")
 GENERATOR_PATH = Path(__file__).with_name("_record_rdf_options_1_oracle.py")
 _BANNER_SNIPPET = (

@@ -29,6 +29,8 @@ import pytest
 
 from repark import ReparkSession
 
+pytestmark = pytest.mark.slow
+
 MAIN: dict[str, Any] = json.loads(
     Path(__file__).with_name("ice_tsns_merge_wall_1_main.json").read_text(encoding="utf-8")
 )["cells"]

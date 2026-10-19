@@ -5,21 +5,18 @@ from __future__ import annotations
 import os
 import sys
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import _live_parity as lp
 import pytest
 
+from repark import ReparkSession
 from repark.spark.session import _reset_active_session_for_tests
 
 os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")
 
 _seen_oracle_context: Any = None
-
-
-def pytest_configure(config: pytest.Config) -> None:
-    """Register the perf marker for the slow catalog-IO budget legs."""
-    config.addinivalue_line("markers", "perf: slow catalog-IO budget legs")
 
 
 @pytest.fixture(scope="session")
@@ -66,3 +63,21 @@ def _isolate_active_session() -> None:
     _reset_active_session_for_tests()
     yield
     _reset_active_session_for_tests()
+
+
+@pytest.fixture
+def spark(request: pytest.FixtureRequest) -> Iterator[ReparkSession]:
+    """Per-test local session named for the test node; stopped on teardown."""
+    session = ReparkSession.builder.appName(request.node.name).getOrCreate()
+    yield session
+    session.stop()
+
+
+@pytest.fixture
+def spark_with_warehouse(tmp_path: Path) -> Iterator[ReparkSession]:
+    """Per-test session with catalog ``mem`` rooted at ``tmp_path`` and namespace ``mem.ns``."""
+    session = ReparkSession.builder.appName("pytest-spark-with-warehouse").getOrCreate()
+    session.register_memory_catalog("mem", tmp_path)
+    session.sql("CREATE NAMESPACE mem.ns")
+    yield session
+    session.stop()

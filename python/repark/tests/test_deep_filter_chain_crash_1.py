@@ -14,6 +14,8 @@ import sys
 
 import pytest
 
+pytestmark = pytest.mark.slow
+
 _WORKER = """
 import json
 import sys

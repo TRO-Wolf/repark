@@ -24,6 +24,8 @@ from typing import Any
 
 import pytest
 
+pytestmark = pytest.mark.slow
+
 _FIXTURE = (
     Path(__file__).resolve().parents[2]
     / "repark-parity"

@@ -13,6 +13,8 @@ import sys
 
 import pytest
 
+pytestmark = pytest.mark.slow
+
 _MAIN_WORKER = """
 import json
 from functools import reduce
