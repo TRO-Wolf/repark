@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_FIXTURE = REPO_ROOT / "python" / "repark" / "tests" / "ice_tsns_sql_1_oracle.json"
 V3 = "TBLPROPERTIES ('format-version' = '3')"
 NS_PER_SECOND = 1_000_000_000

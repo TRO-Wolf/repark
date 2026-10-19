@@ -26,7 +26,7 @@ committed beside this module::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py
+        .venv/bin/python python/repark/tests/timestamps/_record_session_timezone_goldens.py
 
 It imports ``ROWS`` from THIS module and runs each row's own recipe under the row's own zone, so
 the recorded golden and the asserted recipe cannot drift apart. It needs a JVM + ``pyspark``

@@ -20,7 +20,7 @@ from repark.errors import (
 )
 
 _ORACLE: dict[str, Any] = json.loads(
-    Path(__file__).with_name("facade_reader_writer_oracle.json").read_text(encoding="utf-8")
+    Path(__file__).parent.with_name("facade_reader_writer_oracle.json").read_text(encoding="utf-8")
 )["cells"]
 _U7_MEASURED: dict[str, Any] = json.loads(
     Path(__file__).with_name("ice_write_df_1_spark_oracle.json").read_text(encoding="utf-8")

@@ -389,7 +389,7 @@ def test_sql_non_integral_accuracy_is_analysis_without_spark_params(
 def test_run_cells_help_exits_zero() -> None:
     """C-2: run_cells.py --help prints usage and does not raise ValueError."""
     script = (
-        Path(__file__).resolve().parents[3] / "python/repark-parity/bench/approxpct/run_cells.py"
+        Path(__file__).resolve().parents[4] / "python/repark-parity/bench/approxpct/run_cells.py"
     )
     result = subprocess.run(
         [sys.executable, str(script), "--help"],

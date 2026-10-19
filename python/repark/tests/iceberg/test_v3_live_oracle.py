@@ -19,7 +19,7 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _PART_DV_SRC = _REPO_ROOT / "crates/repark-spark/src/tests/fixtures/v3-spark-part-dv"
 _EQ_DV_SRC = _REPO_ROOT / "crates/repark-spark/src/tests/fixtures/v3-spark-eq-dv"
 _PART_DV_DEST = Path("/tmp/repark-v3e3-partdv/ns/v3part")

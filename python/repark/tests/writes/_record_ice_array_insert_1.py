@@ -32,12 +32,12 @@ from typing import Any
 
 import pyarrow.parquet as pq
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
 FIXTURE_DIR = (
-    Path(__file__).resolve().parents[2] / "repark-parity/fixtures/torture/data/ice_array_insert_1"
+    Path(__file__).resolve().parents[3] / "repark-parity/fixtures/torture/data/ice_array_insert_1"
 )
 ORACLE_FILE = FIXTURE_DIR / "spark_array_insert_oracle.json"
 SPARK_CATALOG = "ora"

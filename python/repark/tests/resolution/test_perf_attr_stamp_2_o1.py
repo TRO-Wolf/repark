@@ -11,7 +11,7 @@ from repark import ReparkSession, _native
 from repark.spark import column_fields, functions
 
 _ATTR_KEY = b"repark.attr"
-_ROOT = Path(__file__).resolve().parents[3]
+_ROOT = Path(__file__).resolve().parents[4]
 _ID_READERS = {
     "crates/repark-core/src/orc_footer.rs",
     "crates/repark-core/src/session/df_guards/attr_id.rs",

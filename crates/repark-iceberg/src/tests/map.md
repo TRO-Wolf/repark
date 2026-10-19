@@ -37,7 +37,7 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   format-version 1. Red-first: the pin failed on the unfixed tree with the removed guard's text.
   pins: ice-nested-evo-1/C-060
 - `merge_append_series.rs` — **ICE-MERGE-APPEND-1 (2026-09-19):** replays the recorded Spark
-  4.1.2 / Iceberg 1.11.0 manifest series (`../../../../python/repark/tests/ice_merge_append_1_truth.json`)
+  4.1.2 / Iceberg 1.11.0 manifest series (`../../../../python/repark/tests/writes/ice_merge_append_1_truth.json`)
   through `write::commit_append` — 120 sequential single-file appends per variant, probed at
   1, 5, 20, 50, 99, 100, 101, 110, 120, asserting the manifest count and the data-file count.
   `defaults` collapses 99 manifests into 1 at the hundredth append,

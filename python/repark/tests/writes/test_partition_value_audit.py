@@ -32,7 +32,7 @@ per-slot ``record_count`` on both ``files`` and ``partitions``.
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_partition_value_goldens.py
+        .venv/bin/python python/repark/tests/writes/_record_partition_value_goldens.py
 
 It imports ``ROWS`` from THIS module. Never collected by pytest. CI stays JVM-free.
 """

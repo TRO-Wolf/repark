@@ -15,7 +15,7 @@ Re-derive goldens with the committed record driver (needs a JVM + ``pyspark``,
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_boundary_shapes_goldens.py
+        .venv/bin/python python/repark/tests/io/_record_boundary_shapes_goldens.py
 
 Entry points: facade interchange only (``createDataFrame`` in / ``toPandas`` /
 ``to_arrow`` out). Arrow-Table ingest is not a repark API; inbound is pandas.
@@ -732,7 +732,7 @@ def test_boundary_row_matches_spark_or_still_diverges(row: ShapeRow) -> None:
     """Every recorded row: value AND dtype/shape AND (Arrow) nullability — never ``show``."""
     assert row.spark is not None, (
         f"{row.name}: spark golden is missing — run "
-        "python/repark/tests/_record_boundary_shapes_goldens.py --emit and paste the halves"
+        "python/repark/tests/io/_record_boundary_shapes_goldens.py --emit and paste the halves"
     )
 
     session = _repark_session()
@@ -769,7 +769,7 @@ def test_boundary_row_matches_spark_or_still_diverges(row: ShapeRow) -> None:
             f"{row.name}: repark moved OFF its pinned disclosure and does NOT match the "
             "recorded Spark golden either - this is a regression, not a convergence. "
             "Re-derive both halves in record mode "
-            "(python/repark/tests/_record_boundary_shapes_goldens.py --emit). "
+            "(python/repark/tests/io/_record_boundary_shapes_goldens.py --emit). "
             f"{row.note}\n{mismatch}"
         ) from mismatch
 

@@ -15,7 +15,7 @@ date against the test day instead of a fixed instant.
 
 Run with a PySpark 4.1.2 interpreter::
 
-    SPARK_LOCAL_IP=127.0.0.1 python python/repark/tests/_record_cast_ts_string_1.py
+    SPARK_LOCAL_IP=127.0.0.1 python python/repark/tests/timestamps/_record_cast_ts_string_1.py
 
 ``--check`` compares a fresh recording against the committed fixture and exits non-zero
 on drift. Not collected by pytest.
@@ -320,7 +320,7 @@ def record(session: Any) -> dict[str, Any]:
             cells.extend(record_cell(session, zone, ansi, value) for value in STRINGS)
     return {
         "banner": session.version,
-        "recorder": "python/repark/tests/_record_cast_ts_string_1.py",
+        "recorder": "python/repark/tests/timestamps/_record_cast_ts_string_1.py",
         "cells": cells,
     }
 

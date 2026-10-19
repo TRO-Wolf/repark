@@ -20,7 +20,7 @@ _ORACLE: dict[str, Any] = {
     cell["cell"]: cell["error"]
     for cell in json.loads(
         (
-            Path(__file__).resolve().parents[2]
+            Path(__file__).resolve().parents[3]
             / "repark-parity"
             / "tests"
             / "live_spark"

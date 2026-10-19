@@ -74,7 +74,7 @@ from repark.spark.types import TimestampNTZType
 
 ORACLE_PATH: Path = Path(__file__).with_name("ntz_1_spark_oracle.json")
 _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
-_XC_SRC: Path = Path(__file__).resolve().parent / "fixtures" / "ntz_1_spark_table"
+_XC_SRC: Path = Path(__file__).resolve().parents[1] / "fixtures" / "ntz_1_spark_table"
 _XC_ROOT: Path = Path("/tmp/repark-ntz-1-spark-table/wh")
 _XC_WALL: str = "2024-01-01 12:34:56.123456"
 

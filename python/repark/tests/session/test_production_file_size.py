@@ -16,7 +16,7 @@ from pathlib import Path
 
 from repark.spark.session import _funcs
 
-ROOT = Path(__file__).parents[3]
+ROOT = Path(__file__).parents[4]
 SESSION = ROOT / "python/repark/src/repark/spark/session"
 MODULE_FILES = (
     "_funcs.py",

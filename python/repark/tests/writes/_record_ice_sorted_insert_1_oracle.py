@@ -11,7 +11,7 @@ so manifest file URIs stay valid.
 Run it (one JVM at a time)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
-        /tmp/sparkenv/bin/python python/repark/tests/_record_ice_sorted_insert_1_oracle.py
+        /tmp/sparkenv/bin/python python/repark/tests/writes/_record_ice_sorted_insert_1_oracle.py
 
 Re-running it re-derives every cell from live Spark and exits non-zero on drift;
 it rewrites the truth JSON only when ``--rewrite`` is passed, so routine runs
@@ -37,7 +37,7 @@ _WAREHOUSE = _CANONICAL_ROOT / "wh"
 _CATALOG = "rec"
 _HERE = Path(__file__).resolve().parent
 _TRUTH_PATH = _HERE / "ice_sorted_insert_1_spark_oracle.json"
-_FIXTURE_DIR = _HERE / "fixtures" / "ice_sorted_insert_1"
+_FIXTURE_DIR = _HERE.parent / "fixtures" / "ice_sorted_insert_1"
 _FIXTURE_TABLES = ("days",)
 
 

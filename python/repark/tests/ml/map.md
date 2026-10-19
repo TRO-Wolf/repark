@@ -16,6 +16,16 @@ pins.
 - [test_ml_feature_oracle.py](test_ml_feature_oracle.py) — R-ML-FEATURE oracles — plan-built transformers + pipeline e2e.
 - [test_ml_skeleton_oracle.py](test_ml_skeleton_oracle.py) — R-ML-SKELETON oracles — Param / Pipeline / uid / persistence / vectors.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `test_ml_boost_oracle.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ml_estimators_oracle.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

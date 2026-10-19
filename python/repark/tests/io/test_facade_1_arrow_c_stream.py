@@ -18,7 +18,7 @@ from repark import ReparkSession
 from repark.spark.dataframe import DataFrame
 from repark.spark.ml.ext._arrow_util import reenter_with_prediction
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _HIDE_PYARROW_PREFIX = """
 import sys
 class _BlockPyarrow:

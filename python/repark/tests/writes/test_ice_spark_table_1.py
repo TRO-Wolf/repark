@@ -22,7 +22,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _FIXTURE_SRC = _REPO_ROOT / "python/repark-parity/fixtures/torture/data/ice_spark_table_1"
 _TABLE_ROOT = Path("/tmp/repark-ice-spark-table-1/ns/facts")
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"

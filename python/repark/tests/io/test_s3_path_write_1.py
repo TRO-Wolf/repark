@@ -32,7 +32,7 @@ from repark import ReparkSession
 from repark.errors import AnalysisException, IllegalArgumentException
 from repark.spark.dataframe.writer_s3 import is_s3_url
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 MOTOPY = REPO_ROOT / "target" / "u12" / "moto-venv" / "bin" / "python"
 ORACLE_PATH = REPO_ROOT / "task" / "ledgers" / "staging" / "u12-probes" / "u12-spark.json"
 BUCKET = "u12cell"

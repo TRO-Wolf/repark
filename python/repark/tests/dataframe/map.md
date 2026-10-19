@@ -99,6 +99,18 @@ pins.
 - [offset_nested_sort_1_spark_oracle.json](offset_nested_sort_1_spark_oracle.json) — Recorded Spark oracle read by `test_offset_nested_sort_1.py`.
 - [polars_is_duplicated_1_polars_oracle.json](polars_is_duplicated_1_polars_oracle.json) — Recorded polars oracle read by `test_polars_is_duplicated_1.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `_record_join_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_dynflatten_listnull.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_facade_2_group2_no_python_assembly.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_join_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

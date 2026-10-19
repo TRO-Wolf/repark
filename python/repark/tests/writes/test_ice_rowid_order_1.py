@@ -31,7 +31,7 @@ from typing import Any
 from repark import ReparkSession
 
 _DATA = "repark-parity/fixtures/torture/data/ice_rowid_order_1"
-_FIXTURE_DIR = Path(__file__).resolve().parents[2] / _DATA
+_FIXTURE_DIR = Path(__file__).resolve().parents[3] / _DATA
 _ABC: dict[str, Any] = json.loads((_FIXTURE_DIR / "spark_rowid_abc_oracle.json").read_text())[
     "cells"
 ]

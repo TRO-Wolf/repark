@@ -29,14 +29,14 @@ import warnings
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
 CATALOG = "wbc1"
 NAMESPACE = "ns"
 EVIDENCE = (
-    Path(__file__).resolve().parents[3] / "task" / "wo" / "write-body-carriers-1" / "evidence"
+    Path(__file__).resolve().parents[4] / "task" / "wo" / "write-body-carriers-1" / "evidence"
 )
 JSON_NAME = "spark-cells.json"
 MARKDOWN_NAME = "spark-cells.md"
@@ -204,7 +204,7 @@ def render_markdown(document: dict[str, Any]) -> str:
         "",
         f"Recorded {provenance['date']} on live Spark {provenance['spark']} with "
         f"`{provenance['iceberg']}` by "
-        "`python/repark/tests/_record_write_body_carriers_1_spark.py`. "
+        "`python/repark/tests/writes/_record_write_body_carriers_1_spark.py`. "
         f"Full texts and row values live in [{JSON_NAME}]({JSON_NAME}); "
         "this table is a view over it.",
         "",

@@ -2,8 +2,9 @@
 
 Run once per Spark bump under the JVM lock; never imported by tests::
 
-    REPARK_PARITY_LIVE=1 /tmp/oc-worker/jb-jvm.sh /tmp/sparkenv/bin/python \\
-        python/repark/tests/_record_ice_column_reorder_1.py
+    REPARK_PARITY_LIVE=1 PYTHONPATH=python/repark/tests \\
+        /tmp/oc-worker/jb-jvm.sh /tmp/sparkenv/bin/python \\
+        python/repark/tests/iceberg/_record_ice_column_reorder_1.py
 
 pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012

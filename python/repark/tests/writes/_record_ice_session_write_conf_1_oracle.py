@@ -2,7 +2,8 @@
 
 Usage (PySpark 4.1.2 interpreter, e.g. ``/tmp/sparkenv/bin/python``)::
 
-    /tmp/sparkenv/bin/python python/repark/tests/_record_ice_session_write_conf_1_oracle.py \\
+    /tmp/sparkenv/bin/python \\
+        python/repark/tests/writes/_record_ice_session_write_conf_1_oracle.py \\
         --warehouse /tmp/session-conf-oracle-wh record
     ... check
 
@@ -34,7 +35,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 from _record_ice_session_write_conf_1_paths import derive_path_cells

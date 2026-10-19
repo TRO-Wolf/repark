@@ -32,6 +32,18 @@ pins.
 - [_record_tvl_goldens.py](_record_tvl_goldens.py) — Record mode for the three-valued-logic corpus — re-derive every Spark half from live PySpark.
 - [range_tvf_id_1](range_tvf_id_1/map.md) — RANGE-TVF-ID oracle recordings (own `map.md`).
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `_record_range_tvf_id_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_tvl_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_fuzz_smoke.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_three_valued_logic_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

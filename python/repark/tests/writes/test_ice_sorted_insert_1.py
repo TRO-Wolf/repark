@@ -25,7 +25,7 @@ LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live sort oracle is skipped (CI is 
 
 CATALOG = "icesorted1"
 CANONICAL_ROOT = Path("/tmp/repark-ice-sorted-insert-1")
-FIXTURE_DAYS = _HERE / "fixtures" / "ice_sorted_insert_1" / "days"
+FIXTURE_DAYS = _HERE.parent / "fixtures" / "ice_sorted_insert_1" / "days"
 TRANSFORM_REFUSAL = "only identity sort fields are supported"
 
 

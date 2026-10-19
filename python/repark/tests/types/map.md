@@ -52,6 +52,21 @@ pins.
 - [sql_literal_typing_1_spark_oracle.json](sql_literal_typing_1_spark_oracle.json) — Recorded Spark oracle (77 cells) read by `test_sql_literal_typing_1.py`.
 - [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) — Recorded Spark oracle read by `test_uuid_cast_window_1.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `_record_cast_failure_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_cast_map_spell_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_decimal128_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_nested_container_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_cast_failure_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_decimal128_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_nested_container_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

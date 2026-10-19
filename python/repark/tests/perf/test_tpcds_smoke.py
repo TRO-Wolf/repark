@@ -30,7 +30,7 @@ duckdb = pytest.importorskip("duckdb")
 from repark import ReparkSession  # noqa: E402
 
 # Harness imports (bench/ is not under repark_parity/src — load as package)
-_TPCDS_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench" / "tpcds"
+_TPCDS_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench" / "tpcds"
 _LEDGER_PATH = _TPCDS_DIR / "sf1_status_ledger.json"
 
 # Explicit curated SF0.01 smoke pins (≥10). Chosen for cheap SF0.01 walls and stable

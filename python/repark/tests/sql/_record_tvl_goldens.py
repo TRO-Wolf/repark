@@ -7,7 +7,7 @@ and ``pyspark``, i.e. ``uv sync --extra record``)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_tvl_goldens.py
+        .venv/bin/python python/repark/tests/sql/_record_tvl_goldens.py
 
 ``--emit`` prints paste-ready ``_table`` / ``_one_row`` snippets for every successful Spark half.
 

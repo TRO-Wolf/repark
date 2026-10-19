@@ -162,7 +162,7 @@ def test_the_gated_harness_has_no_drop_or_delete_against_aws() -> None:
     # Structural guard: the harness must NEVER emit DROP TABLE / DELETE FROM / DROP NAMESPACE.
     # CALL expire_snapshots / rewrite_* may remove expired snapshot files under the scratch
     # prefix; that is not table teardown.
-    for filename in ("test_aws_acceptance.py", "_acceptance.py"):
+    for filename in ("test_aws_acceptance.py", "../_acceptance.py"):
         source = (_TESTS_DIR / filename).read_text(encoding="utf-8")
         upper = source.upper()
         assert "DROP TABLE" not in upper, filename
@@ -504,7 +504,7 @@ def test_glue_location_guard_calls_get_database() -> None:
     """The Glue wrapper's live read is ``catalog.getDatabase``, not DESCRIBE."""
     import ast
 
-    source = (_TESTS_DIR / "_acceptance.py").read_text(encoding="utf-8")
+    source = (_TESTS_DIR.parent / "_acceptance.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     helper = None
     for node in tree.body:
@@ -557,7 +557,7 @@ def test_mor_helper_replays_the_last_merge() -> None:
     """
     import ast
 
-    source = (_TESTS_DIR / "_acceptance.py").read_text(encoding="utf-8")
+    source = (_TESTS_DIR.parent / "_acceptance.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     helper = None
     for node in tree.body:

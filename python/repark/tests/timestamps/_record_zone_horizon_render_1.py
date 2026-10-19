@@ -21,7 +21,7 @@ probes and never recomputes one.
 
 Run with a PySpark 4.1.2 interpreter::
 
-    SPARK_LOCAL_IP=127.0.0.1 python python/repark/tests/_record_zone_horizon_render_1.py
+    SPARK_LOCAL_IP=127.0.0.1 python python/repark/tests/timestamps/_record_zone_horizon_render_1.py
 
 ``--check`` re-runs the committed statements and exits non-zero on drift. ``--engine
 repark`` runs them on the facade and counts the cells that differ from the fixture;
@@ -476,7 +476,7 @@ def record(session: Any, probes: dict[str, Any] | None = None) -> dict[str, Any]
         session.conf.set("spark.sql.session.timeZone", zone)
     return {
         "banner": session.version,
-        "recorder": "python/repark/tests/_record_zone_horizon_render_1.py",
+        "recorder": "python/repark/tests/timestamps/_record_zone_horizon_render_1.py",
         "instants": source["instants"],
         "walls": source["walls"],
         "answers": answers,

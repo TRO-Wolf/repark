@@ -11,7 +11,7 @@ import sys
 import types
 from pathlib import Path
 
-_TPCDS_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench" / "tpcds"
+_TPCDS_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench" / "tpcds"
 
 
 def _load_package() -> object:

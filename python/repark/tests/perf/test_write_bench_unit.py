@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 # bench/write is not an installed package — load as a named package for tests.
-_WRITE_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench" / "write"
+_WRITE_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench" / "write"
 _PACKAGE = "repark_write_bench"
 
 

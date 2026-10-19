@@ -17,7 +17,7 @@ import pytest
 
 from repark.errors import AnalysisException
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _PART_DV_SRC = _REPO_ROOT / "crates/repark-spark/src/tests/fixtures/v3-spark-part-dv"
 _PART_DV_DEST = Path("/tmp/repark-v3e3-partdv/ns/v3part")
 _DV_LIVE = [(1, "a", 0), (3, "c", 0), (4, "d", 1), (6, "f", 1)]

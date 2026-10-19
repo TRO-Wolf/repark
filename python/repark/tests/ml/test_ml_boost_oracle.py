@@ -1157,7 +1157,7 @@ def test_sklearn_random_forest_classifier_stretch() -> None:
 def test_numpy_not_imported_at_repark_ml_toplevel() -> None:
     """numpy must not appear as a top-level import of repark.ml (only behind ext)."""
     ml_init = (
-        Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "ml" / "__init__.py"
+        Path(__file__).resolve().parents[2] / "src" / "repark" / "spark" / "ml" / "__init__.py"
     )
     text = ml_init.read_text(encoding="utf-8")
     assert "import numpy" not in text
@@ -2168,7 +2168,7 @@ def test_m8_every_ext_model_has_save_or_pin_refuse() -> None:
 
 def test_m8_no_pickle_import_in_ext_persist_sources() -> None:
     """M8 hygiene: ext persistence modules must not import pickle/joblib."""
-    root = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "ml" / "ext"
+    root = Path(__file__).resolve().parents[2] / "src" / "repark" / "spark" / "ml" / "ext"
     forbidden = re.compile(
         r"^\s*(import\s+pickle|from\s+pickle\s+import|import\s+joblib|from\s+joblib\s+import)"
     )

@@ -29,7 +29,7 @@ from repark.errors import AnalysisException, IllegalArgumentException, PySparkEx
 from repark.spark.session import _reset_active_session_for_tests
 
 CELLS: dict[str, Any] = json.loads(
-    Path(__file__).with_name("facade_reader_writer_oracle.json").read_text()
+    Path(__file__).parent.with_name("facade_reader_writer_oracle.json").read_text()
 )["cells"]
 
 

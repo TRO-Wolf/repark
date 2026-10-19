@@ -72,10 +72,10 @@ import pytest
 from repark import ReparkSession
 from repark.errors import AnalysisException, UnsupportedOperationException
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _FIXTURE_SRC = _REPO_ROOT / "python/repark-parity/fixtures/torture/data/ice_mixed_case_1/ns"
 _ORACLE = json.loads(
-    (_REPO_ROOT / "python/repark/tests/ice_mixed_case_1_spark_oracle.json").read_text(
+    (_REPO_ROOT / "python/repark/tests/iceberg/ice_mixed_case_1_spark_oracle.json").read_text(
         encoding="utf-8"
     )
 )

@@ -21,7 +21,7 @@ duckdb = pytest.importorskip("duckdb")
 
 from repark import ReparkSession  # noqa: E402
 
-_FUZZ_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench" / "fuzz"
+_FUZZ_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench" / "fuzz"
 _REPROS_DIR = _FUZZ_DIR / "repros"
 
 # Charter defaults — fixed literals, not env, for the always-on smoke pin.

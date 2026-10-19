@@ -44,6 +44,8 @@ reports medians of 5 reps after one warmup.
   struct field nullability), and prints whether each rebuild differs from the
   committed bytes plus which case ids moved. All four go red on this tree;
   restore goes green. Same memory-scope invocation as the runner.
+  Since FACADE-TESTS-LAYOUT-1 (2026-10-19) it loads the golden test from
+  `python/repark/tests/types/test_facade_4_ddl_round_trip.py`.
 
 ## Pointers
 

@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROBE_DIR = Path(__file__).resolve().parents[3] / "docs" / "perf" / "profiles-1-probe"
+PROBE_DIR = Path(__file__).resolve().parents[4] / "docs" / "perf" / "profiles-1-probe"
 PROBE = PROBE_DIR / "profiles1_probe.py"
 
 POISON_TOML = '[default.conf]\ndatafusion.execution.batch_size = "notanumber"\n'

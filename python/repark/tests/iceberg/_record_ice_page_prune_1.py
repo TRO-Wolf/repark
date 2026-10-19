@@ -27,9 +27,9 @@ exits non-zero on drift; it rewrites the truth JSON and the fixtures only when
 
 Run it (needs a JVM and ``pyspark`` 4.1.2, one JVM at a time)::
 
-    JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
+    JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark/tests \\
         /tmp/oc-worker/_lib/jvm-lock.sh /tmp/sparkenv/bin/python \\
-        python/repark/tests/_record_ice_page_prune_1.py --rewrite
+        python/repark/tests/iceberg/_record_ice_page_prune_1.py --rewrite
 
 Spark basis: ``local[4]``, UTC, shuffle partitions 1, UI off,
 ``org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`` (see
@@ -55,7 +55,7 @@ _CANONICAL_ROOT = Path("/tmp/repark-ice-page-prune-1")
 _CANONICAL_WAREHOUSE = _CANONICAL_ROOT / "wh"
 _CATALOG = "rec"
 _HERE = Path(__file__).resolve().parent
-_FIXTURE_DIR = _HERE / "fixtures" / "ice_page_prune_1"
+_FIXTURE_DIR = _HERE.parent / "fixtures" / "ice_page_prune_1"
 _TRUTH_PATH = _FIXTURE_DIR / "truth.json"
 _FORK_TRUTH_PATH = Path("/tmp/oc-worker/pb-oracle/page_prune_truth.json")
 _TABLES = ("base_v2", "base_v3", "del_v2", "del_v3", "evo_v2")

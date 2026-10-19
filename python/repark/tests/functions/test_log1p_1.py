@@ -180,7 +180,7 @@ def test_facade_source_is_the_kernel_not_composition() -> None:
     text = (
         Path(__file__)
         .resolve()
-        .parents[1]
+        .parents[2]
         .joinpath("src/repark/spark/functions_expr.py")
         .read_text(encoding="utf-8")
     )

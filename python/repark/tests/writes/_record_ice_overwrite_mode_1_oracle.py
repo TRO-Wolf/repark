@@ -2,7 +2,7 @@
 
 Usage (a PySpark 4.1.2 interpreter with a JVM on PATH)::
 
-    python python/repark/tests/_record_ice_overwrite_mode_1_oracle.py \
+    python python/repark/tests/writes/_record_ice_overwrite_mode_1_oracle.py \
         --warehouse <empty-dir> record
     ... check
 
@@ -31,7 +31,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 

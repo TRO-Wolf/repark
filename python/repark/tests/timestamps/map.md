@@ -93,6 +93,28 @@ pins.
 - [zone_horizon_render_1_residue.json](zone_horizon_render_1_residue.json) — Recorded data read by `test_zone_horizon_render_1.py`; re-derived by `_record_zone_horizon_render_1.py`.
 - [zone_horizon_render_1_spark_oracle.json](zone_horizon_render_1_spark_oracle.json) — Recorded Spark oracle read by `test_zone_horizon_render_1.py`; re-derived by `_record_zone_horizon_render_1.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `_record_cast_ts_string_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_ice_tsns_coercion_1_pins.py` | names its own or a sibling's new path in a docstring or recorded string; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_tsns_sql_1_oracle.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ntz_1_spark_table.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
+| `_record_session_timezone_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_sql_epoch_constructors_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_timestamp_cast_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_zone_horizon_render_1.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_ice_tsns_coercion_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ntz_1.py` | reads the root `fixtures/` one level up. |
+| `test_session_timezone_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_text_write_timestamp_zone_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_timestamp_cast_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_u9_types_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -30,7 +30,7 @@ pytest; Iceberg jar is a **record-time** dependency only via ``spark.jars.packag
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py
+        .venv/bin/python python/repark/tests/writes/_record_merge_differential_goldens.py
 
 It imports ``ROWS`` from THIS module and runs each row's own lifecycle recipe, so the recorded
 golden and the asserted recipe cannot drift apart. CI stays JVM-free.

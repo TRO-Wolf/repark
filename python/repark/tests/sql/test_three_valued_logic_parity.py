@@ -16,7 +16,7 @@ schema name, Arrow type and nullability are part of every content assertion — 
 Nullability is load-bearing here (boolean columns produced by 3VL expressions).
 
 **Re-deriving the goldens (record mode).** The committed driver
-``python/repark/tests/_record_tvl_goldens.py`` (needs a JVM + ``pyspark``; never collected by
+``python/repark/tests/sql/_record_tvl_goldens.py`` (needs a JVM + ``pyspark``; never collected by
 pytest; ``--emit`` prints paste-ready table constructors; serialize with other JVM recorders via
 ``/tmp/grok-jvm-record.lock``) imports ``ROWS`` from this module and runs each row's own recipe.
 
@@ -415,7 +415,7 @@ def test_tvl_parity_row(row: TvlRow, repark: ReparkSession) -> None:
     """
     assert row.spark is not None, (
         f"{row.name}: spark golden is missing — run "
-        f"python/repark/tests/_record_tvl_goldens.py --emit and paste. {row.note}"
+        f"python/repark/tests/sql/_record_tvl_goldens.py --emit and paste. {row.note}"
     )
     actual = run_tvl_content(repark, row)
 

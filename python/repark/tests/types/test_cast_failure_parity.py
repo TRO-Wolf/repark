@@ -18,7 +18,7 @@ Re-deriving the goldens (record mode)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py
+        .venv/bin/python python/repark/tests/types/_record_cast_failure_goldens.py
 
 Hold ``/tmp/grok-jvm-record.lock`` around the process (B4). Needs a JVM + ``pyspark``
 (``uv sync --extra record``); never collected by pytest; CI stays JVM-free.

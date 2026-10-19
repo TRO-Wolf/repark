@@ -27,7 +27,7 @@ from repark.errors import IllegalArgumentException
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live Spark oracle skipped (routine CI is JVM-free)"
 _FIXTURE = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "repark-parity"
     / "fixtures"
     / "torture"

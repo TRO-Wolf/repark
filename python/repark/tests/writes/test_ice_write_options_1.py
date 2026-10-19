@@ -632,7 +632,7 @@ def test_live_cells_reproduce_fixture(tmp_path: Path) -> None:
             [sys.executable, str(Path(__file__).resolve().parent / script), "--out", str(out)],
             capture_output=True,
             text=True,
-            cwd=str(Path(__file__).resolve().parents[3]),
+            cwd=str(Path(__file__).resolve().parents[4]),
             env=env,
             timeout=1200,
         )

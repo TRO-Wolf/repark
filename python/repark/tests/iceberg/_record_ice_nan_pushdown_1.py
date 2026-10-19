@@ -10,7 +10,7 @@ Run it (needs a JVM and ``pyspark`` 4.1.2, one JVM at a time)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         /tmp/oc-worker/jb-jvm.sh /tmp/sparkenv/bin/python \\
-        python/repark/tests/_record_ice_nan_pushdown_1.py
+        python/repark/tests/iceberg/_record_ice_nan_pushdown_1.py
 
 Re-running it re-derives every cell from live Spark and exits non-zero on drift;
 it rewrites the truth JSON only when ``--rewrite`` is passed, so routine runs
@@ -34,7 +34,7 @@ _WAREHOUSE = _CANONICAL_ROOT / "wh"
 _CATALOG = "rec"
 _HERE = Path(__file__).resolve().parent
 _TRUTH_PATH = _HERE / "ice_nan_pushdown_1_oracle.json"
-_FIXTURE_DIR = _HERE / "fixtures" / "ice_nan_pushdown_1"
+_FIXTURE_DIR = _HERE.parent / "fixtures" / "ice_nan_pushdown_1"
 _FIXTURE_TABLES = (
     "v2/mixed",
     "v2/nan_only",

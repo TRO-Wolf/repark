@@ -3,7 +3,7 @@
 Usage (PySpark 4.1.2 interpreter, e.g. ``/tmp/sparkenv/bin/python``)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \
-        /tmp/sparkenv/bin/python python/repark/tests/_record_ice_rtas_byname_1_oracle.py \
+        /tmp/sparkenv/bin/python python/repark/tests/writes/_record_ice_rtas_byname_1_oracle.py \
         --warehouse /tmp/byname-oracle-wh record
     ... check
 
@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 

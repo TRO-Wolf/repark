@@ -103,7 +103,7 @@ def test_pyc_1_udf_bridge_does_not_import_pandas_at_module_scope() -> None:
 
 def test_pyc_1_exception_rows_deleted_not_zeroed() -> None:
     """C-002: emptied files leave the EXCEPTIONS table, they are not kept at 0."""
-    conventions = Path(__file__).resolve().parents[3] / "scripts" / "check_python_conventions.py"
+    conventions = Path(__file__).resolve().parents[4] / "scripts" / "check_python_conventions.py"
     tree = ast.parse(conventions.read_text(encoding="utf-8"))
     found_table = False
     keys: list[str] = []

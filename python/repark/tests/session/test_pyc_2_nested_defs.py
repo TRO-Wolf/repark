@@ -113,7 +113,7 @@ def test_pyc_2_udtf_builder_stays_a_pragma() -> None:
 
 
 def _nested_def_exception_keys() -> list[str]:
-    conventions = Path(__file__).resolve().parents[3] / "scripts" / "check_python_conventions.py"
+    conventions = Path(__file__).resolve().parents[4] / "scripts" / "check_python_conventions.py"
     tree = ast.parse(conventions.read_text(encoding="utf-8"))
     found_table = False
     keys: list[str] = []

@@ -11,7 +11,7 @@ Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_nested_container_goldens.py
+        .venv/bin/python python/repark/tests/types/_record_nested_container_goldens.py
 
 With ``--emit`` it prints paste-ready ``_table(...)`` snippets (Spark, plus a divergent
 repark half) instead of only reporting PASS / MISMATCH / MISSING. When other lanes

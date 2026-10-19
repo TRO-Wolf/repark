@@ -40,6 +40,18 @@ pins.
 - [_acceptance_replace.py](_acceptance_replace.py) — CREATE OR REPLACE TABLE … AS twice leg body for the real-AWS acceptance harness.
 - [_acceptance_v3.py](_acceptance_v3.py) — Format-version-3 leg body for the real-AWS acceptance harness (LIVE-v3).
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `test_acceptance_helpers.py` | reads the root `_acceptance.py` source one level up. |
+| `test_parity_live.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_parity_live_dynflatten.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_pyspark_compat_smoke.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

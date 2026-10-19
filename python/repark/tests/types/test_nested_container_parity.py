@@ -18,7 +18,7 @@ silent CONVERGENCE goes red and forces the disclosure to be flipped to equality,
 value AND type AND nullability; never ``show``; order-insensitive by default.
 
 **Re-deriving goldens (record mode).** The committed driver
-``python/repark/tests/_record_nested_container_goldens.py`` (needs a JVM + ``pyspark``; never
+``python/repark/tests/types/_record_nested_container_goldens.py`` (needs a JVM + ``pyspark``; never
 collected by pytest) imports ``ROWS`` from this module and runs each row's own recipe.
 
 **Entry points.** Facade DataFrame API and facade ``sql()`` over a createDataFrame temp view;
@@ -526,7 +526,7 @@ def test_nested_row_matches_spark_or_still_diverges(row: NestedRow) -> None:
     """
     assert row.spark is not None, (
         f"{row.name}: spark golden is missing — run "
-        "python/repark/tests/_record_nested_container_goldens.py --emit and paste the halves"
+        "python/repark/tests/types/_record_nested_container_goldens.py --emit and paste the halves"
     )
 
     session = _session()
@@ -565,7 +565,7 @@ def test_nested_row_matches_spark_or_still_diverges(row: NestedRow) -> None:
             f"{row.name}: repark moved OFF its pinned disclosure and does NOT match the "
             "recorded Spark golden either - this is a regression, not a convergence. "
             "Re-derive both halves in record mode "
-            "(python/repark/tests/_record_nested_container_goldens.py --emit). "
+            "(python/repark/tests/types/_record_nested_container_goldens.py --emit). "
             f"{row.note}\n{mismatch}"
         ) from mismatch
 

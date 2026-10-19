@@ -12,7 +12,7 @@ exits non-zero on drift.
 
 Run with a PySpark 4.1.2 interpreter::
 
-    SPARK_LOCAL_IP=127.0.0.1 python python/repark/tests/_record_cast_map_spell_1.py
+    SPARK_LOCAL_IP=127.0.0.1 python python/repark/tests/types/_record_cast_map_spell_1.py
 
 Not collected by pytest.
 """

@@ -24,7 +24,7 @@ committed beside this module::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_float_agg_goldens.py
+        .venv/bin/python python/repark/tests/functions/_record_float_agg_goldens.py
 
 It imports ``ROWS`` from THIS module and runs each row's own recipe. Needs a JVM + ``pyspark``
 (``uv sync --extra record``); never collected by pytest. CI stays JVM-free. Hold

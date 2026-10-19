@@ -11,7 +11,7 @@ from pathlib import Path
 import _ice_tsns_coercion_1_spellings as spellings
 import _summarize_ice_tsns_coercion_1 as summarize
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 TESTS = Path(__file__).resolve().parent
 FIXTURE = TESTS / "ice_tsns_coercion_1_twins.json"
 LATTICE = TESTS / "ice_tsns_coercion_1_spark_lattice.json"

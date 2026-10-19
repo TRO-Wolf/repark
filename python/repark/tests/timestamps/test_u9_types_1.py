@@ -302,7 +302,7 @@ def test_every_step_answers_as_spark_measured_or_as_its_dated_residue(
 def test_every_residue_names_a_ledger_residue_and_differs_from_spark() -> None:
     """A residue must differ from Spark's answer and cite a residue id of the unit ledger."""
     ledger = (
-        Path(__file__).resolve().parents[3]
+        Path(__file__).resolve().parents[4]
         / "task"
         / "ledgers"
         / "staging"

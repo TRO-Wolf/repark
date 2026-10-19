@@ -35,8 +35,8 @@ from repark.errors import PySparkException
 
 # The MW-7 driver lives under python/repark-parity/bench/, off `repark_parity`'s import path, so
 # it loads as a synthetic package (same shim as test_mw7_scale_smoke.py / test_tpch_smoke.py).
-_BENCH_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench"
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_BENCH_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench"
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _GUIDE = _REPO_ROOT / "docs" / "guide" / "iceberg-guide.md"
 
 # Six MERGEs over two partitions leave twelve position-delete files, which clears the five-file

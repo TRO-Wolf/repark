@@ -7,7 +7,7 @@ it (needs a JVM and `pyspark`, i.e. `uv sync --extra record`)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_timestamp_cast_goldens.py
+        .venv/bin/python python/repark/tests/timestamps/_record_timestamp_cast_goldens.py
 
 Exit code 0 means every recorded half reproduces bit-for-bit; non-zero prints the live values to
 paste back after a deliberate move. It never edits the corpus — re-recording is a human decision;

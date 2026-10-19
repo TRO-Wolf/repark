@@ -25,7 +25,7 @@ from typing import Any
 import pytest
 
 _FIXTURE = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "repark-parity"
     / "fixtures"
     / "torture"

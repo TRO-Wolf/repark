@@ -207,7 +207,7 @@ def test_every_diverging_row_names_a_registry_row_that_exists() -> None:
     """A DIVERGES verdict cites a registry heading that is in the parity document."""
     from pathlib import Path
 
-    registry = Path(__file__).resolve().parents[3] / "docs" / "spark-sql-iceberg-parity.md"
+    registry = Path(__file__).resolve().parents[4] / "docs" / "spark-sql-iceberg-parity.md"
     text = registry.read_text(encoding="utf-8")
     for name, verdict in VERDICTS.items():
         if verdict != "DIVERGES":

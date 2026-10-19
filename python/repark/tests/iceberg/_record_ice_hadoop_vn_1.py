@@ -12,7 +12,8 @@ pins: ice-hadoop-vn-1/C-006, C-007
 Run explicitly, never from the suite: JVM plus both engines on one interpreter.
 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
 PYTHONPATH=/tmp/jb-vn/python/repark/src:/tmp/jb-vn/.venv/lib/python3.12/site-packages \\
-/tmp/oc-worker/jb-jvm.sh /tmp/sparkenv/bin/python python/repark/tests/_record_ice_hadoop_vn_1.py
+/tmp/oc-worker/jb-jvm.sh /tmp/sparkenv/bin/python \\
+python/repark/tests/iceberg/_record_ice_hadoop_vn_1.py
 """
 
 from __future__ import annotations
@@ -26,15 +27,15 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 TESTS_DIR = Path(__file__).resolve().parent
-REPO_ROOT = TESTS_DIR.parents[2]
+REPO_ROOT = TESTS_DIR.parents[3]
 FIXTURE_DIR = REPO_ROOT / "python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1"
 ORACLE_PATH = TESTS_DIR / "ice_hadoop_vn_1_spark_oracle.json"
 BAKE_WAREHOUSE = Path("/tmp/repark-ice-hadoop-vn-1")
 BAKE_TABLE_ROOT = BAKE_WAREHOUSE / "ns" / "conc"
-RECORDER = "python/repark/tests/_record_ice_hadoop_vn_1.py"
+RECORDER = "python/repark/tests/iceberg/_record_ice_hadoop_vn_1.py"
 
 Row = list[Any]
 

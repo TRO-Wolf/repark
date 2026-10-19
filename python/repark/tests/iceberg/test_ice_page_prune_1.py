@@ -60,9 +60,9 @@ from _record_ice_page_prune_1 import (
 
 _HERE = Path(__file__).resolve().parent
 _TRUTH = json.loads(
-    (_HERE / "fixtures" / "ice_page_prune_1" / "truth.json").read_text(encoding="utf-8")
+    (_HERE.parent / "fixtures" / "ice_page_prune_1" / "truth.json").read_text(encoding="utf-8")
 )["answers"]
-_FIXTURE_SRC = _HERE / "fixtures" / "ice_page_prune_1"
+_FIXTURE_SRC = _HERE.parent / "fixtures" / "ice_page_prune_1"
 _CANONICAL_ROOT = Path("/tmp/repark-ice-page-prune-1/wh")
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live Spark cell skipped (routine CI is JVM-free)"

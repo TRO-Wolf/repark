@@ -7,7 +7,7 @@ JVM and `pyspark`, i.e. `uv sync --extra record`)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_decimal128_goldens.py
+        .venv/bin/python python/repark/tests/types/_record_decimal128_goldens.py
 
 Exit code 0 means every recorded half reproduces bit-for-bit and every raise class still raises;
 non-zero prints the live values to paste back after a deliberate move. It never edits the corpus —

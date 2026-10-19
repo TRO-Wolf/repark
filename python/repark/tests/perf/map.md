@@ -37,6 +37,24 @@ pins.
 - [test_w0_window_bench_smoke.py](test_w0_window_bench_smoke.py) — W-0: run the window-shape driver at gate scale against the native module.
 - [test_write_bench_unit.py](test_write_bench_unit.py) — Unit pins for the write-bench harness (no SF1 wall; pure helpers + tiny smoke).
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `test_dynflatten_bed_gate.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_dynflatten_null_mask.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_mw7_scale_smoke.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_perf_approxpct_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_tpcds_compare_unit.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_tpcds_smoke.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_tpch_compare_unit.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_tpch_smoke.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_w0_window_bench_smoke.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_write_bench_unit.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

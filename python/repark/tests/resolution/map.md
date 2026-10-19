@@ -44,6 +44,15 @@ pins.
 - [casesens_1_spark_oracle.json](casesens_1_spark_oracle.json) — Recorded Spark oracle read by `test_casesens_1.py`, `test_casesens_2.py`.
 - [casesens_2_spark_oracle.json](casesens_2_spark_oracle.json) — Recorded Spark oracle read by `test_casesens_2.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `test_perf_attr_stamp_2_o1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

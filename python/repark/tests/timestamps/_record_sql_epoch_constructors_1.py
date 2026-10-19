@@ -12,7 +12,7 @@ fail on a year outside Python's range. ``PROBES`` records whether the
 Run with a PySpark 4.1.2 interpreter::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 /tmp/sparkenv/bin/python \\
-        python/repark/tests/_record_sql_epoch_constructors_1.py
+        python/repark/tests/timestamps/_record_sql_epoch_constructors_1.py
 
 ``--check`` compares a fresh recording against the committed fixture and exits
 non-zero on drift. Not collected by pytest.
@@ -286,7 +286,7 @@ def record(session: Any) -> dict[str, Any]:
     return {
         "banner": session.version,
         "zone_banner": {zone: zone for zone in ZONES},
-        "recorder": "python/repark/tests/_record_sql_epoch_constructors_1.py",
+        "recorder": "python/repark/tests/timestamps/_record_sql_epoch_constructors_1.py",
         "cells": cells,
         "probes": probes,
     }

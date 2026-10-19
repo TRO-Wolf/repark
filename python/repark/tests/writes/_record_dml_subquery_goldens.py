@@ -12,7 +12,7 @@ cached thereafter):
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_dml_subquery_goldens.py
+        .venv/bin/python python/repark/tests/writes/_record_dml_subquery_goldens.py
 
 Only ONE local Spark driver at a time: check no other lane holds one (``pgrep -af
 'pyspark|SparkSubmit'``, ignoring standing container infrastructure) and wait until it is clear.

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _CRATES = _REPO_ROOT / "crates"
 _FIXTURES = _REPO_ROOT / "crates" / "repark-spark" / "src" / "tests" / "fixtures"
 _SETTER_NEEDLES = ("with_write_default", "write_default(")

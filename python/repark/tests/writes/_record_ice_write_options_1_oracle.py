@@ -6,7 +6,7 @@ at the end. Each cell uses a fresh table so summaries never cross-talk.
 Run with a PySpark 4.1.2 interpreter; ``REPARK_ORACLE_IVY`` optionally points
 ``spark.jars.ivy`` at a warm cache (unset = Spark's default Ivy)::
 
-    python python/repark/tests/_record_ice_write_options_1_oracle.py
+    python python/repark/tests/writes/_record_ice_write_options_1_oracle.py
 
 Not collected by pytest.
 """
@@ -22,7 +22,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 

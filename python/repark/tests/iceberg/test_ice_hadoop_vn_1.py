@@ -24,7 +24,7 @@ from typing import Any
 
 import pytest
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _FIXTURE_SRC = _REPO_ROOT / "python/repark-parity/fixtures/torture/data/ice_hadoop_vn_1"
 _TABLE_ROOT = Path("/tmp/repark-ice-hadoop-vn-1/ns/conc")
 _WAREHOUSE = Path("/tmp/repark-ice-hadoop-vn-1")

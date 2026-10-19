@@ -3,7 +3,7 @@
 Usage (an interpreter with PySpark 4.1.2 on the path)::
 
     PYTHONPATH=<sparkenv site-packages> JAVA_HOME=<java-17> SPARK_LOCAL_IP=127.0.0.1 \
-        python python/repark/tests/_record_ice_drop_ns_1_oracle.py \
+        python python/repark/tests/iceberg/_record_ice_drop_ns_1_oracle.py \
         --warehouse /tmp/drop-ns-oracle-wh record
     ... check
 
@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 

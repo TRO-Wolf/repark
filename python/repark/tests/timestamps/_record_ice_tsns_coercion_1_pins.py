@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 NESTED = ROOT / "crates" / "repark-spark" / "tests" / "timestamp_ns_nested_shapes.rs"
 DOOR = ROOT / "crates" / "repark-spark" / "src" / "tests" / "v3_timestamp_ns_door.rs"
 SQL = ROOT / "python" / "repark" / "tests" / "test_ice_tsns_sql_1.py"
@@ -67,12 +67,12 @@ HELD = (
         "why": "a written TIMESTAMP literal floors; a string keeps nine digits",
     },
     {
-        "file": "python/repark/tests/test_ice_tsns_sql_1.py",
+        "file": "python/repark/tests/timestamps/test_ice_tsns_sql_1.py",
         "test": "test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling",
         "why": "written CAST of the column, the same floor as DataFrame cast",
     },
     {
-        "file": "python/repark/tests/test_ice_tsns_sql_1.py",
+        "file": "python/repark/tests/timestamps/test_ice_tsns_sql_1.py",
         "test": "test_timestamp_typed_values_floor_like_insert_select",
         "why": "written TIMESTAMP literals floor on insert; strings keep nine digits",
     },

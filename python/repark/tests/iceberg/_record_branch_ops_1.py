@@ -12,7 +12,7 @@ Regenerate only on a new oracle recording basis (same GAV as
 :mod:`_oracle_pins`). Needs pyspark + a JVM (the ``record`` extra); routine CI
 never runs this module. Usage::
 
-    .venv/bin/python python/repark/tests/_record_branch_ops_1.py <truth-out-path>
+    .venv/bin/python python/repark/tests/iceberg/_record_branch_ops_1.py <truth-out-path>
 
 pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005
 """
@@ -30,7 +30,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 TABLE_DDL = "(id INT, s STRING) USING iceberg TBLPROPERTIES ('format-version'='2')"
 V3_DDL = "(id INT, s STRING) USING iceberg TBLPROPERTIES ('format-version'='3')"

@@ -17,7 +17,7 @@ from repark import ReparkSession
 from repark.spark.session import _reset_active_session_for_tests
 from repark.spark.types import ArrayType, NullType
 
-_DATASETS_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "datasets"
+_DATASETS_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "datasets"
 
 
 def _bed() -> Any:

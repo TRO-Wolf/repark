@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-_BENCH_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench"
+_BENCH_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench"
 
 
 def _load_measure() -> Any:

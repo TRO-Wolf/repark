@@ -20,7 +20,7 @@ from repark import ReparkSession, Window, ta
 from repark.errors import PySparkTypeError
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-GOLDENS = Path(__file__).resolve().parents[3] / "crates" / "repark-ta" / "tests" / "goldens"
+GOLDENS = Path(__file__).resolve().parents[4] / "crates" / "repark-ta" / "tests" / "goldens"
 PREFIX_RUNS = {"high": 3, "low": 7, "close": 5}
 
 

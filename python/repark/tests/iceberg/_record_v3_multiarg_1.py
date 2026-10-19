@@ -10,7 +10,7 @@ temp dir when omitted) and ``REPARK_ORACLE_IVY`` optionally points
 ``spark.jars.ivy`` at a warm cache::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
-        /tmp/sparkenv/bin/python python/repark/tests/_record_v3_multiarg_1.py \\
+        /tmp/sparkenv/bin/python python/repark/tests/iceberg/_record_v3_multiarg_1.py \\
         --warehouse <dir>
 
 Not collected by pytest.
@@ -27,7 +27,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 

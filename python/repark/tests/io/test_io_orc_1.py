@@ -22,7 +22,7 @@ from repark.spark.session import _reset_active_session_for_tests
 
 CELLS: dict[str, Any] = json.loads(Path(__file__).with_name("facade_orc_oracle.json").read_text())
 
-FIXTURES = str(Path(__file__).with_name("fixtures") / "orc")
+FIXTURES = str(Path(__file__).parent.with_name("fixtures") / "orc")
 
 
 def _cell(name: str) -> dict[str, Any]:

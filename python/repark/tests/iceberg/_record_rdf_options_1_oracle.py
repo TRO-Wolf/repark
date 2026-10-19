@@ -13,7 +13,7 @@ from typing import Any
 
 logger = logging.getLogger("record_rdf_options_1_oracle")
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_OUTPUT = REPO_ROOT / "python" / "repark" / "tests" / "ice_rdf_options_1_spark_oracle.json"
 
 

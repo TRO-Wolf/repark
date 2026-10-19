@@ -5,9 +5,9 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-COLUMN_PATH = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "column.py"
+COLUMN_PATH = Path(__file__).resolve().parents[2] / "src" / "repark" / "spark" / "column.py"
 COLUMN_FIELDS_PATH = (
-    Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "column_fields.py"
+    Path(__file__).resolve().parents[2] / "src" / "repark" / "spark" / "column_fields.py"
 )
 BINDING_MODULES: dict[str, Path] = {
     "_column_fields": COLUMN_FIELDS_PATH,
@@ -15,7 +15,7 @@ BINDING_MODULES: dict[str, Path] = {
     "_column_string": COLUMN_PATH.with_name("column_string.py"),
 }
 SPLIT_MODULES: frozenset[str] = frozenset({"_column_sort", "_column_string"})
-SRC_ROOT = Path(__file__).resolve().parents[1] / "src" / "repark"
+SRC_ROOT = Path(__file__).resolve().parents[2] / "src" / "repark"
 GENERIC_HELPERS: dict[str, frozenset[str]] = {
     "functions.py": frozenset({"lit", "_lit_numpy_ndarray", "_scalar"}),
     "functions_expr.py": frozenset({"pi"}),

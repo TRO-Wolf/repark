@@ -118,6 +118,51 @@ pins.
 - [u8_write_sql_nested_spark_oracle.json](u8_write_sql_nested_spark_oracle.json) — Recorded Spark oracle read by `test_ice_write_sql_1.py`.
 - [u8_write_sql_spark_oracle.json](u8_write_sql_spark_oracle.json) — Recorded Spark oracle read by `test_ice_write_sql_1.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `_record_dml_subquery_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_ice_append_storm_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_array_insert_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_avro_name_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_evo_dml_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_list_null_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_meta_delete_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_overwrite_mode_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_overwrite_mode_1_transform.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_rowid_order_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_rtas_byname_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_session_write_conf_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_sorted_insert_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
+| `_record_ice_sorted_insert_2_oracle.py` | puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_struct_pairing_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_wap_branch_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_write_options_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_write_options_2_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_write_options_3_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_write_options_rp_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_merge_differential_goldens.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_partition_value_goldens.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_write_body_carriers_1_main.py` | names its own or a sibling's new path in a docstring or recorded string; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_write_body_carriers_1_spark.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_dml_subquery_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_ice_dyn_overwrite_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_dyn_overwrite_1_by_name.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_occ_scoped_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_rowid_order_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_sorted_insert_1.py` | reads the root `fixtures/` one level up. |
+| `test_ice_spark_table_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_v3_write_default_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_write_options_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_write_options_rp_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_io_bucket_cluster_1.py` | reads the root `facade_reader_writer_oracle.json` one level up. |
+| `test_merge_differential_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_partition_value_audit.py` | names its own or a sibling's new path in a docstring or recorded string. |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

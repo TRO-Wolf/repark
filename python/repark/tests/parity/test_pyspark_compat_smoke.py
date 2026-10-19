@@ -20,7 +20,7 @@ import pytest
 # would misread as a failure (wheel-smoke CI has no pyspark). Skip at wrapper level too.
 pytest.importorskip("pyspark")
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _SUITE = _REPO_ROOT / "python" / "repark-parity" / "compat" / "smoke_suite.py"
 
 

@@ -44,7 +44,7 @@ Run it (one JVM at a time)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         /tmp/sparkenv/bin/python \\
-        python/repark/tests/_record_ice_rdf_sort_parse_1_oracle.py --rewrite
+        python/repark/tests/iceberg/_record_ice_rdf_sort_parse_1_oracle.py --rewrite
 
 Re-running it re-derives every cell from live Spark and exits non-zero on drift; it
 rewrites the truth JSON only when ``--rewrite`` is passed, so routine runs verify rather

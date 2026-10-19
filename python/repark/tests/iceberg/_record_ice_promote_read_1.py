@@ -10,10 +10,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 FIXTURE_DIR = (
-    Path(__file__).resolve().parents[2] / "repark-parity/fixtures/torture/data/ice_promote_read_1"
+    Path(__file__).resolve().parents[3] / "repark-parity/fixtures/torture/data/ice_promote_read_1"
 )
 TRUTH_FILE = FIXTURE_DIR / "truth.json"
 ADOPTED_WAREHOUSE = Path("/tmp/repark-ice-promote-read-1")

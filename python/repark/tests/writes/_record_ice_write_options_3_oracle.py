@@ -3,7 +3,7 @@
 Run with a Spark 4.1.2 interpreter; the warehouse is ``--warehouse`` (a fresh temp dir when
 omitted) and ``REPARK_ORACLE_IVY`` optionally points ``spark.jars.ivy`` at a warm cache::
 
-    python python/repark/tests/_record_ice_write_options_3_oracle.py --warehouse <dir>
+    python python/repark/tests/writes/_record_ice_write_options_3_oracle.py --warehouse <dir>
 
 Not collected by pytest.
 """
@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 

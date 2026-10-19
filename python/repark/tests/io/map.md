@@ -60,6 +60,24 @@ pins.
 - [facade_grouped_data_oracle.json](facade_grouped_data_oracle.json) — Recorded Spark oracle (25 cells) read by `test_grouped_surface_1.py`.
 - [facade_orc_oracle.json](facade_orc_oracle.json) — Recorded Spark oracle read by `test_io_orc_1.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `_record_boundary_shapes_goldens.py` | names its own or a sibling's new path in a docstring or recorded string; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_boundary_shapes_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_datasets_facade.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_facade_1_arrow_c_stream.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_foreach_wrap_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_io_declared_1.py` | reads the root `facade_reader_writer_oracle.json` one level up. |
+| `test_io_orc_1.py` | reads the root `fixtures/` one level up. |
+| `test_io_text_1.py` | reads the root `facade_reader_writer_oracle.json` one level up. |
+| `test_io_text_2.py` | reads the root `facade_reader_writer_oracle.json` one level up. |
+| `test_s3_path_write_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -28,7 +28,7 @@ Then the record driver::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py
+        .venv/bin/python python/repark/tests/writes/_record_merge_differential_goldens.py
 
 Requires Java 17 (zulu-17), the ``record`` extra (pyspark==4.1.2), and network on first
 resolve for the Ivy/Maven fetch (then cached under ``~/.ivy2.5.2/jars``). Lifecycle
@@ -46,7 +46,7 @@ from typing import TYPE_CHECKING, Any
 
 # Run as a script from anywhere: import the corpus sibling by name (same rows the
 # suite asserts, never a copy).
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 if TYPE_CHECKING:
     import pyarrow as pa

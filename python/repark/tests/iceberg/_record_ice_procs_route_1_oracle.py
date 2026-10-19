@@ -5,7 +5,8 @@ Usage (PySpark interpreter with the Iceberg runtime on ``spark.jars.packages``):
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \
         PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=<ivy> --conf spark.driver.memory=2g \
         --conf spark.ui.enabled=false pyspark-shell" \
-        PYTHONPATH=<sparkenv> python python/repark/tests/_record_ice_procs_route_1_oracle.py \
+        PYTHONPATH=<sparkenv> python \
+        python/repark/tests/iceberg/_record_ice_procs_route_1_oracle.py \
         --warehouse /tmp/procs-oracle-wh record
     ... check
 
@@ -34,7 +35,7 @@ from typing import Any
 
 import pyarrow.parquet as parquet
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 

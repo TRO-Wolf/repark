@@ -834,7 +834,7 @@ def test_no_numpy_import_in_ml_fit_modules() -> None:
     ``repark[ml-ext]`` path (lazy ``require_numpy``). Native estimators remain
     under the M3 Rust rule — no numpy in non-ext modules.
     """
-    root = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "ml"
+    root = Path(__file__).resolve().parents[2] / "src" / "repark" / "spark" / "ml"
     banned = re.compile(r"^\s*(import numpy|from numpy)")
     offenders: list[str] = []
     for path in root.rglob("*.py"):

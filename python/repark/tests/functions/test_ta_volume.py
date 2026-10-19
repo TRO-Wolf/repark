@@ -17,7 +17,7 @@ import pytest
 
 from repark import Column, ReparkSession, Window, ta
 
-_GOLDENS = Path(__file__).resolve().parents[3] / "crates" / "repark-ta" / "tests" / "goldens"
+_GOLDENS = Path(__file__).resolve().parents[4] / "crates" / "repark-ta" / "tests" / "goldens"
 
 
 def _golden(name: str) -> np.ndarray:

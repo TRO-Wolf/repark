@@ -30,7 +30,7 @@ _CATALOG = "ice_write_options_rp_1"
 _NAMESPACE = "ns"
 _ORACLE: dict[str, Any] = json.loads(
     (
-        Path(__file__).resolve().parents[2]
+        Path(__file__).resolve().parents[3]
         / "repark-parity/fixtures/torture/data/ice_write_options_rp_1/spark_rp_oracle.json"
     ).read_text(encoding="utf-8")
 )

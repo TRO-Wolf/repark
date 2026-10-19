@@ -21,7 +21,7 @@ Recipe (re-derivable)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_partition_value_goldens.py
+        .venv/bin/python python/repark/tests/writes/_record_partition_value_goldens.py
 
 Requires Java 17 (zulu-17) and network on the first Ivy resolve. Hold
 ``/tmp/grok-jvm-record.lock`` (MARKER=v4-<step>) for the whole run.
@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING, Any
 
 # Run as a script from anywhere: the corpus is a sibling module, imported by name so the
 # driver reads the SAME rows the suite asserts (never a copy).
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 if TYPE_CHECKING:
     import pyarrow as pa

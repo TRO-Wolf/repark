@@ -29,7 +29,7 @@ import pytest
 
 from repark.errors import AnalysisException
 
-_REPOS_ROOT = Path(__file__).resolve().parents[3]
+_REPOS_ROOT = Path(__file__).resolve().parents[4]
 _FIXTURE_SRC = (
     _REPOS_ROOT
     / "python"

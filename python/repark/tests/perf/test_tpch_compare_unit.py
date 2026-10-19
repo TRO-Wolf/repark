@@ -11,7 +11,7 @@ import sys
 import types
 from pathlib import Path
 
-_TPCH_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench" / "tpch"
+_TPCH_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench" / "tpch"
 
 
 def _compare_mod() -> object:

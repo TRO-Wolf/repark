@@ -718,7 +718,7 @@ def test_build_repark_engine_override_stops_the_active_session_and_rebuilds() ->
 
 #: The divergence registry — the SSOT for divergence *semantics* (this list mirrors it, never
 #: the other way round). Resolved from this file so the check is cwd-independent.
-_REGISTRY = Path(__file__).resolve().parents[3] / "docs" / "spark-sql-iceberg-parity.md"
+_REGISTRY = Path(__file__).resolve().parents[4] / "docs" / "spark-sql-iceberg-parity.md"
 
 #: A registry row opts into the live tier with a `live-mirror: <name>` bullet on its own line.
 #: Prose that merely *mentions* the field must not register as a row; the exact spelling is

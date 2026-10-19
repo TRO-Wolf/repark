@@ -40,7 +40,7 @@ from repark.errors import UnsupportedOperationException
 # The driver lives beside the other measurement harnesses, under
 # python/repark-parity/bench/. That tree is not on `repark_parity`'s import path, so it is
 # loaded as a synthetic package — the same shim `test_tpch_smoke.py` uses.
-_BENCH_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "bench"
+_BENCH_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "bench"
 
 # Small enough for a gate, large enough that every claim has something to bite on: six
 # MERGEs over two partitions leave twelve position-delete files, which is above the

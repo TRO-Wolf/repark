@@ -456,7 +456,7 @@ def test_gt1_docstring_examples_execute(spark: ReparkSession) -> None:
 
 def test_gt1_docstring_examples_are_not_bare_literals() -> None:
     """Mutation pin: restoring ``F.bin(13)`` in the docstring reds this."""
-    spark_dir = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark"
+    spark_dir = Path(__file__).resolve().parents[2] / "src" / "repark" / "spark"
     math_text = (spark_dir / "functions_math.py").read_text(encoding="utf-8")
     bitwise_text = (spark_dir / "functions_bitwise.py").read_text(encoding="utf-8")
     expr_text = (spark_dir / "functions_expr.py").read_text(encoding="utf-8")

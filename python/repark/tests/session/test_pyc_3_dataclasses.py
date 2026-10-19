@@ -46,7 +46,7 @@ _CLAUSE_SHAPES: tuple[dict[str, object], ...] = (
 
 
 def _dataclass_exception_keys() -> list[str]:
-    conventions = Path(__file__).resolve().parents[3] / "scripts" / "check_python_conventions.py"
+    conventions = Path(__file__).resolve().parents[4] / "scripts" / "check_python_conventions.py"
     tree = ast.parse(conventions.read_text(encoding="utf-8"))
     found_table = False
     keys: list[str] = []
@@ -70,7 +70,7 @@ def _dataclass_exception_keys() -> list[str]:
 
 
 def _module_source(relative: str) -> str:
-    repo = Path(__file__).resolve().parents[3]
+    repo = Path(__file__).resolve().parents[4]
     return (repo / relative).read_text(encoding="utf-8")
 
 
@@ -330,7 +330,7 @@ def test_pyc_3_ingest_report_to_dict_identity() -> None:
 
 def test_pyc_3_pydantic_is_wheel_hard_dep() -> None:
     """C-010: pydantic is a [project] hard dep (not an extra) and is in uv.lock."""
-    repo = Path(__file__).resolve().parents[3]
+    repo = Path(__file__).resolve().parents[4]
     with (repo / "python" / "repark" / "pyproject.toml").open("rb") as handle:
         pyproject = tomllib.load(handle)
     hard_deps: list[str] = pyproject["project"]["dependencies"]

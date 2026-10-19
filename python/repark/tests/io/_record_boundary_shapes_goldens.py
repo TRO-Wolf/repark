@@ -11,7 +11,7 @@ Run it (needs a JVM and ``pyspark``, i.e. ``uv sync --extra record``)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_boundary_shapes_goldens.py
+        .venv/bin/python python/repark/tests/io/_record_boundary_shapes_goldens.py
 
 With ``--emit`` it prints paste-ready constructors (Spark, plus a divergent
 repark half) instead of only reporting PASS / MISMATCH / MISSING. The pyspark
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 def _repo_root() -> Path:
     """Repository root (this file lives at python/repark/tests/)."""
-    return Path(__file__).resolve().parents[3]
+    return Path(__file__).resolve().parents[4]
 
 
 def _pinned_pyspark_coordinate() -> str:

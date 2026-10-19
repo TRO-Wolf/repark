@@ -319,7 +319,7 @@ def test_registry_wording_distinguishes_unreachable_from_deferred_cost() -> None
     """FNP-15 sections say unreachable; they must not classify as deferred-by-cost."""
     from pathlib import Path
 
-    registry = Path(__file__).resolve().parents[3] / "docs" / "spark-sql-iceberg-parity.md"
+    registry = Path(__file__).resolve().parents[4] / "docs" / "spark-sql-iceberg-parity.md"
     text = registry.read_text(encoding="utf-8")
     start = text.index("## 9. Declared-absent Spark functions")
     body = text[start:]

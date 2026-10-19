@@ -34,7 +34,7 @@ from repark import ReparkSession
 CATALOG = "wbc1"
 NAMESPACE = "ns"
 EVIDENCE = (
-    Path(__file__).resolve().parents[3] / "task" / "wo" / "write-body-carriers-1" / "evidence"
+    Path(__file__).resolve().parents[4] / "task" / "wo" / "write-body-carriers-1" / "evidence"
 )
 JSON_NAME = "main-cells.json"
 MARKDOWN_NAME = "main-cells.md"
@@ -275,7 +275,7 @@ def render_markdown(document: dict[str, Any]) -> str:
         "",
         f"Recorded {provenance['date']} on the main release module "
         f"(repark {provenance['repark']}, memory catalog) by "
-        "`python/repark/tests/_record_write_body_carriers_1_main.py`. "
+        "`python/repark/tests/writes/_record_write_body_carriers_1_main.py`. "
         f"Full texts and row values live in [{JSON_NAME}]({JSON_NAME}); "
         "these tables are a view over it. `s`/`r`/`f` are the snapshot count, "
         "row count and data-file count before `->` after.",

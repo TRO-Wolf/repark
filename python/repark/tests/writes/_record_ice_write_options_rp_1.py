@@ -34,12 +34,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
 FIXTURE_DIR = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "repark-parity/fixtures/torture/data/ice_write_options_rp_1"
 )
 ORACLE_FILE = FIXTURE_DIR / "spark_rp_oracle.json"

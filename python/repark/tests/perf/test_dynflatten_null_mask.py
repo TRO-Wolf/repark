@@ -16,7 +16,7 @@ import pytest
 from repark import ReparkSession
 from repark.spark.session import _reset_active_session_for_tests
 
-_DATASETS_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "datasets"
+_DATASETS_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "datasets"
 
 ROWS: dict[str, tuple[int, str, str]] = {
     "cartesian_legs_only": (

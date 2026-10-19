@@ -58,7 +58,7 @@ from _record_ice_nan_pushdown_1 import (
 
 _HERE = Path(__file__).resolve().parent
 _TRUTH = json.loads((_HERE / "ice_nan_pushdown_1_oracle.json").read_text(encoding="utf-8"))
-_FIXTURE_SRC = _HERE / "fixtures" / "ice_nan_pushdown_1"
+_FIXTURE_SRC = _HERE.parent / "fixtures" / "ice_nan_pushdown_1"
 _CANONICAL_ROOT = Path("/tmp/repark-ice-nan-pushdown-1/wh")
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live Spark cell skipped (routine CI is JVM-free)"

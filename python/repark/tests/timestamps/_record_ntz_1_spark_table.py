@@ -13,7 +13,7 @@ Run it (needs a JVM and ``pyspark`` 4.1.2, one JVM at a time)::
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=/tmp/sparkenv/lib/python3.12/site-packages \\
         /tmp/oc-worker/_lib/jvm-lock.sh .venv/bin/python \\
-        python/repark/tests/_record_ntz_1_spark_table.py
+        python/repark/tests/timestamps/_record_ntz_1_spark_table.py
 
 Re-running it re-derives every cell from live Spark and exits non-zero on drift;
 it rewrites the probe-side JSON and the fixture only when ``--rewrite`` is
@@ -44,7 +44,7 @@ _JAR = (
 )
 _HERE = Path(__file__).resolve().parent
 _PROBE_SIDE_JSON = Path("/tmp/oc-worker/direct/wo/ntz-1-probes/ntz-xc-spark.json")
-_FIXTURE_DIR = _HERE / "fixtures" / "ntz_1_spark_table"
+_FIXTURE_DIR = _HERE.parent / "fixtures" / "ntz_1_spark_table"
 _WALL = "2024-01-01 12:34:56.123456"
 
 

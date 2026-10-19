@@ -28,7 +28,7 @@ committed beside this module::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
-        .venv/bin/python python/repark/tests/_record_window_goldens.py
+        .venv/bin/python python/repark/tests/functions/_record_window_goldens.py
 
 It imports ``ROWS`` from THIS module and runs each row's own recipe, so the recorded golden and
 the asserted recipe cannot drift apart. Needs a JVM + ``pyspark`` (``uv sync --extra record``);
@@ -1119,7 +1119,7 @@ def test_window_row_matches_spark_or_still_diverges(row: WindowRow) -> None:
     # ----- table rows (equality or disclosure) ---------------------------------------------------
     assert row.spark is not None, (
         f"{row.name}: missing spark golden — run "
-        f"python/repark/tests/_record_window_goldens.py --emit and paste"
+        f"python/repark/tests/functions/_record_window_goldens.py --emit and paste"
     )
     actual = run_row(row, session)
 

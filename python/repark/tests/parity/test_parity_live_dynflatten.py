@@ -15,7 +15,7 @@ from repark_parity import assert_frames_equal
 
 def _dynflatten_bed() -> object:
     """Load the measurement-bed generator (datasets tree is not a hatch package)."""
-    datasets_dir = Path(__file__).resolve().parents[2] / "repark-parity" / "datasets"
+    datasets_dir = Path(__file__).resolve().parents[3] / "repark-parity" / "datasets"
     package_name = "repark_datasets"
     if package_name not in sys.modules:
         package = types.ModuleType(package_name)
@@ -26,7 +26,7 @@ def _dynflatten_bed() -> object:
 
 def _dynflatten_spark_flatten() -> object:
     """Load the Spark explode program used by the measurement driver."""
-    bench_dir = Path(__file__).resolve().parents[2] / "repark-parity" / "bench"
+    bench_dir = Path(__file__).resolve().parents[3] / "repark-parity" / "bench"
     if str(bench_dir) not in sys.path:
         sys.path.insert(0, str(bench_dir))
     from dynflatten.spark_flatten import spark_dynamic_flatten

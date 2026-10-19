@@ -47,6 +47,19 @@ pins.
 - [facade_catalog_oracle.json](facade_catalog_oracle.json) — Recorded Spark oracle (51 cells) read by `test_catalog_surface_1.py`.
 - [facade_session_oracle.json](facade_session_oracle.json) — Recorded Spark oracle (47 cells) read by `test_session_surface_1.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `test_production_file_size.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_profiles1_probe_rerun.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_pyc_1_nested_defs.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_pyc_2_nested_defs.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_pyc_3_dataclasses.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

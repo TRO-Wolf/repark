@@ -129,10 +129,14 @@ def test_cited_pins_exist_and_dec9_stays_open() -> None:
         (dml_rs, "g3e8_update_subquery_family_all_refuse"),
     ):
         assert _defines(rel, name), f"{rel}::{name}"
-    corpus = (_REPO / "python/repark/tests/test_decimal128_parity.py").read_text(encoding="utf-8")
+    corpus = (_REPO / "python/repark/tests/types/test_decimal128_parity.py").read_text(
+        encoding="utf-8"
+    )
     for row in ("div_same_precision_scale", "mul_38_20_plans_in_spark_refuses_in_repark"):
         assert f'"{row}"' in corpus, row
-    dml = (_REPO / "python/repark/tests/test_dml_subquery_parity.py").read_text(encoding="utf-8")
+    dml = (_REPO / "python/repark/tests/writes/test_dml_subquery_parity.py").read_text(
+        encoding="utf-8"
+    )
     assert 'name="update_in_subquery"' in dml
     text = _registry()
     assert "mul_38_20_plans_via_the_expr_planner" in text

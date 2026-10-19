@@ -126,6 +126,24 @@ pins.
 - [fnp_win_1_spark_oracle.json](fnp_win_1_spark_oracle.json) — Recorded Spark oracle (320 cells) read by `test_fnp_win_1.py`.
 - [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) — Recorded Spark oracle (42 cells) read by `test_unresolved_routine_1.py`.
 
+## Path expressions
+
+The move put every file here one level below the old flat directory. These files had a
+path expression repointed in the same unit and no other line changed:
+
+| file | change |
+|---|---|
+| `_record_float_agg_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_window_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_float_agg_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_fnp15_16_declared_refuse.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_functions_gt1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_log1p_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ta.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ta_volume.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ta_with_indicators.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_window_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

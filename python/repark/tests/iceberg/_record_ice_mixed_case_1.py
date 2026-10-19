@@ -3,13 +3,13 @@
 NOT a ``test_`` module: pytest never collects it. It creates a Spark-written
 Iceberg table with mixed-case columns, runs every ledger cell on live PySpark
 4.1.2 under ``spark.sql.caseSensitive`` false and true, and writes
-``python/repark/tests/ice_mixed_case_1_spark_oracle.json``. It also leaves the
+``python/repark/tests/iceberg/ice_mixed_case_1_spark_oracle.json``. It also leaves the
 warehouse in place so the operator can copy it to
 ``python/repark-parity/fixtures/torture/data/ice_mixed_case_1``. Run it (needs
 a JVM and ``pyspark``)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
-        /tmp/ib-build/.venv/bin/python python/repark/tests/_record_ice_mixed_case_1.py \\
+        /tmp/ib-build/.venv/bin/python python/repark/tests/iceberg/_record_ice_mixed_case_1.py \\
         /tmp/repark-ice-mixed-case-1
 
 Exit code 0 writes the oracle JSON next to this driver. It never edits the
@@ -25,7 +25,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _ORACLE_PATH = Path(__file__).resolve().parent / "ice_mixed_case_1_spark_oracle.json"
 
 _CREATE_TABLE = (

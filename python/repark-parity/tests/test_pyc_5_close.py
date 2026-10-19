@@ -114,7 +114,7 @@ def _function_return_annotation(path: Path, name: str) -> ast.expr | None:
 
 def test_pyc_5_door_and_guarded_have_return_annotations() -> None:
     """C-004: revert the two `-> object` annotations and this pin goes red."""
-    door_path = _REPO / "python" / "repark" / "tests" / "test_lrs4_door_domain.py"
-    guarded_path = _REPO / "python" / "repark" / "tests" / "test_polars_core.py"
+    door_path = _REPO / "python" / "repark" / "tests" / "functions" / "test_lrs4_door_domain.py"
+    guarded_path = _REPO / "python" / "repark" / "tests" / "dataframe" / "test_polars_core.py"
     assert _function_return_annotation(door_path, "door") is not None
     assert _function_return_annotation(guarded_path, "guarded") is not None

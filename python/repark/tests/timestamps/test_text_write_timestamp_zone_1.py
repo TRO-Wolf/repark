@@ -45,7 +45,7 @@ _DIVERGENCE_CELLS: list[dict[str, Any]] = [
     cell for cell in _FIXTURE["cells"] if "divergence" in cell
 ]
 
-_REPO_ROOT: Path = Path(__file__).resolve().parents[3]
+_REPO_ROOT: Path = Path(__file__).resolve().parents[4]
 _MOTOPY: Path = _REPO_ROOT / "target" / "u12" / "moto-venv" / "bin" / "python"
 _BUCKET: str = "text-write-timestamp-zone-1"
 _SHUFFLED_ROWS: int = 20_000

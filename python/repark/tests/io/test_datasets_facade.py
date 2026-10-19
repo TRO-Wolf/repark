@@ -38,7 +38,7 @@ from repark.spark.session import _reset_active_session_for_tests
 # Generator loading (bench sys.modules loader — the datasets tree is not a hatch package)
 
 # This file lives at python/repark/tests/ → the datasets tree is a peer under repark-parity.
-_DATASETS_DIR = Path(__file__).resolve().parents[2] / "repark-parity" / "datasets"
+_DATASETS_DIR = Path(__file__).resolve().parents[3] / "repark-parity" / "datasets"
 
 #: CI door is 64 rows at seed 42; the 1M CLI default is for local runs.
 ROWS = 64
