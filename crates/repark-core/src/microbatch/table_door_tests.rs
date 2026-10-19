@@ -34,11 +34,14 @@ pub(super) const ARMED_STALL_LOST: u8 = 4;
 
 pub(super) type LoadHook = Arc<dyn Fn(&TableIdent) -> BoxFuture<'static, ()> + Send + Sync>;
 
+pub(super) type LoadedHook = Arc<dyn Fn(&Table) -> BoxFuture<'static, ()> + Send + Sync>;
+
 pub(super) struct FaultCatalog {
     inner: Arc<dyn Catalog>,
     armed: AtomicU8,
     fail_next_load: AtomicBool,
     load_hook: Mutex<Option<LoadHook>>,
+    loaded_hook: Mutex<Option<LoadedHook>>,
     events: Mutex<Vec<String>>,
 }
 
@@ -68,6 +71,10 @@ impl FaultCatalog {
 
     pub(super) fn on_load(&self, hook: Option<LoadHook>) {
         *self.load_hook.lock().expect("the load hook") = hook;
+    }
+
+    pub(super) fn after_load(&self, hook: Option<LoadedHook>) {
+        *self.loaded_hook.lock().expect("the loaded hook") = hook;
     }
 }
 
@@ -136,7 +143,12 @@ impl Catalog for FaultCatalog {
                 "injected: the reconcile reload failed",
             ));
         }
-        self.inner.load_table(table).await
+        let loaded = self.inner.load_table(table).await?;
+        let hook = self.loaded_hook.lock().expect("the loaded hook").clone();
+        if let Some(hook) = hook {
+            hook(&loaded).await;
+        }
+        Ok(loaded)
     }
 
     async fn drop_table(&self, table: &TableIdent) -> iceberg::Result<()> {
@@ -196,6 +208,7 @@ pub(super) async fn flaky(fixture: &Fixture) -> Arc<FaultCatalog> {
         armed: AtomicU8::new(ARMED_NONE),
         fail_next_load: AtomicBool::new(false),
         load_hook: Mutex::new(None),
+        loaded_hook: Mutex::new(None),
         events: Mutex::default(),
     });
     fixture
