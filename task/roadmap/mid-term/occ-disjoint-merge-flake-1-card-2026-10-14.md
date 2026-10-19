@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-14. **Filed by:** Muse Spark (muse-spark-1.3-contributor), clerk, from the orchestrator's carried list.
 
-**Status:** open, not scheduled.
+**Status:** open. Measured 2026-10-18 by unit OCC-DISJOINT-MERGE-FLAKE-1 (legitimate ordering); waits on the owner's ruling on the pin's tolerance.
 
 **Retires:** when repeated runs settle whether the second winner is a product race or a test assumption, and the test or the product changes accordingly with a dated row.
 
@@ -64,3 +64,42 @@ drill cell: repeated replays under both isolation levels and through both doors,
 winner count of each run. It also asks whether the retry after a commit conflict runs the
 conflict check again. This follows a suggestion the owner passed on, 2026-10-16. It is not a
 ruling, and the card stays unscheduled until U-9's brief is set.
+
+## Seen twice more, then measured, 2026-10-18
+
+Two more CI sightings on 2026-10-18, same assertion and loser shape: `[2-serializable-dataframe]`
+at 19:39 UTC (run 39157964851) and `[3-serializable-dataframe]` at 20:35 UTC (run 39162834196,
+facade shard 2: 1 failed, 5739 passed in 149 s). All four sightings are the DataFrame door.
+
+The owner authorised the unit the same day. Its ledger is
+[occ-disjoint-merge-flake-1-ledger.md](../../ledgers/staging/occ-disjoint-merge-flake-1-ledger.md);
+the tables and the `path:line` reading live there.
+
+**Answer to the open question: legitimate ordering, not a product race.**
+
+- The commit path cannot land two MERGEs that pinned the same base. The fork validates on every
+  commit attempt against a fresh catalog load, the retry after `CatalogCommitConflicts`
+  included, and the in-memory catalog swaps the pointer under one lock against the base it
+  validated. The existing pin
+  `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs::disjoint_key_merges_on_an_unpartitioned_table_still_conflict_on_true`
+  lands the racing write after the victim's validation and before its swap; it is green.
+- A second winner appears when one MERGE loads its base after another has committed. That
+  schedule is serial, and both engines accept it. With one thread held back 300 ms, RePark
+  commits 2 of 8 in 75 of 80 runs over the eight cells. The late thread is always a winner. Its
+  MERGE call always follows the first winner's return. On v3 its snapshot rewrites the first
+  winner's deletion vector, so its scan read the first winner's snapshot. Live Spark 4.1.2 with
+  one thread held back 3 s commits 2 of 8 in 40 of 40 runs.
+- With no injection, the storm committed exactly 1 of 8 in 870 harness runs and 120 runs of the
+  real test id: idle, on 4 cores shared with three facade-suite processes, and with four
+  busy-loop hogs added. Spark committed 1 of 8 in 120 of 120 barrier runs. The CI double win did
+  not reproduce on this box.
+- Why the DataFrame door: both doors run the same `execute_merge`. The DataFrame door does more
+  work under the GIL between the barrier and the MERGE's table load, so its threads start later
+  and further apart. A stall of one thread longer than the winner's whole MERGE (40 ms or more
+  of slack here, less on a release wheel) makes the schedule serial. A full GC run on one thread
+  at the barrier made the SQL door commit 2 of 8 in 10 of 10 runs, so the SQL door is not
+  immune.
+
+**What changes:** nothing in the product and nothing in the pin. The pin's tolerance is the
+owner's ruling; the options and their costs are in the ledger's "Questions for the owner". The
+card stays open until that ruling.

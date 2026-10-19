@@ -2483,6 +2483,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   report's `database`, `catalog`, `warehouse` and `catalog_properties` values, go through
   `redact_property_value` (C-005, amended under ruling 122). `risk_tier: standard`. Branch
   `fix/pa-dbt-mismatch-redact-1`.
+- [occ-disjoint-merge-flake-1-ledger.md](occ-disjoint-merge-flake-1-ledger.md) —
+  **OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-18), READING:** why eight concurrent disjoint
+  MERGEs sometimes commit two. The commit path cannot land two MERGEs on one base (C-001,
+  with `path:line`). The storm commits 1 of 8 in every natural replay here (C-002). A second
+  winner is a MERGE that loaded its base after the first commit, shown by timestamps and the
+  v3 deletion-vector rewrite (C-003). Live Spark splits the same way (C-004). The doors differ
+  only before the MERGE starts (C-005). The pin's tolerance is OPEN for the owner (C-006).
+  `risk_tier: standard`. Branch `fix/occ-disjoint-merge-flake-1`.
 - [mb-fence-body-flake-1-ledger.md](mb-fence-body-flake-1-ledger.md) —
   **MB-FENCE-BODY-FLAKE-1 (2026-10-18), the two-driver fence pin's CI failure:** step 0
   found a product gap, not an over-asserting pin. `enter_scope` loaded the sink before it

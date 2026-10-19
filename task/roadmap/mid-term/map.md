@@ -930,7 +930,7 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-15) it also retires row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE, the cells
   that match no row.
 - [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
-  OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
+  OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open; measured 2026-10-18):**
   `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of
   8 on CI (2026-10-07) where Spark's recording commits 1; losers keep the expected
   `Found conflicting files … matching TRUE` shape. The test fires eight MERGEs on
@@ -939,6 +939,10 @@ declines it (a dated ruling in the intake, then the archive).
   Open question: product race or test assumption. Unmeasured until N repeated runs.
   Seen again 2026-10-16 as `[3-snapshot-dataframe]` (PR #1085 CI, 2 of 8); on the
   orchestrator's list as a U-9 drill cell (an owner-relayed suggestion, not a ruling).
+  Measured 2026-10-18 (unit ledger `occ-disjoint-merge-flake-1-ledger.md`): legitimate
+  ordering, not a product race. The commit path cannot land two MERGEs on one base; a
+  second winner is a MERGE that loaded its base after the first commit. Spark does the same
+  under that schedule. The pin's tolerance waits on an owner ruling.
 - [mtime-metadata-pick-1-card-2026-10-14.md](mtime-metadata-pick-1-card-2026-10-14.md) — **card
   MTIME-METADATA-PICK-1 (2026-10-14, open, not scheduled):** every remaining file under
   `python/repark/tests/` that orders or picks Iceberg metadata files by `st_mtime` /
