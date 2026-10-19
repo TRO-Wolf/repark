@@ -22,6 +22,8 @@ from repark import ReparkSession
 from repark.errors import AnalysisException, IllegalArgumentException, PySparkException
 from repark.spark.session import _reset_active_session_for_tests
 
+pytestmark = pytest.mark.slow
+
 FIXTURE: dict[str, Any] = json.loads(
     Path(__file__).with_name("ice_tt_resolve_1_spark_oracle.json").read_text(encoding="utf-8")
 )

@@ -50,6 +50,8 @@ from repark.errors import (
     PySparkException,
 )
 
+pytestmark = pytest.mark.slow
+
 NS = "mem.ns"
 SEED = "INSERT INTO {t} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (3, 'c', 'x')"
 SEEDED = [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"]]

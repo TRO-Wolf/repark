@@ -12,7 +12,7 @@ import sys
 
 import pytest
 
-pytestmark = pytest.mark.xdist_group("test_deep_subquery_expression_1")
+pytestmark = [pytest.mark.slow, pytest.mark.xdist_group("test_deep_subquery_expression_1")]
 
 _WORKER = """
 import json

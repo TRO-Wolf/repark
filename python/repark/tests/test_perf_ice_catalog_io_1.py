@@ -11,6 +11,8 @@ import pytest
 
 from repark import ReparkSession, _native
 
+pytestmark = pytest.mark.slow
+
 _CACHE_KEY = "repark.iceberg.metadataCache"
 _ENTRIES_KEY = "repark.iceberg.metadataCacheEntries"
 _CACHE_KEY_ALT = "repark.iceberg.metadata_cache"

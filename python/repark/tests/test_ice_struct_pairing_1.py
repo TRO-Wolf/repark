@@ -10,6 +10,8 @@ import pytest
 
 from repark.spark.session import _reset_active_session_for_tests
 
+pytestmark = pytest.mark.slow
+
 HERE = Path(__file__).resolve().parent
 ORACLE = json.loads((HERE / "ice_struct_pairing_1_spark_oracle.json").read_text("utf-8"))
 MAIN = json.loads((HERE / "ice_struct_pairing_1_main.json").read_text("utf-8"))

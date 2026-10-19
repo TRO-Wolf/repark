@@ -12,6 +12,7 @@ dev = [
   "ruff>=0.15.22,<0.16",
   "pytest>=9.1.1",
   "pytest-xdist>=3.6,<4",
+  "pytest-timeout>=2.3,<3",
   "maturin>=1.14.1,<2",
   "pandas>=2.1",
   "duckdb==1.5.5",

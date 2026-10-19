@@ -14,6 +14,8 @@ import repark.spark.session as session_module
 from repark import ReparkSession
 from repark.errors import PySparkException
 
+pytestmark = pytest.mark.slow
+
 _BASE_COLUMNS: tuple[str, ...] = (
     "id",
     "md5(cast(id as string)) AS h",
