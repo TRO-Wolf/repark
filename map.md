@@ -165,6 +165,12 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   the local facade stage tests the optimisation level CI tests; measured on main `476586cd`: 24 min
   under eight workers against 69 min for the debug build, identical pass, skip and xfail counts.
   `FACADE_PROFILE=dev` restores the debug build; `make develop` and `parity-live` are unchanged.
+  **FACADE-XDIST-SCHED-1 (2026-10-19):** the pytest line runs `-n $(FACADE_WORKERS)` (default 16)
+  with `--dist loadgroup --maxschedchunk=8`: xdist's default `load` scheduler hands each worker a
+  contiguous block of 323 tests, which stacks the heavy alphabetical neighbours on one worker and
+  rebuilds every module-scoped fixture on each worker that draws a cell; small chunks plus one
+  `xdist_group` per thousand-filter battery keep each battery's 342 s module fixture on one worker.
+  Measured on main `3beb0a61`: 23:53 under `-n 8 load` → 6:41 under this line, same counts.
 - `repo-manifest.toml` — the **machine-readable structural facts**: the component inventory
   (path / layer / status for every crate, delivered and planned), the current phase, the
   canonical gate commands, and the documentation index (which carries `divergences` →

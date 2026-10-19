@@ -82,6 +82,7 @@ jobs:
     name: facade shard ${{ matrix.shard }}
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -110,7 +111,7 @@ jobs:
             /\/test_deep_filter_chain_crash_1\.py$/ { if (s == 5) print; next }
             /\/test_ice_tsns_type_planner_1\.py$/ { if (s == 6) print; next }
             { n++; if (n % 4 == s) print }')
-          /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --durations=25
+          /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --dist loadgroup --maxschedchunk=8 --durations=25
 
   dbt:
     name: dbt-adapter tests

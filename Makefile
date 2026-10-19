@@ -24,6 +24,7 @@
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 MATURIN := uvx maturin@1.14.1
 FACADE_PROFILE ?= ci
+FACADE_WORKERS ?= 16
 RUFF   := uvx ruff@0.15.22
 PYTHON ?= python
 TORTURE_TIER ?= ci
@@ -277,14 +278,14 @@ py-test-facade: ## Facade tests against the real native module (provisions extra
 	@# could re-sync over maturin's editable install.
 	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop --profile $(FACADE_PROFILE)
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
-		uv run --no-project python -m pytest python/repark/tests -q -n 8
+		uv run --no-project python -m pytest python/repark/tests -q -n $(FACADE_WORKERS) --dist loadgroup --maxschedchunk=8
 
 .PHONY: py-test-facade-fast
 py-test-facade-fast: ## Facade tests minus the `slow` tier (19 files, 82 % of suite time); CI still runs everything
 	uv sync --locked $(FACADE_EXTRAS) --no-install-package repark
 	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop --profile $(FACADE_PROFILE)
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
-		uv run --no-project python -m pytest python/repark/tests -q -n 8 -m "not slow"
+		uv run --no-project python -m pytest python/repark/tests -q -n $(FACADE_WORKERS) --dist loadgroup --maxschedchunk=8 -m "not slow"
 
 .PHONY: py-test-dbt
 py-test-dbt: ## dbt-adapter suite (python/dbt-repark) — needs the native module py-test-facade builds; see python/dbt-repark/tests/map.md
