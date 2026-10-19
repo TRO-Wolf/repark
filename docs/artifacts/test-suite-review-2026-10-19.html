@@ -1,0 +1,176 @@
+<title>Test Suite Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#F2F5F7;--fg:#13202A;--muted:#55646F;--line:#D3DCE2;--card:#FFFFFF;--accent:#0E6C88;--accent-soft:#D8EAF0;--green:#1F7A4D;--green-soft:#DCEFE4;--amber:#9A6A0B;--amber-soft:#F6EBD0;--red:#A3362C;--red-soft:#F4DCD8;--hold:#4C5A66;--hold-soft:#E2E7EB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1418;--fg:#E6EDF1;--muted:#9AAAB5;--line:#23303A;--card:#141C22;--accent:#4DB1CF;--accent-soft:#12303B;--green:#5CC28E;--green-soft:#15302A;--amber:#E0B35A;--amber-soft:#3A2E12;--red:#E57F72;--red-soft:#3B1D1A;--hold:#A5B2BC;--hold-soft:#1F2A32;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1418;--fg:#E6EDF1;--muted:#9AAAB5;--line:#23303A;--card:#141C22;--accent:#4DB1CF;--accent-soft:#12303B;--green:#5CC28E;--green-soft:#15302A;--amber:#E0B35A;--amber-soft:#3A2E12;--red:#E57F72;--red-soft:#3B1D1A;--hold:#A5B2BC;--hold-soft:#1F2A32;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;margin:0;padding-block:28px 56px;padding-inline:clamp(16px,4vw,48px)}
+main{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.1}
+h2{font-size:20px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:12px}
+h3{font-size:16px;margin-bottom:6px}
+p{margin:0 0 10px;max-width:68ch}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:6px}
+.meta{color:var(--muted);font-size:13px;margin-top:8px}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.92em}
+.chip{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.g{background:var(--green-soft);color:var(--green)}.a{background:var(--amber-soft);color:var(--amber)}.r{background:var(--red-soft);color:var(--red)}.h{background:var(--hold-soft);color:var(--hold)}.t{background:var(--accent-soft);color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.tile .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.tile .n small{font-size:16px;color:var(--muted);font-weight:500}
+.tile .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.tile .d{font-size:12.5px;margin-top:6px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;background:var(--accent-soft)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:10px;background:var(--line);border-radius:2px;position:relative;min-width:120px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:2px}
+.bar i.r{background:var(--red)}.bar i.a{background:var(--amber)}.bar i.g{background:var(--green)}
+ul,ol{margin:0 0 10px;padding-left:20px}li{margin-bottom:5px;max-width:72ch}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.note{background:var(--card);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;min-width:0}
+.note.q{border-left-color:var(--amber)}
+.src{font-size:12.5px;color:var(--muted)}
+.src li{margin-bottom:3px}
+pre{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;margin:0 0 10px}
+</style>
+<main>
+<header>
+<div class="kicker">RePark · facade test suite · review</div>
+<h1>Where the facade suite's minutes go, what sessions cost, and how the tree compares with Polars and Sail</h1>
+<div class="meta">Measured 2026-10-19 on main <span class="mono">3beb0a61</span> with the ci-profile native module, on this box under the 26-core cap, box otherwise quiet. Reference clones: Polars <span class="mono">e75c7d37</span> and Sail <span class="mono">1a449ec4</span> under the research directory. Every figure is a measurement unless marked <span class="chip a">est</span>. This revisits the 2026-10-03 test-speed ruling at your request; nothing here changes that ruling until you say so.</div>
+</header>
+
+<section>
+<h2>The short version</h2>
+<div class="tiles">
+<div class="tile"><div class="n">0.4 <small>ms</small></div><div class="l">a fresh RePark session</div><div class="d">consolidating sessions cannot save time; 20,000 of them cost eight seconds</div></div>
+<div class="tile"><div class="n">62 <small>min</small></div><div class="l">of test time inside the suite</div><div class="d">against 190 to 420 worker-minutes the runs had available</div></div>
+<div class="tile"><div class="n">82 <small>%</small></div><div class="l">of that time in 20 of 530 files</div><div class="d">the median file takes a third of a second</div></div>
+<div class="tile"><div class="n">24 <small>→</small> 6.7 <small>min</small></div><div class="l">facade wall, no assertion touched</div><div class="d">sixteen workers, two scheduler flags, two one-line marks</div></div>
+<div class="tile"><div class="n">290</div><div class="l">near-identical local session fixtures</div><div class="d">in 300 of 535 files; no shared one in conftest</div></div>
+<div class="tile"><div class="n">535 <small>+ 351</small></div><div class="l">test files plus oracles, data and helpers in one flat directory</div><div class="d">Polars has 18 areas; Sail has 20</div></div>
+</div>
+</section>
+
+<section>
+<h2>1 · Where the time goes</h2>
+<p>A JUnit report from a sixteen-worker run records every test's own time, setup included. The suite holds 20,710 cases and 3,709 seconds of test time. Two families and twenty files are the suite's shape; everything else is noise.</p>
+<div class="tw"><table>
+<thead><tr><th>File</th><th class="num">Seconds</th><th class="num">Tests</th><th class="num">s / test</th><th>Share of the suite</th><th>What it is</th></tr></thead>
+<tbody>
+<tr><td class="mono">test_ice_tsns_type_planner_1</td><td class="num">893</td><td class="num">60</td><td class="num">14.9</td><td><div class="bar"><i class="r" style="width:24%"></i></div></td><td>the nanosecond type-planner census, each cell a full write-and-read against a typed twin</td></tr>
+<tr><td class="mono">test_ice_struct_pairing_1</td><td class="num">592</td><td class="num">2,458</td><td class="num">0.24</td><td><div class="bar"><i class="r" style="width:16%"></i></div></td><td>a 65-second module fixture replays every struct-pairing cell once, then 2,458 cheap assertions read it</td></tr>
+<tr><td class="mono">test_deep_subquery_expression_1</td><td class="num">343</td><td class="num">6</td><td class="num">57</td><td><div class="bar"><i class="r" style="width:9%"></i></div></td><td>a 342-second module fixture builds the thousand-filter chain and the 20,000-term OR</td></tr>
+<tr><td class="mono">test_ice_tsns_floor_doors_1</td><td class="num">300</td><td class="num">246</td><td class="num">1.2</td><td><div class="bar"><i class="a" style="width:8%"></i></div></td><td>nanosecond floor on every write door</td></tr>
+<tr><td class="mono">test_deep_filter_chain_crash_1</td><td class="num">169</td><td class="num">9</td><td class="num">19</td><td><div class="bar"><i class="a" style="width:5%"></i></div></td><td>a 170-second module fixture, nine assertions</td></tr>
+<tr><td class="mono">test_ice_tsns_merge_wall_1</td><td class="num">90</td><td class="num">356</td><td class="num">0.25</td><td><div class="bar"><i style="width:2%"></i></div></td><td>MERGE against the nanosecond wall</td></tr>
+<tr><td>next fourteen files</td><td class="num">655</td><td class="num"></td><td class="num"></td><td><div class="bar"><i style="width:18%"></i></div></td><td>deep re-verify, spill matrix, catalog I/O perf pin, struct pairing round 3, time-travel resolve</td></tr>
+<tr><td><strong>other 510 files</strong></td><td class="num"><strong>667</strong></td><td class="num">17,500</td><td class="num">0.04</td><td><div class="bar"><i class="g" style="width:18%"></i></div></td><td>the whole rest of the suite</td></tr>
+</tbody></table></div>
+<p class="meta">By family: <span class="mono">ice</span> 67 percent of test time (7,971 tests), <span class="mono">deep</span> 17 percent (24 tests), everything else 16 percent. Collection is not a cost: all 20,704 cases collect in 3.6 seconds.</p>
+</section>
+
+<section>
+<h2>2 · Why the wall is three times the arithmetic</h2>
+<p>Sixteen workers sharing 62 minutes of test time should finish in four. They took fifteen. The reasons are mechanical, and each was confirmed by an experiment rather than inferred.</p>
+<div class="two">
+<div class="note"><h3>Contiguous chunks put the heavy files on one worker</h3>
+<p>pytest-xdist's default <span class="mono">load</span> scheduler hands each worker an opening block of <span class="mono">len(tests) / workers / 4</span> consecutive cases, 323 here, and tops up in blocks of up to 647. Collection order is alphabetical by file, so the three nanosecond files that sit together (<span class="mono">tsns_floor_doors</span>, <span class="mono">tsns_merge_wall</span>, <span class="mono">tsns_type_planner</span>, 21 minutes of work) land on one or two workers while the rest sit idle. CI's shard 6 exists for exactly this reason; this is the same effect inside a shard.</p></div>
+<div class="note"><h3>Module fixtures are rebuilt on every worker that draws a cell</h3>
+<p>A module-scoped fixture is built once per worker per module. When a module's parametrised cells are spread across workers, each worker builds it. The struct-pairing replay showed up fifteen times in the slowest-durations list at 24 workers, 65 to 79 seconds each; the deep-subquery fixture was built on four workers under work stealing, 25 worker-minutes for six tests. 34 files carry a module- or session-scoped fixture; 20 of those also parametrise.</p></div>
+<div class="note"><h3>Each worker thinks it owns the box</h3>
+<p>The engine's Tokio runtime sizes itself to the visible cores and DataFusion's partition count defaults to the same, so sixteen workers plan sixteen-by-26-way parallel queries on 26 cores. That is why 24 workers ran slower than 16 under the default scheduler. A global four-partition cap through <span class="mono">REPARK_CONFIG</span> shaved a minute but broke 71 tests that set or count partitions themselves, so it is not a knob to turn globally.</p></div>
+<div class="note"><h3>What it is not</h3>
+<p>Not fsync: 785 calls in 98 seconds of Iceberg tests cost 42 milliseconds in total. Not sleeps: the suite's 32 sleep calls add up to about ten seconds. Not session construction: 0.4 milliseconds after the per-test reset, 0.25 seconds for the first query in a process, 22 milliseconds for a small <span class="mono">createDataFrame</span> plus <span class="mono">collect</span>.</p></div>
+</div>
+</section>
+
+<section>
+<h2>3 · The experiments</h2>
+<p>Same suite, same module, same box, one variable at a time. Counts were identical on every green run: 20,066 passed, 493 skipped, 151 xfailed.</p>
+<div class="tw"><table>
+<thead><tr><th>Scheduler</th><th class="num">Workers</th><th class="num">Wall</th><th class="num">CPU, user</th><th>Reading</th></tr></thead>
+<tbody>
+<tr><td><span class="mono">load</span> (today's Makefile)</td><td class="num">8</td><td class="num">23:53</td><td class="num">38 min</td><td>yesterday's baseline, #1110</td></tr>
+<tr><td><span class="mono">load</span></td><td class="num">16</td><td class="num">14:55</td><td class="num">45 min</td><td>the tail is one worker holding the nanosecond files</td></tr>
+<tr><td><span class="mono">load</span></td><td class="num">24</td><td class="num">17:32</td><td class="num">47 min</td><td>slower: oversubscription plus more fixture rebuilds</td></tr>
+<tr><td><span class="mono">worksteal</span></td><td class="num">16</td><td class="num">11:16</td><td class="num">69 min</td><td>idle workers take from busy ones; the deep-subquery fixture was built four times</td></tr>
+<tr><td><span class="mono">worksteal</span> + 4-partition cap</td><td class="num">16</td><td class="num">10:27</td><td class="num">64 min</td><td><span class="chip r">71 red</span> tests that set or count partitions; not viable globally</td></tr>
+<tr><td><span class="mono">worksteal</span></td><td class="num">24</td><td class="num">10:56</td><td class="num">79 min</td><td>twenty seconds for eight more workers</td></tr>
+<tr><td><span class="mono">load --maxschedchunk=8</span></td><td class="num">16</td><td class="num">16:53</td><td class="num">51 min</td><td>worse than the default: small chunks spread the deep modules too, so both fixtures were built twice</td></tr>
+<tr><td><span class="mono">loadgroup --maxschedchunk=8</span>, the two deep modules pinned to one worker each</td><td class="num">16</td><td class="num"><strong>6:41</strong></td><td class="num">50 min</td><td><strong>at the floor.</strong> The deep fixtures are built once each; every other test is spread eight at a time</td></tr>
+</tbody></table></div>
+<p>The floor under any scheduler is the longest single item: the 342-second deep-subquery fixture plus its six tests, about six minutes. Getting under that means splitting that fixture's work, which the 2026-10-03 ruling's CI-2 clause already allows at clerk grade.</p>
+</section>
+
+<section>
+<h2>4 · Session consolidation, revisited</h2>
+<p>The 2026-10-03 ruling closed this as a speed item, and the measurement agrees: a session is free. What the survey found is an organisation problem wearing a performance costume.</p>
+<ul>
+<li><strong>300 of 535 files define their own session fixture.</strong> 290 of them normalise to 89 distinct bodies; 74 are byte-identical apart from the app name (<span class="mono">builder.appName().getOrCreate()</span>, yield, stop). 209 call sites add a <span class="mono">.config()</span> and genuinely need their own session.</li>
+<li><strong>conftest has no RePark session fixture at all.</strong> Its only session-scoped fixture is the live PySpark oracle engine. An autouse fixture resets the process-wide active session around every test, so independent sessions are already the contract; a shared fixture would be function-scoped and change nothing about isolation.</li>
+<li><strong>What a shared fixture would buy:</strong> one place to set the warehouse, the temp directory and any future default; new files from any worker tier that look alike; roughly a thousand lines gone. <strong>What it would not buy:</strong> a single second of wall time.</li>
+<li><strong>What Sail does:</strong> one module-scoped <span class="mono">spark</span> fixture in a package conftest, shared by code tests and doctest transcripts. Polars has no session concept and builds frames inline.</li>
+</ul>
+<p><strong>Recommendation.</strong> Add <span class="mono">spark</span> and <span class="mono">spark_with_warehouse(tmp_path)</span> fixtures to conftest and have new files use them; leave the 290 existing copies alone unless you want a mechanical clerk pass over the 74 identical ones. Not a unit on its own; it rides along with the config change in section 6.</p>
+</section>
+
+<section>
+<h2>5 · How the tree compares</h2>
+<div class="tw"><table>
+<thead><tr><th></th><th>RePark <span class="mono">python/repark/tests</span></th><th>Polars <span class="mono">py-polars/tests</span></th><th>Sail <span class="mono">python/pysail/tests</span></th></tr></thead>
+<tbody>
+<tr><td>Layout</td><td>one flat directory: 535 test files, 111 oracle JSONs, 132 data files, 108 helper modules, one fixtures subdirectory</td><td><span class="mono">unit/</span> split into 18 areas by API surface (operations 123 files, io 42, sql 34, functions 29, lazyframe 26, datatypes 22, …); <span class="mono">benchmark/</span> and <span class="mono">docs/</span> apart</td><td>20 directories by Spark subsystem (function, dataframe, dml, catalog, iceberg, delta, streaming, udf, …); integration suites under <span class="mono">catalog/</span> deselected by default</td></tr>
+<tr><td>Naming</td><td>185 files named after a unit or ticket (<span class="mono">test_ice_views_3_alter</span>, <span class="mono">test_attr_id_1_sm2_dupexport</span>); the rest by topic</td><td>by feature (<span class="mono">test_join.py</span>, <span class="mono">test_parquet.py</span>); largest file 4,577 lines</td><td>by feature; 444 Gherkin feature files hold 3,784 scenarios, 43 doctest transcripts, YAML snapshots beside them</td></tr>
+<tr><td>Fixtures</td><td>one conftest; 300 files carry a local session fixture; 44 module-scoped, 5 session-scoped</td><td>8 conftests; frame and format fixtures, no engine session</td><td>16 conftests; package-scoped server, module-scoped session, doctest namespace injection</td></tr>
+<tr><td>pytest config</td><td>none: one registered marker (<span class="mono">perf</span>), no strict markers, no xfail_strict, no timeout, no tiers</td><td><span class="mono">--strict-markers</span>, <span class="mono">xfail_strict</span>, <span class="mono">filterwarnings = error</span>, <span class="mono">--dist loadgroup</span>, ten markers; default run is <span class="mono">-m "not slow and not write_disk and not release …"</span>; 321 tests marked write_disk, 115 slow</td><td>configured in conftest so <span class="mono">pytest --pyargs pysail</span> works on an installed wheel; <span class="mono">integration</span> marker deselected by default</td></tr>
+<tr><td>Oracle</td><td>recorded Spark 4.1.2 JSON cells, replayed by assertion code in each file</td><td>none; property tests via Hypothesis in 67 files</td><td>snapshot files (syrupy) and doctest output; same JVM Spark run against the same features in CI</td></tr>
+<tr><td>Size</td><td>8,217 functions, 20,710 cases, 26 MB on disk</td><td>7,121 functions in 393 files</td><td>1,069 functions plus 3,784 scenarios in 154 files</td></tr>
+<tr><td>Scheduling</td><td><span class="mono">-n 8</span> default load</td><td><span class="mono">-n auto --dist loadgroup</span>, 16 <span class="mono">xdist_group</span> marks, a 60-second per-query timeout env</td><td>serial by default</td></tr>
+</tbody></table></div>
+<p>Two things in the comparison matter more than the rest. Polars keeps a fast inner loop by <em>tiering</em>, not by having fewer tests: the default command skips what is slow or writes to disk, and CI runs everything. Sail keeps the suite navigable by <em>subsystem directories with their own conftest</em>, so a session fixture is written once per area. RePark has neither, and its one directory is now larger than both of theirs put together.</p>
+</section>
+
+<section>
+<h2>6 · What to do, in order</h2>
+<div class="tw"><table>
+<thead><tr><th>#</th><th>Change</th><th class="num">Saves</th><th>Touches</th><th>Risk</th><th>Grade</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>Scheduler flags.</strong> <span class="mono">--dist loadgroup --maxschedchunk=8</span> in the Makefile's facade target, and the same flag on the CI shards (four workers each, same chunking effect).</td><td class="num">24 → 6.7 min with item 2</td><td><span class="mono">Makefile</span>, <span class="mono">smoke.yml</span></td><td><span class="chip g">none</span> same tests, same assertions</td><td>clerk</td></tr>
+<tr><td>2</td><td><strong>Pin the two deep batteries to one worker each</strong> with <span class="mono">xdist_group</span>, so their 342- and 170-second fixtures are built once per run instead of once per worker that draws a test.</td><td class="num">measured together with item 1</td><td>two test files, one line each</td><td><span class="chip g">none</span></td><td>clerk</td></tr>
+<tr><td>3</td><td><strong>A pytest configuration.</strong> Register markers and turn on <span class="mono">--strict-markers</span> and <span class="mono">xfail_strict</span>; pin <span class="mono">pytest-timeout</span> with a generous per-test ceiling so a hang fails in minutes (the facade shard that hung for fifty minutes on 10-18 would have failed at the ceiling); keep <span class="mono">--durations</span> on locally. Add the shared session fixtures from section 4 in the same PR.</td><td class="num">hangs; drift</td><td><span class="mono">pyproject.toml</span>, <span class="mono">conftest.py</span>, <span class="mono">uv.lock</span></td><td><span class="chip a">low</span> strict markers will name every unregistered mark on the first run; each is a finding</td><td>clerk</td></tr>
+<tr><td>4</td><td><strong>A slow tier for the inner loop.</strong> Mark the twenty files that hold 82 percent of the time <span class="mono">slow</span>. <span class="mono">make py-test-facade</span> runs everything as today; a new <span class="mono">py-test-facade-fast</span> runs <span class="mono">-m "not slow"</span> for iteration. CI is unchanged.</td><td class="num">~11 of 11 min, inner loop only <span class="chip a">est</span></td><td>twenty <span class="mono">pytestmark</span> lines, <span class="mono">Makefile</span></td><td><span class="chip g">none</span> to the gate; the full run stays the gate</td><td>clerk</td></tr>
+<tr><td>5</td><td><strong>Split the deep-subquery fixture's work</strong> so each of its six tests builds only what it asserts, or caches the built chain on disk per worker. This is the CI-2 clause of the 2026-10-03 ruling applied to the one file that is now the floor.</td><td class="num">up to 5 min of floor <span class="chip a">est</span></td><td>one test file</td><td><span class="chip a">low</span> assertions unchanged</td><td>clerk, per the 10-03 CI-2 clause</td></tr>
+<tr><td>6</td><td><strong>Subsystem directories.</strong> Move the 535 files into areas with their own conftest (iceberg, sql, dataframe, functions, types and time, io and sources, streaming, perf, deep, parity), oracle JSONs under <span class="mono">fixtures/&lt;area&gt;/</span>, helpers under <span class="mono">_lib/</span>. Pure <span class="mono">git mv</span> plus the map.md files; the CI shard lists, the dual-wire guard and the matrix-liveness check name paths and move with it.</td><td class="num">navigation, not minutes</td><td>every test file's path; <span class="mono">smoke.yml</span>; three guard scripts</td><td><span class="chip a">medium</span> a large mechanical diff; one PR per area keeps each reviewable</td><td>owner decision, then clerk</td></tr>
+</tbody></table></div>
+<p><strong>Not recommended.</strong> Adopting Sail's Gherkin or doctest style: RePark's recorded-oracle cells already play that role with a stronger oracle. A global partition cap: it breaks 71 tests. More than sixteen workers: measured, no gain. Rewriting the 290 local fixtures as a unit: no speed, real churn in files from four worker tiers.</p>
+</section>
+
+<section>
+<h2>7 · Decisions that are yours</h2>
+<div class="two">
+<div class="note q"><h3>1 · The 2026-10-03 ruling</h3><p>It said no test-migration and no fixture-consolidation units, CI-2 only on measured durations. Items 1 to 5 above stay inside it (flags, one-line marks, config, one file's fixture). Item 6 and any fixture migration do not. Say which parts of the ruling stand.</p></div>
+<div class="note q"><h3>2 · Items 1 to 4 now?</h3><p>Four clerk-grade PRs, each measured in its body, none touching an assertion. Together they take the local facade from 24 minutes to under seven minutes for the full run and a few minutes for the fast tier.</p></div>
+<div class="note q"><h3>3 · The directory move</h3><p>Yes, no, or later. If yes: all at once on a quiet day, or one area per PR.</p></div>
+<div class="note q"><h3>4 · The deep-subquery fixture</h3><p>It is the floor under every scheduler. Splitting it is the one change here that edits what a test builds, which is why it is listed separately under the CI-2 clause.</p></div>
+</div>
+</section>
+
+<section>
+<h2>Sources</h2>
+<ul class="src">
+<li>Measurement logs under the session scratchpad, <span class="mono">testeval/logs/</span>: <span class="mono">measure.log</span> (build, session cost, 16 and 24 workers, fsync strace), <span class="mono">junit16.xml</span> (per-test times), <span class="mono">measure2.log</span> (work stealing, partition cap), <span class="mono">measure3.log</span> (chunk size, groups).</li>
+<li><span class="mono">python/repark/tests/conftest.py</span>; the 535 test files' fixture definitions (regex survey); <span class="mono">crates/repark-python/src/deep_stack.rs</span> (runtime builder), <span class="mono">crates/repark-core/src/session.rs</span> and <span class="mono">config_file/wiring.rs</span> (<span class="mono">target_partitions</span>, <span class="mono">REPARK_CONFIG</span>).</li>
+<li>pytest-xdist <span class="mono">scheduler/load.py</span> as installed (initial chunk <span class="mono">len // nodes // 4</span>, top-ups to <span class="mono">len // nodes // 2</span>).</li>
+<li>Polars <span class="mono">py-polars/pyproject.toml</span>, <span class="mono">tests/unit/conftest.py</span>, <span class="mono">.github/workflows/test-python.yml</span>, <span class="mono">py-polars/Makefile</span>; Sail <span class="mono">python/pysail/tests/conftest.py</span>, <span class="mono">tests/spark/conftest.py</span>, feature and doctest files.</li>
+<li>Owner rulings: test speed 2026-10-03; CI-offload gate 2026-09-18; the CI speed board of 2026-10-18 and rundown of 2026-10-19.</li>
+<li>Authorship of the 538 added test files by commit trailer: Claude 309, Muse 85, Grok 54, Devin 23, GLM 16, unattributed 45.</li>
+</ul>
+</section>
+</main>
