@@ -159,6 +159,11 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **CI-SPEED-A (2026-10-18):** `py-test-facade` runs pytest with `-n 8` (eight `pytest-xdist`
   workers; CI's `smoke.yml` shards already run `-n 4`). The serial run took about 170 minutes on
   the 64-core box. `parity-live` stays serial and its dual-wire guard is unchanged.
+  **CI-SPEED-A item 7 (2026-10-18):** the same target builds the native module with
+  `maturin develop --profile ci` (`FACADE_PROFILE ?= ci`, the opt-level-2 profile CI's wheel uses), so
+  the local facade stage tests the optimisation level CI tests; measured on main `476586cd`: 24 min
+  under eight workers against 69 min for the debug build, identical pass, skip and xfail counts.
+  `FACADE_PROFILE=dev` restores the debug build; `make develop` and `parity-live` are unchanged.
 - `repo-manifest.toml` — the **machine-readable structural facts**: the component inventory
   (path / layer / status for every crate, delivered and planned), the current phase, the
   canonical gate commands, and the documentation index (which carries `divergences` →
