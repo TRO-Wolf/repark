@@ -23,6 +23,7 @@
 #   CARGO_AUDIT_VERSION     — cargo install pin in the rust-audit target + audit.yml
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 MATURIN := uvx maturin@1.14.1
+FACADE_PROFILE ?= ci
 RUFF   := uvx ruff@0.15.22
 PYTHON ?= python
 TORTURE_TIER ?= ci
@@ -274,7 +275,7 @@ py-test-facade: ## Facade tests against the real native module (provisions extra
 	@# prefers the PROJECT's environment over VIRTUAL_ENV — in a linked worktree it silently built
 	@# a second `.venv` from source (the maturin install above went unused), and everywhere it
 	@# could re-sync over maturin's editable install.
-	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
+	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop --profile $(FACADE_PROFILE)
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
 		uv run --no-project python -m pytest python/repark/tests -q -n 8
 
