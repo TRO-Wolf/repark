@@ -43,4 +43,4 @@ refusing everything.
 - Up: [src map](../map.md)
 - The door pins: `crates/repark-spark/src/tests/pa_local_fs_policy.rs`,
   `crates/repark-sql/tests/pa_local_fs_policy.rs`,
-  `python/repark/tests/test_pa_local_fs_policy_1.py`
+  `python/repark/tests/session/test_pa_local_fs_policy_1.py`

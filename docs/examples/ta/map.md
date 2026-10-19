@@ -7,7 +7,7 @@ as `repark = ReparkSession.builder…`; see [../map.md](../map.md).
 
 Spark has no TA kernels, so this family's oracle is the recorded C TA-Lib 0.4.0
 goldens under `crates/repark-ta/tests/goldens/` — the same little-endian `f64`
-`.bin` files `python/repark/tests/test_ta.py` and `test_ta_volume.py` pin
+`.bin` files `python/repark/tests/functions/test_ta.py` and `test_ta_volume.py` pin
 bit-identically, recorded over the 5000-row OHLCV fixture
 (`fixture_{open,high,low,close,volume}.bin`). Each example rebuilds that fixture
 as a `createDataFrame`, runs the kernel over `Window.orderBy("ts")`, and asserts
@@ -72,4 +72,4 @@ column is asserted bit-exact against a golden.
 
 - Up: [../map.md](../map.md)
 - Goldens: [../../../crates/repark-ta/tests/goldens/map.md](../../../crates/repark-ta/tests/goldens/map.md)
-- Pins: [../../../python/repark/tests/test_ta.py](../../../python/repark/tests/test_ta.py)
+- Pins: [../../../python/repark/tests/functions/test_ta.py](../../../python/repark/tests/functions/test_ta.py)

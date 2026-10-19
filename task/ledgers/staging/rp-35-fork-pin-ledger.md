@@ -31,18 +31,18 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Every expectation is read from the committed Spark 4.1.2
         recording; the recorder is committed and replayable.
-      artifacts: [python/repark/tests/ice_avro_name_1_spark_oracle.json, python/repark/tests/_record_ice_avro_name_1_oracle.py]
+      artifacts: [python/repark/tests/writes/ice_avro_name_1_spark_oracle.json, python/repark/tests/writes/_record_ice_avro_name_1_oracle.py]
     - id: AT-2
       status: ATTACKED
       evidence: Red before the bump is the inventory cell's measured read
         failure; the manifest-record pins fail if the raw name returns.
-      artifacts: [python/repark/tests/test_ice_avro_name_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_avro_name_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Ten names cover the sanitiser's branches (space, leading
         digit, punctuation, non-ASCII letters kept, surrogate pairs) plus
         two transforms and a valid control, on v2 and v3.
-      artifacts: [python/repark/tests/test_ice_avro_name_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_avro_name_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state is added.

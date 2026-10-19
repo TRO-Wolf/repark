@@ -50,7 +50,7 @@ fork, or knob-default changes. Outputs feed `task/write-bench-report-*.md`.
 | Tiny MERGE smoke | `…/run_write_bench.py --mode merge --rows 5000 --k 1,2 --no-cow --width narrow` |
 | Read human report (prior CTAS) | `../../../../task/write-bench-report-2026-08-06.md` |
 | Read r22 extension report | `../../../../task/write-bench-report-r22-extension.md` |
-| Unit pins (no SF1/1M wall) | `python/repark/tests/test_write_bench_unit.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
+| Unit pins (no SF1/1M wall) | `python/repark/tests/perf/test_write_bench_unit.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
 
 ## Debug
 

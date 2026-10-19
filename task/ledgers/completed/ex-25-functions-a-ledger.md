@@ -263,7 +263,7 @@ COVERAGE_ATTESTATION:
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Oracle: live PySpark 4.1.2 (ANSI on, UTC); probes under gitignored `scratch/ex25/`
-- Pins: [../../../python/repark/tests/test_examples_functions_a.py](../../../python/repark/tests/test_examples_functions_a.py) (20 tests for EX-FN-1..19)
+- Pins: [../../../python/repark/tests/test_examples_functions_a.py](../../../python/repark/tests/parity/test_examples_functions_a.py) (20 tests for EX-FN-1..19)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 (EX-FN-1..19 new; BL-17, FN-APPROXPCT-ACC-1 reused)
 - Siblings: [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md), [ex-23-ta-a-ledger.md](ex-23-ta-a-ledger.md)
 

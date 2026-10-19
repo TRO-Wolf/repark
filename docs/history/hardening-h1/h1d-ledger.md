@@ -28,7 +28,7 @@ its dead citations resolve.
 - **`crates/repark-spark/src/tests.rs`** — one new pin,
   `ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud`, so registry row REF-2 (which the
   `ref_ddl.rs` citation forces into §2.2) is not an unpinned row.
-- **`python/repark/tests/test_parity_live.py`** — the new machine-checked mirror,
+- **`python/repark/tests/parity/test_parity_live.py`** — the new machine-checked mirror,
   `test_disclosures_mirror_the_registry` (decision D-6 below).
 - **`STATUS.md`** — points at the registry; the case-folding entry is reduced to state + link.
 - **`repo-manifest.toml`** — `[documentation] divergences` indexes the registry, so a move or a
@@ -57,9 +57,9 @@ that describe the problem (`briefs/v2-engine-hardening.md:97`,
 | `crates/repark-spark/src/normalize.rs` | 158 | (no section) |
 | `python/repark/src/repark/session/session_core.py` | 142 | §8 |
 | `python/repark/src/repark/session/builder_conf.py` | 57 | §8 |
-| `python/repark/tests/test_dropin_disclosure.py` | 8 | §8 |
-| `python/repark/tests/test_errors.py` | 150 | §7 |
-| `python/repark/tests/test_sql_passthrough_parity.py` | 17 | §7 |
+| `python/repark/tests/session/test_dropin_disclosure.py` | 8 | §8 |
+| `python/repark/tests/session/test_errors.py` | 150 | §7 |
+| `python/repark/tests/sql/test_sql_passthrough_parity.py` | 17 | §7 |
 | `python/repark/tests/map.md` | 799, 945, 996 | §7, §8, §7 |
 
 **The count is right, and so is the site list** (8 in `crates/repark-spark/src/`, 2 in the facade
@@ -137,7 +137,7 @@ read before its section was written, so the section says what the citer claims:
 
 **Decision: YES.** `python/repark/tests/_live_parity.py::DISCLOSURES` is now the machine-checked
 mirror of the registry rows that claim a live mirror, checked by
-`python/repark/tests/test_parity_live.py::test_disclosures_mirror_the_registry` (always-on,
+`python/repark/tests/parity/test_parity_live.py::test_disclosures_mirror_the_registry` (always-on,
 JVM-free, both directions).
 
 Why yes:
@@ -233,8 +233,8 @@ E       AssertionError: the registry's live-mirrored rows and the DISCLOSURES li
 E       assert {'fillna_scal...ion_bypasses'} == {'fillna_scal...union_string'}
 E         Extra items in the right set:
 E         'int_union_string'
-python/repark/tests/test_parity_live.py:172: AssertionError
-FAILED python/repark/tests/test_parity_live.py::test_disclosures_mirror_the_registry
+python/repark/tests/parity/test_parity_live.py:172: AssertionError
+FAILED python/repark/tests/parity/test_parity_live.py::test_disclosures_mirror_the_registry
 1 failed in 0.41s
 PYTEST_EXIT=1
 ```
@@ -249,8 +249,8 @@ E       AssertionError: the registry's live-mirrored rows and the DISCLOSURES li
 E       assert {'fillna_scal...h_disclosure'} == {'fillna_scal...union_string'}
 E         Extra items in the left set:
 E         'no_such_disclosure'
-python/repark/tests/test_parity_live.py:172: AssertionError
-FAILED python/repark/tests/test_parity_live.py::test_disclosures_mirror_the_registry
+python/repark/tests/parity/test_parity_live.py:172: AssertionError
+FAILED python/repark/tests/parity/test_parity_live.py::test_disclosures_mirror_the_registry
 1 failed in 0.41s
 PYTEST_EXIT=1
 ```
@@ -264,8 +264,8 @@ E       AssertionError: a live-mirror name is claimed by two registry rows:
         ['fillna_scalar_numeric_nullability', 'filter_backtick_identifier',
          'filter_case_collision_bypasses', 'int_union_string', 'int_union_string']
 E       assert 5 == 4
-python/repark/tests/test_parity_live.py:167: AssertionError
-FAILED python/repark/tests/test_parity_live.py::test_disclosures_mirror_the_registry
+python/repark/tests/parity/test_parity_live.py:167: AssertionError
+FAILED python/repark/tests/parity/test_parity_live.py::test_disclosures_mirror_the_registry
 1 failed in 0.41s
 PYTEST_EXIT=1
 ```
@@ -278,8 +278,8 @@ unit exists to end, and it must be caught by *two* independent gates. Renamed th
 E       assert False
 E        +  where False = is_file()
 E        +    where is_file = PosixPath('…/docs/spark-sql-iceberg-parity.md').is_file
-python/repark/tests/test_parity_live.py:162: AssertionError
-FAILED python/repark/tests/test_parity_live.py::test_disclosures_mirror_the_registry
+python/repark/tests/parity/test_parity_live.py:162: AssertionError
+FAILED python/repark/tests/parity/test_parity_live.py::test_disclosures_mirror_the_registry
 1 failed in 0.40s
 PYTEST_EXIT=1
 ----- and the manifest gate:
@@ -350,18 +350,18 @@ unit: eight rows, no engine change, each row reusing the pin that already exists
 
 | # | Pin (the current authoritative description) | Class it would carry |
 |---|---|---|
-| 1 | `python/repark/tests/test_dogfood_gaps.py::test_divergence_timestamp_ltz_collect_passthrough` — "DIVERGENCE-1 (disclose, do not build session-tz machinery)" | DECLARED §4 — **check against H-1a first**: session-timezone work may retire or convert it |
-| 2 | `python/repark/tests/test_show_namespaces.py::test_show_namespaces_disclosed_divergences_fail_loud` — the no-`IN`/`FROM` form | DECLARED §2 (statement surface) |
+| 1 | `python/repark/tests/parity/test_dogfood_gaps.py::test_divergence_timestamp_ltz_collect_passthrough` — "DIVERGENCE-1 (disclose, do not build session-tz machinery)" | DECLARED §4 — **check against H-1a first**: session-timezone work may retire or convert it |
+| 2 | `python/repark/tests/session/test_show_namespaces.py::test_show_namespaces_disclosed_divergences_fail_loud` — the no-`IN`/`FROM` form | DECLARED §2 (statement surface) |
 | 3 | the same test's second disclosed divergence | DECLARED §2 (statement surface) |
-| 4 | `python/repark/tests/test_catalog_surface.py::test_show_tables_in_not_implemented_divergence` | DECLARED §2 (statement surface) |
-| 5 | `python/repark/tests/test_catalog_surface.py::test_list_databases_location_uri_none_divergence` | DECLARED §5 (facade drop-in) |
-| 6 | `python/repark/tests/test_interchange_parity.py::test_to_polars_round_trip_int32_widens_to_int64_divergence` | DECLARED §4 (type semantics) |
-| 7 | `python/repark/tests/test_interchange_parity.py::test_to_polars_round_trip_decimal_precision_widens_divergence` | DECLARED §4 (type semantics) |
-| 8 | `python/repark/tests/test_errors.py::test_python_arg_errors_runtime_error_divergence_is_deliberate` — "KNOWN DIVERGENCE, pinned so it is visible rather than accidental" | DECLARED §5 (facade drop-in — the `RuntimeError` base-class decision) |
+| 4 | `python/repark/tests/session/test_catalog_surface.py::test_show_tables_in_not_implemented_divergence` | DECLARED §2 (statement surface) |
+| 5 | `python/repark/tests/session/test_catalog_surface.py::test_list_databases_location_uri_none_divergence` | DECLARED §5 (facade drop-in) |
+| 6 | `python/repark/tests/io/test_interchange_parity.py::test_to_polars_round_trip_int32_widens_to_int64_divergence` | DECLARED §4 (type semantics) |
+| 7 | `python/repark/tests/io/test_interchange_parity.py::test_to_polars_round_trip_decimal_precision_widens_divergence` | DECLARED §4 (type semantics) |
+| 8 | `python/repark/tests/session/test_errors.py::test_python_arg_errors_runtime_error_divergence_is_deliberate` — "KNOWN DIVERGENCE, pinned so it is visible rather than accidental" | DECLARED §5 (facade drop-in — the `RuntimeError` base-class decision) |
 
 Two more that the same grep surfaces and that a sweep unit must **rule on rather than assume**:
 
-- `python/repark/tests/test_metadata_tables.py::test_unpartitioned_partition_column_divergence` —
+- `python/repark/tests/iceberg/test_metadata_tables.py::test_unpartitioned_partition_column_divergence` —
   "pin fork residue: empty partition column kept on unpartitioned tables (Java drops it)". This is
   a divergence from **Java Iceberg**, not from Apache Spark, so its home may be the fork's gap
   matrix rather than this registry.
@@ -536,7 +536,7 @@ MT-2, §2.2 residual note, §2.3 DML-3, §3 ID-1 wording, §6 boundary + exact-s
 BL-1, §8 preamble) · `STATUS.md` (boundary paragraph + both bullets) ·
 `crates/repark-spark/src/tests.rs` (REF-2 dynamic-span assertion + doc comment; MT-2 six-form
 loop) · `crates/repark-sql/tests/cross_door.rs` (discriminating refusal needle) ·
-`python/repark/tests/test_parity_live.py` (fail-closed near-miss probe) ·
+`python/repark/tests/parity/test_parity_live.py` (fail-closed near-miss probe) ·
 `briefs/v2-engine-hardening.md` (H-1b amendment) · map.md lockstep:
 `crates/repark-spark/src/`, `crates/repark-sql/tests/`, `python/repark/src/repark/`,
 `python/repark/tests/`, `briefs/` · this ledger (sweep queue + this section).

@@ -239,7 +239,7 @@ merge the two sorts when the outer sort refines the inner one is **OPEN for the 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | The reported statement answers no rows at one partition and 5 rows at 16 on main, in a `repark-core` session and on a bare DataFusion 54.1.0 `SessionContext`; the plans at 1, 2 and 16 are those of §2. | A Rust reproduction that runs DataFusion's own rule on a RePark session state, and the plan text. | PROVEN | `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` (stock: `0 []` at 1, `5 [4991..4995]` at 16; guarded: 5 at 1) and `reported_plan_keeps_the_inner_top_k_as_wide_as_skip_plus_fetch` (stock text `skip=4990, fetch=0` over `TopK(fetch=4990)`). The bare-context run is the 630-cell row of §3 (scratch probe, not kept in the tree: the stock-rule pins hold the same answers on RePark's state). |
-| C-002 | Through the facade the defect reproduces on main on the Spark-dialect SQL door, the native ANSI door and the DataFrame door, and every measured cell answers Spark's rows with the guard. | A module built from main's rule list and one built with the guard, the same probe on each; then pins on all three doors. | PROVEN | §3 facade table (47 / 23 / 18 wrong on main, 0 / 0 / 0 with the guard). `python/repark/tests/test_offset_nested_sort_1.py`: `test_spark_sql_door_answers_spark_rows` and `test_dataframe_door_answers_spark_rows` at 1, 2, 16 with value and Arrow type; `test_native_sql_door_answers_spark_rows` at 1, 2, 16 by value (the native door keeps DataFusion's own types, for example `uint64` for `row_number`). |
+| C-002 | Through the facade the defect reproduces on main on the Spark-dialect SQL door, the native ANSI door and the DataFrame door, and every measured cell answers Spark's rows with the guard. | A module built from main's rule list and one built with the guard, the same probe on each; then pins on all three doors. | PROVEN | §3 facade table (47 / 23 / 18 wrong on main, 0 / 0 / 0 with the guard). `python/repark/tests/dataframe/test_offset_nested_sort_1.py`: `test_spark_sql_door_answers_spark_rows` and `test_dataframe_door_answers_spark_rows` at 1, 2, 16 with value and Arrow type; `test_native_sql_door_answers_spark_rows` at 1, 2, 16 by value (the native door keeps DataFusion's own types, for example `uint64` for `row_number`). |
 | C-003 | The shape family is measured against live Spark 4.1.2: 73 statements, 21 of them wrong somewhere, 52 controls; every wrong cell is recorded (fold 1, 2026-10-08, added three: 70 statements, 20 wrong, 50 controls before). | The grid of §3 and its fixture. | PROVEN | `skipping_limit_grid.tsv` (73 lines: 12 `one-partition`, 9 `every-partition`, 52 `control`, the family being the memory-table behaviour); `grid_fixture_carries_every_recorded_cell` holds the counts and the reported statement's text. The brief's shapes are all present: OFFSET without LIMIT, LIMIT without OFFSET, OFFSET past the row count, a nested sort on a different key, under a projection, a filter, a UNION, over a join, over an Iceberg scan and a parquet scan, with and without TopK. |
 | C-004 | The defect is in DataFusion 54.1.0's `EnforceSorting` sort pushdown, which ignores `GlobalLimitExec::skip`; no RePark rule takes part; DataFusion 55.0.0 carries the same code. | The rule bisect, the bare-context reproduction, the source reading of §1. | PROVEN | §1. `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` and `stock_enforce_sorting_still_sorts_below_an_offset` swap only that one rule and get the wrong answers back at the recorded partition counts. The 55.0.0 claim is a source reading, not a run. |
 | C-005 | RePark's session installs DataFusion's recommended physical rule list with `EnforceSorting` wrapped by the guard, in the same position and under the same name, followed by the three RePark physical rules. | A pin on the installed rule names. | PROVEN | `guarded_rule_list_is_stock_datafusion_in_order_then_the_repark_rules`. |
@@ -314,7 +314,7 @@ Every cargo command ran under the build lock, on the final tree (the scratch pro
 | `make develop` | exit 0 |
 | `pytest python/repark/tests -k "limit or offset or sort or order" -n 8` | 677 passed, 43 skipped, 3 xfailed |
 | `pytest python/repark/tests -n 8` (the whole facade suite, as a regression check) | 15692 passed, 485 skipped, 153 xfailed, 0 failed |
-| `pytest python/repark/tests/test_offset_nested_sort_1.py` | 10 passed, 1 skipped (the live cell, without the live flag) |
+| `pytest python/repark/tests/dataframe/test_offset_nested_sort_1.py` | 10 passed, 1 skipped (the live cell, without the live flag) |
 | the live cell, `REPARK_PARITY_LIVE=1`, with `test_win_slide_1.py`'s live cells | 15 passed |
 | `ruff check .`, `ruff format --check .` (0.15.22) | clean |
 | `python3 scripts/check_rust_file_size.py` | 1124 files clean |
@@ -398,7 +398,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Clauses C-001..C-011 walked against behavior — the reproduction on stock DataFusion and on RePark's state, the three facade doors on a module built from main and one built with the guard, the 70-statement Spark grid over four sources at three partition counts, the rule list, the live cell and the gates.
-      artifacts: [task/ledgers/staging/offset-nested-sort-1-ledger.md, crates/repark-core/src/session/tests/skipping_limit.rs, python/repark/tests/test_offset_nested_sort_1.py]
+      artifacts: [task/ledgers/staging/offset-nested-sort-1-ledger.md, crates/repark-core/src/session/tests/skipping_limit.rs, python/repark/tests/dataframe/test_offset_nested_sort_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Boundary inputs run as grid cells — OFFSET 0, OFFSET past the row count with and without LIMIT, LIMIT 0, LIMIT past the end, a small offset, nested offsets, a skip with no fetch and a fetch with no skip, sorted and unsorted sources, one and many scan partitions.
@@ -417,7 +417,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The defect is a wrong row count and wrong rows; every cell compares the full ordered row list with Spark's, and the facade cells compare the Arrow types as well; statements without an OFFSET keep the stock plan text.
-      artifacts: [crates/repark-core/src/session/tests/skipping_limit.rs, python/repark/tests/offset_nested_sort_1_spark_oracle.json]
+      artifacts: [crates/repark-core/src/session/tests/skipping_limit.rs, python/repark/tests/dataframe/offset_nested_sort_1_spark_oracle.json]
     - id: AT-7
       status: ATTACKED
       evidence: No rule pass is added; a statement without an OFFSET gains one walk of the physical plan and keeps its plan; the measurement in section 6 puts the difference inside the noise floor; the one cost given up (a second small sort above an OFFSET under a refining sort) is recorded.

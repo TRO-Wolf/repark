@@ -141,7 +141,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Walked all twenty-two clauses against the diff and the runs. Every clause cites a Rust pin and, where the door differs, a Python pin and a replay verdict; the four add_files cells carry the fork-summary residue with its exact key.
-      artifacts: [crates/repark-spark/src/tests/call_procedures_1.rs, crates/repark-spark/src/tests/call_procedures_2.rs, python/repark/tests/test_ice_procedures_1.py, /tmp/oc-worker/nc-inventory/out/repark-procs-after.json, /tmp/oc-worker/nc-inventory/out/repark-zzzzzzz-xb-procs.json]
+      artifacts: [crates/repark-spark/src/tests/call_procedures_1.rs, crates/repark-spark/src/tests/call_procedures_2.rs, python/repark/tests/iceberg/test_ice_procedures_1.py, /tmp/oc-worker/nc-inventory/out/repark-procs-after.json, /tmp/oc-worker/nc-inventory/out/repark-zzzzzzz-xb-procs.json]
     - id: AT-2
       status: ATTACKED
       evidence: PR1a inputs plus the wiring-round edges: malformed and unknown-column where, mistyped ignored expire args, empty snapshot id arrays by construction, NULL partition-filter values, zero and negative parallelism, duplicate imports with the check on and off, and all three unsupported-source shapes in both spellings.
@@ -174,5 +174,5 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Fifteen mutations plus PR1a's base-build bite-proof all went red on the named pins. Every branch the diff adds has a nameable input in the suite: where on/off/malformed, ids named/positional, trio each, filter on/off, duplicates on/off, parallelism serial/parallel, formats parquet/orc/catalog/bare, branch on/ghost/dangling/NULL/main, sort_by named/positional/NULL/empty/non-partition.
-      artifacts: [mutation record M1-M15 above, crates/repark-spark/src/tests/call_procedures_2.rs, crates/repark-spark/src/tests/call_rdf_branch.rs, python/repark/tests/test_ice_procedures_1.py]
+      artifacts: [mutation record M1-M15 above, crates/repark-spark/src/tests/call_procedures_2.rs, crates/repark-spark/src/tests/call_rdf_branch.rs, python/repark/tests/iceberg/test_ice_procedures_1.py]
 ```

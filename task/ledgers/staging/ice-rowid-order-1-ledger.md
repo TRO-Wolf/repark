@@ -77,11 +77,11 @@ shape: RePark deterministic (ascending partition value, then task index).
 
 ## Facade evidence (release native, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin develop --release`)
 
-- Offline: `pytest python/repark/tests/test_ice_rowid_order_1.py -q -p no:cacheprovider -n 4` →
+- Offline: `pytest python/repark/tests/writes/test_ice_rowid_order_1.py -q -p no:cacheprovider -n 4` →
   5 passed.
 - Live: the same file under `REPARK_PARITY_LIVE=1` (with the list-null file) → 234 passed,
   32 xfailed across both files.
-- `pytest python/repark/tests/test_v3_statement_coverage.py -k row_id` → 2 passed, 163
+- `pytest python/repark/tests/iceberg/test_v3_statement_coverage.py -k row_id` → 2 passed, 163
   deselected (offline); 2 passed, 168 deselected (live).
 - Lint: `ruff check` + `ruff format --check` clean on both new Python files; no non-ASCII
   bytes in either.
@@ -112,13 +112,13 @@ COVERAGE_ATTESTATION:
       evidence: Red on the old pin is the orchestrator's quoted six-mapping
         probe (not re-runnable here); red on convergence is constructed into
         the divergence pin. Both directions bite without touching the pins.
-      artifacts: [python/repark/tests/test_ice_rowid_order_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_rowid_order_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The determinism claim is twelve fresh tables per shape (not one
         table read twelve times); the spec-correctness (contiguous, unique,
         running-sum first ids) is asserted as the exact 50-step mapping.
-      artifacts: [python/repark/tests/test_ice_rowid_order_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_rowid_order_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state added; the unit adds no product code.

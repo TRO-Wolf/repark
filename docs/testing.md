@@ -223,6 +223,18 @@ two declared shapes — never mixed in one diff:
    declared map". A rename smuggled into a move-only diff is a slate-failing violation — a pin's
    name is part of the pin.
 
+## Where a facade test goes
+
+`python/repark/tests` is organised by the product subsystem a test pins (FACADE-TESTS-LAYOUT-1,
+2026-10-19): `iceberg/`, `writes/`, `timestamps/`, `types/`, `functions/`, `dataframe/`,
+`resolution/`, `sql/`, `session/`, `io/`, `perf/`, `parity/` and `ml/`, each with a `map.md`
+that states its charter. A new test goes in the directory of the subsystem it pins, never at the
+root. A new subsystem is a new directory with its own `map.md` and a row in the root map's
+"Layout" table. A helper or data file used from one directory lives there; one used from two
+or more directories stays at the root beside `conftest.py`. Test modules that import each other
+share a directory. The layout move itself was a move-only relocation: the collected node ids
+are identical once the directory component is stripped.
+
 ## Forbidden patterns
 
 Banned without an explicit linked tracking issue + deadline: `#[ignore]`, commented-out tests,

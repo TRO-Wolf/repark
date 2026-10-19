@@ -478,11 +478,11 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: Goldens cover the 25 public type classes plus struct shapes, decimal edges (10,2)/(38,18)/(38,0) and decimal256 above 38, timestamp tz/ntz/session-tz, intervals, char/varchar, uint and dictionary Arrow inputs.
-      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py, python/repark/tests/facade_4_type_goldens.json]
+      artifacts: [python/repark/tests/types/test_facade_4_ddl_round_trip.py, python/repark/tests/types/facade_4_type_goldens.json]
     - id: AT-3
       status: ATTACKED
       evidence: Refusals are recorded as golden answers (fromDDL of its own NOT NULL output, interval day to second, repark_type_to_arrow of decimal256), and record mode is refused under any non-empty CI or GITHUB_ACTIONS value (CI=1 pinned).
-      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
+      artifacts: [python/repark/tests/types/test_facade_4_ddl_round_trip.py]
     - id: AT-4
       status: ATTACKED
       evidence: Step 1's only shared mutable state is the table's process-local OnceLock<Mutex<BTreeMap>> regex cache — a pure-function memo behind one lock, poison-recovering, carrying no session state and reading no env; no global mutable state in the Session sense.
@@ -493,7 +493,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The three-table census measures 18 agreements and 24 disagreements (D1-D24) including silent containsNull/valueContainsNull loss in both directions, the uint64 bigint split, csv_smart honoring NTZ while infer does not, and the offset-literal string/timestamp split; none fixed, each an owner question. Step 1 pins every Agree and D-row — 11 agree rows plus D1-D24 — by calling each surface today and changing no answer, refusal class or spelling.
-      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, docs/perf/facade-4-types-baseline-2026-09-14/census_answers.json, python/repark/tests/test_facade_4_census_pins.py]
+      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, docs/perf/facade-4-types-baseline-2026-09-14/census_answers.json, python/repark/tests/types/test_facade_4_census_pins.py]
     - id: AT-7
       status: ATTACKED
       evidence: Step-1 before/after on the real base release native, same box, ABAB driver alternating sides per rep (7 reps, medians, 8 GiB scope): every end-to-end wall within ±5 % (worst +1.8 %), every surface cell inside ±5 % — round-4 re-measure on the release native after L-007..L-009: dtypes −14.9 %/−15.9 %/−44.9 %, df.schema −5.1 %/−5.4 %/−48.4 %, printSchema −10.7 %/−2.8 %/−33.9 %, DESCRIBE +0.1 % to +0.7 %, worst per-call conversion +13.9 us vs the 1 ms bar; the round-2 dtypes breach (+13–15.5 %) is fixed by the R14b-D-2 literal-method restoration and pinned; the L-007..L-009 dispatch restoration kept the bar via _SIMPLE_STRING_FAST and is pinned by the new MI/override pins; round-5 L-010/L-011 reorder re-measure of repark_type_to_arrow (micro cell, two passes): flat7 +8.2 % (10.11 us) / wide50 −3.5 % (57.82 us) / nested3 −17.7 % (18.69 us) vs round-4's +29.4 %/−3.2 %/−16.5 % — inside the round-4 envelope, ≪ 1 ms.
@@ -501,13 +501,13 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: The F1-frozen names are pinned by answer; descriptor-to-class reconstruction in types.py preserves isinstance identity for every public class including VariantType.
-      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py, python/repark/tests/test_facade_4_census_pins.py]
+      artifacts: [python/repark/tests/types/test_facade_4_ddl_round_trip.py, python/repark/tests/types/test_facade_4_census_pins.py]
     - id: AT-9
       status: N/A
       justification: No log-format or diagnosis-path change.
     - id: AT-10
       status: ATTACKED
       evidence: Dropping the tz from pa.timestamp in repark_type_to_arrow redded four golden cases and the restore greened them; the committed mutation_probe.py additionally proves fromJson flag-forcing, inbound int8/int16 widening, Arrow item-nullability preservation, and inner-struct nullability drops each red; step-1 scratch mutations redded the pins in each family — timestamp tz (D1), decimal (D6), list nullability (D15) — and restores greened them; the card's existing pins stay unedited and green.
-      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py, python/repark/tests/test_facade_4_census_pins.py]
+      artifacts: [python/repark/tests/types/test_facade_4_ddl_round_trip.py, python/repark/tests/types/test_facade_4_census_pins.py]
   complete: true
 ```

@@ -21,7 +21,7 @@ function registry, `crates/repark-spark` planner edits (run 18a/18c lanes);
 **Oracle.** Live PySpark 4.1.2 classic cells recorded by run 16b on 2026-09-15:
 `/tmp/oc-worker/run18b/oracle/orc_probe_2026-09-15.json` (script `probe_orc.py`
 beside it), fixtures under `/tmp/oc-worker/run18b/oracle/orc-fixtures/`. Copied
-to `python/repark/tests/facade_orc_oracle.json` (absolute fixture paths replaced
+to `python/repark/tests/io/facade_orc_oracle.json` (absolute fixture paths replaced
 with `{FIX}`) and `python/repark/tests/fixtures/orc/`. Every pin names its cell.
 No hand-computed Spark expectation; unprobed shapes are marked UNMEASURED.
 
@@ -32,7 +32,7 @@ No hand-computed Spark expectation; unprobed shapes are marked UNMEASURED.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | `orc-rust 0.8.0` (default-features off) lands in workspace deps + `repark-core` deps; `cargo update --workspace --offline` moves no existing crate version; Apache-2.0 + transitive licences pass the licence gate; `cargo build -p repark-core` green. | The Cargo.lock diff check; the gate output; the build rc. | PROVEN | `orc-rust = { version = "0.8.0", default-features = false }` (sync reader only; all codecs are non-optional deps). Lock diff: 1 line (the `repark-core → orc-rust` edge); 618 packages before/after, zero version moves — 0.8.0 was already locked via `datafusion-orc`. New decoders: snap BSD-3-Clause, lzokay-native MIT, lz4_flex MIT, the zlib wrapper MIT/Apache-2.0, zstd MIT, prost/snafu/num Apache-2.0-or-MIT — all in the deny allow-list. `cargo deny check licenses` → `licenses ok`, rc 0. `cargo check -p repark-core --offline` rc 0, `cargo build -p repark-core --offline` rc 0. pins: io-orc-1/C-001 |
-| C-002 | O-1: the typed read answers the `orc_typed` cell — 19 columns, the cell's simpleString byte-exact, every column nullable, NULL row intact; `format("orc").load` answers `orc_typed_format_load`. | `python/repark/tests/test_io_orc_1.py` O-1 pins. | PROVEN | 45/45 pins green (`test_io_orc_1.py`). Findings: (a) Spark stores per-column `spark.sql.catalyst.type` attributes in the ORC type tree — `timestamp_ntz` rides on ORC LONG — and orc-rust 0.8.0 drops them, so `repark-core/src/orc_footer.rs` re-reads the footer (tail + block-framed decompress in all five codecs + minimal protobuf parse) and the scan maps LONG→`timestamp_ntz`, ORC-timestamp→`timestamp`(UTC), local-tz-kind→naive. Five codec micro-deps added (all already locked, all allow-list licences; lock still zero-move). orc-rust 0.9.0 checked and rejected: no attribute support either, and it needs arrow 59 against the workspace 58.4. (b) orc-rust converts stored UTC instants to the stripe writer-tz wall (fixtures: America/New_York); Spark ignores writerTimezone, so the scan undoes it per file (`from_local` in the stripe zone; mixed zones do NOT refuse — residue R-18b-13, the earlier refuse claim was false). (c) The probe ran in machine-zone America/New_York ambient (writerTimezone + the `ts` 22:04:05 render agree), so `ts`-bearing pins set that zone; a UTC pin cites the `orc_ts_utc_session` display. (d) File scans collect structs as dicts engine-wide (parquet identical — probed); pins normalize dict→`Row()` text, values byte-exact. pins: io-orc-1/C-002 |
+| C-002 | O-1: the typed read answers the `orc_typed` cell — 19 columns, the cell's simpleString byte-exact, every column nullable, NULL row intact; `format("orc").load` answers `orc_typed_format_load`. | `python/repark/tests/io/test_io_orc_1.py` O-1 pins. | PROVEN | 45/45 pins green (`test_io_orc_1.py`). Findings: (a) Spark stores per-column `spark.sql.catalyst.type` attributes in the ORC type tree — `timestamp_ntz` rides on ORC LONG — and orc-rust 0.8.0 drops them, so `repark-core/src/orc_footer.rs` re-reads the footer (tail + block-framed decompress in all five codecs + minimal protobuf parse) and the scan maps LONG→`timestamp_ntz`, ORC-timestamp→`timestamp`(UTC), local-tz-kind→naive. Five codec micro-deps added (all already locked, all allow-list licences; lock still zero-move). orc-rust 0.9.0 checked and rejected: no attribute support either, and it needs arrow 59 against the workspace 58.4. (b) orc-rust converts stored UTC instants to the stripe writer-tz wall (fixtures: America/New_York); Spark ignores writerTimezone, so the scan undoes it per file (`from_local` in the stripe zone; mixed zones do NOT refuse — residue R-18b-13, the earlier refuse claim was false). (c) The probe ran in machine-zone America/New_York ambient (writerTimezone + the `ts` 22:04:05 render agree), so `ts`-bearing pins set that zone; a UTC pin cites the `orc_ts_utc_session` display. (d) File scans collect structs as dicts engine-wide (parquet identical — probed); pins normalize dict→`Row()` text, values byte-exact. pins: io-orc-1/C-002 |
 | C-003 | O-2: NONE/SNAPPY/ZLIB/LZ4/ZSTD/LZO read back per `orc_codec_*`; brotli has no read pin (Spark write error, empty dir). A codec orc-rust cannot decode raises AnalysisException naming the codec. | The O-2 pins. | PROVEN | All seven codec pins green, LZO included — no HALT needed. Brotli: no decoder in orc-rust 0.8.0; no fixture exists; a brotli file fails loud at stripe read (UNMEASURED, registry note). pins: io-orc-1/C-003 |
 | C-004 | O-3: directory / file / list / `*` glob reads; hidden `_`/`.` files skipped; missing path PATH_NOT_FOUND `file:` form; empty dir, nomatch filter, past modifiedBefore, non-recursive nested → UNABLE_TO_INFER_SCHEMA `42KD9`; non-ORC file → FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER with the path; ignoreCorruptFiles over only-corrupt → UNABLE_TO_INFER_SCHEMA. | The O-3 pins. | PROVEN | All green. Choices: a glob matching zero files → UNABLE_TO_INFER_SCHEMA (unprobed; consistent with every other no-file shape); footers validated eagerly per file so corrupt files refuse at read time (without the flag: CANNOT_READ_FILE_FOOTER naming the path; the `Please ensure…` tail past `Could not read footer.` is unprobed — registry note); modified bounds compare file mtime against Spark timestamp text parsed as UTC, strict inequalities (boundary UNMEASURED). pins: io-orc-1/C-004 |
 | C-005 | O-4: second positional binds mergeSchema → IllegalArgumentException `For input string: "<path>"`; keyword mergeSchema with two positionals → TypeError; non-str/non-list path → PySparkTypeError `[NOT_STR_OR_LIST] Argument `path` should be a str or list, got int.` (JVM Py4JError divergence noted in registry). | The O-4 pins. | PROVEN | All green. Non-bool positional mergeSchema raises the JVM's own text; garbage option-map booleans fail loud through the shared boolean gate (Spark `toBoolean` would coerce — registry note); NOT_STR_OR_LIST params `{"arg_name":"path","arg_type":"int"}` follow the error-conditions shape (unprobed — registry note). pins: io-orc-1/C-005 |
@@ -48,7 +48,7 @@ pasted per clause below as they land.
 
 ### C-002/C-003 red
 
-`.venv/bin/python -m pytest python/repark/tests/test_io_orc_1.py -q` on the base
+`.venv/bin/python -m pytest python/repark/tests/io/test_io_orc_1.py -q` on the base
 tree (refusal still wired): **9 failed** — `test_orc_typed_read`,
 `test_orc_typed_format_load`, `test_orc_codecs_read[none|uncompressed|snappy|
 zlib|lzo|lz4|zstd]`, every one `PySparkNotImplementedError: [NOT_IMPLEMENTED]
@@ -222,11 +222,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause walked against the card O-1..O-10, the run-16b recorded cells and the Q-15B-1/Q-17a-2 rulings; the round-2 orchestrator audit (A-5 comment ban, A-6 trailer, A-7 Rust-first) went back to the actor and all three remediated in one refactor commit.
-      artifacts: [task/ledgers/staging/io-orc-1-ledger.md, python/repark/tests/facade_orc_oracle.json]
+      artifacts: [task/ledgers/staging/io-orc-1-ledger.md, python/repark/tests/io/facade_orc_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: All seven Spark-written codecs, file/dir/glob/list paths, the positional signature shapes (two-positional, bad-arg, kw-after-positionals), mergeSchema on/off, pathGlobFilter, recursiveFileLookup, modifiedBefore/After, basePath, partition discovery (dir, leaf, basePath), subset/missing/wrong-type user schemas, select/filter/count/inputFiles, session-zone timestamps, both SQL-door refusals and the write refusal.
-      artifacts: [python/repark/tests/test_io_orc_1.py]
+      artifacts: [python/repark/tests/io/test_io_orc_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The workspace clippy gate (`-D warnings`, disallowed-methods) is green; the production scan and binding carry no unwrap/expect (unwraps live only in the orc_footer.rs cfg(test) helpers); the async read carries the symmetric-with-read_text unused_async expect.
@@ -240,15 +240,15 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Red-first throughout: the round-2 list pin failed red on the old Python union (UNION column-count mismatch) and passes on one scan; the error-shape pins assert class, message, params and SQLSTATE against the recorded cells; the *.orc listing rule was forced by a real failure (the lockstep map.md footer-crashed the committed m* glob).
-      artifacts: [python/repark/tests/test_io_orc_1.py]
+      artifacts: [python/repark/tests/io/test_io_orc_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: Round 3 on the RELEASE module — facade 9184 passed (2 unrelated UTC-midnight q14 flakes, evidenced in Gates), parity 757 passed rc 0, make verify rc 0, ruff clean, example coverage rc 0, map sync 280 clean, unit file 50/50.
-      artifacts: [python/repark/tests/test_io_orc_1.py, docs/examples/io/orc_read.py]
+      artifacts: [python/repark/tests/io/test_io_orc_1.py, docs/examples/io/orc_read.py]
     - id: AT-8
       status: ATTACKED
       evidence: Spark's contracts were recorded, not assumed: the 43-cell run-16b live-PySpark-4.1.2 oracle (including the brotli cell where Spark itself fails, claimed by neither door), Spark's reader signature shapes and the JVM IllegalArgumentException/NOT_STR_OR_LIST texts.
-      artifacts: [python/repark/tests/facade_orc_oracle.json, python/repark/src/repark/spark/session/reader_orc.py]
+      artifacts: [python/repark/tests/io/facade_orc_oracle.json, python/repark/src/repark/spark/session/reader_orc.py]
     - id: AT-9
       status: ATTACKED
       evidence: Registry IO-ORC-1 rewritten (read implemented, write DECLARED) and IO-ORC-SQL-1 BACKLOG filed; every error shape pins Spark's class, messageParameters and SQLSTATE; the example covers the read names and the refusal example still covers the write names.
@@ -256,7 +256,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Behaviour-move guards run: per-path Python union reds the new list pin (observed UNION column-count mismatch); unattached conditions red the condition pins (observed getCondition None before the method bind); an unfiltered listing reds the m* glob pin (observed map.md footer crash).
-      artifacts: [python/repark/tests/test_io_orc_1.py]
+      artifacts: [python/repark/tests/io/test_io_orc_1.py]
   complete: true
 ```
 

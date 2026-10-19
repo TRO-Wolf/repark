@@ -270,7 +270,7 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
+- Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-WIN-1`, `EX-CAT-1`, `EX-CAT-2`, `EX-CAT-3`
 - Siblings: [ex-18-dataframe-c-ledger.md](ex-18-dataframe-c-ledger.md), [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md)
 

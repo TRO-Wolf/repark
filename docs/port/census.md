@@ -327,7 +327,7 @@ live oracle tier cannot quietly erase it.
 | Corpus | `basis:` | What that means |
 |---|---|---|
 | The live scenario registry (`python/repark/tests/_live_parity.py` + `test_parity_live.py`) | **`live-recorded/ansi-on`** | Goldens derived from live PySpark 4.1.2 under Spark 4 defaults — **ANSI mode ON**. One disclosure depends literally on it. |
-| The SQL passthrough corpus (`python/repark/tests/test_sql_passthrough_parity.py`) | **`hand-computed/non-ansi`** | Goldens hand-computed from Spark's documented **non-ANSI** semantics (divide-by-zero → NULL, invalid array index → NULL), authored when live recording was unavailable. |
+| The SQL passthrough corpus (`python/repark/tests/sql/test_sql_passthrough_parity.py`) | **`hand-computed/non-ansi`** | Goldens hand-computed from Spark's documented **non-ANSI** semantics (divide-by-zero → NULL, invalid array index → NULL), authored when live recording was unavailable. |
 
 **The rule (hard): the live oracle tier may only re-derive goldens whose basis is
 `live-recorded`.** A live re-derivation of a `hand-computed/non-ansi` golden under an ANSI-on

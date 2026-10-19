@@ -54,22 +54,22 @@ Tracked Python lines that mention `datetime64[ns]`.
 
 | file | line | text |
 |---|---:|---|
-| `python/repark/tests/_record_ice_tsns_coercion_1_gate.py` | 6 | ```datetime64[ns]`` count is a source scan of the facade tests, not a share of` |
-| `python/repark/tests/_record_ice_tsns_coercion_1_gate.py` | 38 | `"""Return the Arrow schema and explain text of one ``datetime64[ns]`` frame."""` |
-| `python/repark/tests/_record_ice_tsns_coercion_1_gate.py` | 69 | `"""Return ``datetime64[ns]`` lines in tracked Python under ``roots``."""` |
-| `python/repark/tests/_record_ice_tsns_coercion_1_gate.py` | 75 | `if "datetime64[ns]" not in line:` |
-| `python/repark/tests/_record_ice_tsns_coercion_1_gate.py` | 117 | `"## pandas datetime64[ns]",` |
-| `python/repark/tests/_record_ice_tsns_coercion_1_gate.py` | 119 | `"One `createDataFrame` of a pandas `datetime64[ns]` column scans as",` |
-| `python/repark/tests/_record_ice_tsns_coercion_1_gate.py` | 126 | `"Tracked Python lines that mention `datetime64[ns]`.",` |
-| `python/repark/tests/_record_ice_tsns_sql_1_oracle.py` | 192 | `"""Write the DataFrame-door control table from pandas ``datetime64[ns]`` columns."""` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 73 | ```dtypes`` are ``str(series.dtype)`` (so ``datetime64[ns]`` vs ``datetime64[us]`` is` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 400 | `"""Inbound pandas ``datetime64[ns]`` — same-path twin of the us ingest disclosure."""` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 409 | `dtype="datetime64[ns]",` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 615 | `[("id", "int64"), ("ts", "datetime64[ns]")],` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 637 | `"export unit to datetime64[ns]; repark preserves datetime64[us]. Wall-clock "` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 647 | `[("id", "int64"), ("ts", "datetime64[ns]")],` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 658 | `"createDataFrame from pandas datetime64[ns] then toPandas: both engines export "` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 659 | `"datetime64[ns] (inbound-ns twin of pandas_timestamp_unit_from_pandas_us). "` |
-| `python/repark/tests/test_boundary_shapes_parity.py` | 862 | `"G10 needs an inbound datetime64[ns] twin on the same createDataFrame(pandas) path"` |
-| `python/repark/tests/test_interchange_parity.py` | 217 | `# timestamp → datetime64[ns] (µs+UTC; compare wall clock)` |
-| `python/repark/tests/test_interchange_parity.py` | 682 | `"""numpy.datetime64[ns] must not become epoch int via .item() (C3-L-002).` |
+| `python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py` | 6 | ```datetime64[ns]`` count is a source scan of the facade tests, not a share of` |
+| `python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py` | 38 | `"""Return the Arrow schema and explain text of one ``datetime64[ns]`` frame."""` |
+| `python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py` | 69 | `"""Return ``datetime64[ns]`` lines in tracked Python under ``roots``."""` |
+| `python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py` | 75 | `if "datetime64[ns]" not in line:` |
+| `python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py` | 117 | `"## pandas datetime64[ns]",` |
+| `python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py` | 119 | `"One `createDataFrame` of a pandas `datetime64[ns]` column scans as",` |
+| `python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py` | 126 | `"Tracked Python lines that mention `datetime64[ns]`.",` |
+| `python/repark/tests/timestamps/_record_ice_tsns_sql_1_oracle.py` | 192 | `"""Write the DataFrame-door control table from pandas ``datetime64[ns]`` columns."""` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 73 | ```dtypes`` are ``str(series.dtype)`` (so ``datetime64[ns]`` vs ``datetime64[us]`` is` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 400 | `"""Inbound pandas ``datetime64[ns]`` — same-path twin of the us ingest disclosure."""` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 409 | `dtype="datetime64[ns]",` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 615 | `[("id", "int64"), ("ts", "datetime64[ns]")],` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 637 | `"export unit to datetime64[ns]; repark preserves datetime64[us]. Wall-clock "` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 647 | `[("id", "int64"), ("ts", "datetime64[ns]")],` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 658 | `"createDataFrame from pandas datetime64[ns] then toPandas: both engines export "` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 659 | `"datetime64[ns] (inbound-ns twin of pandas_timestamp_unit_from_pandas_us). "` |
+| `python/repark/tests/io/test_boundary_shapes_parity.py` | 862 | `"G10 needs an inbound datetime64[ns] twin on the same createDataFrame(pandas) path"` |
+| `python/repark/tests/io/test_interchange_parity.py` | 217 | `# timestamp → datetime64[ns] (µs+UTC; compare wall clock)` |
+| `python/repark/tests/io/test_interchange_parity.py` | 682 | `"""numpy.datetime64[ns] must not become epoch int via .item() (C3-L-002).` |

@@ -10,9 +10,9 @@ owner closes the slate row.
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
 **Writable paths:** `python/repark/src/repark/spark/dataframe/statistics.py`,
-`python/repark/tests/test_examples_dataframe_d.py`,
-`python/repark/tests/test_examples_dataframe_a.py`,
-`python/repark/tests/test_examples_dataframe_c.py` (the shared `_summary` leg flips
+`python/repark/tests/parity/test_examples_dataframe_d.py`,
+`python/repark/tests/parity/test_examples_dataframe_a.py`,
+`python/repark/tests/parity/test_examples_dataframe_c.py` (the shared `_summary` leg flips
 EX-DF-15's order and string arms), `docs/spark-sql-iceberg-parity.md` §7 EX-DF-4 and
 EX-DF-15, lockstep `map.md` files (`python/repark/tests/map.md`,
 `python/repark/src/repark/spark/dataframe/map.md`, `task/ledgers/staging/map.md`), and this
@@ -51,10 +51,10 @@ The four rewritten/added pins run at base `f413241b` with `statistics.py` revert
 (`git checkout`), exit 1:
 
 ```
-FAILED python/repark/tests/test_examples_dataframe_d.py::test_describe_string_column_null_stats
-FAILED python/repark/tests/test_examples_dataframe_d.py::test_describe_non_describable_column_arms
-FAILED python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_matches_spark
-FAILED python/repark/tests/test_examples_dataframe_c.py::test_summary_divergent_arms
+FAILED python/repark/tests/parity/test_examples_dataframe_d.py::test_describe_string_column_null_stats
+FAILED python/repark/tests/parity/test_examples_dataframe_d.py::test_describe_non_describable_column_arms
+FAILED python/repark/tests/parity/test_examples_dataframe_a.py::test_describe_row_order_matches_spark
+FAILED python/repark/tests/parity/test_examples_dataframe_c.py::test_summary_divergent_arms
 4 failed, 15 deselected in 0.59s
 ```
 
@@ -135,7 +135,7 @@ identical ordered output each time.
 
 | Command | Exit |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_examples_dataframe_d.py python/repark/tests -q -k "describe or summary"` | 0 — 33 passed, 1 skipped (round 1); 0 — 33 passed, 1 skipped (P1-1 remediation rerun) |
+| `.venv/bin/python -m pytest python/repark/tests/parity/test_examples_dataframe_d.py python/repark/tests -q -k "describe or summary"` | 0 — 33 passed, 1 skipped (round 1); 0 — 33 passed, 1 skipped (P1-1 remediation rerun) |
 | `.venv/bin/python -m pytest python/repark/tests -q` | 0 — 5968 passed, 359 skipped (round 1); 0 — 5968 passed, 359 skipped (P1-1 remediation rerun) |
 | `make check-docs-links` | 0 — 765 files, 4894 links clean (both rounds) |
 | `make check-ledger-grammar` | 0 — 101 live ledgers clean (both rounds; 647 clauses after C-005) |
@@ -166,7 +166,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Four pins red at base with the fix reverted — string mean AnalysisException, boolean avg AnalysisException, the order pin red on index 1 ('min' where 'mean' belongs), and the summary leg red; all green after the fix.
-      artifacts: [python/repark/tests/test_examples_dataframe_d.py, python/repark/tests/test_examples_dataframe_a.py, python/repark/tests/test_examples_dataframe_c.py, python/repark/src/repark/spark/dataframe/statistics.py]
+      artifacts: [python/repark/tests/parity/test_examples_dataframe_d.py, python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_c.py, python/repark/src/repark/spark/dataframe/statistics.py]
     - id: AT-2
       status: ATTACKED
       evidence: Every asserted cell was measured on live PySpark 4.1.2 in the oracle table — NULL mean/stddev, the '6.0' cast-mean arm, the boolean/date/timestamp/array skip, and the PySparkValueError refusal class.
@@ -208,5 +208,5 @@ COVERAGE_ATTESTATION:
 
 - Up: [map.md](map.md)
 - Fix: [../../../python/repark/src/repark/spark/dataframe/statistics.py](../../../python/repark/src/repark/spark/dataframe/statistics.py)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/test_examples_dataframe_d.py), [../../../python/repark/tests/test_examples_dataframe_a.py](../../../python/repark/tests/test_examples_dataframe_a.py), [../../../python/repark/tests/test_examples_dataframe_c.py](../../../python/repark/tests/test_examples_dataframe_c.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_dataframe_d.py](../../../python/repark/tests/parity/test_examples_dataframe_d.py), [../../../python/repark/tests/parity/test_examples_dataframe_a.py](../../../python/repark/tests/parity/test_examples_dataframe_a.py), [../../../python/repark/tests/parity/test_examples_dataframe_c.py](../../../python/repark/tests/parity/test_examples_dataframe_c.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 EX-DF-4, EX-DF-15

@@ -29,17 +29,17 @@ SKIPPED line.
 
 Summary: `11 passed in 364.79s (0:06:04)`.
 
-- `python/repark/tests/test_aws_acceptance.py::test_process_silver_acceptance_against_glue` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_process_silver_acceptance_against_s3tables` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_mor_merge_compact_expire_against_glue` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_mor_merge_compact_expire_against_s3tables` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_v3_dv_dml_maintenance_against_glue` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_v3_dv_dml_maintenance_against_s3tables` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_sql_harden_cutover_against_glue` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_sql_harden_cutover_against_s3tables` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_create_or_replace_twice_against_glue` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_create_or_replace_twice_against_s3tables` — PASSED
-- `python/repark/tests/test_aws_acceptance.py::test_u12_s3_path_write_against_scratch_prefix` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_process_silver_acceptance_against_glue` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_process_silver_acceptance_against_s3tables` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_mor_merge_compact_expire_against_glue` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_mor_merge_compact_expire_against_s3tables` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_v3_dv_dml_maintenance_against_glue` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_v3_dv_dml_maintenance_against_s3tables` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_sql_harden_cutover_against_glue` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_sql_harden_cutover_against_s3tables` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_create_or_replace_twice_against_glue` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_create_or_replace_twice_against_s3tables` — PASSED
+- `python/repark/tests/parity/test_aws_acceptance.py::test_u12_s3_path_write_against_scratch_prefix` — PASSED
 
 ### dbt gold module
 
@@ -88,7 +88,7 @@ right by coincidence:
 
 ## Follow-ups
 
-- **V-003 (low).** The `repark.sql()` pin in `python/repark/tests/test_update_set_subquery_walk_1.py`
+- **V-003 (low).** The `repark.sql()` pin in `python/repark/tests/writes/test_update_set_subquery_walk_1.py`
   and its `map.md` row say "Iceberg table", but that door's `CREATE SCHEMA` and CTAS build
   DataFusion in-memory tables. The pin still goes red on main, so it holds the guard. It does not
   hold the Iceberg path, which the verifier measured separately. To be filed for a clerk.

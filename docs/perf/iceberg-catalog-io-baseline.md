@@ -83,7 +83,7 @@ column, which no cache can touch: the count of round trips per statement is the 
 calls. Measured through the census counter (`hits + misses` per statement, cache on): **SELECT 2,
 SELECT-with-filter 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** — the same numbers as the knob-off
 metadata-read column above, which is exactly the point. The AWS legs of
-`python/repark/tests/test_perf_ice_catalog_io_1.py` are written and SKIP. **Update 2026-09-19
+`python/repark/tests/perf/test_perf_ice_catalog_io_1.py` are written and SKIP. **Update 2026-09-19
 (ICE-CATALOG-CACHE-1):** `F-CATIO-AWS` shipped as fork `#311` (pin `27e0d5fa`) and RePark wires
 the session caches into Glue and S3 Tables — wired, unmeasured (the AWS bench is blocked on an IAM
 grant), so the table above is still the pre-wiring AWS shape and the legs now SKIP naming that.
@@ -185,7 +185,7 @@ strace -f -e trace=openat -o scratch/strace_after.txt .venv/bin/python scratch/p
 .venv/bin/python scratch/probes/count_calls.py scratch/strace_after.txt scratch/census_after.json
 .venv/bin/python scratch/probes/probe_manifest.py cacheoff
 .venv/bin/python scratch/probes/probe_manifest.py cacheon
-.venv/bin/python -m pytest python/repark/tests/test_perf_ice_catalog_io_1.py -q
+.venv/bin/python -m pytest python/repark/tests/perf/test_perf_ice_catalog_io_1.py -q
 ```
 
 Probe sources live under `scratch/probes/` (gitignored via `.git/info/exclude`, never committed;
@@ -473,7 +473,7 @@ strace -f -e trace=openat -o scratch/strace_default.txt .venv/bin/python scratch
 .venv/bin/python scratch/probes/count_calls.py scratch/strace_default.txt scratch/census_default.json
 strace -f -e trace=openat -o scratch/strace_off.txt .venv/bin/python scratch/probes/probe_calls.py off
 .venv/bin/python scratch/probes/count_calls.py scratch/strace_off.txt scratch/census_off.json
-.venv/bin/python -m pytest python/repark/tests/test_perf_ice_catalog_io_1.py -q -k "peak_rss or second_statement"
+.venv/bin/python -m pytest python/repark/tests/perf/test_perf_ice_catalog_io_1.py -q -k "peak_rss or second_statement"
 ```
 
 Probe sources live under `scratch/probes/` (gitignored, never committed; they carry no
@@ -505,7 +505,7 @@ cd $HOME/repark-lanes/lanes/oc-catio3
 .venv/bin/python scratch/probes/rss_second_pass.py 2000 scratch/wh_thrash_default
 .venv/bin/python scratch/probes/rss_second_pass.py 2000 scratch/wh_thrash_off repark.iceberg.manifestCacheBytes=0
 .venv/bin/python scratch/probes/rss_second_pass.py 2000 scratch/wh_thrash_tiny repark.iceberg.manifestCacheBytes=131072
-.venv/bin/python -m pytest python/repark/tests/test_perf_ice_catalog_io_1.py -q -k "charged_weight or sub_megabyte"
+.venv/bin/python -m pytest python/repark/tests/perf/test_perf_ice_catalog_io_1.py -q -k "charged_weight or sub_megabyte"
 ```
 
 `rss_peak.py` is the committed RSS leg's driver with the table count lifted to argv;

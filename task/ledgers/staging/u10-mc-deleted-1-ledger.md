@@ -43,7 +43,7 @@ collision cluster, moved there in mcdel-r6 ahead of the same ceiling; it shares 
 `crates/repark-spark/src/tests/metadata_columns_scope.rs` (the mcdel-r9 wildcard-scope
 pins), `crates/repark-spark/src/tests/input_file_name.rs` (the mcdel-r12 comma-join
 refusal pin), the module entries in `crates/repark-spark/src/tests/mod.rs`, and
-`python/repark/tests/test_ice_metadata_cols_1.py` (`test_unserved_metadata_columns_refuse_typed`
+`python/repark/tests/iceberg/test_ice_metadata_cols_1.py` (`test_unserved_metadata_columns_refuse_typed`
 removed); seven `map.md` files (`crates/repark-core/src/`, `crates/repark-iceberg/src/catalog/`,
 `crates/repark-spark/src/`, `crates/repark-spark/src/tests/`, `docs/`, `python/repark/tests/`,
 `task/ledgers/staging/`); this ledger. That is the twenty files of
@@ -586,7 +586,7 @@ TableFactor::Table … else`, `_ => None`) are not mutated.
    _deleted` shape in `test_user_column_named_deleted_refuses_like_spark`
    (`pytest.raises(AnalysisException)`). The other refusal legs assert the full string only.
    The `…_like_spark` test names refer to the text. The precedent is the class gap in
-   `test_drop_table_purge_gc_disabled_refuses` (`python/repark/tests/test_ice_small_parser_1.py`).
+   `test_drop_table_purge_gc_disabled_refuses` (`python/repark/tests/iceberg/test_ice_small_parser_1.py`).
 3. **`R-MC-IFN-COMMA-JOIN`** (KNOWN DIVERGENCE, cell I1, C-020) — `SELECT input_file_name()
    LIKE '%.parquet' AS f FROM t a, t b`. Spark answers `[[true],[true],[true],[true]]` on
    a v2 table (`/tmp/xo58-mcd-r11probe/mcdifncomma-spark.log`) and on a v3 table
@@ -639,7 +639,7 @@ map-md check, each exit 0; the cargo and pytest rows below are the r12 run.
 | `build-slot.sh make rust-clippy` | exit 0 |
 | `build-slot.sh make rust-panic-ban` | exit 0 |
 | `build-slot.sh make check-rust-file-size` | exit 0 — 991 (`repark-core` `metadata_columns.rs`, unchanged) + 665 + 689 + 934 + 181 + 648 lines (`metadata_columns.rs`, `metadata_columns_deleted.rs`, `metadata_columns_reserved.rs`, `metadata_columns_scope.rs`, `input_file_name.rs` under `repark-spark/src/tests`), all under the 1000 ceiling |
-| `build-slot.sh make develop` then `.venv/bin/python -m pytest -q python/repark/tests/test_ice_metadata_cols_1.py` | exit 0 — 15 passed |
+| `build-slot.sh make develop` then `.venv/bin/python -m pytest -q python/repark/tests/iceberg/test_ice_metadata_cols_1.py` | exit 0 — 15 passed |
 | `bash scripts/check_map_md.sh --base origin/main` | exit 0 |
 | `python3 scripts/check_ledger_grammar.py` | exit 0 |
 
@@ -653,15 +653,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: The answering clause replays the recorded cell on both doors — Rust pairs_i64_bool on the rendered batches, facade rows as a multiset plus the BooleanType field pin — and the composed clause asserts the full ordered (id, _spec_id, _deleted) rows on the copy-on-write and merge-on-read tables.
-      artifacts: [crates/repark-spark/src/tests/metadata_columns_deleted.rs, python/repark/tests/test_ice_metadata_cols_1.py]
+      artifacts: [crates/repark-spark/src/tests/metadata_columns_deleted.rs, python/repark/tests/iceberg/test_ice_metadata_cols_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The seed is the recorded fixture itself — two appends plus one merge-on-read delete — and the COW twin re-runs the same inserts and delete without write.delete.mode; both pins sit mid-history after the DELETE commit.
-      artifacts: [crates/repark-spark/src/tests/metadata_columns_deleted.rs, python/repark/tests/test_ice_metadata_cols_1.py]
+      artifacts: [crates/repark-spark/src/tests/metadata_columns_deleted.rs, python/repark/tests/iceberg/test_ice_metadata_cols_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The quoted-mismatch and time-travel legs pin the full planner message (class, sub-class, suggestion, SQLSTATE 42703) as KNOWN DIVERGENCEs; the composed refusal legs (non-query, wildcard-over-two-relations) compare the full five-name [ICE-MC-1] text; a served metadata name that collides with a user column refuses with Spark's full reserved-name text for all five names on both doors (Spark's class is ValidationException, RePark's AnalysisException: residue R-MC-RESERVED-NAME-CLASS; the N13 leg and the facade pin assert RePark's class), and the near misses (a `deleted` column, an unread colliding column, a reserved word as an alias, CTE name, table alias, literal or struct field) still answer; the check keys on the columns the scan reads.
-      artifacts: [crates/repark-spark/src/tests/metadata_columns_deleted.rs, crates/repark-spark/src/tests/metadata_columns_reserved.rs, crates/repark-spark/src/tests/metadata_columns.rs, crates/repark-iceberg/src/catalog/metadata_columns.rs, python/repark/tests/test_ice_metadata_cols_1.py]
+      artifacts: [crates/repark-spark/src/tests/metadata_columns_deleted.rs, crates/repark-spark/src/tests/metadata_columns_reserved.rs, crates/repark-spark/src/tests/metadata_columns.rs, crates/repark-iceberg/src/catalog/metadata_columns.rs, python/repark/tests/iceberg/test_ice_metadata_cols_1.py]
     - id: AT-4
       status: ATTACKED
       evidence: Resolution runs per query through Session state; the provider registers one temp view per read with no shared mutable state — the same seam the lineage pins already use, unchanged here.
@@ -687,7 +687,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: One recorded cell replayed verbatim on both doors plus thirteen Rust pins in metadata_columns_deleted.rs, eleven in metadata_columns_reserved.rs, two in metadata_columns_scope.rs, one in input_file_name.rs (the comma-join class and text), the strengthened fold/refusal legs in metadata_columns.rs, and three facade pins; every clause carries a pins: citation in the touched map.md rows and the facade docstrings; the schema leg asserts name, type and nullability.
-      artifacts: [python/repark/tests/test_ice_metadata_cols_1.py, crates/repark-spark/src/tests/map.md, crates/repark-core/src/map.md, crates/repark-iceberg/src/catalog/map.md, crates/repark-spark/src/tests/input_file_name.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_metadata_cols_1.py, crates/repark-spark/src/tests/map.md, crates/repark-core/src/map.md, crates/repark-iceberg/src/catalog/map.md, crates/repark-spark/src/tests/input_file_name.rs]
 ```
 
 Every clause is PROVEN — the answering pins against the recorded PySpark 4.1.2

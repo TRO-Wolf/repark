@@ -24,7 +24,7 @@ _PYTHON_MAIN_BASELINES = {
     "python/repark/src/repark/spark/functions.py": 2033,
     "python/repark/src/repark/spark/ml/feature/_transformers.py": 2763,
     "python/repark/src/repark/spark/session/_funcs.py": 8390,
-    "python/repark/tests/test_functions_gt2.py": 1050,
+    "python/repark/tests/functions/test_functions_gt2.py": 1050,
     "python/repark-parity/bench/tpcds/runner.py": 1263,
     "python/repark-parity/bench/tpch/runner.py": 1780,
 }
@@ -41,11 +41,11 @@ _FROZEN_SQP_FILES = {
     "crates/repark-sql/tests/ansi_door_string_literals.rs": (
         "917ddb77f710763e52927a5730c5c2c94867639d64ad61b46e4d4ce26986b95c"
     ),
-    "python/repark/tests/test_sqp_1_string_literals.py": (
+    "python/repark/tests/sql/test_sqp_1_string_literals.py": (
         "b579bdf955d781456d258cee18ee5d7f22c360d398d02ef363b293c849f27894"
     ),
     "python/repark-parity/tests/test_sqp_1_record.py": (
-        "39584dfb5b8d3d73685a9d64146fc691a9dd2bbdf278d489bbbd930b55f6c519"
+        "17315755ee1ff6d3bc9848fb837fa34f069a0e043367cfd7dd31b0cb312b1b0e"
     ),
 }
 _SQL_LITERAL_CALLS = {

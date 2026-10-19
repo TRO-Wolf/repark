@@ -67,15 +67,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every measured Spark row list is pinned == on both doors, including the snapshot-id move, the orc retarget, v1, the partitioned comment exclusion, and the keyed hits and misses.
-      artifacts: [crates/repark-spark/src/tests/show_tblproperties.rs, python/repark/tests/test_tblprops_1.py]
+      artifacts: [crates/repark-spark/src/tests/show_tblproperties.rs, python/repark/tests/iceberg/test_tblprops_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: All name shapes pinned (three/two/one-part after USE), the temp-view empty frame, the missing and wrong-case refusals, and the fall-through sweep over every arm.
-      artifacts: [crates/repark-spark/src/tests/show_tblproperties.rs, python/repark/tests/test_tblprops_1.py]
+      artifacts: [crates/repark-spark/src/tests/show_tblproperties.rs, python/repark/tests/iceberg/test_tblprops_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The missing-name refusal keeps its exact class, condition, SQLSTATE and text on both doors; catalog-view rows and the load/table-existence fault routing are unchanged and still pinned.
-      artifacts: [crates/repark-spark/src/tests/show_tblproperties.rs, crates/repark-spark/src/tests/show_tblproperties_routing.rs, python/repark/tests/test_tblprops_1.py]
+      artifacts: [crates/repark-spark/src/tests/show_tblproperties.rs, crates/repark-spark/src/tests/show_tblproperties_routing.rs, python/repark/tests/iceberg/test_tblprops_1.py]
     - id: AT-4
       status: N/A
       justification: No commit, isolation or concurrency surface; SHOW reads one loaded table snapshot and pins run on fresh warehouses in one session.

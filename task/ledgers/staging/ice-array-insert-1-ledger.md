@@ -77,11 +77,11 @@ each RePark-written `sql_values` table and read the recorded rows.
 
 ## Facade evidence (release native, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin develop --release`)
 
-- Offline: `pytest python/repark/tests/test_ice_array_insert_1.py -q -p no:cacheprovider -n 4` →
+- Offline: `pytest python/repark/tests/writes/test_ice_array_insert_1.py -q -p no:cacheprovider -n 4` →
   30 passed, 6 skipped, 8 xfailed.
 - Live: `REPARK_PARITY_LIVE=1 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64
   SPARK_LOCAL_IP=127.0.0.1 ... jvm-lock.sh .venv/bin/python -m pytest
-  python/repark/tests/test_ice_array_insert_1.py -q -p no:cacheprovider` →
+  python/repark/tests/writes/test_ice_array_insert_1.py -q -p no:cacheprovider` →
   36 passed, 8 xfailed.
 - Bump fallout: `test_ice_nested_evo_1.py` → 54 passed, 5 xfailed;
   `cargo test -p repark-spark --lib nested_column_ddl` → 12 passed, 1 ignored.
@@ -112,7 +112,7 @@ COVERAGE_ATTESTATION:
         (byte-identical copy of the 2026-09-18 recording, SHA-256 in the fixture
         map.md); the footer walk is the recorder's own field_ids, imported, so no
         hand-computed id list exists.
-      artifacts: [python/repark-parity/fixtures/torture/data/ice_array_insert_1/spark_array_insert_oracle.json, python/repark/tests/_record_ice_array_insert_1.py]
+      artifacts: [python/repark-parity/fixtures/torture/data/ice_array_insert_1/spark_array_insert_oracle.json, python/repark/tests/writes/_record_ice_array_insert_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Red at the old pin, measured by the orchestrator at 3296ffc7
@@ -120,13 +120,13 @@ COVERAGE_ATTESTATION:
         loud with the Arrow concat error; the map_list non-VALUES statements
         refuse on CAST-MAP-SPELL-1 and stay strict xfails that flip when that
         row is fixed.
-      artifacts: [python/repark/tests/test_ice_array_insert_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/writes/test_ice_array_insert_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-3
       status: ATTACKED
       evidence: All 30 cells (3 shapes x 5 doors x v2/v3) are one test id each;
         the 8 substitute twins cover the CAST-MAP cells; the live tier has Spark
         adopt RePark-written tables and read Spark's rows (90 passed live).
-      artifacts: [python/repark/tests/test_ice_array_insert_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_array_insert_1.py]
     - id: AT-4
       status: N/A
       justification: No product code and no shared mutable state change on the RePark side; the behaviour change is the fork pin.
@@ -134,7 +134,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Each cell uses a fresh memory catalog under tmp_path; the live tier
         runs under the JVM lock; no network, no credentials.
-      artifacts: [python/repark/tests/test_ice_array_insert_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_array_insert_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: Rows and footer ids are asserted as values; data-file counts are
@@ -162,6 +162,6 @@ COVERAGE_ATTESTATION:
       evidence: The two pins that were blocked on the fork writer (the Rust
         nested_column_ddl ignore and the forkwrite strict xfail) run plainly at
         this pin; the nested-evo file stays green (54 passed, 5 xfailed).
-      artifacts: [crates/repark-spark/src/tests/nested_column_ddl.rs, python/repark/tests/test_ice_nested_evo_1.py]
+      artifacts: [crates/repark-spark/src/tests/nested_column_ddl.rs, python/repark/tests/iceberg/test_ice_nested_evo_1.py]
   complete: true
 ```

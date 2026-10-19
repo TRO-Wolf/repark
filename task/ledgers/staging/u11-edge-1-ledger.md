@@ -128,7 +128,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause comes from a live Spark 4.1.2 + Iceberg 1.11 measurement under target/probe-u11-edge-1/ or the scoreboard record; the three cells replay against the records (E-CASE-SELECT and TP-FORMAT-V1-DELETE EQUAL on every obs key, E-CASE-PARTITION-FIELD both refuse).
-      artifacts: [python/repark/tests/test_u11_edge_case_select.py, python/repark/tests/test_u11_edge_partition_field.py]
+      artifacts: [python/repark/tests/resolution/test_u11_edge_case_select.py, python/repark/tests/iceberg/test_u11_edge_partition_field.py]
     - id: AT-2
       status: ATTACKED
       evidence: Plain, mixed-case, aliased, star, qualified, struct-field, grouped, union and case-sensitive spellings; the DataFrame door on SQL, aliased and created frames; partition ADD, bucket, DROP, REPLACE and WRITE ORDERED BY under both case settings.
@@ -136,7 +136,7 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: Every partition refusal asserts the default spec unchanged from the table metadata; the source check runs before the transaction is built.
-      artifacts: [crates/repark-iceberg/src/write/partition_spec.rs, python/repark/tests/test_u11_edge_partition_field.py]
+      artifacts: [crates/repark-iceberg/src/write/partition_spec.rs, python/repark/tests/iceberg/test_u11_edge_partition_field.py]
     - id: AT-4
       status: N/A
       justification: No concurrency surface changes; the partition check reads the loaded table's current schema inside the existing single-transaction flow.
@@ -146,11 +146,11 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The whole facade suite (13,580 tests) and the repark-core, repark-spark, repark-iceberg and repark-python Rust suites are green; the re-pinned names (ice-mixed-case-1, ice-nested-evo-1, metadata_columns_reserved B7, the DataFusion alias test) follow the measured Spark spelling.
-      artifacts: [python/repark/tests/test_ice_mixed_case_1.py, python/repark/tests/test_ice_nested_evo_1.py, crates/repark-spark/src/tests/metadata_columns_reserved.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_mixed_case_1.py, python/repark/tests/iceberg/test_ice_nested_evo_1.py, crates/repark-spark/src/tests/metadata_columns_reserved.rs]
     - id: AT-7
       status: ATTACKED
       evidence: The display rewrite re-plans only when a written spelling differs from the planned name; the repair future boxes the display and strict-guard steps so the 100-level nested-view and 5,000-branch union stacks stay within their pins (test_nested_view_depth_guard segfaulted on the unboxed draft).
-      artifacts: [crates/repark-core/src/column_resolution.rs, python/repark/tests/test_ice_views_1.py]
+      artifacts: [crates/repark-core/src/column_resolution.rs, python/repark/tests/iceberg/test_ice_views_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: Every decision is in Rust (column_resolution/display.rs, df_guards/case_bind.rs, write/partition_spec.rs); round 2 moves the unionByName column match out of core.py into the Rust binder (the only Python source change, a shrink); ceilings only ratchet down (dataframe.rs 1017 → 1016, core.py 3991 → 3981, mirrored in CAP-1; alter.rs stays at 1607, router.rs untouched); no code comments.

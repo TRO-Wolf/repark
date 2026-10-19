@@ -32,7 +32,7 @@ under `false` and reused under `true` (S1-0 method note, pinned by the S1 test).
 S1-0 was recorded before this round (hand-back
 `casesens-2-s1-0-handback.json`): 29/29 p6 cells, every OD premise CONFIRMED,
 zero contradictions. This round copies `cs_probe6.py` and `p6-spark.json` into
-the committed oracle `python/repark/tests/casesens_2_spark_oracle.json` (new
+the committed oracle `python/repark/tests/resolution/casesens_2_spark_oracle.json` (new
 file, spark payloads byte-equal to `p6-spark.json`).
 
 S1-1 new `crates/repark-core/src/session/df_guards/written_names.rs`
@@ -377,26 +377,26 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: All 8 clauses walked one by one against behavior — the p6 oracle measured on live PySpark 4.1.2 + Iceberg 1.11.0 plus the recorded p1/p4 legs, hermetic Rust pins plus the facade replay per clause, mutations M2-M10 red-then-green (M1 declined with rationale, covered by M2/M3; S4 adds C-003 full via the p10-measured self-join halves, M8-M10).
-      artifacts: [task/ledgers/staging/casesens-2-ledger.md, python/repark/tests/test_casesens_2.py, crates/repark-core/src/session/df_guards/written_names.rs]
+      artifacts: [task/ledgers/staging/casesens-2-ledger.md, python/repark/tests/resolution/test_casesens_2.py, crates/repark-core/src/session/df_guards/written_names.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised — twin spellings id/ID, exact duplicates, qualified strings (last-dot split, dotted whole-name first), both caseSensitive settings per site, empty and mixed subsets, unknown columns, overlay and plain frames, null-bearing tables.
-      artifacts: [python/repark/tests/test_casesens_2.py, crates/repark-core/src/session/df_guards/written_names.rs]
+      artifacts: [python/repark/tests/resolution/test_casesens_2.py, crates/repark-core/src/session/df_guards/written_names.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal raises Spark's measured text (byte-exact, or head plus candidate set per R12, or type plus message per R8); name resolution is plan-time only, so no refusal or answer persists state.
-      artifacts: [python/repark/tests/test_casesens_2.py]
+      artifacts: [python/repark/tests/resolution/test_casesens_2.py]
     - id: AT-4
       status: ATTACKED
       evidence: No shared or global state touched — the rule reads from the frame's own task_ctx per call (Python never reads the flag), each pin runs in its own session and warehouse.
-      artifacts: [crates/repark-python/src/dataframe_names.rs, python/repark/tests/test_casesens_2.py]
+      artifacts: [crates/repark-python/src/dataframe_names.rs, python/repark/tests/resolution/test_casesens_2.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, no secret, no injection or deserialization surface — name matching over closed schema and display-name lists.
     - id: AT-6
       status: ATTACKED
       evidence: Arrow value AND type pinned per leg (dtypes plus rows); divergences recorded as dated residues R-CS2-2, R-CS2-3, R-CS2-5…R-CS2-7 with homes, never absorbed (S4 closes R-CS2-1, opens R-CS2-7).
-      artifacts: [python/repark/tests/test_casesens_2.py, task/ledgers/staging/casesens-2-ledger.md]
+      artifacts: [python/repark/tests/resolution/test_casesens_2.py, task/ledgers/staging/casesens-2-ledger.md]
     - id: AT-7
       status: ATTACKED
       evidence: Planning-only changes — no row path, no hot loop; the facade sweep, the three probes and the scoreboard replay ran in normal time; file-size baselines ratcheted DOWN only (core.py 3973 -> 3968 -> 3963; case_bind.rs held 1000).
@@ -408,7 +408,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Every changed refusal text is pinned on the door that raises it (byte-exact, R12 head plus candidate set, or R8 type plus message); the engine planning prefix is stripped by the shared _plain_message helper and the remainder asserted, not stripped silently.
-      artifacts: [python/repark/tests/test_casesens_2.py]
+      artifacts: [python/repark/tests/resolution/test_casesens_2.py]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first held — every new pin fails pre-change (S1/S2/S3 red runs recorded in the slice hand-backs; S4 red run recorded in the Slice 4 section) and the pre-change answers are recorded in the after-sN probe diffs; no dead branch ships (each new arm has a named pin).

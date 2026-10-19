@@ -124,7 +124,7 @@ shape difference — fork work, registry row).
   `v3_subquery_dml` sites, so both rewrite CALL arms dispatch behind `Box::pin` — the same
   remedy `run_maintenance` already uses (see `src/call/map.md`).
 - Release native (`maturin develop --release`) +
-  `pytest python/repark/tests/test_ice_rdf_options_1.py`: `39 passed, 1 skipped, 28 xfailed`
+  `pytest python/repark/tests/iceberg/test_ice_rdf_options_1.py`: `39 passed, 1 skipped, 28 xfailed`
   (2026-09-17; the skip is the live tier without `REPARK_PARITY_LIVE=1`; re-measured 42/28
   after the three added cells — see the green re-run note below).
 - Neighbours on the release native: `test_rewrite_data_files_options.py` +
@@ -176,15 +176,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Walked C-001..C-007 against the diff and the runs. Every oracle error cell (17 rdf, 2 rpd, dup-key) asserts Spark's class and text end to end; every success cell asserts result, file, row, and snapshot state; fork-owned cells xfail strict with measured modes, and five snapshot XPASSes forced unmarking, so the suite bites in both directions.
-      artifacts: [crates/repark-spark/src/tests/call_rdf_options.rs, python/repark/tests/test_ice_rdf_options_1.py, python/repark/tests/ice_rdf_options_1_spark_oracle.json]
+      artifacts: [crates/repark-spark/src/tests/call_rdf_options.rs, python/repark/tests/iceberg/test_ice_rdf_options_1.py, python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Empty map, NULL, integer literal, duplicate keys, empty/upper-case/unknown keys, zero/negative longs, leading-plus and spaced integers, silent-false booleans, case-varied job orders, non-current and unknown spec ids, non-map and odd-arity maps, and null map values all exercised against live Spark first, then pinned.
-      artifacts: [python/repark/tests/_record_rdf_options_1_oracle.py, python/repark/tests/ice_rdf_options_1_spark_oracle.json, crates/repark-spark/src/tests/call_rdf_options.rs, python/repark/tests/test_ice_rdf_options_1.py]
+      artifacts: [python/repark/tests/iceberg/_record_rdf_options_1_oracle.py, python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json, crates/repark-spark/src/tests/call_rdf_options.rs, python/repark/tests/iceberg/test_ice_rdf_options_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: All validation refuses before any catalog write (options parse after table load, plan before commit); the bad-integer class maps to IllegalArgumentException (PySpark's NumberFormat superclass, Q-19c recorded); duplicate keys surface Spark's map-construction text as a base PySparkException with the RuntimeError catch intact; no retryable commit path is added, so no idempotency surface changes.
-      artifacts: [crates/repark-core/src/error_map.rs, python/repark/tests/test_ice_rdf_options_1.py::test_option_dup_key_matches_spark_map_text, python/repark/tests/test_ice_rdf_options_1.py::test_number_format_maps_to_illegal_argument]
+      artifacts: [crates/repark-core/src/error_map.rs, python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_option_dup_key_matches_spark_map_text, python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_number_format_maps_to_illegal_argument]
     - id: AT-4
       status: ATTACKED
       evidence: Ordering pinned where it matters: missing table still reports before a malformed legacy flag (existing pin kept), unknowns refuse before value parsing, semantic checks run in fork order; multi-violation check order is unmeasured and recorded as a gap. No shared state, no spawn, validation is synchronous — no race surface added.
@@ -195,22 +195,22 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Every success pin asserts live row counts (400/399/370/200/100 per shape) plus file and snapshot state, so a dropped or duplicated row reds the suite; rewrite execution itself is unchanged fork code, and the residue direction (rows kept, deletes left) is pinned exact.
-      artifacts: [python/repark/tests/test_ice_rdf_options_1.py, python/repark/tests/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape]
+      artifacts: [python/repark/tests/iceberg/test_ice_rdf_options_1.py, python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape]
     - id: AT-7
       status: N/A
       justification: Validation is O(map entries) with no new loops, scans, or retained state; the compile-time 16 KiB future episode was a gate sizing matter fixed by arm-level Box::pin (recorded in Gates), not a runtime resource path.
     - id: AT-8
       status: ATTACKED
       evidence: No upstream behavior presumed: the rpd 8-key subset, the per-key value grammars, and every refusal text were measured against PySpark 4.1.2 + Iceberg 1.11.0 (edge probes) instead of copied from docs; only pre-existing fork builder methods are called; the fixture replays byte-identical across runs except the noted delete-byte variance.
-      artifacts: [python/repark/tests/ice_rdf_options_1_spark_oracle.json, python/repark/tests/_record_rdf_options_1_oracle.py, crates/repark-spark/src/call/rewrite_options.rs]
+      artifacts: [python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json, python/repark/tests/iceberg/_record_rdf_options_1_oracle.py, crates/repark-spark/src/call/rewrite_options.rs]
     - id: AT-9
       status: ATTACKED
       evidence: Every refusal path was read end to end in Python and carries Spark's verbatim diagnostic (class plus text), so a field failure diagnoses itself the way Spark's does; no new log or metric surface was needed for a validation-only change.
-      artifacts: [python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_errors]
+      artifacts: [python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_option_cell_errors]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first held both ways: 30 Python pins failed red on the refusal and the 28 Rust pins failed 28/28 with the implementation stashed; five strict-xfail snapshot pins XPASSed on measurement and were unmarked, proving XPASS strictness bites. Every new branch has a nameable input (one pin per message, per key subset, per scalar shape); the threshold `>= 0` branch was added by a probe finding, not by reading code.
-      artifacts: [crates/repark-spark/src/tests/call_rdf_options.rs, python/repark/tests/test_ice_rdf_options_1.py]
+      artifacts: [crates/repark-spark/src/tests/call_rdf_options.rs, python/repark/tests/iceberg/test_ice_rdf_options_1.py]
   reattested: [AT-2, AT-3, AT-10]
   complete: true
 ```
@@ -234,7 +234,7 @@ Fork half: TRO-Wolf/iceberg-rust#283 head `2f5323ca`, read at `/tmp/ic-fork-rdfs
 
 ### Round-2 red-first (unwired tree `97ec905f` + fork `2f5323ca`, release native)
 
-`pytest python/repark/tests/test_ice_rdf_options_1.py -q` (2026-09-17):
+`pytest python/repark/tests/iceberg/test_ice_rdf_options_1.py -q` (2026-09-17):
 `1 failed, 42 passed, 1 skipped, 27 xfailed`. The one failure is
 `test_option_cell_snapshots[min_input_files_1]` with `[XPASS(strict)]` — the fork's
 one-commit default lands even through the unwired CALL, so the pin bites exactly as
@@ -301,7 +301,7 @@ fixed here.
 
 ### Round-2 gates (release native unless noted, 2026-09-17)
 
-- `pytest python/repark/tests/test_ice_rdf_options_1.py`: `65 passed, 1 skipped, 11
+- `pytest python/repark/tests/iceberg/test_ice_rdf_options_1.py`: `65 passed, 1 skipped, 11
   xfailed` (zero XPASS; the skip is the live tier without `REPARK_PARITY_LIVE=1`).
 - Live tier (`test_live_oracle_still_matches_spark`, `REPARK_PARITY_LIVE=1`, one JVM):
   PASSED in 105 s — fixture still replays from the generator.
@@ -326,7 +326,7 @@ fixed here.
 
 ### Round-3 baseline (fork main, release native rebuilt, no round-3 edits)
 
-`pytest python/repark/tests/test_ice_rdf_options_1.py -q`: `65 passed, 1 skipped, 11
+`pytest python/repark/tests/iceberg/test_ice_rdf_options_1.py -q`: `65 passed, 1 skipped, 11
 xfailed` in 349 s — identical to round 2, so the fork merge (`75da2b58` pin /
 `d73b914a` override) introduces no drift on this surface.
 
@@ -374,7 +374,7 @@ the pin's `removed == 0` reds pre-fix by construction.
 
 ### Round-3 gates (release native unless noted, 2026-09-17)
 
-- `pytest python/repark/tests/test_ice_rdf_options_1.py`: `118 passed, 1 skipped, 13
+- `pytest python/repark/tests/iceberg/test_ice_rdf_options_1.py`: `118 passed, 1 skipped, 13
   xfailed`, zero failures (13 = 7 value + 3 snapshot + 1 residue + 2 removed-count
   DANGLE-2 xfails; the skip is the live tier without `REPARK_PARITY_LIVE=1`).
 - Live tier (`test_live_oracle_still_matches_spark`, `REPARK_PARITY_LIVE=1`, one JVM):

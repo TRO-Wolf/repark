@@ -55,7 +55,7 @@ parsing, one spelling, and resolved session state.
 
 - Up: [../map.md](../map.md)
 - The user-visible half of the same knob: `python/repark/src/repark/session/session_time_zone.py`
-- The recorded cross-engine rows: `python/repark/tests/test_session_timezone_parity.py`
+- The recorded cross-engine rows: `python/repark/tests/timestamps/test_session_timezone_parity.py`
 
 ## Debug
 

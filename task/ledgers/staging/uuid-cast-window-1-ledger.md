@@ -27,7 +27,7 @@ combo at 157 units, the exact-100/101-unit windowed lines, and the newline leg (
 2, position 13). A cut that splits a surrogate pair renders `?` through the PySpark
 door (measured on a UTF-8 box, R-1). The ASCII control is byte-identical to RePark
 main. The oracle
-[uuid_cast_window_1_spark_oracle.json](../../../python/repark/tests/uuid_cast_window_1_spark_oracle.json)
+[uuid_cast_window_1_spark_oracle.json](../../../python/repark/tests/types/uuid_cast_window_1_spark_oracle.json)
 keeps the four SQL texts and Spark's full messages, dropping only PySpark's leading
 and trailing newline.
 
@@ -35,7 +35,7 @@ and trailing newline.
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | The UUID refusal's window and position count as Spark counts — the position in Unicode scalar values, the window cuts at UTF-16 code-unit offsets (32 left, 36 past the token start, `...` on each cut side), the caret pad 35 or position minus one with four carets — and never panic on non-ASCII SQL. | Rust pins plus the facade replay byte-compare all four oracle messages; a sweep covers 2/3/4-byte cells across alignments. | PROVEN | [uuid_cast.rs](../../../crates/repark-spark/src/uuid_cast.rs) `uuid_window_counts_characters`, `uuid_window_does_not_panic_on_non_ascii`; [test_uuid_cast_window_1.py](../../../python/repark/tests/test_uuid_cast_window_1.py) all four cases `==`, 4 passed. |
+| C-001 | The UUID refusal's window and position count as Spark counts — the position in Unicode scalar values, the window cuts at UTF-16 code-unit offsets (32 left, 36 past the token start, `...` on each cut side), the caret pad 35 or position minus one with four carets — and never panic on non-ASCII SQL. | Rust pins plus the facade replay byte-compare all four oracle messages; a sweep covers 2/3/4-byte cells across alignments. | PROVEN | [uuid_cast.rs](../../../crates/repark-spark/src/uuid_cast.rs) `uuid_window_counts_characters`, `uuid_window_does_not_panic_on_non_ascii`; [test_uuid_cast_window_1.py](../../../python/repark/tests/types/test_uuid_cast_window_1.py) all four cases `==`, 4 passed. |
 
 ## Mutation record (2026-09-27)
 
@@ -54,11 +54,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: The clause is walked against Spark's measured answer on the same statements; the Rust pins and the facade replay byte-compare every recorded message.
-      artifacts: [crates/repark-spark/src/uuid_cast.rs, python/repark/tests/test_uuid_cast_window_1.py, python/repark/tests/uuid_cast_window_1_spark_oracle.json]
+      artifacts: [crates/repark-spark/src/uuid_cast.rs, python/repark/tests/types/test_uuid_cast_window_1.py, python/repark/tests/types/uuid_cast_window_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Every named shape is pinned (the ASCII control, the 2-byte run, the newline split, the astral run with its right truncation), plus a 2/3/4-byte cell sweep over sixty counts and two head widths.
-      artifacts: [crates/repark-spark/src/uuid_cast.rs, python/repark/tests/test_uuid_cast_window_1.py]
+      artifacts: [crates/repark-spark/src/uuid_cast.rs, python/repark/tests/types/test_uuid_cast_window_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The byte-slice panic is replaced by unit-safe slicing; the sweep holds the position header on every alignment without panicking.
@@ -78,7 +78,7 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: No dependency, no crate edge, no NTZ touch; Spark's 32/36-unit window contract is pinned from measurement rather than presumed from the NTZ shape.
-      artifacts: [python/repark/tests/uuid_cast_window_1_spark_oracle.json, python/repark/tests/test_uuid_cast_window_1.py]
+      artifacts: [python/repark/tests/types/uuid_cast_window_1_spark_oracle.json, python/repark/tests/types/test_uuid_cast_window_1.py]
     - id: AT-9
       status: ATTACKED
       evidence: The byte-slice panic and the misplaced window both fail their pins red-then-green under M1; a wrong window fails with expected versus observed text.
@@ -86,7 +86,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: M1 reverts to byte slicing and both Rust pins red before restore; the facade pins red on the same byte code.
-      artifacts: [crates/repark-spark/src/uuid_cast.rs, python/repark/tests/test_uuid_cast_window_1.py]
+      artifacts: [crates/repark-spark/src/uuid_cast.rs, python/repark/tests/types/test_uuid_cast_window_1.py]
   complete: true
 ```
 

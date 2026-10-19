@@ -8,7 +8,7 @@ use super::common::*;
 
 const ORACLE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../python/repark/tests/u8_write_sql_spark_oracle.json"
+    "/../../python/repark/tests/writes/u8_write_sql_spark_oracle.json"
 ));
 
 const REPLAYED: [&str; 26] = [

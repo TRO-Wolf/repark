@@ -68,7 +68,7 @@ live PySpark 4.1.2) covered beside its camelCase twin, measured Spark-equal.
 Three roster names stay on the backlog as measured divergences:
 `getDatabase` / `get_database` (§7 EX-CAT-1), `listDatabases` (§7 EX-CAT-2,
 cross-referencing FA-2), and the `functionExists(name, dbName)` arm (§7
-EX-CAT-3) — all pinned in `python/repark/tests/test_examples_window_catalog.py`.
+EX-CAT-3) — all pinned in `python/repark/tests/parity/test_examples_window_catalog.py`.
 `Catalog.list_databases` joins the EX-21 batch's stays: it is the same
 function object as the divergent `listDatabases`, so covering it would paper
 over §7 `EX-CAT-2`. EX-29 (2026-09-11) re-measured all four database-listing
@@ -78,6 +78,6 @@ snake legs, which share the divergent function objects.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
 - Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/completed/ex-20-window-catalog-ledger.md)
 - Ledger: [../../../task/ledgers/staging/ex-21-catalog-session-ledger.md](../../../task/ledgers/completed/ex-21-catalog-session-ledger.md)

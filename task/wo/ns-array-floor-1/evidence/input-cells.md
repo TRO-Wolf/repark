@@ -4,7 +4,7 @@ Nine doors over five sources (ns, tzns, coal, case, us) at top level and
 inside an array, on main (module 293896ce), the U-1 head (module 07cbe563),
 and live Spark 4.1.2 (microsecond control only, both values of
 spark.sql.execution.pandas.convertToArrowArraySafely). Recorder
-`python/repark/tests/_record_ns_array_floor_1_input.py`. Zone UTC everywhere.
+`python/repark/tests/timestamps/_record_ns_array_floor_1_input.py`. Zone UTC everywhere.
 Live banner: spark 4.1.2 zone UTC, pandas 3.0.6. The pre-epoch values -1 and
 -1500 (nanoseconds beside the seeds, microseconds in the control) tell floor
 from truncation.

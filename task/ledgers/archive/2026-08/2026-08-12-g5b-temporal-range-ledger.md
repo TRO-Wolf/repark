@@ -131,7 +131,7 @@ re-scoped.
 | Engine change | [`crates/repark-spark/src/window_range.rs`](../../../../crates/repark-spark/src/window_range.rs) | Spark's bare-offset rules for `RANGE` over a datetime key |
 | Wire-in | [`crates/repark-spark/src/spark_ast.rs`](../../../../crates/repark-spark/src/spark_ast.rs) | `conform_temporal_range_frames` between planning and analysis |
 | Rust pins | [`crates/repark-spark/src/tests/window_temporal_range.rs`](../../../../crates/repark-spark/src/tests/window_temporal_range.rs) | 5 tests (4 pin classes + the NULL-key twin) |
-| Differential rows | [`python/repark/tests/test_window_parity.py`](../../../../python/repark/tests/test_window_parity.py) | +15 rows, +2 facade tests, budget + family pins |
+| Differential rows | [`python/repark/tests/test_window_parity.py`](../../../../python/repark/tests/functions/test_window_parity.py) | +15 rows, +2 facade tests, budget + family pins |
 | This ledger | `task/g5b-temporal-range-ledger.md` | linked from [`task/map.md`](../../../map.md) |
 
 ### 1.1 The fix, precisely

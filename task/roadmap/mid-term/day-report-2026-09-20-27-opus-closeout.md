@@ -50,7 +50,7 @@ Two commands, no build, before any PR: `git -C /tmp/<lane> ls-files -v Cargo.tom
 **Sound in the stopped work:** all 3 commits clean, Rust fully green, comment gate clean. Nothing redone.
 **Assessment:** gate RED `CB=0 R=0 T=0 U=1 L=1` — and `U=1 L=1` is ONE failure class counted twice, because
 the gate's `L` is a pytest re-run against release, not a lint code. 5 of 13 tests in
-`python/repark/tests/test_ice_rdf_sort_parse_1.py` failed, two causes, both inside existing packet rulings:
+`python/repark/tests/iceberg/test_ice_rdf_sort_parse_1.py` failed, two causes, both inside existing packet rulings:
  - CAUSE 1 (4 tests): helper `_file_ids` (:124) selects `partition` from `{table}.files`, but the
    UNPARTITIONED `_flat_table` fixture (:93) has no `partition` column — that column is IPI-20's (unit 5,
    unlanded). Packet §11 A-1 rules `SELECT file_path FROM t.files` + pyarrow and says verbatim "Do not wait
@@ -131,7 +131,7 @@ NARROWED (A-11). The WO also orders `git reset --soft d87e3c7a` so no `wip:` tit
 **Open question raised** (claims.txt 10:38, `QUESTION IPI-19/56/37 A-11`): keep RePark's `target.`/`source.`
 qualifiers and bare-`"id"` sugar once Spark's short-name form works? Spark RAISES on them. My lean and the
 WO's scope: A-4's dual-alias route — Spark cells EQUAL, RePark spellings keep working, EX-DF-9 narrowed not
-retired, because Spark-exact breaks `python/repark/tests/test_examples_dataframe_b.py:52-77` and any user
+retired, because Spark-exact breaks `python/repark/tests/parity/test_examples_dataframe_b.py:52-77` and any user
 who copied the RePark docs; commit 64409e13 already took this route. The orchestrating session replied at
 10:29: proceed on the lean (it is INDEX.md decision 22's standing recommendation), say in the PR body and
 registry row that RePark accepts qualifiers Spark rejects, and do not hold the queue for it. **Not blocked.**
@@ -426,7 +426,7 @@ slots full again.
   unfounded), two reds. (a) `check_ledger_grammar.py` fails with 11 findings because the unit ledger
   `task/ledgers/staging/ice-rdf-sort-parse-1-ledger.md` was never written while eleven map.md rows pin
   its clauses C-001..C-011 — ruling: write the ledger, do NOT quiet the pins. (b) ruff E501 at
-  `python/repark/tests/_record_ice_rdf_sort_parse_1_oracle.py:224`. WO `011/wo-ra-rdfsort-r2.md` cut,
+  `python/repark/tests/iceberg/_record_ice_rdf_sort_parse_1_oracle.py:224`. WO `011/wo-ra-rdfsort-r2.md` cut,
   first in the launch queue; the critic running on 2de66930 will need a delta pass afterwards.
 
 ## Tick 12 (12:08 EDT)
@@ -610,8 +610,8 @@ built gate-exact (`maturin@1.14.1 develop --release`, exit 0):
 
 | oracle file | result |
 |---|---|
-| `python/repark/tests/test_ice_session_write_conf_1.py` | 27 passed, 1 skipped, 2 xfailed (rc 0) |
-| `python/repark/tests/test_ice_session_write_conf_1_paths.py` | 38 passed (rc 0) |
+| `python/repark/tests/writes/test_ice_session_write_conf_1.py` | 27 passed, 1 skipped, 2 xfailed (rc 0) |
+| `python/repark/tests/writes/test_ice_session_write_conf_1_paths.py` | 38 passed (rc 0) |
 
 **Before/after: 0 failing -> 0 failing; 65 passing cells + 1 skip + 2 xfail = 68 collected, zero
 regressions on merged main.** No failure nodes, so no residue from the replay.
@@ -838,7 +838,7 @@ paths pytest collects the whole repo and dies on
 `ModuleNotFoundError: No module named 'yaml'` (2 collection errors, both halves rc=2). Unrelated to
 the bump: an environment gap in the lane venv, in a dbt package the pin does not touch. The rust half
 banked clean on `1b2458f5` — comment-ban 0, release rc=0, 1321 + 383 + 0 tests passed, `rust rc=0`.
-Re-queued 16:14 with an explicitly named path: `python/repark/tests/test_metadata_tables.py`, the
+Re-queued 16:14 with an explicitly named path: `python/repark/tests/iceberg/test_metadata_tables.py`, the
 suite that carries this bump's one behavior change (the C-012 flip).
 **Correction to my own notes:** the "prior gate's pytest half was 113 passed / 1 xfailed" figure could
 not be reconstructed — it belongs to a different lane's path set, not ra-pin42's (repark-parity/tests
@@ -919,7 +919,7 @@ five Cargo.toml rev lines + every Cargo.lock `iceberg*` source at `886b94c1…`,
 pin commit and `1b2458f5`, and the C-012 rewrite is **stronger** than the pin it replaces (dropping
 the special case is endorsed explicitly). Both findings are the same root cause — records that still
 claim the old refusal after fork #332 ported `PositionDeletesTable::scan`:
-- **V-001 (P1)** `python/repark/tests/_v3_statement_coverage_repark.py` still records
+- **V-001 (P1)** `python/repark/tests/iceberg/_v3_statement_coverage_repark.py` still records
   `ERROR "External error: FeatureUnsupported => position_deletes metadata table scan i"` and the
   golden keeps `meta-position-deletes` at DIVERGES. **CI independently measured the true answer** on
   `1b2458f5`: `{'probes': [['OK', [[1]]]]}` — this is exactly #760's single red check, so the critic
@@ -973,7 +973,7 @@ are consequences of work already accepted:
    `("crates/repark-iceberg/src/write/merge/mod.rs", 1701)` while the branch's file is 1656 lines and
    `scripts/check_rust_file_size.py:90` was correctly ratcheted to 1656. The two registries must
    agree → change :35 to 1656.
-2. `python/repark/tests/_dfcore_1_expected.py` `EXPECTED_NEW_PACKAGE_SUBMODULES` lacks
+2. `python/repark/tests/dataframe/_dfcore_1_expected.py` `EXPECTED_NEW_PACKAGE_SUBMODULES` lacks
    `writer_schema`, the new dataframe submodule this unit adds → add it.
 Deliberately NOT folded into round 3 (it was already running, with a closed file list); I apply both
 myself when round 3 hands back, so the branch takes ONE more push and ONE more CI cycle.
@@ -2031,7 +2031,7 @@ Muse round 2 (`/tmp/muse-worker/rc-meta/20260921T020741Z/`, exit 0) CONCLUDED wi
 carries the `mutations` key the work order demanded: **20 mutations (F1–F16 incl. F3b/F7b/F13b/F14b),
 each naming the test it reddened, each `reverted: true`**, zero `questions`, six commits. The round is
 **test- and ledger-side only** — `git diff --stat daff9448..49d401b7` touches exactly
-`crates/repark-spark/src/tests/metadata_columns.rs`, `python/repark/tests/test_ice_metadata_cols_1.py`,
+`crates/repark-spark/src/tests/metadata_columns.rs`, `python/repark/tests/iceberg/test_ice_metadata_cols_1.py`,
 two `map.md` files and the staging ledger. The four critic findings are closed in order: V-001 names the
 refused column (rust loop + backtick leg + pytest twin), V-002 pins the metadata-before-lineage stage
 order with the PREFERRED form (a format-v3 `SELECT _file, _row_id`, no fallback needed), V-003 adds the

@@ -30,7 +30,7 @@ change (out of scope, pinned on the Python door plus a string-unit SQL call).
 - D-3 Session zone: RePark fixes the zone at session build (registry TZ-3), so the
   `America/New_York` cells build their own session via
   `ReparkSession.builder.config('spark.sql.session.timeZone', …)`, following
-  `python/repark/tests/test_session_timezone_parity.py`.
+  `python/repark/tests/timestamps/test_session_timezone_parity.py`.
 - D-4 NTZ on the SQL door: `TIMESTAMP_NTZ '…'` literals and
   `CAST(… AS TIMESTAMP_NTZ)` do not parse in RePark's `spark.sql` (run 15c owns the
   parser). SQL cells whose FRAME needs the `ntz` column are pinned on the Python door
@@ -108,7 +108,7 @@ VERDICT: 19 clauses, 19 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 1. Red-first record (base `7693ef23`, before any kernel edit)
 
-`.venv/bin/python -m pytest python/repark/tests/test_fnp11a_temporal.py -q` on the base
+`.venv/bin/python -m pytest python/repark/tests/functions/test_fnp11a_temporal.py -q` on the base
 tree: **346 failed, 0 passed in 12.27s** — every one of the 344 door cells plus the
 signature pin and the NTZ-pair pin. Sampled failure modes: SQL-door cells fail with
 `AnalysisException: Error during planning: Invalid function 'make_timestamp'` (and the
@@ -120,8 +120,8 @@ This matches the orchestrator's `repark_probe_base.json` baseline.
 ## 2. Work log
 
 - 2026-09-15 step 1: ledger created; fixture copied to
-  `python/repark/tests/fnp11_spark_oracle.json`; red pins in
-  `python/repark/tests/test_fnp11a_temporal.py` over the `spark_default` cells.
+  `python/repark/tests/functions/fnp11_spark_oracle.json`; red pins in
+  `python/repark/tests/functions/test_fnp11a_temporal.py` over the `spark_default` cells.
 - 2026-09-15 step 2: kernels in `crates/repark-functions/src/temporal_ctor.rs` plus
   `arith.rs` / `adddiff.rs` / `intervals.rs`, registered in `register_all`; facade
   wrappers in `python/repark/src/repark/spark/functions_temporal.py`, destubbed
@@ -157,9 +157,9 @@ This matches the orchestrator's `repark_probe_base.json` baseline.
 ## 3. Green record (2026-09-15, after step 4)
 
 - `cargo test -p repark-functions temporal_ctor`: 21 passed, 0 failed.
-- `.venv/bin/python -m pytest python/repark/tests/test_fnp11a_temporal.py
-  python/repark/tests/test_examples_functions_a.py
-  python/repark/tests/test_fnp7_try_inversions.py -q`: 317 passed (265 + 52).
+- `.venv/bin/python -m pytest python/repark/tests/functions/test_fnp11a_temporal.py
+  python/repark/tests/parity/test_examples_functions_a.py
+  python/repark/tests/functions/test_fnp7_try_inversions.py -q`: 317 passed (265 + 52).
 - `make verify`: green (see §5).
 
 ## 4. Residual divergences (registry §7 rows EX-FN-24..27)
@@ -195,11 +195,11 @@ COVERAGE_ATTESTATION:
   - id: AT-1
     status: ATTACKED
     evidence: Red-first per-door oracle runs (137 failed/126 passed, then 51/212) drove every kernel fix; the DST day-arithmetic, gap push-forward, decimal-seconds scaling and NTZ naive-storage bugs were all measured against live PySpark cells before the fix, never assumed.
-    artifacts: [python/repark/tests/test_fnp11a_temporal.py, python/repark/tests/fnp11_spark_oracle.json]
+    artifacts: [python/repark/tests/functions/test_fnp11a_temporal.py, python/repark/tests/functions/fnp11_spark_oracle.json]
   - id: AT-2
     status: ATTACKED
     evidence: Full ANSI on/off by UTC/America-New-York matrix on both doors (265 door cells), plus literal-only, null-row and leap-second shapes; error cells assert Spark conditions with message prefixes on both settings.
-    artifacts: [python/repark/tests/test_fnp11a_temporal.py]
+    artifacts: [python/repark/tests/functions/test_fnp11a_temporal.py]
   - id: AT-3
     status: ATTACKED
     evidence: No unsafe, no new threads, no env reads at query time; the panic-ban, crate-DAG and lib-ceiling gates hold over the new module, and the naive-literal UTC reading follows the server-prep disciplines instead of the driver zone.
@@ -213,7 +213,7 @@ COVERAGE_ATTESTATION:
   - id: AT-6
     status: ATTACKED
     evidence: Overflow (year 2147483647 add, month/day/nano checked arithmetic), wrong-unit, bad-zone and wrong-arity inputs raise Spark conditions or answer NULL in try_ forms, pinned per door and ANSI setting.
-    artifacts: [python/repark/tests/test_fnp11a_temporal.py, crates/repark-functions/src/temporal_ctor/intervals.rs]
+    artifacts: [python/repark/tests/functions/test_fnp11a_temporal.py, crates/repark-functions/src/temporal_ctor/intervals.rs]
   - id: AT-7
     status: N/A
     justification: Scalar-function unit, no system-level, migration or fleet-wide change.
@@ -224,11 +224,11 @@ COVERAGE_ATTESTATION:
   - id: AT-9
     status: ATTACKED
     evidence: Every measured divergence that cannot close here carries an explicit residual pin asserting today's behavior (folded nullability, bare localtimestamp, naive-literal zone, bare-unit refusal) so its fix reds on purpose.
-    artifacts: [python/repark/tests/test_fnp11a_temporal.py, docs/spark-sql-iceberg-parity.md]
+    artifacts: [python/repark/tests/functions/test_fnp11a_temporal.py, docs/spark-sql-iceberg-parity.md]
   - id: AT-10
     status: ATTACKED
     evidence: Neighbor suites test_examples_functions_a.py and test_fnp7_try_inversions.py run in the same gate (317 passed total); the EX-FN-10/11/19 pins assert the fixed answers instead of the old refusals.
-    artifacts: [python/repark/tests/test_examples_functions_a.py, python/repark/tests/test_fnp7_try_inversions.py]
+    artifacts: [python/repark/tests/parity/test_examples_functions_a.py, python/repark/tests/functions/test_fnp7_try_inversions.py]
 complete: true
 ```
 

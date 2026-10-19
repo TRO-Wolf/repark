@@ -70,4 +70,4 @@ pins: perf-dynflatten-2-null-mask/C-001, C-005
 
 - Up: [../map.md](../map.md)
 - Tests: [../../tests/test_dynflatten_bed.py](../../tests/test_dynflatten_bed.py)
-- Live: `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode`
+- Live: `python/repark/tests/parity/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode`

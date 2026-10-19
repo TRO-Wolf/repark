@@ -53,7 +53,7 @@ red first, wrote this ledger, updated the two maps, and committed.
 | C-025 | A non-empty `[<profile>.database]` table refuses loud at load: the sources parse and validate (collisions included) but named-source registration is CFG-2's card, and a silent drop would vanish configured sources. | `database_sources_refuse_until_named_registration_lands` | **PROVEN** | Red first (step 3 below); green in the step-3 run. The refusal names `default.database.postgres.company_db` and the `CFG-2` card. |
 | C-026 | `Builder.configFile(path)` forces a file and automatic discovery (`REPARK_CONFIG` → CWD → home) runs at `getOrCreate` without it; the file's translated pairs fold through the existing `.config()` choke point with builder keys winning, so display, session-knob, and `conf` values reach the knob resolvers and `conf.get`. | `test_config_file_folds_pairs_through_config`, `test_repark_config_env_discovers_file` | **PROVEN** | Red first (Python, below: `'Builder' object has no attribute 'configFile'`); green after `make develop` (counts in Gates). The fold asserts `custom.probe.key` in `conf.get` and `display_style == "spark"` from the file; the discovery pin sets `REPARK_CONFIG` by monkeypatch and reads the file value back. |
 | C-027 | The forced path reaches the engine through `PyReparkSession::new(config_path=...)`; end to end, an explicit `.config()` beats the file, and a forced-but-missing path refuses naming it. | `test_builder_config_beats_config_file`, `test_config_file_missing_path_refuses`, `config_path_names_the_forced_file_and_missing_refuses` (binding) | **PROVEN** | Red first (Python, below); green after `make develop` (counts in Gates). The missing-path refusal matches `does not exist` from the engine's forced-path check; the binding pin also asserts undiscoverable `config_file_pairs(None)` comes back empty. |
-| C-028 | The `repark.config` mirror validates typed construction the way the loader parses: unknown `display` / `session` keys refuse, session knobs keep non-negative integers and digit strings, booleans refuse in every table, database kinds outside `postgres / sqlserver / trino` refuse, dotted catalog names / empty catalog blocks / cross-family name collisions refuse. | `test_unknown_display_key_refuses`, `test_unknown_session_key_refuses`, `test_session_digit_string_accepted`, `test_session_negative_knob_refuses`, `test_boolean_values_refuse`, `test_unknown_database_kind_refuses`, `test_catalog_name_with_dot_refuses`, `test_empty_catalog_block_refuses`, `test_name_collision_across_families_refuses` | **PROVEN** | Red first (step 4, below: `ModuleNotFoundError: No module named 'repark.config'`); green after `config.py` landed: `12 passed` (`.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q`, 2026-09-10). The mirror never parses: no discovery, merge, interpolation, or translation code exists in the module. |
+| C-028 | The `repark.config` mirror validates typed construction the way the loader parses: unknown `display` / `session` keys refuse, session knobs keep non-negative integers and digit strings, booleans refuse in every table, database kinds outside `postgres / sqlserver / trino` refuse, dotted catalog names / empty catalog blocks / cross-family name collisions refuse. | `test_unknown_display_key_refuses`, `test_unknown_session_key_refuses`, `test_session_digit_string_accepted`, `test_session_negative_knob_refuses`, `test_boolean_values_refuse`, `test_unknown_database_kind_refuses`, `test_catalog_name_with_dot_refuses`, `test_empty_catalog_block_refuses`, `test_name_collision_across_families_refuses` | **PROVEN** | Red first (step 4, below: `ModuleNotFoundError: No module named 'repark.config'`); green after `config.py` landed: `12 passed` (`.venv/bin/python -m pytest python/repark/tests/session/test_config_mirror.py -q`, 2026-09-10). The mirror never parses: no discovery, merge, interpolation, or translation code exists in the module. |
 | C-029 | The mirror renders TOML the loader accepts: the text parses back to the same tables (dotted conf keys nest and flatten at load), a rendered file builds a session answering the file's conf value and display style, and a rendered database source refuses at load naming `CFG-2`. | `test_rendered_toml_parses_to_same_tables`, `test_rendered_file_builds_session_with_file_values`, `test_rendered_database_source_refuses_at_load_until_cfg_2` | **PROVEN** | Red first (step 4, below); green in the same `12 passed` run. The session pin reads `example.probe.key` and `display_style` off a live session built from `save()` output; the refusal pin matches `CFG-2` from the engine's database-table check. |
 | C-030 | `docs/guide/repark-toml.md` carries one complete example file (`[default]`, `[prod]`, `[read]`, `[write]`, one catalog, one database source, the display and session tables), states the database-load refusal and the sorted-`conf`-key order plainly, and quotes only blocks and errors that ran in this clone. | Step-3 pins for discovery/precedence/fold (`test_repark_config_env_discovers_file`, `test_builder_config_beats_config_file`, `test_config_file_folds_pairs_through_config`) plus the C-029 render/refusal pins for the quoted outputs | **PROVEN** | Every quoted transcript re-ran in this clone (probe outputs in Gates — step 4): the mirror render, the `cfg-1` / `polars` build, `from-env` / `from-local` discovery, the empty-disable `Configuration property probe.key is not set.`, the four `repark config error` refusals verbatim, the `'${TOTAL}'` escape with `TOTAL=42`, and the `***` / `plain` / `s3cr3t` redaction triple. The guide is linked from `docs/guide/map.md` (Contents + I-want rows) with a pointer in `session-and-conf.md`. |
 | C-031 | `config.py` adds no enumerated public name: the surface stays 923, no size baseline moves, and the parity suite plus `check-example-coverage` stay green with no covering example owed. | The `len(rows) == 923` pin in `test_ex_0_enumerator_emits_five_families_and_repark_sql` | **PROVEN** | The enumerator walks only the function/class/module doors plus `repark.sql` — `repark/config.py` is none of them — so the count pin holds without a bump (parity-suite output in Gates — step 4). `config.py` (253 lines) and the test file carry no baseline row; `check_lib_py` is clean. |
@@ -201,7 +201,7 @@ split `tests.rs` → `tests/mod.rs` + `tests/wiring.rs` (identity move, same gre
 The 4 facade pins were written into `test_builder_config_map.py` first (before
 `Builder.configFile`, the fold, or the native `config_path` existed) and run against the
 untouched tree. Red run: `.venv/bin/python -m pytest
-python/repark/tests/test_builder_config_map.py -q -k "config_file or beats_config_file or
+python/repark/tests/session/test_builder_config_map.py -q -k "config_file or beats_config_file or
 env_discovers"`, 2026-09-09 — `4 failed, 20 deselected`, every failure the missing
 surface:
 
@@ -211,10 +211,10 @@ E         Expected regex: 'does not exist'
 E         Actual message: "'Builder' object has no attribute 'configFile'"
 
 =========================== short test summary info ============================
-FAILED python/repark/tests/test_builder_config_map.py::test_config_file_folds_pairs_through_config
-FAILED python/repark/tests/test_builder_config_map.py::test_builder_config_beats_config_file
-FAILED python/repark/tests/test_builder_config_map.py::test_repark_config_env_discovers_file
-FAILED python/repark/tests/test_builder_config_map.py::test_config_file_missing_path_refuses
+FAILED python/repark/tests/session/test_builder_config_map.py::test_config_file_folds_pairs_through_config
+FAILED python/repark/tests/session/test_builder_config_map.py::test_builder_config_beats_config_file
+FAILED python/repark/tests/session/test_builder_config_map.py::test_repark_config_env_discovers_file
+FAILED python/repark/tests/session/test_builder_config_map.py::test_config_file_missing_path_refuses
 4 failed, 20 deselected in 1.10s
 ```
 
@@ -224,7 +224,7 @@ No pin was edited at any point; green came from the implementation plus `make de
 
 The 11 step-4 pins were written into `test_config_mirror.py` first (before
 `repark/config.py` existed) and run against the untouched step-3 tree. Red run:
-`.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q`, 2026-09-10 —
+`.venv/bin/python -m pytest python/repark/tests/session/test_config_mirror.py -q`, 2026-09-10 —
 a collection refusal: the module under test does not exist yet.
 
 ```text
@@ -270,7 +270,7 @@ tree change in this round outside the inherited diff is this ledger plus the two
 | `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out` (40 inherited pins + 8 step-3 pins) |
 | `cargo test -p repark-core` | exit 0 — lib `285 passed`, integration `37 passed` + `8 passed`, 0 FAILED |
 | `cargo test -p repark-python --test bindings` | exit 0 — `25 passed; 0 failed` (24 inherited + the new `config_path_names_the_forced_file_and_missing_refuses`) |
-| `.venv/bin/python -m pytest python/repark/tests/test_builder_config_map.py python/repark/tests/test_session_config_knobs.py python/repark/tests/test_session.py python/repark/tests/test_display_styles.py -q` | exit 0 — `147 passed` (resolver-move blast radius plus the 4 new facade pins) |
+| `.venv/bin/python -m pytest python/repark/tests/session/test_builder_config_map.py python/repark/tests/session/test_session_config_knobs.py python/repark/tests/session/test_session.py python/repark/tests/dataframe/test_display_styles.py -q` | exit 0 — `147 passed` (resolver-move blast radius plus the 4 new facade pins) |
 | `make develop` | exit 0 — wheel rebuilt and installed editable after every native change |
 | `make py-test-facade` | exit 0 — `5841 passed, 369 skipped, 7 xfailed` in 692s |
 | `.venv/bin/python docs/examples/session/config_file.py` | exit 0 — the new covering example runs end to end |
@@ -289,7 +289,7 @@ tree change in this round outside the inherited diff is this ledger plus the two
 
 | Command | Result |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q` | exit 0 — `12 passed` (11 red-first pins + the boolean-refusal pin) |
+| `.venv/bin/python -m pytest python/repark/tests/session/test_config_mirror.py -q` | exit 0 — `12 passed` (11 red-first pins + the boolean-refusal pin) |
 | `make py-test-facade` | exit 0 — `5858 passed, 369 skipped, 7 xfailed` in 702s (maturin develop + full facade suite) |
 | `make py-lint` | exit 0 — `All checks passed!` (uvx ruff@0.15.22 check) |
 | `python3 scripts/check_lib_py.py` | exit 0 — `600 files clean (default ceiling 1000; 32 exceptions; facade no-stub held)` |

@@ -81,11 +81,11 @@ VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Facade evidence (release native, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin develop --release`)
 
-- Offline: `pytest python/repark/tests/test_ice_write_options_rp_1.py -q -p no:cacheprovider -n 4` →
+- Offline: `pytest python/repark/tests/writes/test_ice_write_options_rp_1.py -q -p no:cacheprovider -n 4` →
   5 passed, 1 skipped.
 - Live: `REPARK_PARITY_LIVE=1 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64
   SPARK_LOCAL_IP=127.0.0.1 ... jvm-lock.sh .venv/bin/python -m pytest
-  python/repark/tests/test_ice_write_options_rp_1.py -q -p no:cacheprovider` →
+  python/repark/tests/writes/test_ice_write_options_rp_1.py -q -p no:cacheprovider` →
   6 passed.
 - Siblings: `test_ice_write_options_1.py` + `test_ice_write_options_1_rebase.py` →
   82 passed, 1 skipped.
@@ -119,19 +119,19 @@ COVERAGE_ATTESTATION:
         (the 2026-09-18 recording, SHA-256 in the fixture map.md, agreeing cell
         for cell with the probe RESULT line); no hand-computed summary value
         anywhere.
-      artifacts: [python/repark-parity/fixtures/torture/data/ice_write_options_rp_1/spark_rp_oracle.json, python/repark/tests/_record_ice_write_options_rp_1.py]
+      artifacts: [python/repark-parity/fixtures/torture/data/ice_write_options_rp_1/spark_rp_oracle.json, python/repark/tests/writes/_record_ice_write_options_rp_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Red at the old pin by the registry row's quoted sentence (the two
         false cells read true at the old pin); the recorder replays the probe's
         five writes with GAV from _oracle_pins and Ivy from REPARK_ORACLE_IVY.
-      artifacts: [python/repark/tests/test_ice_write_options_rp_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/writes/test_ice_write_options_rp_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-3
       status: ATTACKED
       evidence: All five recorded cells are one test each (commit plus summary
         replace-partitions, k on the control); the live tier re-derives the
         false cell on Spark.
-      artifacts: [python/repark/tests/test_ice_write_options_rp_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_write_options_rp_1.py]
     - id: AT-4
       status: N/A
       justification: No product code and no shared mutable state change on the RePark side; the behaviour change is the fork pin.
@@ -139,7 +139,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Each pin uses a fresh memory catalog under tmp_path; the recorder
         and the live tier run under the JVM lock; no network, no credentials.
-      artifacts: [python/repark/tests/test_ice_write_options_rp_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_write_options_rp_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: Commit and summary values are asserted as values against the
@@ -164,6 +164,6 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: The sibling write-options suites set no caller replace-partitions
         value, so fork #298 cannot move them; both stay green at this pin.
-      artifacts: [python/repark/tests/test_ice_write_options_1.py, python/repark/tests/test_ice_write_options_1_rebase.py]
+      artifacts: [python/repark/tests/writes/test_ice_write_options_1.py, python/repark/tests/writes/test_ice_write_options_1_rebase.py]
   complete: true
 ```

@@ -121,11 +121,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every proposition C-001…C-018 carries a quoted artifact above or a registry row; the Spark oracle is the spec and the repark pins read it from the checked-in fixture, never from hand computation. Red pasted on the unfixed tree on both tiers (Rust 3 route-cells, pytest 3 failed + 10 errors), green after.
-      artifacts: [task/ledgers/staging/ice-dyn-overwrite-1-ledger.md, python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json, python/repark/tests/test_ice_dyn_overwrite_1.py, crates/repark-spark/src/tests/dyn_partition_overwrite.rs]
+      artifacts: [task/ledgers/staging/ice-dyn-overwrite-1-ledger.md, python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json, python/repark/tests/writes/test_ice_dyn_overwrite_1.py, crates/repark-spark/src/tests/dyn_partition_overwrite.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised on both engines: empty source (partitioned and unpartitioned), unpartitioned table, v2 + v3, evolved spec, all three conf paths, mixed-case and bogus conf values, saveAsTable under dynamic, and the race in three isolation regimes. No max/overflow surface exists (row counts, not arithmetic).
-      artifacts: [python/repark/tests/test_ice_dyn_overwrite_1.py, /tmp/oc-worker/ja-dyn/oracle/race4.json]
+      artifacts: [python/repark/tests/writes/test_ice_dyn_overwrite_1.py, /tmp/oc-worker/ja-dyn/oracle/race4.json]
     - id: AT-3
       status: ATTACKED
       evidence: Failure paths pinned loud: bogus conf refuses at set with Spark's OUT_OF_RANGE_OF_OPTIONS class and keeps the old value; serializable race refuses with the conflicting-files ValidationException on both engines; static-empty still wipes (Spark-equal) while dynamic-empty is a no-op; the empty-dynamic arm still runs the type check first, so a mistyped empty source refuses instead of silently passing.
@@ -140,18 +140,18 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Sibling data is byte-stable by construction (ReplacePartitions only rewrites touched partitions) and asserted by value on every cell; snapshot stamps asserted (operation=overwrite, replace-partitions=true); the evolved-spec cell pins that pre-evolution files survive on both engines.
-      artifacts: [crates/repark-spark/src/tests/dyn_partition_overwrite.rs, python/repark/tests/test_ice_dyn_overwrite_1.py]
+      artifacts: [crates/repark-spark/src/tests/dyn_partition_overwrite.rs, python/repark/tests/writes/test_ice_dyn_overwrite_1.py]
     - id: AT-7
       status: N/A
       justification: No new work per row and no new retained state: the routing reads one cached conf value per statement; staging still writes the source once. The 2M-row oracle overwrites ran bounded on local[4].
     - id: AT-8
       status: ATTACKED
       evidence: Error and contract surfaces mirrored, not presumed: the bogus-conf class copied verbatim from the live Spark message; the live test asserts the fixture GAV equals the pinned ICEBERG_SPARK_RUNTIME_GAV; the fork is untouched at its pinned rev (Cargo.lock identical, override grep clean); the Java validation rule quoted from the pinned runtime's own bytecode.
-      artifacts: [python/repark/tests/test_ice_dyn_overwrite_1.py, task/ledgers/staging/ice-dyn-overwrite-1-ledger.md]
+      artifacts: [python/repark/tests/writes/test_ice_dyn_overwrite_1.py, task/ledgers/staging/ice-dyn-overwrite-1-ledger.md]
     - id: AT-9
       status: ATTACKED
       evidence: Every new behavior is diagnosable from its output: the conf refusal names the key and the two legal values with Spark's class; the race refusal names the conflicting files; the registry rows DML-1B/DML-1C record the saveAsTable marker and the per-table vs per-write serializable difference with dates.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_dyn_overwrite_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/writes/test_ice_dyn_overwrite_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Mutation spot-check by construction: stashing only insert_overwrite.rs flips exactly the 3 dynamic routing tests red with the defect's symptoms while the 5 characterization pins stay green; the pytest battery flips 3 failed + 10 errors on the pre-fix native. Branch liveness: dynamic, static, empty-dynamic, empty-static, unpartitioned-dynamic, and hint-marked arms each have a nameable input changing the committed output (one Rust test each).

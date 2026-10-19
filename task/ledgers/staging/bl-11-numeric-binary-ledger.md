@@ -94,11 +94,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause walked against its recorded oracle cell, not a paraphrase — all 30 B11 cells one case per cell id on spark.sql plus Python-door representatives, value AND Arrow type AND field nullability; the orchestrator re-ran the 30 cells against the release native with 0 divergences.
-      artifacts: [python/repark/tests/test_bl_11_numeric_binary.py]
+      artifacts: [python/repark/tests/types/test_bl_11_numeric_binary.py]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised — 1/2/4/8-byte widths, -1 two's complement, 305419896, NULL-int staying NULL and nullable, CAST('ab' AS BINARY) in both modes, all seven never-castable sources in both modes, stale and fresh frames in both SET directions.
-      artifacts: [python/repark/tests/test_bl_11_numeric_binary.py, crates/repark-functions/src/int_to_binary.rs]
+      artifacts: [python/repark/tests/types/test_bl_11_numeric_binary.py, crates/repark-functions/src/int_to_binary.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Failure paths pin Spark's contract — CAST_WITH_CONF_SUGGESTION plus the conf-naming second line for integrals under ANSI on, CAST_WITHOUT_SUGGESTION otherwise and for TRY_CAST always, SQLSTATE on every refusal, the kernel failing loud on non-integral Scalar and Array input, double analysis encoding exactly once.
@@ -106,14 +106,14 @@ COVERAGE_ATTESTATION:
     - id: AT-4
       status: ATTACKED
       evidence: Analysis-time binding pinned both directions on both doors — stale encode frame survives SET on, refusal binds at build, fresh frame encodes, stale native frame keeps its refusal; the rule is stateless and preserves output names.
-      artifacts: [python/repark/tests/test_bl_11_numeric_binary.py]
+      artifacts: [python/repark/tests/types/test_bl_11_numeric_binary.py]
     - id: AT-5
       status: N/A
       justification: No auth, injection, secret, or deserialization surface — in-process casts over typed Arrow input; refusal text embeds the plan-displayed expression, never executed.
     - id: AT-6
       status: ATTACKED
       evidence: Shared-surface edits verified behavior-preserving — frozen cast_binary.rs 5 tests green unchanged, string/BINARY-DDL/VARBINARY paths untouched, the a3 binary vocab row moved LONG to STRING with its claim intact, the full binary/ansi/cast sweep 952 passed; the removed native little-endian leak is the oracle-directed change, not drift.
-      artifacts: [crates/repark-spark/src/tests/cast_binary_ansi.rs, python/repark/tests/test_a3_cast_vocab.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [crates/repark-spark/src/tests/cast_binary_ansi.rs, python/repark/tests/types/test_a3_cast_vocab.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-7
       status: N/A
       justification: Per-row bounded kernel (at most 8 bytes per row, one builder pass) with no perf claim filed; no system-breaking resource shape.
@@ -124,11 +124,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Every refusal stays diagnosable from the error alone — class, resolve slot, cast sentence, conf remedy where due, SQLSTATE; the AnalysisException fold is unchanged with the sqp and a3 pins green.
-      artifacts: [python/repark/tests/test_bl_11_numeric_binary.py]
+      artifacts: [python/repark/tests/types/test_bl_11_numeric_binary.py]
     - id: AT-10
       status: ATTACKED
       evidence: Pins-first held — 27 failed, 14 passed red with only the test file in the tree; every verdict branch flips at least one pin (ANSI on versus off, integral versus never-castable source, CAST versus TRY_CAST, Binary versus other targets, legal passthrough sources); untypeable sources keep the fail-open passthrough.
-      artifacts: [python/repark/tests/test_bl_11_numeric_binary.py, crates/repark-functions/src/int_to_binary.rs, crates/repark-spark/src/tests/cast_binary_ansi.rs]
+      artifacts: [python/repark/tests/types/test_bl_11_numeric_binary.py, crates/repark-functions/src/int_to_binary.rs, crates/repark-spark/src/tests/cast_binary_ansi.rs]
   complete: true
 ```
 

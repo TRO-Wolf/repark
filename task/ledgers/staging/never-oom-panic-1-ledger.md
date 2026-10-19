@@ -153,7 +153,7 @@ E             'panicked at' is contained here:
 E               thread 'tokio-rt-worker' (84499) panicked at .../datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277:22:
 E             ?                                  +++++++++++
 E               partition not used yet
-python/repark/tests/test_h3_spill_matrix.py:375: AssertionError
+python/repark/tests/perf/test_h3_spill_matrix.py:375: AssertionError
 1 failed in 0.54s
 ```
 
@@ -197,7 +197,7 @@ Each mutation applied alone, the named tests run, then reverted.
 |---|---|---|
 | NLJ build-side re-execution safety (rule + wrapper exec) | `crates/repark-core/src/nlj_build_reset.rs` | The SQL door must reach it: it is a physical-plan rewrite and an `ExecutionPlan`, so it lives in Rust by Q-17a-2. |
 | Tight-pool loop pin | `crates/repark-core/src/session/tests/nlj_tight_pool.rs` | Engine behavior pin; Rust-only. |
-| Facade loop + renamed pins | `python/repark/tests/test_h3_spill_matrix.py` | Names, argument shapes and worker plumbing only: both pins drive the existing `_WORKER` script and assert message shapes, no engine logic. This is the unit's one piece that stays in Python, per Q-17a-2. |
+| Facade loop + renamed pins | `python/repark/tests/perf/test_h3_spill_matrix.py` | Names, argument shapes and worker plumbing only: both pins drive the existing `_WORKER` script and assert message shapes, no engine logic. This is the unit's one piece that stays in Python, per Q-17a-2. |
 
 ## Cells wanted
 
@@ -234,15 +234,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each charter clause is checked against behavior, not paraphrase. C-001 is the 400-run worker histogram with the exact CI payload twice; C-002 is five file:line paths read from the vendored tree; C-003/C-006 are the red (0.10 s, unwound partition-not-used-yet panic) and green (107.02 s, 10/10 Ok) loop-pin runs; C-004 is R-DESIGN with the P-5 evidence; C-005 is the diff-property list (no unwrap/expect/unreachable/panic/spawn/hook/comments, Cargo files empty); C-007 is the stderr-pin red (0.54 s) and green (12.41 s); C-008 is the 23-green matrix plus the containment statement; C-009 is commit 11b22d43; C-010 is the gates table above. Round 2: C-011 is the 16-case policy matrix plus the refuse-on-second-execute pin and the green LEFT/FULL refusal legs; C-012 is the facade value-pin red (35.85 s, LEFT answered ok) and green (25.32 s) with the 34.48 s NLJ group, plus the Rust LEFT red (29.13 s) and green and the INNER values; C-013 is the residue section with the perf-report citations.
-      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/test_h3_spill_matrix.py, crates/repark-core/src/nlj_build_reset.rs]
+      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/perf/test_h3_spill_matrix.py, crates/repark-core/src/nlj_build_reset.rs]
     - id: AT-2
       status: ATTACKED
       evidence: The pool/partition/load domain is swept, not sampled: pools 4M/6M/8M/12M by partitions 2/4/8 by load/no-load, 40 worker runs each. The fits boundary holds (1G control ok); the tight boundary answers ok-or-typed-refusal. Every Rust loop iteration proves its own tightness through the refusal log, so a vacuous pass is impossible. Null/empty inputs have no surface here: the change is a physical-plan rewrite on a fixed non-equi-join shape with no new parser or expression. Round 2: the join-type domain is swept too — eight shapes at two pools plus the single-partition legs — with the wide run as the per-type oracle; MARK is unproducible through the door and covered by the policy matrix instead.
-      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/test_h3_spill_matrix.py]
+      artifacts: [task/ledgers/staging/never-oom-panic-1-ledger.md, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/perf/test_h3_spill_matrix.py]
     - id: AT-3
       status: ATTACKED
       evidence: Both legal failure outcomes are pinned: spill-and-succeed (ok) and the typed ResourcesExhausted refusal with its full message shape. The session-usable-after-refusal pin still passes, no run in 400+ aborts the process, and a non-refusal error propagates unrewritten. The renamed pin forbids every panic marker on both arms.
-      artifacts: [python/repark/tests/test_h3_spill_matrix.py, crates/repark-core/src/session/tests/nlj_tight_pool.rs]
+      artifacts: [python/repark/tests/perf/test_h3_spill_matrix.py, crates/repark-core/src/session/tests/nlj_tight_pool.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The race is the unit. The 400-run histogram under taskset CI-shape CPUs shows the double-execute panic in 400/400 runs and the poisoned-arm panic in 200/400; the fix removes the shared-state double use (a reset clone per execute), and the 10-iteration multi_thread loop plus the 5-run stderr loop assert the race is gone. No shared mutable state is added: the wrapper holds only its child plan.
@@ -253,7 +253,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The spilled path answers exactly the in-memory path: the full join digest 9fb2c245 with 2016 rows is identical at 8M, 64M, and 1G. Schema, partitioning, fetch, and limit-pushdown delegation are pinned, the EXPLAIN shape guard keeps the pin on the NLJ path, and unbounded sessions are behavior-neutral (the fallback never triggers without a refusal; both whole suites green). Round 2: every keep-spill shape is value-pinned per type (count, sum, content digest tight-equals-wide), and the refuse shapes are pinned to never emit a row; the refusal reuses the genuine recorded pool text, never a fabrication.
-      artifacts: [crates/repark-core/src/nlj_build_reset.rs, python/repark/tests/test_h3_spill_matrix.py]
+      artifacts: [crates/repark-core/src/nlj_build_reset.rs, python/repark/tests/perf/test_h3_spill_matrix.py]
     - id: AT-7
       status: ATTACKED
       evidence: Nothing here grows without bound: the pool stays 8 MiB, the excess spills to disk, and each probe session drops per iteration. A tight-pool worker run costs about 1.6 s on RELEASE; the DEBUG Rust loop pin costs 107 s for ten iterations, disclosed, not hidden. No system-breaking perf change: the wrapper adds one plan-node rebuild per NLJ build-side execute, and both whole suites ran in their normal durations.
@@ -265,7 +265,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The failure stays diagnosable: the typed refusal text is unchanged, EXPLAIN names the new NljBuildSideExec node, and non-refusal errors propagate unrewritten. The defect's old signal (panic blocks on stderr) is gone by construction and asserted gone by the stderr pin; the existing tracing warn in the retained containment still covers the other fallback paths.
-      artifacts: [python/repark/tests/test_h3_spill_matrix.py, crates/repark-python/src/arrow_export.rs]
+      artifacts: [python/repark/tests/perf/test_h3_spill_matrix.py, crates/repark-python/src/arrow_export.rs]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first on both doors (Rust 0.10 s red, facade stderr pin 0.54 s red on base). Three mutations, each applied alone and reverted, each killed by named tests: M-1 (rule wiring removed) by the loop pin in 0.10 s; M-2 (wrapper executes the child directly) by the two double-execute module tests; M-3 (rule wraps the probe side) by the two rule tests. Round 2: R2M-1 (partition count ignored) by the policy matrix, R2M-2 (disclosure dropped) by the refuse-on-second-execute pin. Branch liveness: every rule arm has a pin (wrap / non-NLJ identity / idempotent reapply / 16-case policy split), the wrapper arity refusal is pinned, and the three defensive arms are disclosed — NLJ is always binary so the not-two-children arm is unreachable-today future-proofing, the reset ? is standard error propagation, and the no-recorded-refusal arm spills rather than fabricate (pinned by the fall-through test).

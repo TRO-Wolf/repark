@@ -139,11 +139,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause replays against recorded Spark answers — 57 v2 steps plus 10 v3 steps with output schemas, rows, error needles, snapshot structure, refs and lineage asserted; the live tier replays Spark on the same shapes.
-      artifacts: [python/repark/tests/test_ice_branch_ops_1.py, python/repark/tests/branch_ops_1_truth.json, crates/repark-spark/src/tests/branch_ops.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_branch_ops_1.py, python/repark/tests/iceberg/branch_ops_1_truth.json, crates/repark-spark/src/tests/branch_ops.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Unknown/missing/tag/non-descendant refs, both/neither snapshot_id/ref, unknown ids, ancient and exact-equal timestamps, same-ref no-op, auto-created branch, empty branch name — each pinned to Spark's answer or refusal.
-      artifacts: [python/repark/tests/test_ice_branch_ops_1.py, crates/repark-spark/src/tests/branch_ops.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_branch_ops_1.py, crates/repark-spark/src/tests/branch_ops.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal path is pinned and asserts no snapshot is added; each procedure is one fork commit, and the pre-check/commit split resolves fail-closed because the fork re-validates at commit.
@@ -158,22 +158,22 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Both-directions cross-reads (Spark reads RePark commits, RePark reads Spark commits, fresh-name adoption each way); snapshot parent/operation chain asserted step by step; v3 next-row-id and _row_id byte-identical to Spark.
-      artifacts: [python/repark/tests/test_ice_branch_ops_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_branch_ops_1.py]
     - id: AT-7
       status: N/A
       justification: One commit per call and one refs-table scan sized by ref count; no hot loop, no unbounded growth.
     - id: AT-8
       status: ATTACKED
       evidence: Fork calls mirror the sibling procedures (no new API surface); error classes and needles pinned per cell; the session-TZ assumption was refuted by measurement and the UTC-always rule pinned instead of presumed.
-      artifacts: [python/repark/tests/test_ice_branch_ops_1.py, python/repark/tests/branch_ops_1_truth.json]
+      artifacts: [python/repark/tests/iceberg/test_ice_branch_ops_1.py, python/repark/tests/iceberg/branch_ops_1_truth.json]
     - id: AT-9
       status: ATTACKED
       evidence: Every refusal names the table, ref, snapshot id or timestamp floor; the pins assert those needles, so a mis-shaped refusal trips the suite.
-      artifacts: [crates/repark-spark/src/tests/branch_ops.rs, python/repark/tests/test_ice_branch_ops_1.py]
+      artifacts: [crates/repark-spark/src/tests/branch_ops.rs, python/repark/tests/iceberg/test_ice_branch_ops_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first on both tiers (pasted refusal above); during development the suite caught a sibling-snapshot seed, a swapped row-id column pair, and a Java-wrapper message prefix, each fixed against the oracle rather than absorbed.
-      artifacts: [task/ledgers/staging/ice-branch-ops-1-ledger.md, crates/repark-spark/src/tests/branch_ops.rs, python/repark/tests/test_ice_branch_ops_1.py]
+      artifacts: [task/ledgers/staging/ice-branch-ops-1-ledger.md, crates/repark-spark/src/tests/branch_ops.rs, python/repark/tests/iceberg/test_ice_branch_ops_1.py]
   complete: true
 ```
 
@@ -182,8 +182,8 @@ COVERAGE_ATTESTATION:
 **Scope:** unblock `make verify` on the two new Python files only. No Rust, oracle,
 truth-JSON, registry, or ledger-proposition change; no new pins.
 
-**What red:** `py-lint` failed on `python/repark/tests/_record_branch_ops_1.py` and
-`python/repark/tests/test_ice_branch_ops_1.py` with UP031 (`%`-formatting), UP017
+**What red:** `py-lint` failed on `python/repark/tests/iceberg/_record_branch_ops_1.py` and
+`python/repark/tests/iceberg/test_ice_branch_ops_1.py` with UP031 (`%`-formatting), UP017
 (`timezone.utc`), I001 (import order), F541, E501, B905 (`zip` without `strict=`).
 
 **Fixes (behavior-preserving):** `%`-templates rewritten as literal concatenation

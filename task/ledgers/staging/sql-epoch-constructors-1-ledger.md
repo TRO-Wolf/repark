@@ -149,15 +149,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Clauses C-001..C-008 walked against behavior — the 216-cell live recording, the both-doors replay of every cell with value, Arrow type and facade type, the native-door pins, the live drift check and the door-parity guard.
-      artifacts: [task/ledgers/staging/sql-epoch-constructors-1-ledger.md, python/repark/tests/test_sql_epoch_constructors_1.py, python/repark/tests/sql_epoch_constructors_1_spark_oracle.json]
+      artifacts: [task/ledgers/staging/sql-epoch-constructors-1-ledger.md, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py, python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Boundary inputs run as oracle cells — the exact-fit and exact-overflow seconds/millis pairs, bigint extremes, 2100/1900/9999/0001 values, sub-micro doubles and decimals, NaN/±Inf, saturating doubles, huge+fractional decimals, wrongly-typed NULLs.
-      artifacts: [python/repark/tests/sql_epoch_constructors_1_spark_oracle.json]
+      artifacts: [python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal shape is pinned on both doors — the DATATYPE_MISMATCH class, SQLSTATE, required kind and got-type, and the three unclassified overflow texts with no condition.
-      artifacts: [python/repark/tests/test_sql_epoch_constructors_1.py]
+      artifacts: [python/repark/tests/timestamps/test_sql_epoch_constructors_1.py]
     - id: AT-4
       status: N/A
       justification: A stateless scalar kernel — one pure function of its argument with no session read, no cache and no retained state.
@@ -167,7 +167,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Every value cell compares micros, the Arrow type and the facade type against Spark; the 276 base Spark-equal legs re-compare at head with zero regressions.
-      artifacts: [python/repark/tests/test_sql_epoch_constructors_1.py]
+      artifacts: [python/repark/tests/timestamps/test_sql_epoch_constructors_1.py]
     - id: AT-7
       status: N/A
       justification: One row-wise pure kernel replacing one DataFusion kernel call per row; no added plan pass, no cache, no per-batch allocation beyond the output array.
@@ -178,7 +178,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The new DATATYPE_MISMATCH text and the three overflow texts are pinned verbatim on both doors; the only intentional delta from Spark's sentence is the rendered argument (type, not expression).
-      artifacts: [python/repark/tests/test_sql_epoch_constructors_1.py]
+      artifacts: [python/repark/tests/timestamps/test_sql_epoch_constructors_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Four mutations run against the kernel (wrong scale, narrowed gate, wrapping overflow, dropped zone); all four killed by the module tests (§5).

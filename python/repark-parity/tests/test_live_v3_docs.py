@@ -73,7 +73,7 @@ def test_registry_row_records_the_measured_run() -> None:
     assert "S3T-1" in row and "R126" in row
     assert "**Rationale** — FIXED by measurement" in row
     assert "is no longer BACKLOG" in row
-    assert "python/repark/tests/test_v3_acceptance_local.py" in row
+    assert "python/repark/tests/parity/test_v3_acceptance_local.py" in row
 
 
 def test_the_tightened_assertion_is_confirmed_by_a_live_run() -> None:
@@ -94,7 +94,7 @@ def test_northstar_live_row_is_green_and_dated() -> None:
     assert _RUN_ID in row and _RUN_LINK in row
     assert _GLUE_LEG in row and _S3T_LEG in row
     assert "S3T-V3-1" in row
-    assert "python/repark/tests/test_v3_acceptance_local.py" in row
+    assert "python/repark/tests/parity/test_v3_acceptance_local.py" in row
     assert "MW-10 is format v2" in row
     assert "2026-08-30-mw-10-s3tables-mor-ledger.md" in row
     assert "33333274383" in row
@@ -135,17 +135,17 @@ def test_tier2_runbook_lists_every_leg_and_needs_no_new_iam() -> None:
 
 def test_the_leg_tests_exist_where_the_documents_say() -> None:
     """Every cited leg is a real ``def`` in the gated harness, and the local pin exists."""
-    harness = _read("python/repark/tests/test_aws_acceptance.py")
+    harness = _read("python/repark/tests/parity/test_aws_acceptance.py")
     assert f"def {_GLUE_LEG}(" in harness
     assert f"def {_S3T_LEG}(" in harness
-    local = _read("python/repark/tests/test_v3_acceptance_local.py")
+    local = _read("python/repark/tests/parity/test_v3_acceptance_local.py")
     assert "def test_v3_acceptance_leg_body_against_the_local_catalog(" in local
     assert "def test_v3_create_refusal_classification_is_the_s3_tables_decision_table(" in local
-    twins = _read("python/repark/tests/test_acceptance_v3_helpers.py")
+    twins = _read("python/repark/tests/parity/test_acceptance_v3_helpers.py")
     assert "def test_v3_legs_are_twins_of_the_mor_legs(" in twins
     registry = _read("docs/spark-sql-iceberg-parity.md")
-    assert "python/repark/tests/test_acceptance_v3_helpers.py" in registry
-    assert Path(_REPO / "python/repark/tests/_acceptance_v3.py").is_file()
+    assert "python/repark/tests/parity/test_acceptance_v3_helpers.py" in registry
+    assert Path(_REPO / "python/repark/tests/parity/_acceptance_v3.py").is_file()
 
 
 def test_status_names_the_measured_legs() -> None:
@@ -227,7 +227,7 @@ def test_format_v3_track_claims_carry_their_dated_corrections() -> None:
     assert "It was not exercised against a table with expirable snapshots." in track
     assert "**Corrected 2026-09-02 (LIVE-v3):**" in track
     assert "`14 → 1`" in track
-    assert "python/repark/tests/test_v3_acceptance_local.py" in track
+    assert "python/repark/tests/parity/test_v3_acceptance_local.py" in track
     assert "**Nothing was measured on Glue or S3 Tables.**" in track
     assert "**Corrected 2026-09-02 (LIVE-v3-M):** both services are measured now" in track
     assert _RUN_ID in track

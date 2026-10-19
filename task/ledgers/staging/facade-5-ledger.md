@@ -222,11 +222,11 @@ python/repark-parity/tests/test_cap_1_source_file_line_cap.py
 python/repark/src/repark/spark/dataframe/core.py
 python/repark/src/repark/spark/dataframe/map.md
 python/repark/src/repark/spark/dataframe/replace_expr.py
-python/repark/tests/_dfcore_1_expected.py
+python/repark/tests/dataframe/_dfcore_1_expected.py
 python/repark/tests/map.md
-python/repark/tests/test_dfcore_1_exports.py
-python/repark/tests/test_examples_dataframe_c.py
-python/repark/tests/test_replace_linear_1.py
+python/repark/tests/dataframe/test_dfcore_1_exports.py
+python/repark/tests/parity/test_examples_dataframe_c.py
+python/repark/tests/dataframe/test_replace_linear_1.py
 scripts/check_lib_py.py
 scripts/map.md
 task/ledgers/completed/map.md
@@ -377,15 +377,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every charter clause walked — census enumerates all 6 renderers × 9 truncation rules, each unbound pair maps to exactly one golden case id, and the step-1 target names the formatters the C-002 numbers select. Critic findings L-001..L-006 all filed and remediated; F-L2 carried OPEN to the owner.
-      artifacts: [task/ledgers/staging/facade-5-ledger.md, python/repark/tests/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14.md]
+      artifacts: [task/ledgers/staging/facade-5-ledger.md, python/repark/tests/dataframe/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14.md]
     - id: AT-2
       status: ATTACKED
       evidence: Boundary inputs exercised in the golden corpus — zero-column frames (1-row and 0-row, across ASCII/vertical/HTML doors pinning the Table.slice phantom rows), inf/nan doubles through the SQL door, nested struct/array/map scalars, polars nested cells under truncate=True/10/2, truncate=2/5 edges, truncate=False, 50-column wide frames, styled max_rows caps; the HTML <tr> row count for caps {1,20} × sizes {0,cap,cap+1} is covered by test_html_row_count_matches_min_size_cap.
-      artifacts: [python/repark/tests/facade_5_display_goldens.json, python/repark/tests/test_facade_5_display_goldens.py]
+      artifacts: [python/repark/tests/dataframe/facade_5_display_goldens.json, python/repark/tests/dataframe/test_facade_5_display_goldens.py]
     - id: AT-3
       status: ATTACKED
       evidence: Record mode refused under any non-empty CI or GITHUB_ACTIONS token (CI=1 refuses, CI="" allows — pinned by test); every mutation run was followed by a git-clean verify on python/repark/src; the runner cross-checks leg-composed bytes against the real door on all 96 cells.
-      artifacts: [python/repark/tests/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14/run_facade_5_display.py]
+      artifacts: [python/repark/tests/dataframe/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14/run_facade_5_display.py]
     - id: AT-4
       status: ATTACKED
       evidence: Timing cells gated on idle builders and load<6; stale-.pyc contamination in early mutation lists was detected, the runs repeated under -B, and the changed lists re-verified; the runner is one process with no shared state.
@@ -396,7 +396,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Goldens recorded from the release base tree and byte-asserted; 96/96 door_check byte-equal; product files under python/repark/src and crates untouched (git status clean throughout, mutation restores verified).
-      artifacts: [python/repark/tests/facade_5_display_goldens.json, docs/perf/facade-5-display-baseline-2026-09-14.md]
+      artifacts: [python/repark/tests/dataframe/facade_5_display_goldens.json, docs/perf/facade-5-display-baseline-2026-09-14.md]
     - id: AT-7
       status: ATTACKED
       evidence: The baseline is itself the resource measurement — systemd-run MemoryMax=8G MemorySwapMax=0, warmup + 5-rep medians, per-cell idle gating; a 17–107 ms format wall at n=1000 measured and reported, no system-breaking defect.
@@ -411,6 +411,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: All 34 goldens proven red by sixteen one-line mutations (M1–M16) with per-case changed lists; the critic's literal truncate_at pass-through mutant is byte-equivalent and survives — M15/M16 are the biting proofs on the inner-nested path; restore leaves the suite green; the §8 pin corpus (99 tests) re-run green; record-mode CI refusal tested.
-      artifacts: [python/repark/tests/test_facade_5_display_goldens.py, python/repark/tests/facade_5_display_goldens.json, task/ledgers/staging/facade-5-ledger.md]
+      artifacts: [python/repark/tests/dataframe/test_facade_5_display_goldens.py, python/repark/tests/dataframe/facade_5_display_goldens.json, task/ledgers/staging/facade-5-ledger.md]
   complete: true
 ```

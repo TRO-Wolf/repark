@@ -109,7 +109,7 @@ crates at the fork checkout.
 Offline, release native built 23:00:19 against fork `364748c0` + the RePark fix:
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+.venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
 169 passed, 1 skipped in 29.36s
 SKIPPED [1] … REPARK_PARITY_LIVE != 1 — live Spark cell skipped (routine CI is JVM-free)
 ```
@@ -121,7 +121,7 @@ Int32`, which located the second fork seam (DataFusion UPDATE exec).
 Live:
 
 ```
-REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
 170 passed in 153.88s (0:02:33)
 ```
 
@@ -136,7 +136,7 @@ Release native rebuilt with the run-20a override (`maturin develop --release --c
 Offline, whole module:
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+.venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
 4 failed, 169 passed, 1 skipped in 65.15s
 ```
 
@@ -194,7 +194,7 @@ below is therefore not complete.
 | RePark `cargo --config <override> test -p repark-iceberg --lib` | 437 passed; 0 failed |
 | RePark `promoted_scan` mutation (`conform_scan_batch` → `column.clone()`) | 2 red, narrowing control green |
 | release native, `maturin develop --release --config <override>` | built 23:42:04 against fork `04a338c3` |
-| `pytest python/repark/tests/test_ice_promote_read_1.py -q` | 169 passed, 1 skipped |
+| `pytest python/repark/tests/iceberg/test_ice_promote_read_1.py -q` | 169 passed, 1 skipped |
 | same, `REPARK_PARITY_LIVE=1` | 170 passed |
 | `pytest test_alter_table.py test_ice_spark_table_1.py test_merge_*.py test_rdf_schema_evo_1.py test_v3_*.py` (20 modules), native 23:00:19 (fork `364748c0`; `04a338c3` changes no behaviour) | offline 194 passed, 96 skipped; live 290 passed |
 | `make verify` (pinned fork `edc38c6a`, no override, `--locked`) | exit 0 — `ci` clean (fmt, clippy, panic ban, crate DAG, file sizes, docstrings, ledgers, docs links, py-lint "All checks passed!") and the Rust workspace suite 0 failed |
@@ -234,7 +234,7 @@ row gains the inspect-table FIXED sentence with the `inspect/*` pins.
 Offline, whole module, fixed native:
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
+.venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider -rs
 173 passed, 1 skipped in 779.77s
 ```
 
@@ -254,11 +254,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause is a recorded-oracle comparison — 126 Spark cases replayed on both doors where the surface has two, red on the base native (126 failed) and green on the fix (169 passed offline, 170 live); the report's rows V2-10c, V2-06b, V3-11, V3-14 each map to a clause.
-      artifacts: [python/repark/tests/test_ice_promote_read_1.py, python/repark-parity/fixtures/torture/data/ice_promote_read_1/truth.json]
+      artifacts: [python/repark/tests/iceberg/test_ice_promote_read_1.py, python/repark-parity/fixtures/torture/data/ice_promote_read_1/truth.json]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries measured, not assumed — a post-promotion value outside the int range (3000000000), a 24-value IN list beside a two-value one, BETWEEN, NOT IN, float and decimal ranges, single-era versus mixed-era tables, identity, bucket(4) and truncate(10) sources, and an illegal Int32 to Int16 narrowing that must still refuse.
-      artifacts: [python/repark/tests/_record_ice_promote_read_1.py, crates/repark-iceberg/src/write/merge/tests/promoted_scan.rs]
+      artifacts: [python/repark/tests/iceberg/_record_ice_promote_read_1.py, crates/repark-iceberg/src/write/merge/tests/promoted_scan.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Refusals stay loud where they should — promotion widens only int to long, float to double and decimal precision; every other kind mismatch still fails in RecordBatch::try_new, the accessor, and PartitionKey::new (fork pins narrowed to a string literal, RePark narrowing control).
@@ -266,7 +266,7 @@ COVERAGE_ATTESTATION:
     - id: AT-4
       status: ATTACKED
       evidence: Write ordering across eras is the subject — a delete written after the promotion against a data file written before it, dynamic overwrite replacing a pre-promotion partition, MERGE against pre- and post-promotion files; the replace-partitions conflict scope with a stale concurrent writer is named residue in the fork ledger.
-      artifacts: [python/repark/tests/test_ice_promote_read_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_promote_read_1.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, secret, deserialization or path handling changes; the fix re-types values already read.
@@ -285,7 +285,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: A remaining mismatch fails with the same named Arrow or DataInvalid error as before; the live cell reports every drifted case id.
-      artifacts: [python/repark/tests/test_ice_promote_read_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_promote_read_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Red on base at every layer, then single-seam mutations — 7 fork seams, the FLOAT page arm, the DataFusion widening and the RePark conform — each red at least one pin; the facade mergeInto cells are named door guards, not red pins.
@@ -297,7 +297,7 @@ COVERAGE_ATTESTATION:
 
 ### Python pins — release native `32c0e1a3` (unfixed), 2026-09-16 22:05–22:11
 
-`TMPDIR=… .venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -rs`
+`TMPDIR=… .venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider -rs`
 
 ```
 126 failed, 43 passed, 1 skipped in 343.07s (0:05:43)
@@ -359,7 +359,7 @@ test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 434 filtered out
 
 ### C-015 inspect cells — current native without the fork L-01 fix, 2026-09-17
 
-`.venv/bin/python -m pytest python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider -k "inspect or recorded_oracle"`
+`.venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider -k "inspect or recorded_oracle"`
 
 ```
 FAILED test_sql_door_matches_spark[inspect/v2]

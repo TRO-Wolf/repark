@@ -54,11 +54,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every scope line of the card walked. Find every stop (C-001, measured over the full nightly command, not grepped — the grep's 300 `.stop()` lines are almost all RePark sessions named spark); apply the live-cell rule to each formerly-stopping recorder (C-002); prove no cascade with the stopper first (C-003). The owner-named line 131 was read and is a RePark stop.
-      artifacts: [task/ledgers/staging/parity-live-stop-1-ledger.md, python/repark/tests/_record_ice_meta_delete_1.py]
+      artifacts: [task/ledgers/staging/parity-live-stop-1-ledger.md, python/repark/tests/writes/_record_ice_meta_delete_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Ordering is the edge — the collision is order-dependent, so the colliding order (procs-route first), the nightly order (meta-delete first) and a shuffled 126-file order were each run. A private name binds lazily to its own warehouse, so a second module can no longer redirect the first's writes.
-      artifacts: [python/repark/tests/_record_ice_sorted_insert_2_oracle.py, python/repark/tests/test_ice_meta_delete_1.py]
+      artifacts: [python/repark/tests/writes/_record_ice_sorted_insert_2_oracle.py, python/repark/tests/writes/test_ice_meta_delete_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The guard's failure path is unchanged and still names the stopper. The recorders keep their own try/except error capture per cell; a failed live cell surfaces as drift, never as a silent pass.
@@ -66,22 +66,22 @@ COVERAGE_ATTESTATION:
     - id: AT-4
       status: ATTACKED
       evidence: The shared JVM context is the concurrency surface. One SparkContext was constructed per run in every measurement, and the only side session (`newSession` in the out-of-scope hadoop-vn race test) shares the context and passes the guard by design.
-      artifacts: [python/repark/tests/conftest.py, python/repark/tests/test_ice_hadoop_vn_1.py]
+      artifacts: [python/repark/tests/conftest.py, python/repark/tests/iceberg/test_ice_hadoop_vn_1.py]
     - id: AT-5
       status: ATTACKED
       evidence: Test-only change. No environment variable popped or set, warehouses stay under pytest tmp paths, no workflow file touched (the owner-gated `parity-live.yml` is unchanged), no dependency change, no network beyond the pinned Ivy cache.
-      artifacts: [python/repark/tests/_record_ice_meta_delete_1.py]
+      artifacts: [python/repark/tests/writes/_record_ice_meta_delete_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: Every expectation was re-derived on live PySpark 4.1.2 with Iceberg 1.11.0 under the private names; neither committed fixture names the catalog, so the oracle values are byte-identical and the live cells pass against them.
-      artifacts: [python/repark/tests/ice_meta_delete_1_spark_oracle.json, python/repark/tests/ice_sorted_insert_2_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/ice_meta_delete_1_spark_oracle.json, python/repark/tests/writes/ice_sorted_insert_2_spark_oracle.json]
     - id: AT-7
       status: N/A
       justification: No production or hot path touched; two constants and one registration in test code.
     - id: AT-8
       status: ATTACKED
       evidence: PySpark 4.1.2 getOrCreate on an existing session applies only modifiable settings through applyModifiableSettings (read from the installed package), which is why a recorder's catalog options reach the shared session and why the first binder of a name wins.
-      artifacts: [python/repark/tests/_record_ice_sorted_insert_2_oracle.py]
+      artifacts: [python/repark/tests/writes/_record_ice_sorted_insert_2_oracle.py]
     - id: AT-9
       status: ATTACKED
       evidence: A lost test cannot hide a pass — no def test line changed and the collected counts match the base run. The out-of-scope failures stay red and are named, not skipped.
@@ -89,6 +89,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Red first on the unfixed tree in the colliding order (FileNotFoundError into procs-route's warehouse), then green in three orders after the fix, one of them the plain nightly command with no probe loaded.
-      artifacts: [python/repark/tests/test_ice_sorted_insert_2.py, python/repark/tests/test_ice_procs_route_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_sorted_insert_2.py, python/repark/tests/iceberg/test_ice_procs_route_1.py]
   complete: true
 ```

@@ -294,7 +294,7 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
+- Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-SES-1`..`EX-SES-5` (and `EX-CAT-2` for the kept-back `list_databases`)
 - Siblings: [ex-19-dataframe-d-window-ledger.md](ex-19-dataframe-d-window-ledger.md) (the EX-20 window/catalog ledger joins staging with its merge)
 

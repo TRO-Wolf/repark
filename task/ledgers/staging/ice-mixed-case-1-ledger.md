@@ -187,8 +187,8 @@ directory.
 
 ## 4. Spark oracle recording (PySpark 4.1.2, single JVM)
 
-`python/repark/tests/_record_ice_mixed_case_1.py` recorded
-`python/repark/tests/ice_mixed_case_1_spark_oracle.json` verbatim from one
+`python/repark/tests/iceberg/_record_ice_mixed_case_1.py` recorded
+`python/repark/tests/iceberg/ice_mixed_case_1_spark_oracle.json` verbatim from one
 PySpark 4.1.2 JVM: every cell under `spark.sql.caseSensitive` false and
 true (rows + columns on success; error class + message + SQL on refusal,
 including the `[AMBIGUOUS_REFERENCE]` shape). The adopted table itself is
@@ -357,7 +357,7 @@ carrier-parse tests left with the carrier).
 
 ### Step 1 — red-first on the unfixed tree
 
-Measured cells: `python/repark/tests/ice_mixed_case_1_spark_oracle.json`
+Measured cells: `python/repark/tests/iceberg/ice_mixed_case_1_spark_oracle.json`
 `measured_21b.cells` is `/tmp/oc-worker/kb-oracle/mc-truth.json` verbatim
 (checked equal). Spark's twin-table `v3.metadata.json` is committed beside the
 fixture (`twin_v3.metadata.json`).
@@ -682,7 +682,7 @@ the four cells whose fixture is a 1,000-branch `UNION ALL`.
 
 ### Reproduction (debug native, `maturin develop`, unfixed tree)
 
-- `.venv/bin/python -m pytest python/repark/tests/test_perf_approxpct_1.py -q -p no:cacheprovider -n 4`
+- `.venv/bin/python -m pytest python/repark/tests/perf/test_perf_approxpct_1.py -q -p no:cacheprovider -n 4`
   → `4 failed, 59 passed, 7 skipped in 31.74s`; each failure is `worker 'gwN' crashed`, on the same four cells.
 - Control: `/tmp/lb-22b/control.py` runs the four cells' SQL in one session.
   With `SET spark.sql.caseSensitive=true` (the repair call returns before it does any work) it answers `7.0, 7.0, 5.0, 1.0`
@@ -757,9 +757,9 @@ the four cells whose fixture is a 1,000-branch `UNION ALL`.
 
 ### Gates (all run on 2026-09-18, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6`)
 
-- Debug native, fixed tree: `pytest python/repark/tests/test_perf_approxpct_1.py -q -p no:cacheprovider -n 4`
+- Debug native, fixed tree: `pytest python/repark/tests/perf/test_perf_approxpct_1.py -q -p no:cacheprovider -n 4`
   → `63 passed, 7 skipped in 43.12s`.
-- Debug native: `pytest python/repark/tests/test_ice_mixed_case_1.py -q -p no:cacheprovider -n 4`
+- Debug native: `pytest python/repark/tests/iceberg/test_ice_mixed_case_1.py -q -p no:cacheprovider -n 4`
   → `65 passed, 44 skipped, 1 xfailed in 66.18s` (the 5,000-branch pin: 61.83 s).
 - Debug native: `pytest python/repark/tests -q -p no:cacheprovider -n 4 -k "case or column or resolve" -m "not perf"`
   → `1103 passed, 78 skipped, 11 xfailed, 10 warnings in 108.74s` (wall 1m49.6s, no stall; no `perf`

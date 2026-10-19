@@ -247,18 +247,18 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   keeps a birth-frame column's written reference verbatim and rebinds any other
   frame's held attribute by position. The sort-marker family moves to
   `column_sort.py` behind `Column` bindings (1536 → 1485, with the CAP-1
-  mirror). Pins: `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
+  mirror). Pins: `python/repark/tests/resolution/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
   **ATTR-ID-1 S4 alias fix (2026-10-02):** `alias` preserves the base column's
   `_attr_id` and `_birth_frame`, so an aliased side ref binds its own side on
   a condition join instead of reaching the engine with a bare duplicate name.
   The string-predicate family moves to `column_string.py` behind `Column`
   bindings (1485 → 1378, with the CAP-1 mirror). Pins:
-  `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-042
+  `python/repark/tests/resolution/test_attr_id_1_s4.py`. pins: attr-id-1/C-042
   **ATTR-ID-1 SJ-2 (2026-10-02):** the fragment-render family
   (`sql_expr_part`/`join_sql_part`/`sql_expr_without_alias`/`spark_display_part`/
   `spark_wrap_display_part`) moves to `column_render.py` behind `Column`
   bindings (1378 → 1331, with the CAP-1 mirror). Pins:
-  `python/repark/tests/test_attr_id_1_sj2.py`.
+  `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
   **Fold SM-2 R7 (2026-10-06):** `Column` gains the `_repr_display` slot
   (default `None`, set post-bind, never a constructor parameter):
   `__repr__` prefers it over `spark_display_part()`, so a qualified getitem
@@ -352,7 +352,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   then the old stable-name path over the new resolve rule (a refusal falls through to
   the engine). `_column_of` is the same funnel over Columns and strings.
   No docstrings: the lane's no-comments ruling covers new private helpers; the
-  contract lives here. Pins: `python/repark/tests/test_attr_id_1_s3a.py`.
+  contract lives here. Pins: `python/repark/tests/resolution/test_attr_id_1_s3a.py`.
   pins: attr-id-1/C-024
   **ATTR-ID-1 S3b (2026-10-01):** the filter/sort family's one resolve rule lives
   here too. `_rebind_free_names` funnels a filter/sort `Column` through native
@@ -372,7 +372,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   and a miss or a non-unique qualified engine name stays for the engine. No
   exact-preference on either door: an exact spelling among folded rivals
   refuses, as live Spark does. No docstrings on the new private helpers; the
-  contract lives here. Pins: `python/repark/tests/test_attr_id_1_s3b.py`.
+  contract lives here. Pins: `python/repark/tests/resolution/test_attr_id_1_s3b.py`.
   pins: attr-id-1/C-025
   **ATTR-ID-1 S3b H-1 (2026-10-01):** the §9e rulings. A one-id multi-hit
   token refuses when `join_dup_below_wrappers` sees a join below (the
@@ -382,7 +382,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (Spark-measured) with a main's-path fallback on a qualifier miss, anything
   else takes main's bare-ident path. The quoter machinery moves to
   `filter_quote.py` (this module keeps the `_quote_filter_sql_identifiers`
-  entry): 1209 → 871 lines. Pins: `python/repark/tests/test_attr_id_1_s3b.py`.
+  entry): 1209 → 871 lines. Pins: `python/repark/tests/resolution/test_attr_id_1_s3b.py`.
   pins: attr-id-1/C-026
   **ATTR-ID-1 S3c (2026-10-01):** `_live_rule_hits` is the shared hit
   computation the `withColumn(s)`/`withColumn(s)Renamed` family binds through
@@ -395,7 +395,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_rebind_stable_name_column` now re-raises an unqualified
   `AMBIGUOUS_REFERENCE` instead of falling through to a bare engine error;
   misses and qualified names still fall through (S3e owns qualified). Pins:
-  `python/repark/tests/test_attr_id_1_s3c.py`.
+  `python/repark/tests/resolution/test_attr_id_1_s3c.py`.
   pins: attr-id-1/C-030
   **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** `_java_case_equal` is deleted;
   insensitive hits come from the native `java_fold_hits` mode `b` (same
@@ -408,7 +408,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   stable-no-op Column through the qualified rewriter, so aliased compounds
   bind; the filter quoter gains the facade qualifiers and substitutes the
   held-qualified engine field under duplicate engines. Pins:
-  `python/repark/tests/test_attr_id_1_s3e.py`. pins: attr-id-1/C-039
+  `python/repark/tests/resolution/test_attr_id_1_s3e.py`. pins: attr-id-1/C-039
   **ATTR-ID-1 S4 (2026-10-02):** `_bind_stable_id_column` splits into
   `_exact_rebind_position` (one held position through `attribute_column`, onto a
   unique engine field only) and `_qualified_narrow_position` (a qualifier-carrying
@@ -422,7 +422,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   held twice) through the qualified rewriter first. `_bind_sort_key` takes only
   true rebinds from the id bind; a miss stays verbatim for a plain column but a
   marked (asc/desc) column falls through to the free-name funnel, which binds
-  the oldest project hit. Pins: `python/repark/tests/test_attr_id_1_s4.py`.
+  the oldest project hit. Pins: `python/repark/tests/resolution/test_attr_id_1_s4.py`.
   pins: attr-id-1/C-040
   **ATTR-ID-1 S4 follow-up (2026-10-02):** the SQL-spells-engine written-ref check
   is deleted and the sameness test moves to `Column._birth_frame`: a column bound
@@ -436,10 +436,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   column's written name under the live session rule, so a rename that drops the
   name refuses while a case-only rename still binds. `outer`, the sort bound
   column, and `_rewrap_with_markers` carry `_birth_frame` with `_attr_id`. Pins:
-  `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
+  `python/repark/tests/resolution/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
   **ATTR-ID-1 SJ-2 (2026-10-02):** `_column_frame_id(column)` reads the birth
   frame's node id (`None` without a birth frame); it is the one helper every
-  frame-id read uses. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  frame-id read uses. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
   **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `_rebind_stable_name_column` runs the
   native free-name check on compounds that reach it unbound (skipped for
   token-bearing parent refs); `_rebind_free_names` runs the qualified-only
@@ -448,7 +448,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   at the ceiling). `_window_keys_bound` skips the check for windows whose
   partition and order keys all carry an attribute id (internal
   `drop_duplicates`/`distinct` projections), while user windows with free
-  refs still raise. Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+  refs still raise. Pins: `python/repark/tests/resolution/test_attr_id_1_sj5.py`.
   **CASESENS-2 port phase 2 (2026-10-03):** `_resolve_sort_name`'s project
   branch refuses `UNRESOLVED_COLUMN` when `_native.sort_hits_meet_at_join` says
   the output twins trace to two positions of one join. Spark's child-scope
@@ -498,11 +498,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `spark_display_part`/`spark_wrap_display_part`), split out of `column.py` at
   the size ceiling (pure move; `Column` binds the five spellings).
   `join_sql_part` renders the frame field from `_column_frame_id`, `F0` without
-  a birth frame. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  a birth frame. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
   **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):** the token carries the bind-time leaf
   display as `__D<UPPERHEX-OF-UTF8>__` after the qualifiers, so a token whose
   birth frame is an unbound dead temp still names its attribute for the native
-  preparer's `names` map. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  preparer's `names` map. Pins: `python/repark/tests/resolution/test_attr_id_1_sj3.py`.
 - `column_errors.py` — **ATTR-ID-1 SJ-5 F1 (2026-10-03):** the four
   unresolved/ambiguous error builders, moved here from `column_fields.py`
   unchanged (pure move at the size ceiling, re-imported there).

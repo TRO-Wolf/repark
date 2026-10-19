@@ -70,7 +70,7 @@ docs) may still be landing when this card starts — step 1 here does not depend
 `crates/repark-spark/src/call.rs` (the sixth procedure name), `crates/repark-spark/src/call/run_maintenance.rs`
 (new), `crates/repark-spark/src/tests/run_maintenance.rs` (new), Python facade
 `python/repark/src/repark/spark/session/session_core.py` (`run_maintenance`),
-`python/repark/tests/test_maintenance_policy_1.py` (new), `docs/guide/maintenance-policy.md` (new),
+`python/repark/tests/iceberg/test_maintenance_policy_1.py` (new), `docs/guide/maintenance-policy.md` (new),
 `docs/guide/repark-toml.md` (a section), maps.
 
 **Decisions.**

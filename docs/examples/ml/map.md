@@ -30,6 +30,6 @@ Spark-equal arms.
 - Up: [../map.md](../map.md)
 - Registry: [../../spark-sql-iceberg-parity.md](../../spark-sql-iceberg-parity.md) §7
   EX-ML-1..9
-- Pins: [../../../python/repark/tests/test_examples_ml.py](../../../python/repark/tests/test_examples_ml.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_ml.py](../../../python/repark/tests/parity/test_examples_ml.py)
 
 pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007

@@ -462,10 +462,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   [../tests/call_rdf_branch.rs](../tests/call_rdf_branch.rs),
   [../tests/call_rewrite_options.rs](../tests/call_rewrite_options.rs),
   [../tests/call_rdf_options.rs](../tests/call_rdf_options.rs),
-  `python/repark/tests/test_maintenance_call.py`,
-  `python/repark/tests/test_rewrite_data_files_options.py`,
-  `python/repark/tests/test_ice_rdf_options_1.py`,
-  `python/repark/tests/test_ice_procedures_1.py`
+  `python/repark/tests/iceberg/test_maintenance_call.py`,
+  `python/repark/tests/iceberg/test_rewrite_data_files_options.py`,
+  `python/repark/tests/iceberg/test_ice_rdf_options_1.py`,
+  `python/repark/tests/iceberg/test_ice_procedures_1.py`
 - Divergences: [../../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
   rows `MANIFEST-1`, `MANIFEST-2`, `RDF-SORT-1`, `ICE-RDF-OPTIONS-1`, `RDF-DANGLING-1`
 

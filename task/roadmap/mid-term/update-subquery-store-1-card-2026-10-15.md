@@ -61,4 +61,4 @@ The identity path runs before the belt and still stores Spark's value for a scal
   evaluate the subquery before the provider's `update` sees the plan.
 - `repark.sql()` needs the same store path, or an identity path of its own.
 - Each stored shape replaces its refusal pin with a store pin on both doors, held to the live
-  Spark recording (`x_update` in `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`).
+  Spark recording (`x_update` in `python/repark/tests/writes/ice_struct_pairing_1_spark_oracle.json`).

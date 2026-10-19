@@ -1404,7 +1404,7 @@
    "members": 4,
    "member_names": null,
    "member_note": "TIME_TRAVEL, BRANCH_TAG_DDL, METADATA_TABLES, WAP conf",
-   "pinned_by": "crates/repark-spark/src/tests/{time_travel,ref_ddl,refs_and_wap,metadata_tables}.rs, python/repark/tests/test_ref_branch_tag_wap.py",
+   "pinned_by": "crates/repark-spark/src/tests/{time_travel,ref_ddl,refs_and_wap,metadata_tables}.rs, python/repark/tests/iceberg/test_ref_branch_tag_wap.py",
    "examples_covered": null,
    "examples_total": null,
    "residuals": [
@@ -1423,7 +1423,7 @@
    "members": 6,
    "member_names": null,
    "member_note": "INTROSPECTION + the five GUARD_* surfaces",
-   "pinned_by": "crates/repark-spark/src/tests/describe_show.rs, router/local_fs_ddl/write_to_branch guard pins, python/repark/tests/test_show_namespaces.py",
+   "pinned_by": "crates/repark-spark/src/tests/describe_show.rs, router/local_fs_ddl/write_to_branch guard pins, python/repark/tests/session/test_show_namespaces.py",
    "examples_covered": null,
    "examples_total": null,
    "residuals": [
@@ -1441,7 +1441,7 @@
    "members": 7,
    "member_names": null,
    "member_note": "expire_snapshots, register_table, rewrite_data_files, rewrite_manifests, remove_orphan_files, rewrite_position_delete_files, rollback_to_snapshot",
-   "pinned_by": "crates/repark-spark/src/tests/{call,call_manifests,call_register,call_rewrite_options}.rs, python/repark/tests/test_maintenance_call.py",
+   "pinned_by": "crates/repark-spark/src/tests/{call,call_manifests,call_register,call_rewrite_options}.rs, python/repark/tests/iceberg/test_maintenance_call.py",
    "examples_covered": null,
    "examples_total": null,
    "residuals": [
@@ -1504,7 +1504,7 @@
    "members": 7,
    "member_names": null,
    "member_note": "repark.sql.{maxArrayElements, allowLocalFilesystemDDL, allowCreateFormatVersion3} (each with a snake alias), repark.merge.{scan-pruning, file-scoped-rewrite}, and the spark.sql.catalog.<name>.* / repark.sql.catalog.<name>.* prefixes",
-   "pinned_by": "crates/repark-functions/src/cardinality.rs, crates/repark-iceberg/src/write/{scan_prune,file_scoped_rewrite}.rs, crates/repark-core/src/catalog_config.rs, python/repark/tests/test_getorcreate_catalogs.py",
+   "pinned_by": "crates/repark-functions/src/cardinality.rs, crates/repark-iceberg/src/write/{scan_prune,file_scoped_rewrite}.rs, crates/repark-core/src/catalog_config.rs, python/repark/tests/session/test_getorcreate_catalogs.py",
    "examples_covered": null,
    "examples_total": null,
    "residuals": [
@@ -1520,7 +1520,7 @@
    "members": 3,
    "member_names": null,
    "member_note": "repark.sql.allowCreateFormatVersion3, format-version = 3 on CREATE/CTAS, ALTER \u2026 format-version upgrade",
-   "pinned_by": "crates/repark-spark/src/tests/{v3_cow,v3_upgrade}.rs, python/repark/tests/test_v3_acceptance_local.py",
+   "pinned_by": "crates/repark-spark/src/tests/{v3_cow,v3_upgrade}.rs, python/repark/tests/parity/test_v3_acceptance_local.py",
    "examples_covered": null,
    "examples_total": null,
    "residuals": [

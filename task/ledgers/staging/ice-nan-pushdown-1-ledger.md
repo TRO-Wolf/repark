@@ -4,7 +4,7 @@
 **Model:** muse-spark-1.3-contributor
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
-**Oracle:** PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (see `_oracle_pins.py`), recorded at authoring time into `python/repark/tests/ice_nan_pushdown_1_oracle.json`, replayed live under `REPARK_PARITY_LIVE=1`.
+**Oracle:** PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (see `_oracle_pins.py`), recorded at authoring time into `python/repark/tests/iceberg/ice_nan_pushdown_1_oracle.json`, replayed live under `REPARK_PARITY_LIVE=1`.
 **Fork fix:** fork PR #284 (`56cbdbdd`, F-ICE-NAN-PUSHDOWN-1) at pin `75da2b58`, consumed via RP-21 (`a003f9f5`, RePark PR #665). Fork ledger: `task/f-ice-nan-pushdown-1-ledger.md` in the owned fork.
 
 ## 1. Scope and fence
@@ -126,7 +126,7 @@ Round-2 gates (2026-09-17, native rebuilt 08:02 EDT after the Rust edits):
 Exact live command (`.venv` has no `pyspark`; the sparkenv site-packages ride
 `PYTHONPATH`, one JVM via `jb-jvm.sh`):
 
-    cd /tmp/ib-bump && REPARK_PARITY_LIVE=1 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=/tmp/ib-scratch/.ivy2 --conf spark.driver.memory=2g --conf spark.ui.enabled=false pyspark-shell" PYTHONPATH=/tmp/sparkenv/lib/python3.12/site-packages /tmp/oc-worker/jb-jvm.sh .venv/bin/python -m pytest python/repark/tests/test_ice_nan_pushdown_1.py -q -p no:cacheprovider
+    cd /tmp/ib-bump && REPARK_PARITY_LIVE=1 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=/tmp/ib-scratch/.ivy2 --conf spark.driver.memory=2g --conf spark.ui.enabled=false pyspark-shell" PYTHONPATH=/tmp/sparkenv/lib/python3.12/site-packages /tmp/oc-worker/jb-jvm.sh .venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_nan_pushdown_1.py -q -p no:cacheprovider
 
 ## Coverage attestation
 
@@ -140,15 +140,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause walked against its recorded oracle cell, not a paraphrase — 308 read cells (15 double plus 14/4 float legs per shape) across 12 table instances on the SQL door, DataFrame door on every cell but the eq_rev twin, DELETE/UPDATE outcomes at v2 and v3 offline and live; the live tier asserts repark == truth == live Spark.
-      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, python/repark/tests/ice_nan_pushdown_1_oracle.json]
+      artifacts: [python/repark/tests/iceberg/test_ice_nan_pushdown_1.py, python/repark/tests/iceberg/ice_nan_pushdown_1_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised — NaN-only file, NaN plus finite plus NULL in one file, NaN across two mixed files, the split shape (all-NaN file beside a finite-only file, so the is_nan prune-away is exercised), negative and fractional finite values, NaN-as-upper-bound BETWEEN, double and float columns, v2 and v3, RePark- and Spark-written tables.
-      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, python/repark/tests/fixtures/ice_nan_pushdown_1/map.md]
+      artifacts: [python/repark/tests/iceberg/test_ice_nan_pushdown_1.py, python/repark/tests/fixtures/ice_nan_pushdown_1/map.md]
     - id: AT-3
       status: ATTACKED
       evidence: The residual legs (<=>, NaN ranges, BETWEEN, negation) answer the oracle sets instead of erroring; the two bare-decimal-literal spellings fail loud with pinned needles (Overflowing on NaN for d = 1.0, Cannot cast to Decimal128 for IN) against recorded Spark answers, filed as dated OPEN row ICE-NAN-DECIMAL-LITERAL-1, never absorbed.
-      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/iceberg/test_ice_nan_pushdown_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-4
       status: N/A
       justification: No new shared mutable state — fixture copies run under the copied cross-process directory lock, reads carry ORDER BY id, sessions are per-test with stop in finally.
@@ -158,21 +158,21 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Spark-written warehouses adopted byte-identical through register_table at both format versions; DELETE removes exactly the NaN rows and UPDATE touches exactly them on the recorded Spark outcomes; RePark-written twins answer identically.
-      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, python/repark/tests/_record_ice_nan_pushdown_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_nan_pushdown_1.py, python/repark/tests/iceberg/_record_ice_nan_pushdown_1.py]
     - id: AT-7
       status: N/A
       justification: No perf claim filed — fixtures total 372 KB, the grid is a correctness pin, no resource shape changes.
     - id: AT-8
       status: ATTACKED
       evidence: Upstream contracts honored, not presumed — fork #284 named at pin 75da2b58, the Spark GAV read from _oracle_pins, the recorder re-derives every cell from live Spark and exits non-zero on drift, the live tier replays Spark per run.
-      artifacts: [python/repark/tests/_record_ice_nan_pushdown_1.py, python/repark/tests/_oracle_pins.py, crates/repark-spark/src/tests/nan_pushdown.rs]
+      artifacts: [python/repark/tests/iceberg/_record_ice_nan_pushdown_1.py, python/repark/tests/_oracle_pins.py, crates/repark-spark/src/tests/nan_pushdown.rs]
     - id: AT-9
       status: N/A
       justification: No product code and no new failure surface — the one observed failure raises the engine error verbatim, and every pin asserts on values rather than messages.
     - id: AT-10
       status: ATTACKED
       evidence: Pins-first held — the legs assert the exact query shape the fork ledger measured at [] on the unfixed tree, so they fail on the old pin by construction; the grid proved sensitive during development by catching the bare-decimal-literal defect as 3 DIFFs while every pushdown leg stayed ALL-EQUAL.
-      artifacts: [python/repark/tests/test_ice_nan_pushdown_1.py, crates/repark-spark/src/tests/nan_pushdown.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_nan_pushdown_1.py, crates/repark-spark/src/tests/nan_pushdown.rs]
   complete: true
 ```
 

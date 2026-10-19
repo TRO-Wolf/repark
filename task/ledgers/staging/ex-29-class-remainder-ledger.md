@@ -12,7 +12,7 @@ slate row.
 **Writable paths:** `docs/examples/{catalog,column,dataframe,io,session}/`,
 `docs/examples/backlog.txt`, the `BACKLOG_BASELINE` constant in
 `scripts/check_example_coverage.py`, `docs/spark-sql-iceberg-parity.md` §7,
-`python/repark/tests/test_examples_dataframe_d.py`, `test_examples_column_a.py`,
+`python/repark/tests/parity/test_examples_dataframe_d.py`, `test_examples_column_a.py`,
 `test_examples_window_catalog.py`, `test_examples_io_session.py`, lockstep `map.md` files, and
 this ledger with its `staging/map.md` row. Closed: `crates/`, `python/repark/src/`, every other
 `scripts/` line, `.github/`, `STATUS.md`, every other ledger, `briefs/next-sequence.md`.
@@ -239,7 +239,7 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/test_examples_dataframe_d.py), [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_dataframe_d.py](../../../python/repark/tests/parity/test_examples_dataframe_d.py), [../../../python/repark/tests/parity/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7
 - Sibling: [ex-28-scalar-remainder-ledger.md](../completed/ex-28-scalar-remainder-ledger.md)
 

@@ -42,18 +42,18 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Every flipped or xfailed expectation reads the committed
         Spark 4.1.2 recording; no value is hand-computed.
-      artifacts: [python/repark/tests/ice_rdf_options_1_spark_oracle.json]
+      artifacts: [python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Red on the new pin is the CI smoke list (3 strict XPASS,
         4 failures) measured before any pin moved; the strict marks turn
         red again if either side moves.
-      artifacts: [python/repark/tests/test_ice_rdf_options_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_rdf_options_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The regressed cells keep a plain live-row twin, so a row
         loss behind the xfail still reds.
-      artifacts: [python/repark/tests/test_ice_rdf_options_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_rdf_options_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state is added.

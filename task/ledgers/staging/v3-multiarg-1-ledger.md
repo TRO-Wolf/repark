@@ -100,7 +100,7 @@ refusal from §1b, not a hand-written expectation.
 
 | Command | Result |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_v3_multiarg_1.py -q -p no:cacheprovider` | 0 — 3 passed |
+| `.venv/bin/python -m pytest python/repark/tests/iceberg/test_v3_multiarg_1.py -q -p no:cacheprovider` | 0 — 3 passed |
 | `.venv/bin/ruff check` on the two new Python files | 0 — all checks passed |
 | `.venv/bin/ruff format --check` on the two new Python files | 0 — both formatted |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/lb-build origin/main` | 0 hits (§5) |
@@ -128,19 +128,19 @@ COVERAGE_ATTESTATION:
         plus DataFrame plus ANSI context, §1c register plus read plus passing control)
         and on live Spark 4.1.2 in one JVM (§1b); each pin asserts the measured class
         and message fragment, and each pin is red when its refusal is absent (§2).
-      artifacts: [python/repark/tests/test_v3_multiarg_1.py, python/repark/tests/v3_multiarg_1_spark_oracle.json]
+      artifacts: [python/repark/tests/iceberg/test_v3_multiarg_1.py, python/repark/tests/iceberg/v3_multiarg_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: The Spark cell is the verbatim live refusal, recorded by the committed
         `_record_v3_multiarg_1.py` driver (GAV from `_oracle_pins`, `--warehouse`, ivy
         from `REPARK_ORACLE_IVY`), which re-derives the cell and exits non-zero on drift.
-      artifacts: [python/repark/tests/_record_v3_multiarg_1.py]
+      artifacts: [python/repark/tests/iceberg/_record_v3_multiarg_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Refusal paths are the whole surface: SQL-door arity error, register-time
         metadata parse failure, Spark DDL refusal. No silent-answer path exists — §1c
         proves the foreign table refuses at register and the control passes.
-      artifacts: [python/repark/tests/test_v3_multiarg_1.py]
+      artifacts: [python/repark/tests/iceberg/test_v3_multiarg_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state added; the unit adds no product code.
@@ -154,7 +154,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Every pinned value is a measured value (§1 verbatim blocks), not prose:
         the arity text, the untagged-enum fragment, the Spark first line.
-      artifacts: [python/repark/tests/test_v3_multiarg_1.py]
+      artifacts: [python/repark/tests/iceberg/test_v3_multiarg_1.py]
     - id: AT-7
       status: N/A
       justification: No wall-clock claim anywhere in the change.

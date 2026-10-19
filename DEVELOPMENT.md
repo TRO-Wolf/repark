@@ -87,6 +87,16 @@ and `dbt-core`, so it sits beside the facade suite in `preflight` as `make py-te
 job runs it yet**, and the wiring it wants is recorded in
 [task/ledgers/completed/dbt-1-adapter-ledger.md](task/ledgers/completed/dbt-1-adapter-ledger.md) §9.
 
+**Facade suite layout.** Since FACADE-TESTS-LAYOUT-1 (2026-10-19) `python/repark/tests` is split
+into thirteen subsystem directories (`iceberg/`, `writes/`, `timestamps/`, `types/`,
+`functions/`, `dataframe/`, `resolution/`, `sql/`, `session/`, `io/`, `perf/`, `parity/`, `ml/`),
+each with its own `map.md`; the charters and placement rules live in
+[python/repark/tests/map.md](python/repark/tests/map.md) "Layout". Every runner collects the tree
+recursively (`make py-test-facade`, `parity-live.yml`, and the `smoke` shards, which list files
+with `find python/repark/tests -name 'test_*.py'`), and one directory runs alone as
+`pytest python/repark/tests/<dir>`. A new test goes in the directory of the subsystem it pins; a
+new subsystem is a new directory with its own `map.md`.
+
 The testing **contract** (tests land in the same commit as the code; test-per-change; the
 entry-point matrix; divergence-class claims) is in [docs/testing.md](docs/testing.md) — read it
 before any code change.

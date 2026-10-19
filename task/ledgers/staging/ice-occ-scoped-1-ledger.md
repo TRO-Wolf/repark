@@ -214,7 +214,7 @@ Green after (fixed head): `occ_scoped` 8 passed; `conflict_filter` 19 passed.
 ## Facade evidence (release native, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin develop --release`)
 
 BEFORE — native built from the pre-fix sources (`26622dd9`: RP-24 pin, RePark half absent),
-`pytest python/repark/tests/test_ice_occ_scoped_1.py -n 8` (the module as first written):
+`pytest python/repark/tests/writes/test_ice_occ_scoped_1.py -n 8` (the module as first written):
 `16 failed, 14 passed`. Every red is the named reason — `v*_4_partition_scoped_merges/{sql,dataframe}`
 `RePark committed 1 of 4, Spark 4; losers: DataInvalid => Found conflicting files that can contain
 records matching TRUE`; COW range `1 of 2, Spark 2`; MoR range loser `… matching TRUE` where
@@ -271,7 +271,7 @@ this section and the attestation lines):
 | `make rust-clippy` | rc=0 (278 s) |
 | `cargo test -p repark-iceberg --lib` | `485 passed; 0 failed` (475 + 10 new: five float, one nested-leaf, three own-partition, one NOT MATCHED INSERT) |
 | release native `cd python/repark && CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 VIRTUAL_ENV=<repo>/.venv <repo>/.venv/bin/maturin develop --release` | rc=0, 500 s, from `2baafc64` |
-| `.venv/bin/python -m pytest python/repark/tests/test_ice_occ_scoped_1.py -q -p no:cacheprovider` × 3 | `30 passed` in 224.73 s, 85.61 s, 33.42 s |
+| `.venv/bin/python -m pytest python/repark/tests/writes/test_ice_occ_scoped_1.py -q -p no:cacheprovider` × 3 | `30 passed` in 224.73 s, 85.61 s, 33.42 s |
 | `.venv/bin/python -m pytest python/repark/tests -q -p no:cacheprovider -n 8` | `9717 passed, 398 skipped, 47 xfailed` in 36m09s, 0 failed (round 1's three environment reds did not recur) |
 | `make verify` | rc=0 in 51m10s: rust-file-size 625 files, ledger-grammar 187 ledgers / 1515 clauses, docs-links 953 files / 5841 links, map-sync, crate-dag, lib-rs, lib-py, docstring-presence, manifest, owner-ruling, docs-compaction clean; `cargo test --locked --workspace` 57 binaries, 3845 passed, 0 failed |
 | Spark 4.1.2 recording `record_spark_occ3.py` (one `local[8]` JVM, driver 2g, UI off) | rc=0; 16 cells, one deterministic answer each (`spark_occ_oracle3.json`) |
@@ -283,7 +283,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every oracle row maps to a clause and a pin that reads Spark's recording; the scoped shapes were red on the pre-fix head (Rust 6 of 7, facade 16 of 30) and green after; the refusal shapes are pinned to Spark's own messages.
-      artifacts: [crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs, python/repark/tests/test_ice_occ_scoped_1.py]
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs, python/repark/tests/writes/test_ice_occ_scoped_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Derivation boundaries are unit-pinned — bare versus qualified columns, a shadowed alias, case-folded names, type-mismatched and negative literals, IN / NOT IN / BETWEEN / IS NULL, unconvertible conjuncts and disjuncts, subqueries, unparsable text.
@@ -314,7 +314,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Losers keep the fork's typed DataInvalid / CatalogCommitConflicts errors surfaced as PySparkException with Spark's message head; the facade pin names the Spark cell and the RePark loser on any mismatch.
-      artifacts: [python/repark/tests/test_ice_occ_scoped_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_occ_scoped_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first on the pre-fix head at both layers, then eight single-seam mutations (three commit sites, both derivations, the NMBS guard, two over-fixes), each red at least one pin; M8's only witness is the unit test, named. Round 2 adds M9/M10 (float exactness and float-range guard, unit tests) and M11 (an over-narrow extra conjunct, which reds the three own-partition race pins and the NOT MATCHED INSERT pin that no round-1 pin caught).

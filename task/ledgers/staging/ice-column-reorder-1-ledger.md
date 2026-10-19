@@ -67,8 +67,8 @@ that ground: the move is expressible in RePark as a schema update with unchanged
 
 Base shape `(id INT, a STRING, b STRING)`, ids 1/2/3, seed `(1, 'a1', 'b1')`, fresh table per
 case (CREATE = v1/schema 0, seed INSERT = v2). Full record:
-`python/repark/tests/test_ice_column_reorder_1_truth.json` via
-`python/repark/tests/_record_ice_column_reorder_1.py`.
+`python/repark/tests/iceberg/test_ice_column_reorder_1_truth.json` via
+`python/repark/tests/iceberg/_record_ice_column_reorder_1.py`.
 
 | Case | Spark's answer |
 |---|---|
@@ -120,15 +120,15 @@ ERR  native: ParseException: SQL error: ParserError("Expected: SET/DROP NOT NULL
 
 ## 3. Oracle record (S3)
 
-Recorder `python/repark/tests/_record_ice_column_reorder_1.py` (GAV from
+Recorder `python/repark/tests/iceberg/_record_ice_column_reorder_1.py` (GAV from
 `python/repark/tests/_oracle_pins.py`, same session config as `_live_parity.py`'s Iceberg
 engine; local builder only because `/tmp/sparkenv` has no pyarrow) + truth
-`python/repark/tests/test_ice_column_reorder_1_truth.json` (15 cases, provenance Spark 4.1.2 /
+`python/repark/tests/iceberg/test_ice_column_reorder_1_truth.json` (15 cases, provenance Spark 4.1.2 /
 Iceberg 1.11.0). Ran 2026-09-17 under `jb-jvm.sh`, exit 0.
 
 ## 4. Red-first pins (S4) — 2026-09-17, unfixed release native
 
-`python/repark/tests/test_ice_column_reorder_1.py` (26 tests: 12 offline, 14 live):
+`python/repark/tests/iceberg/test_ice_column_reorder_1.py` (26 tests: 12 offline, 14 live):
 
 ```text
 FAILED test_move_first_matches_oracle
@@ -327,15 +327,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause C-001..C-014 walked against the recorded oracle cells, not a paraphrase — 18 truth cases (15 round-1 plus nested_after_short/dotted/cross) across plain, nested, v3, partitioned, insert and DataFrame shapes on the facade SQL door, the Rust ANSI door end to end, and the live replay that re-derives Spark per run.
-      artifacts: [python/repark/tests/test_ice_column_reorder_1.py, python/repark/tests/test_ice_column_reorder_1_truth.json, crates/repark-sql/tests/alter_column_move.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_column_reorder_1.py, python/repark/tests/iceberg/test_ice_column_reorder_1_truth.json, crates/repark-sql/tests/alter_column_move.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised — already-first and already-after no-ops, first-after-last, self-move, unknown mover, unknown reference flat and nested, short/dotted/cross-struct nested references, empty-reference trailing tokens, non-ALTER statements through the intercept, v2 and v3, partitioned source moves.
-      artifacts: [python/repark/tests/test_ice_column_reorder_1.py, crates/repark-spark/src/column_move.rs, crates/repark-sql/src/alter/tests.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_column_reorder_1.py, crates/repark-spark/src/column_move.rs, crates/repark-sql/src/alter/tests.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal is loud and typed — UNRESOLVED_COLUMN with SQLSTATE 42703 for unknown names, PARSE_SYNTAX_ERROR with 42601 for dotted references, the fork Java message for self and cross-struct moves — and every refusal pin asserts no new metadata file; the no-op file delta is a strict xfail tied to OPEN residue R-001, never absorbed.
-      artifacts: [python/repark/tests/test_ice_column_reorder_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/iceberg/test_ice_column_reorder_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-4
       status: ATTACKED
       evidence: The stale no-op race is closed by deleting the load-time decision — every move commits through the fork transaction, whose do_commit rebases onto the refreshed table; schema_stale_move_rebases_to_java_order pins Java final order [id, b, a]; ADD+MOVE batch order pinned against the pre-batch schema hole.
@@ -346,7 +346,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Schema ids are never reassigned by a move (fork reuses by content, round-trip restores 0 as Spark does); Spark-written moved tables adopted through register_table and cross-read both directions live; positional INSERT after the move lands Spark-equal rows.
-      artifacts: [python/repark/tests/test_ice_column_reorder_1.py, crates/repark-iceberg/src/write/alter.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_column_reorder_1.py, crates/repark-iceberg/src/write/alter.rs]
     - id: AT-7
       status: ATTACKED
       evidence: The intercept fast path (starts_with_alter) and the single-load doors answer R-01/R-02; no other resource shape changed — moves are metadata-only commits, and the torture/spill suites are the orchestrator's whole-suite runs, not this unit's.
@@ -354,15 +354,15 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: Upstream contracts honored, not presumed — fork move/find_field/dedup behavior read at pin 96fc9f1f and pinned (stale rebase, batch order, sibling scope, id reuse); the Spark GAV read from _oracle_pins; the recorder re-derives every cell from live Spark; the live tier replays Spark per run.
-      artifacts: [python/repark/tests/_record_ice_column_reorder_1.py, python/repark/tests/_oracle_pins.py, crates/repark-spark/src/tests/column_move.rs]
+      artifacts: [python/repark/tests/iceberg/_record_ice_column_reorder_1.py, python/repark/tests/_oracle_pins.py, crates/repark-spark/src/tests/column_move.rs]
     - id: AT-9
       status: ATTACKED
       evidence: Every failure mode carries its Spark-shaped message and SQLSTATE through the engine classifier (Plan to AnalysisException, SQL to ParseException, fork Java text verbatim), and the two live-tier harness defects (mtime ordering, pos-sensitive needle) were diagnosed from the assertion values and pinned by the fixed helpers.
-      artifacts: [python/repark/tests/test_ice_column_reorder_1.py, crates/repark-core/src/error_map.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_column_reorder_1.py, crates/repark-core/src/error_map.rs]
     - id: AT-10
       status: ATTACKED
       evidence: Pins-first held — the L-002/L-004 pins failed on the unfixed tree and the R-001 xfail XPASSed there, so each fails without the change; every branch the diff adds (prefix scan, sibling qualify, dotted refusal, batch-added cover) has a nameable input in the suite; the full unit file plus the three touched Rust crates ran green on the release native.
-      artifacts: [python/repark/tests/test_ice_column_reorder_1.py, crates/repark-iceberg/src/write/alter.rs, crates/repark-spark/src/column_move.rs, crates/repark-sql/src/alter/tests.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_column_reorder_1.py, crates/repark-iceberg/src/write/alter.rs, crates/repark-spark/src/column_move.rs, crates/repark-sql/src/alter/tests.rs]
   complete: true
 ```
 

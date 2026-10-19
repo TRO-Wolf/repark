@@ -8,7 +8,7 @@ Storing a DOUBLE that does not fit the target integer column (1e19 into BIGINT, 
 - **Spark 4.1.2:** ``[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of "DOUBLE" type to the "BIGINT" type column or variable `v` due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003``. It says `"INT"` for INT columns. Spark also answers this class for `0/0` into BIGINT.
 - **RePark:** `Optimizer rule 'simplify_expressions' failed` for a constant, an Arrow `Can't cast value 1e19 to type Int64` for a column, and `DIVIDE_BY_ZERO` for `0/0`.
 
-Measured cells: the `r_intdiv_1` section of the INTDIV-1 hand-back and the refusal-only `st-*` cells in `python/repark/tests/intdiv_1_spark_oracle.json`.
+Measured cells: the `r_intdiv_1` section of the INTDIV-1 hand-back and the refusal-only `st-*` cells in `python/repark/tests/types/intdiv_1_spark_oracle.json`.
 
 ## Scope
 
