@@ -15,7 +15,7 @@ import pytest
 
 pytestmark = pytest.mark.slow
 
-_MAIN_WORKER = """
+_MAIN_PREAMBLE = """
 import json
 from functools import reduce
 
@@ -25,12 +25,20 @@ from repark.spark import functions as F
 results = {}
 session = ReparkSession.builder.appName("deep-reverify-main-1").getOrCreate()
 base = session.createDataFrame([(i, i * 2) for i in range(50)], "a INT, b INT")
+"""
 
+_MAIN_EPILOGUE = """
+print(json.dumps(results))
+"""
+
+_SQL_TEXT_OR_SHAPE = """
 or_text = " OR ".join(f"a = {i}" for i in range(2000))
 results["fexpr_2000_or"] = base.filter(F.expr(or_text)).count()
 results["selectexpr_2000_or"] = base.selectExpr(f"CASE WHEN {or_text} THEN a END").count()
 results["stringfilter_2000_or"] = base.filter(or_text).count()
+"""
 
+_DF_OR_1500_SHAPE = """
 deep_or = reduce(lambda x, y: x | y, [F.col("a") == i for i in range(1500)])
 try:
     base.filter(deep_or).count()
@@ -38,12 +46,16 @@ try:
 except Exception as raised:
     results["or_1500_df"] = type(raised).__name__
 del deep_or
+"""
 
+_MIXED_OR_SHAPE = """
 mixed = reduce(lambda x, y: x | y, [F.col("a") == i for i in range(300)])
 mixed = mixed | F.expr(" OR ".join(f"a = {i}" for i in range(300, 5001)))
 results["mixed_5001"] = base.filter(mixed).count()
 del mixed
+"""
 
+_DEEP_VIEW_SHAPE = """
 chained = base
 for i in range(1000):
     chained = chained.filter(F.col("a") >= i % 7 - 10)
@@ -51,8 +63,6 @@ chained.createOrReplaceTempView("deepv")
 results["deep_view_count"] = session.sql("SELECT count(*) FROM deepv").collect()[0][0]
 text = chained._explain_text() if hasattr(chained, "_explain_text") else ""
 results["explain_has_filter"] = "Filter" in text
-
-print(json.dumps(results))
 """
 
 _SMALL_WORKER = """
@@ -174,10 +184,16 @@ def _run_worker(worker: str, *args: str) -> dict[str, object]:
     return json.loads(proc.stdout.strip().splitlines()[-1])
 
 
-@pytest.fixture(scope="module")
-def main_results() -> dict[str, object]:
-    """Drive the main-thread battery once in an isolated interpreter."""
-    return _run_worker(_MAIN_WORKER)
+def _run_main_shape(shape: str) -> dict[str, object]:
+    """Drive one main-thread shape in its own isolated interpreter.
+
+    Args:
+        shape: The shape's worker source; it runs between the main preamble and epilogue.
+
+    Returns:
+        The JSON dict the worker prints on its last stdout line.
+    """
+    return _run_worker(_MAIN_PREAMBLE + shape + _MAIN_EPILOGUE)
 
 
 @pytest.fixture(scope="module")
@@ -198,33 +214,29 @@ def gc_results() -> dict[str, object]:
     return _run_worker(_GC_WORKER)
 
 
-def test_sql_text_or_chains_answer_on_every_door(
-    main_results: dict[str, object],
-) -> None:
+def test_sql_text_or_chains_answer_on_every_door() -> None:
     """2,000-term SQL-text OR answers 50 through F.expr, selectExpr, and filter."""
+    main_results = _run_main_shape(_SQL_TEXT_OR_SHAPE)
     assert main_results["fexpr_2000_or"] == 50
     assert main_results["selectexpr_2000_or"] == 50
     assert main_results["stringfilter_2000_or"] == 50
 
 
-def test_dataframe_built_or_past_cap_refuses_clean(
-    main_results: dict[str, object],
-) -> None:
+def test_dataframe_built_or_past_cap_refuses_clean() -> None:
     """A 1,500-term DF-built OR refuses AnalysisException, like Spark refuses."""
+    main_results = _run_main_shape(_DF_OR_1500_SHAPE)
     assert main_results["or_1500_df"] == "AnalysisException"
 
 
-def test_mixed_dataframe_and_text_or_answers(
-    main_results: dict[str, object],
-) -> None:
+def test_mixed_dataframe_and_text_or_answers() -> None:
     """A 5,001-term mixed DF/text OR answers 50; Spark answers it too."""
+    main_results = _run_main_shape(_MIXED_OR_SHAPE)
     assert main_results["mixed_5001"] == 50
 
 
-def test_deep_view_sql_and_explain_answer(
-    main_results: dict[str, object],
-) -> None:
+def test_deep_view_sql_and_explain_answer() -> None:
     """sql() over a 1,000-deep view counts 50 and explain names Filter."""
+    main_results = _run_main_shape(_DEEP_VIEW_SHAPE)
     assert main_results["deep_view_count"] == 50
     assert main_results["explain_has_filter"] is True
 
