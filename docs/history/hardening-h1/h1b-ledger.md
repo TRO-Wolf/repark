@@ -128,7 +128,7 @@ this diff says otherwise.
 
 ## 6. The facade landmine
 
-`python/repark/tests/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables`
+`python/repark/tests/iceberg/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables`
 was character-for-character v1's pre-fix version, and it **encoded the leak as its own
 non-vacuity proof**:
 
@@ -306,9 +306,9 @@ E
 E         Left contains one more item: '__repark_tt_1'
 E         Use -v to get more diff
 
-python/repark/tests/test_time_travel.py:320: AssertionError
+python/repark/tests/iceberg/test_time_travel.py:320: AssertionError
 =========================== short test summary info ============================
-FAILED python/repark/tests/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables
+FAILED python/repark/tests/iceberg/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables
 1 failed, 30 deselected in 0.71s
 ```
 exit `1`. Restored + rebuilt → `31 passed in 7.80s`, exit `0`.
@@ -373,7 +373,7 @@ against it:
 The repaired pin specifically, run alone against the same build:
 
 ```
-python/repark/tests/test_time_travel.py .                                [100%]
+python/repark/tests/iceberg/test_time_travel.py .                                [100%]
 
 ======================= 1 passed, 30 deselected in 0.69s =======================
 ```
@@ -402,7 +402,7 @@ exit `0` — it RAN, it was not skipped.
 **Tests**
 - `crates/repark-spark/src/tests/time_travel.rs` — Hunk D (two pins + two helpers).
 - `crates/repark-sql/tests/introspection.rs` — the `'__repark_tt%'` half of the ANSI pin.
-- `python/repark/tests/test_time_travel.py` — the facade landmine, rewritten.
+- `python/repark/tests/iceberg/test_time_travel.py` — the facade landmine, rewritten.
 
 **Docs (lockstep)**
 - `crates/repark-spark/src/map.md` — router row, `time_travel.rs` row (first `__repark_tt` row this
@@ -447,7 +447,7 @@ without its correction.
 | F-1a | mandatory revert-red evidence | New pin `time_travel_statement_pins_never_collide_with_a_reader_options_view` + leaf-private helper `temp_view_sequence`. Registers a reader-options view via `repark_core::read_table_at` FIRST, runs a Spark-door `VERSION AS OF`, asserts the reader's registration SURVIVES and the statement's own pins are gone; then asserts the door minted from repark-core's sequence. Mutation transcripts: §11.5. | `crates/repark-spark/src/tests/time_travel.rs` |
 | F-1b | falsified docs | Re-trued, each at its own site, and the single-counter/shared-namespace note added to the three-producer Debug bullet: spark map producer-2 "keeps the registration" (true only until an unrelated statement ran); core map "deliberately unchanged" (same); python map "live subject is reader-options only" (the two paths could collide); `PinnedViews::release`'s "only touches names this statement minted itself". | `crates/repark-spark/src/map.md`, `crates/repark-core/src/map.md`, `python/repark/src/repark/map.md`, `crates/repark-spark/src/time_travel.rs` |
 | F-2 | lens1 MAJOR-2 = lens2 M1 — ANSI router wording | `crates/repark-sql/src/router.rs`: the call-site comment gains the unwind/future-drop caveat verbatim as the Spark copy carries it, and the `execute_time_travelled` doc says "every `?` / `return` path" instead of "EVERY exit path". D-1's "three places" is now **four** and is stated as such in §11.2. | `crates/repark-sql/src/router.rs` |
-| F-3 | lens2 N1 — facade step 4 could green on an empty listing | Positive-membership assertion added BEFORE the leak assertion: `assert TABLE.rsplit(".", 1)[-1] in ns_listed`. | `python/repark/tests/test_time_travel.py` |
+| F-3 | lens2 N1 — facade step 4 could green on an empty listing | Positive-membership assertion added BEFORE the leak assertion: `assert TABLE.rsplit(".", 1)[-1] in ns_listed`. | `python/repark/tests/iceberg/test_time_travel.py` |
 | F-4 | lens2 N7 — uncaptured docstring claim | **Captured** (§11.6) — and the capture showed the claim "both leftover assertions red" is not what a run can show: a panic reports ONE assertion. Docstring narrowed to the captured evidence for both mutations. | `crates/repark-sql/tests/introspection.rs` |
 | F-5 | lens2 M2 — STATUS open-defect entry | Entry deleted; the dated "Closed out of this section" paragraph gains the H-1b line (pure pointer to `task/h1b-ledger.md`, zero behavior words — the H-1c `831b7a0` pattern and its own lesson 4). | `STATUS.md` |
 | F-6 | lens2 M3 — port-execution-log | Open checkbox closed (`[x]`) with "Closed by H-1b (2026-08-11), see task/h1b-ledger.md" and the no-divergence-row outcome; the "Open debt" lead-in gains both closures; "every exit path" → "every `?` / `return` path". | `docs/history/port-v2/port-execution-log.md` |
@@ -678,7 +678,7 @@ F-14), `crates/repark-core/src/lib.rs` (F-1 re-export), `crates/repark-spark/src
 (F-1 second counter deleted, F-1b `release` doc, mint-site KEEP comment),
 `crates/repark-spark/src/tests/time_travel.rs` (F-1a pin + `temp_view_sequence` helper),
 `crates/repark-sql/src/router.rs` (F-2), `crates/repark-sql/src/time_travel.rs` (F-8),
-`crates/repark-sql/tests/introspection.rs` (F-4), `python/repark/tests/test_time_travel.py` (F-3).
+`crates/repark-sql/tests/introspection.rs` (F-4), `python/repark/tests/iceberg/test_time_travel.py` (F-3).
 
 **Maps + records (14).** `crates/repark-core/src/map.md`, `crates/repark-spark/src/map.md`,
 `crates/repark-spark/src/tests/map.md`, `crates/repark-spark/map.md` (F-7),

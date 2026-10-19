@@ -12,7 +12,7 @@ spent), the external `iceberg` dependency in `repark-functions/Cargo.toml`,
 round 3 in `repark-spark`: the `<cat>.system.<fn>(` rewrite and `SHOW [USER]
 FUNCTIONS IN <cat>.system` parser+executor in `describe_show.rs`, two hooks in
 `router.rs`, file-backed `describe_show/tests.rs`,
-`python/repark/tests/test_ice_system_functions_1.py`, the registry row, five
+`python/repark/tests/iceberg/test_ice_system_functions_1.py`, the registry row, five
 `map.md` files, this ledger. No code comment added anywhere (`comment-ban
 hits=0`); Python docstrings only where the presence gate needs them.
 `session.rs`, `STATUS.md`, every `Cargo.toml` besides `repark-functions'`, the
@@ -152,7 +152,7 @@ file still refuse — they belong to IPI-40, untouched per H-08.
 
 | Command | Result |
 |---|---|
-| lane gate `local-gate.sh xb-sysfn repark-functions python/repark/tests/test_ice_system_functions_1.py` (round 1) | `CB=0 R=0 T=0 U=0 L=0`, pytest `13 passed` offline and live |
+| lane gate `local-gate.sh xb-sysfn repark-functions python/repark/tests/iceberg/test_ice_system_functions_1.py` (round 1) | `CB=0 R=0 T=0 U=0 L=0`, pytest `13 passed` offline and live |
 | lane gate, same command (round 2) | `CB=0 R=0 T=0 U=0 L=0` |
 | `cargo test -p repark-functions` (gate tier T, round 2) | `827 passed; 0 failed; 1 ignored` |
 | pytest offline (gate tier U, round 2) | `19 passed in 0.95s` |
@@ -183,15 +183,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause walked against a run — eight recorded-value pins on the Arrow path value AND type (C-001..C-008), the ten-call NULL row (C-009), the fork-text and old-order refusals (C-010), the mechanical diff (C-011); round 2 adds the four temporal value pins plus the date schema pin (C-012..C-015), the version stability pin (C-016) and the five-call temporal NULL extension (C-017); round 3 adds the rewrite suite (C-018), the predicate/SHOW/catalog/fence pins (C-019..C-023), the registry row (C-024) and the kept internal-name test (C-025).
-      artifacts: [python/repark/tests/test_ice_system_functions_1.py, crates/repark-functions/src/iceberg_system.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_system_functions_1.py, crates/repark-functions/src/iceberg_system.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries — width 0, width -1, negative truncate input, short string, NULL row, NULL-typed value array, scalar value input, over-i32 widths; round 2 adds the pre-epoch negative legs, the timestamp/date input pair per temporal, and the nullary version shape.
-      artifacts: [python/repark/tests/test_ice_system_functions_1.py, crates/repark-functions/src/iceberg_system.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_system_functions_1.py, crates/repark-functions/src/iceberg_system.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The maths stays in the fork by construction — one Transform build plus create_transform_function per invoke; a RePark re-implementation would have to diverge from the recorded murmur/floor values the pins assert exactly.
-      artifacts: [crates/repark-functions/src/iceberg_system.rs, python/repark/tests/test_ice_system_functions_1.py]
+      artifacts: [crates/repark-functions/src/iceberg_system.rs, python/repark/tests/iceberg/test_ice_system_functions_1.py]
     - id: AT-4
       status: N/A
       justification: Pure scalar kernels over one batch; no shared state, no lock, no ordering.
@@ -212,16 +212,16 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Refusal texts pinned verbatim — the fork Invalid-needle messages and the scalar-literal message, all under PySparkException.
-      artifacts: [python/repark/tests/test_ice_system_functions_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_system_functions_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Every recorded value traces to the IPI-29 inventory dump and the cells_misc.py fixture, replayed on a UTC memory catalog; the round-3 replay scores FUNCTIONS 15/15 EQUAL against the recorded Spark baseline.
-      artifacts: [python/repark/tests/test_ice_system_functions_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_system_functions_1.py]
 ```
 
 Every clause above is PROVEN with a quoted command and its output; no clause is
 OPEN. Touched files per clause: C-001..C-010, C-012..C-023, C-025
-`python/repark/tests/test_ice_system_functions_1.py` +
+`python/repark/tests/iceberg/test_ice_system_functions_1.py` +
 `python/repark/tests/map.md` + `crates/repark-functions/src/iceberg_system.rs`;
 C-011 `crates/repark-functions/src/lib.rs` + `crates/repark-functions/Cargo.toml`
 + `crates/repark-functions/map.md` + `crates/repark-functions/src/map.md`;

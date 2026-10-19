@@ -7,7 +7,7 @@ The measured Spark 4.1.2 answers for ICE-LIST-NULL-1: `DELETE` and
 format versions 2 and 3, under copy-on-write and merge-on-read. Recorded 2026-09-18
 on PySpark 4.1.2 + `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`,
 Hadoop catalog, `local[2]`, `spark.sql.shuffle.partitions=1`. The pins in
-`python/repark/tests/test_ice_list_null_1.py` read every expectation from the oracle
+`python/repark/tests/writes/test_ice_list_null_1.py` read every expectation from the oracle
 file; no id list or snapshot operation is a literal in a test body.
 
 ## Contents
@@ -25,7 +25,7 @@ file; no id list or snapshot operation is a literal in a test body.
 
 ## Provenance
 
-Never hand-edited: re-run `python/repark/tests/_record_ice_list_null_1.py` on live
+Never hand-edited: re-run `python/repark/tests/writes/_record_ice_list_null_1.py` on live
 PySpark to re-record. Raw-recording SHA-256: `spark_list_null_oracle.json`
 `08b8b5f7219dd1e0cfd50bfcec19009c7624caa631972335544e21901c77291f`
 (byte-identical to the recording).

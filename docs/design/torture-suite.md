@@ -28,7 +28,7 @@ stdlib, seeded, and writes only to a cache root or an explicit `--out` outside t
 | `smartcsv` | four delimiter CSVs + `data.parquet` | `manifest.json` | 64 rows |
 
 **Nothing has ever been generated at a million rows.** `ROWS = 64` / `SEED = 42` are the only
-scales in `python/repark/tests/test_datasets_facade.py` (DS-4 clause C-031, deliberately — the 1M
+scales in `python/repark/tests/io/test_datasets_facade.py` (DS-4 clause C-031, deliberately — the 1M
 default was kept out of CI), and `python/repark-parity/tests/` runs the same `small()` door. The
 `--rows 1_000_000` default is a declared intent that no test, report or run has ever exercised.
 

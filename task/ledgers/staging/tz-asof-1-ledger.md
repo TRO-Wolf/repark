@@ -117,11 +117,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause is walked against Spark 4.1.2's measured answer on the same door; the six failing shapes refused red on the base tree with DataFusion's unique-names/DISTINCT texts and answer green after, the Rust module pins columns, types and rows, the facade suite pins the same shapes through the product surface, and the harness replay holds the cell EQUAL.
-      artifacts: [crates/repark-spark/src/tests/tz_asof_1.rs, python/repark/tests/test_tz_asof_1.py]
+      artifacts: [crates/repark-spark/src/tests/tz_asof_1.rs, python/repark/tests/timestamps/test_tz_asof_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Every brief shape is pinned (cast asc/desc/limit, both alias spellings, arithmetic, function call, two casts, DISTINCT, aggregate cast, snapshots read, three rendering instants, the AS OF leg), with the no-rewrite neighbors asserting today's names and the AST unit tests pinning ordinals, projected keys, stars, unions, unnameable items, alias keys and marker collisions.
-      artifacts: [python/repark/tests/test_tz_asof_1.py, crates/repark-spark/src/normalize/sort_key_projection.rs]
+      artifacts: [python/repark/tests/timestamps/test_tz_asof_1.py, crates/repark-spark/src/normalize/sort_key_projection.rs]
     - id: AT-3
       status: ATTACKED
       evidence: "Every failure stays byte-identical to today: any post-rewrite failure retries the passthrough once with the rewrite disabled and returns that outcome, held by the u9_map MAP-ordering pin (reds quoting the internal key without the fallback); bails preserve today's errors (out-of-range ordinals, alias keys, marker collisions) at AST level."
@@ -135,7 +135,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: No stored format changes; the snapshots committed-at read and the TIMESTAMP AS OF leg guard the metadata shape the cell reads, on both doors' harnesses.
-      artifacts: [crates/repark-spark/src/tests/tz_asof_1.rs, python/repark/tests/test_tz_asof_1.py]
+      artifacts: [crates/repark-spark/src/tests/tz_asof_1.rs, python/repark/tests/timestamps/test_tz_asof_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim; one AST walk per ORDER BY query plus error-path-only double planning, both cold relative to execution.
@@ -150,7 +150,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Each pin asserts exact names, types and rows; M1 breaks the outer alias (5 name pins red), M2 drops the key projection (unresolved-column red), M3 drops DISTINCT from the trigger (original DISTINCT refusal red), all restored green.
-      artifacts: [crates/repark-spark/src/tests/tz_asof_1.rs, python/repark/tests/test_tz_asof_1.py]
+      artifacts: [crates/repark-spark/src/tests/tz_asof_1.rs, python/repark/tests/timestamps/test_tz_asof_1.py]
   complete: true
 ```
 

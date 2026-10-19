@@ -48,10 +48,10 @@ accounting.
 Known on main:
 - `crates/repark-functions/src/timestamp_ns_cast.rs` (`narrow_timestamp_ns_expr`, line 415;
   `timestamp_ns_cast_expr`, line 55; `conform_values_timestamp_columns`, line 510).
-- Pins and recorder: `python/repark/tests/test_ice_tsns_merge_wall_1.py`,
+- Pins and recorder: `python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py`,
   `_ice_tsns_merge_wall_1_doors.py`, `_record_ice_tsns_merge_wall_1_main.py`,
   `ice_tsns_merge_wall_1_main.json` (the 72 recorded control cells).
-- Method to copy: `python/repark/tests/test_ice_tstzns_wall_1.py` (R-008's door matrix).
+- Method to copy: `python/repark/tests/timestamps/test_ice_tstzns_wall_1.py` (R-008's door matrix).
 
 Not known until step 0: which function each of the four overwrite doors and the NTZ path
 calls to narrow. The order names no product file to edit before the sketch does.

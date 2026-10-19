@@ -487,7 +487,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [u9-types-1-ledger.md](u9-types-1-ledger.md) —
   **WO U9-TYPES-1 (2026-09-25), in flight:** four column types end to end on the Spark door,
   measured against Spark 4.1.2 + Iceberg 1.11 and replayed step by step from
-  `python/repark/tests/u9_types_1_spark_oracle.json`. `TIMESTAMP_LTZ` columns and typed
+  `python/repark/tests/timestamps/u9_types_1_spark_oracle.json`. `TIMESTAMP_LTZ` columns and typed
   literals (C-001..C-005); `MAP` columns and the empty `map()` literal (C-006..C-008);
   `VOID` (v3 `unknown`) measured and held OPEN on the fork's write refusal (C-009, R-14);
   `uuid` read as string measured and held OPEN for a design ruling (C-010, R-15). Verifier
@@ -1522,25 +1522,25 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **EX-15 (2026-09-04), in flight:** the v1.1 example backfill's first `DataFrame.*` batch —
   36 roster names at base `c70a306`; 28 covered by eight `docs/examples/dataframe/` files
   (backlog 578 → 550), 8 measured divergences stay with §7 rows `EX-DF-1`…`EX-DF-6` and pins in
-  `python/repark/tests/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
+  `python/repark/tests/parity/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
   `docs/ex-15-dataframe-a`. pins: ex-15-dataframe-a/C-001
 - [ex-16-dataframe-b-ledger.md](../completed/ex-16-dataframe-b-ledger.md) —
   **EX-16 (2026-09-04), in flight:** the v1.1 example backfill's second `DataFrame.*` batch —
   36 roster names at base `f3968aa`; 32 covered by eight `docs/examples/dataframe/` files
   (backlog 550 → 518); `intersectAll`/`intersect_all` and `groupingSets`/`grouping_sets` stay
   with §7 rows `EX-DF-7`/`EX-DF-8`, and the narrow `mergeInto`/`printSchema` arms are recorded as
-  §7 rows `EX-DF-9`/`EX-DF-10`, pins in `python/repark/tests/test_examples_dataframe_b.py`.
+  §7 rows `EX-DF-9`/`EX-DF-10`, pins in `python/repark/tests/parity/test_examples_dataframe_b.py`.
   `risk_tier: standard`. Branch `docs/ex-16-dataframe-b`. pins: ex-16-dataframe-b/C-001
 - [ex-18-dataframe-c-ledger.md](../completed/ex-18-dataframe-c-ledger.md) —
   **EX-18 (2026-09-04), in flight:** the v1.1 example backfill's third `DataFrame.*` batch —
   36 roster names at base `e3600a1`; 35 covered by eleven `docs/examples/dataframe/` files (backlog 484 →
-  449 through the EX-16/EX-17 merges), `toJSON` stays (R-DF-BATCH2), §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/test_examples_dataframe_c.py`. `risk_tier: standard`. Branch `docs/ex-18-dataframe-c`. pins: ex-18-dataframe-c/C-001
+  449 through the EX-16/EX-17 merges), `toJSON` stays (R-DF-BATCH2), §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/parity/test_examples_dataframe_c.py`. `risk_tier: standard`. Branch `docs/ex-18-dataframe-c`. pins: ex-18-dataframe-c/C-001
 - [ex-17-column-a-ledger.md](../completed/ex-17-column-a-ledger.md) —
   **EX-17 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Column.*` (a) batch —
   40 roster names at base `e3600a1`; 34 covered by ten `docs/examples/column/` files
   (backlog 550 → 516 at base; 484 after the EX-16 merge), 6 engine-plumbing rows stay (no PySpark analog), the two
   measured divergent bare-name arms are §7 rows `EX-COL-1`/`EX-COL-2` with pins in
-  `python/repark/tests/test_examples_column_a.py`. `risk_tier: standard`. Branch
+  `python/repark/tests/parity/test_examples_column_a.py`. `risk_tier: standard`. Branch
   `docs/ex-17-column-a`. pins: ex-17-column-a/C-001
 - [df-printschema-1-trailing-newline-ledger.md](../completed/df-printschema-1-trailing-newline-ledger.md) —
   **DF-PRINTSCHEMA-1 (2026-09-04), in flight:** `printSchema` stdout byte-identical to
@@ -1555,7 +1555,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   449 → 412 at the dispatch base), 3 stay
   (`getDatabase`/`get_database`, `listDatabases`) with §7 rows `EX-CAT-1`/`EX-CAT-2`, the
   `functionExists` dbName arm is `EX-CAT-3`, and the DataFrame-door tied-key default frame
-  is `EX-WIN-1`, pins in `python/repark/tests/test_examples_window_catalog.py`.
+  is `EX-WIN-1`, pins in `python/repark/tests/parity/test_examples_window_catalog.py`.
   `risk_tier: standard`. Branch `docs/ex-20-window-catalog`. pins: ex-20-window-catalog/C-001
 - [ex-19-dataframe-d-window-ledger.md](../completed/ex-19-dataframe-d-window-ledger.md) —
   **EX-19 (2026-09-04, r3), in flight:** the v1.1 example backfill's fourth `DataFrame.*` batch —
@@ -1564,7 +1564,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   merge; 518 → 480 at the dispatch base), `stat.freqItems` stays
   with §7 `EX-DF-19`, the `withColumnsRenamed` duplicate-name arm is §7 `EX-DF-18`, the struct
   `Row` field arm is §7 `EX-ROW-1`, pins in
-  `python/repark/tests/test_examples_dataframe_d.py`. `risk_tier: standard`. Branch
+  `python/repark/tests/parity/test_examples_dataframe_d.py`. `risk_tier: standard`. Branch
   `docs/ex-19-dataframe-d-window`. pins: ex-19-dataframe-d-window/C-001
 - [perf-dynflatten-2-null-mask-ledger.md](../completed/perf-dynflatten-2-null-mask-ledger.md) —
   **PERF-DYNFLATTEN-2 (2026-09-04), in flight:** the one candidate PERF-DYNFLATTEN-1 queued,
@@ -1585,7 +1585,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `option`/`options` branch-tag arm is §7 `EX-W2-3`, and the round-2 unpartitioned-table
   `overwritePartitions` parser leak is §7 `EX-W2-4` (OPEN, fix unit
   `WRITERV2-OVERWRITE-UNPART-1`), pins in
-  `python/repark/tests/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
+  `python/repark/tests/parity/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
   `docs/ex-22-types-writerv2`. pins: ex-22-types-writerv2/C-001, C-002, C-003, C-004, C-005
 - [perf-dynflatten-1-measure-ledger.md](../completed/perf-dynflatten-1-measure-ledger.md) —
   **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
@@ -1927,7 +1927,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **FNP-11B step 1 (2026-09-15), in flight:** datetime format parsing, the TIME
   family, BL-13 and BL-14 — ledger with D-1…D-10 (card D-1…D-6, run-16a D-7…D-10
   with owner ruling Q-15a-3 under D-8), the filtered oracle
-  (`python/repark/tests/fnp11b_spark_oracle.json`: 315 pa-11b cells plus 22
+  (`python/repark/tests/functions/fnp11b_spark_oracle.json`: 315 pa-11b cells plus 22
   pa-math `to_char`-family cells) and the red-first two-door pins
   (`test_fnp11b_temporal_formats.py`: 310 failed, 28 passed on the base, all
   clauses OPEN). No product code in step 1.
@@ -1936,7 +1936,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [logical-width-1-ledger.md](logical-width-1-ledger.md) —
   **LOGICAL-WIDTH-1 step 1 (2026-09-16), in flight:** Spark's logical widths on the facade —
   ledger with the card rulings W-1..W-7 plus owner rulings Q-16b-3/Q-17a-2/Q-17a-4, the
-  Spark-cell fixture (`python/repark/tests/facade_logical_width_oracle.json`: 22 width cells
+  Spark-cell fixture (`python/repark/tests/types/facade_logical_width_oracle.json`: 22 width cells
   plus 13 round-3 cells) and the red-first pins (`test_logical_width_1.py`, red on the
   base); round 2 moved the fillna width decision into `repark_core::na_fill_expr`
   (R-18b-4); round 3 fixed the zero-arg grouped keep-set (R-18b-5), made
@@ -1947,7 +1947,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **SQL-LITERAL-TYPING-1 (2026-09-16), in flight:** Spark integral literal
   typing and binary-arithmetic promotion on the SQL door (BL-20) — ledger with
   Q-17c-2/Q-17a-2/Q-15c-6 and R-18c-1…R-18c-3, the verbatim 64-cell oracle
-  (`python/repark/tests/sql_literal_typing_1_spark_oracle.json`) and the
+  (`python/repark/tests/types/sql_literal_typing_1_spark_oracle.json`) and the
   red-first pins (`test_sql_literal_typing_1.py`: 19 failed, 44 passed on the
   base, all clauses OPEN). No product code in step 1.
   `risk_tier: standard`. Branch `feat/sql-literal-typing-1`.
@@ -1957,7 +1957,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [io-orc-1-ledger.md](io-orc-1-ledger.md) —
   **IO-ORC-1 (2026-09-16), in flight:** the read-only ORC scan — `DataFrameReader.orc`,
   `format("orc").load` over orc-rust 0.8.0 (owner ruling Q-15B-1; write stays declared),
-  the oracle cells (`python/repark/tests/facade_orc_oracle.json`) and the Spark-written
+  the oracle cells (`python/repark/tests/io/facade_orc_oracle.json`) and the Spark-written
   fixtures (`python/repark/tests/fixtures/orc/`).
   `risk_tier: standard`. Branch `feat/io-orc-1`.
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
@@ -1976,7 +1976,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **ICE-RTAS-BYNAME-1 (2026-09-17), in flight:** `INSERT … BY NAME` column
   resolution on the Spark door plus the RTAS snapshot-operation divergence
   (V2-24). The oracle cells
-  (`python/repark/tests/ice_rtas_byname_1_spark_oracle.json`, generator
+  (`python/repark/tests/writes/ice_rtas_byname_1_spark_oracle.json`, generator
   `_record_ice_rtas_byname_1_oracle.py`) and the red-first pins
   (`test_ice_rtas_byname_1.py`); the RTAS operation fix is fork-owned
   (F-RTAS-OPS-1, xfail pins).

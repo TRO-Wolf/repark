@@ -38,7 +38,7 @@ rejects this sketch; it is then frozen with the unit's records.
   - `t (id INT, v INT)`: (1, 10), (2, 20), (3, 30), (4, 40);
   - `s (id INT, w INT)`: (2, 20), (3, 99).
 - **`repark.sql()`.** The public callable over `PyReparkSession.native()` with the catalog
-  registered, the pattern of `python/repark/tests/test_update_set_subquery_walk_1.py`.
+  registered, the pattern of `python/repark/tests/writes/test_update_set_subquery_walk_1.py`.
 - **Spark SQL door.** The Python facade, `ReparkSession.builder…getOrCreate()`.
 - **ANSI door.** A Rust session built with `AnsiDialect`, run from a throw-away test file in
   `crates/repark-sql/tests/`. The file was removed after each run and is not committed.
@@ -414,7 +414,7 @@ own cell, because U-5's wrapper sits in front of the dialect that carries the re
 door, the three cells of §8, and the cost of the second parse (1,000 `SELECT 1` calls through
 `repark.sql()`, median of five runs, head against base).
 
-**Step 1, pins, red on main.** `python/repark/tests/test_repark_sql_update_subquery_where_1.py`,
+**Step 1, pins, red on main.** `python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py`,
 seeded as §2.1. Each pin asserts the G3-E8 needle "subquery predicates are silently mis-executed"
 with the statement's verb, the rows unchanged, and, for an Iceberg target, the snapshot count
 unchanged.
@@ -445,7 +445,7 @@ unchanged.
 - **Pins that must not move:** the G3-E8 tests in `crates/repark-sql/src/guards/tests.rs` (only
   the call path changes) and `crates/repark-sql/src/guards/ansi_door.rs`;
   `crates/repark-sql/tests/ansi_update_subquery_refusal.rs`; `crates/repark-spark/src/tests/normalize.rs`;
-  `python/repark/tests/test_dml_subquery_parity.py`.
+  `python/repark/tests/writes/test_dml_subquery_parity.py`.
 - **Mutants for the verifier:** drop the native call (every P-* red); pass `true` on the native
   door (P-U1, P-D1, P-D3, P-D5, P-D6 and P-C1 write rows); drop the parse fallback (a parse error
   changes text).

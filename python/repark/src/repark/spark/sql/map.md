@@ -30,7 +30,7 @@ AttributeError naming the gap), never stubs.
 
 ## Pointers
 
-- Pins: `python/repark/tests/test_sql_alias.py`
+- Pins: `python/repark/tests/sql/test_sql_alias.py`
 
 ## Debug
 

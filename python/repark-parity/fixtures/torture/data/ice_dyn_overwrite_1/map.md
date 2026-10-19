@@ -7,7 +7,7 @@ V2-24b and the INSERT OVERWRITE half of V2-20a): the static/dynamic overwrite ma
 (SQL, `insertInto`, `overwritePartitions`, `PARTITION (p)`, v2 + v3, unpartitioned,
 evolved spec, empty source, all three conf paths, `saveAsTable`) and the three
 disk-verified overwrite-vs-concurrent-append interleaves. One JSON document, read by
-`python/repark/tests/test_ice_dyn_overwrite_1.py` offline and on the live tier.
+`python/repark/tests/writes/test_ice_dyn_overwrite_1.py` offline and on the live tier.
 
 ## Contents
 
@@ -28,7 +28,7 @@ disk-verified overwrite-vs-concurrent-append interleaves. One JSON document, rea
   on v2 and v3, plus the empty-source and unpartitioned `BY NAME` shapes. Each cell
   carries `mode`, `setup`, `statement`, `rows` and `snapshot_operations` (the dynamic
   empty cell records no new snapshot). Read by
-  `python/repark/tests/test_ice_dyn_overwrite_1_by_name.py`, which replays every cell.
+  `python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py`, which replays every cell.
   pins: ice-dyn-overwrite-1/C-019.
 
 ## Pointers

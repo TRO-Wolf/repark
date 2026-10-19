@@ -25,12 +25,12 @@ chain of N appends references it 2^N times. ABS-EXPR-1 measured ~×2.2 memory pe
 
 | step | worker | what |
 |---|---|---|
-| 0 | Devin | Measure: D-2 oracle cells (live Spark, box alone, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`), today's facade answers, the route (a)/(b) spike numbers at depth 12/40, and the red-first depth-40 memory pin in a subprocess under `RLIMIT_AS` (S2-8 idiom), in the style of `python/repark/tests/test_abs_expr_1.py`. |
+| 0 | Devin | Measure: D-2 oracle cells (live Spark, box alone, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`), today's facade answers, the route (a)/(b) spike numbers at depth 12/40, and the red-first depth-40 memory pin in a subprocess under `RLIMIT_AS` (S2-8 idiom), in the style of `python/repark/tests/functions/test_abs_expr_1.py`. |
 | 1 | Devin | The chosen D-1 arm, answer pins, memory pin green, door-parity row, COVERAGE_ATTESTATION. |
 
 **Home:** `python/repark/src/repark/spark/functions_collections.py`, the Rust function dispatch under
 `crates/repark-python/src/column/` (or `crates/repark-functions/` for a UDF), `door_parity_tests.rs`,
-`python/repark/tests/test_array_null_1.py`. **Gates:** new and existing `array_append`/`array_prepend` pins,
+`python/repark/tests/functions/test_array_null_1.py`. **Gates:** new and existing `array_append`/`array_prepend` pins,
 `make verify`, `make preflight`, the parity suite; S2-21 Rust and Python reviewers and Grok critic-logic before the PR.
 
 ## Pointers

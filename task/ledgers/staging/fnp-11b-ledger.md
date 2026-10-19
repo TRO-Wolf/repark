@@ -48,7 +48,7 @@ oracle; edits to `dataframe/**`, `column.py`, `session/**`, `catalog.py`,
 - D-5 Registry: flip `EX-FN-20` (try_to_timestamp), `EX-FN-21` (unix_timestamp
   format), `BL-13`, `BL-14` (or file the planner seam) to FIXED with pins; add a
   section-7 row per residual.
-- D-6 Pins: `python/repark/tests/test_fnp11b_temporal_formats.py`, both doors,
+- D-6 Pins: `python/repark/tests/functions/test_fnp11b_temporal_formats.py`, both doors,
   both ANSI settings, both zones where the oracle has them, red first on the
   base tree with the red summary in the ledger; Rust unit tests beside each
   kernel. Cast each input column ONCE per batch (never a per-row whole-array
@@ -95,7 +95,7 @@ VERDICT: 8 clauses, 4 PROVEN, 4 OPEN, 0 REJECTED. No COVERAGE_ATTESTATION and th
 ## 1. Red-first record (base `bee2cde3`, before any kernel edit)
 
 `PYTHONPATH=python/repark/src .venv/bin/python -m pytest
-python/repark/tests/test_fnp11b_temporal_formats.py -q` on the base tree:
+python/repark/tests/functions/test_fnp11b_temporal_formats.py -q` on the base tree:
 **310 failed, 28 passed in 15.93s** — the signature pin plus 309 door cells red.
 Per-name failures (parametrized cells): `to_date` 22, `to_timestamp` 30,
 `to_timestamp_ltz` 28, `to_timestamp_ntz` 28, `unix_timestamp` 20,
@@ -123,11 +123,11 @@ INTERVAL 0 DAY` staying `date` (2 cells), and 4 bare-`current_time` answers
 ## 2. Work log
 
 - 2026-09-15 step 1: ledger created; fixture filtered to
-  `python/repark/tests/fnp11b_spark_oracle.json` (315 pa-11b cells with
+  `python/repark/tests/functions/fnp11b_spark_oracle.json` (315 pa-11b cells with
   `time_type_enabled == spark_default` over the card names plus the
   `make_timestamp` Python `date=` cells, and the 22 `to_char`-family cells from
   pa-math); red pins in
-  `python/repark/tests/test_fnp11b_temporal_formats.py` (337 parametrized
+  `python/repark/tests/functions/test_fnp11b_temporal_formats.py` (337 parametrized
   cells plus the facade-signature pin). SQL `typeof(current_time…)` cells run
   translated to Arrow time64 assertions (no `typeof` on the SQL door, the
   FNP-11A R2 precedent); Python `tm`-column value cells run on the TIME frame,
@@ -487,7 +487,7 @@ planner — which run 17c owns (`crates/repark-sql` untouched). All 10 cells
 stay red for 17c.
 
 6c (R-17a-13): the 40-cell oracle copies verbatim to
-`python/repark/tests/fnp11b_typeof_spark_oracle.json` (cmp-clean) and every
+`python/repark/tests/functions/fnp11b_typeof_spark_oracle.json` (cmp-clean) and every
 cell pins on its recorded door in `test_fnp11b_typeof.py` — 40/40 green (35
 answers plus the signature, the two arity texts, and five blocked pins).
 D-34 spells `array<…>` / `map<…>` / `struct<…>` recursively through typeof's
@@ -748,7 +748,7 @@ which asserted `hour` / `minute` / `second` over `lit(datetime.time(12, 34, 56))
 12 / 34 / 56.
 
 Rather than assume either side was right, the orchestrator recorded the shape live on
-PySpark 4.1.2 into `python/repark/tests/fnp11b_hour_time_spark_oracle.json` (11 cells). Spark
+PySpark 4.1.2 into `python/repark/tests/dataframe/fnp11b_hour_time_spark_oracle.json` (11 cells). Spark
 **raises `UNSUPPORTED_TIME_TYPE` for all three extractors on both doors** (HT-01…HT-04,
 HT-SQL-01…HT-SQL-03), and `make_time` / `to_time` refuse identically (HT-SQL-04/05). The old pin
 asserted behaviour Spark does not have — it reads as a port of an Apache test written for a Spark

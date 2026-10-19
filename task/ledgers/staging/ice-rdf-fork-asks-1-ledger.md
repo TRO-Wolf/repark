@@ -8,7 +8,7 @@
 
 **Why now.** Card C-6 predicted the RP-23 fork pin (`4151b488`, rolling writer splits
 rewrite output at the target file size) would turn some of
-`python/repark/tests/test_ice_rdf_options_1.py`'s thirteen strict xfails into XPASSes.
+`python/repark/tests/iceberg/test_ice_rdf_options_1.py`'s thirteen strict xfails into XPASSes.
 The orchestrator measured it 2026-09-17 on a release native from main `71482620`
 (RP-23 is on main) and the prediction was wrong: zero XPASS. Nothing is un-marked,
 `ICE-RDF-DANGLE-2` stays a fork ask, and the three other reasons — until now only
@@ -21,8 +21,8 @@ the measurement, do not re-derive it).
 **The measurement (orchestrator, 2026-09-17, recorded verbatim — this lane's red evidence).**
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_ice_rdf_options_1.py \
-    python/repark/tests/test_rdf_schema_evo_1.py -q -p no:cacheprovider -rX
+.venv/bin/python -m pytest python/repark/tests/iceberg/test_ice_rdf_options_1.py \
+    python/repark/tests/iceberg/test_rdf_schema_evo_1.py -q -p no:cacheprovider -rX
 129 passed, 1 skipped, 13 xfailed in 115.79s
 ```
 
@@ -60,7 +60,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause C-001..C-007 walked against the read test file and fixture cells, not a paraphrase — all 13 xfail marks mapped to exactly one of the four rows (7 value, 3 snapshot, 2 removed-count, 1 residue), every quoted number read from its reason string or its named fixture cell.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_rdf_options_1.py, python/repark/tests/ice_rdf_options_1_spark_oracle.json]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/iceberg/test_ice_rdf_options_1.py, python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries checked — the thirteen count kept in ICE-RDF-OPTIONS-1 (4+2+4+3), the target_small FORK-WRITE-GRANULARITY prefix variance recorded instead of normalised, no fork file named because no reason names one, no test/status/crates file touched.
@@ -90,5 +90,5 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Every registry number was re-checked by the orchestrator against the named fixture cell in ice_rdf_options_1_spark_oracle.json, and the thirteen-count mapping against the test file's xfail tables.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/ice_rdf_options_1_spark_oracle.json]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json]
 ```

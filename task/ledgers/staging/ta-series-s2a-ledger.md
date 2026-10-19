@@ -20,7 +20,7 @@ scope: S1 (#944, held), S5 fusion, any kernel, any new crate.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | P-S2a-1: the owner's levels (L1 `ema21` / `test_21`, L2 `tr`, L3 indicators including `ETR13` with `null_lookback=True`, L4 post-columns), bare against `.over(Window.orderBy(ts))`, are `to_bits`-equal in every column, on a lazily sorted frame (case (a)) and on a sorted eager frame (case (b) on this base). | `python/repark/tests/test_ta_series.py::test_series_equals_explicit_orderby` (both legs); mutation: resolve K as DESC (`series.rs` builds `!key.asc`). | PROVEN | Green: 4,000 rows × 25 columns, bits and validity equal, `ETR13` 12 NULL + 1 NaN. Red under the mutation: both legs fail, `ema21 bits` (`test_ta_series.py:121`). §2. |
+| C-001 | P-S2a-1: the owner's levels (L1 `ema21` / `test_21`, L2 `tr`, L3 indicators including `ETR13` with `null_lookback=True`, L4 post-columns), bare against `.over(Window.orderBy(ts))`, are `to_bits`-equal in every column, on a lazily sorted frame (case (a)) and on a sorted eager frame (case (b) on this base). | `python/repark/tests/functions/test_ta_series.py::test_series_equals_explicit_orderby` (both legs); mutation: resolve K as DESC (`series.rs` builds `!key.asc`). | PROVEN | Green: 4,000 rows × 25 columns, bits and validity equal, `ETR13` 12 NULL + 1 NaN. Red under the mutation: both legs fail, `ema21 bits` (`test_ta_series.py:121`). §2. |
 | C-002 | P-S2a-2: a frame sorted by a later timestamp column is ordered by that column, without a warning; (a) wins over (b). The declared order is found through `Projection` (plain or aliased column), `Filter`, `SubqueryAlias`, `Window` and `Limit`, down to a `Sort` (aliased keys included) or a `MemTable` scan with a `sort_order`; a dropped key, a computed key or any other node falls through. | `crates/repark-core/src/series_order/tests.rs::series_order_declared_beats_temporal`, `series_order_declared_lost_falls_through`; `test_ta_series.py::test_series_order_declared_beats_temporal`; mutation: try (b) before (a). | PROVEN | Green. Red under the mutation: `series_order/tests.rs:96`, `left: FirstTemporal("ts1") right: Declared`. §2. |
 | C-003 | P-S2a-3 / 3b: with no declared order, a schema with a `DATE` column first and a `TIMESTAMP` later resolves to the `TIMESTAMP` (Q2); with no timestamp, the first `DATE`. The bare answer equals the explicit spelling over that column. One `UserWarning` per session, with the sketch §1.3 text, across `withColumn`, `withColumns` and `select`; `spark.conf.set` keeps the flag. | `series_order_timestamp_before_date`, `series_order_date_fallback`, `series_order_notice_claims_once_per_session` (core); `test_series_order_timestamp_before_date_and_warns_once`, `test_series_order_date_fallback` (facade); mutations: the first temporal column of any kind; warn on every call. | PROVEN | Green. Red: any-kind → `series_order/tests.rs:178` and `:161` (`FirstTemporal("day")`); every call → `test_ta_series.py:197`, two extra warnings. §2. |
 | C-004 | P-S2a-4: with no order and no temporal column, the bare window stays `OVER ()` and `ParallelWindowExec`'s `InputOrder::PartitionIndex` arm drops the `CoalescePartitionsExec` and reads its input's partitions in index order: deterministic, equal to source order. Aggregate, mixed and fetching-coalesce `OVER ()` windows keep today's plan. | `crates/repark-core/src/parallel_window/tests.rs::series_order_current_row_order_partition_index` (four partitions finishing in reverse order), `partition_index_keeps_aggregate_over_coalesce`; `test_ta_series.py::test_bare_ta_current_row_order_reads_partitions_in_index_order`; mutations: read through `CoalescePartitionsExec` (arm disabled; arm kept but reading through a coalesce). | PROVEN | Green, three runs in source order. Red: arm disabled → `tests.rs:717` (`Single` vs `PartitionIndex`); coalesce read → `tests.rs:734`, ids `300…399, 200…, 100…, 0…99`. §1, §2. |
@@ -252,7 +252,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each order item (resolver, rewrite, warning, native null_lookback, partition-index arm, facade, docs, maps) maps to a clause; every pin P-S2a-1 to P-S2a-9 has a measured red under its named mutation.
-      artifacts: [crates/repark-core/src/series_order/tests.rs, crates/repark-ta/tests/null_prefix.rs, python/repark/tests/test_ta_series.py]
+      artifacts: [crates/repark-core/src/series_order/tests.rs, crates/repark-ta/tests/null_prefix.rs, python/repark/tests/functions/test_ta_series.py]
     - id: AT-2
       status: ATTACKED
       evidence: No declared order, no temporal column, a date-only schema, a zoned timestamp, aliased sort keys, dropped and computed keys, NULL and NaN prefixes per partition and a fetching coalesce are exercised; a prefix longer than its partition is clamped by construction (not pinned).
@@ -271,7 +271,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Bare equals explicit by construction and bit for bit on the owner's file, explicit equals base, 0 rows off polars_talib, goldens unchanged, SQL TA answers unchanged.
-      artifacts: [crates/repark-ta/tests/null_prefix.rs, python/repark/tests/test_ta_series.py]
+      artifacts: [crates/repark-ta/tests/null_prefix.rs, python/repark/tests/functions/test_ta_series.py]
     - id: AT-7
       status: ATTACKED
       evidence: Interleaved release-wheel rounds against main today and main now, single and nine samples per process, kernel race re-measured; one bind-time walk is the only cost on the explicit path.
@@ -287,7 +287,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Twelve mutations across nine pins, each red, the tree restored and the suites green afterwards.
-      artifacts: [crates/repark-core/src/series_order/tests.rs, crates/repark-core/src/parallel_window/tests.rs, crates/repark-ta/tests/null_prefix.rs, python/repark/tests/test_ta_series.py]
+      artifacts: [crates/repark-core/src/series_order/tests.rs, crates/repark-core/src/parallel_window/tests.rs, crates/repark-ta/tests/null_prefix.rs, python/repark/tests/functions/test_ta_series.py]
   complete: true
 ```
 
@@ -330,7 +330,7 @@ FOLD_ATTESTATION:
   date: 2026-10-05
   corrects: C-004
   fix: crates/repark-core/src/parallel_window/exec.rs (partition_index_stream)
-  pin: python/repark/tests/test_ta_series.py::test_bare_ta_file_stream_stealing_reads_file_order
+  pin: python/repark/tests/functions/test_ta_series.py::test_bare_ta_file_stream_stealing_reads_file_order
   pin_result: 10/10 multi-file (8 groups), 10/10 byte-range (16 groups), bit-equal to file order
   mutation: override dropped, pin red; probe diffs multi-file 0-3/10, byte-range 3-6/10
   docs: docs/guide/ta-guide.md order note (V950-2)

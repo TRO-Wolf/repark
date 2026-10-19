@@ -6,7 +6,7 @@ The measured Spark 4.1.2 answers for ICE-ROWID-ORDER-1: which partition's data
 file takes which `first_row_id` when one statement writes several partitions of a
 format-v3 table. Two recordings, both on PySpark 4.1.2 +
 `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`. The pins in
-`python/repark/tests/test_ice_rowid_order_1.py` read every expectation from these
+`python/repark/tests/writes/test_ice_rowid_order_1.py` read every expectation from these
 files; no row id is a literal in a test body.
 
 ## Contents
@@ -39,7 +39,7 @@ files; no row id is a literal in a test body.
 
 ## Provenance
 
-Never hand-edited: re-run `python/repark/tests/_record_ice_rowid_order_1.py` on
+Never hand-edited: re-run `python/repark/tests/writes/_record_ice_rowid_order_1.py` on
 live PySpark to re-record (it reproduces the eight `rowid_*` a/b/c cells and the
 default-configuration order cell; the storm cells and the non-default order
 configurations re-record through its parameters). Raw-recording SHA-256:

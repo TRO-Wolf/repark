@@ -6,7 +6,7 @@ The measured Spark 4.1.2 answers for ICE-ARRAY-INSERT-1: writes into `ARRAY<INT>
 `ARRAY<STRUCT<a INT, b STRING>>` and `MAP<STRING, ARRAY<INT>>` columns through five doors
 at format versions 2 and 3. Recorded 2026-09-18 on PySpark 4.1.2 +
 `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`, Hadoop catalog, `local[2]`.
-The facade pins in `python/repark/tests/test_ice_array_insert_1.py` read every expectation
+The facade pins in `python/repark/tests/writes/test_ice_array_insert_1.py` read every expectation
 from the oracle file; no row or field id is a literal in a test body.
 
 ## Contents
@@ -24,7 +24,7 @@ from the oracle file; no row or field id is a literal in a test body.
 
 ## Provenance
 
-Never hand-edited: re-run `python/repark/tests/_record_ice_array_insert_1.py` on live
+Never hand-edited: re-run `python/repark/tests/writes/_record_ice_array_insert_1.py` on live
 PySpark to re-record. Raw-recording SHA-256: `spark_array_insert_oracle.json`
 `d41216e5156cb7eef11b24664e525399b1d20424d5552be0a6699dd50a8d7040`
 (byte-identical to the recording).

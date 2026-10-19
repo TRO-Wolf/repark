@@ -87,7 +87,7 @@ only after the halt H1 is reported.
 
 ## 4. The fixture
 
-`python/repark/tests/test_ice_tsns_floor_doors_1.py`, red-first. The step 0 matrix (216
+`python/repark/tests/timestamps/test_ice_tsns_floor_doors_1.py`, red-first. The step 0 matrix (216
 combinations, 2376 ticks) with `rule_expected` of the recorder as the only source of expectations
 (floor by `//`, zone by `zoneinfo`). Red on main: 712 ticks (304 LTZ, 408 NTZ); 132 are the v2
 UPDATE refusal and stay. Added doors, same derivation, plain and partitioned, copy-on-write and

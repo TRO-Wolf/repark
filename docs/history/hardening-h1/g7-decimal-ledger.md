@@ -22,8 +22,8 @@ recorded here, not silent.
 
 | Artifact | Path | Role |
 |---|---|---|
-| Differential corpus | `python/repark/tests/test_decimal128_parity.py` | 24 G2 + 7 G13 rows + budget pin + 3 CTAS |
-| Record driver | `python/repark/tests/_record_decimal128_goldens.py` | re-derives every Spark half from live 4.1.2 |
+| Differential corpus | `python/repark/tests/types/test_decimal128_parity.py` | 24 G2 + 7 G13 rows + budget pin + 3 CTAS |
+| Record driver | `python/repark/tests/types/_record_decimal128_goldens.py` | re-derives every Spark half from live 4.1.2 |
 | Tests map | `python/repark/tests/map.md` | lockstep navigation + debug |
 | This ledger | `task/g7-decimal-ledger.md` | linked from `task/map.md` |
 
@@ -97,7 +97,7 @@ recorded here, not silent.
 ```
 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \
   PYTHONPATH=python/repark-parity/src \
-  .venv/bin/python python/repark/tests/_record_decimal128_goldens.py
+  .venv/bin/python python/repark/tests/types/_record_decimal128_goldens.py
 ```
 
 Captured: **`record mode: 33 spark halves re-derived, 0 mismatch(es)`** (31 differential + 2 CTAS
@@ -138,7 +138,7 @@ record mode: 33 spark halves re-derived, 0 mismatch(es)
 ### 3.2 Facade unit suite
 
 ```
-python/repark/tests/test_decimal128_parity.py — 35 passed in 0.72s
+python/repark/tests/types/test_decimal128_parity.py — 35 passed in 0.72s
 ```
 
 (31 differential + 1 budget + 3 CTAS)
@@ -160,7 +160,7 @@ gate.sh N1 RELEASE ec=0
 ### 3.4 Facade unit (true counts)
 
 ```
-python/repark/tests/test_decimal128_parity.py — 35 passed in 0.71s
+python/repark/tests/types/test_decimal128_parity.py — 35 passed in 0.71s
 (31 differential + 1 budget + 3 CTAS)
 ```
 
@@ -219,16 +219,16 @@ All provocations done.
 > resolvable `path::test[case]` node ids so a sweep can drop them into §7 BACKLOG without rewrite.
 
 Pin node-id pattern (parametrized corpus):
-`python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[<row.name>]`.
+`python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[<row.name>]`.
 
 Oracle basis for every Spark half below: **recorded** — goldens re-derivable in-repo via
-`python/repark/tests/_record_decimal128_goldens.py` against live PySpark 4.1.2 (ANSI on).
+`python/repark/tests/types/_record_decimal128_goldens.py` against live PySpark 4.1.2 (ANSI on).
 
 ### G2-LIT-1 — bare decimal literal `1.23` infers double
 
 - **repark** — `SELECT 1.23 AS v` yields Arrow `float64` non-null with value `1.23`.
 - **Apache Spark** — yields `decimal128(3,2)` non-null with `Decimal('1.23')`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[literal_1_23_infers_decimal_in_spark_double_in_repark]`
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[literal_1_23_infers_decimal_in_spark_double_in_repark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G2). A money column written from a bare literal is
   the wrong Arrow type; the pin holds both halves so a silent convergence reds with
   CONVERGED / flip-don't-delete.
@@ -237,7 +237,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
 
 - **repark** — `SELECT 0.1 AS v` yields Arrow `float64` non-null with value `0.1`.
 - **Apache Spark** — yields `decimal128(1,1)` non-null with `Decimal('0.1')`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[literal_0_1_infers_decimal_in_spark_double_in_repark]`
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[literal_0_1_infers_decimal_in_spark_double_in_repark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G2). The classic binary-float landmine as a type
   divergence; same flip discipline as G2-LIT-1.
 
@@ -245,7 +245,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
 
 - **repark** — `SELECT 123.456 AS v` yields Arrow `float64` non-null with value `123.456`.
 - **Apache Spark** — yields `decimal128(6,3)` non-null with `Decimal('123.456')`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[literal_123_456_infers_decimal_in_spark_double_in_repark]`
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[literal_123_456_infers_decimal_in_spark_double_in_repark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G2). Three fractional digits of literal inference;
   same class as G2-LIT-1/2.
 
@@ -259,7 +259,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
 - **Apache Spark** — same `(10,2)/(10,2)` recipe yields `decimal128(23,13)` nullable
   `0.2697368421053`; repeating money stays `(23,13)` `3.3333333333333`; integer-scale lands
   `(21,11)` `0.33333333333`; exact half is `(23,13)` `2.5000000000000`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[div_same_precision_scale]`,
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[div_same_precision_scale]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[div_repeating_money]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[div_integer_scales]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[div_exact_half_type_only]`
@@ -275,7 +275,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
 - **Apache Spark** — reduces scale to keep precision ≤38:
   `(38,10)*(38,10)` → `decimal128(38,6)`; `(38,18)+(38,18)` → `decimal128(38,17)`;
   `(38,10)+(38,10)` → `decimal128(38,9)`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[mul_38_10_clamps_scale_in_spark]`,
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[mul_38_10_clamps_scale_in_spark]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[add_38_18_clamps_scale_in_spark]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[add_38_10_clamps_scale_in_spark]`
   (coverage also pinned by `test_decimal128_row_set_covers_gap_budgets`, which requires ≥3 rows
@@ -289,7 +289,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
   `1.6500000000000001`.
 - **Apache Spark** — keeps `decimal128(14,6)` nullable with exact `Decimal('1.650000')`.
   *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[avg_money_stays_decimal_in_spark_double_in_repark]`
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[avg_money_stays_decimal_in_spark_double_in_repark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G2 — keep avg of decimal as decimal). An average
   unit price is not money-safe under repark's float64 promotion.
 
@@ -299,7 +299,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
   `7.50`.
 - **Apache Spark** — yields `decimal128(12,2)` **nullable** with the same value `7.50`.
   *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[int_times_decimal_promotes_wider_in_repark]`
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[int_times_decimal_promotes_wider_in_repark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G2). Value agrees; precision width and nullability
   are a schema-level money divergence.
 
@@ -309,7 +309,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
   `CAST(999…9 AS DECIMAL(38,0)) + CAST(1 AS DECIMAL(38,0))`.
 - **Apache Spark** — under ANSI raises `ArithmeticException` /
   `NUMERIC_VALUE_OUT_OF_RANGE`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[overflow_max_decimal38_plus_one_raises_in_spark]`
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[overflow_max_decimal38_plus_one_raises_in_spark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G13 — ANSI overflow raise or honest NULL under
   non-ANSI). Silently-wrong-result class on the integrity path.
 
@@ -319,7 +319,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
   `decimal128(38,4)`; small `(2,0)/(2,0)` → NULL at `decimal128(6,4)`.
 - **Apache Spark** — under ANSI raises `ArithmeticException` / `DIVIDE_BY_ZERO` for both recipes.
   *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[div_by_zero_decimal38_raises_in_spark_null_in_repark]`,
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[div_by_zero_decimal38_raises_in_spark_null_in_repark]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[div_by_zero_small_decimal_raises_in_spark_null_in_repark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G13). NULL-vs-raise is an integrity divergence for
   any consumer that distinguishes error from missing.
@@ -329,7 +329,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
 - **repark** — refuses at plan time with `AnalysisException` (`Cannot get result type for decimal
   operation … 38,20 * 38,20`).
 - **Apache Spark** — clamps the product to `decimal128(38,6)` and succeeds. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[mul_38_20_plans_in_spark_refuses_in_repark]`
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[mul_38_20_plans_in_spark_refuses_in_repark]`
 - **Rationale** — BACKLOG, intent to FIX (gap G13 / folds into G2's 38-digit clamp follow-on). A
   high-scale multiply that Spark accepts is a hard plan failure here.
 
@@ -340,7 +340,7 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
   `998001`.
 - **Apache Spark** — marks the same results **nullable** (overflow-capable binary arithmetic)
   at the same types and values. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[mul_single_digit_nullability_differs]`,
+- **Pin** — `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[mul_single_digit_nullability_differs]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[add_single_digit_nullability_differs]`,
   `…::test_decimal128_row_matches_spark_or_still_diverges[mul_three_digit_capacity_nullability_differs]`
 - **Rationale** — BACKLOG, intent to FIX (gap G13). Nullability-only pin; a schema-sensitive
@@ -408,7 +408,7 @@ sweep clean (`grep -rn '^<<<<<<<'`).
 
 | Finding | Action |
 |---|---|
-| Ledger §6 not paste-true (wrong bullet template; Pin citations not resolvable node ids) | **Rewrote §6** to the registry bullet template (`- **repark**` / `- **Apache Spark**` / `- **Pin**` / `- **Rationale**`) with full `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[<case>]` ids. Registry file **not** edited (orchestrator lands rows). |
+| Ledger §6 not paste-true (wrong bullet template; Pin citations not resolvable node ids) | **Rewrote §6** to the registry bullet template (`- **repark**` / `- **Apache Spark**` / `- **Pin**` / `- **Rationale**`) with full `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[<case>]` ids. Registry file **not** edited (orchestrator lands rows). |
 | 38-digit-clamp coverage pin satisfied by a non-clamp control row (`mul_38_0_identity` is DECIMAL(38,…) equality) | **Tightened pin** — requires ≥3 G2 rows whose names match `*clamps_scale_in_spark`; deleting the clamp family goes red. |
 | Disclosure note missing `f` prefix (~line 365) — failures printed literal `{FIX_G2}` | **Added `f`** so the note formats the real `FIX_G2` text. |
 | Authorship polluted (`Grok (grok-4.5) <noreply@x.ai>`) | **Amended** to `TRO-Wolf <64240326+TRO-Wolf@users.noreply.github.com>` + existing `Authored-By: Grok (grok-4.5) <noreply@x.ai>` trailer (per-command `-c` only). Re-verified after this rebase. |

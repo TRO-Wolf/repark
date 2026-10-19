@@ -7,7 +7,7 @@ to a struct, a list element struct or a map value struct, and nested DDL (`CREAT
 struct column, `ADD COLUMN s.c`, `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b`, the required-child
 refusal) — and four Spark-written tables the JVM-free tier adopts with `register_table`.
 Recorded 2026-09-17 (re-recorded 2026-09-18 with round 2's cells; the round-1 cells answer
-byte-identically) by `python/repark/tests/_record_ice_nested_evo_1.py` on PySpark 4.1.2 +
+byte-identically) by `python/repark/tests/iceberg/_record_ice_nested_evo_1.py` on PySpark 4.1.2 +
 iceberg-spark-runtime-4.1_2.13:1.11.0 (Hadoop catalog, one local JVM). v2 and v3 answer
 identically. Never hand-edited: re-run the driver.
 

@@ -15,9 +15,9 @@ cast-UDF plus token-rewrite feature on both SQL doors plus complex-type support 
 DataFrame `.cast` path.
 
 **Step 2.** Fixture plus red pins only, no product code: the 21-cell oracle verbatim
-under `python/repark/tests/cast_map_spell_1/`, the repo-idiomatic re-deriver
-`python/repark/tests/_record_cast_map_spell_1.py`, and
-`python/repark/tests/test_cast_map_spell_1.py` with one pin per cell per door. Red on
+under `python/repark/tests/types/cast_map_spell_1/`, the repo-idiomatic re-deriver
+`python/repark/tests/types/_record_cast_map_spell_1.py`, and
+`python/repark/tests/types/test_cast_map_spell_1.py` with one pin per cell per door. Red on
 the base tree for the recorded reasons (`ParserError("Expected: ), found: <")` on the
 facade door, `unknown cast type 'map<string,long>'` on the DataFrame door).
 
@@ -78,14 +78,14 @@ COVERAGE_ATTESTATION:
         the live drift check re-derives it (rc 0). The 24 FNP8 dispositions were
         re-measured and each equals Spark's recorded rows and Arrow schema, so no
         RePark-only answer was written into a pin.
-      artifacts: [python/repark/tests/cast_map_spell_1/cast_map_spell_1_spark_oracle.json, python/repark/tests/fnp8_repark_dispositions.json]
+      artifacts: [python/repark/tests/types/cast_map_spell_1/cast_map_spell_1_spark_oracle.json, python/repark/tests/functions/fnp8_repark_dispositions.json]
     - id: AT-2
       status: ATTACKED
       evidence: Red on the base tree (34 failed, recorded in step 2); the flipped
         pins asserted the refusal before. After the fix, the native door stayed red
         until the binding session door carried the rewrite, which shows the pins
         discriminate by door.
-      artifacts: [python/repark/tests/test_cast_map_spell_1.py, python/repark/tests/test_nullability_2.py]
+      artifacts: [python/repark/tests/types/test_cast_map_spell_1.py, python/repark/tests/types/test_nullability_2.py]
     - id: AT-3
       status: ATTACKED
       evidence: All 21 cells are pinned on every door that can spell them. The Rust
@@ -137,6 +137,6 @@ COVERAGE_ATTESTATION:
         tree, green on 4374243d. Every other file that casts to MAP ran green. FNP8 re-derived; the
         ICE-LIST-NULL-1 seed runs verbatim with 225 passed and the same 32 strict
         xfails. The repark-sql lib suite passes (356).
-      artifacts: [python/repark/tests/test_fnp8_oracle_matrix.py, python/repark/tests/test_ice_list_null_1.py]
+      artifacts: [python/repark/tests/functions/test_fnp8_oracle_matrix.py, python/repark/tests/writes/test_ice_list_null_1.py]
   complete: true
 ```

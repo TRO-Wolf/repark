@@ -2,7 +2,7 @@
 
 Measured 2026-10-14 on the release module of main at
 `018d0efdbe8bc25ccaeebf39950704f3ef8ada52`, with the recorder
-`python/repark/tests/_record_ice_tsns_floor_doors_1_main.py`.
+`python/repark/tests/timestamps/_record_ice_tsns_floor_doors_1_main.py`.
 Source table is format version 3. Each combination writes eleven probe ticks
 through one door and reads the stored microsecond ticks back as integers.
 

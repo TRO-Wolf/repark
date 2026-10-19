@@ -94,7 +94,7 @@ generalized in place (the probe now also fires for a negative or field-qualified
 |---|---|---|
 | Engine | [`crates/repark-spark/src/window_range.rs`](../../../../crates/repark-spark/src/window_range.rs) | R3 empty-frame restatement; R2 DAY TO SECOND restatement; mixed negative+numeric refuse |
 | Spark-door pins | [`crates/repark-spark/src/tests/window_temporal_range.rs`](../../../../crates/repark-spark/src/tests/window_temporal_range.rs) | +5 tests (R3 value, R2 value, R1/R4/R5 still-open) |
-| Facade corpus | [`python/repark/tests/test_window_parity.py`](../../../../python/repark/tests/test_window_parity.py) | R2 + both R3 rows flipped to equality; disclosure floor 5→3 |
+| Facade corpus | [`python/repark/tests/test_window_parity.py`](../../../../python/repark/tests/functions/test_window_parity.py) | R2 + both R3 rows flipped to equality; disclosure floor 5→3 |
 | This ledger | `task/g5br-range-residuals-ledger.md` | linked from [`task/map.md`](../../../map.md) |
 
 ### 1.1 R3 fix (HIGH)

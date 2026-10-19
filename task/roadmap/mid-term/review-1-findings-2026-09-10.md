@@ -517,7 +517,7 @@ document — they enter the slate order the owner or the next orchestrator sets.
 
 ### Card REVIEW-FIX-1 — the CFG-1 mirror agrees with the loader (Q-3, Q-4, Q-5, Q-6)
 
-**Home.** `python/repark/src/repark/config.py`, `python/repark/tests/test_config_mirror.py`,
+**Home.** `python/repark/src/repark/config.py`, `python/repark/tests/session/test_config_mirror.py`,
 `python/repark/src/repark/map.md` if a line moves. Nothing in `crates/`.
 
 **Decisions.** D-1 The mirror's job is to refuse exactly what the loader refuses: a knob value is
@@ -557,7 +557,7 @@ compares the same two things on any machine.
 ### Card REVIEW-FIX-3 — the polars display honours every legal `max_rows` (Q-9, Q-10, Q-11)
 
 **Home.** `python/repark/src/repark/spark/dataframe/display.py`,
-`python/repark/tests/test_display_polars_default.py`, `core.py`'s `show` docstring.
+`python/repark/tests/dataframe/test_display_polars_default.py`, `core.py`'s `show` docstring.
 
 **Decisions.** D-1 `head_n + tail_n == min(n, max_rows)` for every `max_rows >= 1`: the odd row
 goes to the head, which is what polars does. D-2 `max_rows = 1` prints the first row and the
@@ -576,7 +576,7 @@ pin over the `str_len` remap.
 
 **Home.** `python/repark/src/repark/spark/dataframe/eager.py`,
 `python/repark/src/repark/spark/dataframe/core.py` (`_materialize_cache_if_needed`),
-`display.py` (`_styled_total_rows`), `python/repark/tests/test_df_eager_1.py`.
+`display.py` (`_styled_total_rows`), `python/repark/tests/dataframe/test_df_eager_1.py`.
 
 **Decisions.** D-1 `_to_lazy` never interpolates `_cache_view` into SQL: an eager frame becomes a
 lazy one through `_spawn_preserving_identity(frame._inner)`. A set `_eager_shape` with no
@@ -617,7 +617,7 @@ environment variable changed after the session is built.
 ### Card REVIEW-FIX-6 — `explain()` refuses the both-set shape (Q-17)
 
 **Home.** `python/repark/src/repark/spark/dataframe/core.py` (`_explain_text`, `explain`),
-`python/repark/tests/test_df_explain_1.py`.
+`python/repark/tests/dataframe/test_df_explain_1.py`.
 
 **Decision.** D-1 Follow PySpark: passing both `extended` and `mode` raises the
 `CANNOT_SET_TOGETHER`-shaped error rather than silently choosing one. A string `extended` with no
@@ -634,7 +634,7 @@ prints the tree; `explain("formatted")` still prints the tree.
 
 ### Card REVIEW-FIX-7 — the config mirror cannot inject TOML, and a parse error cannot echo a secret (Q-18, Q-19)
 
-**Home.** `python/repark/src/repark/config.py`, `python/repark/tests/test_config_mirror.py`,
+**Home.** `python/repark/src/repark/config.py`, `python/repark/tests/session/test_config_mirror.py`,
 `crates/repark-core/src/config_file.rs`, `crates/repark-core/src/config_file/tests/mod.rs`.
 
 **Decisions.** D-1 Every rendered header segment is quoted with `_toml_text`, or the name is
@@ -676,7 +676,7 @@ move into it. D-3 The summary counts agree with the table.
 
 **Home.** `python/repark/src/repark/spark/dataframe/polars_cells.py`,
 `python/repark/src/repark/spark/dataframe/display.py`,
-`python/repark/tests/test_display_polars_default.py`.
+`python/repark/tests/dataframe/test_display_polars_default.py`.
 
 **Decisions.** D-1 The list-cell ellipsis threshold is polars': a four-element list renders
 `[0, 1, … 3]`. D-2 Float spelling follows polars at the fixed/scientific switch (`±999999.0` →
@@ -708,7 +708,7 @@ the critic's own reproduction and can be lifted from its report.
 
 ### Card REVIEW-FIX-11 — the unpinned `explain()` rows (Q-32, with Q-17)
 
-**Home.** `python/repark/tests/test_df_explain_1.py`, and `core.py` only if a D-2 row is found
+**Home.** `python/repark/tests/dataframe/test_df_explain_1.py`, and `core.py` only if a D-2 row is found
 wrong once pinned.
 
 **Decision.** D-1 Every D-2 row gets a pin: cost, codegen, `ANALYZE`, simple-mode physical-only,
@@ -771,7 +771,7 @@ its errors have already cost a Grok round each.
 
 **Home.** `python/repark/src/repark/spark/session/builder_conf.py`,
 `python/repark/src/repark/spark/session/session_configuration.py`,
-`python/repark/tests/test_display_polars_default.py`.
+`python/repark/tests/dataframe/test_display_polars_default.py`.
 
 **Decisions.** D-1 `conf.get("repark.display.style")` reads the session's snapshot, never the
 process environment, after an `unset` — the lockstep its docstring promises, and ADR-0004's rule

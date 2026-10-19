@@ -15,8 +15,8 @@ flight** at kickoff — cite, do not duplicate). Critic: `octo` cycles=2 early_s
 
 | Artifact | Path | Role |
 |---|---|---|
-| Differential corpus | [`python/repark/tests/test_three_valued_logic_parity.py`](../../../../python/repark/tests/test_three_valued_logic_parity.py) | 12 rows + lifecycle helpers + budget pin + CP-1 classifiers |
-| Record driver | [`python/repark/tests/_record_tvl_goldens.py`](../../../../python/repark/tests/_record_tvl_goldens.py) | re-derive Spark halves; `--emit` paste helpers |
+| Differential corpus | [`python/repark/tests/test_three_valued_logic_parity.py`](../../../../python/repark/tests/sql/test_three_valued_logic_parity.py) | 12 rows + lifecycle helpers + budget pin + CP-1 classifiers |
+| Record driver | [`python/repark/tests/_record_tvl_goldens.py`](../../../../python/repark/tests/sql/_record_tvl_goldens.py) | re-derive Spark halves; `--emit` paste helpers |
 | Cross-door rows (2) | [`crates/repark-sql/tests/cross_door.rs`](../../../../crates/repark-sql/tests/cross_door.rs) | G12 TwoSession 3VL (X-2 sole writer tonight) |
 | Maps | `python/repark/tests/map.md`, `crates/repark-sql/tests/map.md`, `task/map.md` | lockstep |
 | This ledger | `task/x2-tvl-ledger.md` | linked from [`task/map.md`](../../../map.md) |

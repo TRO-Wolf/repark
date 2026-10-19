@@ -67,7 +67,7 @@ warning: `repark-core` (lib doc) generated 4 warnings
 **Status:** DONE (Glue-only live wire; pure comparison unit-tested without AWS)
 
 **Probe result (bounded):** `DESCRIBE NAMESPACE` already yields a `Location` row when the
-property is set (`python/repark/tests/test_describe_namespace.py` + engine
+property is set (`python/repark/tests/session/test_describe_namespace.py` + engine
 `execute_describe_namespace`). Facade `listDatabases` still returns `locationUri=None`.
 **Live path wired through SQL DESCRIBE** — harness-local, zero engine change.
 

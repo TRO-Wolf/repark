@@ -37,7 +37,7 @@ Release native (`__debug_assertions__` False), warmup + 5 reps, medians, idle-bo
 before/after table because step 0 changes no product code. The only ratio trip is `df.schema`, where 33 µs of a 66 µs
 call is conversion. A Rust table cannot move a user-visible number there.
 
-Pins: `python/repark/tests/test_facade_4_ddl_round_trip.py` + `facade_4_type_goldens.json` cover 47 golden cases (29
+Pins: `python/repark/tests/types/test_facade_4_ddl_round_trip.py` + `facade_4_type_goldens.json` cover 47 golden cases (29
 atomic, 16 complex, a raw-Arrow probe and the session conf) and an `isinstance` pin. Record mode is refused under CI. The
 mutation proof: dropping the tz from `pa.timestamp("us", tz="UTC")` in `repark_type_to_arrow` reds four cases, and the
 restore turns them green (ledger C-004).

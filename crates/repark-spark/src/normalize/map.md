@@ -138,7 +138,7 @@ here and is re-exported in one line.
   (column-def `OR REPLACE` → `StagedTableTransaction::begin_replace`, no new snapshot) and
   [../ctas.rs](../ctas.rs) `execute_ctas` (`with_replace_write(true)` → an `overwrite` stamp).
 - Pins: [../tests/ctas.rs](../tests/ctas.rs), [../tests/create_table.rs](../tests/create_table.rs),
-  [../../../../python/repark/tests/test_ice_small_parser_1.py](../../../../python/repark/tests/iceberg/test_ice_small_parser_1.py).
+  [../../../../python/repark/tests/iceberg/test_ice_small_parser_1.py](../../../../python/repark/tests/iceberg/test_ice_small_parser_1.py).
 
 ## Debug
 

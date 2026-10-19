@@ -23,7 +23,7 @@ are listed afterwards; this card does not move them.
 |---|---|---|
 | `crates/repark-spark/src/tests/v3_timestamp_ns_door.rs` | `cast_ns_columns_as_timestamp_floor_to_microsecond_instants` | written CAST(ns AS TIMESTAMP) and CAST(tzns AS TIMESTAMP), not a card spelling |
 | `crates/repark-spark/src/tests/v3_timestamp_ns_door.rs` | `timestamp_typed_values_floor_to_microseconds_and_strings_keep_nine_digits` | a written TIMESTAMP literal floors; a string keeps nine digits |
-| `python/repark/tests/test_ice_tsns_sql_1.py` | `test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling` | written CAST of the column, the same floor as DataFrame cast |
-| `python/repark/tests/test_ice_tsns_sql_1.py` | `test_timestamp_typed_values_floor_like_insert_select` | written TIMESTAMP literals floor on insert; strings keep nine digits |
+| `python/repark/tests/timestamps/test_ice_tsns_sql_1.py` | `test_cast_ns_column_as_timestamp_floors_like_the_dataframe_spelling` | written CAST of the column, the same floor as DataFrame cast |
+| `python/repark/tests/timestamps/test_ice_tsns_sql_1.py` | `test_timestamp_typed_values_floor_like_insert_select` | written TIMESTAMP literals floor on insert; strings keep nine digits |
 | `crates/repark-functions/src/timestamp_ns_cast/tests.rs` | `narrowing_floors_instants_to_microseconds` | the narrow kernel itself, not a card spelling |
 | `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs` | `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` | coalesce(ns, NULL) and array(ns, NULL)[0] feed a nested leaf; the pin is the nested-leaf refusal, which still applies when the spelling stays ns |

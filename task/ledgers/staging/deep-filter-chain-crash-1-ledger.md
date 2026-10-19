@@ -132,15 +132,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each pin asserts a Spark-measured value on the same shape: filter 50, join 1, union 15050 and 601, withColumn 50, and the RecursionError refusal class; the oracle ran Spark 4.1.2 America/New_York in one JVM session.
-      artifacts: [python/repark/tests/test_deep_filter_chain_crash-1.py]
+      artifacts: [python/repark/tests/sql/test_deep_filter_chain_crash_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The DataFrame door carries C-001 through C-003 and the SQL door carries C-004 in nested and flat shapes; every native entry point (all 45 product block_on sites: SQL, DataFrame, reads, writes, temp views, catalogs, streams) drives through the same grown-stack helper.
-      artifacts: [python/repark/tests/test_deep_filter_chain_crash-1.py, crates/repark-python/src/deep_stack.rs]
+      artifacts: [python/repark/tests/sql/test_deep_filter_chain_crash_1.py, crates/repark-python/src/deep_stack.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Nested-deep SQL raises a catchable RecursionError, never a crash; panics still unwind through block_on to the PyO3 fence (Rust pin block_on_propagates_a_future_panic_to_the_caller); M1 and M2 crash before restore.
-      artifacts: [python/repark/tests/test_deep_filter_chain_crash-1.py, crates/repark-python/src/deep_stack.rs]
+      artifacts: [python/repark/tests/sql/test_deep_filter_chain_crash_1.py, crates/repark-python/src/deep_stack.rs]
     - id: AT-4
       status: N/A
       justification: No new shared state and no new concurrency surface; same-thread stack growth plus sized pool stacks, each pin in one isolated interpreter.
@@ -150,7 +150,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Twelve neighbour statements answer identically before and after except pre-existing UNION ALL order noise (both orders observed on head across identical runs, no ORDER BY); the committed facade smoke files run green on head.
-      artifacts: [python/repark/tests/test_df_easy.py, python/repark/tests/test_columns.py]
+      artifacts: [python/repark/tests/dataframe/test_df_easy.py, python/repark/tests/dataframe/test_columns.py]
     - id: AT-7
       status: ATTACKED
       evidence: The 3-filter 5-sample check moves +1.4%, inside the 5% bound; the VmSize/VmRSS base-vs-head record sits in Measurements above (reservation +6.8 GiB virtual, residency unchanged).
@@ -166,7 +166,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: M1 breaks the filter pin (rc=-11) and M2 breaks the join pin (rc=139) under subprocess; both answer after the revert with git status clean.
-      artifacts: [crates/repark-python/src/deep_stack.rs, python/repark/tests/test_deep_filter_chain_crash-1.py]
+      artifacts: [crates/repark-python/src/deep_stack.rs, python/repark/tests/sql/test_deep_filter_chain_crash_1.py]
   complete: true
 ```
 

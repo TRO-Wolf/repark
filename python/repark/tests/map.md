@@ -41,10 +41,10 @@ Rules for new files:
   root helper puts this directory on `sys.path` itself (`Path(__file__).resolve().parents[1]`),
   or says `PYTHONPATH=python/repark/tests` in its usage block.
 
-The dated entries below predate the layout. Their markdown links are repointed to the new paths;
-backticked file names and `python/repark/tests/<file>` mentions in their prose are history and
-name the flat path the file had when the entry was written. Each directory's `map.md` lists
-its files.
+The dated entries below predate the layout. Their markdown links and full
+`python/repark/tests/<file>` paths are repointed to the new locations; a bare backticked file name
+in their prose is history and does not say which directory the file now lives in. Each
+directory's `map.md` lists its files.
 
 SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08): `sql_epoch_constructors_1_spark_oracle.json` is the 304-cell live Spark 4.1.2 recording (76 inputs × zones `UTC` / `America/New_York` × ANSI off / on) behind `_record_sql_epoch_constructors_1.py`: each of `timestamp_seconds` / `timestamp_millis` / `timestamp_micros` over int, bigint, smallint, tinyint, double, float, decimal, string, boolean, timestamp and NULL inputs, negatives, 2100/1900/9999/0001 values, exact overflow boundaries and bigint extremes, the 22-input decimal-boundary set (MAX/MIN exact, ±half/±1/±1.5 micro, 19- vs 20-digit micros both signs, exact vs inexact, fold 1 2026-10-09), with `unix_micros` values, error class/SQLSTATE/first line and `df.schema` types on the SQL and DataFrame doors, plus `to_timestamp_*` probes (Spark refuses all three as `UNRESOLVED_ROUTINE`). All four zone×ANSI groups are byte-identical; the contract is seconds-requires-NUMERIC (fractional kept, double NaN/Inf→NULL, huge doubles saturate, decimal inexact-within-19-digits refuses `Rounding necessary` even past the bound while `Overflow` needs past-19-digits or exact-out-of-range) while millis/micros require INTEGRAL, every refusal `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` 42K09 and every overflow an unclassified `long overflow`. pins: sql-epoch-constructors-1/C-001, C-009 **Pins (2026-10-08):** `test_sql_epoch_constructors_1.py` replays every cell on both doors — micros value plus Arrow `timestamp[us, tz=UTC]` and facade `timestamp` for answers, exact class/SQLSTATE with the NUMERIC/INTEGRAL kind and Spark's got-type for `DATATYPE_MISMATCH` refusals, Spark's core text with no condition for overflows — pins the native door refusing all three names, and re-derives the fixture from live Spark under `REPARK_PARITY_LIVE=1`. pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-006, C-007, C-009
 CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `test_join_condition_refusals_1.py` pins the refusals through the exception accessors (`getCondition`, `getErrorClass`, `getMessageParameters`, `getSqlState`) instead of the head line: the engine now surfaces the bare bracketed condition with no analyzer-rule header, and the refusal text starts with `[CONDITION]`; `test_refused_join_inside_a_subquery_expression_refuses` pins the refused join nested in an `IN` subquery (kills the m5 plan-descent mutant). pins: cross-join-condition-1/C-008
@@ -1194,7 +1194,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `to_arrow` path. Live (`REPARK_PARITY_LIVE=1`): live Spark re-derives every recorded
   answer on private catalogs; any drift fails the cell. Re-record:
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
-  path, then `.venv/bin/python python/repark/tests/_record_ice_promote_read_1.py`
+  path, then `.venv/bin/python python/repark/tests/iceberg/_record_ice_promote_read_1.py`
   (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache). Registry rows (FIXED
   2026-09-16): ICE-PROMOTE-READ-1, ICE-PROMOTE-DML-1, ICE-PROMOTE-PARTITION-1. The fork half
   (F-PROMOTE-READ-1) reaches CI with the fork pin bump; until then the table cases are red at
@@ -1765,7 +1765,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `UnsupportedOperationException` for the refused default DDL). Live (`REPARK_PARITY_LIVE=1`):
   live Spark re-derives every recorded answer on both doors; any drift fails the cell. Re-record:
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
-  path, then `.venv/bin/python python/repark/tests/_record_ice_evo_dml_1.py`
+  path, then `.venv/bin/python python/repark/tests/writes/_record_ice_evo_dml_1.py`
   (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache). Registry rows (FIXED
   2026-09-17): ICE-EVO-DML-1, ICE-EVO-SWAP-1, ICE-EVO-LINEAGE-READ-1; the former EX-W2-4 `xfail` cells run plainly (2026-09-19); the RePark cells need the fork pin carrying F-PROMOTE-READ-1 (stacked
   on `fix/ice-promote-read-1`; local override until that unit's pin bump).
@@ -8539,32 +8539,32 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Record a divergence from Apache Spark (behavior, pin, rationale) | `../../../docs/spark-sql-iceberg-parity.md` — the registry; add the `Disclosure` too when the live tier can express it (§6) |
 | Run a live-oracle scenario under a NON-UTC session zone | `Scenario(..., session_conf=((lp.SESSION_TIME_ZONE_KEY, lp.ZONE_TOKYO),))` — and move the size + uniqueness pins in the same diff |
 | Add a session-timezone / temporal-edge differential row | `test_session_timezone_parity.py` (`G1_ROWS` / `G16_ROWS`; record the Spark half with `_record_session_timezone_goldens.py`, never by hand) |
-| Re-derive the recorded Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py` |
+| Re-derive the recorded Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/timestamps/_record_session_timezone_goldens.py` |
 | Add a MERGE INTO differential row (gap G3) | `test_merge_differential_parity.py` (`ROWS`; record Spark half with `_record_merge_differential_goldens.py`, never by hand) |
-| Re-derive the MERGE differential Spark halves (record mode) | First the parity-live sync line (`uv sync --locked --extra record --extra numpy --extra pandas --extra polars --extra ml-ext --no-install-package repark`), then `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py` |
+| Re-derive the MERGE differential Spark halves (record mode) | First the parity-live sync line (`uv sync --locked --extra record --extra numpy --extra pandas --extra polars --extra ml-ext --no-install-package repark`), then `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/writes/_record_merge_differential_goldens.py` |
 | Add a DELETE/UPDATE subquery-predicate row (defect G3-E8) | `test_dml_subquery_parity.py` (`ROWS`; record the Spark half with `_record_dml_subquery_goldens.py`, never by hand) |
-| Re-derive the G3-E8 Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_dml_subquery_goldens.py` |
+| Re-derive the G3-E8 Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/writes/_record_dml_subquery_goldens.py` |
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
-| Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
+| Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/types/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
 | Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 unemitted-id pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
 | Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_semi_then_inner_join_emits_the_same_right`, `test_spawn_descendant_still_refuses_unemitted_right`, `test_self_semi_exclusive_set_resolves_df_column`, `test_distinct_name_*`, `test_right_ref_abs_*`, `test_left_abs_*`, `test_inner_join_abs_*`, `test_distinct_name_abs_*`, `test_right_ref_lower_*`, `test_coalesce_left_then_right_*`, `test_abs_string_name_*`, `test_right_ref_agg_*`, `test_left_agg_*`, `test_inner_join_sum_*`, `test_distinct_name_sum_*`, `test_count_distinct_left_then_right_*`, `test_sum_string_name_*`,
   `test_inner_join_abs_keeps_the_abs_on_a_negative_key`) |
-| Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/dataframe/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a timestamp-cast differential row (registry TZ-5 / B-TZ-4) | `test_timestamp_cast_parity.py` (`ROWS`; record Spark half with `_record_timestamp_cast_goldens.py`, never by hand — and keep the SHAPE pin in `test_the_class_is_covered_per_entry_point_and_per_edge` honest in the same diff) |
-| Re-derive the timestamp-cast Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_timestamp_cast_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Re-derive the timestamp-cast Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/timestamps/_record_timestamp_cast_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a window-function differential row (gap G5) | `test_window_parity.py` (`ROWS`; record Spark half with `_record_window_goldens.py`, never by hand) |
-| Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/functions/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a nested-container differential row (gap G18) | `test_nested_container_parity.py` (`ROWS`; record Spark half with `_record_nested_container_goldens.py`, never by hand) |
-| Re-derive the nested-container Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_nested_container_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Re-derive the nested-container Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/types/_record_nested_container_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a facade-boundary container-shape row (gap G10) | `test_boundary_shapes_parity.py` (`ROWS`; record Spark half with `_record_boundary_shapes_goldens.py`, never by hand). Do not extend X-5 VALUES families or census allowlists. |
-| Re-derive the G10 boundary-shape Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_boundary_shapes_goldens.py` (hold `/tmp/grok-jvm-record.lock`; marker `y6-g10-fix` after the cycle-1 pin fix) |
+| Re-derive the G10 boundary-shape Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/io/_record_boundary_shapes_goldens.py` (hold `/tmp/grok-jvm-record.lock`; marker `y6-g10-fix` after the cycle-1 pin fix) |
 | Add a cast-failure differential row (gap G6) | `test_cast_failure_parity.py` (`ROWS`; record Spark half with `_record_cast_failure_goldens.py`, never by hand) |
-| Re-derive the cast-failure Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Re-derive the cast-failure Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/types/_record_cast_failure_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a three-valued-logic differential row (gap G12) | `test_three_valued_logic_parity.py` (`ROWS`; record Spark half with `_record_tvl_goldens.py`, never by hand) |
-| Re-derive the TVL Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_tvl_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Re-derive the TVL Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/sql/_record_tvl_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a float-agg differential row (gap G7) | `test_float_agg_parity.py` (`ROWS`; record Spark half with `_record_float_agg_goldens.py`, never by hand) |
-| Re-derive the float-agg Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_float_agg_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Re-derive the float-agg Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/functions/_record_float_agg_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |

@@ -168,7 +168,7 @@ restated here.
 
 ## 6. The legs this workflow runs
 
-One row per test in `python/repark/tests/test_aws_acceptance.py`. Whether a leg has run, and how
+One row per test in `python/repark/tests/parity/test_aws_acceptance.py`. Whether a leg has run, and how
 it went, is current state and lives in [../STATUS.md](../STATUS.md) — never here.
 
 | Leg | Catalog | Extra gate | What the run answers |

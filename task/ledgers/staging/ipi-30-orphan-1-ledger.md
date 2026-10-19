@@ -41,7 +41,7 @@
 - `docs/cutover/inventory.md:24` and `docs/cutover/production-iceberg-status-2026-09-14.md` (lines 80, 226, 337, 365, 409, 562, 635) — describe the required-`older_than` / dry-run-default posture.
 - `docs/design/v3-statement-coverage.md:185`, `docs/design/v1-0-api-review-2026-09-02.md:54` and `docs/design/v1-0-api-review-2026-09-02.json:1448-1449` — cite ORPHAN-1/ORPHAN-2 as open rows.
 - `docs/perf/engine-iceberg-analysis-2026-09-04.md:99` — cites ORPHAN-2 for the 24 h refusal (the floor itself is unchanged).
-- `python/repark/tests/test_maintenance_call.py` carried no planting helper before this round: `_plant_orphan` and `_orphan_names` are new, modelled on the `plant_orphans` / `orphan_locations` pair in `call_orphan.rs`.
+- `python/repark/tests/iceberg/test_maintenance_call.py` carried no planting helper before this round: `_plant_orphan` and `_orphan_names` are new, modelled on the `plant_orphans` / `orphan_locations` pair in `call_orphan.rs`.
 
 ## Close
 
@@ -55,7 +55,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Walked all twelve clauses against the diff and the runs. Every clause cites a Rust pin and, where the door differs, a Python pin; the runbook clause cites the driver SQL, the guide block and both pins.
-      artifacts: [crates/repark-spark/src/tests/call_orphan.rs, python/repark/tests/test_maintenance_call.py, python/repark-parity/bench/mw7/measure.py, python/repark/tests/test_mw8_runbook.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [crates/repark-spark/src/tests/call_orphan.rs, python/repark/tests/iceberg/test_maintenance_call.py, python/repark-parity/bench/mw7/measure.py, python/repark/tests/iceberg/test_mw8_runbook.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised on both doors: 10-day-old vs 1-day-old orphans against the 3-day default, 23h vs 25h against the 24h floor, the zero-row warehouse, a bogus mode, non-map schemes, quoted booleans and an unknown argument.
@@ -88,5 +88,5 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Every clause has a named pin on each door it touches, and both rewritten Python pins went RED against the stale pre-R1 build (AnalysisException on the bare call) before passing on the rebuilt one, so the suite discriminates the new behaviour. No new branch lacks a nameable input: planting, listing shape and on-disk effects are each asserted.
-      artifacts: [python/repark/tests/test_maintenance_call.py, python/repark/tests/test_mw7_scale_smoke.py, python/repark/tests/test_mw8_runbook.py]
+      artifacts: [python/repark/tests/iceberg/test_maintenance_call.py, python/repark/tests/perf/test_mw7_scale_smoke.py, python/repark/tests/iceberg/test_mw8_runbook.py]
 ```

@@ -38,7 +38,7 @@ plus the two commits.
 ## Pointers
 
 - Up: [../map.md](../map.md). Design: `../../../../docs/design/sql-doors.md`.
-- Oracle: `../../../../python/repark/tests/ice_rtas_byname_1_spark_oracle.json`.
+- Oracle: `../../../../python/repark/tests/writes/ice_rtas_byname_1_spark_oracle.json`.
 - Ledger: `../../../../task/ledgers/staging/ice-rtas-byname-1-ledger.md`.
 
 ## Debug
