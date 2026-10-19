@@ -51,6 +51,6 @@ pins: ice-write-options-rp-1/C-001, C-002
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Consumer: [../../../../../repark/tests/test_ice_write_options_rp_1.py](../../../../../repark/tests/test_ice_write_options_rp_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_write_options_rp_1.py](../../../../../repark/tests/_record_ice_write_options_rp_1.py)
+- Consumer: [../../../../../repark/tests/test_ice_write_options_rp_1.py](../../../../../repark/tests/writes/test_ice_write_options_rp_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_write_options_rp_1.py](../../../../../repark/tests/writes/_record_ice_write_options_rp_1.py)
 - Ledger: `task/ledgers/staging/ice-write-options-rp-1-ledger.md`

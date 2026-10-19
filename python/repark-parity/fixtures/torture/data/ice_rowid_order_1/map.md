@@ -66,6 +66,6 @@ pins: ice-rowid-order-1/C-001, C-002, C-007
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Consumer: [../../../../../repark/tests/test_ice_rowid_order_1.py](../../../../../repark/tests/test_ice_rowid_order_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_rowid_order_1.py](../../../../../repark/tests/_record_ice_rowid_order_1.py)
+- Consumer: [../../../../../repark/tests/test_ice_rowid_order_1.py](../../../../../repark/tests/writes/test_ice_rowid_order_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_rowid_order_1.py](../../../../../repark/tests/writes/_record_ice_rowid_order_1.py)
 - Ledger: `task/ledgers/staging/ice-rowid-order-1-ledger.md`

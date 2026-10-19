@@ -1,4 +1,4 @@
-# map — python/repark/tests/cast_map_spell_1
+# map — python/repark/tests/types/cast_map_spell_1
 
 ## Purpose
 

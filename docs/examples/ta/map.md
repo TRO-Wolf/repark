@@ -72,4 +72,4 @@ column is asserted bit-exact against a golden.
 
 - Up: [../map.md](../map.md)
 - Goldens: [../../../crates/repark-ta/tests/goldens/map.md](../../../crates/repark-ta/tests/goldens/map.md)
-- Pins: [../../../python/repark/tests/test_ta.py](../../../python/repark/tests/test_ta.py)
+- Pins: [../../../python/repark/tests/test_ta.py](../../../python/repark/tests/functions/test_ta.py)

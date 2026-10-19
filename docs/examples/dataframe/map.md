@@ -165,7 +165,7 @@ The EX-19 batch adds §7 EX-DF-18 (`withColumnsRenamed` refuses duplicate final 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_a.py](../../../python/repark/tests/test_examples_dataframe_a.py)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_c.py](../../../python/repark/tests/test_examples_dataframe_c.py)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_b.py](../../../python/repark/tests/test_examples_dataframe_b.py)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/test_examples_dataframe_d.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_a.py](../../../python/repark/tests/parity/test_examples_dataframe_a.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_c.py](../../../python/repark/tests/parity/test_examples_dataframe_c.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_b.py](../../../python/repark/tests/parity/test_examples_dataframe_b.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/parity/test_examples_dataframe_d.py)

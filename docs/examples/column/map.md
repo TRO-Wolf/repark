@@ -65,4 +65,4 @@ read).
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Pins: [../../../python/repark/tests/test_examples_column_a.py](../../../python/repark/tests/test_examples_column_a.py)
+- Pins: [../../../python/repark/tests/test_examples_column_a.py](../../../python/repark/tests/parity/test_examples_column_a.py)

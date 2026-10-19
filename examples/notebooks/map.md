@@ -35,7 +35,7 @@ is needed; a cell that fails Ruff fails the canonical gate.
 |---|---|
 | Run the tour | `make develop`, then open `datasets_tour.ipynb` (or execute it headless, below) |
 | Execute a notebook headless | `VIRTUAL_ENV=$PWD/.venv uv run --no-project --with nbclient --with ipykernel python -c "import nbformat; from nbclient import NotebookClient; nb = nbformat.read('examples/notebooks/datasets_tour.ipynb', as_version=4); NotebookClient(nb, timeout=1800, kernel_name='python3').execute()"` |
-| See the pins behind the tour | [../../python/repark/tests/test_datasets_facade.py](../../python/repark/tests/test_datasets_facade.py) |
+| See the pins behind the tour | [../../python/repark/tests/test_datasets_facade.py](../../python/repark/tests/io/test_datasets_facade.py) |
 | Read the generators the tour drives | [../../python/repark-parity/datasets/map.md](../../python/repark-parity/datasets/map.md) |
 
 ## Pointers

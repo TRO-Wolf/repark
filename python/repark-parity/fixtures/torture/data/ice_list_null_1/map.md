@@ -71,6 +71,6 @@ pins: ice-list-null-2/C-005
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Consumer: [../../../../../repark/tests/test_ice_list_null_1.py](../../../../../repark/tests/test_ice_list_null_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_list_null_1.py](../../../../../repark/tests/_record_ice_list_null_1.py)
+- Consumer: [../../../../../repark/tests/test_ice_list_null_1.py](../../../../../repark/tests/writes/test_ice_list_null_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_list_null_1.py](../../../../../repark/tests/writes/_record_ice_list_null_1.py)
 - Ledger: `task/ledgers/staging/ice-list-null-1-ledger.md`

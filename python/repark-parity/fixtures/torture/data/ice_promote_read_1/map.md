@@ -35,8 +35,8 @@ Never hand-edited: re-run the driver.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Cells: [../../../../../repark/tests/test_ice_promote_read_1.py](../../../../../repark/tests/test_ice_promote_read_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_promote_read_1.py](../../../../../repark/tests/_record_ice_promote_read_1.py)
+- Cells: [../../../../../repark/tests/test_ice_promote_read_1.py](../../../../../repark/tests/iceberg/test_ice_promote_read_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_promote_read_1.py](../../../../../repark/tests/iceberg/_record_ice_promote_read_1.py)
 - Ledger: `task/ledgers/staging/ice-promote-read-1-ledger.md`
 
 pins: ice-promote-read-1/C-001, C-008, C-015

@@ -34,6 +34,6 @@ disk-verified overwrite-vs-concurrent-append interleaves. One JSON document, rea
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Pins live in: [../../../../../repark/tests/test_ice_dyn_overwrite_1.py](../../../../../repark/tests/test_ice_dyn_overwrite_1.py)
-  and [../../../../../repark/tests/test_ice_dyn_overwrite_1_by_name.py](../../../../../repark/tests/test_ice_dyn_overwrite_1_by_name.py)
+- Pins live in: [../../../../../repark/tests/test_ice_dyn_overwrite_1.py](../../../../../repark/tests/writes/test_ice_dyn_overwrite_1.py)
+  and [../../../../../repark/tests/test_ice_dyn_overwrite_1_by_name.py](../../../../../repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py)
 - Ledger: [../../../../../../task/ledgers/staging/ice-dyn-overwrite-1-ledger.md](../../../../../../task/ledgers/staging/ice-dyn-overwrite-1-ledger.md)

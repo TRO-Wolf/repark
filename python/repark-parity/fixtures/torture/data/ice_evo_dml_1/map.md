@@ -33,8 +33,8 @@ round-3 L-02 shapes) agree on every shared case. Never hand-edited: re-run the d
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Cells: [../../../../../repark/tests/test_ice_evo_dml_1.py](../../../../../repark/tests/test_ice_evo_dml_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_evo_dml_1.py](../../../../../repark/tests/_record_ice_evo_dml_1.py)
+- Cells: [../../../../../repark/tests/test_ice_evo_dml_1.py](../../../../../repark/tests/writes/test_ice_evo_dml_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_evo_dml_1.py](../../../../../repark/tests/writes/_record_ice_evo_dml_1.py)
 - Ledger: `task/ledgers/staging/ice-evo-dml-1-ledger.md`
 
 pins: ice-evo-dml-1/C-001, C-009, C-016, C-017
