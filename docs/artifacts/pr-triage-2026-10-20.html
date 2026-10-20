@@ -1,0 +1,1453 @@
+<title>PR Triage Overnight</title>
+<style>
+:root{--bg:#f7f6f2;--fg:#1d1f24;--muted:#5d6370;--line:#d9d6cc;--card:#fffdf8;--accent:#8a4b1f;
+--close:#7a2e2e;--close-bg:#f6e3e1;--land:#1f5c3a;--land-bg:#dff0e5;--rebuild:#7a5a12;--rebuild-bg:#f7ecd0;--hold:#2d4a7a;--hold-bg:#dfe8f6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171b;--fg:#e8e6df;--muted:#a3a7b0;--line:#33373e;--card:#1d2026;--accent:#e0a56f;
+--close:#f0a8a2;--close-bg:#3b2224;--land:#9fd9b3;--land-bg:#1d3327;--rebuild:#efcf7a;--rebuild-bg:#3a3017;--hold:#a9c4ef;--hold-bg:#1f2b40;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15171b;--fg:#e8e6df;--muted:#a3a7b0;--line:#33373e;--card:#1d2026;--accent:#e0a56f;
+--close:#f0a8a2;--close-bg:#3b2224;--land:#9fd9b3;--land-bg:#1d3327;--rebuild:#efcf7a;--rebuild-bg:#3a3017;--hold:#a9c4ef;--hold-bg:#1f2b40;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif;margin:0;padding-block:32px;padding-inline:16px}
+main{max-width:1080px;margin:0 auto}
+h1{font-size:1.9rem;margin:0 0 .25rem;text-wrap:balance} h2{font-size:1.2rem;margin:2rem 0 .6rem;border-bottom:1px solid var(--line);padding-bottom:.2rem}
+.sub{color:var(--muted);margin:0 0 1.2rem}
+.kpis{display:flex;flex-wrap:wrap;gap:12px;margin:1rem 0} .kpi{flex:1 1 140px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;background:var(--card)}
+.kpi b{display:block;font-size:1.6rem;font-variant-numeric:tabular-nums} .kpi span{color:var(--muted);font-size:.85rem;letter-spacing:.04em;text-transform:uppercase}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.75rem;font-weight:600;letter-spacing:.05em}
+.pill.close{color:var(--close);background:var(--close-bg)} .pill.land{color:var(--land);background:var(--land-bg)}
+.pill.rebuild{color:var(--rebuild);background:var(--rebuild-bg)} .pill.hold{color:var(--hold);background:var(--hold-bg)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:.9rem} th,td{text-align:left;vertical-align:top;padding:7px 9px;border-top:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;border-top:0}
+td.num{white-space:nowrap;font-variant-numeric:tabular-nums} td.mono{font-family:ui-monospace,monospace;font-size:.85rem;white-space:nowrap} td.one{min-width:320px} td.conf{white-space:nowrap}
+a{color:var(--accent)}
+ol.group{padding-left:1.4rem} ol.group li{margin:.45rem 0} ol.group .t{color:var(--muted)}
+.note{border-left:3px solid var(--accent);padding:.4rem .9rem;background:var(--card);margin:.8rem 0}
+details.card{border:1px solid var(--line);border-radius:8px;background:var(--card);margin:.6rem 0} details.card summary{cursor:pointer;padding:.6rem .9rem;font-weight:500}
+details.card .body{padding:0 1rem 1rem;font-size:.92rem} details.card .body h2{font-size:1rem;margin:1rem 0 .3rem;border:0} details.card code{font-size:.85em}
+details.card table{min-width:0} details.card .body > p:first-child{color:var(--muted)}
+ul li{margin:.25rem 0}
+</style>
+<main>
+<h1>Open PR triage, overnight 19 to 20 October 2026</h1>
+<p class="sub">Twenty-two open pull requests on TRO-Wolf/repark, one card each, written by eleven sequential <code>claude-opus-5-5</code> agents at medium effort against main <code>085d77e8</code>. Evidence is reading and git history, not execution: no branch was built or run.</p>
+<div class="kpis">
+<div class="kpi"><b>3</b><span>close</span></div><div class="kpi"><b>5</b><span>land</span></div>
+<div class="kpi"><b>8</b><span>rebuild</span></div><div class="kpi"><b>6</b><span>hold</span></div>
+</div>
+<h2>What to do this morning</h2>
+<p>Four groups, in the order that frees the most with the least risk. Nothing was closed, marked or merged overnight; every action below is yours.</p>
+<ol>
+<li><b>Close three outright.</b> #881 (replaced by #968, merged 7 October, shipped in v1.5.3), #423 (overtaken by the version ladder and the Rust-first ruling), #874 (ports gates main already runs in Python; keep the branch). One close each, with the link the card names.</li>
+<li><b>Land the four docs PRs and the actions bump at clerk band.</b> #1072 needs one commit first: a parity test hard-codes the old upload-artifact SHA, and eight version comments went stale. No rust-cache bump is in the set, so no cold wheel. #1044, #1067 and #1098 need only a local merge of main to clear a map-row conflict that GitHub reports and the repo's union merge rule resolves. #1099 is not docs-only: it adds the model-ban gate script and a CI step, and has one real conflict in the lessons file where both sides appended. Confirm the ruling block's wording before it is frozen byte for byte.</li>
+<li><b>Close eight for rebuild</b>, each when its fresh unit opens, and #1047 now. The intent on every one of these is still needed on main; the branch is the wrong vehicle. The fresh unit is already named for five of them (NVL-TYPE-COERCION-2, USING-SIDE-KEY-DESIGN-1, NS-ARRAY-FLOOR-1, ICE-TSNS-NESTED-1, the 09-20 session-names path); #643, #884 and #1048 need a card first.</li>
+<li><b>Hold six.</b> #1096, the cargo group, drags in DataFusion 55 and Arrow 59 through ballista and orc-rust and does not compile; extend the dependabot ignore list to those two crates, take the four patch bumps as one lock-only commit, then close it. The other five hold under rulings you made: #1011 (streaming freeze, OD-1 to OD-8), #1014 (upstream DataFusion #26178 still open), #1038 (the read half of #1037, parked), #1070 (ruling 86: wires after U-9), #1071 (ruling 121(b): after v2 and v3 read PRODUCTION). Two cheap things while held: mark #1071 draft with a park note, and record DataFusion #26178 on #1014's card.</li>
+</ol>
+
+<h2>What the cards corrected in the record</h2>
+<ul>
+<li><b>No R-011 refusal-with-hint exists on main.</b> The closeout notes said it did. The registry row reads OPEN, PARKED 2026-10-12; the nested gate matches nanosecond leaves only. U-8 is unbuilt and has no order.</li>
+<li><b>T-3's adoption is recorded only on the unmerged #1098 replan</b>, and the nanosecond card ICE-TSNS-NESTED-1 does not own the microsecond lift that #1037 and #1038 need.</li>
+<li><b>#1037 and #1038 are one unit.</b> #1038 is an ancestor of #1037 and is the "localise" half the Fable design note keeps; #1037's per-door machinery is what the note deletes.</li>
+<li><b>#1048 can no longer be "rebase and verify once".</b> The type planner (c7121437) rewrote fifteen of its files, and by reading, a rebased #1048 would refuse the very user casts the ruling protects.</li>
+<li><b>#1070's ruling 86 is quoted only in the PR body.</b> U-9's three test modules and requirements file exist in no ref, and U-10's cross-read module moved to <code>parity/</code> on 19 October, so the workflow as written would fail twice.</li>
+<li><b>GitHub's CONFLICTING flag is wrong for #1044, #1067 and #1098.</b> Both sides appended map rows; <code>.gitattributes</code> gives <code>map.md</code> a union merge that GitHub's check ignores.</li>
+<li><b>Two claims could not be verified:</b> the "one extra fold" ruling cited in #1000's park comment, and #411's claimed GLM/Sol/Grok reviews (GitHub shows no reviews). The cards say so.</li>
+</ul>
+
+<h2>Evidence rescued overnight</h2>
+<p>Three verdict corpora the cards depend on lived only in a volatile <code>/tmp</code> scratch directory. They are copied into the session scratch now: the #888 Fable review and experiment JSON, the three #1000 verify runs with their verdict files (2.4 M after dropping the clones), and the three #1071 verdict files including the final V1 to V5 FAIL. Recommended: file them under each unit's directory in <code>task/wo/</code> in one docs PR before the branches close, since the cards' gates cite them.</p>
+
+<h2>Every branch that adds tests is now mis-rooted</h2>
+<p>#1113 moved the facade suite into thirteen subsystem directories on 19 October. Every open product branch (#411, #643, #884, #888, #1000, #1014, #1037, #1038, #1047, #1048, #1071) adds test files at the old flat root; #1047 also imports a helper that now lives under <code>timestamps/</code>. A rebuild from main places them correctly; a rebase of any of these would need the moves by hand.</p>
+
+<h2>Method and limits</h2>
+<ul>
+<li>One <code>claude-opus-5-5</code> agent at a time at medium effort, eleven batches, each with a read-only clone on main <code>085d77e8</code> carrying every PR head, GitHub review history, and a digest of the dated rulings on record, which the agents were told to verify rather than trust.</li>
+<li>Each verdict is one of LAND, REBUILD, HOLD or CLOSE with the one fact that would flip it. Where a claim rests on reading rather than running, the card says so; nothing was built.</li>
+<li>Agents wrote cards only. No PR was commented on, labelled, marked or closed.</li>
+<li>Spend: about 1.2 million subagent tokens across the eleven agents, roughly three to five minutes each.</li>
+</ul>
+
+<h2>All twenty-two, one line each</h2>
+<div class="tbl"><table><thead><tr><th>PR</th><th>Title</th><th>Opened</th><th>State</th><th>Verdict</th><th>Confidence</th><th>One line for the owner</th></tr></thead><tbody>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/411">#411</a></td><td>fix(spark): support session functions and reject scalar window use</td><td class="mono">2026-09-06</td><td>open</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">high</td><td class="one">SQL-door `current_user()`/`user()`/`session_user()`/`version()` are still missing on main; rebuild them on the 09-20 session-names path, then close #411.</td></tr>
+<tr class="v-close"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/423">#423</a></td><td>docs: plan capability milestones and frontier worker decisions</td><td class="mono">2026-09-08</td><td>open</td><td><span class="pill close">CLOSE</span></td><td class="conf">high</td><td class="one">#423's capability-ID roadmap and worker-brief plan were overtaken by the version ladder, worker skills and the 09-14 Rust-first ruling; close it.</td></tr>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/643">#643</a></td><td>wip(door-converge-2b): parked kernels, pins and ledger — NOT gated, for run 18</td><td class="mono">2026-09-16</td><td>draft</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">medium-high</td><td class="one">#643's parity is still missing on main, but the branch was never gated, has red CI and six conflicts. Rebuild per clause from main, salvaging its kernels and pins, then close it.</td></tr>
+<tr class="v-close"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/874">#874</a></td><td>feat(tooling): compile repository maps, context, evidence, and documentation checks</td><td class="mono">2026-09-28</td><td>draft</td><td><span class="pill close">CLOSE</span></td><td class="conf">medium</td><td class="one">#874 ports gates main already runs in Python (about 1 s saved) and adds a compiler for a retired harness. Close it, keep the branch.</td></tr>
+<tr class="v-close"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/881">#881</a></td><td>feat(casesens-2): the DataFrame door follows spark.sql.caseSensitive in Rust — bare name…</td><td class="mono">2026-09-28</td><td>open</td><td><span class="pill close">CLOSE</span></td><td class="conf">high</td><td class="one">#881 is done: #968 replaced it by name, merged 10-07 and shipped in v1.5.3 after STAMP-2 met 1.0812. Close it with a link to #968.</td></tr>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/884">#884</a></td><td>fix(casesens-release-diff-1): path writes refuse case-twin columns like Spark; an exact-…</td><td class="mono">2026-09-29</td><td>open</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">medium</td><td class="one">#884, stacked on #881: its write-twin refusal shipped via ATTR-ID-1; only the select-miss error (R-CS2-3) remains. Port about 45 lines plus pins, then close.</td></tr>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/888">#888</a></td><td>fix(nvl-type-coercion-1): the nvl family types and widens like Spark 4.1.2 (v1.5.2)</td><td class="mono">2026-09-29</td><td>draft</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">medium-high</td><td class="one">#888 → REBUILD as NVL-TYPE-COERCION-2 (carded, undispatched); salvage oracle JSON, pins, ledger, review-888 evidence from /tmp; close #888 once the new PR opens.</td></tr>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1000">#1000</a></td><td>fix(using-per-side-keys-1): USING joins show the merged key and answer per-side keys on …</td><td class="mono">2026-10-08</td><td>draft</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">medium</td><td class="one">#1000 is the parked marker approach to USING joins. Close it for USING-SIDE-KEY-DESIGN-1, keep the branch, and copy the verdict corpora out of `/tmp` first.</td></tr>
+<tr class="v-hold"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1011">#1011</a></td><td>feat(mb-4): the streaming facade (surface round against a stub binding; wire-up to follo…</td><td class="mono">2026-10-08</td><td>draft</td><td><span class="pill hold">HOLD</span></td><td class="conf">high</td><td class="one">#1011 holds: OD-1..OD-8 are still unruled and the head is unchanged at 48e961ef with the eighth verify passed. Only 4 conflicts, but one is semantic (#1108's fence order).</td></tr>
+<tr class="v-hold"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1014">#1014</a></td><td>fix(cast-view-agg-nullability-1): an aggregate over a view of a cast arithmetic timestam…</td><td class="mono">2026-10-09</td><td>draft</td><td><span class="pill hold">HOLD</span></td><td class="conf">high</td><td class="one">#1014 stays parked: upstream #26178 and fix PR #26201 are still open, and DataFusion is still 54.1.0. Meanwhile record the issue on main's card.</td></tr>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1037">#1037</a></td><td>fix(ice-ntz-nested-wall-1): an instant written into a nested TIMESTAMP_NTZ leaf stores t…</td><td class="mono">2026-10-12</td><td>draft</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">high</td><td class="one">Parked R-011 vehicle, design superseded by the Fable note; salvage the Spark oracles and attack families, close when the lift unit opens. R-011 refusal (U-8) is still unbuilt.</td></tr>
+<tr class="v-hold"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1038">#1038</a></td><td>fix(ntz-struct-coerce-1): a naive struct member coerced to TIMESTAMP reads as the sessio…</td><td class="mono">2026-10-12</td><td>draft</td><td><span class="pill hold">HOLD</span></td><td class="conf">medium</td><td class="one">Read half of #1037, one unit with it; keep parked. It is the Fable design's localise half; rebase it as the lift's first slice. Meanwhile file the read-side divergence as a registry row.</td></tr>
+<tr class="v-land"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1044">#1044</a></td><td>docs(prod-grade-def-1): define "production grade" with a review rubric</td><td class="mono">2026-10-13</td><td>open</td><td><span class="pill land">LAND</span></td><td class="conf">high</td><td class="one">#1044 is the production-grade definition that four merged artifacts already cite. It is CI green, so merge main (map row only) and land it at clerk band.</td></tr>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1047">#1047</a></td><td>fix(ns-array-apply-in-pandas-refuse-1): applyInPandas refuses a nanosecond array it woul…</td><td class="mono">2026-10-13</td><td>draft</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">high</td><td class="one">Close #1047: the adopted NS-ARRAY-FLOOR-1 design floors where it refuses. Copy its case matrix and fixture first; step 0 contests the ntz-refuse half of the card.</td></tr>
+<tr class="v-rebuild"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1048">#1048</a></td><td>fix(ice-tsns-create-door-1): a new timestamp_ns column needs the user's ask, else refuse…</td><td class="mono">2026-10-13</td><td>draft</td><td><span class="pill rebuild">REBUILD</span></td><td class="conf">medium</td><td class="one">Planner landed; #1048 is no longer rebase-and-verify. It would refuse user casts post-planner. Rebuild as a fresh unit reusing its door files, and give it a card first.</td></tr>
+<tr class="v-land"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1067">#1067</a></td><td>docs(ice-integrity-pins-1): the U-9 design sketch, three integrity pins (for the 2026-10…</td><td class="mono">2026-10-15</td><td>open</td><td><span class="pill land">LAND</span></td><td class="conf">high</td><td class="one">#1067 holds U-9's ruled sketch (79–88) and the only copy of the DUP-1 and op-id cards. Land it at clerk band after a map merge and a DUP-1 status fix.</td></tr>
+<tr class="v-hold"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1070">#1070</a></td><td>ci(aws-acceptance): wire U-10's cross-read step and U-9's integrity legs (owner ruling 8…</td><td class="mono">2026-10-15</td><td>draft</td><td><span class="pill hold">HOLD</span></td><td class="conf">high</td><td class="one">Keep draft: U-9's three test modules and requirements file don't exist; U-10's path moved to `parity/`. Optionally split a U-10-only clerk PR if you want the cross-read live sooner.</td></tr>
+<tr class="v-hold"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1071">#1071</a></td><td>fix(enc-1-residue-1): a refused keyed commit sweeps its staged files; session registrati…</td><td class="mono">2026-10-15</td><td>open</td><td><span class="pill hold">HOLD</span></td><td class="conf">medium-high</td><td class="one">#1071 parked under 121(b) after V1–V5 FAIL (V1 deletes a referenced file, a regression against main). Mark it draft, post a park note, file the 10-14 item 2/3/4/6 acceptance on main.</td></tr>
+<tr class="v-land"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1072">#1072</a></td><td>chore(deps): bump the actions group across 1 directory with 7 updates</td><td class="mono">2026-10-15</td><td>open</td><td><span class="pill land">LAND</span></td><td class="conf">high</td><td class="one">#1072 is safe once one stale test pin (upload-artifact SHA) and the stale `# v10.0.1` comments are fixed. No rust-cache bump, so no cold build. LAND.</td></tr>
+<tr class="v-hold"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1096">#1096</a></td><td>chore(deps): bump the cargo group across 1 directory with 13 updates</td><td class="mono">2026-10-17</td><td>open</td><td><span class="pill hold">HOLD</span></td><td class="conf">high</td><td class="one">#1096 bundles ballista 55 and orc-rust 0.9, which drag in DataFusion 55 and Arrow 59; it fails to compile. HOLD; extend the dependabot ignore and land the four patch bumps lock-only.</td></tr>
+<tr class="v-land"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1098">#1098</a></td><td>docs(artifacts): the Iceberg closeout replan of 2026-10-17</td><td class="mono">2026-10-17</td><td>open</td><td><span class="pill land">LAND</span></td><td class="conf">medium-high</td><td class="one">#1098 files the 10-17 replan as a proposal record. Land it at clerk band. D1–D8 are still yours, and the halt has already slipped its dates.</td></tr>
+<tr class="v-land"><td class="num"><a href="https://github.com/TRO-Wolf/repark/pull/1099">#1099</a></td><td>docs(owner-ruling): Opus 5.0 is banned forever; Opus means claude-opus-5-5, byte-preserv…</td><td class="mono">2026-10-17</td><td>open</td><td><span class="pill land">LAND</span></td><td class="conf">high</td><td class="one">#1099 files your permanent Opus 5.0 ban and a gate that main already passes. Resolve one lessons.md append conflict, confirm the block's wording, and land it with fork #369.</td></tr>
+</tbody></table></div>
+<h2>Close</h2><ol class="group"><li><a href="#pr-423">#423</a> <span class="t">docs: plan capability milestones and frontier worker decisions</span><br>#423's capability-ID roadmap and worker-brief plan were overtaken by the version ladder, worker skills and the 09-14 Rust-first ruling; close it.</li><li><a href="#pr-874">#874</a> <span class="t">feat(tooling): compile repository maps, context, evidence, and documen</span><br>#874 ports gates main already runs in Python (about 1 s saved) and adds a compiler for a retired harness. Close it, keep the branch.</li><li><a href="#pr-881">#881</a> <span class="t">feat(casesens-2): the DataFrame door follows spark.sql.caseSensitive i</span><br>#881 is done: #968 replaced it by name, merged 10-07 and shipped in v1.5.3 after STAMP-2 met 1.0812. Close it with a link to #968.</li></ol>
+<h2>Land</h2><ol class="group"><li><a href="#pr-1044">#1044</a> <span class="t">docs(prod-grade-def-1): define "production grade" with a review rubric</span><br>#1044 is the production-grade definition that four merged artifacts already cite. It is CI green, so merge main (map row only) and land it at clerk band.</li><li><a href="#pr-1067">#1067</a> <span class="t">docs(ice-integrity-pins-1): the U-9 design sketch, three integrity pin</span><br>#1067 holds U-9's ruled sketch (79–88) and the only copy of the DUP-1 and op-id cards. Land it at clerk band after a map merge and a DUP-1 status fix.</li><li><a href="#pr-1072">#1072</a> <span class="t">chore(deps): bump the actions group across 1 directory with 7 updates</span><br>#1072 is safe once one stale test pin (upload-artifact SHA) and the stale `# v10.0.1` comments are fixed. No rust-cache bump, so no cold build. LAND.</li><li><a href="#pr-1098">#1098</a> <span class="t">docs(artifacts): the Iceberg closeout replan of 2026-10-17</span><br>#1098 files the 10-17 replan as a proposal record. Land it at clerk band. D1–D8 are still yours, and the halt has already slipped its dates.</li><li><a href="#pr-1099">#1099</a> <span class="t">docs(owner-ruling): Opus 5.0 is banned forever; Opus means claude-opus</span><br>#1099 files your permanent Opus 5.0 ban and a gate that main already passes. Resolve one lessons.md append conflict, confirm the block's wording, and land it with fork #369.</li></ol>
+<h2>Rebuild</h2><ol class="group"><li><a href="#pr-411">#411</a> <span class="t">fix(spark): support session functions and reject scalar window use</span><br>SQL-door `current_user()`/`user()`/`session_user()`/`version()` are still missing on main; rebuild them on the 09-20 session-names path, then close #411.</li><li><a href="#pr-643">#643</a> <span class="t">wip(door-converge-2b): parked kernels, pins and ledger — NOT gated, fo</span><br>#643's parity is still missing on main, but the branch was never gated, has red CI and six conflicts. Rebuild per clause from main, salvaging its kernels and pins, then close it.</li><li><a href="#pr-884">#884</a> <span class="t">fix(casesens-release-diff-1): path writes refuse case-twin columns lik</span><br>#884, stacked on #881: its write-twin refusal shipped via ATTR-ID-1; only the select-miss error (R-CS2-3) remains. Port about 45 lines plus pins, then close.</li><li><a href="#pr-888">#888</a> <span class="t">fix(nvl-type-coercion-1): the nvl family types and widens like Spark 4</span><br>#888 → REBUILD as NVL-TYPE-COERCION-2 (carded, undispatched); salvage oracle JSON, pins, ledger, review-888 evidence from /tmp; close #888 once the new PR opens.</li><li><a href="#pr-1000">#1000</a> <span class="t">fix(using-per-side-keys-1): USING joins show the merged key and answer</span><br>#1000 is the parked marker approach to USING joins. Close it for USING-SIDE-KEY-DESIGN-1, keep the branch, and copy the verdict corpora out of `/tmp` first.</li><li><a href="#pr-1037">#1037</a> <span class="t">fix(ice-ntz-nested-wall-1): an instant written into a nested TIMESTAMP</span><br>Parked R-011 vehicle, design superseded by the Fable note; salvage the Spark oracles and attack families, close when the lift unit opens. R-011 refusal (U-8) is still unbuilt.</li><li><a href="#pr-1047">#1047</a> <span class="t">fix(ns-array-apply-in-pandas-refuse-1): applyInPandas refuses a nanose</span><br>Close #1047: the adopted NS-ARRAY-FLOOR-1 design floors where it refuses. Copy its case matrix and fixture first; step 0 contests the ntz-refuse half of the card.</li><li><a href="#pr-1048">#1048</a> <span class="t">fix(ice-tsns-create-door-1): a new timestamp_ns column needs the user'</span><br>Planner landed; #1048 is no longer rebase-and-verify. It would refuse user casts post-planner. Rebuild as a fresh unit reusing its door files, and give it a card first.</li></ol>
+<h2>Hold</h2><ol class="group"><li><a href="#pr-1011">#1011</a> <span class="t">feat(mb-4): the streaming facade (surface round against a stub binding</span><br>#1011 holds: OD-1..OD-8 are still unruled and the head is unchanged at 48e961ef with the eighth verify passed. Only 4 conflicts, but one is semantic (#1108's fence order).</li><li><a href="#pr-1014">#1014</a> <span class="t">fix(cast-view-agg-nullability-1): an aggregate over a view of a cast a</span><br>#1014 stays parked: upstream #26178 and fix PR #26201 are still open, and DataFusion is still 54.1.0. Meanwhile record the issue on main's card.</li><li><a href="#pr-1038">#1038</a> <span class="t">fix(ntz-struct-coerce-1): a naive struct member coerced to TIMESTAMP r</span><br>Read half of #1037, one unit with it; keep parked. It is the Fable design's localise half; rebase it as the lift's first slice. Meanwhile file the read-side divergence as a registry row.</li><li><a href="#pr-1070">#1070</a> <span class="t">ci(aws-acceptance): wire U-10's cross-read step and U-9's integrity le</span><br>Keep draft: U-9's three test modules and requirements file don't exist; U-10's path moved to `parity/`. Optionally split a U-10-only clerk PR if you want the cross-read live sooner.</li><li><a href="#pr-1071">#1071</a> <span class="t">fix(enc-1-residue-1): a refused keyed commit sweeps its staged files; </span><br>#1071 parked under 121(b) after V1–V5 FAIL (V1 deletes a referenced file, a regression against main). Mark it draft, post a park note, file the 10-14 item 2/3/4/6 acceptance on main.</li><li><a href="#pr-1096">#1096</a> <span class="t">chore(deps): bump the cargo group across 1 directory with 13 updates</span><br>#1096 bundles ballista 55 and orc-rust 0.9, which drag in DataFusion 55 and Arrow 59; it fails to compile. HOLD; extend the dependabot ignore and land the four patch bumps lock-only.</li></ol>
+<h2>The cards</h2>
+<p class="sub">Each card follows one schema: what it does, the record, main since, verdict, confidence, one line. Open a card for the evidence.</p>
+<details id="pr-411" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#411</b> fix(spark): support session functions and reject scalar window use</summary><div class="body">
+<p>claude-opus-5-5 · head <code>02c8ac99</code> · base <code>main</code> · open (not draft) · opened 2026-09-06 · last push 2026-09-08 · GitHub reports +18150/-2176 over 160 files (stale: it counts main content carried by the 09-08 reconciliation merge); the real three-dot diff vs main (merge base <code>f00ed9ea</code>, 2026-09-07) is 15 files +1271/-11 · split: Rust ~740 lines (<code>repark-functions/src/session_functions.rs</code> 215, <code>repark-spark</code> <code>spark_ast.rs</code>/<code>normalize.rs</code> + 365 lines of Rust tests), Python tests 196 (one new root-level file), docs/maps/ledger ~335.</p>
+<h2>What it does</h2>
+<p>Adds four Rust UDFs (<code>user</code>, <code>current_user</code>, <code>session_user</code> answering <code>repark</code>; <code>version</code> answering <code>repark-&lt;workspace version&gt;</code>, Utf8 non-null) in a new <code>crates/repark-functions/src/session_functions.rs</code> and registers them on the Spark SQL door. The parenthesised user calls, which failed to parse, are accepted through a token-sniff-gated retry of the whole statement on the Databricks parse route (<code>spark_ast.rs</code>, <code>normalize.rs</code>). A zero-argument session scalar with <code>OVER</code> raises <code>UNSUPPORTED_EXPR_FOR_WINDOW</code> / SQLSTATE 42P20. Files registry rows <code>SQL-SESSION-FN-1</code> and <code>SQL-VERSION-1</code> in <code>docs/spark-sql-iceberg-parity.md</code>, a completed ledger (C-001..C-005, live PySpark 4.1.2 oracle table), and <code>python/repark/tests/test_sql_door_session_fn_1.py</code>. The PR body itself says the whole-statement retry, a dead compound-name arm and thin output-name coverage are follow-ups.</p>
+<h2>Record</h2>
+<ul>
+<li>rulings.md: "parked unreviewed at the campaign pause; clean, uncritiqued" (2026-09-06), no later ruling. Unverified in the repo: main carries no mention of #411 or SQL-DOOR-SESSION-FN-1 outside <code>docs/artifacts/test-suite-rundown-2026-10-19.html</code> (which lists #411 among open branches whose root-level test files must move into a subsystem directory on pickup).</li>
+<li>Partly contradicted: the 09-08 commits (<code>3a743e15</code>, <code>02c8ac99</code>, authored by John) and the PR body claim an independent GLM review, Sol remediation and a Grok re-review with no blocking findings, plus <code>make verify</code>/<code>make preflight</code> and 22 live Spark cells green. No GitHub reviews or comments exist (API: 0 reviews, 0 comments). No Opus verifier ever ran.</li>
+<li>Executor: Muse Spark (muse-spark-1.3) for the four 09-06 commits (<code>Authored-By</code> trailers).</li>
+<li>CI on the head: all required checks pass (runs from 2026-09-08; stale against today's main).</li>
+<li>Ledger: the PR's ledger sits only on the branch (<code>task/ledgers/completed/sql-door-session-fn-1-ledger.md</code>); main has none.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li>The problem is NOT fixed on main (by reading, not running):</li>
+<li><code>python/repark/tests/sql/test_spark_sql_grammar_1.py</code> holds <code>Q14_SESSION_NAMES_REFUSING = ["current_user", "user", "session_user"]</code> with a pin asserting <code>SELECT &lt;name&gt;()</code> raises <code>AnalysisException</code> on the SQL door ("the SQL door still refuses").</li>
+<li><code>task/ledgers/staging/spark-sql-grammar-1-ledger.md</code> C-010 is OPEN: the paren session-name forms were "handed to 17a". <code>python/repark/tests/map.md</code> (ICE-CATALOG-SESSION-1, 2026-09-20) says the user names "still refuse".</li>
+<li>Main has no Rust <code>version</code> UDF, so <code>SELECT version()</code> on the SQL door likely still answers DataFusion's string (the ledger measured <code>Apache DataFusion 54.1.0</code> before the fix). Not re-measured today.</li>
+<li><code>UNSUPPORTED_EXPR_FOR_WINDOW</code> appears nowhere on main. <code>docs/spark-sql-iceberg-parity.md</code> has no <code>SQL-SESSION-FN-1</code> / <code>SQL-VERSION-1</code> row and no current_user row.</li>
+<li>Related work on main that changes the right shape of the fix:</li>
+<li><code>cbe6ec97</code> ICE-CATALOG-SESSION-1 added <code>crates/repark-functions/src/session_names.rs</code> and <code>crates/repark-spark/src/extension/session_catalog.rs</code>, which answer <code>current_catalog()</code>/<code>current_database()</code>/<code>current_schema()</code> on the SQL door. That is the natural home for the user names; the PR's parallel <code>session_functions.rs</code> and its whole-statement retry predate it.</li>
+<li><code>059fbcf7</code> (#644) added <code>crates/repark-spark/src/bare_nullary.rs</code> for the bare spellings.</li>
+<li><code>50f03f64</code> (#654) gives unknown functions <code>UNRESOLVED_ROUTINE</code> on both doors.</li>
+<li>The Python door already answers all four (<code>python/repark/src/repark/spark/functions_session.py</code>, a Python-synthesized literal; <code>task/fnp-0-census/facade-classification.json</code> flags this as an "OWNERSHIP GAP"). The Rust-first ruling favours moving it into Rust, which is what this PR's kernels do.</li>
+<li>Test layout: the new root-level <code>python/repark/tests/test_sql_door_session_fn_1.py</code> must move into <code>python/repark/tests/sql/</code> after #1113.</li>
+<li><code>git merge-tree main pr-411</code>: <strong>5 conflicts</strong>. <code>crates/repark-functions/src/lib.rs</code>, <code>crates/repark-spark/src/normalize.rs</code> (986 lines on main), <code>crates/repark-spark/src/spark_ast.rs</code>, <code>crates/repark-spark/src/tests/mod.rs</code>, <code>docs/spark-sql-iceberg-parity.md</code>.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> The intent is still needed: Spark answers <code>user()</code>/<code>current_user()</code>/<code>session_user()</code>/<code>version()</code> and main's SQL door refuses or answers wrongly. This PR is the wrong vehicle. It has five conflicts in the parse path, a whole-statement retry its own body flags as a follow-up, a module that duplicates the session-name UDF pattern main grew 09-20, and it was never reviewed against today's main.</p>
+<p>Salvageable:
+- the live-oracle table and C-001..C-005 wording from the branch ledger;
+- the four UDF kernels in <code>session_functions.rs</code> (fold them into <code>session_names.rs</code>);
+- the Rust pin cases in <code>crates/repark-spark/src/tests/session_functions.rs</code> and the facade cells in <code>test_sql_door_session_fn_1.py</code> (moved to <code>tests/sql/</code>);
+- the two registry rows;
+- the <code>OVER</code> refusal (<code>UNSUPPORTED_EXPR_FOR_WINDOW</code>).</p>
+<p>The fresh unit is unnamed in the record; it extends ICE-CATALOG-SESSION-1's session-name path, flips the <code>Q14_SESSION_NAMES_REFUSING</code> pins, and closes C-010 of <code>spark-sql-grammar-1</code>. Effort: Sonnet or Muse executor with one verifier, small (four nullary UDFs on an existing path). Close #411 with a link from the new PR.</p>
+<h2>Confidence</h2>
+<p>High that the gap is still open on main (pins assert the refusal). Medium on REBUILD over LAND. If a rebase onto <code>session_names.rs</code> proves mechanical and the retry can be dropped because main's executing parse now accepts <code>user()</code>, re-landing this branch would be cheaper.</p>
+<h2>One line for the owner</h2>
+<p>SQL-door <code>current_user()</code>/<code>user()</code>/<code>session_user()</code>/<code>version()</code> are still missing on main; rebuild them on the 09-20 session-names path, then close #411.</p></div></details>
+<details id="pr-423" class="card v-close"><summary><span class="pill close">CLOSE</span> <b>#423</b> docs: plan capability milestones and frontier worker decisions</summary><div class="body">
+<p>claude-opus-5-5 · head <code>3f170165</code> · base <code>main</code> · open (not draft) · opened 2026-09-08 · last push 2026-09-08 (commits dated 2026-09-07) · +888/-65 · 14 files · docs only (Markdown: PROJECT.md, docs/release.md, a roadmap rewrite, one SEPMO plan, three completed ledgers, maps).</p>
+<h2>What it does</h2>
+<p>Three proposals in one PR:
+1. <strong>Capability roadmap.</strong> Rewrites <code>task/roadmap/epic-term/release-roadmap-2026-08-29.md</code> to plan by 27 stable capability IDs instead of future version numbers. Adds a "Capability milestones and release assembly" section to <code>docs/release.md</code> (versions picked at release assembly, no calendar cadence). Repoints <code>PROJECT.md</code> (for example ML becomes "CAP-ML").
+2. <strong>Frontier worker plan.</strong> Adds <code>docs/sepmo/frontier-worker-decision-plan-2026-09-07.md</code>: two proposed skills (<code>prepare-worker-brief</code>, <code>review-worker-brief</code>), a minimum worker brief, a "Terra" execution route, a qualification pilot, and the decision register FW-1..FW-8, all open.
+3. <strong>FW-8 Rust-first placement.</strong> Rust owns reusable production behavior and Python stays a thin layer, to be adopted later as an AGENTS amendment.</p>
+<p>It files three completed ledgers for these. The body says nothing is installed or authorized.</p>
+<h2>Record</h2>
+<ul>
+<li>rulings.md: no ruling on record. Confirmed: main mentions neither #423 nor its ledgers, and FW-1..FW-8 / capability IDs appear nowhere on main.</li>
+<li>Reviews: 0 GitHub reviews, 0 comments. The body claims a sequential Actor–Critic pass recorded in the three branch ledgers; not checked further.</li>
+<li>CI on the head: green (2026-09-08 runs).</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Capability IDs, superseded by the opposite choice.</strong></li>
+<li>Main kept the version ladder and strengthened it. <code>PROJECT.md</code> has "Primary outcome by release line" (1.5.x Iceberg parity, 1.6 Postgres, 1.7 micro-batch CDC, 1.8 <code>repark-io</code>). The ladder change of 2026-09-13 is recorded in <code>task/roadmap/epic-term/map.md</code>, and the 2026-10-01 crate layout through 1.8 is <code>f051509f</code>.</li>
+<li><code>release-roadmap-2026-08-29.md</code> on main still carries version headings, edited since by <code>493d123f</code>, <code>bc825c24</code>, <code>f051509f</code>, <code>ef6d234f</code> and <code>8bc9d83b</code>.</li>
+<li>Releases shipped as numbered lines v1.5.1 through v1.5.5 with v1.5.6 in flight (STATUS.md).</li>
+<li><strong>Frontier worker plan, overtaken in practice.</strong></li>
+<li>Worker dispatch now runs through the worker skills (grok-, muse-, codex-worker) and graded work orders (<code>task/wo/TEMPLATE.md</code>, grades A/B/C, 2026-10-01).</li>
+<li>The brief templates were adopted 2026-10-11 (from rulings memory; not verified in the repo).</li>
+<li>No "Terra" adapter exists. The pilot was never authorized.</li>
+<li><strong>FW-8 Rust-first, decided another way.</strong></li>
+<li>The owner made Rust-first a standing instruction on 2026-09-14 ("new kernels, functions and planner rules land in Rust, Python stays a thin facade"). It is recorded in <code>task/roadmap/mid-term/map.md</code> (overnight runbook entry) and cited across the tree's maps.</li>
+<li>The only part still ahead of main: AGENTS.md itself does not state Rust-first. A grep of AGENTS.md, <code>.agents/skills/engineering-method</code>, and <code>docs/adr</code> finds only ADR-0004's "bindings-as-thin-adapter". That is a one-line AGENTS amendment if the owner wants it, not this PR.</li>
+<li><code>git merge-tree main pr-423</code>: <strong>3 conflicts</strong>: <code>PROJECT.md</code>, <code>docs/release.md</code>, <code>task/roadmap/epic-term/release-roadmap-2026-08-29.md</code>.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>CLOSE.</strong> Every proposal on it was overtaken:
+- the owner kept and extended the version ladder instead of capability IDs;
+- worker briefs and dispatch grew their own skills and work-order grades;
+- Rust-first was ruled directly on 2026-09-14.</p>
+<p>The three conflicted files are the core of the PR, so the roadmap rewrite cannot be salvaged as is.</p>
+<p>Optional things to copy before closing (owner's choice, none required):
+- the <code>docs/release.md</code> paragraph "a shipped slice does not complete its parent capability; a behavior-changing correction needs an explicit compatibility assessment" (<code>git show pr-423:docs/release.md</code>);
+- a one-line Rust-first clause for AGENTS.md, drawn from FW-8, filed as its own docs unit.</p>
+<h2>Confidence</h2>
+<p>High. It would flip only if the owner still wants capability IDs as a planning layer above the version ladder. Nothing on main since 09-08 points that way.</p>
+<h2>One line for the owner</h2>
+<h1>423's capability-ID roadmap and worker-brief plan were overtaken by the version ladder, worker skills and the 09-14 Rust-first ruling; close it.</h1></div></details>
+<details id="pr-643" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#643</b> wip(door-converge-2b): parked kernels, pins and ledger — NOT gated, for run 18</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>f9ea0757</code> · base <code>main</code> (merge-base <code>b8e79fca</code>, 2026-09-16) · <strong>draft</strong> · opened 2026-09-16 · last push 2026-09-16 19:55 EDT · real diff <code>main...pr-643</code>: +4411/-430, 64 files (Rust 36 files +3117/-291; Python 12 files +683/-74; docs/maps 15 files +603/-57; other 1). GitHub's counts happen to match.</p>
+<h2>What it does</h2>
+<p>It is the DOOR-CONVERGE-2b unit, built from Devin SWE-2's round 1 plus a Muse round 2. It adds Spark-shaped kernels for decimal-scale <code>round</code>/<code>bround</code> and <code>ceil</code>/<code>ceiling</code>/<code>floor</code> with a scale argument (<code>spark_round.rs</code>, 878 lines), <code>date_part</code>/<code>extract</code> seconds as <code>decimal(8,6)</code> with <code>INVALID_EXTRACT_FIELD</code> refusals (<code>spark_date_part.rs</code>, <code>analyzer/date_part.rs</code>), and three-argument <code>like</code>/<code>ilike</code> plus <code>LIKE … ESCAPE</code> with <code>INVALID_ESCAPE_CHAR</code> (<code>spark_like.rs</code>, <code>analyzer/like_escape.rs</code>). It also adds repark-owned <code>array</code>/<code>slice</code>/<code>array_repeat</code> kernels with Spark's wider-common element type and element <code>containsNull</code> (<code>collection/spark_array.rs</code> 800 lines, <code>collection/coerce.rs</code>), and makes <code>IS DISTINCT FROM</code> and literal <code>VALUES</code> rows non-null. It cuts <code>EXPECTED_DIVERGENCES</code> from 15 to 4 and adds <code>test_door_converge_2b.py</code> (599 lines, 120 oracle legs). Ledger: <code>task/ledgers/staging/door-converge-2b-ledger.md</code>, with C-001 to C-007 marked PROVEN by the actor.</p>
+<h2>Record</h2>
+<ul>
+<li>2026-09-16 (run 17c): parked as a draft and never gated. Devin ran 3.5 h and committed nothing, so the orchestrator committed the tree. Verified in <code>task/roadmap/mid-term/overnight-report-2026-09-16-17c.md</code> lines 17, 30 and 114.</li>
+<li>2026-09-16 (run 18c): rebased onto main after BL-20 (#656), then a Muse round 2. It was parked again for 25 whole-facade failures outside its fence (21 in ML <code>array_element</code> lowering, 4 in <code>fnp_gen_1</code> union nested unification) and because <code>expr_fn.rs</code> reached 1003 lines. Verified in <code>overnight-report-2026-09-16-18c.md</code> lines 54–61 and 228–239. Recommendation Q-18c-2 was a small unit to fix the ML <code>array_element</code> lowering first, then gate and review #643. No unit on main carries out Q-18c-2.</li>
+<li>Devin was retired 2026-10-05 (rulings.md; I did not verify this in the repo, and it does not affect the verdict).</li>
+<li>Reviews: none. No PR comments and no reviews (checked with <code>gh</code>). No verifier or critic round has ever run on it.</li>
+<li>CI on the head: <strong>red</strong>. <code>Python</code>, <code>Repo guards (map.md + …)</code> and <code>build + import smoke</code> fail.</li>
+<li>Ledger state on main: the ledger exists only on the branch. Main has no row for DOOR-CONVERGE-2b outside run reports and <code>task/roadmap/mid-term/map.md:405</code>. The record holds no later owner ruling.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Landed another way:</strong> only <code>bround</code>. FNP-MATH-1 (<code>a6d4c0db</code>, 2026-09-22) added <code>crates/repark-functions/src/spark_math/bround.rs</code> (HALF_EVEN; double, decimal and integral; negative scale) with its facade half. The branch's <code>bround</code> arm in <code>spark_round.rs</code> now duplicates that kernel.</li>
+<li><strong>Not landed (checked with <code>git grep</code> on main):</strong></li>
+<li>Main's <code>crates/repark-python/src/column/door_parity_tests.rs</code> still lists <code>ceil</code>, <code>ceiling</code>, <code>floor</code>, <code>round</code>, <code>like</code>, <code>ilike</code>, <code>sec</code>, <code>csc</code>, <code>slice</code>, <code>array_repeat</code>, <code>date_part</code>, <code>datepart</code>, <code>array</code> and <code>array_element</code> as expected divergences.</li>
+<li><code>INVALID_ESCAPE_CHAR</code>, <code>INVALID_EXTRACT_FIELD</code>, <code>__repark_date_part__</code>, <code>__repark_ceil__</code>, <code>rewrite_values_schema</code> and <code>_from_is_distinct_from_operand</code> appear nowhere on main.</li>
+<li><code>ARRAY-LITERAL-CONTAINSNULL-1</code> is still an open divergence in <code>docs/spark-sql-iceberg-parity.md:9048</code>; the branch marks it FIXED.</li>
+<li>Main's <code>analyzer/like_escape.rs</code> only refuses a trailing escape (FN-LIKE-ESCEND-1). It has no three-argument form.</li>
+<li><strong>Files rewritten under it:</strong> main's <code>expr_fn.rs</code> is already 1001 lines, held at a named baseline in <code>scripts/check_rust_file_size.py:64</code>. The branch adds 98 lines, so it needs a split. <code>spark_rewrites.rs</code> became <code>spark_rewrites/mod.rs</code>. The facade tests moved into subdirectories on 10-19 (#1113). <code>test_door_converge_2b.py</code> would still be collected at the flat root, but it must move to <code>python/repark/tests/functions/</code> (<code>docs/artifacts/test-suite-rundown-2026-10-19.html:64</code>).</li>
+<li><strong>Tests already on main:</strong> none of its 120 legs.</li>
+<li><code>git merge-tree main pr-643</code>: <strong>6 conflicts</strong>:</li>
+<li><code>crates/repark-functions/src/lib.rs</code></li>
+<li><code>crates/repark-functions/src/spark_result_types.rs</code></li>
+<li><code>crates/repark-spark/src/spark_literals.rs</code></li>
+<li><code>crates/repark-spark/src/spark_rewrites/mod.rs</code></li>
+<li><code>crates/repark-spark/src/tests/spark_dialect.rs</code></li>
+<li><code>docs/spark-sql-iceberg-parity.md</code></li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> Main still needs the parity it targets: decimal-scale round/ceil/floor, <code>date_part</code> seconds, three-argument like/ilike, array literal widths and <code>containsNull</code>, and non-null <code>IS DISTINCT FROM</code>/<code>VALUES</code>. Ten names are still listed as divergences on main. This PR is the wrong vehicle for five reasons:
+1. It was never gated and never reviewed.
+2. CI is red, with 25 known facade reds.
+3. It has six conflicts and is 33 days stale.
+4. It has a file-size overrun.
+5. It duplicates <code>bround</code>.</p>
+<p>What can be salvaged:
+- <strong>Kernels:</strong> <code>spark_round.rs</code> (drop the <code>bround</code> arm and reuse <code>spark_math/bround.rs</code>), <code>spark_date_part.rs</code>, <code>spark_like.rs</code>, <code>collection/spark_array.rs</code>, <code>collection/coerce.rs</code>, <code>analyzer/{date_part,subscript,like_escape}.rs</code>.
+- <strong>The pin file</strong> <code>test_door_converge_2b.py</code>. Its oracle cells are the spec, and the <code>/tmp/oc-worker</code> fixture files it cites are likely gone.
+- <strong>The ledger:</strong> clauses C-001 to C-007 and finding D-1 (first-pass <code>TypeCoercion</code> freezes <code>CAST(array(…) AS List(Int64))</code> before literal narrowing).</p>
+<p>The record names no fresh unit. Suggested shape: one unit per clause family (round/ceil, date_part, like, arrays), each from main, after the Q-18c-2 <code>array_element</code> lowering fix. The record says nothing on scheduling against the Iceberg-first priority. Close #643 with a link from the first new unit's PR.</p>
+<h2>Confidence</h2>
+<p>Medium-high. Every on-main check comes from reading with <code>git grep</code> and <code>git log</code>. I ran nothing. One fact would flip the verdict: an unread unit on main that already gives <code>round</code>/<code>date_part</code>/<code>like</code> the Spark types under other names. In that case the verdict is CLOSE. The divergence list on main makes that unlikely.</p>
+<h2>One line for the owner</h2>
+<h1>643's parity is still missing on main, but the branch was never gated, has red CI and six conflicts. Rebuild per clause from main, salvaging its kernels and pins, then close it.</h1></div></details>
+<details id="pr-874" class="card v-close"><summary><span class="pill close">CLOSE</span> <b>#874</b> feat(tooling): compile repository maps, context, evidence, and documentation checks</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>064ac568</code> · base <code>main</code> (merge-base <code>adc26586</code>, 2026-09-28) · <strong>draft</strong> · opened 2026-09-28 · last push 2026-09-28 19:50 EDT · real diff <code>main...pr-874</code>: +10012/-75, 71 files (Rust 29 files +7360, all new under <code>scripts/repo-tool/</code>; Python 5 files +661/-15; docs/maps 22 files +1299/-21; other 15 files +692/-39, which covers the standalone <code>Cargo.lock</code>/<code>Cargo.toml</code>, the Makefile, CI workflows, Dependabot and JSON policy). GitHub's counts match. Main is 181 commits ahead of the merge-base.</p>
+<h2>What it does</h2>
+<p>It adds a standalone Rust workspace, <code>scripts/repo-tool/</code>, with its own lockfile. The tool:
+- snapshots the worktree, index or revision;
+- checks and regenerates <code>map.md</code> inventories;
+- assembles "approved context packets" for agents;
+- records clause/pin traces, lifecycle views and typed gate/critic evidence;
+- runs a local workflow state machine that emits intents but never dispatches.</p>
+<p>It also ports three Python gates to Rust: docs-links, ledger grammar and the map check. The Python scripts stay as differential references, and a 251-line Python fallback (<code>scripts/repo-tool-fallback.py</code>) runs when Cargo cannot build. The Makefile <code>ci</code>, the pre-commit hook and <code>ci.yml</code> are rewired to call <code>scripts/repo-tool.sh</code>. <code>AGENTS.md</code> gains a managed-map exception, under which an unchanged generated inventory excuses the same-change map edit.</p>
+<h2>Record</h2>
+<ul>
+<li>Owner 2026-09-28 (rulings.md, and the orchestrator's memory <code>v1-5-1-rulings-2026-09-28</code>): run ONE Opus critic on #874 and hold every other decision (merge timing, evidence-command adoption, brief updates). Later that day: "#874 and stale-PR triage TABLED until the owner can focus." The repo itself does not mention #874 or the repo-tool anywhere on main, so this rests on the orchestrator's record alone.</li>
+<li><strong>The Opus critic</strong> (memory <code>opus-verifier-catch-rate</code>) found C874-1 (S1): the Rust map check was silently weaker than the Python one because pulldown-cmark ran without tables, so links in table cells went unchecked. Same-family Sol review and CI had missed it. It also filed C874-2/3/4 (S3: tracked backslashes, unavailable Cargo, an unaudited standalone lockfile) and C874-5 (S3: conflicting map-lockstep policy).</li>
+<li><strong>Remediation <code>26e2f477</code></strong> (same day): fixed C874-1 to C874-4. <code>maps.rs:432</code> now parses with <code>ENABLE_TABLES</code> and keeps the legacy line scan, backed by differential real-tree tests. The fixes were re-attested by fresh Sol critics, not by Opus. <strong>No Opus re-verify of the S1 fix exists.</strong> Ledger erratum: <code>task/ledgers/completed/repo-compiler-ledger.md</code> on the branch only.</li>
+<li><strong>C874-5 is still open:</strong> an owner policy ruling is required before merge. The branch's <code>AGENTS.md</code> exception conflicts with <code>AGENTS.md:252</code>, <code>PROJECT.md:85</code>, <code>CONTRIBUTING.md:32–34</code>, <code>DEVELOPMENT.md:47/110</code>, the compact-context-docs skill and the SEPMO binding manifest. No such ruling is on record.</li>
+<li>No PR comments or reviews on GitHub, so the critic findings live only in the branch ledger and the PR body. CI on <code>064ac568</code> was all green on 09-28; that CI was against a main that is now 181 commits old.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li>Main did <strong>not</strong> grow a Rust port. <code>git ls-tree</code> finds no <code>repo-tool</code> on main, and nothing else on main mentions it. But every check #874 ports was already on main before it opened, and all still run:</li>
+<li><code>scripts/sync_map_md.py</code>: added 2026-08-22 (#214); PR-level lockstep added 09-20 (<code>e26d1349</code>).</li>
+<li><code>scripts/check_map_md.sh</code>: added 08-06; same 09-20 change.</li>
+<li><code>scripts/check_docs_links.py</code>: 09-09 (#437); fixed 09-10 (#483).</li>
+<li><code>scripts/check_ledger_grammar.py</code>: 08-23 (#222).</li>
+<li>Main's <code>make ci</code> runs <code>check-ledger-grammar</code>, <code>check-docs-links</code>, <code>check-ledgers</code> and <code>check-map-sync</code>. Main tracks <strong>411</strong> <code>map.md</code> files (counted).</li>
+<li><strong>The speed case is small:</strong> per the PR body, docs-links goes 1.36 s → 0.31 s, ledger grammar 0.35 s → 0.16 s, and maps 0.25 s → 0.18 s. That saves about 1.3 s per local run, on a CI whose long pole is about 20 minutes of Rust test.</li>
+<li><strong>The compiler half has no consumer:</strong> the context, evidence and workflow intent features served a tick-driven harness. Since 2026-09-24 the owner orchestrates directly with no tick lanes (memory <code>process-mode</code>), and the PR body itself defers harness dispatch.</li>
+<li>Main has since rewritten CI and Makefile wiring under it: <code>ci.yml</code> (5 commits) and Makefile test targets (nextest #1105, xdist #1104, CI-1 shards, the pytest config).</li>
+<li><code>git merge-tree main pr-874</code>: <strong>2 conflicts</strong>, <code>.github/workflows/ci.yml</code> and <code>python/repark-parity/tests/test_map_pr_gate_1.py</code>. The Makefile auto-merges, but its <code>ci</code> target swaps <code>check-docs-links</code>/<code>check-ledger-grammar</code> for <code>check-repo-docs</code>, so a rebase must re-audit the wiring by hand.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>CLOSE.</strong> Main already has every check this PR would add, in Python, and they pass over 411 maps. The Rust port buys about a second, and it costs:
+- a second Cargo workspace and lockfile to audit;
+- a Python fallback;
+- two implementations of each gate to keep in step.</p>
+<p>The compiler and workflow half serves an orchestration mode the owner retired on 09-24. Landing it would also need an Opus re-verify of the S1 map fix, the C874-5 policy ruling, and a rebase across 181 commits of CI changes. That is Opus-tier effort for no product gain.</p>
+<p>Before closing:
+1. Copy the C874-5 policy-conflict table into <code>task/lessons.md</code> or a docs-lifecycle note if the owner wants the lockstep contradiction tracked. The conflict exists only if the exception lands, so this is optional.
+2. Keep the branch <code>codex/repo-compiler</code> (do not delete it) in case the context-packet compiler is revived for a future harness.</p>
+<h2>Confidence</h2>
+<p>Medium. One fact would flip the verdict to HOLD: the owner still wants the agent context/evidence compiler for a planned harness, for example for Muse/Grok briefs. In that case the check ports could be split off and dropped while the compiler waits.</p>
+<h2>One line for the owner</h2>
+<h1>874 ports gates main already runs in Python (about 1 s saved) and adds a compiler for a retired harness. Close it, keep the branch.</h1></div></details>
+<details id="pr-881" class="card v-close"><summary><span class="pill close">CLOSE</span> <b>#881</b> feat(casesens-2): the DataFrame door follows spark.sql.caseSensitive in Rust — bare names, withColumn(s), subsets, aliased self-joins</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>121c4bd0</code> · base <code>main</code> (merge-base <code>adc26586</code>, 2026-09-28) · open, not draft · opened 2026-09-28 · last push 2026-09-29 08:42 EDT · <code>main...pr-881</code>: +7494/-427, 39 files (Rust 13 files +2716/-286; Python and oracle JSON 14 files +3318/-127; docs, maps and ledger 12 files +1460/-14). 36 commits. GitHub reports CONFLICTING. Main is 181 commits ahead of the merge-base.</p>
+<h2>What it does</h2>
+<p>The PR moves DataFrame-door name matching into Rust under <code>repark_common::names::NameRule</code>, so the door follows <code>spark.sql.caseSensitive</code>:
+- S1: bare names resolve in Rust. Under <code>true</code> a wrong-case name refuses, and qualified strings bind.
+- S2: <code>withColumn</code>, <code>withColumns</code> and <code>withColumnRenamed</code> follow the setting, and folded duplicate keys refuse.
+- S3: the <code>fillna</code>/<code>dropna</code> subsets and <code>dropDuplicates</code> resolve in Rust.
+- S4: DataFrame-alias qualified names bind in join conditions, so the owner's self-join answers as Spark (R-CS2-1).</p>
+<p>It adds <code>written_names.rs</code>/<code>.py</code>, <code>predicate_names.rs</code>, <code>sort_names.rs</code>, <code>resolver_names.rs</code>, a 758-line Spark oracle, <code>test_casesens_2.py</code> and a 993-line <code>test_casesens_2_diffprobe.py</code>. The PR body leaves "DIFF-PROBE against main and a scoped Opus re-verify" still to run.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Owner 2026-09-29:</strong> moved to v1.5.2. Verified in the PR's only comment and in <code>task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md:44</code>.</li>
+<li><strong>Six verifier passes found eight S1 findings that are one bug:</strong> identity was rebuilt after the fact from four encodings. Verified in <code>task/ledgers/staging/attr-id-1-ledger.md:11</code>, which is why ATTR-ID-1 superseded this design.</li>
+<li><strong>Owner 2026-10-01</strong> (from rulings.md, not quoted verbatim anywhere in the repo): "CLOSE it and open a NEW PR from the finished attribute-id stack, linking #881."</li>
+<li><strong>Owner 2026-10-03</strong> (from rulings.md): "Close #881 only after the new PR merges."</li>
+<li><strong>The replacement PR exists and merged.</strong> It is #968, <code>b5214494</code>, merged 2026-10-07 from <code>wip/feat/attr-id-1-2026-10-01</code>. Its body opens "This PR replaces #881, as ruled by the owner on 2026-10-01" (verified with <code>gh pr view 968</code>). The squash carries the CASESENS-2 port as named commits: <code>feat(casesens-2)</code> S1–S4, the matcher retirement, the join-condition half of #881's <code>predicate_names.rs</code> ported onto <code>resolve</code>, and charter pins re-measured on live Spark 4.1.2 (2026-10-03).</li>
+<li><strong>PERF-ATTR-STAMP-2 carve-out: released.</strong> The 10-03 carve-out let the stack reach main at 1.2021x, provided no tag carried it until PERF-ATTR-STAMP-2 was measured. The v1.5.3 notes (<code>task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md:45-52</code>) record the gate met at <strong>1.0812</strong> against 1.10x (STAMP-2-R5P6-1, #980). v1.5.3 was tagged at <code>7a8fcf1a</code> (<code>STATUS.md:20</code>).</li>
+<li><strong>No GitHub reviews on #881.</strong> Its verifier history lives in the ledgers.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>The problem is fixed another way:</strong> ATTR-ID-1 plus the CASESENS-2 port, via #968 / <code>b5214494</code>, shipped in v1.5.3. On main:</li>
+<li><code>df_guards/attr_id.rs</code> <code>resolve</code> (line 890) is the one resolve rule;</li>
+<li><code>column_fields.py</code> binds through <code>_native.resolve_display_name(..., exact)</code> and reads the live <code>session_case_sensitive</code>;</li>
+<li><code>written_names.py</code> is deleted;</li>
+<li><code>written_names.rs</code> is reduced to <code>refuse_folded_duplicate_keys</code>.</li>
+<li><strong>Tests already on main:</strong></li>
+<li><code>python/repark/tests/resolution/test_casesens_2.py</code> and <code>casesens_2_spark_oracle.json</code>;</li>
+<li><code>test_attr_id_1_s2..s4/sj*/sm2*</code>;</li>
+<li>Rust <code>session/tests/attr_id*.rs</code>;</li>
+<li><code>crates/repark-spark/src/tests/casesens_*.rs</code>.</li>
+<li><strong>The ledger is already on main:</strong> <code>task/ledgers/staging/casesens-2-ledger.md</code> arrived with <code>b5214494</code>.</li>
+<li><strong>Not carried, on purpose:</strong> #881's <code>test_casesens_2_diffprobe.py</code>. Orchestrator ruling R-CS2P-2 (2026-10-03, in that ledger) recorded its 15 failing tests as a residue file for the DIFF-PROBE stage instead.</li>
+<li><strong>Residues still OPEN on main</strong> (casesens-2 ledger, <code>## Residues</code>):</li>
+<li>R-CS2-2: toggle-reuse staleness;</li>
+<li>R-CS2-3: <code>F.col("nope")</code> under <code>true</code> keeps the engine's raw miss text;</li>
+<li>R-CS2-5: <code>fillna</code> on mixed-type duplicate displays;</li>
+<li>R-CS2-6: four <code>_resolve_getitem_column_name</code> callers.
+  R-CS2-1, R-CS2-7 and R-CS2P-1 are closed.</li>
+<li><strong>Ledgers never retired:</strong> both <code>casesens-2-ledger.md</code> and <code>attr-id-1-ledger.md</code> still sit in <code>task/ledgers/staging/</code>, though each says it moves to <code>completed/</code> when the unit lands.</li>
+<li><code>git merge-tree main pr-881</code>: <strong>20 conflicted paths</strong>, including:</li>
+<li><code>df_guards.rs</code>, <code>case_bind.rs</code>, <code>predicate_names.rs</code>, <code>sort_names.rs</code>, <code>written_names.rs</code>;</li>
+<li><code>expr_build.rs</code>, <code>dataframe.rs</code>, <code>dataframe_names.rs</code>, <code>subquery.rs</code>, <code>core.py</code>, <code>actions_export.py</code>;</li>
+<li><code>docs/spark-sql-iceberg-parity.md</code>, <code>scripts/check_lib_py.py</code>, the casesens-2 ledger;</li>
+<li>four tests moved by #1113.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>CLOSE.</strong> The owner's release condition ("close only after the new PR merges") is met: #968 replaced #881 by name, merged 2026-10-07, and shipped in v1.5.3 after PERF-ATTR-STAMP-2 met 1.0812 ≤ 1.10. The stack did not stall. Nothing on the branch is needed. Its matchers were retired on purpose, its tests and oracle are on main, and its diff-probe file was deliberately not carried (R-CS2P-2).</p>
+<p>Before or at close:
+1. Post a closing comment linking #968 / <code>b5214494</code>.
+2. Keep the branch <code>feat/casesens-2-s4</code> (#884 is based on it).</p>
+<p>What remains is follow-up work, not this PR. These are clerk/Sonnet items:
+- the four OPEN residues R-CS2-2, -3, -5, -6;
+- moving the casesens-2 and attr-id-1 ledgers from <code>staging/</code> to <code>completed/</code> with the residues re-homed.</p>
+<h2>Confidence</h2>
+<p>High. All of this rests on reading git history, <code>gh</code> and the ledgers; nothing was run. One fact would flip the verdict: the owner wanting the 15 diff-probe tests carried as pins rather than a residue file. Even then, copy the file out and close.</p>
+<h2>One line for the owner</h2>
+<h1>881 is done: #968 replaced it by name, merged 10-07 and shipped in v1.5.3 after STAMP-2 met 1.0812. Close it with a link to #968.</h1></div></details>
+<details id="pr-884" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#884</b> fix(casesens-release-diff-1): path writes refuse case-twin columns like Spark; an exact-mode DataFrame miss keeps UNRESOLVED_COLUMN</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>de419cd4</code> · base <code>feat/casesens-2-s4</code> (#881's branch, merge-base <code>121c4bd0</code> = #881's head) · open, not draft · opened 2026-09-28 22:02 EDT · last push 2026-09-29 09:25 EDT · own delta <code>pr-881...pr-884</code>: +897/-4, 11 files (Rust 2 files +45/-1; Python, test and oracle 4 files +664; docs, maps and ledger 5 files +188/-3). That is 3 product commits plus 2 merges of #881's branch. GitHub shows MERGEABLE only because it compares against #881's branch.</p>
+<h2>What it does</h2>
+<p>It fixes the two S3 regressions found by the v1.5.1 Opus whole-release differential:
+- <strong>RD-1:</strong> under <code>caseSensitive=false</code>, parquet and json path writes of a frame with case-twin columns refuse <code>COLUMN_ALREADY_EXISTS</code> (42711) before any save mode, and nothing is written. This covers local paths and <code>s3a://</code>. The new <code>writer_layout.refuse_path_write_twins</code> is called first in <code>writer_readwriter._apply_path_write</code> and uses #881's <code>refuse_folded_duplicate_keys(frame, …)</code>. CSV keeps writing, ORC keeps NOT_IMPLEMENTED, and nothing refuses under <code>true</code>.
+- <strong>RD-2:</strong> under <code>true</code>, an exact-mode <code>F.col("t.ID")</code> or bare total miss in a projection raises <code>UNRESOLVED_COLUMN.WITH_SUGGESTION</code>. The new <code>case_bind::refuse_unresolved_exact</code> is called from <code>bind_projection_expr</code>, whose body lives in <code>cast_names.rs</code>.</p>
+<p>It adds 18 pins (<code>test_casesens_release_diff_1.py</code>), a 24-cell Spark oracle, and the ledger <code>casesens-release-diff-1-ledger.md</code> with C-001 to C-005 PROVEN.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Body:</strong> "Stacked on #881 … will be retargeted to main before #881 merges. Target: v1.5.1."</li>
+<li><strong>Owner 2026-09-29:</strong> moved to v1.5.2. Verified in the PR comment and in <code>v1-5-1-release-notes-2026-09-29.md:44</code> ("CASESENS-2 (#881) and RD-1/RD-2 (#884)").</li>
+<li><strong>Owner 2026-10-03</strong> (from rulings.md; not found in the repo): "tell the owner in one line what it is and what it is based on before touching it." See the last section.</li>
+<li><strong>No later ruling.</strong> No GitHub reviews. Its Opus re-check is recorded only as the two merges of #881's re-verify fold.</li>
+<li>The ledger exists only on the branch. Main has no <code>casesens-release-diff-1</code> ledger, card or row.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>RD-1 is on main, done another way.</strong> The ATTR-ID-1 stack (#968, <code>b5214494</code>, Fold SM-2 R2, <code>attr-id-1/C-061</code>) added <code>writer_layout._refuse_duplicate_output_columns</code>:</li>
+<li>it folds under the frame's case rule and runs exact under <code>true</code>;</li>
+<li>it is called from <code>_apply_path_write</code> for parquet, json and csv (csv runs <code>exact_only</code>, so twins write the raw header), and from <code>save</code>, <code>write_table</code>, <code>_run_ctas</code> and V2 <code>append</code>;</li>
+<li>pins in <code>python/repark/tests/resolution/test_attr_id_1_sm2_dupwrites.py</code> cover parquet/json twin refusal, the csv raw header, parquet writes under <code>true</code>, and the folded name.</li>
+<li>Differences from #884:<ul>
+<li>ORC twins now refuse 42711 ahead of the format refusal (#884 kept NOT_IMPLEMENTED).</li>
+<li>Main has no s3a or non-ASCII (é/É, ß/SS) twin pins. Python <code>str.lower</code> gives the same é/É and ß answers by reading, not running.</li>
+</ul>
+</li>
+<li><strong>RD-2 is not on main.</strong></li>
+<li>Main's <code>bind_projection_expr</code> (<code>case_bind.rs:482</code>) has no exact-miss refusal, and <code>cast_names.rs</code> no longer exists.</li>
+<li>The ATTR-ID-1 ledger C-048 says a free name with no matching display "falls through to the engine".</li>
+<li>Casesens-2 residue <strong>R-CS2-3 is still OPEN</strong> on main: <code>F.col("nope")</code> under <code>true</code> keeps the engine's raw miss text.</li>
+<li>Filter and sort misses do refuse <code>UNRESOLVED_COLUMN</code> (<code>expr_build.rs:91-118</code>, <code>unresolved_sort_key</code>). Only the projection door remains. This rests on reading, not running.</li>
+<li><strong><code>git merge-tree</code>:</strong></li>
+<li><code>main pr-884</code> (whole branch): <strong>21 conflicted paths</strong>, #881's 20 plus its own.</li>
+<li>Delta alone (<code>--merge-base=121c4bd0 main pr-884</code>): <strong>2 conflicts</strong>, <code>case_bind.rs</code> and <code>cast_names.rs</code>. The writer files auto-merge but would add a second twin check. That check calls <code>refuse_folded_duplicate_keys(frame._inner, …)</code>, while main's binding takes a session (<code>dataframe_names.rs:260</code>), so it would fail at runtime.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> RD-1 is done on main by ATTR-ID-1, so #884's writer half must be dropped, not rebased. RD-2 is still needed, and it is already tracked on main as residue R-CS2-3. #884 cannot stand alone on main: its base #881 is superseded, and the delta conflicts on the moved projection binder.</p>
+<p>Salvageable:
+- the <code>refuse_unresolved_exact</code> walker and its Rust pin <code>projection_refuses_an_exact_total_miss</code> (about 45 Rust lines), to re-place in main's <code>case_bind.rs::bind_projection_expr</code>;
+- the RD-2 legs of <code>test_casesens_release_diff_1.py</code> (C-004) and their oracle cells;
+- optionally the s3a and non-ASCII twin cells, as extra pins on main's C-061 refusal.</p>
+<p>The record names no fresh unit. Suggest closing R-CS2-3 as a small Sonnet unit, then closing #884 with a link. Re-verify with an Opus scoped check that sort-through-child and the C-048 fall-through still answer.</p>
+<h2>Confidence</h2>
+<p>Medium. One fact would flip the verdict to CLOSE: if running <code>F.col("t.ID")</code> / <code>F.col("nope")</code> in a <code>select</code> under <code>true</code> on main already raises <code>UNRESOLVED_COLUMN.WITH_SUGGESTION</code> through a path this reading missed.</p>
+<h2>One line for the owner</h2>
+<h1>884, stacked on #881: its write-twin refusal shipped via ATTR-ID-1; only the select-miss error (R-CS2-3) remains. Port about 45 lines plus pins, then close.</h1></div></details>
+<details id="pr-888" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#888</b> fix(nvl-type-coercion-1): the nvl family types and widens like Spark 4.1.2 (v1.5.2)</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>be5193c3</code> · base <code>main</code> (merge-base <code>db3a1f37</code>, 2026-09-29; main is 175 commits ahead) · <strong>draft</strong> · opened 2026-09-29 · last push 2026-09-30 19:07 EDT (park comment 2026-10-01) · <code>main...pr-888</code>: +9892/-291, 44 files (Rust 19 files +4749/-275; Python and oracle JSON 12 files +3955/-16; maps and ledger 13 files +1188). 29 commits. GitHub: CONFLICTING. CI green at <code>be5193c3</code> (all 8 checks). Fold head <code>54bc9ac2</code> on <code>wip/fix/nvl-type-coercion-1-2026-10-01</code> adds 5 commits (+1838/-208 over the PR head; 51 files against main).</p>
+<h2>What it does</h2>
+<p>It fixes PE-4 from the v1.5.1 release differential: <code>nvl(DATE, TIMESTAMP)</code> answers STRING on main where Spark answers TIMESTAMP. The PR makes <code>nvl</code>/<code>ifnull</code> widen like <code>coalesce</code>, <code>nvl2</code> like <code>if</code>, <code>nullif</code> compare after widening and return the first argument's type, and <code>zeroifnull</code>/<code>nullifzero</code> act as <code>coalesce(x, 0)</code>/<code>nullif(x, 0)</code>. This applies on the SQL, <code>F.expr</code> and column-API doors. The mechanism is new UDFs (<code>spark_nvl.rs</code>, <code>spark_nvl_udf.rs</code>, <code>spark_nvl_eager.rs</code>) plus an analyzer rewrite, <code>SparkNvlFamilyRewrite</code> (<code>spark_nvl_rule.rs</code>), that runs after <code>type_coercion</code>. Eleven verifier folds then grew side changes:
+- <code>sequence</code> STRING/DATE bound coercion;
+- a session-zoned string-instant helper;
+- <code>nullif</code> ceiling-proof logic in the cardinality evaluator.</p>
+<p>It adds a live Spark 4.1.2 oracle (<code>test_nvl_type_coercion_1_spark.json</code>, 797 lines). It also adds seven pin files at the old test root and a 700-line ledger.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Owner 2026-10-01, "Okay park it"; no more folds.</strong> Verified in two places:</li>
+<li>the owner-authored park comment on the PR (2026-10-01T14:17Z): "stays at be5193c3 … round-10 fold … not applied here";</li>
+<li><code>task/roadmap/mid-term/nvl-type-coercion-2-card-2026-10-02.md</code>, which quotes "Do not resume Muse folds on #888".</li>
+<li><strong>Verifier history.</strong> The record is the ledger (on the branch only) plus the park comment. There are no GitHub reviews.</li>
+<li>Opus re-verify rounds VN-1 through VN11 ran on 2026-09-29 and 09-30.</li>
+<li>Round 11 (VN12) ran on the fold head <code>54bc9ac2</code>. It found <strong>VN12-2, S1 in default ANSI-on mode</strong>: 61 cells where base and Spark agree regress, and 141 PR pins fail. It also found VN12-1.</li>
+<li>Last verdict: FAIL on the fold head. Rounds 9–10 left S2/S3 findings VN11-1..5 open at <code>be5193c3</code>.</li>
+<li><strong>Structural cause, from the park note and verified in the card.</strong> Spark types the family per ANSI mode: <code>nvl('a', 5)</code> is BIGINT with ANSI on and STRING with ANSI off. The UDFs cannot see the flag, and the rewrite runs after <code>type_coercion</code>. So a parent expression coerces against a declared type that the rewrite then changes. Every fold from VN4 on layered a heuristic over that.</li>
+<li><strong>Measured direction.</strong> An uncommitted 15-line experiment moved the rewrite to just before <code>type_coercion</code>:</li>
+<li>it fixed 16 of 31 nested cap cells and 19 pins, with zero ANSI-off movement;</li>
+<li>48 pins regressed because the rewrite ran before the TIMESTAMP literal got its session zone. The review calls this an ordering detail.</li>
+<li><strong>Follow-up cards on main, all filed, none dispatched:</strong></li>
+<li>NVL-TYPE-COERCION-2 (2026-10-02): design-heavy, an Opus sketch before any code, draft clauses C-001..C-004.</li>
+<li>CONST-EVAL-CEILING-1 (2026-10-01, the owner's card): replace the mirror constant evaluator in <code>cardinality.rs</code> with a ceiling check on DataFusion's ConstEvaluator output.</li>
+<li>COALESCE-ANSI-WIDEN-1 (2026-10-02): bare <code>coalesce</code>/<code>array</code> over STRING × {DATE, BINARY, DECIMAL}. These are the 15 cells the experiment left.</li>
+<li>All three sit under <code>task/roadmap/mid-term/</code> with map lines (<code>map.md:490</code>, <code>:533</code>).</li>
+<li><strong>No work order exists</strong>: <code>task/wo/</code> has no nvl or const-eval entry.</li>
+<li><strong>Ledger.</strong> <code>task/ledgers/staging/nvl-type-coercion-1-ledger.md</code> exists <strong>only on the branch</strong>. Main has no copy.</li>
+<li>It holds C-001..C-040 (all PROVEN at <code>be5193c3</code>) and C-041 (round-10 fold, on <code>54bc9ac2</code> only).</li>
+<li>It also holds the C-004 residual table and the owner-cap carry list.</li>
+<li><strong>VN12 (round 11) is not in the ledger.</strong> It lives only in the park comment and the NVL-TYPE-COERCION-2 card.</li>
+<li><strong>Also open:</strong> PE-4 and PE-13 in <code>task/roadmap/mid-term/release-diff-1-5-1-pre-existing.md:12,21</code> (PE-13 "overlaps NVL-TYPE-COERCION-1"). Neither is marked fixed.</li>
+<li><strong>Evidence.</strong> The experiment diff, <code>p12-exp.json</code> and the README sit in the orchestrator box's <code>oc-worker/direct/wo/review-888-fable/</code>. They were present on 2026-10-19, but that is volatile <code>/tmp</code> storage and nothing in the repo holds a copy.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Nothing on main fixed the nvl family another way.</strong> I searched main's log since 09-29 for nvl, NVL, zeroifnull, nullif and CONST-EVAL and found zero commits. <code>coalesce</code>/<code>type_coercion</code> hits are unrelated except one.</li>
+<li>That one is <code>c7121437</code> (ICE-TSNS-TYPE-PLANNER-1, 2026-10-16). It adds <code>SparkTimestampUnitWiden</code>, inserted <strong>immediately before <code>type_coercion</code></strong> (<code>crates/repark-functions/src/timestamp_unit_widen.rs:56-64</code>). It lists <code>nvl</code>, <code>ifnull</code> and <code>nvl2</code>.</li>
+<li>It widens only the timestamp <strong>unit</strong> (ns versus µs, R-017); it does not do the family's Spark type widening. It is, though, a working pre-coercion seat on main: the very position the NVL-TYPE-COERCION-2 experiment needed.</li>
+<li><strong>By reading, PE-4 is still live on main:</strong></li>
+<li>main has no <code>spark_nvl*</code> module, so <code>nvl</code>/<code>nullif</code> go to DataFusion core;</li>
+<li><code>zeroifnull</code>/<code>nullifzero</code> exist only as facade Python helpers (<code>functions_expr.py:1819-1825</code>);</li>
+<li>the parity registry (<code>docs/spark-sql-iceberg-parity.md</code>) has no nvl-family row; the only mention is R-017's <code>nvl(ns, NULL)</code> at line 3658.</li>
+<li>Not run.</li>
+<li><strong>Ledger rows against main's behaviour, by reading:</strong></li>
+<li>C-001 (the Spark-side widening table) is an oracle fact and still valid as data.</li>
+<li>C-004's residuals are pre-existing and still describe main.</li>
+<li>C-002, C-003 and C-005..C-041 prove the PR's code, which is absent on main. None of them is PROVEN on main's behaviour.</li>
+<li><strong>Files rewritten on main:</strong> <code>crates/repark-spark/src/extension.rs</code> (<code>StoreOverflowCast</code> seat), <code>crates/repark-functions/src/spark_sequence.rs</code> (<code>c7121437</code>), and the cap-1 line-cap test.</li>
+<li><strong>Test moves.</strong> #1113 (10-19) emptied the old test root. The PR's 8 test/oracle files would land back at <code>python/repark/tests/test_nvl_*.py</code>, the old layout; they would need to move to <code>functions/</code> or <code>types/</code>.</li>
+<li><strong><code>git merge-tree main pr-888</code>: 3 conflicted paths:</strong></li>
+<li><code>crates/repark-functions/src/spark_sequence.rs</code></li>
+<li><code>crates/repark-spark/src/extension.rs</code></li>
+<li><code>python/repark-parity/tests/test_cap_1_source_file_line_cap.py</code></li>
+<li><strong><code>git merge-tree main wip-888</code>: 4 conflicted paths:</strong> the same three, plus <code>crates/repark-spark/src/extension/tests.rs</code>.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> The intent is still needed: PE-4 is an S2 silent wrong type, and VN12-2 shows the area is S1-sensitive. But the owner ruled this vehicle dead ("park, no more folds"), and the record names a fresh design unit, NVL-TYPE-COERCION-2, whose clause C-003 <em>deletes</em> the machinery this PR is built on:
+- the base route;
+- <code>core_declared</code>;
+- the fexpr markers;
+- the F.expr <code>type_coercion</code> strip;
+- the mirror evaluator.</p>
+<p>The ruling carries no condition that would resume #888, so HOLD does not fit.</p>
+<p><strong>Salvage into the new unit:</strong>
+1. The oracle <code>test_nvl_type_coercion_1_spark.json</code> and the C-001 widening table. They were measured on Spark 4.1.2 (ANSI on, UTC and New York); re-pin per the card.
+2. These pin cells from <code>test_nvl_type_coercion_1*.py</code>, as acceptance cells moved into a subsystem directory:
+   - laziness (VN-1, C-008);
+   - single evaluation of a volatile first (VN2-1/VN3-1, C-012/C-016);
+   - grouping-set names (VN2-3, C-014);
+   - string-leaf casts (VN-3, C-010);
+   - -0.0/NaN in <code>nullif</code> (C-020/C-022);
+   - pick nullability (C-024/C-026);
+   - ANSI-off legacy typing (C-040).
+3. The ledger. Copy it to <code>task/ledgers/</code> as a parked record, adding VN12-1/VN12-2 from the park note.
+4. The <code>sequence</code> STRING/DATE-bound work (C-030/C-034/C-036). It is a separate Spark divergence and needs its own card if still wanted. I did not measure it on main.
+5. The review-888-fable experiment diff and <code>p12-exp.json</code>. Copy them into the repo before <code>/tmp</code> loses them.</p>
+<p><strong>Do not salvage:</strong> <code>spark_nvl*.rs</code> (~3.1k lines) or the cardinality <code>nullif</code> proof logic. The design deletes them, and CONST-EVAL-CEILING-1 replaces the latter.</p>
+<p><strong>Steps, in order:</strong>
+1. Dispatch the Opus design sketch for NVL-TYPE-COERCION-2, seated beside <code>SparkTimestampUnitWiden</code> before <code>type_coercion</code>.
+2. File its work order.
+3. Copy out items 3 and 5 above.
+4. Close #888 with a link from the new PR. Keep both branches until then.</p>
+<h2>Confidence</h2>
+<p><strong>Medium-high.</strong> One fact would flip the verdict: an owner ruling that resumes #888 as the vehicle, for example rebasing and doing the 15-line rule move on this branch. That would make it HOLD/LAND. The record shows no such ruling. "PE-4 still live on main" rests on reading, not running.</p>
+<h2>One line for the owner</h2>
+<h1>888 → REBUILD as NVL-TYPE-COERCION-2 (carded, undispatched); salvage oracle JSON, pins, ledger, review-888 evidence from /tmp; close #888 once the new PR opens.</h1></div></details>
+<details id="pr-1000" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#1000</b> fix(using-per-side-keys-1): USING joins show the merged key and answer per-side keys on both doors; chained FULL USING joins match on the merged key</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>e1e763fa</code> · base <code>main</code> (merge-base <code>a8b04260</code>, 2026-10-08; main is 90 commits ahead) · <strong>draft</strong> · opened 2026-10-08 · last push 2026-10-08 15:01Z (park comment 15:35Z) · +16096/-310, 57 files (Rust 17 files +3130/-18; Python 14 files +2117/-281; oracle/corpus JSON 8 files +9453; maps, ledger, registry, probes 18 files +1396/-11). 15 commits. GitHub: CONFLICTING. CI green at <code>e1e763fa</code>.</p>
+<h2>What it does</h2>
+<p>It makes RePark's <code>USING</code> joins behave like Spark's on both doors. The shown key becomes the right key on <code>RIGHT</code> and <code>coalesce(left, right)</code> on <code>FULL</code>. As a result, a chained FULL <code>USING</code> join matches on the merged key. The PR body measured 1.0.0, 1.3.0, 1.5.2 and main all returning the same five wrong rows. Each per-side key (<code>l.id</code>, <code>r.id</code>) stays reachable as a hidden join column in select, filter, sort, a join condition and <code>l.*</code>/<code>r.*</code>, without becoming an output field. On the SQL door the unqualified key answers in <code>WHERE</code> on all six join types; main raises <code>AMBIGUOUS_REFERENCE</code>. The mechanism is a plan-level marker: the helper column <code>__repark_using_k</code> and <code>ORDER_MARK</code> (<code>__repark_using_order</code>), in new <code>column_resolution/using_keys.rs</code>, <code>using_marks.rs</code> and <code>df_guards/using_keys.rs</code>. It adds a 1,090-cell live Spark 4.1.2 grid (885 equal on head, 679 on main, 0 regressed), a 1,355-statement differential pin, a 957-line ledger and three new registry rows (USING-SIDE-KEY-REACH-1, USING-MIXED-KEY-TYPE-1, USING-SQL-STAR-SHAPES-1).</p>
+<h2>Record</h2>
+<ul>
+<li><strong>2026-10-04 rulings.</strong> The orchestrator's memory, not the repo, lists #1000 as the fix PR for "chained FULL USING wrong rows (since ≥1.0.0)", under "Known in 1.5.3". I found no copy in the repo. A ratification line ("USING-PER-SIDE-KEYS-1 carries measured Spark cells…", "now unblocked") is also in memory only. Origin, verified: the row in <code>task/roadmap/mid-term/v1-5-3-card-2026-10-04.md:18</code> (2026-10-06, Fold SM-2 R6, R-R6-1), following <code>attr-id-1-ledger.md</code> C-066.</li>
+<li><strong>Verifier history.</strong> There are no GitHub reviews. The record is the park comment (TRO-Wolf, 2026-10-08 15:35Z) and the design card on main.</li>
+<li>Three Opus verifies, all FAIL: verify (six S1), reverify (three S1), reverify2 (one S1, the <code>WINDOW</code> clause, plus S2×3 and S3×1).</li>
+<li>Folds 1 and 2 are on the branch. The park comment says "per the owner's one-extra-fold ruling the unit is not folded again". <strong>Unverified</strong>: I found that ruling in neither the repo nor memory.</li>
+<li>The comment's conclusion: "the plan-level marker is lost or unread in one more clause each time … The next step is a design unit … not another fold."</li>
+<li><strong>Successor card on main (verified):</strong> <code>task/roadmap/mid-term/using-side-key-design-1-card-2026-10-08.md</code>, USING-SIDE-KEY-DESIGN-1.</li>
+<li>Status: open, not scheduled, and it needs an Opus design sketch before any executor.</li>
+<li>It names the branch as an input that "the sketch reads … it does not rebase it".</li>
+<li>Its gates: the 575-statement corpus, the 926-cell grid and the 373-cell DataFrame grid, with zero third answers.</li>
+<li>Map line: <code>task/roadmap/mid-term/map.md:820-822</code>.</li>
+<li><strong>No work order.</strong> <code>task/wo/</code> has no USING entry.</li>
+<li><strong>Ledger.</strong> <code>task/ledgers/staging/using-per-side-keys-1-ledger.md</code> is on the branch only; main has no copy.</li>
+<li>Its header still reads "built, awaiting the Critic".</li>
+<li>C-001..C-017 cover the grid, both doors, mixed keys and the fold-2 narrowings.</li>
+<li><strong>Evidence outside the repo.</strong> The three verdict dirs (<code>verify/</code>, <code>reverify/</code>, <code>reverify2/</code>) plus <code>fold1.md</code>, <code>fold2.md</code> and <code>rulings-r1.md</code> are in orchestrator scratch <code>oc-worker/direct/wo/using-per-side-keys-1/</code>. They were present on 2026-10-19 but sit in volatile <code>/tmp</code>.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>No USING fix on main.</strong> <code>git log main --grep</code> for using-per-side, USING-SIDE-KEY, chained full and FULL USING finds only the design card commit. The <code>using</code> hits since 10-04 are unrelated (C-4, MB-1, FA-5, ATTR-ID-1 <code>b5214494</code>, which shipped R-R6-1).</li>
+<li><strong>By reading, the wrong rows are still live on main:</strong></li>
+<li>main has no <code>using_keys.rs</code>/<code>using_marks.rs</code>;</li>
+<li><code>column_resolution/fold.rs:522</code> only folds the <code>JoinConstraint::Using</code> columns;</li>
+<li>the DataFrame door keeps the left key physically (R-R6-1, <code>attr-id-1-ledger.md</code> C-066), so a chained FULL <code>USING</code> still keys on the left key.</li>
+<li>Not run.</li>
+<li><strong>Parity registry.</strong> None of the three PR rows exist on main's <code>docs/spark-sql-iceberg-parity.md</code>. No main row declares the chained-FULL wrong rows or the <code>RIGHT</code>/<code>FULL</code> NULL key, so the known S1-class wrong answer has no registry row.</li>
+<li><strong>Files rewritten on main:</strong> <code>crates/repark-python/src/dataframe_names.rs</code>. The <code>df_guards</code>, <code>column_resolution</code> and maps auto-merge.</li>
+<li><strong>Test layout (#1113).</strong> In the merge tree, the 3 new test modules, <code>_using_corpus.py</code> and 5 oracle/corpus JSONs land at the old flat root <code>python/repark/tests/</code>. The PR's edit to <code>test_attr_id_1_sm2_r6.py</code> follows the rename into <code>resolution/</code>. The new files would need to move to <code>resolution/</code> (or <code>sql/</code>/<code>dataframe/</code>).</li>
+<li><strong><code>git merge-tree main pr-1000</code>: 1 conflicted path:</strong> <code>crates/repark-python/src/dataframe_names.rs</code>.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> The intent is still needed: an S1-class wrong-rows defect since ≥1.0.0, live on main by reading. But three verifies showed the marker mechanism is the wrong vehicle, and main already names the fresh unit, USING-SIDE-KEY-DESIGN-1 (Opus sketch first).</p>
+<p>Salvageable:
+- the 1,090-cell grid and probes (<code>task/ledgers/staging/using-per-side-keys-1-probes/</code>);
+- the Spark/main corpus JSONs and the verifier-events JSON;
+- the ledger's C-001 measured table and §3 design note;
+- the three drafted registry rows, as declared-divergence text;
+- the test modules, as acceptance pins, after moving them to <code>resolution/</code>.</p>
+<p>Recommendation:
+- Close #1000 with a link from the design unit's PR, and <strong>keep the branch <code>fix/using-per-side-keys-1</code></strong>: the design card reads it.
+- Before closing, copy the three verdict dirs from orchestrator scratch into the repo (or onto the branch). The card's gates depend on those corpora.
+- A clerk-band docs row on main for the live wrong rows is worth filing now.</p>
+<h2>Confidence</h2>
+<p>Medium. The verdict flips if the owner rules that a narrowed slice of this PR ships on its own, for example only the FULL-chain fix in the DataFrame door.</p>
+<h2>One line for the owner</h2>
+<h1>1000 is the parked marker approach to USING joins. Close it for USING-SIDE-KEY-DESIGN-1, keep the branch, and copy the verdict corpora out of <code>/tmp</code> first.</h1></div></details>
+<details id="pr-1011" class="card v-hold"><summary><span class="pill hold">HOLD</span> <b>#1011</b> feat(mb-4): the streaming facade (surface round against a stub binding; wire-up to follow)</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>48e961ef</code> (confirmed: local <code>pr-1011</code> and <code>gh pr view</code> both give <code>48e961ef</code>; last push 2026-10-11 13:53Z, no commit since) · base <code>main</code> (merge-base <code>2c33f289</code>, 2026-10-10, from the branch's own main-merge <code>740ccd18</code>; main is 73 commits ahead) · <strong>draft</strong> · opened 2026-10-08 · +25,675/-614, 131 files, 88 commits. Split: Rust 58 files +10,666 (product 33 files +5,484, tests 25 files +5,182); Python 33 files +7,343 (product 14 files +1,269/-247, of which 246 lines are <code>map_bridge.py</code> code moved out of <code>core.py</code>; tests 19 files +6,074); markdown 37 files +4,335; MB-0c live-Spark oracle JSON +3,321. GitHub: CONFLICTING. CI on the head: 15 pass, 2 fail (<code>facade shard 1</code>: one failure, <code>test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool</code>, a 64 MB memory-pool exhaustion in a perf test the PR does not touch; <code>build + import smoke</code> fails only because it rolls up the facade result).</p>
+<h2>What it does</h2>
+<p>The title and body are stale. They describe round 1 only: the surface against a stub binding. The branch now carries the whole of MB-4 plus a second unit:
+- The PySpark streaming surface: <code>DataStreamReader</code>, <code>DataStreamWriter</code>, <code>StreamingQuery</code>, <code>StreamingQueryManager</code>, triggers and option validation.
+- The wire-up to the MB-3 driver. The stub terminal is gone (branch <code>streaming/map.md</code>), and <code>spark.readStream</code> / <code>spark.streams</code> now answer.
+- The SES-DECL flips (ledger C-043) and the MB-0c facade oracle measured on live Spark 4.1.2 + Iceberg 1.11.0.
+- MB-4-FOREACH-EO, built after the owner's 2026-10-09 "FIX IT" ruling. It makes <code>foreachBatch</code> exactly-once on the declared sink: the body's own commit is stamped, there is a starting mark, every stamped arm goes through one fence, and stray writes are walked and refused. Built on rulings D2 to D5 (2026-10-10).
+- Tests added: 205 Python test functions in 13 new <code>test_mb_4_streaming_*.py</code> files plus edits; 152 Rust <code>#[test]</code>s.</p>
+<p><strong>Rust-first (2026-09-14).</strong> Mostly compliant, by reading:
+- Validation, option parsing, trigger intervals, the error mapping and the whole driver are Rust (<code>streaming*.rs</code>, <code>trigger_interval.rs</code>, <code>sink_offsets/*</code>, <code>microbatch/*</code>).
+- Fold 1b (ledger C-040) moved the read-side Python refusal logic into Rust.
+- Python product is about 1.0k net lines against about 5.3k Rust. <code>readers.py</code> (512 lines) is builder state, plus PySpark-shaped argument type/value checks that raise <code>PySparkTypeError</code>/<code>PySparkValueError</code>, then <code>_native</code> calls.
+- Residue a Rust-first critic could name: the argument checks in <code>readers.py</code> <code>trigger()</code>/<code>outputMode()</code>/<code>queryName()</code>. Small, not blocking.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>2026-10-11 freeze, verified on main.</strong> <code>task/roadmap/epic-term/iceberg-streaming-open-decision-2026-10-11.md</code> (commit <code>07be1dc9</code>, PR #1029, merged 2026-10-11) still reads "<strong>Status:</strong> OPEN. Owner-held. Nothing in this file is ruled." It has had no commit since. §5 lists OD-1 to OD-8 with leans only, and §7 says the track stays paused until dated rulings close it. Its <code>epic-term/map.md</code> row still says OPEN, and I found no OD ruling anywhere else on main.</li>
+<li>OD-2 is about this PR: "hold as draft, or merge on its passed verify", with the lean "hold".</li>
+<li><strong>"#1011 stays a draft at 48e961ef: no merge, no fold, no further verify."</strong> This quote is from the orchestrator's memory and I did not find it in the repo. The facts match it: draft, head <code>48e961ef</code>, nothing pushed since.</li>
+<li><strong>Other rulings, found in the branch ledger and not re-checked against an owner source:</strong> "FIX IT" (2026-10-09), and D1 to D5 (2026-10-10). D5 asks for one Opus re-verify of the whole PR and then a quiet-box timing run of at most 1.05x.</li>
+<li><strong>Verify history</strong> (branch ledger <code>task/ledgers/staging/mb-4-foreach-eo-ledger.md</code>, folds 1 to 9). Eight verifies, the 1st through 7th each FAIL with at least one S1, each followed by a fold. The 3rd was on head <code>dffca617</code>: 3 S1, 2 S2, 7 S3.</li>
+<li><strong>The eighth verify: PASS, no S1, no S2</strong> (per the OD file §1). Its two S3s:</li>
+<li>The retention lapse of a mark-only name: silent 96 of 96, and 277 of 480 foreign commits under a stamp in a raced run. "Not worse than main". This is Q1, and it became OD-1.</li>
+<li>Two surviving mutants, N2 and N3. Fold 9 (<code>d6bbfb2c..48e961ef</code>) pinned both and corrected the retention sentence, with no product change.</li>
+<li>No GitHub reviews and no PR comments. The verdict files live outside the repo, so the verifier's identity and model come only from the ledger's wording "Opus verify". I did not verify them further.</li>
+<li><strong>Still OPEN on the branch:</strong></li>
+<li>foreach-eo C-015, the D5 re-verify and quiet-box timing;</li>
+<li>mb-4 C-015, the registry rows that ride item 15;</li>
+<li>mb-4 C-009, C-017 and C-018, stub-era rows never re-dispositioned after the wire-up;</li>
+<li>mb-4 C-035, superseded by the EO ledger and never closed.</li>
+<li><strong>On main:</strong> neither ledger is there. Only the OD file and the MB order/design under <code>task/wo/microbatch/</code> are.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Streaming code on main since the merge-base:</strong> one unit, <code>476586cd</code> MB-FENCE-BODY-FLAKE-1 (#1108, 2026-10-18). It fixes a race in MB-3's <code>run.rs</code>: the batch now enters the sink's scope <strong>before</strong> it loads the sink.</li>
+<li>The PR's <code>run.rs</code> still loads first and then calls <code>BatchScope::enter_on(&amp;sink, …)</code>. That is the order #1108 found racy.</li>
+<li>So the <code>run.rs</code> conflict is <strong>semantic</strong>: a rebase must keep main's order and adapt it to the PR's <code>enter_on</code> API.</li>
+<li>Nothing else on main fixes or duplicates the streaming surface or foreach-EO. <code>c7121437</code> (type planner) and <code>5531311b</code> (struct pairing) touch shared Iceberg write paths but not these files.</li>
+<li><strong><code>git merge-tree main pr-1011</code>: 4 conflicted paths (content):</strong></li>
+<li><code>crates/repark-core/src/microbatch/run.rs</code> (1 hunk, semantic, above);</li>
+<li><code>crates/repark-core/src/microbatch/fence_tests.rs</code> (1 hunk, #1108's pins);</li>
+<li><code>crates/repark-python/src/lib.rs</code> (2 hunks, module registration beside <code>session_write_postgres</code>, trivial);</li>
+<li><code>docs/spark-sql-iceberg-parity.md</code> (1 hunk, registry rows).</li>
+<li><strong>Test layout (#1113, <code>1199cf94</code>).</strong></li>
+<li>The two edited root tests follow the rename cleanly, to <code>dataframe/test_dfcore_1_exports.py</code> and <code>session/test_session_surface_1.py</code>.</li>
+<li><strong>All 13 new <code>test_mb_4_streaming_*.py</code> files would land at the old flat root</strong>, where main now has zero <code>test_*.py</code>. Main's <code>python/repark/tests/map.md</code> says a new subsystem is a new directory, so they need a <code>streaming/</code> directory plus a map row.</li>
+<li>The <code>python/repark-parity/tests/</code> additions are unaffected.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>HOLD.</strong> The 2026-10-11 freeze holds: the open-decision file on main is unruled, and its release condition is dated owner rulings on OD-1 to OD-8. The PR passed its eighth verify, and OD-2 is the owner's choice of hold versus merge.</p>
+<p><strong>Worth doing while held (clerk, none of it a fold or a verify):</strong>
+1. Protect the head with a ref that survives branch cleanup, for example an annotated tag <code>archive/mb-4-facade-48e961ef</code>. The OD file's reading path (§6) points into this branch's ledger, which is not on main.
+2. With owner leave, refresh the stale title and body: it is no longer a stub round, and it carries wire-up, SES-DECL and foreach-EO.
+3. Nothing else. A rebase now would be wasted if OD-1 (carry-full, "own unit after #1011") or OD-2 change the scope.</p>
+<p><strong>When unfrozen (if OD-2 = merge):</strong>
+- Rebase over #1108, re-deriving the <code>run.rs</code> scope order. This is Opus-band, because it touches the fence.
+- Move the 13 tests into <code>tests/streaming/</code>, close the stale ledger rows (C-009/017/018/035), and settle the registry conflict.
+- Then the D5 work still owed: one Opus re-verify of the rebased head and the quiet-box timing run (≤1.05x).
+- Effort: Sonnet clerk work for the move and maps, Opus for the rebase and verify.</p>
+<p><strong>Cost of staying frozen, by reading:</strong>
+- Since the merge-base, about 55 main commits a week have touched 30 of its 131 files, about 23 a week.
+- Nearly all of that churn is in hot shared docs: <code>task/roadmap/mid-term/map.md</code> 21 commits, <code>python/repark/tests/map.md</code> 20, <code>docs/spark-sql-iceberg-parity.md</code> 18, <code>task/ledgers/staging/map.md</code> 16. These are mechanical.
+- Code drift is low because the track is frozen. In 9 days only #1108 touched the microbatch code, and the conflict count has stayed at 4.
+- Expect about 1 to 2 new doc conflicts a week, and a code conflict only when someone else fixes MB-3. The real risk is another #1108-style fence fix landing underneath it.</p>
+<p><strong>If closed instead, these would be lost from the PR list:</strong>
+- 9 fold records and 8 verify records, including the only passed verify of the streaming track;
+- the MB-0c live-Spark facade oracle (3,321-line JSON plus its recorder);
+- 357 tests and the registry drafts;
+- the code the OD file is written against, since §1 and §6 cite this head.</p>
+<p>OD-1's lean also builds "after #1011", so closing would orphan the decision file's subject.</p>
+<h2>Confidence</h2>
+<p>High. The verdict flips to LAND if the owner rules OD-2 "merge on its passed verify". The steps above then apply, and the #1108 <code>run.rs</code> re-derivation is the critical step.</p>
+<h2>One line for the owner</h2>
+<h1>1011 holds: OD-1..OD-8 are still unruled and the head is unchanged at 48e961ef with the eighth verify passed. Only 4 conflicts, but one is semantic (#1108's fence order).</h1></div></details>
+<details id="pr-1014" class="card v-hold"><summary><span class="pill hold">HOLD</span> <b>#1014</b> fix(cast-view-agg-nullability-1): an aggregate over a view of a cast arithmetic timestamp answers instead of raising an internal schema error</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>14a42998</code> · base <code>main</code> (merge-base <code>40fc916f</code>, 2026-10-08; main is 86 commits ahead) · <strong>draft</strong> · opened 2026-10-09 · last push 2026-10-10 13:34Z · +595/-16, 8 files (Rust 1 file +9/-11; Python 1 test file +133; ledger, card and maps 6 files +453/-5). 5 commits. GitHub: CONFLICTING. <code>gh pr checks</code> reports no checks on the branch.</p>
+<h2>What it does</h2>
+<p><code>SELECT max(ts)</code> over a temp view of <code>CAST(&lt;arithmetic with %&gt; AS TIMESTAMP)</code> raises a DataFusion internal error on main: the physical schema is nullable while the logical one is not. The PR changes <code>wrap_as_ltz</code> in <code>crates/repark-functions/src/instant_ts.rs</code>. It drops the named target field that carries a sampled <code>expr.nullable(schema)</code> and builds a plain <code>Cast::new(expr, ltz_timestamp_type())</code>, so physical nullability tracks the child. It also drops the now-unused <code>schema</code> argument from <code>wrap_ns_literal</code>. It adds 10 pins in <code>python/repark/tests/test_cast_view_agg_nullability_1.py</code> and a 410-line ledger. The ledger names two residues: R-1, where <code>wrap_as_ntz</code> shares the pattern, and R-2, the <code>ntz_store.rs</code> DML path.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>2026-10-10 ruling: "upstream apache/datafusion#26178 filed; PR stays parked".</strong></li>
+<li>The ruling itself comes from the orchestrator's memory; I found no owner-quoted text in the repo.</li>
+<li>The branch ledger states it: "Filed 2026-10-10 as apache/datafusion#26178 … PR #1014 stays parked on that issue" (<code>task/ledgers/staging/cast-view-agg-nullability-1-ledger.md</code> on <code>pr-1014</code>).</li>
+<li><strong>Verifier history.</strong> There are no GitHub reviews. The record is the park comment (TRO-Wolf, 2026-10-09 18:25Z):</li>
+<li>One Opus verify, <strong>FAIL on one S1</strong>. Over 103,668 cells, no value, type or nullable flag moved, and 5,182 cells that raise on main now answer.</li>
+<li>But 12 cells that answer on main now raise, on the metadata axis: a cast over an expression simplified to a bare Iceberg column, under a SQL view or <code>UNION</code>, then an aggregate.</li>
+<li>Fold 1 halted with a proof (C-006 REJECTED): no construction inside <code>instant_ts.rs</code> agrees on every shape, and a pure-DataFusion <code>CAST(coalesce(...) AS BIGINT)</code> under <code>UNION</code> plus an aggregate raises the same error.</li>
+<li>Ledger recommendation: "hold PR #1014 until the S1 class is resolved"; "Not recommended: ship head accepting the 12 regressions".</li>
+<li><strong>Card on main.</strong> <code>task/roadmap/mid-term/cast-view-agg-nullability-1-card-2026-10-08.md</code> reads "open. Not scheduled". It does <strong>not</strong> record #26178. Its retire condition ("reported upstream and the repo records the upstream reference and a pin") is therefore not met on main.</li>
+<li><strong>No ledger on main.</strong> The ledger, the fold-1 proof and the upstream draft are on the branch only.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Upstream (checked 2026-10-19 via <code>gh api</code>):</strong></li>
+<li>apache/datafusion#26178 is <strong>open</strong>, with 0 comments.</li>
+<li>A community fix PR, apache/datafusion#26201 ("Closes #26178"), is <strong>open and unmerged</strong>: <code>mergeable_state</code> blocked, 0 reviews, last update 2026-10-11. A duplicate, #26200, was closed unmerged.</li>
+<li><strong>Pin.</strong> <code>Cargo.lock</code> <code>datafusion</code> is <strong>54.1.0 on main and on the PR</strong>. The pin has not moved, and no 54.x release can carry the fix while #26201 is unmerged.</li>
+<li><strong>By reading, the defect still reproduces on main.</strong> Main's <code>wrap_as_ltz</code> (<code>instant_ts.rs:681-685</code>) still builds <code>Cast::new_from_field</code> with a sampled-nullability <code>Field</code>, and <code>wrap_as_ntz</code> (<code>:736-740</code>) is unchanged (R-1). Not run.</li>
+<li><strong>Overlap.</strong> The only main commit touching the file since the merge-base is <code>c7121437</code> (ICE-TSNS-TYPE-PLANNER-1, 10-16), which rewrote <code>rewrite_cast</code> around the <code>wrap_as_ltz</code> call site. Nothing on main fixes the nullability another way.</li>
+<li><strong>Test layout (#1113).</strong> The pin file lands at the old flat root <code>python/repark/tests/test_cast_view_agg_nullability_1.py</code>. It would need to move to <code>timestamps/</code> or <code>sql/</code>.</li>
+<li><strong><code>git merge-tree main pr-1014</code>: 1 conflicted path:</strong> <code>crates/repark-functions/src/instant_ts.rs</code>.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>HOLD.</strong> The 2026-10-10 ruling parks it on apache/datafusion#26178. The release condition: #26178 is resolved, for example #26201 merges, <strong>and</strong> RePark's DataFusion pin moves to a release that carries the fix. Neither has happened. The head is worse than main on 12 cells, so it cannot land before that.</p>
+<p>While held, worth doing at clerk band:
+- record #26178 and #26201 on main's card, with the branch ledger as the evidence link;
+- optionally, comment on #26201 to ask for review.</p>
+<p>When unheld: rebase over <code>c7121437</code> (a small conflict), move the pin file into a subsystem directory, add the ledger's carry-over S1 pins, and run one Opus re-verify (Sonnet-band rebase, Opus verify).</p>
+<p>Alternative if the owner wants the PR list short: close it and keep the branch. The code change is 20 lines and the value is the ledger.</p>
+<h2>Confidence</h2>
+<p>High. The verdict flips if the owner rules the 12 metadata-axis regressions are an acceptable trade for 5,182 newly answering cells. That would make it LAND.</p>
+<h2>One line for the owner</h2>
+<h1>1014 stays parked: upstream #26178 and fix PR #26201 are still open, and DataFusion is still 54.1.0. Meanwhile record the issue on main's card.</h1></div></details>
+<details id="pr-1037" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#1037</b> fix(ice-ntz-nested-wall-1): an instant written into a nested TIMESTAMP_NTZ leaf stores the session wall, as Spark does (narrows R-011)</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>5ea94e8c</code> · base <code>main</code> (merge-base <code>2ac03089</code>, 2026-10-12; main is 63 commits ahead) · <strong>draft</strong> · opened 2026-10-12 · last push 2026-10-12 16:23 EDT (park comment 2026-10-13 00:16Z) · <code>main...pr-1037</code>: +25622/-402, 90 files (Rust 25 files +4158; Python 9 files +4413; Markdown 27 files +3571; JSON/JSONL/TXT evidence 29 files +13480). 65 commits (Grok 4.7 49, Muse 13, Claude 3), four merge commits. CI green at the head. No GitHub reviews. <strong>Contains #1038 whole</strong> (<code>pr-1038</code> is an ancestor, joined at <code>9349c362</code>, round 12).</p>
+<h2>What it does</h2>
+<p>It targets R-011: in a non-UTC session an instant written into <code>struct&lt;v: TIMESTAMP_NTZ, …&gt;</code> stores the session wall through field assignment and the UTC wall through every other door (INSERT, MERGE INSERT, whole-struct UPDATE/MERGE, the DataFrame writers). The PR adds a store kernel <code>__repark_cast_nested_ntz__</code> (<code>crates/repark-functions/src/nested_ntz_cast.rs</code>) and a types-only decision table, then wires it into four <code>repark-iceberg</code> SQL sites and the <code>repark-spark</code> INSERT hook (<code>insert_timestamp_ns.rs</code> +572). It carries #1038's read-side localise kernel (<code>nested_wall.rs</code>). Fifteen rounds of folds added EXPLAIN routing, a <code>nested_assign/probe.rs</code> source-type probe, and per-door patches. Step 0 recorded 1,191 cells against main and live Spark 4.1.2 + Iceberg 1.11. The PR itself lists 22 cells and five door families still not fixed.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Owner 2026-10-12: PARKED. "narrowing deferred, no fourth round"; branch and draft kept.</strong> Verified in the park comment on the PR (2026-10-13T00:16Z) and in parity row R-011, <code>docs/spark-sql-iceberg-parity.md:3395-3428</code> ("PRs #1037 and #1038 are parked as drafts; no further fold round is planned"), filed by <code>8c51fbc4</code>.</li>
+<li><strong>Three verifier rounds failed on one finding class.</strong> Rounds 1 and 2 are verified in the branch ledger; the third is cited by reading only:</li>
+<li>Verify 1 at <code>2557c2b2</code>: 3 S1 and 4 S2 (PR comment 2026-10-12T09:26Z; ledger §13).</li>
+<li>Verify 2 at <code>877feac5</code>: one S1 (F1, the wall operand first) and four smaller findings (ledger §15).</li>
+<li>Verify 3 at <code>5ea94e8c</code>: cited only by the Fable note (<code>verify3/out</code>, finding F5). No verdict text is in the tree.</li>
+<li>Per the PR body, these were Opus verifiers.</li>
+<li><strong>The finding class:</strong> two halves decide separately on every path nobody enumerated. The read side localises a naive struct leaf and the store side converts an instant leaf. Each fold closed the named paths (CASE operand order, COALESCE, UNION ALL, EXPLAIN variants, NOT NULL depth-2, temp view after a zone change, the single-branch CASE batch shortcut), and the next verifier found new ones. <code>task/lessons.md:297-307</code> (2026-10-12, proportionality) names this PR: "Guard at the one chokepoint or stop."</li>
+<li><strong>Design note on main:</strong> <code>task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md</code> (Fable, read at <code>5ea94e8c</code>).</li>
+<li>Remedy: one invariant on the optimized plan, a store kernel that decides per leaf at execution from its argument's type, and a plan-level property test.</li>
+<li>It <strong>deletes</strong> <code>probe.rs</code>, the decision table <code>NtzDecision</code>/<code>LEAF_ROWS</code>, every <code>analyzed_types</code> caller, <code>keep_update_store_casts</code> and more of this PR's machinery.</li>
+<li><strong>Closeout decision T-3:</strong> refuse a nested µs NTZ write with a hint now, as R-015 does for ns; #1037/#1038 stay parked; the lift belongs to ICE-TSNS-NESTED-1. It is proposed in <code>docs/artifacts/iceberg-closeout-plan-2026-10-13.html</code> (U-8). Its adoption is recorded only on PR #1098 (unmerged); main's own <code>docs/artifacts/iceberg-rating-status-2026-10-17.html:89,133</code> says "T-3 … not recorded as adopted". <strong>Unverified on main.</strong></li>
+<li><strong>Ledger:</strong> <code>task/ledgers/staging/ice-ntz-nested-wall-1-ledger.md</code> is on the branch only (743 lines).</li>
+<li><strong>Card:</strong> <code>task/roadmap/mid-term/ice-ntz-nested-wall-1-card-2026-10-10.md</code> is on main, status "open, target v1.5.5"; that status is stale.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>R-011 is not fixed and not refused on main.</strong> No commit since 10-12 touches it except the park record <code>8c51fbc4</code>.</li>
+<li>The nested gate <code>crates/repark-iceberg/src/write/nested_ns_gate.rs</code> matches <code>Timestamp(Nanosecond, None)</code> only.</li>
+<li>R-015 says µs leaves "are not refused and answer as main does (rows R-008, R-011)".</li>
+<li>No U-8 order or sketch exists in <code>task/wo/</code>. The rulings note "R-011 refuses with a hint now" is <strong>false on main</strong>.</li>
+<li>R-011 is the v2 "no silent value" blocker (production audit PA-06, S1; STATUS.md:46,61).</li>
+<li><strong>ICE-TSNS-NESTED-1 does not own this yet.</strong> <code>task/roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md</code> is the nanosecond card. Its line 172 lists R-011 as a control: "Not refused, not changed." The card has not been amended since 10-10.</li>
+<li><strong>Files rewritten under it:</strong></li>
+<li><code>5531311b</code> (ICE-STRUCT-PAIRING-1, U-6): <code>update_cast.rs</code> +211, <code>nested_assign.rs</code>, <code>expand.rs</code>, <code>spark_ast.rs</code>, <code>merge/insert.rs</code>.</li>
+<li><code>c7121437</code> (ICE-TSNS-TYPE-PLANNER-1): <code>instant_ts.rs</code> (deleted the ns-literal wraps, added <code>planned_instant_cast</code>), <code>predicate_dml/lineage.rs</code>, <code>predicate_dml.rs</code>, <code>timestamp_ns_nested_shapes.rs</code>.</li>
+<li><code>37d60eaf</code> (U-3): <code>ntz_store.rs</code>, <code>merge/mod.rs</code>, <code>timestamp_ns_wall_doors.rs</code>.</li>
+<li>MERGE-MOD-SPLIT-1 landed: <code>merge/mod.rs</code> is 757 lines, so the PR's "waits on the split" item (<code>store_assignment_then_sql</code>) is now unblocked.</li>
+<li><strong>Planner effect, by reading and not measured.</strong> <code>SparkTypePlanner</code> now plans SQL <code>TIMESTAMP</code> as <code>Timestamp(µs, UTC)</code>. Two premises may have moved:</li>
+<li>the PR's 22 literal residue cells;</li>
+<li>the Fable note's "user-written <code>STRUCT&lt;v: TIMESTAMP&gt;</code> planned as ns" arm.</li>
+</ul>
+<p>Re-measure them before reuse.
+- <strong>Registry ids collide.</strong> The PR adds rows R-019..R-032. Main now uses R-019..R-025 for unrelated rows (frame door, applyInPandas, struct pairing, CTAS body, encoded ns, ANSI floor). Every salvaged row needs a new id.
+- <strong>Tests.</strong> Six Python test, helper and fixture files plus <code>map.md</code> land at the flat <code>python/repark/tests/</code> root. After <code>1199cf94</code> (#1113, 10-19) they belong in <code>timestamps/</code> or <code>writes/</code>. They are new paths, so they do not conflict.
+- <strong><code>git merge-tree main pr-1037</code>: 8 conflicted paths:</strong>
+  - <code>crates/repark-functions/src/instant_ts.rs</code>
+  - <code>crates/repark-iceberg/src/write/predicate_dml.rs</code>
+  - <code>crates/repark-iceberg/src/write/predicate_dml/lineage.rs</code>
+  - <code>crates/repark-iceberg/src/write/update_cast.rs</code>
+  - <code>crates/repark-spark/src/merge/nested_assign.rs</code>
+  - <code>crates/repark-spark/src/merge/nested_assign/expand.rs</code>
+  - <code>crates/repark-spark/src/merge/nested_assign/tests.rs</code>
+  - <code>docs/spark-sql-iceberg-parity.md</code></p>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> The intent is still needed: R-011 is an S1 silent-value blocker for the v2 label. But the owner closed this vehicle ("no fourth round"), and the design note on main deletes the per-door machinery the PR is built from. Eight of its files were rewritten by U-6, U-3 and the planner.</p>
+<p><strong>Salvage, by path on <code>pr-1037</code>:</strong>
+- <strong>Spark-measured oracles:</strong>
+  - <code>task/wo/ice-ntz-nested-wall-1/evidence/spark-4.1.2.jsonl</code> (1,191 cells);
+  - <code>join_round12_spark_{utc,ny,lh}.json</code> (393 each);
+  - <code>python/repark/tests/ice_ntz_nested_wall_1_wall_first.json</code> (2,589 lines). Its Spark columns are reusable; its main columns are stale.
+- <strong>Harnesses:</strong> <code>probe.py</code>, <code>join_round12.py</code>, <code>wall_first_round15.py</code>.
+- <strong>The verifier's statement families</strong> as attack inventory: ledger §13 (the six F1 statements) and §15 (F1–F5).
+- <strong>Ledger §2</strong> (the Spark rule) and the <strong>release-note section</strong> (doors, values before and after, the repair statement).
+- <strong>Registry rows R-020</strong> (the mirror: NTZ literal into a nested TIMESTAMP leaf), <strong>R-030</strong>, <strong>R-031</strong> and <strong>R-032</strong>, re-numbered and re-measured on main.
+- <strong>Not salvageable:</strong> the kernels, <code>probe.rs</code>, the decision table and the per-door wiring (the Fable note deletes them), and the main-side recordings at <code>2ac03089</code>.</p>
+<p><strong>The new unit.</strong> Either amend ICE-TSNS-NESTED-1 to own the µs lift, as T-3 says, or open a sibling card. Build it from the Fable note's §3 contract and §5 property test. Close #1037 with a link from that unit's PR; the owner's "branches kept" holds, because closing does not delete the branch.</p>
+<p><strong>While parked:</strong> the cheap and needed step is U-8's refusal with a hint. Its order is not written; it needs a sketch of the one seam and Opus sketch plus Muse build per the plan. It does not touch this branch.</p>
+<h2>Confidence</h2>
+<p>High. One fact would flip it: the owner reversing "no fourth round" and asking for the narrowed form on this branch, which would make it HOLD. A rebase alone is eight conflicts on files rewritten by three units.</p>
+<h2>One line for the owner</h2>
+<p>Parked R-011 vehicle, design superseded by the Fable note; salvage the Spark oracles and attack families, close when the lift unit opens. R-011 refusal (U-8) is still unbuilt.</p></div></details>
+<details id="pr-1038" class="card v-hold"><summary><span class="pill hold">HOLD</span> <b>#1038</b> fix(ntz-struct-coerce-1): a naive struct member coerced to TIMESTAMP reads as the session wall</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>ef721ee6</code> · base <code>main</code> (merge-base <code>572130dd</code>, 2026-10-11; main is 65 commits ahead) · <strong>draft</strong> · opened 2026-10-12 · last push 2026-10-12 07:33 EDT (park comment 2026-10-13 00:16Z) · <code>main...pr-1038</code>: +3328/-200, 23 files:
+- Rust: 4 files, +1176
+- Python: 2 files, +1047
+- Markdown: 9 files, +458
+- JSONL/JSON/TXT evidence: 8 files, +647</p>
+<p>6 commits, all Grok 4.7. CI green at the head. No GitHub reviews. <strong>Fully contained in #1037:</strong> <code>pr-1038</code> is an ancestor of <code>pr-1037</code>, merged there at <code>9349c362</code>.</p>
+<h2>What it does</h2>
+<p>This is the read side. A struct with a naive µs leaf, coerced beside a struct with a <code>TIMESTAMP</code> leaf (CASE, COALESCE, UNION ALL, INSERT … SELECT), reads the wall as UTC; Spark reads it in the session zone. The PR adds an arm to <code>instant_ts.rs</code> <code>rewrite_cast</code> that rewrites such a struct cast to <code>Cast(__repark_localize_nested_ntz__(expr, paths), target)</code>, with the kernel in the new <code>crates/repark-functions/src/nested_wall.rs</code> (718 lines). It also moves <code>instant_ts</code> tests into <code>instant_ts_tests.rs</code>. Measured on a 144-cell probe against live Spark 4.1.2:
+- 24 cells move from UTC onto Spark (New York, Kolkata);
+- 0 move away;
+- 11 user-written <code>CAST(st AS STRUCT&lt;v: TIMESTAMP&gt;)</code> cells stay as on main, planned as ns.</p>
+<p>It adds registry row "R-019 FIXED", one facade test file, a ledger and a probe.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Owner 2026-10-12: PARKED, same ruling as #1037.</strong> Verified in the park comment (2026-10-13T00:16Z) and in parity row R-011 (<code>docs/spark-sql-iceberg-parity.md:3425-3428</code>).</li>
+<li><strong>Origin.</strong> It was opened as the prerequisite #1037's verify 1 named: "unit NTZ-STRUCT-COERCE-1 fixes that at the source. This PR does not merge before it" (#1037 comment, 2026-10-12T09:26Z). Its body says "Unblocks finding F1 of #1037".</li>
+<li><strong>Review.</strong> It had no standalone verifier. It was joined into #1037 at round 12, and #1037's verify 2 F1 (the wall operand first) is a failure <em>of this arm's interaction</em> with the store kernel (#1037 ledger §15).</li>
+<li><strong>Ledger.</strong> <code>task/ledgers/staging/ntz-struct-coerce-1-ledger.md</code> is on the branch only: C-001..C-005, all PROVEN at the head. #1037's copy adds §8 (the round-15 fold).</li>
+<li><strong>No card, work order or registry row for this defect on main.</strong> <code>grep</code> of main for <code>localize_nested</code>, <code>NTZ-STRUCT-COERCE</code> and a mixed-struct coercion row found nothing except the R-011 park note.</li>
+<li><strong>Closeout T-3</strong> names "#1037/#1038 stay parked; the lift belongs to ICE-TSNS-NESTED-1". The plan page is on main; its adoption is recorded only on unmerged PR #1098. See card 1037.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>The defect is unfixed on main by reading.</strong> <code>instant_ts.rs</code> has no struct arm, and no nested localise kernel exists in <code>crates/</code>. Not run.</li>
+<li><strong>Its one seat was rewritten.</strong> <code>c7121437</code> (ICE-TSNS-TYPE-PLANNER-1, 10-16) changed <code>rewrite_cast</code> in <code>instant_ts.rs</code>:</li>
+<li>it added <code>planned_instant_cast</code> and <code>wall_kernel_by_target</code>;</li>
+<li>it deleted <code>wrap_ns_literal</code>/<code>wrap_ns_literal_as_ntz</code> and the <code>targeting_ns</code> arms.</li>
+</ul>
+<p><code>SparkTypePlanner</code> now plans SQL <code>TIMESTAMP</code> as <code>Timestamp(µs, UTC)</code>. By reading, the 11 user-cast cells this PR left at ns may now reach the arm, or behave differently. Re-measure them.
+- <strong>Registry id collision.</strong> Main's R-019 is ICE-TSNS-FRAME-DOOR-1 (<code>f3f98823</code>); this PR's "R-019" needs a new id. #1037 had already renamed it R-029, which is free on main.
+- <strong>Tests.</strong> <code>python/repark/tests/test_ntz_struct_coerce_1.py</code> lands at the flat root that #1113 (<code>1199cf94</code>, 10-19) emptied; it belongs in <code>timestamps/</code>. It is a new path, so it does not conflict.
+- <strong><code>git merge-tree main pr-1038</code>: 1 conflicted path</strong>, <code>crates/repark-functions/src/instant_ts.rs</code>.</p>
+<h2>Verdict</h2>
+<p><strong>HOLD.</strong> Ruling: owner 2026-10-12 park, "no fourth round". Release condition: the owner dispatches the R-011 lift, ICE-TSNS-NESTED-1 extended to µs per T-3 or a sibling card. <strong>#1037 and #1038 are one unit.</strong> This branch is #1037's read half; the Fable note on main (<code>task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md</code> §2–3) keeps this exact mechanism as its "localise" half, <code>nested_wall.rs</code> <code>rewrite_struct_wall_cast</code> from <code>rewrite_cast</code>.
+- <strong>Not to land alone.</strong> The lessons entry (<code>task/lessons.md:297-307</code>) is about the read and store sides deciding separately. Landing the read side without the store kernel changes the value every nested NTZ store receives from a mixed struct. That is unmeasured, and it is exactly the class three verifiers failed.
+- <strong>At release:</strong>
+  - rebase this branch as the lift's first slice (one conflict, Sonnet/clerk grade);
+  - extend the arm per Fable §3 if the planner has not already;
+  - move the test to <code>timestamps/</code> and re-number the row;
+  - then close this PR with a link from the lift PR.
+- <strong>Salvage:</strong>
+  - <code>task/wo/ntz-struct-coerce-1/evidence/spark-4.1.2.jsonl</code> (144 Spark cells) and <code>probe.py</code>;
+  - <code>nested_wall.rs</code> and <code>instant_ts_tests.rs</code>;
+  - the ledger §4 seat analysis.
+- <strong>While held:</strong> register the read-side defect as an OPEN registry row on main. It is a measured Spark divergence with no row today. Nothing else.</p>
+<h2>Confidence</h2>
+<p>Medium. One fact would flip this to REBUILD: a re-measure showing the planner change moved this arm's seat, so the rebuild would rewrite rather than rebase <code>nested_wall.rs</code>.</p>
+<h2>One line for the owner</h2>
+<p>Read half of #1037, one unit with it; keep parked. It is the Fable design's localise half; rebase it as the lift's first slice. Meanwhile file the read-side divergence as a registry row.</p></div></details>
+<details id="pr-1044" class="card v-land"><summary><span class="pill land">LAND</span> <b>#1044</b> docs(prod-grade-def-1): define "production grade" with a review rubric</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>9f823d1b</code> · base <code>main</code> (merge-base <code>2d08afa3</code>, 2026-10-17; main <code>085d77e8</code> is 18 squash commits ahead) · open, not draft · opened 2026-10-13 · last push 2026-10-17 · +482/-0, 5 files · Rust 0 / Python 0 / docs 5 (one commit).</p>
+<h2>What it does</h2>
+<p>It adds <code>docs/production-grade.md</code> (161 lines): a definition of "production grade", the operating envelope, assessment per capability and never averaged, twelve attributes with the evidence that earns each, anti-patterns, five review questions and ten reference projects. The page says it is "a definition and a review rubric, not a gate": no ledger, script, make target or required artifact. It also adds a standalone HTML copy, <code>docs/artifacts/production-grade-2026-10-13.html</code> (313 lines). It adds a one-line pointer under PROJECT.md "What production-grade means", and rows in <code>docs/map.md</code> and <code>docs/artifacts/map.md</code>. The per-capability maturity section in STATUS.md is left to a separate unit.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>rulings.md (2026-10-13 to 10-17):</strong> the re-rating cites it, the STATUS maturity section waits on it, it was rebased on 10-17, and there is no ruling to close it.</li>
+<li>Verified: the merge-base is <code>2d08afa3</code> (2026-10-17).</li>
+<li>I found no owner-quoted ruling text in the repo.</li>
+<li><strong>Main cites it as the definition of record, by PR number, in five artifacts:</strong></li>
+<li><code>docs/artifacts/iceberg-rerating-2026-10-13.html</code> (":98" "Under the PR #1044 definition…"; row 7 "the unit PR #1044 defers");</li>
+<li><code>docs/artifacts/iceberg-closeout-plan-2026-10-13.html</code> (:41, :111);</li>
+<li><code>docs/artifacts/iceberg-production-plan-2026-10-13.html</code> (:49 names <code>docs/production-grade.md</code>; :65 "0.3 STATUS.md per-capability maturity section, the unit #1044 defers"; :153 "0.3 waits on #1044");</li>
+<li><code>docs/artifacts/server-mode-2026-10-15.html:227</code> ("in PR #1044, still open, not on main");</li>
+<li><code>docs/artifacts/iceberg-rating-status-2026-10-17.html:137</code> ("Housekeeping that a label move needs: merge #1044").</li>
+<li><strong>On main, <code>docs/production-grade.md</code> does not exist.</strong> The production-plan page links a file that is missing on main.</li>
+<li><strong>Reviews:</strong> no GitHub reviews and no PR comments. As a docs-only definition, the record names no verifier.</li>
+<li><strong>Ledger or work order:</strong> none, and none is required (docs only, adds no gate).</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Has the content reached main another way? No.</strong></li>
+<li>The production-grade text appears nowhere else on main.</li>
+<li>PROJECT.md "What production-grade means" (<code>PROJECT.md:97</code>) is unchanged since the merge-base.</li>
+<li>STATUS.md has no maturity section (grep for "maturity" finds nothing).</li>
+<li><strong>Gates, by reading (not run):</strong></li>
+<li>Every relative link in <code>docs/production-grade.md</code> resolves on main.</li>
+<li>STATUS.md (24,948 B against the 25,000 B ceiling) and AGENTS.md are untouched, so there is no compaction risk.</li>
+<li>It adds no ledger, so there is no lifecycle check.</li>
+<li>Both map rows are present (sync_map_md).</li>
+<li><strong>CI (<code>gh pr checks</code>):</strong> every run job passed: Python, Repo guards, Rust lint, Rust test, smoke, cargo-deny, taplo, typos, zizmor. The wheel, facade and dbt jobs were skipped by the docs-skip rule.</li>
+<li><strong><code>git merge-tree --write-tree main pr-1044</code>: 0 conflicts</strong> locally. The repo's <code>.gitattributes</code> sets <code>map.md merge=union</code>.</li>
+<li>GitHub reports <strong>CONFLICTING/DIRTY</strong>. Both main (four rows from #1101/#1111) and the PR append a row at the end of the table in <code>docs/artifacts/map.md</code>.</li>
+<li>By reading, GitHub's mergeability check does not apply the union driver. A local rebase or merge resolves it with no hand edit.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>LAND.</strong> It is needed, and the record already relies on it: four merged artifact pages cite it as the definition, one names its file path, and the STATUS maturity unit (production-plan 0.3) waits on it.</p>
+<p>Remaining steps:
+1. Merge main into the branch locally (the union driver resolves <code>docs/artifacts/map.md</code>) and push.
+2. Let the docs CI run green.
+3. Merge.</p>
+<p>No verifier is needed: there is no code and no gate, and the text was the owner's adopt basis on 10-13. Effort band: <strong>clerk</strong>.</p>
+<p>Optional follow-up, not part of this PR: the STATUS maturity section (0.3). It must fit in the 52 B left under the STATUS.md 25,000 B ceiling, or compact STATUS first.</p>
+<h2>Confidence</h2>
+<p>High. One fact would flip it: an owner statement that the definition should move elsewhere or be rewritten before adoption. None is on record.</p>
+<h2>One line for the owner</h2>
+<h1>1044 is the production-grade definition that four merged artifacts already cite. It is CI green, so merge main (map row only) and land it at clerk band.</h1></div></details>
+<details id="pr-1047" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#1047</b> fix(ns-array-apply-in-pandas-refuse-1): applyInPandas refuses a nanosecond array it would store wrong</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>946f3b47</code> · base <code>main</code> (merge-base <code>f8f1d252</code>, 2026-10-13; main is 59 commits ahead) · <strong>draft</strong> · opened 2026-10-13 · last push 2026-10-13 16:14 EDT (deferral comment 22:11Z) · <code>main...pr-1047</code>: +2757/-6, 12 files:
+- Rust: 0
+- Python: 6 files, +1589/-6 (product: <code>grouped_arrow.py</code> +352, <code>cogroup.py</code> +17; the rest tests)
+- Markdown: 5 files, +763 (ledger 570, parity doc 59, maps)
+- JSON fixture: 1 file, +405</p>
+<p>12 commits: round 0 by Muse Spark, fold 1 by Opus 5.5 (per the ledger). CI green at the head. No GitHub reviews.</p>
+<h2>What it does</h2>
+<p><code>_pandas_result_to_arrow_batches</code> is the one conversion function that grouped and cogrouped <code>applyInPandas</code> share. The PR adds a pre-schema scan to it: a compiled "scan plan" walks every declared timestamp position (list, struct, map, any depth). It raises <code>PySparkTypeError</code> with a cast hint when a list cell holds a numpy <code>datetime64[ns]</code> array. Fold 1 added a second rule: refuse an <strong>integer</strong> equal to a nanosecond tick of the group frame. It also exempts the facade's own pandas-UDF callbacks. Nothing in it floors. The rest is a 923-line case matrix, a main-recorded fixture (<code>f3f98823</code>), 15+ pins, a timing probe, a ledger and its own parity row R-020.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Owner 2026-10-13, adopt C: deferred to 1.5.6 as NS-ARRAY-FLOOR-1, a redesign.</strong> Verified three ways:</li>
+<li>the PR comment of 2026-10-13T22:11Z ("stays draft and takes no further fold; v1.5.5 does not wait on it");</li>
+<li>the card <code>task/roadmap/mid-term/ns-array-floor-1-card-2026-10-13.md</code> ("Status: open. Target v1.5.6. A redesign that replaces draft PR #1047");</li>
+<li>parity row R-020 on main (<code>docs/spark-sql-iceberg-parity.md:3955</code>), OPEN, "a redesign that replaces draft PR #1047".</li>
+<li><strong>Review.</strong> The ledger records verify 1 FAIL on <code>b8f50345</code> (H-1, H-3, M-1, M-2, L-1). Fold 1 followed. Verdict 2 (named in the card) dropped the design: its integer rule refused a correct µs integer, and its own hint (<code>value // 1000</code>) stored a wrong value. The verifier's identity is not on the PR; unverified.</li>
+<li><strong>Lesson on main:</strong> <code>task/lessons.md:317-319</code>, "refuse at sketch a guard that infers a unit from a value's magnitude or equality". Case: #1047.</li>
+<li><strong>Sibling card:</strong> <code>task/roadmap/mid-term/ns-nested-pandas-1-card-2026-10-13.md</code> takes the struct and map cases. It is unscheduled.</li>
+<li><strong>NS-ARRAY-FLOOR-1 on main:</strong></li>
+<li>card (above), R-020, closeout plan U-2 (<code>docs/artifacts/iceberg-closeout-plan-2026-10-13.html:73</code>);</li>
+<li>step 0 merged as <code>304bc4e7</code> (2026-10-14, Muse, measurement only): ledger <code>task/ledgers/staging/ns-array-floor-1-ledger.md</code> C-001..C-007 PROVEN, evidence <code>task/wo/ns-array-floor-1/evidence/</code>, recorders <code>python/repark/tests/timestamps/_record_ns_array_floor_1_{input,output,lane_a}.py</code>;</li>
+<li>no work order for step 1 and no build branch on main. The 10-17 status page reads "U-2 not started; Step 0 only (#1064); #1047 is a stale draft".</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>The defect is not fixed on main.</strong> R-020 is still OPEN. <code>grouped_arrow.py</code> was last touched on main 2026-10-07 (<code>392f2350</code>), before this PR.</li>
+<li><strong>The adopted design contradicts this PR on both halves.</strong></li>
+<li>Under <code>array&lt;timestamp&gt;</code> the design floors; this PR refuses.</li>
+<li>The design is driven by the dtype, "never by integer comparison". This PR's fold-1 integer rule is exactly what verdict 2 and the lesson reject.</li>
+<li>Only the <code>array&lt;timestamp_ntz&gt;</code> refusal coincides. Step 0 contests even that: "The card's verdict-2 refusal under <code>array&lt;timestamp_ntz&gt;</code> does not reproduce on pandas 3.0.6: Spark floors there under both settings" (<code>task/wo/ns-array-floor-1/evidence/sites.md</code>; ledger §3).</li>
+<li><strong>Step 0 did not record this PR's shape.</strong> Its output recorder returns a Python list of <code>pd.Timestamp</code> (<code>ns_stamps</code>), and main floors that shape: "same, floor" for both applyInPandas doors. R-020's defect shape is the group frame's numpy <code>datetime64[ns]</code> array (<code>table_array_ns</code> in this PR's matrix). It is recorded only on this branch, in <code>_ns_array_apply_in_pandas_refuse_1_cases.py</code> and <code>ns_array_apply_in_pandas_refuse_1_main.json</code>. Read, not run.</li>
+<li><strong>What the redesign reuses:</strong></li>
+<li>the refusal <em>site</em> is the same function (<code>grouped_arrow.py:103</code> on main, named in <code>sites.md</code>);</li>
+<li>the scan-plan walk could carry a floor instead of a raise, but it is built around the rejected integer rule;</li>
+<li>the case matrix and the main fixture are the reusable part;</li>
+<li>the pins assert refusal texts, so they invert under a floor.</li>
+<li><strong>Tests at the flat root.</strong> All five Python test files land in <code>python/repark/tests/</code>, which #1113 (<code>1199cf94</code>, 10-19) emptied. The pin file imports <code>_ice_tsns_merge_wall_1_doors</code>, which now lives in <code>timestamps/</code>. By reading, it would not resolve from the root.</li>
+<li><strong><code>git merge-tree main pr-1047</code>: 1 conflicted path</strong>, <code>docs/spark-sql-iceberg-parity.md</code>. Main's <code>be011012</code> wrote its own R-020 (the deferral text); the PR writes a different R-020 ("the interim fix refuses").</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> The intent, R-020 S0 wrong stored value, is still needed and is ruled as NS-ARRAY-FLOOR-1 (U-2, 1.5.6). This PR's mechanism is the rejected one.
+- <strong>Close #1047 now.</strong> The card and R-020 on main already name it as replaced, so there is no need to wait for a new PR. Keep the branch <code>fix/ns-array-apply-in-pandas-refuse-1</code>: R-020 and both cards cite its ledger as their measurement source.
+- <strong>Salvage into <code>task/wo/ns-array-floor-1/</code></strong> (or the step-1 branch):
+  - <code>python/repark/tests/_ns_array_apply_in_pandas_refuse_1_cases.py</code>, the matrix;
+  - <code>ns_array_apply_in_pandas_refuse_1_main.json</code>, main's answers per cell;
+  - ledger §F1 and the verdict-2 cell list.</p>
+<p>They hold the numpy-array shape step 0 missed. Optionally keep <code>_time_ns_array_apply_in_pandas_refuse_1.py</code> as the cost probe.
+- <strong>Discard:</strong> the integer rule, both refusal texts, the facade-callback exemption, and the PR's R-020 text.
+- <strong>Before step 1 is ordered</strong>, the owner should see that step 0 found Spark floors under <code>array&lt;timestamp_ntz&gt;</code> on pandas 3.0.6. The card's "refuse under ntz" half may need a re-ruling. Step 1 should re-record the numpy-array shape on live Spark.
+- Effort for the rebuild: a Sonnet/Muse executor for a floor at one site, plus one Opus verifier, as U-2 was planned.</p>
+<h2>Confidence</h2>
+<p>High that this PR should not land. Medium on "close now". One fact would flip it to HOLD: the owner wants the branch kept open as the live reference until the U-2 step-1 PR opens.</p>
+<h2>One line for the owner</h2>
+<p>Close #1047: the adopted NS-ARRAY-FLOOR-1 design floors where it refuses. Copy its case matrix and fixture first; step 0 contests the ntz-refuse half of the card.</p></div></details>
+<details id="pr-1048" class="card v-rebuild"><summary><span class="pill rebuild">REBUILD</span> <b>#1048</b> fix(ice-tsns-create-door-1): a new timestamp_ns column needs the user's ask, else refuse with a hint</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>409b8c6e</code> · base <code>main</code> (merge-base <code>f8f1d252</code>, 2026-10-13; main is 59 commits ahead) · <strong>draft</strong> · opened 2026-10-13 · last push 2026-10-13 18:30 EDT · <code>main...pr-1048</code>: +10944/-68, 70 files:
+- Rust: 39 files, +2606/-68
+- Python: 6 files, +1351
+- JSON fixtures/evidence: 2 files, +5753 (the main-recorded matrix is 5568 of it)
+- Markdown: 23 files, +1234</p>
+<p>9 commits, executor Opus 5.5 (ledger). CI green at the head. No GitHub reviews, no PR comments.</p>
+<h2>What it does</h2>
+<p>It implements the owner's 2026-10-13 Option A at one door, <code>crates/repark-iceberg/src/write/nanosecond_door.rs</code>. A new or schema-added <code>timestamp_ns</code>/<code>timestamptz_ns</code> column is created only when the user asked for it: DDL naming the type, a user-written cast, or the session setting <code>repark.sql.allowImplicitTimestampNanos</code>. Otherwise the statement refuses with <code>[TIMESTAMP_NANOS_NOT_REQUESTED]</code> and a hint; below format v3 it refuses with <code>[TIMESTAMP_NANOS_REQUIRES_FORMAT_V3]</code>.</p>
+<p>The mechanism is slice 1: the ns cast kernel gains <code>CastOrigin::{Written, Inserted}</code>.
+- The SQL-registered kernel is <code>Written</code>.
+- <code>timestamp_ns_cast_expr</code> (engine-built) is <code>Inserted</code>.
+- An asked-columns walk (<code>timestamp_ns_cast/asked.rs</code>) reads the origin from the plan.</p>
+<p>It seats the door in:
+- CTAS/replace (<code>repark-sql</code> <code>create_table.rs</code>, <code>v3/create.rs</code>);
+- facade CTAS (<code>repark-spark</code> <code>ctas.rs</code>);
+- <code>insert_by_name/evolution.rs</code>, MERGE schema evolution, and the catalog builders.</p>
+<p>It adds parity rows "R-021"/"R-022", a ledger and a 72-cell main record.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Owner 2026-10-13, NS create-door ruling (Option A).</strong> Unverifiable in-repo as a ruling text; the orchestrator memory holds it. The repo corroborates it:</li>
+<li>the v1.5.5 notes: "the native door still creates nanosecond tables that Spark 4.1.2 cannot open, until the create-door card lands (planned 1.5.6)" (<code>task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md:38-40</code>);</li>
+<li>parity doc line 3914: "Keeping them is the create-door card's session setting".</li>
+<li><strong>Owner 2026-10-13: "hold the re-verifier until the type planner lands, rebase onto that head, verify once."</strong> From rulings.md; not verified as text. The boards on main corroborate it:</li>
+<li>"#1048 waits for U-1" (<code>docs/artifacts/evening-board-2026-10-15.html:96</code>);</li>
+<li>"Held as before; CI green" (<code>overnight-board-2026-10-15.html:174</code>).</li>
+<li><strong>Review.</strong></li>
+<li>Verify 1 (independent) <strong>FAILED <code>53ced116</code></strong> with ten findings and one surviving mutant (ledger §16).</li>
+<li>Fold 1 (<code>d5c94c24</code>, <code>409b8c6e</code>) answered them and is unverified. That is the "re-verifier" the ruling holds.</li>
+<li>Three owner accept-or-flip questions are open in ledger §15: native v3 CTAS with a plain <code>TIMESTAMP</code> output (20 cells), 4 MERGE-evolution cells, and the grouping-sets/subquery/lambda/window/cache cast shapes.</li>
+<li><strong>No card or work order on main.</strong> There is no <code>task/wo/ice-tsns-create-door-1*</code> and no create-door card file; the release notes cite "the create-door card" without a link. The unit is not a U-row in the closeout plan (<code>docs/artifacts/iceberg-closeout-plan-2026-10-13.html</code>). The ledger sits in <code>task/ledgers/completed/</code> on the branch only.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>The planner landed.</strong> <code>c7121437</code> (ICE-TSNS-TYPE-PLANNER-1, PR #1082, 2026-10-16; R-017 FIXED, <code>docs/spark-sql-iceberg-parity.md:3656</code>), plus records <code>7b3541ae</code>.</li>
+<li><strong>Nothing on main implements the create-door refusal.</strong> <code>git grep</code> of main finds no <code>TIMESTAMP_NANOS_NOT_REQUESTED</code>, <code>allowImplicitTimestampNanos</code>, <code>TIMESTAMP_NANOS_REQUIRES_FORMAT_V3</code>, <code>nanosecond_door</code>, <code>CastOrigin</code> or <code>asked_nanosecond</code>.</li>
+<li><strong>Related doors that did land:</strong></li>
+<li>the frame door R-019 (<code>f3f98823</code>, 10-13, already in this branch's base): pandas/polars ns frames enter as µs, so the facade-create cells from pandas are already µs on main;</li>
+<li>R-008 FIXED 10-10 (ns targets);</li>
+<li>neither covers native CTAS from an ns source.</li>
+<li><strong>Files of this PR the planner rewrote</strong> (15 overlap with <code>c7121437</code>):</li>
+<li><code>crates/repark-functions/src/instant_ts.rs</code>, <code>timestamp_ns_cast.rs</code>, <code>timestamp_ns_cast/tests.rs</code>;</li>
+<li><code>crates/repark-sql/src/create_table.rs</code>, <code>dialect.rs</code>;</li>
+<li><code>crates/repark-spark/tests/timestamp_ns_nested_shapes.rs</code>;</li>
+<li><code>docs/spark-sql-iceberg-parity.md</code>;</li>
+<li><code>python/repark/tests/test_ice_tsns_merge_wall_1.py</code>;</li>
+<li>7 <code>map.md</code>.</li>
+</ul>
+<p>Later main commits also touch its files: <code>14ad3c6d</code>, <code>41cdd957</code>, <code>0b9195ca</code>, <code>5531311b</code>, <code>37d60eaf</code>, <code>564649b8</code>, <code>1199cf94</code>, <code>72a6c0db</code>.
+- <strong><code>git merge-tree main pr-1048</code>: 4 conflicted paths.</strong>
+  - <code>crates/repark-functions/src/instant_ts.rs</code>
+  - <code>crates/repark-functions/src/timestamp_ns_cast/tests.rs</code>
+  - <code>docs/spark-sql-iceberg-parity.md</code>
+  - <code>python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py</code> (rename followed)
+- <strong>A semantic break the textual merge hides</strong> (by reading, not run).
+  - On main the planner's <code>SparkTypePlanner</code> plans a SQL <code>CAST(x AS TIMESTAMP_NS)</code> to a native <code>Expr::Cast</code>. <code>wall_kernel_by_target</code> (<code>timestamp_ns_cast.rs:63-71</code>, called from <code>spark_type_planner.rs:161</code> and <code>instant_ts.rs:568</code>) then rewrites it through <code>timestamp_ns_cast_expr</code>.
+  - This PR makes <code>timestamp_ns_cast_expr</code> build the <strong><code>Inserted</code></strong> kernel, and <code>timestamp_ns_cast.rs</code> auto-merges with no conflict. After a rebase, every user-written cast would read as engine-inserted, and the door would refuse exactly the opt-in the ruling protects.
+  - Slice 1's origin seat must move into the planner path.
+- <strong>The owner questions may have dissolved.</strong> Ruling 94 inside <code>c7121437</code> plans ANSI <code>TIMESTAMP</code> as <code>Timestamp(µs, None)</code>. The 20 native v3 "plain TIMESTAMP output" cells this PR refuses (ledger §15/§16.7) likely store µs on main now, so they no longer reach the door. The widen rule also changes which CTAS outputs are ns. The 72-cell main record (<code>ice_tsns_create_door_1_main.json</code>, recorded on a pre-planner main) is stale.
+- <strong>Row ids collide.</strong> Main's R-021 and R-022 are ICE-STRUCT-PAIRING-1 rows (CLOSED 10-14). The next free id is R-026.
+- <strong>Tests at the flat root.</strong> Four new Python files (<code>test_ice_tsns_create_door_1.py</code>, <code>_fold_1.py</code>, <code>_record_…_main.py</code>, <code>_ice_tsns_create_door_1_texts.py</code>) land in <code>python/repark/tests/</code> (#1113); they belong in <code>iceberg/</code> or <code>timestamps/</code>.</p>
+<h2>Verdict</h2>
+<p><strong>REBUILD.</strong> "Rebase and verify once" is no longer a bounded job:
+- slice 1 (origin carry) needs a redesign on the planner;
+- the census must be re-recorded on post-planner main;
+- the three owner questions must be re-measured;
+- the rows must be renumbered;
+- then a verifier must review fold 1 plus the redesign, which is more than "verify once".</p>
+<p>The intent is ruled and still live on main. Spark 4.1.2 cannot open an ns table main creates unasked.
+- <strong>New unit:</strong> none is named on main. Suggest ICE-TSNS-CREATE-DOOR-2, a fresh branch from main, a grade-B order with an Opus 5.5 sketch of where the origin lives post-planner, then a Sonnet/Opus executor.
+- <strong>Salvageable:</strong>
+  - <code>write/nanosecond_door.rs</code> (+ tests);
+  - <code>repark-sql</code> <code>create_table/nanosecond_ask.rs</code> and <code>v3/nanosecond_door.rs</code>;
+  - <code>repark-spark</code> <code>ctas/nanosecond_ask.rs</code>, <code>insert_by_name/evolution.rs</code> seats, <code>tests/nanosecond_create_door.rs</code>;
+  - <code>timestamp_ns_cast/asked.rs</code> (the walk itself, minus the origin source);
+  - both error texts and the session setting name;
+  - the recorder <code>_record_ice_tsns_create_door_1_main.py</code> (re-run, not its JSON);
+  - ledger §15–16 (verify-1 findings and fold answers);
+  - the cost harness.
+- <strong>Close #1048 with a link from the new PR.</strong> Until then keep it draft; it needs no further action.
+- <strong>Owner first:</strong> put the create door on the closeout plan or the 1.5.6 list explicitly. Today it has no card, order or U-row.</p>
+<h2>Confidence</h2>
+<p>Medium. The semantic break and the dissolved owner questions are from reading, not running. One fact would flip this to LAND with an Opus fold: a run showing user-written <code>TIMESTAMP_NS</code> casts still reach the door as the SQL-registered <code>Written</code> kernel on main.</p>
+<h2>One line for the owner</h2>
+<p>Planner landed; #1048 is no longer rebase-and-verify. It would refuse user casts post-planner. Rebuild as a fresh unit reusing its door files, and give it a card first.</p></div></details>
+<details id="pr-1067" class="card v-land"><summary><span class="pill land">LAND</span> <b>#1067</b> docs(ice-integrity-pins-1): the U-9 design sketch, three integrity pins (for the 2026-10-15 triage)</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>8dfb1dbb</code> · base <code>main</code> (merge-base <code>37d60eaf</code>, 2026-10-14; main <code>085d77e8</code> is 46 commits ahead) · open, not draft · opened 2026-10-15 · last push 2026-10-15 06:37 EDT · +829/-0, 6 files · Rust 0 / Python 0 / docs 6 (8 commits).</p>
+<h2>What it does</h2>
+<p>It adds the U-9 (ICE-INTEGRITY-PINS-1) design sketch, <code>task/wo/ice-integrity-pins-1/sketch.md</code> (733 lines), with three pins:
+- <strong>K:</strong> kill between the data files and the commit, with the table unchanged and the orphans counted.
+- <strong>U:</strong> an unknown commit outcome drilled live on Glue and S3 Tables.
+- <strong>X:</strong> the v1.5.4 wheel and the head read each other's tables.</p>
+<p>The sketch also covers local measurements, the injection choice, the cells, the legs, a proposed workflow change (the file is left untouched), risks, questions Q1 to Q10, and an "Owner rulings (2026-10-15)" block quoting rulings 79 to 88 with their mapping to sections.</p>
+<p>It files two cards:
+- <code>task/roadmap/mid-term/ice-commit-rebase-dup-1-card-2026-10-15.md</code> (ruling 84);
+- <code>task/roadmap/mid-term/commit-unknown-operation-id-1-card-2026-10-15.md</code> (ruling 85).</p>
+<p>It adds rows to the work-order map and the mid-term map.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>rulings.md:</strong> "U-9 ruled on 10-15 and un-dispatched; the Q84 card lives on this branch only; its precondition (fork DUP-1 → RePark #1095) merged 10-17."</li>
+<li>Verified: the sketch quotes owner rulings 79 to 88 verbatim (sketch, "Owner rulings (2026-10-15)").</li>
+<li>Verified: neither card file exists on main.</li>
+<li>Verified: #1095 merged as <code>1ce895a0</code> on 2026-10-17 (<code>docs/cutover/p2-report-rp-58-fork-repin-2026-10-17.md</code>: fork #368 merged as <code>409ff330</code>, the verifier chain ended in a PASS at <code>ca358550</code>).</li>
+<li><strong>Main cites it (by PR number or unit name):</strong></li>
+<li><code>docs/cutover/p2-report-rp-58-fork-repin-2026-10-17.md:90</code> ("The U-9 live drill (#1067, held)");</li>
+<li><code>docs/artifacts/iceberg-rating-status-2026-10-17.html:90,132</code> ("U-9's ten questions (#1067, held since 10-15)");</li>
+<li><code>docs/artifacts/evening-board-2026-10-15.html:96</code>;</li>
+<li><code>docs/artifacts/overnight-board-2026-10-15.html:94,172</code>;</li>
+<li><code>task/roadmap/mid-term/occ-disjoint-merge-flake-1-card-2026-10-14.md:62-66</code> ("stays unscheduled until U-9's brief is set");</li>
+<li><code>task/roadmap/mid-term/map.md:941</code>;</li>
+<li>the closeout plan row U-9 (<code>docs/artifacts/iceberg-closeout-plan-2026-10-13.html:80</code>).</li>
+<li><strong>"Held".</strong> The main pages call it held. I found no owner ruling that holds the PR itself. The hold reads as "the sketch waits for U-9's dispatch", and the 10-17 evening halt stopped new lanes (<code>docs/cutover/p2-report-repark-sql-update-subquery-where-1-2026-10-17.md:97</code>: "The owner has halted new lanes").</li>
+<li><strong>Reviews:</strong> no GitHub reviews and no comments. The sketch is the design; there is no verifier record and none is required for a docs sketch.</li>
+<li><strong>Ledger or work order:</strong> none on main for ICE-INTEGRITY-PINS-1. <code>git log main --grep</code> finds no U-9 or ICE-INTEGRITY commit.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Has the content reached main another way? No.</strong></li>
+<li>The sketch, its rulings block and both cards are branch-only.</li>
+<li>Main names ICE-COMMIT-REBASE-DUP-1 only in artifact pages and the RP-58 P2 report, never as a card.</li>
+<li><strong>The DUP-1 card is stale on one half.</strong> It says "open, not scheduled". The fork change it asks for merged (fork <code>409ff330</code>, RePark #1095 <code>1ce895a0</code>), and the fork pin has since moved to <code>d80a2884</code> (RP-59, #1103, 10-18). The other half of its retire condition, "U-9's live drill shows no double append", is still open.</li>
+<li><strong>The sketch's line references are on old revs.</strong> Its <code>path:line</code> citations are on main <code>37d60eaf</code> and fork <code>076d5f98</code>, which it states. The fork's <code>append.rs</code> re-base path changed under DUP-1. The sketch is accurate as a dated record, but the U-9 executor must re-read the fork lines at <code>d80a2884</code>.</li>
+<li><strong>Gates, by reading (not run):</strong></li>
+<li>Every relative link in the sketch and the two cards resolves on main or the branch.</li>
+<li>It adds no ledger, so there is no lifecycle check.</li>
+<li>STATUS.md and AGENTS.md are untouched.</li>
+<li>Map rows exist for every new file.</li>
+<li><strong>CI:</strong> <code>gh pr checks</code> reports <strong>no checks</strong> on the head. Runs exist only for <code>a4c1a6a5</code> (2026-10-15 01:17Z: CI, cargo-deny, smoke, zizmor all success). The last two commits (<code>a12a6184</code> rulings block, <code>8dfb1dbb</code> cards) never got a run. The reason is unknown; no <code>skip ci</code> appears in their messages.</li>
+<li><strong><code>git merge-tree main pr-1067</code>: 0 conflicts</strong> locally, via the <code>map.md merge=union</code> driver. GitHub reports CONFLICTING/DIRTY because both sides append to <code>task/wo/map.md</code> and <code>task/roadmap/mid-term/map.md</code>, and its check does not apply the union driver (by reading).</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>LAND.</strong> U-9 is ruled (79 to 88) and is the closeout's critical path (U-9, then #1070, then the first live nightly, then U-11). The sketch is the design the U-9 executor builds from, and the Q84 and Q85 cards exist nowhere else.</p>
+<p>Remaining steps:
+1. Merge main into the branch locally. The union driver resolves both maps.
+2. Update the DUP-1 card's status line: the fork half is done (#1095 <code>1ce895a0</code>, fork <code>409ff330</code>, now pin <code>d80a2884</code>); the U-9 drill half is open.
+3. Optionally add one line under the sketch header: "fork lines cited at <code>076d5f98</code>; re-read at the current pin before building."
+4. Push, which also gets the never-run head its first CI.
+5. Merge.</p>
+<p>No verifier is needed for a docs sketch. Effort band: <strong>clerk</strong>.</p>
+<p>Landing it does not dispatch U-9. Dispatch stays the owner's call under the 10-17 halt.</p>
+<h2>Confidence</h2>
+<p>High. One fact would flip it to REBUILD: the owner wants U-9 re-sketched at the new fork pin before any record lands. The record does not say so.</p>
+<h2>One line for the owner</h2>
+<h1>1067 holds U-9's ruled sketch (79–88) and the only copy of the DUP-1 and op-id cards. Land it at clerk band after a map merge and a DUP-1 status fix.</h1></div></details>
+<details id="pr-1070" class="card v-hold"><summary><span class="pill hold">HOLD</span> <b>#1070</b> ci(aws-acceptance): wire U-10's cross-read step and U-9's integrity legs (owner ruling 86; draft until U-9 lands)</summary><div class="body">
+<p>claude-opus-5-5 · head <code>abc5e40c</code> · base main · DRAFT · opened 2026-10-15 · last push 2026-10-15 · +44/-4 · 3 files · Rust 0 / Python 0 / workflow 42 lines + docs 4 lines (<code>.github/workflows/map.md</code>, <code>task/wo/ice-spark-cross-read-1/order.md</code>)</p>
+<h2>What it does</h2>
+<p>Edits the <code>live-aws</code> job of <code>.github/workflows/aws-acceptance.yml</code> only. It raises the job cap 90 → 120 min, adds <code>actions/setup-java</code> (Temurin 17, SHA-pinned with <code># v6.0.0</code>, the same SHA <code>parity-live.yml</code> uses), and changes the build step to <code>uv sync --locked --extra record</code> (PySpark 4.1.2 for the cross-read). Still in the build step, before credentials, it builds a <code>.venv-previous</code> from a hash-pinned <code>previous_release_requirements.txt</code> and asserts <code>repark.__version__ == '1.5.4'</code>. After dbt gold it adds an "integrity legs" step running three U-9 modules, then a "cross-read module" step running U-10's <code>test_aws_acceptance_cross_read.py</code>. No new permission, secret, variable or action version; it reuses <code>vars.REPARK_ACCEPT_*</code> and <code>secrets.TABLE_BUCKET_ARN</code>.</p>
+<h2>Record</h2>
+<ul>
+<li>Owner ruling 86 (2026-10-15), quoted in the PR body: "Wire it as the plan writes it; I merge the .github change. The first run is the proof. One clerk PR carries U-9's step and U-10's AWS leg together." I verified the quote only in the PR body. Not found verbatim on main.</li>
+<li><code>docs/artifacts/evening-board-2026-10-15.html</code> (main): "#1070 is yours, after U-9 lands." <code>docs/artifacts/iceberg-rating-status-2026-10-17.html</code> (main): "The AWS leg is draft #1070, waiting on U-9"; U-9 is "not started", with sketch #1067 "held with ten owner questions". Verified.</li>
+<li>The rulings.md critical path (U-9 → #1070 → first live nightly → U-11) matches the closeout plan on main (<code>docs/artifacts/iceberg-closeout-plan-2026-10-13.html</code>: U-11's bound needs the U-9 kill pin).</li>
+<li>Reviews: none. No verifier round (ruling 86 makes the first live run the proof). CI on the head: 20 pass, 2 skipping, zizmor pass (run 38722650366/…401; this predates #1102, which made zizmor blocking again).</li>
+<li>Work order on main: <code>task/wo/ice-spark-cross-read-1/order.md</code> holds the U-10 step as a proposal. It already names the post-#1113 path <code>python/repark/tests/parity/test_aws_acceptance_cross_read.py</code>.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>U-10 half exists on main.</strong> It moved in #1113 (1199cf94, 10-19) to <code>python/repark/tests/parity/test_aws_acceptance_cross_read.py</code>, with <code>_acceptance_cross_read.py</code> and the local leg <code>test_acceptance_cross_read_local.py</code>. The PR still names the old root path <code>python/repark/tests/test_aws_acceptance_cross_read.py</code>. That file no longer exists, so the step as written would fail with "file not found".</li>
+<li><strong>U-9 half points at nothing.</strong> <code>test_aws_acceptance_integrity_kill.py</code>, <code>test_aws_acceptance_commit_unknown.py</code>, <code>test_aws_acceptance_cross_release.py</code> and <code>previous_release_requirements.txt</code> exist in no ref of the clone (<code>git log --all</code> is empty for each). The <code>.venv-previous</code> install sits in the build step, so merged today it would fail the whole nightly before the existing acceptance module runs. The PR body says this too.</li>
+<li><code>git merge-tree --write-tree main pr-1070</code> is clean in the local clone: 0 conflicts, tree <code>306f638d</code>. GitHub reports <code>mergeable: CONFLICTING</code>, probably a stale computation. I did not resolve the discrepancy.</li>
+<li>Gates, by reading only: actions SHA-pinned with version comments, yes. The YAML adds no comment (the Java comment was dropped in 0b2db279). Every var and secret reaches <code>run:</code> through <code>env:</code>. <code>persist-credentials</code> is untouched (the checkout step is unchanged). <code>check_workflows_parse.py</code> and zizmor passed on PR CI. I did not run any of them locally.</li>
+<li>The previous-release pin is 1.5.4. v1.5.5 was never tagged, so 1.5.4 is still the latest release. If 1.5.5 tags first, the pin and the assert change.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>HOLD.</strong> Ruling 86 makes this one clerk PR carrying both legs, which the owner merges after U-9 lands. U-9 has built nothing: no test modules, no requirements file. Landing it now would turn the nightly red at the build step.
+A U-10-only LAND is technically possible, because the module exists on main. It would take Java 17, <code>--extra record</code> and the cross-read step at the <code>parity/</code> path, without the timeout bump, the 1.5.4 venv or the integrity step. Clerk effort. But it contradicts ruling 86's "together", so it needs the owner's word first. It would also start the live cross-read before U-9, which the record never asked for.
+Worth doing while held:
+- Leave it draft, which it already is.
+- When U-9 builds, rebase so every module path sits under a <code>python/repark/tests/&lt;subsystem&gt;/</code> directory: the cross-read path becomes <code>parity/</code>, and U-9's three modules plus <code>previous_release_requirements.txt</code> follow wherever U-9 places them.
+- Re-check that the pinned previous release is still the latest tag.</p>
+<h2>Confidence</h2>
+<p>High. It would flip to LAND (U-10 half) if the owner amends ruling 86 to wire the cross-read leg alone ahead of U-9.</p>
+<h2>One line for the owner</h2>
+<p>Keep draft: U-9's three test modules and requirements file don't exist; U-10's path moved to <code>parity/</code>. Optionally split a U-10-only clerk PR if you want the cross-read live sooner.</p></div></details>
+<details id="pr-1071" class="card v-hold"><summary><span class="pill hold">HOLD</span> <b>#1071</b> fix(enc-1-residue-1): a refused keyed commit sweeps its staged files; session registration always installs the guard (items 1 and 5)</summary><div class="body">
+<p>claude-opus-5-5 · head <code>787a3357</code> · base main (merge-base <code>1ce895a0</code>, 10-17) · OPEN, not draft · opened 2026-10-15 · last push 2026-10-17 · +4649/-351 · 84 files · Rust ~4,130 changed lines / Python 4 / docs, maps, ledgers, clippy.toml ~860</p>
+<h2>What it does</h2>
+<p>It closes two of six ENC-1 residue items from <code>task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md</code>.
+- <strong>Item 1</strong>, after the ruling-121 redesign: when a commit refuses because the table is keyed, it deletes the staged files that attempt wrote. A new <code>write/staged_commit.rs</code> (<code>StagedFiles</code>/<code>StagedCommit</code>, a process-wide record of every path RePark's writer builders open, capped at 2^20) becomes the only place a staged file joins a transaction. <code>clippy.toml</code> bans the fork's <code>Transaction::commit</code> and 15 file-adding methods everywhere else, enforced by <code>make rust-panic-ban</code>. 26 metadata-only commits move to <code>write::commit_unstaged</code>, and <code>merge/abort.rs</code> is deleted.
+- <strong>Item 5:</strong> <code>ReparkCatalogProvider::try_new</code> installs <code>EncryptionGuardCatalog</code> once, so a catalog registered directly through the session is guarded. The <code>Arc::ptr_eq</code> registration-race pin now asserts through the wrapper.
+- It also carries the docs record of the owner's 10-14 acceptance of items 2, 3, 4 and 6, plus rulings 71/72, 96/97, 108/109, 121 and 141–145, in the card, <code>task/ledgers/completed/enc-1-ledger.md</code> (+273), the parity doc and the maps.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Owner 10-14 (rulings 22–27, 32):</strong> close items 1 and 5; accept 2, 3, 4 and 6. On the branch card only, not on main. <code>docs/artifacts/iceberg-rating-status-2026-10-17.html</code> (main) notes that one reader missed it for that reason.</li>
+<li><strong>Verifier rounds</strong> (boards on main plus the PR body; all Opus):</li>
+<li>10-15 at <code>c7713000</code>: FAIL, F1–F6, $8.40. Rulings 96/97: one fix round; "F3 is the ruling-71 census pin, not a marker scan".</li>
+<li>Round 2 under rulings 108/109.</li>
+<li>10-16 at <code>02c36ef0</code>: FAIL, R1 high (a stale-view door deletes a file the current table uses) plus R2–R4, $13.71. Ruling 121 (<code>docs/artifacts/morning-board-2026-10-16.html</code>): one redesigned round, and "Not green parks it until v2 and v3 read PRODUCTION."</li>
+<li>10-17, final, head <code>787a3357</code> at fork <code>409ff330</code>: <strong>FAIL, V1–V5.</strong> The verdict JSON sits in a local scratch directory, not in the repo; I read it there.</li>
+<li><strong>What V1–V5 found:</strong></li>
+<li><strong>V1 (high):</strong> a RePark-written file committed outside <code>StagedCommit</code> (by a public Rust caller using the fork directly) stays claimable. A later refused keyed commit deletes it while a snapshot references it, and <code>SELECT</code> then fails "No such file". Main sweeps nothing, so this is a <strong>regression against main</strong> for the public Rust API. The verifier found no in-product path that triggers it.</li>
+<li><strong>V2 (medium):</strong> <code>Transaction::rewrite_files</code>, <code>RewriteFilesAction::rewrite_files(_with_deletes)</code> and the fork's <code>AddFiles</code> escape the clippy list. Each passes <code>make rust-panic-ban</code> and leaves plaintext under a keyed table.</li>
+<li><strong>V3 (medium):</strong> mutants MJ, MM2 and MN are non-equivalent survivors; each lets a refused commit delete a file the attempt did not write.</li>
+<li><strong>V4 (low):</strong> records overstate, including the card's F3 census row and the write map's "a committed file is never own".</li>
+<li><strong>V5 (low):</strong> mutant MP survives (the ambiguous-leg read-back may read only the current snapshot).</li>
+<li>The verifier's open questions Q1–Q3 (V2 under ruling 142? V1 under 145? the ratchet seed) were never answered.</li>
+<li><strong>What the verifier confirmed:</strong> R1, R2, R4 and R5–R7 green; R3's five escapes fail to compile; tests 6,037 passed / 0 failed; comment gate 0.</li>
+<li><strong>Park:</strong> ruling 121(b) applies. The owner halted all lanes on the evening of 10-17 (orchestrator memory, unverified in the repo). No park note on the PR (0 issue comments, 0 reviews) and no draft mark, both verified with <code>gh</code>. CI on the head: 20 pass, 2 skipping.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li>Main moved 19 commits past the merge-base. Nothing on main fixes items 1 or 5 another way: <code>git log main --grep</code> for ENC-1, sweep, staged file, keyed commit, catalog_handle and ptr_eq finds only the two board artifacts. No new stage-then-commit site landed. #1090 added <code>predicate_dml/subquery_where.rs</code> and <code>statement_writes.rs</code>, with no <code>commit</code>/<code>add_data_files</code> calls in the added lines.</li>
+<li>The fork repinned again to <code>d80a2884</code> (#1103, cfb20a16). The final verdict was measured at <code>409ff330</code>, so any revival must re-verify at the new rev (ruling 141's logic).</li>
+<li>
+<h1>1113 moved <code>test_enc_1.py</code> to <code>python/repark/tests/writes/</code>. The PR touches no root facade test, so this causes no conflict.</h1>
+</li>
+<li><code>git merge-tree</code>: <strong>1 conflict</strong>, <code>crates/repark-iceberg/src/write/mod.rs</code> (main's <code>pub mod statement_writes;</code> against the PR's <code>pub(crate) mod staged_commit;</code>). It is trivial: keep both. Everything else auto-merges. GitHub reports CONFLICTING.</li>
+<li><strong>Park condition in time:</strong> "v2 and v3 read PRODUCTION" is proposed for v2 on 11-03 and v3 core on 11-08, but only in the unmerged replan #1098 (D1–D8 unruled). The 10-17 rating status calls even 11-01 "not on track", with U-9 and U-11 unstarted and lanes halted. Realistically that means three weeks or more, and more likely the second half of November.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>HOLD.</strong> Ruling 121(b) parks it until Iceberg v2 and v3 read PRODUCTION.
+Worth doing while held:
+1. Mark it draft.
+2. Post a park note naming ruling 121(b), the final FAIL with V1–V5 in one line each, and the open Q1–Q3.
+3. File the verdict's findings into the repo, as a docs PR or the card. Today they exist only in a local scratch directory.
+4. Carry the 10-14 acceptance record of items 2, 3, 4 and 6 to main as a docs-only PR. It is owner-ruled, independent of the failed code, and readers already miss it.</p>
+<p>When the park lifts, I lean <strong>rebuild, not resume</strong>:
+- Item 5 is small and was not faulted by any V finding: <code>session.rs</code>, <code>catalog/provider.rs</code>, <code>enc_1_gate.rs</code>, <code>iceberg_guard_registration.rs</code>, <code>enc_1_registry.rs</code> and the <code>catalog_registration.rs</code> <code>ptr_eq</code> change, about 320 lines in a5022959 plus d2b2a748. It can land alone.
+- Item 1 needs the "typed attempt set" the follow-up to ruling 145 already names. Item 1's harm on main is an unreferenced orphan Parquet, never served. The PR's V1 trades that for a possible deleted live file.
+- The pins on the branch (R1, R2, R4, the concurrent-writer and ambiguous legs, <code>enc_1_sweep_warning.rs</code>) and the verifier's probes are the salvage for that unit.</p>
+<h2>Confidence</h2>
+<p>Medium-high on HOLD, because the ruling is explicit. The REBUILD lean flips if the owner answers Q1 and Q2 as "inside the accepted edge". V1 and V2 would then become documented limits, and one scoped round could close V3–V5 on this branch.</p>
+<h2>One line for the owner</h2>
+<h1>1071 parked under 121(b) after V1–V5 FAIL (V1 deletes a referenced file, a regression against main). Mark it draft, post a park note, file the 10-14 item 2/3/4/6 acceptance on main.</h1></div></details>
+<details id="pr-1072" class="card v-land"><summary><span class="pill land">LAND</span> <b>#1072</b> chore(deps): bump the actions group across 1 directory with 7 updates</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>5741871b</code> · base <code>main</code> (merge-base <code>1199cf94</code> (#1113), 2026-10-19; main <code>085d77e8</code> is 3 commits ahead, none in <code>.github/</code> or <code>python/repark-parity/</code>) · open, not draft, dependabot · opened 2026-10-15 12:25Z · last push 2026-10-19 19:49Z (dependabot rebase) · +37/-37, 13 files (one commit). Split: 13 workflow YAML files. No Rust, Python or docs.</p>
+<h2>What it does</h2>
+<p>It bumps seven actions across 13 workflows (<code>git diff main...pr-1072</code>). Every changed <code>uses:</code> line stays pinned to a 40-hex SHA.</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>From</th>
+<th>To</th>
+<th>Lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dtolnay/rust-toolchain</td>
+<td><code>6c977a6c</code> (master)</td>
+<td><code>683b588c</code> (master, "Add 1.99.1 patch release")</td>
+<td>13</td>
+</tr>
+<tr>
+<td>taiki-e/install-action</td>
+<td><code>fcf5432d</code> 2.86.8</td>
+<td><code>1168f681</code> 2.87.28</td>
+<td>3</td>
+</tr>
+<tr>
+<td>astral-sh/setup-uv</td>
+<td><code>20cfd1bf</code> 10.0.1</td>
+<td><code>1c37ad07</code> 10.3.0</td>
+<td>8</td>
+</tr>
+<tr>
+<td>aws-actions/configure-aws-credentials</td>
+<td><code>e6de0542</code> 6.2.3</td>
+<td><code>e1253824</code> 6.3.0</td>
+<td>2</td>
+</tr>
+<tr>
+<td>actions/upload-artifact</td>
+<td><code>043fb46d</code> 7.0.1</td>
+<td><code>cf430e03</code> 7.0.2</td>
+<td>5</td>
+</tr>
+<tr>
+<td>actions/setup-java</td>
+<td><code>dd06d9cb</code> 6.0.0</td>
+<td><code>de7274f0</code> 6.0.1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>actions/download-artifact</td>
+<td><code>37930b1c</code> (smoke, v7) and <code>3e5f45b2</code> (release)</td>
+<td><code>90008277</code> 8.0.2</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>download-artifact is a major bump (v7 to v8).</strong> v8 changes two defaults: a hash mismatch now errors, and non-zip downloads are no longer unzipped. It is also ESM now. <code>release.yml</code>'s old SHA <code>3e5f45b2</code> is itself a v8-line commit ("Add regression tests for CJK characters (#471)" in the PR body's commit list), so on main that file already sits past v7. Only <code>smoke.yml</code> really moves v7 to v8.</p>
+<h2>Record</h2>
+<ul>
+<li><strong>Rulings:</strong> none name this PR (rulings.md, "no ruling").</li>
+<li><strong>Standing rule (verified):</strong> <code>.github/workflows/map.md</code> says every third-party action is "pinned to a <strong>commit SHA</strong> with a trailing <code># vX</code> tag comment". <code>SECURITY.md</code> says "every action SHA-pinned".</li>
+<li><strong><code>.github/dependabot.yml</code> on main:</strong> a weekly <code>actions</code> group with patterns <code>*</code> and a 7-day cooldown. It has no ignore rules for actions.</li>
+<li><strong>Reviews:</strong> no reviews, no comments.</li>
+<li><strong>Ledger or work order:</strong> none.</li>
+<li><strong>History.</strong> Dependabot action groups last merged as-is in #73 (2026-08-13) and #294 (2026-09-02).</li>
+<li><strong>Unmerged predecessors.</strong> Since then #668, #743 and #925 closed unmerged; this PR superseded #925 on 10-15 (<code>gh pr list --author app/dependabot --state closed</code>).</li>
+</ul>
+<h2>Pin and comment audit (reading, on the PR head)</h2>
+<ul>
+<li><strong>SHA pin:</strong> every bumped line is pinned to a full SHA. Every other <code>uses:</code> line in the 13 files is too. Zero unpinned.</li>
+<li><strong>Version comment.</strong> The PR keeps the old trailing comment on every line that had one, but several now name the wrong version:</li>
+<li><code>astral-sh/setup-uv</code>: 8 lines still say <code># v10.0.1 (node24)</code>. The version is now 10.3.0.</li>
+<li><code>release.yml</code> upload-artifact still says <code># v7.0.1 (node24)</code>. The version is now 7.0.2.</li>
+<li><code>dtolnay/rust-toolchain</code>: 13 lines still say <code># master 2026-07-11</code>. The SHA is a later master commit.</li>
+<li><strong>Comments that are correct:</strong> <code>taiki-e # v2</code>, <code>upload-artifact # v7</code> (smoke, wheels, zizmor) and the <code># v6.3.0</code>, <code># v6.0.1</code> and <code># v8.0.2</code> comments dependabot rewrote.</li>
+<li><strong>Missing comment:</strong> 5 bumped lines have no comment at all, and none had one on main either:</li>
+<li><code>aws-acceptance.yml</code>: 141 (rust-toolchain), 164 (aws-credentials), 281 (upload-artifact)</li>
+<li><code>release.yml</code>: 94 (download-artifact)</li>
+<li><code>wheels.yml</code>: 102 (upload-artifact)</li>
+<li><strong>Moved past on main?</strong> No. <code>git grep</code> on main finds none of the seven new SHAs. The old SHAs appear only in these workflows, plus doc citations in <code>task/wo/ci-1-wheel-smoke-time.md</code>, <code>task/wo/ice-spark-cross-read-1/order.md</code> and <code>task/roadmap/mid-term/zizmor-gate-1-card-2026-10-03.md</code> (historical, no update needed).</li>
+<li><strong>The exception is the test pin below.</strong></li>
+</ul>
+<h2>rust-cache</h2>
+<ul>
+<li><strong><code>Swatinem/rust-cache</code> is not among the seven.</strong> It stays at <code>6323deb1</code> (v2.9.2) everywhere.</li>
+<li><strong>The cache key does not rotate.</strong> <code>prefix-key: "v3-df54"</code> and the shared keys are untouched.</li>
+<li><strong>The rust-toolchain bump does not change the compiler.</strong> Every call passes <code>toolchain: "1.96.0"</code>, matching <code>rust-toolchain.toml</code>. rustc is unchanged, so the rust-cache key, which includes the rustc version, should not move.</li>
+<li><strong>Net: no cold 30-minute wheel build is expected.</strong> This rests on reading, not running.</li>
+</ul>
+<h2>CI state (<code>gh pr checks 1072</code>, run on head <code>5741871b</code>)</h2>
+<ul>
+<li><strong>Green:</strong> zizmor, Repo guards (map.md, workflow parse, crate-DAG, lib.rs), Rust lint, Rust test (workspace and cluster), the debug wheel, facade shards 0–6, dbt, example-coverage, cargo-deny, taplo and typos.</li>
+<li><strong>Facade shards prove download-artifact v8.</strong> All seven facade shards downloaded <code>wheel-ci</code> through the new v8 <code>smoke.yml</code> step and passed.</li>
+<li><strong>RED: <code>Python</code>, 2 failed / 699 passed.</strong> Both failures are in <code>python/repark-parity/tests/test_ice_read_perf_bench_workflow.py</code>:</li>
+<li><code>test_the_bench_job_uses_the_same_pinned_actions_as_the_acceptance_job</code></li>
+<li><code>test_the_bench_builds_before_credentials_and_disables_compaction_before_any_write</code></li>
+<li><strong>Cause.</strong> The test hard-codes <code>UPLOAD_ARTIFACT = "actions/upload-artifact@043fb46d…"</code> at line 17, and <code>ORDERED_MARKERS</code> reuses it. The PR moves that SHA, so both tests fail on the one constant. The workflow is fine; the test pin is stale.</li>
+<li><strong>Not exercised on a PR:</strong> <code>release.yml</code> (tags only). Its download-artifact was already a v8-line SHA.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Nothing on main overlaps.</strong> No commit since the merge-base touches <code>.github/</code> or <code>python/repark-parity/</code> (<code>git diff --stat 1199cf94 main</code>).</li>
+<li><strong><code>git merge-tree --write-tree main pr-1072</code>:</strong> clean, 0 conflicts. GitHub reports MERGEABLE / BEHIND.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>LAND.</strong> One test constant blocks it, and the comment drift can be fixed in the same push. Steps:
+1. On the PR branch or a follow-up commit, set <code>UPLOAD_ARTIFACT</code> in <code>python/repark-parity/tests/test_ice_read_perf_bench_workflow.py</code> to <code>actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9</code>.
+2. In the same commit, fix the stale comments:
+   - setup-uv: 8 lines to <code># v10.3.0 (node24)</code>
+   - <code>release.yml</code> upload-artifact: <code># v7.0.2 (node24)</code>
+   - rust-toolchain: 13 lines to the date of master commit <code>683b588c</code>
+   - Optionally add <code># vX</code> to the 5 uncommented lines.
+3. Put a <code>.github/workflows/map.md</code> touch in the same commit if the map.md lockstep guard asks for it.
+4. Rerun CI and expect all green. Then squash-merge.
+5. Watch the first <code>release.yml</code> tag run for the v8 hash-mismatch default.</p>
+<p>Effort: clerk (Haiku or Sonnet), about 15 minutes plus one CI run (about 20 minutes).</p>
+<h2>Confidence</h2>
+<p>High. What would flip it: a <code>release.yml</code> dry run failing on the v8 digest-mismatch default. That is unlikely, since <code>release.yml</code> already used a v8-line SHA.</p>
+<h2>One line for the owner</h2>
+<h1>1072 is safe once one stale test pin (upload-artifact SHA) and the stale <code># v10.0.1</code> comments are fixed. No rust-cache bump, so no cold build. LAND.</h1></div></details>
+<details id="pr-1096" class="card v-hold"><summary><span class="pill hold">HOLD</span> <b>#1096</b> chore(deps): bump the cargo group across 1 directory with 13 updates</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>2592016e</code> · base <code>main</code> (merge-base <code>cfb20a16</code>, 2026-10-18; main <code>085d77e8</code> is ahead, but not in <code>Cargo.toml</code> or <code>Cargo.lock</code>) · open, not draft, dependabot · opened 2026-10-17 21:33Z · last push 2026-10-18 22:53Z · +1637/-540, 2 files: <code>Cargo.toml</code> (+9/-9) and <code>Cargo.lock</code>. No Rust source, Python or docs.</p>
+<h2>What it does</h2>
+<p>It raises 13 workspace dependency requirements in the root <code>Cargo.toml</code> and re-resolves the lock.</p>
+<table>
+<thead>
+<tr>
+<th>Crate</th>
+<th>From</th>
+<th>To</th>
+<th>Kind</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>toml</td>
+<td>0.8.23</td>
+<td>1.1.8+spec-1.1.0</td>
+<td>major</td>
+<td>repark-core</td>
+</tr>
+<tr>
+<td>serde_json</td>
+<td>1.0.151</td>
+<td>1.0.154</td>
+<td>patch, lock only</td>
+<td>test-only</td>
+</tr>
+<tr>
+<td>tokio-postgres-rustls</td>
+<td>0.13.0</td>
+<td>0.14.0</td>
+<td>breaking (0.x)</td>
+<td>repark-connect (optional)</td>
+</tr>
+<tr>
+<td>uuid</td>
+<td>1.26.0</td>
+<td>1.28.0</td>
+<td>minor, lock only</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>orc-rust</strong></td>
+<td>0.8.0</td>
+<td>0.9.0</td>
+<td>breaking (0.x)</td>
+<td>repark-core</td>
+</tr>
+<tr>
+<td>flate2</td>
+<td>1.1.9</td>
+<td>1.1.10</td>
+<td>patch, lock only</td>
+<td></td>
+</tr>
+<tr>
+<td>lz4_flex</td>
+<td>0.11.6</td>
+<td>0.14.0</td>
+<td>breaking (0.x)</td>
+<td>repark-core</td>
+</tr>
+<tr>
+<td>zstd</td>
+<td>0.13.3</td>
+<td>0.14.2 (locks 0.14.3)</td>
+<td>breaking (0.x)</td>
+<td>repark-core</td>
+</tr>
+<tr>
+<td>aws-config</td>
+<td>1.10.1</td>
+<td>1.11.0</td>
+<td>minor, lock only</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>ballista</strong></td>
+<td><strong>=54.1.0</strong></td>
+<td><strong>=55.0.0</strong></td>
+<td>major, exact pin</td>
+<td>repark-distributed (cluster)</td>
+</tr>
+<tr>
+<td><strong>ballista-core</strong></td>
+<td><strong>=54.1.0</strong></td>
+<td><strong>=55.0.0</strong></td>
+<td>major, exact pin</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>ballista-scheduler</strong></td>
+<td><strong>=54.1.0</strong></td>
+<td><strong>=55.0.0</strong></td>
+<td>major, exact pin</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>ballista-executor</strong></td>
+<td><strong>=54.1.0</strong></td>
+<td><strong>=55.0.0</strong></td>
+<td>major, exact pin</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2>Flags: the DataFusion family and exact pins</h2>
+<ul>
+<li><strong>The four <code>ballista*</code> crates are exact-pinned on main</strong> (<code>Cargo.toml:136-139</code>, <code>"=54.1.0"</code>), beside <code>datafusion-proto = "=54.1.0"</code>. The PR moves them to <code>=55.0.0</code>.</li>
+<li><strong>The PR lock carries two DataFusion lines side by side.</strong> It adds a second full DataFusion 55.2.0 (34 <code>datafusion*</code> 55.2.0 crates, including <code>datafusion-proto</code> 55.2.0) next to 54.1.0.</li>
+<li><strong>orc-rust 0.9.0 brings a second arrow and parquet.</strong> It pulls arrow 59.3.1 (15 <code>arrow-*</code> crates) and parquet 59.3.1, next to the workspace's <code>arrow = "58.4"</code> and <code>parquet = "58.4"</code>.</li>
+<li><strong>What this breaks.</strong> It breaks the DataFusion-family rule in <code>.github/dependabot.yml</code> on main: "never merge a Dependabot cargo group that bundles a safe bump with a DataFusion/Arrow MAJOR bump … Split the group and land targeted bumps instead."</li>
+<li><strong>Why the ignore block missed it.</strong> That block ignores majors for <code>datafusion*</code>, <code>arrow*</code>, <code>parquet</code> and <code>object_store</code> only. <strong><code>ballista*</code> and <code>orc-rust</code> ride the same graph but are not in it</strong>, so dependabot proposed them.</li>
+<li><strong>No impact on:</strong> pyo3 (0.29.3 both sides), iceberg (0.9.1 and the fork patch unchanged), object_store 0.13.2, or polars (not in the lock).</li>
+<li><strong><code>deny.toml</code>:</strong> <code>[bans] deny = []</code> and <code>multiple-versions = "warn"</code>, so cargo-deny passes despite the duplicates. The only skips are thiserror and thiserror-impl.</li>
+</ul>
+<h2>Lock churn check</h2>
+<ul>
+<li><strong>There is none of the trap's churn.</strong> <code>git diff cfb20a16 pr-1096 -- Cargo.lock</code> re-points no socket2 edge. It removes one windows-sys edge, and only because the <code>console</code> package leaves the graph with <code>insta</code> and <code>similar</code> (ballista 55 drops them). That is a real graph change, not duplicate-edge churn.</li>
+<li><strong>Package count.</strong> It goes from 646 to 705 entries: +87 new, -28 removed.</li>
+</ul>
+<h2>Record</h2>
+<ul>
+<li><strong>Rulings:</strong> none name this PR. The standing rules are the DataFusion-family rule (verified in <code>.github/dependabot.yml</code>) and the cargo-update edge-churn trap (orchestrator memory).</li>
+<li><strong>Reviews:</strong> no reviews, no comments.</li>
+<li><strong>The group never lands as-is.</strong> Every earlier cargo group was closed unmerged and superseded: #664, #899, #1006, #1032, #1036, #1053 and #1073 (#1073 closed 21:33:02Z, 22 s before this PR opened).</li>
+<li><strong>The safe bumps reach main by hand as targeted lock-only commits</strong>, for example <code>572130dd</code> (thiserror, tokio, futures), <code>1640421b</code> (pyo3 0.29.3), <code>813bf02b</code> (rustls) and <code>31066e9d</code> (quinn-proto).</li>
+<li><strong>Last group merged:</strong> #229 on 2026-09-02.</li>
+</ul>
+<h2>CI state (<code>gh pr checks 1096</code>, run on head <code>2592016e</code>)</h2>
+<ul>
+<li><strong>RED: Rust lint, Rust test (workspace), Rust test (cluster feature) and the debug wheel.</strong> All fail the same way, with <code>error[E0308]: mismatched types</code> in <code>repark-core</code>:</li>
+<li><code>crates/repark-core/src/orc_scan.rs:635</code> expected <code>arrow::array::RecordBatch</code> (58.4.0) and found arrow-array 59.3.1.</li>
+<li><code>crates/repark-core/src/orc_schema.rs:107</code> hits the same mismatch for <code>Schema</code>.</li>
+<li><strong>orc-rust 0.9 alone breaks the build.</strong> Because <code>repark-core</code> fails first, the ballista 55 and DataFusion 55 break in <code>repark-distributed</code> is masked, not cleared.</li>
+<li><strong>RED: Repo guards.</strong> It fails with "map.md was not updated on this branch (map.md lockstep rule)", because dependabot never touches <code>map.md</code>.</li>
+<li><strong>Green:</strong> Python, audit, cargo-deny, taplo, typos and zizmor. Facade, dbt and example-coverage were skipped because the wheel failed.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Main has not touched <code>Cargo.toml</code> or <code>Cargo.lock</code> since the merge-base</strong> (<code>git log cfb20a16..main -- Cargo.lock Cargo.toml</code> is empty).</li>
+<li><strong><code>git merge-tree --write-tree main pr-1096</code>:</strong> clean, 0 conflicts. GitHub reports MERGEABLE / BEHIND.</li>
+<li><strong>A rebase or <code>@dependabot recreate</code> would only regenerate the same set.</strong> The lock does not conflict, and the dependabot ignore block still admits <code>ballista*</code> and <code>orc-rust</code>, so the same compile failure would return.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>HOLD.</strong> Do not merge. The group bundles a DataFusion 55 and Arrow 59 major (via <code>ballista*</code> =55 and <code>orc-rust</code> 0.9) against the DF 54.1 and Arrow 58.4 pin. That is the case the dependabot.yml rule forbids, and it fails to compile. Release condition: a deliberate DataFusion 55 family bump, which is not on record.</p>
+<p>Worth doing while held (clerk or Sonnet):
+1. Add <code>ballista*</code> (major) and <code>orc-rust</code> (minor and major, since it is 0.x) to the cargo <code>ignore</code> block in <code>.github/dependabot.yml</code>, beside <code>datafusion*</code>. Next week's group will then come clean.
+2. Land the four in-range bumps as one targeted lock-only commit, following the 572130dd pattern: serde_json 1.0.154, uuid 1.28.0, flate2 1.1.10 and aws-config 1.11.0. Use <code>cargo update -p &lt;crate&gt; --precise &lt;ver&gt;</code>, diff the lock for edge churn, and check with <code>cargo metadata --locked</code>.
+3. Take toml 1.x, tokio-postgres-rustls 0.14, lz4_flex 0.14 and zstd 0.14 only as separate units with a compile and test proof. These are unproven: CI never got past repark-core. zstd 0.14 and lz4_flex 0.14 also add duplicate versions, since parquet keeps zstd 0.13 and lz4_flex 0.11/0.13 already coexist.
+4. Then close #1096. Dependabot supersedes it anyway.</p>
+<h2>Confidence</h2>
+<p>High. What would flip it: an owner ruling to move the whole stack to DataFusion 55 and Arrow 59. Even then, this PR is the wrong vehicle, since the fork, <code>datafusion-spark</code> and the cache prefix <code>v3-df54</code> must move together.</p>
+<h2>One line for the owner</h2>
+<h1>1096 bundles ballista 55 and orc-rust 0.9, which drag in DataFusion 55 and Arrow 59; it fails to compile. HOLD; extend the dependabot ignore and land the four patch bumps lock-only.</h1></div></details>
+<details id="pr-1098" class="card v-land"><summary><span class="pill land">LAND</span> <b>#1098</b> docs(artifacts): the Iceberg closeout replan of 2026-10-17</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>57fea5ad</code> · base <code>main</code> (merge-base <code>2d08afa3</code>, 2026-10-17; main <code>085d77e8</code> is 18 commits ahead) · open, not draft · opened 2026-10-17 22:32Z · last push the same time · +246/-0, 2 files · Rust 0 / Python 0 / docs 2 (one commit).</p>
+<h2>What it does</h2>
+<p>It files the standalone HTML copy of a published claude.ai artifact, <code>docs/artifacts/iceberg-closeout-replan-2026-10-17.html</code> (245 lines), and its row in <code>docs/artifacts/map.md</code>. The page is a plan-of-record <strong>proposal</strong> by the Frontier agent (<code>claude-fable-5-1</code>). It contains:
+- five corrections to the 10-17 rating-status page (U-9 ruled since 10-15, T-3 adopted, the parity-live red is a recorder drift, the fork CI and two v3 interop suites, v1.5.5 untagged);
+- a per-label gate checklist;
+- the critical path (U-9, then the first live nightly, then U-11, then the label PR);
+- the units re-cut, with four new ones;
+- a day-by-day schedule proposing v2 PRODUCTION for 2026-11-03 and v3 core for 2026-11-08;
+- eight owner decisions, D1 to D8, each with a lean.</p>
+<p>The page states: "The plan of record stays the 10-13 page until the owner adopts D1 and D2."</p>
+<h2>Record</h2>
+<ul>
+<li><strong>rulings.md:</strong> "PROPOSAL, decisions D1–D8 await the owner." Verified from the page text and the PR body. I found no ruling on D1 to D8 anywhere on main: grep for the replan, <code>11-03</code> and <code>closeout-replan</code> in STATUS.md, <code>task/</code> and <code>docs/</code> finds nothing relevant.</li>
+<li><strong>Main cites it nowhere</strong> (grep for <code>closeout-replan</code> finds nothing). The 10-13 closeout plan and the 10-17 rating-status page it corrects are on main.</li>
+<li><strong>Reviews:</strong> no GitHub reviews and no comments. No verifier is expected for an artifact copy.</li>
+<li><strong>Ledger or work order:</strong> none, and none is required.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Has the content reached main another way? No.</strong> No later artifact supersedes it. The 10-18 and 10-19 artifacts (#1101, #1111) are about CI speed and the test suite.</li>
+<li><strong>Events since 10-17 overtake part of the proposal.</strong> These are facts on main; how they affect the D-items is my reading.</li>
+<li><strong>The halt.</strong> The owner halted new lanes on the 10-17 evening (<code>docs/cutover/p2-report-repark-sql-update-subquery-where-1-2026-10-17.md:97</code>). The schedule's Monday 10-19 lane openings (U-9 lane A, U-11 measurement) did not happen, so the day-by-day dates have already slipped.</li>
+<li><strong>D4 / RP-59.</strong> The fork repin to <code>d80a2884</code> landed as #1103 (<code>cfb20a16</code>, 10-18), which fixes the four red nightly-interop suites as tests and oracle only. Part of D4's "fix on the fork, pin through RP-59" is done.</li>
+<li><strong>D7 / v1.5.5.</strong> Still untagged: GitHub tags stop at v1.5.4. D7 is still live.</li>
+<li><strong>U-12 / ENC-1 (#1071).</strong> The page plans a final scoped verifier for ENC-1. The orchestrator's memory says that verifier FAILed and #1071 was parked on 10-17 (unverified here; see the #1071 card).</li>
+<li><strong>Gates, by reading (not run):</strong></li>
+<li>The map row is present (sync_map_md). An HTML page has no relative markdown links for check_docs_links.</li>
+<li>STATUS.md (24,948 B of 25,000) and AGENTS.md are untouched.</li>
+<li>There is no ledger.</li>
+<li><strong>CI (<code>gh pr checks</code>):</strong> every run job passed (Python, Repo guards, Rust lint, Rust test, smoke, cargo-deny, taplo, typos, zizmor). The heavy jobs were skipped by the docs-skip rule.</li>
+<li><strong><code>git merge-tree main pr-1098</code>: 0 conflicts</strong> locally, via the <code>map.md merge=union</code> driver. GitHub reports CONFLICTING/DIRTY because both sides append rows at the end of the <code>docs/artifacts/map.md</code> table, and GitHub does not apply the union driver (by reading).</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>LAND, as a record of the proposal, not as an adoption.</strong> The directory's contract (<code>docs/artifacts/map.md</code> preamble) is that the repository carries the same page the owner reads, never edited after filing, with a later report as a new file. The page already labels itself a proposal that leaves the 10-13 plan of record in force, and its map row says "plan-of-record proposal". Landing it therefore commits the owner to nothing. Holding it adds nothing, because a later ruling on D1 to D8 is recorded in a new file, not by editing this one.</p>
+<p>Remaining steps:
+1. Merge main into the branch locally (the union driver resolves the map row) and push.
+2. Let the docs CI run green.
+3. Merge.</p>
+<p>Optionally, append to the map row: "D1–D8 unruled at filing; lanes halted 10-17 evening." Effort band: <strong>clerk</strong>.</p>
+<p>Separately, the owner's open item is ruling D1 to D8. The dates in D1 have slipped by at least the halt, so that ruling likely needs a fresh schedule rather than this page's.</p>
+<h2>Confidence</h2>
+<p>Medium-high. One fact would flip it to HOLD or CLOSE: the owner prefers that unadopted proposals not be filed under <code>docs/artifacts/</code>. No such rule is on main, and the 10-17 rating-status page sets the precedent of a non-ruling status page being filed.</p>
+<h2>One line for the owner</h2>
+<h1>1098 files the 10-17 replan as a proposal record. Land it at clerk band. D1–D8 are still yours, and the halt has already slipped its dates.</h1></div></details>
+<details id="pr-1099" class="card v-land"><summary><span class="pill land">LAND</span> <b>#1099</b> docs(owner-ruling): Opus 5.0 is banned forever; Opus means claude-opus-5-5, byte-preserved, with the check-model-ban gate</summary><div class="body">
+<p>Model <code>claude-opus-5-5</code> · head <code>1ac3e9fa</code> · base <code>main</code> (merge-base <code>2d08afa3</code>, 2026-10-17; main <code>085d77e8</code> is 18 commits ahead) · open, not draft · opened 2026-10-17 23:11Z · last push the same time · +284/-8, 14 files (one commit).</p>
+<p>Split: Rust 0; Python 4 files (+233/-4: two scripts and two tests); CI and Makefile 2 (+8/-1); docs and maps 8 (+46/-3). <strong>It is not docs-only.</strong> It adds a gate.</p>
+<h2>What it does</h2>
+<ul>
+<li><strong>The ruling block.</strong> It files the owner's 2026-10-17 ruling as a block right after the comment ruling in <code>AGENTS.md</code> (+10) and <code>CLAUDE.md</code> (+12): "Opus 5.0 is banned forever; every Opus dispatch is <code>claude-opus-5-5</code>". CLAUDE.md also gets a tier bullet saying <code>opus</code> must resolve to 5.5, verified from the transcript.</li>
+<li><strong>Byte-preservation.</strong> <code>scripts/check_owner_ruling.py</code> preserves the new block byte-for-byte in both files.</li>
+<li><strong>A new gate.</strong> <code>scripts/check_model_ban.py</code> scans every tracked file for a 5.0 Opus id in any spelling and self-tests its own pattern. It is wired as <code>make check-model-ban</code> inside <code>make ci</code> and as a step in <code>.github/workflows/ci.yml</code>.</li>
+<li><strong>Tests and ceiling.</strong> It adds <code>python/repark-parity/tests/test_model_ban.py</code> and four mutation cases in <code>test_pr_247_owner_ruling.py</code>. It raises the AGENTS.md compaction ceiling from 27,816 to 28,600 B.</li>
+<li><strong>Maps and lessons.</strong> It updates the maps and adds a <code>task/lessons.md</code> entry.</li>
+<li><strong>Companion.</strong> The fork PR TRO-Wolf/iceberg-rust#369 does the same on the fork.</li>
+</ul>
+<h2>Record</h2>
+<ul>
+<li><strong>rulings.md:</strong> "the ruling itself is PERMANENT (every Opus dispatch is claude-opus-5-5); the PR files it in the repo."</li>
+<li>The ruling text in the PR is quoted as the owner's (2026-10-17, "same night" mechanics).</li>
+<li>I could not verify the ruling from any owner-authored source in the repo. It exists only on this branch.</li>
+<li><strong>Main carries none of it.</strong> I grepped <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>task/lessons.md</code> and <code>STATUS.md</code> on main for "Opus 5.0", "Opus means", <code>opus-5-0</code>, <code>check_model_ban</code> and <code>check-model-ban</code>: zero hits. <code>claude-opus-5-5</code> appears on main only as model stamps in ledgers and artifacts.</li>
+<li><strong>Reviews:</strong> no GitHub reviews and no comments.</li>
+<li>The PR body lists the gates run locally: owner-ruling, model-ban, ruff, 23 pytest cases, docs and map gates, compaction, spell-check.</li>
+<li>The body also notes two zizmor findings in the map-md step. Main fixed those since, in #1102 (<code>99dfc21b</code>).</li>
+<li><strong>Fork #369:</strong> OPEN and unmerged (<code>gh pr view 369 -R TRO-Wolf/iceberg-rust</code>).</li>
+<li><strong>Ledger:</strong> none. The unit is a ruling filing, and the lessons entry carries the rule.</li>
+</ul>
+<h2>Main since</h2>
+<ul>
+<li><strong>Has the content reached main another way? No.</strong> Nothing in <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>task/lessons.md</code> or <code>docs/artifacts</code> files the ban.</li>
+<li><strong>The gate would pass on main today.</strong> Grepping main with the PR's exact pattern (<code>claude[-_]opus[-_]5[-_.]0\b|\bopus[-_]5[-_.]0\b</code>, case-insensitive) finds <strong>no hit</strong>. Reading, not running.</li>
+<li><strong>Compaction.</strong></li>
+<li>AGENTS.md is 27,755 B on main and unchanged since the merge-base, so the merged file is 28,516 B, under the PR's new 28,600 ceiling.</li>
+<li>The PR does not touch STATUS.md (24,948 / 25,000).</li>
+<li>CLAUDE.md on main has no ceiling.</li>
+<li><strong>Overlap.</strong> Main changed <code>ci.yml</code> (#1102, #1104 to #1107: zizmor, xdist, nextest, seven facade shards), the <code>Makefile</code> (#1104, #1105, #1110) and <code>task/lessons.md</code> (#1116). All but lessons auto-merge.</li>
+<li><strong>CI (<code>gh pr checks</code>):</strong> all green on the head, including three facade shards, dbt, the Rust cluster feature and example coverage.</li>
+<li>That run predates the seven-shard and nextest CI.</li>
+<li>A rebase reruns CI on the new matrix. The PR's tests live under <code>python/repark-parity/tests</code>, which #1113 did not move.</li>
+<li><strong><code>git merge-tree main pr-1099</code>: 1 conflicted path,</strong> <code>task/lessons.md</code>.</li>
+<li>The conflict is append-append: main added "## 2026-10-19 — facade test organisation" (#1116) and the PR adds its 2026-10-17 entry at the same end of file.</li>
+<li>Resolve it by keeping both, in date order (the PR's entry first).</li>
+<li>Raise the PR's <code>###</code> heading to <code>##</code> to match the file's dated sections.</li>
+<li>GitHub shows CONFLICTING for this reason.</li>
+</ul>
+<h2>Verdict</h2>
+<p><strong>LAND.</strong> It files a permanent owner ruling that today lives only in the orchestrator's memory, and it adds a cheap gate that main already passes.</p>
+<p>Remaining steps:
+1. Merge main locally and resolve <code>task/lessons.md</code> as above.
+2. Re-run <code>make check-owner-ruling</code>, <code>make check-model-ban</code>, <code>make check-docs-compaction</code> and the two parity test files.
+3. Push and let the full CI run green on the current matrix.
+4. Merge.</p>
+<p>One owner touch is advisable before merge: confirm that the quoted ruling block is the owner's exact wording. The gate freezes it byte-for-byte in AGENTS.md and CLAUDE.md, and any later edit needs a PR that changes the script.</p>
+<p>No Opus verifier is warranted: two small scripts and a text block. Effort band: <strong>clerk</strong> (the lessons conflict is mechanical), with a Sonnet scoped read of the two scripts if the owner wants one.</p>
+<p>Fork #369 should land the same day so both repos carry the gate.</p>
+<h2>Confidence</h2>
+<p>High. One fact would flip it to REBUILD: the owner does not want a byte-frozen block, only the lessons entry and the gate. The block and <code>check_owner_ruling.py</code> change would then come out.</p>
+<h2>One line for the owner</h2>
+<h1>1099 files your permanent Opus 5.0 ban and a gate that main already passes. Resolve one lessons.md append conflict, confirm the block's wording, and land it with fork #369.</h1></div></details>
+</main>
