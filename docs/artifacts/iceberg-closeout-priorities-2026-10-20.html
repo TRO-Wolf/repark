@@ -1,0 +1,162 @@
+<title>Iceberg Closeout Priorities</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f6f8f9;--panel:#ffffff;--fg:#14232b;--muted:#566a75;--line:#d6e0e5;--accent:#0f6f86;--accent-soft:#e2f1f5;--ok:#1f7a4d;--ok-soft:#e3f3ea;--warn:#9a6200;--warn-soft:#fbf0dc;--bad:#a8322d;--bad-soft:#f8e4e2;--idle:#5d6b73;--idle-soft:#eceff1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0e171c;--panel:#152229;--fg:#dbe7ec;--muted:#93a7b1;--line:#27383f;--accent:#5fc3dc;--accent-soft:#16323b;--ok:#6ccf9a;--ok-soft:#143024;--warn:#e6b45a;--warn-soft:#33270f;--bad:#f08a83;--bad-soft:#3a1c1a;--idle:#a3b1b8;--idle-soft:#202d33;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e171c;--panel:#152229;--fg:#dbe7ec;--muted:#93a7b1;--line:#27383f;--accent:#5fc3dc;--accent-soft:#16323b;--ok:#6ccf9a;--ok-soft:#143024;--warn:#e6b45a;--warn-soft:#33270f;--bad:#f08a83;--bad-soft:#3a1c1a;--idle:#a3b1b8;--idle-soft:#202d33;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+h1{font-size:28px;line-height:1.2;margin:0;text-wrap:balance;font-weight:600}
+h2{font-size:18px;margin:0 0 10px;font-weight:600;text-wrap:balance}
+.kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.meta{color:var(--muted);font-size:13px}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.88em}
+p{margin:0;max-width:72ch}
+.verdict{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.verdict p{max-width:none}
+section{display:flex;flex-direction:column;gap:10px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td{font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}.bad{background:var(--bad-soft);color:var(--bad)}.idle{background:var(--idle-soft);color:var(--idle)}.acc{background:var(--accent-soft);color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .n{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.tile .l{font-size:13px;color:var(--muted)}
+ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+li{max-width:76ch}
+.note{font-size:13px;color:var(--muted)}
+.qblock{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;white-space:pre-wrap;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px;overflow-x:auto}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:6px">
+  <span class="kicker">RePark · Iceberg closeout</span>
+  <h1>Iceberg closeout, re-prioritised: 2026-10-20</h1>
+  <p class="meta">Read from RePark main <code>085d77e8</code>, the fork pin <code>d80a2884</code>, the 2026-10-17 rating status, the open pull requests after this morning's triage, and the GitHub run history. Nothing was built or run. Written by the orchestrator (Claude, <code>claude-fable-5-1</code>) for the owner's adopt; it replaces the schedule of the 10-17 replan and its decisions D1 to D8.</p>
+</header>
+
+<div class="verdict">
+  <span class="kicker">Bottom line</span>
+  <p><strong>Four builds and one nightly stand between main and both labels.</strong> In the order they should run on one Opus 5.5 lane: the live-parity nightly re-recorded (a gate, red six mornings), U-8 (R-011 refused with a hint, small), EXPLAIN-DML-WRITE-1 (the ANSI twin of 106, small), U-9 (the integrity pins, the only large build), then U-11 (the resource bound). Everything else on either list is merged, ruled, or a clerk docs PR.</p>
+  <p>The fork is off the critical path: its nightly interop runs 65 of 65 since 10-18 and RePark is pinned to that head, so the 10-17 decision D4 is closed by fact. With one lane and no second builder, the honest dates are <strong>v2 PRODUCTION Thu 2026-11-05</strong> (buffer 11-07) and <strong>v3 core PRODUCTION Tue 2026-11-10</strong> (buffer 11-13), v1.5.6 shipping both. The 10-17 dates (11-03, 11-08) assumed lanes that the halt never opened.</p>
+</div>
+
+<div class="grid">
+  <div class="tile"><span class="n">8 / 13</span><span class="l">closeout units merged or ruled closed (U-1, U-3, U-5, U-6, U-7, U-10 local, U-12 items 2–4 and 6, plus 106)</span></div>
+  <div class="tile"><span class="n">4</span><span class="l">builds left for v2 (U-8, EXPLAIN-DML-WRITE-1, U-9, U-11); one more for v3 (U-4)</span></div>
+  <div class="tile"><span class="n">6</span><span class="l">mornings the live-parity nightly has been red on one cell (10-14 to 10-19; 10-20 running at writing)</span></div>
+  <div class="tile"><span class="n">0</span><span class="l">fork items on the critical path (nightly interop 65/65 on 10-18; pin current)</span></div>
+</div>
+
+<section>
+  <h2>1. The v2 list, row by row, on main this morning</h2>
+  <p>The list is the one the 10-13 plan wrote and the owner adopted. A label moves when every row is green on main with a dated pin or carries a dated owner carve-out; a silent value disqualifies, a refusal with a hint does not.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Row</th><th>State on main</th><th>What closes it</th><th>Band</th></tr></thead>
+    <tbody>
+      <tr><td>No silent value from any door</td><td><span class="chip ok">R-016</span> #1062 · <span class="chip ok">CTAS body</span> #1057 · <span class="chip ok">106</span> #1090 · <span class="chip bad">R-011</span> parked, the refuse-with-hint (T-3, adopted 10-14) never built · <span class="chip bad">EXPLAIN-DML-WRITE-1</span> card only (rulings 136, 138, 139)</td><td>U-8: refuse a nested microsecond NTZ wall with a hint, as R-015 does. EXPLAIN-DML-WRITE-1: <code>EXPLAIN ANALYZE</code> of DML refuses on every door; <code>PREPARE</code> of a write refuses while <code>PREPARE</code> of a query works.</td><td>Opus build, scoped verifier, each about a day</td></tr>
+      <tr><td>Boundary and secrecy</td><td><span class="chip ok">PA-01 to PA-04</span> #1075, #1088 · <span class="chip warn">ENC-1 items 2, 3, 4, 6</span> accepted 10-14, record only on #1071's branch · <span class="chip bad">items 1 and 5</span> built in #1071, final verifier FAIL (V1 to V5), parked under ruling 121(b) until the labels · <span class="chip warn">ENC-CTAS-REPLACE-1</span> awaits ruling 98's close-or-carve</td><td>A clerk docs PR carries the 10-14 acceptance to main. Items 1 and 5 need a dated carve-out row on the v2 label (item 1's harm on main is an unreferenced orphan file, never served; the branch's V1 traded that for a possible deleted live file), or the label waits on a rebuild of the two items. Ruling 98 settles the CTAS row.</td><td>Clerk, plus one owner line (P9)</td></tr>
+      <tr><td>Integrity under failure</td><td><span class="chip bad">U-9</span> sketch ruled (79 to 88) on #1067, landing today; nothing built, no test module exists</td><td>K (kill mid-write) then U (unknown outcome live on Glue and S3 Tables) then X (cross-release read), each a build and a scoped verifier, fork lines re-read at <code>d80a2884</code>. Then the owner wires #1070 (ruling 86) and the first live integrity nightly runs.</td><td>Opus build, the long pole, about five working days</td></tr>
+      <tr><td>A second engine reads what we write</td><td><span class="chip ok">local leg</span> #1056 · <span class="chip warn">AWS leg</span> draft #1070, wired together with U-9's legs by ruling 86</td><td>Nothing until U-9 lands; then the owner's one wiring PR.</td><td>Owner</td></tr>
+      <tr><td>A stated resource bound</td><td><span class="chip bad">U-11</span> no card, no order, no branch</td><td>PP-01 ordered writes and MoR MERGE measured, the bound written down, exceeded means refused; PA-10 and PA-11 as declared rows where the definition's "refuses cleanly where it cannot spill" applies. The kill pin (U-9 K) gives crash and refusal two different pinned outcomes, so U-11 follows U-9.</td><td>Clerk card now; Opus measure and build after U-9</td></tr>
+      <tr><td>Truth-up</td><td><span class="chip ok">842-cell count</span> #1054 · <span class="chip bad">STATUS header</span> still 2026-09-12, no maturity section · <span class="chip warn">#1044 definition</span> landing today</td><td>U-13 once, after the last write-path merge: matrix re-run, registry re-date, maturity section under the 25,000 B ceiling, the carve-out rows, the label line.</td><td>Clerk, after U-11</td></tr>
+      <tr><td>Gates outside the list</td><td><span class="chip bad">parity-live</span> red 10-14 to 10-19 on one cell (ICE-META-DELETE-1's live-oracle recorder finds Spark's own answer drifted from the fixture, first cell <code>all_rows_nopred_v2_cow</code>); no card · <span class="chip ok">aws-acceptance</span> 12/12 on every run through 10-19 · <span class="chip warn">v1.5.5</span> never tagged (PyPI latest 1.5.4)</td><td>A re-record unit with a dated note, or a recorder fix, then two green mornings before any label PR (10-17 decision D5). The tag is the owner's.</td><td>Opus medium, half a day; owner for the tag</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>2. What v3 core adds, and where it stands</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Row</th><th>State on main</th><th>What closes it</th></tr></thead>
+    <tbody>
+      <tr><td>Everything on the v2 list, measured on v3 tables</td><td>Every U-5 to U-11 pin is written per format version; the matrix cells are per version already</td><td>Nothing extra; U-9 and U-11 write their pins on both versions from the start.</td></tr>
+      <tr><td>v3 features exercised stay green (row lineage, deletion vectors, default values, the twenty north-star rows)</td><td><span class="chip ok">fork nightly interop 65/65</span> on 10-18 after fork #370, #371, #372 (tests and oracle only); RePark pinned to that head by #1103 (RP-59)</td><td>Closed by fact. The 10-17 decision D4 (the two red v3 suites gate v3) needs no ruling now.</td></tr>
+      <tr><td>Nanosecond columns leave EXPERIMENTAL</td><td><span class="chip ok">R-017</span> U-1 #1082 · <span class="chip ok">R-009</span> U-3 #1059 · <span class="chip bad">R-020</span> U-2 step 0 only · <span class="chip bad">R-012</span> U-4 not started · <span class="chip warn">R-010</span> fixed by U-1 (the 1.5.6 draft note says so) but its registry row still reads OPEN · <span class="chip warn">R-013, R-018(1), R-001</span> to be measured on the planner head</td><td>U-4 is small (an error class, not a value). U-2 moves to 1.5.7 as a dated row (10-17 lean D6): it is nanosecond work and cannot change the row's ceiling. R-010, R-013, R-018(1) and R-001 are re-measured in U-13 and closed or re-dated.</td></tr>
+      <tr><td>Dated carve-outs the label carries</td><td>R-002 (no second engine reads a nanosecond column) · R-015 (nested nanosecond leaves refused by name) · R-024 (encoded or nested nanosecond source truncates, 1.5.7) · the nanosecond create door (#1048's intent: a new <code>timestamp_ns</code> column needs the user's ask; no card, order or U-row today)</td><td>One dated row each in the v3 label PR, signed by the owner (T-2). The create door is rebuilt as ICE-TSNS-CREATE-DOOR-2 in 1.5.7 from #1048's door files; the planner rewrote fifteen of its files, so a rebase would refuse user casts.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>3. The order, on one Opus 5.5 lane</h2>
+  <p>The owner's direction this morning is one Opus agent at a time. The order below puts the cheap v2 blockers and the gate first, so the long pole starts with the rest of the list already green, and no two builds ever overlap. Each product unit: order in <code>task/wo</code> at its grade, CI green before the verifier, one scoped Opus 5.5 verifier, a FAIL parks and the owner hears first, the P2 report (cell count, verdicts first, acceptance run id) before the next lane opens.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Unit</th><th>Days</th><th>Exit proof</th><th>Why here</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>Clerk, in flight today: land-prep of #1044, #1067, #1098, #1099, #1072; the ENC-1 acceptance record and the parity-live card to main; #1038's read-side divergence as a registry row; #1047's case matrix salvaged under <code>task/wo/ns-array-floor-1/</code> and the PR closed; U-11's card and order; EXPLAIN-DML-WRITE-1's order</td><td>Tue 10-20</td><td>Docs CI green; the owner merges</td><td>None of it needs a build, and every later unit reads from it.</td></tr>
+      <tr><td>1</td><td>PARITY-LIVE-RERECORD-1</td><td>Tue 10-20 to Wed 10-21</td><td>The drifting cell explained (a Spark behaviour change re-recorded with a dated note, or a recorder defect fixed); the nightly green the next morning</td><td>Gate D5 needs two green mornings before a label PR; starting now costs nothing later.</td></tr>
+      <tr><td>2</td><td>U-8 ICE-NTZ-NESTED-REFUSE-1 (R-011 refused with a hint, T-3)</td><td>Wed 10-21</td><td>Every door refuses a mixed-wall nested NTZ store with one hint; the hint names no deleting action (ruling 76); #1037's Spark cells re-pinned as refusals</td><td>The last silent-value row on the v2 list; one seam, the cheapest build on the list.</td></tr>
+      <tr><td>3</td><td>EXPLAIN-DML-WRITE-1 (rulings 136, 138, 139)</td><td>Thu 10-22 to Fri 10-23</td><td><code>EXPLAIN ANALYZE</code> of DML refuses on every door; <code>PREPARE</code> of a write refuses on every door, of a query works; the card's wrapper pins on every door</td><td>Known shape (106 built the walk-level refusal for repark-spark); it supersedes the 10-17 decision D3, since there is one lane.</td></tr>
+      <tr><td>4</td><td>U-9 ICE-INTEGRITY-PINS-1, pins K then U then X</td><td>Fri 10-23 to Thu 10-29</td><td>K: one Rust pin per write door, the table reads as before and the orphans are counted. U: four network cuts plus the SDK resend, the outcome resolved by operation id on reopen, offline twin on every PR, live on Glue and S3 Tables. X: a 1.5.4 table reads equal on the head and the reverse. Halts 84 and 87 carried.</td><td>The long pole, and it gates #1070 and U-11. Fork lines re-read at <code>d80a2884</code> first.</td></tr>
+      <tr><td>5</td><td>Owner wires #1070 (ruling 86); first live integrity nightly</td><td>Fri 10-30</td><td>The nightly runs U-9's legs and U-10's cross-read on Glue and S3 Tables; one Muse-sized fold if red for harness reasons, retried once on maintenance (ruling 87)</td><td>The live evidence the integrity row needs.</td></tr>
+      <tr><td>6</td><td>U-11 ICE-RESOURCE-BOUND-1</td><td>Fri 10-30 to Mon 11-02</td><td>Ordered writes and MoR MERGE measured on the acceptance sizes, the bound written in docs, exceeded means refused with one text; PA-10 and PA-11 declared or closed</td><td>Needs K so that crash and refusal are two pinned outcomes.</td></tr>
+      <tr><td>7</td><td>U-13 and the v2 label PR</td><td>Tue 11-03 to Thu 11-05</td><td>Matrix run once, registry re-dated, STATUS maturity section, the carve-out rows (ENC-1 items 1 and 5 under 121(b), ENC-CTAS-REPLACE-1 per 98), two green parity mornings, the acceptance run id; v2 reads PRODUCTION</td><td>Buffer to Sat 11-07.</td></tr>
+      <tr><td>8</td><td>U-4 (R-012 message class), the nanosecond truth-up (R-010, R-013, R-018(1), R-001 on the planner head), and the v3 label PR</td><td>Fri 11-06 to Tue 11-10</td><td>v3 core reads PRODUCTION with the dated rows R-002, R-015, R-024, U-2 (1.5.7) and the create door; v1.5.6 ships both labels</td><td>Buffer to Fri 11-13. U-2 and the create door rebuild in 1.5.7 on the same lane.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Nanosecond work after the labels, in 1.5.7, in this order: U-2 (NS-ARRAY-FLOOR-1 from #1047's matrix), ICE-TSNS-CREATE-DOOR-2 (from #1048's door files), the R-011 µs lift (ICE-TSNS-NESTED-1 extended, from #1037's oracles and #1038's localise half), R-024, then ENC-1 items 1 and 5 rebuilt from #1071's pins with the typed attempt set ruling 145 names.</p>
+</section>
+
+<section>
+  <h2>4. The open pull requests on this path</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>PR</th><th>Triage verdict</th><th>On this plan</th></tr></thead>
+    <tbody>
+      <tr><td>#1067 U-9 sketch</td><td>LAND</td><td>Lands today after the map merge and the DUP-1 status fix; the U-9 brief builds from it.</td></tr>
+      <tr><td>#1044 definition, #1098 replan record, #1099 Opus ban gate, #1072 actions bump</td><td>LAND</td><td>Land-prep in flight; the owner merges. #1044 is what the label PRs cite.</td></tr>
+      <tr><td>#1070 AWS legs</td><td>HOLD</td><td>Stays draft until U-9 lands; then the owner's wiring PR (step 5). Paths re-based under the subsystem directories at that time.</td></tr>
+      <tr><td>#1071 ENC-1 items 1 and 5</td><td>HOLD</td><td>Parked under 121(b). Today: the acceptance record of items 2, 3, 4 and 6 goes to main as docs; the PR gets a park note and draft when the owner says. Rebuild in 1.5.7.</td></tr>
+      <tr><td>#1047 applyInPandas refusal</td><td>REBUILD</td><td>Close today once the case matrix and fixture are filed under the U-2 work order; U-2 itself is 1.5.7 (P6).</td></tr>
+      <tr><td>#1048 nanosecond create door</td><td>REBUILD</td><td>Keep draft; dated row in the v3 label PR; rebuilt as ICE-TSNS-CREATE-DOOR-2 in 1.5.7, closed with a link from that PR.</td></tr>
+      <tr><td>#1037, #1038 nested NTZ wall</td><td>REBUILD, HOLD</td><td>One unit. U-8 does not use them (it refuses). The read-side divergence gets a registry row today; both close when the 1.5.7 lift unit opens.</td></tr>
+      <tr><td>#1014 cast-view nullability, #1096 cargo bumps, #1011 streaming facade</td><td>HOLD</td><td>Not on either label; unchanged.</td></tr>
+      <tr><td>#411, #643, #884, #888, #1000</td><td>REBUILD</td><td>Not Iceberg; wait as the owner said.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>5. The fork</h2>
+  <ul>
+    <li><strong>Nothing on the critical path.</strong> Fork main <code>d80a2884</code> is RePark's pin (#1103, 10-18). Its required CI (Tests default and doc) has been real since RustFS replaced MinIO (#367), and the weekly nightly interop ran 65 of 65 on 10-18 after the three tests-and-oracle PRs. The four long-red suites are closed.</li>
+    <li><strong>U-9 changes no fork line.</strong> The sketch keeps the commit path, the error taxonomy and the fork out of scope; the U drill cuts the network around the SDK rather than injecting a fault. Fork #303 (the feature-gated Glue fault seam, draft since 09-19) stays parked; it would become the second step only if the U drill cannot reach a case without it, and that is a halt, not a quiet scope change.</li>
+    <li><strong>Fork #369</strong> (the Opus 5.0 ban gate) lands the day #1099 does, so both repositories carry the gate.</li>
+    <li>A fork change during U-9 or U-11 is an RP-60 repin at clerk band with its own P2 report, as RP-58 and RP-59 were.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Decisions for the owner</h2>
+  <p>Each has a lean. These replace D1 to D8 of the 10-17 replan. The clerk items in step 0 run today without them; step 1 opens on the owner's word.</p>
+  <ol>
+    <li><strong>P1, the dates.</strong> v2 PRODUCTION Thu 11-05 (buffer 11-07), v3 core Tue 11-10 (buffer 11-13), v1.5.6 ships both. Lean: adopt. The 10-17 dates assumed two lanes from Monday 10-19; the halt kept them closed.</li>
+    <li><strong>P2, one Opus 5.5 lane in the order of section 3.</strong> Muse stays idle unless the owner wants the step-0 clerk items in parallel. Lean: adopt; it is what the owner said this morning, written down.</li>
+    <li><strong>P3, EXPLAIN-DML-WRITE-1 builds on Opus</strong> (supersedes D3's Muse lean), because there is one lane and the shape is known. Lean: yes.</li>
+    <li><strong>P4, D4 is closed by fact</strong> (fork suites green, pin current). No ruling needed.</li>
+    <li><strong>P5, parity-live gates the label PRs:</strong> two green mornings. Lean: yes, unchanged from D5.</li>
+    <li><strong>P6, U-2 moves to 1.5.7</strong> as a dated row on the v3 label, and #1047 closes today with its matrix filed. Lean: yes, unchanged from D6.</li>
+    <li><strong>P7, tag v1.5.5 now</strong> from its release commit, before v1.5.6 carries the labels. Lean: yes, unchanged from D7; the owner's hands.</li>
+    <li><strong>P8, the weekly Opus ceiling.</strong> The orchestrator cannot read the meter. The plan's Opus work: four verifiers and three builds for U-9, one build and one verifier each for U-8, EXPLAIN and U-11, one medium agent for the parity re-record, one for U-4. Lean: the owner names a number on this reply; a lane finishing its commit and handing back is the only response to crossing it.</li>
+    <li><strong>P9, ENC-1 items 1 and 5 as a dated carve-out row on the v2 label</strong> under ruling 121(b), with the rebuild in 1.5.7. Lean: yes. Item 1's harm on main is an unreferenced orphan file that is never served; the alternative is v2 waiting on a rebuild whose first attempt failed five verifier findings.</li>
+    <li><strong>P10, the nanosecond create door</strong> is a dated row on the v3 label and ICE-TSNS-CREATE-DOOR-2 in 1.5.7. Lean: yes; nanosecond columns stay HARDENED-NARROW under R-002 either way.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>7. Halts, carried unchanged</h2>
+  <ul>
+    <li>A FAIL verdict parks the unit and the owner hears first; no further round unless the owner names it (rulings 55, 73).</li>
+    <li>A second seam in any sketch halts the same day and re-plans the label date (standing guidance 8).</li>
+    <li>A red acceptance run stops every lane until it is explained (63); the U drill showing a double append stops the live leg and v2 waits (84).</li>
+    <li>Any statement main answers that a head refuses, outside the named carve-outs, halts (70).</li>
+    <li>Every write-path merge carries its P2 report before the next lane opens (standing guidance 4); the 1.5.6 note gets its one line per stored-value change (5).</li>
+  </ul>
+  <p class="note">Method: reading only, on a clone of main at <code>085d77e8</code> with every open PR head fetched; the 10-17 rating status and replan, the triage cards of 2026-10-20, the registry, the work orders, <code>gh</code> run and PR records. The 10-20 parity-live and acceptance runs were still in progress when this page was written. A label moves only through the rubric in #1044 and the owner.</p>
+</section>
+</div>
