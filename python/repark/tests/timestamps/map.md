@@ -38,6 +38,7 @@ pins.
 - [test_tz_asof_1.py](test_tz_asof_1.py) — WO TZ-ASOF-1: an expression named like its ORDER BY key plans.
 - [test_u9_types_1.py](test_u9_types_1.py) — WO U9-TYPES-1: TIMESTAMP_LTZ and MAP columns end to end, replayed against Spark 4.1.2.
 - [test_zone_horizon_render_1.py](test_zone_horizon_render_1.py) — ZONE-HORIZON-RENDER-1 — an instant after 2099 renders at Spark's wall clock.
+- [test_zone_oracle_1.py](test_zone_oracle_1.py) — ZONE-ORACLE-1: every timestamp-and-zone cell replays Spark on a plain `SELECT`; the non-EQUAL set is exactly the dated list, and twenty hash-chosen cells re-record live.
 - [_ice_tsns_coercion_1_doors.py](_ice_tsns_coercion_1_doors.py) — Write doors for the ICE-TSNS-COERCION-1 twin matrix.
 - [_ice_tsns_coercion_1_spellings.py](_ice_tsns_coercion_1_spellings.py) — Spellings, twin kernels, and door names for ICE-TSNS-COERCION-1 slice 0.
 - [_ice_tsns_merge_wall_1_doors.py](_ice_tsns_merge_wall_1_doors.py) — ICE-TSNS-MERGE-WALL-1: the write-door matrix shared by the recorder and the pins.
@@ -94,6 +95,7 @@ pins.
 - [u9_types_1_spark_oracle.json](u9_types_1_spark_oracle.json) — Recorded Spark oracle read by `test_u9_types_1.py`.
 - [zone_horizon_render_1_residue.json](zone_horizon_render_1_residue.json) — Recorded data read by `test_zone_horizon_render_1.py`; re-derived by `_record_zone_horizon_render_1.py`.
 - [zone_horizon_render_1_spark_oracle.json](zone_horizon_render_1_spark_oracle.json) — Recorded Spark oracle read by `test_zone_horizon_render_1.py`; re-derived by `_record_zone_horizon_render_1.py`.
+- [zone_oracle_1_main_difference.json](zone_oracle_1_main_difference.json) — RePark recording on main `754fb6e5`: every ZONE-ORACLE-1 cell that is not EQUAL (400 DIFFERENT, 20 REFUSED, 70 ERROR), with its status and the measured RePark answer; read by `test_zone_oracle_1.py`; re-derived by `_record_zone_oracle_1.py --main`.
 - [zone_oracle_1_spark_oracle.json](zone_oracle_1_spark_oracle.json) — Recorded Spark 4.1.2 oracle (1,640 cells) read by `test_zone_oracle_1.py`; re-derived by `_record_zone_oracle_1.py`.
 
 ## Path expressions
@@ -166,6 +168,30 @@ JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 /tmp/sparkenv/bin/
 
 `--check` re-derives and exits non-zero on drift; `--check --sample 20` re-derives the twenty
 cells with the smallest SHA-256 of their id.
+
+**Replay** (`test_zone_oracle_1.py`, `_record_zone_oracle_1.py --main`). Each cell runs through
+`ReparkSession.sql` in a session set to the cell's zone with ANSI on and the view re-created in
+that zone. The value comes from `to_arrow()` and the type name from the facade schema, not from
+`collect()`, which renders a `TIMESTAMP` at the session wall clock. A cell is classified against
+the Spark record: EQUAL (same type and value, or both raise and RePark's text names Spark's error
+condition), DIFFERENT (another type or value, Spark raises and RePark answers, or both raise with
+another condition), REFUSED (Spark answers, RePark raises a deliberate refusal: the text says
+`refus`, `unsupported` or `not supported`), ERROR (Spark answers, RePark raises anything else,
+a caught Rust panic included). No cell is skipped or xfailed. The cells that are not EQUAL on
+main are the dated list `zone_oracle_1_main_difference.json`, each with its status and the
+measured RePark answer, recorded from the `ci`-profile build of main `754fb6e5`; the test
+asserts that the set of non-EQUAL cells is exactly that list, so a cell that leaves it (a fix)
+and a cell that joins it (a regression) both fail, and a listed cell must keep its status and
+its measured answer (an error cell keeps only the fact that it raises). To retire a listed cell,
+fix the engine and re-record the list:
+
+```
+PYTHONPATH=python/repark-parity/src python python/repark/tests/timestamps/_record_zone_oracle_1.py --main --base <sha>
+```
+
+The live cell (`REPARK_PARITY_LIVE=1`) runs the recorder as a subprocess with
+`--check --sample 20` in a fresh interpreter, so it owns a `local[1]` context whatever the shared
+SparkContext of the serial live suite is. The replay is 1,640 cells in about 4 s on the `ci` profile.
 
 ## Pointers
 
