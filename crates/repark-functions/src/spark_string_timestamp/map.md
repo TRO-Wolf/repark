@@ -43,4 +43,4 @@ pins: cast-ts-string-1/C-001, C-002, C-003, C-008
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Oracle and facade pins: `python/repark/tests/test_cast_ts_string_1.py`
+- Oracle and facade pins: `python/repark/tests/timestamps/test_cast_ts_string_1.py`

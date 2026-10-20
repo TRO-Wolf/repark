@@ -32,7 +32,7 @@ plan-shape handling; the two file-size splits (`store_fold.rs`,
 **What Spark does (Spark 4.1.2 + Iceberg 1.11.0, `local[1]`, ANSI on, UTC, hadoop
 catalog; probe `/tmp/gen_cov_oracle2.py`, Spark output `/tmp/cov_oracle_spark.json`;
 the replayed cells are committed as
-`python/repark/tests/cast_overflow_insert_1_spark_oracle.json`).** Tables `sc.ns.cov
+`python/repark/tests/writes/cast_overflow_insert_1_spark_oracle.json`).** Tables `sc.ns.cov
 (id BIGINT, v BIGINT)` rows `(1,0),(2,0)`, `covi` (INT), `covtiny`/`covsmall`
 (Iceberg widens TINYINT/SMALLINT to INT — measured `DESCRIBE v int` on Spark),
 `srcd` (DOUBLE), `srcf` (FLOAT), `srce` (empty), `srcz`:
@@ -86,15 +86,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every brief source (1e19, -1e19, NaN, infinities, 1e10 into INT, 1e30 decimal, 0/0, 1/0.0, column division) is walked against the recorded Spark answers on all nine doors, comparing err, message head, SQLSTATE and read-back rows.
-      artifacts: [python/repark/tests/test_cast_overflow_insert_1.py, python/repark/tests/cast_overflow_insert_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/test_cast_overflow_insert_1.py, python/repark/tests/writes/cast_overflow_insert_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Constant, column, subquery, temp-view and empty sources; boundary values (MAX double, MAX/MIN int, try_cast, WHERE-false); INT and BIGINT targets plus the Iceberg-widened TINYINT/SMALLINT behavior; narrow kernels pinned at unit level.
-      artifacts: [crates/repark-iceberg/src/write/store_cast.rs, crates/repark-spark/src/tests/cast_overflow_insert.rs, python/repark/tests/test_cast_overflow_insert_1.py]
+      artifacts: [crates/repark-iceberg/src/write/store_cast.rs, crates/repark-spark/src/tests/cast_overflow_insert.rs, python/repark/tests/writes/test_cast_overflow_insert_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The rule returns non-Dml plans untouched and skips pairs outside float/decimal-to-int; int-to-int, string and divide-by-zero refusals keep their text by keep-pin and neighbour battery; the UPDATE empty-match stays lazy.
-      artifacts: [crates/repark-iceberg/src/write/store_overflow.rs, python/repark/tests/test_cast_overflow_insert_1.py]
+      artifacts: [crates/repark-iceberg/src/write/store_overflow.rs, python/repark/tests/writes/test_cast_overflow_insert_1.py]
     - id: AT-4
       status: N/A
       justification: Stateless analyzer rule and pure plan rewrites; no shared or mutable state.
@@ -104,7 +104,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Every refusal cell asserts the post-statement read-back equals the pre-statement rows; every store cell asserts exact rows and column types.
-      artifacts: [python/repark/tests/test_cast_overflow_insert_1.py]
+      artifacts: [python/repark/tests/writes/test_cast_overflow_insert_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim; plans without a fractional-to-integer store skip the rule after one scan, and const folding evaluates only store-bound constants.
@@ -115,11 +115,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Integer-overflow, string and divide-by-zero refusals keep Spark's condition and message head by keep-pin; the facade compares both where the engine parses them.
-      artifacts: [python/repark/tests/test_cast_overflow_insert_1.py]
+      artifacts: [python/repark/tests/writes/test_cast_overflow_insert_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: M1 doubles the float boundary and the value pins red across seven door groups while the controls stay green, proving the pins judge values, not shape.
-      artifacts: [crates/repark-iceberg/src/write/store_cast.rs, python/repark/tests/test_cast_overflow_insert_1.py]
+      artifacts: [crates/repark-iceberg/src/write/store_cast.rs, python/repark/tests/writes/test_cast_overflow_insert_1.py]
   complete: true
 ```
 

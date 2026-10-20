@@ -1,6 +1,6 @@
 # WRITE-BODY-CARRIERS-1 step 0: Spark's answer
 
-Recorded 2026-10-14 on live Spark 4.1.2 with `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0` by `python/repark/tests/_record_write_body_carriers_1_spark.py`. Full texts and row values live in [spark-cells.json](spark-cells.json); this table is a view over it.
+Recorded 2026-10-14 on live Spark 4.1.2 with `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0` by `python/repark/tests/writes/_record_write_body_carriers_1_spark.py`. Full texts and row values live in [spark-cells.json](spark-cells.json); this table is a view over it.
 
 | cell | exception | error class | condition | SQLSTATE | first line | t | z |
 |---|---|---|---|---|---|---|---|

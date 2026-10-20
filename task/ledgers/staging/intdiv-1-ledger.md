@@ -39,7 +39,7 @@ About 130 product lines (the non-test part of the rule module) plus the seat lin
 **What Spark does (Spark 4.1.2 + Iceberg 1.11.0, `local[1]`, ANSI default on, UTC, hadoop
 catalog; probe `/tmp/oc-worker/direct/wo/intdiv-probes/intdiv_probe.py`, outputs
 `out/intdiv-{spark,repark,repark-base}.json`; the replayed subset is committed as
-`python/repark/tests/intdiv_1_spark_oracle.json`).** Table `sc.ns.t (id BIGINT, i INT, d
+`python/repark/tests/types/intdiv_1_spark_oracle.json`).** Table `sc.ns.t (id BIGINT, i INT, d
 DECIMAL(10,2))` rows `(1,1,1.00), (2,2,2.00), (3,3,3.00)`; `h = id / 2` or `i / 2`:
 
 | Cell | Spark |
@@ -99,11 +99,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: C-001 is walked cell by cell against the recorded Spark answers in every scope family, over BIGINT and INT, with names, types and rows compared exactly.
-      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/test_intdiv_1.py, python/repark/tests/intdiv_1_spark_oracle.json]
+      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/types/test_intdiv_1.py, python/repark/tests/types/intdiv_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Same scope, derived table, CTE, temp view, session view, nested and chained scopes; filter, sort, aggregate, CTAS and INSERT consumers; BIGINT MAX plus a fraction; lambda-variable divisions are skipped and stay with SparkExprSemantics; non-integer and decimal divisions are not touched.
-      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/test_intdiv_1.py]
+      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/types/test_intdiv_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The rule adds no error path; an operand whose type cannot be read is left for the existing post-coercion rewrite. The R-INTDIV-1 fold closes the INSERT/UPDATE-into-integer internal errors with a store cast; out-of-range, NaN and Infinity quotients still refuse and store nothing (R-INTDIV-9 holds the message class).
@@ -117,7 +117,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: CTAS now stores DOUBLE and INSERT into DOUBLE stores Spark's values where main stored truncated integers; the stored-type and read-back cells are pinned. The R-INTDIV-1 fold stores a fractional quotient into BIGINT/INT columns with Spark's toward-zero values on INSERT, VALUES, OVERWRITE, UPDATE and MERGE, pinned by read-back.
-      artifacts: [python/repark/tests/test_intdiv_1.py]
+      artifacts: [python/repark/tests/types/test_intdiv_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim; plans without `/` skip the rule after one expression scan, and plans with `/` pay one extra bottom-up rewrite pass.
@@ -128,11 +128,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The integral overflow refusals keep Spark's condition and message head through a derived table and a CTE; the facade compares both.
-      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/test_intdiv_1.py]
+      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/types/test_intdiv_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: M1 unseats the rule and the value pins red; M2 and M3 remove each half and pins red, proving both branches are load-bearing; the integral control stays green under every mutation.
-      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/test_intdiv_1.py]
+      artifacts: [crates/repark-functions/src/integer_spark/fractional_division.rs, python/repark/tests/types/test_intdiv_1.py]
   complete: true
 ```
 

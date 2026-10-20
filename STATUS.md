@@ -194,6 +194,8 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   wrong answers, two failure shapes filed (`H3-SPILL-NLJ-1`, `H3-SPILL-COLLECT-1`); the pool
   bounds only the operators that register with it:
   [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md). **Next:** those two.
+  **COLUMN-OR-BUILD-1 (candidate, 2026-10-19, after U-9):** a 20,000-term `|` OR builds in 302 s,
+  quadratic, refusal under 0.2 s; [baseline](docs/perf/column-or-build-cost-2026-10-19.md).
   **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal.
   **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
 <!-- /ws -->
@@ -282,12 +284,9 @@ entry rather than moving it. Nothing is described in both places.
   NULL str and a non-foldable `partNum` 0 errors where Spark short-circuits to NULL. Live-verified
   2026-08-19; [task/fn-gt1-ledger.md](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
 
-**Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
-**2026-08-10** — see
-[docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md).
-The Spark-door time-travel view leak was fixed in unit H-1b on **2026-08-11** — see
-[docs/history/hardening-h1/h1b-ledger.md](docs/history/hardening-h1/h1b-ledger.md).
-Deleted at the campaign's close-out.
+**Closed out (2026-08):** the `$`-metadata rider, H-1c
+([ADR 0006](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)); the time-travel
+view leak, H-1b ([ledger](docs/history/hardening-h1/h1b-ledger.md)).
 
 ## Architectural risks
 

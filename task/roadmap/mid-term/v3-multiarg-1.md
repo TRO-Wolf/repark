@@ -13,7 +13,7 @@ multi-argument bucket). RePark's SQL door refuses `bucket(4, id, name)` at analy
 the DataFrame door has no multi-argument spelling, a foreign table carrying
 `"source-ids": [1, 2]` refuses loud at `register_table`, and Spark 4.1.2 DDL cannot
 create one either. All four answers are measured and pinned in
-`python/repark/tests/test_v3_multiarg_1.py`; the declaration keeps the gate honest.
+`python/repark/tests/iceberg/test_v3_multiarg_1.py`; the declaration keeps the gate honest.
 
 ## Why it is not a 1.x fix
 
@@ -56,5 +56,5 @@ Iceberg-Java surface instead of the fork.
 ## Pointers
 
 - Up: [map.md](map.md) · Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
-- Pins: [../../../python/repark/tests/test_v3_multiarg_1.py](../../../python/repark/tests/test_v3_multiarg_1.py) ·
+- Pins: [../../../python/repark/tests/iceberg/test_v3_multiarg_1.py](../../../python/repark/tests/iceberg/test_v3_multiarg_1.py) ·
   Ledger: [../../ledgers/staging/v3-multiarg-1-ledger.md](../../ledgers/staging/v3-multiarg-1-ledger.md)

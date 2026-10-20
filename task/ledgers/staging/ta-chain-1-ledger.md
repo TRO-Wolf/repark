@@ -126,7 +126,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every recorded family pinned bit-exact against polars_talib on the wrapper (NaN and NULL twins) and the chain through the facade and the example; red at base.
-      artifacts: [crates/repark-ta/tests/prefix_goldens.rs, python/repark/tests/test_ta_with_indicators.py]
+      artifacts: [crates/repark-ta/tests/prefix_goldens.rs, python/repark/tests/functions/test_ta_with_indicators.py]
     - id: AT-2
       status: ATTACKED
       evidence: Interior NaN, all-invalid input, NULL versus NaN runs, per-input runs of different lengths and the length-mismatch cap pinned or reasoned in section 2.
@@ -138,7 +138,7 @@ COVERAGE_ATTESTATION:
     - id: AT-4
       status: ATTACKED
       evidence: Per-partition starts pinned over 14 partitions; the multi-output cache is keyed on the same input identity and the trimmed answer is a pure function of it.
-      artifacts: [python/repark/tests/test_ta_with_indicators.py]
+      artifacts: [python/repark/tests/functions/test_ta_with_indicators.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, environment read, secret or network access in the product change.

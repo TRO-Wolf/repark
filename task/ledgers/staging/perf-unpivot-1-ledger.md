@@ -67,7 +67,7 @@ described = frame.describe()
 >       assert described._map_bridge is None
 E       AssertionError: assert {'parent': DataFrame[__repark_stat_0: bigint, ...
 'arrow_schema': summary: string\nf0: string\nf1: string} is None
-FAILED python/repark/tests/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
+FAILED python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
 1 failed in 0.66s
 ```
 
@@ -116,9 +116,9 @@ JVM was not started for these gates.
 
 | Command | Exit |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_perf_describe_1.py python/repark/tests/test_perf_unpivot_1.py -q` | 0 — 12 passed (both named suites + laziness + plan-shape pin) |
+| `.venv/bin/python -m pytest python/repark/tests/perf/test_perf_describe_1.py python/repark/tests/perf/test_perf_unpivot_1.py -q` | 0 — 12 passed (both named suites + laziness + plan-shape pin) |
 | `.venv/bin/python -m pytest python/repark/tests -q -k "describe or summary"` | 0 — 37 passed, 6 skipped |
-| `.venv/bin/python -m pytest python/repark/tests/test_facade_2_column_display_goldens.py -q` (in the combined run) | 0 — 3 passed |
+| `.venv/bin/python -m pytest python/repark/tests/dataframe/test_facade_2_column_display_goldens.py -q` (in the combined run) | 0 — 3 passed |
 | `python3 scripts/check_ledger_grammar.py` | 0 — 118 live ledgers clean |
 | `make verify` | 0 |
 | `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 — 749 passed, 1 skipped, 12 xfailed (669 s) |
@@ -220,7 +220,7 @@ JVM was not started for these gates.
 | Command | Exit |
 |---|---|
 | `cargo test -p repark-core stack` | 0 — 9 passed incl. `labeled_stack_coerces_cells_like_engine_cast` |
-| `.venv/bin/python -m pytest -q python/repark/tests/test_perf_unpivot_1.py $(ls python/repark/tests/*describe*.py)` | 0 — 32 passed, 1 skipped |
+| `.venv/bin/python -m pytest -q python/repark/tests/perf/test_perf_unpivot_1.py $(ls python/repark/tests/*describe*.py)` | 0 — 32 passed, 1 skipped |
 | `.venv/bin/python -m pytest python/repark/tests -q -k "describe or summary or stack"` | 0 — 46 passed, 6 skipped (both `STACK_COLUMN_DIFF_TYPES` refusal doors green) |
 | `make verify` | 0 (one timing-sensitive `repark-iceberg` listing-cost test flaked once under parity-suite load; green in isolation and in the quiet re-run) |
 | `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 — 749 passed, 1 skipped, 12 xfailed (711 s) |
@@ -306,7 +306,7 @@ The new pin `test_stack_name_is_exported` fails as:
 ```
 E       AssertionError: assert False
 E        +  where False = hasattr(F, 'stack')
-python/repark/tests/test_perf_unpivot_1.py::test_stack_name_is_exported
+python/repark/tests/perf/test_perf_unpivot_1.py::test_stack_name_is_exported
 SQL: Invalid function 'stack'
 ```
 
@@ -331,11 +331,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Spark 4.1.2 oracle cells for row-major fill, pad, per-column types, n-range, and F.stack/SQL doors.
-      artifacts: [python/repark/tests/test_perf_unpivot_1.py, scratch/perf-unpivot-1/oracle_stack.py]
+      artifacts: [python/repark/tests/perf/test_perf_unpivot_1.py, scratch/perf-unpivot-1/oracle_stack.py]
     - id: AT-2
       status: ATTACKED
       evidence: n=0/-1, missing args, STACK_COLUMN_DIFF_TYPES, and two generators refused.
-      artifacts: [python/repark/tests/test_perf_unpivot_1.py, crates/repark-core/src/stack/tests.rs]
+      artifacts: [python/repark/tests/perf/test_perf_unpivot_1.py, crates/repark-core/src/stack/tests.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Loud AnalysisException with Spark condition names; no silent half-unpivot.
@@ -349,11 +349,11 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Value and Arrow-path types pinned on SQL and F.stack; output columns nullable.
-      artifacts: [python/repark/tests/test_perf_unpivot_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_unpivot_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: Linearity pin exponent 0.91 at 50/250/500; UnpivotExec interleaves with a shared index and streams each input batch (C-006/C-007).
-      artifacts: [python/repark/tests/test_perf_unpivot_1.py, crates/repark-core/src/stack/exec.rs]
+      artifacts: [python/repark/tests/perf/test_perf_unpivot_1.py, crates/repark-core/src/stack/exec.rs]
     - id: AT-8
       status: ATTACKED
       evidence: Spark cells measured live; DataFusion TableScan/generate_series named honestly in the EXPLAIN pin.
@@ -365,5 +365,5 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Red-first absence of the name on the base tree; pins fail without UnpivotExec.
-      artifacts: [python/repark/tests/test_perf_unpivot_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_unpivot_1.py]
 ```

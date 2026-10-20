@@ -12,7 +12,7 @@ no code in U-1.
 [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) (the line
 "Three written casts on that door disagree"), U-1's ledger
 [ice-tsns-type-planner-1-ledger.md](../../ledgers/staging/ice-tsns-type-planner-1-ledger.md)
-(Q1), and the dated rows of `python/repark/tests/ice_tsns_type_planner_1_dated.json`.
+(Q1), and the dated rows of `python/repark/tests/timestamps/ice_tsns_type_planner_1_dated.json`.
 
 ## Why
 
@@ -28,7 +28,7 @@ the floor U-3 rules for every write door.
 ## Cells (dated on U-1's branch, red on today's main)
 
 `repro|r017_update_nowhere_ntz_cast|{ns,tzns}|{UTC,America/New_York}` of
-`python/repark/tests/test_ice_tsns_type_planner_1.py`.
+`python/repark/tests/timestamps/test_ice_tsns_type_planner_1.py`.
 
 ## Done when
 

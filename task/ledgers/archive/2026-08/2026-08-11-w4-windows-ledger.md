@@ -14,8 +14,8 @@ divergences; the registry file; joins (W-3). Critic: `octo` cycles=3 early_stop 
 
 | Artifact | Path | Role |
 |---|---|---|
-| Differential corpus | [`python/repark/tests/test_window_parity.py`](../../../../python/repark/tests/test_window_parity.py) | 27 rows + budget pin + classifier |
-| Record driver | [`python/repark/tests/_record_window_goldens.py`](../../../../python/repark/tests/_record_window_goldens.py) | re-derive Spark halves; `--emit` paste helpers |
+| Differential corpus | [`python/repark/tests/test_window_parity.py`](../../../../python/repark/tests/functions/test_window_parity.py) | 27 rows + budget pin + classifier |
+| Record driver | [`python/repark/tests/_record_window_goldens.py`](../../../../python/repark/tests/functions/_record_window_goldens.py) | re-derive Spark halves; `--emit` paste helpers |
 | Tests map | [`python/repark/tests/map.md`](../../../../python/repark/tests/map.md) | lockstep navigation + debug |
 | This ledger | `task/w4-windows-ledger.md` | linked from [`task/map.md`](../../../map.md) |
 

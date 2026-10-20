@@ -36,8 +36,8 @@ range), the clause stops, pins what is equal, and records the fork ask below.
 
 | # | Clause | Verdict | Evidence |
 |---|--------|---------|----------|
-| C-001 | The 27 measured Spark cells ship as a committed fixture with provenance and hash | PROVEN | `python/repark/tests/ice_procs_route_1_spark_oracle.json` (SHA-256 `cfffc500…b9eb7`, provenance `spark-qc3.json` / `cells_qc3.py`, re-recorded by the round-2 recorder); step-1 commit `7c58d046` |
-| C-002 | A tree recorder re-derives the cells on live PySpark | PROVEN | `python/repark/tests/_record_ice_procs_route_1_oracle.py` replays every cell shape against live Spark 4.1.2 + Iceberg 1.11.0 |
+| C-001 | The 27 measured Spark cells ship as a committed fixture with provenance and hash | PROVEN | `python/repark/tests/iceberg/ice_procs_route_1_spark_oracle.json` (SHA-256 `cfffc500…b9eb7`, provenance `spark-qc3.json` / `cells_qc3.py`, re-recorded by the round-2 recorder); step-1 commit `7c58d046` |
+| C-002 | A tree recorder re-derives the cells on live PySpark | PROVEN | `python/repark/tests/iceberg/_record_ice_procs_route_1_oracle.py` replays every cell shape against live Spark 4.1.2 + Iceberg 1.11.0 |
 | C-003 | The live tier re-runs the recorder against the fixture | PROVEN | `test_live_oracle_matches_recorded` (`REPARK_PARITY_LIVE=1`); round 2 normalizes every run-varying token at record time to its exact writer shape, so two fresh-warehouse derivations are byte-identical and `check` compares minus `secs` with no second pass |
 | C-004 | `ancestors_of` answers Spark's columns, newest-first chains, and timestamps | PROVEN | `crates/repark-spark/src/call/ancestors_of.rs`; facade pins default/id/rollback/branch/positional; Rust `call_ancestors_of_walks_newest_first_with_snapshot_timestamps` plus round-4 `call_ancestors_of_honors_older_snapshot_id` (S1 walks `[S1,S0]`, red if the walk starts at current) |
 | C-005 | `ancestors_of` refusals carry Spark's class and text | PROVEN | `Cannot find snapshot: -1` / `Cannot find snapshot: 12345` as `IllegalArgumentException`; facade `test_ancestors_empty`, `test_ancestors_missing_id`; Rust `call_ancestors_of_names_missing_snapshots_like_spark` |
@@ -235,15 +235,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Clauses C-001..C-016 walked one by one against behavior — the 27-cell oracle was measured on live PySpark 4.1.2 + Iceberg 1.11.0, the recorder re-derives it, the facade pins ran red-first on the base tree, and the routing answers were verified against the oracle cell for cell; every clause is PROVEN and cited from the maps.
-      artifacts: [task/ledgers/staging/ice-procs-route-1-ledger.md, python/repark/tests/test_ice_procs_route_1.py]
+      artifacts: [task/ledgers/staging/ice-procs-route-1-ledger.md, python/repark/tests/iceberg/test_ice_procs_route_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Boundary cells actually exercised — empty tables (ancestors refusal, stats zero rows), unknown snapshot id, unknown column, unpartitioned table, wrong prefix, explicit staging, no-file-list, MoR position deletes, branch head, rollback plus commit, reversed columns, struct default, second run on one snapshot, v3 format.
-      artifacts: [python/repark/tests/test_ice_procs_route_1.py, crates/repark-spark/src/tests/call_procs_route_1.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_procs_route_1.py, crates/repark-spark/src/tests/call_procs_route_1.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every recorded refusal raises IllegalArgumentException with Spark's text (Cannot find snapshot, Can't find column, Table must be partitioned, does-not-start-with); missing/wrong-typed arguments keep AnalysisException; the version range refuses NotImplemented naming the fork gap; the base-tree red was the not-supported refusal on all four procedures.
-      artifacts: [python/repark/tests/test_ice_procs_route_1.py, crates/repark-spark/src/tests/call_procs_route_1.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_procs_route_1.py, crates/repark-spark/src/tests/call_procs_route_1.rs]
     - id: AT-4
       status: ATTACKED
       evidence: No privileged action, no destructive catalog operation, no secret — rewrite_table_path stages files under the table/staging locations the caller names and commits nothing; the procedure surface is four literal CALL names over a closed match.
@@ -251,11 +251,11 @@ COVERAGE_ATTESTATION:
     - id: AT-5
       status: ATTACKED
       evidence: The version-range gap is a loud NotImplemented plus two strict xfails with fork ask R-001, never a narrowed assertion; no divergence absorbed silently — R-002..R-004 are dated observations in this ledger.
-      artifacts: [task/ledgers/staging/ice-procs-route-1-ledger.md, python/repark/tests/test_ice_procs_route_1.py]
+      artifacts: [task/ledgers/staging/ice-procs-route-1-ledger.md, python/repark/tests/iceberg/test_ice_procs_route_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: Arrow value AND type pinned per oracle cell on the facade door (snapshot ids resolved to commit-order positions, ndv asserted exactly, partition counts asserted per partition, file lists asserted line by line); the native-door CALL refusal pinned per cell.
-      artifacts: [python/repark/tests/test_ice_procs_route_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_procs_route_1.py]
     - id: AT-7
       status: N/A
       justification: No performance or memory-path change — routing adds one metadata walk or one fork action per CALL; no hot loop, no cache, no spill surface.
@@ -269,7 +269,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Red-first held — the 28-test file failed 25-strong on the base tree with the not-supported refusal and goes 25 passed plus 2 strict xfails after routing; the live re-derivation passes on fresh randomness, so no dead branch ships.
-      artifacts: [python/repark/tests/test_ice_procs_route_1.py, python/repark/tests/_record_ice_procs_route_1_oracle.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_procs_route_1.py, python/repark/tests/iceberg/_record_ice_procs_route_1_oracle.py]
 ```
 
 Up: [map.md](map.md)

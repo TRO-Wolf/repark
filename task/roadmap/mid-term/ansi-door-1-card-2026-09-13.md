@@ -33,7 +33,7 @@ casts), so the gap is wider than `abs`.
 
 **Home:** the session-build config seam in `crates/repark-core/src/session/` (the `SessionConfig` build), the runtime
 conf path in `python/repark/src/repark/spark/session/session_configuration.py`, `door_parity_tests.rs`,
-`python/repark/tests/test_abs_expr_1.py`, a new oracle pin file. **Gates:** `make verify`, `make preflight`, the parity
+`python/repark/tests/functions/test_abs_expr_1.py`, a new oracle pin file. **Gates:** `make verify`, `make preflight`, the parity
 suite, the door-parity ratchet; S2-21 Rust reviewer (per-query config read cost) and Grok critic-logic before the PR.
 
 ## Pointers

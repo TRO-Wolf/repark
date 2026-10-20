@@ -12,8 +12,8 @@ Spark records `append, overwrite`.
 Measured Spark oracle (orchestrator-recorded):
 `/tmp/oc-worker/ic-build/write_fidelity_spark.json` (probe
 `write_fidelity_probe.py` beside it), cells `insert_by_name` and `rtas_ops`.
-Committed here as `python/repark/tests/ice_rtas_byname_1_spark_oracle.json` with
-generator `python/repark/tests/_record_ice_rtas_byname_1_oracle.py`.
+Committed here as `python/repark/tests/writes/ice_rtas_byname_1_spark_oracle.json` with
+generator `python/repark/tests/writes/_record_ice_rtas_byname_1_oracle.py`.
 
 **Date:** 2026-09-17 · **Branch:** `feat/ice-rtas-byname-1` · **Base:** `origin/main`
 · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).

@@ -67,7 +67,7 @@ before any code changes. If it does not, the card drops it from the ask and says
 - The ZONE-HORIZON-RENDER-1 ledger: C-016, R-4, R-5 and fold 1 finding 3.
 - The ZONE-HORIZON-RENDER-1 card: [zone-horizon-render-1-card-2026-10-07.md](zone-horizon-render-1-card-2026-10-07.md).
 - The shared helper: `crates/repark-common/src/zone_horizon.rs`.
-- The residue and oracle fixtures: `python/repark/tests/zone_horizon_render_1_residue.json` and
-  `python/repark/tests/zone_horizon_render_1_spark_oracle.json`.
-- The residue check that names the classes: `python/repark/tests/test_zone_horizon_render_1.py`
+- The residue and oracle fixtures: `python/repark/tests/timestamps/zone_horizon_render_1_residue.json` and
+  `python/repark/tests/timestamps/zone_horizon_render_1_spark_oracle.json`.
+- The residue check that names the classes: `python/repark/tests/timestamps/test_zone_horizon_render_1.py`
   (`test_every_residue_cell_is_explained`).

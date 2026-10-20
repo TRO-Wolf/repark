@@ -186,7 +186,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [df-eager-1-ledger.md](df-eager-1-ledger.md) —
   **DF-EAGER-1 step 1 (2026-09-09), in flight:** `.eager()` / `.compute()` / `.lazy()` on the
   facade DataFrame. Step 1 only: the red-first pins in
-  [../../../python/repark/tests/test_df_eager_1.py](../../../python/repark/tests/test_df_eager_1.py)
+  [../../../python/repark/tests/test_df_eager_1.py](../../../python/repark/tests/dataframe/test_df_eager_1.py)
   — seven `xfail(strict=True)` pins red on the base tree (marker-less run recorded in the
   ledger) plus two keep-green guards; step 2 builds D-1..D-6 in `core.py` + `polars.py`.
   Clauses C-001…C-006 OPEN. Branch `feat/df-eager-1`.
@@ -260,7 +260,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   exact shape, no count; full peek → one count), under `spark` the grid is byte-identical.
   Closes DISPLAY-POLARS-1-S3-Q-001 (flipped FIXED in the completed display-polars-1
   ledger). Three clauses, pins red-first in
-  [../../../python/repark/tests/test_display_bridge_1.py](../../../python/repark/tests/test_display_bridge_1.py).
+  [../../../python/repark/tests/test_display_bridge_1.py](../../../python/repark/tests/dataframe/test_display_bridge_1.py).
   `risk_tier: standard`. Branch `feat/display-bridge-1`.
   pins: display-bridge-1/C-001, C-002, C-003
 - [display-lazy-1-ledger.md](display-lazy-1-ledger.md) — Unit ledger — DISPLAY-LAZY-1 step 1 · a lazy frame's `repr` shows the schema, not the data (R-22)

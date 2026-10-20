@@ -340,7 +340,7 @@ matrix on 2026-09-03**: 81 statement programs over 12 statement classes and all 
 `CALL system.*` procedures, 267 comparison cells, 72 EQUAL, 1 refused by both engines, 8 rows
 filed and 2 defects FIXED in the same unit — the matrix is
 [v3-statement-coverage.md](v3-statement-coverage.md) and its harness is
-`python/repark/tests/test_v3_statement_coverage.py`. Step 6 now owes **no engineering item**;
+`python/repark/tests/iceberg/test_v3_statement_coverage.py`. Step 6 now owes **no engineering item**;
 `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). The gate audit itself is
 [the north star](../../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
 
@@ -373,7 +373,7 @@ The FNP and TA performance campaigns consume none of these fork surfaces.
   table with expirable snapshots.
   **Corrected 2026-09-02 (LIVE-v3):** it is now, on a partitioned v3 merge-on-read table with
   thirteen expirable snapshots — `14 → 1`, pinned by
-  `python/repark/tests/test_v3_acceptance_local.py`. V3E-4 had already measured the dual probe
+  `python/repark/tests/parity/test_v3_acceptance_local.py`. V3E-4 had already measured the dual probe
   on adopted v3; this is the created-table half.
 - **No equality-delete or partitioned v3 fixture was built.** Both fixtures are unpartitioned and
   carry only position-style deletes.

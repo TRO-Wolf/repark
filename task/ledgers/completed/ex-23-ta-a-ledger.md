@@ -288,7 +288,7 @@ COVERAGE_ATTESTATION:
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Goldens: [../../../crates/repark-ta/tests/goldens/map.md](../../../crates/repark-ta/tests/goldens/map.md)
-- Pins: [../../../python/repark/tests/test_ta.py](../../../python/repark/tests/test_ta.py) (the bit-exact DataFrame-route pins over the same goldens; no new pin file — zero divergences)
+- Pins: [../../../python/repark/tests/test_ta.py](../../../python/repark/tests/functions/test_ta.py) (the bit-exact DataFrame-route pins over the same goldens; no new pin file — zero divergences)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 (no row filed from this unit)
 - Siblings: [ex-21-catalog-session-ledger.md](ex-21-catalog-session-ledger.md), [ex-20-window-catalog-ledger.md](ex-20-window-catalog-ledger.md)
 

@@ -281,10 +281,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
 | See the TA SQL route pinned bit-exact | [ta_window.rs](ta_window.rs) |
 | See the session-timezone class pinned at the Spark door + DataFrame API | [session_timezone.rs](session_timezone.rs) |
 | See the same class at the ANSI door | [../../repark-sql/tests/session_timezone_ansi_door.rs](../../repark-sql/tests/session_timezone_ansi_door.rs) |
-| See the same class at the facade | [../../../python/repark/tests/test_session_timezone_parity.py](../../../python/repark/tests/test_session_timezone_parity.py) |
+| See the same class at the facade | [../../../python/repark/tests/timestamps/test_session_timezone_parity.py](../../../python/repark/tests/timestamps/test_session_timezone_parity.py) |
 | See the timestamp-cast epoch-seconds class at the Spark door + DataFrame API | [timestamp_cast_seconds.rs](timestamp_cast_seconds.rs) |
 | See that class at the ANSI door | [../../repark-sql/tests/timestamp_cast_ansi_door.rs](../../repark-sql/tests/timestamp_cast_ansi_door.rs) |
-| See that class at the facade | [../../../python/repark/tests/test_timestamp_cast_parity.py](../../../python/repark/tests/test_timestamp_cast_parity.py) |
+| See that class at the facade | [../../../python/repark/tests/timestamps/test_timestamp_cast_parity.py](../../../python/repark/tests/timestamps/test_timestamp_cast_parity.py) |
 
 ## Pointers
 

@@ -12,7 +12,7 @@ cannot tell folds that ignore the materialized view from folds that use it,
 because the fold-count query reads the view anyway.
 
 Test file, verified present at base `02c2f1be`:
-`python/repark/tests/test_ml_boost_oracle.py` (the named test at line 1231).
+`python/repark/tests/ml/test_ml_boost_oracle.py` (the named test at line 1231).
 
 ## Suggested direction (a suggestion, not a decision)
 

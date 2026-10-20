@@ -34,10 +34,10 @@ refusals, never outbound calls.
 | C-010 | Design question 4 rules credential and region resolution (reuse the read chain unchanged, no endpoint option in the product round). | Orchestrator ruling on the recommendation in Design answers. | PROVEN (RULED 2026-09-28) | Q4 OVERRIDDEN in Orchestrator rulings: the endpoint keys ship; C-012. |
 | C-011 | Design question 5 rules the live leg under the tier-2 scratch prefix on the existing grants. | Orchestrator ruling on the recommendation in Design answers. | PROVEN (RULED 2026-09-28) | Q5 ADOPTED in Orchestrator rulings; C-016, C-017. |
 | C-012 | The `s3a` endpoint keys (`fs.s3a.endpoint`, `fs.s3a.path.style.access`, `fs.s3a.connection.ssl.enabled`, both spellings) are honoured on the read and write side; absent keys leave behaviour byte-identical. | Unit tests for parsing plus moto reads and writes through a custom endpoint. | PROVEN | `endpoint_config_*` in [object_store_s3.rs](../../../crates/repark-core/src/object_store_s3.rs); Round 1 verification. |
-| C-013 | Every one of the 38 `W-PATH-S3-*` cells replays on moto: write outcome, normalised listing and read-back rows are EQUAL, or a dated residue below records both answers. | The moto pins plus the residue entries. | PROVEN | [test_s3_path_write_1.py](../../../python/repark/tests/test_s3_path_write_1.py); Residues. |
+| C-013 | Every one of the 38 `W-PATH-S3-*` cells replays on moto: write outcome, normalised listing and read-back rows are EQUAL, or a dated residue below records both answers. | The moto pins plus the residue entries. | PROVEN | [test_s3_path_write_1.py](../../../python/repark/tests/io/test_s3_path_write_1.py); Residues. |
 | C-014 | The local path is bit-for-bit unchanged: the local pins stay green and no existing pin changes. | The writer suites in the round gate. | PROVEN | Round 1 verification; the suites listed there. |
 | C-015 | Failed-write cleanup is best effort and the residue of each failure shape is recorded. | The fault-injection probe output below. | PROVEN | Fault record F1-F5. |
-| C-016 | The live leg is written in the module the plan named, skipped unless the tier-2 marker is present, with no workflow change. | The skipped test in the acceptance module. | PROVEN | `test_u12_s3_path_write_against_scratch_prefix` in [test_aws_acceptance.py](../../../python/repark/tests/test_aws_acceptance.py). |
+| C-016 | The live leg is written in the module the plan named, skipped unless the tier-2 marker is present, with no workflow change. | The skipped test in the acceptance module. | PROVEN | `test_u12_s3_path_write_against_scratch_prefix` in [test_aws_acceptance.py](../../../python/repark/tests/parity/test_aws_acceptance.py). |
 | C-017 | The live leg runs green on real AWS under the tier-2 scratch prefix. | The owner runs it; moto cannot prove real-AWS reachability. | OPEN | C-016; the owner run is pending. |
 
 ## Oracle setup
@@ -226,11 +226,11 @@ applies the mode from C-002/C-003, executes the write (local keeps
 staging-and-rename; S3 writes direct part files plus `_SUCCESS`), and returns
 what the writer needs for its output listing. The local-path pins that guard it:
 
-- [test_r2_read_formats2.py](../../../python/repark/tests/test_r2_read_formats2.py) — path modes error/ignore/append/overwrite, partitionBy layouts, csv/json/parquet write options
-- [test_e2_readwriter.py](../../../python/repark/tests/test_e2_readwriter.py) — parquet/csv/json save/load round trips
-- [test_r1_read_formats.py](../../../python/repark/tests/test_r1_read_formats.py) — read side plus the `PATH_ALREADY_EXISTS` pin
-- [test_examples_io_session.py](../../../python/repark/tests/test_examples_io_session.py) — writer output listing (`_SUCCESS`, part files)
-- [test_io_text_1.py](../../../python/repark/tests/test_io_text_1.py) — text-door path modes (adjacent door, stays local-only)
+- [test_r2_read_formats2.py](../../../python/repark/tests/io/test_r2_read_formats2.py) — path modes error/ignore/append/overwrite, partitionBy layouts, csv/json/parquet write options
+- [test_e2_readwriter.py](../../../python/repark/tests/io/test_e2_readwriter.py) — parquet/csv/json save/load round trips
+- [test_r1_read_formats.py](../../../python/repark/tests/io/test_r1_read_formats.py) — read side plus the `PATH_ALREADY_EXISTS` pin
+- [test_examples_io_session.py](../../../python/repark/tests/parity/test_examples_io_session.py) — writer output listing (`_SUCCESS`, part files)
+- [test_io_text_1.py](../../../python/repark/tests/io/test_io_text_1.py) — text-door path modes (adjacent door, stays local-only)
 - [test_ex_0_example_coverage.py](../../../python/repark-parity/tests/test_ex_0_example_coverage.py) — the example-drift gate over [docs/examples/io](../../../docs/examples/io/map.md) (`parquet_roundtrip`, `writer_csv`, `writer_json`, `writer_partition`, `text_read_write`)
 
 ## Round estimate
@@ -245,7 +245,7 @@ for reads).
 ## Live-leg plan
 
 The live leg is a new test in
-[test_aws_acceptance.py](../../../python/repark/tests/test_aws_acceptance.py)
+[test_aws_acceptance.py](../../../python/repark/tests/parity/test_aws_acceptance.py)
 (the module section 6 of [tier2-aws.md](../../../docs/tier2-aws.md) rows), run
 by the owner-tier `aws-acceptance.yml` workflow on the `REPARK_AWS_ACCEPTANCE=1`
 gate — no workflow change in this round. It writes parquet, csv and json under

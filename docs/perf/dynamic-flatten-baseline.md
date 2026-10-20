@@ -229,7 +229,7 @@ from ~25 ms to ~1 ms. A 0.0585 ms floor is a floor for a 1 ms cell and says noth
 | cartesian_tags_only | y | 18.83 | 14.88 | 23.71 | 18.82 | 310150 |
 
 `rows_out` is identical on all eleven fixtures. Row-set identity is pinned separately and more
-strictly: `python/repark/tests/test_dynflatten_null_mask.py` holds the gate-scale row count,
+strictly: `python/repark/tests/perf/test_dynflatten_null_mask.py` holds the gate-scale row count,
 the Arrow schema string (names, types, nullability) and a SHA-256 over the ordered rows for
 each of the eleven shapes, captured before the extractor existed.
 

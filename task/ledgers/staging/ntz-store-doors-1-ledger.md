@@ -199,15 +199,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause is walked against Spark's recorded answer on the same door and zone; the probe covers 15 doors, 11 sources, both target types and three zones, and the facade replays 66 door cells and 12 partition cells.
-      artifacts: [python/repark/tests/test_ntz_store_doors_1.py, python/repark/tests/ntz_store_doors_1_spark_oracle.json, python/repark/tests/ntz_store_doors_1_mixed_spark_oracle.json, crates/repark-spark/src/tests/ntz_store.rs, crates/repark-spark/src/tests/ntz_values_mix.rs]
+      artifacts: [python/repark/tests/timestamps/test_ntz_store_doors_1.py, python/repark/tests/timestamps/ntz_store_doors_1_spark_oracle.json, python/repark/tests/timestamps/ntz_store_doors_1_mixed_spark_oracle.json, crates/repark-spark/src/tests/ntz_store.rs, crates/repark-spark/src/tests/ntz_values_mix.rs]
     - id: AT-2
       status: ATTACKED
       evidence: One Rust pin per door and direction over UTC, New York and Kolkata with the gap and overlap rows; the must-not-change cells are asserted by the probe diff and the facade refusal steps.
-      artifacts: [crates/repark-spark/src/tests/ntz_store.rs, python/repark/tests/test_ntz_store_doors_1.py]
+      artifacts: [crates/repark-spark/src/tests/ntz_store.rs, python/repark/tests/timestamps/test_ntz_store_doors_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The refusal steps assert RePark's recorded text for every STRING and INT source on every door; M1 and M2 red the named pins and restore green.
-      artifacts: [python/repark/tests/ntz_store_doors_1_spark_oracle.json, crates/repark-spark/src/tests/ntz_store.rs]
+      artifacts: [python/repark/tests/timestamps/ntz_store_doors_1_spark_oracle.json, crates/repark-spark/src/tests/ntz_store.rs]
     - id: AT-4
       status: N/A
       justification: No commit, isolation or concurrency change; the conversion is a projection over the planned source.
@@ -217,7 +217,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: No stored-format change; partition values follow the stored value (C-005) and time travel of the pre-insert snapshot is unchanged (C-003).
-      artifacts: [python/repark/tests/test_ntz_store_doors_1.py]
+      artifacts: [python/repark/tests/timestamps/test_ntz_store_doors_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim; the plan wrap adds one analyzer pass only when a target column is a timestamp.
@@ -231,7 +231,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Each pin asserts exact walls, instants or refusal texts; M1 and M2 break one routing each and the named pins red before restore; M3 reverts the VD-1 coercion and reds 11 Rust pins and 47 facade cells; M4 counts a DATE as an instant again and reds the 6 new DATE pins. M5 to M7 remove the RD3-1 mark and the RD3-2 NULL rule and red the 3 new C-008 pins.
-      artifacts: [crates/repark-spark/src/tests/ntz_store.rs, crates/repark-spark/src/tests/ntz_values_mix.rs, python/repark/tests/test_ntz_store_doors_1.py]
+      artifacts: [crates/repark-spark/src/tests/ntz_store.rs, crates/repark-spark/src/tests/ntz_values_mix.rs, python/repark/tests/timestamps/test_ntz_store_doors_1.py]
   complete: true
 ```
 

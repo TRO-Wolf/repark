@@ -46,7 +46,7 @@ answer under a zone is pinned end-to-end on real sessions in
 - Who FILLS the carrier: `crates/repark-spark/src/extension.rs` (`SparkExtension::configure`) —
   the only crate that depends on both the engine that owns the key and the leaf that reads it
 - Who OWNS the key, the spelling and the validation: `crates/repark-core/src/session_time_zone.rs`
-- The recorded cross-engine rows: `python/repark/tests/test_session_timezone_parity.py`
+- The recorded cross-engine rows: `python/repark/tests/timestamps/test_session_timezone_parity.py`
 
 ## Debug
 

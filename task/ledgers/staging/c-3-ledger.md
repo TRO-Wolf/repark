@@ -532,7 +532,7 @@ One hold of the build lock on the final tree, the server up; every command exit 
 | `make develop` | 0 | installed |
 | `pytest python/repark-parity/tests/live_db` | 0 | 33 passed, 5 xfailed (C-0's strict xfails) |
 | `pytest python/repark/tests -k "source or postgres or toml or named" -n 8` | 0 | 693 passed, 9 skipped |
-| `pytest python/repark/tests/test_production_file_size.py -q` | 0 | 11 passed |
+| `pytest python/repark/tests/session/test_production_file_size.py -q` | 0 | 11 passed |
 | `check_example_coverage.py --require-execute`, `cargo deny check`, `check_manifest.sh` | 0 | covered; advisories, bans, licenses, sources ok; silent |
 
 ## 6. Gates (2026-10-08)

@@ -25,7 +25,7 @@ Unit ledgers live in
 |---|---|
 | Fence is policy, both catalog policies | STATUS MW; `call.rs`; guide "Maintenance on Glue and S3 Tables" |
 | Five CALL procedures, no omitted Spark column | STATUS; `crates/repark-spark/src/call.rs` |
-| MW-0 2.1× growth demo | STATUS scorecard; `python/repark/tests/test_mw5_baseline_delta.py` |
+| MW-0 2.1× growth demo | STATUS scorecard; `python/repark/tests/iceberg/test_mw5_baseline_delta.py` |
 | Remaining divergences | registry MOR-1, MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3 |
 | S3 Tables MOR compact+expire out | STATUS; OD-3 Glue prefix only |
 | Live Glue proof | aws-acceptance run 32640855145 on `d3c248c` |

@@ -83,12 +83,12 @@ COVERAGE_ATTESTATION:
       evidence: Every expectation reads from the committed Spark 4.1.2 oracle. Time-only
         cells compare the local date and time of day, because Spark resolves them against
         today's date. The live leg re-derives the fixture through the recorder.
-      artifacts: [python/repark/tests/cast_ts_string_1_spark_oracle.json, python/repark/tests/_record_cast_ts_string_1.py]
+      artifacts: [python/repark/tests/timestamps/cast_ts_string_1_spark_oracle.json, python/repark/tests/timestamps/_record_cast_ts_string_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The 30 facade pins were red on main (step 1) and green on the fix. The
         three time-travel tests were strict xfails that failed on main.
-      artifacts: [python/repark/tests/test_cast_ts_string_1.py, python/repark/tests/test_ice_tt_resolve_1_tt2.py]
+      artifacts: [python/repark/tests/timestamps/test_cast_ts_string_1.py, python/repark/tests/iceberg/test_ice_tt_resolve_1_tt2.py]
     - id: AT-3
       status: ATTACKED
       evidence: Each grammar branch has a recorded string and a Rust test. This includes
@@ -115,7 +115,7 @@ COVERAGE_ATTESTATION:
       evidence: TRY_CAST changes from timestamp[ns] to timestamp[us, UTC], and every
         column leg asserts the Arrow type. The residues (NTZ, map leaf, rendering after
         2099, native door) are named in the registry row.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_cast_ts_string_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/timestamps/test_cast_ts_string_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim; the kernel replaces a per-row Arrow parse with a per-row byte scan.
@@ -135,6 +135,6 @@ COVERAGE_ATTESTATION:
       evidence: to_timestamp_ntz is isolated on the Arrow grammar. The existing
         to_timestamp, try_to_timestamp and time-travel files ran green (16 files, 796
         passed before the flip). Every file that spells a timestamp cast runs in step 5.
-      artifacts: [crates/repark-functions/src/timestamp_ltz_ntz.rs, python/repark/tests/test_ice_tt_resolve_1.py]
+      artifacts: [crates/repark-functions/src/timestamp_ltz_ntz.rs, python/repark/tests/iceberg/test_ice_tt_resolve_1.py]
   complete: true
 ```

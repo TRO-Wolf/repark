@@ -323,6 +323,31 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO paste the test count for a claimed clean revert.** A fold that claims a clean revert
   commits the revert on a throwaway branch and pastes the test count.
 
-### 2026-10-17 — Opus means Opus 5.5; Opus 5.0 is banned forever
+## 2026-10-17 — Opus means Opus 5.5; Opus 5.0 is banned forever
 
 - **DO dispatch every Opus role on `claude-opus-5-5` and verify the id from the agent transcript, never from the brief.** *Why:* the owner asked to confirm a running fork agent was 5.5 after a report typo said 5.1; the transcript proved 5.5, and the owner made the ban permanent so no dispatch can drift. Held by the ruling block in `AGENTS.md`/`CLAUDE.md` (byte-preserved by `make check-owner-ruling`) and by `make check-model-ban`.
+
+## 2026-10-19 — facade test organisation: the 2026-10-03 clause 1 rewritten
+
+- **DO organise the facade suite; DON'T change what it asserts.** Clause 1 of the 2026-10-03
+  test-speed ruling ("no test-migration unit and no fixture-consolidation unit") is superseded
+  by the owner's override of 2026-10-19. What stands: a test file may move between directories,
+  a battery may split into one isolated interpreter per shape, and a new test may use the shared
+  `spark` / `spark_with_warehouse` fixtures in `python/repark/tests/conftest.py`, when the PR
+  proves the collect-only node-id set is identical after the path prefix, the passed / skipped /
+  xfailed counts hold, and no assert line, parameter or error class changes. Existing local
+  fixtures are not rewritten. No test moves between languages, none is deleted or skipped, no
+  bound loosens, and `test_perf_ice_catalog_io_1.py` moves only whole (clause 4 stands). Cases:
+  #1112 (scheduler), #1114 (config, fixtures, `slow` tier), #1113 (thirteen subsystem
+  directories, 20,704 node ids unchanged), #1115 (deep batteries, 398 s → 307 s at `-n 8`).
+- **DO put a new facade test in its subsystem directory** ([docs/testing.md](../docs/testing.md)
+  "Facade suite layout"); the suite root holds only `conftest.py`, the shared helpers and
+  `fixtures/`.
+- **DO hand-merge `origin/main` after each squash merge of a stacked chain.** A squash drops the
+  shared history, so the update-branch API answers 422 for every later branch of the stack. A
+  local merge (no rebase, no force) is the fix; the lockstep hook's staged-mode warnings on that
+  merge commit are expected, and the base-mode check in CI is the gate.
+- **DO measure the test before calling its wall the product's.** The 20,000-term OR battery
+  spends under 0.1 s in the refusal and the rest building the `Column` with `|` on the Python
+  door, which grows quadratically ([docs/perf/column-or-build-cost-2026-10-19.md](../docs/perf/column-or-build-cost-2026-10-19.md)).
+  A suite floor is a product finding only once the phase that owns it is named.

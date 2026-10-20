@@ -41,7 +41,7 @@ folded statement's inner scopes are respelled and re-planned once. S1-2 new
 `column_resolution/fold_text.rs` (`fold_query_text`, R5) called from
 `maybe_rewrite_merge_fragments` for a parenthesized MERGE source before the
 fragment rewrite. Pins: `crates/repark-spark/src/tests/casesens_scopes.rs` (5
-tests), `python/repark/tests/test_casesens_1.py` (17 nested + merge legs) over
+tests), `python/repark/tests/resolution/test_casesens_1.py` (17 nested + merge legs) over
 the copied oracle (unchanged bytes). The S1-3 catalog-view halt fired (record
 in C-003); per the 2026-09-27 ruling (b) the view legs were dropped from the
 commit, C-003 stays OPEN, and C-003 with R-CS1-1 is homed to CASESENS-1 S1b,
@@ -211,16 +211,16 @@ Spark answers unquoted exact-case under `true`):
   (net-zero lines, file stays 930): `SELECT userId FROM t` under `true`
   refused `FieldNotFound userid` before, answers `["userId"]` now (Spark:
   `p1/cs_sel_Data` answers `Data`).
-- `python/repark/tests/test_ice_mixed_case_1.py::test_sql_door_unquoted_exact_case_refuses_case_sensitive`
+- `python/repark/tests/iceberg/test_ice_mixed_case_1.py::test_sql_door_unquoted_exact_case_refuses_case_sensitive`
   → renamed `..._succeeds_case_sensitive`, asserting the recorded `true`
   oracle rows for MC-SEL-01, MC-UPD-01 and MC-MRG-01 (each refused before;
   the MERGE executes and its trailing SELECT matches Spark's rows now).
-- `python/repark/tests/test_ice_mixed_case_1.py::test_sql_set_statement_drives_case_sensitive`:
+- `python/repark/tests/iceberg/test_ice_mixed_case_1.py::test_sql_set_statement_drives_case_sensitive`:
   the `SELECT userId … ORDER BY userId` leg answers `[{userId: 1}, {userId:
   2}]` instead of raising (the wrong-case `SELECT userid … WHERE USERID`
   leg still raises; the backticked twin is unchanged).
 
-Slice 4 (1 pin): `python/repark/tests/test_ice_mixed_case_1.py::test_star_over_a_case_twin_frame_answers_both_columns_declared`
+Slice 4 (1 pin): `python/repark/tests/iceberg/test_ice_mixed_case_1.py::test_star_over_a_case_twin_frame_answers_both_columns_declared`
 — the N03 twin-view creation refuses Spark's `[COLUMN_ALREADY_EXISTS]` text (oracle
 `p3/tw_view`) instead of `Projections require unique expression names`.
 
@@ -244,7 +244,7 @@ Final fold (2026-09-28, 1 pin, OD-3 adopted, Spark wins):
   lowered in the same commit).
 
 CI fix round (2026-09-28, PR #876, 1 pin, OD-3 adopted, Spark wins):
-- `python/repark/tests/test_alter_table.py::test_alter_add_drop_partition_field_and_write_after`
+- `python/repark/tests/iceberg/test_alter_table.py::test_alter_add_drop_partition_field_and_write_after`
   (re-added `cat` leg): before, `DROP PARTITION FIELD CAT` over stored `cat` succeeded;
   after, it refuses `Cannot find partition field to remove: CAT` (`PySparkException`,
   `DataInvalid =>` prefix) and the leg drops the exact name `cat`; every other assertion
@@ -259,7 +259,7 @@ intentionally changed the bare-cast answer, and the EX-COL-1 pin the fold's swee
 missed went red on CI (which builds the module fresh); it flipped below.
 
 CI fix 2 (2026-09-28, PR #876, 1 pin, VC-3 adopted, Spark wins):
-- `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`:
+- `python/repark/tests/parity/test_examples_column_a.py::test_col_cast_qualified_projection_name`:
   before, a bare `F.col("v").cast("double")` select named
   `datafusion.public.__repark_cdf_<plan-id>.v` (EX-COL-1, Spark answers `v`); after
   VC-3 it answers `v`, and the pin asserts `["v"]`. Sibling sweep
@@ -590,26 +590,26 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: All 18 clauses walked one by one against behavior — the oracle measured on live PySpark 4.1.2 + Iceberg 1.11.0, hermetic Rust pins plus the facade replay per clause, every refusal snapshotting the unchanged table or spec, mutations M1-M18 red-then-green.
-      artifacts: [task/ledgers/staging/casesens-1-ledger.md, python/repark/tests/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
+      artifacts: [task/ledgers/staging/casesens-1-ledger.md, python/repark/tests/resolution/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised — twin spellings ID/id/Id, exact duplicates (ID-3 kept), quoted vs unquoted, dotted nested paths (s.A), transform terms (bucket(4, ID)), named fields (Kat/kat), both caseSensitive settings per seat, empty orders, unknown columns.
-      artifacts: [crates/repark-spark/src/tests/casesens_ddl.rs, crates/repark-iceberg/src/write/partition_spec/tests.rs, python/repark/tests/test_casesens_1.py]
+      artifacts: [crates/repark-spark/src/tests/casesens_ddl.rs, crates/repark-iceberg/src/write/partition_spec/tests.rs, python/repark/tests/resolution/test_casesens_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal raises Spark's measured text (byte-exact, or head plus candidate set per R12/R13); wrong-case DML and DDL leave tables, specs, orders and identifier sets unchanged (snapshotted in the pins and the _meta replays).
-      artifacts: [python/repark/tests/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
+      artifacts: [python/repark/tests/resolution/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
     - id: AT-4
       status: ATTACKED
       evidence: No shared or global state touched — the SQL true path clones the session state per statement only (M3/M4), each pin runs in its own session and warehouse, metadata assertions read committed files.
-      artifacts: [crates/repark-spark/src/tests/casesens_true.rs, python/repark/tests/test_casesens_1.py]
+      artifacts: [crates/repark-spark/src/tests/casesens_true.rs, python/repark/tests/resolution/test_casesens_1.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, no secret, no injection or deserialization surface — name matching over closed schema and spec field lists.
     - id: AT-6
       status: ATTACKED
       evidence: Arrow value AND type pinned per leg (dtypes plus rows); display names asserted as written at every scope; divergences recorded as dated residues R-CS1-2…R-CS1-11 with homes, never absorbed.
-      artifacts: [python/repark/tests/test_casesens_1.py, task/ledgers/staging/casesens-1-ledger.md]
+      artifacts: [python/repark/tests/resolution/test_casesens_1.py, task/ledgers/staging/casesens-1-ledger.md]
     - id: AT-7
       status: ATTACKED
       evidence: Planning/DDL-only changes — no row path, no hot loop; the facade sweep and the four probes ran in normal time; file-size baselines ratcheted DOWN only (alter.rs 1607 -> 1606).
@@ -621,7 +621,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Every changed refusal text is pinned byte-exact (or R12/R13 head) on the door that raises it; the registered class prefixes (DataInvalid, planning prefix, line/pos suffix) are asserted, not stripped silently.
-      artifacts: [python/repark/tests/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
+      artifacts: [python/repark/tests/resolution/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first held — every new pin fails with the behavior removed (M1-M18) and the pre-change answers are recorded in the after-s4 probe diffs; no dead branch ships (each new arm has a named pin).

@@ -1,5 +1,7 @@
 # map — scripts/
 
+FACADE-TESTS-LAYOUT-1 (2026-10-19): `check_lib_py.py` re-keys its fifteen `python/repark/tests` exceptions to the files' subsystem directories (`dataframe/`, `functions/`, `io/`, `ml/`, `perf/`, `timestamps/`, `writes/`); every baseline is unchanged and `_live_parity.py` stays at the tests root. The CAP-1 mirror in `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` follows in the same branch.
+
 ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)): `check_rust_file_size.py` ratchets `repark-spark/src/tests/dml.rs` 1154 → 1139, shrink-only, with the CAP-1 mirror in `python/repark-parity/tests/test_cap_1_source_file_line_cap.py`; the G3-E8 negative that held an `UPDATE … SET col = (SELECT …)` storing on the harness context became the two-statement refusal pin.
 
 ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional): `check_rust_file_size.py` ratchets the `repark-iceberg/src/write/overwrite.rs` baseline 1053 → 1049, shrink-only, with the CAP-1 mirror; the guard's commit removed the file's local strict-cast options when its two batch casts moved to `conform::strict_store_cast`. pins: ice-tsns-floor-doors-1/C-014
@@ -18,13 +20,13 @@ ATTR-ID-1 S4 alias fix (2026-10-02): `check_lib_py.py` ratchets `spark/column.py
 
 ATTR-ID-1 V-4 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3653 → 3652 (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-045
 
-ATTR-ID-1 SJ-3 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3595 → 3583 (the join-token siding calls are deleted with V-2's positional siding), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
-CASESENS-2 port, PERF-1 merge (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` to the merged head's measured 3466 (PERF-1's 3475 less the port's 9-line join-argument move), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_casesens_2.py`.
-CASESENS-2 port (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3485 → 3476 (the join preparer's arguments move to `join_attr_tokens._join_condition_args`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_casesens_2.py`.
+ATTR-ID-1 SJ-3 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3595 → 3583 (the join-token siding calls are deleted with V-2's positional siding), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj3.py`.
+CASESENS-2 port, PERF-1 merge (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` to the merged head's measured 3466 (PERF-1's 3475 less the port's 9-line join-argument move), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_casesens_2.py`.
+CASESENS-2 port (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3485 → 3476 (the join preparer's arguments move to `join_attr_tokens._join_condition_args`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_casesens_2.py`.
 ATTR-ID-1 PERF-1 (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3485 → 3475 (the frame-node and snapshot caches move to `frame_nodes.py`), shrink-only, with the CAP-1 mirror.
-ATTR-ID-1 SJ-5 (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3494 → 3485 and retires the `dataframe/joins_columns.py` exception (the pivot family moves to `grouped_pivot.py`; the file is 955 lines, under the default ceiling), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
-ATTR-ID-1 SJ-4 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3583 → 3494 (the repartition trio moves to `repartition_ops.py` behind `DataFrame` bindings) and `dataframe/joins_columns.py` 1169 → 1119 (`_grouped_agg_pandas` moves to `grouped_udf.py`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj4.py`.
-ATTR-ID-1 SJ-2 (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1378 → 1331 (the fragment-render family moves to `column_render.py` behind `Column` bindings) and `dataframe/core.py` 3652 → 3595 (the unemitted-id family moves to `unemitted_ids.py` behind `DataFrame` bindings), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+ATTR-ID-1 SJ-5 (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3494 → 3485 and retires the `dataframe/joins_columns.py` exception (the pivot family moves to `grouped_pivot.py`; the file is 955 lines, under the default ceiling), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj5.py`.
+ATTR-ID-1 SJ-4 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3583 → 3494 (the repartition trio moves to `repartition_ops.py` behind `DataFrame` bindings) and `dataframe/joins_columns.py` 1169 → 1119 (`_grouped_agg_pandas` moves to `grouped_udf.py`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj4.py`.
+ATTR-ID-1 SJ-2 (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1378 → 1331 (the fragment-render family moves to `column_render.py` behind `Column` bindings) and `dataframe/core.py` 3652 → 3595 (the unemitted-id family moves to `unemitted_ids.py` behind `DataFrame` bindings), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
 
 ATTR-ID-1 S3e (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3803 → 3800 (the `selectExpr` body moves to `filter_quote._select_expr_frame` and the select star arms fold into one `qualified_names` delegate), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-039
 
@@ -425,7 +427,7 @@ FNP-9 / FNP-15 / FNP-16 rows plus new `EX-FN-22` (`from_xml` / `schema_of_xml`
 E1 stubs) and `EX-FN-23` (the `udf` / `pandas_udf` factory return-type arm,
 BACKLOG ARM on covered names); `F.PythonUDFColumn` stays pending an owner
 ruling on inventory narrowing. Pins in
-`python/repark/tests/test_examples_functions_b.py`. Red-first: the nine covered
+`python/repark/tests/parity/test_examples_functions_b.py`. Red-first: the nine covered
 names deleted from `backlog.txt` with `COVERS` stripped red the static gate
 with nine findings (exit 1), and a wrong-bytes control in `bitmap.py` failed
 the execute leg by name (exit 1).
@@ -457,7 +459,7 @@ names, taught by extending `docs/examples/functions/{utf8,dates_more,session_mis
 Every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC). Twenty-seven
 roster names stay on the backlog with existing EX-FN / BL-17 / FNP-15 / FNP-16
 rows; two new §7 rows (EX-FN-20 `try_to_timestamp`, EX-FN-21 `unix_timestamp`
-format arm) are pinned by `python/repark/tests/test_examples_functions_b.py`.
+format arm) are pinned by `python/repark/tests/parity/test_examples_functions_b.py`.
 Red-first: 7 has-no-example findings with the new COVERS names stripped
 (exit 1), and a wrong-epoch control in `dates_more.py` failed the execute
 leg by name (exit 1).
@@ -469,7 +471,7 @@ examples under `docs/examples/ml/`. Round 2 re-measured every oracle cell on
 live PySpark 4.1.2 (ANSI on, UTC), including session-level OLS / Pipeline /
 CrossValidator / persistence / UnaryTransformer. Nine §7 rows (EX-ML-1..9) pin
 the diverged arms of covered names, with nine tests in
-`python/repark/tests/test_examples_ml.py`. Mixins are taught only through
+`python/repark/tests/parity/test_examples_ml.py`. Mixins are taught only through
 concrete stages; UnaryTransformer is plan-built `_transform`; persistence is
 the repark-ml round-trip.
 pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
@@ -481,7 +483,7 @@ measured on live PySpark 4.1.2 (ANSI on, UTC) or — for the repark-only names �
 documented answer. Seventeen roster names keep their prior stays rows
 (EX-DF/EX-CAT/EX-W2/EX-DF-19); the four excel names stay with the new §7 EX-IO-7 row, and
 eleven new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
-tests in `python/repark/tests/test_examples_io_session.py`. Red-first: 29 has-no-example
+tests in `python/repark/tests/parity/test_examples_io_session.py`. Red-first: 29 has-no-example
 findings with the files held out (exit 1), and a wrong-bytes control in `writer_csv.py`
 failed the execute leg by name (exit 1).
 pins: ex-26-io-session/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
@@ -492,7 +494,7 @@ new examples under `docs/examples/functions/` plus the `F.hours` arm in
 `partition_transforms.py`, every asserted value measured on live PySpark 4.1.2 (ANSI on,
 UTC). The other 25 roster names stay on the backlog with nineteen new §7 rows (EX-FN-1..19;
 `F.base64` keeps its BL-17 row), pinned by twenty tests in
-`python/repark/tests/test_examples_functions_a.py`. No `csv_json.py`: all four CSV/JSON
+`python/repark/tests/parity/test_examples_functions_a.py`. No `csv_json.py`: all four CSV/JSON
 names refuse. Red-first: 20 has-no-example findings with the files held out (exit 1), and
 a wrong-median control in `stats.py` failed the execute leg by name (exit 1).
 pins: ex-25-functions-a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
@@ -519,7 +521,7 @@ shipped (411 → 377 at the dispatch base, before the EX-20 merge) — 34 roster
 `docs/examples/catalog/` and `docs/examples/session/`; `list_databases` stays on the backlog
 (the same function object as the divergent `listDatabases`, §7 `EX-CAT-2`), the
 `registerFunction` return and `newSession` promotion arms are §7 `EX-SES-1`/`EX-SES-2`, pins in
-`python/repark/tests/test_examples_window_catalog.py`. pins: ex-21-catalog-session/C-001
+`python/repark/tests/parity/test_examples_window_catalog.py`. pins: ex-21-catalog-session/C-001
 EX-22 types-writerv2 (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 340 → 298
 shipped (374 → 332 at the dispatch base 671a714's predecessor, before the EX-21 merge) —
 42 roster names (all 28 `types.*`, 14 of 15 `DataFrameWriterV2.*`) covered by eleven new examples
@@ -528,7 +530,7 @@ under `docs/examples/types/` and `docs/examples/io/`; the flagged `VariantType`/
 covered as repark extensions (`hasattr` False on live PySpark 4.1.2); `DataFrameWriterV2.overwrite`
 stays on the backlog (§7 `EX-W2-1`), the empty-source `overwritePartitions` arm is §7 `EX-W2-2`,
 and the `option`/`options` branch-tag arm is §7 `EX-W2-3`, pins in
-`python/repark/tests/test_examples_window_catalog.py`.
+`python/repark/tests/parity/test_examples_window_catalog.py`.
 pins: ex-22-types-writerv2/C-001, C-002, C-004
 
 EX-20 window-catalog (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 411 → 374
@@ -537,12 +539,12 @@ shipped (449 → 412 at the dispatch base, before the EX-19 merge) —
 new examples under `docs/examples/window/` and `docs/examples/catalog/`; `getDatabase`/
 `get_database` and `listDatabases` stay on the backlog (§7 `EX-CAT-1`/`EX-CAT-2`), the
 `functionExists(name, dbName)` arm is §7 `EX-CAT-3`, and the DataFrame-door tied-key default
-frame is §7 `EX-WIN-1`, pins in `python/repark/tests/test_examples_window_catalog.py`.
+frame is §7 `EX-WIN-1`, pins in `python/repark/tests/parity/test_examples_window_catalog.py`.
 pins: ex-20-window-catalog/C-001
 EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 515 at
 dispatch (518 → 483 through the EX-16 merge, 484 → 449 through the EX-17 merge) —
 35 `DataFrame.*` names covered by eleven new examples under `docs/examples/dataframe/`; `toJSON`
-refuses (R-DF-BATCH2) and stays a backlog row, registry §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/test_examples_dataframe_c.py`. pins: ex-18-dataframe-c/C-001
+refuses (R-DF-BATCH2) and stays a backlog row, registry §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/parity/test_examples_dataframe_c.py`. pins: ex-18-dataframe-c/C-001
 EX-19 DataFrame-d (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 449 → 411
 shipped (518 → 480 at the dispatch base, before the EX-17/EX-18 merges) —
 38 roster names covered by ten new examples under `docs/examples/dataframe/`
@@ -551,7 +553,7 @@ shipped (518 → 480 at the dispatch base, before the EX-17/EX-18 merges) —
 `grouped_pivot.py`, `row_dicts.py`); `stat.freqItems` stays on the backlog
 (§7 `EX-DF-19`), the `withColumnsRenamed` duplicate-final-name arm is §7 `EX-DF-18`
 and the struct-`Row` field arm is §7 `EX-ROW-1`, with pins in
-`python/repark/tests/test_examples_dataframe_d.py`. `Row.as_dict`, `Row.from_mapping`,
+`python/repark/tests/parity/test_examples_dataframe_d.py`. `Row.as_dict`, `Row.from_mapping`,
 and `Row.from_ordered_fields` are documented as repark extensions (`hasattr` False on
 live PySpark 4.1.2).
 pins: ex-19-dataframe-d-window/C-001
@@ -563,7 +565,7 @@ EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 5
 into `joins_hints.py` after the Iceberg-oracle re-measure); `intersectAll`/`intersect_all` and
 `groupingSets`/`grouping_sets` stay on the backlog (§7 `EX-DF-7`/`EX-DF-8`), and the narrow
 `mergeInto` bare-key/qualifier arm (§7 `EX-DF-9`) and `printSchema` stdout tail (§7 `EX-DF-10`)
-are recorded with pins in `python/repark/tests/test_examples_dataframe_b.py`.
+are recorded with pins in `python/repark/tests/parity/test_examples_dataframe_b.py`.
 pins: ex-16-dataframe-b/C-001
 EX-17 Column-a (2026-09-04, r2): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 516 at base `e3600a1` (484 after the EX-16 merge) —
 34 `Column.*` names covered by ten new examples under `docs/examples/column/`
@@ -576,7 +578,7 @@ analog; the `dt`/`str` Polars-style accessor namespaces landed in round 2 as
 repark extensions documented beside their PySpark-spelled twins); the two measured
 divergent bare-name arms are registry §7 `EX-COL-1`/`EX-COL-2` (`F.col`-receiver
 `cast` select name, unaliased `getField` select name), pins in
-`python/repark/tests/test_examples_column_a.py`.
+`python/repark/tests/parity/test_examples_column_a.py`.
 pins: ex-17-column-a/C-001
 
 EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
@@ -586,7 +588,7 @@ EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 5
 measured divergent stay on the backlog (`colRegex`/`col_regex` opposite-spelling regex,
 the three global-temp-view spellings refused, `exceptAll`/`except_all` refused,
 `describe` row order), registry §7 `EX-DF-1`…`EX-DF-6`, pins in
-`python/repark/tests/test_examples_dataframe_a.py`.
+`python/repark/tests/parity/test_examples_dataframe_a.py`.
 pins: ex-15-dataframe-a/C-001
 
 EX-4-functions-strings-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
@@ -1566,7 +1568,7 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   `repark-python/src/dataframe.rs` 1019 → 1021 (the two-spec pre-check
   call); `check_lib_py.py` moves `test_fnp_win_1.py` 1415 → 1454 (the
   `C2-L004` pin). Ratchets only. pins: fnp-win-1/C-004
-FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/test_fnp_win_1.py` down 1454 → 1449.
+FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/functions/test_fnp_win_1.py` down 1454 → 1449.
 - **FNP-11B step-4 orchestrator fix-up (2026-09-15, run 17a):** the step-3 row's numeral phrase is reworded to "sits exactly on the default line ceiling". CAP-1's prose pin forbids the literal old default in any carrier `map.md`, so the numeral reds `test_cap_1_prose_and_navigation_name_the_generalized_gate`; the fact is unchanged. pins: fnp-11b/C-007
 - **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** the round added a `check_lib_py`
   EXCEPTIONS row for `check_example_coverage.py` at 1002 lines when the generator names pushed it

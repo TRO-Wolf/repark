@@ -68,9 +68,9 @@ Attribute ids exist only on the ATTR-ID-1 stack (`wip/feat/attr-id-1-2026-10-01`
 
 ## Scope, as proposed
 
-- (a) `CREATE TEMP VIEW … AS SELECT` registers an id-free or re-minted provider. Proposed pins: the `sv` id row mints; V9 raises MISSING_ATTRIBUTES; V-3a and V-3b answer Spark — e.g. proposed `python/repark/tests/test_attr_view_semantics_1.py::test_sql_view_provider_mints`, `::test_sql_view_foreign_column_missing_attributes`, `::test_sql_view_write_parquet_answers`, `::test_sql_view_groupby_count_answers`.
-- (b) SQL aliases mint. Proposed pins: the `SELECT v AS v` id row mints; V4 raises MISSING_ATTRIBUTES — e.g. proposed `python/repark/tests/test_attr_view_semantics_1.py::test_sql_alias_mints`, `::test_sql_alias_foreign_column_missing_attributes`.
-- (c) A foreign column not in the plan raises MISSING_ATTRIBUTES. Proposed pins: V3, V12 and V15 raise with Spark's condition — e.g. proposed `python/repark/tests/test_attr_view_semantics_1.py::test_expr_alias_foreign_column_missing_attributes`, `::test_replaced_view_foreign_column_missing_attributes`, `::test_agg_view_foreign_column_missing_attributes`.
+- (a) `CREATE TEMP VIEW … AS SELECT` registers an id-free or re-minted provider. Proposed pins: the `sv` id row mints; V9 raises MISSING_ATTRIBUTES; V-3a and V-3b answer Spark — e.g. proposed `python/repark/tests/resolution/test_attr_view_semantics_1.py::test_sql_view_provider_mints`, `::test_sql_view_foreign_column_missing_attributes`, `::test_sql_view_write_parquet_answers`, `::test_sql_view_groupby_count_answers`.
+- (b) SQL aliases mint. Proposed pins: the `SELECT v AS v` id row mints; V4 raises MISSING_ATTRIBUTES — e.g. proposed `python/repark/tests/resolution/test_attr_view_semantics_1.py::test_sql_alias_mints`, `::test_sql_alias_foreign_column_missing_attributes`.
+- (c) A foreign column not in the plan raises MISSING_ATTRIBUTES. Proposed pins: V3, V12 and V15 raise with Spark's condition — e.g. proposed `python/repark/tests/resolution/test_attr_view_semantics_1.py::test_expr_alias_foreign_column_missing_attributes`, `::test_replaced_view_foreign_column_missing_attributes`, `::test_agg_view_foreign_column_missing_attributes`.
 - (d) The two V-3 internal errors become answers that equal Spark. Proposed pins: the V-3a/V-3b pins named under (a), plus a regression pin that no `Internal error` text escapes either shape.
 
 No code is designed here; the pin names above are proposals, not citations.

@@ -23,6 +23,8 @@
 #   CARGO_AUDIT_VERSION     — cargo install pin in the rust-audit target + audit.yml
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 MATURIN := uvx maturin@1.14.1
+FACADE_PROFILE ?= ci
+FACADE_WORKERS ?= 16
 RUFF   := uvx ruff@0.15.22
 PYTHON ?= python
 TORTURE_TIER ?= ci
@@ -32,6 +34,7 @@ TYPOS  := uvx typos@1.47.2
 ZIZMOR := uvx zizmor@1.26.1
 CARGO_DENY_VERSION := 0.19.9
 CARGO_AUDIT_VERSION := 0.22.1
+NEXTEST_VERSION := 0.9.143
 UV_VERSION := 0.9.5
 # Local JVM for `make parity-live` (Spark 4.1.2 needs Java 17; CI uses Temurin 17 via setup-java).
 # Defaults to the caller's JAVA_HOME so no machine-specific path is committed; set it to a Java 17
@@ -184,8 +187,11 @@ rust-check: ## cargo check
 	cargo check --locked --workspace
 
 .PHONY: rust-test
-rust-test: ## cargo test (workspace; see note above re: --all-features)
-	cargo test --locked --workspace
+rust-test: ## cargo nextest run + doctests (workspace; see note above re: --all-features)
+	@[ "$$(cargo-nextest --version 2>/dev/null | awk 'NR == 1 {print $$2}')" = "$(NEXTEST_VERSION)" ] \
+		|| cargo install cargo-nextest --locked --version $(NEXTEST_VERSION) --force
+	cargo nextest run --locked --workspace
+	cargo test --locked --workspace --doc
 
 .PHONY: rust-test-cluster
 rust-test-cluster: ## cargo test for repark-distributed with the cluster feature (Ballista executor)
@@ -270,9 +276,16 @@ py-test-facade: ## Facade tests against the real native module (provisions extra
 	@# prefers the PROJECT's environment over VIRTUAL_ENV — in a linked worktree it silently built
 	@# a second `.venv` from source (the maturin install above went unused), and everywhere it
 	@# could re-sync over maturin's editable install.
-	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
+	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop --profile $(FACADE_PROFILE)
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
-		uv run --no-project python -m pytest python/repark/tests -q
+		uv run --no-project python -m pytest python/repark/tests -q -n $(FACADE_WORKERS) --dist loadgroup --maxschedchunk=8
+
+.PHONY: py-test-facade-fast
+py-test-facade-fast: ## Facade tests minus the `slow` tier (19 files, 82 % of suite time); CI still runs everything
+	uv sync --locked $(FACADE_EXTRAS) --no-install-package repark
+	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop --profile $(FACADE_PROFILE)
+	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
+		uv run --no-project python -m pytest python/repark/tests -q -n $(FACADE_WORKERS) --dist loadgroup --maxschedchunk=8 -m "not slow"
 
 .PHONY: py-test-dbt
 py-test-dbt: ## dbt-adapter suite (python/dbt-repark) — needs the native module py-test-facade builds; see python/dbt-repark/tests/map.md

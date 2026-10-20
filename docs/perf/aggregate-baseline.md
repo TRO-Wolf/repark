@@ -69,7 +69,7 @@ s = med("SELECT l_partkey, sum(l_quantity) AS a FROM lineitem GROUP BY l_partkey
 print(f"avg={a:.1f} sum={s:.1f} ratio={a / s:.2f}")
 EOF
 .venv/bin/python python/repark-parity/bench/tpch/run_tpch.py --sf 1 --repeats 3 --queries 17
-.venv/bin/python -m pytest python/repark/tests/test_perf_agg_avg_1.py -q
+.venv/bin/python -m pytest python/repark/tests/perf/test_perf_agg_avg_1.py -q
 ```
 
 The last line is the durable pin: `test_many_groups_avg_costs_like_sum` re-measures

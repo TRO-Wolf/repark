@@ -3,7 +3,7 @@
 Nine doors return datetime64[ns] values under array<timestamp>,
 array<timestamp_ntz>, timestamp and timestamp_ntz, on main (module 293896ce)
 and live Spark 4.1.2 (both safe settings). Recorder
-`python/repark/tests/_record_ns_array_floor_1_output.py`. Zone UTC. Live
+`python/repark/tests/timestamps/_record_ns_array_floor_1_output.py`. Zone UTC. Live
 banner: spark 4.1.2 zone UTC, pandas 3.0.6. Ticks are read back as integers
 through an Arrow cast, never through Python datetime. Floor reference:
 array [1767323045123456, 1767323045000000, 1767323045000000, -1, -2] and

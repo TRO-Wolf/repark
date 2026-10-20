@@ -34,7 +34,7 @@ doors carry value+type pins for every D-2 cell.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The D-2 oracle cells are measured on live PySpark 4.1.2 (one `local[1]` session, ANSI default, stopped before other work) beside repark's answers on the same explicit-schema frames through the facade AND the SQL door: answer rows AND result type (element type, `containsNull`) or error class, for NULL array, NULL element, empty array, nested arrays, int→`array<bigint>`, int→`array<double>`, string→`array<int>`, NULL element into a `containsNull=False` array, and a literal array — for both `array_append` and `array_prepend`. | The measured table under Evidence + the facade oracle pins in `python/repark/tests/test_array_null_1.py`. | PROVEN | Measured 2026-09-14, PySpark 4.1.2, `spark.sql.ansi.enabled` default, zulu-17. Spark widens `containsNull` to true in every result. Facade was cell-correct on the base tree; door then diverged on NULL-array append (`[4]` not NULL) and refused every Spark-spelled `array_prepend(a, e)` — both closed by the step-1 arm, now pinned on both doors. |
+| C-001 | The D-2 oracle cells are measured on live PySpark 4.1.2 (one `local[1]` session, ANSI default, stopped before other work) beside repark's answers on the same explicit-schema frames through the facade AND the SQL door: answer rows AND result type (element type, `containsNull`) or error class, for NULL array, NULL element, empty array, nested arrays, int→`array<bigint>`, int→`array<double>`, string→`array<int>`, NULL element into a `containsNull=False` array, and a literal array — for both `array_append` and `array_prepend`. | The measured table under Evidence + the facade oracle pins in `python/repark/tests/functions/test_array_null_1.py`. | PROVEN | Measured 2026-09-14, PySpark 4.1.2, `spark.sql.ansi.enabled` default, zulu-17. Spark widens `containsNull` to true in every result. Facade was cell-correct on the base tree; door then diverged on NULL-array append (`[4]` not NULL) and refused every Spark-spelled `array_prepend(a, e)` — both closed by the step-1 arm, now pinned on both doors. |
 | C-002 | A chain of 40 nested `F.array_append`/`F.array_prepend` calls plans and collects under a bounded RSS delta — bound = `max(2 × flat control delta, 2 × same-tree depth-4 chain delta)` (run-14b P2-1 ruling: no fixed floor) — in a subprocess under `RLIMIT_AS = VmSize_at_apply + 3 × 8 GB`. Red on the base tree, green after the step-1 lowering, default-gated on both functions. | `test_array_append_depth40_memory_linear[append\|prepend]` red output pasted, then green with the ten-run deltas below. | PROVEN | Red demonstrated 2026-09-14 on the base tree (64 MB bound crossed at level 15, 131 014 656 B delta). After the arm under the tightened P2-1 bound: ten consecutive runs, depth-40 deltas 1 986 560–1 990 656 B per leg vs bound 3 809 280 B — the pin is in the default suite, ungated, covering both functions. |
 | L-1 | Element coercion matches Spark's `findTightestCommonType` on both doors: numeric precedence byte<short<int<long<float<double> (higher of the two — round-4 ruling replaces the round-3 `integer/float32→float64` arm), date↔timestamp→timestamp µs; identical types pass; NULL element/NullType array keep the pinned answers; nested arrays/maps/structs widen RECURSIVELY (round-4 ruling replaces the round-3 equality rule); string↔non-string and any decimal mismatch refuse at planning with a message containing `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` and both type names. Existing elements are never recast to a non-widened type. | `coerce_types` on both UDFs (user-defined signature, validate-only) + Rust unit tests for every widening pair and refusal family + the Python pins. | PROVEN | Implemented in `collection/array_append.rs` + `collection/array_append/coerce.rs` — `spark_common_element`/`spark_coerce_args` under `Signature::user_defined` (the `array_and_element` signature ran DF's `type_union_resolution`, which recast `array<string>`+int and refused `array<date>`+timestamp). Red-first: the L-2 pins failed 42 cells on the pre-fix tree (pasted below); the round-4 pins failed 96 cells on the round-3 build (pasted below). |
 | L-2 | Every run-14b oracle coercion cell is pinned on both doors and both functions — value, Arrow element type, `containsNull`/field nullability, or the refusal class + message. | `test_array_element_coercion_cells` (parametrised over the oracle table × 2 functions × 2 doors) + `test_array_element_coercion_door_only_cells` (bare SQL `1.5`). | PROVEN | 62 parametrized cells green on the release native; the door's Arrow types pin actual (round 3: `int64` element literal width, `timestamp[ns]` under the planner CAST; round 4: `int32` and µs timestamps after the validate-only redesign — the L-5..L-10 table pins the current answers). |
@@ -260,7 +260,7 @@ names).
 run against it:
 
 ```
-$ .venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q -k "coercion or all_null or plan_shape"
+$ .venv/bin/python -m pytest python/repark/tests/functions/test_array_null_1.py -q -k "coercion or all_null or plan_shape"
 42 failed, 29 passed, 6 deselected in 1.64s
 e.g. test_array_element_coercion_cells[str_num+int-facade-array_append]:
     table r: list<item: int32> — r: [[[1,2,4]]]   (should refuse)
@@ -275,7 +275,7 @@ The round-4 pins (recursive coercion cells, LA-session temporal cells, exact pai
 tokens, no-CAST perf pin) run against the unmodified round-3 build:
 
 ```
-$ .venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q
+$ .venv/bin/python -m pytest python/repark/tests/functions/test_array_null_1.py -q
 96 failed, 74 passed in 4.31s
 e.g. test_array_element_coercion_cells[float+int-facade-array_append]:
     table r: list<item: double>   (Spark: array<float>)
@@ -444,7 +444,7 @@ Armed run (`REPARK_ARRAY_NULL_1_MEM=1`), red on the base tree:
 AssertionError: F.array_append depth-40 crossed the bound 67108864 B
 (2x flat 40-append select delta 4046848 B, floor 67108864 B): 15 at delta 131014656 B;
 assert 2 == 0
-FAILED python/repark/tests/test_array_null_1.py::test_array_append_depth40_memory_linear
+FAILED python/repark/tests/functions/test_array_null_1.py::test_array_append_depth40_memory_linear
 ```
 
 The worker's per-level bound check exited at level 15 (rc=2) with a 131 MB delta —
@@ -695,8 +695,8 @@ planner CAST, removed under validate-only `coerce_types`; see P3-A).
 
 Step 0 (on the restored base tree, 2026-09-14):
 
-- `REPARK_ARRAY_NULL_1_MEM=1 .venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q` → red on base (pasted, C-002).
-- `.venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q` → green (pin skipped by default).
+- `REPARK_ARRAY_NULL_1_MEM=1 .venv/bin/python -m pytest python/repark/tests/functions/test_array_null_1.py -q` → red on base (pasted, C-002).
+- `.venv/bin/python -m pytest python/repark/tests/functions/test_array_null_1.py -q` → green (pin skipped by default).
 - `grep -rln "array_append\|array_prepend" python/repark/tests` → `test_array_null_1.py`, `test_functions_e.py`.
 - `make verify` → green.
 
@@ -705,7 +705,7 @@ Step 1 (the landed arm, 2026-09-14):
 - `cargo test -p repark-functions` → green (452 tests incl. 5 new `collection::array_append` tests).
 - `cargo test -p repark-python door_parity` → green (4 tests; no `EXPECTED_DIVERGENCES` row added).
 - `make develop` → green.
-- `.venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q -p no:cacheprovider` → green, 6 tests ungated.
+- `.venv/bin/python -m pytest python/repark/tests/functions/test_array_null_1.py -q -p no:cacheprovider` → green, 6 tests ungated.
 - `grep -rln "array_append\|array_prepend" python/repark/tests` → `test_array_null_1.py`, `test_functions_e.py`, `test_functions_split_identity.py`; all green.
 - `make verify` → green.
 
@@ -714,7 +714,7 @@ Run 14b (L-1/L-2/P2-1/P3-1/L-3, on e6311c9e + this round's changes):
 - `cargo test -p repark-functions` → green (456 tests incl. the `coerce_types` widening/refusal/NULL/nested and all-null short-circuit tests).
 - `cargo test -p repark-python door_parity` → green (4 tests; no `EXPECTED_DIVERGENCES` row added).
 - `cd python/repark && maturin develop --release` → rebuilt with the coercion + short-circuit changes.
-- `.venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q -p no:cacheprovider` → green, 77 tests.
+- `.venv/bin/python -m pytest python/repark/tests/functions/test_array_null_1.py -q -p no:cacheprovider` → green, 77 tests.
 - `grep -rln "array_append\|array_prepend" python/repark/tests` → `test_array_null_1.py`, `test_functions_e.py`, `test_functions_split_identity.py`; `pytest` on all three → green (77 + 12).
 - Depth-40 memory pin × 10 consecutive runs → green, deltas in the P2-1 table.
 - `make verify` → green.
@@ -726,7 +726,7 @@ Run 14b round 4 (L-5..L-11 + P3-A, on ead1f60e + this round's changes):
 - `cargo test -p repark-functions` → green (the `coerce_types`/`spark_common_element` suite covers the numeric ladder incl. Float32+Int32/Float16, Date64, timestamp×timestamp across units and tz presence, nested lists, map/struct recursion, LargeList/FixedSizeList, Binary/Boolean equality, and UInt/Time/Duration/Interval/Dictionary mismatch refusals; 11 array_append tests).
 - `cargo test -p repark-python door_parity` → green (4 tests; no `EXPECTED_DIVERGENCES` row added).
 - `cd python/repark && maturin develop --release` → rebuilt with the validate-only coercion + invoke-side conversion.
-- `.venv/bin/python -m pytest python/repark/tests/test_array_null_1.py python/repark/tests/test_array_null_1_coercion.py -q -p no:cacheprovider` → green, 170 tests (file split under the 1000-line ratchet: 425 + 664 lines).
+- `.venv/bin/python -m pytest python/repark/tests/functions/test_array_null_1.py python/repark/tests/functions/test_array_null_1_coercion.py -q -p no:cacheprovider` → green, 170 tests (file split under the 1000-line ratchet: 425 + 664 lines).
 - `grep -rln "array_append\|array_prepend" python/repark/tests` → `test_array_null_1.py`, `test_array_null_1_coercion.py`, `test_functions_e.py`, `test_functions_split_identity.py`; `pytest` on all → green (182 tests).
 - Depth-40 memory pin × 3 consecutive runs → green.
 - Perf guard: `array<timestamp[us]>` + timestamp, 1e6 rows, SQL door → median 18.53 ms (re-check 18.24, base 19.38); plan `array_append(a@0, …)` with no array CAST.
@@ -770,26 +770,26 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: Boundary cells exercised on both doors — NULL array, NULL element, empty array, nested array<int> element, int into array<bigint>, int into array<double>, string into array<int>, NULL element into a containsNull=False array, literal array, CAST(NULL AS ARRAY<INT>), a two-row all-null input column, and a sliced input whose NullBuffer carries a non-zero offset; the run-14b coercion oracle covers every widening pair (int ladder, →double, date↔timestamp both directions), every refusal family (string↔numeric, decimal vs anything/different precision, boolean, unequal nested) on both functions × both doors; the round-4 oracle adds recursive cells (array<float>+int incl. the 16777217 float-rounding value, nested arrays, map key/value widening, struct name/count/order/case, ntz↔ltz/date, 0001-01-01/9999-12-31 in an LA session compared as unix micros); round 5 adds the float16-as-FLOAT ladder pin (100000 → 100000.0, never Inf, over polars halffloat ingest) and the spark.sql.caseSensitive=true struct-matching pin; round 6 adds the DST-transition pins (2024-03-10/2024-11-03 date midnights, NTZ walls inside the skipped 02:30 and repeated 01:30 hours, LA session, unix-micro answers recorded before the code changed) and the negative pre-epoch ns→µs truncation pin (Arrow semantics: toward zero); chain depths 1..100 measured.
-      artifacts: [python/repark/tests/test_array_null_1.py, python/repark/tests/test_array_null_1_coercion.py, crates/repark-functions/src/collection/array_append.rs, crates/repark-functions/src/collection/array_append/coerce.rs]
+      artifacts: [python/repark/tests/functions/test_array_null_1.py, python/repark/tests/functions/test_array_null_1_coercion.py, crates/repark-functions/src/collection/array_append.rs, crates/repark-functions/src/collection/array_append/coerce.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every off-ladder pair refuses at planning on both doors with `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` naming both types in Spark DDL — the round-4 pins assert the full `["X", "Y"]` pair token (struct `STRUCT<x: INT>`, map `MAP<STRING, INT>`, door `BIGINT` literal width), and Rust refusals cover UInt/Time64/Duration/Interval/Dictionary mismatches, struct name/count/order, and off-ladder map key/value; a non-array first argument plan-errors; a DataType::Null input yields an all-null result and an all-null array column short-circuits before the kernel; the memory worker exits rc 2 at the bound crossing instead of aborting — the base-tree red was the bound exit at level 15.
-      artifacts: [python/repark/tests/test_array_null_1_coercion.py, crates/repark-functions/src/collection/array_append.rs, crates/repark-functions/src/collection/array_append/coerce.rs]
+      artifacts: [python/repark/tests/functions/test_array_null_1_coercion.py, crates/repark-functions/src/collection/array_append.rs, crates/repark-functions/src/collection/array_append/coerce.rs]
     - id: AT-4
       status: ATTACKED
       evidence: No shared mutable state — each UDF impl is a stateless ScalarUDFImpl; each pin session is created and stopped in its own fixture and the memory legs run in isolated subprocesses; the sliced-input graft test builds its own arrays per call.
-      artifacts: [python/repark/tests/test_array_null_1.py, crates/repark-functions/src/collection/array_append.rs]
+      artifacts: [python/repark/tests/functions/test_array_null_1.py, crates/repark-functions/src/collection/array_append.rs]
     - id: AT-5
       status: N/A
       justification: No privileged action, secret, injection or deserialization surface — the dispatch arms are literal name matches and the UDF consumes typed Arrow arrays only.
     - id: AT-6
       status: ATTACKED
       evidence: Arrow value AND type AND element nullability pinned per cell on both doors via to_arrow; the door-parity ratchet re-run green with no EXPECTED_DIVERGENCES row — facade arm and door registration resolve the same ScalarUDF; the DF-only alias names are pinned to keep DF's kernel (no aliases declared on the shim).
-      artifacts: [python/repark/tests/test_array_null_1.py, crates/repark-python/src/column/door_parity_tests.rs]
+      artifacts: [python/repark/tests/functions/test_array_null_1.py, crates/repark-python/src/column/door_parity_tests.rs]
     - id: AT-7
       status: ATTACKED
       evidence: The unit is the AT-7 fix — the exponential facade rewrite is replaced by one native call per level; the depth-40 pin runs in the default suite under the tightened P2-1 bound (ten consecutive runs, 1 986 560–1 990 656 B vs bound 3 809 280 B) and the release before/after table shows 577 MB→2.0 MB at depth 16/40; the residual collect-wall growth (~12×, 12→40, analyzer planning per P3-2) is recorded with numbers, not assumed away.
-      artifacts: [python/repark/tests/test_array_null_1.py, task/ledgers/staging/array-null-1-ledger.md]
+      artifacts: [python/repark/tests/functions/test_array_null_1.py, task/ledgers/staging/array-null-1-ledger.md]
     - id: AT-8
       status: ATTACKED
       evidence: DataFusion 54.1.0 behavior verified against the crate source and by measurement — register_udf keys on name+aliases (so the shim replaces only the two primary names), the prepend kernel takes (element, array) (arg swap in the shim), generic_append_and_prepend drops the input null buffer (the graft), and no lateral plan-level alias exists (Schema error measured). File-size ratchet held — the dispatch arms landed in dispatch_json.rs because the parent is at exactly 1000; no ceiling moved.
@@ -800,5 +800,5 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Red-first held — the depth-40 pin crossed its bound at level 15 on the base tree (131 014 656 B), the door pins would have failed on base (NULL array → [4]; Spark-spelled prepend refused outright), the run-14b L-2 pins ran red on the pre-fix tree (42 failed cells: silent recasts of array<string>+int/double, generic refusal text, date+ts refusal), and the round-4 pins ran red on the release native of ead1f60e (96 failed cells: float+int widening to double, UTC-midnight dates, ns wraps, missing recursion, substring tokens); the bound-exit branch has a named input (the base tree at level 15), so no dead branch ships.
-      artifacts: [python/repark/tests/test_array_null_1.py, task/ledgers/staging/array-null-1-ledger.md]
+      artifacts: [python/repark/tests/functions/test_array_null_1.py, task/ledgers/staging/array-null-1-ledger.md]
 ```

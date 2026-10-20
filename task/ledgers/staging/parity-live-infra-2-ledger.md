@@ -84,15 +84,15 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: Resolution edges (env override, box lane present/absent, venv fallback); both ANSI settings for B and the Spark probe; four suite orders for D (standalone, full file, two prefixes).
-      artifacts: [python/repark/tests/_spark_python.py, python/repark/tests/test_ice_hadoop_vn_1.py]
+      artifacts: [python/repark/tests/_spark_python.py, python/repark/tests/iceberg/test_ice_hadoop_vn_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The demotions pin status plus two cause needles each, so a changed failure mode re-reds; one needle bait-checked. The race keeps its three-round retry and parquet watch untouched.
-      artifacts: [python/repark-parity/compat/smoke_suite.py, python/repark/tests/test_ice_hadoop_vn_1.py]
+      artifacts: [python/repark-parity/compat/smoke_suite.py, python/repark/tests/iceberg/test_ice_hadoop_vn_1.py]
     - id: AT-4
       status: ATTACKED
       evidence: The 400k race mechanism measured directly (RePark lands v3 in the shared metadata dir, Spark scan-forwards to v4, count 400002). The D fix touches only side-session conf, never the race itself.
-      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_hadoop_vn_1.py]
     - id: AT-5
       status: ATTACKED
       evidence: Test files and maps only; no workflow, lockfile, or product change. The record extra was provisioned in the local venv only. Runner-vs-box versions compared identical (PySpark, PyArrow, pandas, Python, Java).
@@ -107,14 +107,14 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: newSession inherits shared-context conf only, so a session-scoped catalog binding does not reach it; proven by the failing REQUIRES_SINGLE_PART_NAMESPACE shape and the passing wired shape in the same prefix orders.
-      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py, python/repark/tests/_live_parity.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_hadoop_vn_1.py, python/repark/tests/_live_parity.py]
     - id: AT-9
       status: ATTACKED
       evidence: No test deleted, skipped, or weakened. Inner smoke total stays 221 (212 PASS + 9 metas); the rdf_options rerun now runs instead of skipping without the box lane (proven green in the lane-hidden run).
-      artifacts: [python/repark-parity/compat/smoke_suite.py, python/repark/tests/test_ice_rdf_options_1.py]
+      artifacts: [python/repark-parity/compat/smoke_suite.py, python/repark/tests/iceberg/test_ice_rdf_options_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Red first everywhere: B 2 failed before the flip; C 3 failed before the demotion; D failed in both prefix orders before the wiring; A failed FileNotFound on the runner and passes in both resolutions now.
-      artifacts: [python/repark/tests/test_parity_live_fnp8.py, python/repark-parity/compat/smoke_suite.py]
+      artifacts: [python/repark/tests/parity/test_parity_live_fnp8.py, python/repark-parity/compat/smoke_suite.py]
   complete: true
 ```

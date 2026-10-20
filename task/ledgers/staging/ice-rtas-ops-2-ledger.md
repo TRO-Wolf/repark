@@ -17,7 +17,7 @@ none. RePark never sets it, so the four Spark cells in
 takes the RP-23 consumer slot the fork-sync row names ("run 20c
 ICE-RTAS-BYNAME-1 (RTAS opt-in)").
 
-**Sources.** `python/repark/tests/ice_rtas_byname_1_spark_oracle.json` section
+**Sources.** `python/repark/tests/writes/ice_rtas_byname_1_spark_oracle.json` section
 `rtas_ops` (live PySpark 4.1.2 + Iceberg 1.11.0); registry prose
 `docs/spark-sql-iceberg-parity.md` §2.3 RTAS-OPS-1; the 2026-09-17 column-def
 measurement (orchestrator, live PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog; column-def
@@ -105,11 +105,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause walked against the tree and a green or red run — the four RTAS pins red on the base tree and red again under the ctas.rs revert (C-005, C-009), the three controls green (C-006..C-008), the column-def path untouched and pinned against the live 2026-09-17 cell (C-003, C-007).
-      artifacts: [crates/repark-spark/src/ctas.rs, python/repark/tests/test_ice_rtas_byname_1.py]
+      artifacts: [crates/repark-spark/src/ctas.rs, python/repark/tests/writes/test_ice_rtas_byname_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries exercised — RTAS on an existing table, on a missing table, with an empty SELECT, twice empty; plain CTAS control; column-def replace on a table with rows.
-      artifacts: [python/repark/tests/test_ice_rtas_byname_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_rtas_byname_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Round 1 recorded the service-managed create-first arm as residue C-004. Round 2 found the fork's public overwrite-by-filter plus allow_empty_commit path (C-018) and routes new-table RTAS on both doors' create-first arms through commit_replace_write (C-019, C-020); plain CTAS keeps commit_append, pinned and mutation-proven. Dual-door coverage (ADR-0002 §3) — the native ANSI door takes the same opt-in on both staged arms, gated on OR REPLACE with a query so the column-def form never takes it; the native column-def control goes red when it does (C-015..C-017).
@@ -123,7 +123,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The acceptance replace-twice asserter follows the new ordered answer on all three legs (memory offline twin green; Glue and S3 Tables replaces take the same staged begin_replace arm, seed CTAS stays append).
-      artifacts: [python/repark/tests/_acceptance_replace.py, python/repark/tests/test_acceptance_replace_offline.py]
+      artifacts: [python/repark/tests/parity/_acceptance_replace.py, python/repark/tests/parity/test_acceptance_replace_offline.py]
     - id: AT-7
       status: N/A
       justification: No performance-relevant path; one flag on an existing builder.

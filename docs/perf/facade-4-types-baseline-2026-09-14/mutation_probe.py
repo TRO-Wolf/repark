@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any
 
 TEST_PATH = (
-    Path(__file__).resolve().parents[3] / "python/repark/tests/test_facade_4_ddl_round_trip.py"
+    Path(__file__).resolve().parents[3]
+    / "python/repark/tests/types/test_facade_4_ddl_round_trip.py"
 )
 GOLDEN_PATH = TEST_PATH.with_name("facade_4_type_goldens.json")
 

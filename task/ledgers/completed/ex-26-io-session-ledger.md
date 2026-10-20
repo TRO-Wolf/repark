@@ -335,7 +335,7 @@ COVERAGE_ATTESTATION:
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Oracle: live PySpark 4.1.2 (ANSI on, UTC); probes under gitignored `scratch/ex26/`
-- Pins: [../../../python/repark/tests/test_examples_io_session.py](../../../python/repark/tests/test_examples_io_session.py) (13 tests for EX-IO-1..10, the EX-IO-8 arity arm, and EX-SES-6)
+- Pins: [../../../python/repark/tests/test_examples_io_session.py](../../../python/repark/tests/parity/test_examples_io_session.py) (13 tests for EX-IO-1..10, the EX-IO-8 arity arm, and EX-SES-6)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 (EX-IO-1..10 and EX-SES-6 new; EX-IO-8 extended; EX-SES-1 corrected)
 - Siblings: [ex-25-functions-a-ledger.md](ex-25-functions-a-ledger.md), [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md)
 

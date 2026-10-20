@@ -8,7 +8,7 @@
 
 ## Why
 
-`python/repark/tests/test_perf_unpivot_1.py::test_stack_is_linear_in_columns`
+`python/repark/tests/perf/test_perf_unpivot_1.py::test_stack_is_linear_in_columns`
 failed on CI on 2026-10-15 01:37 UTC, facade shard 1, run `38665297618`
 attempt 1, on PR #1064's branch after it merged main; the re-run (attempt 2)
 passed and the PR merged.
@@ -20,7 +20,7 @@ stack wall must be linear in columns; exponent=1.128 medians={50: 0.004130164999
 ```
 
 against the bound `exponent <= 1.1` in
-`python/repark/tests/test_perf_unpivot_1.py:149`.
+`python/repark/tests/perf/test_perf_unpivot_1.py:149`.
 
 ## Known facts
 

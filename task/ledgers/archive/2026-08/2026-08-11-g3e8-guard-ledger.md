@@ -18,8 +18,8 @@ the fix unit inherits its goldens. The fix is a separate unit; §7 hands it ever
 | Spark-door pins | [`crates/repark-spark/src/tests/dml.rs`](../../../../crates/repark-spark/src/tests/dml.rs) (**10**), [`…/tests/normalize.rs`](../../../../crates/repark-spark/src/tests/normalize.rs) (**2**) | refuse families, adjacent negatives, guard order, the FROM-less bypass family + its negative, CTE-prefixed loud-today, detector, statement valve |
 | ANSI-door pins | [`crates/repark-sql/src/guards/tests.rs`](../../../../crates/repark-sql/src/guards/tests.rs) (**6**) | detector, message, rendered target, end-to-end refuse + rows-untouched, valve ORDER vs BUG-001, router-vs-session parse dialect |
 | Cross-door pin | [`crates/repark-sql/tests/cross_door.rs`](../../../../crates/repark-sql/tests/cross_door.rs) (**1**) | the two doors' RENDERED refusals must be byte-identical (the D-1 duplication's drift net) |
-| Differential corpus | [`python/repark/tests/test_dml_subquery_parity.py`](../../../../python/repark/tests/test_dml_subquery_parity.py) | 10 rows (8 split + 2 controls) + lifecycle helper + classifier |
-| Record driver | [`python/repark/tests/_record_dml_subquery_goldens.py`](../../../../python/repark/tests/_record_dml_subquery_goldens.py) | live Spark+Iceberg re-derivation |
+| Differential corpus | [`python/repark/tests/test_dml_subquery_parity.py`](../../../../python/repark/tests/writes/test_dml_subquery_parity.py) | 10 rows (8 split + 2 controls) + lifecycle helper + classifier |
+| Record driver | [`python/repark/tests/_record_dml_subquery_goldens.py`](../../../../python/repark/tests/writes/_record_dml_subquery_goldens.py) | live Spark+Iceberg re-derivation |
 | Maps (lockstep) | `crates/repark-spark/src/map.md`, `…/src/tests/map.md`, `crates/repark-sql/src/map.md`, `…/src/guards/map.md`, `python/repark/tests/map.md` | |
 | This ledger | `task/g3e8-guard-ledger.md` | linked from [`task/map.md`](../../../map.md) |
 
