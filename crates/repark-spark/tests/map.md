@@ -295,6 +295,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`task/wo/ice-ntz-nested-refuse-1/evidence/`) and its seven hand mutants (ledger §10: each
   one-line revert of a round-1 rule reds one of these pins) back the same rules.
   pins: ice-ntz-nested-refuse-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021
+  **Fix round 2 (2026-10-20, after the verifier's round-1 FAIL):**
+  `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`: on the plain `UPDATE` of a
+  whole struct, `to_timestamp_ntz(<instant>)` (also over `coalesce` of a zoned column) stores
+  the session wall, and a wall beside a zoned column that feeds only an `INT` field or a
+  condition stores the wall, in New York and Kolkata, as Spark and main do; round 1 refused all
+  four (verifier S1-2).
+  pins: ice-ntz-nested-refuse-1/C-022
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

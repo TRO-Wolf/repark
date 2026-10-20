@@ -572,6 +572,68 @@ async fn the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside
     assert_eq!(wrong, Vec::<String>::new());
 }
 
+/// The plain `UPDATE` that assigns a whole struct stores a value whose zoned sub-expression is
+/// not a `TIMESTAMP_NTZ` cast: `to_timestamp_ntz` of an instant stores the session wall, and a
+/// zoned column that feeds only an `INT` field or a condition leaves the wall as written. Spark
+/// 4.1.2 and main store the same values; fix round 1 refused all four.
+///
+/// pins: ice-ntz-nested-refuse-1/C-022
+#[tokio::test]
+async fn the_plain_update_stores_a_wall_beside_a_zoned_sub_expression() {
+    let cases = [
+        (
+            format!("named_struct('v', to_timestamp_ntz({INSTANT}), 'n', 1)"),
+            None,
+        ),
+        (
+            format!("named_struct('v', to_timestamp_ntz(coalesce(z, {INSTANT})), 'n', 1)"),
+            None,
+        ),
+        (
+            format!("named_struct('v', {WALL}, 'n', IF(z IS NULL, 1, 2))"),
+            Some(UTC_WALL),
+        ),
+        (
+            format!("named_struct('v', st.v, 'n', CAST(year(coalesce(z, {INSTANT})) AS INT))"),
+            Some(UTC_WALL),
+        ),
+    ];
+    let mut wrong = Vec::new();
+    for (zone, session_wall) in ZONES {
+        let session = session(zone);
+        let _warehouse = catalog(&session).await;
+        for (index, (value, expected)) in cases.iter().enumerate() {
+            let name = format!("w{index}");
+            run(
+                &session,
+                &format!(
+                    "CREATE TABLE ice.ns.{name} (id INT, st {S}, k INT, z TIMESTAMP) USING \
+                     iceberg TBLPROPERTIES ('format-version'='2')"
+                ),
+            )
+            .await;
+            run(
+                &session,
+                &format!(
+                    "INSERT INTO ice.ns.{name} (id, st, k) VALUES (1, named_struct('v', {WALL}, \
+                     'n', 0), 0)"
+                ),
+            )
+            .await;
+            let write = format!("UPDATE ice.ns.{name} SET st = {value} WHERE id >= 0");
+            if let Err(error) = attempt(&session, &write).await {
+                wrong.push(format!("{zone} / {write}: {error}"));
+                continue;
+            }
+            let values = stored(&session, &format!("SELECT st FROM ice.ns.{name}")).await;
+            if values != vec![Some(expected.unwrap_or(session_wall))] {
+                wrong.push(format!("{zone} / {write}: {values:?}"));
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
 fn counted(calls: &Arc<AtomicUsize>) -> datafusion::logical_expr::ScalarUDF {
     let calls = Arc::clone(calls);
     create_udf(

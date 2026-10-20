@@ -460,15 +460,13 @@ fn casts_a_zoned_value_to_naive(expr: &Expr, schema: &DFSchema) -> bool {
             .map_or(true, |source| casts_zoned_to_naive(&source, target))
 }
 
-fn shifts_in_an_update(expr: &Expr, schema: &DFSchema) -> bool {
-    if let Expr::ScalarFunction(function) = expr
-        && matches!(
-            function.func.name(),
-            TIMESTAMP_NTZ_CAST_NAME | TRY_TIMESTAMP_NTZ_CAST_NAME
-        )
-    {
-        return true;
-    }
-    expr.get_type(schema)
-        .map_or(true, |data_type| holds_zoned_timestamp(&data_type))
+fn shifts_in_an_update(expr: &Expr, _: &DFSchema) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function)
+            if matches!(
+                function.func.name(),
+                TIMESTAMP_NTZ_CAST_NAME | TRY_TIMESTAMP_NTZ_CAST_NAME
+            )
+    )
 }

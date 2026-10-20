@@ -18,6 +18,15 @@ wall) and four S3 notes. Each became a clause below: S1-1 C-015, S1-2 C-016, S2-
 C-017, S3-1 C-006, S3-2 C-018, S3-3 C-010. The round's cells are C-019, its mutants C-020, its
 gates C-021.
 
+**Fix round 2 (2026-10-20).** The verifier's round-1 verdict on `c20c3e25` was FAIL: S1-1 (a
+cast through `STRING`, `DATE` or `BIGINT`, or `from_json(to_json(…))`, stores the UTC wall),
+S1-2 (the plain `UPDATE`'s zoned-sub-expression arm refuses four EQUAL cells), S1-3 (the cast
+walk reads the whole statement, not the column's value), S1-4 (no pin holds the subquery
+descent), and S2-1 to S2-4. Each became a dated clause from C-022 on; earlier rows stand as
+written and the later row supersedes where they differ. S1-1 and S2-1 are one mechanism that
+is not this unit's (carded CONTAINER-CAST-ZONE-1, owner's ruling pending) and are stated as a
+residue, not gated.
+
 **Why.** In a session whose zone is not UTC, an instant written into a nested microsecond
 `TIMESTAMP_NTZ` leaf stored the session wall through field assignment and the UTC wall through
 every other door, so one table held two walls for one input. Two folds that stored the right
@@ -49,6 +58,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-019 | Against main `c516c54a`, the extended matrix (3168 cells: the round-0 1980 plus `ntz_text_cast`, `ts_struct_cast`, `ts_struct_cast_column`) moves 360 cells, every one to the refusal: the round-0 192 and 168 new ones (100 container-cast UTC walls, 4 string-cast walls shifted by the offset on the plain `UPDATE`, 64 raw errors). No other cell moves: 2112 control cells, every UTC cell, the leaf cast's 132 session-wall cells. The round-0 cells answer as in round 0 but for the new text. The attack probe (28 shapes × 3 zones) refuses every shape that stored a wrong wall. | `probe.py run` and `probe.py attack` on main and head; the cell diff. | **PROVEN** | §9. `task/wo/ice-ntz-nested-refuse-1/evidence/`. |
 | C-020 | Each round-1 refusal has a pin that a one-line revert kills (seven hand mutants). | §10. | **PROVEN** | §10. |
 | C-021 | The round's gates are green with real exit codes. | §11. | **PROVEN** | §11. |
+| C-022 | Outside UTC the plain `UPDATE` that assigns a whole struct or array above the leaf no longer refuses a value for holding a zoned sub-expression; it still refuses a `TIMESTAMP_NTZ` cast in the value (C-017), a planned type holding a zoned timestamp and a container cast of an instant. `to_timestamp_ntz(<instant>)` and `to_timestamp_ntz(coalesce(z, <instant>))` store the session wall, a wall literal beside `IF(z IS NULL, 1, 2)` and `named_struct('v', st.v, 'n', CAST(year(coalesce(z, <instant>)) AS INT))` keep the wall, as Spark 4.1.2 and main store them. No wrong wall re-opens. *(Supersedes the zoned-sub-expression arm of C-001, C-005 and §1, fix round 2, verifier S1-2.)* | The four cells in New York and Kolkata at the Rust door; the 3168-cell matrix and the 84-cell probe on the build against `c20c3e25`. | **PROVEN** | §12. `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`. |
 
 ## §1 The rule and the seam
 
@@ -226,3 +236,24 @@ After `git merge origin/main` (`754fb6e5`). Every heavy command under `taskset -
 | live leg co-collected after `python/repark/tests/parity` | 423 passed, 13 skipped; `test_live_spark_stores_the_recorded_session_wall` PASSED | 140 s | 7.28, no other JVM |
 | `make ci` after the last code edit | exit 0 | 107 s | 3.53 |
 | `python3 scripts/sync_map_md.py` | clean | — | — |
+
+## §12 Fix round 2: what each finding became
+
+### §12.1 S1-2, the plain `UPDATE`'s zoned-sub-expression arm (C-022)
+
+The second arm of `shifts_in_an_update` (`crates/repark-spark/src/router/nested_ns.rs`) is
+gone; the `TIMESTAMP_NTZ`-cast arm stays. Build of the arm's removal alone, New York
+(`taskset -c 0-25`, load 5.10 at start):
+
+| Cell | Spark 4.1.2 | main | `c20c3e25` | this build |
+|---|---|---|---|---|
+| `named_struct('v', to_timestamp_ntz(<instant>), 'n', 1)` | session wall | session wall | refused | session wall |
+| `named_struct('v', to_timestamp_ntz(coalesce(z, <instant>)), 'n', 1)` | session wall | session wall | refused | session wall |
+| `named_struct('v', <wall literal>, 'n', IF(z IS NULL, 1, 2))` | the wall | the wall | refused | the wall |
+| `named_struct('v', st.v, 'n', CAST(year(coalesce(z, <instant>)) AS INT))` | the wall | the wall | refused | the wall |
+
+The 3168-cell door matrix (`probe.py run`, 112 s) answers cell for cell as the committed
+`repark-head.jsonl` of `c20c3e25` (0 cells differ; 360 moved against main, every one refused),
+and the 84-cell named-shape probe (`probe.py attack`) as the committed `attack-head.jsonl`
+(0 cells differ). No cell that held a wrong wall on main stores on this build.
+
