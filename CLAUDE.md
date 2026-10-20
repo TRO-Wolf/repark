@@ -20,6 +20,16 @@ directory's `map.md` (the ledger-grammar gate reads every tracked file under `cr
 not by a gate: the `check-comment-density` ratchet was dropped before #247 merged; the file-size
 ratchets are the mechanical gates, and a new file carries no comments.
 
+# OWNER RULING (2026-10-17) — OPUS 5.0 IS BANNED FOREVER; OPUS MEANS OPUS 5.5
+
+**EFFECTIVE IMMEDIATELY AND PERMANENTLY. NO AGENT, LANE, EXECUTOR, VERIFIER, SKETCHER OR CLERK RUNS ON OPUS 5.0. EVERY OPUS DISPATCH IS CLAUDE OPUS 5.5 (`claude-opus-5-5`) AND NOTHING ELSE.**
+
+*Mechanics (owner, 2026-10-17, same night):* a brief, trailer, workflow, launcher or skill that names an
+Opus model names `claude-opus-5-5`; the bare alias `opus` is allowed only where the tool resolves it to
+that id, and the resolution is verified from the agent transcript, never from the brief. Two gates hold
+it: `make check-model-ban` fails any tracked file that names a 5.0 Opus id, and `make check-owner-ruling`
+preserves this block byte-for-byte in `AGENTS.md` and `CLAUDE.md`.
+
 **STOP — the authoritative contract is [AGENTS.md](AGENTS.md). Read it first.** This file adds
 only Claude-specific tool mechanics; it defines **no project rules**. Deleting it would lose no
 project knowledge.
@@ -74,6 +84,8 @@ Claude's):
 Claude-family orchestration mechanics, **not** project rules ([AGENTS.md](AGENTS.md) "Delegated
 work" is the neutral rule):
 
+- **Opus means Opus 5.5 (`claude-opus-5-5`).** Opus 5.0 is banned by the owner ruling at the top of
+  this file; `model: opus` is allowed only where it resolves to 5.5, and the transcript shows it.
 - Opus orchestrates and owns architecture and assembly.
 - Fan-out (search, mechanical edits, narrow implementation) runs on AGENTS.md-allowed tiers —
   pass the tier explicitly: executors surface ambiguity, clerks hand back at any design

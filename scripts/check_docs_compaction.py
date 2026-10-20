@@ -40,7 +40,7 @@ LEDGER_SUFFIX = "-ledger.md"
 CEILINGS: dict[str, int] = {
     "STATUS.md": 25_000,
     "briefs/next-sequence.md": 6_000,
-    "AGENTS.md": 27_816,
+    "AGENTS.md": 28_600,
     ".agents/skills/engineering-method/SKILL.md": 35_000,
     ".agents/skills/sepmo/unit-runbook.md": 5_000,
 }
