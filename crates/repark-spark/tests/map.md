@@ -319,8 +319,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
-  The map residue named above is C-026.
-  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026
+  The map residue named above is C-026. Not pinned, stated as a residue (CONTAINER-CAST-ZONE-1,
+  C-027): a container cast or `from_json(to_json(…))` whose zoned leaf passes through `STRING`,
+  `DATE` or `BIGINT`, and the six table-creating writers, store the UTC wall outside UTC on main
+  as on this build. The plain `UPDATE` pins above hold C-028's corrected statement.
+  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

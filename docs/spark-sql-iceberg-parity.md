@@ -3469,8 +3469,28 @@ still open is `isModifiable`.
   UTC for the statement. SQLSTATE: KD000``. The text names no source type, because a
   statement the router cannot plan (`INSERT … TABLE`, `LATERAL VIEW`, an arity mismatch,
   `DISTRIBUTE BY`, CTAS of `INSERT`) takes it too, where main raised its own error. A wall,
-  a `TIMESTAMP_NTZ` column, a container cast of a wall or a string, and the leaf cast store
-  as before (the leaf cast stores Spark's session wall). *(Corrected 2026-10-20, fix round 2,
+  a `TIMESTAMP_NTZ` column, a container cast of a `TIMESTAMP_NTZ` value or of a string
+  literal, and the leaf cast store as before (the leaf cast stores Spark's session wall).
+  **Not gated, dated 2026-10-20 (fix round 2, verifier S1-1 and S2-1; round 1 read "a
+  container cast of a wall or a string … store as before"):** a container cast or
+  `from_json(to_json(…))` whose zoned leaf passes through `STRING`, `DATE` or `BIGINT`
+  (`CAST(CAST(named_struct('v', x, 'n', 1) AS STRUCT<v: STRING, n: INT>) AS STRUCT<v:
+  TIMESTAMP_NTZ, n: INT>)`, the same through `DATE` or `BIGINT`, `CAST(CAST(array(x) AS
+  ARRAY<STRING>) AS ARRAY<TIMESTAMP_NTZ>)`, the leaf cast over an element of such an array,
+  `from_json(to_json(named_struct('v', x, 'n', 1)), 'v TIMESTAMP_NTZ, n INT')`) stores the UTC
+  wall (the UTC date through `DATE`, the UTC wall to the millisecond through JSON) outside UTC
+  on main and on the build, on `INSERT … SELECT` and a MERGE update; the gate does not see it,
+  because no single cast there reads a zoned type and produces a naive one. Spark 4.1.2 stores
+  the session wall through `STRING`, the session date through `DATE`, refuses `BIGINT`
+  (`DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`) and stores NULL through JSON. The six
+  table-creating writers (CTAS, `CREATE OR REPLACE TABLE … AS SELECT`, `REPLACE TABLE … AS
+  SELECT`, `saveAsTable` in mode `overwrite`, `writeTo().create()`, `.replace()`,
+  `.createOrReplace()`) are not gated and carry the same value: a container cast of an instant
+  stores the UTC wall outside UTC on main and on the build where Spark stores the session
+  wall. One mechanism: the container cast and `to_json` render a zoned leaf in UTC for every
+  target type, in a plain `SELECT` as in a write. Carded as CONTAINER-CAST-ZONE-1
+  (`task/roadmap/mid-term/container-cast-zone-1-card-2026-10-20.md`); the owner rules whether
+  this unit grows to gate it. *(Corrected 2026-10-20, fix round 2,
   verifier S2-3: round 1 said "a UTC session refuses nothing".)* A UTC session refuses no
   write but a `PREPARE`: a `PREPARE` is decided as if the zone were not UTC, because `EXECUTE`
   can run it after a `SET` of the zone, so every `PREPARE` of such a write whose value is an

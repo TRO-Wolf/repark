@@ -132,7 +132,12 @@ Tables already written keep the values they hold; this release ships no migratio
   column refuses in every zone, UTC included), while a `CAST` of a whole
   struct, array or map holding an instant, a parameterised `PREPARE` that supplies the column,
   and a `TIMESTAMP_NTZ` cast inside a struct assigned by a plain `UPDATE` refuse too. Nested `TIMESTAMP_NTZ` values that `INSERT` wrote before this
-  release in a session whose zone was not UTC hold the UTC wall.
+  release in a session whose zone was not UTC hold the UTC wall. Not gated (CONTAINER-CAST-ZONE-1,
+  owner's ruling pending): a container cast or `from_json(to_json(…))` whose zoned leaf passes
+  through `STRING`, `DATE` or `BIGINT` still stores the UTC wall outside UTC, and the six
+  table-creating writers (CTAS, `CREATE OR REPLACE`/`REPLACE TABLE … AS SELECT`,
+  `saveAsTable` in mode `overwrite`, `writeTo().create()`/`.replace()`/`.createOrReplace()`)
+  carry the same value.
 
 - **The local-file write policy checks writes below the root (PA-LOCAL-FS-POLICY-1, audit
   PA-02).** With `repark.sql.allowLocalFilesystemDDL=false` (the default), `EXPLAIN ANALYZE
