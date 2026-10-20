@@ -734,10 +734,12 @@ declines it (a dated ruling in the intake, then the archive).
   `ICE-TSNS-SQL-1-R-007`). Widening the matchers alone is not the fix, because the NTZ wall cast is microsecond. The card
   holds the review's probe and its log, the acceptance criteria and the write-door checklist.
 - [enc-1-residue-1-card-2026-10-09.md](enc-1-residue-1-card-2026-10-09.md) **card ENC-1-RESIDUE-1
-  (2026-10-09, open):** what the keyed-table refusal does not cover, from the re-verify of PR #1019: a stale handle's
+  (2026-10-09, open for items 1 and 5):** what the keyed-table refusal does not cover, from the re-verify of PR #1019: a stale handle's
   one orphan Parquet, an unkeyed table placed under a keyed table's location, ref-only commits that publish rows staged
   before the key, the thirteen shapes whose clean refusal rests on entry checks, the textual gate and the
-  caller-built catalog, and the Glue metadata-directory limit. Each needs an owner call.
+  caller-built catalog, and the Glue metadata-directory limit. Owner 2026-10-14 (ruling 32): items 2, 3, 4 and 6
+  accepted. Items 1 and 5 built in #1071, final verifier FAIL (V1 to V5, 2026-10-17), parked under ruling 121(b);
+  the 2026-10-20 plan's carve-out row (P9) awaits the owner.
 - [enc-ctas-replace-1-card-2026-10-15.md](enc-ctas-replace-1-card-2026-10-15.md) **card ENC-CTAS-REPLACE-1
   (2026-10-15, open, not scheduled, clerk under owner ruling 98 (a)):** a key landing between `begin_replace`
   and the publish of `CREATE OR REPLACE TABLE … AS SELECT` leaves an orphan unencrypted file under the keyed
@@ -971,6 +973,14 @@ declines it (a dated ruling in the intake, then the archive).
   A deterministic pin reproduces it; the fix enters the scope first. Open: the same pin also
   misses its 10 s bound on a slow disk (the PA-15 family), measured to `fsync`; the owner
   keeps the bound or rules otherwise.
+- [parity-live-drift-1-card-2026-10-20.md](parity-live-drift-1-card-2026-10-20.md) — **card
+  PARITY-LIVE-DRIFT-1 (2026-10-20, open, not scheduled):** the `parity-live` nightly is red every
+  morning since 2026-10-14 on one test, `test_ice_meta_delete_1.py::test_live_oracle_fixture_reproduces`:
+  the ICE-META-DELETE-1 recorder re-runs Spark and 52 of 72 cells drift from the committed fixture
+  in data-file counts (first `all_rows_nopred_v2_cow`). Two candidate causes: a Spark behaviour
+  change to re-record with a dated note, or a recorder defect (a `local[1]` `getOrCreate` that may
+  reuse a `local[2]` session, a lead by reading). The 2026-10-20 plan's PARITY-LIVE-RERECORD-1,
+  gate D5/P5 two green mornings; awaits the owner's adopt.
 - [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
   ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, open, not scheduled, awaits the owner's adopt of the
   2026-10-20 plan):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE
