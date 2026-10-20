@@ -36,6 +36,11 @@ repo.
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.
+- [production-grade.md](production-grade.md) — the **definition of "production grade"** and its
+  review rubric (PROD-GRADE-DEF-1, 2026-10-13): the operating envelope, assessment per
+  capability, the attribute-and-evidence table, anti-patterns, five review questions and the
+  reference projects. Sits under PROJECT.md "What production-grade means"; adds no gate, ledger
+  or required artifact.
 - [fork-sync.md](fork-sync.md) — the iceberg-rust fork **sync contract**: pin-bump procedure
   (`make bump-fork-pin`), green-before-pinnable, upstream-flows-through-the-fork, the
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
