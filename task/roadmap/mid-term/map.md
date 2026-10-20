@@ -906,6 +906,19 @@ declines it (a dated ruling in the intake, then the archive).
   R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
   #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
   `timestamp_ns` target leaf.
+- [ice-commit-rebase-dup-1-card-2026-10-15.md](ice-commit-rebase-dup-1-card-2026-10-15.md) —
+  **card ICE-COMMIT-REBASE-DUP-1 (2026-10-15; fork half done via fork #368 and RePark #1095, pin now `d80a2884`; U-9 drill half open):** the fork's
+  re-base after a CAS rejection can append the same rows twice (a lost reply, an
+  SDK re-send, a stale rejection, then the re-base), from the owner's ruling 84;
+  fork work (refresh and check for our snapshot id before re-basing, SDK retry
+  off on the two commit calls), retired by a pin running the exact sequence
+  with no double append in U-9's live drill.
+- [commit-unknown-operation-id-1-card-2026-10-15.md](commit-unknown-operation-id-1-card-2026-10-15.md) —
+  **card COMMIT-UNKNOWN-OPERATION-ID-1 (2026-10-15, open, not scheduled):** thread
+  the fork's minted operation id to the plain `INSERT` unknown-outcome error,
+  which raises with `operation_id = None` today, from the owner's ruling 85;
+  the error text keeps the snapshot-list read-back, retired when the id
+  reaches the error, pinned.
 - [facade-hang-98-1-card-2026-10-14.md](facade-hang-98-1-card-2026-10-14.md) — **card
   FACADE-HANG-98-1 (2026-10-14, open, not scheduled):** the facade suite (`pytest -n 8`
   over `python/repark/tests/`) sometimes stalls at 98–99 % with idle xdist workers on CI

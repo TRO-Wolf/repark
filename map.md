@@ -230,7 +230,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `DEVELOPMENT.md` — build / test / verify, the `make` targets, the CI surface, troubleshooting.
   `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts). The owner
   ruling at the start of `AGENTS.md` and its adapter copy are byte-preserved by
-  `make check-owner-ruling`; the model-family restriction itself is held by compliance and review.
+  `make check-owner-ruling`, as is the 2026-10-17 Opus 5.0 ban block beneath them; the
+  model-family restriction itself is held by compliance and review, and `make check-model-ban`
+  fails any tracked file that names a 5.0 Opus id (Opus means `claude-opus-5-5`).
   `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
 - `.agents/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
   `cursor.md` stubs) and `skills/` (agent-facing runbooks: release-to-PyPI, context-doc
