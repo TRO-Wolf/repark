@@ -981,6 +981,13 @@ declines it (a dated ruling in the intake, then the archive).
   change to re-record with a dated note, or a recorder defect (a `local[1]` `getOrCreate` that may
   reuse a `local[2]` session, a lead by reading). The 2026-10-20 plan's PARITY-LIVE-RERECORD-1,
   gate D5/P5 two green mornings; awaits the owner's adopt.
+- [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
+  ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, open, not scheduled, awaits the owner's adopt of the
+  2026-10-20 plan):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE
+  (PP-02), measured on the acceptance sizes and written in docs; above it the statement refuses
+  with one text and the old snapshot stands, under #1044's "refuses cleanly where it cannot
+  spill"; PA-10 and PA-11 declared or closed. Follows U-9, whose kill pin keeps a crash and a
+  refusal two pinned outcomes. Order under `task/wo/ice-resource-bound-1/`.
 - [stack-linear-flake-1-card-2026-10-15.md](stack-linear-flake-1-card-2026-10-15.md) — **card
   STACK-LINEAR-FLAKE-1 (2026-10-15, open, not scheduled):**
   `test_stack_is_linear_in_columns` failed on CI (2026-10-15, facade shard 1,
