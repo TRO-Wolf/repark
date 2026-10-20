@@ -66,9 +66,11 @@ pins.
 - [_record_sql_epoch_constructors_1.py](_record_sql_epoch_constructors_1.py) — Re-derive the SQL-EPOCH-CONSTRUCTORS-1 Spark oracle from live PySpark 4.1.2.
 - [_record_timestamp_cast_goldens.py](_record_timestamp_cast_goldens.py) — Record mode for the timestamp-cast corpus — re-derive every `spark` half from live PySpark.
 - [_record_zone_horizon_render_1.py](_record_zone_horizon_render_1.py) — Re-derive the ZONE-HORIZON-RENDER-1 Spark oracle from live PySpark 4.1.2.
+- [_record_zone_oracle_1.py](_record_zone_oracle_1.py) — Record the ZONE-ORACLE-1 Spark oracle from live PySpark 4.1.2 on its own `local[1]` context (`--check [--sample N]` re-derives), and with `--main` replay the corpus on the installed RePark build and write the dated difference list.
 - [_summarize_ice_tsns_coercion_1.py](_summarize_ice_tsns_coercion_1.py) — Build the twin summary from the fixture and the Spark lattice.
 - [_time_ice_tsns_coercion_1.py](_time_ice_tsns_coercion_1.py) — Time the ICE-TSNS-COERCION-1 cost baseline on the installed module.
 - [_time_ice_tsns_frame_door_1.py](_time_ice_tsns_frame_door_1.py) — ICE-TSNS-FRAME-DOOR-1: time ``createDataFrame`` + ``count()`` of a pandas timestamp frame.
+- [_zone_oracle_1_corpus.py](_zone_oracle_1_corpus.py) — ZONE-ORACLE-1: the deterministic generator of the 1,640 timestamp-and-zone `SELECT` cells (328 expressions × 5 zones), their stable ids, the corpus hash and the hash-chosen live sample.
 - [cast_ts_string_1_spark_oracle.json](cast_ts_string_1_spark_oracle.json) — Recorded Spark oracle (604 cells) read by `test_cast_ts_string_1.py`; re-derived by `_record_cast_ts_string_1.py`.
 - [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) — Recorded data (1540 cells) read by `test_ice_tsns_coercion_1.py`.
 - [ice_tsns_coercion_1_twins.json](ice_tsns_coercion_1_twins.json) — Recorded data read by `_ice_tsns_type_planner_1_cells.py`, `test_ice_tsns_coercion_1.py`.
@@ -92,6 +94,7 @@ pins.
 - [u9_types_1_spark_oracle.json](u9_types_1_spark_oracle.json) — Recorded Spark oracle read by `test_u9_types_1.py`.
 - [zone_horizon_render_1_residue.json](zone_horizon_render_1_residue.json) — Recorded data read by `test_zone_horizon_render_1.py`; re-derived by `_record_zone_horizon_render_1.py`.
 - [zone_horizon_render_1_spark_oracle.json](zone_horizon_render_1_spark_oracle.json) — Recorded Spark oracle read by `test_zone_horizon_render_1.py`; re-derived by `_record_zone_horizon_render_1.py`.
+- [zone_oracle_1_spark_oracle.json](zone_oracle_1_spark_oracle.json) — Recorded Spark 4.1.2 oracle (1,640 cells) read by `test_zone_oracle_1.py`; re-derived by `_record_zone_oracle_1.py`.
 
 ## Path expressions
 
@@ -114,6 +117,55 @@ path expression repointed in the same unit and no other line changed:
 | `test_text_write_timestamp_zone_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_timestamp_cast_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
 | `test_u9_types_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+
+## ZONE-ORACLE-1 (2026-10-20)
+
+An expression-level Spark oracle for timestamps and zones. A write stores what `SELECT` yields,
+so an expression that is EQUAL on a plain `SELECT` in every zone is EQUAL through every write
+door; the corpus records Spark 4.1.2 once and replays it on RePark. No product code.
+
+**Corpus** (`_zone_oracle_1_corpus.py`, run as a script it prints the cell count and the corpus
+hash). 328 expressions in 5 session zones (`UTC`, `America/New_York`, `Asia/Kolkata`, `+05:30`,
+`Etc/UTC`) make 1,640 cells; an id is the dotted expression key plus the zone tag
+(`array.inst.ccast_ntz.new_york`). Value sources: an instant literal
+`TIMESTAMP '2026-01-02 03:04:05.123456+00:00'` (`inst`), a wall literal `TIMESTAMP_NTZ` (`wall`), a
+string (`str`), a date (`date`), a `BIGINT` epoch (`epoch`), `NULL` (`null`), and a column of each
+type (`col_inst`, `col_wall`, `col_str`, `col_date`, `col_epoch`) from the one-row temp view
+`zone_oracle_1_one_row`. The view is selected `FROM range(1)` on purpose: a view of bare literals
+is folded into the query and `map('k', c_inst)` then answers, while over a real column it panics
+`list array` (card MAP-COLUMN-PANIC-1). Leaf conversions: `CAST`, `TRY_CAST`, `::`,
+`to_timestamp_ntz`, `to_timestamp_ltz`, `to_utc_timestamp`, `from_utc_timestamp`, `date_format`
+(`yyyy-MM-dd HH:mm:ss`, plus `date_format_micros` with `.SSSSSS` on `inst` and `wall` only,
+because RePark refuses the `S` pattern letter and that would hide the zone in every other
+`date_format` cell), `to_date`, `unix_micros`, `to_json`. Containers: bare, `named_struct`
+(`struct`), `array`, `map` with the literal key `'k'`, `struct2`, `array2` and `array_struct`.
+Targets: `TIMESTAMP_NTZ`, `TIMESTAMP`, `STRING`, `DATE`, `BIGINT`.
+
+Four levels of expression: `leaf` (a conversion of a source, no container), `inner` (a container
+whose leaf is converted inside it, the whole container selected), `container` (`CAST` or
+`TRY_CAST` of the container to its own shape with the target at the leaf, or `to_json` of it;
+the leaf is read back) and `through` (two chained container casts, a leaf cast over a string a
+container cast made, and `from_json(to_json(..))`). A leaf read goes one step per subquery layer
+(`SELECT c1.a AS v FROM (SELECT c0[0] AS c1 FROM (...) q0) q1`) because the facade refuses
+`s[0].a` and `s.a.b` in one expression (`Dot access not supported for non-string expr`; measured
+while drafting, 50 cells); that refusal is not a zone defect and would hide the zone.
+
+**Recorder** (`_record_zone_oracle_1.py`). Records Spark 4.1.2 `local[1]` with
+`spark.sql.ansi.enabled` true into `zone_oracle_1_spark_oracle.json`: per cell the statement, the
+zone, the result type (`simpleString`) and the value as `collect()` renders it (timestamps in
+microseconds, dates in ISO text, strings as text, arrays as lists, structs and maps as objects),
+or the Spark error condition. The provenance header holds the Spark version, the date, the master,
+the ANSI setting and the corpus hash (the SHA-256 of the ordered ids, zones and statements and the
+view statement). The recorder sets its own process zone to UTC before it builds the session, so
+PySpark's local-zone conversion of a `TIMESTAMP` is the identity, and it raises on any master
+other than `local[1]`, so it is run as a script in its own interpreter (the PR #1122 pattern):
+
+```
+JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 /tmp/sparkenv/bin/python python/repark/tests/timestamps/_record_zone_oracle_1.py
+```
+
+`--check` re-derives and exits non-zero on drift; `--check --sample 20` re-derives the twenty
+cells with the smallest SHA-256 of their id.
 
 ## Pointers
 
