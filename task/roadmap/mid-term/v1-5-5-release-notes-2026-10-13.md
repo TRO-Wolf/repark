@@ -8,7 +8,7 @@ every write door (R-008) and the pandas/polars nanosecond frame door (R-019) —
 merge-module split, two lock-only dependency bumps, and test and docs groundwork.
 
 The tag target is the release commit; the last product commit is `f8f1d252`
-(CASESENS-1, metadata by version number). The tag and the PyPI upload are TODO(owner).
+(CASESENS-1, metadata by version number). Tagged `v1.5.5` at `293896ce` on 2026-10-20 (16:00 UTC); the release wheels build from the tag. The PyPI upload is TODO(owner).
 
 ## One instant for one wall in `timestamptz_ns` (R-008, `26b378a4`)
 
