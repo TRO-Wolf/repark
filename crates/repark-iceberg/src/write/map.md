@@ -779,13 +779,16 @@ repark-core's error map.
   fix round 1, 2026-10-20). `lands_on_naive_leaf` says whether a field path ends on the leaf
   itself. The hint names the leaf cast (`named_struct('<field>', CAST(<value> AS
   TIMESTAMP_NTZ), ...)`, `array(CAST(<value> AS TIMESTAMP_NTZ))`), says a cast of the whole
-  struct, array or map is refused, and names no source type. **Why the
+  struct, array or map is refused, and names no source type; since fix round 2 (2026-10-20,
+  ledger C-029) it also names `col.cast("timestamp_ntz")` on the leaf column for a DataFrame,
+  because a `CAST` written inside `expr()` is not lowered to the session-aware cast function
+  and is refused. **Why the
   type is read here and not in R-015:** a naive value is right on every door (379 agreeing
   cells), so refusing it would regress them; R-015 refuses every value because no door was
   right. The type itself is planned by the router (`repark-spark/src/router/nested_ns.rs`).
   The unit tests moved to [nested_ns_gate/tests.rs](nested_ns_gate/map.md) when the file passed
   the 1000-line ceiling.
-  pins: ice-ntz-nested-refuse-1/C-001, C-015
+  pins: ice-ntz-nested-refuse-1/C-001, C-015, C-029
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

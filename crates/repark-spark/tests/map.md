@@ -323,7 +323,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   C-027): a container cast or `from_json(to_json(…))` whose zoned leaf passes through `STRING`,
   `DATE` or `BIGINT`, and the six table-creating writers, store the UTC wall outside UTC on main
   as on this build. The plain `UPDATE` pins above hold C-028's corrected statement.
-  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028
+  The whole-text pin in `ntz_nested_refuse.rs` holds fix round 2's hint, which names
+  `col.cast("timestamp_ntz")` for a DataFrame (C-029).
+  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

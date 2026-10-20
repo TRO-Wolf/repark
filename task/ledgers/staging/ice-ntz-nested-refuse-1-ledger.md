@@ -65,6 +65,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-026 | The `list array` panic beside this unit is DataFusion's `map()` constructor over a column value (`MapFunc::invoke_with_args` → `list_to_arrays` → `arrow-array` 58.4.0 `cast.rs:929`), for any value type, in a plain `SELECT` as in a write, on main and on the build, before any store; a `map()` of literals stores, and a container cast of a map literal does not panic but returns the UTC wall. It is not this unit's and is carded as MAP-COLUMN-PANIC-1 (`task/roadmap/mid-term/map-column-panic-1-card-2026-10-20.md`). *(Supersedes §9's "the container cast of a map panics in the engine", fix round 2, verifier S2-2.)* | The verifier's residue and map probes re-run on the build and on main. | **PROVEN** | §12. Residue, not gated; the map residue line in `crates/repark-spark/tests/map.md`. |
 | C-027 | Not gated, stated (owner's ruling pending): outside UTC, a container cast or `from_json(to_json(…))` whose zoned leaf passes through `STRING`, `DATE` or `BIGINT` stores the UTC wall (the UTC date, the UTC wall to the millisecond) on main and on the build, on `INSERT … SELECT` and a MERGE update, and the six table-creating writers (CTAS, `CREATE OR REPLACE TABLE … AS SELECT`, `REPLACE TABLE … AS SELECT`, `saveAsTable` in mode `overwrite`, `writeTo().create()`, `.replace()`, `.createOrReplace()`) store the UTC wall of a container cast of an instant; Spark 4.1.2 stores the session wall (`STRING`, the writers), the session date (`DATE`), refuses `BIGINT` and stores NULL through JSON. One mechanism, the container cast and `to_json` rendering a zoned leaf in UTC for every target type, carded as CONTAINER-CAST-ZONE-1 (`task/roadmap/mid-term/container-cast-zone-1-card-2026-10-20.md`); the owner rules whether this unit grows to gate it. *(Supersedes C-015's "a container cast of a wall or a string still store[s]" as a description of what passes; fix round 2, verifier S1-1 and S2-1.)* | The verifier's cells re-run on the build against main and Spark. | **PROVEN** | §12. Residue, not gated; the residue line in `crates/repark-spark/tests/map.md`. |
 | C-028 | After fix round 2 the plain `UPDATE` that assigns a whole struct or array above the leaf refuses, outside UTC, a value whose lineage calls the `TIMESTAMP_NTZ` cast, and no other value for that reason. Every cell that rule moves in the 3168-cell matrix (8 `CAST` cells that stored the UTC wall, 8 raw errors, 4 string casts that stored the wall plus the offset) and in the named-shape probe (6 string, date and array-element casts that stored the wall or midnight plus the offset) held a wrong value or raised on main, in New York and Kolkata; the four EQUAL cells round 1's zoned arm refused store again (C-022). A zone whose offset is zero at the value is still a zone that is not UTC: in `Europe/London` on 2026-01-02 the string cast, the instant cast and a container cast of an instant refuse though Spark and main store the same wall (3 cells measured), by design, as `Etc/UTC` does. *(Supersedes C-017's "No EQUAL cell moves", fix round 2, verifier S1-2.)* | The matrix and the probes on the build; the London cells on Spark, main and the build. | **PROVEN** | §12. `the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside_utc`, `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`. |
+| C-029 | The hint names the DataFrame remedy: a leaf cast written inside `F.expr(…)` is not lowered to the session-aware cast function, so on main `F.expr("named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n', 1)")` stores the UTC wall in New York (Spark 4.1.2 the session wall) and the build refuses it; the hint now reads "… or array(CAST(<value> AS TIMESTAMP_NTZ)) in SQL, or col.cast(\"timestamp_ntz\") on the leaf column of a DataFrame (a CAST written inside expr() is refused), …", and `col.cast("timestamp_ntz")` stores the session wall on that door. The text still names no dropping, truncating, overwriting, recreating, deleting or replacing action. The lowering of `expr()` is outside this unit's files: a residue line in R-011, not a change. *(Supersedes C-006's text, fix round 2, verifier S3-1.)* | The whole-text pin; the `F.expr` and `col.cast` cells on Spark, main and the build. | **PROVEN** | §12. `the_refusal_names_the_table_the_column_and_the_leaf`. |
 
 ## §1 The rule and the seam
 
@@ -385,4 +386,35 @@ None moves between main and the build; this round does not gate them (brief, own
 pending). `Europe/London`, 2026-01-02 (offset zero), `cases_london`: Spark, main and the build
 answer the wall, the wall and the refusal for the plain `UPDATE`'s string cast, its instant
 cast and an `INSERT` of a container cast of an instant.
+
+### §12.7 S3-1, the hint on the `F.expr` door (C-029)
+
+`cases_r3`, a frame `spark.table("ice.ns.src").select(id, <leaf>, 0).writeTo(…).append()`,
+New York (UTC answers the UTC wall everywhere):
+
+| Leaf | Spark 4.1.2 | main | build of items 1 to 3 |
+|---|---|---|---|
+| `F.expr("named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n', 1)")` | session wall | UTC wall | refused |
+| `F.expr("named_struct('v', to_timestamp_ntz(x), 'n', 1)")` | session wall | session wall | session wall |
+| `F.expr("named_struct('v', w, 'n', 1)")` | the wall | the wall | the wall |
+| `F.struct(F.col("x").cast("timestamp_ntz").alias("v"), F.lit(1).alias("n"))` | session wall | session wall | session wall |
+| SQL `named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n', 1)` | session wall | session wall | session wall |
+
+The SQL text's `CAST … AS TIMESTAMP_NTZ` is rewritten to the session-aware cast function
+(`keyword_lower/ntz_cast_lower.rs`) before planning; the `expr()` string of the DataFrame door
+is not, so its cast is a planner cast of a zoned value and the gate refuses it. No one-line
+lowering in this unit's files reaches that door, so it is a residue (R-011) and the hint stops
+promising the SQL spelling there.
+
+As of fix round 2 (2026-10-20) the text is:
+
+``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table
+`<catalog>`.`<namespace>`.`<table>`: Cannot safely cast `<column>`.`<leaf>` to "TIMESTAMP_NTZ".
+A value that is not provably a TIMESTAMP_NTZ wall time is not written into a nested
+TIMESTAMP_NTZ field while the session time zone is not UTC: cast the leaf itself, as in
+named_struct('<field>', CAST(<value> AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS
+TIMESTAMP_NTZ)) in SQL, or col.cast("timestamp_ntz") on the leaf column of a DataFrame (a CAST
+written inside expr() is refused), to store the session wall time (a CAST of the whole struct,
+array or map is refused, and in an UPDATE assign the field itself), or set
+spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000``
 

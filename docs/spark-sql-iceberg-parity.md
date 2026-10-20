@@ -3464,9 +3464,15 @@ still open is `isModifiable`.
   not provably a TIMESTAMP_NTZ wall time is not written into a nested TIMESTAMP_NTZ field
   while the session time zone is not UTC: cast the leaf itself, as in
   named_struct('<field>', CAST(<value> AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS
-  TIMESTAMP_NTZ)), to store the session wall time (a CAST of the whole struct, array or map
-  is refused, and in an UPDATE assign the field itself), or set spark.sql.session.timeZone to
-  UTC for the statement. SQLSTATE: KD000``. The text names no source type, because a
+  TIMESTAMP_NTZ)) in SQL, or col.cast("timestamp_ntz") on the leaf column of a DataFrame (a
+  CAST written inside expr() is refused), to store the session wall time (a CAST of the whole
+  struct, array or map is refused, and in an UPDATE assign the field itself), or set
+  spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000``. *(Fix round 2,
+  verifier S3-1: the DataFrame door's `F.expr("named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n',
+  1)")` does not lower the leaf cast to the session-aware cast function, so main stores the UTC
+  wall there and the build refuses it; the hint now names `col.cast("timestamp_ntz")`, which
+  stores the session wall, as the DataFrame remedy. The lowering of `expr()` lies outside this
+  unit's files and stays a residue.)* The text names no source type, because a
   statement the router cannot plan (`INSERT … TABLE`, `LATERAL VIEW`, an arity mismatch,
   `DISTRIBUTE BY`, CTAS of `INSERT`) takes it too, where main raised its own error. A wall,
   a `TIMESTAMP_NTZ` column, a container cast of a `TIMESTAMP_NTZ` value or of a string

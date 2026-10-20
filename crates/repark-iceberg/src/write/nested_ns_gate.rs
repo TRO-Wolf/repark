@@ -9,9 +9,11 @@ use iceberg::table::Table;
 const MICROS_HINT: &str = "A value that is not provably a TIMESTAMP_NTZ wall time is not written \
                            into a nested TIMESTAMP_NTZ field while the session time zone is not \
                            UTC: cast the leaf itself, as in named_struct('<field>', CAST(<value> \
-                           AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS TIMESTAMP_NTZ)), to \
-                           store the session wall time (a CAST of the whole struct, array or map \
-                           is refused, and in an UPDATE assign the field itself), or set \
+                           AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS TIMESTAMP_NTZ)) in \
+                           SQL, or col.cast(\"timestamp_ntz\") on the leaf column of a \
+                           DataFrame (a CAST written inside expr() is refused), to store the \
+                           session wall time (a CAST of the whole struct, array or map is \
+                           refused, and in an UPDATE assign the field itself), or set \
                            spark.sql.session.timeZone to UTC for the statement.";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
