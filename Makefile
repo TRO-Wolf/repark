@@ -51,7 +51,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-docs-links check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface py-test
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-docs-links check-owner-ruling check-model-ban check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface py-test
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -396,6 +396,10 @@ ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy
 .PHONY: check-owner-ruling
 check-owner-ruling: ## Preserve the owner ruling and its enforcement boundary byte-for-byte
 	python3 scripts/check_owner_ruling.py
+
+.PHONY: check-model-ban
+check-model-ban: ## Owner ruling 2026-10-17: no tracked file names an Opus 5.0 model id; Opus means claude-opus-5-5
+	python3 scripts/check_model_ban.py
 
 .PHONY: check-docs-compaction
 check-docs-compaction: ## Live-document guard: no closed campaign in STATUS, no merged unit on the slate, every workstream marked, byte ceilings (DL-4)
