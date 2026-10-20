@@ -3513,9 +3513,17 @@ still open is `isModifiable`.
   NULL)`, New York; Spark and main store the wall). **Not reached by this gate, dated
   2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
   frame or a table built from a container cast of an instant carries the UTC wall the cast
-  produced; the container cast's own conversion in a `SELECT` is the defect, for the lift. A
-  container cast of a map panics in the engine (`list array`) on main and on the build before
-  any store. **Lift:** the 1.5.7 unit that extends ICE-TSNS-NESTED-1 to the microsecond leaf
+  produced; the container cast's own conversion in a `SELECT` is the defect, for the lift.
+  *(Corrected 2026-10-20, fix round 2, verifier S2-2; round 1 said a container cast of a map
+  panics.)* The `list array` panic is DataFusion's `map()` constructor over a column value,
+  not the cast: `MapFunc::invoke_with_args` → `datafusion_common::utils::list_to_arrays` →
+  `arrow-array` 58.4.0 `cast.rs:929`, for any value type (`INSERT INTO … SELECT id, map('a',
+  id)` into `MAP<STRING, INT>` panics too) and in a plain `SELECT map('a', id) FROM
+  ice.ns.src`, on main and on the build, before any store; a `map()` of literals stores.
+  Carded as MAP-COLUMN-PANIC-1
+  (`task/roadmap/mid-term/map-column-panic-1-card-2026-10-20.md`). A container cast of a map
+  literal does not panic: `SELECT CAST(map('a', <instant>) AS MAP<STRING, TIMESTAMP_NTZ>)['a']`
+  returns the UTC wall in New York, the mechanism carded as CONTAINER-CAST-ZONE-1. **Lift:** the 1.5.7 unit that extends ICE-TSNS-NESTED-1 to the microsecond leaf
   from #1037's oracles and #1038's localise half. Pins:
   `crates/repark-spark/tests/ntz_nested_refuse.rs`,
   `crates/repark-spark/tests/ntz_nested_refuse_casts.rs`,

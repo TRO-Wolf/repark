@@ -290,8 +290,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   the field assignment and MERGE store the wall; UTC stores the wall, a date cast midnight.
   `the_type_read_never_runs_the_source`: a counting function is called as often in New York as
   in UTC across an `INSERT`, an `UPDATE` and a `MERGE`; refused, it is never called, and no
-  snapshot, file or view is left. The container cast of a map is not pinned: it panics in the
-  engine on main as well, before any store. The round's door matrix and named-shape probe
+  snapshot, file or view is left. A map value built by `map(<column>)` is not pinned: DataFusion's
+  `map()` constructor over a column value panics (`list array`) on main as well, for any value
+  type and in a plain `SELECT`, before any store (MAP-COLUMN-PANIC-1; corrected in fix round 2,
+  round 1 blamed the container cast). The round's door matrix and named-shape probe
   (`task/wo/ice-ntz-nested-refuse-1/evidence/`) and its seven hand mutants (ledger §10: each
   one-line revert of a round-1 rule reds one of these pins) back the same rules.
   pins: ice-ntz-nested-refuse-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021
@@ -317,7 +319,8 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
-  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025
+  The map residue named above is C-026.
+  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that
