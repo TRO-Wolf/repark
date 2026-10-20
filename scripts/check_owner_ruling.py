@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preserve the owner ruling and its explicit enforcement boundary."""
+"""Preserve the owner rulings (no code comments; Opus 5.0 banned) and the enforcement boundary."""
 
 from __future__ import annotations
 
@@ -36,6 +36,24 @@ EXPECTED_BOUNDARY = (
     "docstrings, Rust banners, and invariant comments remain. No sweep."
 )
 
+EXPECTED_RULING_OPUS = (
+    "# OWNER RULING (2026-10-17) — OPUS 5.0 IS BANNED FOREVER; OPUS MEANS OPUS 5.5\n"
+    "\n"
+    "**EFFECTIVE IMMEDIATELY AND PERMANENTLY. NO AGENT, LANE, EXECUTOR, VERIFIER, SKETCHER "
+    "OR CLERK RUNS ON OPUS 5.0. EVERY OPUS DISPATCH IS CLAUDE OPUS 5.5 (`claude-opus-5-5`) "
+    "AND NOTHING ELSE.**\n"
+    "\n"
+    "*Mechanics (owner, 2026-10-17, same night):* a brief, trailer, workflow, launcher or "
+    "skill that names an\n"
+    "Opus model names `claude-opus-5-5`; the bare alias `opus` is allowed only where the "
+    "tool resolves it to\n"
+    "that id, and the resolution is verified from the agent transcript, never from the "
+    "brief. Two gates hold\n"
+    "it: `make check-model-ban` fails any tracked file that names a 5.0 Opus id, and `make "
+    "check-owner-ruling`\n"
+    "preserves this block byte-for-byte in `AGENTS.md` and `CLAUDE.md`."
+)
+
 DOCUMENT_TITLES = {
     "AGENTS.md": "# AGENTS.md — the authoritative contributor contract",
     "CLAUDE.md": "# CLAUDE.md — the Claude adapter (not authoritative)",
@@ -64,6 +82,14 @@ def findings(repo: Path) -> list[str]:
             found.append(f"{relative_path}: owner ruling is not byte-exact at the document start")
         elif text.count(EXPECTED_RULING) != 1:
             found.append(f"{relative_path}: owner ruling must appear exactly once")
+        if relative_path == "CLAUDE.md":
+            opus_prefix = f"{expected_prefix(title)}{EXPECTED_RULING_OPUS}\n\n"
+            if text.startswith(expected_prefix(title)) and not text.startswith(opus_prefix):
+                found.append(
+                    "CLAUDE.md: Opus 5.0 ban ruling is missing or changed after the comment ruling"
+                )
+            elif text.count(EXPECTED_RULING_OPUS) != 1:
+                found.append("CLAUDE.md: Opus 5.0 ban ruling must appear exactly once")
     agents_path = repo / "AGENTS.md"
     if agents_path.is_file():
         agents_text = agents_path.read_text(encoding="utf-8")
@@ -73,6 +99,14 @@ def findings(repo: Path) -> list[str]:
             found.append("AGENTS.md: enforcement boundary is missing or changed")
         elif agents_text.count(EXPECTED_BOUNDARY) != 1:
             found.append("AGENTS.md: enforcement boundary must appear exactly once")
+        opus_prefix = f"{boundary_prefix}{EXPECTED_RULING_OPUS}\n\n"
+        if agents_text.startswith(boundary_prefix) and not agents_text.startswith(opus_prefix):
+            found.append(
+                "AGENTS.md: Opus 5.0 ban ruling is missing or changed after the enforcement "
+                "boundary"
+            )
+        elif agents_text.count(EXPECTED_RULING_OPUS) != 1:
+            found.append("AGENTS.md: Opus 5.0 ban ruling must appear exactly once")
     return found
 
 
@@ -87,7 +121,7 @@ def main() -> int:
             print(finding, file=sys.stderr)
         print(f"owner-ruling: FAIL — {len(found)} finding(s)", file=sys.stderr)
         return 1
-    print("owner-ruling: exact ruling and enforcement boundary present")
+    print("owner-ruling: exact rulings and enforcement boundary present")
     return 0
 
 

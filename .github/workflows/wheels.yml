@@ -35,7 +35,7 @@ jobs:
           # Explicitly off: tag-triggered artifact publish must not restore shared build cache
           # (zizmor cache-poisoning). Cold manylinux builds are rare and acceptable.
           sccache: "false"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: wheels-linux
           path: python/repark/dist/*.whl
@@ -99,7 +99,7 @@ jobs:
           "$PY" -m pip install --upgrade pip
           "$PY" -m pip install python/repark/dist/repark-*.whl
           "$PY" -c "import repark; from repark.spark import ReparkSession; s = ReparkSession.builder.appName('wheel-matrix-smoke').getOrCreate(); assert [r.id for r in s.range(3).collect()] == [0, 1, 2]; print('wheel OK', repark.__version__)"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: wheels-${{ matrix.leg }}
           path: python/repark/dist/*.whl
