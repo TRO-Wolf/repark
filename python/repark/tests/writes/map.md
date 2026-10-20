@@ -26,7 +26,7 @@ pins.
 - [test_ice_list_null_1.py](test_ice_list_null_1.py) — ICE-LIST-NULL-1: DELETE and UPDATE with IS NULL on nested columns answer Spark.
 - [test_ice_merge_append_1.py](test_ice_merge_append_1.py) — ICE-MERGE-APPEND-1 pins: an INSERT commits through ``merge_append``.
 - [test_ice_merge_schema_1.py](test_ice_merge_schema_1.py) — IPI-19 + IPI-56 + IPI-37 — schema evolution on write.
-- [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) — ICE-META-DELETE-1 — a DELETE that covers whole data files deletes the files, on both modes.
+- [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) — ICE-META-DELETE-1 — a DELETE that covers whole data files deletes the files, on both modes. Its live leg runs the recorder's `--check` in its own interpreter (a subprocess), never in-process; see "PARITY-LIVE-RERECORD-1 (2026-10-20)".
 - [test_ice_occ_scoped_1.py](test_ice_occ_scoped_1.py) — ICE-OCC-SCOPED-1 — concurrent Iceberg DML storms commit and refuse exactly where Spark does.
 - [test_ice_orc_avro_1.py](test_ice_orc_avro_1.py) — IPI-41 — ORC and Avro data files: write, read, DELETE / UPDATE / MERGE.
 - [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) — ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every facade overwrite door.
@@ -78,7 +78,7 @@ pins.
 - [_record_ice_avro_name_1_oracle.py](_record_ice_avro_name_1_oracle.py) — Record or re-check the ICE-AVRO-NAME-1 Spark oracle cells on live PySpark 4.1.2.
 - [_record_ice_evo_dml_1.py](_record_ice_evo_dml_1.py) — Records the ICE-EVO-DML-1 Spark oracle (DML after ADD / RENAME COLUMN).
 - [_record_ice_list_null_1.py](_record_ice_list_null_1.py) — Record Spark 4.1.2's answers for ICE-LIST-NULL-1: DELETE and UPDATE with IS NULL.
-- [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) — Record Spark 4.1.2's answers for ICE-META-DELETE-1 — DELETE that covers whole data files.
+- [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) — Record Spark 4.1.2's answers for ICE-META-DELETE-1 — DELETE that covers whole data files. Raises `RuntimeError` when its SparkContext's master is not `local[1]`, so it never records or checks on a borrowed session.
 - [_record_ice_overwrite_mode_1_oracle.py](_record_ice_overwrite_mode_1_oracle.py) — Record or re-check the ICE-OVERWRITE-MODE-1 Spark oracle cells on live PySpark.
 - [_record_ice_overwrite_mode_1_transform.py](_record_ice_overwrite_mode_1_transform.py) — Record or re-check the ICE-OVERWRITE-MODE-1 transform-spec cells on live PySpark 4.1.2.
 - [_record_ice_rowid_order_1.py](_record_ice_rowid_order_1.py) — Record Spark 4.1.2's answers for ICE-ROWID-ORDER-1: v3 row-id assignment order.
@@ -162,6 +162,39 @@ path expression repointed in the same unit and no other line changed:
 | `test_io_bucket_cluster_1.py` | reads the root `facade_reader_writer_oracle.json` one level up. |
 | `test_merge_differential_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
 | `test_partition_value_audit.py` | names its own or a sibling's new path in a docstring or recorded string. |
+
+## PARITY-LIVE-RERECORD-1 (2026-10-20)
+
+The `parity-live` nightly was red on one test, `test_live_oracle_fixture_reproduces`, with
+`meta-delete cells checked=72 drift=52`: first red run `38529013387` (2026-10-14, main
+`d96028ee`), last red run `39387205143` (2026-10-20, main `085d77e8`). Rows agreed; only file
+counts differed.
+
+**Cause, measured.** The nightly runs `pytest python/repark/tests` serially in one process,
+and every PySpark session shares the one SparkContext the first live module builds.
+`getOrCreate` keeps that context's master. The test called the recorder's `main` in-process,
+so the recorder's `local[1]` request was ignored. On a `local[2]` context the three-row seed
+`VALUES` writes two data files where the fixture, recorded alone on `local[1]` (2026-09-19),
+has one, and every later `total-data-files` / `deleted-data-files` is one higher.
+Until `d96028ee` the first PySpark context in the flat collection order was
+`test_applyinpandas_oracle.py` at `local[1]`, so the borrowed context happened to match.
+`d96028ee` (ICE-SPARK-CROSS-READ-1, U-10) added `test_acceptance_cross_read_local.py`, which
+sorts before it and builds a `local[2]` Iceberg session. In today's directory layout the first
+context is `local[2]` either way.
+
+Measured on 2026-10-20, live env, zulu-17:
+
+- the test alone: green, recorder master `local[1]`;
+- `parity/test_acceptance_cross_read_local.py` then this test, one process: red, recorder
+  master `local[2]`, `drift=52`, first drift `all_rows_nopred_v2_cow` (fixture 2 data files,
+  live 3);
+- `io/test_applyinpandas_oracle.py`, then the cross-read module, then this test: green,
+  master `local[1]`, `drift=0`.
+
+**Fix.** The live test runs the recorder as a script in a fresh interpreter, so it always
+owns a `local[1]` context, and the recorder raises on any other master. The comparison still
+covers every recorded key, file counts included. The fixture is unchanged (byte-identical):
+no Spark behaviour changed.
 
 ## Pointers
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -38,6 +39,7 @@ from repark.spark.session import _reset_active_session_for_tests
 
 LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live Spark re-derivation is skipped (CI is JVM-free)"
+RECORDER_TIMEOUT_SECONDS = 1800
 FIXTURE: dict[str, Any] = load_cells()
 DECLARED_DIVERGENCES: dict[str, str] = {
     "prior_deletes_then_rest_v2_mor": (
@@ -166,7 +168,22 @@ def test_fixture_provenance_covers_every_cell() -> None:
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
 def test_live_oracle_fixture_reproduces(tmp_path: Path) -> None:
-    """The recorder re-derives every committed cell from live Spark."""
-    from _record_ice_meta_delete_1 import main
+    """The recorder re-derives every committed cell from live Spark, in its own interpreter.
 
-    assert main(["--check", str(tmp_path / "wh")]) == 0
+    The serial live suite shares one SparkContext, and an earlier module builds it on
+    ``local[2]``. An in-process ``getOrCreate`` borrows that context, writes two seed files where
+    the ``local[1]`` fixture has one, and drifts 52 cells. A fresh interpreter gives the recorder
+    its own ``local[1]`` context, so the check compares like with like on every key.
+    """
+    recorder = Path(__file__).with_name("_record_ice_meta_delete_1.py")
+    completed = subprocess.run(
+        [sys.executable, str(recorder), "--check", str(tmp_path / "wh")],
+        capture_output=True,
+        text=True,
+        timeout=RECORDER_TIMEOUT_SECONDS,
+        check=False,
+    )
+    assert completed.returncode == 0, (
+        f"recorder --check exited {completed.returncode}\n"
+        f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+    )

@@ -18,6 +18,8 @@ Run with a PySpark 4.1.2 interpreter that can resolve the Iceberg runtime GAV fr
 
 The first form rewrites the fixture; ``--check`` re-derives every cell and exits non-zero on
 drift. ``warehouse`` is created fresh (removed first) and defaults to a scratch directory.
+The recorder refuses any SparkContext whose master is not ``local[1]``: the fixture's file
+counts depend on it, so it never records or checks on a borrowed session.
 """
 
 from __future__ import annotations
@@ -156,9 +158,18 @@ def load_cells() -> dict[str, Any]:
 
 
 def _spark(warehouse: Path) -> Any:
+    """Build the recorder's own ``local[1]`` session, or fail on a borrowed one.
+
+    ``getOrCreate`` keeps the master of a SparkContext already live in the process. A borrowed
+    ``local[2]`` context splits the three-row seed ``VALUES`` into two data files where the
+    fixture, recorded on ``local[1]``, has one, so every file count drifts.
+
+    Raises:
+        RuntimeError: the session runs on a master other than ``local[1]``.
+    """
     from pyspark.sql import SparkSession
 
-    return (
+    session = (
         SparkSession.builder.master("local[1]")
         .appName("record-ice-meta-delete-1")
         .config("spark.sql.session.timeZone", "UTC")
@@ -174,6 +185,13 @@ def _spark(warehouse: Path) -> Any:
         .config(f"spark.sql.catalog.{CATALOG}.warehouse", str(warehouse))
         .getOrCreate()
     )
+    master = session.sparkContext.master
+    if master != "local[1]":
+        raise RuntimeError(
+            f"the meta-delete recorder needs its own local[1] SparkContext, got {master!r}: "
+            "run it as a script in its own interpreter"
+        )
+    return session
 
 
 def _spark_cell(session: Any, shape: str, version: int, mode: str) -> dict[str, Any]:
