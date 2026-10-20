@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RePark Production Grade</title>
+<meta name="description" content="What production grade means in RePark: the definition, the operating envelope, assessment per capability, the attributes and their evidence, anti-patterns, values, five review questions and ten reference projects (2026-10-13). A definition and review rubric, not a gate.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F2F5F7;
+  --surface: #FFFFFF;
+  --fg: #16232B;
+  --muted: #55676F;
+  --rule: #D5DEE3;
+  --accent: #0E6C88;
+  --accent-soft: #DCEEF3;
+  --code-bg: #E9EFF2;
+  --sec: #9B2C3A;      --sec-soft: #F7E3E5;
+  --chg: #8A5A00;      --chg-soft: #F6ECD3;
+  --fix: #2F6B3C;      --fix-soft: #DFEFE2;
+  --base: #55676F;     --base-soft: #E3E9EC;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418; --surface: #151D22; --fg: #E3EBEF; --muted: #93A5AD; --rule: #27343B;
+    --accent: #4DB1CF; --accent-soft: #14303A; --code-bg: #1A252B;
+    --sec: #F0919C; --sec-soft: #3A1B20; --chg: #E5B95C; --chg-soft: #382C12;
+    --fix: #7FCB8F; --fix-soft: #183021;
+    --base: #93A5AD; --base-soft: #202C32; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418; --surface: #151D22; --fg: #E3EBEF; --muted: #93A5AD; --rule: #27343B;
+  --accent: #4DB1CF; --accent-soft: #14303A; --code-bg: #1A252B;
+  --sec: #F0919C; --sec-soft: #3A1B20; --chg: #E5B95C; --chg-soft: #382C12;
+  --fix: #7FCB8F; --fix-soft: #183021;
+  --base: #93A5AD; --base-soft: #202C32; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.6; overflow-wrap: break-word; }
+.page { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; }
+@media (min-width: 700px) { .page { padding-inline: 24px; } }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 0.08em 0.36em; border-radius: 3px; overflow-wrap: anywhere; }
+
+.masthead { border-bottom: 2px solid var(--fg); padding-bottom: 22px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 7vw, 60px); line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { max-width: 64ch; margin: 16px 0 0; font-size: 17px; }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0; margin: 0; padding: 0; border-bottom: 1px solid var(--rule); }
+.facts div { padding: 16px 16px 16px 0; min-width: 0; }
+.facts dt { font-family: var(--mono); font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 4px 0 0; font-family: var(--display); font-weight: 600; font-size: 21px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.facts dd small { display: block; font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; margin-top: 36px; }
+@media (min-width: 900px) { .layout { grid-template-columns: 200px minmax(0, 1fr); gap: 56px; } }
+nav.toc { font-size: 14px; }
+@media (min-width: 900px) { nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; } }
+nav.toc p { font-family: var(--mono); font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+@media (max-width: 899px) { nav.toc ul { flex-direction: row; flex-wrap: wrap; gap: 6px 18px; } }
+nav.toc a { text-decoration: none; color: var(--fg); }
+nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+main { display: flex; flex-direction: column; gap: 52px; min-width: 0; }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; scroll-margin-top: 24px; }
+section > * { margin: 0; }
+.tag { align-self: flex-start; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; border-radius: 2px; }
+.tag.sec { color: var(--sec); background: var(--sec-soft); }
+.tag.chg { color: var(--chg); background: var(--chg-soft); }
+.tag.fix { color: var(--fix); background: var(--fix-soft); }
+.tag.base { color: var(--base); background: var(--base-soft); }
+.tag.def { color: var(--accent); background: var(--accent-soft); }
+h2 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.12; text-wrap: balance; }
+p, li { max-width: 68ch; }
+ul, ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.ref { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.note { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; }
+.note.warn { border-left-color: var(--chg); }
+
+blockquote.definition { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 4px; padding: 18px 20px; font-family: var(--display); font-weight: 500; font-size: 21px; line-height: 1.4; max-width: 72ch; }
+.heuristic { font-size: 18px; font-style: italic; }
+
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.pair > div { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pair h3 { margin: 0; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.pair p { margin: 0; font-size: 15px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+td:first-child { font-weight: 600; }
+@media (max-width: 699px) {
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: 100%; }
+  table.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table.stack tr { border-bottom: 1px solid var(--rule); padding: 12px 0; }
+  table.stack td { border-bottom: 0; padding: 3px 0; }
+  table.stack td::before { content: attr(data-label); display: block; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+  table.stack td:first-child::before { display: none; }
+  table.stack td:first-child { font-family: var(--display); font-size: 19px; }
+}
+
+.values { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 0; list-style: none; }
+.values li { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 12px 14px; font-size: 15px; max-width: none; }
+.values strong { display: block; font-family: var(--display); font-weight: 600; font-size: 17px; }
+
+ol.questions { counter-reset: q; list-style: none; padding: 0; gap: 10px; }
+ol.questions li { counter-increment: q; display: grid; grid-template-columns: 2.2em minmax(0, 1fr); align-items: baseline; font-size: 17px; }
+ol.questions li::before { content: counter(q); font-family: var(--display); font-weight: 700; font-size: 24px; color: var(--accent); }
+
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13.5px; }
+footer p { max-width: 80ch; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">RePark · definition and review rubric · 2026-10-13</p>
+    <h1>Production <span>grade</span></h1>
+    <p class="lede">What the term means in RePark, and how a reviewer tests a claim to it. The definition sits under the evidence list in PROJECT.md "What production-grade means"; on any conflict PROJECT.md wins. This page is a definition and a review rubric, not a gate.</p>
+  </header>
+
+  <dl class="facts">
+    <div><dt>Filed</dt><dd>2026-10-13<small>unit PROD-GRADE-DEF-1</small></dd></div>
+    <div><dt>Attributes</dt><dd>12<small>each with the evidence that earns it</small></dd></div>
+    <div><dt>Review questions</dt><dd>5<small>answered from existing contracts and tests</small></dd></div>
+    <div><dt>Reference projects</dt><dd>10<small>one practice each, one capability each</small></dd></div>
+    <div><dt>Creates</dt><dd>Nothing to run<small>no gate, no ledger, no required artifact</small></dd></div>
+  </dl>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Contents">
+      <p>On this page</p>
+      <ul>
+        <li><a href="#purpose">Purpose</a></li>
+        <li><a href="#definition">Definition</a></li>
+        <li><a href="#envelope">Operating envelope</a></li>
+        <li><a href="#per-capability">Per capability</a></li>
+        <li><a href="#attributes">Attributes and evidence</a></li>
+        <li><a href="#anti-patterns">Anti-patterns</a></li>
+        <li><a href="#values">Values</a></li>
+        <li><a href="#questions">Five questions</a></li>
+        <li><a href="#references">Reference projects</a></li>
+        <li><a href="#next">Next step</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <section id="purpose">
+        <span class="tag base">Purpose</span>
+        <h2>A definition, not a gate</h2>
+        <p>The repository uses "production grade" in goals, cards and reviews, but until now it had only an evidence checklist in PROJECT.md and no definition of the term itself. This page is the definition agents and reviewers apply when a capability claims the label, and a rubric for reviewing that claim.</p>
+        <p class="note warn">No new ledger, no new check and no required artifact comes from this page. It adds no <code>make</code> target, no script, no CI job and no document a unit must produce. The answers it asks for already live in existing contracts and tests.</p>
+        <p>The page is permanent and is amended deliberately, never as a passenger on another change. An owner ruling that moves the definition elsewhere retires it.</p>
+        <p class="ref">docs/production-grade.md · Purpose</p>
+      </section>
+
+      <section id="definition">
+        <span class="tag def">Definition</span>
+        <h2>What the label claims</h2>
+        <blockquote class="definition">A capability is production grade when it delivers its documented behavior within a declared operating envelope, protects data during failures, makes its condition observable, and can be maintained and upgraded with justified confidence, and those claims are backed by repeatable tests and operational evidence.</blockquote>
+        <p class="heuristic">The compressed heuristic: the number of things you must know that are not written down is close to zero.</p>
+        <p>The review form of the same idea:</p>
+        <ul>
+          <li>the contract is written;</li>
+          <li>the failure paths are tested as thoroughly as the happy path;</li>
+          <li>a stranger reads the code without a guide;</li>
+          <li>a change is cheap because the tests catch what matters;</li>
+          <li>the limits are stated rather than discovered.</li>
+        </ul>
+        <p class="ref">docs/production-grade.md · Definition</p>
+      </section>
+
+      <section id="envelope">
+        <span class="tag base">Scope</span>
+        <h2>The operating envelope</h2>
+        <p>Production grade is relative to a declared scope: the supported workloads, data sizes, concurrency, storage systems and deployment shapes. A capability is production grade inside its envelope; outside it, the honest behavior is a refusal.</p>
+        <div class="pair">
+          <div><h3>Inside the envelope</h3><p>RePark is an embedded, single-node, no-JVM engine. Refusing distributed execution or a server mode is inside the envelope, not a gap in it (AGENTS.md "Explicitly out of scope"; PROJECT.md "Not now, and why").</p></div>
+          <div><h3>The posture</h3><p>A clear refusal with a hint beats a plausible wrong answer. That is already the repository's posture: PROJECT.md's "no silent degradation" rule and AGENTS.md's "LOUD unsupported errors" rule.</p></div>
+        </div>
+        <p class="ref">docs/production-grade.md · The operating envelope</p>
+      </section>
+
+      <section id="per-capability">
+        <span class="tag chg">Assessment</span>
+        <h2>Assessed per capability, never averaged</h2>
+        <p>Local analytical queries, Iceberg writes, the Spark facade, CDC and a future warehouse service have different failure modes and need different evidence. Each is assessed on its own; there is no single score for the engine. Strength in one attribute does not offset weakness in another: excellent documentation does not offset a possible silent data loss.</p>
+        <p>Part of production grade is exposure to real workloads, and that cannot be bought. The honest claim for a young project is therefore "production grade for the workloads we have exercised", with the list of those workloads as the evidence. A claim without that list is a claim about workloads nobody has run.</p>
+        <p class="ref">docs/production-grade.md · Assessed per capability, never averaged</p>
+      </section>
+
+      <section id="attributes">
+        <span class="tag fix">Evidence</span>
+        <h2>Attributes and the evidence that earns each</h2>
+        <table class="stack">
+          <thead><tr><th>Attribute</th><th>In practice</th><th>Evidence</th></tr></thead>
+          <tbody>
+            <tr><td>Correctness</td><td data-label="In practice">The capability answers as its contract says: the live Spark oracle on the Spark door, the door's own contract on the native door.</td><td data-label="Evidence">Pinned tests per entry point plus adversarial testing: fuzzing and randomized differential testing against the Spark oracle, not only hand-written happy paths.</td></tr>
+            <tr><td>Data integrity</td><td data-label="In practice">A failed or interrupted write leaves the table at its last committed snapshot, with no partial commit visible and no acknowledged data lost.</td><td data-label="Evidence">Tests that fail commits, kill writers and race concurrent writers, then read the table back and check every row.</td></tr>
+            <tr><td>Predictable failure</td><td data-label="In practice">Every unsupported path refuses by name with a hint, and every error carries a documented class.</td><td data-label="Evidence">Refusal tests that assert the error class and message on every entry point the path is reachable from.</td></tr>
+            <tr><td>Determinism</td><td data-label="In practice">Same input, same plan, same output, same error.</td><td data-label="Evidence">Repeat-run tests that compare plans, output bytes and error text across runs, thread counts and partition counts.</td></tr>
+            <tr><td>Resource discipline</td><td data-label="In practice">Memory, disk and file handles stay inside a declared bound; the engine spills where it can and refuses cleanly where it cannot.</td><td data-label="Evidence">The spill-coverage matrix and torture runs at multiples of the memory limit, indexed from <span class="mono">docs/perf/map.md</span>.</td></tr>
+            <tr><td>Performance consistency</td><td data-label="In practice">Each reference workload stays within its card's stated ceiling of the committed baseline, release after release.</td><td data-label="Evidence">Committed baselines under <span class="mono">docs/perf/</span> measured as like-for-like medians against that ceiling.</td></tr>
+            <tr><td>Operability</td><td data-label="In practice">An operator sees what the engine did, how far it got and why it stopped, without a debugger.</td><td data-label="Evidence">Tests that assert on emitted progress, metrics or log events and on the state left behind after a stop.</td></tr>
+            <tr><td>Security</td><td data-label="In practice">Credentials never reach logs, errors or files, and a request the engine cannot honor safely refuses rather than downgrades.</td><td data-label="Evidence">Redaction tests on every error and log path, the dependency audit the pre-PR gate runs, and refusal tests for unsafe requests.</td></tr>
+            <tr><td>Maintainability and small surface</td><td data-label="In practice">Few ways to do a thing, few abstractions, and a public API that fits in one head.</td><td data-label="Evidence">The mechanical structure gates in AGENTS.md "Hard rules" green, and a frozen-surface register that names every public name.</td></tr>
+            <tr><td>Compatibility and delivery</td><td data-label="In practice">Data an earlier release wrote reads and writes correctly on this one, and the public surface changes only under the versioning policy in <span class="mono">docs/release.md</span>.</td><td data-label="Evidence">Compatibility tests against tables the shipped engine wrote, the API-freeze register, and wheels built and smoke-tested on every platform.</td></tr>
+            <tr><td>Documentation as product surface</td><td data-label="In practice">Every public name and every limit is documented where a user looks first.</td><td data-label="Evidence">Executable examples that fail on drift, and guide snippets executed against a built module.</td></tr>
+            <tr><td>Operational maturity</td><td data-label="In practice">The capability has run on real workloads, and each incident ends in a fix, a pinned test and a recorded lesson.</td><td data-label="Evidence">A dated list of exercised workloads and a regression pin for each incident found in use.</td></tr>
+          </tbody>
+        </table>
+        <p class="ref">docs/production-grade.md · Attributes and the evidence that earns each</p>
+      </section>
+
+      <section id="anti-patterns">
+        <span class="tag sec">Disqualifies</span>
+        <h2>Anti-patterns</h2>
+        <p>Each of these disqualifies a capability from the label however well it is tested. Where the repository already enforces one, the existing rule is named rather than described.</p>
+        <ul>
+          <li><strong>Silent fallbacks:</strong> a path that quietly takes a slower, looser or different route instead of refusing.</li>
+          <li><strong>Swallowed errors:</strong> an error caught and dropped, or downgraded to a log line the caller never sees.</li>
+          <li><strong>Panics in library code:</strong> enforced by <code>make rust-panic-ban</code> (AGENTS.md "Hard rules").</li>
+          <li><strong>Hidden global state:</strong> held by the everything-through-Session discipline (<span class="mono">docs/adr/0004-server-prep-disciplines.md</span>).</li>
+          <li><strong>Undocumented environment variables:</strong> any behavior switch a user cannot find in the configuration guides.</li>
+          <li><strong>Nondeterministic or flaky tests:</strong> a test that can pass and fail on the same input proves nothing; the testing contract's "Forbidden patterns" name the related escape hatches.</li>
+          <li><strong>Knowledge that lives only in one head:</strong> a step, a limit or a reason that exists only in a conversation; AGENTS.md "Write for the eventual reader" says where durable reasons go.</li>
+          <li><strong>A claim of "supported" with no named test:</strong> the testing contract (<span class="mono">docs/testing.md</span>) requires the test in the same change.</li>
+        </ul>
+        <p class="ref">docs/production-grade.md · Anti-patterns</p>
+      </section>
+
+      <section id="values">
+        <span class="tag base">Direction</span>
+        <h2>Values for directing agents and reviewers</h2>
+        <ul class="values">
+          <li><strong>Evidence over assertion</strong>A claim stands on a named test or a recorded measurement, never on agreement.</li>
+          <li><strong>Explicitness over surprise</strong>A user learns a limit from a refusal or a document, never from a wrong answer.</li>
+          <li><strong>Simplicity with purpose</strong>Every abstraction earns its place with a second real caller.</li>
+          <li><strong>Failure is ordinary</strong>Crashes, conflicts and bad input are designed for and tested, not treated as rare.</li>
+          <li><strong>Compatibility is stewardship</strong>Data and pipelines that worked yesterday keep working, or the change says so first.</li>
+          <li><strong>Honest limits</strong>"Not supported" and "not yet measured" are valid, written answers.</li>
+          <li><strong>Useful observability</strong>Emit what an operator needs to act on, not everything that happened.</li>
+          <li><strong>Proportionate assurance</strong>The depth of evidence matches what a failure would cost the user.</li>
+          <li><strong>Learning compounds</strong>Every incident leaves a pinned test and a written lesson behind.</li>
+        </ul>
+        <p class="ref">docs/production-grade.md · Values for directing agents and reviewers</p>
+      </section>
+
+      <section id="questions">
+        <span class="tag def">Review</span>
+        <h2>Five review questions</h2>
+        <p>For any capability that claims the label:</p>
+        <ol class="questions">
+          <li>What exactly is promised, and under which conditions?</li>
+          <li>What can go wrong, and what happens to the user's data and work when it does?</li>
+          <li>What evidence demonstrates the guarantees?</li>
+          <li>How does someone diagnose, recover and upgrade?</li>
+          <li>What remains unproven or unsupported?</li>
+        </ol>
+        <p class="note">The answers live in the existing contracts and tests: the capability's guide, its registry rows in <span class="mono">docs/spark-sql-iceberg-parity.md</span>, its pinned tests and its committed baselines. They are not a new artifact, and a reviewer asks them rather than requiring a document that answers them.</p>
+        <p class="ref">docs/production-grade.md · Five review questions</p>
+      </section>
+
+      <section id="references">
+        <span class="tag fix">Practice</span>
+        <h2>Reference projects</h2>
+        <p>Each reference stands for exactly one practice we copy and the RePark capability it governs; a project that cannot fill all three columns is not on the list.</p>
+        <table class="stack">
+          <thead><tr><th>Project</th><th>The one practice we copy</th><th>RePark capability it governs</th></tr></thead>
+          <tbody>
+            <tr><td>DuckDB</td><td data-label="Practice">Continuous fuzzing and randomized differential testing of the engine against other engines</td><td data-label="Governs">SQL and DataFrame correctness; the parity suite against the Spark oracle</td></tr>
+            <tr><td>Polars</td><td data-label="Practice">Strict typing, an explicit lazy versus eager split, an error-message culture and a small public surface</td><td data-label="Governs">The native DataFrame door and its API</td></tr>
+            <tr><td>Apache Kafka</td><td data-label="Practice">A written design proposal before any significant change, and published protocol and API compatibility guarantees</td><td data-label="Governs">Change process; facade and API compatibility; release policy</td></tr>
+            <tr><td>SQLite</td><td data-label="Practice">A published testing doctrine (one page that says how the product is tested) and a long-term file-format and API promise</td><td data-label="Governs">The testing contract; the "how we test" page this repo should eventually carry</td></tr>
+            <tr><td>ClickHouse</td><td data-label="Practice">Per-pull-request performance tests and fuzzers in CI, with regressions blocking merge</td><td data-label="Governs">The performance gates and their like-for-like medians</td></tr>
+            <tr><td>TigerBeetle</td><td data-label="Practice">A written engineering style guide (assertions, limits, allocation, control flow) and deterministic simulation of failures</td><td data-label="Governs">The engineering method and the briefs agents work from</td></tr>
+            <tr><td>PostgreSQL</td><td data-label="Practice">Complete documentation, error codes as a stable interface, boring release and deprecation discipline</td><td data-label="Governs">The user guides and the error-class contract</td></tr>
+            <tr><td>Apache DataFusion</td><td data-label="Practice">sqllogictest as the test format, benchmark tracking, written design discussion before large changes</td><td data-label="Governs">Test format and adjacent review practice; the engine RePark builds on</td></tr>
+            <tr><td>RocksDB</td><td data-label="Practice">Crash and stress tests that kill the process mid-write and verify recovery</td><td data-label="Governs">Iceberg write data integrity; the CDC sink</td></tr>
+            <tr><td>The Apache Iceberg specification</td><td data-label="Practice">Spec first, versioned format, explicit compatibility rules</td><td data-label="Governs">Iceberg parity as a product claim; format-version support</td></tr>
+          </tbody>
+        </table>
+        <p class="ref">docs/production-grade.md · Reference projects</p>
+      </section>
+
+      <section id="next">
+        <span class="tag chg">Not created here</span>
+        <h2>Next step</h2>
+        <p>A per-capability maturity label (three levels, each citing the tests that justify it) belongs in STATUS.md and is a separate unit; this page does not create it.</p>
+        <p class="ref">docs/production-grade.md · Next step</p>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p>Rendering of <span class="mono">docs/production-grade.md</span> as filed on 2026-10-13. The markdown is the document of record; this page is a copy and the sources stay authoritative.</p>
+    <p>The definition sits under PROJECT.md "What production-grade means" in the precedence chain held by AGENTS.md.</p>
+  </footer>
+</div>
+</body>
+</html>
