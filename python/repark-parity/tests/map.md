@@ -159,7 +159,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `acceptance` default) and `purpose`. The bench job runs only on its dispatch, behind
   `environment: aws-acceptance`, the ref guard, job-scoped `id-token: write`,
   `persist-credentials: false` and no `continue-on-error`. It uses the same action SHAs as
-  `live-aws` plus the repo's `upload-artifact` SHA. Step order: build, then credentials, then
+  `live-aws` plus the repo's `upload-artifact` SHA (`cf430e03`, v7.0.2, since #1072). Step order: build, then credentials, then
   S3 Tables create, compaction `disabled` and read back, S3 Tables write, Glue create and write,
   both run loops, the bytes summary, the upload. It runs four modes on both catalogs at
   `BENCH_REPEAT: "1"` (Q-24a-1) under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
