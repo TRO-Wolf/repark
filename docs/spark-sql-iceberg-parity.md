@@ -1688,6 +1688,9 @@ perfectly good read.
   (byte-magic `PAR1`, readable with no key — measured 2026-09-18) with no error raised;
   `SELECT` returns the rows; table-metadata `encryption-keys` stays empty. There is no
   KMS client and no file encryption. Dated DECLARED exclusion, owner 2026-08-24.
+  Accepted 2026-10-14 (ENC-1-RESIDUE-1 item 2, owner ruling 32): an unkeyed table placed under a keyed
+  table's location still writes plaintext there — nothing is written into the keyed
+  table itself, so the refusal does not cover it.
 - **After** — the first write to a table carrying `encryption.key-id` refuses with
   `UnsupportedOperationException` and one sentence naming the table, the property, no
   table encryption, no plaintext and ENC-1, never echoing the key value (owner ruling
@@ -1730,7 +1733,9 @@ perfectly good read.
   kinds (an unknown kind refuses), read from the structure of the commit and not from its
   text, so no property value or column comment can lock a keyed table; table-metadata JSON
   is writable only in the table's metadata directory. Open residue: card ENC-1-RESIDUE-1
-  (`../task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md`).
+  (`../task/roadmap/mid-term/enc-1-residue-1-card-2026-10-09.md`). Owner 2026-10-14
+  (ruling 32): items 2, 3, 4 and 6 accepted; items 1 and 5 stay open on main (built in
+  #1071, final verifier FAIL 2026-10-17, parked under ruling 121(b)).
   Implementing envelope encryption stays fork work (GAP_MATRIX R130) and is not on the
   v1.0 slate.
 - **Divergence (2026-10-09, by ruling, owner can overturn):** the ruling's phrase "as Spark
@@ -4152,6 +4157,38 @@ still open is `isModifiable`.
   narrowing floors on every door.
 - **Card** — [ICE-TSNS-ANSI-CAST-FLOOR-1](../task/roadmap/mid-term/ice-tsns-ansi-cast-floor-1-card-2026-10-16.md)
   (2026-10-16, open, not scheduled, does not block U-1).
+
+### ICE-TSNS-SQL-1-R-026 — OPEN, PARKED 2026-10-12 (measured 2026-10-12): a naive struct member coerced to `TIMESTAMP` reads its wall as UTC, not in the session zone
+
+- **repark** — a struct whose member is a naive microsecond wall (`struct<v: TIMESTAMP_NTZ, …>`),
+  coerced beside a struct whose member is `TIMESTAMP` by `CASE`, `COALESCE` or `UNION ALL`,
+  reads the wall as UTC: DataFusion's type coercion inserts
+  `Cast(struct<v: Timestamp(µs)> → struct<v: Timestamp(µs, "UTC")>)` and `rewrite_cast`
+  (`crates/repark-functions/src/instant_ts.rs`) has no struct arm, so the session zone never
+  applies. `TIMESTAMP_NTZ '2026-01-02 03:04:05.123456'` answers `1767323045123456` in
+  America/New_York and Asia/Kolkata alike, on read, `ORDER BY`, `GROUP BY` and
+  `INSERT … SELECT`: 24 cells (three shapes, four uses, two zones). A user-written
+  `CAST(st AS STRUCT<v: TIMESTAMP, n: INT>)` answered the UTC wall scaled to nanoseconds
+  (`timestamp[ns]`) in every zone: 11 more cells. The top-level column already localises
+  (`to_timestamp`), and its 72 cells equal Spark. Measured on main `572130dd` by
+  NTZ-STRUCT-COERCE-1 (PR #1038); not re-measured since. By reading main `085d77e8`,
+  `rewrite_cast` still has no struct arm; ICE-TSNS-TYPE-PLANNER-1 (`c7121437`) since plans
+  SQL `TIMESTAMP` as `Timestamp(µs, "UTC")`, so the 11 user-cast cells may now answer
+  differently. Not run.
+- **Apache Spark** — localises the naive member in the session zone for every struct shape,
+  the user-written cast included: `1767341045123456` in America/New_York and
+  `1767303245123456` in Asia/Kolkata. In UTC both engines agree on the coerced shapes.
+  *(oracle: recorded — live PySpark 4.1.2 with Iceberg 1.11.0, 144 cells, 0 errors,
+  `task/wo/ntz-struct-coerce-1/evidence/spark-4.1.2.jsonl` on branch `pr-1038`
+  (head `ef721ee6`); not on main. Of the 144, 35 differ from main, all struct cells.)*
+- **Pin** — none on main. The branch's `python/repark/tests/test_ntz_struct_coerce_1.py`
+  pins the fixed answer and did not land.
+- **Rationale** — OPEN, dated 2026-10-12. The read half of R-011's nested microsecond wall:
+  PR #1038 built the localise arm (`nested_wall.rs`) and is parked with #1037 under the
+  owner's 2026-10-12 ruling ("narrowing deferred, no fourth round"; see R-011). The two halves
+  are one unit, so this row closes in the 1.5.7 lift unit (ICE-TSNS-NESTED-1 extended to
+  microseconds per T-3), not alone. Branch ledger
+  `task/ledgers/staging/ntz-struct-coerce-1-ledger.md` §3 and §4 (the seat) on `pr-1038`.
 
 ### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
 
