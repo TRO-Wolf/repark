@@ -67,7 +67,7 @@ untouched), `spark_literals.rs` (four-arm value dispatch, verbatim-aware
 rewrite rule), `spark_rewrites/create_options.rs` (option keys unescape with
 their own quote type). Pins: `crates/repark-spark/src/tests/string_literal_escape_1.rs`
 (own leaf — the SQP-1 leaf is byte-frozen),
-`python/repark/tests/test_string_literal_escape_1.py` (40 default + 11
+`python/repark/tests/sql/test_string_literal_escape_1.py` (40 default + 11
 verbatim cases on five doors plus an iceberg write round-trip).
 
 ### C-004 guards and mutation
@@ -123,7 +123,7 @@ Mutation: the Rust DDL pin red without the fix, green with; 4/5 new facade
 pins red without (the `OPTIONS`-value survivor correctly stays green),
 11/11 green with. Product files: `spark_literals.rs`,
 `spark_rewrites/mod.rs`; pins: `tests/string_literal_escape_1.rs`,
-`python/repark/tests/test_string_literal_escape_1.py`;
+`python/repark/tests/sql/test_string_literal_escape_1.py`;
 `python/repark/tests/map.md`, `crates/repark-spark/src/map.md`,
 `src/tests/map.md`, `src/spark_rewrites/map.md` in the same commit.
 
@@ -320,11 +320,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Clauses C-000..C-004 walked against behavior — the 229-literal Step-0 matrix on five doors under both modes against live PySpark 4.1.2, the post-fix rerun to zero unexplained diffs, the residuals ledgered with Spark values, the guards re-run to zero match-to-diff transitions, the mutation run red-first at both levels, and the gate run as written; every clause is PROVEN and cited from the maps.
-      artifacts: [task/ledgers/staging/string-literal-escape-1-ledger.md, python/repark/tests/test_string_literal_escape_1.py]
+      artifacts: [task/ledgers/staging/string-literal-escape-1-ledger.md, python/repark/tests/sql/test_string_literal_escape_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries actually exercised — empty literals both quotes, quote runs of 2/3/4/6, lone and trailing escapes, NUL/control bytes, astral and lone surrogates, out-of-range \U, malformed \u, unterminated and unpaired-backslash refusals, 10k-char control; Arrow value AND type pinned per facade cell.
-      artifacts: [python/repark/tests/test_string_literal_escape_1.py, crates/repark-spark/src/tests/string_literal_escape_1.rs]
+      artifacts: [python/repark/tests/sql/test_string_literal_escape_1.py, crates/repark-spark/src/tests/string_literal_escape_1.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Failure modes preserved in kind — unterminated literals, unpaired trailing backslashes, and raw backslash-quote forms refuse on both engines before and after; error-to-value flips land only where Spark answers (double-raw, verbatim borrowed doubles); no new failure mode and no retry/cleanup surface (pure value function).
@@ -338,7 +338,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Stored values move only toward Spark — the write read-back differs solely on the documented r'''' row; every value that matched Spark is byte-identical after (zero match-to-diff transitions, native door included); no migration or schema surface.
-      artifacts: [python/repark/tests/test_string_literal_escape_1.py]
+      artifacts: [python/repark/tests/sql/test_string_literal_escape_1.py]
     - id: AT-7
       status: N/A
       justification: No resource or performance envelope change — the same single token pass with one value allocation per literal as before; nothing unbounded, nothing hot.
@@ -352,7 +352,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Red-first held — old behavior fails 5/6 new Rust pins and 6/6 facade tests, and passes again on the byte-exact restore; every new branch names a flipping input (quote arms, raw head/tail/verbatim splits, verbatim rewrite rule); no dead branch ships.
-      artifacts: [crates/repark-spark/src/tests/string_literal_escape_1.rs, python/repark/tests/test_string_literal_escape_1.py]
+      artifacts: [crates/repark-spark/src/tests/string_literal_escape_1.rs, python/repark/tests/sql/test_string_literal_escape_1.py]
 ```
 
 ### C-015 merge inventory (2026-10-01)

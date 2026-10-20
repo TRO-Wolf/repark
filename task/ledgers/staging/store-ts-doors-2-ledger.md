@@ -492,7 +492,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause is walked against recorded Spark answers — 21 must-change refusal cells across every shape and partition form, 5 store cells, and the 94-statement Step 0 matrix re-run confining every change to the intended cells.
-      artifacts: [python/repark/tests/test_store_ts_doors_2.py, python/repark/tests/store_ts_doors_2_spark_oracle.json]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_doors_2.py, python/repark/tests/timestamps/store_ts_doors_2_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Direct, star, CTE (both spellings), view, both join sides, UNION, nested aliases, WHERE, ORDER BY/LIMIT, VALUES/SELECT/listed/dynamic/BY NAME partition forms, and multi-row VALUES are exercised; views, table columns, literals, CASTs, functions and ambiguous refs fall through to base behaviour.
@@ -500,7 +500,7 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal is a planning error raised before any file is staged; the replay test reads back the target after each refusal and matches Spark's unchanged rows, including the seeded rows and the empty overwritten partitions.
-      artifacts: [python/repark/tests/test_store_ts_doors_2.py]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_doors_2.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state; the resolver borrows the statement AST and the helper plans the statement's own source.
@@ -510,7 +510,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: No stored-format change; the silent epoch-seconds and NULL writes are closed and the replay test asserts refused statements leave prior rows intact.
-      artifacts: [python/repark/tests/test_store_ts_doors_2.py]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_doors_2.py]
     - id: AT-7
       status: ATTACKED
       evidence: The SELECT-arm resolver runs only when the INSERT body is not a VALUES list and bails before any catalog load when no arm maps a VALUES cell; the partition helper loads the target schema and plans the filled source once per partition overwrite. No new per-row work.
@@ -522,10 +522,10 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Every new refusal carries Spark's class, condition and SQLSTATE through the facade's stamped-message parse; the replay test compares all three with the recorded oracle.
-      artifacts: [python/repark/tests/test_store_ts_doors_2.py]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_doors_2.py]
     - id: AT-10
       status: ATTACKED
       evidence: Each new call site has a skip mutation that reds exactly its pins while the other family stays green; the resolver has classifier tests for every shape and every fall-through.
-      artifacts: [crates/repark-spark/src/void_type/select_values_arms.rs, python/repark/tests/test_store_ts_doors_2.py]
+      artifacts: [crates/repark-spark/src/void_type/select_values_arms.rs, python/repark/tests/timestamps/test_store_ts_doors_2.py]
   complete: true
 ```

@@ -112,7 +112,7 @@ pins: h3-spill-1/C-001, C-002, C-003, C-007
 | Run one operator row | `measure.py --operators sort --scratch <dir> --json-out <file>` |
 | Run one cell by hand | `cell_worker.py --operator sort --pool 64M --scale 1000000 --as-cap-bytes 34359738368 --json-out <file>` |
 | Read the measured matrix | [../../../../docs/perf/spill-matrix-baseline.md](../../../../docs/perf/spill-matrix-baseline.md) |
-| Read the pins | [../../../repark/tests/test_h3_spill_matrix.py](../../../repark/tests/test_h3_spill_matrix.py) |
+| Read the pins | [../../../repark/tests/test_h3_spill_matrix.py](../../../repark/tests/perf/test_h3_spill_matrix.py) |
 
 **H3-SPILL-RESIDUE-1 (2026-09-06)** re-ran two narrowed slices of this harness to close the two
 defects the matrix found: the whole 8 MiB column at 1e6 (all 18 operators, before and after — 17

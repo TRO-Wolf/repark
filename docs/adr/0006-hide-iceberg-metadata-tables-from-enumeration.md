@@ -160,5 +160,5 @@ disclosure. Rejected on four grounds:
 - **Guard:** a change that makes metadata tables enumerate again contradicts this ADR — write a
   superseding ADR. A change that filters them in a door parser, or that hides them by making
   `table()` / `table_exist()` refuse the `$` form, contradicts decisions 1–2 and breaks the pins in
-  `crates/repark-spark/src/tests.rs` and `python/repark/tests/test_metadata_tables.py` that exist to
+  `crates/repark-spark/src/tests.rs` and `python/repark/tests/iceberg/test_metadata_tables.py` that exist to
   catch exactly that.

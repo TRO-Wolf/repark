@@ -27,7 +27,7 @@ keeps today's behaviour and that the fix gets its own card, because it changes t
 | 1 | Devin | D-1 sentinel, D-3 snapshot deltas, pins green. |
 
 **Home:** `python/repark/src/repark/spark/dataframe/replace_expr.py`, `dataframe/core.py` (`replace` signature only),
-`python/repark/tests/test_replace_linear_1.py` or a sibling pin file. **Gates:** `make verify`, `make preflight`, the
+`python/repark/tests/dataframe/test_replace_linear_1.py` or a sibling pin file. **Gates:** `make verify`, `make preflight`, the
 parity suite; Grok critic-logic before the PR.
 
 ## Pointers

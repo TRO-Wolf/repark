@@ -17,9 +17,9 @@ _DOC = "docs/design/v3-statement-coverage.md"
 _REGISTRY = "docs/spark-sql-iceberg-parity.md"
 _NORTH_STAR = "task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md"
 _TRACK = "docs/design/format-v3-track.md"
-_HARNESS = "python/repark/tests/_v3_statement_coverage_programs.py"
-_GOLDEN = "python/repark/tests/_v3_statement_coverage_repark.py"
-_SPARK_GOLDEN = "python/repark/tests/_v3_statement_coverage_spark.py"
+_HARNESS = "python/repark/tests/iceberg/_v3_statement_coverage_programs.py"
+_GOLDEN = "python/repark/tests/iceberg/_v3_statement_coverage_repark.py"
+_SPARK_GOLDEN = "python/repark/tests/iceberg/_v3_statement_coverage_spark.py"
 _FILED = (
     "V3-COV-1",
     "V3-COV-2",

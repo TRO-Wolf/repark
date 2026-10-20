@@ -215,10 +215,17 @@ impl Run {
         stamp: &CommitStamp,
     ) -> Result<Option<(Table, BatchScopeGuard)>, MicroBatchError> {
         let deadline = Instant::now() + self.shared.catalog_timeout;
+        let mut scope = self.shared.sink_uuid;
         loop {
-            let sink = self.load_sink().await?;
-            match BatchScope::enter(TableUuid::of(&sink), stamp.clone()) {
-                Ok(guard) => return Ok(Some((sink, guard))),
+            match BatchScope::enter(scope, stamp.clone()) {
+                Ok(guard) => {
+                    let sink = self.load_sink().await?;
+                    let loaded = TableUuid::of(&sink);
+                    if loaded == scope {
+                        return Ok(Some((sink, guard)));
+                    }
+                    scope = loaded;
+                }
                 Err(MicroBatchError::SinkBusy { .. }) if Instant::now() < deadline => {
                     let retry = (Instant::now() + self.shared.polling_delay).min(deadline);
                     if let Wake::Stop = self.wait_until(retry).await {

@@ -37,7 +37,7 @@ RePark before this unit:
 
 **M-2 — step-1 probes on Spark 4.1.2** (`target/probe-u7-pr1/probe.py`, `probe2.py`,
 `probe3.py` under `jvm-lock.sh`, JDK 17, InMemoryCatalog `sc`). All 61 cells are
-committed as `measured` in `python/repark/tests/ice_write_df_1_spark_oracle.json`.
+committed as `measured` in `python/repark/tests/writes/ice_write_df_1_spark_oracle.json`.
 Findings the record left open:
 
 `save(name)`:
@@ -240,20 +240,20 @@ COVERAGE_ATTESTATION:
         (no S3 filesystem in the probe) and `bucket_existing_void_append` (a format-version 1
         table RePark cannot create; its text is the Rust expectation in
         `the_table_side_drops_void_fields_and_names_time_transforms_like_spark`).
-      artifacts: [python/repark/tests/test_ice_write_df_1.py, python/repark/tests/test_ice_write_df_1_edges.py, python/repark/tests/ice_write_df_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/test_ice_write_df_1.py, python/repark/tests/writes/test_ice_write_df_1_edges.py, python/repark/tests/writes/ice_write_df_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: The oracle is live Spark 4.1.2 + Iceberg 1.11.0 (scoreboard record plus step-1
         probes under jvm-lock.sh, round 3 adding six shapes and round 4 five); no expected value is derived from
         RePark output or typed in beside the oracle.
-      artifacts: [python/repark/tests/ice_write_df_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/ice_write_df_1_spark_oracle.json]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal (not found, already exists, layout mismatch, cannot convert, spec id,
         number format, missing column) is pinned with its class and full text through
         `_assert_error`, and no table or commit appears after it; the `SORTED BY … DESC` parse
         answer is pinned by class only and listed as a residue.
-      artifacts: [python/repark/tests/test_ice_write_df_1.py, python/repark/tests/test_ice_write_df_1_edges.py, crates/repark-iceberg/src/tests/writer_partitioning.rs]
+      artifacts: [python/repark/tests/writes/test_ice_write_df_1.py, python/repark/tests/writes/test_ice_write_df_1_edges.py, crates/repark-iceberg/src/tests/writer_partitioning.rs]
     - id: AT-4
       status: N/A
       justification: No shared mutable state is added; the staging view is a per-write read-only
@@ -286,6 +286,6 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: The writer-touching facade sweep (2883 passed) and the touched-crate Rust suites
         stay green; the only pre-existing pin changed is the retired R-1 refusal.
-      artifacts: [python/repark/tests/test_io_bucket_cluster_1.py]
+      artifacts: [python/repark/tests/writes/test_io_bucket_cluster_1.py]
   complete: true
 ```

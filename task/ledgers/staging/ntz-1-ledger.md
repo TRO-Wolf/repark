@@ -85,15 +85,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each Slice 1 clause is walked against Spark's measured answer on the same door; the new facade suite replays 25 oracle queries plus v2/v3 cells, and the Rust door suite pins values, types, names and refusal texts. Slice 2 (2026-09-27): each store clause is walked against the probe SQL and Spark's recorded walls/refusals on the same door; probe6 sel is byte-EQUAL and probe2 value steps EQUAL.
-      artifacts: [python/repark/tests/test_ntz_1.py, python/repark/tests/ntz_1_spark_oracle.json, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
+      artifacts: [python/repark/tests/timestamps/test_ntz_1.py, python/repark/tests/timestamps/ntz_1_spark_oracle.json, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Every named behavior is pinned per door (literal walls and truncation, string/date/NULL/instant/NTZ cast sources, try_cast NULL, the DML reach, CTAS type); the rewritten grammar/typeof/temporal pins hold their recorded answers. Slice 2 (2026-09-27): every store door is pinned per zone (VALUES/SELECT/UPDATE/MERGE/append walls, midnight, session instants) in UTC and New York; the TZ pin set answers identically before and after.
-      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
+      artifacts: [python/repark/tests/timestamps/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal text is pinned (INVALID_TYPED_LITERAL with the SQL window, DATATYPE_MISMATCH both directions, CAST_INVALID_INPUT, R4 nested) with class, SQLSTATE and first line where the engine framing allows; the M1–M4 mutations break one mechanism each and the named tests red before restore. Slice 2 (2026-09-27): the CANNOT_SAFELY_CAST store refusals are pinned on VALUES/SELECT/UPDATE/MERGE plus the append with class, condition, SQLSTATE and first line; M5a/M5b/M6 red before restore.
-      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
+      artifacts: [python/repark/tests/timestamps/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
     - id: AT-4
       status: N/A
       justification: No commit, isolation or concurrency surface; each pin runs on a fresh warehouse in one session.
@@ -103,7 +103,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: No stored-format change; scoreboard compare.py 2026-09-27 says TY-TIMESTAMP-NTZ EQUAL, TY-TIMESTAMP-NTZ-V3 EQUAL, TY-TIMESTAMP EQUAL, TY-TIMESTAMP-LTZ EQUAL, TY-PROMOTE-DATE-TS SPARK-CANNOT both refuse at the same ALTER COLUMN step.
-      artifacts: [python/repark/tests/test_ntz_1.py, python/repark/tests/ntz_1_spark_oracle.json]
+      artifacts: [python/repark/tests/timestamps/test_ntz_1.py, python/repark/tests/timestamps/ntz_1_spark_oracle.json]
     - id: AT-7
       status: N/A
       justification: No performance claim; the literal UDF is Immutable so filters prune, pinned only by value.
@@ -121,7 +121,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Each pin asserts exact values, types or texts; M1–M4 break one expectation each and the named tests red before restore. Slice 2 (2026-09-27): each store pin asserts exact walls, instants or refusal texts; M5a/M5b/M6 break one mechanism each and the named tests red before restore.
-      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
+      artifacts: [python/repark/tests/timestamps/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
   complete: true
 ```
 
@@ -279,7 +279,7 @@ stays OPEN.
   bugs were fixed in the pins themselves (a DDL-ack shape, a tuple/list dtype shape,
   duplicate `.files` bound names needing aliases); no residue needed a fix outside
   the fence, so the halt counter stayed at zero.
-- The fixture run: new `python/repark/tests/_record_ntz_1_spark_table.py` (the
+- The fixture run: new `python/repark/tests/timestamps/_record_ntz_1_spark_table.py` (the
   `_record_ice_nan_pushdown_1.py` shape) builds `xc.ns.x` (`id INT`,
   `c TIMESTAMP_NTZ`, `z TIMESTAMP`, one row `2024-01-01 12:34:56.123456`) on live
   Spark at `/tmp/repark-ntz-1-spark-table/wh`, records the reads, the re-insert round

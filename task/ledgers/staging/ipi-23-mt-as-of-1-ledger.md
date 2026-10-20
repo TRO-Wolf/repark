@@ -16,8 +16,8 @@ tables to Spark's `Cannot select snapshot in table: <TYPE>` refusal) plus its
 `metadata_tables.rs` (the AS OF routing into the provider); the Rust battery
 `crates/repark-spark/src/tests/metadata_tables_asof.rs` with `tests/common.rs` and
 `tests/mod.rs`; the MT-1 registry row; the facade pins
-`python/repark/tests/test_ice_mt_as_of_1.py`; the reformatted
-`python/repark/tests/test_metadata_tables.py`; five `map.md` files
+`python/repark/tests/iceberg/test_ice_mt_as_of_1.py`; the reformatted
+`python/repark/tests/iceberg/test_metadata_tables.py`; five `map.md` files
 (`crates/repark-iceberg/src/catalog/`, `crates/repark-spark/src/`,
 `crates/repark-spark/src/tests/`, `python/repark/tests/`, `scripts/` — the last
 for the `check_rust_file_size.py` EXCEPTIONS line the branch carries); and this
@@ -92,7 +92,7 @@ partitions `x` (3 records) and `y` (1 record).
 | `uvx ruff@0.15.22 format --check .` | exit 0 (1130 files formatted) |
 | `uvx ruff@0.15.22 check .` | exit 0 |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xo55-mt origin/main HEAD` | exit 0 (`hits=0`) |
-| `.venv/bin/python -m pytest -q python/repark/tests/test_ice_mt_as_of_1.py python/repark/tests/test_metadata_tables.py` | `25 passed in 2.86s` |
+| `.venv/bin/python -m pytest -q python/repark/tests/iceberg/test_ice_mt_as_of_1.py python/repark/tests/iceberg/test_metadata_tables.py` | `25 passed in 2.86s` |
 
 ## COVERAGE_ATTESTATION
 
@@ -104,11 +104,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause walked to its recorded PySpark 4.1.2 cell — row/schema equality on snapshots-TT (C-001), exact counts on files/entries (C-002/C-003), exact partition rows (C-004), branch-head count equality (C-005), refusal class plus full message on the probe-55b refusals (C-006); every assert collects on the Arrow path.
-      artifacts: [python/repark/tests/test_ice_mt_as_of_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_as_of_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The shared seed exercises a two-append merge-on-read history with a delete, so the pinned snapshot sits mid-history; the facade pins cover snapshot-id and named-branch AS OF spellings; the Rust battery adds rule-1/rule-2 per-type scoping, timestamp resolution, and unknown-id/ref behavior — R4 pins the mapped `IllegalArgument` class plus the full Spark-recorded message on each refusal, `IllegalArgument("Cannot find snapshot with ID 999")` verbatim on the rule-1 unknown id, and compares the empty scan's Arrow fields (name, data type, nullability) rather than rendered text.
-      artifacts: [python/repark/tests/test_ice_mt_as_of_1.py, crates/repark-spark/src/tests/metadata_tables_asof.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_as_of_1.py, crates/repark-spark/src/tests/metadata_tables_asof.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The five `all_*` tables refuse with Spark's `Cannot select snapshot in table: <TYPE>` text under their mapped `Analysis` class (the gap to Spark's `UnsupportedOperationException` is declared, not copied) and the parenthesized `(t.snapshots) VERSION AS OF` form pins the mapped `Parse` class; both refusal classes are asserted in the Rust battery.
@@ -123,7 +123,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Registry row MT-1 moved from a DECLARED refusal to the recorded served behavior; the replaced refusal was itself a declared divergence, so no prior green behavior is silently altered — the new answers are pinned to recorded Spark 4.1.2 cells.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_mt_as_of_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/iceberg/test_ice_mt_as_of_1.py]
     - id: AT-7
       status: N/A
       justification: The scan streams and projects each batch; no added materialization, unbounded growth, or hot-loop pattern beyond the fork read.
@@ -138,7 +138,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Five recorded cells replayed verbatim on the facade harness; every clause carries a `pins:` citation in the test file plus the catalog and tests map.md rows; C-001 asserts schema field names alongside values.
-      artifacts: [python/repark/tests/test_ice_mt_as_of_1.py, python/repark/tests/map.md, crates/repark-iceberg/src/catalog/map.md]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_as_of_1.py, python/repark/tests/map.md, crates/repark-iceberg/src/catalog/map.md]
 ```
 
 Every clause above is PROVEN against a recorded PySpark 4.1.2 cell replayed by

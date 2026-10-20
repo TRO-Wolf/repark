@@ -105,9 +105,9 @@ changed-meaning pins move to Spark's measured answers with the cell named in the
 ## Facade evidence (release native, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin develop --release`)
 
 - Rust: `cargo test -p repark-spark --lib call_rewrite_dangling` → 3 passed.
-- Offline: `pytest python/repark/tests/test_ice_rdf_options_1.py -q -p no:cacheprovider -n 4` →
+- Offline: `pytest python/repark/tests/iceberg/test_ice_rdf_options_1.py -q -p no:cacheprovider -n 4` →
   121 passed, 1 skipped, 8 xfailed.
-- Offline: `pytest python/repark/tests/test_mw7_scale_smoke.py -q -p no:cacheprovider -n 4` →
+- Offline: `pytest python/repark/tests/perf/test_mw7_scale_smoke.py -q -p no:cacheprovider -n 4` →
   19 passed, 1 skipped.
 - Live (`REPARK_PARITY_LIVE=1` under the JVM lock, pinned submit args): both files →
   142 passed, 8 xfailed (the oracle re-derivation and the v3 live oracle run inside).
@@ -138,14 +138,14 @@ COVERAGE_ATTESTATION:
         recording (the rp32 fixture with its in-file banner, or the
         pre-existing options fixture); the recorder is committed and
         replayable, so no hand-computed row, count, or byte value exists.
-      artifacts: [python/repark/tests/rp32_rdf_cow_bytes_spark_oracle.json, python/repark/tests/ice_rdf_options_1_spark_oracle.json]
+      artifacts: [python/repark/tests/iceberg/rp32_rdf_cow_bytes_spark_oracle.json, python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Red on the old pin is the bump-alone CI list reproduced
         in-round before any pin moved; red on convergence is constructed
         into the zero, removed-count, and renamed keep pins. Both
         directions bite without touching the pins.
-      artifacts: [python/repark/tests/test_ice_rdf_options_1.py, python/repark/tests/test_mw7_scale_smoke.py, crates/repark-spark/src/tests/call_rewrite_dangling.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_rdf_options_1.py, python/repark/tests/perf/test_mw7_scale_smoke.py, crates/repark-spark/src/tests/call_rewrite_dangling.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The keep is pinned on five independent shapes (two value
@@ -153,7 +153,7 @@ COVERAGE_ATTESTATION:
         six-file MERGE shape, the 2,000-row dead file), each with a live
         row-count guard beside the delete counts, so a silent row loss
         reds with the keep.
-      artifacts: [python/repark/tests/test_ice_rdf_options_1.py, python/repark/tests/test_mw7_scale_smoke.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_rdf_options_1.py, python/repark/tests/perf/test_mw7_scale_smoke.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state added; the unit adds no product code.
@@ -170,7 +170,7 @@ COVERAGE_ATTESTATION:
         cells, the release-native row and file outcomes), not prose: the
         banner, the basenames, the snapshot summaries, the recorded
         refusals, the five registry rows with their pin pointers.
-      artifacts: [python/repark/tests/rp32_rdf_cow_bytes_spark_oracle.json, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/iceberg/rp32_rdf_cow_bytes_spark_oracle.json, docs/spark-sql-iceberg-parity.md]
     - id: AT-7
       status: N/A
       justification: No wall-clock claim anywhere in the change.

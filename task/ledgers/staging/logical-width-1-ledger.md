@@ -266,11 +266,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause walked against the card M-1..M-5, rulings W-1..W-7 and the recorded PySpark 4.1.2 width cells; the M-1/M-4(a) claims verified by measurement on this tree (engine int16/int8/float/binary; no Rust fillna builder), and the card's float*2-matches-Spark claim REFUTED by cell arith_width (finding F-1, filed ARITH-FLOAT-INT-1).
-      artifacts: [python/repark/tests/test_logical_width_1.py, python/repark/tests/facade_logical_width_oracle.json]
+      artifacts: [python/repark/tests/types/test_logical_width_1.py, python/repark/tests/types/facade_logical_width_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: DDL-string, StructType and inferred frames; SQL-door CAST and hex literal; Python-door cast; arithmetic, aggregates, union; scalar, dict and float fillna; parquet and Iceberg round trips; schema.json bytes; lit(bytes) refusal; ANSI cast-to-binary refusal; typename spellings; DESCRIBE unchanged on both surfaces.
-      artifacts: [python/repark/tests/test_logical_width_1.py]
+      artifacts: [python/repark/tests/types/test_logical_width_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Rust tests logical_key_reports_spark_narrow_widths + describe_keeps_spark_ddl_spellings_for_narrow_widths in type_table/tests.rs; full repark-spark suite 1025 passed; no unwrap/expect added (make verify clippy clean).
@@ -281,7 +281,7 @@ COVERAGE_ATTESTATION:
     - id: AT-5
       status: ATTACKED
       evidence: No endpoint, file or catalog write added — parquet/Iceberg pins write only to tmp_path warehouses; the refusals (lit, ANSI cast) raise before any plan executes.
-      artifacts: [python/repark/tests/test_logical_width_1.py]
+      artifacts: [python/repark/tests/types/test_logical_width_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: Single-agent round, no critic phase ordered; self-review caught the D9 key-vocabulary slip (byte/short keys vs tinyint/smallint labels) and the iceberg d-vs-date name collision before the gates.
@@ -289,11 +289,11 @@ COVERAGE_ATTESTATION:
     - id: AT-7
       status: ATTACKED
       evidence: Round-2 tree: make verify exit 0; facade 9057 passed, 367 skipped, 34 xfailed, exit 0; parity 757 passed, 2 skipped, 12 xfailed, exit 0; unit file 20 passed; core na_fill 8 passed; differential probe 20 keys 0 diffs; comment-ban grep zero hits. Counts in §Gates.
-      artifacts: [python/repark/tests/test_logical_width_1.py]
+      artifacts: [python/repark/tests/types/test_logical_width_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: Every Spark expectation comes from facade_logical_width_oracle.json (byte-identical copy of the run-17b live recording, cmp clean); the three tree-measured values (fillna(1.5) truncation, to(string) 'hi', lit refusal text) are labelled tree-measured in §Out-of-scope measurements, never presented as oracle.
-      artifacts: [python/repark/tests/facade_logical_width_oracle.json]
+      artifacts: [python/repark/tests/types/facade_logical_width_oracle.json]
     - id: AT-9
       status: ATTACKED
       evidence: LOGICAL-WIDTH-1 implemented with cell citations; DF-LIT-BINARY-1 and ARITH-FLOAT-INT-1 BACKLOG with red-when-fixed pins; DF-TO-BINARY-1 closed by the report fix with the unmeasured value noted; no silent stubs.
@@ -301,7 +301,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Mutation guards observed — stashing the LogicalKey fix reddened 13 pins (red-first run); restoring the int/long-only fill arm reddened both fillna pins (2 failed, 18 deselected); the lit BACKLOG guard asserts the refusal text, so a bytes arm without retiring it reds.
-      artifacts: [python/repark/tests/test_logical_width_1.py]
+      artifacts: [python/repark/tests/types/test_logical_width_1.py]
   complete: true
 ```
 

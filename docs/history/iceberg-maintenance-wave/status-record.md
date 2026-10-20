@@ -24,7 +24,7 @@
     merge-on-read table, each touching the same 200 ids, grow position-delete files **1→10**.
     After `rewrite_position_delete_files` + `rewrite_data_files` + `expire_snapshots`, delete
     files are **10→1** and data files are **1**. Pin:
-    `python/repark/tests/test_mw5_baseline_delta.py::test_mw0_demo_delete_files_grow_then_compact_reclaims`
+    `python/repark/tests/iceberg/test_mw5_baseline_delta.py::test_mw0_demo_delete_files_grow_then_compact_reclaims`
     (`assert` 10 then 1 deletes; `assert` 1 data file after rewrite+expire). `COUNT(*)` stays
     **1,000** (`int64`) on the Arrow path. Data-file count *before* compact was **41** on this
     host (2026-08-23, logged, not asserted). Wall-clock on this host (not a CI pin): merge 2
@@ -87,7 +87,7 @@
     **zero** delete files at both `write.delete.granularity` settings with
     `remove-dangling-deletes` off. Registry row **`RDF-1`**, fork ask **F-16**, ledger finding
     F-MW7-1 (OPEN), pinned by `test_delete_laden_in_band_file_survives_the_runbook`. Driver: `python/repark-parity/bench/mw7/`; machinery pin:
-    `python/repark/tests/test_mw7_scale_smoke.py`. Ledger:
+    `python/repark/tests/perf/test_mw7_scale_smoke.py`. Ledger:
     [task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md).
     **The verdict the charter asked for: MW-9 was urgent** — the point probe went
     **858 → 3,878 ms** for a predicate returning 0.02 % of the rows, because `'partition'`
@@ -111,7 +111,7 @@
     stated limit is `RDF-1`:** a cycle does not return a table to baseline, so an operator sees
     a merge-on-read table still reading at **2.02×** (point) / **2.45×** (partition) a
     compacted control and holding **1.90×** its live bytes, with correct answers throughout.
-    Pin: `python/repark/tests/test_mw8_runbook.py` (ten clauses, one documented cycle censused
+    Pin: `python/repark/tests/iceberg/test_mw8_runbook.py` (ten clauses, one documented cycle censused
     after every step, 4.4 s; C-010 parses the guide's printed `CALL` block and compares it to
     the measured sequence). Ledger:
     [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).

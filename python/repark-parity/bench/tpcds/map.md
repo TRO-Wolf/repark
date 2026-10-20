@@ -41,7 +41,7 @@ no AWS; no product-engine fixes here. Mirrors `../tpch/` shape.
 | Run SF1 scoreboard | `python python/repark-parity/bench/tpcds/run_tpcds.py --sf 1 --report task/tpcds-report-2026-07-31.md` |
 | Tiny smoke datagen | `ensure_parquet_sf(0.01)` or CLI `--sf 0.01` |
 | Read the human scoreboard | `../../../../task/tpcds-report-2026-07-31.md` |
-| CI pin battery | `python/repark/tests/test_tpcds_smoke.py` + unit pins in `test_tpcds_compare_unit.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
+| CI pin battery | `python/repark/tests/perf/test_tpcds_smoke.py` + unit pins in `test_tpcds_compare_unit.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
 | Add a dialect-only rewrite | `queries.py` → `DIALECT_REWRITES` (must disclose in report) |
 
 ## Debug

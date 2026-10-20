@@ -60,19 +60,19 @@ COVERAGE_ATTESTATION:
       evidence: Every refusal expectation reads its core from the committed Spark 4.1.2
         oracle, and the live leg re-derives the fixture (rc 0). No RePark-only answer was
         written into a pin; the count text is asserted only where the memory catalog emits it.
-      artifacts: [python/repark/tests/ice_drop_ns_1_spark_oracle.json, python/repark/tests/test_ice_drop_ns_1.py]
+      artifacts: [python/repark/tests/iceberg/ice_drop_ns_1_spark_oracle.json, python/repark/tests/iceberg/test_ice_drop_ns_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Red on the base tree (16 failed with DID NOT RAISE or the old message,
         recorded in step 1); the 8 control pins passed before and after, which shows the
         refusal pins discriminate the fix rather than the harness.
-      artifacts: [python/repark/tests/test_ice_drop_ns_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_drop_ns_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: All seven facade spellings pinned per catalog with Arrow-path survival
         (lists plus SELECT ids); the ANSI door pinned in Rust where it is reachable; the
         helper pinned directly including the dropped-first shape.
-      artifacts: [python/repark/tests/test_ice_drop_ns_1.py, crates/repark-spark/src/tests/namespace_ddl.rs, crates/repark-sql/src/schema_ddl/tests.rs, crates/repark-iceberg/src/catalog/tests/namespace_drop.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_drop_ns_1.py, crates/repark-spark/src/tests/namespace_ddl.rs, crates/repark-sql/src/schema_ddl/tests.rs, crates/repark-iceberg/src/catalog/tests/namespace_drop.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The check lists live catalog state on every drop; nothing is cached. The
@@ -90,7 +90,7 @@ COVERAGE_ATTESTATION:
       evidence: Residues are named in the registry row rather than hidden (exception class,
         nested namespaces). The Python repark.sql routing limit is stated in the test module
         and here, with the measured evidence.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_drop_ns_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/iceberg/test_ice_drop_ns_1.py]
     - id: AT-7
       status: N/A
       justification: No wall-clock or performance claim; the check adds two catalog listings to a DDL path.
@@ -110,6 +110,6 @@ COVERAGE_ATTESTATION:
       evidence: Full lib suites of the three touched crates pass; the write-options V-03
         arm (the one existing non-empty-drop statement) stays green unchanged; the facade
         idempotency tests and the parser production tests pass.
-      artifacts: [python/repark/tests/test_ice_write_options_1.py, crates/repark-sql/tests/parser_productions.rs]
+      artifacts: [python/repark/tests/writes/test_ice_write_options_1.py, crates/repark-sql/tests/parser_productions.rs]
   complete: true
 ```

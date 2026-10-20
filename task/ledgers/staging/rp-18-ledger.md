@@ -57,7 +57,7 @@ after: dictionary only on `grp`, actuals 1 839 168 / 1 755 749 — below the
 
 | Gate | Exit |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_perf_ice_catalog_io_1.py python/repark/tests -q -k "adapt or partition or catalog_io"` | 0 — 254 passed, 31 skipped, 6023 deselected in 76.13s |
+| `.venv/bin/python -m pytest python/repark/tests/perf/test_perf_ice_catalog_io_1.py python/repark/tests -q -k "adapt or partition or catalog_io"` | 0 — 254 passed, 31 skipped, 6023 deselected in 76.13s |
 | `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q -p no:cacheprovider` | 0 — 747 passed, 1 skipped, 11 xfailed in 68.85s |
 | `make check-docs-links` | 0 — 783 files, 5041 links |
 | `make check-ledger-grammar` | 0 — clean once the attestation carried only ATTACKED/N/A |

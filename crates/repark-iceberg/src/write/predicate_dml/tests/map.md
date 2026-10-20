@@ -11,6 +11,12 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
 ## Contents
 
 - `mod.rs` — thin index.
+- `subquery_where.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16):** the shared G3-E8
+  refusal's pins. The five allow-listed forms pass only with the identity exemption; six forms
+  outside the allow-list, two-part names among them, refuse with or without it; six statements
+  with no subquery in a DML `WHERE` pass either way; the `UPDATE` and `DELETE` texts equal the
+  G3-E8 text byte for byte, and a target that is not a plain table renders `<table>`.
+  pins: repark-sql-update-subquery-where-1/C-007
 - `plain.rs` — **RP-9 r2:** `try_allowed_plain_identity` accepts `DELETE … WHERE id = 0` on a
   three-part name and refuses a subquery `WHERE`, a literal `IN` list, an `UPDATE`, and a
   four-part branch selector (those stay on the IN/EXISTS allow-list or the fork delete exec).

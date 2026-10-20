@@ -114,16 +114,16 @@ before the PR unless main moves).
   `crates/repark-distributed/tests/iceberg_scan.rs`: `CatalogSpec` literals gain
   `refusal: None` (two sites in `codec.rs`, one in `iceberg_scan.rs`, commit `a8c24c33`);
   the scan codec maps the refused kind (round-trips; refused specs never travel the wire).
-- `python/repark/tests/test_catalog_flow.py`: `test_config_driven_catalog_publish_flow`,
+- `python/repark/tests/parity/test_catalog_flow.py`: `test_config_driven_catalog_publish_flow`,
   `test_repark_prefixed_catalog_config_registers_identically` (the measured blocks plus
   the opt-in).
-- `python/repark/tests/test_catalog_surface.py`:
+- `python/repark/tests/session/test_catalog_surface.py`:
   `test_default_catalog_from_builder_config` (`type=hadoop`; the C-003 meaning is the
   default seeding, not the memory spelling).
-- `python/repark/tests/test_getorcreate_catalogs.py`: the late/keep builders move to
+- `python/repark/tests/session/test_getorcreate_catalogs.py`: the late/keep builders move to
   `type=hadoop`; the malformed block (`type=hadoop`, no warehouse) still raises on
   `warehouse`.
-- `python/repark/tests/test_ice_catalog_session_1.py`: the five runtime registrations and
+- `python/repark/tests/iceberg/test_ice_catalog_session_1.py`: the five runtime registrations and
   the EAGER-1 builder block move to `type=hadoop`.
 - Seeded further by the C-010 toml-keys commit:
   `crates/repark-core/src/config_file/tests/mod.rs`
@@ -137,7 +137,7 @@ before the PR unless main moves).
   `config_driven_memory_catalog_registers_and_runs` declares the `catalog-impl` long form
   instead of the bare `type=memory` (commit `c25129dc`).
 - The part-1 auto-flip and alias rewrites (squashed onto main as `fbd97ef2`), recorded here
-  for the complete list: the fixtures of `python/repark/tests/test_f1_sql_expander.py`,
+  for the complete list: the fixtures of `python/repark/tests/sql/test_f1_sql_expander.py`,
   `test_g1_stat_and_expander.py`, `test_e2_readwriter.py`, `test_iceberg_load_path.py`,
   `test_time_travel.py` now `USE` their catalog; the alias and flip pins of
   `test_e2_readwriter.py`, `test_catalog_surface.py`, `test_auto_memory_catalog.py`,
@@ -165,7 +165,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause was checked against its measured Spark text or shape, never a paraphrase, and the five scoreboard cells plus CAT-IMPL-INMEMORY, CAT-TYPE-HADOOP, CAT-SHOW-CATALOGS, E-CATALOG-LISTDATABASES and P-CALL-NO-CATALOG replay EQUAL through the harness.
-      artifacts: [task/ledgers/staging/catalog-1-ledger.md, python/repark/tests/test_catalog_1.py, target/probe-catalog-1c/replay-CAT-TYPE-MEMORY.json]
+      artifacts: [task/ledgers/staging/catalog-1-ledger.md, python/repark/tests/session/test_catalog_1.py, target/probe-catalog-1c/replay-CAT-TYPE-MEMORY.json]
     - id: AT-2
       status: ATTACKED
       evidence: Case variants of the memory type, both-keys raw-value echo, unknown and empty default catalogs, non-string toml values, missing warehouses, dotted catalog names and empty blocks are all exercised on the builder, runtime and file doors.
@@ -173,18 +173,18 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: Refused catalogs raise on every use with the current catalog unchanged, a later long-form block replaces the refusal, and a default naming no catalog fails only at first resolution with the CATALOG_NOT_FOUND text.
-      artifacts: [python/repark/tests/test_catalog_1.py::test_type_memory_cell_refuses_at_first_use, python/repark/tests/test_catalog_1.py::test_a_default_catalog_naming_no_catalog_answers_catalog_not_found]
+      artifacts: [python/repark/tests/session/test_catalog_1.py::test_type_memory_cell_refuses_at_first_use, python/repark/tests/session/test_catalog_1.py::test_a_default_catalog_naming_no_catalog_answers_catalog_not_found]
     - id: AT-4
       status: ATTACKED
       evidence: The USE pin against later conf set and unset, the runtime block replacement order, and the builder-versus-runtime door split are pinned step by step, and the current catalog lives in the one engine registry both doors read.
-      artifacts: [python/repark/tests/test_catalog_1.py::test_use_pins_the_current_catalog_against_the_default_conf, crates/repark-core/src/session/tests/session_catalog.rs]
+      artifacts: [python/repark/tests/session/test_catalog_1.py::test_use_pins_the_current_catalog_against_the_default_conf, crates/repark-core/src/session/tests/session_catalog.rs]
     - id: AT-5
       status: N/A
       justification: No authentication, secret, deserialization or path handling is added. Warehouse paths flow through the existing scheme validation and toml parse errors still redact source lines.
     - id: AT-6
       status: ATTACKED
       evidence: The spark_catalog alias removal is pinned as the documented behavior change, existing toml files load unchanged through the rewrite, and refused specs never cross the distributed scan wire.
-      artifacts: [python/repark/tests/test_catalog_1.py::test_spark_catalog_is_not_an_alias_of_another_catalog, crates/repark-core/src/config_file/tests/session_catalog.rs::the_owner_toml_shape_loads_and_starts_in_spark_catalog]
+      artifacts: [python/repark/tests/session/test_catalog_1.py::test_spark_catalog_is_not_an_alias_of_another_catalog, crates/repark-core/src/config_file/tests/session_catalog.rs::the_owner_toml_shape_loads_and_starts_in_spark_catalog]
     - id: AT-7
       status: N/A
       justification: No hot path, unbounded growth or new query-time work is added. A refused catalog is one registry placeholder whose uses raise without I/O.
@@ -199,7 +199,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Every clause pins per entry point on the Arrow path with bite-proving mutations recorded in C-005, C-006 and C-009, every added branch has a nameable flipping input, and the facade, dbt, parity and config_file suites are green with no deletion.
-      artifacts: [python/repark/tests/test_catalog_1.py, crates/repark-core/src/config_file/tests/session_catalog.rs, crates/repark-spark/src/tests/session_catalog.rs]
+      artifacts: [python/repark/tests/session/test_catalog_1.py, crates/repark-core/src/config_file/tests/session_catalog.rs, crates/repark-spark/src/tests/session_catalog.rs]
   reattested: []
   complete: true
 ```

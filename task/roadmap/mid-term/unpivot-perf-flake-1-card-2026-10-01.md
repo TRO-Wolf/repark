@@ -7,14 +7,14 @@ mid-term.
 
 ## The gap it records
 
-`python/repark/tests/test_perf_unpivot_1.py::test_stack_is_linear_in_columns`
+`python/repark/tests/perf/test_perf_unpivot_1.py::test_stack_is_linear_in_columns`
 is timing-based and fails on shared CI runners with no product cause. It hit
 #891 (exponent 1.224) and #892 (1.120); neither PR changes unpivot. Needs a
 noise-robust bound, e.g. median of more reps, or a ratio against a same-run
 control.
 
 Test file, verified present at base `02c2f1be`:
-`python/repark/tests/test_perf_unpivot_1.py` (the named test at line 131).
+`python/repark/tests/perf/test_perf_unpivot_1.py` (the named test at line 131).
 
 ## Suggested direction (a suggestion, not a decision)
 

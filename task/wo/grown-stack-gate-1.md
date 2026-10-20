@@ -39,7 +39,7 @@ This unit makes growth conditional at those sites with the verdicts the frame do
 | `crates/repark-python/src/session.rs` | 17 sites per R-GSG-2/3 | 1000 (798 today) |
 | `crates/repark-python/src/text_io.rs`, `session_sources.rs`, `session_write_options.rs`, `ml.rs`, `writer_layout.rs`, `session_runtime.rs`, `plan_introspect.rs`, `orc_io.rs`, `dataframe_stats.rs`, `catalog_census.rs`, `cache_budget.rs` | sites per R-GSG-2/3/4/5; import lists adjusted | 1000 |
 | `crates/repark-python/src/map.md` | R-GSG-7 | — |
-| `python/repark/tests/test_grown_stack_gate_1.py` | new pins (§4 S2) | 1000 |
+| `python/repark/tests/perf/test_grown_stack_gate_1.py` | new pins (§4 S2) | 1000 |
 | `python/repark/tests/map.md` | one row for the new test file | — |
 | `task/ledgers/staging/grown-stack-gate-1-ledger.md` | new: clauses C-001…C-006 (§5) with the measured evidence | — |
 | `task/ledgers/staging/map.md` | one row | — |

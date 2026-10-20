@@ -870,7 +870,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ipi-30-orphan-guard-narrow-1/C-003, C-005
 - [call/branch_ops.rs](call/branch_ops.rs) — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`,
   `cherrypick_snapshot`, `set_current_snapshot`, `rollback_to_timestamp` (Spark 4.1.2
-  parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
+  parity, oracle-pinned in `python/repark/tests/iceberg/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
 - `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
@@ -1222,7 +1222,7 @@ pins: rp-4-fork-repin/C-005, C-006
   keys unescape with their own quote type. Rust pins in
   [tests/string_literal_escape_1.rs](tests/string_literal_escape_1.rs) (own
   leaf; the SQP-1 leaf is byte-frozen), facade pins in
-  `python/repark/tests/test_string_literal_escape_1.py`.
+  `python/repark/tests/sql/test_string_literal_escape_1.py`.
   pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
   **DIFF-PROBE fold (2026-09-29):** verbatim keep-exact now applies only to
   query-expression literals and `OPTIONS` values; DDL property lists
@@ -2132,6 +2132,17 @@ pins: rp-4-fork-repin/C-005, C-006
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
   pins: rp-9-repin-f23/C-005
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139 (2026-10-17):**
+  `normalize.rs::refuse_dml_subquery_predicate_in_statement` keeps its allow-list exemption for
+  the top-level statement only, then refuses each `DELETE` and `UPDATE` that
+  `repark_iceberg::write::statement_writes::executed_writes` returns (through `PREPARE`, through a
+  sqlparser `EXPLAIN ANALYZE`, and a DML nested in a query), with no exemption, in the G3-E8 text.
+  Both repark-spark doors (the `SparkDialect` session door and the router API) reach it through
+  `execute_passthrough_inner`, so `PREPARE p AS DELETE … WHERE id IN (SELECT …)`, which `EXECUTE
+  p` used to run on DataFusion's DML planner over every row, refuses at `PREPARE`. DataFusion's own
+  `EXPLAIN ANALYZE` takes the `DfStatement::Explain` arm and never reaches the function; by
+  ruling 139 it stays with card EXPLAIN-DML-WRITE-1.
+  pins: repark-sql-update-subquery-where-1/C-025, C-027
   **ICE-LIST-NULL-2 (2026-09-19):** the plain-identity attach declines through
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection returns `None` to the fork DELETE path. Door battery:
@@ -2584,7 +2595,7 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
      `repark_core::time_travel::read_table_at` and **keeps** the registration: that view backs the
      `DataFrame` handed to the user and has no statement boundary to release at. This is a
      DOCUMENTED RESIDUAL, not a bug, and it is what makes the facade pin
-     `python/repark/tests/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables`
+     `python/repark/tests/iceberg/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables`
      non-vacuous (the `listTables` prefix filter has something real to hide).
   3. **The ANSI door** — `repark-sql`'s `FOR … AS OF` composes its `__repark_ansi_tt_<n>` view
      over the same `read_table_at`, so it minted a `__repark_tt_<n>` underneath. It leaked until

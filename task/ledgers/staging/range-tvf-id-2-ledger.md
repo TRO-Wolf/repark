@@ -80,7 +80,7 @@ VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 ### 1a. The pins are red on main for the named reason (2026-09-19)
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_range_tvf_id_2.py -q -p no:cacheprovider -n 4
+.venv/bin/python -m pytest python/repark/tests/sql/test_range_tvf_id_2.py -q -p no:cacheprovider -n 4
 30 failed, 8 passed in 1.62s
 ```
 
@@ -96,7 +96,7 @@ count cell renders `count(*)` where Spark renders `count(1)`.
 ### 1b. Green after the fix (2026-09-19)
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_range_tvf_id_2.py python/repark/tests/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4
+.venv/bin/python -m pytest python/repark/tests/sql/test_range_tvf_id_2.py python/repark/tests/sql/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4
 64 passed in 1.26s
 ```
 
@@ -131,7 +131,7 @@ untouched.
 
 | Command | Result |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_range_tvf_id_2.py python/repark/tests/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4` | 0 — 64 passed |
+| `.venv/bin/python -m pytest python/repark/tests/sql/test_range_tvf_id_2.py python/repark/tests/sql/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4` | 0 — 64 passed |
 | `cargo test -p repark-core range_table` | 0 — 32 passed |
 | `cargo fmt --all --check` | 0 — clean |
 | `cargo clippy -p repark-core --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 — clean (brief step-5 flags) |
@@ -185,14 +185,14 @@ COVERAGE_ATTESTATION:
         the SQL doors it can spell (§1a red, §1b green); each answer pin asserts
         the measured schema string, non-nullability, and rows, and the overflow
         pins read through a LIMIT bound so a regression cannot hang CI.
-      artifacts: [python/repark/tests/test_range_tvf_id_2.py]
+      artifacts: [python/repark/tests/sql/test_range_tvf_id_2.py]
     - id: AT-2
       status: ATTACKED
       evidence: The Spark cells are the verbatim orchestrator recording (Spark
         4.1.2, local[2], UTC), committed under range_tvf_id_1/ with SHA-256;
         the folded recorder cell table matches the fixture SQL cell for cell
         and re-derives both fixtures with --check drift detection.
-      artifacts: [python/repark/tests/_record_range_tvf_id_1.py]
+      artifacts: [python/repark/tests/sql/_record_range_tvf_id_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal is pinned by RePark's mapped class plus Spark's
@@ -200,7 +200,7 @@ COVERAGE_ATTESTATION:
         and partition strings, non-positive partitions); coercion widths,
         truncation, both overflow bounds, near-both-end counts, limit, and
         projection are pinned at the Rust level. No silent path remains.
-      artifacts: [python/repark/tests/test_range_tvf_id_2.py, crates/repark-core/src/range_table/tests.rs]
+      artifacts: [python/repark/tests/sql/test_range_tvf_id_2.py, crates/repark-core/src/range_table/tests.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The new provider holds no mutable state across queries (pure
@@ -219,7 +219,7 @@ COVERAGE_ATTESTATION:
         blocks), not prose: the row lists, the AnalysisException /
         PySparkException / IllegalArgumentException classes, the Spark tokens,
         the declared count(*) display name.
-      artifacts: [python/repark/tests/test_range_tvf_id_2.py]
+      artifacts: [python/repark/tests/sql/test_range_tvf_id_2.py]
     - id: AT-7
       status: N/A
       justification: No wall-clock claim anywhere in the change.

@@ -517,7 +517,7 @@ declines it (a dated ruling in the intake, then the archive).
   ignore the materialized view from folds that use it, because the fold-count query reads the view anyway.
 - [unpivot-perf-flake-1-card-2026-10-01.md](unpivot-perf-flake-1-card-2026-10-01.md) — **card
   UNPIVOT-PERF-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, CI flake):**
-  `python/repark/tests/test_perf_unpivot_1.py::test_stack_is_linear_in_columns` is timing-based
+  `python/repark/tests/perf/test_perf_unpivot_1.py::test_stack_is_linear_in_columns` is timing-based
   and fails on shared CI runners with no product cause (hit #891 at exponent 1.224 and #892 at
   1.120); needs a noise-robust bound.
 - [spark-string-ts-functions-1-card-2026-10-01.md](spark-string-ts-functions-1-card-2026-10-01.md) — **card
@@ -747,7 +747,16 @@ declines it (a dated ruling in the intake, then the archive).
   REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-15, open, critical, clerk under owner ruling 106 (a)):**
   through `repark.sql()`, an `UPDATE` whose `WHERE` holds a subquery updates every row and reports
   success. Retires with `repark.sql()` routed through the ANSI door's dialect, or a refusal on that
-  door as the stopgap; own unit next on the U-6 lane after #1062 merges.
+  door as the stopgap; own unit next on the U-6 lane after #1062 merges. **2026-10-16:** `DELETE`
+  is in, and the stopgap has landed (round 2: `repark.sql()` refuses every subquery-predicate
+  `UPDATE` and `DELETE` with the G3-E8 text); routing stays this card, and a later tidy unit
+  folds the Spark SQL door's G3-E8 copy into the shared home. **2026-10-16, ruling 131 (b):**
+  `EXPLAIN` is in; the refusal fires inside `EXPLAIN` and `EXPLAIN ANALYZE`. **2026-10-17,
+  ruling 135 (a):** the refusal reads every write the statement executes (the shared walk), so
+  `PREPARE` and `EXPLAIN ANALYZE` refuse and a plain `EXPLAIN` answers its plan again; the pins
+  run on Iceberg tables. **2026-10-17, ruling 139:** both repark-spark doors' strict pregate
+  refuses each walked subquery-predicate `DELETE` and `UPDATE`, so `PREPARE` of one refuses there
+  too; DataFusion's own `EXPLAIN ANALYZE` on those doors goes to card EXPLAIN-DML-WRITE-1.
 - [explain-dml-write-1-card-2026-10-16.md](explain-dml-write-1-card-2026-10-16.md) **card
   EXPLAIN-DML-WRITE-1 (2026-10-16, corrected 2026-10-17, open, critical under owner ruling 139):**
   `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE`, and the same statement run as `PREPARE` then
@@ -921,7 +930,7 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-15) it also retires row ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY-WHERE-FALSE, the cells
   that match no row.
 - [occ-disjoint-merge-flake-1-card-2026-10-14.md](occ-disjoint-merge-flake-1-card-2026-10-14.md) — **card
-  OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open, not scheduled):**
+  OCC-DISJOINT-MERGE-FLAKE-1 (2026-10-14, open; measured 2026-10-18):**
   `test_disjoint_key_merges_refuse_like_spark[3-serializable-dataframe]` committed 2 of
   8 on CI (2026-10-07) where Spark's recording commits 1; losers keep the expected
   `Found conflicting files … matching TRUE` shape. The test fires eight MERGEs on
@@ -930,6 +939,10 @@ declines it (a dated ruling in the intake, then the archive).
   Open question: product race or test assumption. Unmeasured until N repeated runs.
   Seen again 2026-10-16 as `[3-snapshot-dataframe]` (PR #1085 CI, 2 of 8); on the
   orchestrator's list as a U-9 drill cell (an owner-relayed suggestion, not a ruling).
+  Measured 2026-10-18 (unit ledger `occ-disjoint-merge-flake-1-ledger.md`): legitimate
+  ordering, not a product race. The commit path cannot land two MERGEs on one base; a
+  second winner is a MERGE that loaded its base after the first commit. Spark does the same
+  under that schedule. The pin's tolerance waits on an owner ruling.
 - [mtime-metadata-pick-1-card-2026-10-14.md](mtime-metadata-pick-1-card-2026-10-14.md) — **card
   MTIME-METADATA-PICK-1 (2026-10-14, open, not scheduled):** every remaining file under
   `python/repark/tests/` that orders or picks Iceberg metadata files by `st_mtime` /
@@ -937,6 +950,14 @@ declines it (a dated ruling in the intake, then the archive).
   `f8f1d252` flake shape) or does something else. Proposed fix is one shared helper
   that picks by the version number in the file name, as `f8f1d252`'s
   `_metadata_version` does. Retires when every listed use is converted.
+- [mb-fence-body-flake-1-card-2026-10-18.md](mb-fence-body-flake-1-card-2026-10-18.md) — **card
+  MB-FENCE-BODY-FLAKE-1 (2026-10-18, fixed in the unit's PR, one open question):**
+  `two_drivers_on_one_sink_land_each_epoch_exactly_once` failed on CI (run 39157958057,
+  main's tree) with `left: [0, 0, 1, 2]`: a fenced driver's `foreachBatch` body ran epoch 0.
+  Cause: `enter_scope` loaded the sink before it entered the sink's scope, against MB-3 D-19.
+  A deterministic pin reproduces it; the fix enters the scope first. Open: the same pin also
+  misses its 10 s bound on a slow disk (the PA-15 family), measured to `fsync`; the owner
+  keeps the bound or rules otherwise.
 - [stack-linear-flake-1-card-2026-10-15.md](stack-linear-flake-1-card-2026-10-15.md) — **card
   STACK-LINEAR-FLAKE-1 (2026-10-15, open, not scheduled):**
   `test_stack_is_linear_in_columns` failed on CI (2026-10-15, facade shard 1,

@@ -43,10 +43,10 @@ UTC-adjusted), and a second engine — PyIceberg 0.12.0, read side — must read
 RePark wrote. PyIceberg 0.12.0 refuses to write format v3 (`NotImplementedError: Writing V3 is
 not yet supported`, apache/iceberg-python#1551), so the write-direction oracle is residue R-002.
 
-**Oracle harness.** `python/repark/tests/_record_ice_tsns_sql_1_oracle.py` (two processes: RePark
+**Oracle harness.** `python/repark/tests/timestamps/_record_ice_tsns_sql_1_oracle.py` (two processes: RePark
 `write` under the repo venv, PyIceberg `record` / `check` under a caller-supplied interpreter with
 `pyiceberg==0.12.0` + `pyarrow` — not a repository dependency), fixture
-`python/repark/tests/ice_tsns_sql_1_oracle.json`, pins `python/repark/tests/test_ice_tsns_sql_1.py`.
+`python/repark/tests/timestamps/ice_tsns_sql_1_oracle.json`, pins `python/repark/tests/timestamps/test_ice_tsns_sql_1.py`.
 
 ## PROPOSITION LEDGER — ICE-TSNS-SQL-1 — 2026-09-17
 
@@ -94,7 +94,7 @@ not yet supported`, apache/iceberg-python#1551), so the write-direction oracle i
 
 ## 2. Red run (step 1, `126b8285` + the pins, release native)
 
-`python -m pytest python/repark/tests/test_ice_tsns_sql_1.py` — 37 failed, 2 passed. The two
+`python -m pytest python/repark/tests/timestamps/test_ice_tsns_sql_1.py` — 37 failed, 2 passed. The two
 passes are the fixture self-check and the clause-6 v2 fence, green by design. The two
 `Regex pattern did not match` rows are the malformed-string ANSI pins: the `TIMESTAMP` cast raises
 `CAST_INVALID_INPUT` and the ns cast raises `Unsupported SQL type` instead.

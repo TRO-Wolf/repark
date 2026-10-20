@@ -150,7 +150,7 @@ to `f7ecd855` stays a separate PR (another run).
 
 ### Python pins — release native `75433230` + fork `04a338c3` (unfixed), 2026-09-17 00:14–00:19
 
-`TMPDIR=… .venv/bin/python -m pytest python/repark/tests/test_ice_evo_dml_1.py -q -p no:cacheprovider --tb=line -rA`
+`TMPDIR=… .venv/bin/python -m pytest python/repark/tests/writes/test_ice_evo_dml_1.py -q -p no:cacheprovider --tb=line -rA`
 
 ```
 160 failed, 56 passed, 1 skipped, 16 xfailed in 312.45s (0:05:12)
@@ -203,7 +203,7 @@ own fix unit; they are strict, so they flip red when that unit lands.
 
 ### Lineage-read pins (second red set) — unfixed native and source, 2026-09-17 00:22–00:26
 
-`TMPDIR=… .venv/bin/python -m pytest python/repark/tests/test_ice_evo_dml_1.py -q -p no:cacheprovider --tb=line -rA -k "lineage_read or covers_the_driver"`
+`TMPDIR=… .venv/bin/python -m pytest python/repark/tests/writes/test_ice_evo_dml_1.py -q -p no:cacheprovider --tb=line -rA -k "lineage_read or covers_the_driver"`
 
 ```
 E   repark.errors.PySparkException: External error: DataInvalid => Column extra not found in table. Schema: table {
@@ -264,7 +264,7 @@ Release native built with the run override (`maturin develop --release
 --config /tmp/oc-worker/run20a/fork-override.toml`, 6m08s, `repark-1.4.2` installed;
 `Cargo.lock` restored after every override build — tree clean at each commit).
 
-`.venv/bin/python -m pytest python/repark/tests/test_ice_evo_dml_1.py python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider`
+`.venv/bin/python -m pytest python/repark/tests/writes/test_ice_evo_dml_1.py python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider`
 
 ```
 33 failed, 356 passed, 2 skipped, 16 xfailed in 155.28s (0:02:35)
@@ -280,7 +280,7 @@ merge-source / adopted-MERGE arms are all green.
 Step-2 re-measurement on the rebased tree before the replacement (release native rebuilt with
 the run override; `Cargo.lock` restored after every override build):
 
-`.venv/bin/python -m pytest python/repark/tests/test_ice_evo_dml_1.py python/repark/tests/test_ice_promote_read_1.py -q -p no:cacheprovider`
+`.venv/bin/python -m pytest python/repark/tests/writes/test_ice_evo_dml_1.py python/repark/tests/iceberg/test_ice_promote_read_1.py -q -p no:cacheprovider`
 
 ```
 393 passed, 2 skipped, 16 xfailed in 108.01s (0:01:48)
@@ -397,11 +397,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every DML arm after every evolution measured on Spark 4.1.2 and pinned on RePark — ADD, RENAME, key-rename, swap, DROP-then-ADD, RENAME-onto-dropped × v2/v3 × CoW/MoR, the added column in an UPDATE predicate, a MERGE key and NMBS, plus the v3 default-DDL refusal on both engines. Residuals bind the current schema by field id; NMBS disables the residual and still answers.
-      artifacts: [python/repark/tests/test_ice_evo_dml_1.py, python/repark-parity/fixtures/torture/data/ice_evo_dml_1/truth.json]
+      artifacts: [python/repark/tests/writes/test_ice_evo_dml_1.py, python/repark-parity/fixtures/torture/data/ice_evo_dml_1/truth.json]
     - id: AT-2
       status: ATTACKED
       evidence: SQL and DataFrame doors pinned wherever the shape has one (facade mergeInto with updateAll/insertAll, column maps, append, by-source update; UPDATE/DELETE are SQL-only on both engines); lineage reads are SQL-only (the DataFrame door resolves no _row_id on any table). Four recordings agree on every shared case; the live cell re-derives all 183 answers on both doors.
-      artifacts: [python/repark/tests/test_ice_evo_dml_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_evo_dml_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Round 3 adds no Rust and no new failure path; the round-2 engine change rides the fork project_current_schema API with clippy pedantic and the panic/async bans green under make verify.
@@ -420,7 +420,7 @@ COVERAGE_ATTESTATION:
     - id: AT-7
       status: ATTACKED
       evidence: Facade 9904 passed with 3 pre-existing local-only reds, parity 755 passed, repark-iceberg lib green, pin module 274 passed with the live re-derivation green; make verify rc 0; comment ban hits 0.
-      artifacts: [python/repark/tests/test_ice_evo_dml_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_evo_dml_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: Spark contracts read from the oracle, never assumed: old-row NULL fill after DROP-then-ADD, w-values after RENAME-onto-dropped, the 4.1.2 default-DDL refusal recorded verbatim, NMBS and merge-on-new-column row shapes recorded on both doors.

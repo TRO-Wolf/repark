@@ -582,7 +582,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     original column name is restored with `NamePreserver`, because DataFusion spells an
     `AggregateUDF` window function's schema name with `", "` between arguments and a `WindowUDF`'s
     with `","`.
-  Pins: `tests/window_rescan.rs` and `python/repark/tests/test_win_slide_1.py`. It sits under
+  Pins: `tests/window_rescan.rs` and `python/repark/tests/functions/test_win_slide_1.py`. It sits under
   `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard
   and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
   pins: win-slide-1/C-001, C-002, C-005, C-006, C-007
@@ -593,7 +593,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   Round 3 (2026-09-16): `__repark_any_row` joins the guard family for a stripped
   correlated `LIMIT 1`, and the projection hoist carries a `SubqueryAlias`
   qualifier through to its lifted outputs.
-  Pins: `tests/subquery.rs` and `python/repark/tests/test_df_subquery_1.py`.
+  Pins: `tests/subquery.rs` and `python/repark/tests/dataframe/test_df_subquery_1.py`.
   pins: df-subquery-1/C-001, C-002, C-003, C-004
 - `tests/subquery.rs` — **DF-SUBQUERY-1:** plan-level pins for the three subquery
   rules: the scalar guard wraps a non-singleton subplan and leaves a zero-group

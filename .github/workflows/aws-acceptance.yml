@@ -101,7 +101,7 @@ jobs:
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
         run: >
           VIRTUAL_ENV="$PWD/.venv"
-          uv run --no-project python -m pytest python/repark/tests/test_aws_acceptance.py -q -rA
+          uv run --no-project python -m pytest python/repark/tests/parity/test_aws_acceptance.py -q -rA
       - name: dbt gold acceptance (REPARK_AWS_ACCEPTANCE=1)
         if: ${{ !cancelled() }}
         env:

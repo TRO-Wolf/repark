@@ -456,6 +456,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   read-performance slate.
   pins: ice-read-perf-0/C-006
 
+- [column-or-build-cost-2026-10-19.md](column-or-build-cost-2026-10-19.md) —
+  **COLUMN-OR-BUILD-1 baseline (2026-10-19):** the cost of composing an n-term `OR` with
+  `|` over `Column` objects on the Python door at 2,500 / 5,000 / 10,000 / 20,000 terms on the
+  `ci` profile, build time against `filter().count()` time, the fitted exponent, the
+  suspected owner (`Column._binary` re-composes the left side's display and SQL strings at
+  every level) and the acceptance experiment. Measurement only; no product change. Found
+  as the facade suite's floor by DEEP-BATTERY-SPLIT-1 (#1115).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

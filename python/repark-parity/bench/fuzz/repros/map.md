@@ -19,7 +19,7 @@ rows) and the minimized SQL body. **Empty corpus is a valid outcome** — do not
 | I want to… | Go to |
 |---|---|
 | See whether the corpus is empty | this dir (no `*.sql` → empty) + `task/d3-sql-fuzzer-ledger.md` |
-| Pin a banked repro as xfail | `python/repark/tests/test_fuzz_smoke.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
+| Pin a banked repro as xfail | `python/repark/tests/sql/test_fuzz_smoke.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
 
 ## Debug
 

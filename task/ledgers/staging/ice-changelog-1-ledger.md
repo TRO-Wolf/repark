@@ -34,7 +34,7 @@ refuses on both engines with the same message; `remove_carryovers` as a procedur
 Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (`local[1]`, InMemoryCatalog
 `sc`), **36** `QI-*` / `QC-*` cells recorded by the orchestrator's run-25c measurement (harness
 `/tmp/oc-worker/nc-inventory/harness.py`, cells `cells_qc4.py`), committed verbatim as
-`python/repark/tests/ice_changelog_1_spark_oracle.json` (SHA-256
+`python/repark/tests/iceberg/ice_changelog_1_spark_oracle.json` (SHA-256
 `c2002461483cd468541f52b953d619551e34153bbad9611b4e27271adcbb76fc`). They are a SUPERSET of the
 eleven inventory cells this unit closes.
 
@@ -131,7 +131,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every Spark-visible answer is pinned cell for cell against 36 recorded live-Spark cells committed verbatim as the oracle, a superset of the eleven inventory cells the unit closes; Java's own bytecode was read for every message and every iterator rule rather than inferred.
-      artifacts: [python/repark/tests/test_ice_changelog_1.py, python/repark/tests/ice_changelog_1_spark_oracle.json]
+      artifacts: [python/repark/tests/iceberg/test_ice_changelog_1.py, python/repark/tests/iceberg/ice_changelog_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: The row transforms are pinned on synthetic rows where a wrong rule survives the cells — a delete and insert one snapshot apart (carryover must NOT fire), a row deleted and re-inserted inside the window (net must drop it), an unpaired DELETE at a later ordinal (pairing must not fire), and two deletes of one identifier (Java's refusal). The packet's own chain design fails the net pin, which is how it was caught.
@@ -139,14 +139,14 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: Both doors carry the relation (SQL `FROM t.changes` and `format('iceberg').load(t + '.changes')` with window options), and the procedure is exercised through the Spark CALL door with every argument Iceberg 1.11 declares.
-      artifacts: [python/repark/tests/test_ice_changelog_1.py, crates/repark-spark/src/time_travel/changes.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_changelog_1.py, crates/repark-spark/src/time_travel/changes.rs]
     - id: AT-4
       status: N/A
       justification: No new shared mutable state and no concurrency. The providers are per-statement and immutable; the only registry touched is the session's temp-view namespace, through the existing `PinnedViews` release path.
     - id: AT-5
       status: ATTACKED
       evidence: The unit adds no write path. The one place it could answer where Spark refuses — a merge-on-read changelog range — is pinned to Spark's refusal instead, and the fork flag that would have answered it is deliberately not passed.
-      artifacts: [python/repark/tests/test_ice_changelog_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_changelog_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: Three residues are written down rather than smoothed over: the fork pin this branch needs, the unpinned QC-UPDATES-TABLE-IDENT cell (Spark itself errored at its ALTER step), and Java's unorderable-columns refusal, which no cell measures and which is not implemented.
@@ -166,6 +166,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: The local gate ran the comment gate, the release native, the three named crates' test suites and the unit's pytest file offline and live against real Spark; CI runs the rest.
-      artifacts: [python/repark/tests/test_ice_changelog_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_changelog_1.py]
   complete: true
 ```

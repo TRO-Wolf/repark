@@ -459,6 +459,10 @@ repark-core's error map.
   MoR arm before identity UPDATE/DELETE writes parquet (same refuse-before-IO
   class as `resolve_merge_mode`). Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)):** `pub mod
+  subquery_where;` declares the shared G3-E8 refusal (row in
+  [predicate_dml/map.md](predicate_dml/map.md)); the file sits at 990 of the 1000-line default
+  ceiling. pins: repark-sql-update-subquery-where-1/C-007
 - `file_order.rs` — **V3-11 (2026-09-02):** `ascending_partition_order` stable-sorts one
   commit's `Vec<DataFile>` by partition value ascending (spec-field order, nulls first,
   primitive literals ascending) before the files reach the manifest, so `first_row_id`
@@ -757,6 +761,16 @@ repark-core's error map.
   API (below the SQL router). The one caller is `repark-spark/src/router/nested_ns.rs`.
   Its unit tests hold one case per container kind and per statement form.
   pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-047
+- `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
+  (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
+  statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to
+  the explained one, nothing for a plain `EXPLAIN` (it executes nothing), and otherwise every
+  `INSERT`, `UPDATE`, `MERGE` and `DELETE` in the statement, the statement itself first. It
+  moved here from `repark-spark/src/router/nested_ns.rs` so the Spark SQL router and
+  `repark.sql()` (`repark-core`'s `DataFusionDialect`, which cannot depend on `repark-spark`)
+  share it. `DELETE` is new to the walk; the router's match ignores it, so the Spark SQL door
+  answers as before. Its tests are the two callers' pins.
+  pins: repark-sql-update-subquery-where-1/C-021
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
   matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows
@@ -1213,7 +1227,7 @@ repark-core's error map.
   non-Dml plans (MERGE arms, the UPDATE rewrite, OVERWRITE/BY NAME sources); callers apply
   it between eager analysis and optimization so the optimizer folds the swapped guard.
   `analyzed_store_source` is the shared parse-plus-analyze entry for the raw-SQL internal
-  plans. pins: cast-overflow-insert-1 (python/repark/tests/test_cast_overflow_insert_1.py).
+  plans. pins: cast-overflow-insert-1 (python/repark/tests/writes/test_cast_overflow_insert_1.py).
   Re-verify VO3-1 (2026-09-29): `wrap_store_outputs` takes a `gate_op` label and judges
   every (source, target) pair with `refuse_unless_write_store_assignable` before building
   the wrap, so a row with both a type refusal and an overflow reports the store refusal

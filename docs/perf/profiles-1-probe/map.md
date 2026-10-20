@@ -19,7 +19,7 @@ for the script-relative `WORK` directory.
   session so no discovered file reaches a measurement, and scrubs the work prefix to
   `<work>` in every plan so two runs agree byte for byte. Run data stays under the
   system temporary root for the operator to delete. Pinned by
-  `python/repark/tests/test_profiles1_probe_rerun.py`.
+  `python/repark/tests/session/test_profiles1_probe_rerun.py`.
   **CONF-UNREAD-1 step 1 (2026-09-11):** a key whose build refuses is recorded as
   `outcome: refused` with the message (plus a `conf.set` probe on an unkeyed
   session) instead of aborting the run; `write_batch_size` carries a `["write"]`

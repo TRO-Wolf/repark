@@ -6,7 +6,7 @@ The measured Spark 4.1.2 answers for ICE-OCC-SCOPED-1 (rating row V2-20a / resid
 many of N concurrent Iceberg writes commit, what the losers raise, and the rows left behind.
 Recorded 2026-09-17 on PySpark 4.1.2 + `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`,
 Hadoop catalog, `local[8]`, each storm released by one `threading.Barrier` so the N statements
-race. The facade pins in `python/repark/tests/test_ice_occ_scoped_1.py` read every expectation
+race. The facade pins in `python/repark/tests/writes/test_ice_occ_scoped_1.py` read every expectation
 from these fixture files; no count, row or error text is a literal in a test body.
 
 ## Contents

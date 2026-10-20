@@ -372,6 +372,13 @@ pub(crate) fn refuse_dml_subquery_predicate_in_statement(statement: &Statement) 
     {
         return Ok(());
     }
+    for write in repark_iceberg::write::statement_writes::executed_writes(statement) {
+        refuse_written_dml_subquery_predicate(&write)?;
+    }
+    Ok(())
+}
+
+fn refuse_written_dml_subquery_predicate(statement: &Statement) -> Result<()> {
     match statement {
         Statement::Delete(delete) => refuse_dml_subquery_predicate(
             DmlSubqueryVerb::Delete,

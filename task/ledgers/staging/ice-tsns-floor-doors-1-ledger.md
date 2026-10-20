@@ -27,7 +27,7 @@ where the narrowing is decided.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The door matrix on main is recorded: 216 combinations, 2376 ticks, with harness-derived floor and session-zone references beside each observation. | The recorder and its evidence files. | **PROVEN** | `python/repark/tests/_record_ice_tsns_floor_doors_1_main.py`; `task/wo/ice-tsns-floor-doors-1/evidence/main-cells.json` (216 cells) and `main-cells.md` (counts by door and target). pins: ice-tsns-floor-doors-1/C-001 |
+| C-001 | The door matrix on main is recorded: 216 combinations, 2376 ticks, with harness-derived floor and session-zone references beside each observation. | The recorder and its evidence files. | **PROVEN** | `python/repark/tests/timestamps/_record_ice_tsns_floor_doors_1_main.py`; `task/wo/ice-tsns-floor-doors-1/evidence/main-cells.json` (216 cells) and `main-cells.md` (counts by door and target). pins: ice-tsns-floor-doors-1/C-001 |
 | C-002 | On `TIMESTAMP` targets the append class equals INSERT's floor on every tick, and the four overwrite doors differ wherever truncation or the UTC reading differs. | The count table of `main-cells.md`. | **PROVEN** | `main-cells.md`: INSERT, MERGE update arm, UPDATE on v3, `writeTo().append()`, `insertInto` append 66 of 66 EQUAL per version; INSERT OVERWRITE, MERGE insert arm, `overwritePartitions`, `insertInto(overwrite=True)` 28 EQUAL, 16 truncated, 14 wall-as-UTC, 8 both per version. pins: ice-tsns-floor-doors-1/C-002 |
 | C-003 | On `TIMESTAMP_NTZ` targets every door, INSERT included, truncates toward zero. | The count table of `main-cells.md`. | **PROVEN** | `main-cells.md`: every door except v2 UPDATE 42 EQUAL, 21 truncated, 3 other per version; the other trio is the Kolkata `timestamptz_ns` pre-epoch set (truncation before the zone shift). pins: ice-tsns-floor-doors-1/C-003 |
 | C-004 | The registry row's 72 cells reproduce on main. | The collapsed overlap of `main-cells.md`. | **PROVEN** | `main-cells.md`: the 48 collapsed combinations (4 doors x 2 sources x 3 zones x 2 versions; the 3 MERGE spellings collapse to one arm) show INSERT all EQUAL and every overwrite door differing; the split holds. pins: ice-tsns-floor-doors-1/C-004 |
@@ -87,7 +87,7 @@ the build re-measures the 72 control cells there).
 
 ## 5. The fixture, red first (C-008)
 
-`python/repark/tests/test_ice_tsns_floor_doors_1.py`, committed failing. Every
+`python/repark/tests/timestamps/test_ice_tsns_floor_doors_1.py`, committed failing. Every
 expected tick is `rule_expected` of the step 0 recorder: the floor by `//`,
 the naive wall localised in the session zone and the instant shifted to the
 session wall through `zoneinfo`. A `TIMESTAMP_NTZ` or `TIMESTAMP` source runs
@@ -304,7 +304,7 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: The fixture enumerates twenty doors, four layouts on the eleven added ones, four targets, three zones, four sources and eleven ticks (26928 ticks), counted per door and target on main, on the seam commit and on the routers commit.
-      artifacts: [python/repark/tests/test_ice_tsns_floor_doors_1.py, task/ledgers/staging/ice-tsns-floor-doors-1-ledger.md]
+      artifacts: [python/repark/tests/timestamps/test_ice_tsns_floor_doors_1.py, task/ledgers/staging/ice-tsns-floor-doors-1-ledger.md]
     - id: AT-3
       status: ATTACKED
       evidence: store_micros and the router arms read for unwrap, panics, overflow and casts; the floor is div_euclid on i64 (no overflow), localisation and the wall shift return errors out of range as before; make rust-clippy, make rust-panic-ban and the touched crates' tests run before hand-back.
@@ -318,15 +318,15 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The fixture was committed red on main (180 tests, 4400 ticks) before any product commit; the mutants of section 7 each die on a named test.
-      artifacts: [python/repark/tests/test_ice_tsns_floor_doors_1.py, python/repark/tests/test_ice_tsns_merge_wall_1.py]
+      artifacts: [python/repark/tests/timestamps/test_ice_tsns_floor_doors_1.py, python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: Release modules built inside the build lock for main, the seam commit, the routers commit, each mutant and the head; the fixture, the three neighbours and the facade suite run on the head; ruff, rustfmt, clippy, panic ban, file-size, map, docs, ledger and comment gates run before hand-back.
-      artifacts: [python/repark/tests/test_ice_tsns_floor_doors_1.py]
+      artifacts: [python/repark/tests/timestamps/test_ice_tsns_floor_doors_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: The oracle is ruling Q-21c-8 (floor) and INSERT's session-zone wall; every expected tick is rule_expected of the step 0 recorder, never typed in; Spark 4.1.2 cannot read the source types.
-      artifacts: [python/repark/tests/_record_ice_tsns_floor_doors_1_main.py]
+      artifacts: [python/repark/tests/timestamps/_record_ice_tsns_floor_doors_1_main.py]
     - id: AT-9
       status: ATTACKED
       evidence: Registry row R-009 moves to FIXED 2026-10-14 with its pins and the restated door count; the 1.5.6 notes draft carries one line per stored-value change.
@@ -334,7 +334,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Behaviour-move guards run on the routers commit; 0 microsecond-source cells and 0 INSERT cells into TIMESTAMP moved from main (H3), and the merge-wall control cells that moved are counted (94) with the rest byte-equal to main.
-      artifacts: [python/repark/tests/test_ice_tsns_merge_wall_1.py]
+      artifacts: [python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py]
   complete: true
 ```
 
