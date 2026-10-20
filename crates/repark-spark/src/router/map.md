@@ -57,7 +57,7 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `COMMENT ON COLUMN` is not the shape and passes through. Execute sets or
   unsets the `comment` property with no reregister, like `SET TBLPROPERTIES`
   (cell `D-COMMENT-ON`). Unit pins are inline; door pins are
-  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py).
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/iceberg/test_ice_ddl_clauses_1.py).
 - `hive_change_column.rs` — **IPI-26/27 round 2 (2026-09-20); rename refusal
   (2026-09-21):** the two-name Hive `ALTER TABLE t CHANGE [COLUMN] old new TYPE
   [COMMENT 'lit']` intercept. The type parses with `SparkSqlDialect` and maps at
@@ -66,9 +66,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   name with `[PARSE_SYNTAX_ERROR]` / SQLSTATE 42601, as Spark does; execute then
   applies only `UpdateColumnType` plus an optional `UpdateColumnDoc` against the
   old name (cell `D-X-CHANGE-COLUMN-TYPE`). Unit pins are inline; door pins are
-  [test_ice_change_column_rename_1.py](../../../../python/repark/tests/test_ice_change_column_rename_1.py)
+  [test_ice_change_column_rename_1.py](../../../../python/repark/tests/iceberg/test_ice_change_column_rename_1.py)
   and
-  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/iceberg/test_ice_ddl_clauses_1.py)
   beside the `COMMENT ON` pins.
 - `table_props_ddl.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   the `ALTER TABLE <cat.ns.tbl> SET LOCATION '<literal>'` intercept (the statement does
@@ -83,7 +83,7 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   tested leg: the move changes no names, so no pin can observe it. Unit pins are
   inline; door pins are
   [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs) and
-  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/iceberg/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).
 - `pg_insert.rs` — **C-4 step 2 (2026-10-09):** Postgres-target INSERT routing on this door
   (a router child because `../router.rs` is at its line ceiling and `../lib.rs` at its
@@ -146,6 +146,12 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   reports the nested refusal, not the parser's error.
   A target that is not an Iceberg table passes through to the door, which answers as before.
   pins: ice-tsns-merge-wall-1/C-040, C-050, C-053
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a) (2026-10-17):** the walk over the
+  parsed statement, `executed_writes`, moved unchanged to
+  `repark_iceberg::write::statement_writes`, which `repark.sql()` also calls; this file calls it
+  from there. The moved walk also answers a `DELETE`, which this file's match ignores, and the
+  statement itself still comes first, so the `BY NAME` index and every answer stay as they were.
+  pins: repark-sql-update-subquery-where-1/C-021
 
 ## Pointers
 

@@ -8,7 +8,7 @@ per-table outcome table live in the unit ledger:
 
 ## What was built
 
-- D1 — [the helper](../../../python/repark/tests/_acceptance_cross_read.py):
+- D1 — [the helper](../../../python/repark/tests/parity/_acceptance_cross_read.py):
   given a RePark session and catalog, a PySpark session whose catalog points
   at the same warehouse, and table names, it adopts each table's newest
   metadata file into Spark (`register_table`: a Hadoop catalog cannot see
@@ -21,13 +21,13 @@ per-table outcome table live in the unit ledger:
   [the parity registry](../../../docs/spark-sql-iceberg-parity.md)). No
   expectation is typed in per table: the rule is Spark's rows equal
   RePark's rows.
-- D2 — [the local leg](../../../python/repark/tests/test_acceptance_cross_read_local.py):
+- D2 — [the local leg](../../../python/repark/tests/parity/test_acceptance_cross_read_local.py):
   three live cells run the MOR, create-or-replace-twice and v3 offline
   acceptance runners unchanged (reused by import), assert their own
   outcomes, then cross-read every table each wrote. Gated on the live flag
   plus a PySpark importorskip; the shared Spark session is never stopped
   and each test takes a private catalog.
-- D3 — [the AWS leg](../../../python/repark/tests/test_aws_acceptance_cross_read.py):
+- D3 — [the AWS leg](../../../python/repark/tests/parity/test_aws_acceptance_cross_read.py):
   two cells discover every `testing_` table under the scratch namespace on
   Glue and on S3 Tables and cross-read each through the shared helper
   (direct catalog reads both sides, no adoption). Same module-level
@@ -43,7 +43,7 @@ repo root, with `JAVA_HOME` on a Java 17 home (fill the three bracketed
 paths for this box):
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 PYTHONPATH=<repark release module's src>:<its site-packages> <the PySpark interpreter> -m pytest python/repark/tests/test_acceptance_cross_read_local.py -q -rA -s
+JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 PYTHONPATH=<repark release module's src>:<its site-packages> <the PySpark interpreter> -m pytest python/repark/tests/parity/test_acceptance_cross_read_local.py -q -rA -s
 ```
 
 Result 2026-10-14: 4 passed. Four tables EQUAL (`mw4mor` 20 rows,
@@ -123,7 +123,7 @@ after the dbt gold step so every acceptance table exists first:
 +          SPARK_LOCAL_IP: "127.0.0.1"
 +        run: >
 +          VIRTUAL_ENV="$PWD/.venv"
-+          uv run --no-project python -m pytest python/repark/tests/test_aws_acceptance_cross_read.py -q -rA
++          uv run --no-project python -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA
 ```
 
 Notes for the wire-up, in the operator's own runbook terms

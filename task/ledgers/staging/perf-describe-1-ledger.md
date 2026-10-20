@@ -10,7 +10,7 @@ owner closes the slate row.
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
 **Writable paths:** `python/repark/src/repark/spark/dataframe/statistics.py`,
-`python/repark/tests/test_perf_describe_1.py` (new pin file), lockstep `map.md` files
+`python/repark/tests/perf/test_perf_describe_1.py` (new pin file), lockstep `map.md` files
 (`python/repark/tests/map.md`, `python/repark/src/repark/spark/dataframe/map.md`,
 `task/ledgers/staging/map.md`), this ledger, and the measurement scratch under
 `scratch/perf-describe-1/` (gitignored). Closed: `crates/`, `scripts/` baselines,
@@ -121,8 +121,8 @@ E           AssertionError: expected one aggregate plan; session queries: ['SELE
 E           assert 0 == 1
 E            +  where 0 = len([])
 
-python/repark/tests/test_perf_describe_1.py:108: AssertionError
-FAILED python/repark/tests/test_perf_describe_1.py::test_describe_scans_the_source_once
+python/repark/tests/perf/test_perf_describe_1.py:108: AssertionError
+FAILED python/repark/tests/perf/test_perf_describe_1.py::test_describe_scans_the_source_once
 1 failed, 1 passed in 0.31s
 ```
 
@@ -188,7 +188,7 @@ is identity. Python-side float formatting was measured and rejected: engine
 
 | Command | Exit |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_perf_describe_1.py -q` | 0 — 3 passed |
+| `.venv/bin/python -m pytest python/repark/tests/perf/test_perf_describe_1.py -q` | 0 — 3 passed |
 | `.venv/bin/python -m pytest python/repark/tests -q -k "describe or summary"` | 0 — 36 passed, 6 skipped, 6266 deselected |
 | `.venv/bin/python -m pytest python/repark/tests -q` | 0 — 5939 passed, 369 skipped in 803.46 s |
 | `PYTHONPATH=python/repark-parity/src uv run --no-project python -m pytest python/repark-parity/tests -q -p no:cacheprovider` | 0 — 740 passed, 1 skipped, 11 xfailed in 132.48 s |
@@ -229,11 +229,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: The one-scan pin is red at base 25ca119a with statistics.py reverted — the base emits a five-leg UNION ALL with five TableScans and an ORDER BY ordinal, so no single aggregate plan exists to observe; green after the change.
-      artifacts: [python/repark/tests/test_perf_describe_1.py, python/repark/src/repark/spark/dataframe/statistics.py]
+      artifacts: [python/repark/tests/perf/test_perf_describe_1.py, python/repark/src/repark/spark/dataframe/statistics.py]
     - id: AT-2
       status: ATTACKED
       evidence: Every asserted cell and ordering is the DF-DESCRIBE-STR-1 oracle contract, kept green unchanged — string try_cast mean/stddev, the non-describable skip/refusal, stat subsets, duplicate-stat order, display-name overlay; 35 describe/summary pins pass.
-      artifacts: [python/repark/tests/test_perf_describe_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_describe_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The comment fence runs on the staged diff and prints nothing; make check-lib-py holds statistics.py under its exact baseline.
@@ -241,7 +241,7 @@ COVERAGE_ATTESTATION:
     - id: AT-4
       status: ATTACKED
       evidence: The row order is emitted by the bridge's Python unpivot in requested order, not a sort — the parent plan's EXPLAIN has no SortExec/SortPreservingMergeExec and the duplicate-stat pin keeps requested slots.
-      artifacts: [python/repark/src/repark/spark/dataframe/statistics.py, python/repark/tests/test_perf_describe_1.py]
+      artifacts: [python/repark/src/repark/spark/dataframe/statistics.py, python/repark/tests/perf/test_perf_describe_1.py]
     - id: AT-5
       status: ATTACKED
       evidence: The bridge reuses the facade's existing lazy mapInArrow path — the parent aggregate is a normal plan node and every action path (collect/take/to_arrow/Arrow stream) already routes through the bridge; verified by the laziness pin and the 60-column two-chunk collect probe.
@@ -273,6 +273,6 @@ COVERAGE_ATTESTATION:
 
 - Up: [map.md](map.md)
 - Change: [../../../python/repark/src/repark/spark/dataframe/statistics.py](../../../python/repark/src/repark/spark/dataframe/statistics.py)
-- Pins: [../../../python/repark/tests/test_perf_describe_1.py](../../../python/repark/tests/test_perf_describe_1.py)
+- Pins: [../../../python/repark/tests/perf/test_perf_describe_1.py](../../../python/repark/tests/perf/test_perf_describe_1.py)
 - Motivation: `/tmp/oc-worker/grok-rev-descr/report.md` (S2-21 reviewer); oracle contract:
   [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md)

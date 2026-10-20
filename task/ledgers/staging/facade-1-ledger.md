@@ -61,15 +61,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Capsule-not-IPC pins red on the base tree (mapInArrow placeholder and ML re-entry used register_ipc_stream_as_temp_view) and green after the helper. Version-skew IPC fallback pin still fires when the native capsule symbol is hidden.
-      artifacts: [python/repark/tests/test_facade_1_arrow_c_stream.py, python/repark/src/repark/spark/_arrow_stream.py]
+      artifacts: [python/repark/tests/io/test_facade_1_arrow_c_stream.py, python/repark/src/repark/spark/_arrow_stream.py]
     - id: AT-2
       status: ATTACKED
       evidence: Hidden-pyarrow subprocess pins package import, polars DataFrame(frame), pandas from those rows, and polars createDataFrame. With pyarrow present, pandas.DataFrame.from_arrow and polars.DataFrame consume the export capsule. Audit pin list 95 passed + 1 skipped.
-      artifacts: [python/repark/tests/test_facade_1_arrow_c_stream.py, python/repark/tests/test_mapinarrow.py, python/repark/tests/test_applyinpandas.py]
+      artifacts: [python/repark/tests/io/test_facade_1_arrow_c_stream.py, python/repark/tests/io/test_mapinarrow.py, python/repark/tests/io/test_applyinpandas.py]
     - id: AT-3
       status: ATTACKED
       evidence: to_arrow with pyarrow hidden raises ImportError whose text contains repark[pyarrow]. Doors that need pyarrow do not fall back to Python rows.
-      artifacts: [python/repark/src/repark/spark/_pyarrow.py, python/repark/tests/test_facade_1_arrow_c_stream.py]
+      artifacts: [python/repark/src/repark/spark/_pyarrow.py, python/repark/tests/io/test_facade_1_arrow_c_stream.py]
     - id: AT-4
       status: N/A
       justification: No new shared mutable state, lock, or async spawn. Capsule drain already serializes under the GIL in register_arrow_stream_as_temp_view.
@@ -79,11 +79,11 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Public names to_arrow, toPandas, collect, createDataFrame, mapInArrow, __arrow_c_stream__ are unchanged. Freeze inventory files were not edited and passed.
-      artifacts: [python/repark/tests/test_facade_1_arrow_c_stream.py, python/repark-parity/tests/test_api_freeze.py, python/repark-parity/tests/test_v1_gate_docs.py]
+      artifacts: [python/repark/tests/io/test_facade_1_arrow_c_stream.py, python/repark-parity/tests/test_api_freeze.py, python/repark-parity/tests/test_v1_gate_docs.py]
     - id: AT-7
       status: ATTACKED
       evidence: Actor 5k mapInPandas identity capsule 14.426 vs IPC 12.193 ms is a 2 ms wobble (samples 13.59/15.58/14.43). Reviewer stage-isolated encode (report /tmp/oc-worker/grok-rev-facade1/report.md): capsule 4.913 vs IPC 5.145 ms at 5k and 10.556 vs 13.728 ms at 500k; Table.from_batches 0.004 ms at 500k. Interleaved 5k round-trip 13.78 vs 14.03 ms. Capsule is faster.
-      artifacts: [task/ledgers/staging/facade-1-ledger.md, python/repark/tests/test_facade_1_arrow_c_stream.py]
+      artifacts: [task/ledgers/staging/facade-1-ledger.md, python/repark/tests/io/test_facade_1_arrow_c_stream.py]
     - id: AT-8
       status: ATTACKED
       evidence: core.py exact baseline ratcheted 4485 to 4473 to 4470 in check_lib_py.py and the CAP-1 mirror. New helpers sit under the default Python ceiling. No comment bytes added in the code diff.
@@ -94,6 +94,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: New pins failed on the base tree (import, mapInArrow IPC placeholder, ML IPC re-entry) and pass on the tip (9 passed). Existing D-4 batteries stay green.
-      artifacts: [python/repark/tests/test_facade_1_arrow_c_stream.py]
+      artifacts: [python/repark/tests/io/test_facade_1_arrow_c_stream.py]
   complete: true
 ```

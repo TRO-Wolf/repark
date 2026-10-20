@@ -129,7 +129,7 @@ COVERAGE_ATTESTATION:
       evidence: No Spark-visible change. Names, LongType and values of SELECT count(*),
         count(1), count(5), count(DISTINCT 1) and groupBy().count() equal main's on both
         doors, recorded on main's native before the fix and pinned after it.
-      artifacts: [python/repark/tests/test_ice_count_fold_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_count_fold_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Reverting either rule change turns the fold pins red (Grok verification,
@@ -174,6 +174,6 @@ COVERAGE_ATTESTATION:
       evidence: The existing spark_result_types and spark_literal_typing suites and the
         literal-typing Python files run green; the six F-27 fold pins of
         test_perf_ice_scan_1.py now run instead of skipping.
-      artifacts: [python/repark/tests/test_perf_ice_scan_1.py]
+      artifacts: [python/repark/tests/perf/test_perf_ice_scan_1.py]
   complete: true
 ```

@@ -116,7 +116,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: C-001 is walked shape by shape: VALUES refusal equals Spark's recorded text on the test catalog, the other three SQL doors carry the class, the DataFrame append refuses, and every legal source reads back its exact value.
-      artifacts: [crates/repark-spark/src/tests/ltz_store.rs, python/repark/tests/test_ltz_store_int_1.py]
+      artifacts: [crates/repark-spark/src/tests/ltz_store.rs, python/repark/tests/timestamps/test_ltz_store_int_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ, explicit CAST (user intent still stores), positional and reordered column lists, signed integers, fractional numbers, strings and booleans are all exercised; partitioned inserts, arity mismatches, unresolvable columns and probe failures fall through to pre-change behavior by construction.
@@ -134,7 +134,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: No stored-format change; the epoch-micros silent write is closed and the pins assert refused statements leave prior data intact.
-      artifacts: [crates/repark-spark/src/tests/ltz_store.rs, python/repark/tests/test_ltz_store_int_1.py]
+      artifacts: [crates/repark-spark/src/tests/ltz_store.rs, python/repark/tests/timestamps/test_ltz_store_int_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim; the gate loads one table schema per VALUES insert and plans at most one probe per non-literal LTZ cell, and only for tables that have an LTZ column.
@@ -145,7 +145,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The refusal carries Spark's class, condition and SQLSTATE through the facade's stamped-message parse, and the exact-text pins red if the failure mode changes.
-      artifacts: [crates/repark-spark/src/tests/ltz_store.rs, python/repark/tests/test_ltz_store_int_1.py]
+      artifacts: [crates/repark-spark/src/tests/ltz_store.rs, python/repark/tests/timestamps/test_ltz_store_int_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Every new branch has a nameable input that changes the output (classifier unit tests, mapping and probe asserts, legal read-backs); M1 bypasses the gate and the refuse pin reds; the stash check reds the same pin on unfixed code; M3 stashes the verifier fold and the three fold pins red; M4 skips every function call and the new STRING-function pin reds. The bail-out branches (partitioned, arity, unmapped, probe failure) are deliberately unpinned: pinning them would pin the residual hole.

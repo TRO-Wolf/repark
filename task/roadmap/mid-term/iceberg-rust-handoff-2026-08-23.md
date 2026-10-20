@@ -540,7 +540,7 @@ RP-3 C-006 (2026-08-30, `d408da42`): the 1e7×50 MOR driver still ends at 8 dele
   accounting, which is why it was deferred; the planner already has each task's attached delete
   files, so the accounting is the work.
 - **Acceptance.** The engine pin that flips is
-  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
+  `python/repark/tests/perf/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
   — a characterization pin, written to go RED when this lands. Its fixture's 100 %-dead in-band
   file must become a candidate, be rewritten, and take its delete file with it, leaving the
   table at zero delete files with the same 2,500 rows. Registry row **RDF-1** retires with it.

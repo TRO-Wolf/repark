@@ -472,7 +472,7 @@ Source comments retain only API and safety contracts; implementation narration i
   metadata-columns copy is separate and already serves empty projections) and
   the red-first pins — three `empty_projection_*` unit tests beside
   `conform_batch`, the provider pin in `microbatch/provider.rs`, and the facade
-  pins in `python/repark/tests/test_empty_projection_count_1.py`.
+  pins in `python/repark/tests/iceberg/test_empty_projection_count_1.py`.
   Step 2 (same date): `conform_batch` serves an empty projected schema through
   `RecordBatch::try_new_with_options` with the incoming batch's row count, so
   all four readers answer the empty projection; non-empty projections read

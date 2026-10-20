@@ -160,7 +160,7 @@ Run on main `27c56f74` with the pins added (the release module of §1 for Python
 
 | Suite | On main |
 |---|---|
-| `python/repark/tests/test_pa_local_fs_policy_1.py` | 7 failed, 8 passed |
+| `python/repark/tests/session/test_pa_local_fs_policy_1.py` | 7 failed, 8 passed |
 | `cargo test -p repark-spark --lib -- tests::pa_local_fs_policy` | 6 failed, 9 passed |
 | `cargo test -p repark-sql --test pa_local_fs_policy` | 5 failed, 3 passed |
 
@@ -233,7 +233,7 @@ The release module was built from `83147df1` with an empty `git status --short`.
 | Command | Result |
 |---|---|
 | `cargo test --no-fail-fast -p repark-core -p repark-spark -p repark-sql` (inside the build lock) | 48 test binaries, 4906 passed, 0 failed, 11 ignored |
-| `.venv/bin/python -m pytest python/repark/tests/test_pa_local_fs_policy_1.py -q` | 15 passed |
+| `.venv/bin/python -m pytest python/repark/tests/session/test_pa_local_fs_policy_1.py -q` | 15 passed |
 | every `python/repark/tests` file that calls `repark.sql()`, plus `test_sec_boundaries.py` | 1361 passed, 130 skipped, 5 xfailed |
 | `python -m pytest python/repark/tests -n 16` (the whole suite) | 17009 passed, 488 skipped, 151 xfailed |
 | `make rust-clippy`, `make rust-panic-ban`, `cargo fmt --all -- --check` | exit 0 |

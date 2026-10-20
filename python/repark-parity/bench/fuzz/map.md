@@ -38,7 +38,7 @@ is the deliverable; engine product fixes mid-unit are **out of scope** (bank + p
 |---|---|
 | Run smoke (200q, seed 42) | `python python/repark-parity/bench/fuzz/run_fuzz.py` |
 | Long pass (≥5000) | `REPARK_FUZZ_N=5000 python …/run_fuzz.py --out /tmp/fuzz-long.json` |
-| CI smoke pin | `python/repark/tests/test_fuzz_smoke.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
+| CI smoke pin | `python/repark/tests/sql/test_fuzz_smoke.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
 | Read long-pass census | `../../../../task/d3-sql-fuzzer-ledger.md` |
 | Understand exclusions | **EXCLUSIONS** section below |
 

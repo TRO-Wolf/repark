@@ -266,7 +266,7 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/test_examples_dataframe_d.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/parity/test_examples_dataframe_d.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-DF-18`, `EX-DF-19`, `EX-ROW-1`
 - Siblings: [ex-15-dataframe-a-ledger.md](ex-15-dataframe-a-ledger.md), [ex-16-dataframe-b-ledger.md](ex-16-dataframe-b-ledger.md)
 

@@ -208,6 +208,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **FACADE-TESTS-LAYOUT-1 (2026-10-19):** the fifteen
+  facade-test mirror rows move to the files' subsystem directories with their baselines
+  unchanged, and `scripts/check_lib_py.py` keeps its exception keys sorted, which this file
+  asserts. In the same unit, `test_pr_245_revalidation_record.py` re-records the frozen
+  digest of `test_sqp_1_record.py`, whose only change is the
+  `functions/test_functions_gt1.py` path it reads. `test_deferred_ledger.py` finds a deferred
+  id's ported file anywhere under `python/repark/tests` instead of skipping a file that moved,
+  and the live-v3 docs, PYC-5, registry, SQP-1 and v3-cov pins name the new paths.
 - `test_cap_1_source_file_line_cap.py` — **ICE-STRUCT-PAIRING-1 exception round (2026-10-15):** the
   mirror ratchets `crates/repark-spark/src/tests/dml.rs` 1154 → 1139 with the Rust gate.
 - `test_cap_1_source_file_line_cap.py` — **ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14,
@@ -236,7 +244,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: attr-id-1/C-042
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-3 (2026-10-02):**
   the mirror row ratchets `dataframe/core.py` 3595 → 3583 (V-2's siding calls
-  are deleted) with the script baseline. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  are deleted) with the script baseline. Pins: `python/repark/tests/resolution/test_attr_id_1_sj3.py`.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 PERF-1 (2026-10-03):**
   mirror row ratchets `dataframe/core.py` 3485 → 3475 (the frame-node and snapshot
   caches move to `frame_nodes.py`), with the script baseline.
@@ -245,22 +253,22 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `dataframe/joins_columns.py` row (the pivot family moves to
   `grouped_pivot.py`, leaving the file under the default ceiling), so the
   Python exception count drops 30 → 29, with the script baseline.
-  Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+  Pins: `python/repark/tests/resolution/test_attr_id_1_sj5.py`.
 - `test_cap_1_source_file_line_cap.py` — **CASESENS-2 port (2026-10-03):**
   the mirror row ratchets `dataframe/core.py` 3485 → 3476 with the script
-  baseline. Pins: `python/repark/tests/test_casesens_2.py`.
+  baseline. Pins: `python/repark/tests/resolution/test_casesens_2.py`.
   **PERF-1 merge (2026-10-03):** the mirror row takes the merged head's
   measured 3466 (PERF-1 3475, port −9) with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-4 (2026-10-02):**
   mirror rows ratchet `dataframe/core.py` 3583 → 3494 (the repartition trio
   moves to `repartition_ops.py`) and `dataframe/joins_columns.py` 1169 → 1119
   (`_grouped_agg_pandas` moves to `grouped_udf.py`) with the script baseline.
-  Pins: `python/repark/tests/test_attr_id_1_sj4.py`.
+  Pins: `python/repark/tests/resolution/test_attr_id_1_sj4.py`.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-2 (2026-10-02):**
   mirror rows ratchet `spark/column.py` 1378 → 1331 (the fragment-render
   family moves to `column_render.py`) and `dataframe/core.py` 3652 → 3595
   (the unemitted-id family moves to `unemitted_ids.py`) with the script
-  baseline. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  baseline. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 V-4 (2026-10-02):**
   mirror row ratchets `dataframe/core.py` 3653 → 3652 with the script baseline
   (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`).
@@ -990,6 +998,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   red on a new directory without a map, quiet on deletion-only, root-level file maps to `map.md`;
   staged mode exits 0 with `WARNING:` naming ci.yml's `map.md guard`; the `sync_map_md.py`
   duplicate-row rule fires on a two-row fixture and stays quiet on a single row naming a file twice.
+  C-011 pins ci.yml's guard step as PR-only with the base ref taken into `env` as `BASE_REF` and
+  expanded as `${BASE_REF}` in both run lines (since 2026-10-18; no `${{ }}` inside the run block).
 - `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
   record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;

@@ -143,7 +143,7 @@ grammar has no `EXTENDED`.
 
 **Home.** `crates/repark-spark/src/describe_show.rs` (parser + executor),
 `crates/repark-spark/src/router.rs` (one new intercept arm after the namespace one),
-`crates/repark-spark/src/tests/describe_table.rs` (new), `python/repark/tests/test_describe_table.py`
+`crates/repark-spark/src/tests/describe_table.rs` (new), `python/repark/tests/iceberg/test_describe_table.py`
 (new), `docs/spark-sql-iceberg-parity.md` (row), `crates/repark-spark/map.md` and
 `python/repark/tests/map.md` (lockstep).
 
@@ -215,7 +215,7 @@ file green; the Z6 pin unchanged.
 object**, so the plan arrives as `Row(plan_type='physical_plan', plan='ProjectionExec…\n  …')`
 with literal `\n`.
 
-**Home.** `core.py` (`explain` and a new `_explain_text`), `python/repark/tests/test_df_explain_1.py`
+**Home.** `core.py` (`explain` and a new `_explain_text`), `python/repark/tests/dataframe/test_df_explain_1.py`
 (new), `docs/guide/` (the DataFrame guide's explain paragraph), maps.
 
 **Decisions.**
@@ -426,7 +426,7 @@ rows and is untouched. `cache()`/`persist()` materialise through
 (guarded by `repark.cache.max_bytes`), and `unpersist()` drops that view.
 
 **Home.** `core.py` (three methods, an `_eager_shape` slot, `__repr__` shortcut), `polars.py`
-(`PolarsFrame.eager()` mirror), `python/repark/tests/test_df_eager_1.py` (new), the DataFrame
+(`PolarsFrame.eager()` mirror), `python/repark/tests/dataframe/test_df_eager_1.py` (new), the DataFrame
 guide, maps.
 
 **Decisions.**

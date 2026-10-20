@@ -14,7 +14,7 @@ the owner's decision (see "Recommendation").
 
 | ID | Claim | Evidence | Status | Notes |
 |----|-------|----------|--------|-------|
-| C-001 | On a pyarrow other than 25.0.0, `collect`, `take`, `head`, `first`, `toLocalIterator` and `toArrow` each answer with the right row count on six successive fresh non-main threads, in an isolated interpreter whose exit status is the assertion. | `python/repark/tests/test_threaded_collect_segv_1.py`: 6 passed with repark 1.5.3 (release wheel) + pyarrow 25.0.1; 6 skipped with the reason on pyarrow 25.0.0. | PROVEN | Run against the 1.5.3 release wheel, not a build of this branch (the branch changes no product code and the clone has no build). |
+| C-001 | On a pyarrow other than 25.0.0, `collect`, `take`, `head`, `first`, `toLocalIterator` and `toArrow` each answer with the right row count on six successive fresh non-main threads, in an isolated interpreter whose exit status is the assertion. | `python/repark/tests/session/test_threaded_collect_segv_1.py`: 6 passed with repark 1.5.3 (release wheel) + pyarrow 25.0.1; 6 skipped with the reason on pyarrow 25.0.0. | PROVEN | Run against the 1.5.3 release wheel, not a build of this branch (the branch changes no product code and the clone has no build). |
 | C-002 | The test exercises the crash's precondition: pyarrow is not loaded on the main thread before the first threaded door runs. | The worker reports `pyarrow_on_main_before_first_thread` and the test asserts it is false. With the skip bypassed on pyarrow 25.0.0 the same worker dies with signal 11 on five of the six doors (`toArrow` survived its six iterations). | PROVEN | This is the mutation stand-in: there is no RePark fix to revert, so the red is the worker on 25.0.0. |
 
 ## Cause
@@ -205,7 +205,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: With the skip bypassed on pyarrow 25.0.0 the test's worker dies with signal 11 on
         five of six doors; on 25.0.1 all six pass.
-      artifacts: [python/repark/tests/test_threaded_collect_segv_1.py]
+      artifacts: [python/repark/tests/session/test_threaded_collect_segv_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Nine doors over range, parquet and iceberg sources on both pyarrow versions, and
@@ -237,6 +237,6 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: The facade suite gains a subprocess-isolated threaded test that CI runs on its
         resolved pyarrow.
-      artifacts: [python/repark/tests/test_threaded_collect_segv_1.py]
+      artifacts: [python/repark/tests/session/test_threaded_collect_segv_1.py]
   complete: true
 ```

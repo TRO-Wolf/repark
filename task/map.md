@@ -207,7 +207,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 ## Debug
 
-- `pg-integration-report.md` may appear here untracked: `python/repark/tests/test_pg_acceptance.py`
+- `pg-integration-report.md` may appear here untracked: `python/repark/tests/io/test_pg_acceptance.py`
   writes it (CWD-relative) on every facade run. It is gitignored on purpose — a run output, not a
   record. Do not `git add` it.
 - If work and trackers disagree, the code is truth — update the tracker.

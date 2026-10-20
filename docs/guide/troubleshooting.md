@@ -152,7 +152,7 @@ spark.read.option("header", True).option("sep", ";").schema(schema).csv(str(euro
 ```
 
 This is an **open finding**, reported and pinned as current behavior —
-`python/repark/tests/test_datasets_facade.py::test_smartcsv_euro_comma_decimal_cast_refuses_loud`
+`python/repark/tests/io/test_datasets_facade.py::test_smartcsv_euro_comma_decimal_cast_refuses_loud`
 is the pin. It has no registry row.
 
 ---
@@ -193,7 +193,7 @@ elements have no CAST spelling — the same CASE uses untyped `make_array(NULL)`
 an empty void sibling cannot cartesian-drop typed sibling lists. Map element types, and
 struct fields whose names are not simple identifiers, still refuse loud (no safe CAST
 spelling). Pin:
-`python/repark/tests/test_datasets_facade.py::test_nested_explode_outer_on_array_of_struct_refuses_loud`.
+`python/repark/tests/io/test_datasets_facade.py::test_nested_explode_outer_on_array_of_struct_refuses_loud`.
 
 `dynamicFlatten()` defaults to the same keep-both behaviour (`empty_as_null=True`) so a
 GA4-shaped frame with empty `items` / `user_properties` does not vanish. Pass
@@ -274,12 +274,12 @@ cached.select("Legs_Fills_f").to_arrow().to_pylist()    # [{'Legs_Fills_f': 1.0}
 ```
 
 Pinned by
-`python/repark/tests/test_dynamic_flatten.py::test_multi_pass_flatten_every_projection_subset_is_green`
+`python/repark/tests/dataframe/test_dynamic_flatten.py::test_multi_pass_flatten_every_projection_subset_is_green`
 (the full 15-subset matrix, both explode orders),
 `…::test_multi_pass_flatten_count_and_agg_are_green`,
-`python/repark/tests/test_explode_rewrite.py::test_two_pass_explode_chain_survives_a_narrowing_projection`
+`python/repark/tests/dataframe/test_explode_rewrite.py::test_two_pass_explode_chain_survives_a_narrowing_projection`
 (the same shape without `dynamicFlatten`),
-`python/repark/tests/test_datasets_facade.py::test_nested_dynamic_flatten_count_action_is_green`,
+`python/repark/tests/io/test_datasets_facade.py::test_nested_dynamic_flatten_count_action_is_green`,
 and engine-side by
 `crates/repark-core/src/session/df_guards.rs` → the five
 `session::df_guard_tests::*leaf_pushdown*` pins (the flag stays enabled, the wrapper is installed, a
@@ -364,7 +364,7 @@ spark.read.smartCsv(str(p), sep=",").show()
 `.option("sep", ...)` / `.option("delimiter", ...)` on the reader resolve to the same parameter.
 Auto-detection is a **guess**; treat it as a convenience for exploration, not a production
 contract. An **open finding**, pinned by
-`python/repark/tests/test_datasets_facade.py::test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter`.
+`python/repark/tests/io/test_datasets_facade.py::test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter`.
 
 ---
 

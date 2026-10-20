@@ -44,3 +44,14 @@ python-source = "src"
 # default-conf primaries ≥5% faster (serving shapes up to ~50%), no primary regression,
 # goldens + facade suite green under mimalloc. Numbers: the AL-1b wire PR + bench/ta/map.md.
 features = ["extension-module", "allocator-mimalloc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config -ra"
+xfail_strict = true
+timeout = 1200
+timeout_func_only = false
+markers = [
+  "perf: slow catalog-IO budget legs",
+  "slow: files whose measured suite time exceeds 30 s; deselected by make py-test-facade-fast",
+]

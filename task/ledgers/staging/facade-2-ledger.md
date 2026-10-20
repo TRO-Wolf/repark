@@ -26,7 +26,7 @@ later branch.
 | C-005 | Mutation proof: one-character change in one rendered string in `column.py` turns the golden test red; restore leaves it green. | Scratch edit of `spark/column.py`; pytest red output pasted here; `git checkout` restore. | **PROVEN** | `negative(` → `negativx(` at `column.py:399`. Red: `golden byte mismatch ... changed=['g2_unary__neg', 'g2_unary__neg_add', 'g2_unary__neg_neg']`. `git checkout -- python/repark/src/repark/spark/column.py`; 3 passed. Product tree unchanged. |
 | C-006 | The audit's five pin files stay green unchanged: `test_columns.py`, `test_column_access.py`, `test_column_x1_census.py`, `test_examples_column_a.py`, `test_fnp_9_collections_json.py`. | Those files, same commit, no edits. | **PROVEN** | Combined with the new golden file: 225 passed in 5.32s. Those five files were not edited. |
 | C-007 | Named gates green: golden+audit pytest, `make verify`, parity suite. | Commands and counts in Evidence. | **PROVEN** | See Evidence. |
-| C-008 | Goldens file is byte-identical and unedited vs step-1 commit `524e9edc`, and the compare pin is green. | `git diff 524e9edc -- python/repark/tests/facade_2_column_display_goldens.json` empty; `test_column_display_goldens_match_committed_bytes`. | **PROVEN** | `git diff` empty. Golden pin green on the Group-2 Rust renderer (3 passed with the isinstance and CI-guard pins). |
+| C-008 | Goldens file is byte-identical and unedited vs step-1 commit `524e9edc`, and the compare pin is green. | `git diff 524e9edc -- python/repark/tests/dataframe/facade_2_column_display_goldens.json` empty; `test_column_display_goldens_match_committed_bytes`. | **PROVEN** | `git diff` empty. Golden pin green on the Group-2 Rust renderer (3 passed with the isinstance and CI-guard pins). |
 | C-009 | No Python text assembly remains in the Group-2 families (f-string / concat / `format` / `join` of display/SQL/join text). | `test_facade_2_group2_no_python_assembly.py`; red first on the step-1 tree. | **PROVEN** | Red on `524e9edc` (1 failed, 1 passed in 0.08s): 54 sites across `_binary`, `__neg__`, `__ne__`, `__invert__`, `eqNullSafe`, `substr`, `_string_predicate`, `_bitwise`, `is_null`, `is_not_null`, `_from_when_pairs`, `alias`, `__getitem__`, `cast`, `try_cast`. Green after the move: 2 passed. Refusals/`raise` f-strings stay allowed. `_with_sort_order` / `getItem` / `getField` had no assembly on the step-1 tree. |
 | C-010 | The audit's five pin files and the whole facade suite green; counts compared with step-1. | `make py-test-facade` (or the Makefile facade target). | **PROVEN** | Five audit files + goldens + C-009: 227 passed in 4.96s (step-1 225 in 5.32s; +2 C-009 tests). Whole facade `python/repark/tests`: **5961 passed, 369 skipped** in 804.73s. |
 | C-011 | Depth-100 binary+cast+alias chain (built, not executed) and depth-100 `withColumn` chain; 3+ reps after warmup; medians; no regression beyond 5%. | RELEASE `maturin develop --release` on step-1 vs this branch (R9-D-6: a debug build is not a ranking measurement). | **PROVEN** | Release re-measure after F1/F2/F5: depth-100 chain **+2.77%** (paired reps +1.45 … +4.07%), depth-500 **+2.55%**, `withColumn`-100 **−1.38%** on the stationary interleaved pass of the orchestrator's S2-21 re-check (release natives both trees). The Step-2b passes in the evidence (−34.44% / −42.31%) ran against a drifting base worker (3.55 → 6.2 ms) and are not a speedup. Bar ≤ +5%: met on every deciding case. Earlier debug-build read was +10.12%/−1.55%; the reviewer's release read on the pre-remediation branch was +8.65%/+8.48% depth-100, +4.93% depth-500, −3.65% withColumn. |
@@ -91,7 +91,7 @@ contract.
 `python/repark/src/repark/spark/column.py:399`: `negative(` → `negativx(`.
 
 ```
-FAILED python/repark/tests/test_facade_2_column_display_goldens.py::test_column_display_goldens_match_committed_bytes
+FAILED python/repark/tests/dataframe/test_facade_2_column_display_goldens.py::test_column_display_goldens_match_committed_bytes
 AssertionError: golden byte mismatch missing=[] extra=[] changed=['g2_unary__neg', 'g2_unary__neg_add', 'g2_unary__neg_neg']
 1 failed in 0.23s
 ```
@@ -115,15 +115,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: 221 golden cases recorded from the base tree cover every §4 Group-1 site and every named Group-2 family. Missing JSON was red; compare is byte-identical after record.
-      artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py, python/repark/tests/facade_2_column_display_goldens.json]
+      artifacts: [python/repark/tests/dataframe/test_facade_2_column_display_goldens.py, python/repark/tests/dataframe/facade_2_column_display_goldens.json]
     - id: AT-2
       status: ATTACKED
       evidence: Mutation of one display character in column.py redded the three unary-neg cases; restore greened them. Audit pin files 225 passed with the new golden file.
-      artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py, python/repark/tests/test_columns.py]
+      artifacts: [python/repark/tests/dataframe/test_facade_2_column_display_goldens.py, python/repark/tests/dataframe/test_columns.py]
     - id: AT-3
       status: ATTACKED
       evidence: Record mode is refused when CI or GITHUB_ACTIONS is set. Pin test_record_mode_fails_when_ci_is_set monkeypatches both.
-      artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py]
+      artifacts: [python/repark/tests/dataframe/test_facade_2_column_display_goldens.py]
     - id: AT-4
       status: N/A
       justification: Pins-only step. No new shared mutable state, lock, or async spawn.
@@ -133,7 +133,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: isinstance(c, repark.Column) holds; repark.Column is the exported spark.column.Column class. No public name added or removed.
-      artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py]
+      artifacts: [python/repark/tests/dataframe/test_facade_2_column_display_goldens.py]
     - id: AT-7
       status: ATTACKED
       evidence: C-011 re-measured on RELEASE natives after the step-2b string-FFI remediation. Stationary re-check pass: depth-100 op chain +2.77%, depth-500 +2.55%, withColumn-100 −1.38% — all under the 5% bar; the actor's −34.44%/−42.31% passes had a drifting base and are not a speedup.
@@ -141,14 +141,14 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: New test is 391 lines under the default 1000 ceiling. No baseline raised in check_lib_py.py, check_rust_file_size.py, or the CAP-1 mirror. No comment bytes in the code diff.
-      artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py]
+      artifacts: [python/repark/tests/dataframe/test_facade_2_column_display_goldens.py]
     - id: AT-9
       status: N/A
       justification: No log-format or diagnosis-path change.
     - id: AT-10
       status: ATTACKED
       evidence: Golden compare failed without the JSON and after the one-character mutation; it passes on the recorded file. Audit pin list stays green.
-      artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py, python/repark/tests/facade_2_column_display_goldens.json]
+      artifacts: [python/repark/tests/dataframe/test_facade_2_column_display_goldens.py, python/repark/tests/dataframe/facade_2_column_display_goldens.json]
   complete: true
 ```
 

@@ -98,7 +98,7 @@ COVERAGE_ATTESTATION:
         SHA-256 all in the fixture map.md); RePark's numbers are the
         orchestrator's release-native measurement transcribed into the registry
         row. No hand-computed expectation anywhere.
-      artifacts: [python/repark-parity/fixtures/torture/data/ice_occ_scoped_1/spark_occ_oracle4.json, python/repark/tests/_record_ice_append_storm_1.py]
+      artifacts: [python/repark-parity/fixtures/torture/data/ice_occ_scoped_1/spark_occ_oracle4.json, python/repark/tests/writes/_record_ice_append_storm_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The recorder replays the draft's barrier storm on both catalogs
@@ -106,7 +106,7 @@ COVERAGE_ATTESTATION:
         from REPARK_ORACLE_IVY, tempfile warehouse, REPETITIONS = 6); it cannot
         run in this round (no JVM), so import-cleanliness is proven by AST parse
         and ruff check plus format.
-      artifacts: [python/repark/tests/_record_ice_append_storm_1.py]
+      artifacts: [python/repark/tests/writes/_record_ice_append_storm_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The storm's whole surface is committed + losers = 16 with typed
@@ -114,7 +114,7 @@ COVERAGE_ATTESTATION:
         (committed + losers == of, CatalogCommitConflicts losers, rows and
         snapshots equal the commits) and the corrected docstring cites the
         measured ranges.
-      artifacts: [python/repark/tests/test_ice_occ_scoped_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_occ_scoped_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state added; the unit adds no product code.

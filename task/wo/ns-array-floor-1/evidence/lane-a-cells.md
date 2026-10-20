@@ -4,7 +4,7 @@ The function returns its input frame unchanged and the declared return
 schema is the input frame's own schema. Sources are a plain timestamp_ns
 column, coalesce(ns, NULL), and a microsecond control; on live Spark the
 microsecond control plus a pandas frame built with datetime64[ns] values.
-Recorder `python/repark/tests/_record_ns_array_floor_1_lane_a.py`. Zone UTC.
+Recorder `python/repark/tests/timestamps/_record_ns_array_floor_1_lane_a.py`. Zone UTC.
 Live banner: spark 4.1.2 zone UTC, pandas 3.0.6, default safe setting
 (true in this environment). Ticks are read back as integers through an
 Arrow cast. The live ns_pandas ticks compose a floor to microseconds with a

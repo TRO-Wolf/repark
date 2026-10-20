@@ -139,7 +139,7 @@ VERDICT (2026-09-15, round 1 close): 6 clauses, 5 PROVEN, 1 OPEN (C-006, round 2
 
 ## Red first
 
-`python/repark/tests/test_set_ansi_runtime_1.py` (22 pins) against main `11ae1595`
+`python/repark/tests/session/test_set_ansi_runtime_1.py` (22 pins) against main `11ae1595`
 plus the unit clone, release native, 2026-09-15: **14 failed, 8 passed**. The 8
 passes are the already-true cells (S16-0 stale raise, S16-3/S16-4 raise shapes,
 S16-10/S16-11, S5-bool refusals, C-004 native stability). Every application
@@ -177,7 +177,7 @@ not Spark's) — pinned as the C-004 answer.
 
 ## Red-first, P1 spelling pins (round 17c review follow-up)
 
-`python/repark/tests/test_runtime_zone_spellings_1.py` (new): 4 tests, run against the
+`python/repark/tests/timestamps/test_runtime_zone_spellings_1.py` (new): 4 tests, run against the
 pre-fix release native — 4 failed, 0 passed. The value pins failed with the reviewers'
 measured error (`session timezone "+5" could not be resolved at query time` on
 `from_unixtime(0)`; `ZoneInfoNotFoundError` on the `createDataFrame` path); the seconds
@@ -208,7 +208,7 @@ now documented). Post-fix: 6 passed. Five oracle cells closed against the fixtur
 - `make verify` — rc 0.
 - Release native rebuilt twice via the venv maturin path (after the Rust slice, after the
   clippy fixes); no `make develop`, no JVM.
-- `.venv/bin/python -m pytest python/repark/tests/test_set_ansi_runtime_1.py python/repark/tests/test_sql_set_door_1.py -q` — 65 passed.
+- `.venv/bin/python -m pytest python/repark/tests/session/test_set_ansi_runtime_1.py python/repark/tests/sql/test_sql_set_door_1.py -q` — 65 passed.
 - `.venv/bin/python -m pytest python/repark/tests -q -k "ansi or time_zone or timezone or conf or set_door"` — 881 passed, 112 skipped.
 - Full facade suite (`python/repark/tests`, venv python, release native) — 8296 passed,
   367 skipped, 2 xfailed, 1 failed: `test_production_file_size` `_SQLCONF_DEFAULTS` body

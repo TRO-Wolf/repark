@@ -23,7 +23,7 @@ pub(crate) struct Probe {
 
 pub(crate) fn truth_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../python/repark/tests/ice_merge_append_1_truth.json")
+        .join("../../python/repark/tests/writes/ice_merge_append_1_truth.json")
 }
 
 pub(crate) fn spark_series(variant: &str) -> Vec<Probe> {

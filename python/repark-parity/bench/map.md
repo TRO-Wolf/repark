@@ -90,7 +90,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run TPC-DS SF1 scoreboard | `tpcds/run_tpcds.py --sf 1 --report …` |
 | Read TPC-H findings | `../../../task/tpch-report-2026-07-31.md` |
 | Read TPC-DS findings | `../../../task/tpcds-report-2026-07-31.md` |
-| Run SQL fuzzer smoke (seed 42, 200q) | `fuzz/run_fuzz.py` or `python/repark/tests/test_fuzz_smoke.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
+| Run SQL fuzzer smoke (seed 42, 200q) | `fuzz/run_fuzz.py` or `python/repark/tests/sql/test_fuzz_smoke.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
 | Long fuzz pass | `REPARK_FUZZ_N=5000 python …/fuzz/run_fuzz.py --out …` |
 | Run write-path K×file-size bench (SF1) | `write/run_write_bench.py --mode ctas --sf 1 --report task/write-bench-report-….md` |
 | Run the P-2 TA pipeline battery | `ta/bench_kernel_race.py` (and siblings); `--quick` for n=1e5 |

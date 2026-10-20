@@ -1,6 +1,6 @@
 # Cost — ICE-TSNS-FRAME-DOOR-1 (2026-10-13)
 
-`cost.json` is the output of `python/repark/tests/_time_ice_tsns_frame_door_1.py`: one process
+`cost.json` is the output of `python/repark/tests/timestamps/_time_ice_tsns_frame_door_1.py`: one process
 per side per set, five sets, main then head inside each set, sixteen cores pinned, the build
 lock held so nothing else compiled. Each number is the median, in milliseconds, of
 `createDataFrame` + `count()` over a 1,000,000-row pandas frame after one warm run (seven

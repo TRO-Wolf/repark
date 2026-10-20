@@ -48,7 +48,7 @@ ruling); `write.spark.accept-any-schema` anywhere but as this gate (owner decisi
 Spark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0` over an `InMemoryCatalog`, recorded by run
 26e into `/tmp/oc-worker/qe/probe/p2.json` (keys `D.*`) and by the parity inventory into
 `/tmp/oc-worker/nc-inventory/out/*.json` (the twelve cells). Every expected value in
-`python/repark/tests/test_ice_merge_schema_1.py` is one of those recordings.
+`python/repark/tests/writes/test_ice_merge_schema_1.py` is one of those recordings.
 
 | # | Fact | Evidence |
 |---|---|---|
@@ -89,26 +89,26 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause was checked against Spark's recording, not a paraphrase. The twelve cell expectations and M-1..M-9 come from run 26e's probe and the inventory harness, and every pin asserts schema names, Arrow types, row values, and snapshot counts on the collect path.
-      artifacts: [python/repark/tests/test_ice_merge_schema_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_merge_schema_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: A missing source column, narrower and wider source types, a no-new-column MERGE, both option spellings, both conf spellings, unset, mixed-case and comment-split clause text, partial clauses, CTE-leading WITH, non-MERGE statements carrying the words, and a data value of literally evolution are all exercised.
-      artifacts: [python/repark/tests/test_ice_merge_schema_1.py, crates/repark-spark/src/merge/schema_evolution/tests.rs]
+      artifacts: [python/repark/tests/writes/test_ice_merge_schema_1.py, crates/repark-spark/src/merge/schema_evolution/tests.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The three error shapes come from three places and are pinned by exact class, condition, and SQLSTATE. Every failure pin also asserts the table is unchanged. The schema-tx-then-data-tx gap is named above as a shared-with-Spark atomicity residue.
-      artifacts: [python/repark/tests/test_ice_merge_schema_1.py, crates/repark-spark/src/insert_by_name/evolution.rs]
+      artifacts: [python/repark/tests/writes/test_ice_merge_schema_1.py, crates/repark-spark/src/insert_by_name/evolution.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The executor unions the schema first and expands stars against the evolved schema, so data files carry evolved field ids, and the evolved-row pins fail if that order flips. Conf and option reads are per-statement with no shared mutable state. No new concurrency surface.
-      artifacts: [crates/repark-iceberg/src/write/merge/mod.rs, python/repark/tests/test_ice_merge_schema_1.py]
+      artifacts: [crates/repark-iceberg/src/write/merge/mod.rs, python/repark/tests/writes/test_ice_merge_schema_1.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, no credential or secret handling, no deserialization, no path traversal. The sniffer strips four fixed keywords and aliases flow through the existing identifier quoting.
     - id: AT-6
       status: ATTACKED
       evidence: Rows, Arrow types, and snapshot counts are pinned per cell. The new column lands last and optional with the source's own type. Legacy mergeInto spellings keep working and positional INSERT VALUES is fenced off so IPI-17 cannot flip.
-      artifacts: [python/repark/tests/test_ice_merge_schema_1.py, python/repark/tests/test_merge_into.py]
+      artifacts: [python/repark/tests/writes/test_ice_merge_schema_1.py, python/repark/tests/writes/test_merge_into.py]
     - id: AT-7
       status: N/A
       justification: No performance claim. An evolving write adds one LIMIT 0 source probe and one schema transaction, and the MERGE read and write paths are unchanged.
@@ -119,11 +119,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The three refusal shapes carry Spark's exact class and SQLSTATE so each is diagnosable at the call site. The registry rows for the answered cells and the narrowed EX-DF-9 read true after this unit.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_merge_schema_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/writes/test_ice_merge_schema_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first at the pins commit (18 failed, 9 passed controls). Every packet mutation has a named pin, including the evolved-file order, the sniffer boundaries, and the unknown-option arm. Every new branch has a nameable input across the gate combinations, the alias shapes, and the clause-strip outcomes.
-      artifacts: [python/repark/tests/test_ice_merge_schema_1.py, python/repark/tests/test_merge_into.py, crates/repark-spark/src/merge/schema_evolution/tests.rs]
+      artifacts: [python/repark/tests/writes/test_ice_merge_schema_1.py, python/repark/tests/writes/test_merge_into.py, crates/repark-spark/src/merge/schema_evolution/tests.rs]
   complete: true
 ```
 

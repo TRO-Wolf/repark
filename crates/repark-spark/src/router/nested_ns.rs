@@ -1,15 +1,12 @@
-use std::ops::ControlFlow;
-
 use datafusion::error::Result;
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::ast::{
-    Insert, Statement, TableFactor, TableObject, visit_statements,
-};
+use datafusion::sql::sqlparser::ast::{Insert, Statement, TableFactor, TableObject};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::nested_ns_gate::{InsertSupply, NestedWrite, refuse_nested_ns_supply};
+use repark_iceberg::write::statement_writes::executed_writes;
 
 use super::insert_positional::replace_where::parse_replace_where;
 use crate::catalog_ops::{iceberg_err, name_parts};
@@ -108,34 +105,6 @@ fn explained_statement(sql: &str) -> Option<(bool, String)> {
         }
     }
     None
-}
-
-fn executed_writes(statement: &Statement) -> Vec<Statement> {
-    match statement {
-        Statement::Explain {
-            analyze, statement, ..
-        } => {
-            if *analyze {
-                executed_writes(statement)
-            } else {
-                Vec::new()
-            }
-        }
-        Statement::Prepare { statement, .. } => executed_writes(statement),
-        carrier => {
-            let mut writes = Vec::new();
-            let _ = visit_statements(carrier, |nested| {
-                if matches!(
-                    nested,
-                    Statement::Insert(_) | Statement::Update(_) | Statement::Merge(_)
-                ) {
-                    writes.push(nested.clone());
-                }
-                ControlFlow::<()>::Continue(())
-            });
-            writes
-        }
-    }
 }
 
 async fn refuse_insert(

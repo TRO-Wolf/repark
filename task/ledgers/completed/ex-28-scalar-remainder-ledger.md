@@ -225,7 +225,7 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Pins: [../../../python/repark/tests/test_examples_functions_b.py](../../../python/repark/tests/test_examples_functions_b.py)
+- Pins: [../../../python/repark/tests/test_examples_functions_b.py](../../../python/repark/tests/parity/test_examples_functions_b.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 EX-FN-20..21
 - Siblings: [ex-27-ml-ledger.md](ex-27-ml-ledger.md), [ex-25-functions-a-ledger.md](ex-25-functions-a-ledger.md)
 

@@ -51,7 +51,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: The page-prune pins read their expectations from a recorded Spark 4.1.2
         fixture and a live re-derivation; they stay green with pruning on.
-      artifacts: [python/repark/tests/test_ice_page_prune_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_page_prune_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The Q3 sentinel was red at the bump before it was flipped.

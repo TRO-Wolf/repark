@@ -51,7 +51,7 @@ and unary `~` (SPARK-SQL-GRAMMAR-1 C-001/C-002 residues); `functions*.py`,
 
 ## 1. Red-first record (base `33c87cbf`, release native in `.venv`, 2026-09-16)
 
-`python/repark/tests/test_sql_literal_typing_1.py` over
+`python/repark/tests/types/test_sql_literal_typing_1.py` over
 `sql_literal_typing_1_spark_oracle.json` (verbatim copy of the orchestrator's
 live PySpark 4.1.2 recording `/tmp/oc-worker/sc/oracle/bl20-oracle.json`,
 batch `sc18-bl20-literal-typing`, measured 2026-09-16). One case per in-scope
@@ -95,7 +95,7 @@ passes (full list in §2).
   every promotion cell is red. pins: sql-literal-typing-1/C-001, C-002, C-003.
 - Fixture copied verbatim (64 cells). Red pins written, run, evidence above.
 - Red run 2026-09-16 (`.venv/bin/python -m pytest
-  python/repark/tests/test_sql_literal_typing_1.py -q -p no:cacheprovider`):
+  python/repark/tests/types/test_sql_literal_typing_1.py -q -p no:cacheprovider`):
   `19 failed, 44 passed`. Failing: LIT-SQL-06 (typeof(UInt64) unimplemented),
   16, 19, 21, 27, 30, 31, 32, 33, 35 (decimal(21,0)), 41, 42, 44, 47 (8 bytes),
   LIT-PY-08 (bigint), the 09 precision refusal, the 52 tinyint overflow, the

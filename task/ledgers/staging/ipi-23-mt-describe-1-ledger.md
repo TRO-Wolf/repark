@@ -14,7 +14,7 @@ resolves, plus the four-part parser for names the metadata rewrite leaves
 untouched) with a five-line hook in `describe_show.rs` (`execute_describe_table`
 before `load_table`), a two-line `or_else` in `router.rs`, and one `mod` line in
 `describe_show.rs` (moved under it 2026-09-23, `lib.rs` back to its ceiling); the facade pins
-`python/repark/tests/test_ice_mt_describe_1.py` (25 offline pins plus the live
+`python/repark/tests/iceberg/test_ice_mt_describe_1.py` (25 offline pins plus the live
 snapshots leg); the DESC-1 registry row; four `map.md` files
 (`crates/repark-spark/src/`, `crates/repark-spark/src/describe_show/`,
 `python/repark/tests/`, `task/ledgers/staging/`); and
@@ -471,15 +471,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause walked to its recorded oracle cell or main-branch behavior — the six R-MT-DESCRIBE rows with Arrow-path value, type and nullability asserts (C-001), per-meta DESCRIBE-vs-SELECT column equality across six metadata tables (C-002), spelling variants incl. EXTENDED/FORMATTED column-rows-only (C-003), the two-part USE form (C-004), and the four near misses pinning unchanged behavior or today's exact error (C-005/C-006/C-007/C-008).
-      artifacts: [python/repark/tests/test_ice_mt_describe_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_describe_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The pins cover the `$` form via the rewrite, the un-rewritten four-part form (missing base, EXTENDED), the two-part session-default form, upper-case suffixes, a real table shadowing a metadata name, and unknown suffixes; the Rust unit test pins the row builder on bigint/string/map fields.
-      artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-3
       status: ATTACKED
       evidence: Missing base maps to TABLE_OR_VIEW_NOT_FOUND/42P01 naming the full metadata-table name as written with no `$` leak (C-007, identifier case kept per C-018; a quoted `$` name keeps the `$` per C-019); unknown suffixes answer Spark's 42P01 naming the full four-part name (C-008, re-pinned by describe-column-1); any other provider error passes through unchanged by construction of the match.
-      artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-4
       status: ATTACKED
       evidence: Resolution runs per query through Session state (`ctx.table_provider` plus catalog `load_table` probes); no shared mutable state or global registration is added.
@@ -490,7 +490,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Registry row DESC-1 moved from "metadata-table suffixes fall through unchanged" to the recorded served behavior; the replaced fall-through was itself the reported bug, and every previously green neighbor (plain tables, real tables named like metadata tables, unknown suffixes) is pinned unchanged.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_mt_describe_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/iceberg/test_ice_mt_describe_1.py]
     - id: AT-7
       status: N/A
       justification: One provider-schema read per DESCRIBE plus at most two catalog probes on narrow paths; no added materialization, unbounded growth, or hot-loop pattern.
@@ -501,11 +501,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The missing-base error names the full metadata-table name as written without the `$` suffix form, so a typo is diagnosable from the error; rejected shapes keep today's loud errors.
-      artifacts: [crates/repark-spark/src/describe_show/metadata_table.rs, python/repark/tests/test_ice_mt_describe_1.py]
+      artifacts: [crates/repark-spark/src/describe_show/metadata_table.rs, python/repark/tests/iceberg/test_ice_mt_describe_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: The recorded R-MT-DESCRIBE cell replays verbatim in the facade test and the gate's live leg; every clause carries a pins citation in the test file or the crate map; C-001 asserts Arrow field types and nullability alongside values.
-      artifacts: [python/repark/tests/test_ice_mt_describe_1.py, python/repark/tests/map.md, crates/repark-spark/src/describe_show/map.md]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_describe_1.py, python/repark/tests/map.md, crates/repark-spark/src/describe_show/map.md]
 ```
 
 Every md-r1 clause above is PROVEN against the recorded R-MT-DESCRIBE cell and

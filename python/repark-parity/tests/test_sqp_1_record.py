@@ -47,7 +47,7 @@ def test_registry_has_the_three_backlog_rows_each_pinned() -> None:
 def test_gt1_residual_comments_are_updated() -> None:
     """The two GT1 disclosure comments that described the residual are rewritten — the residual
     closed with this unit."""
-    gt1 = _read("python/repark/tests/test_functions_gt1.py")
+    gt1 = _read("python/repark/tests/functions/test_functions_gt1.py")
     assert "coincidence of double-escaping" not in gt1
     assert "SQL literals do not process" not in gt1
     assert "SQP-1 landed" in gt1

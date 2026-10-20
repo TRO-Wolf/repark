@@ -18,7 +18,7 @@ holds two different walls for one input.
 |---|---|---|---|---|
 | C-001 | The review's first test, ported unchanged in substance, is red on main `40fc916f`. | `cargo test -p repark-spark --test timestamp_ns_wall_doors` on the base. | **PROVEN** | §1: `INSERT=1767323045123456000 MERGE=1767341045123456000`, `assertion left == right failed`. |
 | C-002 | Spark 4.1.2 with Iceberg 1.11.0 cannot create, describe, read or write `timestamp_ns`, so no Spark answer exists; the reference is INSERT's ratified rule (ICE-TSNS-SQL-1 clause 2 and its A-1). | The probe of §2, verbatim. | **PROVEN** | §2. |
-| C-003 | Main is measured over the whole matrix (1926 cells) and its answers are recorded; of the 321 `timestamp_ns` cells, 38 store a wrong value and 15 refuse where a precise answer exists. | `_record_ice_tsns_merge_wall_1_main.py 40fc916f`; the classification of §3. | **PROVEN** | §3; `python/repark/tests/ice_tsns_merge_wall_1_main.json`. |
+| C-003 | Main is measured over the whole matrix (1926 cells) and its answers are recorded; of the 321 `timestamp_ns` cells, 38 store a wrong value and 15 refuse where a precise answer exists. | `_record_ice_tsns_merge_wall_1_main.py 40fc916f`; the classification of §3. | **PROVEN** | §3; `python/repark/tests/timestamps/ice_tsns_merge_wall_1_main.json`. |
 | C-004 | At head every door stores the rule's value in a `timestamp_ns` column: the 38 cells main got wrong are right. | The facade matrix against `expected_wall`; eight doors on the Rust door in three zones; the review's test green. | **PROVEN** | §4, §5: 38 of 38; `test_every_door_stores_the_session_wall_in_timestamp_ns` (57 tests), `timestamp_ns_wall_doors.rs` (3). |
 | C-005 | At head no cell main answers correctly has moved: the 1605 control cells and the 268 `timestamp_ns` cells main answered right or refused by the ratified gate are identical, and every carry (DELETE, sibling UPDATE and MERGE, three maintenance rewrites, both modes) reads back the seeded ticks. | The facade matrix against main's recorded cells. | **PROVEN** | §5: 1926 cells, 47 moved, all 47 on the `timestamp_ns` target; that count is this matrix's only and C-021 restates it. Pins after fold 1 (§9.5): `test_control_targets_answer_what_main_answered` (95, one zone), the Rust door's `untouched_rows_carry_their_nanosecond_ticks`. |
 | C-006 | `UPDATE t SET v = <column or literal>` with no `WHERE` into a `timestamp_ns` column answers by the rule from a `TIMESTAMP`, `TIMESTAMP_NTZ` or `timestamptz_ns` source, with every nanosecond digit; main raised a raw Arrow error (9 matrix cells). | The `update_column` cells; the Rust door's `update` door; the literal and NULL edge pins. | **PROVEN** | §4.2, §5; `test_update_with_no_where_stores_a_literal`. |
@@ -122,7 +122,7 @@ independent of the engine, and main's INSERT doors agree with it in every cell (
 
 ## 3. Main over the matrix (C-003)
 
-The matrix is `python/repark/tests/_ice_tsns_merge_wall_1_doors.py`. A cell is one session
+The matrix is `python/repark/tests/timestamps/_ice_tsns_merge_wall_1_doors.py`. A cell is one session
 zone × one target column type × one door × one source type, and writes eight moments, each
 with non-zero digits below the microsecond:
 
@@ -157,7 +157,7 @@ with non-zero digits below the microsecond:
   unchanged.
 
 3 zones × 6 targets × (19 doors × 5 sources + 6 carries × 2 modes) = **1926 cells**, recorded
-on main `40fc916f` in `python/repark/tests/ice_tsns_merge_wall_1_main.json`.
+on main `40fc916f` in `python/repark/tests/timestamps/ice_tsns_merge_wall_1_main.json`.
 
 **The 321 `timestamp_ns` cells on main:**
 
@@ -552,7 +552,7 @@ Run 2026-10-09 on the head tree, one cargo command at a time, under the build lo
 | `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test dml_sessions --test session_timestamp_type` | 0 | 9 + 1 + 7 passed |
 | `cargo test --locked -p repark-sql --test ansi_ntz_wall_cast --test ansi_update_cast --test session_wiring` | 0 | 3 + 4 + 4 passed |
 | `make develop` | 0 | |
-| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 179 passed, 32 s |
+| `pytest python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 179 passed, 32 s |
 | `pytest python/repark/tests -q -n 8 -k "ntz or timestamp_ns or tsns or merge or update"` | 0 | 1418 passed, 38 skipped (1703 before the cut of 285) |
 | `python3 scripts/sync_map_md.py --check` | 0 | |
 | `bash scripts/check_map_md.sh --base origin/main` | 0 | |
@@ -797,7 +797,7 @@ Run 2026-10-09 on `6aef7f87`, one cargo command at a time under the build lock o
 | `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes --test dml_sessions --test session_timestamp_type` | 0 | 9 + 7 + 1 + 7 passed |
 | `cargo test --locked -p repark-sql --test ansi_ntz_wall_cast --test ansi_update_cast --test session_wiring` | 0 | 3 + 4 + 4 passed |
 | `make develop` | 0 | |
-| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 6` | 0 | 195 passed |
+| `pytest python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py -q -n 6` | 0 | 195 passed |
 | `pytest python/repark/tests -q -n 8 -k "ntz or timestamp_ns or tsns or merge or update"` | 0 | 1435 passed, 38 skipped |
 | `python3 scripts/sync_map_md.py --check` | 0 | |
 | `bash scripts/check_map_md.sh --base ca5a062a` (the merged main; §10.6) | 0 | |
@@ -1054,7 +1054,7 @@ gates), one cargo command at a time under the build lock on cores 32-47.
 | `cargo test --locked -p repark-sql --lib` | 0 | 393 passed |
 | `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes` | 0 | 7 + 6 passed |
 | `make develop` | 0 | |
-| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 351 passed |
+| `pytest python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 351 passed |
 | `pytest python/repark/tests -q -n 8 -k "iceberg or v3 or merge or timestamp or nested or struct"` | 0 | 3575 passed, 140 skipped, 11 xfailed |
 | `ruff check .` and `ruff format --check .` (0.15.22) | 0 | |
 | `python3 scripts/sync_map_md.py --check` | 0 | 374 maps clean |
@@ -1190,7 +1190,7 @@ facade routes fail.
 | `cargo test --locked -p repark-sql --lib` | 0 | 393 passed |
 | `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes` | 0 | 7 + 6 passed |
 | `make develop` | 0 | |
-| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 364 passed |
+| `pytest python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 364 passed |
 | `pytest python/repark/tests -q -n 8 -k "iceberg or v3 or merge or timestamp or nested or struct"` | 0 | 3588 passed, 140 skipped, 11 xfailed |
 | `ruff check .` and `ruff format --check .` (0.15.22) | 0 | |
 | `make check-rust-file-size`, `make check-lib-rs` | 0 | `router.rs` at 1000 of 1000 |
@@ -1331,7 +1331,7 @@ fail.
 | `cargo test --locked -p repark-sql --lib` | 0 | 393 passed |
 | `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes` | 0 | 7 + 6 passed |
 | `make develop` | 0 | |
-| `pytest python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 374 passed |
+| `pytest python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 374 passed |
 | `pytest python/repark/tests -q -n 8 -k "iceberg or v3 or merge or timestamp or nested or struct"` | 0 | 3598 passed, 140 skipped, 11 xfailed |
 | `ruff check .` and `ruff format --check .` (0.15.22) | 0 | |
 | `make check-rust-file-size`, `make check-lib-rs` | 0 | |

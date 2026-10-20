@@ -39,8 +39,8 @@ parse refusals.
 | `crates/repark-spark/src/tests/alter.rs::alter_replace_columns_promote_and_identity_trap` | `id INT → BIGINT` kept field id 1 and its rows; `id → STRING` refused "identity trap". | `tests/replace_columns.rs::replace_columns_assigns_fresh_ids_and_nulls_existing_rows` + `…accepts_an_incompatible_type_on_a_kept_name` (cells RC-BASIC, RC-TYPE). |
 | `crates/repark-spark/src/tests/alter.rs::alter_replace_columns_float_decimal_promote_and_traps` | float→double / decimal widen kept the ids; double→string and decimal→int refused. | The same two tests plus `…with_the_same_list_still_rewrites_every_id` (cells RC-BASIC, RC-SAME, RC-TYPE). |
 | `crates/repark-spark/src/tests/alter.rs::alter_unsupported_forms_refuse_loud` (REPLACE block) | `REPLACE COLUMNS (id STRING, name STRING)` refuses. | The cell RC-TYPE answer; the block is deleted, the rest of the refuse battery is untouched. |
-| `python/repark/tests/test_alter_table.py::test_alter_replace_partition_field_and_replace_columns` | `id` kept its value `[1]` after the replace; the re-type refused "identity trap". | The same test, now asserting `[None]` and the answered re-type (cells RC-BASIC, RC-TYPE). |
-| `python/repark/tests/test_alter_table.py::test_alter_unsupported_forms_refuse_loud` (REPLACE twin) | the re-type refuses. | Deleted; cell RC-TYPE covers the answer. |
+| `python/repark/tests/iceberg/test_alter_table.py::test_alter_replace_partition_field_and_replace_columns` | `id` kept its value `[1]` after the replace; the re-type refused "identity trap". | The same test, now asserting `[None]` and the answered re-type (cells RC-BASIC, RC-TYPE). |
+| `python/repark/tests/iceberg/test_alter_table.py::test_alter_unsupported_forms_refuse_loud` (REPLACE twin) | the re-type refuses. | Deleted; cell RC-TYPE covers the answer. |
 
 ## Residues (declared)
 
@@ -103,7 +103,7 @@ COVERAGE_ATTESTATION:
       evidence: Every expectation reads from the committed Spark 4.1.2 oracle (cells RC-*,
         v2 and v3) rather than from RePark's own answer; the recorder re-derives the fixture
         on live Spark and the harness replay compares RePark against the same recording.
-      artifacts: [python/repark/tests/ice_replace_columns_1_spark_oracle.json, python/repark/tests/_record_ice_replace_columns_1_oracle.py]
+      artifacts: [python/repark/tests/iceberg/ice_replace_columns_1_spark_oracle.json, python/repark/tests/iceberg/_record_ice_replace_columns_1_oracle.py]
     - id: AT-2
       status: ATTACKED
       evidence: Red on the base tree before the fix — 34 of 46 pins failed, each for the
@@ -111,14 +111,14 @@ COVERAGE_ATTESTATION:
         primitives-only STRUCT refusal, the silent partition/sort keep); the control cells
         (RENAME, EMPTY-TABLE, IDENTIFIER, the native door) passed before and after, so the
         pins discriminate the fix rather than the harness.
-      artifacts: [python/repark/tests/test_ice_replace_columns_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_replace_columns_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Both doors are pinned — the Spark facade per measured cell and the native
         ANSI door at its registered parse refusal — plus 12 Rust twins at the planner seam,
         each refusal asserting the table's ids and rows are untouched. Format versions 2 and
         3 are separate cells throughout.
-      artifacts: [python/repark/tests/test_ice_replace_columns_1.py, crates/repark-spark/src/tests/replace_columns.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_replace_columns_1.py, crates/repark-spark/src/tests/replace_columns.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The plan loads the table once and reads live metadata for the current schema,
@@ -161,6 +161,6 @@ COVERAGE_ATTESTATION:
         the tree for REPLACE COLUMNS, flipped with its replacement named in the flipped-pin
         table, and re-run green; the ALTER suites (58 Rust, 9 facade) pass unchanged
         otherwise.
-      artifacts: [crates/repark-spark/src/tests/alter.rs, python/repark/tests/test_alter_table.py]
+      artifacts: [crates/repark-spark/src/tests/alter.rs, python/repark/tests/iceberg/test_alter_table.py]
   complete: true
 ```

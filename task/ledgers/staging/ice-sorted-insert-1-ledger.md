@@ -6,7 +6,7 @@
 **Model:** claude-opus-5 (round 4, 2026-09-17 — remediation of the verification critic's V-01…V-04; §10)
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
-**Oracle:** PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (see `_oracle_pins.py`), recorded at authoring time into `python/repark/tests/ice_sorted_insert_1_spark_oracle.json`, replayed live under `REPARK_PARITY_LIVE=1`.
+**Oracle:** PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (see `_oracle_pins.py`), recorded at authoring time into `python/repark/tests/writes/ice_sorted_insert_1_spark_oracle.json`, replayed live under `REPARK_PARITY_LIVE=1`.
 **Fork fix:** fork PR #287 (F-SORTED-INSERT-1), fork main `4151b488`, consumed via RP-22 (PR #667); the round-4 tree runs on main's later pin RP-24 `8fb44a39`, which carries it. Round-1 local develop override: the five iceberg* lines of `Cargo.toml` pointed at a local fork checkout; `Cargo.toml` and `Cargo.lock` were skip-worktree and never staged (removed in round 2).
 
 ## 1. Scope and fence
@@ -50,8 +50,8 @@ Row V2-12, claim C-7 (2026-09-16): a plain `INSERT INTO` into a table with a dec
 
 ### Oracle cells (recorded 2026-09-17, Spark 4.1.2, `local[4]`, UTC)
 
-`python/repark/tests/_record_ice_sorted_insert_1_oracle.py --rewrite` wrote
-`python/repark/tests/ice_sorted_insert_1_spark_oracle.json` (8 cells) and the
+`python/repark/tests/writes/_record_ice_sorted_insert_1_oracle.py --rewrite` wrote
+`python/repark/tests/writes/ice_sorted_insert_1_spark_oracle.json` (8 cells) and the
 `fixtures/ice_sorted_insert_1/days` warehouse (84 KB). Per-file
 `(records, sort_order_id, sorted)`:
 
@@ -380,15 +380,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause walked against bytes, not metadata. Each round-3 clause names the pin, the red it showed before the fix and the mutation that reds it. C-003's MERGE claim was found vacuous (L-02) and moved to C-006, not re-asserted.
-      artifacts: [task/ledgers/staging/ice-sorted-insert-1-ledger.md, python/repark/tests/test_ice_sorted_insert_2.py, python/repark/tests/ice_sorted_insert_2_spark_oracle.json]
+      artifacts: [task/ledgers/staging/ice-sorted-insert-1-ledger.md, python/repark/tests/writes/test_ice_sorted_insert_2.py, python/repark/tests/writes/ice_sorted_insert_2_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Edges pinned are NULL keys first, a solid NaN block, negative NaN, a DESC order after an ALTER (current id 2), an unpartitioned table, v2 and v3, an empty-batch skip in the lineage drain, and a transform order, which still refuses loud and writes nothing.
-      artifacts: [python/repark/tests/test_ice_sorted_insert_2.py, crates/repark-iceberg/src/write/distribution/canonical_float.rs]
+      artifacts: [python/repark/tests/writes/test_ice_sorted_insert_2.py, crates/repark-iceberg/src/write/distribution/canonical_float.rs]
     - id: AT-3
       status: ATTACKED
       evidence: No stamp without a sort. The lineage writer is built after the sort returns, so a sort error aborts the write before any file exists. The shapes RePark cannot fix (the fork's binpack and COW UPDATE) are strict xfails whose failures were read with --runxfail and match the claim.
-      artifacts: [crates/repark-iceberg/src/write/merge/row_lineage.rs, python/repark/tests/test_ice_sorted_insert_2.py]
+      artifacts: [crates/repark-iceberg/src/write/merge/row_lineage.rs, python/repark/tests/writes/test_ice_sorted_insert_2.py]
     - id: AT-4
       status: N/A
       justification: No concurrency surface changed. The sort runs inside one writer call before the fanout exists, and commit and OCC paths are untouched.
@@ -398,7 +398,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Every expected value is Spark 4.1.2's, read from the committed 15-cell fixture (stamp, sortedness, live row count, float layout). Q-21c-2 follows the measurement over the critic's premise.
-      artifacts: [python/repark/tests/ice_sorted_insert_2_spark_oracle.json, python/repark/tests/_record_ice_sorted_insert_2_oracle.py]
+      artifacts: [python/repark/tests/writes/ice_sorted_insert_2_spark_oracle.json, python/repark/tests/writes/_record_ice_sorted_insert_2_oracle.py]
     - id: AT-7
       status: ATTACKED
       evidence: The lineage arm buffers before sorting only when an order is declared, the cost the v2 and unpartitioned arms pay on the same tables; unsorted tables stream (round 4, V-01, §10). The float wrap runs once per sort key per batch evaluation. The stamp stays once per writer construction.
@@ -410,7 +410,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Strict xfails XPASS and red once either fork PR lands, forcing their un-marking. The registry rows state OPEN / BLOCKED-ON-FORK with the measurement, not a paraphrase.
-      artifacts: [python/repark/tests/test_ice_sorted_insert_2.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/writes/test_ice_sorted_insert_2.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-10
       status: ATTACKED
       evidence: Six single-change mutations (three stamp sites, the lineage sort, lineage detachment, NaN canonicalisation) each red a named pin and nothing is left unpinned (§9.4).

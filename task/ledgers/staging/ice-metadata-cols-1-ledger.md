@@ -13,7 +13,7 @@ is the hard-coded `METADATA_COLUMN_NAMES = [_file, _pos, _spec_id]`;
 `crates/repark-core/src/metadata_columns.rs` (the Spark-door rewrite plus the
 typed `[ICE-MC-1]` refusal of the two unserved names), the router hook and the
 `repark-core` re-export, `crates/repark-spark/src/tests/metadata_columns.rs`,
-`python/repark/tests/test_ice_metadata_cols_1.py`, the registry row, six
+`python/repark/tests/iceberg/test_ice_metadata_cols_1.py`, the registry row, six
 `map.md` files, the `repark-core` lib.rs `154` EXCEPTIONS row (sanctioned out
 (2): the root sat exactly at the 150 default), and this ledger. No code comment
 added anywhere (`comment-ban hits=0`); Python docstrings only where the presence
@@ -168,7 +168,7 @@ unpart pin.
 
 | Command | Result |
 |---|---|
-| lane gate `build-slot.sh local-gate.sh rc-meta repark-core,repark-iceberg,repark-spark python/repark/tests/test_ice_metadata_cols_1.py` | `CB=0 R=0 T=0 U=0 L=0` |
+| lane gate `build-slot.sh local-gate.sh rc-meta repark-core,repark-iceberg,repark-spark python/repark/tests/iceberg/test_ice_metadata_cols_1.py` | `CB=0 R=0 T=0 U=0 L=0` |
 | `cargo test -p repark-core` (gate tier T) | `651 passed; 0 failed; 1 ignored` lib + `37` + `8` bins |
 | `cargo test -p repark-iceberg` (gate tier T) | `630 passed; 0 failed` |
 | `cargo test -p repark-spark` (gate tier T) | `1344 passed; 0 failed; 5 ignored` lib + integration bins green |
@@ -182,7 +182,7 @@ unpart pin.
 | `scripts/check_rust_file_size.py`, `scripts/check_lib_py.py` | clean (new files under the 1000 default) |
 | `ruff check` + `ruff format --check` on the new test file and `check_lib_rs.py` | `All checks passed!`, already formatted |
 | r2 `cargo test -p repark-spark --lib tests::metadata_columns` | `7 passed; 0 failed` |
-| r2 pytest `python/repark/tests/test_ice_metadata_cols_1.py` | `9 passed` |
+| r2 pytest `python/repark/tests/iceberg/test_ice_metadata_cols_1.py` | `9 passed` |
 | r2 xgate `rc-meta repark-core,repark-iceberg,repark-spark` + 3 pytest files | `CB=0 R=0 T=0 U=0 L=0` (verdict file, all five codes 0) |
 
 ## r2 mutation battery (V-001..V-003 findings + CLASS sweep)
@@ -269,7 +269,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause walked against a run — five recorded-value pins on the Arrow path value AND type (C-001..C-005), the star pin (C-006), the refusal plus fold plus composed-shape pins (C-007), the registry row (C-008).
-      artifacts: [python/repark/tests/test_ice_metadata_cols_1.py, crates/repark-spark/src/tests/metadata_columns.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_metadata_cols_1.py, crates/repark-spark/src/tests/metadata_columns.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries — empty projection (bare count), quoted vs folded vs compound names, non-query and two-relation shapes, backtick unserved names, the MoR delete twin; every added branch has a nameable input that changes the output.
@@ -303,7 +303,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Five recorded cells replayed verbatim on two harnesses (Rust lib + facade pytest); the r2 battery (F1..F16 incl. F3b/F7b/F13b/F14b) reds every assertion in both pin files, each mutation reverted and byte-verified; the refusal mutation (drop the unserved check) reds C-007, the empty-projection mutation reds C-003, and each added branch has a nameable input per AT-2.
-      artifacts: [python/repark/tests/test_ice_metadata_cols_1.py, crates/repark-spark/src/tests/metadata_columns.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_metadata_cols_1.py, crates/repark-spark/src/tests/metadata_columns.rs]
 ```
 
 Every clause above is PROVEN with a quoted command and its output; no clause is
@@ -311,7 +311,7 @@ OPEN. Touched files per clause: C-001..C-007
 `crates/repark-core/src/metadata_columns.rs` +
 `crates/repark-iceberg/src/catalog/metadata_columns.rs` +
 `crates/repark-spark/src/tests/metadata_columns.rs` +
-`python/repark/tests/test_ice_metadata_cols_1.py` plus the five code-dir
+`python/repark/tests/iceberg/test_ice_metadata_cols_1.py` plus the five code-dir
 `map.md` files; C-008 `docs/spark-sql-iceberg-parity.md`; the lib.rs ceiling row
 `scripts/check_lib_rs.py` + `scripts/map.md`; plus this ledger's own entry in
 `task/ledgers/staging/map.md`. `Cargo.lock`, every `Cargo.toml`, the fork pin,

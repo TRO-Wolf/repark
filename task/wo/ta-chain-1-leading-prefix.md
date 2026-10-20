@@ -34,7 +34,7 @@ Written 2026-10-03 by a Claude session (claude-fable-5-1) on the owner's ruling 
 | `crates/repark-ta/tests/goldens/prefix/` | new recorded fixtures (binary) | — |
 | `crates/repark-ta/tests/prefix_goldens.rs` | new: wrapper-level bit-exact gate behind `#[cfg(feature = "datafusion")]` | 1000 |
 | `crates/repark-ta/tests/map.md` | edited: the new gate and fixture directory | — |
-| `python/repark/tests/test_ta_with_indicators.py` | edited: `test_chained_indicator_over_trange_matches_polars_talib_golden`, `test_leading_null_prefix_is_skipped_per_partition` | — |
+| `python/repark/tests/functions/test_ta_with_indicators.py` | edited: `test_chained_indicator_over_trange_matches_polars_talib_golden`, `test_leading_null_prefix_is_skipped_per_partition` | — |
 | `docs/examples/ta/composition.py` | edited: one chained column (`ema21_of_tr`) asserted against the new golden; `COVERS` unchanged | — |
 | `task/ledgers/staging/ta-chain-1-ledger.md` | new: clauses C-001…C-007 below | — |
 | `task/roadmap/mid-term/ta-chain-1-card-2026-10-03.md` | already filed with this order | — |
@@ -103,7 +103,7 @@ Slice S3 — facade, example, ledger (one commit: `docs(ta-chain-1): chained ind
 | `cargo clippy -p repark-ta --features datafusion -- -D warnings` / `cargo fmt --check` | exit 0 |
 | `make rust-panic-ban` | exit 0 |
 | `python scripts/check_example_coverage.py --require-execute` | exit 0 |
-| `.venv/bin/python -m pytest python/repark/tests/test_ta_with_indicators.py -q` | all passed, two new names present |
+| `.venv/bin/python -m pytest python/repark/tests/functions/test_ta_with_indicators.py -q` | all passed, two new names present |
 | `bench_kernel_race.py --quick` base vs head | median ratio ≤ 1.02 |
 
 ## 6. Halt rules

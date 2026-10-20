@@ -54,7 +54,7 @@ the cache view.
    does (same-type columns pass through, castable columns cast with `safe: false`, field metadata and nullability
    taken from the logical field). When a column cannot be cast, refuse with an `AnalysisException` that prints both
    schemas — the logical field and the batch field that differ — instead of DataFusion's one-line message.
-3. **Pins:** `python/repark/tests/test_decimal_cache_1.py` — every oracle cell through `.eager()`, `.cache()`,
+3. **Pins:** `python/repark/tests/types/test_decimal_cache_1.py` — every oracle cell through `.eager()`, `.cache()`,
    `.persist()` and `collect()` on both doors; a Rust test in `temp_views` for the conformance step with a
    deliberately drifted batch (type promoted, metadata dropped) and one for the uncastable refusal message.
 4. **Registry:** a row in `docs/spark-sql-iceberg-parity.md` under the decimal section, FIXED with the pin.

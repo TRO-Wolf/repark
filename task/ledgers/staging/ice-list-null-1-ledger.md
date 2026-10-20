@@ -82,11 +82,11 @@ re-derives one cell per shape on Spark through the recorder's own `record_cell`.
 
 ## Facade evidence (release native, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin develop --release`)
 
-- Offline: `pytest python/repark/tests/test_ice_list_null_1.py -q -p no:cacheprovider -n 4` →
+- Offline: `pytest python/repark/tests/writes/test_ice_list_null_1.py -q -p no:cacheprovider -n 4` →
   225 passed, 4 skipped, 32 xfailed.
 - Live: `REPARK_PARITY_LIVE=1 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64
   SPARK_LOCAL_IP=127.0.0.1 ... jvm-lock.sh .venv/bin/python -m pytest
-  python/repark/tests/test_ice_list_null_1.py python/repark/tests/test_ice_rowid_order_1.py
+  python/repark/tests/writes/test_ice_list_null_1.py python/repark/tests/writes/test_ice_rowid_order_1.py
   -q -p no:cacheprovider` → 234 passed, 32 xfailed (4 of them the live re-derivations).
 - Lint: `ruff check` + `ruff format --check` clean on both new Python files; no non-ASCII
   bytes in either (E501 counts multibyte).
@@ -111,20 +111,20 @@ COVERAGE_ATTESTATION:
         (byte-identical copy of the run-23a recording, SHA-256 in the fixture
         map.md); the seed read-back asserts the recorded seed semantics, so no
         hand-computed id list exists.
-      artifacts: [python/repark-parity/fixtures/torture/data/ice_list_null_1/spark_list_null_oracle.json, python/repark/tests/_record_ice_list_null_1.py]
+      artifacts: [python/repark-parity/fixtures/torture/data/ice_list_null_1/spark_list_null_oracle.json, python/repark/tests/writes/_record_ice_list_null_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Red-first on the 16 compound cells is the fork #299 residue
         itself (loud Accessor refusal at the bumped pin, quoted in Red
         evidence); the count divergences pin RePark's measured values, so a
         convergence on either side reds the suite.
-      artifacts: [python/repark/tests/test_ice_list_null_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_list_null_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The matrix is exhaustive over the recorded shape x predicate x
         statement x mode x version product (128 cells, one pin id each, both
         parametrizations); the seed test covers the one substituted row.
-      artifacts: [python/repark/tests/test_ice_list_null_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_list_null_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state added; the unit adds no product code.

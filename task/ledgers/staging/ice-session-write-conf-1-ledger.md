@@ -403,7 +403,7 @@ COVERAGE_ATTESTATION:
         the recorder check is clean. No RePark-only answer was written into a
         pin. Round 1 added the 38 QS / QZ / QR path cells recorded on run 25c;
         round 2 closed the one cell the recorder could not re-derive.
-      artifacts: [python/repark/tests/ice_session_write_conf_1_spark_oracle.json, python/repark/tests/test_ice_session_write_conf_1.py, python/repark/tests/test_ice_session_write_conf_1_paths.py, python/repark/tests/_record_ice_session_write_conf_1_paths.py]
+      artifacts: [python/repark/tests/writes/ice_session_write_conf_1_spark_oracle.json, python/repark/tests/writes/test_ice_session_write_conf_1.py, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py, python/repark/tests/writes/_record_ice_session_write_conf_1_paths.py]
     - id: AT-2
       status: ATTACKED
       evidence: Empty conf value, two keys at once, upper-case codec, bogus
@@ -415,7 +415,7 @@ COVERAGE_ATTESTATION:
         (refuse) beside one it did not (stamp and feed the totals), and a free
         key whose total would go negative (dropped, not written). Round 2 adds a
         tag selector and an empty branch_ selector, which must decline.
-      artifacts: [python/repark/tests/test_ice_session_write_conf_1.py, python/repark/tests/test_ice_session_write_conf_1_paths.py, crates/repark-iceberg/src/tests/session_write_conf.rs, crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs]
+      artifacts: [python/repark/tests/writes/test_ice_session_write_conf_1.py, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py, crates/repark-iceberg/src/tests/session_write_conf.rs, crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The bogus codec refuses before any file is written with no
@@ -426,7 +426,7 @@ COVERAGE_ATTESTATION:
         pin the day RePark's whole-partition DELETE routed as Spark's does; #739
         landed that route, the cell was re-measured green on the merged build
         (round 6, 2026-09-20), and it is a pin.
-      artifacts: [python/repark/tests/test_ice_session_write_conf_1.py, python/repark/tests/test_ice_session_write_conf_1_paths.py, crates/repark-sql/src/session_write_conf.rs]
+      artifacts: [python/repark/tests/writes/test_ice_session_write_conf_1.py, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py, crates/repark-sql/src/session_write_conf.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The conf is read per statement from the live session context;
@@ -435,7 +435,7 @@ COVERAGE_ATTESTATION:
         cannot leak state into each other. The native repark.sql door carries its
         OWN ConfigOptions, which the facade cannot reach, so its pins build the
         door session directly rather than assuming one shared carrier.
-      artifacts: [crates/repark-spark/src/tests/session_write_conf.rs, crates/repark-sql/src/session_write_conf.rs, python/repark/tests/test_ice_session_write_conf_1.py]
+      artifacts: [crates/repark-spark/src/tests/session_write_conf.rs, crates/repark-sql/src/session_write_conf.rs, python/repark/tests/writes/test_ice_session_write_conf_1.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, no secret, no deserialization and
@@ -448,7 +448,7 @@ COVERAGE_ATTESTATION:
         Spark answers on v3 tables. The branch cells additionally assert the
         BRANCH data and the ref-to-snapshot map, so a write that stamps
         correctly but lands on the wrong head still reds.
-      artifacts: [python/repark/tests/test_ice_session_write_conf_1.py, python/repark/tests/test_ice_session_write_conf_1_paths.py]
+      artifacts: [python/repark/tests/writes/test_ice_session_write_conf_1.py, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py]
     - id: AT-7
       status: N/A
       justification: The per-statement conf merge walks the set keys only; no
@@ -463,7 +463,7 @@ COVERAGE_ATTESTATION:
         rather than papered over, and the metadata snapshots-array ordering
         divergence round 2 measured is reported rather than silently fixed
         inside this unit.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_session_write_conf_1.py, python/repark/tests/test_ice_session_write_conf_1_paths.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/writes/test_ice_session_write_conf_1.py, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py]
     - id: AT-9
       status: ATTACKED
       evidence: The refusal names the codec, so the failure is diagnosable
@@ -530,7 +530,7 @@ COVERAGE_ATTESTATION:
         which re-derives all ninety-five and re-derived the sixty-three older
         ones byte-identically in the same run. No round-4 expectation was
         written from reasoning: each was recorded on live Spark 4.1.2 first.
-      artifacts: [python/repark/tests/ice_session_write_conf_1_spark_oracle.json, python/repark/tests/_record_ice_session_write_conf_1_rounds.py, python/repark/tests/_record_ice_session_write_conf_1_oracle.py]
+      artifacts: [python/repark/tests/writes/ice_session_write_conf_1_spark_oracle.json, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py, python/repark/tests/writes/_record_ice_session_write_conf_1_oracle.py]
     - id: AT-2
       status: ATTACKED
       evidence: Round 4 attacks the edges the THIRD critic found. The static
@@ -554,7 +554,7 @@ COVERAGE_ATTESTATION:
         file-naming item, together with the measurement showing the two routes
         now answer alike. The false fixture claim was corrected by making it
         true, not by deleting the sentence.
-      artifacts: [task/ledgers/staging/ice-session-write-conf-1-ledger.md, docs/spark-sql-iceberg-parity.md, python/repark/tests/ice_session_write_conf_1_spark_oracle.json]
+      artifacts: [task/ledgers/staging/ice-session-write-conf-1-ledger.md, docs/spark-sql-iceberg-parity.md, python/repark/tests/writes/ice_session_write_conf_1_spark_oracle.json]
     - id: AT-10
       status: ATTACKED
       evidence: Every round-4 pin was run against the mutation that names it.
@@ -575,7 +575,7 @@ COVERAGE_ATTESTATION:
         pinned, then entered into the unit fixture and the live recorder, which
         re-derives all 106 and re-derived the 95 older ones equal in the same
         run.
-      artifacts: [python/repark/tests/ice_session_write_conf_1_spark_oracle.json, python/repark/tests/_record_ice_session_write_conf_1_rounds.py]
+      artifacts: [python/repark/tests/writes/ice_session_write_conf_1_spark_oracle.json, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py]
     - id: AT-2
       status: ATTACKED
       evidence: Round 5 attacks the removal side the earlier rounds only

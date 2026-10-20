@@ -31,7 +31,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   v2/v3 copy-on-write of S1/S2/S4 (6 programs; 15 total, 0 EQUAL, 15 DIVERGES). CoW MERGE
   `delete_files` empty and data-file count 1 on both engines; remaining DIVERGES are
   `CUTOVER-CTAS-REQ-1` / `V3-COV-7`. Harness:
-  `python/repark/tests/test_sql_harden_cutover.py`. Critic round 2: S6 names follow the
+  `python/repark/tests/iceberg/test_sql_harden_cutover.py`. Critic round 2: S6 names follow the
   passed namespace; DATE-FN-1 incidental pins. CI round 3: MERGE delete-file count is
   host-dependent; golden pins kinds. pins: sql-harden-1-cutover-shapes/C-004
   pins: sql-harden-2-cow-shapes/C-004
@@ -39,7 +39,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   statement-coverage matrix that discharges the north star's §2 pillar 4 — 81 statement programs
   over 12 statement classes and all seven `CALL system.*` procedures, 267 comparison cells,
   72 EQUAL, 1 refused by both engines, 8 rows filed, 2 defects FIXED in the same unit. Harness:
-  `python/repark/tests/test_v3_statement_coverage.py`. Read it before adding a statement surface:
+  `python/repark/tests/iceberg/test_v3_statement_coverage.py`. Read it before adding a statement surface:
   a new statement class that is not in §3 is not covered, whatever the nightly legs say.
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** `insert-overwrite-partition-dynamic` reads EQUAL;
   the totals are 73 EQUAL and 7 DIVERGES. pins: ice-overwrite-mode-1/C-018
@@ -57,7 +57,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   **Corrected 2026-09-02 (LIVE-v3):** §7's "`expire_snapshots` … was not exercised against a
   table with expirable snapshots" now carries its dated fix — the live v3 leg's created-table
   sequence expires thirteen of fourteen snapshots (`14 → 1`), pinned by
-  `python/repark/tests/test_v3_acceptance_local.py`. pins: live-v3-aws-legs/C-004
+  `python/repark/tests/parity/test_v3_acceptance_local.py`. pins: live-v3-aws-legs/C-004
   **Corrected 2026-09-02 (LIVE-v3-M):** §7's "Nothing was measured on Glue or S3 Tables" carries
   its dated fix too — `aws-acceptance` run 33635288918 measured both, registry `S3T-V3-1`.
   pins: live-v3-first-measurement/C-002

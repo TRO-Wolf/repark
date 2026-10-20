@@ -63,11 +63,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each ruling item maps to a clause. The masked copy raised below the handler is C-001; the credential-free identity is C-002; the transform passthrough with its dated DECL row is C-003; the FW1 citation in DF-FOREACH-1 is C-004.
-      artifacts: [python/repark/src/repark/spark/dataframe/surface_b.py, python/repark/tests/test_foreach_wrap_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/src/repark/spark/dataframe/surface_b.py, python/repark/tests/io/test_foreach_wrap_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-2
       status: ATTACKED
       evidence: Both doors are exercised with a plain message, a lone-surrogate message and a credential-free message; foreachPartition raises from inside the row iterator.
-      artifacts: [python/repark/tests/test_foreach_wrap_1.py]
+      artifacts: [python/repark/tests/io/test_foreach_wrap_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The failure path is the subject. The raise sits after the handler, so __context__ is None (M-2 red), and an engine error from toLocalIterator or to_arrow_batches inside the try takes the same scrub, keeping its identity when nothing masks.
@@ -78,7 +78,7 @@ COVERAGE_ATTESTATION:
     - id: AT-5
       status: ATTACKED
       evidence: str, repr and format_exception carry no userinfo on both doors, in both doors4.py modes; transform is the one ruled exception, matching Spark.
-      artifacts: [python/repark/tests/test_foreach_wrap_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/io/test_foreach_wrap_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-6
       status: N/A
       justification: No data path changes; the rows each callback sees are unchanged, and the DF-FOREACH-1 visit pins pass.
@@ -88,14 +88,14 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: The error contract is the registry's. DF-FOREACH-1 keeps the user's class, and its pin test_foreach_propagates_user_exception is unchanged and green; DF-TRANSFORM-1 records the passthrough against the live FW1-transform cell.
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_df_surface_b_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/dataframe/test_df_surface_b_1.py]
     - id: AT-9
       status: ATTACKED
       evidence: The masked copy keeps the user's traceback frames and the class, so the failure stays diagnosable with only the credential masked.
-      artifacts: [python/repark/tests/test_foreach_wrap_1.py]
+      artifacts: [python/repark/tests/io/test_foreach_wrap_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: 4 cells are red on the base. M-1 (scrub dropped) and M-2 (raise inside the handler) are each red on 2 cells. Every branch the diff adds has an input that changes its output: a secret flips the copy, and no error leaves failure None.
-      artifacts: [python/repark/tests/test_foreach_wrap_1.py]
+      artifacts: [python/repark/tests/io/test_foreach_wrap_1.py]
   complete: true
 ```

@@ -49,7 +49,7 @@ its basis once, in its preamble, because every row there shares it.
 **`live-mirror:`** — the machine-checked link between a row and the live-oracle tier. A row that
 carries `live-mirror: <name>` promises that `python/repark/tests/_live_parity.py` holds a
 `Disclosure` of exactly that name. The two sides are checked against each other by
-`python/repark/tests/test_parity_live.py::test_disclosures_mirror_the_registry`, which reds if
+`python/repark/tests/parity/test_parity_live.py::test_disclosures_mirror_the_registry`, which reds if
 either side gains or loses a name. The field has **one exact spelling**, given in §6 ("The exact
 spelling this gate parses") — a near-miss is a loud failure, not a silent skip. Rows without the
 field are pinned JVM-free only; that is a property of what the live tier can express, not a
@@ -115,9 +115,9 @@ exists to prevent, and every refusal message names the section it is recorded in
   `getSqlState()`, and the legacy-option refusals (C-012) are standalone literals with
   `getSqlState()` `None`.
 - **Pin** — `crates/repark-spark/src/tests/metadata_tables_asof.rs::metadata_asof_served_per_type`
-  and `python/repark/tests/test_ice_mt_as_of_1.py`; the reader leg pins in
+  and `python/repark/tests/iceberg/test_ice_mt_as_of_1.py`; the reader leg pins in
   `crates/repark-spark/src/tests/metadata_tables_asof.rs::reader_metadata_path_matches_sql_door`
-  and `python/repark/tests/test_ice_mt_reader_1.py`
+  and `python/repark/tests/iceberg/test_ice_mt_reader_1.py`
 - **Rationale** — FIXED. The refusal it replaced would have hidden a served Spark surface behind
   a planning error; the per-type rules above are what Spark 4.1.2 was recorded answering.
 
@@ -162,9 +162,9 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   `{"ts":"2024-01-01T04:30:00.000000Z"}` (and the companion instant) from
   `.files` / `.partitions`. *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_partition_value_audit.py::test_partition_value_row[carry_identity_timestamp_ctas]`
+  `python/repark/tests/writes/test_partition_value_audit.py::test_partition_value_row[carry_identity_timestamp_ctas]`
   and
-  `python/repark/tests/test_partition_value_audit.py::test_partition_value_row[carry_identity_timestamp_insert]`
+  `python/repark/tests/writes/test_partition_value_audit.py::test_partition_value_row[carry_identity_timestamp_insert]`
 - **Rationale** — DECLARED, fork-wave-routed. Fork inspect (`data_file` metadata
   projection). Not a TZ-4 representation miss (data values match). Do not "fix" in
   repark by skipping the meta read.
@@ -180,7 +180,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   `all_data_files`) answer Spark-equal on the same fixture.
 - **Apache Spark** — returns the deleted positions (one `pos` row for the single-row MoR DELETE on
   the V3-COV flat seed). *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[meta-position-deletes]`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[meta-position-deletes]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[meta-position-deletes]`
 - **Rationale** — FIXED 2026-09-20 (RP-42). The DECLARED row's TRIGGER fired: the fork ported
   `PositionDeletesTable`'s scan (fork #332, consumed at pin `886b94c1`), so no engine-side
@@ -197,12 +197,12 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   options and both SQL doors: the built-ins travel as raw strings, the timestamp casts in the
   session zone, integer means epoch seconds, combined pins raise Spark's refusal texts, and the
   `AS OF` expression evaluates as a DataFusion constant (column refs and non-determinism refuse).
-- **Pin** — `python/repark/tests/test_ice_tt_resolve_1.py` (94-cell oracle, 155 offline cells
+- **Pin** — `python/repark/tests/iceberg/test_ice_tt_resolve_1.py` (94-cell oracle, 155 offline cells
   green plus the `REPARK_PARITY_LIVE=1` re-derivation leg), the
   `reader_spec_builtin_pins_refuse_loud` / `reader_spec_legacy_pins_still_resolve` /
   `sql_timestamp_asof_evaluates_constants_in_session_zone` Rust batteries, and the flipped ms
   pins (`crates/repark-spark/src/tests/time_travel.rs`,
-  `python/repark/tests/test_time_travel.py::test_sql_timestamp_as_of`).
+  `python/repark/tests/iceberg/test_time_travel.py::test_sql_timestamp_as_of`).
 - **Rationale** — FIXED 2026-09-19 (ICE-TT-RESOLVE-1 round 1, IPI-01 + IPI-02). TRIGGER: none, the
   fix is engine-side. IPI-18 stays open: the legacy `snapshot-id` / `as-of-timestamp` / `tag`
   reader options refuse like Spark 4.1.2 (measured 2026-09-22, Iceberg 1.10) instead of
@@ -266,7 +266,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   current snapshot `[[2,"b","y"],[3,"c","x"]]`. *(oracle: recorded live PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0 cell `R-DF-LOAD-PATH`; replayed identical on the
   lane build 2026-09-23.)*
-- **Pin** — `python/repark/tests/test_iceberg_load_path.py`
+- **Pin** — `python/repark/tests/iceberg/test_iceberg_load_path.py`
   (`test_load_table_location_reads_current_rows`, `test_load_table_location_trailing_slash`,
   `test_load_missing_location_names_the_path`,
   `test_load_path_with_travel_or_incremental_option_refuses`, and the near-miss pins that
@@ -292,7 +292,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   the current snapshot `[[2,"b","y"],[3,"c","x"]]`. *(oracle: recorded live PySpark 4.1.2
   + iceberg-spark-runtime-4.1_2.13:1.11.0 cell `R-DF-LOAD-METADATA-JSON`; replayed
   identical on the lane build 2026-09-23.)*
-- **Pin** — `python/repark/tests/test_iceberg_load_path.py`
+- **Pin** — `python/repark/tests/iceberg/test_iceberg_load_path.py`
   (`test_load_latest_metadata_file_reads_current_rows`,
   `test_load_older_metadata_file_reads_that_version`).
 - **Rationale** — FIXED 2026-09-23 (dfload-1, WO dfload-r1). The suffix test precedes the
@@ -319,7 +319,7 @@ Supported surface, for reference:
 > row: it is the supported grammar, and the pins are
 > `crates/repark-spark/src/tests/refs_and_wap.rs::branch_snapshot_retention_takes_both_count_and_age_halves`
 > (+ its reversed-order sibling), `crates/repark-sql/src/ref_ddl/tests.rs::parses_both_snapshot_retention_halves`,
-> and `python/repark/tests/test_ref_branch_tag_wap.py`.
+> and `python/repark/tests/iceberg/test_ref_branch_tag_wap.py`.
 > *(Incidental control, same measurement: Spark 4.1.2 **parse-fails** the top-level
 > `CREATE BRANCH b IN t` spelling that this door accepts. RePark is a superset there, not a
 > divergence, so no row — but do not cite that form as Spark-equal.)*
@@ -360,7 +360,7 @@ Supported surface, for reference:
   + Iceberg 1.11.0, 2026-09-01, `<pyspark-4.1.2-oracle>`.)*
 - **Pin** — `crates/repark-spark/src/tests/write_to_branch.rs` (per family on a diverged branch;
   tag refuse; missing-branch refuse);
-  `python/repark/tests/test_ref_branch_tag_wap.py`
+  `python/repark/tests/iceberg/test_ref_branch_tag_wap.py`
 - **Rationale** — FIXED (2026-09-01, RP-5). `df.writeTo("cat.ns.t.branch_b").append()` is not
   plumbed unless `writeTo` already funnels into this SQL path; BACKLOG if still missing.
   pins: rp-5-fork-repin/C-004
@@ -391,7 +391,7 @@ Supported surface, for reference:
 - **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse`
   (the guarded spellings run, an unknown trailing clause still refuses),
   `crates/repark-spark/src/ref_ddl/tests.rs::{parses_if_not_exists_infix_on_create,parses_if_exists_infix_on_drop,postfix_if_not_exists_still_refuses,or_replace_with_if_not_exists_refuses_parse_class}`,
-  and `python/repark/tests/test_ice_small_parser_1.py` (the four recorded cells plus the
+  and `python/repark/tests/iceberg/test_ice_small_parser_1.py` (the four recorded cells plus the
   conditional arms they do not reach).
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
 - **Rationale** — FIXED (2026-09-20, IPI-42). The old row declared the refusal because silently
@@ -442,8 +442,8 @@ staged-snapshot flow behind `spark.wap.id` on 2026-09-21 (IPI-05, over fork pin
 - **Pin** — `crates/repark-spark/src/tests/wap_id.rs` (the staged INSERT, `publish_changes` on an
   unmoved and on a moved `main`, the unknown-id refusal, and the near misses that stay ordinary
   commits); `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
-  facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`; WAP-staged cherry-pick
-  live rows in `python/repark/tests/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
+  facade rows in `python/repark/tests/iceberg/test_ref_branch_tag_wap.py`; WAP-staged cherry-pick
+  live rows in `python/repark/tests/iceberg/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
 - **Rationale** — BACKLOG (2026-09-01, RP-5; narrowed 2026-09-17, ICE-BRANCH-OPS-1:
   `fast_forward` and `cherrypick_snapshot` are ordinary branch procedures now, REF-5/REF-6;
   round 2: cherry-picking a Spark-staged WAP snapshot publishes it with `published-wap-id`
@@ -492,14 +492,14 @@ staged-snapshot flow behind `spark.wap.id` on 2026-09-21 (IPI-05, over fork pin
   because branch and `main` held the same rows (four cells now diverge the two snapshots
   first).
 - **Apache Spark** — as above. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:
-  1.11.0, recorded 2026-09-19 into `python/repark/tests/ice_wap_branch_1_spark_oracle.json`
-  by `python/repark/tests/_record_ice_wap_branch_1_oracle.py`, re-recorded whole 2026-09-20;
+  1.11.0, recorded 2026-09-19 into `python/repark/tests/writes/ice_wap_branch_1_spark_oracle.json`
+  by `python/repark/tests/writes/_record_ice_wap_branch_1_oracle.py`, re-recorded whole 2026-09-20;
   the 27 cells reproduce the orchestrator's run-25c measurement observation for observation,
   and the 19 round-1 cells came back byte-identical in that re-recording.)*
-- **Pin** — `python/repark/tests/test_ice_wap_branch_1.py` (one parametrized pin per recorded
+- **Pin** — `python/repark/tests/writes/test_ice_wap_branch_1.py` (one parametrized pin per recorded
   cell, plus the refusal, the Arrow-type rider, the SQL `SET` row and the native-door row);
   `crates/repark-spark/src/tests/wap_branch.rs` (the resolver's decision table on the Rust
-  door); facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`.
+  door); facade rows in `python/repark/tests/iceberg/test_ref_branch_tag_wap.py`.
 - **Rationale** — FIXED 2026-09-19 (ICE-WAP-BRANCH-1). One resolver owns the decision:
   explicit selector > the session conf when the table property is on > `main`. The read half
   pins the branch's snapshot before the time-travel pass; the write half reuses the
@@ -546,12 +546,12 @@ staged-snapshot flow behind `spark.wap.id` on 2026-09-21 (IPI-05, over fork pin
   pins answer as Spark does, row multiset and column types included.
 - **Apache Spark** — as above. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:
   1.11.0, `local[1]`, InMemoryCatalog; 36 cells recorded by the run-25c measurement and
-  committed verbatim as `python/repark/tests/ice_changelog_1_spark_oracle.json`. Every message
+  committed verbatim as `python/repark/tests/iceberg/ice_changelog_1_spark_oracle.json`. Every message
   and every iterator rule was read off the 1.11.0 runtime jar's bytecode —
   `SparkReadConf.incrementalAppendScanBoundaries`, `SparkChangelogScanBuilder`,
   `SnapshotUtil.oldestAncestorAfter`, `CreateChangelogViewProcedure` and the three
   `ChangelogIterator` implementations.)*
-- **Pin** — `python/repark/tests/test_ice_changelog_1.py` (one pin per recorded cell);
+- **Pin** — `python/repark/tests/iceberg/test_ice_changelog_1.py` (one pin per recorded cell);
   `crates/repark-spark/src/call/changelog/tests.rs` (the row transforms on synthetic rows,
   including the three edges no cell reaches); `crates/repark-core/src/time_travel/incremental/tests.rs`
   (the window parser and Java's boundary refusals).
@@ -596,7 +596,7 @@ perfectly good read.
   `…::ref_selector_on_the_read_side_of_dml_is_a_read`,
   `…::write_to_branch_refusal_claims_the_target_only`, and
   `…::ref_selector_does_not_claim_metadata_tables_or_real_table_names`;
-  `python/repark/tests/test_ref_branch_tag_wap.py`
+  `python/repark/tests/iceberg/test_ref_branch_tag_wap.py`
 - **Rationale** — the row is kept after the fix because the boundary above is the interesting
   part. Before REF the selector answered DataFusion's opaque `Unsupported compound identifier …
   Expected 1, 2 or 3 parts, got 4`, which named neither the ref nor the door; worse, a selector
@@ -627,7 +627,7 @@ perfectly good read.
 - **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::fast_forward_moves_branch_and_reports_refs`,
   `…::fast_forward_named_and_to_tag_and_new_branch`,
   `…::fast_forward_refusals_name_the_ref`;
-  `python/repark/tests/test_ice_branch_ops_1.py` (`ff_*` steps plus the live cross-read leg)
+  `python/repark/tests/iceberg/test_ice_branch_ops_1.py` (`ff_*` steps plus the live cross-read leg)
 - **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
   `ManageSnapshots::fast_forward`; no fork change. Ref-kind and ancestry pre-checks live in the
   procedure layer so the messages match Java's procedure layer; the fork still enforces at
@@ -659,7 +659,7 @@ perfectly good read.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
 - **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::cherrypick_replays_branch_snapshot_onto_main`,
   `…::cherrypick_ancestor_and_delete_refuse`;
-  `python/repark/tests/test_ice_branch_ops_1.py` (`cp_*` steps plus the live cross-read leg)
+  `python/repark/tests/iceberg/test_ice_branch_ops_1.py` (`cp_*` steps plus the live cross-read leg)
 - **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
   `Transaction::cherry_pick`; no fork change. On a format-v3 table the replay keeps Spark's
   row lineage (`next-row-id`, `_row_id`), pinned by the `ops3_*` steps.
@@ -675,7 +675,7 @@ perfectly good read.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`
   `wap_pick_dup`.)*
 - **Pin** —
-  `python/repark/tests/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
+  `python/repark/tests/iceberg/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
   (`wap_pick_dup`: RePark's class and Spark's message prefix).
 - **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (`F-CHERRYPICK-WAP-ORDER-1`):
   the fork validates the WAP duplicate first and refuses with Java's text, which
@@ -698,7 +698,7 @@ perfectly good read.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
 - **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::set_current_snapshot_by_id_and_ref`,
   `…::set_current_snapshot_refusals`;
-  `python/repark/tests/test_ice_branch_ops_1.py` (`sc_*` steps plus the live cross-read leg)
+  `python/repark/tests/iceberg/test_ice_branch_ops_1.py` (`sc_*` steps plus the live cross-read leg)
 - **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
   `ManageSnapshots::set_current_snapshot`; no fork change.
   pins: ice-branch-ops-1/C-003, C-007
@@ -723,7 +723,7 @@ perfectly good read.
   including an `America/New_York` session (UTC wall selects; NY wall reads as UTC).
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, `branch_ops_1_truth.json`.)*
 - **Pin** — `crates/repark-spark/src/tests/branch_ops.rs::rollback_to_timestamp_selects_latest_older_ancestor`;
-  `python/repark/tests/test_ice_branch_ops_1.py` (`rt_*` steps plus the live cross-read leg)
+  `python/repark/tests/iceberg/test_ice_branch_ops_1.py` (`rt_*` steps plus the live cross-read leg)
 - **Rationale** — FIXED (2026-09-17, ICE-BRANCH-OPS-1). Procedure wiring over the fork's
   `ManageSnapshots::rollback_to` with the pre-check's selected id (round 2; the fork
   re-validates ancestry at commit); no fork change.
@@ -779,9 +779,9 @@ perfectly good read.
   `crates/repark-sql/src/partition_overwrite.rs`;
   `crates/repark-iceberg/src/tests/overwrite_scope.rs`;
   `crates/repark-iceberg/src/write/partition_overwrite.rs::commit_rejects_added_file_outside_overwrite_filter`;
-  `python/repark/tests/test_dml_b_partition_overwrite.py`;
-  `python/repark/tests/test_ice_overwrite_mode_1.py` (row **ICE-OVERWRITE-MODE-1**);
-  `python/repark/tests/test_writer_v2.py::test_write_to_overwrite_partitions_replaces_source_partitions_only`;
+  `python/repark/tests/writes/test_dml_b_partition_overwrite.py`;
+  `python/repark/tests/writes/test_ice_overwrite_mode_1.py` (row **ICE-OVERWRITE-MODE-1**);
+  `python/repark/tests/writes/test_writer_v2.py::test_write_to_overwrite_partitions_replaces_source_partitions_only`;
   PIN O5 (`transform_overwrite.rs::overwrite_partition_clause_on_transform_source_refuses_non_partition_column`)
   now pins `NON_PARTITION_COLUMN`.
 - **Rationale** — the static-mode `PARTITION (k)` wipe, mixed lists, the empty static
@@ -838,7 +838,7 @@ perfectly good read.
   their value is read. Round 3: all 96 cells answer Spark (the RTAS history aside); the
   `session_sql_with_write_options` binding is pinned in Rust with each intent flag pair on a
   real partitioned table in a static and a dynamic session.
-- **Pin** — `python/repark/tests/test_ice_overwrite_mode_1.py` +
+- **Pin** — `python/repark/tests/writes/test_ice_overwrite_mode_1.py` +
   `ice_overwrite_mode_1_spark_oracle.json` + `_record_ice_overwrite_mode_1_oracle.py` (96
   cells offline, the live re-derivation under `REPARK_PARITY_LIVE=1`, the RTAS history as a
   strict xfail); `crates/repark-iceberg/src/tests/overwrite_scope.rs` (decision table);
@@ -871,7 +871,7 @@ perfectly good read.
   `DeleteFiles.deleteFromRowFilter(expr)`; a conjunct it cannot convert makes the whole
   decision false. *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19, 72
   cells: 18 DELETE shapes x format v2/v3 x merge-on-read/copy-on-write.)*
-- **Pin** — `python/repark/tests/test_ice_meta_delete_1.py` +
+- **Pin** — `python/repark/tests/writes/test_ice_meta_delete_1.py` +
   `ice_meta_delete_1_spark_oracle.json` + `_record_ice_meta_delete_1.py` (72 cells offline,
   the live re-derivation under `REPARK_PARITY_LIVE=1`);
   `crates/repark-iceberg/src/write/meta_delete/tests.rs` (the decision and the translation);
@@ -899,7 +899,7 @@ perfectly good read.
   `removed-position-deletes=1`, `total-delete-files=1` (Iceberg's file-granularity delete
   write, `write.delete.granularity=file`). *(oracle: recorded, live PySpark 4.1.2 + Iceberg
   1.11.0, 2026-09-19, cell `prior_deletes_then_rest_v2_mor`.)*
-- **Pin** — `python/repark/tests/test_ice_meta_delete_1.py::test_meta_delete_cell_matches_spark`
+- **Pin** — `python/repark/tests/writes/test_ice_meta_delete_1.py::test_meta_delete_cell_matches_spark`
   cell `prior_deletes_then_rest_v2_mor`, a STRICT `xfail` naming this row; it reds the day the
   delete-file rewrite lands.
   pins: ice-meta-delete-1/C-005
@@ -944,9 +944,9 @@ perfectly good read.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17.)*
 - **Pin** — `python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json`
   (matrix cells) and `spark_byname_dyn_oracle.json` (20 `BY NAME` / column-list /
-  positional cells); `python/repark/tests/test_ice_dyn_overwrite_1.py` (offline repark vs
+  positional cells); `python/repark/tests/writes/test_ice_dyn_overwrite_1.py` (offline repark vs
   fixture on both doors plus the live Spark replay);
-  `python/repark/tests/test_ice_dyn_overwrite_1_by_name.py` (every `BY NAME` cell plus the
+  `python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py` (every `BY NAME` cell plus the
   `unset` restore); `crates/repark-spark/src/tests/dyn_by_name_overwrite.rs`;
   `crates/repark-spark/src/tests/dyn_partition_overwrite.rs` (routing, empty arms,
   unpartitioned arms, the static-entry pin, the marker-as-payload pins);
@@ -1007,7 +1007,7 @@ perfectly good read.
   representation difference conforms and a genuinely non-assignable type still refuses.
 - **Apache Spark** — writes the row and replaces only `part = 10`.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[insert-overwrite-partition-static-select]`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[insert-overwrite-partition-static-select]`
   (red on `a0cd39e`, green on the fix) and
   `…::test_v3_statement_row_matches_the_live_spark_oracle[insert-overwrite-partition-static-select]`;
   the `VALUES` control is the `[insert-overwrite-partition-static-values]` pair.
@@ -1027,7 +1027,7 @@ perfectly good read.
   `INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED`.
 - **Pin** — `crates/repark-spark/src/tests/truncate.rs::truncate_table_wipes_rows_stamps_delete_and_preserves_history`
   (Spark door); `crates/repark-sql/src/truncate_tests.rs::truncate_table_wipes_rows_stamps_delete_and_preserves_history`
-  (ANSI door); `python/repark/tests/test_dml_c_truncate.py` (facade).
+  (ANSI door); `python/repark/tests/writes/test_dml_c_truncate.py` (facade).
 - **Rationale** — Iceberg has no separate truncate action; Spark's statement is delete-only
   overwrite. The product spelling is `TRUNCATE TABLE`, not a documented empty-overwrite
   substitute. pins: dml-c-truncate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
@@ -1126,7 +1126,7 @@ perfectly good read.
   `crates/repark-sql/src/create_table/tests.rs` (no abort-drop on unknown, stamped id on
   the service-managed path, `operation_id: None` on the staged publish path),
   `crates/repark-python/src/tests.rs` (class + `operation_id` attribute),
-  `python/repark/tests/test_errors.py` (hierarchy + re-export identity).
+  `python/repark/tests/session/test_errors.py` (hierarchy + re-export identity).
 - **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-14). The assessment's retry contract
   needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
   makes the unconfirmed commit nameable in an alert.
@@ -1151,9 +1151,9 @@ perfectly good read.
   `INSERT` is untouched.
 - **Apache Spark** — resolves by name with the same three errors in the same
   order. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-16, committed as
-  `python/repark/tests/ice_rtas_byname_1_spark_oracle.json` with generator
-  `python/repark/tests/_record_ice_rtas_byname_1_oracle.py`.)*
-- **Pin** — `python/repark/tests/test_ice_rtas_byname_1.py`
+  `python/repark/tests/writes/ice_rtas_byname_1_spark_oracle.json` with generator
+  `python/repark/tests/writes/_record_ice_rtas_byname_1_oracle.py`.)*
+- **Pin** — `python/repark/tests/writes/test_ice_rtas_byname_1.py`
   (`test_by_name_reorders_source_columns`,
   `test_by_name_subset_null_fills_missing_nullable`,
   `test_by_name_matches_case_insensitively`, `test_by_name_extra_column_refused`,
@@ -1227,7 +1227,7 @@ perfectly good read.
   `PARTITION` a `ParseException` `PARSE_SYNTAX_ERROR` near `'REPLACE'`.
 - **Apache Spark** — `OverwriteByExpression` → Iceberg `SparkWrite.OverwriteByFilter`, the same
   answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24 and 2026-09-25, committed
-  as `python/repark/tests/u8_write_sql_spark_oracle.json` (572 cases; keys `pr1/…`, `r1/…`,
+  as `python/repark/tests/writes/u8_write_sql_spark_oracle.json` (572 cases; keys `pr1/…`, `r1/…`,
   `r2/…`, `r2b/…`, `r2fix/…`, `r3/…`..`r3e/…`, `r3fix/…`) and replayed case by case — 438 cases
   on the Rust door, 439 on the facade (plus the WAP branch); a residue case carries RePark's
   recorded answer and is held to it; snapshot summaries are pinned by the hand pins only;
@@ -1270,7 +1270,7 @@ perfectly good read.
   (`i < 1.5` over `(1, 'a'), (2, 'b'), (NULL, 'n')` — Spark `[[2,b],[9,z]]`, RePark also
   `[null,n]`); a NULL key in its own manifest matches. Follow-up: emulate Java Iceberg's
   manifest-level delete in the fork's overwrite-by-filter.
-- **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
+- **Pin** — `python/repark/tests/writes/test_ice_write_sql_1.py`;
   `crates/repark-spark/src/tests/replace_where.rs`;
   `crates/repark-spark/src/tests/replace_where_oracle.rs` (reads the oracle);
   `crates/repark-spark/src/tests/replace_where_sources.rs`;
@@ -1295,11 +1295,11 @@ perfectly good read.
   (U6's door), so `SELECT 9, 'z'` refuses `Field 9 not found in source schema`.
 - **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
   2026-09-24, keys `pr1/PC…`, `r2fix/P-…` and `r3fix/N-part-…` of
-  `python/repark/tests/u8_write_sql_spark_oracle.json`;
+  `python/repark/tests/writes/u8_write_sql_spark_oracle.json`;
   scoreboard cell `W-INSERT-PARTITION-CLAUSE`.)*
 - **Residue** — Spark raises `NumberFormatException` for `CAST_INVALID_INPUT`; RePark raises its
   parent `IllegalArgumentException` (the facade has no narrower class).
-- **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
+- **Pin** — `python/repark/tests/writes/test_ice_write_sql_1.py`;
   `crates/repark-spark/src/tests/partition_append.rs`.
   pins: u8-write-sql/C-006, C-007, C-008, C-009, C-010, C-023
 - **Rationale** — FIXED. `Partitioned inserts not yet supported` (DataFusion's planner text)
@@ -1358,7 +1358,7 @@ perfectly good read.
   and `UPDATE SET *, t.v = 1` refuses `[PARSE_SYNTAX_ERROR] Syntax error at or near ','.
   SQLSTATE: 42601`.
 - **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-25, 177 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
+  2026-09-25, 177 keys `pr2/…` of `python/repark/tests/writes/u8_write_sql_nested_spark_oracle.json`;
   scoreboard cells `W-UPDATE-NESTED-FIELD`, `W-MERGE-NESTED`.)*
 - **Residue** — an `UPDATE` without `WHERE` on a table with a struct column fails in the fork's
   `IcebergUpdateExec` (`arguments need to have the same data type`), also for top-level
@@ -1374,7 +1374,7 @@ perfectly good read.
   under `UPDATE SET *` or `INSERT *` refuses RePark's gate text where Spark writes (R-18). R-17 (a whole-struct value with a missing field wrote
   NULL; a reordered or renamed MERGE value refused RePark's gate text) is retired by fix round 2.
   Spark appends `; line N pos M` to key refusals; RePark does not.
-- **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
+- **Pin** — `python/repark/tests/writes/test_ice_write_sql_1.py`;
   `crates/repark-spark/src/tests/nested_assign.rs`, `nested_assign_oracle.rs`.
   pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 - **Rationale** — FIXED. `nested-field assignment is not supported` (MERGE) and
@@ -1422,9 +1422,9 @@ perfectly good read.
   `rtas_ops` cells `ctas_then_rtas` / `rtas_new_table` / `rtas_empty_new` /
   `rtas_empty_twice`.)*
 - **Pin** — the `REPLACE TABLE` spelling:
-  `python/repark/tests/test_ice_small_parser_1.py::{test_replace_table_column_list,test_replace_table_as_select,test_replace_table_preserves_time_travel,test_replace_table_missing_raises_table_not_found,test_create_or_replace_table_unchanged}`
+  `python/repark/tests/iceberg/test_ice_small_parser_1.py::{test_replace_table_column_list,test_replace_table_as_select,test_replace_table_preserves_time_travel,test_replace_table_missing_raises_table_not_found,test_create_or_replace_table_unchanged}`
   (pins: ipi-21-25-42-small-parser/C-005, C-006, C-007). The `CREATE OR REPLACE` spelling:
-  `python/repark/tests/test_ice_rtas_byname_1.py::test_rtas_replace_records_overwrite`,
+  `python/repark/tests/writes/test_ice_rtas_byname_1.py::test_rtas_replace_records_overwrite`,
   `…::test_rtas_new_table_records_overwrite`,
   `…::test_rtas_empty_new_records_delete`,
   `…::test_rtas_empty_twice_records_two_deletes`
@@ -1470,7 +1470,7 @@ perfectly good read.
 - **After** — the bare form lists the session's current catalog (Spark's rule): `USE <catalog>`
   first, or the `spark_catalog` build default. An unregistered current catalog still refuses
   loud (`unknown catalog`), never guessing.
-- **Pin** — `python/repark/tests/test_show_namespaces.py::test_show_namespaces_bare_lists_current_catalog`
+- **Pin** — `python/repark/tests/session/test_show_namespaces.py::test_show_namespaces_bare_lists_current_catalog`
   and `crates/repark-spark/src/tests/use_ddl.rs::show_namespaces_bare_lists_current_catalog`.
 - **Rationale** — engine `USE` / current-catalog state landed (ICE-CATALOG-SESSION-1); the
   no-guess rule now has a current catalog to resolve against.
@@ -1481,7 +1481,7 @@ perfectly good read.
   supported one-part `IN <catalog>` form. Nested namespace listing is not implemented.
 - **Apache Spark** — lists children of the nested namespace. *(oracle: documented — the claim
   here is the refusal form, not a value.)*
-- **Pin** — `python/repark/tests/test_show_namespaces.py::test_show_namespaces_disclosed_divergences_fail_loud`
+- **Pin** — `python/repark/tests/session/test_show_namespaces.py::test_show_namespaces_disclosed_divergences_fail_loud`
   (the nested-`IN` arm)
 - **Rationale** — DECLARED. repark namespaces are single-level today; an empty frame would read as
   "no children exist" rather than "nested listing is unsupported". Loud refusal keeps that
@@ -1512,9 +1512,9 @@ perfectly good read.
   namespaces drop. A missing namespace answers `AnalysisException [SCHEMA_NOT_FOUND]`. A
   namespace holding only a child namespace refuses with `Contains 1 child namespace(s).`.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19,
-  `python/repark/tests/ice_drop_ns_1_spark_oracle.json`, re-derived by
-  `python/repark/tests/_record_ice_drop_ns_1_oracle.py`.)*
-- **Pin** — `python/repark/tests/test_ice_drop_ns_1.py` (one pin per cell on the facade door;
+  `python/repark/tests/iceberg/ice_drop_ns_1_spark_oracle.json`, re-derived by
+  `python/repark/tests/iceberg/_record_ice_drop_ns_1_oracle.py`.)*
+- **Pin** — `python/repark/tests/iceberg/test_ice_drop_ns_1.py` (one pin per cell on the facade door;
   the ANSI door is pinned in Rust, where it is reachable);
   `crates/repark-spark/src/tests/namespace_ddl.rs` (every spelling, empty, table-dropped-first,
   missing); `crates/repark-sql/src/schema_ddl/tests.rs` (native non-empty refusal under every
@@ -1564,7 +1564,7 @@ perfectly good read.
   keys `E.drop_table_purge_missing`, `E.drop_table_if_exists_purge`.)*
 - **Pin** — `crates/repark-spark/src/tests/purge.rs` (both arms of the purge branch in one pin,
   the `gc.enabled` refusal, the `IF EXISTS` composition, and the delete-failure posture);
-  `python/repark/tests/test_ice_small_parser_1.py::{test_drop_table_purge_deletes_data_files,test_drop_table_without_purge_keeps_data_files,test_drop_table_purge_gc_disabled_refuses,test_drop_expander_emits_purge}`.
+  `python/repark/tests/iceberg/test_ice_small_parser_1.py::{test_drop_table_purge_deletes_data_files,test_drop_table_without_purge_keeps_data_files,test_drop_table_purge_gc_disabled_refuses,test_drop_expander_emits_purge}`.
   pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
 - **Rationale** — FIXED (2026-09-20, IPI-21). Before, the keyword never reached Rust at all: the
   facade's `DROP` expander swallowed `t PURGE` as one identifier segment and answered
@@ -1620,10 +1620,10 @@ perfectly good read.
 - **Apache Spark** — the same shape and sections on the DataSourceV2 path. *(oracle: live
   PySpark 4.1.2, 2026-09-09, SQL-DESCRIBE-1 step-1 capture: commented `bigint` column,
   `string`, `timestamp`, `days(ts)`, one `k=v` property.)*
-- **Pin** — `python/repark/tests/test_describe_table.py` (eight offline pins plus
+- **Pin** — `python/repark/tests/iceberg/test_describe_table.py` (eight offline pins plus
   `test_describe_table_live_matches_capture_and_repark`, which re-measures the capture live
   and diffs repark against it row for row); metadata tables
-  `python/repark/tests/test_ice_mt_describe_1.py` (25 offline pins plus the live snapshots
+  `python/repark/tests/iceberg/test_ice_mt_describe_1.py` (25 offline pins plus the live snapshots
   leg, which re-measures the R-MT-DESCRIBE cell live)
 - **Rationale** — FIXED 2026-09-09 (SQL-DESCRIBE-1): the `ParseException: Expected: end of
   statement, found: EXTENDED` bug is closed by the router intercept. The `Table Properties`
@@ -1659,7 +1659,7 @@ perfectly good read.
   2026-09-23, five shapes plus the escape, OPTIONS, multi-term sort-order and
   identifier-order probes.)*
 - **Pin** — `crates/repark-spark/src/tests/show_create.rs`,
-  `python/repark/tests/test_show_create_table.py`
+  `python/repark/tests/iceberg/test_show_create_table.py`
 - **Rationale** — FIXED 2026-09-23 (C1). Unmeasured choices: Spark's reserved keys beyond the
   measured `owner` / `comment`, void partition fields dropped from `PARTITIONED BY`, and the
   `VOID` / `VARIANT` spellings follow the Spark 4.1 / Iceberg 1.11 source.
@@ -1674,7 +1674,7 @@ perfectly good read.
   missing explicit namespace refuses `SCHEMA_NOT_FOUND`, and a missing ambient scope
   answers empty. Temp views are not listed (Spark lists them only under the session
   catalog; deferred — no inventory cell covers it).
-- **Pin** — `python/repark/tests/test_catalog_surface.py::test_show_tables_in_lists_namespace_tables`
+- **Pin** — `python/repark/tests/session/test_catalog_surface.py::test_show_tables_in_lists_namespace_tables`
   and `crates/repark-spark/src/tests/use_ddl.rs::show_tables_lists_current_namespace_after_use`
   (+ the `show_tables_*` siblings).
 - **Rationale** — the SQL form now lists the same live set as the facade path
@@ -1706,7 +1706,7 @@ perfectly good read.
   (create and scan as before, first write refuses) plus `crates/repark-spark/src/tests/enc_1.rs`
   (35 Spark-door pins), `crates/repark-sql/tests/enc_1.rs` (15 ANSI-door pins),
   `crates/repark-iceberg/src/write/encryption_tests.rs` (the streaming-sink stamp pin) and
-  `python/repark/tests/test_enc_1.py` (15 facade pins). Every refusal pin also asserts the
+  `python/repark/tests/writes/test_enc_1.py` (15 facade pins). Every refusal pin also asserts the
   snapshot list and the file listing under the table location are unchanged.
   **Fold 1 (2026-10-09):** `crates/repark-spark/src/tests/enc_1_fold.rs` (branch targets,
   WAP sessions, the empty-table branch, `run_maintenance(dry_run => false)`, the
@@ -1795,7 +1795,7 @@ perfectly good read.
   `fresh_all`, `after_insert_all`, `after_set_all`, `v1_all`, `partitioned_all`, `two_part`,
   `one_part`, `temp_view`, `missing_table` and `mixed_case_table` in
   `tblprops-spark-2026-09-26.json` (probe `tblprops-probe.py` beside it).
-- **Pin** — `python/repark/tests/test_tblprops_1.py` (every row list above `==`, the temp
+- **Pin** — `python/repark/tests/iceberg/test_tblprops_1.py` (every row list above `==`, the temp
   view, the missing and wrong-case refusals, and the fall-through sweep);
   `crates/repark-spark/src/tests/show_tblproperties.rs` (the same contract on the Rust
   door); the updated `show_tblproperties_routing.rs`, `show_create.rs` and
@@ -1819,7 +1819,7 @@ perfectly good read.
 - **Apache Spark** — the same one-row answers, measured 2026-09-26 on Spark 4.1.2 +
   Iceberg 1.11: `fresh_key`, `fresh_builtin_key`, `fresh_snapshot_key`, `fresh_missing_key`
   and `key_upper` in `tblprops-spark-2026-09-26.json` (probe `tblprops-probe.py` beside it).
-- **Pin** — `python/repark/tests/test_tblprops_1.py::test_keyed_lookup_hits_value_and_builtins`
+- **Pin** — `python/repark/tests/iceberg/test_tblprops_1.py::test_keyed_lookup_hits_value_and_builtins`
   and `::test_keyed_lookup_misses_loudly_and_case_sensitively`;
   `crates/repark-spark/src/tests/show_tblproperties.rs::keyed_lookup_hits_builtins_and_misses_loudly`.
   pins: tblprops-1/C-006
@@ -1984,10 +1984,10 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   'Project [*]
   +- 'UnresolvedRelation [sc, ns, v_t_p_av_rename_old_gone], [], false
   ```
-- **Pin** — `python/repark/tests/test_ice_views_3_alter.py::test_rename_missing_view_is_table_or_view_not_found`,
-  `python/repark/tests/test_ice_views_3_alter.py::test_rename_table_with_alter_view_refuses`,
-  `python/repark/tests/test_ice_views_3_alter.py::test_alter_table_set_on_view_name_answers_table_path_missing`,
-  and `python/repark/tests/test_ice_views_3_alter.py::test_old_name_is_gone_after_rename`.
+- **Pin** — `python/repark/tests/iceberg/test_ice_views_3_alter.py::test_rename_missing_view_is_table_or_view_not_found`,
+  `python/repark/tests/iceberg/test_ice_views_3_alter.py::test_rename_table_with_alter_view_refuses`,
+  `python/repark/tests/iceberg/test_ice_views_3_alter.py::test_alter_table_set_on_view_name_answers_table_path_missing`,
+  and `python/repark/tests/iceberg/test_ice_views_3_alter.py::test_old_name_is_gone_after_rename`.
 - **Rationale** — DECLARED. E6 follows the repository's origin-tail convention. E7's native
   bridge cannot carry a condition beginning with `_LEGACY_`. The ALTER TABLE missing-target
   answer and SELECT missing-relation answer are engine-wide paths. View DDL does not own them,
@@ -2006,7 +2006,7 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   }
   ~~~
 - **EQUAL** — P-SP-BARE-NAME (`USE sc.ns; SHOW TBLPROPERTIES v ('k')`) and P-SP-TWO-PART (`USE sc; SHOW TBLPROPERTIES ns.v ('k')`) each return `[["k","v"]]` in both engines: short names complete from the `USE` session defaults.
-- **Pin** — `python/repark/tests/test_ice_views_4_showprops.py::test_no_key_lists_reserved_then_stored_sorted`, `::test_no_key_without_stored_properties_is_reserved_only`, `::test_alter_view_set_then_show_reflects_updates`, `::test_bare_and_two_part_names_follow_use`, `::test_missing_view_is_table_or_view_not_found`, and `::test_bare_missing_name_after_use_is_table_or_view_not_found`; `python/repark/tests/test_ice_views_4_showprops.py::test_commented_view_listing_hides_comment`, `::test_commented_view_key_lookups` and `::test_comment_set_through_alter_view_stays_hidden`; `crates/repark-spark/src/tests/show_tblproperties_routing.rs::present_view_returns_reserved_and_stored_rows`, `::bare_name_completes_from_use_session_defaults` and `::commented_view_hides_comment_in_listing_and_key_lookup`.
+- **Pin** — `python/repark/tests/iceberg/test_ice_views_4_showprops.py::test_no_key_lists_reserved_then_stored_sorted`, `::test_no_key_without_stored_properties_is_reserved_only`, `::test_alter_view_set_then_show_reflects_updates`, `::test_bare_and_two_part_names_follow_use`, `::test_missing_view_is_table_or_view_not_found`, and `::test_bare_missing_name_after_use_is_table_or_view_not_found`; `python/repark/tests/iceberg/test_ice_views_4_showprops.py::test_commented_view_listing_hides_comment`, `::test_commented_view_key_lookups` and `::test_comment_set_through_alter_view_stays_hidden`; `crates/repark-spark/src/tests/show_tblproperties_routing.rs::present_view_returns_reserved_and_stored_rows`, `::bare_name_completes_from_use_session_defaults` and `::commented_view_hides_comment_in_listing_and_key_lookup`.
 - **Rationale** — DECLARED. Spark's no-key order follows Java map iteration and is not the property-set contract (R-PR4-ORDER). The missing-name condition and SQLSTATE agree; the compact RePark diagnostic omits Spark's plan context.
 
 #### D-VIEW-SHOWCREATE-1 — SHOW CREATE TABLE on a view: unmeasured shapes
@@ -2039,7 +2039,7 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   `/tmp/xb-views5/target/probe5/r4/p5b.json` keys `vs.show_create.1` and `vs.show_create.2`.)* No oracle probes short
   names, quote escaping in views, `AS SERDE` on a view, bare-name bodies, or a version with no
   SQL representation.
-- **Pin** — `python/repark/tests/test_ice_views_5_showcreate.py::test_show_create_table_on_view`,
+- **Pin** — `python/repark/tests/iceberg/test_ice_views_5_showcreate.py::test_show_create_table_on_view`,
   `::test_show_create_table_on_plain_view`, `::test_bare_name_follows_use`,
   `::test_two_part_name_follows_use`, `::test_quotes_in_column_doc_and_view_comment`,
   `::test_view_as_serde_keeps_the_main_parse_error`, `::test_stored_body_is_rendered_verbatim` and
@@ -2094,11 +2094,11 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
 - **Apache Spark** — resolves every spelling case-**insensitively** by default
   (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`;
   under `true` both quoted and unquoted exact-case resolve.
-  *(oracle: recorded fixture `python/repark/tests/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2;
+  *(oracle: recorded fixture `python/repark/tests/iceberg/ice_mixed_case_1_spark_oracle.json`, Spark 4.1.2;
   its `measured_21b` block is the run-21b recording of the V-01 / V-02 / V-04 / L-08 cells,
   PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17.)*
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
-  (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
+  (ANSI refuses, Spark resolves) plus `python/repark/tests/iceberg/test_ice_mixed_case_1.py` (both
   doors, both flag values, DML fragments, the ambiguity shape, the backticked-`true` success,
   the unquoted-`true` success (was the declared refusal until CASESENS-1 slice 2),
   and the live tier). The run-21b cells are
@@ -2166,11 +2166,11 @@ Spark cells.
   and `SELECT id` gives the same sentence in `id`. `SELECT * FROM tw` →
   `` [COLUMN_ALREADY_EXISTS] The column `id` already exists. … SQLSTATE: 42711 ``, and so does
   `CREATE OR REPLACE TEMP VIEW twv AS SELECT 1 AS id, 2 AS ID`.
-  *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json` `measured_21b`, PySpark
+  *(oracle: `python/repark/tests/iceberg/ice_mixed_case_1_spark_oracle.json` `measured_21b`, PySpark
   4.1.2 + Iceberg 1.11.0, Java 17, hadoop catalog, 2026-09-17; Spark's twin metadata is
   committed as `python/repark-parity/fixtures/torture/data/ice_mixed_case_1/twin_v3.metadata.json`;
   the view cell is `measured_21b_r2` `N03_star_twin_view_create`, `probe_mc2.py`, 2026-09-18.)*
-- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_case_twin_reference_is_ambiguous_exact_or_not`
+- **Pin** — `python/repark/tests/iceberg/test_ice_mixed_case_1.py::test_case_twin_reference_is_ambiguous_exact_or_not`
   (the four reference forms on a twin frame, full sentence), `…::test_sql_door_ambiguous_reference_matches_spark_shape`
   (the recorded cross-relation sentence up to `SQLSTATE: 42704`),
   `…::test_measured_case_twin_table_adopts_then_refuses_references[L08_*]` (adoption, then
@@ -2207,9 +2207,9 @@ Unit ICE-MIXED-CASE-1, run 21b round 2 (2026-09-18), ruling Q-21b-11.
 - **Apache Spark** — the three IN spellings answer `[[1], [2]]`, with columns `USERID`, `userId`
   and `userid`. The scalar cell refuses `[UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE]
   … Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses …
-  SQLSTATE: 0A000`. *(oracle: `python/repark/tests/ice_mixed_case_1_spark_oracle.json`
+  SQLSTATE: 0A000`. *(oracle: `python/repark/tests/iceberg/ice_mixed_case_1_spark_oracle.json`
   `measured_21b_r2`, `probe_mc2.py`, PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18.)*
-- **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_correlated_in_subquery_select_list_refuses_where_spark_answers`
+- **Pin** — `python/repark/tests/iceberg/test_ice_mixed_case_1.py::test_correlated_in_subquery_select_list_refuses_where_spark_answers`
   (three spellings) and `…::test_correlated_scalar_subquery_select_list_refuses_like_spark`.
   pins: ice-mixed-case-1/C-019
 - **Rationale** — DECLARED. The name resolution matches Spark, and the refusal is an engine
@@ -2233,7 +2233,7 @@ Unit ICE-MIXED-CASE-1, run 21b round 2 (2026-09-18), ruling Q-21b-11.
 > (owner Option A). Spark `ansi=false` wrap vs ANSI raise is an INTENDED pin
 > (`cross_door_int32_add_overflow_wraps_on_spark_ansi_false_raises_on_ansi`). Pins:
 > `crates/repark-functions/src/integer_spark.rs` tests; `ansi_door_int32_add_overflow_raises`;
-> `python/repark/tests/test_integer_overflow_parity.py`. G13's integer half is closed.
+> `python/repark/tests/types/test_integer_overflow_parity.py`. G13's integer half is closed.
 > Residue of that campaign body: G5b-R3-ANSI (window RANGE wrap), F-Y10-2, and
 > SMALLINT/Int16 overflow (2026-08-30: `CAST(32767 AS SMALLINT) + CAST(1 AS SMALLINT)`
 > still Arrow-wraps to Int16 `-32768` under default ANSI; charter partition was int32/int64).
@@ -2265,7 +2265,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   struct IS NOT NULL` answers rows `[[1]]`. *(oracle: `python/repark-parity/fixtures/torture/data/
   ice_nested_evo_1/`, CTAS cell `ctas_where_struct_lt`, PySpark 4.1.2 + Iceberg 1.11.0,
   2026-09-18.)*
-- **Pin** — strict xfail `python/repark/tests/test_ice_nested_evo_1_schema.py::
+- **Pin** — strict xfail `python/repark/tests/iceberg/test_ice_nested_evo_1_schema.py::
   test_nested_ddl_{schema,rows}_matches_spark[ctas_where_struct_lt-v{2,3}]`; the ANSI twin in
   `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs` requires the refusal and reports the day it
   answers.
@@ -2285,8 +2285,8 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — raises `AMBIGUOUS_REFERENCE` for the `Column` form, and reads a
   double-quoted span as a string **literal**, raising `CAST_INVALID_INPUT` under ANSI when it is
   compared to a number. *(oracle: live; cell `L9-dq-ident-compare`.)*
-- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_column_entry_point_refuses_the_ambiguity_like_spark`
-  and `python/repark/tests/test_filter_predicate_rewrite.py::test_explicitly_double_quoted_span_is_a_string_literal`
+- **Pin** — `python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_column_entry_point_refuses_the_ambiguity_like_spark`
+  and `python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_explicitly_double_quoted_span_is_a_string_literal`
   (renamed from `test_explicitly_double_quoted_ident_bypasses_the_ambiguity_refusal`),
   with the guarded half in the same module's
   `test_ambiguous_reference_raises_analysis_exception`
@@ -2309,9 +2309,9 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — accepts both constructions (e.g. `Row(id=1, id=2)`); the ambiguity surfaces
   later as `AMBIGUOUS_REFERENCE` only when the duplicate name is *referenced*. *(oracle:
   documented — PySpark 4.1.2 API / analysis semantics for duplicate output names.)*
-- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_exact_duplicate_column_names_are_rejected_at_frame_construction`;
+- **Pin** — `python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_exact_duplicate_column_names_are_rejected_at_frame_construction`;
   `crates/repark-spark/src/tests/casesens_twins.rs::exact_duplicates_still_refuse`;
-  `python/repark/tests/test_casesens_1.py::test_s4_case_twins`. pins: casesens-1/C-011, C-012
+  `python/repark/tests/resolution/test_casesens_1.py::test_s4_case_twins`. pins: casesens-1/C-011, C-012
 - **Rationale** — DECLARED. The refusal is inherited from DataFusion's unique-output-name rule
   and is load-bearing for facade helpers that assume unique names (e.g. the filter rewriter's
   exact-duplicate defensive branch). Reproducing Spark's late raise would mean allowing illegal
@@ -2341,7 +2341,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — the names above. *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11,
   2026-09-25/26, `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`, `spark_r3.json` in
   the lane clone; scoreboard cell `E-CASE-SELECT`.)*
-- **Pin** — `python/repark/tests/test_u11_edge_case_select.py`;
+- **Pin** — `python/repark/tests/resolution/test_u11_edge_case_select.py`;
   `crates/repark-core/src/column_resolution/tests.rs::display_rewrite_keeps_the_written_spelling`;
   `crates/repark-core/src/session/df_guards/case_bind.rs::tests`. pins: u11-edge-1/C-001
 - **Rationale** — FIXED; the cell replays EQUAL on every observation.
@@ -2362,7 +2362,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   scope fields (2026-09-27).
 - **Apache Spark** — the names above. *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11,
   2026-09-27, `casesens_1_spark_oracle.json` (210 steps) beside the facade pin.)*
-- **Pin** — `python/repark/tests/test_casesens_1.py`;
+- **Pin** — `python/repark/tests/resolution/test_casesens_1.py`;
   `crates/repark-spark/src/tests/casesens_scopes.rs`;
   `crates/repark-core/src/column_resolution/inner_scopes.rs::tests`. pins: casesens-1/C-001, C-002, C-003, C-004
 - **Rationale** — FIXED; the cell replays EQUAL on every observation, the
@@ -2392,7 +2392,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — the refusals and answers above. *(oracle: recorded —
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
   (210 steps) beside the facade pin.)*
-- **Pin** — `python/repark/tests/test_casesens_1.py`
+- **Pin** — `python/repark/tests/resolution/test_casesens_1.py`
   (`test_s2_sql_door_is_exact_under_case_sensitive`,
   `test_s2_default_session_unchanged`);
   `crates/repark-spark/src/tests/casesens_true.rs`;
@@ -2448,7 +2448,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
   (210 steps) beside the facade pin; 2026-09-28, `casesens_2_spark_oracle.json`
   (34 steps) beside the S1 pin.)*
-- **Pin** — `python/repark/tests/test_casesens_1.py`
+- **Pin** — `python/repark/tests/resolution/test_casesens_1.py`
   (`test_s3_dataframe_door_is_exact_under_case_sensitive`,
   `test_s3_dataframe_union_refuses_the_missing_name`,
   `test_s3_default_door_binds_and_names_as_written`,
@@ -2459,7 +2459,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`);
   `crates/repark-python/src/column/door_parity_tests.rs::column_keeps_the_written_spelling`.
   pins: casesens-1/C-009, C-010
-  **CASESENS-2 S1 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  **CASESENS-2 S1 (2026-09-28):** `python/repark/tests/resolution/test_casesens_2.py`
   (`test_s1_true_door_refuses_bare_names`, `test_s1_true_misses_refuse`,
   `test_s1_qualified_strings_bind`, `test_s1_false_door_byte_identical`);
   `crates/repark-core/src/session/df_guards/written_names.rs::tests`
@@ -2467,13 +2467,13 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `qualified_names_split_on_the_last_dot`,
   `display_names_fan_out_and_the_subset_text_is_legacy`).
   pins: casesens-2/C-001, C-002, C-003, C-006
-  **CASESENS-2 S2 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  **CASESENS-2 S2 (2026-09-28):** `python/repark/tests/resolution/test_casesens_2.py`
   (`test_s2_withcolumn_follows_the_rule`, `test_s2_renamed_follows_the_rule`,
   `test_s2_folded_keys_refuse`, `test_s2_overlay_replace_unchanged`);
   `crates/repark-core/src/session/df_guards/written_names.rs::tests`
   (`display_match_fans_out_under_ignore_case_and_is_exact_under_exact`).
   pins: casesens-2/C-002, C-004, C-006
-  **CASESENS-2 S3 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  **CASESENS-2 S3 (2026-09-28):** `python/repark/tests/resolution/test_casesens_2.py`
   (`test_s3_fillna_follows_the_rule`, `test_s3_dropna_follows_the_rule`,
   `test_s3_drop_duplicates_follows_the_rule`);
   `crates/repark-core/src/session/df_guards/written_names.rs::tests`
@@ -2499,14 +2499,14 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   refuses the same `ValidationException` under `true`), and `SET` / `DROP IDENTIFIER FIELDS`
   bind exactly under both settings. The `RENAME PARTITION FIELD` extension keeps working,
   now exact (Spark does not parse it). *(oracle: this probe set,
-  `python/repark/tests/casesens_1_spark_oracle.json`.)*
+  `python/repark/tests/resolution/casesens_1_spark_oracle.json`.)*
 - **Apache Spark** — the refusals above, from Iceberg's `NamedReference.bind`. *(oracle:
   recorded — PySpark 4.1.2 + Iceberg 1.11, 2026-09-26, `target/probe-u11-edge-1/spark_r2.json`;
   scoreboard cell `E-CASE-PARTITION-FIELD`.)*
-- **Pin** — `python/repark/tests/test_u11_edge_partition_field.py`;
+- **Pin** — `python/repark/tests/iceberg/test_u11_edge_partition_field.py`;
   `crates/repark-iceberg/src/write/alter.rs::tests::partition_spec_add_wrong_case_source_refuses_like_spark`.
   pins: u11-edge-1/C-009
-  `python/repark/tests/test_casesens_1.py::test_s5_iceberg_ddl_binds_exactly`;
+  `python/repark/tests/resolution/test_casesens_1.py::test_s5_iceberg_ddl_binds_exactly`;
   `crates/repark-spark/src/tests/casesens_ddl.rs`;
   `crates/repark-iceberg/src/write/partition_spec/tests.rs`.
   pins: casesens-1/C-013, C-014, C-015, C-016
@@ -2536,7 +2536,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   2026-09-26, `out/spark-edge.json` for the cell; `tz-order-spark-2026-09-26.json` for the
   eleven `ORDER BY` shapes.)*
 - **Pin** — `crates/repark-spark/src/tests/tz_asof_1.rs`,
-  `python/repark/tests/test_tz_asof_1.py`. pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005,
+  `python/repark/tests/timestamps/test_tz_asof_1.py`. pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008, C-009
 - **Rationale** — EQUAL on replay (`target/probe-tz-asof-1/replay.json`).
 
@@ -2559,7 +2559,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `Utf8`, and the integer is widened losslessly (`1` → `'1'`). No error.
 - **Apache Spark** — coerces to `bigint`, then raises `CAST_INVALID_INPUT` at materialization on
   the non-numeric string; no rows are ever produced. *(oracle: live.)*
-- **Pin** — `python/repark/tests/test_union_distinct.py::test_union_int_string_coerces_to_string_diverges_from_ansi_spark`
+- **Pin** — `python/repark/tests/dataframe/test_union_distinct.py::test_union_int_string_coerces_to_string_diverges_from_ansi_spark`
 - `live-mirror: int_union_string`
 - **Rationale** — DECLARED. The coercion is DataFusion's common-type choice, and it is *lossless*
   where Spark's is lossy-then-fatal; forcing repark to raise would mean overriding type coercion
@@ -2573,9 +2573,9 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — is internally inconsistent here: the filled integer column stays **nullable**
   while a filled double column becomes non-nullable. The divergence is on the integer column.
   *(oracle: live.)*
-- **Pin** — `python/repark/tests/test_parity_live.py::test_live_disclosure_still_diverges`
+- **Pin** — `python/repark/tests/parity/test_parity_live.py::test_live_disclosure_still_diverges`
   (parameter `fillna_scalar_numeric_nullability`), with the JVM-free value/type half in
-  `python/repark/tests/test_na_rename.py::test_fillna_scalar_numeric_value_and_type`
+  `python/repark/tests/dataframe/test_na_rename.py::test_fillna_scalar_numeric_value_and_type`
 - `live-mirror: fillna_scalar_numeric_nullability`
 - **Rationale** — DECLARED. Values and Arrow types agree; only the nullability flag differs, and
   it differs from a behavior Spark is not self-consistent about. Reproducing it would mean
@@ -2589,7 +2589,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `Decimal('2.5')`.
 - **Apache Spark** — parses the literal as `DECIMAL(2,1)` and widens the integer into it, yielding
   `decimal128(11,1)` / non-null with `Decimal('1.0')`, `Decimal('2.5')`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_union_distinct.py::test_union_inline_decimal_literal_diverges_from_spark`
+- **Pin** — `python/repark/tests/dataframe/test_union_distinct.py::test_union_inline_decimal_literal_diverges_from_spark`
 - **Rationale** — DECLARED, with narrow impact: stored Iceberg `DECIMAL` columns coerce
   faithfully; only inline decimal *literals* differ. The pin asserts repark's actual output **and**
   asserts that the recorded Spark golden still does not match, so a future convergence reds it.
@@ -2620,7 +2620,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   oracle is **H-2 gap G10** — named by the G-5 owner ruling for facade-boundary interchange
   shapes (G10's slate also budgets map/struct/array container pins); the basis moves to *live*
   or *recorded* in that change.)*
-- **Pin** — `python/repark/tests/test_interchange_parity.py::test_to_polars_round_trip_int32_widens_to_int64_divergence`
+- **Pin** — `python/repark/tests/io/test_interchange_parity.py::test_to_polars_round_trip_int32_widens_to_int64_divergence`
 - **Rationale** — DECLARED until StructType-schema `createDataFrame` (or an equivalent width-
   preserving path) lands. The SQL VALUES path cannot carry Arrow int32 width through Python
   inference; the pin holds both sides of the round-trip so a silent preservation reds it.
@@ -2636,7 +2636,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   asserts the Spark half yet. The unit that attaches a real oracle is **H-2 gap G10** — named by
   the G-5 owner ruling for facade-boundary interchange shapes; the basis moves to *live* or
   *recorded* in that change.)*
-- **Pin** — `python/repark/tests/test_interchange_parity.py::test_to_polars_round_trip_decimal_precision_widens_divergence`
+- **Pin** — `python/repark/tests/io/test_interchange_parity.py::test_to_polars_round_trip_decimal_precision_widens_divergence`
 - **Rationale** — DECLARED until a schema-preserving create path exists. Values stay equal; only
   the container precision/scale widens. The pin asserts source and round-trip Arrow + polars
   dtypes so a silent preservation reds it.
@@ -2661,7 +2661,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   (`SparkIntegralLiteral`), so the coercion unifies an already-narrow literal.
 - **Apache Spark** — answers `int32` / non-null with the same value. *(oracle: live
   PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_answers_int_on_repark`
+- **Pin** — `python/repark/tests/types/test_types_1.py::test_coalesce_with_int_answers_int_on_repark`
   and `::test_live_recoercion_shapes_match_the_oracle`
   (pins the `(int32, int32)` type pair so either side moving reds it).
 - **Rationale** — FIXED 2026-09-16 (SQL-LITERAL-TYPING-1, closing BL-20's mechanism).
@@ -2681,7 +2681,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   shapes, raises `UNSUPPORTED_GROUPING_EXPRESSION` under a plain `GROUP BY i`, and raises
   `WRONG_NUM_ARGS` for two arguments. *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1
   round-4 probe on the shared int/bigint/string seed.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_grouping_in_rollup_and_sets_answers_int`,
+- **Pin** — `python/repark/tests/types/test_types_1.py::test_grouping_in_rollup_and_sets_answers_int`,
   `::test_grouping_under_plain_group_by_is_accepted`, and
   `::test_live_grouping_sets_match_on_value_with_type_carve_out`
   (pins the `(int8, int8)` type pair so either side moving reds it).
@@ -2700,7 +2700,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — refuses with `DATATYPE_MISMATCH` (`ntile` requires INT). *(oracle:
   live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared int/bigint/string
   seed.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_ntile_with_bigint_argument_is_accepted`.
+- **Pin** — `python/repark/tests/types/test_types_1.py::test_ntile_with_bigint_argument_is_accepted`.
 - **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Plan-time refusal needs
   argument validation the window wrapper has no hook for; that machinery is its own unit.
   pins: types-1/C-005
@@ -2716,7 +2716,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — answers `decimal128(11, 2)` on both doors with the same values.
   *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared
   int/bigint/string seed.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_facade_decimal_plus_literal_skips_min_precision`
+- **Pin** — `python/repark/tests/types/test_types_1.py::test_facade_decimal_plus_literal_skips_min_precision`
   (name kept; now asserts the Spark type).
 - **Rationale** — FIXED. The widening unit TY-10 named was DECIMAL-CACHE-1 (C-002).
   pins: types-1/C-001, decimal-cache-1/C-002
@@ -2730,7 +2730,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   configuration default. Admitted under §1's exception deliberately: pinning the *live* default
   would pin the CI host's own zone, which is exactly the non-reproducibility this row declares
   against.)*
-- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_session_timezone_conf_is_readable_back_and_defaults_to_utc`
+- **Pin** — `python/repark/tests/timestamps/test_session_timezone_parity.py::test_session_timezone_conf_is_readable_back_and_defaults_to_utc`
   and `crates/repark-core/src/session_time_zone/tests.rs::absent_key_resolves_to_the_utc_default`
 - **Rationale** — DECLARED. A reproducible default beats a host-dependent one, and reading the
   host zone would be the environment read
@@ -2755,16 +2755,16 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `fixtures-batch17-zone-spellings.json`: `ZoneId` matching is case-sensitive (`GMT+8` yes,
   `gmt+8` no; `Z` yes, `z` no), surrounding whitespace is not trimmed (padded refuses with
   the raw text echoed), seconds-precision offsets are accepted (`+05:30:30`, `+18:00:00`).)*
-- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_runtime_conf_set_of_the_session_zone_applies`
+- **Pin** — `python/repark/tests/timestamps/test_session_timezone_parity.py::test_runtime_conf_set_of_the_session_zone_applies`
   (valid leg, invalid leg, unset leg);
   `…::test_apache_sql_conf_context_manager_round_trips_the_session_zone` (each step moves the
   engine);
   `…::test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise` (the same laxness on
   the reuse path, unchanged); the SQL-door half is pinned by
-  `python/repark/tests/test_sql_set_door_1.py::test_set_session_time_zone_key_applies`,
+  `python/repark/tests/sql/test_sql_set_door_1.py::test_set_session_time_zone_key_applies`,
   `…::test_set_time_zone_literal_returns_the_pair`,
   `…::test_set_time_zone_literal_america_new_york_applies`,
-  and `python/repark/tests/test_set_ansi_runtime_1.py` (S16-6…S16-11, BTZ5-2/3/5, S5-tz-*)
+  and `python/repark/tests/session/test_set_ansi_runtime_1.py` (S16-6…S16-11, BTZ5-2/3/5, S5-tz-*)
 - **Rationale** — FIXED by SET-ANSI-RUNTIME-1 round 1 (per-query config snapshot through the
   live `SessionContext` carriers plus the session zone snapshot; owner Q-15c-3). The old
   accept-and-warn shape was evidence-driven: refusing the call reds the pinned Apache drop-in
@@ -2796,7 +2796,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Apache Spark** — resolves `LOCAL` to the host machine's local timezone and applies it.
   *(oracle: documented — the claim here is the refusal, not a value.)*
 - **Pin** —
-  `python/repark/tests/test_sql_set_door_1.py::test_set_time_zone_local_is_a_declared_refusal`
+  `python/repark/tests/sql/test_sql_set_door_1.py::test_set_time_zone_local_is_a_declared_refusal`
 - **Rationale** — DECLARED. Serving `LOCAL` would require reading the host machine's zone, a
   global input the server-prep disciplines (ADR-0004: no env reads at query time) keep off the
   query path. A loud refusal naming the explicit spellings beats a host-dependent silent apply.
@@ -2812,8 +2812,8 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   the registered default, not the builder's `7`; only SQL `RESET` restores the builder value. *(oracle: live PySpark
   4.1.2, 2026-09-15, run 16b probe cells `unset_builder_sql_conf`, `sql_reset_builder_value`, `unset_builder_value`,
   `unset_never_set`.)*
-- **Pin** — `python/repark/tests/test_registry_16b_1.py::test_conf_unset_builder_sql_conf_raises_on_get`,
-  `python/repark/tests/test_registry_16b_1.py::test_sql_reset_restores_builder_value`
+- **Pin** — `python/repark/tests/session/test_registry_16b_1.py::test_conf_unset_builder_sql_conf_raises_on_get`,
+  `python/repark/tests/session/test_registry_16b_1.py::test_sql_reset_restores_builder_value`
 - **Rationale** — BACKLOG, filed by REGISTRY-16B-1 (run 16b). Run 15c read this as "unset hides a builder value Spark
   restores"; the measurement shows Spark does not restore on `unset` either, so the divergence is the raised `get` where
   Spark answers the registered default. The fix is a registered-default table behind `RuntimeConfig.get`; the unset pin
@@ -2831,8 +2831,8 @@ still open is `isModifiable`.
   while both keys still store and read back and SQL `SET` still answers the pair row.
   *(oracle: live PySpark 4.1.2, 2026-09-15, run 16b probe cells `wap_branch_set_get`,
   `wap_id_set_get`, `wap_is_modifiable`, `wap_sql_set`.)*
-- **Pin** — `python/repark/tests/test_registry_16b_1.py::test_conf_wap_keys_store_and_report_modifiable`,
-  `python/repark/tests/test_registry_16b_1.py::test_sql_set_wap_branch_answers_the_pair_row`
+- **Pin** — `python/repark/tests/session/test_registry_16b_1.py::test_conf_wap_keys_store_and_report_modifiable`,
+  `python/repark/tests/session/test_registry_16b_1.py::test_sql_set_wap_branch_answers_the_pair_row`
 - **Rationale** — BACKLOG, filed by REGISTRY-16B-1 (run 16b). The `isModifiable` answer comes
   from the facade's static-conf set, which has no registered-key table to consult; a fix needs
   that table, not a WAP special case, so it stays here. The write-redirect half moved to
@@ -2845,7 +2845,7 @@ still open is `isModifiable`.
 - **repark** — Iceberg `timestamptz` columns export `timestamp[us, tz=+00:00]`.
 - **Apache Spark** — `timestamp[us, tz=UTC]`. Instants match. *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_partition_value_audit.py::test_partition_value_row[carry_years_ts_ctas]`
+  `python/repark/tests/writes/test_partition_value_audit.py::test_partition_value_row[carry_years_ts_ctas]`
   (type rider; every timestamp-carrying data half).
 - **Rationale** — DECLARED, fork-wave-routed. Fork read mapping
   (`Timestamp(µs, "+00:00")`). Not a partition-VALUE divergence.
@@ -2861,7 +2861,7 @@ still open is `isModifiable`.
 - **Apache Spark** — answers one session per chain with a calendar-month end
   (`2026-09-15 10:07:30 → 2026-10-15 10:31:00`, count 3 on the three-row frame).
   *(oracle: live — PySpark 4.1.2, run-16a residual cell `R-session-month-gap`.)*
-- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_resid_session_month_diverges`
+- **Pin** — `python/repark/tests/functions/test_fnp_win_1.py::test_resid_session_month_diverges`
   pins today's refusal against that cell. pins: fnp-win-1/C-015
 - **Rationale** — DECLARED, as an **unsupported calendar semantic rather than a
   parity claim**: matching the cell would need calendar-month session ends and a
@@ -2892,7 +2892,7 @@ still open is `isModifiable`.
   parameter with name \`window\`.\`start\` cannot be resolved. ...`
   *(oracle: live — PySpark 4.1.2, run-16a critic cell `C-L005-window-lt-slide`
   SQL door.)*
-- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_crit_window_lt_slide_refuses`
+- **Pin** — `python/repark/tests/functions/test_fnp_win_1.py::test_crit_window_lt_slide_refuses`
   asserts the recorded `UNRESOLVED_COLUMN` condition on the cell and RePark's
   constraint refusal on the door. pins: fnp-win-1/C-005
 - **Rationale** — DECLARED, as a **refusal-shape divergence rather than a
@@ -2923,7 +2923,7 @@ still open is `isModifiable`.
   window column: ...`
   *(oracle: live — PySpark 4.1.2, run-16a critic cells
   `C-L008-window-time-plain-struct` on both doors.)*
-- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_crit_window_time_table_struct_answers`
+- **Pin** — `python/repark/tests/functions/test_fnp_win_1.py::test_crit_window_time_table_struct_answers`
   pins today's answer (`2024-01-01 10:09:59.999999`) over a struct-DDL frame.
   pins: fnp-win-1/C-003
 - **Rationale** — DECLARED, as a **type-system gap rather than a parity
@@ -2944,7 +2944,7 @@ still open is `isModifiable`.
   window expressions would result in a cartesian product of rows, therefore they are currently not
   supported.` *(oracle: live — PySpark 4.1.2, run-16a verification cells
   `C2-L004-two-session-specs` on both doors.)*
-- **Pin** — `python/repark/tests/test_fnp_win_1.py::test_crit2_two_session_specs_refuse` asserts
+- **Pin** — `python/repark/tests/functions/test_fnp_win_1.py::test_crit2_two_session_specs_refuse` asserts
   Spark's cell and RePark's duplicate-name error on the Python door, and the `1039` text on the SQL
   door. pins: fnp-win-1/C-004
 - **Rationale** — DECLARED, as a **refusal-shape divergence**: both engines refuse. The seam is
@@ -2960,7 +2960,7 @@ still open is `isModifiable`.
   `randstr would build … characters x … rows, past the … byte limit of a string column`.
 - **Apache Spark** — has no cap. `SELECT length(randstr(5000000, 1))` returns **5000000**.
   *(oracle: live — PySpark 4.1.2.)*
-- **Pin** — `python/repark/tests/test_lrs3_registered_divergences.py::test_randstr_refuses_a_length_spark_accepts`
+- **Pin** — `python/repark/tests/functions/test_lrs3_registered_divergences.py::test_randstr_refuses_a_length_spark_accepts`
   and `::test_randstr_refuses_a_batch_that_would_overflow_string_offsets`
 - **Rationale** — DECLARED, as a **safety limit rather than a parity claim**, which is why it needs
   a row: nothing else says it is deliberate. The failure mode without the per-row cap is not an
@@ -2988,12 +2988,12 @@ still open is `isModifiable`.
 - **Pin** —
   `crates/repark-spark/src/tests/create_table.rs::v3_type_columns_geometry_geography_variant_refuse_naming_the_type`
   (ANSI twin of the same name in `crates/repark-sql/src/v3/types.rs`; facade
-  `python/repark/tests/test_v3_create_opt_in.py::test_v3_geometry_geography_variant_columns_refuse_naming_the_type`);
+  `python/repark/tests/iceberg/test_v3_create_opt_in.py::test_v3_geometry_geography_variant_columns_refuse_naming_the_type`);
   facade type objects:
-  `python/repark/tests/test_types_bases_1.py::test_spatial_column_use_refuses_naming_the_type`;
+  `python/repark/tests/types/test_types_bases_1.py::test_spatial_column_use_refuses_naming_the_type`;
   user-schema door (reader `.schema` — repark has no `catalog.createTable` /
   user-schema `writeTo` door):
-  `python/repark/tests/test_types_bases_1.py::test_spatial_reader_schema_refuses_naming_the_type`
+  `python/repark/tests/types/test_types_bases_1.py::test_spatial_reader_schema_refuses_naming_the_type`
 - **Rationale** — DECLARED, owner-dated 2026-08-25. Spatial types are fork work (F-15 → R89)
   with no consumer on the v1.0 path; the ruling keeps the gate honest instead of silent.
   Reversing it needs a new dated decision, and the landing reds the pin on purpose. `variant`
@@ -3053,11 +3053,11 @@ still open is `isModifiable`.
   the oracle is the refusal itself. *(oracle: live PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0 on a Hadoop catalog, 2026-09-18.)*
 - **Pin** —
-  `python/repark/tests/test_v3_multiarg_1.py::test_sql_door_refuses_multiarg_bucket`
+  `python/repark/tests/iceberg/test_v3_multiarg_1.py::test_sql_door_refuses_multiarg_bucket`
   (C-001), `::test_register_table_with_source_ids_refuses_at_register` (C-003),
   `::test_spark_oracle_refused_the_multiarg_ddl` over
-  `python/repark/tests/v3_multiarg_1_spark_oracle.json` recorded by
-  `python/repark/tests/_record_v3_multiarg_1.py` (C-002).
+  `python/repark/tests/iceberg/v3_multiarg_1_spark_oracle.json` recorded by
+  `python/repark/tests/iceberg/_record_v3_multiarg_1.py` (C-002).
 - **Rationale** — DECLARED, owner-dated 2026-09-18. Multi-argument transforms need fork
   work first (spec parsing in `iceberg-rust`, transform evaluation, pruning) with no
   1.x consumer; the ruling keeps the gate honest instead of silent. Reversing it needs
@@ -3078,7 +3078,7 @@ still open is `isModifiable`.
   scan's column type differs from the declared field type.
 - **Apache Spark** — returns the promoted column beside the lineage columns.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-alter-column-type]`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-alter-column-type]`
   (red on `a0cd39e`, green on the fix) and
   `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-alter-column-type]`
 - **Rationale** — FIXED, not declared. A v1.0 gate that promises v3 row lineage cannot ship a
@@ -3110,12 +3110,12 @@ still open is `isModifiable`.
   2026-09-18,
   `python/repark-parity/fixtures/torture/data/ice_rowid_order_1/spark_rowid_abc_oracle.json`)
   answers a:0, b:100, c:200 in 12 of 12 for INSERT INTO SELECT, VALUES and CTAS alike.
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
   and the incidental control
   `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`; plus the nine
   partitioned rows of the matrix, whose lineage probe is
   `SELECT id, _row_id, _last_updated_sequence_number` again on both engine goldens;
-  plus `python/repark/tests/test_ice_rowid_order_1.py` (twelve-run determinism per shape
+  plus `python/repark/tests/writes/test_ice_rowid_order_1.py` (twelve-run determinism per shape
   and the DECLARED-divergence pin below)
 - **Rationale** — FIXED 2026-09-18 (RP-31) at fork #300 (F-ROWID-ORDER-1) for determinism
   and for the a/b/c shape. History: FIXED at RP-8 for the `INSERT … VALUES` shape and CTAS;
@@ -3182,10 +3182,10 @@ still open is `isModifiable`.
   UTC-adjusted) and a second engine must read back exactly what RePark wrote. *(oracle:
   recorded — Iceberg v3 spec plus a PyIceberg 0.12.0 `StaticTable` read-back of the
   DataFrame-door control and of every SQL-door table, in
-  `python/repark/tests/ice_tsns_sql_1_oracle.json` via
-  `python/repark/tests/_record_ice_tsns_sql_1_oracle.py`; no Spark measurement exists or
+  `python/repark/tests/timestamps/ice_tsns_sql_1_oracle.json` via
+  `python/repark/tests/timestamps/_record_ice_tsns_sql_1_oracle.py`; no Spark measurement exists or
   is claimed.)*
-- **Pin** — `python/repark/tests/test_ice_tsns_sql_1.py` (42 pins plus one xfail on
+- **Pin** — `python/repark/tests/timestamps/test_ice_tsns_sql_1.py` (42 pins plus one xfail on
   R-003, every expected value read from the fixture); the recorder's PyIceberg `check` leg over
   the SQL-door tables; `crates/repark-spark/src/tests/v3_timestamp_ns_door.rs` (casts, INSERT
   VALUES / SELECT widening, rendering and predicates on the Rust door); the unit suites in
@@ -3278,7 +3278,7 @@ still open is `isModifiable`.
   (`UnsupportedOperationException: Cannot convert unsupported type to Spark: timestamp_ns`),
   measured 2026-10-09. *(oracle: documented — the rule is the one INSERT already follows,
   ICE-TSNS-SQL-1 clause 2 and ledger A-1; the pins compute it with Python `zoneinfo`.)*
-- **Pin** — `python/repark/tests/test_ice_tsns_merge_wall_1.py` (351 tests since the split:
+- **Pin** — `python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py` (351 tests since the split:
   the 57 `timestamp_ns` door tests in three zones, the control doors in America/New_York, the
   overflow pins, every door read from the Parquet file, the encoded sources, the nested
   refusals), with main's answers for those cells in `ice_tsns_merge_wall_1_main.json`;
@@ -3333,7 +3333,7 @@ still open is `isModifiable`.
   WRITE-BODY-CARRIERS-1.
 - **Apache Spark** — cannot write the type. *(oracle: documented — INSERT's rule, as R-007;
   the pins compute it with Python `zoneinfo` and check it against INSERT in five zones.)*
-- **Pin** — `python/repark/tests/test_ice_tstzns_wall_1.py` (nineteen doors in five zones,
+- **Pin** — `python/repark/tests/timestamps/test_ice_tstzns_wall_1.py` (nineteen doors in five zones,
   the gap and overlap walls of New York and Lord Howe, out-of-range values, every value read
   from the Parquet files); `crates/repark-spark/tests/timestamptz_ns_wall_doors.rs` (ten
   doors, both row-level modes, five zones; out-of-range values; the Dictionary-encoded wall
@@ -3367,7 +3367,7 @@ still open is `isModifiable`.
   move. Tables already written keep their values.
 - **Apache Spark** — cannot read the source types. *(oracle: documented — ruling Q-21c-8
   floors a nanosecond value narrowed to microseconds.)*
-- **Pin** — `python/repark/tests/test_ice_tsns_floor_doors_1.py` (246 tests, 26928 ticks; red
+- **Pin** — `python/repark/tests/timestamps/test_ice_tsns_floor_doors_1.py` (246 tests, 26928 ticks; red
   on main on 4400 ticks; every expected tick is the recorder's rule), and the nanosecond control
   cells of `test_ice_tsns_merge_wall_1.py` held to the same rule (94 of main's cells moved).
 - **Rationale** — FIXED 2026-10-14 by the owner's go of that day on the one-chokepoint sketch
@@ -3525,7 +3525,7 @@ still open is `isModifiable`.
   seventeen doors, no file and no snapshot; the whole text; the allowed statements; the
   controls); `crates/repark-iceberg/src/write/nested_ns_gate.rs` (each container kind and
   each statement form at the function);
-  `python/repark/tests/test_ice_tsns_merge_wall_1.py` (fourteen Arrow layouts through eight
+  `python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py` (fourteen Arrow layouts through eight
   DataFrame routes).
 - **Rationale** — DECLARED 2026-10-09 by the owner's adopted amendment 3 of pull request
   #1018: two folds converted the nested value in place and three verifies found a wrong or
@@ -3584,10 +3584,10 @@ still open is `isModifiable`.
   RePark does. No code follows this note.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0: the rule above, at every depth and in every
   container. *(oracle: live, 1,216 matrix cells and five added cells,
-  `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`, recorded 2026-10-13 and
+  `python/repark/tests/writes/ice_struct_pairing_1_spark_oracle.json`, recorded 2026-10-13 and
   re-recorded 2026-10-14 with no cell changed; 410 build-round-3 cells, groups `r3_leaf`,
   `r3_part` and `r3_misc`, recorded live 2026-10-14.)*
-- **Pin** — `python/repark/tests/test_ice_struct_pairing_1.py` (2,458 tests: the rule against
+- **Pin** — `python/repark/tests/writes/test_ice_struct_pairing_1.py` (2,458 tests: the rule against
   the oracle in every cell, the engine against the rule, lists L1 and L2, the stored Parquet
   field names); `crates/repark-spark/tests/struct_pairing_doors.rs` (sixteen doors × four
   shapes at the Rust door, and the partition overwrite route);
@@ -3595,7 +3595,7 @@ still open is `isModifiable`.
   layouts, and hint H-1 at S1 and S2);
   `crates/repark-iceberg/src/write/store_overflow/tests.rs`
   `an_insert_pairs_struct_fields_by_position_unless_its_statement_says_by_name`; build round 3:
-  `python/repark/tests/test_ice_struct_pairing_1_round3.py` (411 tests over the 410 round-3
+  `python/repark/tests/writes/test_ice_struct_pairing_1_round3.py` (411 tests over the 410 round-3
   cells), `struct_pairing/tests.rs` `every_paired_leaf_is_judged_as_a_flat_column_is`,
   `case_insensitive_names_match_as_java_equals_ignore_case` and
   `case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive`, and
@@ -3641,7 +3641,7 @@ still open is `isModifiable`.
   replaces every partition of the table.)*
 - **Pin** — `crates/repark-spark/tests/struct_pairing_doors.rs`
   `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1`;
-  `python/repark/tests/test_ice_struct_pairing_1_round3.py`
+  `python/repark/tests/writes/test_ice_struct_pairing_1_round3.py`
   `test_the_partition_carve_out_refuses_with_the_workaround` (104 cells) and, for the shapes
   Spark refuses, `test_the_engine_answers_as_spark`.
 - **Rationale** — DATED CARVE-OUT 2026-10-14, owner ruling 58(a) on question 34: the static
@@ -3838,7 +3838,7 @@ still open is `isModifiable`.
   floors (R-024); and the carried planner work moves 51 Rust and 27 facade pins that pass on
   main, three of them statements main answers that now error. The unit ledger's questions Q1
   to Q5. Pins:
-  `python/repark/tests/test_ice_tsns_type_planner_1.py`,
+  `python/repark/tests/timestamps/test_ice_tsns_type_planner_1.py`,
   `crates/repark-sql/tests/ice_tsns_type_planner_1_lattice.rs`,
   `crates/repark-spark/tests/ice_tsns_type_planner_1_update_forms.rs`. Ledger:
   `task/ledgers/staging/ice-tsns-type-planner-1-ledger.md` (on the branch).
@@ -3928,7 +3928,7 @@ still open is `isModifiable`.
   raised `ArrowInvalid` before and now answers as the microsecond column always did.
 - **Apache Spark** — `timestamp[us, tz=UTC]`, nullable, floored, no warning, for every unit
   and zone. *(oracle: recorded live, Spark 4.1.2 with pandas 3.0.6 and pyarrow 25.0.1 —
-  `python/repark/tests/ice_tsns_frame_door_1_spark.json`, 90 cells.)*
+  `python/repark/tests/timestamps/ice_tsns_frame_door_1_spark.json`, 90 cells.)*
   **Spark-side disclosure, not pinned:** where Spark's own conversion loses the instant
   the facade keeps the true floor. An aware instant in the **driver machine's** repeated
   hour can be stored an hour early or late; which pass moves depends on the other values in
@@ -3939,7 +3939,7 @@ still open is `isModifiable`.
   the int64 extremes of an aware
   column wrap (`pd.Timestamp.min`: Spark `9223368674854775`, floor `-9223372036854776`) and
   of a naive column raise; an 1883 local-mean-time instant is 238 seconds off.
-- **Pin** — `python/repark/tests/test_ice_tsns_frame_door_1.py` (254 tests, two session
+- **Pin** — `python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py` (254 tests, two session
   zones, Arrow type and int64 values); `test_boundary_shapes_parity.py` row
   `pandas_timestamp_unit_from_pandas_ns`, now a disclosure like its microsecond twin.
 - **Rationale** — FIXED 2026-10-13 by the owner's ruling of that day (parity, fixed at the
@@ -3990,7 +3990,7 @@ still open is `isModifiable`.
   the table `ora`.`ns`.`step0_twins`: Ambiguous column name in the input data `st`.`a`.
   SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
   Hadoop catalog, 2026-10-14, U-6 step 0.)*
-- **Pin** — `python/repark/tests/test_ice_struct_pairing_1.py::test_the_engine_answers_the_rule_in_every_added_cell[by_name_case_twins]`.
+- **Pin** — `python/repark/tests/writes/test_ice_struct_pairing_1.py::test_the_engine_answers_the_rule_in_every_added_cell[by_name_case_twins]`.
 - **Rationale** — CLOSED 2026-10-14: hint H-2 of ICE-STRUCT-PAIRING-1 closes it, the
   by-name walk refusing a target field that two source fields match. The unit did not grow
   for it (owner ruling, question 37); card
@@ -4009,7 +4009,7 @@ still open is `isModifiable`.
   the table `ora`.`ns`.`step0_msge`: Cannot write extra fields `c` to the struct `st`.
   SQLSTATE: KD000`. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
   Hadoop catalog, 2026-10-14, U-6 step 0.)*
-- **Pin** — `python/repark/tests/test_ice_struct_pairing_1.py::test_the_engine_answers_the_rule_in_every_added_cell[merge_schema_extra]`.
+- **Pin** — `python/repark/tests/writes/test_ice_struct_pairing_1.py::test_the_engine_answers_the_rule_in_every_added_cell[merge_schema_extra]`.
 - **Rationale** — CLOSED 2026-10-14 in ICE-STRUCT-PAIRING-1 (owner ruling, question 37):
   `writeTo().append()` now pairs by name, and a source field left over refuses
   `EXTRA_STRUCT_FIELDS`. Measured in ICE-STRUCT-PAIRING-1 step 0 (U-6), cell
@@ -4159,7 +4159,7 @@ still open is `isModifiable`.
   `timestamp_ns` / `timestamptz_ns` as hours since the epoch. *(oracle: documented — the spec's
   transform table; the fixture's `sql_hours` expectation is derived from it,
   `hour = floor(tz_ns / 3_600_000_000_000)`.)*
-- **Pin** — `python/repark/tests/test_ice_tsns_sql_1.py::test_hours_partitions_equal_the_spec`
+- **Pin** — `python/repark/tests/timestamps/test_ice_tsns_sql_1.py::test_hours_partitions_equal_the_spec`
   (runs plainly and must pass) and the recorder's `check` leg, which reads `sql_hours`
   back with PyIceberg like every other table now that the fork writes it.
 - **Rationale** — FIXED 2026-09-18 (RP-28) at fork #296 (**F-TSNS-HOUR-1**): the fork's
@@ -4199,11 +4199,11 @@ still open is `isModifiable`.
   (`CAST(CAST('2999-07-01 12:00:00' AS TIMESTAMP) AS STRING)` in New York answered
   `2999-07-01 11:00:00`); closed 2026-10-08 by ZONE-HORIZON-RENDER-1, the next row. The native `repark.sql` door has no LTZ `TIMESTAMP` (its
   `TIMESTAMP` is the ANSI zoneless type), so no cell runs there.
-- **Apache Spark** — the 604 cells in `python/repark/tests/cast_ts_string_1_spark_oracle.json`:
+- **Apache Spark** — the 604 cells in `python/repark/tests/timestamps/cast_ts_string_1_spark_oracle.json`:
   151 strings x `UTC` / `America/New_York` x ANSI off / on, each with the `unix_micros` of
   `CAST`, `TRY_CAST` and `to_timestamp`, or the error condition and message.
-  *(oracle: live PySpark 4.1.2, 2026-09-19, recorder `python/repark/tests/_record_cast_ts_string_1.py`.)*
-- **Pin** — `python/repark/tests/test_cast_ts_string_1.py` (literal and view-column `CAST` /
+  *(oracle: live PySpark 4.1.2, 2026-09-19, recorder `python/repark/tests/timestamps/_record_cast_ts_string_1.py`.)*
+- **Pin** — `python/repark/tests/timestamps/test_cast_ts_string_1.py` (literal and view-column `CAST` /
   `TRY_CAST`, `Column.cast` / `try_cast`, `to_timestamp`, the Arrow type, and a live drift
   check); `crates/repark-functions/src/tests/spark_string_timestamp.rs` and
   `…/spark_string_timestamp_sql.rs`; the time-travel pins that were strict xfails
@@ -4252,13 +4252,13 @@ still open is `isModifiable`.
   with Spark's values, refusal classes and `timestamp` schema. The styled `show()` prints
   instants in UTC, not in the session zone.
 - **Apache Spark** — the 6972 cells in
-  `python/repark/tests/zone_horizon_render_1_spark_oracle.json`: six session zones x 2099,
+  `python/repark/tests/timestamps/zone_horizon_render_1_spark_oracle.json`: six session zones x 2099,
   2100, 2104, 2500, 9999 x a January and a July instant plus both sides of each transition x
   46 instant functions, the same walls x 16 wall-clock functions, and a CSV and a JSON write
   per zone. Spark's rule and the proxy-year rule agree on every cell RePark reaches.
   *(oracle: live PySpark 4.1.2, 2026-10-08, recorder
-  `python/repark/tests/_record_zone_horizon_render_1.py`.)*
-- **Pin** — `python/repark/tests/test_zone_horizon_render_1.py` (every cell outside the residue
+  `python/repark/tests/timestamps/_record_zone_horizon_render_1.py`.)*
+- **Pin** — `python/repark/tests/timestamps/test_zone_horizon_render_1.py` (every cell outside the residue
   per zone, the residue explained, the card's three expressions, `collect` and the Arrow
   path, and a live drift check); `crates/repark-common/src/zone_horizon/tests.rs`;
   `crates/repark-functions/src/tests/zone_horizon_render.rs`; the core site pins
@@ -4279,7 +4279,7 @@ still open is `isModifiable`.
 - **Apache Spark** — resolves a *later* new name against an *earlier* new name laterally, so the
   forward order yields `x=2, y=2`; the reverse order raises `AnalysisException`.
   *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_dropin_disclosure.py::test_with_columns_lateral_alias_divergence_disclosed`
+- **Pin** — `python/repark/tests/session/test_dropin_disclosure.py::test_with_columns_lateral_alias_divergence_disclosed`
 - **Rationale** — DECLARED. Lateral aliasing is an analyzer feature, not a facade one; reproducing
   it means resolving new names against a projection under construction. The pin asserts **both**
   orders raise, so partial convergence (the forward order starting to work) reds it and forces the
@@ -4292,11 +4292,11 @@ still open is `isModifiable`.
   `SHOW NAMESPACES`, which has no location or description column.
 - **Apache Spark** — fills `locationUri` (and may fill `description`) from the catalog metadata
   for each database. *(oracle: documented — field shape / filled location from the Catalog API.)*
-- **Pin** — `python/repark/tests/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
+- **Pin** — `python/repark/tests/session/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
 - **Rationale** — DECLARED. Inventing a location would be a silent lie; leaving the fields `None`
   is honest about what the SHOW primitive carries. **Y-3 / #69 (2026-08-12):** `getDatabase` now
   returns the stored `locationUri` and `description` (DESCRIBE NAMESPACE; pin
-  `python/repark/tests/test_catalog_surface.py::test_get_database_returns_location_and_comment`).
+  `python/repark/tests/session/test_catalog_surface.py::test_get_database_returns_location_and_comment`).
   This row's `listDatabases` half is unchanged (`locationUri` / `description` remain `None`).
   Revisit if list-side metadata readback gains a real location source.
 
@@ -4312,7 +4312,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   subclasses (`PySparkException` subclasses `Exception` there); a broad `except RuntimeError`
   does not catch them. *(oracle: documented — the documented class hierarchy of
   `pyspark.errors`.)*
-- **Pin** — `python/repark/tests/test_errors.py::test_python_arg_errors_runtime_error_divergence_is_deliberate`
+- **Pin** — `python/repark/tests/session/test_errors.py::test_python_arg_errors_runtime_error_divergence_is_deliberate`
 - **Rationale** — DECLARED. The hierarchy is the near-drop-in decision that keeps
   `except RuntimeError` catching engine failures after migration. The consequence is a strict
   **superset**: everything PySpark catches, repark catches too; a broad `except RuntimeError`
@@ -4327,7 +4327,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   explicit `schema=` wins either way.
 - **Apache Spark** — the conf defaults to `false` (SPARK-35929): dict cells infer as
   `MapType` unless the user opts in. *(oracle: documented — the conf's documented default.)*
-- **Pin** — `python/repark/tests/test_n1_nested_dict_struct.py::test_conf_default_true_in_sqlconf_defaults`
+- **Pin** — `python/repark/tests/types/test_n1_nested_dict_struct.py::test_conf_default_true_in_sqlconf_defaults`
   and `::test_default_unset_dict_cell_infers_struct`; the conf-false leg stays pinned
   byte-identical to PySpark in the same file.
 - **Rationale** — DECLARED, owner decision (2026-08-16). The dominant facade ingestion shape
@@ -4356,7 +4356,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — writes the file with the duplicate display header, and
   refuses the same partition and non-csv cells. *(oracle: live 4.1.2,
   2026-10-08, the csv cells in `task/ledgers/staging/fa-5-6-ledger.md`.)*
-- **Pin** — `python/repark/tests/test_fa_5_duplicate_csv.py`;
+- **Pin** — `python/repark/tests/resolution/test_fa_5_duplicate_csv.py`;
   `crates/repark-core/src/session/tests/duplicate_names.rs`
 - **Rationale** — was DECLARED as a deliberate refusal (orchestrator,
   2026-10-06) because the csv rows could only carry the twin engine names.
@@ -4391,7 +4391,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — registers the view; `SELECT *`, `spark.table` and
   `DESCRIBE` all carry the duplicate display names (`id, s, v, id, s, v` on
   the fold's self-join). *(oracle: live 4.1.2, 2026-10-06, `v_self`/`v_r`.)*
-- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupviews.py` (11 tests)
+- **Pin** — `python/repark/tests/resolution/test_attr_id_1_sm2_dupviews.py` (11 tests)
 - **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
   the engine cannot hold duplicate names in a view schema (a duplicate
   `(qualifier, name)` pair is unplannable), and registering the twin engine
@@ -4417,7 +4417,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `DeduplicateWithinWatermark` logical-plan dump after it. *(oracle: recorded —
   cells `ddww_batch` / `ddww_batch_noargs`; subset-shape and missing-column errors in
   `ddww_bad_subset` / `ddww_missing_col` / `ddww_order` match exactly.)*
-- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_drop_duplicates_within_watermark_refuses_on_batch`
+- **Pin** — `python/repark/tests/dataframe/test_df_stream_batch_1.py::test_drop_duplicates_within_watermark_refuses_on_batch`
 - **Rationale** — DECLARED 2026-09-14. repark is batch-only, so the refusal is the parity answer;
   the appended plan dump is a JVM logical-plan rendering repark does not have. The pin asserts
   the first line byte-exactly; the tail differs by omission, never by content.
@@ -4430,7 +4430,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — classic returns the frame's `RDD`; the Connect client refuses with the
   same `NOT_IMPLEMENTED` shape repark raises. *(oracle: recorded — cells `rdd`,
   `connect_rdd_shape`.)*
-- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_rdd_property_raises_spark_not_implemented`
+- **Pin** — `python/repark/tests/dataframe/test_df_stream_batch_1.py::test_rdd_property_raises_spark_not_implemented`
 - **Rationale** — DECLARED 2026-09-14, unreachable: the name needs the JVM RDD layer, which
   repark does not have; the Connect refusal is the honest answer for a name that can never
   produce its classic return type here.
@@ -4443,7 +4443,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — returns a pandas-on-Spark frame (`pandas_api` needs pandas >= 2.2.0 and the
   pandas-on-Spark layer; the oracle environment raised `PACKAGE_NOT_INSTALLED`).
   *(oracle: recorded — cells `pandas_api`, `pandas_api_with_pandas`.)*
-- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_pandas_api_raises_spark_not_implemented`
+- **Pin** — `python/repark/tests/dataframe/test_df_stream_batch_1.py::test_pandas_api_raises_spark_not_implemented`
 - **Rationale** — DECLARED 2026-09-14, unreachable: pandas-on-Spark needs the JVM RDD layer
   repark does not have. The declared `NOT_IMPLEMENTED` refusal is named by the orchestrator
   ruling over the environment-specific `PACKAGE_NOT_INSTALLED` the oracle recorded.
@@ -4454,7 +4454,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   and `{"feature": "plot"}`, str `[NOT_IMPLEMENTED] plot is not implemented.`
 - **Apache Spark** — returns a `PySparkPlotAccessor` whose methods (`.line`, `.bar`, …) plot via
   plotly/pandas-on-Spark. *(oracle: recorded — cells `plot`, `plot_line`, `plot_with_pandas`.)*
-- **Pin** — `python/repark/tests/test_df_stream_batch_1.py::test_plot_property_raises_spark_not_implemented`
+- **Pin** — `python/repark/tests/dataframe/test_df_stream_batch_1.py::test_plot_property_raises_spark_not_implemented`
 - **Rationale** — DECLARED 2026-09-14, reachable, deferred: port the accessor over `toPandas`.
 ### TYPES-UDT-1 — `UserDefinedType` exists on the facade; column use refuses through the missing JVM registry
 - **repark** — `repark.spark.types.UserDefinedType` exists and instantiates like Spark
@@ -4468,7 +4468,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   the registered Scala/Python class pair); the Python surface is the class itself plus the
   `sqlType()` / `module()` contract. *(oracle: measured — PySpark 4.1.2, run 15b cells
   `udt_instantiate` / `udt_typeName` / `udt_sqlType`.)*
-- **Pin** — `python/repark/tests/test_types_bases_1.py::test_udt_cells`,
+- **Pin** — `python/repark/tests/types/test_types_bases_1.py::test_udt_cells`,
   `…::test_udt_column_use_refuses`.
 - **Rationale** — DECLARED, 2026-09-14 (TYPES-BASES-1). Spark UDT execution walks the JVM
   UDT registry — the same reason `FNP-15-unwrap_udt` is unreachable (row §9); there is no
@@ -4486,7 +4486,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   *(oracle: `facade_dataframe_surface_oracle.json` cell `to_not_schema`, PySpark 4.1.2,
   ruling R-1, 2026-09-14)*.
 - **Pin** —
-  `python/repark/tests/test_df_surface_a_1.py::test_to_non_struct_schema_raises_not_struct`
+  `python/repark/tests/dataframe/test_df_surface_a_1.py::test_to_non_struct_schema_raises_not_struct`
 - **Rationale** — DECLARED (R-1, 2026-09-14). The leaked `AttributeError` is an
   implementation accident in Spark classic, not a contract; refusing with Spark's own
   error-class shape is the honest near-drop-in answer.
@@ -4501,7 +4501,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   *(oracle: `facade_dataframe_surface_oracle.json` cells `checkpoint_nodir`,
   `checkpoint_with_dir`, `checkpoint_lazy`, PySpark 4.1.2, ruling R-3, 2026-09-14)*.
 - **Pin** —
-  `python/repark/tests/test_df_surface_a_1.py::test_checkpoint_returns_new_frame_with_same_rows`
+  `python/repark/tests/dataframe/test_df_surface_a_1.py::test_checkpoint_returns_new_frame_with_same_rows`
 - **Rationale** — DECLARED (R-3, 2026-09-14). repark has no SparkContext checkpoint
   directory and no reliable-storage checkpoint write; the in-memory materialization is
   the same-rows answer rather than a refusal the engine cannot honor anyway.
@@ -4512,7 +4512,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — the call leaks `py4j.Py4JException: Method addTag([class
   java.lang.Integer]) does not exist` — a reflection error with no Spark error class, caught
   only by `except py4j.protocol.Py4JError`. *(oracle: cell `addTag_not_str`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_add_tag_not_str_declared`
+- **Pin** — `python/repark/tests/session/test_session_surface_1.py::test_add_tag_not_str_declared`
 - **Rationale** — DECLARED 2026-09-14 (ruling R-1). Reproducing a Py4J reflection leak
   requires a JVM; the structured `NOT_STR` refusal carries the same information in repark's
   error taxonomy. String tags themselves match Spark exactly: empty and comma-containing
@@ -4529,7 +4529,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   when nothing is running; the same `Try(toLong)` validation applies, and a non-str
   `op_id` leaks a Py4J reflection error. *(oracle: cells `interruptAll`, `interruptTag`,
   `interruptOperation`, `interruptOperation_numeric`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_interrupts_answer_empty_lists`,
+- **Pin** — `python/repark/tests/session/test_session_surface_1.py::test_interrupts_answer_empty_lists`,
   `::test_interrupt_operation_java_long_validation`, `::test_interrupt_operation_non_str`
 - **Rationale** — DECLARED 2026-09-14 (ruling R-2). repark executes an action synchronously
   on the calling thread and keeps no cancellable operation registry, so there is never
@@ -4543,7 +4543,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `NOT_IMPLEMENTED` and parameters `{"feature": "readStream"}`.
 - **Apache Spark** — returns a `DataStreamReader` bound to the session's streaming context.
   *(oracle: cell `readStream_type`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_read_stream_declared`,
+- **Pin** — `python/repark/tests/session/test_session_surface_1.py::test_read_stream_declared`,
   `::test_declared_properties_raise_under_hasattr`
 - **Rationale** — DECLARED 2026-09-14. Structured Streaming needs an execution engine repark
   does not have; the property refuses loudly rather than returning a hollow reader. Known
@@ -4558,7 +4558,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `NOT_IMPLEMENTED` and parameters `{"feature": "streams"}`.
 - **Apache Spark** — returns a `StreamingQueryManager` whose `active` is `[]` on an idle
   session. *(oracle: cells `streams_type`, `streams_active`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_streams_declared`,
+- **Pin** — `python/repark/tests/session/test_session_surface_1.py::test_streams_declared`,
   `::test_declared_properties_raise_under_hasattr`
 - **Rationale** — DECLARED 2026-09-14. Same engine gap as `readStream`; an `active == []`
   facade would be a silent lie about query lifecycle support. The R-5 `hasattr`
@@ -4692,7 +4692,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
 - **Apache Spark** — returns a `DataSourceRegistration` for registering Python data
   sources. *(oracle: cell `dataSource`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_data_source_declared`,
+- **Pin** — `python/repark/tests/session/test_session_surface_1.py::test_data_source_declared`,
   `::test_declared_properties_raise_under_hasattr`
 - **Rationale** — DECLARED 2026-09-14. Reachable in principle (the registration plumbing is
   Python-side), deferred until the data-source execution contract is scheduled. The R-5
@@ -5109,7 +5109,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   value claim.)*
 - **Pin** — `crates/repark-spark/src/tests/pg_insert.rs::pg_overwrite_names_the_modes_row`;
   `crates/repark-sql/src/pg_insert.rs::tests::pg_overwrite_names_the_modes_row`;
-  `python/repark/tests/test_io_declared_1.py::test_writer_jdbc_bare_uses_the_writer_mode`;
+  `python/repark/tests/io/test_io_declared_1.py::test_writer_jdbc_bare_uses_the_writer_mode`;
   live `python/repark-parity/tests/live_db/test_c4_write.py::test_refused_modes_name_the_row_on_every_door`
 - **Rationale** — DECLARED 2026-10-09 (C-4 step 2). Overwrite needs a truncate-or-replace
   protocol the write core does not have yet. Retire when every save mode lands.
@@ -5191,7 +5191,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `a_credential_free_storage_location_is_shown_as_spark_shows_it`);
   `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_masks_comment_location_and_owner_credentials`;
   `crates/repark-common/src/redaction/tests.rs::storage_locations_without_a_password_are_shown_as_is`;
-  `python/repark/tests/test_source_url_redaction_1.py::test_set_listings_never_carry_the_password`,
+  `python/repark/tests/io/test_source_url_redaction_1.py::test_set_listings_never_carry_the_password`,
   `::test_get_database_returns_the_stored_location_and_comment`
 - **Rationale** — DECLARED 2026-10-06 (SOURCE-URL-REDACT-1; extended by fold 1 to tables and
   views, by fold 2 to the namespace rows and the Oracle, JSON, YAML and wider-name shapes, and
@@ -5323,7 +5323,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   crashes with a bare `AssertionError` (`Undefined error message parameter for error class:
   INVALID_MULTIPLE_ARGUMENT_CONDITIONS`). *(oracle: cells `addArtifact`,
   `addArtifact_real`, `addArtifacts_two_flags`.)*
-  `python/repark/tests/test_session_surface_1.py::test_add_artifact_pyfile_lands_on_sys_path`,
+  `python/repark/tests/session/test_session_surface_1.py::test_add_artifact_pyfile_lands_on_sys_path`,
   `::test_add_artifact_missing_path`, `::test_add_artifacts_two_flags`,
   `::test_add_artifacts_archive_and_file_declared`
 - **Rationale** — DECLARED 2026-09-14. Driver-local `pyfile` is honest plumbing repark can
@@ -5341,7 +5341,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — accumulates perf and memory profiles of UDF executions; `show` prints
   nothing when none exist. *(oracle: cells `profile_type`, `profile_methods`,
   `profile_show`.)*
-- **Pin** — `python/repark/tests/test_session_surface_1.py::test_profile_surface`,
+- **Pin** — `python/repark/tests/session/test_session_surface_1.py::test_profile_surface`,
   `::test_profile_show_dump_clear_noop`, `::test_profile_render_declared`
 - **Rationale** — DECLARED 2026-09-14 (ruling R-3). repark collects no UDF profiles, so the
   collector-backed methods are honest no-ops; `render` is a declared refusal rather than a
@@ -5359,7 +5359,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   table-valued functions of the same names. *(oracle: cells `tvf_type`,
   `tvf_methods_full`, `tvf_sql_keywords`, `tvf_collations`, `tvf_posexplode`,
   `tvf_json_tuple`, `tvf_inline`, `tvf_variant_explode`.)*
-  `python/repark/tests/test_session_surface_1.py::test_tvf_sql_functions_declared_today`,
+  `python/repark/tests/session/test_session_surface_1.py::test_tvf_sql_functions_declared_today`,
   `::test_tvf_posexplode_declared_today`, `::test_tvf_json_tuple_answers_today`,
   `::test_tvf_inline_and_variant_declared_today`
 - **Rationale** — DECLARED 2026-09-14. `sql_keywords`/`collations` need table functions in
@@ -5383,7 +5383,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   UTC, 2026-09-14, run 15b `facade_catalog_oracle.json` `listFunctions_*` /
   `getFunction_*` cells.)*
 - **Pin** —
-  `python/repark/tests/test_catalog_surface_1.py::test_list_functions_shape`,
+  `python/repark/tests/session/test_catalog_surface_1.py::test_list_functions_shape`,
   `…::test_list_functions_pattern`, `…::test_list_functions_db_name`,
   `…::test_list_functions_udf`, `…::test_get_function_builtin`,
   `…::test_get_function_udf`, `…::test_get_function_missing`
@@ -5403,7 +5403,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   PySpark 4.1.2, local[2], UTC, 2026-09-14, run 15b `facade_catalog_oracle.json`
   `recoverPartitions_*` cells.)*
 - **Pin** —
-  `python/repark/tests/test_catalog_surface_1.py::test_recover_partitions`,
+  `python/repark/tests/session/test_catalog_surface_1.py::test_recover_partitions`,
   `…::test_recover_partitions_view`, `…::test_recover_partitions_missing`
 - **Rationale** — DECLARED, 2026-09-14 (catalog-surface-1 ruling R-5). Spark's
   `NOT_A_PARTITIONED_TABLE` is a Hive-directory concept — a table whose partitions live as
@@ -5422,7 +5422,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `UserWarning`. *(oracle: recorded — cells `applyInArrow_bad_schema_result`,
   `applyInArrow_missing_col`, `applyInArrow_extra_col`, `applyInArrow_returns_not_table`,
   `applyInArrow_iter`, `applyInArrow_not_callable`.)*
-  `python/repark/tests/test_grouped_surface_1.py::test_apply_in_arrow_result_validation_errors`,
+  `python/repark/tests/io/test_grouped_surface_1.py::test_apply_in_arrow_result_validation_errors`,
   `…::test_apply_in_arrow_not_callable`.
 - **Rationale** — DECLARED 2026-09-14. repark has no worker/driver split to wrap across, so
   the inner Spark error class is the honest answer — the card names it explicitly over the
@@ -5434,7 +5434,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — accepts `cogroup(<a DataFrame>)` silently and returns
   `PandasCogroupedOps`; the failure lands later inside the JVM apply call.
   *(oracle: recorded — cell `cogroup_not_grouped`.)*
-  `python/repark/tests/test_grouped_surface_1.py::test_cogroup_type_and_ungrouped_side`.
+  `python/repark/tests/io/test_grouped_surface_1.py::test_cogroup_type_and_ungrouped_side`.
 - **Rationale** — DECLARED 2026-09-14 (ruling R-1). Spark's silent acceptance is a
   deferred-crash shape the facade does not reproduce; the eager refusal names the argument,
   the expected type, and the actual type at the point of the mistake.
@@ -5445,7 +5445,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — on a batch frame the call reaches the streaming state store and fails
   with `CANNOT_LOAD_STATE_STORE.UNCATEGORIZED` (SQLSTATE 58030) from inside the JVM.
   *(oracle: recorded — cell `transformWithState_batch`.)*
-  `python/repark/tests/test_grouped_surface_1.py::test_state_api_refusals`.
+  `python/repark/tests/io/test_grouped_surface_1.py::test_state_api_refusals`.
 - **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
   Streaming state stores repark does not have; every repark frame is batch, so the refusal
   is the parity answer.
@@ -5456,7 +5456,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — on a batch frame the call reaches the streaming state store and fails
   with `CANNOT_LOAD_STATE_STORE.UNCATEGORIZED` (SQLSTATE 58030) from inside the JVM.
   *(oracle: recorded — cell `transformWithStateInPandas_batch`.)*
-  `python/repark/tests/test_grouped_surface_1.py::test_state_api_refusals`.
+  `python/repark/tests/io/test_grouped_surface_1.py::test_state_api_refusals`.
 - **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
   Streaming state stores repark does not have; every repark frame is batch, so the refusal
   is the parity answer.
@@ -5467,7 +5467,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   (`java.lang.ClassCastException: class java.lang.Integer cannot be cast to class
   java.lang.String`) through `py4j.Py4JException` on classic. *(oracle: live PySpark
   4.1.2, 2026-09-14, `dropfields_not_str`.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_dropfields_not_str`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_dropfields_not_str`
 - **Rationale** — DECLARED, card COLUMN-PARITY-1 ruling R-3 (2026-09-14). Both engines
   refuse the call; repark refuses with the facade's typed argument error instead of a
   leaked JVM cast, the same class family every other `NOT_STR` facade argument uses.
@@ -5477,7 +5477,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — the same call raises `SparkRuntimeException` with condition
   `UNSUPPORTED_FEATURE.LITERAL_TYPE` and a `class java.util.ArrayList` literal message.
   *(oracle: live PySpark 4.1.2, 2026-09-14, `isin_tuple`.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isin_tuple`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_isin_tuple`
 - **Rationale** — DECLARED, card COLUMN-PARITY-1 (2026-09-14). Same refusal, same
   errorClass string; the Python exception class is the facade's `PySparkRuntimeError`
   (repark's closest answer to `SparkRuntimeException`), not a JVM-bound wrapper.
@@ -5539,21 +5539,21 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `assertNotBucketed("insertInto")` raise the same 1312/1313/SORT_BY errors on those doors.
   *(oracle: recorded — cells `bucketBy_bad_num`, `bucketBy_list`, `bucketBy_save`, `bucketBy_zero`,
   `bucketBy_missing_col`, `sortBy_without_bucketBy`, `bucketBy_saveAsTable` on the session
-  catalog; the Iceberg-catalog shapes in `python/repark/tests/ice_write_df_1_spark_oracle.json`,
+  catalog; the Iceberg-catalog shapes in `python/repark/tests/writes/ice_write_df_1_spark_oracle.json`,
   live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24.)*
-- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py::test_bucket_by_rejects_non_int_num_buckets`,
+- **Pin** — `python/repark/tests/writes/test_io_bucket_cluster_1.py::test_bucket_by_rejects_non_int_num_buckets`,
   `::test_bucket_by_accepts_list_first_column_and_returns_writer`,
   `::test_bucketed_path_save_refused`, `::test_sort_by_without_bucket_by_refused`,
   `::test_bucket_by_count_bounds_refused_at_save`, `::test_bucket_by_missing_column_refused`,
   `::test_bucket_by_sort_by_save_as_table_refuses_like_iceberg`,
   `::test_bucket_by_list_with_extra_cols_refuses`, `::test_bucket_by_non_str_names_refused`,
   `::test_bucketed_and_sorted_path_save_refused_1313`, `::test_insert_into_refuses_bucketing`;
-  `python/repark/tests/test_ice_write_df_1.py::test_bucket_by_creates_a_bucket_partitioned_table`,
+  `python/repark/tests/writes/test_ice_write_df_1.py::test_bucket_by_creates_a_bucket_partitioned_table`,
   `::test_bucket_by_new_table_shapes`, `::test_bucket_by_shapes_iceberg_cannot_convert_refuse`,
   `::test_bucket_by_existing_unbucketed_table`, `::test_bucket_by_existing_bucketed_table`,
   `::test_bucket_by_existing_partitioned_table`,
   `::test_bucket_by_existing_table_overwrite_with_partition_by`;
-  `python/repark/tests/test_ice_write_df_1_edges.py::test_a_missing_bucket_column_on_a_new_table_is_legacy_3060`,
+  `python/repark/tests/writes/test_ice_write_df_1_edges.py::test_a_missing_bucket_column_on_a_new_table_is_legacy_3060`,
   `::test_a_missing_bucket_column_on_an_existing_table`,
   `::test_bucket_count_precedes_the_missing_column`,
   `::test_error_mode_and_bucketed_save_answer_spark_text`,
@@ -5594,7 +5594,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `clusterBy_with_bucketBy`, `v2_clusterBy_type`, `v2_clusterBy_partitionedBy`,
   `v2_clusterBy_create_session_catalog`; the empty-call assert read from Spark 4.1.2's
   `readwriter.py` by the critic round.)*
-- **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py::test_cluster_by_path_save_writes_and_ignores_clustering`,
+- **Pin** — `python/repark/tests/writes/test_io_bucket_cluster_1.py::test_cluster_by_path_save_writes_and_ignores_clustering`,
   `::test_cluster_by_save_as_table_refused_ruling_r2`,
   `::test_cluster_by_conflicts_refused_at_save_as_table`, `::test_v2_cluster_by_returns_writer`,
   `::test_v2_cluster_by_with_partitioned_by_refused_at_actions`,
@@ -5637,7 +5637,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   the session catalog; the probe session had no metastore and raised `RuntimeMetaException:
   Failed to connect to Hive Metastore`, and with a Hadoop path table present Spark would write
   it.
-- **Pin** — `python/repark/tests/test_ice_write_df_1.py::test_save_name_appends_like_the_recorded_cell`,
+- **Pin** — `python/repark/tests/writes/test_ice_write_df_1.py::test_save_name_appends_like_the_recorded_cell`,
   `::test_save_name_overwrites_like_the_recorded_cell`,
   `::test_save_name_on_a_missing_table_refuses_in_write_modes`,
   `::test_save_name_creates_a_missing_table_in_create_modes`,
@@ -5646,7 +5646,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_save_name_refuses_a_partitioning_that_differs_from_the_table`,
   `::test_save_to_a_real_path_refuses_with_spark_path_relation`,
   `::test_save_to_a_real_path_in_create_mode_is_a_declared_refusal`;
-  `python/repark/tests/test_ice_write_df_1_edges.py::test_save_path_relations_split_at_the_last_slash`,
+  `python/repark/tests/writes/test_ice_write_df_1_edges.py::test_save_path_relations_split_at_the_last_slash`,
   `::test_save_as_table_append_checks_a_partition_by_layout`,
   `::test_save_as_table_append_refuses_a_different_partition_by`; in-crate
   `crates/repark-iceberg/src/tests/writer_partitioning.rs::path_relations_split_at_the_last_slash_like_iceberg_path_identifier`.
@@ -5672,10 +5672,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `foreachPartition_return`; live 2026-10-07 —
   `python/repark-parity/tests/live_spark/fw1_callback_oracle.json` cells `FW1-foreach`
   and `FW1-foreachPartition`, `secret_in_str` true.)*
-- **Pin** — `python/repark/tests/test_df_surface_b_1.py::test_foreach_rejects_non_callable`,
+- **Pin** — `python/repark/tests/dataframe/test_df_surface_b_1.py::test_foreach_rejects_non_callable`,
   `…::test_foreach_propagates_user_exception`,
   `…::test_foreach_partition_empty_frame_calls_once`;
-  `python/repark/tests/test_foreach_wrap_1.py::test_foreach_door_raises_a_masked_copy_of_the_user_class`,
+  `python/repark/tests/io/test_foreach_wrap_1.py::test_foreach_door_raises_a_masked_copy_of_the_user_class`,
   `…::test_foreach_door_keeps_a_credential_free_error`.
 - **Rationale** — DECLARED 2026-09-14. repark has no executor/RDD layer; the callable
   runs on the driver over streamed `Row`s. Spark's own `NOT_CALLABLE` class is raised
@@ -5691,7 +5691,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   *(oracle: live 2026-10-07 —
   `python/repark-parity/tests/live_spark/fw1_callback_oracle.json` cell
   `FW1-transform`: `builtins.ValueError`, `is_original` true, `secret_in_str` true.)*
-- **Pin** — `python/repark/tests/test_foreach_wrap_1.py::test_transform_passes_the_user_exception_through`.
+- **Pin** — `python/repark/tests/io/test_foreach_wrap_1.py::test_transform_passes_the_user_exception_through`.
 - **Rationale** — DECLARED 2026-10-07 (FOREACH-WRAP-1). The user's own exception from
   `transform` is not masked because it never crosses an engine boundary: RePark adds no
   text and runs no engine code between the raise and the caller, which is exactly what
@@ -5721,7 +5721,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   action blocks the caller forever. *(oracle: recorded — cells `observe_obs`,
   `observe_obs_twice_get`, `observe_name`, `observe_unaliased`; `observe_get_before`
   was not recorded because it blocks.)*
-- **Pin** — `python/repark/tests/test_df_surface_b_1.py::test_observe_obs_get_after_action`,
+- **Pin** — `python/repark/tests/dataframe/test_df_surface_b_1.py::test_observe_obs_get_after_action`,
   `…::test_observe_agg_runs_once_across_actions`,
   `…::test_observe_get_before_action_raises`,
   `…::test_observe_take_head_first_isempty_fill_full_metrics`,
@@ -5784,9 +5784,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `freq_array_dup_cap1`, `freq_struct_dup_cap1`, `freq_struct_with_map_default`,
   `freq_array_of_map_default`, `freq_null_map_default`, `freq_null_map_cap1`,
   `freq_null_and_value_map_default`, `freq_empty_map_default` in
-  `python/repark/tests/facade_df_rust3_oracle.json`.)*
-- **Pin** — `python/repark/tests/test_df_rust3_freqitems_transpose.py` (freq pins),
-  `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_answers`
+  `python/repark/tests/dataframe/facade_df_rust3_oracle.json`.)*
+- **Pin** — `python/repark/tests/dataframe/test_df_rust3_freqitems_transpose.py` (freq pins),
+  `python/repark/tests/parity/test_examples_dataframe_d.py::test_stat_freq_items_answers`
 - **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-1..R-6); float-key equality
   remediated 2026-09-16 (R-9), map-key identity the same day (R-13), and the NULL-map
   narrowing immediately after (R-14). Recorded divergences: int `support` is accepted as
@@ -5821,8 +5821,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `transpose_missing_index`, `transpose_too_many`, `transpose_sql`,
   `transpose_binary_invalid_utf8`, `transpose_binary_invalid_utf8_repr`,
   `transpose_binary_null_index` in
-  `python/repark/tests/facade_df_rust3_oracle.json`.)*
-- **Pin** — `python/repark/tests/test_df_rust3_freqitems_transpose.py` (transpose pins)
+  `python/repark/tests/dataframe/facade_df_rust3_oracle.json`.)*
+- **Pin** — `python/repark/tests/dataframe/test_df_rust3_freqitems_transpose.py` (transpose pins)
 - **Rationale** — IMPLEMENTED 2026-09-15 (DF-RUST-3, rulings R-7/R-8); the U+FFFD binary
   index rendering landed 2026-09-16 (R-10). One recorded divergence: the duplicate-index
   dict view accepts either legal value order because Spark's own `Row.asDict` last-wins
@@ -5845,7 +5845,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `planintro_local_data_same_data_same_semantics`,
   `planintro_df_filter_vs_sql_where`, `planintro_select_all_named_vs_df` and the
   sibling `planintro_*` cells in `facade_dataframe_surface_oracle.json`.)*
-- **Pin** — `python/repark/tests/test_df_plan_introspect_1.py::test_inputfiles_iceberg_scan_is_empty`,
+- **Pin** — `python/repark/tests/dataframe/test_df_plan_introspect_1.py::test_inputfiles_iceberg_scan_is_empty`,
   `…::test_semantichash_df_filter_matches_sql_where`,
   `…::test_semantichash_identity_selects_match_frame`
 - **Rationale** — IMPLEMENTED 2026-09-15 (DF-PLAN-INTROSPECT-1 follow-up round 2,
@@ -5862,7 +5862,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   plan: both pairs answer unequal hashes and `sameSemantics` False. *(oracle: live PySpark 4.1.2, 2026-09-15, cells
   `planintro_r4_sql_cast_in_filter_vs_plain`, `planintro_r4_sql_cast_in_case_vs_plain` in
   `facade_dataframe_surface_oracle.json`.)*
-- **Pin** — `python/repark/tests/test_df_plan_introspect_1.py::test_semantichash_sql_door_user_widening_cast_divergence`
+- **Pin** — `python/repark/tests/dataframe/test_df_plan_introspect_1.py::test_semantichash_sql_door_user_widening_cast_divergence`
 - **Rationale** — BACKLOG, filed by DF-PLAN-INTROSPECT-1 round 4 (ruling R-19). The hash cannot tell identical inputs
   apart; the fix is SQL-door integer literal typing (the seam FNP9-ARRAY-INSERT-BIGINT-1 names: literals narrow in
   `SparkIntegerLiteral` only after coercion), owned by the SQL planner. The pin reds when that lands; retire this row
@@ -5886,15 +5886,15 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   (`orc_glob_filter*`, `orc_nested_*`, `orc_modified_*`).
 - **Apache Spark** — reads and writes ORC, including nested array/map/struct columns, decimals,
   dates, timestamps, and the zstd default compression. *(oracle: live PySpark 4.1.2 classic,
-  run 16b, 2026-09-15, `python/repark/tests/facade_orc_oracle.json`, 43 cells; the
+  run 16b, 2026-09-15, `python/repark/tests/io/facade_orc_oracle.json`, 43 cells; the
   `orc_codec_brotli` cell records Spark itself failing without the brotli native library, so
   no repark pin claims brotli.)*
-- **Pin** — `python/repark/tests/test_io_orc_1.py` (45 pins, red-first).
+- **Pin** — `python/repark/tests/io/test_io_orc_1.py` (45 pins, red-first).
 - **Writer** — `DataFrameWriter.orc(path, mode, partitionBy, compression)` and
   `format("orc").save(…)` stay declared: `PySparkNotImplementedError` with errorClass
   `NOT_IMPLEMENTED` and `{"feature": "orc"}`, str `[NOT_IMPLEMENTED] orc is not implemented.`
   — at the call for the shorthand method, at `save()` for the `format` spelling.
-  Pin — `python/repark/tests/test_io_declared_1.py::test_writer_orc_refuses_at_the_call`,
+  Pin — `python/repark/tests/io/test_io_declared_1.py::test_writer_orc_refuses_at_the_call`,
   `…::test_writer_format_orc_refuses_at_save`.
 - **Rationale** — DELIVERED 2026-09-16 (run 18b), owner ruling Q-15B-1 (orc-rust 0.8.0,
   pin `parsers` out of the tree). The old reader refusal pins
@@ -5953,7 +5953,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   missing-path check precedes the `rowTag` check — cell `xml_read_no_rowtag` answers
   `PATH_NOT_FOUND` — so the declared refusal's rowTag-first answer applies to paths Spark
   would resolve.)*
-- **Pin** — `python/repark/tests/test_io_declared_1.py::test_reader_xml_without_row_tag_refuses`,
+- **Pin** — `python/repark/tests/io/test_io_declared_1.py::test_reader_xml_without_row_tag_refuses`,
   `…::test_reader_xml_with_row_tag_refuses`, `…::test_reader_format_xml_row_tag_from_options`,
   `…::test_writer_xml_without_row_tag_refuses`, `…::test_writer_xml_with_row_tag_refuses`.
 - **Rationale** — DECLARED (R-1, 2026-09-14). BACKLOG 2026-09-14: reachable in Rust; needs an
@@ -6001,14 +6001,14 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   PySpark 4.1.2, run 15b. The recorded read cells used a driverless PostgreSQL URL, which
   repark answers by reading; the declared refusal is the answer for the other drivers'
   JVM-driver path.)*
-- **Pin** — `python/repark/tests/test_pg_jdbc_options.py::test_jdbc_dbtable_from_properties_is_forwarded`,
+- **Pin** — `python/repark/tests/io/test_pg_jdbc_options.py::test_jdbc_dbtable_from_properties_is_forwarded`,
   `…::test_jdbc_camel_case_keywords_reach_read_postgres`, `…::test_jdbc_snake_case_aliases_reach_read_postgres`,
   `…::test_jdbc_both_keyword_spellings_raise_typeerror`, `…::test_jdbc_postgres_alias_url_reaches_read_postgres`,
   `…::test_jdbc_postgres_jdbc_scheme_still_refuses_not_implemented`, `…::test_jdbc_predicates_xor_range`,
   `…::test_jdbc_empty_predicates_fails` (the read path); live
   `python/repark-parity/tests/live_db/test_c2_read.py::test_read_jdbc_and_format_postgres_match_the_mount`,
   `…::test_a_partitioned_read_refuses_naming_its_row` (the connector, C-2d);
-  `python/repark/tests/test_io_declared_1.py::test_reader_jdbc_non_postgres_urls_refuse_at_the_call`,
+  `python/repark/tests/io/test_io_declared_1.py::test_reader_jdbc_non_postgres_urls_refuse_at_the_call`,
   `…::test_reader_jdbc_non_postgres_props_refuse_at_the_call`,
   `…::test_writer_jdbc_refuses_after_the_mode_check`,
   `…::test_writer_jdbc_bad_mode_is_invalid_save_mode`,
@@ -6033,7 +6033,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Apache Spark** — `compression="gzip"` writes `part-*.txt.gz` files. *(oracle: live
   PySpark 4.1.2, local[2], UTC, 2026-09-14, run 15b `facade_reader_writer_oracle.json`
   `text_compression` cell.)*
-- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_compression_gzip_refused`
+- **Pin** — `python/repark/tests/io/test_io_text_1.py::test_text_compression_gzip_refused`
 - **Rationale** — DECLARED, 2026-09-14 (io-text-1). Revisit when the workspace vendors a
   compressor; the pin then flips to Spark's `.txt.gz` listing.
 
@@ -6043,7 +6043,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   (`table 'datafusion.text.<path>' not found`). The path-format table route belongs to the
   SQL planner lane, so this unit pins today's refusal instead of teaching it.
 - **Apache Spark** — answers the file's lines as `struct<value:string>`.
-- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_sql_door_pins_today_refusal`
+- **Pin** — `python/repark/tests/io/test_io_text_1.py::test_text_sql_door_pins_today_refusal`
 - **Rationale** — DECLARED, 2026-09-14 (io-text-1). The pin reds the day the planner
   routes `text.` paths, and the row retires with it.
 
@@ -6081,7 +6081,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   part per key, every row) and under a 512 MiB pool (17.3 s / 708 MiB
   peak, 8 spills).
 - **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
-- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
+- **Pin** — `python/repark/tests/io/test_io_text_1.py::test_text_probe_partition_by`
   (leaf bytes plus `_SUCCESS`) and `::test_text_probe_partition_by_two_remaining`
   (the verbatim 1290 text, destination absent, plus its `_LEGACY_ERROR_TEMP_1290`
   condition — round 3, ruling U-10); `crates/repark-core/src/text_partition.rs::text_partition_evicted_key_appends_to_same_part`
@@ -6097,7 +6097,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   plus `::text_partition_fallback_splits_pool_busting_batches` and
   `::tail_rechunk_splits_only_oversized_batches` (round 7, ruling Z-2: the
   rechunk contract — red without the split, green with it)
-  and `python/repark/tests/test_io_text_2.py::test_text_partition_fallback_holds_one_part_per_leaf`.
+  and `python/repark/tests/io/test_io_text_2.py::test_text_partition_fallback_holds_one_part_per_leaf`.
 - **Rationale** — FIXED, 2026-09-15 (io-text-1 follow-up).
   pins: io-text-1/T-6, X-4, Y-1, Z-2
 
@@ -6133,7 +6133,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   here).
 - **Apache Spark** — PySpark 4.1.2 classic; all four methods implemented per the
   recorded probe (`probe_dfsubq.py`, run 16b, 2026-09-15).
-- **Pin** — `python/repark/tests/test_df_subquery_1.py` (every `scalar_*`, `exists_*`,
+- **Pin** — `python/repark/tests/dataframe/test_df_subquery_1.py` (every `scalar_*`, `exists_*`,
   `lateral_*`, `astable_*`, `outer_*` cell of `facade_df_subquery_oracle.json`);
   `crates/repark-core/src/session/tests/subquery.rs` (rule-level pins).
 - **Rationale** — FIXED. The `getCondition` gap on engine-raised refusals and the
@@ -6178,7 +6178,7 @@ new dated decision; a BACKLOG row is retired when the fix lands. Either way the 
 proves the Spark behavior *still differs*, so a silent convergence reds instead of being laundered
 into "parity" ([testing.md](testing.md) "The live oracle tier"). A row that the tier can express
 carries `live-mirror: <name>`, and
-`python/repark/tests/test_parity_live.py::test_disclosures_mirror_the_registry` checks the two
+`python/repark/tests/parity/test_parity_live.py::test_disclosures_mirror_the_registry` checks the two
 sides against each other in both directions — a name on one side and not the other is RED. The
 mirror keys on the **field**, not on the row's class: a BACKLOG row can be live-mirrored (BL-2 is),
 and a DECLARED row need not be (TY-3 is not, because the live tier has no scenario for it).
@@ -6188,7 +6188,7 @@ form is a contract, and a row author edits *this* file rather than the test. A r
 **top-level list item and nothing else on the line**: a `- ` at column zero, then — inside one
 pair of backticks — the field name, a colon, a single space, and the name; then end of line. The
 name matches `[a-z0-9_]+` (lower-case, digits and underscores; **no hyphens**). The compiled form
-is `python/repark/tests/test_parity_live.py::_LIVE_MIRROR_RE`, and the live-mirrored rows in this
+is `python/repark/tests/parity/test_parity_live.py::_LIVE_MIRROR_RE`, and the live-mirrored rows in this
 document are its worked examples.
 
 Anything else is a **near-miss** and reds loud, naming the offending line: an indented bullet, a
@@ -6235,12 +6235,12 @@ the pin rather than obeying it.
 - **Apache Spark** — session `currentCatalog` / `currentNamespace` with the same
   statements and answers.
   *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20;
-  `python/repark/tests/ice_catalog_session_1_oracle.json`, transcribed verbatim from the
+  `python/repark/tests/iceberg/ice_catalog_session_1_oracle.json`, transcribed verbatim from the
   inventory cells plus the `F.show_columns*` / `F.td_props` / `F.rename_result` /
   `F.show_tables_after_use` / `F.unqualified_select` / `F.cache_then_insert_then_read`
   probes.)*
 - **Pin** — the eleven `*_cell` replays in
-  `python/repark/tests/test_ice_catalog_session_1.py`
+  `python/repark/tests/iceberg/test_ice_catalog_session_1.py`
   (`test_current_catalog_answers_spark_catalog`, `test_use_catalog_ns_cell`,
   `test_show_catalogs_lists_registered`, `test_refresh_table_cell`,
   `test_cache_table_cell`, `test_show_columns_is_declaration_order`,
@@ -6260,7 +6260,7 @@ the pin rather than obeying it.
   *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20; `F.show_catalogs`
   vs the `CAT-SHOW-CATALOGS` cell.)*
 - **Pin** —
-  `python/repark/tests/test_ice_catalog_session_1.py::test_show_catalogs_lists_untouched_configured_catalog`
+  `python/repark/tests/iceberg/test_ice_catalog_session_1.py::test_show_catalogs_lists_untouched_configured_catalog`
 - **Rationale** — BACKLOG, deliberate (INDEX 26): closing it needs first-touch tracking
   per catalog, and the leniency only ever shows more names, never fewer.
   pins: ice-catalog-session-1/C-015
@@ -6273,7 +6273,7 @@ the pin rather than obeying it.
 - **Apache Spark** — a Hadoop catalog writes `version-hint.text` and `vN.metadata.json`
   names; that naming is load-bearing for `rewrite_table_path` (ipi-30-31 A-8).
 - **Pin** —
-  `python/repark/tests/test_ice_catalog_session_1.py::test_hadoop_alias_writes_versioned_metadata_names`
+  `python/repark/tests/iceberg/test_ice_catalog_session_1.py::test_hadoop_alias_writes_versioned_metadata_names`
 - **Rationale** — FIXED 2026-09-26 (RP-54, fork #359). BACKLOG, deliberate (INDEX 25): the
   `vN` naming mattered for `rewrite_table_path` (ipi-30-31 A-8), and the fork now publishes it.
   pins: ice-catalog-session-1/C-025
@@ -6332,7 +6332,7 @@ the pin rather than obeying it.
   three property variants, probed at 1, 5, 20, 50, 99, 100, 101, 110, 120.
   *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19; producer mapping
   disassembled with `javap -p -c` from `iceberg-spark-runtime-4.1_2.13:1.11.0`.)*
-- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_by_name_append_series_matches_spark`
+- **Pin** — `python/repark/tests/writes/test_ice_merge_append_1.py::test_by_name_append_series_matches_spark`
   (all three variants) and
   `crates/repark-iceberg/src/tests/merge_append_series.rs::defaults_series_matches_spark`,
   `…::min_count_to_merge_series_matches_spark`, `…::merge_disabled_series_matches_spark`
@@ -6352,7 +6352,7 @@ the pin rather than obeying it.
   at the hundredth default append `manifests-created=1, manifests-kept=0, manifests-replaced=99`;
   at the hundred-and-first `1 / 1 / 0`. *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0,
   2026-09-19, `ice_merge_append_1_truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_merging_commit_stamps_the_manifests_summary_keys`
+- **Pin** — `python/repark/tests/writes/test_ice_merge_append_1.py::test_merging_commit_stamps_the_manifests_summary_keys`
   (strict xfail: it flips to a failure the moment the fork lands the keys)
 - **Rationale** — FIXED by the fork, as routed. The keys were never synthesised in RePark: a
   hand-rolled count that drifted from what the fork's merge actually did would have been worse
@@ -6372,7 +6372,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the bare `INSERT INTO` **is** `SparkWrite$BatchAppend`, the merging producer:
   the hundredth default append leaves ONE manifest. *(oracle: recorded, live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-19.)*
-- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_bare_insert_into_now_merges_through_the_fork_commit_exec`
+- **Pin** — `python/repark/tests/writes/test_ice_merge_append_1.py::test_bare_insert_into_now_merges_through_the_fork_commit_exec`
   (Spark's ONE manifest after the hundredth append, beside the kept `IcebergCommitExec` plan node) and
   `…::test_bare_insert_into_merges_like_spark` (un-xfailed at RP-54)
 - **Rationale** — FIXED by the fork ask **`ICE-MERGE-APPEND-COMMITEXEC`** (fork #361,
@@ -6401,7 +6401,7 @@ the pin rather than obeying it.
   `isolation-level` (`snapshot`/`serializable`) overrides the table property on
   the overwrite family. Spark parses the option only on the overwrite and replace doors, and
   RePark matches it door by door (measured 2026-09-25, `iso_*` and `vf_bad_*` shapes in
-  `python/repark/tests/ice_write_df_1_spark_oracle.json`): `writeTo(t).overwrite(condition)`,
+  `python/repark/tests/writes/ice_write_df_1_spark_oracle.json`): `writeTo(t).overwrite(condition)`,
   `overwritePartitions()`, `saveAsTable` overwrite, `insertInto(overwrite=True)` (static and
   dynamic), `replace()` and `createOrReplace()` (with or without a table) refuse
   `Invalid isolation level: <value>` for `none` or any other unknown value (Spark's text,
@@ -6431,14 +6431,14 @@ the pin rather than obeying it.
   door has no snapshot-property channel on either engine (measured: a
   `spark.sql.iceberg.write.snapshot-property.*` conf does not reach the summary).
 - **Apache Spark** — the recorded cells in
-  `python/repark/tests/ice_write_options_1_spark_oracle.json` (live PySpark 4.1.2 +
+  `python/repark/tests/writes/ice_write_options_1_spark_oracle.json` (live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-17): prefix strip and lower-case (upper-case suffix lands
   lower-cased; empty suffix commits an `""` key), per-snapshot scope, orc/avro files
   for those formats, `NumberFormatException` for a bad size, Hadoop-enum failure for
   gzip plus an integer level, `Invalid distribution mode` / `Invalid isolation level`
   refusals, `ValidationException` on a serializable conflict, lenient booleans, silent
   unknown keys, and the SQL-door conf absence.
-- **Pin** — `python/repark/tests/test_ice_write_options_1.py` (offline over the
+- **Pin** — `python/repark/tests/writes/test_ice_write_options_1.py` (offline over the
   fixture; the live tier re-runs all three record drivers and checks the fixture);
   `crates/repark-spark/src/write_options.rs` (out-of-band pair validation units,
   `isolation_level_passes_through_unparsed_like_spark` and
@@ -6446,9 +6446,9 @@ the pin rather than obeying it.
   staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`
   (`writer_props.rs::isolation_override_none_refuses_like_spark`); the `none` refusal on
   the facade is
-  `python/repark/tests/test_ice_write_df_2_overwrite.py::test_validate_from_snapshot_residues[vf_bad_id_level_none]`
+  `python/repark/tests/writes/test_ice_write_df_2_overwrite.py::test_validate_from_snapshot_residues[vf_bad_id_level_none]`
   (Spark's text; the class is EX-W2-1's R-4), and the door-by-door answers are
-  `python/repark/tests/test_ice_write_df_2_doors.py::test_isolation_level_is_ignored_where_spark_ignores_it`
+  `python/repark/tests/writes/test_ice_write_df_2_doors.py::test_isolation_level_is_ignored_where_spark_ignores_it`
   and `::test_isolation_level_refuses_on_the_overwrite_and_replace_doors`.
 - **Rationale** — FIXED for the measured option set. Two residuals stay named here, not
   pinned as parity: (a) required-field nullability is not asserted on write, so
@@ -6548,7 +6548,7 @@ the pin rather than obeying it.
   the declared order and stamp its id, as in WRITE-ORDER-SORTED-INSERT-1. *Column lists
   (Q-22b-WO-5).* The writers' `INSERT INTO t (cols)` form, and a SQL-channel column list,
   land with the property. Omitted columns take the `write_default` fill.
-  Pin: `python/repark/tests/test_ice_write_options_1_rebase.py` (WO-DYN-01…06, WO-RTAS-01/02,
+  Pin: `python/repark/tests/writes/test_ice_write_options_1_rebase.py` (WO-DYN-01…06, WO-RTAS-01/02,
   WO-SORT-01, WO-APP-01/02).
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 
@@ -6572,12 +6572,12 @@ the pin rather than obeying it.
   `W-DF-OPT-OUTPUT-SPEC-ID` (`specs [[0, 2]]` after `ADD PARTITION FIELD cat`) and the step-1
   and round-2 shapes in `ice_write_df_1_spark_oracle.json` (`dyn_overwrite_old_part_spec0`:
   rows 2, 7, 8, `specs [[0, 3]]`). Pins:
-  `python/repark/tests/test_ice_write_df_1.py::test_output_spec_id_writes_under_the_old_spec`,
+  `python/repark/tests/writes/test_ice_write_df_1.py::test_output_spec_id_writes_under_the_old_spec`,
   `::test_output_spec_id_reaches_every_writer`,
   `::test_output_spec_id_writes_partitioned_files_under_an_old_partitioned_spec`,
   `::test_output_spec_id_refusals`, `::test_output_spec_id_parses_like_java_integer`,
   `::test_output_spec_id_current_and_absent_land_under_the_current_spec`;
-  `python/repark/tests/test_ice_write_df_1_edges.py::test_dynamic_overwrite_replaces_partitions_of_the_staged_spec`,
+  `python/repark/tests/writes/test_ice_write_df_1_edges.py::test_dynamic_overwrite_replaces_partitions_of_the_staged_spec`,
   `::test_dynamic_overwrite_of_an_unpartitioned_staged_spec_replaces_everything`,
   `::test_output_spec_id_on_a_replacing_write_resolves_in_the_replacement`,
   `::test_output_spec_id_on_a_create_and_an_unknown_replacement_spec`,
@@ -6596,7 +6596,7 @@ the pin rather than obeying it.
   marker, as Java's `SnapshotProducer` applies user `set(...)` properties last (the
   cherry-pick path reads the key case-insensitively). Not a collision: the run-22b
   verification critic's premise that Spark refuses it was measured wrong.
-- **Pin** — `python/repark/tests/test_ice_write_options_rp_1.py` (one test per recorded
+- **Pin** — `python/repark/tests/writes/test_ice_write_options_rp_1.py` (one test per recorded
   cell: the write commits and the newest summary's `replace-partitions` — and `k` for
   the control — equals Spark's; the live tier re-derives one cell on Spark).
   pins: ice-write-options-rp-1/C-007
@@ -6742,7 +6742,7 @@ the pin rather than obeying it.
     Re-recorded on live Spark: the only delta is this observation on the seven `QR-*` cells
     that commit a snapshot.
 - **Apache Spark** — the recorded cells in
-  `python/repark/tests/ice_session_write_conf_1_spark_oracle.json` (live
+  `python/repark/tests/writes/ice_session_write_conf_1_spark_oracle.json` (live
   PySpark 4.1.2 + Iceberg 1.11.0: 16 SP + 9 CZ cells 2026-09-18, plus 38
   `QS-*` / `QZ-*` / `QR-*` path cells 2026-09-19 run 25c — 63 in all): `team=a`
   stamped on every committed snapshot, two keys at once, empty value stamps
@@ -6759,10 +6759,10 @@ the pin rather than obeying it.
   with `IllegalArgumentException: Multiple entries with same key: <k>=<engine> and
   <k>=<property>` on an actual collision while a free key is stamped and feeds the
   totals (`deleted-records=5` takes `total-records` to 3+3-5=1).
-- **Pin** — `python/repark/tests/test_ice_session_write_conf_1.py` (one pin
+- **Pin** — `python/repark/tests/writes/test_ice_session_write_conf_1.py` (one pin
   per SP / CZ cell on the facade SQL / DataFrame doors, v2 and v3 twins; the live tier
   re-derives the whole 63-cell fixture under `REPARK_PARITY_LIVE=1`);
-  `python/repark/tests/test_ice_session_write_conf_1_paths.py` (the 38 path cells, driven
+  `python/repark/tests/writes/test_ice_session_write_conf_1_paths.py` (the 38 path cells, driven
   from the same statement tuples the recorder uses so pin and re-recording cannot drift);
   `crates/repark-iceberg/src/tests/session_write_conf.rs` (resolver precedence
   carrier, 11 tests), `crates/repark-spark/src/tests/session_write_conf.rs`
@@ -6966,10 +6966,10 @@ the pin rather than obeying it.
 - **Apache Spark** — writes ORC / AVRO data files for those values (recorded
   `FORMAT-02` / `FORMAT-03`); `bogus` refuses with `IllegalArgumentException: Invalid
   file format: bogus`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_ice_write_options_1.py::test_write_format_orc_writes`
+- **Pin** — `python/repark/tests/writes/test_ice_write_options_1.py::test_write_format_orc_writes`
   and `::test_write_format_avro_writes` (exact suffix plus `file_format` ORC / AVRO),
   with the S6 option-door twins
-  `python/repark/tests/test_ice_orc_avro_1.py::test_write_format_option_orc` and
+  `python/repark/tests/writes/test_ice_orc_avro_1.py::test_write_format_option_orc` and
   `::test_write_format_option_avro`.
 - **Rationale** — SERVED 2026-09-22 (RP-47: fork#344 `AnyFileWriter` seam at pin
   `604edca0`, per-write option > table property > parquet through `resolve_data_format`,
@@ -6989,8 +6989,8 @@ the pin rather than obeying it.
   with no `url` answers `IllegalArgumentException: requirement failed: Option 'url' is required.` *(oracle: live PySpark
   4.1.2, 2026-09-15, run 16b probe cells `jdbc_format_mysql_url`, `jdbc_format_no_url`, `jdbc_method_mysql_url`,
   `jdbc_format_postgres_url_refused_conn`.)*
-- **Pin** — `python/repark/tests/test_registry_16b_1.py::test_format_jdbc_non_postgres_url_is_not_the_declared_refusal`,
-  `python/repark/tests/test_registry_16b_1.py::test_format_jdbc_missing_url_names_postgres`
+- **Pin** — `python/repark/tests/session/test_registry_16b_1.py::test_format_jdbc_non_postgres_url_is_not_the_declared_refusal`,
+  `python/repark/tests/session/test_registry_16b_1.py::test_format_jdbc_missing_url_names_postgres`
 - **Rationale** — BACKLOG, owner ruling Q-15B-4 (2026-09-15): the alias applies the same URL dispatch as
   `spark.read.jdbc` in the 1.6 native connector work; recorded now so the two doors' difference has one home. The
   format-door pin reds when the dispatch lands.
@@ -7015,7 +7015,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the three aggregates answer the recorded cells `F6D-*`
   (`fixtures-batch3.json`, 2026-09-14) and `B8-*` (`fixtures-batch8.json`,
   live PySpark 4.1.2, 2026-09-15). Spark re-scans a sliding frame.
-- **Pin** — `python/repark/tests/test_fnp_6d_bitmap_aggregates.py` (C-001..C-006,
+- **Pin** — `python/repark/tests/functions/test_fnp_6d_bitmap_aggregates.py` (C-001..C-006,
   C-011..C-015); `crates/repark-functions/src/bitmap_agg.rs` kernel tests of
   the same cells; `crates/repark-functions/src/bitmap_agg/groups.rs` (C-016,
   C-017).
@@ -7023,10 +7023,10 @@ the pin rather than obeying it.
   and window shapes. Facade Python names landed 2026-09-15 (FNP-BITMAP-FACADE-1):
   `F.bitmap_construct_agg` / `F.bitmap_or_agg` / `F.bitmap_and_agg` are one-line wrappers
   over the same UDAFs through `unary_aggregate_udaf`, pinned against the same oracle cells
-  in `python/repark/tests/test_fnp_bitmap_facade_1.py`.
+  in `python/repark/tests/functions/test_fnp_bitmap_facade_1.py`.
 - **Residuals (FNP-6D-FOLLOWUP-1, 2026-09-15).** The followup closes the L-001/L-003
   signature gaps against the recorded `FU-*` cells
-  (`python/repark/tests/fnp_6d_followup_1_spark_oracle.json`, live PySpark 4.1.2):
+  (`python/repark/tests/functions/fnp_6d_followup_1_spark_oracle.json`, live PySpark 4.1.2):
   OR/AND refuse every non-BINARY payload and construct refuses every non-BIGINT
   payload at planning with Spark's class, required type, Spark type name, and
   `SQLSTATE: 42K09`; malformed STRING raises Spark's `CAST_INVALID_INPUT` text with
@@ -7047,7 +7047,7 @@ the pin rather than obeying it.
   Spark since FNP-4B (#611, root-projection display names). The `spark.sql` leak is
   systemic (every unaliased SQL function over a view column shows it) and owned by the
   SQL door (run 16c) — pinned as an expected divergence by
-  `python/repark/tests/test_fnp_bitmap_facade_1.py::test_sql_door_qualifier_leak_is_expected_divergence`
+  `python/repark/tests/functions/test_fnp_bitmap_facade_1.py::test_sql_door_qualifier_leak_is_expected_divergence`
   (its `selectExpr` half now asserts Spark's name), which reds when the `spark.sql` door converges.
 
 ### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
@@ -7060,14 +7060,14 @@ the pin rather than obeying it.
   round 2 (2026-09-07), when the lineage walk went multi-hop; the round-1 nullable
   instance converged.
 - **Apache Spark** — those measured fields are non-null; values agree. The exact recursive
-  schemas are recorded in `python/repark/tests/fnp8_spark_oracle.json`.
+  schemas are recorded in `python/repark/tests/functions/fnp8_spark_oracle.json`.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
-- **Pin** — `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
+- **Pin** — `python/repark/tests/functions/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
   (`forms-forall`, `forms-transform_keys`, `forms-transform_values`, `forms-map_filter`,
   `forms-map_zip_with`, `binding-map_third_slot`, `binding-capture`, `binding-shadow`,
   `binding-struct` Column cells). The same module's `test_live_fnp8_recorded_oracle`
   remeasures every Spark field.
-  `python/repark/tests/test_fnp_8_sql_door.py::test_table_backed_lambda_body_literals_answer_int32`
+  `python/repark/tests/functions/test_fnp_8_sql_door.py::test_table_backed_lambda_body_literals_answer_int32`
   holds both doors Spark-equal (the round-1 nullable Column-view instance converged
   in round 2).
   Round 3 (2026-09-07) names one more staying shape: a HOF over the PADDED side of an
@@ -7075,7 +7075,7 @@ the pin rather than obeying it.
   same) answers nullable elements where Spark derives `not null`; values agree. The
   nullable element is deliberate: dropping the Join-arm padding guard hard-errors
   (`Column 'r' is declared as non-nullable but contains null values`).
-  `python/repark/tests/test_fnp_8_sql_door.py::test_outer_join_padded_side_answers_nullable`
+  `python/repark/tests/functions/test_fnp_8_sql_door.py::test_outer_join_padded_side_answers_nullable`
   holds the disclosed shape.
 - **Rationale** — BACKLOG (2026-09-07). These metadata differences predate the resumed repair.
   Public indexed-transform and `exists` metadata regressions are repaired in FNP-8; these
@@ -7093,8 +7093,8 @@ the pin rather than obeying it.
   Int32 in FNP-8-REVIEW (2026-09-07); the matrix cells assert Spark equality now.
 - **Apache Spark** — all these measured results have Int32 elements, with equal values.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
-- **Pin** — `python/repark/tests/test_parity_live_fnp8.py` holds the indexed source distinction.
-  `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
+- **Pin** — `python/repark/tests/parity/test_parity_live_fnp8.py` holds the indexed source distinction.
+  `python/repark/tests/functions/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
   holds `forms-transform_index` `sql_columns` and `binding-nested_array` Column cells;
   `test_live_fnp8_recorded_oracle` remeasures Spark.
 - **Rationale** — BACKLOG (2026-09-07). These wider paths were present before the repair.
@@ -7113,11 +7113,11 @@ the pin rather than obeying it.
   requires at least one argument, before the null-key kernel validator runs.
 - **Apache Spark** — the struct transform returns the incremented fields, and the typed-map
   expressions return empty maps or NULL maps. Exact values and schemas are recorded in
-  `python/repark/tests/fnp8_spark_oracle.json`. Bare `map()` collects as `{}`, but Spark
+  `python/repark/tests/functions/fnp8_spark_oracle.json`. Bare `map()` collects as `{}`, but Spark
   Arrow export refuses its NullType key (`A null type field may not be non-nullable`);
   this collect diagnostic is not an Arrow-parity claim.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
-- **Pin** — `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
+- **Pin** — `python/repark/tests/functions/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
   holds `binding-struct` SQL/expr (exception class and diagnostic) and the six map
   `empty`/`null` SQL/expr cells (Spark-equal schemas since 2026-09-19). `test_live_fnp8_recorded_oracle` remeasures Spark.
   `test_fnp8_sql_text_error_dispositions` and `test_live_fnp8_empty_map_collect_diagnostic`
@@ -7136,9 +7136,9 @@ the pin rather than obeying it.
   `INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH`, including SQL lambdas with four parameters.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
 - **Pin** — `crates/repark-spark/src/tests/lambda_door.rs::sql_door_overlong_lambdas_divergence_df_plan_time_text`
-  and `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_sql_text_error_dispositions`.
+  and `python/repark/tests/functions/test_fnp8_oracle_matrix.py::test_fnp8_sql_text_error_dispositions`.
   `test_live_fnp8_sql_error_oracle` remeasures the shared Spark expression grammar.
-  Column counts are pinned in `python/repark/tests/test_fnp4c_higher_order.py`.
+  Column counts are pinned in `python/repark/tests/functions/test_fnp4c_higher_order.py`.
 - **Rationale** — BACKLOG (2026-09-07). Matching SQL errors needs validation before DataFusion
   binds the lambda. The newly introduced Column regression was repaired; the newly enabled
   SQL surface retains a measured, named diagnostic difference.
@@ -7175,7 +7175,7 @@ the pin rather than obeying it.
 > FIXED — a stale frame keeps its analysis snapshot), and `SET TIME ZONE LOCAL` is a dated
 > DECLARED refusal
 > ([SET-TZ-LOCAL-1](#set-tz-local-1--set-time-zone-local-is-refused-repark-never-reads-the-host-zone)).
-> Pins: `python/repark/tests/test_sql_set_door_1.py`,
+> Pins: `python/repark/tests/sql/test_sql_set_door_1.py`,
 > `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-SET-CONF]`,
 > `crates/repark-functions/src/session_time_zone/tests.rs::current_timezone_*`.
 > Module: `python/repark/src/repark/spark/session/sql_set_statements.py`.
@@ -7194,8 +7194,8 @@ the pin rather than obeying it.
   the same `1/0` then answers NULL. *(oracle: measured — `fixtures-batch1.json` cell `BTZ5-8`,
   PySpark 4.1.2; re-measured 2026-09-15 in `fixtures-batch16-dc2rest-setansi.json` S16-0…S16-5.)*
 - **Pin** —
-  `python/repark/tests/test_sql_set_door_1.py::test_set_ansi_enabled_applies`,
-  `python/repark/tests/test_set_ansi_runtime_1.py` (S16-0…S16-5, C-001 F-API, BTZ5-7…10, S5-bool-*)
+  `python/repark/tests/sql/test_sql_set_door_1.py::test_set_ansi_enabled_applies`,
+  `python/repark/tests/session/test_set_ansi_runtime_1.py` (S16-0…S16-5, C-001 F-API, BTZ5-7…10, S5-bool-*)
 - **Rationale** — FIXED by SET-ANSI-RUNTIME-1 round 1 (the live path to the built engine's
   `SparkAnsiConfig` this row's BACKLOG named, paired with the runtime-applied session zone;
   owner Q-15c-3). Two narrow residues stay open: a stale frame's `current_timezone()`
@@ -7210,7 +7210,7 @@ the pin rather than obeying it.
   call folds at collect), while the value-bearing expressions keep the analysis snapshot.
   *(oracle: measured — `fixtures-batch16-dc2rest-setansi.json` cell S16-6, PySpark 4.1.2.)*
 - **Pin** —
-  `python/repark/tests/test_set_ansi_runtime_1.py::test_s16_6_stale_frame_split_binding`
+  `python/repark/tests/session/test_set_ansi_runtime_1.py::test_s16_6_stale_frame_split_binding`
   (pins `UTC` with the residue named in the docstring)
 - **Rationale** — DECLARED narrow residue. DataFusion `DataFrame`s hold the `sql()`-time
   `SessionState` clone, so writing the live state gives analysis-time binding for free and
@@ -7231,7 +7231,7 @@ the pin rather than obeying it.
   `fixtures-batch16-dc2rest-setansi.json` cell S16-2, PySpark 4.1.2; breadth measured
   2026-09-15 on this native, identical at build and at runtime.)*
 - **Pin** —
-  `python/repark/tests/test_set_ansi_runtime_1.py::test_s16_2_cast_x_still_raises_string_cast_residue`
+  `python/repark/tests/session/test_set_ansi_runtime_1.py::test_s16_2_cast_x_still_raises_string_cast_residue`
 - **Rationale** — DECLARED residue, broader than first drawn (2026-09-15 review: the row claimed
   only the string-cast case; the measured list above replaces it; 2026-09-15 night review adds
   `CAST('x' AS FLOAT)` to the follow-list and the remaining targets to the raise-list).
@@ -7251,7 +7251,7 @@ the pin rather than obeying it.
   `1970-01-01 05:30:30`). *(oracle: measured — `fixtures-batch17-zone-spellings.json`,
   PySpark 4.1.2.)*
 - **Pin** —
-  `python/repark/tests/test_runtime_zone_spellings_1.py::test_batch17_nonzero_seconds_is_declared_divergence`
+  `python/repark/tests/timestamps/test_runtime_zone_spellings_1.py::test_batch17_nonzero_seconds_is_declared_divergence`
 - **Rationale** — DATED DECLARED divergence (2026-09-15): Spark accepts, RePark refuses, said
   aloud here and never silent. The proof that implementation needs an out-of-fence change:
   Arrow `Tz::from_str` is the sole zone parse on every value-bearing engine path —
@@ -7283,7 +7283,7 @@ the pin rather than obeying it.
   `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CTAS-OPTIONS]`,
   with `::test_served_shapes_run[S-CTAS-PARTITIONED-BY]`, `[S-CTAS-CLUSTERED-BY]` and
   `[S-CTAS-LOCATION]` holding the served half,
-  `python/repark/tests/test_ice_ddl_clauses_1.py::test_clustered_by_is_not_silently_dropped`
+  `python/repark/tests/iceberg/test_ice_ddl_clauses_1.py::test_clustered_by_is_not_silently_dropped`
   pinning the `bucket[4]` spec in table metadata, and
   `python/dbt-repark/tests/test_gold_models.py::test_unsupported_ctas_clauses_refuse` holding the
   adapter's side
@@ -7341,7 +7341,7 @@ the pin rather than obeying it.
   Spark 4.1.2 + Iceberg 1.11.0 scoreboard cell `D-ALTER-COMMENT` and the WO U5 PR2 probes.)*
 - **Pin** —
   `crates/repark-spark/src/tests/column_comment_ddl.rs`,
-  `python/repark/tests/test_ice_ddl_alter_2.py`,
+  `python/repark/tests/iceberg/test_ice_ddl_alter_2.py`,
   `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-COLUMN-COMMENT]`
   and `[S-COLUMN-COMMENT-CHANGE]`, and
   `python/dbt-repark/tests/test_gold_models.py::test_column_documentation_sets_the_column_docs`
@@ -7372,7 +7372,7 @@ the pin rather than obeying it.
   row 33, cell `D-SET-LOCATION`); the served value claims above are pinned on RePark's side
   by the offline cell, not re-measured value-by-value against Spark.)*
 - **Pin** —
-  `python/repark/tests/test_ice_ddl_clauses_1.py::test_alter_table_set_location_moves_the_metadata_location`
+  `python/repark/tests/iceberg/test_ice_ddl_clauses_1.py::test_alter_table_set_location_moves_the_metadata_location`
   and, on the Rust side,
   `crates/repark-spark/src/tests/ice_ddl_clauses_1.rs::set_location_moves_the_metadata_location_and_the_next_commit_lands_under_it`
   plus `::set_location_near_misses_keep_their_own_routing` and
@@ -7411,8 +7411,8 @@ the pin rather than obeying it.
 - **Apache Spark** — moves the column (Java `UpdateSchema.moveFirst` / `moveBefore` /
   `moveAfter`: same field ids, new order, a new schema id; a no-op move commits nothing).
   *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, recorded in
-  `python/repark/tests/test_ice_column_reorder_1_truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_column_reorder_1.py` (17 offline vs the truth JSON on
+  `python/repark/tests/iceberg/test_ice_column_reorder_1_truth.json`.)*
+- **Pin** — `python/repark/tests/iceberg/test_ice_column_reorder_1.py` (17 offline vs the truth JSON on
   the facade SQL door with DataFrame-door reads, incl. the short-sibling move, the
   cross-struct and dotted-`AFTER` refusals, and the no-op-metadata pin; 17 live
   replaying Spark and cross-reading both engines' moved tables),
@@ -7436,7 +7436,7 @@ the pin rather than obeying it.
   the current one: no new schema, no new metadata file. *(oracle: truth cases `noop_first_v2`
   / `noop_after_v2`, metadata version and schema id unchanged.)*
 - **Pin** —
-  `python/repark/tests/test_ice_column_reorder_1.py::test_noop_moves_write_no_metadata_file`
+  `python/repark/tests/iceberg/test_ice_column_reorder_1.py::test_noop_moves_write_no_metadata_file`
   plus `crates/repark-sql/tests/alter_column_move.rs` (ANSI door: the no-op move leaves the
   metadata-file count unchanged).
 - **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (**F-UPDATE-SCHEMA-SAME-1**): a
@@ -7478,13 +7478,13 @@ the pin rather than obeying it.
   `org.apache.iceberg.exceptions.ValidationException` through `Py4JJavaError`, the table
   unchanged). *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
   `local[1]` + InMemoryCatalog, 2026-09-19, cells `RC-*` (v2 and v3),
-  `python/repark/tests/ice_replace_columns_1_spark_oracle.json`, re-derived by
-  `python/repark/tests/_record_ice_replace_columns_1_oracle.py`.)*
-- **Pin** — `python/repark/tests/test_ice_replace_columns_1.py` (one pin per measured cell:
+  `python/repark/tests/iceberg/ice_replace_columns_1_spark_oracle.json`, re-derived by
+  `python/repark/tests/iceberg/_record_ice_replace_columns_1_oracle.py`.)*
+- **Pin** — `python/repark/tests/iceberg/test_ice_replace_columns_1.py` (one pin per measured cell:
   field ids, required flags, `last-column-id`, schema count, schema, data, time travel; the
   refusal class and message; the table-untouched twin per refusal; the native-door refusal; the
   live re-derivation leg); `crates/repark-spark/src/tests/replace_columns.rs` (12 Rust twins);
-  `python/repark/tests/test_alter_table.py` (the facade row, flipped).
+  `python/repark/tests/iceberg/test_alter_table.py` (the facade row, flipped).
 - **Rationale** — FIXED, not declared: the fork's `UpdateSchema` already allows a delete and a
   same-name add in one batch, and already assigns fresh ids level-order; RePark only had to
   stop keeping the old id. Residues, both declared: (1) the refusal classes — Spark surfaces
@@ -7506,8 +7506,8 @@ the pin rather than obeying it.
   `iceberg-field-name`; manifests already written with a raw name read through a header repair.
 - **Apache Spark** — writes the sanitised record and reads the rows back. *(oracle: recorded —
   PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-19,
-  `python/repark/tests/ice_avro_name_1_spark_oracle.json`, 20 cells, v2 and v3.)*
-- **Pin** — `python/repark/tests/test_ice_avro_name_1.py` (rows, the `partitions` metadata
+  `python/repark/tests/writes/ice_avro_name_1_spark_oracle.json`, 20 cells, v2 and v3.)*
+- **Pin** — `python/repark/tests/writes/test_ice_avro_name_1.py` (rows, the `partitions` metadata
   table and the manifest's Avro partition record per cell; the live tier re-derives the
   fixture).
 - **Rationale** — FIXED. Table-format behaviour, fixed in the fork (rule 3).
@@ -7536,7 +7536,7 @@ the pin rather than obeying it.
   *(oracle: recorded — PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog,
   2026-09-17, `python/repark-parity/fixtures/torture/data/ice_nested_evo_1/oracle.json`, with
   the four Spark-written tables beside it; v2 and v3 identical.)*
-- **Pin** — `python/repark/tests/test_ice_nested_evo_1.py::test_adopted_spark_table_reads_match_spark`
+- **Pin** — `python/repark/tests/iceberg/test_ice_nested_evo_1.py::test_adopted_spark_table_reads_match_spark`
   (8 `fork292` cells, both doors), `…::test_nested_ddl_rows_match_spark` (`fork292` ids),
   `crates/repark-spark/src/tests/nested_column_ddl.rs::fork292_nested_add_reads_null_for_rows_written_before`.
 - **Rationale** — FIXED. A spec-legal Spark schema evolution made the table unreadable.
@@ -7573,7 +7573,7 @@ the pin rather than obeying it.
   required child with `SparkException` `_LEGACY_ERROR_TEMP_2045` caused by
   `IllegalArgumentException`: `Unsupported table change: Incompatible change: cannot add
   required column: r`. *(oracle: the same recording.)*
-- **Pin** — `python/repark/tests/test_ice_nested_evo_1.py::test_nested_ddl_schema_matches_spark`
+- **Pin** — `python/repark/tests/iceberg/test_ice_nested_evo_1.py::test_nested_ddl_schema_matches_spark`
   (every DDL cell, inserts skipped, both doors), `…::test_nested_ddl_rows_match_spark`,
   `…::test_required_nested_child_refuses_like_spark`,
   `crates/repark-spark/src/tests/nested_column_ddl.rs` (CREATE / DESCRIBE, evolution by
@@ -7600,7 +7600,7 @@ the pin rather than obeying it.
   42601 as Spark does (L-005, PROVEN); `MAP`, `STRUCT` and `ARRAY<STRUCT>` child types added
   under a struct take Spark's ids; a duplicate child and an unknown parent refuse with Spark's
   error class and text ([R-005](#ice-nested-ddl-1-r-005--fixed-2026-09-18-the-duplicate-child-and-unknown-parent-refusals)).
-  Pins: `python/repark/tests/test_ice_nested_evo_1_schema.py` (every schema cell, v2 and v3:
+  Pins: `python/repark/tests/iceberg/test_ice_nested_evo_1_schema.py` (every schema cell, v2 and v3:
   metadata, refusal, read shape; the DataFrame-door CREATE),
   `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs` (every recorded cell on the ANSI door),
   `crates/repark-spark/src/tests/nested_column_ddl.rs`,
@@ -7617,7 +7617,7 @@ the pin rather than obeying it.
 - **Apache Spark** — `Unsupported table change: Incompatible change: cannot add required
   column: r` (the Iceberg 1.11.0 message names the leaf and has no default clause; Spark's
   `SparkCatalog` adds the prefix). *(oracle: the same recording.)*
-- **Pin** — `python/repark/tests/test_ice_nested_evo_1.py::test_required_nested_child_message_matches_spark`
+- **Pin** — `python/repark/tests/iceberg/test_ice_nested_evo_1.py::test_required_nested_child_message_matches_spark`
   (v2, v3; a strict xfail until 2026-09-18), `crates/repark-sql/tests/ansi_nested_ddl_oracle.rs`
   (the ANSI twin compares the whole line), `crates/repark-iceberg/src/write/nested_column.rs`.
 - **Rationale** — FIXED. The fork's own text is unchanged (fork finding F-2 stays a fork-side
@@ -7702,7 +7702,7 @@ the pin rather than obeying it.
   relabels nested fields to the table's Iceberg types, so the element, key and value field
   ids reach the parquet footer, and `INSERT … VALUES` into nested columns plans.
 - **Apache Spark** — inserts the row (`list_add` cells of the ICE-NESTED-EVO-1 recording).
-- **Pin** — `python/repark/tests/test_ice_nested_evo_1.py::test_nested_ddl_rows_match_spark`
+- **Pin** — `python/repark/tests/iceberg/test_ice_nested_evo_1.py::test_nested_ddl_rows_match_spark`
   (`fork292-list_element_child_add_read` ids, plain passing pins),
   `crates/repark-spark/src/tests/nested_column_ddl.rs::forkwrite_list_insert_reads_back`,
   and the thirty ICE-ARRAY-INSERT-1 cells below.
@@ -7725,7 +7725,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the recorded 30 cells (PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-18,
   `python/repark-parity/fixtures/torture/data/ice_array_insert_1/spark_array_insert_oracle.json`).
-- **Pin** — `python/repark/tests/test_ice_array_insert_1.py::test_cell_matches_spark` (one id
+- **Pin** — `python/repark/tests/writes/test_ice_array_insert_1.py::test_cell_matches_spark` (one id
   per cell, all 30 plain pins running the recorded statement verbatim),
   `…::test_live_spark_reads_repark_table` (live tier: Spark adopts each RePark-written
   table and reads the recorded rows).
@@ -7760,7 +7760,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the recorded 128 cells (PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-18,
   `python/repark-parity/fixtures/torture/data/ice_list_null_1/spark_list_null_oracle.json`).
-- **Pin** — `python/repark/tests/test_ice_list_null_1.py::test_cell_answers_spark` (one id
+- **Pin** — `python/repark/tests/writes/test_ice_list_null_1.py::test_cell_answers_spark` (one id
   per cell; the 16 copy-on-write compound-predicate ids run the recorded statement
   verbatim as plain pins since ICE-LIST-NULL-2, with the 8 `xs IS NULL OR id = 1` ids
   pinning RePark's measured `overwrite` operation against Spark's `delete`),
@@ -7809,7 +7809,7 @@ the pin rather than obeying it.
   claim is retired: this repository has never recorded a non-ANSI NULL for this recipe, and the
   live session is ANSI ON. *(oracle: recorded — PySpark 4.1.2, ANSI on.)*
 - **Pin** — the oracle-backed home is now
-  `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 15 rows). The remaining
+  `python/repark/tests/types/test_cast_failure_parity.py` (G6 corpus; 15 rows). The remaining
   live divergences under ANSI ON are
   [CAST-NULL-1](#cast-null-1--non-decimal-cast-nullability-keeps-or-flips-the-child-where-spark-does-the-opposite)
   (explicit valid-literal→date/timestamp cells only, likewise nullability only;
@@ -7834,7 +7834,7 @@ the pin rather than obeying it.
 - **Apache Spark** — backticks are its own quoting spelling; the predicate simply filters.
   *(oracle: `<pyspark-4.1.2-oracle>` — cell `FNP4B-filter-bt`; brief-oracle agreement
   re-confirmed 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_backtick_quoted_identifier_is_a_protected_span`
+- **Pin** — `python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_backtick_quoted_identifier_is_a_protected_span`
 - **Rationale** — FIXED. The fix treats a backticked span the way a double-quoted span was
   already treated, exactly as this row prescribed; the old disclosed-hole pin flipped red→green
   with the fix.
@@ -7876,7 +7876,7 @@ the pin rather than obeying it.
 - **Apache Spark** — analysis-refuses BOOLEAN for both with
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` (`bin` requires BIGINT; `rint` requires DOUBLE).
   *(oracle: live — PySpark 4.1.2, 2026-08-18.)*
-- **Pin** — `python/repark/tests/test_functions_gt1.py::test_bin_bool_over_accepts_where_spark_refuses`
+- **Pin** — `python/repark/tests/functions/test_functions_gt1.py::test_bin_bool_over_accepts_where_spark_refuses`
   (covers both names).
 - **Rationale** — BACKLOG, intent to FIX (fail-loud on BOOLEAN before the cast). Deliberately kept
   out of the GT1-FIX PR (#180, round-2 ruling A4): wrong-answer classes outranked over-accepts in
@@ -7901,10 +7901,10 @@ the pin rather than obeying it.
 - **Apache Spark** — stringifies via Java `Double.toString`: `'Infinity'` (octet_length 8),
   `'1.0E21'` (octet_length 6). *(oracle: live — PySpark 4.1.2, 2026-08-19;
   cells `BL7-*` in `fixtures-batch1.json`, `JD-*` in `fixtures-batch4.json`.)*
-- **Pin** — `python/repark/tests/test_java_double_str_1.py` (CAST, `TRY_CAST`,
+- **Pin** — `python/repark/tests/types/test_java_double_str_1.py` (CAST, `TRY_CAST`,
   `concat`, `col.cast`/`selectExpr`/`try_cast`, `array_join`, `format_string` `%s`,
   LIKE, `CASE`/`coalesce` mixes, length kernels, native-door guard — value AND type)
-  and `python/repark/tests/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence`
+  and `python/repark/tests/functions/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence`
   (now equality).
 - **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-STR-1; GT1-FIX round-3 ruling R3-4).
   Round 2 the same day widened the shapes: `TRY_CAST`, `array_join`, `format_string`
@@ -7925,14 +7925,14 @@ the pin rather than obeying it.
   cells `J10-fd-8.41E21`, `J10-fd-more`, `J10-format-string-f` in
   `fixtures-batch10.json`.)*
 - **Pin** — (now equality)
-  `python/repark/tests/test_java_double_str_1.py::test_spark_door_jdk_longhand_backlog`,
+  `python/repark/tests/types/test_java_double_str_1.py::test_spark_door_jdk_longhand_backlog`,
   `::test_spark_door_jdk_longhand_cells` and
   `::test_spark_door_format_string_f_is_todays_answer`, plus
-  `python/repark/tests/test_java_double_fd_1.py` (JDK-longhand SQL door and facade
+  `python/repark/tests/types/test_java_double_fd_1.py` (JDK-longhand SQL door and facade
   `col` casts, `%f`/`%.2f` HALF_UP on both doors, every DEGI cast cell both doors
   for value AND type with ANSI on and off, hex-refuse/hex-null, FLOAT suffix
   target) and
-  `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`
+  `python/repark/tests/functions/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`
   (`to_json` shares the formatter; now equality).
 - **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-FD-1). A Rust port of JDK 17
   `FloatingDecimal` digit generation (`dtoa` fast/`FDBigInteger` slow paths in
@@ -7963,7 +7963,7 @@ the pin rather than obeying it.
   `fixtures-batch10.json`; Q19 eight column cells in
   `fixtures-batch19-critic-633.json`.)*
 - **Pin** —
-  `python/repark/tests/test_java_double_fd_1.py::test_spark_door_cast_accepting_shapes`,
+  `python/repark/tests/types/test_java_double_fd_1.py::test_spark_door_cast_accepting_shapes`,
   `::test_spark_door_cast_accepting_shapes_nonansi`,
   `::test_facade_cast_accepting_shapes`,
   `::test_facade_cast_accepting_shapes_nonansi`, `::test_cast_hex_refused`,
@@ -8029,12 +8029,12 @@ the pin rather than obeying it.
   the live `current_timestamp` type, `timestamp[us, tz=UTC]`, non-null; CREATE probe
   2026-08-13.)*
 - **Pin** — progress (now equalities):
-  `python/repark/tests/test_session_timezone_parity.py::test_current_timestamp_type_and_zone_disclosure`,
+  `python/repark/tests/timestamps/test_session_timezone_parity.py::test_current_timestamp_type_and_zone_disclosure`,
   `…[to_timestamp_of_zone_suffixed_string]`,
   `…[tz_aware_to_naive_round_trip]` (now equality, PR-2),
   `…[date_trunc_day_across_a_zone_boundary]`,
   `…[dataframe_api_extract_under_new_york_session]`,
-  `python/repark/tests/test_timestamp_cast_parity.py::…[bigint_to_timestamp_reads_seconds]`,
+  `python/repark/tests/timestamps/test_timestamp_cast_parity.py::…[bigint_to_timestamp_reads_seconds]`,
   `crates/repark-spark/tests/session_timezone.rs::date_trunc_truncates_on_the_session_zone_calendar`
   (now asserts `timestamp[us, tz=UTC]`, not naive),
   `crates/repark-spark/src/tests/create_table.rs::column_def_temporary_refuse_testing_create_ref_and_types`,
@@ -8066,9 +8066,9 @@ the pin rather than obeying it.
 > `repark_functions::analyzer::SparkExprSemantics`.
 > **Pins:** `crates/repark-spark/tests/timestamp_cast_seconds.rs`,
 > `crates/repark-sql/tests/timestamp_cast_ansi_door.rs`,
-> `python/repark/tests/test_timestamp_cast_parity.py`, and the flipped row
+> `python/repark/tests/timestamps/test_timestamp_cast_parity.py`, and the flipped row
 > `pre_1970_timestamp_cast_to_bigint` in
-> `python/repark/tests/test_session_timezone_parity.py`.
+> `python/repark/tests/timestamps/test_session_timezone_parity.py`.
 > **Residuals** (all LOUD refusals, none silent): `TINYINT` overflow-message parity, the `LONG`
 > keyword spelling, `unix_timestamp`, the `D` double-literal suffix, and `F.expr` over a
 > column reference — `task/tz5-cast-seconds-ledger.md` §5.
@@ -8087,7 +8087,7 @@ the pin rather than obeying it.
 > (recorded 2026-08-10).
 >
 > **Pins:**
-> `python/repark/tests/test_session_timezone_parity.py::…[timestamp_ntz_is_indistinguishable_from_timestamp]`
+> `python/repark/tests/timestamps/test_session_timezone_parity.py::…[timestamp_ntz_is_indistinguishable_from_timestamp]`
 > (now an equality row) and
 > `crates/repark-spark/tests/session_timezone.rs::a_naive_ntz_timestamp_is_not_shifted_by_the_session_zone`.
 > **Residual:** `spark.sql.timestampType` (opt-in default-NTZ) is not implemented (Q10).
@@ -8102,7 +8102,7 @@ the pin rather than obeying it.
 > yet, so #606's `D4_BLOCKED_SQL` cell
 > (`timestampdiff(DAY, ntz, TIMESTAMP_NTZ'2024-03-11 01:00:00')`) stays blocked
 > and this unit does not touch that skip set.
-> **Pin:** `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_ntz_literal_refuses`
+> **Pin:** `python/repark/tests/sql/test_spark_sql_grammar_1.py::test_pg_ntz_literal_refuses`
 > and `…::test_pg_ntz_cast_refuses`.
 >
 > **TZ-6 — the scalar `TIMESTAMP_NTZ` literal and cast answer Spark's wall clock —
@@ -8121,7 +8121,7 @@ the pin rather than obeying it.
 > (the literal and explicit casts, both cells EQUAL), slice 2 (store assignment),
 > slice 3 (the storage surface: partitions, `.files` bounds, v3, CTAS, DDL
 > presentation, a Spark-written table).
-> **Pins:** `python/repark/tests/test_ntz_1.py` (clauses C-001..C-008),
+> **Pins:** `python/repark/tests/timestamps/test_ntz_1.py` (clauses C-001..C-008),
 > `crates/repark-spark/src/tests/ntz_door.rs`, `…/ntz_store.rs`.
 > **Residues** (ledger `task/ledgers/staging/ntz-1-ledger.md`, dated 2026-09-27, both
 > texts): `spark.sql.timestampType=TIMESTAMP_NTZ` leaves bare `TIMESTAMP` DDL and
@@ -8149,7 +8149,7 @@ the pin rather than obeying it.
 > `TIMESTAMP '2024-01-01 00:30:00'` under `America/New_York` stay `2024` / `1`. A zone-suffixed
 > string is **not** localized (H-1a double-shift control).
 >
-> **Pins:** `python/repark/tests/test_session_timezone_parity.py`
+> **Pins:** `python/repark/tests/timestamps/test_session_timezone_parity.py`
 > `[zoneless_timestamp_literal_under_new_york_session]`,
 > `[zoneless_timestamp_input_spellings_under_tokyo_session]`,
 > `[naive_datetime_column_under_new_york_session]` (now equality rows); Rust:
@@ -8165,7 +8165,7 @@ the pin rather than obeying it.
 > `spark.sql.session.timeZone` for LTZ; stored wall for NTZ; trailing-zero fractions stripped
 > (`.123400` → `.1234`); year −1 is `-0001`, year 10000 is `+10000`. Same strings as Spark
 > 4.1.2 (recorded 2026-08-13, PySpark 4.1.2, zulu-17, `local[2]`, ANSI on).
-> **Pins:** `python/repark/tests/test_timestamp_cast_parity.py::test_timestamp_cast_row_matches_spark_or_still_diverges[timestamp_to_string_ltz_under_new_york]`
+> **Pins:** `python/repark/tests/timestamps/test_timestamp_cast_parity.py::test_timestamp_cast_row_matches_spark_or_still_diverges[timestamp_to_string_ltz_under_new_york]`
 > (and the 11 sibling STRING rows in `ROWS`); Rust
 > `crates/repark-functions/src/timestamp_cast.rs::spark_timestamp_string_trims_trailing_fraction_zeros`
 > + `ltz_renders_in_the_session_zone_and_ntz_does_not`; analyzer
@@ -8204,7 +8204,7 @@ the pin rather than obeying it.
 > `…::native_dataframe_api_cast_to_date_reads_the_session_zone`,
 > `…::date_valued_shims_take_the_date_in_the_session_zone` (the `trunc` / `add_months` shims that
 > share the kernel);
-> `python/repark/tests/test_partition_value_audit.py::test_partition_value_row[tz8_cast_ts_as_date_identity_new_york_ctas]`
+> `python/repark/tests/writes/test_partition_value_audit.py::test_partition_value_row[tz8_cast_ts_as_date_identity_new_york_ctas]`
 > + `…[tz8_to_date_ts_identity_new_york_ctas]` (flipped to equality — flip evidence). A fixed
 > defect gets this dated note, never a live divergence row.
 
@@ -8217,8 +8217,8 @@ the pin rather than obeying it.
 > corpus (hardening gaps **G2** and **G13**; unit ledger
 > [history/hardening-h1/g7-decimal-ledger.md](history/hardening-h1/g7-decimal-ledger.md)). Oracle basis for every Spark half:
 > **recorded** — live PySpark 4.1.2 (ANSI on), re-derivable in-repo via the committed driver
-> `python/repark/tests/_record_decimal128_goldens.py`. Every pin below is a parametrized case of
-> `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges`,
+> `python/repark/tests/types/_record_decimal128_goldens.py`. Every pin below is a parametrized case of
+> `python/repark/tests/types/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges`,
 > written `[<case>]` for short; each asserts repark's pinned half AND classifies a drift as
 > CONVERGED (flip, don't delete) vs regression.
 
@@ -8343,7 +8343,7 @@ the pin rather than obeying it.
   re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** — `[mul_single_digit_nullability_differs]`, `[add_single_digit_nullability_differs]`,
   `[mul_three_digit_capacity_nullability_differs]`, and
-  `python/repark/tests/test_nullability_2.py::test_decimal_arithmetic_nullability_follows_ansi`
+  `python/repark/tests/types/test_nullability_2.py::test_decimal_arithmetic_nullability_follows_ansi`
 - **Rationale** — FIXED. CUTOVER-SCHEMA-1 (2026-09-04) converged the int-operand cells
   through the decimal-cast rule; this unit measured the genuinely-non-null-operand
   remainder on the live oracle and implemented the ANSI-gated rule.
@@ -8374,8 +8374,8 @@ the pin rather than obeying it.
   `(38,17)`; `decimal(10,2)` under `* 5` → `(12,2)`, under `* price` → `(21,4)` —
   on the facade, the SQL door and through `.cache()`. *(oracle: recorded — live PySpark
   4.1.2, committed beside the pin as
-  `python/repark/tests/decimal_cache_1_oracle.json`.)*
-- **Pin** — `python/repark/tests/test_decimal_cache_1.py` (every cell on both doors
+  `python/repark/tests/types/decimal_cache_1_oracle.json`.)*
+- **Pin** — `python/repark/tests/types/test_decimal_cache_1.py` (every cell on both doors
   through every materializing action, values as `Decimal` strings, types via
   `df.schema[...]`); Rust `cache_conform_tests` (drifted conform, refusal message,
   arity guard) and the `decimal_precision.rs` prod-assembly pins (logical == physical
@@ -8416,11 +8416,11 @@ the pin rather than obeying it.
 - **Apache Spark** — answers `current_date` in the session time zone: PySpark 4.1.2 measured
   2026-09-18 13:03 UTC answered `2026-09-19` under `Pacific/Kiritimati` and `2026-09-18` under
   `UTC` and `Etc/GMT+12`, each equal to that zone's calendar date (run 22b probe `probe_tz9.py`).
-- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_q14_current_date_answers_the_session_zone_date`
+- **Pin** — `python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_current_date_answers_the_session_zone_date`
   (the strict xfail retired; asserts over `Pacific/Kiritimati` and `Etc/GMT+12`,
   midnight-race guarded); `…::test_q14_current_date_bare_and_paren` compares against the
   session's configured zone instead of the host-local date;
-  `python/repark/tests/test_current_date_session_zone_1.py` (every `current_date`-rooted
+  `python/repark/tests/timestamps/test_current_date_session_zone_1.py` (every `current_date`-rooted
   spelling, both setting styles, UTC control, stored value);
   `crates/repark-functions/src/current_date.rs::tests`.
 - **Rationale** — FIXED by CURRENT-DATE-SESSION-ZONE-1 (2026-10-10). DataFusion's
@@ -8439,7 +8439,7 @@ the pin rather than obeying it.
   re-derived live — this needs **Spark**, and no pyspark is installed in this
   worktree's `.venv`. The repair round's JVM probe is `java.net.URI`, which has
   nothing to say about ANSI `element_at`.)*
-- **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
+- **Pin** — `python/repark/tests/functions/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG. repark's `spark.sql.ansi.enabled` is TRUE by default
   but its implemented scope is `/` and `%` by zero
   (`crates/repark-functions/src/ansi.rs`; docs/guide/session-and-conf.md). NULL
@@ -8452,7 +8452,7 @@ the pin rather than obeying it.
   `date32` on BOTH doors.
 - **Apache Spark** — under ANSI raises `DATETIME_FIELD_OUT_OF_BOUNDS`.
   *(oracle: documented Spark 4.1.2; not re-derived live.)*
-- **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
+- **Pin** — `python/repark/tests/functions/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
 - **Rationale** — BACKLOG, same class and same rationale as FN-1.
 
 ### FN-LAST-1 — `last(ignorenulls)` over an ordered unbounded window answers NULL — **FIXED 2026-09-03 (FN-FIX-1)**
@@ -8466,7 +8466,7 @@ the pin rather than obeying it.
   `[('a', 3), ('b', 6)]`. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
   invariant at `repartition(1)`, `repartition(3)` and `repartition(6)`; measured frame
   `[("a",1),("a",2),("a",3),("a",None),("b",4),("b",6)]`.)*
-- **Pin** — `python/repark/tests/test_functions_w.py::test_last_ignorenulls_window_skips_trailing_null`
+- **Pin** — `python/repark/tests/functions/test_functions_w.py::test_last_ignorenulls_window_skips_trailing_null`
 - **Rationale** — FIXED. History: `Column.over` dropped `IGNORE NULLS` when wrapping
   an aggregate as a window. The example `docs/examples/functions/first_last.py`
   dropped its ignorenulls leg; names for the next EX batch are listed in the
@@ -8482,7 +8482,7 @@ the pin rather than obeying it.
   (`LongType`), grouped `[('a', 2), ('b', 4)]`. *(oracle: live PySpark 4.1.2,
   2026-09-03.)*
 - **Pin** —
-  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_discrete_bigint_matches_spark`
+  `python/repark/tests/functions/test_fn_batch4.py::test_approx_percentile_discrete_bigint_matches_spark`
 - **Rationale** — FIXED. History: t-digest interpolation returned DOUBLE.
   Residue closed 2026-09-05 (PERF-APPROXPCT-1): the accuracy knob reaches the
   sketch (`FN-APPROXPCT-ACC-1`).
@@ -8500,9 +8500,9 @@ the pin rather than obeying it.
   accuracy 2). `percentile_approx(x, 0.5)` and `…, 10000` are `100.0`.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
 - **Pin** —
-  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer`
+  `python/repark/tests/functions/test_fn_batch4.py::test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer`
   and the Spark-measured matrix
-  `python/repark/tests/test_perf_approxpct_1.py::test_accuracy_matrix_matches_spark`.
+  `python/repark/tests/perf/test_perf_approxpct_1.py::test_accuracy_matrix_matches_spark`.
 - **Rationale** — FIXED. History: the knob was accepted and ignored while the
   kernel answered the discrete rank. Scope narrowed 2026-09-06 (round 2): the
   "Spark's column exactly" claim holds on single-partition inputs and the pinned
@@ -8519,10 +8519,10 @@ the pin rather than obeying it.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC, `local[2]`, 2026-09-06;
   BANNER spark=4.1.2 tz=UTC.)*
 - **Pin** —
-  `python/repark/tests/test_perf_approxpct_1.py::test_million_row_repeats_one_value`
+  `python/repark/tests/perf/test_perf_approxpct_1.py::test_million_row_repeats_one_value`
   (10 runs, 1 distinct value at default and acc100, plus the 2N/accuracy triangle
   bound against Spark's 500082) and
-  `python/repark/tests/test_perf_approxpct_1.py::test_hundred_thousand_groups_repeat_bit_equal`.
+  `python/repark/tests/perf/test_perf_approxpct_1.py::test_hundred_thousand_groups_repeat_bit_equal`.
 - **Rationale** — OPEN, filed 2026-09-06 from the PERF-APPROXPCT-1 round-2 review.
   Not a refused shape: both engines answer within the GK rank budget (|499971 -
   500082| = 111 against a 2N/accuracy budget of 200), but the merge trees differ
@@ -8550,12 +8550,12 @@ the pin rather than obeying it.
   two refusals carry `AnalysisException` with `FAILED_FUNCTION_CALL` /
   `UNRESOLVED_COLUMN.WITH_SUGGESTION`. *(oracle: recorded — live PySpark 4.1.2,
   `local[2]`, UTC, 2026-09-18,
-  `python/repark/tests/range_tvf_id_1/range_tvf_id_1_spark_oracle.json`;
-  re-deriver `python/repark/tests/_record_range_tvf_id_1.py`.)*
+  `python/repark/tests/sql/range_tvf_id_1/range_tvf_id_1_spark_oracle.json`;
+  re-deriver `python/repark/tests/sql/_record_range_tvf_id_1.py`.)*
 - **Pin** —
-  `python/repark/tests/test_range_tvf_id_1.py::test_sql_range_cell_answers_recorded_schema_and_rows`,
-  `python/repark/tests/test_range_tvf_id_1.py::test_sql_range_refusal_matches_spark_class`,
-  `python/repark/tests/test_range_tvf_id_1.py::test_spark_range_door_answers_recorded_schema_and_rows`;
+  `python/repark/tests/sql/test_range_tvf_id_1.py::test_sql_range_cell_answers_recorded_schema_and_rows`,
+  `python/repark/tests/sql/test_range_tvf_id_1.py::test_sql_range_refusal_matches_spark_class`,
+  `python/repark/tests/sql/test_range_tvf_id_1.py::test_spark_range_door_answers_recorded_schema_and_rows`;
   `crates/repark-core/src/range_table/tests.rs` (provider schema, forms, zero step).
 - **Rationale** — FIXED. Both doors resolved `range` to DataFusion's built-in
   table function (`value`, 1–3 arguments); RePark now registers its own `range`
@@ -8592,13 +8592,13 @@ the pin rather than obeying it.
   `IllegalArgumentException`, malformed strings with `NumberFormatException`
   (`CAST_INVALID_INPUT`). *(oracle: recorded — live PySpark 4.1.2,
   `local[2]`, UTC, 2026-09-19,
-  `python/repark/tests/range_tvf_id_1/range_tvf_id_2_spark_oracle.json`;
-  re-deriver `python/repark/tests/_record_range_tvf_id_1.py` (`_SQL_CELLS_2`,
+  `python/repark/tests/sql/range_tvf_id_1/range_tvf_id_2_spark_oracle.json`;
+  re-deriver `python/repark/tests/sql/_record_range_tvf_id_1.py` (`_SQL_CELLS_2`,
   compact shape, `--check` covers both fixtures).)*
 - **Pin** —
-  `python/repark/tests/test_range_tvf_id_2.py::test_sql_range_id2_answer_cell_matches_recorded_schema_and_rows`,
-  `python/repark/tests/test_range_tvf_id_2.py::test_sql_range_id2_near_max_count_answers_rows_with_door_display_name`,
-  `python/repark/tests/test_range_tvf_id_2.py::test_sql_range_id2_refusal_matches_mapped_class_and_token`;
+  `python/repark/tests/sql/test_range_tvf_id_2.py::test_sql_range_id2_answer_cell_matches_recorded_schema_and_rows`,
+  `python/repark/tests/sql/test_range_tvf_id_2.py::test_sql_range_id2_near_max_count_answers_rows_with_door_display_name`,
+  `python/repark/tests/sql/test_range_tvf_id_2.py::test_sql_range_id2_refusal_matches_mapped_class_and_token`;
   `crates/repark-core/src/range_table/tests.rs` (branch pins for every
   refusal and coercion, both overflow cells, exact counts near both ends,
   limit and projection).
@@ -8627,9 +8627,9 @@ the pin rather than obeying it.
   and SQLSTATE 42K09. SQL `1.5` is DECIMAL(2,1); DataFrame `1.5` is DOUBLE.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC, `local[2]`, 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_perf_approxpct_1.py::test_sql_non_integral_accuracy_is_analysis_without_spark_params`
+  `python/repark/tests/perf/test_perf_approxpct_1.py::test_sql_non_integral_accuracy_is_analysis_without_spark_params`
   (red-when-fixed: `getErrorClass`/`getMessageParameters` stay None) and
-  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_bool_accuracy_rejected`
+  `python/repark/tests/functions/test_fn_batch4.py::test_percentile_approx_bool_accuracy_rejected`
   (DataFrame door Spark-equal).
 - **Rationale** — OPEN, filed 2026-09-06 from the PERF-APPROXPCT-1 round-3 review.
   Not a silent accept: the SQL door fails analysis with Spark's class in the
@@ -8647,7 +8647,7 @@ the pin rather than obeying it.
 - **Apache Spark** — Greenwald-Khanna QuantileSummaries bound sketch memory by
   the accuracy knob.
 - **Pin** —
-  `python/repark/tests/test_perf_approxpct_1.py::test_million_row_wall_stays_within_bar`
+  `python/repark/tests/perf/test_perf_approxpct_1.py::test_million_row_wall_stays_within_bar`
   (Rust: `quantile_summaries::tests::million_row_state_stays_small`,
   `inserts_compress_eagerly_before_any_query`, and
   `state_size_follows_one_over_eps`).
@@ -8664,7 +8664,7 @@ the pin rather than obeying it.
 - **Apache Spark** — `isnan(CAST(NULL AS DOUBLE))` on `[1.0, NULL]` yields
   `[False, False]` (non-nullable `bool`, Spark `IsNaN`); NULL is not NaN.
   *(oracle: live — PySpark 4.1.2, `local[1]`, ANSI on, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_batch1.py::test_isnan_null_is_false_non_nullable`
+- **Pin** — `python/repark/tests/functions/test_fn_batch1.py::test_isnan_null_is_false_non_nullable`
 - **Rationale** — FIXED. History: DataFusion `isnan` null-propagated; the Spark
   `IsNaN` kernel returns false for NULL.
 
@@ -8686,10 +8686,10 @@ the pin rather than obeying it.
 - **Apache Spark** — the same id sets per clause per shape (NaN = NaN is true;
   NaN sorts above every non-NaN; NULL never matches). *(oracle: recorded —
   PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
-  `python/repark/tests/ice_nan_pushdown_1_oracle.json`, plus the checked-in
+  `python/repark/tests/iceberg/ice_nan_pushdown_1_oracle.json`, plus the checked-in
   Spark-written v2/v3 warehouses; the pin's live tier replays Spark.)*
 - **Pin** —
-  `python/repark/tests/test_ice_nan_pushdown_1.py` (offline: RePark-written
+  `python/repark/tests/iceberg/test_ice_nan_pushdown_1.py` (offline: RePark-written
   tables plus the Spark warehouses vs the truth JSON, both doors; live tier
   re-derives the grid and the v2/v3 DML from live Spark) and
   `crates/repark-spark/src/tests/nan_pushdown.rs` (answer pins plus
@@ -8710,7 +8710,7 @@ the pin rather than obeying it.
 - **Apache Spark** — `F.sha2(col, 256)` returns Arrow `string` hex
   `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824` (and `512`
   hex `9b71d224...dec043`). *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_batch4.py::test_sha2_facade_hex_string_matches_spark`
+- **Pin** — `python/repark/tests/functions/test_fn_batch4.py::test_sha2_facade_hex_string_matches_spark`
 - **Rationale** — FIXED. History: the facade dispatched to `sha256` bytes and
   refused non-256 bit lengths.
 
@@ -8722,7 +8722,7 @@ the pin rather than obeying it.
 - **Apache Spark** — `try_to_number(col('s'), col('f'))` raises
   `AnalysisException: [DATATYPE_MISMATCH.NON_FOLDABLE_INPUT]`. *(oracle: live
   PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_to_number_non_foldable_format_raises`
+- **Pin** — `python/repark/tests/functions/test_fnp7_try_inversions.py::test_try_to_number_non_foldable_format_raises`
 - **Rationale** — FIXED. History: a column format was parsed per row and
   returned `Decimal('12345')`.
 
@@ -8735,7 +8735,7 @@ the pin rather than obeying it.
   still clamp: `add_months(2016-02-29, 12)` is `2017-02-28`.
 - **Apache Spark** — `LocalDate.plusMonths` keeps the day-of-month whenever the
   target month has it. *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_functions_dates.py::test_add_months_keeps_day_when_target_month_has_it`
+- **Pin** — `python/repark/tests/functions/test_functions_dates.py::test_add_months_keeps_day_when_target_month_has_it`
 - **Rationale** — FIXED. History: a month-end source in a short month clamped
   to the target month's last day.
 
@@ -8752,7 +8752,7 @@ the pin rather than obeying it.
   exact `FutureWarning` on every call.
 - **Apache Spark** — `degrees(rad)` is a DOUBLE column named `DEGREES(rad)`;
   INT input answers the same doubles. *(oracle: live PySpark 4.1.2, 2026-09-14.)*
-- **Pin** — `python/repark/tests/test_fnp_alias_1.py`
+- **Pin** — `python/repark/tests/functions/test_fnp_alias_1.py`
   (`fnp_alias_1_spark_oracle.json` cells; SQL-door value pin included)
 - **Rationale** — FIXED. History: the facade composed `(x * 180) / pi()` — the
   display name was `((deg * 180) / pi())`, the two-step arithmetic drifted in
@@ -8774,7 +8774,7 @@ the pin rather than obeying it.
   `ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX]` (index 3 or 0 out of
   bounds, the array has 2 elements, SQLSTATE 22003). In-range cells agree.
   *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17, ANSI on.)*
-- **Pin** — `python/repark/tests/test_fn_elt_out_of_range.py::test_elt_index_three_raises_invalid_array_index`
+- **Pin** — `python/repark/tests/functions/test_fn_elt_out_of_range.py::test_elt_index_three_raises_invalid_array_index`
   (and `test_elt_index_zero_raises_invalid_array_index`).
 - **Rationale** — FIXED. History: DataFusion `array_element` answered NULL for
   out-of-range; Spark raises under ANSI.
@@ -8791,12 +8791,12 @@ the pin rather than obeying it.
   `regexp_count` is `[1, 0, 4]` and `rlike` is `[True, False, True]` on the same
   frame. *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17.)*
 - **Pin** —
-  `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
+  `python/repark/tests/functions/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
   (and `test_rlike_posix_alpha_is_java_union`).
   **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` answers through the same
   union path — `regexp_extract('alpha', '([[:alpha:]]+)', 1)` is `'alpha'`,
   `regexp_extract('fox', '([[:alpha:]]+)', 1)` is `''` — pinned in
-  `python/repark/tests/test_fn_regexp_extract.py::test_extract_posix_alpha_is_java_union`.
+  `python/repark/tests/functions/test_fn_regexp_extract.py::test_extract_posix_alpha_is_java_union`.
   Widening: the facade accepts a 2-arg call (`idx` defaults to 1) where PySpark
   4.1.2 requires `idx` (`TypeError` measured 2026-09-04); the SQL door matches
   Spark exactly. Source-compatible; recorded in the API freeze.
@@ -8812,9 +8812,9 @@ the pin rather than obeying it.
 - **Apache Spark** — the keyword statement answers `True` (also `True` for `'fox'`).
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3;
   fixtures-batch3 PG-rlike.)*
-- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_rlike` and
+- **Pin** — `python/repark/tests/sql/test_spark_sql_grammar_1.py::test_pg_rlike` and
   `…::test_pg_not_rlike` (the retired
-  `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
+  `python/repark/tests/functions/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
   refusal pin).
 - **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Closed
   2026-09-16 by the SQL-door lowering.
@@ -8828,7 +8828,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the same cell answers `'bar'` (lookbehind consumed, group 0
   is the match). *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04,
   FN-REGEXP-EXTRACT-1 round 2.)*
-- **Pin** — `python/repark/tests/test_fn_regexp_extract.py::test_extract_java_lookbehind_is_loud`
+- **Pin** — `python/repark/tests/functions/test_fn_regexp_extract.py::test_extract_java_lookbehind_is_loud`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the FN-REGEXP-EXTRACT-1 round-2
   measurement. Refusal is the shared translator behaviour, not an extract gap.
 
@@ -8843,7 +8843,7 @@ the pin rather than obeying it.
   escape character is not allowed to end with.`). The control is `True` on both
   engines. *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17.)*
 - **Pin** —
-  `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_raises`
+  `python/repark/tests/functions/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_raises`
 - **Rationale** — FIXED. History: DataFusion LIKE treated a trailing escape as a
   non-match.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): the escape-at-end refusal holds under ANSI off too, on both engines, for the API, SQL, and explicit-`ESCAPE` spellings.
@@ -8874,7 +8874,7 @@ the pin rather than obeying it.
   `F-ICEBERG-VERSION`, `F-BUCKET-IN-WHERE`, `F-SHOW-FUNCTIONS`) over the
   shared `cells_misc.py` fixture, live Spark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0.)*
-- **Pin** — `python/repark/tests/test_ice_system_functions_1.py` (value pins
+- **Pin** — `python/repark/tests/iceberg/test_ice_system_functions_1.py` (value pins
   C-001..C-008, C-012..C-016; NULL C-009/C-017; refusals C-010/C-021; mechanics
   C-011/C-018/C-025; predicate C-019; SHOW C-020/C-023; catalogs C-022) plus
   `crates/repark-spark/src/describe_show/tests.rs` (rewrite and SHOW-parser
@@ -8907,7 +8907,7 @@ the pin rather than obeying it.
 > `2020-01-01` non-null in repark and refused in Spark. It was unpinned anywhere — not in the G6
 > corpus, not in this registry — and closing G6-3 alone would have left the class half-shut,
 > which §6 discipline forbids. Now pinned as a shared-raise equality:
-> `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[int_to_date_both_refuse]`.
+> `python/repark/tests/types/test_cast_failure_parity.py::test_cast_failure_row[int_to_date_both_refuse]`.
 > Retired per §6.
 
 ### G6-4 — TIMESTAMP→INT nullability only (after TZ-5)
@@ -8917,9 +8917,9 @@ the pin rather than obeying it.
   both ANSI modes.
 - **Apache Spark** — same value, Arrow type, and nullability.
   *(oracle: recorded; re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
-- **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_nullability]`
+- **Pin** — `python/repark/tests/types/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_nullability]`
   (flipped to an equality row) and
-  `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
+  `python/repark/tests/types/test_nullability_2.py::test_cast_nullability_matches_spark`
   (the live legs re-derive the cell from the oracle; the divergence disclosure retired
   with the fix).
 - **Rationale** — FIXED. X-1 originally queued this as raise-vs-value; #64 un-refused the
@@ -8934,9 +8934,9 @@ the pin rather than obeying it.
 - **Apache Spark** — same value, Arrow type, and nullability.
   *(oracle: recorded; re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq]`
+  `python/repark/tests/sql/test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq]`
   (flipped to an equality row) and
-  `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
+  `python/repark/tests/types/test_nullability_2.py::test_null_safe_equal_is_non_null`
   (the live legs re-derive the cell from the oracle; the divergence disclosure retired
   with the fix).
 - **Rationale** — FIXED. VALUE already matched; the analyzer now wraps the operator in a
@@ -8949,9 +8949,9 @@ the pin rather than obeying it.
 - **Apache Spark** — same recipe yields Arrow `bool` **non-nullable**. *(oracle: recorded;
   re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select]`
+  `python/repark/tests/sql/test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select]`
   (flipped to an equality row) and
-  `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
+  `python/repark/tests/types/test_nullability_2.py::test_null_safe_equal_is_non_null`
   (the live legs re-derive the cell from the oracle; the divergence disclosure retired
   with the fix).
 - **Rationale** — FIXED (gap G12 — DF door twin of G12-1, same analyzer rule).
@@ -8974,7 +8974,7 @@ the pin rather than obeying it.
   from non-null children. *(oracle: live PySpark 4.1.2, UTC, both ANSI modes,
   2026-09-05; complex cells 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
+  `python/repark/tests/types/test_nullability_2.py::test_cast_nullability_matches_spark`
   (the generalized matrix, both ANSI modes),
   `...::test_valid_literal_cast_to_date_or_ts_stays_nonnull` (the residue cells),
   `...::test_complex_cast_nullability_matches_spark` (complex casts + constructors,
@@ -8998,7 +8998,7 @@ the pin rather than obeying it.
 - **Apache Spark** — same value, type, and nullability on every cell, both ANSI modes.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_bool_to_decimal_served_on_both_doors`
+  `python/repark/tests/types/test_nullability_2.py::test_bool_to_decimal_served_on_both_doors`
   and `crates/repark-functions/src/bool_decimal.rs` (rule pins).
 - **Rationale** — FIXED. A both-doors analyzer rule rewrites the cast to a
   precision-carrying UDF that reads ANSI for the overflow edge; the UDF's return field
@@ -9015,7 +9015,7 @@ the pin rather than obeying it.
   elements are non-null exactly when their children are. Values match.
   *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1`
+  `python/repark/tests/types/test_nullability_2.py::test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1`
   (red when fixed).
 - **Rationale** — BACKLOG. Element propagation needs type-rebuilding constructor
   shims; the top-level rule (CAST-NULL-1) marks only the top field. Filed 2026-09-06
@@ -9038,7 +9038,7 @@ the pin rather than obeying it.
   `element_at` alias overwrite the dedicated `element_at` binding, order-dependent.)
 - **Apache Spark** — `element_at` serves arrays and maps through one resolution.
 - **Pin** —
-  `python/repark/tests/test_door_converge_1.py::test_element_at_alias_1_resolves_the_dedicated_binding`
+  `python/repark/tests/functions/test_door_converge_1.py::test_element_at_alias_1_resolves_the_dedicated_binding`
   (codifies today's answer; turns red if a registration change re-clobbers).
 - **Rationale** — BACKLOG, filed 2026-09-15 (DOOR-CONVERGE-1 round 3, ruling R-10).
   No live divergence today; the hazard resurfaces with DOOR-CONVERGE-2's
@@ -9057,7 +9057,7 @@ the pin rather than obeying it.
   `array(1,2)` and `array()` (cells C6-ac-double-hit, C6-ac-empty-untyped, N7-31).
   *(oracle: live PySpark 4.1.2, UTC.)*
 - **Pin** —
-  `python/repark/tests/test_door_converge_1.py::test_l002_array_contains_coerces_to_tightest_common_type`
+  `python/repark/tests/functions/test_door_converge_1.py::test_l002_array_contains_coerces_to_tightest_common_type`
   and `test_l004_array_contains_empty_untyped_array_answers_false`
   (the literal-haystack legs assert today's `nullable=True`; they red when the
   constructor fix lands and must be flipped to Spark's non-null).
@@ -9110,12 +9110,12 @@ the pin rather than obeying it.
   stores a map with one NULL key (size 1) that PySpark cannot collect. An Arrow map cannot
   hold a NULL key, so RePark refuses loud (`a map key cast produced NULL`) in both modes.
 - **Apache Spark** — the recorded 21 cells in
-  `python/repark/tests/cast_map_spell_1/cast_map_spell_1_spark_oracle.json` and the 17
+  `python/repark/tests/types/cast_map_spell_1/cast_map_spell_1_spark_oracle.json` and the 17
   round-3 cells in `…/cast_map_spell_1_round3_spark_oracle.json`.
   *(oracle: live PySpark 4.1.2, UTC, ANSI on plus legacy cells, 2026-09-19.)*
-- **Pin** — `python/repark/tests/test_cast_map_spell_1.py` (every cell on the facade door,
+- **Pin** — `python/repark/tests/types/test_cast_map_spell_1.py` (every cell on the facade door,
   the native door where it can spell the cell, the three DataFrame cells, and a live drift
-  check); `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_answers_per_cast_map_spell_1`;
+  check); `python/repark/tests/types/test_nullability_2.py::test_cast_to_map_type_spelling_answers_per_cast_map_spell_1`;
   `crates/repark-functions/src/cast_map/tests.rs`.
 - **Rationale** — FIXED 2026-09-19. Filed 2026-09-06 (NULLABILITY-2 round 2).
   pins: cast-map-spell-1/C-009, C-011, C-012, C-013, C-014, C-015, C-016
@@ -9131,13 +9131,13 @@ the pin rather than obeying it.
 - **Apache Spark** — reports `smallint` / `tinyint` / `float`. Nullability agrees;
   only the width label diverges. *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_narrow_logical_widths_report_wide_per_logical_width_1`
+  `python/repark/tests/types/test_nullability_2.py::test_narrow_logical_widths_report_wide_per_logical_width_1`
   plus the dtype asserts in `...::test_cast_nullability_matches_spark`
   (`_CAST_FLAG_ROWS`, red when fixed), and
-  `python/repark/tests/test_df_surface_a_1.py::test_to_narrow_reports_logical_width_1`
+  `python/repark/tests/dataframe/test_df_surface_a_1.py::test_to_narrow_reports_logical_width_1`
   (the same collapse seen through `DataFrame.to`, oracle cell `to_narrow`).
   IO-TEXT-1 (2026-09-15): a user schema typing a text partition column `float` / `smallint` / `tinyint` reads the exact
-  values and reports the wide label — `python/repark/tests/test_io_text_2.py::test_text_probe6_float_schema_float`,
+  values and reports the wide label — `python/repark/tests/io/test_io_text_2.py::test_text_probe6_float_schema_float`,
   `…::test_text_probe6_int_schema_smallint`, `…::test_text_probe6_int_schema_tinyint` (red when fixed).
 - **Rationale** — IMPLEMENTED 2026-09-16 (LOGICAL-WIDTH-1 round 1, owner ruling Q-16b-3).
   Filed 2026-09-06 (NULLABILITY-2 round 2). The fix is the `LogicalKey` arms of
@@ -9150,8 +9150,8 @@ the pin rather than obeying it.
   smallint/tinyint at the Iceberg boundary either. Nullability divergences (`fillna`
   non-null, Iceberg all-nullable) are recorded in the unit ledger, out of scope per W-7;
   `toPandas` dtypes unmeasured (no pandas in the oracle env).
-- **Pin** — `python/repark/tests/test_logical_width_1.py` (20 pins over
-  `python/repark/tests/facade_logical_width_oracle.json`, 22 live cells, 2026-09-15).
+- **Pin** — `python/repark/tests/types/test_logical_width_1.py` (20 pins over
+  `python/repark/tests/types/facade_logical_width_oracle.json`, 22 live cells, 2026-09-15).
   Reclassified narrow: `test_nullability_2.py` narrow-width and `_CAST_FLAG_ROWS` asserts,
   `test_df_surface_a_1.py::test_to_narrow…` and `test_to_binary…`, the facade-3
   `bin_*`/`tup_*` goldens, facade-4 census D7/D8/D9/D18/D19, io-text-2 probe6
@@ -9164,7 +9164,7 @@ the pin rather than obeying it.
   *(oracle: live PySpark 4.1.2, UTC, `facade_logical_width_oracle.json` cell `lit_width`,
   2026-09-15.)*
 - **Pin** —
-  `python/repark/tests/test_logical_width_1.py::test_lit_bytes_refuses_df_lit_binary_1`
+  `python/repark/tests/types/test_logical_width_1.py::test_lit_bytes_refuses_df_lit_binary_1`
   (asserts today's refusal plus the Spark target dtypes; red when fixed).
 - **Rationale** — BACKLOG, filed 2026-09-16 (LOGICAL-WIDTH-1 round 1). The bytes arm needs
   `python/repark/src/repark/spark/functions.py::lit`, owned by run 18a today, ahead of the
@@ -9182,7 +9182,7 @@ the pin rather than obeying it.
   *(oracle: live PySpark 4.1.2, 2026-09-16, probe
   `/tmp/oc-worker/run18b/oracle/probe_lw_r3.py`.)*
 - **Pin** —
-  `python/repark/tests/test_logical_width_1.py::test_float_int_coercion_divergence_arith_float_int_1`
+  `python/repark/tests/types/test_logical_width_1.py::test_float_int_coercion_divergence_arith_float_int_1`
   (holds today's tree dtypes AND today's tree `fplus` value against both Spark cells on
   both doors; red when fixed).
 - **Rationale** — BACKLOG, filed 2026-09-16 (LOGICAL-WIDTH-1 round 1, finding F-1), made
@@ -9198,7 +9198,7 @@ the pin rather than obeying it.
 - **Apache Spark** — same recipe under `local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`
   lands **2.25**. Type: Arrow `float64` nullable. *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_float_agg_parity.py::test_float_agg_parity_row[sum_catastrophic_cancellation_fixture]`
+  `python/repark/tests/functions/test_float_agg_parity.py::test_float_agg_parity_row[sum_catastrophic_cancellation_fixture]`
   and `crates/repark-spark/src/tests/float_agg.rs::pin_sum_f64_bits_at_target_partitions_2`
 - `live-mirror: sum_catastrophic_cancellation_fixture`
 - **Rationale** — accumulation-order sensitivity on a catastrophic-cancellation fixture;
@@ -9209,7 +9209,7 @@ the pin rather than obeying it.
 - **repark** — `avg(v)` lands **0.46875**.
 - **Apache Spark** — lands **0.28125**. *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_float_agg_parity.py::test_float_agg_parity_row[avg_catastrophic_cancellation_fixture]`
+  `python/repark/tests/functions/test_float_agg_parity.py::test_float_agg_parity_row[avg_catastrophic_cancellation_fixture]`
   and `crates/repark-spark/src/tests/float_agg.rs::pin_avg_f64_bits_at_target_partitions_2`
 - `live-mirror: avg_catastrophic_cancellation_fixture`
 - **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
@@ -9224,9 +9224,9 @@ the pin rather than obeying it.
   **153846153846154.34**, grouped and global alike — a 3.3e-15 relative gap, inside
   1e-12. *(oracle: recorded 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_grouped_float_drift_within_spark`
+  `python/repark/tests/perf/test_perf_agg_avg_1.py::test_avg_grouped_float_drift_within_spark`
   (repark's exact value plus within-1e-12 of the recorded Spark value) and
-  `python/repark/tests/test_perf_agg_avg_1.py::test_live_grouped_float_drift_within_spark`
+  `python/repark/tests/perf/test_perf_agg_avg_1.py::test_live_grouped_float_drift_within_spark`
   (live re-derivation against the oracle).
 - **Rationale** — follows FLOAT-AGG-1/2 (same accumulation-order class); the grouped
   shape is new in PERF-AGG-AVG-1. Value diverges, type agrees. DECLARE candidacy
@@ -9252,7 +9252,7 @@ the pin rather than obeying it.
   returned.
   *(oracle: recorded 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
+  `python/repark/tests/perf/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
   (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors, the
   window `try_avg` list and the window `avg` raise; reds when fixed).
 - **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4, widened to
@@ -9269,7 +9269,7 @@ the pin rather than obeying it.
 - **Apache Spark** — same recipe exports list value field named `element`. Values match.
   *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[array_column_roundtrip]`
+  `python/repark/tests/types/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[array_column_roundtrip]`
 - `live-mirror: nested_array_list_field_name`
 - **Rationale** — TYPE disclosure (list field name). Unlocked by G18; fix is G10 / list-type
   follow-on.
@@ -9282,7 +9282,7 @@ the pin rather than obeying it.
 - **Apache Spark** — exports `list<element: int64 not null>` **non-nullable**. Values match
   under the G18 order-insensitive comparator. *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[collect_list_grouped]`
+  `python/repark/tests/types/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[collect_list_grouped]`
 - `live-mirror: nested_collect_list_nullability`
 - **Rationale** — TYPE disclosure (field name + element flag; the top-level nullability
   half converged 2026-09-06). Same G10 follow-on.
@@ -9294,7 +9294,7 @@ the pin rather than obeying it.
 - **Apache Spark** — wraps the same struct in a list value field named `element`. Values match.
   *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[array_of_struct_roundtrip]`
+  `python/repark/tests/types/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[array_of_struct_roundtrip]`
 - `live-mirror: nested_array_of_struct_list_field_name`
 - **Rationale** — TYPE disclosure; sibling of G18-1 on a nested list+struct shape.
 
@@ -9305,7 +9305,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the same recipe yields object-dtype **dict** cells. Values otherwise
   match. *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[map_topandas_cell_shape]`
+  `python/repark/tests/io/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[map_topandas_cell_shape]`
 - **Rationale** — BACKLOG, interchange SHAPE (G10). Fix is a G10 follow-on, not silent
   absorption. No `live-mirror`: the live-oracle tier has no scenario for this pandas-cell
   SHAPE class (same as the G5-RANK-TYPE family).
@@ -9317,7 +9317,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the same recipe lands that Long as Python **float** `20.0` (row-0
   stays int `10`; recorded live-Spark fact under arrow-on toPandas). *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[struct_topandas_cell_shape]`
+  `python/repark/tests/io/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[struct_topandas_cell_shape]`
 - **Rationale** — BACKLOG, interchange SHAPE (G10). Type-sensitive compare so `20 == 20.0`
   cannot launder the row. No `live-mirror` (same SHAPE-class reason as G10-1).
 
@@ -9328,7 +9328,7 @@ the pin rather than obeying it.
 - **Apache Spark** — the same ingest exports `list<element: int64>`. Values match.
   *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[array_from_pandas_object]`
+  `python/repark/tests/io/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[array_from_pandas_object]`
 - **Rationale** — BACKLOG, interchange SHAPE (G10 — pandas ingest twin of G18-1). No
   `live-mirror` (same SHAPE-class reason as G10-1). G18-1's live-mirror is the VALUES
   entry; this row is the pandas ingest twin.
@@ -9339,7 +9339,7 @@ the pin rather than obeying it.
   `datetime64[us]`. Wall-clock values match Spark.
 - **Apache Spark** — the same recipe exports `datetime64[ns]`. *(oracle: recorded.)*
 - **Pin** —
-  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[pandas_timestamp_unit_from_pandas_us]`
+  `python/repark/tests/io/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[pandas_timestamp_unit_from_pandas_us]`
 - **Rationale** — BACKLOG, interchange SHAPE (G10 timestamp-unit family). The inbound
   `datetime64[ns]` twin is an equality control, not a row. No `live-mirror` (same
   SHAPE-class reason as G10-1).
@@ -9358,7 +9358,7 @@ the pin rather than obeying it.
 > `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT` (distinct-name).
 > `drop(right[…])` is a no-op (left schema unchanged). Left-parent refs and inner-join origin
 > resolution are unchanged. Pin:
-> `python/repark/tests/test_g4b_semi_join.py::test_right_ref_select_raises_missing_attributes_same_key`
+> `python/repark/tests/dataframe/test_g4b_semi_join.py::test_right_ref_select_raises_missing_attributes_same_key`
 > (and the filter / withColumn / drop / left-ref / inner / distinct-name siblings). **2026-08-13
 > (Z-4 / #77):** the Y-5 SAF-001 residual is closed — `F.abs(right[…])` after semi/anti now
 > raises the same `MISSING_ATTRIBUTES` classes (`test_right_ref_abs_raises_missing_attributes_same_key`
@@ -9373,7 +9373,7 @@ the pin rather than obeying it.
 > `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT` (distinct-name). Left refs
 > and inner-join refs still resolve. `count_distinct(left, right)` still raises on the
 > unemitted right (`join_sql` QCOL scan, not first-origin-only). Pin:
-> `python/repark/tests/test_g4b_semi_join.py::test_right_ref_agg_raises_missing_attributes_same_key`
+> `python/repark/tests/dataframe/test_g4b_semi_join.py::test_right_ref_agg_raises_missing_attributes_same_key`
 > (and left / inner / distinct-name / `count_distinct` left-then-right siblings). No
 > remaining D6 divergence to disclose; no `live-mirror`. Conditionless semi/anti refusal
 > remains [G4-3](#g4-3--conditionless-dataframe-semianti-join-refuses). A fixed defect
@@ -9387,7 +9387,7 @@ the pin rather than obeying it.
 - **Apache Spark** — `on=None` keeps every left row when the right side is non-empty and none
   when it is empty; the anti side is the complement. `on=[]` raises a PySpark `IndexError`.
   *(oracle: recorded live, PySpark 4.1.2.)*
-- **Pin** — `python/repark/tests/test_g4b_semi_join.py::test_conditionless_semi_family_refuses_loud`
+- **Pin** — `python/repark/tests/dataframe/test_g4b_semi_join.py::test_conditionless_semi_family_refuses_loud`
 - `live-mirror: conditionless_semi_anti_refuses`
 - **Rationale** — DELIBERATE refusal, low priority to fix. The facade's only fallback is the
   Cartesian path, which returns an m×n result set — a wrong answer, not a narrower one.
@@ -9396,7 +9396,7 @@ the pin rather than obeying it.
 
 - **repark** — `rank() OVER (ORDER BY k)` yields Arrow `int32` non-null (values match Spark).
 - **Apache Spark** — yields `int32` non-null with the same values. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+- **Pin** — `python/repark/tests/types/test_types_1.py` rank pins; the window-parity row
   `test_window_row_matches_spark_or_still_diverges[rank_with_ties]` is an equality now.
 - **Rationale** — FIXED (2026-09-05, TYPES-1): `SignedWindow` UDF-registration wrappers
   answer `Int32` for the rank family over the DataFusion kernels. pins: types-1/C-005
@@ -9405,7 +9405,7 @@ the pin rather than obeying it.
 
 - **repark** — `row_number() OVER (ORDER BY k, id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+- **Pin** — `python/repark/tests/types/test_types_1.py` rank pins; the window-parity row
   `test_window_row_matches_spark_or_still_diverges[row_number_total_order]` is an equality now.
 - **Rationale** — FIXED (2026-09-05, TYPES-1). Sibling of G5-RANK-TYPE-1. pins: types-1/C-005
 
@@ -9413,7 +9413,7 @@ the pin rather than obeying it.
 
 - **repark** — `ntile(4) OVER (ORDER BY id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+- **Pin** — `python/repark/tests/types/test_types_1.py` rank pins; the window-parity row
   `test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]` is an equality now.
 - **Rationale** — FIXED (2026-09-05, TYPES-1). Completes the ranking-family type class.
   pins: types-1/C-005
@@ -9425,7 +9425,7 @@ the pin rather than obeying it.
 > longer silently means one *month*: over a `TIMESTAMP` key the door refuses with Spark's
 > `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`, and over a `DATE` key it means days.
 > Pins: `crates/repark-spark/src/tests/window_temporal_range.rs` and the `temporal_range`
-> family in `python/repark/tests/test_window_parity.py`. **G5b-R2 and Spark-door G5b-R3
+> family in `python/repark/tests/functions/test_window_parity.py`. **G5b-R2 and Spark-door G5b-R3
 > closed in Y-1 / #72** (FIXED notes below). **G5b-R1 and G5b-R5 closed in W-4 / #82**
 > (FIXED notes below). **G5b-R4 stays OPEN.** This increment does not claim R4 closed.
 
@@ -9436,7 +9436,7 @@ the pin rather than obeying it.
 > re-plans. Pins (now equalities):
 > `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_day_to_second_literal_matches_spark`
 > and
-> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_day_to_second_literal]`.
+> `python/repark/tests/functions/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_day_to_second_literal]`.
 > A fixed defect gets this dated note, never a live divergence row.
 
 > **G5b-R3 — negative interval offset wrap (`count(*)` = -1) — FIXED (2026-08-12, Y-1
@@ -9455,7 +9455,7 @@ the pin rather than obeying it.
 > mixed-statement hole. Pins:
 > `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_negative_offset_is_spark_empty_frame`,
 > `…::temporal_range_value_inverted_frames_do_not_wrap`,
-> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_negative_offset_count]`
+> `python/repark/tests/functions/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_negative_offset_count]`
 > and `…[temporal_range_negative_offset_sum]`.
 
 > **G5b-R1 — unquoted `INTERVAL n UNIT` frame bound refused — FIXED (2026-08-13, W-4 / #82).**
@@ -9463,7 +9463,7 @@ the pin rather than obeying it.
 > the quoted table `[10, 30, 60, 90, 90]`. Pins:
 > `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_unquoted_interval_literal_matches_quoted`
 > and
-> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_unquoted_interval_literal]`
+> `python/repark/tests/functions/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_unquoted_interval_literal]`
 > (now equality). A fixed defect gets this dated note, never a live divergence row.
 
 ### G5b-R4 — FOLLOWING-to-FOLLOWING frame includes the current row
@@ -9471,7 +9471,7 @@ the pin rather than obeying it.
 - **repark** — `INTERVAL '1' DAY FOLLOWING AND INTERVAL '2' DAY FOLLOWING` includes the
   current row (sums 120 where Spark sums 90 on the recorded seed).
 - **Apache Spark** — the current row lies outside that frame. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_following_to_following_window]`
+- **Pin** — `python/repark/tests/functions/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_following_to_following_window]`
 - **Rationale** — BACKLOG (G5b-R). Range-search boundary. Still OPEN.
   W-4 re-verified on this base: DF 54.1.0 still 120; Spark 4.1.2 is 90;
   `sqlparser` 0.62 `WindowFrame` is `// TBD: EXCLUDE`; no dependency bump. Rust pin
@@ -9485,7 +9485,7 @@ the pin rather than obeying it.
 > itself" is the unique-`v` special case of numeric `n=1`, not a distinct class. Pins:
 > `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_interval_bound_over_int_key_is_numeric_n`,
 > `…::temporal_range_interval_bound_over_int_key_uses_numeric_magnitude`,
-> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_interval_bound_over_int_key]`
+> `python/repark/tests/functions/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_interval_bound_over_int_key]`
 > (now equality), and facade
 > `test_temporal_range_interval_over_int_uses_numeric_magnitude`. A fixed defect gets
 > this dated note, never a live divergence row.
@@ -9508,7 +9508,7 @@ the pin rather than obeying it.
   ICE-STRUCT-PAIRING-1-UPDATE-SUBQUERY).
 - **Apache Spark** — runs all of them, deleting/updating exactly the matching rows.
   *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11.0.)*
-- **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`,
+- **Pin** — `python/repark/tests/writes/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`,
   `…[delete_not_in_subquery]`, `…[delete_not_in_subquery_with_null_key]`,
   `…[delete_correlated_in_subquery]`, `…[delete_exists_correlated]`,
   `…[delete_not_exists_correlated]`, `…[update_in_subquery]` (all now **content**)
@@ -9558,9 +9558,9 @@ the pin rather than obeying it.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 stores the subquery's value in every matched
   row, for a flat INT column and a struct column fed in order or reordered (by name).
   *(oracle: live, the `x_update` group of
-  `python/repark/tests/ice_struct_pairing_1_spark_oracle.json`, 48 cells, recorded
+  `python/repark/tests/writes/ice_struct_pairing_1_spark_oracle.json`, 48 cells, recorded
   2026-10-15.)*
-- **Pin** — `python/repark/tests/test_ice_struct_pairing_1_exception.py`
+- **Pin** — `python/repark/tests/writes/test_ice_struct_pairing_1_exception.py`
   `test_ruling_74_a_flat_int_update_from_a_subquery_refuses_before_any_write` and
   `test_ruling_90_a_struct_update_from_a_subquery_refuses_before_any_write` (both doors),
   `test_the_identity_update_from_a_subquery_stores_spark_value`;
@@ -9613,22 +9613,56 @@ the pin rather than obeying it.
   [UPDATE-SUBQUERY-STORE-1](../task/roadmap/mid-term/update-subquery-store-1-card-2026-10-15.md):
   when the shapes store Spark's value, these cells succeed and write nothing, as Spark's do.
 
-### REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 — DATED ROW 2026-10-15 (owner ruling 106 (a)): `UPDATE … WHERE col IN (SELECT …)` through `repark.sql()` updates every row, where Spark updates the matching rows
+### REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 — DATED ROW 2026-10-15, STOPGAP 2026-10-16 (owner ruling 106 (a)): `UPDATE` or `DELETE` with a subquery in `WHERE` through `repark.sql()` refuses with the G3-E8 text, where it wrote every row and Spark writes the matching rows
 
 - **repark** — through the public Python `repark.sql()` only (the `DataFusionDialect` door),
   `UPDATE t SET v = 5 WHERE id IN (SELECT id FROM s)` and `WHERE id = (SELECT …)` update every
   row of the table and report success. The Spark SQL door and the Rust ANSI door refuse these
   statements. Main and PR #1062's head are the same.
+  **2026-10-16, measured (the sketch of round 1):** `DELETE` is in the row: through `repark.sql()`,
+  6 of 8 `DELETE` forms with a subquery in `WHERE` emptied the table, and a 7th deleted a row
+  that does not match. The ANSI door and the Spark SQL door answer the three-part `UPDATE … WHERE
+  id IN (SELECT …)` and `DELETE … WHERE` `IN`, `NOT IN` and `EXISTS` forms with Spark's rows
+  through their identity path and refuse the rest.
+  **2026-10-16, stopgap (round 2):** `repark.sql()` refuses every `UPDATE` and `DELETE` whose
+  `WHERE` holds a subquery with the G3-E8 text and writes nothing, the identity forms included.
+  The refusal lives once in `repark_iceberg::write::predicate_dml::subquery_where`; the ANSI
+  router calls it with the identity exemption and `DataFusionDialect` without.
+  *(Corrected 2026-10-17, finding V106-F6: "every" held for the bare statement; `PREPARE` and
+  then `EXECUTE` still wrote every row.)*
+  **2026-10-17, owner ruling 135 (a), round 4:** the refusal reads every write the statement
+  executes (the walk `repark_iceberg::write::statement_writes::executed_writes`, shared with
+  the Spark SQL router): bare, under `PREPARE`, and under `EXPLAIN ANALYZE`, parsed with the
+  session's SQL dialect. A plain `EXPLAIN` answers its plan and leaves an Iceberg table
+  unchanged, as on main.
+  **2026-10-17, owner ruling 139:** on both repark-spark doors, the strict pregate
+  (`refuse_dml_subquery_predicate_in_statement`) refuses each `DELETE` and `UPDATE` the same walk
+  returns, the allow-list exemption kept for the top-level bare statement: `PREPARE` of a
+  subquery-predicate statement, alone or around `EXPLAIN ANALYZE`, refuses there, where `EXECUTE`
+  changed every row; the bare forms keep Spark's rows. DataFusion's own `EXPLAIN ANALYZE` on those
+  doors is card EXPLAIN-DML-WRITE-1's.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 updates only the matching rows. *(measured by
-  U-6's re-verifier 3, 2026-10-15.)*
-- **Pin** — none yet.
+  U-6's re-verifier 3, 2026-10-15.)* `DELETE` deletes only the matching rows, in all eight forms
+  of the sketch. *(measured 2026-10-16, private Hadoop catalog, `local[1]`.)*
+- **Pin** — 2026-10-16:
+  `python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py` (22 refusal pins on
+  `repark.sql()`, rows and warehouse files held, and 5 controls that still write);
+  `crates/repark-core/src/dialect/tests.rs`
+  `the_default_dialect_refuses_a_subquery_in_update_or_delete_where`;
+  `crates/repark-sql/tests/ansi_subquery_where_identity.rs` (the ANSI door's identity forms
+  answer Spark's rows); `crates/repark-iceberg/src/write/predicate_dml/tests/subquery_where.rs`
+  (the shared refusal). **2026-10-17:** every pin seeds Iceberg tables and asserts an
+  `IcebergTableScan`; the `PREPARE`, `EXPLAIN ANALYZE` and MsSQL-dialect pins join the file and
+  `crates/repark-core/src/dialect/tests.rs`.
 - **Rationale** — DATED ROW 2026-10-15, owner ruling 106 (a): a silent wrong value, the same
   class as F-04. **Critical.** Closed by card
   [REPARK-SQL-UPDATE-SUBQUERY-WHERE-1](../task/roadmap/mid-term/repark-sql-update-subquery-where-1-card-2026-10-15.md):
   own unit next on the U-6 lane after #1062 merges; `repark.sql()` routed through the ANSI door's
   dialect so it inherits that door's refusal, with no third guard copy; if routing is more than one
   unit carries, a refusal on that door is the stopgap and routing stays the card. The 1.5.6 note
-  names it until it lands.
+  names it until it lands. **2026-10-16:** routing is more than one unit carries (it needs the
+  ruling-113 edge and makes eleven measured statements worse), so the stopgap landed; routing
+  stays the card, and the 1.5.6 note names the refusal and `DELETE`.
 
 ### ICE-STRUCT-INLINE-TABLE-FROM-1 — DATED ROW 2026-10-15 (owner ruling 107 (a)): an inline table in `FROM` stores a reordered struct by name, where Spark pairs by position
 
@@ -9655,7 +9689,7 @@ the pin rather than obeying it.
   G3-E8 valve).
 - **Apache Spark** — `x NOT IN (…, NULL)` is UNKNOWN for every row, so Spark matches nothing
   and the table is unchanged. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_not_in_subquery_with_null_key]`
+- **Pin** — `python/repark/tests/writes/test_dml_subquery_parity.py::test_dml_subquery_row[delete_not_in_subquery_with_null_key]`
   (now **content**, remaining ids `{1,2,3}`) and `…[update_not_in_subquery_with_null_key]`
   (still **split**). Rust:
   `crates/repark-spark/src/tests/dml.rs::g3e8_delete_not_in_subquery_with_null_key_deletes_nothing`.
@@ -9679,7 +9713,7 @@ the pin rather than obeying it.
   (`SYSTEM.BUILTIN.UNICODE`). *(oracle: recorded — Apache 4.1.2 tests
   `test_create_df_with_collation`, `test_collation`; live probe in
   `task/y7-collation-refuse-ledger.md` §0b.)*
-- **Pin** — `python/repark/tests/test_collation_refuse.py::test_create_dataframe_unicode_ci_refuses`,
+- **Pin** — `python/repark/tests/types/test_collation_refuse.py::test_create_dataframe_unicode_ci_refuses`,
   `…::test_from_json_collations_metadata_constructs_and_create_refuses`,
   `…::test_sql_collate_expression_refuses`,
   `…::test_sql_order_by_collate_refuses`,
@@ -9718,8 +9752,8 @@ the pin rather than obeying it.
 - **Apache Spark** — `bigint` on both, and Spark has no unsigned type at all.
   *(oracle: live — PySpark 4.1.2: `regr_count` → `struct<r:bigint>`,
   `approx_count_distinct` → `struct<r:bigint>`.)*
-- **Pin** — `python/repark/tests/test_types_1.py` count-like pins;
-  `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`
+- **Pin** — `python/repark/tests/types/test_types_1.py` count-like pins;
+  `python/repark/tests/functions/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`
   (its `DOOR_RETURNS_UNSIGNED` set ratcheted to empty).
 - **Rationale** — FIXED (2026-09-05, TYPES-1). The sign conversion moved into
   UDF-registration wrappers that preserve the inner kernels' names, aliases, signatures,
@@ -9740,7 +9774,7 @@ the pin rather than obeying it.
   was not about surrogates at all and moved to its own row, `RE-3` — **which SEM-6 then closed the
   same day**, so it is gone from this registry and `regexp_substr` now returns NULL there. What
   remains here is genuinely surrogate-bound: the count.
-- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re2_zero_width_matches_skip_the_mid_surrogate_position`
+- **Pin** — `python/repark/tests/functions/test_lrs6_regexp_divergences.py::test_re2_zero_width_matches_skip_the_mid_surrogate_position`
 - **Rationale** — BACKLOG. `regexp_count` walks UTF-16 code units and is already right;
   `collect_matches` walks Unicode scalars, because a mid-surrogate offset is **not a byte boundary**
   and Rust's `&str` cannot address one — there is no `regex::Match` to build there. Closing this
@@ -9755,9 +9789,9 @@ the pin rather than obeying it.
 > that base (`log(2, 8)` → `3.0`). Both arities return NULL on zero, negative, and null operands;
 > `log(1, 8)` stays `inf`. Native ANSI `repark.sql()` is unchanged (base 10, ADR-0002). `F.log`
 > accepts `log(arg1, arg2=None)`. Kernel: `crates/repark-functions/src/spark_log.rs`. Pins:
-> `python/repark/tests/test_lrs4_door_domain.py::test_log1_sql_door_log_is_natural`,
+> `python/repark/tests/functions/test_lrs4_door_domain.py::test_log1_sql_door_log_is_natural`,
 > `::test_log1_both_arities_null_on_non_positive_operands`,
-> `python/repark/tests/test_sem1_spark_log.py`. Oracle: live PySpark 4.1.2, 2026-08-31.
+> `python/repark/tests/functions/test_sem1_spark_log.py`. Oracle: live PySpark 4.1.2, 2026-08-31.
 
 ### ORPHAN-1 — `remove_orphan_files` defaults `older_than` to three days, like Spark (retired 2026-09-22)
 
@@ -9775,7 +9809,7 @@ the pin rather than obeying it.
   the `DataSourceV2Relation` note this row used to carry is retired — see
   [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** — `crates/repark-spark/src/tests/call_orphan.rs::call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`
-  and `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_defaults_older_than_to_three_days`
+  and `python/repark/tests/iceberg/test_maintenance_call.py::test_remove_orphan_files_defaults_older_than_to_three_days`
 - **Rationale** — RETIRED by owner ruling Q-55-2 on 2026-09-22: owner decision OD-2 (2026-08-21)
   is reversed, and repark now answers Spark's answer. **The 24-hour floor stays** — it is
   *parity* with Spark, not a stricter posture, and it keeps its pins
@@ -9799,7 +9833,7 @@ the pin rather than obeying it.
   `::call_remove_orphan_files_dry_run_lists_without_deleting`,
   `::call_remove_orphan_files_armed_deletes_orphans_and_nothing_else`,
   `::call_remove_orphan_files_refuses_a_quoted_dry_run`, and
-  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_deletes_by_default`
+  `python/repark/tests/iceberg/test_maintenance_call.py::test_remove_orphan_files_deletes_by_default`
 - **Rationale** — RETIRED by owner ruling Q-55-2 on 2026-09-22: owner decision OD-2 (2026-08-21)
   is reversed, and repark now answers Spark's answer. The **result shape is identical either
   way** — one row per orphan, `orphan_file_location`, exactly Spark's schema.
@@ -9920,7 +9954,7 @@ the pin rather than obeying it.
   `::call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations`,
   `::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path` and
   `::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`, and
-  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_memory_table_but_never_the_shared_root`
+  `python/repark/tests/iceberg/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_memory_table_but_never_the_shared_root`
 - **Rationale** — FIXED by owner ruling Q-55-6 under Q-55-2 (full Spark parity), 2026-09-22.
   The old guard refused every table under the fallback root. It protected against two sessions
   that share one warehouse writing the same derived directory. The narrowed guard refuses in
@@ -10166,10 +10200,10 @@ the pin rather than obeying it.
   deletes by reference, so RePark converges back onto the 2026-09-02 oracle: `removed == 0`,
   the delete survives with its records, and the DATA-file reclaim still reproduces (measured:
   Spark cell `dead_file` in
-  `python/repark/tests/rp32_rdf_cow_bytes_spark_oracle.json` and the reflipped runbook pin —
+  `python/repark/tests/iceberg/rp32_rdf_cow_bytes_spark_oracle.json` and the reflipped runbook pin —
   removed 0, one data plus one delete file, seed gone, 2,000 rows).
 - **Pin** —
-  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_survives`
+  `python/repark/tests/perf/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_survives`
   (the reflipped runbook pin), and on the Spark door
   `crates/repark-spark/src/tests/call_rewrite_dangling.rs::call_rewrite_data_files_keeps_the_merge_delete_that_still_applies`
   with its incidental control
@@ -10212,7 +10246,7 @@ the pin rather than obeying it.
   *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-06, re-run by the
   pinning session; cells in `task/ledgers/staging/rdf-schema-evo-1-ledger.md` §7.)*
 - **Pin** —
-  `python/repark/tests/test_rdf_schema_evo_1.py` (11 pins: the seven red shapes, the
+  `python/repark/tests/iceberg/test_rdf_schema_evo_1.py` (11 pins: the seven red shapes, the
   unpartitioned-add-only and post-evolution-write controls, the `rewrite_position_delete_files`
   and `rewrite_manifests` characterizations).
 - **Rationale** — BACKLOG until the pin bump: no RePark production code changes in this unit.
@@ -10256,7 +10290,7 @@ the pin rather than obeying it.
   `a_partition_scoped_merge_commits_through_a_concurrent_insert_into_another_partition`,
   `a_copy_on_write_range_scoped_merge_commits_through_a_disjoint_range_rewrite`);
   `crates/repark-iceberg/src/write/conflict_filter.rs` unit tests (the derivation);
-  `python/repark/tests/test_ice_occ_scoped_1.py` (`test_partition_scoped_storms_match_spark`,
+  `python/repark/tests/writes/test_ice_occ_scoped_1.py` (`test_partition_scoped_storms_match_spark`,
   `test_range_scoped_merges_match_spark`, `test_whole_partition_deletes_both_commit`, SQL and
   DataFrame doors). Red-first and mutation
   evidence: `task/ledgers/staging/ice-occ-scoped-1-ledger.md`.
@@ -10275,7 +10309,7 @@ the pin rather than obeying it.
   UPDATE path stays scoped (pinned).
 - **Apache Spark** — 4 of 4. *(oracle: recorded 2026-09-17, fixture
   `ice_occ_scoped_1/spark_occ_oracle2.json` `*_4_partition_scoped_updates`.)*
-- **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_partition_scoped_storms_match_spark`
+- **Pin** — `python/repark/tests/writes/test_ice_occ_scoped_1.py::test_partition_scoped_storms_match_spark`
   (replays `*_4_partition_scoped_updates` and asserts Spark's commit count, loser messages and
   `rows_after_4_partition_scoped_updates` rows on every door).
 - **Rationale** — FIXED 2026-09-18 (RP-27) at fork #294 (**F-OCC-EXEC-1**): the fork's DataFusion
@@ -10373,7 +10407,7 @@ the pin rather than obeying it.
   Hadoop catalog committed all sixteen in 4 and 9–15 otherwise; the in-memory catalog never
   exceeded 9. *(oracle: recorded 2026-09-18, fixture
   `ice_occ_scoped_1/spark_occ_oracle4.json`.)*
-- **Pin** — `python/repark/tests/test_ice_occ_scoped_1.py::test_insert_storm_loses_only_to_the_retry_budget`
+- **Pin** — `python/repark/tests/writes/test_ice_occ_scoped_1.py::test_insert_storm_loses_only_to_the_retry_budget`
   (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser
   a `CatalogCommitConflicts` `PySparkException`, rows and snapshots equal the commits). The
   exact count is not pinned: it is scheduler-dependent in both engines.
@@ -10421,7 +10455,7 @@ the pin rather than obeying it.
   *(oracle: recorded — PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, ANSI on,
   2026-09-16, `python/repark-parity/fixtures/torture/data/ice_promote_read_1/truth.json`,
   two recordings identical; re-derived by the module's live cell.)*
-- **Pin** — `python/repark/tests/test_ice_promote_read_1.py::test_sql_door_matches_spark` and
+- **Pin** — `python/repark/tests/iceberg/test_ice_promote_read_1.py::test_sql_door_matches_spark` and
   `…::test_dataframe_door_matches_spark` over the `read/*` cases (v2/v3 × single/mixed era),
   `…::test_adopted_spark_table_matches_spark` (the committed Spark-created tables, both doors),
   `…::test_live_spark_rederives_every_recorded_answer`; fork
@@ -10452,7 +10486,7 @@ the pin rather than obeying it.
   narrowing refusal stay.)*
 - **Apache Spark** — updates or deletes the pre-promotion rows, inserts no duplicate.
   *(oracle: recorded — as ICE-PROMOTE-READ-1.)*
-- **Pin** — `python/repark/tests/test_ice_promote_read_1.py::test_sql_door_matches_spark` over
+- **Pin** — `python/repark/tests/iceberg/test_ice_promote_read_1.py::test_sql_door_matches_spark` over
   `merge_key/*`, `dml_range/*`, `dml_single/*`; `…::test_dataframe_door_matches_spark` over
   `merge_key/*` and `dml_single/*` (facade `mergeInto`); the adopted tables' MERGE `*`, range
   UPDATE and DELETE steps; `crates/repark-iceberg/src/write/merge/tests/promoted_scan.rs`
@@ -10488,7 +10522,7 @@ the pin rather than obeying it.
 - **Apache Spark** — filters, deletes, updates and replaces the promoted partition.
   *(oracle: recorded — as ICE-PROMOTE-READ-1; the dynamic overwrite is recorded on both the SQL
   spelling and `writeTo(t).overwritePartitions()`.)*
-- **Pin** — `python/repark/tests/test_ice_promote_read_1.py::test_sql_door_matches_spark` and
+- **Pin** — `python/repark/tests/iceberg/test_ice_promote_read_1.py::test_sql_door_matches_spark` and
   `…::test_dataframe_door_matches_spark` over `read_partition/*` (identity, bucket(4),
   truncate(10) × v2/v3 × single/mixed) and `dml_partition/*` (DELETE / UPDATE by a non-partition
   and a partition predicate, MERGE on `p`, static and dynamic overwrite × v2/v3 × CoW/MoR ×
@@ -10533,7 +10567,7 @@ the pin rather than obeying it.
   catalog, 2026-09-17; `python/repark-parity/fixtures/torture/data/ice_evo_dml_1/truth.json`,
   183 cases; every recording agrees on the shared cases; re-derived live under
   `REPARK_PARITY_LIVE=1`.)*
-- **Pin** — `python/repark/tests/test_ice_evo_dml_1.py::test_sql_door_matches_spark` over
+- **Pin** — `python/repark/tests/writes/test_ice_evo_dml_1.py::test_sql_door_matches_spark` over
   `grid/add_column/*`, `grid/rename_column/*`, `grid/rename_key/*`, `emptied/*`, `rewrite/*`,
   `merge_star_source/*`; `…::test_dataframe_door_matches_spark` (facade `mergeInto`,
   `writeTo().append()`); `…::test_adopted_spark_table_matches_spark` (MERGE `*` both doors,
@@ -10561,7 +10595,7 @@ the pin rather than obeying it.
 - **Apache Spark** — every statement keeps each value under its field id
   (`[(1,'a','u'), (2,'b',None)]` for the UPDATE above).
   *(oracle: recorded — as ICE-EVO-DML-1.)*
-- **Pin** — `python/repark/tests/test_ice_evo_dml_1.py::test_sql_door_matches_spark` and
+- **Pin** — `python/repark/tests/writes/test_ice_evo_dml_1.py::test_sql_door_matches_spark` and
   `…::test_dataframe_door_matches_spark` over `grid/rename_swap/*` (v2/v3 × CoW/MoR);
   `crates/repark-iceberg/src/write/merge/tests/evolved_scan.rs`
   (`target_scan_after_swapping_two_names_keeps_each_value_under_its_field_id`,
@@ -10585,7 +10619,7 @@ the pin rather than obeying it.
 - **Apache Spark** — `[(0, 1, 1, 'a', 'e1'), (1, 1, 2, 'b', None)]` after every evolution
   (`extra` NULL after `ADD COLUMN`), and the filter keeps `(0, 1, 'a', …)`.
   *(oracle: recorded — as ICE-EVO-DML-1, group `lineage_read`.)*
-- **Pin** — `python/repark/tests/test_ice_evo_dml_1.py::test_lineage_read_matches_spark` over
+- **Pin** — `python/repark/tests/writes/test_ice_evo_dml_1.py::test_lineage_read_matches_spark` over
   `lineage_read/{add_column, rename_column, rename_key, rename_swap}` (SQL door; RePark's
   DataFrame door does not resolve `_row_id` on any table);
   `crates/repark-iceberg/src/catalog/tests/evolved_lineage_read.rs`
@@ -10605,7 +10639,7 @@ the pin rather than obeying it.
   `record_count = 4` and left the data file live (the rows read back empty either way).
 - **Apache Spark** — commits the same delete as a metadata delete: the data file is removed and
   `t.delete_files` is empty. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[delete-all-rows-mor]`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[delete-all-rows-mor]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[delete-all-rows-mor]`
 - **Rationale** — FIXED. It was never a wrong answer — both engines read the same rows — but the
   storage shape cost a DV read on every later scan and left the bytes on disk until an expire.
@@ -10626,7 +10660,7 @@ the pin rather than obeying it.
   divergence.
 - **Apache Spark** — sets the table's write order. *(oracle: live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-03; the five-form matrix re-measured 2026-09-06.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
 - **Transform terms** — **Transform terms FIXED 2026-09-24 (WO U5 PR2b, cell D-WRITE-ORDERED-TRANSFORM):**
   `WRITE ORDERED BY bucket(4, id), days(ts) DESC NULLS FIRST` lands `[bucket[4] id asc
   nulls-first], [day ts desc nulls-first]` with `write.distribution-mode = range`, as Spark
@@ -10687,7 +10721,7 @@ the pin rather than obeying it.
   `alter_write_order_transform.rs::delete_after_a_repark_bucket_order_is_the_identity_only_residue`.
   (the repark half flipped `ERROR` → `OK`, the verdict `DIVERGES` → `EQUAL`) and
   `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-write-ordered-by]`; the
-  five-form behavior is pinned in `python/repark/tests/test_write_order_dist_1.py`
+  five-form behavior is pinned in `python/repark/tests/writes/test_write_order_dist_1.py`
 - **Rationale** — FIXED, not declared. Sort-order evolution was scoped out of I7, which delivered
   partition-spec DDL only; this unit builds it on the fork's `replace_sort_order`, which the
   pinned rev exposes. `RDF-SORT-1` stayed open beside it until 2026-09-20 (retired by
@@ -10709,7 +10743,7 @@ the pin rather than obeying it.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03. This row claims the property SET the
   statement leaves behind, which is what was measured; the codec each engine actually writes into
   the Parquet footer was NOT measured and is not claimed either way.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[create-v3-properties]`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[create-v3-properties]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[create-v3-properties]`; the three
   create rows that carry no properties (`[create-v3-flat]`, `[create-v3-partitioned]`,
   `[create-v3-bucket-transform]`) are the controls and agree on every metadata fact those rows
@@ -10739,7 +10773,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `{"name": "name", "required": false, "type": "string"}` for the same statement — the literal's
   own width and **optional**. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, re-measured on the
   raw metadata JSON 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
+- **Pin** — `python/repark/tests/iceberg/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]` (verdict now EQUAL);
   the column-def `[create-v3-flat]` control stores `id int` optional on BOTH engines.
 - **Rationale** — FIXED (nullability 2026-09-04 CUTOVER-SCHEMA-1; width 2026-09-05 TYPES-1).
@@ -10789,12 +10823,12 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (`target/probe-u5-pr2b/spark.out` in the lane clone; scoreboard cell `D-CREATE-V1`).
 - **Pin** — `crates/repark-spark/src/tests/create_format_version_one.rs`,
   `crates/repark-sql/src/v3/create.rs::format_version_one_creates_v1_and_deletes_copy_on_write`,
-  `python/repark/tests/test_ice_ddl_alter_2.py`; the v1 ref writes:
+  `python/repark/tests/iceberg/test_ice_ddl_alter_2.py`; the v1 ref writes:
   `crates/repark-iceberg/src/tests/v1_ref_writes.rs`, `crates/repark-spark/src/tests/v1_ref_writes.rs`,
   `ref_branch_on_empty.rs` (the v1 branch/tag cases),
   `crates/repark-sql/src/v3/create.rs::ref_ddl_on_a_v1_table_commits_like_spark`,
   `test_ice_ddl_alter_2.py::test_a_wap_branch_write_on_a_v1_table_commits_on_the_branch`;
-  the downgrade: `crates/repark-spark/src/tests/v3_upgrade.rs`, `python/repark/tests/test_v3_upgrade.py`.
+  the downgrade: `crates/repark-spark/src/tests/v3_upgrade.rs`, `python/repark/tests/iceberg/test_v3_upgrade.py`.
 
 ### D-REF-BRANCH-ON-EMPTY — `CREATE BRANCH` on a snapshot-less table refused — **FIXED 2026-09-24 (WO U5 PR2b)**
 
@@ -10826,7 +10860,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-24
   (`target/probe-u5-pr2b/spark.out`, `spark2.out`; scoreboard cell `D-REF-BRANCH-ON-EMPTY`).
 - **Pin** — `crates/repark-spark/src/tests/ref_branch_on_empty.rs`,
-  `crates/repark-spark/src/tests/v1_ref_writes.rs`, `python/repark/tests/test_ice_ddl_alter_2.py`.
+  `crates/repark-spark/src/tests/v1_ref_writes.rs`, `python/repark/tests/iceberg/test_ice_ddl_alter_2.py`.
 
 ### D-X-PARTITIONED-COLDEF — hive-style typed `PARTITIONED BY` column refused — **FIXED 2026-09-25 (WO U5 PR3)**
 
@@ -10856,9 +10890,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (`target/probe-u5-pr3/spark.out`, `spark2.out` in the lane clone; scoreboard cell
   `D-X-PARTITIONED-COLDEF`, replayed EQUAL).
 - **Pin** — `crates/repark-spark/src/tests/create_typed_partition.rs`,
-  `python/repark/tests/test_ice_ddl_alter_2.py::test_typed_partition_columns_become_identity_columns_like_spark`,
+  `python/repark/tests/iceberg/test_ice_ddl_alter_2.py::test_typed_partition_columns_become_identity_columns_like_spark`,
   `…::test_typed_partition_column_refusals_match_spark`,
-  `python/repark/tests/test_ice_typed_partition_refusals.py`.
+  `python/repark/tests/iceberg/test_ice_typed_partition_refusals.py`.
   Verifier probe 2026-09-25 (critic `xr-spark.out`; `REPLACE TABLE` and `NULL` in the critic
   scratchpad `xr/rep_spark.out`).
   pins: ice-nested-evo-1/C-058
@@ -10885,9 +10919,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   scoreboard cells `D-RENAME-TABLE` and `D-RENAME-TABLE-SHORT`, both replayed EQUAL).
 - **Pin** — `crates/repark-spark/src/tests/rename_target.rs`,
   `crates/repark-spark/src/tests/hadoop_rename.rs`,
-  `python/repark/tests/test_ice_ddl_alter_2.py::test_rename_to_reads_the_target_inside_the_source_catalog`,
+  `python/repark/tests/iceberg/test_ice_ddl_alter_2.py::test_rename_to_reads_the_target_inside_the_source_catalog`,
   `…::test_rename_to_an_existing_table_answers_spark_text`,
-  `python/repark/tests/test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`.
+  `python/repark/tests/iceberg/test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`.
   pins: ice-nested-evo-1/C-059
 
 ### TY-TIMESTAMP-LTZ — a `TIMESTAMP_LTZ` column refused at CREATE — **FIXED 2026-09-25 (WO U9-TYPES-1)**
@@ -10917,9 +10951,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `TIMESTAMP WITH TIME ZONE` refuses as nanosecond precision (9). The Spark door's
   `TIMESTAMP_LTZ` column is `timestamptz`.
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (88 steps in
-  `python/repark/tests/u9_types_1_spark_oracle.json`, group `ltz`; scoreboard cell
+  `python/repark/tests/timestamps/u9_types_1_spark_oracle.json`, group `ltz`; scoreboard cell
   `TY-TIMESTAMP-LTZ`, replayed EQUAL).
-- **Pin** — `python/repark/tests/test_u9_types_1.py`,
+- **Pin** — `python/repark/tests/timestamps/test_u9_types_1.py`,
   `crates/repark-spark/src/tests/u9_timestamp_ltz.rs`,
   `crates/repark-spark/src/spark_rewrites/timestamp_ltz_literal.rs` (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
@@ -10948,9 +10982,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   2026-09-27 (`ntz-xc-spark.json`: the Spark-written `xc.ns.x` reads, `.files` bounds,
   re-insert and the three `ALTER COLUMN … TYPE` refusal texts); scoreboard cell
   `TY-TIMESTAMP-NTZ`, replayed EQUAL.
-- **Pin** — `python/repark/tests/test_ntz_1.py` (+ `ntz_1_spark_oracle.json`),
+- **Pin** — `python/repark/tests/timestamps/test_ntz_1.py` (+ `ntz_1_spark_oracle.json`),
   `crates/repark-spark/src/tests/ntz_door.rs`, `…/ntz_store.rs`,
-  `python/repark/tests/_record_ntz_1_spark_table.py` and the
+  `python/repark/tests/timestamps/_record_ntz_1_spark_table.py` and the
   `python/repark/tests/fixtures/ntz_1_spark_table/` fixture.
 - **Rationale** — EQUAL, dated 2026-09-27, WO NTZ-1 clauses C-001..C-008 (PROVEN).
 
@@ -10964,7 +10998,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (`ntz-spark.json` `create_v3` / `ins_v3` / `select_v3` / `meta_v3`,
   `ntz2-spark.json` DML legs; the v3 DML walls are rule-derived from the measured v2
   legs); scoreboard cell `TY-TIMESTAMP-NTZ-V3`, replayed EQUAL.
-- **Pin** — `python/repark/tests/test_ntz_1.py::test_table_cells_replay_spark[3]` and
+- **Pin** — `python/repark/tests/timestamps/test_ntz_1.py::test_table_cells_replay_spark[3]` and
   `…::test_v3_round_trip_answers_as_spark`.
 - **Rationale** — EQUAL, dated 2026-09-27, WO NTZ-1 clauses C-004 and C-008 (PROVEN).
 
@@ -11002,9 +11036,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   to satisfy a call to 'element_at' function …` where Spark answers `NULL` typed `void` (dated
   2026-09-25).
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (128 steps after r3 in
-  `python/repark/tests/u9_types_1_spark_oracle.json`, group `map`; scoreboard cell `TY-MAP`,
+  `python/repark/tests/timestamps/u9_types_1_spark_oracle.json`, group `map`; scoreboard cell `TY-MAP`,
   replayed EQUAL).
-- **Pin** — `python/repark/tests/test_u9_types_1.py`, `crates/repark-spark/src/tests/u9_map.rs`,
+- **Pin** — `python/repark/tests/timestamps/test_u9_types_1.py`, `crates/repark-spark/src/tests/u9_map.rs`,
   `crates/repark-spark/src/keyword_lower.rs` (unit pin), `crates/repark-iceberg/src/write/update_cast.rs`
   (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
@@ -11024,12 +11058,12 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   DataFrame `create()` of a `NULL` column stores `unknown` on v3 and refuses on v2.
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (21 steps) and
   2026-09-26 (+6 steps: printSchema, cast rows, file metrics, CoW DELETE; group `void` of
-  `python/repark/tests/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
+  `python/repark/tests/timestamps/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
   `unknown`; `INSERT … VALUES (0, NULL)` writes; the column reads NULL and describes as `void`;
   `INSERT … VALUES (2, 1)` refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot
   safely cast `c` "INT" to "VOID". SQLSTATE: KD000`; v1 and v2 refuse `IllegalStateException:
   Invalid schema for v<N>: - Invalid type for c: unknown is not supported until v3`.
-- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `void`, residues R-22, R-23, R-24
+- **Pin** — `python/repark/tests/timestamps/test_u9_types_1.py` (group `void`, residues R-22, R-23, R-24
   of `task/ledgers/staging/u9-types-1-ledger.md`) and
   `crates/repark-spark/src/tests/u9_void_uuid.rs`.
 - **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-009 (PROVEN). Remaining
@@ -11064,12 +11098,12 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (12 steps) and
   2026-09-26 (+18 steps: dtypes, printSchema, order, bucket partition, alter-to-string,
   invalid literals, append, DELETE / UPDATE smoke, files metrics; group `uuid` of
-  `python/repark/tests/u9_types_1_spark_oracle.json`): SQL refuses the type name
+  `python/repark/tests/timestamps/u9_types_1_spark_oracle.json`): SQL refuses the type name
   (`[UNSUPPORTED_DATATYPE] Unsupported data type "UUID". SQLSTATE: 0A000`); a column added
   through the Iceberg API reads as `string` with canonical lower-case values, takes string
   literals (upper case stored lower case, an invalid string refused at the task with
   `IllegalArgumentException: Invalid UUID string: …`) and DataFrame `STRING` appends.
-- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `uuid`, residues R-25, R-26,
+- **Pin** — `python/repark/tests/timestamps/test_u9_types_1.py` (group `uuid`, residues R-25, R-26,
   R-27, R-28 of `task/ledgers/staging/u9-types-1-ledger.md`) and
   `crates/repark-spark/src/tests/u9_void_uuid.rs`.
 - **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-010 (PROVEN). Remaining
@@ -11097,7 +11131,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `[["spark_catalog"]]` on the harness session (`hc` configured, `sc` configured), and
   `SELECT * FROM spark_catalog.ns.t0` refuses `TABLE_OR_VIEW_NOT_FOUND` when `ns` exists only
   in `sc`.
-- **Pin** — `python/repark/tests/test_catalog_1.py::test_current_catalog_cell_is_spark_catalog`,
+- **Pin** — `python/repark/tests/session/test_catalog_1.py::test_current_catalog_cell_is_spark_catalog`,
   `…::test_register_memory_catalog_registers_and_nothing_else`,
   `…::test_spark_catalog_is_not_an_alias_of_another_catalog`,
   `crates/repark-spark/src/tests/session_catalog.rs::a_fresh_session_is_in_spark_catalog_beside_configured_and_registered_catalogs`,
@@ -11122,7 +11156,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-rt-default.json`,
   `spark-build-default-sc.json`, `spark-build-default-missing.json`, `spark-main.json` keys
   `m1_*`).
-- **Pin** — `python/repark/tests/test_catalog_1.py::test_default_catalog_cell_follows_the_runtime_conf`,
+- **Pin** — `python/repark/tests/session/test_catalog_1.py::test_default_catalog_cell_follows_the_runtime_conf`,
   `…::test_the_runtime_default_catalog_drives_the_dataframe_door`,
   `…::test_use_pins_the_current_catalog_against_the_default_conf`,
   `…::test_the_default_catalog_conf_at_build_is_the_first_current_catalog`,
@@ -11143,7 +11177,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-main.json`
   keys `use_*`; `target/probe-catalog-1b/spark-open.json` keys `use_sc_from_same_cur`,
   `use_session_from_same_cur`).
-- **Pin** — `python/repark/tests/test_catalog_1.py::test_use_catalog_ns_cell_and_the_final_reset`,
+- **Pin** — `python/repark/tests/session/test_catalog_1.py::test_use_catalog_ns_cell_and_the_final_reset`,
   `…::test_use_forms_answer_as_spark`,
   `crates/repark-spark/src/tests/session_catalog.rs::use_forms_answer_as_spark`.
   pins: catalog-1/C-005
@@ -11162,7 +11196,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-main.json`
   keys `c_mem_*` / `c_both_*`; `target/probe-catalog-1b/spark-open.json`: the `type` match
   is case-insensitive and echoes the raw value, the both-keys text is general).
-- **Pin** — `python/repark/tests/test_catalog_1.py::test_type_memory_cell_refuses_at_first_use`,
+- **Pin** — `python/repark/tests/session/test_catalog_1.py::test_type_memory_cell_refuses_at_first_use`,
   `…::test_type_memory_on_the_builder_door_builds_and_refuses_at_first_use`,
   `…::test_both_kind_keys_refuse_at_first_use_on_both_doors`,
   `…::test_the_catalog_extensions_opt_in_restores_the_memory_type`,
@@ -11180,7 +11214,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `listDatabases()` answers `["default"]`, and after `setCurrentCatalog("sc")` it answers
   `["ns"]`: the call reads the session catalog until the current catalog moves.
 - **Apache Spark** — the cell replay (`out/spark-edge.json`).
-- **Pin** — `python/repark/tests/test_catalog_1.py::test_list_databases_cell_lists_the_session_catalog`.
+- **Pin** — `python/repark/tests/session/test_catalog_1.py::test_list_databases_cell_lists_the_session_catalog`.
   pins: catalog-1/C-009
 - **Rationale** — the cell replays EQUAL.
 
@@ -11194,7 +11228,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — the same CTAS stores every field optional (`required: false`) and reads
   every Arrow field nullable. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s1-ctas-if-fresh]`
+  `python/repark/tests/iceberg/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s1-ctas-if-fresh]`
   and `…[s7-ctas-if-fresh]`, `…[s8-ctas-cow]`, `…[s9-ctas-cow]`,
   `…[s8-merge-idempotent-cow]`, `…[s9-merge-idempotent-cow]`; live
   `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
@@ -11217,7 +11251,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Apache Spark** — same SQL, same rows, same snapshot operations, two delete files.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s2-merge-idempotent]`
+  `python/repark/tests/iceberg/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s2-merge-idempotent]`
   and `…[s7-merge-idempotent]`; live
   `…::test_sql_harden_row_matches_the_live_spark_oracle[s2-merge-idempotent]`;
   `…::test_merge_delete_file_count_meets_spark_floor`;
@@ -11238,7 +11272,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   decimal128(10,4) nullable`, `units int32 not null`, `note string not null`, `part int32
   nullable`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s3-dedup-coalesce-cast]`
+  `python/repark/tests/iceberg/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s3-dedup-coalesce-cast]`
   and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s3-dedup-coalesce-cast]`;
   the export-boundary coercion surface is pinned by
   `crates/repark-python/src/arrow_export.rs::tests::non_string_widening_mismatch_casts_losslessly`
@@ -11268,7 +11302,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `crates/repark-core/src/spark_nullable.rs::tests::relax_covers_depth_40`,
   `...::relax_covers_depth_200`, `...::deep_nesting_completes_with_nullable_flags`
   (600-deep, all nullable) plus
-  `python/repark/tests/test_nullability_2.py::test_reader_relax_covers_depth_40` and
+  `python/repark/tests/types/test_nullability_2.py::test_reader_relax_covers_depth_40` and
   `...::test_deep_read_refuses_past_arrow_footer_limit` (the transport ceiling).
 - **Rationale** — FIXED. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
@@ -11287,10 +11321,10 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_date_fn_1.py`,
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`
+  `python/repark/tests/functions/test_date_fn_1.py`,
+  `python/repark/tests/iceberg/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`
   and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
-  `python/repark/tests/test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
+  `python/repark/tests/parity/test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
 - **Rationale** — FIXED. The Spark-door spelling was missing; `to_date` / `CAST(ts AS DATE)`
   already existed. `unix_timestamp` was `R-FN-BATCH1` / `B-TZ-1` and is registered on the
   SQL door and the facade (zero-arg and one-arg; the format argument stays unsupported).
@@ -11315,9 +11349,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `unsupported strategy: {name}. Only binpack or sort is supported`.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-31.)*
 - **Pin** — `crates/repark-spark/src/tests/call_rdf_sort.rs` (the routing table and every
-  refusal) and `python/repark/tests/test_ice_rdf_sort_parse_1.py` (the three cells against
+  refusal) and `python/repark/tests/iceberg/test_ice_rdf_sort_parse_1.py` (the three cells against
   the recorded Spark oracle), plus the re-pinned facade rows
-  `python/repark/tests/test_rewrite_data_files_options.py::test_rewrite_sort_order_refuses_loud`
+  `python/repark/tests/iceberg/test_rewrite_data_files_options.py::test_rewrite_sort_order_refuses_loud`
   and `…::test_rewrite_sort_strategy_refuses_loud`.
 - **Rationale** — FIXED, not declared. 2026-09-06 (WRITE-ORDER-DIST-1): the table write order
   fixed there sorts the files a write commits, but `rewrite_data_files` still took no `sort` /
@@ -11339,7 +11373,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (`ExtendedParser.parseSortOrder`).
   *(oracle: documented — the claim here is the refusal, not a value.)*
 - **Pin** —
-  `python/repark/tests/test_ice_rdf_sort_parse_1.py::test_rdf_sort_order_transform_is_a_declared_refusal`
+  `python/repark/tests/iceberg/test_ice_rdf_sort_parse_1.py::test_rdf_sort_order_transform_is_a_declared_refusal`
   and the `bucket(4, id)` arm of
   `crates/repark-spark/src/tests/call_rdf_sort.rs::call_rdf_sort_order_parse_refusals_match_java`.
 - **Rationale** — DECLARED. The fork's sort writer takes identity orders and z-order only; a
@@ -11387,7 +11421,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   F-RDF-COW-BYTES-1): the two MoR value cells, every removed-count cell, and the residue
   zero cell run plain (see those rows).
 - **Apache Spark** — the 49 recorded cells
-  (`python/repark/tests/ice_rdf_options_1_spark_oracle.json`, live PySpark 4.1.2 + Iceberg
+  (`python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json`, live PySpark 4.1.2 + Iceberg
   1.11.0, 2026-09-17): default single-commit rewrites, per-key validation messages, the
   `rewrite_position_delete_files` option subset (including the narrowing forced cells), the
   negative-size band answers, and the two residue sequences.
@@ -11395,7 +11429,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_rdf_options.rs` (35 option-validation, apply, and
   RPD-refusal pins),
-  `python/repark/tests/test_ice_rdf_options_1.py` (offline pins over the fixture with per-cell
+  `python/repark/tests/iceberg/test_ice_rdf_options_1.py` (offline pins over the fixture with per-cell
   dated xfail reasons plus green keep-set twins, failed/removed delete-count pins, the RPD
   `UnsupportedOperationException` and IAE-first pins, the NULL-dangling-precedence pin, the
   max-failed-commits no-effect pin, plus the live tier that re-runs the
@@ -11403,8 +11437,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `call.rs::call_rewrite_position_delete_files_validates_options_and_refuses_where`.
   The six RP-32 cells for the programs the 49-cell oracle does not cover (the legacy-flag
   and NULL spellings, the six-file MERGE shape, the 2,000-row dead file) live in
-  `python/repark/tests/rp32_rdf_cow_bytes_spark_oracle.json`, recorded by
-  `python/repark/tests/_record_rp32_rdf_cow_bytes.py`.
+  `python/repark/tests/iceberg/rp32_rdf_cow_bytes_spark_oracle.json`, recorded by
+  `python/repark/tests/iceberg/_record_rp32_rdf_cow_bytes.py`.
 - **Rationale** — FIXED. The `NumberFormatException` leaf, the `inf`/`2d` double
   spellings, and multi-violation check order stay measured-and-noted gaps in the unit ledger.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-007, C-011
@@ -11428,7 +11462,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (`residue_rdf_only`) the same data rewrite leaves all 16 pre-existing deletes in place.
   *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** —
-  `python/repark/tests/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape`
+  `python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape`
   and `::test_residue_matches_spark_zero_delete_files` (both assert the zero since RP-32).
 - **Rationale** — FIXED at RP-32 by the same fork change that closes `ICE-RDF-DANGLE-2`:
   the merging commit retires delete files older than every live data file, so no
@@ -11451,7 +11485,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   2 data + 0 delete files in 19 snapshots (`removed_delete_files_count = 0`).
   *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** —
-  `python/repark/tests/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape`
+  `python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape`
   (asserts `deletes == 0`) and `::test_residue_matches_spark_zero_delete_files` (plain),
   plus `::test_option_cell_removed_counts` (plain on every non-RPD cell).
 - **Rationale** — FIXED at RP-32. The remaining difference was exactly 2 partition-scoped deletes
@@ -11474,11 +11508,11 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `rewritten_bytes_count = 9229`, 9 snapshots, 4 data files) and
   `partial_progress_groups` (the same result counts, 10 snapshots over 2 `replace`
   commits, 4 data files) in
-  `python/repark/tests/ice_rdf_options_1_spark_oracle.json`
+  `python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json`
   (live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17).
   *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
 - **Pin** —
-  `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[target_small]`,
+  `python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_option_cell_values[target_small]`,
   `[max_group_size]`, `[partial_progress_groups]` and
   `::test_option_cell_snapshots[partial_progress_groups]`, all plain since RP-34.
 - **Rationale** — **FIXED 2026-09-19 (RP-34, fork #306).** It was a fork ask: output
@@ -11509,7 +11543,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   merge-on-read shape) rewrite 8 delete files into 8 and commit a 10th snapshot. Rows are
   unchanged (200 live).
 - **Apache Spark** — the same cells in
-  `python/repark/tests/ice_rdf_options_1_spark_oracle.json` rewrite 0 delete files
+  `python/repark/tests/iceberg/ice_rdf_options_1_spark_oracle.json` rewrite 0 delete files
   (`rewritten_delete_files_count = 0`, `added_delete_files_count = 0`, 9 snapshots).
 - **Pin** — `test_ice_rdf_options_1.py::test_option_cell_values[rpd_target_small]`,
   `[rpd_target_small_forced]` and `::test_option_cell_snapshots[rpd_target_small]`,
@@ -11548,7 +11582,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `removed_delete_files_count = 0`, 3 data + 1 delete files), same oracle file.
   *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
 - **Pin** —
-  `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[delete_file_threshold]`
+  `python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_option_cell_values[delete_file_threshold]`
   and `[remove_dangling]` (plain since RP-32, as are the removed-count asserts on the same
   cells that used to xfail under `ICE-RDF-DANGLE-2`).
 - **Rationale** — FIXED at RP-32: the byte accounting sits in the fork's rewrite commit path,
@@ -11569,7 +11603,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   counts), same oracle file.
   *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
 - **Pin** —
-  `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[rpd_rewrite_all]`,
+  `python/repark/tests/iceberg/test_ice_rdf_options_1.py::test_option_cell_values[rpd_rewrite_all]`,
   `[rpd_min_input_files_1]` and
   `::test_option_cell_snapshots[rpd_rewrite_all]`, `[rpd_min_input_files_1]` — plain pins
   since RP-33 (they were `xfail(strict)` with the dated reasons).
@@ -11609,7 +11643,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   replayed),
   `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_merges_both_legs`
   and `::call_rewrite_manifests_merges_the_delete_leg_alone`, and
-  `python/repark/tests/test_ice_rm_deletes_1.py`.
+  `python/repark/tests/iceberg/test_ice_rm_deletes_1.py`.
   **Which of the 14 are literal (re-measured 2026-09-19, ICE-META-DELETE-1 round 2):** twelve
   — `unpart_mor`, `no_deletes`, `part_mor`, `part_mor_spec` and `part_mor_nocache` in v2 and
   v3, plus `part_mor_real_v3` — are pinned against the recorded cell on every field (before
@@ -11655,7 +11689,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`,
   `crates/repark-spark/src/tests/call_rm_deletes.rs` (current, non-current and unknown `spec_id`
   pins) and
-  `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_selects_and_use_caching_is_accepted`
+  `python/repark/tests/iceberg/test_maintenance_call.py::test_rewrite_manifests_spec_id_selects_and_use_caching_is_accepted`
 - **Rationale** — `spec_id` FIXED 2026-09-20 (ICE-RM-DELETES-1): the argument flows into the
   `rewrite_if` predicate, which the sibling `rewrite_data_files` options map already validated
   this way. The `use_caching` string-literal strictness stays DECLARED. `use_caching` is a
@@ -11699,8 +11733,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 `rewrite_table_path` refused before this row (`CALL … is not supported`);
 they now answer with Spark's schemas and rows over the owned fork's
 maintenance actions. Measured before/after on the 31-cell PySpark-4.1.2 +
-Iceberg-1.11.0 oracle (`python/repark/tests/ice_procs_route_1_spark_oracle.json`,
-re-derived by `python/repark/tests/_record_ice_procs_route_1_oracle.py`):
+Iceberg-1.11.0 oracle (`python/repark/tests/iceberg/ice_procs_route_1_spark_oracle.json`,
+re-derived by `python/repark/tests/iceberg/_record_ice_procs_route_1_oracle.py`):
 before, every facade cell failed with the not-supported refusal; after, 28
 cells pass on the facade door with the recorded columns, rows, metadata
 entries, and file contents, the 2 incremental version-range cells plus the
@@ -11748,7 +11782,7 @@ oracle on live Spark.
   cells, which only Spark answers (the fork stages a full rewrite), and the
   nested-column stats cell, which only Spark answers (the fork scan has no
   nested projection).
-- **Pin**: `python/repark/tests/test_ice_procs_route_1.py` (facade cells plus
+- **Pin**: `python/repark/tests/iceberg/test_ice_procs_route_1.py` (facade cells plus
   the native-door CALL refusal each) and
   `crates/repark-spark/src/tests/call_procs_route_1.rs` (schemas, rows, and
   every refusal).
@@ -11802,7 +11836,7 @@ owned fork's maintenance actions.
   complete import` (`P-ADD-FILES-CHECK-DUP` is SPARK-CANNOT; the pins hold the exact
   type plus that body on each door). *(oracle: recorded — `out/spark-proc.json`, live
   PySpark 4.1.2 + Iceberg 1.11.0.)*
-- **Pin** — `python/repark/tests/test_ice_procedures_1.py` and
+- **Pin** — `python/repark/tests/iceberg/test_ice_procedures_1.py` and
   `crates/repark-spark/src/tests/call_procedures_2.rs` (schemas, rows, NULL-ness,
   mapping, paths, by-name binding, every refusal), plus
   `crates/repark-spark/src/tests/call_rdf_branch.rs` (branch refs, ghost text,
@@ -11838,7 +11872,7 @@ owned fork's maintenance actions.
   read from the recorded warehouse the cells were taken from.)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_rm_deletes.rs::rm_deletes_evolved_spec_v2` / `_v3` and
-  `python/repark/tests/test_ice_rm_deletes_1.py::test_evolved_spec_default_is_a_no_op`
+  `python/repark/tests/iceberg/test_ice_rm_deletes_1.py::test_evolved_spec_default_is_a_no_op`
   assert the merged `[(0,0,5,0), (0,1,0,0)]`, and
   `::rm_deletes_non_current_spec_rewrites_that_spec` reaches the three-manifest layout only
   with `commit.manifest-merge.enabled=false`.
@@ -11867,7 +11901,7 @@ owned fork's maintenance actions.
   session zone is not UTC; repark's default zone is UTC by registry row
   [TZ-2](#tz-2--the-session-timezone-default-is-utc), so the instant is the same and the rendering
   differs by that already-declared row, not by this one.)*
-- **Pin** — `python/repark/tests/test_types_1.py` `from_unixtime` pins (the LRS-4 UNIX-1
+- **Pin** — `python/repark/tests/types/test_types_1.py` `from_unixtime` pins (the LRS-4 UNIX-1
   divergence pin retired with the row).
 - **Rationale** — FIXED (2026-09-05, TYPES-1).
   pins: types-1/C-006
@@ -11929,7 +11963,7 @@ owned fork's maintenance actions.
   `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_data_files_on_v3_drops_scoped_deletion_vectors`;
   `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_data_files_drops_both_vectors`
   and `partitioned_v3_dv_rewrite_where_part0_keeps_the_sibling_vector`;
-  facade `python/repark/tests/test_v3_dv_compaction.py::test_facade_rewrite_data_files_drops_scoped_v3_deletion_vectors`.
+  facade `python/repark/tests/iceberg/test_v3_dv_compaction.py::test_facade_rewrite_data_files_drops_scoped_v3_deletion_vectors`.
   Pins: v3-5-dv-compaction/C-001, C-002, C-004.
 - **Rationale** — FIXED. Fork `plan_dv_removal` / `rewrite_siblings_for_dropped_references`
   is wired in `RewriteDataFiles::rewrite_group` at `33be9a0`. The engine CALL already
@@ -11963,10 +11997,10 @@ owned fork's maintenance actions.
   (six DVs stay);
   `crates/repark-spark/src/tests/v3e3.rs::partitioned_v3_dv_rewrite_position_delete_files_returns_zeros`
   and `partitioned_v3_dv_fork_rewrite_position_delete_files_measurement`;
-  facade `python/repark/tests/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`
-  and `python/repark/tests/test_v3_dv_compaction.py`;
+  facade `python/repark/tests/iceberg/test_v3e3_fixtures.py::test_facade_partitioned_v3_dv_matches_spark_live_rows`
+  and `python/repark/tests/iceberg/test_v3_dv_compaction.py`;
   cell B `call_v3_dv.rs::call_rewrite_position_delete_files_converts_five_upgraded_parquet_deletes_to_puffin`
-  and live `python/repark/tests/test_parity_live.py::test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark`.
+  and live `python/repark/tests/parity/test_parity_live.py::test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark`.
   Pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-002, C-003.
 - **Rationale** — FIXED. Owner ruling 2026-09-03: build the PROC-1 addendum shape. DV-only
   zeros are Spark's measured answer, not a silent under-report. Parquet→DV conversion on an
@@ -11989,7 +12023,7 @@ owned fork's maintenance actions.
   `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_zeros_two_upgraded_parquet_deletes_below_spark_floor`,
   `call_rewrite_position_delete_files_zeros_mixed_remaining_parquet_below_spark_floor`,
   `call_rewrite_position_delete_files_zeros_partition_parquet_below_spark_floor`;
-  live `python/repark/tests/test_parity_live.py::test_live_rewrite_position_delete_files_below_floor_matches_spark`.
+  live `python/repark/tests/parity/test_parity_live.py::test_live_rewrite_position_delete_files_below_floor_matches_spark`.
   Pins: rp-11-repin-f24/C-002.
 - **Rationale** — FIXED. The fork planner admits the group; RePark does not patch it.
   Spark converts the same shapes once the group reaches five files (cells B5, D5).
@@ -12052,11 +12086,11 @@ owned fork's maintenance actions.
   and is not reachable deterministically through PySpark 4.1.2. Spark's own
   `CREATE OR REPLACE` after a RePark commit succeeds and continues the version chain
   (`v4`, new rows only); RePark's adopted handle keeps reading its stale snapshot.
-  *(oracle: recorded — `python/repark/tests/ice_hadoop_vn_1_spark_oracle.json`: Spark's
+  *(oracle: recorded — `python/repark/tests/iceberg/ice_hadoop_vn_1_spark_oracle.json`: Spark's
   rows after each shape, the 400k-row race count, the planted-file outcome, and the
   replace mirror.)*
 - **Pin** —
-  `python/repark/tests/test_ice_hadoop_vn_1.py` (offline `conc` + wedge + recovery +
+  `python/repark/tests/iceberg/test_ice_hadoop_vn_1.py` (offline `conc` + wedge + recovery +
   DataFrame-door stale writers; live `conc2`, conc cross-read, recovery cross-read),
   `crates/repark-iceberg/src/write/hadoop_stale_commit.rs`
   (`stale_hadoop_pointer_second_append_fails_loud_and_keeps_winner`,
@@ -12084,7 +12118,7 @@ owned fork's maintenance actions.
   after a RePark commit it writes `v4` in Hadoop naming and reads the new rows only,
   and after a stale RePark replace raises, Spark still reads the winner's rows.
 - **Pin** —
-  `python/repark/tests/test_ice_hadoop_vn_1.py::test_stale_replace_raises_conflict`,
+  `python/repark/tests/iceberg/test_ice_hadoop_vn_1.py::test_stale_replace_raises_conflict`,
   `::test_stale_df_replace_raises_conflict`,
   `::test_live_stale_replace_conflicts_spark_reads_winner`,
   `::test_live_spark_replace_after_repark_commit` (oracle
@@ -12173,9 +12207,9 @@ owned fork's maintenance actions.
   *(oracle: live — `aws-acceptance` run 33635288918 on merged `main` `8c4bc55`, 2026-09-02, job
   "tier-2 live AWS acceptance (Glue + S3 Tables, scratch-only)", `6 passed in 122.13s`.)*
 - **Pin** —
-  `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`,
-  `python/repark/tests/test_v3_acceptance_local.py::test_v3_create_refusal_classification_is_the_s3_tables_decision_table`,
-  `python/repark/tests/test_acceptance_v3_helpers.py::test_v3_legs_are_twins_of_the_mor_legs`
+  `python/repark/tests/parity/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`,
+  `python/repark/tests/parity/test_v3_acceptance_local.py::test_v3_create_refusal_classification_is_the_s3_tables_decision_table`,
+  `python/repark/tests/parity/test_acceptance_v3_helpers.py::test_v3_legs_are_twins_of_the_mor_legs`
 - **Tightened 2026-09-02 (V3-11), confirmed live 2026-09-03.** The shared leg body's
   `assert_v3_lineage` now demands the inserted row's exact `_row_id = 11` on both legs
   (`exact_commit_counts` does not gate it) where it demanded only a fresh unused id. The counts
@@ -12228,9 +12262,9 @@ owned fork's maintenance actions.
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_subquery_update_outside_the_hole_still_refuses`;
   ANSI twins `crates/repark-sql/src/v3/cow.rs::adopted_v3_cow_subquery_where_dml_keeps_row_lineage`
   and `ansi_door_still_refuses_subquery_predicate_shapes_outside_the_hole`; facade
-  `python/repark/tests/test_v3_cow_dml.py::test_facade_adopted_v3_cow_subquery_where_dml_keeps_row_lineage`
+  `python/repark/tests/iceberg/test_v3_cow_dml.py::test_facade_adopted_v3_cow_subquery_where_dml_keeps_row_lineage`
   and `test_facade_v3_subquery_update_outside_the_hole_still_refuses`; live cell
-  `python/repark/tests/test_v3_live_oracle.py::test_v3_subquery_where_dml_live_cow`.
+  `python/repark/tests/iceberg/test_v3_live_oracle.py::test_v3_subquery_where_dml_live_cow`.
   Earlier shapes stay pinned by
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_carries_survivor_row_lineage`,
   `adopted_v3_cow_second_delete_keeps_survivor_row_id`,
@@ -12287,8 +12321,8 @@ owned fork's maintenance actions.
   ANSI twin
   `crates/repark-sql/src/v3/cow.rs::adopted_v3_mor_subquery_where_dml_writes_file_scoped_deletion_vectors`;
   facade
-  `python/repark/tests/test_v3_cow_dml.py::test_facade_adopted_v3_mor_subquery_where_dml_writes_deletion_vectors`;
-  live cell `python/repark/tests/test_v3_live_oracle.py::test_v3_mor_subquery_where_dml_live`.
+  `python/repark/tests/iceberg/test_v3_cow_dml.py::test_facade_adopted_v3_mor_subquery_where_dml_writes_deletion_vectors`;
+  live cell `python/repark/tests/iceberg/test_v3_live_oracle.py::test_v3_mor_subquery_where_dml_live`.
   Pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-004.
 - **Rationale** — FIXED for rows, lineage, next-row-id and delete-entry content. The one dated
   residual it carried was a Puffin **container-packing** difference, not a row or lineage
@@ -12343,7 +12377,7 @@ owned fork's maintenance actions.
   `merge/tests/partition_sink.rs::the_target_scan_records_every_planned_file_partition` holds the
   scan side of it; `dv_close.rs::closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers`
   records that an empty map still walks. Live cell
-  `python/repark/tests/test_v3_dv_container_close.py::test_v3_shared_puffin_container_close_live`.
+  `python/repark/tests/iceberg/test_v3_dv_container_close.py::test_v3_shared_puffin_container_close_live`.
 - **Rationale** — FIXED. The packing lived in the fork and was fixed there (F-18); RePark
   consumed it in repin **RP-7**, re-aimed the narrowed V3-9 pin at Spark's exact layout, and
   re-measured the oracle at the matched layout rather than trusting the V3-9 transcript. Pins:
@@ -12384,7 +12418,7 @@ owned fork's maintenance actions.
   `partitioned_ctas_numbers_files_ascending_by_partition_value`; ANSI twins
   `crates/repark-sql/src/v3/cow.rs::ansi_mor_merge_across_three_partitions_numbers_files_ascending_by_partition_value`
   and `::ansi_partitioned_ctas_numbers_files_ascending_by_partition_value`; facade
-  `python/repark/tests/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`
+  `python/repark/tests/parity/test_v3_acceptance_local.py::test_v3_acceptance_leg_body_against_the_local_catalog`
   via `_acceptance_v3.assert_v3_lineage`, which now pins `V3_EXPECTED_INSERTED_ROW_ID = 11`
   exactly where it used to assert only a fresh-id floor.
 - **Rationale** — FIXED. The engine's ordering rule is ascending partition value, spec-field
@@ -12521,8 +12555,8 @@ owned fork's maintenance actions.
   `coalesce(1)`, 2026-09-02 V3-10 transcript)*.
 - **Pin** — `crates/repark-spark/src/tests/v3_upgrade.rs` (twelve cells, Spark door),
   `crates/repark-sql/src/v3/create.rs::alter_set_properties_*` (ANSI door),
-  `python/repark/tests/test_v3_upgrade.py` (facade),
-  `python/repark/tests/test_v3_live_oracle.py::test_v3_upgrade_v2_to_v3_live_matches_spark`
+  `python/repark/tests/iceberg/test_v3_upgrade.py` (facade),
+  `python/repark/tests/iceberg/test_v3_live_oracle.py::test_v3_upgrade_v2_to_v3_live_matches_spark`
   (live triple),
   `crates/repark-functions/src/format_version.rs` unit pins.
   Pins: v3-10-upgrade-v2-to-v3/C-002, C-003, C-004.
@@ -12574,7 +12608,7 @@ owned fork's maintenance actions.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-10 transcript)*.
 - **Pin** — `crates/repark-spark/src/tests/v3_upgrade.rs::alter_downgrade_and_unsupported_versions_refuse_naming_both_versions`,
   `crates/repark-sql/src/v3/create.rs::alter_set_properties_downgrade_and_unsupported_versions_refuse`,
-  `python/repark/tests/test_v3_upgrade.py::test_alter_downgrade_and_unsupported_versions_refuse`.
+  `python/repark/tests/iceberg/test_v3_upgrade.py::test_alter_downgrade_and_unsupported_versions_refuse`.
   Pins: v3-10-upgrade-v2-to-v3/C-002, C-005.
 - **Rationale** — DECLARED and dated. The owned fork's `FormatVersion` enum stops at `V3` and
   its spec support ends there; format v4 is still in development upstream. Refusing loudly is
@@ -12615,7 +12649,7 @@ owned fork's maintenance actions.
   after, subquery UPDATE, subquery DELETE, plain-`WHERE` DELETE, plain-`WHERE` UPDATE, two legacy
   deletes, untouched sibling, partition-scoped merge-and-keep, copy-on-write and two
   diverged-branch cells, plus one `#[ignore]`d measurement), `crates/repark-sql/src/v3/create.rs::upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv`,
-  `python/repark/tests/test_v3_legacy_delete_merge.py` (facade + live Spark cells at matched layouts).
+  `python/repark/tests/iceberg/test_v3_legacy_delete_merge.py` (facade + live Spark cells at matched layouts).
   Pins: v3-12-legacy-delete-merge/C-002, C-003, C-004; rp-8-repin-f21-f22/C-002, C-003.
 - **Rationale** — FIXED. **Moved fork-side (RP-8, 2026-09-03):** V3-12 built the merge engine-side
   because the fork could not express it; fork `#262`/`#263` (F-21/F-22) then took ownership, so
@@ -12640,7 +12674,7 @@ owned fork's maintenance actions.
 - **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_plain_where_merge_on_read_delete_over_a_legacy_delete_merges_into_the_dv`
   and `::a_plain_where_merge_on_read_update_over_a_legacy_delete_merges_into_the_dv`,
   `crates/repark-sql/src/v3/create.rs::ansi_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv`,
-  `python/repark/tests/test_v3_legacy_delete_merge.py::test_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv`
+  `python/repark/tests/iceberg/test_v3_legacy_delete_merge.py::test_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv`
   and its live twin `::test_plain_where_mor_delete_over_a_legacy_parquet_delete_matches_spark`.
   Pins: rp-8-repin-f21-f22/C-003.
 - **Rationale** — FIXED. The TRIGGER this row named — "a fork `write_deletion_vectors` that merges
@@ -12674,7 +12708,7 @@ owned fork's maintenance actions.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-02 V3-12 transcript.)*
 - **Pin** — `crates/repark-spark/src/tests/v3_legacy_delete.rs::a_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`,
   `crates/repark-sql/src/v3/create.rs::ansi_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`,
-  `python/repark/tests/test_v3_legacy_delete_merge.py::test_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`
+  `python/repark/tests/iceberg/test_v3_legacy_delete_merge.py::test_partition_scoped_legacy_delete_merges_and_keeps_the_parquet_live`
   and its live twin `::test_partition_scoped_legacy_delete_matches_spark`.
   Pins: rp-8-repin-f21-f22/C-003.
 - **Rationale** — FIXED. Both halves of the TRIGGER this row named landed together in the fork and
@@ -12721,9 +12755,9 @@ owned fork's maintenance actions.
 - **Apache Spark** — `"abc"` is a STRING literal (`spark.sql.ansi.doubleQuotedIdentifiers` is off
   by default): `SELECT "abc"` is `abc`, `length("a\nb")` is 3, `"it\'s"` is `it's`.
   *(oracle: `<pyspark-4.1.2-oracle>` — E17 / E18 / U16; re-measured live 2026-09-15, banner 4.1.2.)*
-- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_double_quoted_literal_is_a_string`
-  (supersedes `python/repark/tests/test_sqp_1_string_literals.py::test_double_quoted_literal_is_an_identifier`);
-  door pins `python/repark/tests/test_fnp_4b_spark_dialect.py` (BL9-*, FNP4B-*).
+- **Pin** — `python/repark/tests/sql/test_sqp_1_string_literals.py::test_double_quoted_literal_is_a_string`
+  (supersedes `python/repark/tests/sql/test_sqp_1_string_literals.py::test_double_quoted_literal_is_an_identifier`);
+  door pins `python/repark/tests/functions/test_fnp_4b_spark_dialect.py` (BL9-*, FNP4B-*).
 - **Rationale** — FIXED. The wire landed with the backtick internal-SQL move in the same unit,
   exactly the order this row prescribed; the old BACKLOG pin flipped red→green with the fix.
 
@@ -12736,8 +12770,8 @@ owned fork's maintenance actions.
 - **Apache Spark** — with `escapedStringLiterals=true`, the lexer keeps the backslash verbatim:
   `'\d'` is `\d` (length 2) and `'\''` is `\'`. The default is `false`, which SQP-1 matches.
   *(oracle: `<pyspark-4.1.2-oracle>` — E20 / E21; re-measured live 2026-09-15, banner 4.1.2.)*
-- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_escaped_string_literals_flag_has_no_carrier`
-  (default-`false` door); `true`-carrier pins in `python/repark/tests/test_fnp_4b_literals.py`
+- **Pin** — `python/repark/tests/sql/test_sqp_1_string_literals.py::test_escaped_string_literals_flag_has_no_carrier`
+  (default-`false` door); `true`-carrier pins in `python/repark/tests/functions/test_fnp_4b_literals.py`
 - **Rationale** — FIXED. The carrier landed with its behavior (both modes pinned) rather than as
   a silent surprise, exactly as this row required; the only remainder is runtime `SET`.
 
@@ -12753,9 +12787,9 @@ owned fork's maintenance actions.
   and repark's) Spark refuses the same cast — which repark matches.
   *(oracle: `<pyspark-4.1.2-oracle>` — B11; re-measured 2026-09-16 as
   `fixtures-batch17-bl11-binary.json`, 30 cells.)*
-- **Pin** — `python/repark/tests/test_bl_11_numeric_binary.py` (one case per B11 cell id on the
+- **Pin** — `python/repark/tests/types/test_bl_11_numeric_binary.py` (one case per B11 cell id on the
   SQL door plus Python-door representatives, value AND Arrow type AND nullability) and
-  `python/repark/tests/test_sqp_1_string_literals.py::test_numeric_to_binary_refuses`
+  `python/repark/tests/sql/test_sqp_1_string_literals.py::test_numeric_to_binary_refuses`
   (the ANSI-on refusal, flipped in place); door battery
   `crates/repark-spark/src/tests/cast_binary_ansi.rs`
 - **Rationale** — FIXED 2026-09-16. The ANSI-off encode and the ANSI-on conf refusal land together
@@ -12774,7 +12808,7 @@ owned fork's maintenance actions.
   unpaired/oversized unit with `?`, so an out-of-range `\U` yields **two** characters:
   `length('\U00110000')` = 2 and `hex('\U00110000')` = `3F3F` (and `hex('\UFFFFFFFF')` = `ED9EBF3F`,
   a longer artifact). *(oracle: `<pyspark-4.1.2-oracle>`; re-measured live 2026-09-15, banner 4.1.2.)*
-- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_out_of_range_unicode_escape_is_two_replacements`
+- **Pin** — `python/repark/tests/sql/test_sqp_1_string_literals.py::test_out_of_range_unicode_escape_is_two_replacements`
   (renamed from `test_out_of_range_unicode_escape_is_one_replacement`, flipped with the fix)
 - **Rationale** — FIXED. A migrated job now depends on the exact artifact byte-for-byte; the old
   single-`?` pin flipped red→green with the fix.
@@ -12792,7 +12826,7 @@ owned fork's maintenance actions.
   (2026-09-14 fixture and the 2026-09-15 live probe agree; the 2026-08-31 claim that
   `try_avg` is not NULL-on-overflow is stale).
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture, 2026-09-15 probe.)*
-- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_avg_interval_answers`
+- **Pin** — `python/repark/tests/functions/test_fnp7_try_inversions.py::test_try_avg_interval_answers`
   (day-time average, try-NULL on overflow, avg raise)
 - **Rationale** — BACKLOG, intent to close with **FNP-11**. Averaging intervals is temporal
   entanglement (month vs day-time fields, overflow class), not a try_* inversion. The
@@ -12809,7 +12843,7 @@ owned fork's maintenance actions.
   literal's HOUR unit forces the promotion even at zero. The calendar day is equal on both
   engines; the divergence is the result type and a midnight clock, never a wrong instant.
   *(oracle: live PySpark 4.1.2, 2026-08-31.)*
-- **Pin** — `python/repark/tests/test_fnp7_try_inversions.py::test_try_add_date_plus_zero_hour_stays_date_bl14`
+- **Pin** — `python/repark/tests/functions/test_fnp7_try_inversions.py::test_try_add_date_plus_zero_hour_stays_date_bl14`
   (asserts the current Date32 behavior so a silent change is loud).
 - **Rationale** — BACKLOG, filed 2026-08-31 from the FNP-7 final Critic pass (finding L-008).
   A fix needs the literal's unit to survive planning — upstream of the MonthDayNano
@@ -12823,8 +12857,8 @@ owned fork's maintenance actions.
 > `expm1(1e-08)` is `math.expm1(1e-08)`, not `exp(x)-1`. Sibling `log1p` is the matching
 > `f64::ln_1p` kernel (Spark SQL NULLs `x <= -1`; tiny-arg `log1p(1e-16)` is `1e-16`). Kernel:
 > `crates/repark-functions/src/spark_log1p.rs`. Pins:
-> `python/repark/tests/test_bl15_bl16_math_divergences.py::test_bl15_expm1_matches_spark_precise_kernel`,
-> `python/repark/tests/test_log1p_1.py`. Oracle: live PySpark 4.1.2, 2026-09-02.
+> `python/repark/tests/functions/test_bl15_bl16_math_divergences.py::test_bl15_expm1_matches_spark_precise_kernel`,
+> `python/repark/tests/functions/test_log1p_1.py`. Oracle: live PySpark 4.1.2, 2026-09-02.
 
 ### BL-16 — `hypot` squares before the root, overflowing where Spark rescales — **FIXED 2026-09-15 (DOOR-CONVERGE-1)**
 
@@ -12834,7 +12868,7 @@ owned fork's maintenance actions.
   `inf`, result `double` non-null for non-null inputs.
 - **Apache Spark** — `java.lang.Math.hypot` rescales: `1.4142135623730951e+200`.
   *(measured 2026-09-01, EX-2 pilot; oracle cells BL16-0..8.)*
-- **Pin** — `python/repark/tests/test_door_converge_1.py::test_c002_hypot_registers_rescaled_on_both_doors`
+- **Pin** — `python/repark/tests/functions/test_door_converge_1.py::test_c002_hypot_registers_rescaled_on_both_doors`
   and `test_bl15_bl16_math_divergences.py::test_bl16_hypot_rescales_like_spark`.
 - **Rationale** — FIXED. History: the facade composed `sqrt(x*x + y*y)` and the SQL door had
   no `hypot` at all (`Invalid function 'hypot'`).
@@ -12845,7 +12879,7 @@ owned fork's maintenance actions.
   NULL array or a NULL needle: `[2, 0, NULL]`.
 - **Apache Spark** — the not-found position is `0`: `[2, 0, NULL]` over the same frame.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_position_not_found_returns_zero`
+- **Pin** — `python/repark/tests/functions/test_fn_arrays_divergence.py::test_array_position_not_found_returns_zero`
 - **Rationale** — FIXED. History: DataFusion `array_position` returned NULL for not-found.
 
 ### FN-ARRAYSORT-1 — `array_sort` orders NULLs first; Spark orders them last — **FIXED 2026-09-03 (FN-FIX-1)**
@@ -12855,7 +12889,7 @@ owned fork's maintenance actions.
   `[2, 1, NULL]`.
 - **Apache Spark** — `array_sort` places NULL elements last: `[1, 2, NULL]`; its `sort_array`
   places them first on asc and last on desc. *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_array_sort_nulls_last`
+- **Pin** — `python/repark/tests/functions/test_fn_arrays_divergence.py::test_array_sort_nulls_last`
 - **Rationale** — FIXED. History: one comparator served both spellings as NULLS FIRST.
 
 ### FN-ARRAYSOVERLAP-1 — `arrays_overlap` answers False where a NULL element leaves the decision open — **FIXED 2026-09-03 (FN-FIX-1)**
@@ -12865,7 +12899,7 @@ owned fork's maintenance actions.
 - **Apache Spark** — the three-valued answer is NULL whenever no definite common element
   exists and a NULL blocks the decision: `[NULL, False, NULL, True, True, NULL]`.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_arrays_overlap_three_valued`
+- **Pin** — `python/repark/tests/functions/test_fn_arrays_divergence.py::test_arrays_overlap_three_valued`
 - **Rationale** — FIXED. History: a NULL element that blocked the decision answered False.
 
 ### FN-FLATTEN-1 — `flatten` drops a NULL sub-array; Spark answers NULL — **FIXED 2026-09-03 (FN-FIX-1)**
@@ -12875,7 +12909,7 @@ owned fork's maintenance actions.
   `[] / [] / [1, 2, 3] / NULL / [NULL, 1, 2] / NULL`.
 - **Apache Spark** — a NULL sub-array makes the whole row's answer NULL.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_arrays_divergence.py::test_flatten_null_subarray_makes_row_null`
+- **Pin** — `python/repark/tests/functions/test_fn_arrays_divergence.py::test_flatten_null_subarray_makes_row_null`
 - **Rationale** — FIXED. History: DataFusion flatten skipped NULL sub-arrays.
 ### BL-17 — `base64` omits RFC 4648 padding — **FIXED 2026-09-15 (DOOR-CONVERGE-1)**
 
@@ -12888,7 +12922,7 @@ owned fork's maintenance actions.
 - **Apache Spark** — RFC 4648 padded and MIME-chunked: `'Spark'` → `U3Bhcms=`, `'A'` →
   `QQ==`, `'Apache'` → `QXBhY2hl`, empty and NULL unchanged. *(oracle: live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-03, EX-4 string-basics batch.)*
-- **Pin** — `python/repark/tests/test_door_converge_1.py::test_c001_base64_pads_and_chunks_on_both_doors`,
+- **Pin** — `python/repark/tests/functions/test_door_converge_1.py::test_c001_base64_pads_and_chunks_on_both_doors`,
   `test_c001_unbase64_lenient_decode_on_both_doors`,
   `test_l001_unbase64_strict_endings_on_both_doors`, and
   `test_bl17_base64_padding.py::test_bl17_base64_applies_rfc4648_padding`.
@@ -12909,7 +12943,7 @@ owned fork's maintenance actions.
   **non-null**, `0` on empty input (oracle cells BL18-0..3).
 - **Apache Spark** — answers `int64` / **non-null** with the same values. *(oracle: live
   PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe on the shared int/bigint/string seed.)*
-- **Pin** — `python/repark/tests/test_door_converge_1.py::test_c006_count_aggregates_non_null_bigint_on_both_doors`
+- **Pin** — `python/repark/tests/functions/test_door_converge_1.py::test_c006_count_aggregates_non_null_bigint_on_both_doors`
   and `test_types_1.py::test_live_sketch_and_regression_counts_match_on_type_and_value`
   (full `(type, nullable, value)` equality now).
 - **Rationale** — FIXED. History: the DataFusion kernels were `UInt64`-nullable; TYPES-1
@@ -12932,7 +12966,7 @@ owned fork's maintenance actions.
   non-null); the full cell table is Q12-0…Q12-16. `concat('A', CAST(X'42' AS BINARY))`
   → STRING `'AB'` (Q15-5…Q15-8). *(oracle: recorded PySpark 4.1.2
   fixtures-batch12, 2026-09-15; fixtures-batch15-critic-622, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-0…Q12-16`
+- **Pin** — `python/repark/tests/functions/test_door_converge_2.py::test_sql_cell` (`Q12-0…Q12-16`
   legs), `test_q15_cell` (`Q15-5…Q15-8` legs), `test_facade_concat_arrays`,
   `test_facade_concat_string_binary`, and the `concat_array` / `string` Rust unit pins.
 - **Rationale** — FIXED. History: the Spark-door shim coerced every argument to `Utf8`,
@@ -12949,7 +12983,7 @@ owned fork's maintenance actions.
   types refuse `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` (oracle cells Q12-17…Q12-25).
 - **Apache Spark** — `reverse(array(1,2))` → `[2, 1]`; the full cell table is
   Q12-17…Q12-25. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-17…Q12-25`
+- **Pin** — `python/repark/tests/functions/test_door_converge_2.py::test_sql_cell` (`Q12-17…Q12-25`
   legs), `test_facade_reverse_arrays`, `test_facade_reverse_string`, and the
   `spark_reverse` Rust unit pins.
 - **Rationale** — FIXED. History: the door resolved DataFusion's string `reverse`, so
@@ -12981,12 +13015,12 @@ owned fork's maintenance actions.
   the date/timestamp stepping half too).
 - **Apache Spark** — `sequence(1, 3)` → `[1, 2, 3]` (`array<int>`); the full cell table
   is Q12-26…Q12-40. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-26…Q12-40`
+- **Pin** — `python/repark/tests/functions/test_door_converge_2.py::test_sql_cell` (`Q12-26…Q12-40`
   legs), `test_sql_error_cell` (`Q12-31`, `Q12-32`, `Q12-40`), `test_q15_cell` (`Q15-0…Q15-4`
   legs), `test_q15_error_cell` (`Q15-18`, `Q15-19` legs), `test_facade_sequence_column_stop`,
   `test_facade_sequence_literals`, `test_facade_sequence_month_step`,
   `test_facade_sequence_column_cap`,
-  `python/repark/tests/test_fnp_9_collections_json.py::test_sequence_descending_counts_down_and_illegal_step_raises`,
+  `python/repark/tests/functions/test_fnp_9_collections_json.py::test_sequence_descending_counts_down_and_illegal_step_raises`,
   and the `spark_sequence` Rust unit pins.
 - **Rationale** — FIXED. History: the name was unregistered on the SQL door and the
   facade lowered to `generate_series` (descending → `[]`, illegal step → `[]`).
@@ -13009,7 +13043,7 @@ owned fork's maintenance actions.
 - **Apache Spark** — `split('a,b', ',')` → `['a', 'b']`; the full cell table is
   Q12-41…Q12-55. *(oracle: recorded PySpark 4.1.2 fixtures-batch12, 2026-09-15;
   fixtures-batch15-critic-622, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_door_converge_2.py::test_sql_cell` (`Q12-41…Q12-55`
+- **Pin** — `python/repark/tests/functions/test_door_converge_2.py::test_sql_cell` (`Q12-41…Q12-55`
   legs), `test_q15_cell` (`Q15-9`, `Q15-14`, `Q15-16` legs), `test_q15_error_cell`
   (`Q15-10…Q15-13` legs) and the `spark_split` Rust unit pins;
   `test_facade_split_refusal_handoff_16a` guards the Python refusal until run 16a
@@ -13034,7 +13068,7 @@ owned fork's maintenance actions.
   the 16b export hand-off with C-003).
 - **Apache Spark** — evaluates all three cells above. *(oracle: live PySpark 4.1.2,
   fixtures-batch15-critic-622, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_door_converge_2.py::test_q15_error_cell`
+- **Pin** — `python/repark/tests/functions/test_door_converge_2.py::test_q15_error_cell`
   (`Q15-10`, `Q15-11`, `Q15-12` refusal legs, `Q15-13` text leg) pins today's
   refusal so the fix flips it loudly.
 - **Rationale** — BACKLOG, filed 2026-09-15 (DOOR-CONVERGE-2 round 3). The refusal is
@@ -13049,7 +13083,7 @@ owned fork's maintenance actions.
   `'ab_cd'` → `'Ab_cd'`, `'x\\ty'` → `'X\\ty'`, `'a-b c.d'` → `'A-b C.d'`.
 - **Apache Spark** — splits words on SPACE only: `'A-b'`, `'Foo.bar'`, `"O'neil"`,
   `'Ab_cd'`, `'X\\ty'`, `'A-b C.d'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_only_after_space`
+- **Pin** — `python/repark/tests/functions/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_only_after_space`
 - **Rationale** — FIXED. History: DataFusion `initcap` treated every non-alnum as a
   word break.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `'ünï_9 ab'` → `'Ünï_9 Ab'`, `''` → `''`, NULL → NULL on both engines.
@@ -13062,7 +13096,7 @@ owned fork's maintenance actions.
 - **Apache Spark** — `chr(n) == chr(n % 256)`, and `n < 0` answers `''`:
   `[256, 300, 321, 65601, -1]` → `['\\x00', ',', 'A', 'A', '']`. *(oracle: live PySpark
   4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_modulo_256_and_negative_empty`
+- **Pin** — `python/repark/tests/functions/test_fn_chr_divergence.py::test_fn_chr_modulo_256_and_negative_empty`
 - **Rationale** — FIXED. History: DataFusion `chr` took a Unicode scalar and raised
   on negatives.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `chr(0/256/65536/1114112)` → `'\x00'`, negatives → `''`, NULL → NULL on both engines.
@@ -13074,7 +13108,7 @@ owned fork's maintenance actions.
   whitespace trim is unchanged.
 - **Apache Spark** — the second argument is a set of trim characters:
   `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_charset`
+- **Pin** — `python/repark/tests/functions/test_fn_trim_chars.py::test_fn_trim_two_arg_charset`
 - **Rationale** — FIXED. History: the facade wrappers took one argument only.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): an empty trim set is a no-op and a NULL trim set answers NULL on both engines.
 
@@ -13109,7 +13143,7 @@ frame answers a fresh accumulator's `evaluate()` (so `collect_list` answers `[]`
 2026-08-31.)*
 
 Shared roster pin for every heading:
-`python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
+`python/repark/tests/perf/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
 (the frozen refuse set is now empty) and
 `python/repark-parity/tests/test_w0_window_bench.py::test_every_rescanned_name_has_a_fixed_registry_row`.
 
@@ -13121,7 +13155,7 @@ Shared roster pin for every heading:
   FOLLOWING`. An empty frame answers `0` (a fresh HLL sketch), not NULL.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-approx_count_distinct]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13135,7 +13169,7 @@ Shared roster pin for every heading:
   FOLLOWING`. The discrete data value of each frame; the accuracy knob stays ignored (`WIN-SLIDE-PCT-ACC-1`).
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-approx_percentile]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13149,7 +13183,7 @@ Shared roster pin for every heading:
   FOLLOWING`. NULL inputs are skipped; an all-NULL frame answers NULL.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bit_and]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13163,7 +13197,7 @@ Shared roster pin for every heading:
   FOLLOWING`. NULL inputs are skipped; an all-NULL frame answers NULL.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bit_or]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13177,7 +13211,7 @@ Shared roster pin for every heading:
   FOLLOWING`. The SQL door reaches the UDAF; the DataFrame door was already a `min` shim and is unchanged.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bool_and]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13191,7 +13225,7 @@ Shared roster pin for every heading:
   FOLLOWING`. The SQL door reaches the UDAF; the DataFrame door was already a `max` shim and is unchanged.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bool_or]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13205,7 +13239,7 @@ Shared roster pin for every heading:
   FOLLOWING`. Frame row order is preserved and an empty frame answers `[]`, both Spark-measured.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-collect_list]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13219,7 +13253,7 @@ Shared roster pin for every heading:
   FOLLOWING`. Element order is Spark-unspecified; the pin asserts the sorted multiset. Empty frame answers `[]`.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-collect_set]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13233,7 +13267,7 @@ Shared roster pin for every heading:
   FOLLOWING`. Re-scanning carries no retraction drift: every frame is summed from its own rows, so a 1e5-row run matches Spark exactly rather than to a tolerance. Fewer than two valid pairs answers NULL.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-corr]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13247,7 +13281,7 @@ Shared roster pin for every heading:
   FOLLOWING`. One valid pair answers `0.0`; an empty frame answers NULL.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-covar_pop]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13261,7 +13295,7 @@ Shared roster pin for every heading:
   FOLLOWING`. Fewer than two valid pairs answers NULL.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-covar_samp]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13275,7 +13309,7 @@ Shared roster pin for every heading:
   FOLLOWING`. The discrete data value of each frame; the accuracy knob stays ignored (`WIN-SLIDE-PCT-ACC-1`).
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-percentile_approx]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13289,7 +13323,7 @@ Shared roster pin for every heading:
   FOLLOWING`. An overflow inside the frame answers NULL for that row only, Spark-measured on `try_sum(ov)` over BIGINT values at `Long.MaxValue`.
 - **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
   `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-try_sum]` over the
   five frame shapes.
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
@@ -13307,9 +13341,9 @@ Shared roster pin for every heading:
   `1.0, 1.0, 1.0, 51.0, 101.0`. The default-accuracy column agrees with repark.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_win_slide_1.py::test_percentile_approx_over_a_frame_honours_the_accuracy_knob`
+  `python/repark/tests/functions/test_win_slide_1.py::test_percentile_approx_over_a_frame_honours_the_accuracy_knob`
   and
-  `python/repark/tests/test_perf_approxpct_1.py::test_sliding_frame_honours_accuracy_per_frame`.
+  `python/repark/tests/perf/test_perf_approxpct_1.py::test_sliding_frame_honours_accuracy_per_frame`.
 - **Rationale** — FIXED. History: the frame case of `FN-APPROXPCT-ACC-1`, where the
   knob was accepted and ignored. Scope narrowed 2026-09-06 (round 2): the exactness
   claim holds on the pinned frame matrix (`FN-APPROXPCT-ORDER-1`).
@@ -13326,7 +13360,7 @@ Shared roster pin for every heading:
 - **Apache Spark** — re-scans every frame, so the same cells are `2.0` and `1.0`:
   `sum` `(1e16, 1e16, 2.0, 1e16, 1e16, 2.0)`, `avg` `(1e16, 5e15, 1.0, 5e15, 5e15, 1.0)`.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sliding_sum_and_avg_retract_where_spark_rescans`
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_sliding_sum_and_avg_retract_where_spark_rescans`
   (repark's current column AND that it differs from Spark's), with the oracle half in
   `::test_live_spark_rescans_the_cancellation_fixture`.
 - **Controls, measured on the same fixture** — `min`, `max`, `count`, `stddev_pop`,
@@ -13360,7 +13394,7 @@ Shared roster pin for every heading:
   `rowsBetween` frame were already correct and are unchanged.
 - **Apache Spark** — `rangeBetween(-2, 0)` is a value range on the order key for every numeric
   key type. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
   every `[range_frame-*]` case (the fixture's `id` is `IntegerType`).
 - **Scope, measured** — the fix reaches **numeric** order keys, which is the whole of this row.
   A `DATE` or `TIMESTAMP` key never reaches it: the facade's own G2 guard
@@ -13387,7 +13421,7 @@ Shared roster pin for every heading:
   does not support the data type "INT" which is used in the range frame.`
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_win_slide_1.py::test_dataframe_door_range_over_a_date_key_refuses_with_reparks_own_error_class`
+  `python/repark/tests/functions/test_win_slide_1.py::test_dataframe_door_range_over_a_date_key_refuses_with_reparks_own_error_class`
   with the oracle half in `::test_live_spark_refuses_the_date_key_range_frame_with_its_own_class`.
 - **Rationale** — BACKLOG, and **pre-existing, not a residue of `WIN-RANGE-DF-1`**. The refusal
   comes from the Python facade's `_reject_non_numeric_range_order` (`plan_collapse.py`, landed in
@@ -13413,7 +13447,7 @@ Shared roster pin for every heading:
   group-by spelling is untouched. `collect_set` is the same shape and is fixed with it.
 - **Apache Spark** — `F.collect_list(col).over(w)` is an ordinary window aggregate.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
-- **Pin** — `python/repark/tests/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
+- **Pin** — `python/repark/tests/functions/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
   the `[*-collect_list]` and `[*-collect_set]` cases.
 - **Rationale** — FIXED. An expression carrying two or more aggregates still refuses with the
   original message; there is no single window to push down.
@@ -13430,7 +13464,7 @@ Shared roster pin for every heading:
 - **repark** — **FIXED 2026-09-03.** Unpartitioned CTAS from a parquet-read temp view commits. The unpartitioned stream writer conforms each batch (`Utf8View`/`BinaryView` → Iceberg `string`/`binary`) the same way the partitioned writer already did. History: shipped in 1.0.0, fixed for 1.0.1.
 - **Apache Spark** — the same CTAS from a parquet-read view succeeds; parquet strings store as Iceberg `string`. *(oracle: documented Spark Iceberg CTAS; local 1.0.0 wheel repro, 2026-09-03.)*
 - **Pin** — `crates/repark-spark/src/tests/ctas_view.rs::unpartitioned_ctas_from_view_typed_batches_round_trips`,
-  `python/repark/tests/test_ctas_view_typed.py::test_unpartitioned_ctas_from_parquet_temp_view_round_trips`,
+  `python/repark/tests/writes/test_ctas_view_typed.py::test_unpartitioned_ctas_from_parquet_temp_view_round_trips`,
   `crates/repark-spark/src/tests/service_managed_ctas.rs::ctas_service_managed_from_view_typed_batches_round_trips`,
   `crates/repark-spark/src/tests/ctas_view.rs::partitioned_ctas_from_view_typed_batches_still_round_trips`.
 - **Rationale** — FIXED. The 1.0.0 unpartitioned stream writer never called `conform_batch`. DataFusion's parquet reader yields `Utf8View`/`BinaryView` while the Iceberg schema derived from the plan is `string`/`binary`. Partitioned CTAS, `writeTo().append()`, and `createDataFrame` views were already fine.
@@ -13456,7 +13490,7 @@ Shared roster pin for every heading:
   column, on every cell of the same matrix: depth 3 with `id` gives columns
   `['id', 'Payload_L1_L2_Val']`, row `{'id': 1, 'Payload_L1_L2_Val': 9}`.
   *(oracle: measured — PySpark 4.1.2, 2026-09-04, all 12 cells.)*
-- **Pin** — `python/repark/tests/test_dynamic_flatten_divergences.py`:
+- **Pin** — `python/repark/tests/dataframe/test_dynamic_flatten_divergences.py`:
   `test_keep_column_beside_any_struct_depth_collects_the_spark_row`, the whole 12-cell matrix
   as an answer pin (columns and row values), replacing the two refusal pins and their control.
 - **Rationale** — FIXED by PERF-DYNFLATTEN-2, and not by switching the bed (the do-not held).
@@ -13482,8 +13516,8 @@ Shared roster pin for every heading:
   NULL per parent. Measured PySpark 4.1.2, 2026-09-06, bed `list_struct_1` at 16 rows and a
   three-row `list<null>` control (`None` / `[]` / `[None]`).
 - **Pin** —
-  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`;
-  always-run `python/repark/tests/test_dynflatten_listnull.py` (both DataFrame doors + the
+  `python/repark/tests/parity/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`;
+  always-run `python/repark/tests/dataframe/test_dynflatten_listnull.py` (both DataFrame doors + the
   `make_array()` drop control).
 - **Rationale** — FIXED. The promotion lives in `read_parquet_nullable` after the
   nullability relax (`promote_parquet_null_types`), not in `drop_null_lists`. Spark's
@@ -13499,7 +13533,7 @@ Shared roster pin for every heading:
   every parquet column to nullable on read. *(oracle: measured — PySpark 4.1.2, 2026-09-04,
   bed shape `list_struct_1` at 16 rows.)*
 - **Pin** —
-  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode`
+  `python/repark/tests/parity/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode`
   (asserts repark `True` and Spark `True`, then compares values after widening).
 - **Rationale** — FIXED. The parquet reader relaxes non-null file nullability to nullable
   the way Spark does. The live pin's repark half moved `False` → `True`; values agree
@@ -13530,7 +13564,7 @@ Shared roster pin for every heading:
   *(oracle: live PySpark 4.1.2, UTC, 2026-09-05; CSV-infer legs 2026-09-06; session-zone
   / nullValue / JSON-path legs 2026-09-06; offset / `Z` / Kolkata / date legs 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_tz_naive_timestamp_dtype`,
+  `python/repark/tests/types/test_nullability_2.py::test_tz_naive_timestamp_dtype`,
   `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls),
   `...::test_csv_inferschema_timestamp_reports_timestamp`,
   and `...::test_live_csv_inferschema_matches_oracle`.
@@ -13556,7 +13590,7 @@ Shared roster pin for every heading:
 - **Apache Spark** — `inferSchema` scans the whole file for types without a
   Python-side per-column materialization of the frame.
 - **Pin** —
-  `python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_trial_path_does_not_materialize_per_column`,
+  `python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_trial_path_does_not_materialize_per_column`,
   `...::test_infer_schema_true_stays_under_half_second`,
   `...::test_infer_schema_shapes_match_spark_answers`,
   `...::test_late_type_conflict_past_sample_is_spark_equal`,
@@ -13582,7 +13616,7 @@ Shared roster pin for every heading:
 - **Apache Spark** — `multiLine=True` keeps the `no\nte` header and reads the row.
   *(oracle: live PySpark 4.1.2.)*
 - **Pin** —
-  `python/repark/tests/test_csv_infer_perf_1.py::test_header_embedded_newline_raises_until_record_aware_scan`,
+  `python/repark/tests/io/test_csv_infer_perf_1.py::test_header_embedded_newline_raises_until_record_aware_scan`,
   `...::test_live_late_and_grammar_shapes_match_oracle`.
 - **Rationale** — DECLARED. The first-record schema reader is line-based. A
   record-aware header scan is a separate unit. The pin reds when repark answers
@@ -13595,7 +13629,7 @@ Shared roster pin for every heading:
   widens the column to `double` rather than raising.
 - **Apache Spark** — `decimal(20,0)` / `decimal(19,0)`. *(oracle: live PySpark 4.1.2.)*
 - **Pin** —
-  `python/repark/tests/test_csv_infer_perf_1.py::test_twenty_digit_integer_infers_double_not_decimal`,
+  `python/repark/tests/io/test_csv_infer_perf_1.py::test_twenty_digit_integer_infers_double_not_decimal`,
   `...::test_live_late_and_grammar_shapes_match_oracle`.
 - **Rationale** — DECLARED. Same family as EX-IO-3 (integer width). A decimal infer
   path is a separate unit. The pin reds when repark answers Spark's decimal.
@@ -13713,11 +13747,11 @@ Shared roster pin for every heading:
   Column use (`createDataFrame` / `cast` / reader schema / SQL CREATE) still refuses per V3-GEO-1.
 - **Apache Spark** — every form above answers `_parse_datatype_string` as pinned, or raises
   `ParseException` `PARSE_SYNTAX_ERROR` for the refusal cells. *(oracle: recorded, PySpark 4.1.2 on JDK 17,
-  2026-09-15, cells `G13-0 … G13-20`, copied verbatim to `python/repark/tests/fixtures-batch13-geo.json`.)*
-- **Pin** — `python/repark/tests/test_types_geo_ddl_1.py::test_geo_ddl_parse_cells`,
+  2026-09-15, cells `G13-0 … G13-20`, copied verbatim to `python/repark/tests/types/fixtures-batch13-geo.json`.)*
+- **Pin** — `python/repark/tests/types/test_types_geo_ddl_1.py::test_geo_ddl_parse_cells`,
   `::test_geo_ddl_error_cells`, `::test_geo_ddl_bridge_tags_both_ways`,
   `::test_geo_ddl_create_schema_string_refuses`, `::test_geo_ddl_reader_schema_string_refuses`;
-  `python/repark/tests/test_types_bases_1.py::test_geometry_ddl_door_answers`,
+  `python/repark/tests/types/test_types_bases_1.py::test_geometry_ddl_door_answers`,
   `::test_spatial_ddl_door_answers`; `crates/repark-spark/src/type_table/tests.rs`
   (`spatial_ddl_accept_cells_parse`, `spatial_ddl_refuse_cells_keep_parse_error`,
   `spatial_mixed_form_uses_spark_any_marker`, `spatial_arrow_mapping_refuses_naming_the_type`)
@@ -13736,13 +13770,13 @@ Shared roster pin for every heading:
   for binary → string and answers `'hi'` (cell `to_string_from_binary`; `cast_string_from_binary` likewise).
   *(oracle: live PySpark 4.1.2, 2026-09-16, probe
   `/tmp/oc-worker/run18b/oracle/probe_lw_r3.py`.)*
-- **Pin** — `python/repark/tests/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
+- **Pin** — `python/repark/tests/dataframe/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1`
   (rewritten 2026-09-16: binary identity keeps bytes; string target follows the cast) and
-  `python/repark/tests/test_logical_width_1.py::test_to_string_from_binary_matches_spark_logical_width_1`
+  `python/repark/tests/types/test_logical_width_1.py::test_to_string_from_binary_matches_spark_logical_width_1`
   (round 3: `to(string)` and `cast(string)` against cells `to_string_from_binary`,
   `cast_string_from_binary`).
 - **Pin (IO-TEXT-1, 2026-09-15)** — a user schema typing a text partition column `binary` reads the raw bytes and now
-  reports `binary`: `python/repark/tests/test_io_text_2.py::test_text_probe6_int_schema_binary`.
+  reports `binary`: `python/repark/tests/io/test_io_text_2.py::test_text_probe6_int_schema_binary`.
 - **Rationale** — FIXED 2026-09-16 (LOGICAL-WIDTH-1 round 1): the binary report landed, so
   `to()` reconciles binary→binary as identity. Filed by DF-SURFACE-A-1 (run 15b) from the
   critic re-check finding L-101. The binary → string VALUE was tree-measured until round 3
@@ -13776,7 +13810,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `V3-COW-1` FIXED). Pins:
   `crates/repark-spark/src/tests/v3_lineage.rs`,
   `crates/repark-sql/src/v3/partitioned_equality_deletes.rs` ANSI lineage tests,
-  `python/repark/tests/test_v3_lineage_columns.py`.
+  `python/repark/tests/iceberg/test_v3_lineage_columns.py`.
 
 - **V3-ROWID-2** — **DECLARED (V3-4, 2026-08-31).** Lineage projection over joins, CTEs,
   subqueries, and `VERSION AS OF` / time-travel refuses loud:
@@ -13967,7 +14001,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   order is not fixed either. Pins: `crates/repark-iceberg/src/write/distribution.rs` (one value →
   one writer, the same layout across two runs, input partitions without rows and an empty input,
   NULL values, `bucket(4, id)` + `day(ts)` keyed on the transform, the unpartitioned bypass, a
-  missing source column as a planning error) and `python/repark/tests/test_write_distribution_1.py`
+  missing source column as a planning error) and `python/repark/tests/writes/test_write_distribution_1.py`
   (a partitioned CTAS at `shuffle.partitions = 8` writes 8 files with `first_row_id` tiling them,
   `bucket(4, id)` writes 4, NULL labels share one file; live: the same layout as Spark). The counts
   the old pins asserted (32 files over the four-file seed, 64 at 1e6) are quoted in the unit
@@ -14009,7 +14043,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `crates/repark-iceberg/src/write/distribution/tests.rs`
   (stream one value → one writer, determinism,
   NULL values, a two-field spec, MERGE inserts through the MERGE entry, the truncate cast, the
-  partitioned abort) and `python/repark/tests/test_write_distribution_2.py` (overwrite and merge
+  partitioned abort) and `python/repark/tests/writes/test_write_distribution_2.py` (overwrite and merge
   write 8 files with the row set proved; a `truncate(3, s)` CTAS writes one file per prefix;
   live: the same layouts as Spark). Numbers: `docs/perf/iceberg-write-baseline.md` §6 and §9.
 
@@ -14046,7 +14080,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `crates/repark-iceberg/src/write/distribution/tests.rs` (the `none`/`hash`/`range` layouts, the
   unknown-mode planning error, cross-batch sorting, monotone committed files on both funnel
   entries) and `distribution/sort_order_tests.rs` (the nested sort, the transform refusal),
-  and `python/repark/tests/test_write_order_dist_1.py` (every `metadata.json`
+  and `python/repark/tests/writes/test_write_order_dist_1.py` (every `metadata.json`
   transition on v2 and v3, the refusals, the transform refusal, the gating counts, monotone
   overwrite/MERGE files, the dotted DDL and nested-monotone files, the
   replace shape; live: the same five statements leave equal metadata on both engines, the
@@ -14069,7 +14103,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `{t}.files` even where the bytes were sorted; they now stamp the default
   order id through `distribution::stamp` (0 when unordered, like the fork),
   reusing the fork's `with_sort_order_id` with no local sort logic. Pins:
-  `python/repark/tests/test_ice_sorted_insert_1.py` (SQL door over five
+  `python/repark/tests/writes/test_ice_sorted_insert_1.py` (SQL door over five
   identity cells — partitioned-local, DESC, two-key null ordering,
   locally-ordered, float with NaN — plus the DataFrame door, the owned paths,
   and the adopted Spark-written `days(ts), id` warehouse; oracle
@@ -14097,7 +14131,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `REPARK_PARITY_LIVE=1`). The two shapes the measurement left on the fork —
   `WRITE-ORDER-RDF-1` and `WRITE-ORDER-COW-UPDATE-1` — closed 2026-09-18 (RP-28,
   fork #296 sorts and stamps both); their rows below are FIXED. Pins:
-  `python/repark/tests/test_ice_sorted_insert_2.py`.
+  `python/repark/tests/writes/test_ice_sorted_insert_2.py`.
   pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-010
 
 - **WRITE-ORDER-RDF-1** — surfaced 2026-09-17 (ICE-SORTED-INSERT-1 round 3).
@@ -14115,7 +14149,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark's own `options => map('min-input-files','2','rewrite-all','true')` included
   (accepted since ICE-RDF-OPTIONS-1): RePark's compacted `p=0` file holds 300 rows,
   as Spark's does, and reads `sort_order_id` 1. Pin (plain, passing):
-  `python/repark/tests/test_ice_sorted_insert_2.py::test_binpack_rewrite_sorts_and_stamps_like_spark`
+  `python/repark/tests/writes/test_ice_sorted_insert_2.py::test_binpack_rewrite_sorts_and_stamps_like_spark`
   pins: ice-sorted-insert-1/C-009
 
 - **WRITE-ORDER-COW-UPDATE-1** — surfaced 2026-09-17 (ICE-SORTED-INSERT-1 round
@@ -14134,7 +14168,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `v3_partitioned_update` / `v2_partitioned_update`). Table-format behaviour, taken
   through the fork ([fork-sync.md](fork-sync.md) RP-28 row); not patched locally
   (AGENTS.md rule 3). Pin (plain, passing):
-  `python/repark/tests/test_ice_sorted_insert_2.py::test_predicate_update_sorts_and_stamps_like_spark`
+  `python/repark/tests/writes/test_ice_sorted_insert_2.py::test_predicate_update_sorts_and_stamps_like_spark`
   pins: ice-sorted-insert-1/C-009
 - **WRITE-ORDER-TRANSFORM-1** — **DDL half FIXED 2026-09-24 (WO U5 PR2b):** the ALTER lands
   transform terms through the fork's `ReplaceSortOrderAction::sort_by` (RP-46); see V3-COV-5.
@@ -14156,13 +14190,13 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   commit path can land a transform sort field — support needs fork work plus DDL parse and
   per-writer sort on the transformed value. BACKLOG, stated here rather than silent.
   Red-when-fixed pins: the DDL refusal pins flipped on 2026-09-24
-  (`python/repark/tests/test_write_order_dist_1.py::test_write_order_transform_sort_lands_the_measured_order`);
+  (`python/repark/tests/writes/test_write_order_dist_1.py::test_write_order_transform_sort_lands_the_measured_order`);
   the write-path refusal
   (`crates/repark-iceberg/src/write/distribution/sort_order_tests.rs::transform_sort_order_refuses_the_write_loud`).
   Measured 2026-09-17 (ICE-SORTED-INSERT-1, still open): a plain `INSERT INTO`
   a Spark-registered `days(ts), id` ordered table sorts day-major and stamps 1
   through the fork, while the RePark-owned paths keep the loud refusal
-  (`python/repark/tests/test_ice_sorted_insert_1.py::test_days_transform_insert_sorts_and_stamps`).
+  (`python/repark/tests/writes/test_ice_sorted_insert_1.py::test_days_transform_insert_sorts_and_stamps`).
 - **WRITE-RANGE-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1). On a partitioned table
   `write.distribution-mode = range` takes the hash shape plus per-file sort (pinned in
   `WRITE-ORDER-DIST-1`); the unbuilt half is an explicit global range shuffle — key ranges
@@ -14206,10 +14240,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   at `a92a68db`); and a
   `bucket(4,id)` sort order refuses the MERGE loudly with nothing committed — the
   WRITE-ORDER-TRANSFORM-1 residual, stated not silent. Pins:
-  `python/repark/tests/test_ice_spark_table_1.py::test_live_spark_created_table_roundtrip`,
-  `python/repark/tests/test_ice_spark_table_1.py::test_live_transform_sort_residual`,
-  `python/repark/tests/test_ice_spark_table_1.py::test_spark_created_fixture_adopted_merged_and_maintained`,
-  `python/repark/tests/test_ice_spark_table_1.py::test_spark_created_and_repark_created_metadata_shapes`.
+  `python/repark/tests/writes/test_ice_spark_table_1.py::test_live_spark_created_table_roundtrip`,
+  `python/repark/tests/writes/test_ice_spark_table_1.py::test_live_transform_sort_residual`,
+  `python/repark/tests/writes/test_ice_spark_table_1.py::test_spark_created_fixture_adopted_merged_and_maintained`,
+  `python/repark/tests/writes/test_ice_spark_table_1.py::test_spark_created_and_repark_created_metadata_shapes`.
 
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
@@ -14253,7 +14287,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   fix, 2026-09-06; the unpartitioned count stands). Pins:
   `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
   partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
-  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 3, 4, 8
+  `python/repark/tests/perf/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 3, 4, 8
   and 16 partitions: manifest ascending by content, `_row_id` tiling it, the row set as a digest of ids,
   and equal id-to-`_row_id` maps for equal groupings; Spark row-set equality). Numbers and commands:
   `docs/perf/iceberg-write-baseline.md`.
@@ -14295,7 +14329,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   nested kind are converted by the unchanged Python path and handed to the binding, and a
   calendar interval anywhere in the schema sends the whole batch back to it, so the map → dict,
   tz-aware-timestamp and interval-refusal contracts are the same code as before. Pin:
-  `python/repark/tests/test_perf_facade_collect_rows.py` — both converters run on the same
+  `python/repark/tests/perf/test_perf_facade_collect_rows.py` — both converters run on the same
   batch and every cell is compared by `repr` as well as by value. Numbers and the cProfile /
   GC decomposition: `docs/perf/facade-boundary-baseline.md` §1.
 - **PERF-FACADE-WITHCOLUMN-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. A dependent
@@ -14314,7 +14348,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `repark_functions::analyzer_rules` rewrites through `NamePreserver` and none adds, drops or
   reorders a projection expression; pinned byte-for-byte against the analyzed names over 19
   planned statements, a 12-deep chain and eight DataFrame transforms in
-  `python/repark/tests/test_perf_facade_logical_names.py`. Numbers:
+  `python/repark/tests/perf/test_perf_facade_logical_names.py`. Numbers:
   `docs/perf/facade-boundary-baseline.md` §2.
 - **PERF-FACADE-CDF-1** — **FIXED 2026-09-05 (PERF-FACADE-CDF-1)**. `createDataFrame(list of
   tuples)` normalized every cell in Python across five passes (the cell normalizer, the nested
@@ -14329,7 +14363,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the bar); the nested pair reads 0.96× (the measured delegation cost) and the explicit pair
   1.00× (identical path by dispatch). The tuple loop also skips the per-row permutation
   rebuild when the permutation is the identity (~60 ms at 1e5, shared by both legs). Pin:
-  `python/repark/tests/test_perf_facade_cdf_1.py` — both dispatchers run on the same input and
+  `python/repark/tests/perf/test_perf_facade_cdf_1.py` — both dispatchers run on the same input and
   every case compares Arrow field types, Arrow values and `collect()` by `(type name, repr)`,
   plus a live leg against PySpark 4.1.2 `createDataFrame`. Numbers:
   `docs/perf/facade-boundary-baseline.md` §4.
@@ -14365,7 +14399,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the facade was written. Fixing it means deciding what `asDict(recursive=False)` and
   `Row.__eq__` do with nested rows, so it is a `Row`-contract unit, not a converter change.
   Pin of repark's current answer:
-  `python/repark/tests/test_perf_facade_collect_rows.py::test_struct_cell_is_a_dict_not_a_row_collect_struct_row_1`.
+  `python/repark/tests/perf/test_perf_facade_collect_rows.py::test_struct_cell_is_a_dict_not_a_row_collect_struct_row_1`.
 - **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). Fork
   contract: `close_touched_dv_containers_with_partitions` skips the data-manifest walk when
   there are no legacy deletes and `known_partitions` covers every touched path;
@@ -14416,7 +14450,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
   `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
   Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
-  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `python/repark/tests/perf/test_perf_ice_catalog_io_1.py`. Tables:
   `docs/perf/iceberg-catalog-io-baseline.md` §1.
 - **PERF-CATALOG-LOADS-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1 (PERF-ANALYSIS-1 §2 row
   11's other half). **BACKLOG** behind a fork pin bump. A planning round resolves the table twice:
@@ -14478,7 +14512,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   **OPEN — measured 2026-09-16** (corrected 2026-09-17 from the 2026-09-16 rating,
   probe `p_countstar` at `a92a68db`): no fold at the current pin — `EXPLAIN SELECT count(*)`
   over a delete-free RePark table keeps `IcebergTableScan` under `AggregateExec`; the answer
-  stays correct and the fold pins in `python/repark/tests/test_perf_ice_scan_1.py` self-skip
+  stays correct and the fold pins in `python/repark/tests/perf/test_perf_ice_scan_1.py` self-skip
   with `fork pin predates F-27`. History: **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork
   pin bump. `SELECT count(*)` over a plain
   1e6-row Iceberg table cost 86.5 ms (analysis §7.4: 93 ms) because the empty projection
@@ -14493,7 +14527,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   never-committed path override as **86.5 → 2.0 ms at 1e6** (parquet 1.8 ms) and
   686 → 2.5 ms at 1e7, with the V3 MoR DV leg correctly unfolded at 4.6 ms answering
   990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
-  (`python/repark/tests/test_perf_ice_scan_1.py`) self-skip with `fork pin predates F-27`
+  (`python/repark/tests/perf/test_perf_ice_scan_1.py`) self-skip with `fork pin predates F-27`
   at the current pin.
 - **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
   **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump, with residue. A sub-split-size
@@ -14538,9 +14572,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   uses **1,250,000** (headroom above the 1,071,000 edge: r0 is a single TinyLFU
   victim and 1,071,000 flaked once under pytest after three isolated retains). The
   old 280000 budget still evicts (192 of 256 missed in the probe). Pins:
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_a_budget_sized_to_the_charged_weight_retains_every_table`
+  `python/repark/tests/perf/test_perf_ice_catalog_io_1.py::test_a_budget_sized_to_the_charged_weight_retains_every_table`
   (budget 1250000 retains r0 and r255) and
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_the_old_estimated_weight_budget_evicts_the_coldest_table`
+  `python/repark/tests/perf/test_perf_ice_catalog_io_1.py::test_the_old_estimated_weight_budget_evicts_the_coldest_table`
   (budget 280000: r0 misses and the miss names the manifest). History: **BACKLOG**
   behind a fork change. Fork ask **F-CATIO-WEIGHT**: the fork's
   `estimate_manifest_weight` (`object_cache.rs:57`: entries × 768 B; lists 256 B) under-counts
@@ -14591,7 +14625,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   on the default session, the four upgrade-lineage tests green on default sessions, and a
   two-session concurrency leg plus a 500-table RSS leg. Pins:
   `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
-  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `python/repark/tests/perf/test_perf_ice_catalog_io_1.py`. Tables:
   `docs/perf/iceberg-catalog-io-baseline.md` §6.
 - **PERF-CATALOG-COMMIT-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2. **BACKLOG**
   behind a fork change. The fork's shared manifest cache covers the **scan** path only:
@@ -14629,10 +14663,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Until the fix landed, `PERF-ICE-MANIFEST-1` stayed BACKLOG and the knob default stayed
   OFF: the four upgrade-lineage tests passed by default and had to pass knob-on before
   the default-ON flip. Pins:
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  `python/repark/tests/perf/test_perf_ice_catalog_io_1.py::test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
   (was the wrong-answer detector as `test_with_the_knob_on_…`; it redded on RP-13 as designed,
   IO-3 renamed it onto the default session, and now it pins the fix),
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  `python/repark/tests/perf/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
   (the same upgrade serves assigned lineage with the knob off).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
@@ -14677,7 +14711,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   with `DistinctAvgAccumulator`. Grouped float `avg` changes bit-for-bit vs the base
   (per-element summation replaces Arrow's lane-chunked kernel): `153846153846153.84`
   here vs Spark's `153846153846154.34` on the 1e16-plus-ones fixture, disclosed as
-  FLOAT-AGG-3. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
+  FLOAT-AGG-3. Pins: `python/repark/tests/perf/test_perf_agg_avg_1.py`
   (24 Spark-recorded answer pins plus 3 round-2 behavior pins, the 2.5-bound cost
   probe red at 4.06× on the base and green at 1.21× after, 7 live legs) and 21 Rust
   unit tests. Numbers, floors and the reproduce block:
@@ -14710,11 +14744,11 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   measured 2026-09-04 EX-15 DataFrame-a batch, re-measured 2026-09-11 by DF-COLREGEX-1
   across `select`/`drop`/`withColumn` plus the position, zero-match, case-fold, and
   full-match arms on the `g/k/v` and `k/kx` frames.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_backtick_spelling_parity`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_colregex_backtick_spelling_parity`
   (spellings plus the `drop`/`withColumn` arms) and
-  `python/repark/tests/test_examples_dataframe_d.py::test_colregex_multi_match_expands`
+  `python/repark/tests/parity/test_examples_dataframe_d.py::test_colregex_multi_match_expands`
   (expansion order, position, case-fold, zero-match, alias refusal);
-  `python/repark/tests/test_df_easy.py::test_col_regex_and_noops` uses the backticked
+  `python/repark/tests/dataframe/test_df_easy.py::test_col_regex_and_noops` uses the backticked
   spelling.
 - **Rationale** — filed 2026-09-04 from the EX-15 measurement; FIXED 2026-09-11 by
   DF-COLREGEX-1 with a facade marker column and `select` expansion — no engine change.
@@ -14729,7 +14763,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `SELECT k FROM global_temp.gt` answers the frame's rows (`[1, 1, 2, 2, 2, 3]` on the EX-15
   six-row `g/k/v` frame), and the replace spelling swaps the definition the same way.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_global_temp_view_divergence`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_global_temp_view_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. The refusal is
   disclosed (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured
   Spark answers and keeps all three spellings on the example backlog until the global_temp
@@ -14743,7 +14777,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Apache Spark** — `[(1,), (1,), (2,)].exceptAll([(1,)])` answers `[(1,), (2,)]`: the
   multiset difference keeps duplicate multiplicities. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-04, EX-15 DataFrame-a batch.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_except_all_divergence`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_except_all_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
   the example backlog until the multiset semantics are Spark-correct.
 
@@ -14770,9 +14804,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   non-strictly for `mean`/`stddev`. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-11,
   DF-DESCRIBE-STR-1 — the skip/refuse and numeric-string arms are new measurements; the
   cell arms supersede EX-15/EX-29 on the repark half.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_matches_spark`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_describe_row_order_matches_spark`
   (the ordered cells) and
-  `python/repark/tests/test_examples_dataframe_d.py::test_describe_string_column_null_stats`
+  `python/repark/tests/parity/test_examples_dataframe_d.py::test_describe_string_column_null_stats`
   + `test_describe_non_describable_column_arms` (the string arms and the skip/refuse
   boundary).
 - **Rationale** — FIXED 2026-09-11 by DF-DESCRIBE-STR-1 (filed 2026-09-04 from the EX-15
@@ -14791,7 +14825,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   it is not a `createDataFrame` inference artefact. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-04, EX-15 round 2; rows `[(1.0, 10.0), (2.0, 20.0), (2.0, 30.0), (3.0, 40.0),
   (1.0, 50.0), (2.0, None)]` over `u`/`v` doubles.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_corr_cov_null_pair_divergence`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_corr_cov_null_pair_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 round-2 re-measure (the inferred-schema
   reading survived the explicit-schema probe). The example covers the null-free arm, where the
   engines agree bit-for-bit; this row records the NULL-pair arm until Spark's NULL handling is
@@ -14808,7 +14842,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `AnalysisException: [TEMP_TABLE_OR_VIEW_ALREADY_EXISTS]` naming `tv`, so a pre-existing
   definition is never silently replaced. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04,
   EX-15 round 3; second `createTempView` of one name.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_create_temp_view_replaces_silently`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_a.py::test_create_temp_view_replaces_silently`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 round-3 promotion of the round-1
   review-gap entry. `createTempView` / `create_temp_view` stay covered by the fresh-name arm,
   where the engines agree; this row records the replace-on-existing arm until repark refuses an
@@ -14822,7 +14856,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Apache Spark** — `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` answers `[(1,), (1,)]`:
   the multiset intersect keeps each row at the minimum of the two sides' multiplicities.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_intersect_all_divergence`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_intersect_all_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
   the example backlog until the multiset intersect is Spark-correct; the distinct-bag
   `intersect` is covered and Spark-equal.
@@ -14843,7 +14877,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `groupingSets("g", "k")` on the same input answers `['k', 'count']` with rows
   `[(None, 1), (None, 2)]` — a different aggregation with different output columns.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_grouping_sets_divergence`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_grouping_sets_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. The signatures disagree
   on the first parameter and the measured answers differ either way, so no input answers
   Spark-equal on both; both spellings stay on the example backlog until repark implements
@@ -14871,8 +14905,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   EX-16 round 3; local Hadoop catalog, COW `format-version` 2 target — the round-1
   "refuses every locally reachable shape" reading was an artefact of probing the default
   `spark_catalog` parquet target.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_merge_into_divergence`
-  and the dual-alias pins in `python/repark/tests/test_ice_merge_schema_1.py`: the five
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_merge_into_divergence`
+  and the dual-alias pins in `python/repark/tests/writes/test_ice_merge_schema_1.py`: the five
   `test_df_merge_into_*_with_the_spark_qualifier` tests plus
   `test_df_merge_into_keeps_the_target_source_qualifiers` and
   `test_df_merge_into_bare_key_sugar_still_upserts`.
@@ -14894,8 +14928,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   trailing `''` (five elements).
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; re-measured by
   DF-PRINTSCHEMA-1 on four shapes; capture via `redirect_stdout` on both engines.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_matches_spark`
-  and the four shapes in `python/repark/tests/test_df_printschema.py`.
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_b.py::test_print_schema_stdout_matches_spark`
+  and the four shapes in `python/repark/tests/dataframe/test_df_printschema.py`.
 - **Rationale** — filed 2026-09-04 by EX-16 round 3 from the round-1 review-gap entry; FIXED the
   same day by DF-PRINTSCHEMA-1. The example's `rstrip` arm holds on both engines either way.
 
@@ -14912,7 +14946,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `a int, big bigint, b string` parquet probe
   `planintro_cast_probe_2026-09-15.json`: alias, filter-twin, int-literal-door, and
   literal-width twins true; narrowing, widening, and string casts false.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_same_semantics_alias_plan_equality`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_c.py::test_same_semantics_alias_plan_equality`
 - **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. FIXED 2026-09-15
   (DF-PLAN-INTROSPECT-1 follow-up round 3, ruling R-9): the method body moved to
   `dataframe/plan_introspect.py` behind a native `same_semantics` comparison, so the alias
@@ -14929,7 +14963,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   replaces matching cells in numeric columns only and keeps each column's type (`k` stays
   `bigint`). *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch, six-row
   `g/k/v` and five-row `k/v` frames.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_replace_unsubset_arms`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_c.py::test_replace_unsubset_arms`
 - **Rationale** — FIXED (2026-09-14, REPLACE-LINEAR-1): the linear `replace_expr` rewrite made
   target columns key-family-typed, so the no-subset and string-value arms answer like Spark.
 
@@ -14948,7 +14982,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch; re-measured
   2026-09-04 after the round-2 review — the earlier "unstable re-collects" claim and row set
   did not survive re-measurement.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_sample_plan_seed_stable`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_c.py::test_sample_plan_seed_stable`
 - **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement, re-measured
   2026-09-04. The name stays covered by the fraction-1.0 arm; this row records the seeded-set
   difference and the keyword-seed shim until the engine samples with Spark's RNG.
@@ -14962,7 +14996,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Apache Spark** — the same seeded call answers `[(a, 2, 30.0), (b, 2, None)]`: one `a` row
   and the `b` row, two rows where repark keeps three. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-04, EX-18 DataFrame-c batch.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_sampleby_seeded_fraction_divergence`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_c.py::test_sampleby_seeded_fraction_divergence`
 - **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
   covered by the 0.0/1.0 strata arms; this row records the seeded-fraction arm until the
   per-stratum rand stream matches Spark's XORShift sequence row for row.
@@ -14984,7 +15018,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   column's `mean`/`stddev`; `count` cells match repark's. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-04, EX-18 DataFrame-c batch; order and string arms re-measured 2026-09-11,
   DF-DESCRIBE-STR-1.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_summary_divergent_arms`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_c.py::test_summary_divergent_arms`
 - **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement, narrowed
   2026-09-11 by DF-DESCRIBE-STR-1: the order and string-column arms are FIXED; the row
   stays for the bare-call percentile refusal until the engine answers Spark's
@@ -15000,7 +15034,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   footer line `only showing top 3 rows`; the full-table `show(20)` prints the same 6 rows and
   `NULL` cell. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch,
   six-row `g/k/v` frame.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_show_rendering_divergence`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_c.py::test_show_rendering_divergence`
 - **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
   covered by the cell-and-row-count arm (the same philosophy as `explain`: never text-pin the
   rendering in the example); this row records the rendering divergence and the falsified
@@ -15015,7 +15049,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   object string per row, e.g. `{"g":"a","k":1,"v":10.0}`, with null-valued keys omitted
   (`{"g":"b","k":2}`). *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c
   batch.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_tojson_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_c.py::test_tojson_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-18 measurement. The refusal is disclosed
   (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured Spark answers
   and keeps the name on the example backlog until the engine grows a row-JSON exporter.
@@ -15032,7 +15066,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   order. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d batch; one-row
   `g`/`k`/`v` frame.)*
 - **Pin** —
-  `python/repark/tests/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_divergence`
+  `python/repark/tests/parity/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. The S3c replay showed
   the refusal moving main-equal cells away from Spark (folded matches newly collide), and the
   `select` duplicate-display overlay already materializes the shape, so S3c lifts the refusal
@@ -15049,7 +15083,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `['k_freqItems', 'v_freqItems']` and the row `([1, 2, 3], [50.0, 20.0, 40.0, 10.0, 30.0])` at
   the default 1% support. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d
   batch; null-free five-row `k`/`v` frame.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_answers`
+- **Pin** — `python/repark/tests/parity/test_examples_dataframe_d.py::test_stat_freq_items_answers`
 - **Rationale** — FIXED 2026-09-15 (DF-RUST-3). History: the name raised the disclosed
   `UnsupportedOperationException` (R-DF-BATCH2) until the Rust `FreqItemCounter` UDAF landed.
 
@@ -15066,10 +15100,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   several Datasets together …`). *(oracle: recorded, live PySpark 4.1.2, 2026-10-02,
   ATTR-ID-1 S4 probes s4-spark-lineage cells a/m/h2 and s4-spark-selfequi.)*
 - **Pin** —
-  `python/repark/tests/test_h2_group_h2.py::test_h2_same_object_self_join_cross_fields`,
-  `python/repark/tests/test_h2_group_h2.py::test_h2_same_object_compound_self_join_refuses_loud`
+  `python/repark/tests/dataframe/test_h2_group_h2.py::test_h2_same_object_self_join_cross_fields`,
+  `python/repark/tests/dataframe/test_h2_group_h2.py::test_h2_same_object_compound_self_join_refuses_loud`
   (both halves),
-  `python/repark/tests/test_attr_id_1_s4.py::test_s4_mixed_compound_arms_refuses`
+  `python/repark/tests/resolution/test_attr_id_1_s4.py::test_s4_mixed_compound_arms_refuses`
 - **Rationale** — FIXED 2026-10-02 (ATTR-ID-1 SJ-3): the native
   `prepare_join_condition` resolves ON-clause references against each join side's
   plan the way Catalyst does, and the positional siding is deleted.
@@ -15107,9 +15141,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `spark.sql.analyzer.failAmbiguousSelfJoin`. *(oracle: recorded, live PySpark
   4.1.2, 2026-10-02, ATTR-ID-1 selfjoin probes sj1–sj5 and sj2.params.json.)*
 - **Pin** —
-  `python/repark/tests/test_attr_id_1_sj3.py`,
-  `python/repark/tests/test_attr_id_1_sj4.py`,
-  `python/repark/tests/test_attr_id_1_sj5.py`
+  `python/repark/tests/resolution/test_attr_id_1_sj3.py`,
+  `python/repark/tests/resolution/test_attr_id_1_sj4.py`,
+  `python/repark/tests/resolution/test_attr_id_1_sj5.py`
 - **Rationale** — FIXED 2026-10-03 (ATTR-ID-1 SJ-3 to SJ-5, owner ruling
   2026-10-02 option A): the native `prepare_join_condition` detects, rewrites
   and binds ON-clause references the way Catalyst does, and the post-join
@@ -15133,7 +15167,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `[[250.0, 500.0, 750.0], [500.0, 1000.0, 1500.0]]`.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-07, local[2].)*
 - **Pin** —
-  `python/repark/tests/test_dfcore_5_approx_quantile.py::test_one_collect_per_frame_regardless_of_shape`
+  `python/repark/tests/dataframe/test_dfcore_5_approx_quantile.py::test_one_collect_per_frame_regardless_of_shape`
 - **Rationale** — FIXED. History: the facade looped one `collect()` per column
   per probability over the scalar `percentile_approx` form. Cells:
   `docs/perf/approx-percentile-baseline.md` §"DataFrame.approxQuantile".
@@ -15148,8 +15182,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `{'s': {'g': 'a', 'k': 1}}`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19
   DataFrame-d batch; one-row `g`/`k` frame.)*
 - **Pin** —
-  `python/repark/tests/test_examples_dataframe_d.py::test_row_asdict_recursive_false_struct_divergence`,
-  `python/repark/tests/test_row_tuple_1.py::test_collected_nested_struct_counts_as_dict_not_row`
+  `python/repark/tests/parity/test_examples_dataframe_d.py::test_row_asdict_recursive_false_struct_divergence`,
+  `python/repark/tests/dataframe/test_row_tuple_1.py::test_collected_nested_struct_counts_as_dict_not_row`
   (ROW-TUPLE-1 critic round 1, 2026-09-14: the count/index arm — the collected struct cell is a
   dict, so `.count({"x": 1, "y": 2}) == 1` and `.count(Row(x=1, y=2)) == 0`)
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. `Row.asDict` /
@@ -15163,7 +15197,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 > aliases a `Cast`/`TryCast` over a column reference to the written child name, so the
 > bare arm answers `v` like Spark on createDataFrame, temp-view, and Iceberg frames,
 > lowercase names included. The pin
-> `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+> `python/repark/tests/parity/test_examples_column_a.py::test_col_cast_qualified_projection_name`
 > flipped to `["v"]` in the same change. Retired per §6.
 
 - **repark** — `df.select(F.col("v").cast("double"))` names the output column
@@ -15176,7 +15210,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   df-bound arm answers. Values are equal on both engines; only the default name diverges.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, frames
   `[("a",1,10.0),("b",2,None)]` over `g/k/v` and `[(10.0,)]` over `v`.)*
-- **Pin** — `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+- **Pin** — `python/repark/tests/parity/test_examples_column_a.py::test_col_cast_qualified_projection_name`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
   df-bound and aliased arms, where the engines agree; the bare `F.col` arm stays on the
   backlog and is not re-taught until repark names it `v`.
@@ -15191,7 +15225,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   dotted field form). Values are equal; only the default name diverges.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, struct
   `r<a string, b double>` over rows `("x",2.0)` / `("y",3.0)`.)*
-- **Pin** — `python/repark/tests/test_examples_column_a.py::test_get_field_bare_projection_name`
+- **Pin** — `python/repark/tests/parity/test_examples_column_a.py::test_get_field_bare_projection_name`
 - **Note 2026-09-17 (ICE-PROMOTE-READ-1 C-015).** The same default-name divergence
   is measured on the SQL door over Iceberg metadata tables: `SELECT partition.p
   FROM t.partitions` on a `(id INT, p INT, s STRING) PARTITIONED BY (p)` table
@@ -15219,7 +15253,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   peer-group sum (both `k=1` rows answer `60.0`; `60.0, 140.0, 240.0` per peer group).
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 window batch, six-row `g/k/v` fixture
   `[("a",1,10.0),("a",2,20.0),("a",3,30.0),("b",1,50.0),("b",2,60.0),("b",3,70.0)]`.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_window_default_frame_tie_peers`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_window_default_frame_tie_peers`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. This is the
   DataFrame-door face of the known default-frame class — the SQL door's `default_frame_*`
   disclosure family in `test_window_parity.py` (gap G5) pins the same semantics on the `sql()`
@@ -15239,7 +15273,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   path location answers `('ex20_db', 'spark_catalog', 'ex20 comment', 'file:<path>')`.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch, default session plus a
   created `ex20_db` namespace with a tempdir location.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_get_database_default_fields`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_get_database_default_fields`
   (both spellings since EX-29, 2026-09-11; `pyspark.sql.catalog.Catalog` has no `get_database`
   member — the snake name is a repark extension sharing the divergent function object).
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. The memory catalog
@@ -15255,11 +15289,11 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Apache Spark** — fills both from the catalog metadata:
   `[('default', 'spark_catalog', 'default database', 'file:<warehouse>')]`.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_list_databases_fields_none`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_list_databases_fields_none`
   (both spellings since EX-29, 2026-09-11; `pyspark.sql.catalog.Catalog` has no `list_databases`
   member — the snake name is a repark extension sharing the divergent function object)
   beside the FA-2 pin
-  `python/repark/tests/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
+  `python/repark/tests/session/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. Same declared divergence
   as [FA-2](#fa-2--listdatabases-leaves-description-and-locationuri-as-none), which owns the
   fact; this row records the measured Spark values behind the example batch's roster decision.
@@ -15276,7 +15310,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   single-arg form answers `True` on both engines, and an unknown name `False` on both.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch, UDF registered via
   `spark.udf.register`.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_function_exists_db_name_arm`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_function_exists_db_name_arm`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. The example keeps the
   single-arg arm, where the engines agree; the dbName arm is pinned, not taught.
 
@@ -15293,7 +15327,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   source; the EX-21 text misstated it as the `UserDefinedFunction`. See EX-SES-6.).
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 catalog/session batch, both lambdas
   registered and called through `spark.sql("SELECT fn(4)")` → `u4` on both engines.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_register_function_returns_udf_object`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_register_function_returns_udf_object`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 measurement. The example keeps the
   registration, existence, and SQL arms, where the engines agree; the return-value arm is
   pinned, not taught. `Catalog.listDatabases`' snake twin `list_databases` shares the EX-CAT-2
@@ -15310,7 +15344,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   round 2 — `getActiveSession() is spark` asserted before and after `spare.sql(...).collect()`;
   repark measured the same two arms, the second answering `spare`. `spare.stop()` then clears
   the active slot to `None` on both engines.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_new_session_action_promotes_active`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_new_session_action_promotes_active`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 measurement; the Spark column was
   re-measured and corrected in round 2 (the first text claimed only `stop()` on the active
   session clears the slot, which the re-measure refuted — the spare's `stop()` clears it too).
@@ -15326,7 +15360,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 round 2; repark measured `collect()`
   `[]` with `dtypes` `[('a', 'string')]`. The explicit-schema arm agrees: both engines answer
   `[]` with `dtypes` `[('a', 'int')]` for `createDataFrame([], schema="a int")`.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_create_dataframe_empty_name_list_answers_empty`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_create_dataframe_empty_name_list_answers_empty`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 round-2 measurement. The example keeps
   the explicit-schema empty frame, where the engines agree; the name-list empty arm is pinned,
   not taught.
@@ -15339,7 +15373,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   ("The SQL config \"unset.key\" cannot be found. Please verify that the config exists.").
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 round 2; the two-arg default form
   agrees — both engines answer the default for an unset key.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_conf_get_unset_key_raises_bare_exception`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_conf_get_unset_key_raises_bare_exception`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 round-2 measurement. The example keeps
   the two-arg default arm, where the engines agree; the unset-key error contract is pinned, not
   taught.
@@ -15353,7 +15387,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 round 2, one missing file per format
   with the format's extension; both engines raise `AnalysisException` and the texts differ —
   repark names the empty location it planned against, Spark the missing path.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_missing_file_readers_analysis_exception`
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_missing_file_readers_analysis_exception`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 round-2 measurement. The example keeps
   the agreeing arm — each reader raises `AnalysisException` on a missing path; repark's message
   text is pinned, not taught.
@@ -15379,8 +15413,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   method always raised `UnsupportedOperationException` ("DataFrameWriterV2.overwrite(condition)
   is not supported — …").
   *Residual (measured 2026-09-24, `oc_*`/`vf_*` shapes in
-  `python/repark/tests/ice_write_df_1_spark_oracle.json`, pinned in
-  `python/repark/tests/test_ice_write_df_2_overwrite.py`):* the Iceberg validation refusals (a
+  `python/repark/tests/writes/ice_write_df_1_spark_oracle.json`, pinned in
+  `python/repark/tests/writes/test_ice_write_df_2_overwrite.py`):* the Iceberg validation refusals (a
   file that matches in part, conflicting files or deletes, an unknown start, also on a
   `t.branch_b1` target) raise
   `PySparkException` `DataInvalid => …` with the filter spelled `id = 1` and a bare path,
@@ -15443,13 +15477,13 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `oc_*`/`vf_*` shapes: a data file that matches only in part refuses `ValidationException:
   Cannot delete file where some, but not all, rows match filter …` (the EX-22 fixture wrote
   one file per row).
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_condition_replaces_the_matching_files`;
-  `python/repark/tests/test_ice_write_df_2_overwrite.py::test_overwrite_condition_replaces_like_the_recorded_cells`,
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_writerv2_overwrite_condition_replaces_the_matching_files`;
+  `python/repark/tests/writes/test_ice_write_df_2_overwrite.py::test_overwrite_condition_replaces_like_the_recorded_cells`,
   `::test_overwrite_condition_shapes_match_spark`, `::test_overwrite_condition_residues`,
   `::test_validate_from_snapshot_shapes_match_spark`, `::test_validate_from_snapshot_residues`,
   `::test_overwrite_condition_divergences_where_one_engine_answers`,
   `::test_overwrite_condition_divergences_on_the_row_filter`;
-  `python/repark/tests/test_ice_write_df_2_doors.py::test_nested_binding_answers_as_spark`,
+  `python/repark/tests/writes/test_ice_write_df_2_doors.py::test_nested_binding_answers_as_spark`,
   `::test_store_assignment_residues_beside_spark`;
   Rust `crates/repark-iceberg/src/tests/filter_validation.rs`,
   `crates/repark-spark/src/tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`,
@@ -15470,8 +15504,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   empty source, still answers `[(2,'b'), (9,'a')]`.
   *(oracle: live PySpark 4.1.2 + Iceberg runtime, same engine and fixture as EX-W2-1,
   2026-09-04, EX-22 WriterV2 batch.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_commits_nothing`;
-  `python/repark/tests/test_ice_overwrite_mode_1.py` cells `OW3-WRITETO-OWP-EMPTY-*` (static
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_commits_nothing`;
+  `python/repark/tests/writes/test_ice_overwrite_mode_1.py` cells `OW3-WRITETO-OWP-EMPTY-*` (static
   and dynamic session mode, measured on Spark 4.1.2 + Iceberg 1.11.0, 2026-09-19).
 - **Rationale** — FIXED 2026-09-19 (row ICE-OVERWRITE-MODE-1, round 2): an empty dynamic
   stage skips the commit. Filed 2026-09-04 from the EX-22 measurement; the example still
@@ -15494,14 +15528,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `ALTER TABLE … CREATE BRANCH IF NOT EXISTS b1`, 2026-09-04, EX-22 WriterV2 batch.)*
   Re-measured 2026-09-24 (U7 PR2, scoreboard cell `W-DF-V2-OPTION-BRANCH` and the
   `*_option_branch_*`/`v2_option_tag_append`/`v2_options_branch_upper` shapes in
-  `python/repark/tests/ice_write_df_1_spark_oracle.json`): the same on `append`,
+  `python/repark/tests/writes/ice_write_df_1_spark_oracle.json`): the same on `append`,
   `overwritePartitions`, `overwrite(condition)`, `create`, `DataFrameWriter` append,
   `saveAsTable` overwrite and `insertInto` overwrite, and a missing branch.
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_option_branch_writes_the_default_branch`;
-  `python/repark/tests/test_ice_write_df_2.py::test_writer_v2_branch_option_writes_main_like_the_recorded_cell`,
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_writerv2_option_branch_writes_the_default_branch`;
+  `python/repark/tests/writes/test_ice_write_df_2.py::test_writer_v2_branch_option_writes_main_like_the_recorded_cell`,
   `::test_branch_and_tag_options_are_ignored_like_spark` (one shape per door, the two
   `DataFrameWriter` overwrite doors added 2026-09-25);
-  `python/repark/tests/test_time_travel.py::test_write_to_branch_option_writes_main`,
+  `python/repark/tests/iceberg/test_time_travel.py::test_write_to_branch_option_writes_main`,
   `::test_write_to_tag_option_writes_main`.
 - **Rationale** — FIXED 2026-09-24 (U7 PR2). Filed BACKLOG 2026-09-04 from the EX-22
   measurement.
@@ -15519,9 +15553,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog `local` over a local
   warehouse, ANSI on, 2026-09-04, EX-22 round-2 review; repark on the memory catalog with the
   same fixture.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_unpartitioned_leak`;
+- **Pin** — `python/repark/tests/parity/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_unpartitioned_leak`;
   since 2026-09-17 also the 16 strict `xfail(raises=ParseException)` cells
-  `python/repark/tests/test_ice_evo_dml_1.py::test_dataframe_door_matches_spark[grid/*/insert_overwrite]`,
+  `python/repark/tests/writes/test_ice_evo_dml_1.py::test_dataframe_door_matches_spark[grid/*/insert_overwrite]`,
   which hold Spark's recorded `writeTo(t).overwritePartitions()` answer on unpartitioned evolved
   tables and flip red when the fix lands.
 - **Rationale** — **FIXED 2026-09-19** by ICE-OVERWRITE-MODE-1: `overwritePartitions()` now
@@ -15543,9 +15577,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Iceberg's catalog turns it into `write.format.default=parquet` on the CTAS and on the RTAS,
   overwriting an existing `orc`. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
   InMemoryCatalog, 2026-09-24, shapes `sat_new_no_format` and `sat_overwrite_no_format` in
-  `python/repark/tests/ice_write_df_1_spark_oracle.json`; the `orc` case measured by
+  `python/repark/tests/writes/ice_write_df_1_spark_oracle.json`; the `orc` case measured by
   `target/probe-u7-pr2/cells_pr2.py` `P-SAVEAS-OVW-NOFORMAT-PROPS`.)*
-- **Pin** — `python/repark/tests/test_ice_write_df_2.py::test_save_as_table_without_a_format_writes_no_format_property_divergence`
+- **Pin** — `python/repark/tests/writes/test_ice_write_df_2.py::test_save_as_table_without_a_format_writes_no_format_property_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-24 (U7 PR2 residue R-1). The CTAS half predates
   U7 PR2; the fix is one rule for both statements (the provider of a format-less writer), not
   a passenger on the replace change.
@@ -15564,8 +15598,8 @@ field NAME.
   `arrays_zip(array(1,2), array('a','b'))` is `STRUCT<0: INT, 1: STRING>` on both engines.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
 - **Pin** —
-  `python/repark/tests/test_fnp_9_collections_json.py::test_arrays_zip_field_names_are_positional_not_the_column_name`
-  and `python/repark/tests/test_examples_functions_a.py::test_arrays_zip_names_its_fields_by_position`
+  `python/repark/tests/functions/test_fnp_9_collections_json.py::test_arrays_zip_field_names_are_positional_not_the_column_name`
+  and `python/repark/tests/parity/test_examples_functions_a.py::test_arrays_zip_names_its_fields_by_position`
   (EX-FN-1's flipped pin — the name answers now, only the field names differ, so `F.arrays_zip`
   stays on the example backlog)
 - **Rationale** — BACKLOG, filed 2026-09-05. A DataFusion UDF's return field must be a pure
@@ -15584,7 +15618,7 @@ field NAME.
 - **Apache Spark** — `posexplode([10, 20])` answers `(0, 10), (1, 20)`; `posexplode_outer`
   answers the same two rows and keeps the empty and NULL arrays as `(NULL, NULL)` rows.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_posexplode_pair_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_posexplode_pair_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both spellings
   stay on the example backlog until the engine grows unnest-with-ordinality.
 
@@ -15598,7 +15632,7 @@ field NAME.
   `encode("AB", "US-ASCII")` answers `4142`; `decode(encode(s, "utf-8"), "utf-8")`
   round-trips every row including empty and NULL. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_encode_decode_charset_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_encode_decode_charset_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
   on the example backlog until a charset codec reaches the planner.
 
@@ -15612,7 +15646,7 @@ field NAME.
   answers `2020-01-01`, both Spark-equal.
 - **Apache Spark** — `expr("a + 1")` over `(1,), (2,), (None,)` answers `[2, 3, None]`.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_expr_column_reference_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_expr_column_reference_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog: column references are the name's core use, and a literal-only
   example would document the edge while the middle raises.
@@ -15626,8 +15660,8 @@ field NAME.
   `format_number(0.5, 2)` answers `"0.50"`; `format_number(-9876.543, 2)` answers
   `"-9,876.54"`; at four decimals `"12,332.1234"`, `"0.5000"`, `"-9,876.5430"`; NULL
   stays NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_format_number_answers`
-  and `python/repark/tests/test_fn_batch3.py::test_batch3_format_number_answers`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_format_number_answers`
+  and `python/repark/tests/functions/test_fn_batch3.py::test_batch3_format_number_answers`
 - **Rationale** — FIXED 2026-09-16 (FNP-MATH-1 run 18a): the Rust `format_number` kernel
   plus the facade destub answer both doors; the fnp-math-1 C-002/C-003 pins hold every
   measured o245 cell. Filed 2026-09-05 from the EX-25 measurement.
@@ -15639,7 +15673,7 @@ field NAME.
   answers NULL. A literal `schema_of_csv` call folds as the schema argument.
 - **Apache Spark** — `"1,hello"` answers `(1, "hello")`; `"2,"` answers `(2, None)`; NULL
   answers NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_from_csv_answers`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_from_csv_answers`
 - **Rationale** — FIXED 2026-09-16 (FNP-GEN-1 run 18a): the Rust scalar kernel plus
   the `CsvFold` options rule answer both doors; the s34 pins hold every measured
   cell. Filed 2026-09-05 from the EX-25 measurement.
@@ -15653,8 +15687,8 @@ field NAME.
 - **Apache Spark** — `hash(1)` is `-559580957`; `hash(2)` is `1765031574`; `hash(NULL)`
   is `42`; `hash(1, "a")` is `-936062819`. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_answers` and
-  the residual `python/repark/tests/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_hash_answers` and
+  the residual `python/repark/tests/functions/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
   (strict-xfail, EX-FN-7-RESID-1).
 - **Rationale** — FIXED 2026-09-16 (FNP-MATH-1 run 18a): the Rust `spark_hash` Murmur3
   kernel plus the facade destub answer both doors; the fnp-math-1 C-002/C-005 pins hold
@@ -15671,7 +15705,7 @@ field NAME.
   allowed); `hash(CAST(-0.0 AS DOUBLE))` and `hash(CAST(0.0 AS DOUBLE))` both answer
   `-1670924195`, so the seam is planning-only, never a value divergence.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
+- **Pin** — `python/repark/tests/functions/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
   (strict-xfail, reason text naming EX-FN-7-RESID-1).
 - **Rationale** — BACKLOG, filed 2026-09-16 (FNP-MATH-1 run 18a step 4): the `-0.0`
   literal fold is a SQL planner seam owned by run 18c, not a hash-kernel gap; every
@@ -15686,7 +15720,7 @@ field NAME.
 - **Apache Spark** — `'{"a": 1, "b": 2}'` answers `("1", "2")` (strings, not ints); malformed
   JSON and NULL answer `(NULL, NULL)`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05,
   EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_json_tuple_answers`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_json_tuple_answers`
 - **Rationale** — FIXED 2026-09-16 (FNP-GEN-1 run 18a): the Rust kernel plus the
   `GeneratorRewrite` arm answer both doors; the s34 pins hold every measured
   cell. Filed 2026-09-05 from the EX-25 measurement.
@@ -15698,7 +15732,7 @@ field NAME.
 - **Apache Spark** — over `[1, 2, 2, 3, 4, 5]` (NULL skipped): kurtosis is
   `-1.1517159763313605`, skewness is `0.3053162697580512`, mode is `2`. *(oracle: live
   PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_moment_aggregates_refuse`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_moment_aggregates_refuse`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. All three names
   stay on the example backlog until the moment kernels land.
 
@@ -15711,8 +15745,8 @@ field NAME.
   raises `DATETIME_FIELD_OUT_OF_BOUNDS` under ANSI. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-05, EX-25 batch; FNP-11A oracle: live PySpark 4.1.2, both ANSI settings, UTC and
   America/New_York, 2026-09-14.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_timestamp_answers`
-  and `python/repark/tests/test_fnp11a_temporal.py`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_make_timestamp_answers`
+  and `python/repark/tests/functions/test_fnp11a_temporal.py`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement; closed 2026-09-15
   by FNP-11A.
 
@@ -15724,8 +15758,8 @@ field NAME.
   answers `-8.0`; NULL answers NULL; `roundOff=false` agrees on whole months. *(oracle:
   live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch; FNP-11A oracle: live PySpark 4.1.2,
   both ANSI settings, UTC and America/New_York, 2026-09-14.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_months_between_answers`
-  and `python/repark/tests/test_fnp11a_temporal.py`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_months_between_answers`
+  and `python/repark/tests/functions/test_fnp11a_temporal.py`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement; closed 2026-09-15
   by FNP-11A.
 
@@ -15736,7 +15770,7 @@ field NAME.
 - **Apache Spark** — `monotonically_increasing_id()` over a five-row single-partition frame
   answers `0..4`; `spark_partition_id()` answers `0`. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_single_node_ids_refuse`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_single_node_ids_refuse`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
   on the example backlog until single-node id semantics land.
 
@@ -15746,7 +15780,7 @@ field NAME.
   functions.input_file_name is not supported yet (disclosed R-FN-BATCH4)`.
 - **Apache Spark** — reading a two-row CSV answers the `file:///.../letters.csv` URI.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_input_file_name_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_input_file_name_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog until the read path is tracked.
 
@@ -15757,7 +15791,7 @@ field NAME.
   disclosed E1)` before any row runs.
 - **Apache Spark** — raises `[USER_RAISED_EXCEPTION] boom`, SQLSTATE `P0001`. *(oracle:
   live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_raise_error_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_raise_error_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog until the raise kernel lands.
 
@@ -15773,7 +15807,7 @@ field NAME.
   values above; `replace("aaa", lit("a"), lit("$1"))` answers `"$1$1$1"` (literal, no
   group substitution); a column search is served (`("aaa", "a")` becomes `"XXX"`).
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_replace_lit_spelling_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_replace_lit_spelling_refuses`
   and `::test_replace_dollar_arm_answers_backslash`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement (facade-spelling
   class, as `translate.py`'s map row anticipated). The name stays on the example backlog:
@@ -15788,7 +15822,7 @@ field NAME.
 - **Apache Spark** — `schema_of_csv("1,hello")` answers `"STRUCT<_c0: INT, _c1: STRING>"`
   (likewise with an explicit `sep` option). It takes a foldable literal, not a column.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_csv_answers`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_schema_of_csv_answers`
 - **Rationale** — FIXED 2026-09-16 (FNP-GEN-1 run 18a): the Rust inference kernel plus
   the `CsvFold` literal fold answer both doors; the s34 pins hold every measured cell,
   including the `INTERNAL_ERROR` defect match. Filed 2026-09-05 from the EX-25
@@ -15802,7 +15836,7 @@ field NAME.
 - **Apache Spark** — `"Hello world. How are you?"` answers `[["Hello", "world"], ["How",
   "are", "you"]]`; `""` answers `[]`; NULL answers NULL. *(oracle: live PySpark 4.1.2,
   ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_sentences_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_sentences_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog until the sentence kernel lands.
 
@@ -15815,8 +15849,8 @@ field NAME.
 - **Apache Spark** — `"a,b,c"` answers `["a", "b", "c"]`; `"a,,c"` answers `["a", "", "c"]`;
   `""` answers `[""]`; NULL answers NULL; `limit=2` answers `["a", "b,c"]`. *(oracle: live
   PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_split_answers` and
-  `python/repark/tests/test_fn_batch1.py::test_split_answers`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_split_answers` and
+  `python/repark/tests/functions/test_fn_batch1.py::test_split_answers`
 - **Rationale** — FIXED 2026-09-16 (FNP-MATH-1 run 18a): the Rust `spark_split` kernel
   plus the D-8 facade destub answer both doors; the fnp-math-1 C-003/C-008 pins hold
   every measured cell. Filed 2026-09-05 from the EX-25 measurement.
@@ -15833,7 +15867,7 @@ field NAME.
   Collecting the interval itself refuses on both engines (Spark:
   `CalendarIntervalType.fromInternal is not implemented`). *(oracle: live PySpark 4.1.2,
   ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_interval_string_form`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_a.py::test_make_interval_string_form`
 - **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement; the display arm
   closed 2026-09-15 as a side effect of the FNP-11A interval CAST rule.
 
@@ -15848,7 +15882,7 @@ field NAME.
 - **Apache Spark** — `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`; `"not-a-timestamp"`
   and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch;
   FNP-11B oracle: live PySpark 4.1.2, both ANSI settings, UTC and America/New_York, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+- **Pin** — `python/repark/tests/functions/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
   (the `try_to_timestamp` cells, both doors)
 - **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement; closed
   2026-09-15 by FNP-11B step 3, which retired the refusal pin
@@ -15865,7 +15899,7 @@ field NAME.
   `"1970-01-02"` answers `86400`; NULL answers NULL. *(oracle: live PySpark 4.1.2, ANSI on,
   UTC, 2026-09-06, EX-28 batch; FNP-11B oracle: live PySpark 4.1.2, both ANSI settings, UTC
   and America/New_York, 2026-09-15.)*
-- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+- **Pin** — `python/repark/tests/functions/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
   (the `unix_timestamp` cells, both doors)
 - **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement; closed
   2026-09-15 by FNP-11B step 2, which retired the refusal pin
@@ -15884,7 +15918,7 @@ field NAME.
 - **Apache Spark** — `from_xml("<a><b>1</b></a>", "b INT")` answers `Row(b=1)`;
   `schema_of_xml("<a><b>1</b></a>")` answers `"STRUCT<b: BIGINT>"`. *(oracle: live PySpark
   4.1.2, ANSI on, UTC, 2026-09-11, EX-30 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_from_xml_refuses` and
+- **Pin** — `python/repark/tests/parity/test_examples_functions_b.py::test_from_xml_refuses` and
   `…::test_schema_of_xml_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-11 from the EX-30 measurement. Both names stay on
   the example backlog until the XML parse kernel lands — the same E1 stub family as
@@ -15903,7 +15937,7 @@ field NAME.
   same as repark. The projected values agree on every measured arm (`u1`/`u2`/`u3` through
   both factories, `2`/`4`/`6` through the pandas arm, `(5,)`/`(6,)` through the UDTF).
   *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-11, EX-30 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_udf_factories_answer_typed_wrappers`
+- **Pin** — `python/repark/tests/parity/test_examples_functions_b.py::test_udf_factories_answer_typed_wrappers`
 - **Rationale** — BACKLOG ARM, filed 2026-09-11 from the EX-30 measurement; same mechanism
   as EX-SES-6 (`spark.udf.register` answers the UDF object where Spark answers a plain
   function). `F.udf`, `F.pandas_udf` and `F.udtf` stay covered by the value arms; this row
@@ -15921,7 +15955,7 @@ field NAME.
   each into a non-null literal). Values, types and row counts agree with the repark
   answers above. *(oracle: live PySpark 4.1.2, both ANSI settings, UTC and
   America/New_York, 2026-09-14, FNP-11A batch.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_folded_literals_stay_nullable`
+- **Pin** — `python/repark/tests/functions/test_fnp11a_temporal.py::test_folded_literals_stay_nullable`
   (the door pins skip the nullability assert for literal-only cells via `_folded_literal`
   and still assert type and rows).
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closing it
@@ -15940,9 +15974,9 @@ field NAME.
 - **Apache Spark** — the same text raises `[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION]`; only
   `localtimestamp()` with parentheses answers. *(oracle: live PySpark 4.1.2, ANSI on, UTC,
   2026-09-14, FNP-11A batch.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_bare_localtimestamp_refuses`
+- **Pin** — `python/repark/tests/functions/test_fnp11a_temporal.py::test_bare_localtimestamp_refuses`
   (the retired `test_bare_localtimestamp_answers_call` pin) and the Q14-0/8/10/12/18/20
-  legs in `python/repark/tests/test_spark_sql_grammar_1.py`.
+  legs in `python/repark/tests/sql/test_spark_sql_grammar_1.py`.
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closed
   2026-09-16 by the SQL-door error map; the `BARE_NULLARY_SQL` skip retired in the
   same commit.
@@ -15957,7 +15991,7 @@ field NAME.
   (America/New_York session): a naive literal is the driver-process wall clock (the
   recording box runs America/New_York). *(oracle: live PySpark 4.1.2, both ANSI settings,
   2026-09-14, FNP-11A batch.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_timestampdiff_python_lit_keeps_repark_lit_zone`
+- **Pin** — `python/repark/tests/functions/test_fnp11a_temporal.py::test_timestampdiff_python_lit_keeps_repark_lit_zone`
   asserts both values and that they differ.
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Matching
   Spark would mean reading the driver zone, which the server-prep disciplines forbid.
@@ -15974,9 +16008,9 @@ field NAME.
   and answer. *(oracle: live PySpark 4.1.2, both ANSI settings, UTC and
   America/New_York, 2026-09-14, FNP-11A batch; batch-14 nullary-units fixture for
   the quoted/unknown-unit refusals.)*
-- **Pin** — `python/repark/tests/test_spark_sql_grammar_1.py` (Q14-22…40 PG-tsadd /
+- **Pin** — `python/repark/tests/sql/test_spark_sql_grammar_1.py` (Q14-22…40 PG-tsadd /
   PG-tsdiff / PG-dateadd / PG-datediff-unit legs, both ANSI settings) and
-  `python/repark/tests/test_fnp11a_temporal.py::test_bare_timestampadd_unit_answers`
+  `python/repark/tests/functions/test_fnp11a_temporal.py::test_bare_timestampadd_unit_answers`
   (the retired `test_bare_timestampadd_unit_refuses` pin).
 - **Rationale** — BACKLOG ARM, filed 2026-09-15 from the FNP-11A measurement. Closed
   2026-09-16 by the SQL-door rewrite; the `BARE_UNIT_NAMES` workaround and the refusal
@@ -16011,9 +16045,9 @@ field NAME.
 - **Apache Spark** — PySpark 4.1.2 declares every parameter optional so the `(date, time[, timezone])` keyword form
   works on the Python door. *(oracle: live PySpark 4.1.2, 2026-09-14, `fnp11_spark_oracle.json` signatures and the
   `F.make_timestamp(date=…, time=F.expr("TIME'…'"))` cells.)*
-- **Pin** — `python/repark/tests/test_fnp11a_temporal.py::test_make_timestamp_date_time_keywords_answer`,
+- **Pin** — `python/repark/tests/functions/test_fnp11a_temporal.py::test_make_timestamp_date_time_keywords_answer`,
   `…::test_make_timestamp_keeps_its_frozen_signature`,
-  `python/repark/tests/test_fnp11b_temporal_formats.py` `make_timestamp` cells (19 cells,
+  `python/repark/tests/functions/test_fnp11b_temporal_formats.py` `make_timestamp` cells (19 cells,
   both ANSI settings; the five `UNRESOLVED_COLUMN` cells are strict-xfail pins per
   owner ruling R-17a-22, 2026-09-15, pointing at carry-over ERR-UNRESOLVED-COL-1 —
   §7 row FNP-11B-UNRESOLVED-1).
@@ -16060,7 +16094,7 @@ field NAME.
   is the failure shape, not a value. The measured Spark comparison cells on the same fixture are
   `sort` and `hash_join`, in the baseline's §5.)*
 - **Pin** —
-  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_refuses_a_nested_loop_join_with_the_typed_exception`
+  `python/repark/tests/perf/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_refuses_a_nested_loop_join_with_the_typed_exception`
   (the pin forbids the caught-panic marker AND DataFusion's own `partition not used yet` payload);
   `crates/repark-python/src/arrow_export.rs` (five containment pins);
   `crates/repark-core/src/pool_refusals.rs` and
@@ -16118,7 +16152,7 @@ field NAME.
   raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
   is the failure shape, not a value.)*
 - **Pin** —
-  `python/repark/tests/test_h3_spill_matrix.py::test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`
+  `python/repark/tests/perf/test_h3_spill_matrix.py::test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr`
   (five worker runs, zero `panicked at` blocks on stderr — red on the base tree at the first
   run — plus the renamed `…_spills_or_refuses_…_without_a_panic` pin accepting `ok` or the
   typed refusal);
@@ -16165,7 +16199,7 @@ field NAME.
   inferred from the driver-side `Job 0 cancelled because SparkContext was shut down` — and takes
   the SparkContext down, which is worse than repark's typed refusal on the same operator.)*
 - **Pin** —
-  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_raise_memory_error`;
+  `python/repark/tests/perf/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_raise_memory_error`;
   `crates/repark-python/src/collect_rows.rs` (the NULL-check unit pins, including the deliberate
   `PyTuple_New(-1)` provocation)
 - **Rationale** — FIXED 2026-09-06 by H3-SPILL-RESIDUE-1. Filed BACKLOG 2026-09-05 by H3-SPILL-1.
@@ -16183,7 +16217,7 @@ field NAME.
 - **Apache Spark** — reads the parquet directory and answers its rows (`[(1, 'a'), (2, 'b')]`
   on the EX-26 two-row `id`/`name` frame). *(oracle: live PySpark 4.1.2, ANSI on, UTC session
   zone, 2026-09-06, EX-26 batch.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_bare_load_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_bare_load_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
   `format(...).load(...)` arms, where the engines agree; the bare-load default is pinned, not
   taught.
@@ -16196,7 +16230,7 @@ field NAME.
 - **Apache Spark** — applies the schema as a projection: dtypes `[('name', 'string')]` and
   rows `[('a',), ('b',)]` on the same frame. *(oracle: live PySpark 4.1.2, ANSI on, UTC session
   zone, 2026-09-06, EX-26 batch.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_schema_on_parquet_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_schema_on_parquet_refuses`
 - **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The name stays
   covered by the csv/json schema arms, where the engines agree; the parquet arm is pinned, not
   taught.
@@ -16208,7 +16242,7 @@ field NAME.
   EX-26 `id`/`name` letters file.
 - **Apache Spark** — answers dtypes `[('id', 'int'), ('name', 'string')]` and the same rows.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 batch.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_csv_infer_schema_width`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_csv_infer_schema_width`
 - **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
   the default, header, null-value, and explicit-schema arms, where schema and rows agree; the
   infer arm is pinned, not taught.
@@ -16220,7 +16254,7 @@ field NAME.
 - **Apache Spark** — both spellings write `"1,a\n2,b\n"`; the header appears only with
   `header=true`, which answers `"id,name\n1,a\n2,b\n"` on both engines. *(oracle: live PySpark
   4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 batch, both spellings measured.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_csv_header_default_true`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_csv_header_default_true`
 - **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
   the explicit-header arms, where bytes agree; the default is pinned, not taught.
 
@@ -16232,7 +16266,7 @@ field NAME.
 - **Apache Spark** — writes one `.snappy.parquet` part file (the
   `spark.sql.sources.default` format). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone,
   2026-09-06, EX-26 batch.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_save_default_format_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_save_default_format_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
   explicit-format arms, where bytes and layout agree; the default is pinned, not taught.
 
@@ -16245,8 +16279,8 @@ field NAME.
   on the EX-26 frame). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
   EX-26 batch.)*
 - **Pin** —
-  `python/repark/tests/test_examples_io_session.py::test_saveas_table_non_iceberg_refuses`;
-  `python/repark/tests/test_catalog_surface_1.py::test_create_table_non_iceberg_source_refuses`
+  `python/repark/tests/parity/test_examples_io_session.py::test_saveas_table_non_iceberg_refuses`;
+  `python/repark/tests/session/test_catalog_surface_1.py::test_create_table_non_iceberg_source_refuses`
   and `…::test_create_table_path_refuses` (CATALOG-SURFACE-1, 2026-09-14 —
   `createTable`/`createExternalTable` `path=` and non-`iceberg` `source=` share this
   refusal arm).
@@ -16265,7 +16299,7 @@ field NAME.
   `read.sheet_names`, `read_excel`, and `excel_sheet_names`, so no oracle values exist for
   these four names. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-06, EX-26 batch, hasattr
   probe.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_excel_reader_refuses` and
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_excel_reader_refuses` and
   `…::test_excel_sheet_names_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. A refusal is documented
   as a refusal, never as an example that swallows it; all four names stay on the example backlog
@@ -16289,7 +16323,7 @@ field NAME.
   \`id\`, \`name\`. Data columns: \`x\`, \`y\`, \`z\`.`) and the `NOT_ENOUGH_DATA_COLUMNS` twin
   (`Data columns: \`x\`.`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
   EX-26 round 2, both widths measured.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_missing_table_text` and
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_missing_table_text` and
   `…::test_insert_arity_text`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The examples keep the
   agreeing arm — each entry point raises `AnalysisException` on a missing name, and the arity
@@ -16305,7 +16339,7 @@ field NAME.
   `[TABLE_OR_VIEW_ALREADY_EXISTS]` (`Cannot create table or view … because it already
   exists. …`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26
   batch.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_saveas_table_exists_text`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_saveas_table_exists_text`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
   create arm, where rows and dtypes agree; the exists text is pinned, not taught.
 
@@ -16323,7 +16357,7 @@ field NAME.
   partitioned `['_SUCCESS', '._SUCCESS.crc']` at the top with one
   `part-00000-<uuid>.c000.csv` plus its checksum per leaf (the uuid varies per write).
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 round 2.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_writer_output_listing`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_writer_output_listing`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 round-2 measurement. The examples
   keep the data-file bytes and counts, where the engines agree; the marker and naming shape is
   pinned, not taught.
@@ -16344,7 +16378,7 @@ field NAME.
   a short last row; `json_tuple('{"a":1,"b":2}', 'a', 'b')` projects TWO string columns.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
 - **Pin** —
-  `python/repark/tests/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
+  `python/repark/tests/functions/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
   (`stack` removed from the absent roster; pins: perf-unpivot-1/C-004) and
   `…::test_json_tuple_still_refuses_on_the_facade`
 - **Rationale** — BACKLOG, filed 2026-09-05. One seam, not six gaps: the facade select path
@@ -16369,9 +16403,9 @@ field NAME.
 - **Apache Spark** — `call_udf("name", col)` invokes a function registered through
   `spark.udf.register`, and `call_function("name", col)` invokes any resolvable function,
   built-in or registered. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch;
-  re-measured 2026-09-14 in `python/repark/tests/fnp_misc_1_agg_spark_oracle.json`.)*
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py` (the `call_function` / `call_udf` pins);
-  `python/repark/tests/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
+  re-measured 2026-09-14 in `python/repark/tests/functions/fnp_misc_1_agg_spark_oracle.json`.)*
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py` (the `call_function` / `call_udf` pins);
+  `python/repark/tests/functions/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
   no longer asserts absence for these two names (still pins `inline` / `inline_outer` absent).
 - **Rationale** — FIXED 2026-09-15 (FNP-MISC-1), filed BACKLOG 2026-09-05. Residual: resolution
   happens when `call_function` / `call_udf` is called, not at analysis as in Spark — a facade
@@ -16391,7 +16425,7 @@ field NAME.
   the element type is `INT` and non-nullable; and
   `sequence(DATE'2021-01-01', DATE'2021-01-05', INTERVAL 2 DAY)` answers three dates.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
-- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_sequence_descending_answers_empty`
+- **Pin** — `python/repark/tests/functions/test_fnp_9_collections_json.py::test_sequence_descending_answers_empty`
 - **Rationale** — BACKLOG, filed 2026-09-05 by FNP-9/10, which measured the name while
   chartering the collection family and did not build it. Two of the three gaps — the descending
   count-down and the raise on an illegal step — are an integer kernel; the third is
@@ -16412,7 +16446,7 @@ field NAME.
   NaN and Infinity. *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
   FNP-9/10 round 2.)*
 - **Pin** — (now equality)
-  `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`.
+  `python/repark/tests/functions/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`.
 - **Rationale** — FIXED 2026-09-15 (JAVA-DOUBLE-FD-1 closed it). Filing history:
   BACKLOG 2026-09-06 by the FNP-9/10 round-1 critic (finding F13); closing it meant
   porting `FloatingDecimal.toJavaFormatString`, which FD-1 landed as a Rust port
@@ -16430,7 +16464,7 @@ field NAME.
   modifiers are accepted and ignored, as Spark accepts them.
 - **Apache Spark** — the same call answers a one-day interval. *(oracle: live PySpark 4.1.2,
   ANSI on, UTC session zone, 2026-09-06, FNP-9/10 round 2.)*
-- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_from_json_refuses_an_interval_ddl_field`
+- **Pin** — `python/repark/tests/functions/test_fnp_9_collections_json.py::test_from_json_refuses_an_interval_ddl_field`
 - **Rationale** — BACKLOG, filed 2026-09-06 by the FNP-9/10 round-1 critic (finding F17). An
   interval-typed JSON field needs the temporal family FNP-11 owns; refusing loudly is the honest
   answer until then, and the refusal names the type it could not build.
@@ -16453,7 +16487,7 @@ field NAME.
   `schema_of_json('{"a":1}', map('primitivesAsString','true'))` answers `STRUCT<a: STRING>` where
   the default answers `STRUCT<a: BIGINT>`.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
-- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_from_json_option_coverage_is_loud`
+- **Pin** — `python/repark/tests/functions/test_fnp_9_collections_json.py::test_from_json_option_coverage_is_loud`
   and `…::test_to_json_and_schema_of_json_refuse_options`
 - **Rationale** — BACKLOG, filed 2026-09-05. repark refuses where Spark ignores, on purpose: an
   option repark does not implement would otherwise change the answer silently, and a JSON parse
@@ -16468,7 +16502,7 @@ field NAME.
 - **Apache Spark** — `from_json('{"a":1}', schema_of_json('{"a":1}'))` answers `{a: 1}`; the
   schema argument is folded to a literal before the expression is typed. *(oracle: live PySpark
   4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch.)*
-- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_from_json_refuses_a_column_schema`
+- **Pin** — `python/repark/tests/functions/test_fnp_9_collections_json.py::test_from_json_refuses_a_column_schema`
 - **Rationale** — BACKLOG, filed 2026-09-05. `from_json`'s result TYPE comes from its schema
   argument, and repark resolves a facade expression's type where it is built — before any
   constant folding runs. Closing this needs the schema folded at Column-construction time, which
@@ -16481,7 +16515,7 @@ field NAME.
 - **Apache Spark** — the same call raises
   `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] … requires the "INT" type`; only INT and narrower
   resolve. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch.)*
-- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_array_insert_places_and_pads_on_both_doors`
+- **Pin** — `python/repark/tests/functions/test_fnp_9_collections_json.py::test_array_insert_places_and_pads_on_both_doors`
 - **Rationale** — BACKLOG, filed 2026-09-05. repark's SQL-door integer literals are `Int64`, and
   `SparkIntegerLiteral` narrows them in the analyzer — after UDF coercion has already run. A
   kernel that refused `Int64` therefore refused the ordinary spelling
@@ -16499,7 +16533,7 @@ field NAME.
   independent JVM runs and confirmed in the installed 4.1.2 source (`register` returns
   `udf_obj._wrapped()`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
   EX-26 batch.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_udf_register_returns_udf_object`
+- **Pin** — `python/repark/tests/parity/test_examples_io_session.py::test_udf_register_returns_udf_object`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
   registration, SQL, and frame arms, where the engines agree; the return arm is pinned, not
   taught. This re-measure corrects EX-SES-1's Spark half-sentence (see the dated note there);
@@ -16513,7 +16547,7 @@ field NAME.
 - **Apache Spark** — `.size` is an `int` property (`3` / `5`); `.size()` raises
   `TypeError: 'int' object is not callable`.
   *(oracle: live PySpark 4.1.2, 2026-09-05, EX-27 ml batch, JVM-free `pyspark.ml.linalg`.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_size_is_a_method`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_vector_size_is_a_method`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement. The examples keep
   `toArray`, indexing, and `numNonzeros`, where the engines agree; the size arm is pinned,
   not taught.
@@ -16533,7 +16567,7 @@ field NAME.
   `pyClass=pyspark.ml.linalg.VectorUDT`. `serialize(dense)` answers
   `(1, None, None, [1.0, 0.0, 3.0])`; `deserialize` is present.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free `VectorUDT`.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_udt_typename_and_sql_type`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_vector_udt_typename_and_sql_type`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, deepened
   2026-09-06. The example keeps `simpleString` and `repr`, the only equal arms;
   typeName / sqlType / jsonValue / serialize / deserialize stay pinned.
@@ -16550,7 +16584,7 @@ field NAME.
   `explainParams()` shows `inputCol: input column name. (undefined)`.
   `Tokenizer().getOutputCol()` (unset) answers `uid + "__output"` on both engines.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_has_input_col_is_not_params`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_has_input_col_is_not_params`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, extended
   2026-09-06 to the concrete Tokenizer arm. The example reads mixins off
   Tokenizer / VectorAssembler / OneHotEncoder / LinearRegression after set, and
@@ -16570,7 +16604,7 @@ field NAME.
   `baseOn({param: 20})` and `baseOn((param, 20))` both answer `20`.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free
   `pyspark.ml.tuning.ParamGridBuilder`.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_param_grid_base_on_pairs`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_param_grid_base_on_pairs`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, reverse
   arm added 2026-09-06. The example keeps the dict spelling, where the engines
   agree; both the alternating-pair arm and the tuple arm are pinned, not taught.
@@ -16590,7 +16624,7 @@ field NAME.
   `VectorAssembler.setInputCols` / `getHandleInvalid() == "error"` agree on both
   engines.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_mixin_setters_present`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_mixin_setters_present`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
   The example teaches the mixins only through Tokenizer, VectorAssembler,
   OneHotEncoder, and LinearRegression.
@@ -16603,7 +16637,7 @@ field NAME.
   `Pipeline(stages=[VectorAssembler, LinearRegression]).getStages()` types agree
   on both engines.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_empty_pipeline_get_stages_defaults_to_empty_list`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_empty_pipeline_get_stages_defaults_to_empty_list`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
   The example keeps the two-stage `getStages` arm, where the engines agree; the
   unset default is pinned, not taught.
@@ -16619,7 +16653,7 @@ field NAME.
   `createTransformFunc = lambda value: float(value) + 1.0` transforms
   `[(1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (4.0, 5.0)]`.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_spark_shaped_unary_transformer_refuses`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_spark_shaped_unary_transformer_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
   The example teaches the plan-built `_transform` shape repark supports.
 
@@ -16636,7 +16670,7 @@ field NAME.
   `AnalysisException: [PATH_NOT_FOUND] Path does not exist: file:<path>/metadata`.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2; cross-load measured
   both directions.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_persistence_format_is_repark_ml`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_persistence_format_is_repark_ml`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
   The example keeps the repark-format round-trip; neither engine reads the
   other's layout.
@@ -16649,7 +16683,7 @@ field NAME.
   `dense.squared_distance(Vectors.zeros(3))` answers `10.0`.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free
   `pyspark.ml.linalg.DenseVector`.)*
-- **Pin** — `python/repark/tests/test_examples_ml.py::test_dense_vector_lacks_dot_and_squared_distance`
+- **Pin** — `python/repark/tests/parity/test_examples_ml.py::test_dense_vector_lacks_dot_and_squared_distance`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
   The example keeps `toArray`, indexing, and `numNonzeros`, where the engines
   agree; the missing methods are pinned, not taught. The API freeze closes
@@ -16670,7 +16704,7 @@ field NAME.
   footer; the text and the eager-cap packing were already pinned to the
   Apache `test_repr_behaviors` shape and are unchanged by this unit.
 - **Pin** —
-  `python/repark/tests/test_dfcore_6_eager_preview.py::test_preview_doors_never_count`
+  `python/repark/tests/dataframe/test_dfcore_6_eager_preview.py::test_preview_doors_never_count`
 - **Rationale** — FIXED. History: a full preview ran a full `count()` only
   to decide the footer, and the eager doors ran a bridged UDF over every
   row twice. Cells: `docs/perf/eager-preview-baseline.md`.
@@ -16688,8 +16722,8 @@ field NAME.
   *(oracle: live PySpark 4.1.2, cells `withMetadata` / `withMetadata_replaces` / `withMetadata_order`, 2026-09-14; the
   transform-survival positions are documented in Spark's `withMetadata` semantics, not live-measured.)*
 - **Pin** —
-  `python/repark/tests/test_df_surface_a_1.py::test_with_metadata_dropped_across_positions_df_metadata_1`,
-  `python/repark/tests/test_df_surface_a_1.py::test_to_metadata_arms_df_metadata_1` (the lossy positions codify today's `{}`;
+  `python/repark/tests/dataframe/test_df_surface_a_1.py::test_with_metadata_dropped_across_positions_df_metadata_1`,
+  `python/repark/tests/dataframe/test_df_surface_a_1.py::test_to_metadata_arms_df_metadata_1` (the lossy positions codify today's `{}`;
   the Spark-matching positions are pinned by `test_with_metadata_stamp_and_replace_answer_spark` and the cache / target-override
   assertions).
 - **Rationale** — BACKLOG, filed 2026-09-14 (DF-SURFACE-A-1 critic round 1, ruling R-7), narrowed 2026-09-15 by COLUMN-PARITY-1
@@ -16704,9 +16738,9 @@ field NAME.
   expression in the SQL plan). Materialize via select/withColumn, then apply further
   expressions on that column. Mid-expression embedding is an M5-class seed.`
 - **Apache Spark** — `(plus("v") + 1)` answers `[[12], [None], [32]]` as `x int`.
-  *(oracle: `python/repark/tests/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udf` /
+  *(oracle: `python/repark/tests/functions/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udf` /
   `composed plus(v) + 1`, live PySpark 4.1.2, 2026-09-14.)*
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_mid_expression_composition_refused`
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_mid_expression_composition_refused`
 - **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). Closing it needs bridge markers
   to become Column expressions (`dataframe/**`, `column.py`), owned by another
   orchestrator. The refusal is the pandas bridge's own, inherited by sharing its
@@ -16721,9 +16755,9 @@ field NAME.
   `PandasUDFFunction`, so the existing name-based gate catches it).
 - **Apache Spark** — `spark.udf.register("arrow_plus", plus)` then
   `SELECT arrow_plus(v)` answers `[[2], [None]]` as `x int`.
-  *(oracle: `python/repark/tests/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udf` /
+  *(oracle: `python/repark/tests/functions/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udf` /
   `register and sql`, live PySpark 4.1.2, 2026-09-14.)*
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_register_then_sql_refused`
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_register_then_sql_refused`
 - **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). The SQL registry is
   classic-scalar-only (`session/**`), owned by another orchestrator.
   pins: fnp-misc-1/C-006
@@ -16735,10 +16769,10 @@ field NAME.
   for non-window form, or attach an unbounded partition window via .over`.
 - **Apache Spark** — `AnalysisException [MISSING_AGGREGATION] The non-aggregating
   expression "v" is based on columns which are not participating in the GROUP BY clause.`
-  *(oracle: `python/repark/tests/fnp_misc_1_arrow_bucket_spark_oracle.json` cell
+  *(oracle: `python/repark/tests/functions/fnp_misc_1_arrow_bucket_spark_oracle.json` cell
   `arrow_udf` / `arrow_udf grouped agg (pa.Array -> scalar)`, live PySpark 4.1.2,
   2026-09-14.)*
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_grouped_in_select_refused`
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_grouped_in_select_refused`
 - **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). Both sides refuse loud with
   `AnalysisException`; only the message differs, and matching it needs a `dataframe/**`
   edit owned by another orchestrator.
@@ -16752,9 +16786,9 @@ field NAME.
   [UDTF_EVAL_METHOD_ARGUMENTS_DO_NOT_MATCH_SIGNATURE] Failed to evaluate the
   user-defined table function 'Echo' because the function arguments did not match the
   expected signature of the 'eval' method (missing a required argument: 'a').`
-  *(oracle: `python/repark/tests/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udtf` /
+  *(oracle: `python/repark/tests/functions/fnp_misc_1_arrow2_spark_oracle.json` cell `arrow_udtf` /
   `decorator, no args`, live PySpark 4.1.2, 2026-09-14.)*
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udtf_zero_arg_eval_mismatch_refused`
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udtf_zero_arg_eval_mismatch_refused`
 - **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1). Matching the condition needs a
   `udtf.py`-adjacent signature check at call time; the bridge text it emits is shared
   UDTF-path behavior. Both sides refuse loud.
@@ -16768,7 +16802,7 @@ field NAME.
   second pandas-to-Arrow-to-pandas round trip per batch.
 - **Apache Spark** — the Arrow UDF path hands Arrow batches to the user function with no
   pandas round trip.
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py` holds the value and error cells
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py` holds the value and error cells
   (no timing pin; CI timing would flake).
 - **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1 round 2, ruling D-5, accepted).
   The zero-copy fix needs an Arrow-in/Arrow-out callback in `dataframe/udf_bridge.py`,
@@ -16782,7 +16816,7 @@ field NAME.
   `<NA>`. The same collapse happens on `pandas_udf` identity (Spark-plausible there).
 - **Apache Spark** — `arrow_udf` hands the user a `pyarrow.Array` that keeps NaN distinct
   from null, so identity answers `[1.5, NaN, NULL, 0.0]`.
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_identity_collapses_nan_to_null`
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py::test_fnp_misc_1_arrow_udf_identity_collapses_nan_to_null`
   (a Spark-correct NaN assertion reds against it by measurement, 2026-09-15).
 - **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1 round 2). Fixing it inside
   `functions_arrow_udf.py` is impossible — the information is already lost when the
@@ -16797,7 +16831,7 @@ field NAME.
   follows it.
 - **Apache Spark** — the grouped `arrow_udf` receives an int array with nulls for every
   group of an INT column.
-- **Pin** — `python/repark/tests/test_fnp_misc_1.py::test_fnp_misc_1_arrow_grouped_all_null_int_group_arrives_double`
+- **Pin** — `python/repark/tests/functions/test_fnp_misc_1.py::test_fnp_misc_1_arrow_grouped_all_null_int_group_arrives_double`
   (records `(len, type)` per group: `{(2, "double"), (1, "int32")}`).
 - **Rationale** — BACKLOG, filed 2026-09-15 (FNP-MISC-1 round 2). Casting the group back
   needs the input Arrow type at the adapter, which only the bridge schema knows
@@ -16811,7 +16845,7 @@ field NAME.
   result, and the keyed callback receives the expression's value.
   *(oracle: recorded — cell `applyInArrow_expr_group` answers
   `Row(k=0, n=1), Row(k=1, n=2)`.)*
-  `python/repark/tests/test_grouped_surface_1.py::test_apply_in_arrow_expression_group_key_refusal`.
+  `python/repark/tests/io/test_grouped_surface_1.py::test_apply_in_arrow_expression_group_key_refusal`.
 - **Rationale** — BACKLOG, filed 2026-09-14 (GROUPED-SURFACE-1). The refusal predates this
   unit on `applyInPandas` and the new doors keep it; fixing it means projecting expression
   keys into the streamed frame first (the workaround the message names — project, then
@@ -16824,7 +16858,7 @@ field NAME.
 - **Apache Spark** — `s IN ('a', 1)` coerces the literal list and answers per-row
   booleans (ANSI `IN` semantics, `NULL` propagated). *(oracle: live PySpark 4.1.2,
   2026-09-14, `sql_in_mixed`.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_sql_in_mixed`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_sql_in_mixed`
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The SQL-door
   literal-list coercion belongs to the SQL parser/planner surface, which this unit is
   fenced out of (run 15c owns it tonight); the pin codifies today's refusal so the fix
@@ -16848,7 +16882,7 @@ field NAME.
 - **Apache Spark** — `SELECT isnan('a')` casts the string to DOUBLE and raises
   `CAST_INVALID_INPUT` at collect for a malformed value. *(oracle: live PySpark
   4.1.2, 2026-09-14, `isnan_sql_string`.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isnan_sql_string`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_isnan_sql_string`
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The DataFrame-door
   `Column.isNaN` / `F.isnan` coerce through `CAST(x AS DOUBLE)` and match Spark; the
   SQL-door kernel needs the same implicit cast, which lives in the SQL planner surface
@@ -16860,7 +16894,7 @@ field NAME.
 - **Apache Spark** — `st.withField("", lit(3))` appends a field literally named `""`:
   `struct<a:int,b:string,:int>`. *(oracle: live PySpark 4.1.2, 2026-09-14,
   `withfield_empty_name`.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_withfield_empty_name`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_withfield_empty_name`
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. DataFusion's
   `named_struct` requires every field-name literal to be a non-empty constant string,
   so an empty name cannot reach the engine unchanged; the `col{index}` substitution is
@@ -16871,7 +16905,7 @@ field NAME.
 - **Apache Spark** — `explode(arr).name("a", "b")` aliases the two generator output
   columns (`a` for key/pos, `b` for value/col). *(oracle: live PySpark 4.1.2,
   2026-09-14, `name_multi`.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_name_multi`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_name_multi`
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Multi-name
   aliasing names generator outputs, which belongs to the generator select-path; the
   pin codifies today's refusal so the fix reds it on purpose.
@@ -16901,7 +16935,7 @@ field NAME.
 - **Apache Spark** — `col("st.a")` binds the nested field `a` inside struct `st`.
   *(oracle: live PySpark 4.1.2, 2026-09-14, `withfield_nested_replace` exercises the
   same failure as the replacement value.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_withfield_nested_replace`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_withfield_nested_replace`
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Dotted-name
   resolution lives in column-name binding, outside this unit's fence; `withField`
   itself walks dotted `fieldName` paths inside the `update_fields` engine expression
@@ -16915,7 +16949,7 @@ field NAME.
   `NumberFormatException` (`The value 'c' of the type "STRING" cannot be cast to
   "BIGINT"`). *(oracle: live PySpark 4.1.2, 2026-09-14, `isin_string_vs_int`,
   `isin_int_vs_string`.)*
-- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isin_string_vs_int`
+- **Pin** — `python/repark/tests/dataframe/test_column_parity_1.py::test_isin_string_vs_int`
   and `::test_isin_int_vs_string`
 - **Rationale** — BACKLOG, filed 2026-09-14 by unit column-parity-1 (critic L-008).
   Both engines refuse the malformed ANSI coercion; only the error class and message
@@ -16934,7 +16968,7 @@ field NAME.
   `update_fields(st, WithField(9))[c]` — the facade `select` spelling, per the
   round-2 ruling; UNMEASURED live this round).
 - **Pin** —
-  `python/repark/tests/test_column_parity_1.py::test_groupby_unaliased_arith_key_uses_engine_name`
+  `python/repark/tests/dataframe/test_column_parity_1.py::test_groupby_unaliased_arith_key_uses_engine_name`
   and `::test_groupby_withfield_key_uses_engine_name` (each asserts today's engine
   string shape plus the grouped values, so a display-form fix reds them on purpose).
 - **Rationale** — BACKLOG, filed 2026-09-15 by unit column-parity-1 (critic re-check
@@ -16985,14 +17019,14 @@ field NAME.
   (`(value, k)` rows on the probe's `partition_by` read-back).
   *(oracle: live PySpark 4.1.2, probes `partition_by` + probe3 `part_*` + probe4 `text_probe4_*` + probe5 `text_probe5_*` + probe6 `text_probe6_*` + probe7 `text_probe7_*` (America/New_York session), 2026-09-15.)*
 - **Pin** —
-  `python/repark/tests/test_io_text_1.py::test_text_probe_partition_by`
+  `python/repark/tests/io/test_io_text_1.py::test_text_probe_partition_by`
   plus `test_text_probe3_part_*_read` (slash, specials, empty/null,
   decimal, bool, date/ts/double/int rows, schemas and dtypes) plus
   `test_text_probe4_schema_*` (value-only, renamed, with-partition,
   partition-first, int-cast refusal), `::test_text_probe4_mixed_layout`,
   `::test_text_probe4_conflicting_names`, `::test_text_probe4_glob_with_basepath`
   and the `L-201`/`L-205` pins (`lead_zero_*`, `plus_sign`, bare globs stay
-  `value`-only) plus `python/repark/tests/test_io_text_2.py::test_text_probe5_*`
+  `value`-only) plus `python/repark/tests/io/test_io_text_2.py::test_text_probe5_*`
   (raw-text overlay, uneven-depth and non-leaf refusals, marker-only layout,
   fallback layout — round 5, rulings X-1, X-2, X-3, X-4) plus
   `::test_text_probe6_*` (boolean overlay and results, the four uppercase
@@ -17019,7 +17053,7 @@ field NAME.
 - **Apache Spark** — the CAST-to-STRING text is `INTERVAL '0-2' YEAR TO MONTH` (a direct
   collect hits `[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented`).
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
-- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+- **Pin** — `python/repark/tests/functions/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
   cells 187/188 through `STRICT_XFAIL_CELLS` (strict xfail against the oracle text; the
   engine renders `2 months`).
 - **Rationale** — BACKLOG, owner ruling R-17a-16 (2026-09-15): one Arrow `MonthDayNano`
@@ -17037,7 +17071,7 @@ field NAME.
   parameter with name `tm` cannot be resolved. Did you mean one of the following? […]`
   with an edit-distance-ranked proposal list.
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
-- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+- **Pin** — `python/repark/tests/functions/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
   cells 0–4 through `STRICT_XFAIL_CELLS` (strict xfail against the oracle condition; the
   engine answers a bare schema error).
 - **Rationale** — BACKLOG, owner ruling R-17a-22 (2026-09-15): Spark's proposal list is
@@ -17054,7 +17088,7 @@ field NAME.
   kernel).
 - **Apache Spark** — the same cells type `timestamp` (midnight wall); the calendar day agrees.
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
-- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+- **Pin** — `python/repark/tests/functions/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
   cells 197–200 and 203–208 (strict xfail for run 17c).
 - **Rationale** — BACKLOG, run 17c's SQL-planner seam (D-33): the promotion needs the literal's
   unit where it is still visible, upstream of the `MonthDayNano` representation.
@@ -17067,7 +17101,7 @@ field NAME.
   kernel (`interval_avg::tests::all_null_input_is_null`).
 - **Apache Spark** — the same cells answer one NULL `interval day to second` row.
   *(oracle: live PySpark 4.1.2, 2026-09-14 fixture.)*
-- **Pin** — `python/repark/tests/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
+- **Pin** — `python/repark/tests/functions/test_fnp11b_temporal_formats.py::test_door_cell_matches_oracle`
   cells 191/192 (strict xfail for run 17c).
 - **Rationale** — BACKLOG, run 17c's INTERVAL DAY dialect seam (D-3, D-17).
   pins: fnp-11b/C-006
@@ -17076,9 +17110,9 @@ field NAME.
 
 - **repark** — the cell raises `Unsupported SQL type` naming `TIMESTAMP_NTZ`.
 - **Apache Spark** — the oracle records the cell as `timestamp_ntz`.
-  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/fnp11b_typeof_spark_oracle.json`
+  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/functions/fnp11b_typeof_spark_oracle.json`
   cell TYPEOF-SQL-13.)*
-- **Pin** — `python/repark/tests/test_fnp11b_typeof.py::test_typeof_ntz_literal_is_blocked_on_the_dialect_seam`.
+- **Pin** — `python/repark/tests/functions/test_fnp11b_typeof.py::test_typeof_ntz_literal_is_blocked_on_the_dialect_seam`.
 - **Rationale** — BACKLOG, run 17c's grammar seam (D-36).
   pins: fnp-11b/C-005
 
@@ -17087,9 +17121,9 @@ field NAME.
 - **repark** — the cell raises `[UNRESOLVED_ROUTINE]` naming `binary` (Spark-shaped
   since 2026-09-16, UNRESOLVED-ROUTINE-1; still unowned).
 - **Apache Spark** — the oracle records the cell as `binary`.
-  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/fnp11b_typeof_spark_oracle.json`
+  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/functions/fnp11b_typeof_spark_oracle.json`
   cell TYPEOF-SQL-24.)*
-- **Pin** — `python/repark/tests/test_fnp11b_typeof.py::test_typeof_binary_function_owner_is_recorded`.
+- **Pin** — `python/repark/tests/functions/test_fnp11b_typeof.py::test_typeof_binary_function_owner_is_recorded`.
 - **Rationale** — BACKLOG (D-36): neither matrix owns the `binary` function name and no
   registry row names it, so no unit is assigned yet; the pin reds when an owner lands it.
   pins: fnp-11b/C-005
@@ -17101,9 +17135,9 @@ field NAME.
   unit-less.
 - **Apache Spark** — the oracle records `interval day to second`, `interval year to month`
   and `interval year to month`.
-  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/fnp11b_typeof_spark_oracle.json`
+  *(oracle: live PySpark 4.1.2, 2026-09-15, `python/repark/tests/functions/fnp11b_typeof_spark_oracle.json`
   cells TYPEOF-SQL-14/15/16.)*
-- **Pin** — `python/repark/tests/test_fnp11b_typeof.py::test_typeof_interval_spelling_is_blocked_on_the_unit_seam`.
+- **Pin** — `python/repark/tests/functions/test_fnp11b_typeof.py::test_typeof_interval_spelling_is_blocked_on_the_unit_seam`.
 - **Rationale** — BACKLOG (D-35): the same run-17c unit seam as BL-14 — the literal's unit
   must survive planning before any kernel or spelling table can use it.
   pins: fnp-11b/C-005
@@ -17124,8 +17158,8 @@ field NAME.
   The same class and shape answer an unknown bare name, an unknown quoted name, and an unknown datetime
   unit used as a routine (`FORTNIGHT`).
   *(oracle: live PySpark 4.1.2, 2026-09-16,
-  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cells UR-SQL-00…17, UR-PY-00…03.)*
-- **Pin** — `python/repark/tests/test_unresolved_routine_1.py` (full-message SQL-door cells,
+  `python/repark/tests/functions/unresolved_routine_1_spark_oracle.json` cells UR-SQL-00…17, UR-PY-00…03.)*
+- **Pin** — `python/repark/tests/functions/test_unresolved_routine_1.py` (full-message SQL-door cells,
   py-door cells, the 22-name blanket pin) plus 14 in-module Rust tests in `unknown_routine.rs`.
 - **Rationale** — FIXED, contract-level (Q-17c-3: one fix corrects every missing name at once).
   History: recorded BACKLOG by run 17c while measuring the SPARK-SQL-GRAMMAR-1 cells
@@ -17143,8 +17177,8 @@ field NAME.
   [``system``.``builtin``, ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883;
   line 1 pos 0`.
   *(oracle: live PySpark 4.1.2, 2026-09-16,
-  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cell UR-PY-02.)*
-- **Pin** — `python/repark/tests/test_unresolved_routine_1.py::test_py_door_select_expr_answers_spark_class`
+  `python/repark/tests/functions/unresolved_routine_1_spark_oracle.json` cell UR-PY-02.)*
+- **Pin** — `python/repark/tests/functions/test_unresolved_routine_1.py::test_py_door_select_expr_answers_spark_class`
   (class plus search path plus SQLSTATE; the position is the wrapped one).
 - **Rationale** — BACKLOG, dated 2026-09-16. The Rust seam only sees the wrapped statement; the
   fragment-relative rewrite belongs to the facade (`dataframe/core.py`, run 18b's file — P2
@@ -17161,8 +17195,8 @@ field NAME.
   [``system``.``builtin``, ``system``.``session``, ``spark_catalog``.``default``]. SQLSTATE: 42883;
   line 1 pos 5` (UR3-PY-00) and `… line 1 pos 11` (UR3-PY-03).
   *(oracle: live PySpark 4.1.2, 2026-09-16,
-  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cells UR3-PY-00, UR3-PY-03.)*
-- **Pin** — `python/repark/tests/test_unresolved_routine_1.py::test_py_door_filter_fragments_answer_spark_class`
+  `python/repark/tests/functions/unresolved_routine_1_spark_oracle.json` cells UR3-PY-00, UR3-PY-03.)*
+- **Pin** — `python/repark/tests/functions/test_unresolved_routine_1.py::test_py_door_filter_fragments_answer_spark_class`
   (class plus search path plus SQLSTATE; the position is the quoted one).
 - **Rationale** — BACKLOG, dated 2026-09-16. The native `filter_sql` seam only sees the quoted
   predicate; recovering the fragment offset would require the original text, which only the
@@ -17175,8 +17209,8 @@ field NAME.
   `UnsupportedOperationException: This feature is not implemented: LATERAL VIEWS`.
 - **Apache Spark** — `[ROUTINE_NOT_FOUND] The routine ``default``.``nosuchgen`` cannot be found. ... SQLSTATE: 42883; line 1 pos 23`.
   *(oracle: live PySpark 4.1.2, 2026-09-16,
-  `python/repark/tests/unresolved_routine_1_spark_oracle.json` cell UR-SQL-16.)*
-- **Pin** — `python/repark/tests/test_unresolved_routine_1.py::test_sql_door_lateral_view_generator_stays_backlogged`.
+  `python/repark/tests/functions/unresolved_routine_1_spark_oracle.json` cell UR-SQL-16.)*
+- **Pin** — `python/repark/tests/functions/test_unresolved_routine_1.py::test_sql_door_lateral_view_generator_stays_backlogged`.
 - **Rationale** — BACKLOG, dated 2026-09-16. LATERAL VIEW parses under SPARK-SQL-GRAMMAR-1's C-009,
   which is not on main; the class can only land with that parse. The refusal is loud in both
   engines.
@@ -17190,8 +17224,8 @@ field NAME.
 - **Apache Spark** — `typeof(1 + CAST(1 AS TINYINT))` is `int`, and
   `hex(CAST(1 + CAST(1 AS TINYINT) AS BINARY))` is `00000002` on both doors.
   *(oracle: `<pyspark-4.1.2-oracle>` — measured by run 17c, 2026-09-16.)*
-- **Pin** — `python/repark/tests/test_sql_literal_typing_1.py` over
-  `python/repark/tests/sql_literal_typing_1_spark_oracle.json` (the 64-cell live-PySpark 4.1.2
+- **Pin** — `python/repark/tests/types/test_sql_literal_typing_1.py` over
+  `python/repark/tests/types/sql_literal_typing_1_spark_oracle.json` (the 64-cell live-PySpark 4.1.2
   recording `/tmp/oc-worker/sc/oracle/bl20-oracle.json`, batch `sc18-bl20-literal-typing`,
   measured 2026-09-16): value plus Arrow type per cell, Spark error class plus message where
   recorded. Rust unit tests beside `crates/repark-spark/src/spark_literal_typing.rs`.
@@ -17214,7 +17248,7 @@ field NAME.
   *(oracle: `/tmp/oc-worker/sc/oracle/bl20-oracle.json` cell LIT-SQL-52 — measured by run 18c,
   2026-09-16.)*
 - **Pin** — `test_tinyint_overflow_wrap_is_declared` in
-  `python/repark/tests/test_sql_literal_typing_1.py` holds today's `-128` wrap; it flips red
+  `python/repark/tests/types/test_sql_literal_typing_1.py` holds today's `-128` wrap; it flips red
   when the kernel lands.
   pins: sql-literal-typing-1/C-005.
 - **Rationale** — BACKLOG. Neither operand is an unsuffixed literal, so no planner rule can see a
@@ -17248,11 +17282,11 @@ field NAME.
   `WHERE d IN (CAST('NaN' AS DOUBLE), 1.0)` answers `[1, 2, 5]` on the same
   six-row mixed shape. *(oracle: recorded — PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0, `decimal_literal` in
-  `python/repark/tests/ice_nan_pushdown_1_oracle.json`, 2026-09-17.)*
+  `python/repark/tests/iceberg/ice_nan_pushdown_1_oracle.json`, 2026-09-17.)*
 - **Pin** —
-  `python/repark/tests/test_ice_nan_pushdown_1.py::test_bare_decimal_literal_spellings_answer`
+  `python/repark/tests/iceberg/test_ice_nan_pushdown_1.py::test_bare_decimal_literal_spellings_answer`
   holds both legs against the recorded Spark answers, and the SQL-door
-  full-grid legs in `python/repark/tests/test_ice_page_prune_1.py`
+  full-grid legs in `python/repark/tests/iceberg/test_ice_page_prune_1.py`
   (`test_sql_door_answers_every_recorded_cell`, `test_live_grid_replays_spark`)
   carry the three bare-decimal range cells; the loud-refusal pin
   (`test_sql_door_bare_decimal_ranges_refuse_loud`) is removed.
@@ -17300,7 +17334,7 @@ field NAME.
   `record.py`, six (`V01_*`, `V02_*`, `MIX_*`) copied from the orchestrator's
   `probe_wd2.py` run the same night.)*
 - **Pin** —
-  `python/repark/tests/test_ice_v3_write_default_1.py` (21 offline cells plus
+  `python/repark/tests/writes/test_ice_v3_write_default_1.py` (21 offline cells plus
   the live rebuild-and-replay cell with the roll-call leg);
   `crates/repark-iceberg/src/write/merge/tests/insert_fill.rs` (MERGE
   projection fill and required-missing refusal);
@@ -17348,7 +17382,7 @@ field NAME.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, hadoop catalog, format-version 3,
   2026-09-17, cells `ow_*` on table `pdflt` in
   `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py`
+- **Pin** — `python/repark/tests/writes/test_ice_v3_write_default_1.py`
   (`test_dynamic_partition_named_list_fills_write_default`,
   `test_static_partition_named_list_fills_write_default`,
   `test_partitioned_whole_table_named_list_fills_write_default`,
@@ -17379,7 +17413,7 @@ field NAME.
   2026-09-17, orchestrator probe `probe_wd2.py`; cells
   `MIX_static_dynamic_positional` and `MIX_static_dynamic_named_list_omits_default`
   copied into `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_matches_spark`
+- **Pin** — `python/repark/tests/writes/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_matches_spark`
   answers both recorded Spark cells on `(id, cat, payload)` (RePark cannot create the
   probe's `c` write-default, so `c` stays out of the compare).
 - **Rationale** — FIXED 2026-09-19 by ICE-OVERWRITE-MODE-1 (mixed lists run in both modes;
@@ -17394,7 +17428,7 @@ field NAME.
   table uuid, its properties and its other refs; the frame's schema, the `partitionBy` spec
   (unpartitioned without one) and an empty sort order replace the old ones; the new
   `overwrite` snapshot has no parent (scoreboard cell `W-DF-SAVEASTABLE-OVERWRITE` and the
-  `sat_*` shapes in `python/repark/tests/ice_write_df_1_spark_oracle.json`). Since round 2
+  `sat_*` shapes in `python/repark/tests/writes/ice_write_df_1_spark_oracle.json`). Since round 2
   (2026-09-25) the replacement schema keeps each column's field id by name, as Java's
   `TableMetadata.buildReplacement` does through `TypeUtil.assignFreshIds(schema, base,
   nextId)`: a new name takes a fresh id above `last-column-id`, nested fields keep theirs by
@@ -17420,10 +17454,10 @@ field NAME.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, cell
   `saveastable_overwrite_missing_defaulted` and `schema_after.dfltsat` in
   `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_saveastable_overwrite_replaces_the_table_like_spark`
+- **Pin** — `python/repark/tests/writes/test_ice_v3_write_default_1.py::test_saveastable_overwrite_replaces_the_table_like_spark`
   (the old `test_saveastable_overwrite_is_insert_overwrite_not_replace` flipped red and
   was re-pinned to the recorded Spark cell and schema);
-  `python/repark/tests/test_ice_write_df_2.py::test_save_as_table_overwrite_replaces_like_the_recorded_cell`,
+  `python/repark/tests/writes/test_ice_write_df_2.py::test_save_as_table_overwrite_replaces_like_the_recorded_cell`,
   `::test_save_as_table_overwrite_shapes_match_spark`,
   `::test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark`,
   `::test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence`,
@@ -17501,7 +17535,7 @@ field NAME.
   cluster, from `deleted_column_marks_merge_on_read_deleted_row`),
   `crates/repark-spark/src/tests/metadata_columns_reserved.rs` (the reserved-name
   collision and alias-position pins) plus
-  `python/repark/tests/test_ice_metadata_cols_1.py` (the verbatim cell
+  `python/repark/tests/iceberg/test_ice_metadata_cols_1.py` (the verbatim cell
   replays, the star pin, the `_deleted` pins and the collision pin).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
   u10-mc-deleted-1/C-001
@@ -17596,9 +17630,9 @@ field NAME.
   label `tinyint`: the engine-to-facade narrow-width seam this row was filed against is
   closed at this head, so the pin passes with no xfail.
 - **Apache Spark** — the same query reports `tinyint` for `grouping(g)`.
-  *(oracle: live PySpark 4.1.2, 2026-09-14, `python/repark/tests/fnp_agg_1_spark_oracle.json`
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `python/repark/tests/functions/fnp_agg_1_spark_oracle.json`
   SQL grouping cells.)*
-- **Pin** — `python/repark/tests/test_fnp_agg_1.py::test_sql_grouping_reports_tinyint`
+- **Pin** — `python/repark/tests/functions/test_fnp_agg_1.py::test_sql_grouping_reports_tinyint`
   passes unmarked.
 - **Rationale** — the row lands FIXED: the rebase onto `a3cb8012` closed LOGICAL-WIDTH-1
   for this label, and slice (d) carries the passing pin rather than the filed xfail.
@@ -17632,12 +17666,12 @@ field NAME.
   *(oracle: recorded — live PySpark 4.1.2, 2026-10-08; 70 SQL statements recorded at 1 and 16 input
   partitions in `crates/repark-core/src/session/tests/skipping_limit_grid.tsv`, 31 of them and
   15 DataFrame shapes with Arrow types in
-  `python/repark/tests/offset_nested_sort_1_spark_oracle.json`, re-derived under `REPARK_PARITY_LIVE=1` by
-  `python/repark/tests/test_offset_nested_sort_1.py::test_live_spark_answers_every_recorded_cell`.)*
+  `python/repark/tests/dataframe/offset_nested_sort_1_spark_oracle.json`, re-derived under `REPARK_PARITY_LIVE=1` by
+  `python/repark/tests/dataframe/test_offset_nested_sort_1.py::test_live_spark_answers_every_recorded_cell`.)*
 - **Pin** — `crates/repark-core/src/session/tests/skipping_limit.rs` (the 70-statement grid over
   a memory table, a sorted series view, a parquet scan and an Iceberg scan at 1, 2 and 16
   partitions; the two stock-rule pins; the plan-text and no-`OFFSET` plan-identity pins) and
-  `python/repark/tests/test_offset_nested_sort_1.py` (the Spark-dialect SQL door, the native
+  `python/repark/tests/dataframe/test_offset_nested_sort_1.py` (the Spark-dialect SQL door, the native
   ANSI door and the DataFrame door).
 - **Rationale** — FIXED, filed and closed in the same unit. A wrong row count, not a declared
   difference: the guard stays only until the pinned DataFusion fixes its rule. Measurements,
@@ -17650,7 +17684,7 @@ field NAME.
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
 reproducing Spark's effect — so a migrated script runs, and the difference is disclosed rather
 than silent. Every row is pinned in
-[`python/repark/tests/test_dropin_disclosure.py`](../python/repark/tests/test_dropin_disclosure.py);
+[`python/repark/tests/session/test_dropin_disclosure.py`](../python/repark/tests/session/test_dropin_disclosure.py);
 the `Pin` column names the test.
 
 **Oracle basis for this whole table: *documented*** — PySpark's documented API contract for each
@@ -17696,7 +17730,7 @@ oracle is involved.
   default 64-way partitioning; at 512 MiB the default-partitioning case also refuses.
 - **Apache Spark** — the sort-based dynamic partition writer spills through the task memory manager, so the equivalent write completes
   given executor memory. No oracle cell exists for a comparable pool limit (the JVM executor memory model is not a byte-for-byte match).
-- **Pin** — `python/repark/tests/test_io_text_2.py::test_text_partitioned_fallback_tiny_pool_refuses_loudly` (today's loud refusal; reds when
+- **Pin** — `python/repark/tests/io/test_io_text_2.py::test_text_partitioned_fallback_tiny_pool_refuses_loudly` (today's loud refusal; reds when
   the write completes), beside the Rust pins in `crates/repark-core/src/text_partition_fallback.rs`
   (`text_partition_fallback_spills_fat_tail_under_session_pool`, `text_partition_fallback_splits_pool_busting_batches`) that prove the
   spilling path where the producer fits.
@@ -17713,7 +17747,7 @@ oracle is involved.
   JVM. repark has no JVM.
 - **Apache Spark** — loads the named class and invokes the static method.
   *(oracle: documented — Spark `CallMethodViaReflection` / `java_method`.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[java_method]`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[java_method]`,
   `…::test_spark_sql_door_refuses[java_method]`,
   `…::test_ansi_sql_door_refuses[java_method]`;
   `crates/repark-spark/src/tests/declared_refuse.rs::java_method_refuses`.
@@ -17725,7 +17759,7 @@ oracle is involved.
   (`CallMethodViaReflection`).
 - **Apache Spark** — same JVM reflection as `java_method`.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[reflect]`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[reflect]`,
   `…::test_spark_sql_door_refuses[reflect]`,
   `…::test_ansi_sql_door_refuses[reflect]`;
   `crates/repark-spark/src/tests/declared_refuse.rs::reflect_refuses`.
@@ -17737,7 +17771,7 @@ oracle is involved.
   it needs a live JVM.
 - **Apache Spark** — JVM reflection; exceptions become NULL.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[try_reflect]`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[try_reflect]`,
   `…::test_spark_sql_door_refuses[try_reflect]`,
   `…::test_ansi_sql_door_refuses[try_reflect]`;
   `crates/repark-spark/src/tests/declared_refuse.rs::try_reflect_refuses`.
@@ -17749,7 +17783,7 @@ oracle is involved.
   UDT registry; with no JVM there is no UDT system to unwrap from.
 - **Apache Spark** — unwraps a `UserDefinedType` to its SQL type.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[unwrap_udt]`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[unwrap_udt]`,
   `…::test_spark_sql_door_refuses[unwrap_udt]`,
   `…::test_ansi_sql_door_refuses[unwrap_udt]`;
   `crates/repark-spark/src/tests/declared_refuse.rs::unwrap_udt_refuses`.
@@ -17763,7 +17797,7 @@ oracle is involved.
   itself still a stub.
 - **Apache Spark** — returns the start offset of the current file split.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_start]`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_start]`,
   `…::test_spark_sql_door_refuses[input_file_block_start]`,
   `…::test_ansi_sql_door_refuses[input_file_block_start]`;
   `crates/repark-spark/src/tests/declared_refuse.rs::input_file_block_start_refuses`.
@@ -17777,7 +17811,7 @@ oracle is involved.
   repark's `input_file_name` is itself still a stub.
 - **Apache Spark** — returns the length of the current file split.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_length]`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_length]`,
   `…::test_spark_sql_door_refuses[input_file_block_length]`,
   `…::test_ansi_sql_door_refuses[input_file_block_length]`;
   `crates/repark-spark/src/tests/declared_refuse.rs::input_file_block_length_refuses`.
@@ -17792,7 +17826,7 @@ oracle is involved.
   cannot serve the blob even for the HLL subset.
 - **Apache Spark** — evaluates the DataSketches-backed aggregates and scalars.
   *(oracle: documented — Spark 4.1.2 `pyspark.sql.functions` sketch family.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_sketch_facade_refuses_deferred_by_cost`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_sketch_facade_refuses_deferred_by_cost`,
   `…::test_sketch_spark_sql_door_refuses`,
   `…::test_sketch_ansi_sql_door_refuses`;
   `crates/repark-functions/src/declared_refuse.rs::sketches_are_deferred_by_cost_and_sorted`.
@@ -17810,7 +17844,7 @@ oracle is involved.
   FNP-GEN-1 run 18a (EX-FN-6 / EX-FN-16 answer both doors).
 - **Apache Spark** — parses CSV/XML and evaluates XPath 1.0 over XML strings.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_csv_xml_xpath_facade_refuses_deferred_by_cost`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_csv_xml_xpath_facade_refuses_deferred_by_cost`,
   `…::test_csv_xml_xpath_spark_sql_door_refuses`,
   `…::test_csv_xml_xpath_ansi_sql_door_refuses`;
   `crates/repark-functions/src/declared_refuse.rs::csv_xml_xpath_are_deferred_by_cost_and_sorted`.
@@ -17826,7 +17860,7 @@ oracle is involved.
   a shell with nothing behind it.
 - **Apache Spark** — parses and extracts Spark VARIANT values.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_variant_facade_refuses_deferred_by_cost`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_variant_facade_refuses_deferred_by_cost`,
   `…::test_variant_spark_sql_door_refuses`,
   `…::test_variant_ansi_sql_door_refuses`;
   `crates/repark-functions/src/declared_refuse.rs::variant_is_deferred_by_cost_and_sorted`.
@@ -17840,7 +17874,7 @@ oracle is involved.
   GEOGRAPHY/GEOMETRY have no Arrow representation and no vendored WKB codec.
 - **Apache Spark** — constructs and inspects GEOGRAPHY/GEOMETRY values.
   *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_geospatial_facade_refuses_deferred_by_cost`,
+- **Pin** — `python/repark/tests/functions/test_fnp15_16_declared_refuse.py::test_geospatial_facade_refuses_deferred_by_cost`,
   `…::test_geospatial_spark_sql_door_refuses`,
   `…::test_geospatial_ansi_sql_door_refuses`;
   `crates/repark-functions/src/declared_refuse.rs::geospatial_is_deferred_by_cost_and_sorted`.

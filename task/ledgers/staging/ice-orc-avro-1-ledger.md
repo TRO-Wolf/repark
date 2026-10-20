@@ -106,11 +106,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause walked against the packet cells (D-*, TP-*, W-*, M-*) and the R-ORC-1/R-ORC-2/R-ORC-3 rulings; the C-005/C-006 fork-limit line retired with evidence, not consensus.
-      artifacts: [task/ledgers/staging/ice-orc-avro-1-ledger.md, python/repark/tests/test_ice_orc_avro_1.py]
+      artifacts: [task/ledgers/staging/ice-orc-avro-1-ledger.md, python/repark/tests/writes/test_ice_orc_avro_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: All 13 inventory cells plus the M-1/M-2/M-3 delete-format cells, the M-5/M-6 metrics cells, the M-7 wide-type cells, the D-5.1 refusal cell and the compaction cell are pinned; C-016 asserts rows only, C-019 asserts the primitive row with R-1 carrying the nested refusal, and C-021/C-025 assert the refusal class and the full message.
-      artifacts: [python/repark/tests/test_ice_orc_avro_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_orc_avro_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: The workspace clippy gate (-D warnings, disallowed-methods) is green at the assembly head; no unwrap/expect added by the 17-commit stack.
@@ -124,15 +124,15 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Red-first throughout: WO1 11 red by design, WO3a step-1 red proof (the orc Rust pin failed after the arm opened, before the invert), and the T-4 file_format asserts that would pass on silent parquet without them.
-      artifacts: [python/repark/tests/test_ice_orc_avro_1.py, python/repark/tests/test_ice_write_options_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_orc_avro_1.py, python/repark/tests/writes/test_ice_write_options_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: WO3a receipts on the release module: S6 22P offline and 22P live, write_options 68P/1S offline and 69P live, Rust write_options 21P, clippy/panic-ban/size/comment-ban green, facade T-8 50P untouched; assembly re-runs the lint battery at the final head.
-      artifacts: [python/repark/tests/test_ice_orc_avro_1.py, python/repark/tests/test_ice_write_options_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_orc_avro_1.py, python/repark/tests/writes/test_ice_write_options_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: The packet's Spark facts (M-1..M-8 from Spark 4.1.2 + Iceberg 1.11.0, HadoopCatalog) were replayed, not assumed: delete-format precedence, v3 PUFFIN, ORC metrics shape, Avro empty metrics and the exact-suffix rule each carry a pin.
-      artifacts: [python/repark/tests/test_ice_orc_avro_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_orc_avro_1.py]
     - id: AT-9
       status: ATTACKED
       evidence: Registry ICE-WRITE-OPTIONS-ORC-AVRO rewritten to SERVED with the new pin names and the C-005/C-006 ruling; IO-ORC-1 keeps its plain-file writer refusal; every error shape pins Spark's class and message.

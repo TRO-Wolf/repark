@@ -15,8 +15,8 @@ match only).
 
 **Writable paths:** `python/repark/src/repark/spark/dataframe/core.py`,
 `python/repark/src/repark/spark/dataframe/colregex.py` (new marker module),
-`python/repark/tests/test_examples_dataframe_a.py`,
-`python/repark/tests/test_examples_dataframe_d.py`, `python/repark/tests/test_df_easy.py`,
+`python/repark/tests/parity/test_examples_dataframe_a.py`,
+`python/repark/tests/parity/test_examples_dataframe_d.py`, `python/repark/tests/dataframe/test_df_easy.py`,
 `docs/spark-sql-iceberg-parity.md` §7 EX-DF-1, this ledger, and the lockstep `map.md` files
 (`python/repark/src/repark/spark/dataframe/map.md`, `python/repark/tests/map.md`,
 `task/ledgers/staging/map.md`, `docs/examples/dataframe/map.md`). Closed: `crates/`,
@@ -106,7 +106,7 @@ measured divergence itself, not a pin artifact.
 |---|---|
 | `.venv/bin/python -m pytest -q python/repark/tests` | **5967 passed, 359 skipped** in 18m35s — on the final tree |
 | `.venv/bin/python -m pytest tests/test_examples_dataframe_a.py tests/test_examples_dataframe_d.py tests/test_df_easy.py -q` (cwd `python/repark`) | **20 passed** |
-| `.venv/bin/python -m pytest -q python/repark/tests/test_dfcore_1_exports.py` | **10 passed** (freeze set gains `colregex`, line-neutral at the 1000 default ceiling) |
+| `.venv/bin/python -m pytest -q python/repark/tests/dataframe/test_dfcore_1_exports.py` | **10 passed** (freeze set gains `colregex`, line-neutral at the 1000 default ceiling) |
 | `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **exit 0** — 927 public names, 797 covered, 128 backlog, 2 exceptions, 212 examples |
 | `make check-docs-links` | **clean** — 765 files, 4894 links |
 | `make check-ledger-grammar` | **clean** — 101 live ledgers, 647 clauses |
@@ -177,7 +177,7 @@ COVERAGE_ATTESTATION:
         a bare pattern resolves as a literal name in both directions (a hit selects,
         a miss raises); the marker's non-`select` doors are pinned shut (`drop`
         no-op, `withColumn` refusal, alias refusal).
-      artifacts: [python/repark/tests/test_examples_dataframe_a.py, python/repark/tests/test_examples_dataframe_d.py]
+      artifacts: [python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py]
     - id: AT-2
       status: N/A
       justification: No numeric or performance claim is made; the unit is a name-resolution contract.
@@ -188,7 +188,7 @@ COVERAGE_ATTESTATION:
         `.alias` on the marker raise on the never-resolvable ref, and a malformed
         regex raises naming the pattern; each pin asserts the raise, not just the
         exception class.
-      artifacts: [python/repark/tests/test_examples_dataframe_a.py, python/repark/tests/test_examples_dataframe_d.py]
+      artifacts: [python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py]
     - id: AT-4
       status: ATTACKED
       evidence: Ordering is load-bearing and pinned — expansion emits matches in
@@ -196,7 +196,7 @@ COVERAGE_ATTESTATION:
         (`["v", "g", "k"]`); a multi-name frame expands each duplicate display name
         to its own bound column. No shared state — the marker carries its pattern
         per instance.
-      artifacts: [python/repark/tests/test_examples_dataframe_d.py, python/repark/src/repark/spark/dataframe/colregex.py]
+      artifacts: [python/repark/tests/parity/test_examples_dataframe_d.py, python/repark/src/repark/spark/dataframe/colregex.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, environment read, or secret; the unit changes name resolution only.
@@ -221,7 +221,7 @@ COVERAGE_ATTESTATION:
         `colregex` submodule attribute on the dataframe package — is pinned in the
         export freeze (`EXPECTED_NEW_PACKAGE_SUBMODULES` plus the binding import),
         funded line-neutrally at the file's default ceiling.
-      artifacts: [python/repark/tests/test_dfcore_1_exports.py]
+      artifacts: [python/repark/tests/dataframe/test_dfcore_1_exports.py]
     - id: AT-9
       status: ATTACKED
       evidence: Failures stay diagnosable — the literal-name refusal lists the
@@ -235,7 +235,7 @@ COVERAGE_ATTESTATION:
         unchanged base tree and the verbatim `AnalysisException: No column matched
         regex` failures are pasted in the Red-first section; no test was edited to
         manufacture the red.
-      artifacts: [python/repark/tests/test_examples_dataframe_a.py, python/repark/tests/test_examples_dataframe_d.py]
+      artifacts: [python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py]
   reattested: []
   complete: true
 ```
@@ -245,4 +245,4 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](map.md)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 EX-DF-1
 - Marker: [../../../python/repark/src/repark/spark/dataframe/colregex.py](../../../python/repark/src/repark/spark/dataframe/colregex.py)
-- Pins: [../../../python/repark/tests/test_examples_dataframe_a.py](../../../python/repark/tests/test_examples_dataframe_a.py), [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/test_examples_dataframe_d.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_dataframe_a.py](../../../python/repark/tests/parity/test_examples_dataframe_a.py), [../../../python/repark/tests/parity/test_examples_dataframe_d.py](../../../python/repark/tests/parity/test_examples_dataframe_d.py)

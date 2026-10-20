@@ -31,7 +31,7 @@ The table-lifecycle work `../namespace_ddl.rs` delegates rather than inlines.
 
 - Up: [../map.md](../map.md). Caller: [../namespace_ddl.rs](../namespace_ddl.rs) `execute_drop_table`.
 - Pins: [../tests/purge.rs](../tests/purge.rs),
-  [../../../../python/repark/tests/test_ice_small_parser_1.py](../../../../python/repark/tests/test_ice_small_parser_1.py).
+  [../../../../python/repark/tests/iceberg/test_ice_small_parser_1.py](../../../../python/repark/tests/iceberg/test_ice_small_parser_1.py).
 
 ## Debug
 

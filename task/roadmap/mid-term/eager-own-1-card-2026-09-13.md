@@ -38,7 +38,7 @@ measured there, so step 0 measures first.
 - `temp_views.rs::register_collected_memtable` — collects fully, then applies the
   `repark.cache.max_bytes` guard, then registers a `MemTable` of `Arc<RecordBatch>`. Exported Arrow
   objects share those buffers by refcount; dropping the registration does not invalidate them.
-- Existing pins: `python/repark/tests/test_cache_persist.py` (the orphan-registration sequence at
+- Existing pins: `python/repark/tests/perf/test_cache_persist.py` (the orphan-registration sequence at
   the `gc.collect()` test — it asserts the table SURVIVES the frame; step 1 flips that assertion),
   `test_df_eager_1.py`, `test_dfcore_4b_eager_goldens.py`, `test_dfcore_6_eager_preview.py`,
   `test_sql_dml_eager.py`.

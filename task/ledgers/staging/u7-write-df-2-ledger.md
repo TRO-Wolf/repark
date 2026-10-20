@@ -62,7 +62,7 @@ RePark before this unit: the first cell answered the rows with an in-place `INSE
 **M-2 — step-1 probes on Spark 4.1.2** (`target/probe-u7-pr2/cells_pr2.py` through a copy of
 the scoreboard harness, and `target/probe-u7-pr2/record.py`, under `jvm-lock.sh`, JDK 17,
 InMemoryCatalog `sc`). The recorder's shapes are committed under `measured` in
-`python/repark/tests/ice_write_df_1_spark_oracle.json`. Findings:
+`python/repark/tests/writes/ice_write_df_1_spark_oracle.json`. Findings:
 
 `saveAsTable(mode="overwrite")`:
 - It is an RTAS on every table: the uuid stays; properties stay (`k1`, and
@@ -444,19 +444,19 @@ COVERAGE_ATTESTATION:
         fields, the uuid, field ids by name, identifier ids, last-column-id, schema ids, spec
         source/field ids, and the refusal class, condition, SQLSTATE and text; residues R-1..R-9
         are divergence pins.
-      artifacts: [python/repark/tests/test_ice_write_df_2.py, python/repark/tests/test_ice_write_df_2_overwrite.py, python/repark/tests/test_ice_write_df_2_doors.py, python/repark/tests/ice_write_df_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/test_ice_write_df_2.py, python/repark/tests/writes/test_ice_write_df_2_overwrite.py, python/repark/tests/writes/test_ice_write_df_2_doors.py, python/repark/tests/writes/ice_write_df_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: The oracle is live Spark 4.1.2 + Iceberg 1.11.0 (scoreboard record plus
         `target/probe-u7-pr2/record.py` under jvm-lock.sh); no expected value is derived from
         RePark output or typed in beside the oracle.
-      artifacts: [python/repark/tests/ice_write_df_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/ice_write_df_1_spark_oracle.json]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal on the new path leaves the table as Spark leaves it (rows,
         snapshots) and is pinned with its class and full text; the stale-pointer replace and
         overwrite keep the metadata files unchanged.
-      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_hadoop_vn_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state is added.
@@ -468,7 +468,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: One mutation per new path (M1..M17), each red on its named test (section Mutation).
-      artifacts: [crates/repark-iceberg/src/tests/writer_plan.rs, crates/repark-iceberg/src/tests/replace_schema.rs (deleted 2026-09-26 by RP50-B), crates/repark-iceberg/src/tests/filter_validation.rs, python/repark/tests/test_ice_write_df_2.py]
+      artifacts: [crates/repark-iceberg/src/tests/writer_plan.rs, crates/repark-iceberg/src/tests/replace_schema.rs (deleted 2026-09-26 by RP50-B), crates/repark-iceberg/src/tests/filter_validation.rs, python/repark/tests/writes/test_ice_write_df_2.py]
     - id: AT-7
       status: N/A
       justification: No performance claim.
@@ -490,6 +490,6 @@ COVERAGE_ATTESTATION:
         suites stay green; the 62 scoreboard W-DF cells plus W-CONCURRENT-VALIDATE-ERR
         replay 63 of 63 EQUAL (53 on the scoreboard's older RePark build); the pre-existing
         pins changed are listed with their reason.
-      artifacts: [python/repark/tests/test_ice_overwrite_mode_1.py, python/repark/tests/test_ice_v3_write_default_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_overwrite_mode_1.py, python/repark/tests/writes/test_ice_v3_write_default_1.py]
   complete: true
 ```

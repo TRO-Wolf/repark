@@ -123,7 +123,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every failing shape (list, map, struct x AND, OR x v2, v3 x CoW) is pinned against the recorded Spark oracle ids offline and live; red pre-fix, green post-fix.
-      artifacts: [python/repark/tests/test_ice_list_null_1.py, crates/repark-spark/src/tests/list_null_compound.rs]
+      artifacts: [python/repark/tests/writes/test_ice_list_null_1.py, crates/repark-spark/src/tests/list_null_compound.rs]
     - id: AT-2
       status: N/A
       justification: No numeric result; ids compared as exact integers, no float or decimal path touched.

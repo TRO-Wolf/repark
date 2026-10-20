@@ -104,7 +104,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   **IPI-40 PR6 r2 (2026-09-24):** the incremental and snapshot refusals pin the complete
   `DBT-INCREMENTAL-1` compilation-error text dbt reports, macro trail included.
 - `test_aws_acceptance_gold.py` — the Glue gold leg, gated on `REPARK_AWS_ACCEPTANCE=1` and
-  the same env variables as `python/repark/tests/test_aws_acceptance.py`. It writes to
+  the same env variables as `python/repark/tests/parity/test_aws_acceptance.py`. It writes to
   `testing_repark_acceptance` and nowhere else. **The orchestrator runs it; a unit agent never
   does.** **ICE-GOLD-TWICE-1 (2026-09-14):** the stem is unique per run
   (`testing_dbt1_<uuid8>`, minted in the `glue_project` fixture and passed to
