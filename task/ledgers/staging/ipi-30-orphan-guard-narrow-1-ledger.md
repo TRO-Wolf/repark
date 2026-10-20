@@ -93,5 +93,5 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: The first round's pins went red on 85011ea0 before going green. The own-directory, other-table, three file_list_view and unit-rule pins failed with the old refusal or NotImplemented texts, and the Python pin raised the old AnalysisException. The round-2 pins (C-003 extension, C-005 and C-007 and C-008 extensions, C-010 to C-016) were not run on 85011ea0; each was instead shown red by a one-line mutation of the branch it covers, named in its clause's evidence.
-      artifacts: [crates/repark-spark/src/tests/call_orphan_scope.rs, python/repark/tests/test_maintenance_call.py]
+      artifacts: [crates/repark-spark/src/tests/call_orphan_scope.rs, python/repark/tests/iceberg/test_maintenance_call.py]
 ```

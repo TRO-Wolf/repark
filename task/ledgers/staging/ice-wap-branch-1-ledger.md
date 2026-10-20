@@ -30,8 +30,8 @@ remaining half); `STATUS.md`; `Cargo.toml` / `Cargo.lock`; size ceilings.
 ## Measured
 
 Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, **27** `QW-*` cells,
-recorded by `python/repark/tests/_record_ice_wap_branch_1_oracle.py` into
-`python/repark/tests/ice_wap_branch_1_spark_oracle.json` (re-recorded whole 2026-09-20, SHA-256
+recorded by `python/repark/tests/writes/_record_ice_wap_branch_1_oracle.py` into
+`python/repark/tests/writes/ice_wap_branch_1_spark_oracle.json` (re-recorded whole 2026-09-20, SHA-256
 `586d5e403b2b53ff5eb348667148f675a1f310d662bd641b74d3637ecd9c6f53`). The recording reproduces the
 orchestrator's run-25c measurement (harness cells qc5 and qc13, cells `QW-*`) **observation for
 observation**: zero differences over status, error type, error text and every `obs` key
@@ -120,7 +120,7 @@ outside the catalog registry, and a CTAS into a new table (no target to load).
   every SQL statement, so the whole lib runs).
 - `cargo test -p repark-spark --lib -- tests::wap_branch` — 13 passed; red-first on the round-1
   walker, the two comma pins fail with 2 rows where the branch answers 4.
-- `pytest python/repark/tests/test_ice_wap_branch_1.py -q -n 4` — 31 passed, 1 skipped
+- `pytest python/repark/tests/writes/test_ice_wap_branch_1.py -q -n 4` — 31 passed, 1 skipped
   (27 cells), and green live with `REPARK_PARITY_LIVE=1`.
 - `comment_ban.py` — `comment-ban hits=0`. `cargo fmt --all --check`, clippy, ruff, the size
   scripts, `check_ledger_grammar.py`, `check_docs_links.py`, `sync_map_md.py --check` — clean.
@@ -131,7 +131,7 @@ On `a5cb3d94`, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6`:
 
 - `cargo test -p repark-spark --lib` — 1252 passed, 0 failed, 5 ignored.
 - `cargo test -p repark-spark --lib tests::wap_branch` — 9 passed.
-- `.venv/bin/python -m pytest python/repark/tests/test_ice_wap_branch_1.py -q -n 4` —
+- `.venv/bin/python -m pytest python/repark/tests/writes/test_ice_wap_branch_1.py -q -n 4` —
   23 passed, 1 skipped.
 - `python3 /tmp/oc-worker/_lib/comment_ban.py <clone> origin/main` — `comment-ban hits=0`.
 - `cargo fmt --all --check` — clean. `.venv/bin/ruff check` / `format --check` — clean.
@@ -147,15 +147,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: The Spark-visible change is pinned cell for cell against a recorded live oracle that reproduces the orchestrator's independent measurement observation for observation; 5 of 19 cells matched before, 19 of 19 after.
-      artifacts: [python/repark/tests/test_ice_wap_branch_1.py, python/repark/tests/ice_wap_branch_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/test_ice_wap_branch_1.py, python/repark/tests/writes/ice_wap_branch_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Red-first on the unfixed tree — 17 failed, 6 passed, 1 skipped. Every pin names an input where the branch changes the output; the metadata-table pin redded on a real defect (the table$suffix re-tokenization) and is green only because the fix landed. Round 2 re-attacked mutation-blindness itself (C-013): four recorded cells now diverge branch and main before the observation, and the two round-2 comma pins are red-first on the round-1 walker.
-      artifacts: [crates/repark-spark/src/tests/wap_branch.rs, python/repark/tests/test_ice_wap_branch_1.py]
+      artifacts: [crates/repark-spark/src/tests/wap_branch.rs, python/repark/tests/writes/test_ice_wap_branch_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Every write door Spark offers is a cell (SQL INSERT, writeTo append, saveAsTable, CoW and MoR DELETE, UPDATE, MERGE, INSERT OVERWRITE, stacked appends), plus the five negative controls, the both-keys refusal, the SQL SET spelling and the native ANSI door.
-      artifacts: [python/repark/tests/test_ice_wap_branch_1.py, python/repark/tests/test_ref_branch_tag_wap.py]
+      artifacts: [python/repark/tests/writes/test_ice_wap_branch_1.py, python/repark/tests/iceberg/test_ref_branch_tag_wap.py]
     - id: AT-4
       status: N/A
       justification: No new shared mutable state and no concurrency. The carrier is a per-session DataFusion ConfigExtension written under the session state lock, the same seam the ANSI, zone, case-sensitivity and overwrite-mode knobs already use.
@@ -182,6 +182,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: The whole repark-spark lib suite (1252 tests), the new file offline and live, and every file mentioning wap under python/repark/tests ran green at the unit's head; CI runs the rest.
-      artifacts: [crates/repark-spark/src/tests/wap_branch.rs, python/repark/tests/test_ice_wap_branch_1.py]
+      artifacts: [crates/repark-spark/src/tests/wap_branch.rs, python/repark/tests/writes/test_ice_wap_branch_1.py]
   complete: true
 ```

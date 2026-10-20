@@ -62,7 +62,7 @@ RePark before this unit: the first cell answered the rows with an in-place `INSE
 **M-2 — step-1 probes on Spark 4.1.2** (`target/probe-u7-pr2/cells_pr2.py` through a copy of
 the scoreboard harness, and `target/probe-u7-pr2/record.py`, under `jvm-lock.sh`, JDK 17,
 InMemoryCatalog `sc`). The recorder's shapes are committed under `measured` in
-`python/repark/tests/ice_write_df_1_spark_oracle.json`. Findings:
+`python/repark/tests/writes/ice_write_df_1_spark_oracle.json`. Findings:
 
 `saveAsTable(mode="overwrite")`:
 - It is an RTAS on every table: the uuid stays; properties stay (`k1`, and
@@ -214,7 +214,7 @@ round-2 wheel):
 | C-013 | `overwrite(condition)` binds the frame to the table by name in the Rust door, as Spark's `OverwriteByExpression.byName`: the facade names the frame's columns and raises a typed `source_by_name` flag; a wider frame refuses `TOO_MANY_DATA_COLUMNS`, a frame column the table lacks at matching width refuses `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS` with Spark's text naming every extra column, a column the frame lacks is NULL, names fold by `spark.sql.caseSensitive`; the SQL door stays positional. Round 3: the binding reaches struct sub-fields as Spark's resolver does — a missing sub-field refuses `CANNOT_FIND_DATA` with the dotted path (`` `s`.`b` ``), reported before an extra one, which refuses `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS`; the append doors do not share it (R-15), and a case-only sub-field spelling writes NULL (R-16). | Rust `tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`; `test_overwrite_condition_residues[oc_extra_and_missing_bigint / _string / _reordered]` (Spark's class, condition, SQLSTATE and text under the R-4 prefix, table unchanged); `[oc_frame_upper_case]`, `[oc_cond_on_dropped_frame_column]`, `[oc_missing_frame_column]` EQUAL; `repark-python tests.rs` intent pins pass `false`; round 3 `insert_by_name/nested.rs` units and `test_overwrite_condition_residues[oc_nested_*]`. | **PROVEN** | M16/M17 red (round 3); M14 red (the string shape committed shifted columns on the lane wheel before the fix, critic V-001). |
 | C-014 | The `isolation-level` option is parsed only where Spark parses it (measured 2026-09-25): `overwrite(condition)`, `overwritePartitions()`, `saveAsTable` overwrite, `insertInto(overwrite=True)` static and dynamic, `replace()` and `createOrReplace()` refuse `Invalid isolation level: <value>` for `none` or any unknown value (Spark's text, R-4 class, nothing written); `writeTo.append()`, `saveAsTable` append and create, `insertInto` append and `writeTo.create()` commit with `none` or `bogus`. Round 2 refused `none` on every statement; before round 2 RePark accepted `none` everywhere and refused `bogus` on append. | `write_options::tests::isolation_level_passes_through_unparsed_like_spark`, `::replace_doors_refuse_an_unknown_isolation_level_like_spark`; `repark-iceberg writer_props.rs::isolation_override_none_refuses_like_spark`; `test_ice_write_df_2_doors.py::test_isolation_level_is_ignored_where_spark_ignores_it` (7), `::test_isolation_level_refuses_on_the_overwrite_and_replace_doors` (5), `test_validate_from_snapshot_residues[vf_bad_id_level_none]`; registry ICE-WRITE-OPTIONS-1 wording. | **PROVEN** | M15/M17 red (round 3); `StatementWriteOptions::validate` keeps the value raw, the overwrite executors' `isolation_with_override` and the replace door's `refuse_invalid_isolation` parse it. The table-property parser keeps the fork sentinel (out of scope, V-003). |
 | C-015 | The 21 shapes critic r4 measured are pinned: the EQUAL ones on every observation, the rest as residues R-2/R-4 (rules) or R-11..R-14 (each beside Spark's recorded answer). | `test_overwrite_condition_shapes_match_spark` (+8), `test_validate_from_snapshot_shapes_match_spark` (+3), `test_overwrite_condition_residues` (+5), `test_validate_from_snapshot_residues` (+2), `test_overwrite_condition_divergences_on_the_row_filter`; oracle `measured` +21 (M-6). | **PROVEN** | Measured on both engines (M-6); no expected value typed in. |
-| C-016 | The round-3 shapes are pinned (oracle `measured` +23, `iso_*`, `oc_nested_*`, `append_nested_*`, `op_nested_*`, `oc_string_into_bigint`, `oc_null_into_not_null`): the EQUAL ones on every observation, the nested refusals under the R-4 prefix, and residues R-15..R-18 each beside Spark's recorded answer with RePark's text stated in full. | `test_ice_write_df_2_doors.py` (`test_isolation_level_is_ignored_where_spark_ignores_it`, `test_isolation_level_refuses_on_the_overwrite_and_replace_doors`, `test_nested_binding_residues_beside_spark`, `test_store_assignment_residues_beside_spark`); `test_ice_write_df_2_overwrite.py::test_overwrite_condition_residues[oc_nested_*]` (+5). | **PROVEN** | Measured on both engines (M-7); no expected Spark value typed in. |
+| C-016 | The round-3 shapes are pinned (oracle `measured` +23, `iso_*`, `oc_nested_*`, `append_nested_*`, `op_nested_*`, `oc_string_into_bigint`, `oc_null_into_not_null`): the EQUAL ones on every observation, the nested refusals under the R-4 prefix, and residues R-15..R-18 each beside Spark's recorded answer with RePark's text stated in full. | `test_ice_write_df_2_doors.py` (`test_isolation_level_is_ignored_where_spark_ignores_it`, `test_isolation_level_refuses_on_the_overwrite_and_replace_doors`, `test_nested_binding_answers_as_spark` (R-15 and R-16 retired 2026-10-14), `test_store_assignment_residues_beside_spark`); `test_ice_write_df_2_overwrite.py::test_overwrite_condition_residues[oc_nested_*]` (+5). | **PROVEN** | Measured on both engines (M-7); no expected Spark value typed in. |
 
 ## Pre-existing pins changed (slice 1)
 
@@ -305,13 +305,16 @@ round-2 wheel):
   refuses the missing `b` as `PySparkException` `datafusion engine error: Execution error:
   INSERT OVERWRITE cast of list column `s` to `s` (…) failed: Invalid argument error: Incorrect
   number of arrays for StructArray fields, expected 2 got 1` (`op_nested_missing_subfield`;
-  Spark `CANNOT_FIND_DATA`, both tables unchanged). Pre-existing; pinned beside Spark's answer.
+  Spark `CANNOT_FIND_DATA`, both tables unchanged). Pre-existing; pinned beside Spark's answer. **Retired 2026-10-14** by ICE-STRUCT-PAIRING-1
+  build round 2 (parity row ICE-TSNS-SQL-1-R-016): the three shapes refuse with Spark's
+  condition and text (R-4 prefix) and leave the table, as Spark does.
 - **R-16** (2026-09-25) — a sub-field spelled `A` for `a` under the default case-insensitive
   setting passes the resolver and writes `a` NULL through `overwrite(condition)`; Spark
   writes 9 (`oc_nested_upper_subfield`). The writer's struct cast matches sub-field names
   exactly. Any case-only sub-field spelling, at any depth and in any position (`B` for
   `b`, `s.t.A`), writes that field NULL the same way (verifier r3 V-002, 2026-09-25). Pinned
-  beside Spark's answer.
+  beside Spark's answer. **Retired 2026-10-14** by ICE-STRUCT-PAIRING-1 build round 2: the pairing
+  kernel folds case by `spark.sql.caseSensitive`, so the shape writes 9 as Spark does.
 - **R-17** (2026-09-25, critic r3 V-005a) — a STRING `id` into BIGINT refuses
   `AnalysisException` (condition null) `repark_insert_store_assignment\ncaused by\nError
   during planning: INSERT INTO cannot store-assign column `id`: source type Utf8 is not
@@ -441,19 +444,19 @@ COVERAGE_ATTESTATION:
         fields, the uuid, field ids by name, identifier ids, last-column-id, schema ids, spec
         source/field ids, and the refusal class, condition, SQLSTATE and text; residues R-1..R-9
         are divergence pins.
-      artifacts: [python/repark/tests/test_ice_write_df_2.py, python/repark/tests/test_ice_write_df_2_overwrite.py, python/repark/tests/test_ice_write_df_2_doors.py, python/repark/tests/ice_write_df_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/test_ice_write_df_2.py, python/repark/tests/writes/test_ice_write_df_2_overwrite.py, python/repark/tests/writes/test_ice_write_df_2_doors.py, python/repark/tests/writes/ice_write_df_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: The oracle is live Spark 4.1.2 + Iceberg 1.11.0 (scoreboard record plus
         `target/probe-u7-pr2/record.py` under jvm-lock.sh); no expected value is derived from
         RePark output or typed in beside the oracle.
-      artifacts: [python/repark/tests/ice_write_df_1_spark_oracle.json]
+      artifacts: [python/repark/tests/writes/ice_write_df_1_spark_oracle.json]
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal on the new path leaves the table as Spark leaves it (rows,
         snapshots) and is pinned with its class and full text; the stale-pointer replace and
         overwrite keep the metadata files unchanged.
-      artifacts: [python/repark/tests/test_ice_hadoop_vn_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_hadoop_vn_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state is added.
@@ -465,7 +468,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: One mutation per new path (M1..M17), each red on its named test (section Mutation).
-      artifacts: [crates/repark-iceberg/src/tests/writer_plan.rs, crates/repark-iceberg/src/tests/replace_schema.rs (deleted 2026-09-26 by RP50-B), crates/repark-iceberg/src/tests/filter_validation.rs, python/repark/tests/test_ice_write_df_2.py]
+      artifacts: [crates/repark-iceberg/src/tests/writer_plan.rs, crates/repark-iceberg/src/tests/replace_schema.rs (deleted 2026-09-26 by RP50-B), crates/repark-iceberg/src/tests/filter_validation.rs, python/repark/tests/writes/test_ice_write_df_2.py]
     - id: AT-7
       status: N/A
       justification: No performance claim.
@@ -487,6 +490,6 @@ COVERAGE_ATTESTATION:
         suites stay green; the 62 scoreboard W-DF cells plus W-CONCURRENT-VALIDATE-ERR
         replay 63 of 63 EQUAL (53 on the scoreboard's older RePark build); the pre-existing
         pins changed are listed with their reason.
-      artifacts: [python/repark/tests/test_ice_overwrite_mode_1.py, python/repark/tests/test_ice_v3_write_default_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_overwrite_mode_1.py, python/repark/tests/writes/test_ice_v3_write_default_1.py]
   complete: true
 ```

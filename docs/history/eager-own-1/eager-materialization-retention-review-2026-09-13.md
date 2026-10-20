@@ -235,8 +235,8 @@ All links are pinned to the reviewed commit so this report remains usable after 
 - [Unpersist and public eager methods](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/python/repark/src/repark/spark/dataframe/core.py#L928)
 - [Session-wide cache cleanup](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/python/repark/src/repark/spark/catalog.py#L231)
 - [Rust collection and post-collection budget check](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/crates/repark-core/src/session/temp_views.rs#L135)
-- [Existing orphan-registration test](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/python/repark/tests/test_cache_persist.py#L191)
-- [Existing eager API tests](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/python/repark/tests/test_df_eager_1.py)
+- [Existing orphan-registration test](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/python/repark/tests/perf/test_cache_persist.py#L191)
+- [Existing eager API tests](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/python/repark/tests/dataframe/test_df_eager_1.py)
 - [TA partition evaluator](https://github.com/TRO-Wolf/repark/blob/0a1a3d70d272690c4f6f075fd0c235134f973d1b/crates/repark-ta/src/udf/mod.rs#L660)
 
 ## Reported symptom (owner, 2026-09-13)

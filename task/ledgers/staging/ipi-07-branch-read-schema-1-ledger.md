@@ -74,11 +74,11 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: Branch, tag, snapshot-id, timestamp, unknown-ref, and empty-result inputs exercised on the SQL, selector, VERSION AS OF, and reader-option spellings.
-      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/test_ice_branch_schema_1.py]
+      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Unknown-ref refusal text pinned full-string on both spellings; legacy tag-option refusal pinned exact; the fork unknown-ref text cannot surface (gatekeeper first).
-      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/test_ice_branch_schema_1.py]
+      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py]
     - id: AT-4
       status: N/A
       justification: Read-only change; the provider choice is per statement with no shared mutable state.
@@ -88,7 +88,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Branch reads track ADD/DROP/RENAME COLUMN; tag, snapshot-id, and timestamp reads keep the snapshot schema; no write path touched.
-      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/test_ice_branch_schema_1.py]
+      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py]
     - id: AT-7
       status: N/A
       justification: Same catalog-load count as before (resolution, then provider build); no new loop or allocation.
@@ -102,6 +102,6 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Six Rust and five Python behavior pins failed before the fix and pass after; both if-let arms change output (branch projects current, tag keeps snapshot); guards fail if the gatekeeper is dropped (the fork text differs).
-      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/test_ice_branch_schema_1.py]
+      artifacts: [crates/repark-spark/src/tests/branch_read_schema.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py]
   complete: true
 ```

@@ -53,10 +53,10 @@ Three pins and one registry row moved to the fork-owned shapes in this commit, R
   `typed_partition_columns_differing_by_case_serve_under_case_sensitive` (renamed): twin
   typed-partition columns serve under `caseSensitive=true` with their schemas and identity
   fields; the exact-duplicate `COLUMN_ALREADY_EXISTS` leg is unchanged.
-- `python/repark/tests/test_ice_typed_partition_refusals.py`
+- `python/repark/tests/iceberg/test_ice_typed_partition_refusals.py`
   `test_typed_partition_columns_differing_by_case_serve_under_case_sensitive` (renamed):
   the facade mirror — twins land, columns plus the empty count.
-- `python/repark/tests/test_ice_mixed_case_1.py`: the twin-table adoption pin splits into
+- `python/repark/tests/iceberg/test_ice_mixed_case_1.py`: the twin-table adoption pin splits into
   `test_measured_case_twin_table_adopts_then_refuses_references` (the three L-08 reference
   cells refuse `AMBIGUOUS_REFERENCE` / 42704 at resolution); the star half moved again in
   the fold below.
@@ -192,7 +192,7 @@ Tests rewritten (one existing pin):
 `test_star_over_a_case_twin_frame_answers_like_spark` (p9 `f_twv_read`). New
 pins: `vr3_derived_cte_and_join_twin_stars_answer` (bite-proven: red with the
 old guard restored, green with the fix) and six tests in
-`python/repark/tests/test_ice_case_twin_1.py` (C-002/C-003). Unchanged and
+`python/repark/tests/iceberg/test_ice_case_twin_1.py` (C-002/C-003). Unchanged and
 green: `n03_star_over_a_case_twin_refuses_column_already_exists`,
 `test_case_twin_table_star_answers_under_true_and_refuses_under_false`, the
 `_repark_ow_tgt` ambiguity pin, and the full insert_overwrite / case_twin /

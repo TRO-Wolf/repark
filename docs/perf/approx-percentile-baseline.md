@@ -102,7 +102,7 @@ Reproduce (from the repo root, release module):
 
 ```
 cd python/repark && VIRTUAL_ENV=$PWD/../../.venv uvx maturin@1.14.1 develop --release
-.venv/bin/python -m pytest python/repark/tests/test_dfcore_5_approx_quantile.py::test_one_collect_per_frame_regardless_of_shape -q
+.venv/bin/python -m pytest python/repark/tests/dataframe/test_dfcore_5_approx_quantile.py::test_one_collect_per_frame_regardless_of_shape -q
 ```
 
 The pin re-derives the collect counts mechanically. The wall medians come

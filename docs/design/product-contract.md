@@ -35,12 +35,12 @@ is a **conf-gated** DataFusion stock path, not the product listing surface.
 
 | Claim | Pin |
 |---|---|
-| `listTables(db)` returns MANAGED Iceberg tables + TEMPORARY views with the live PySpark field shape | `python/repark/tests/test_catalog_surface.py::test_list_tables_field_shape_and_temps` |
-| `listTables` pattern filter (`*`, `\|`) matches Spark filterPattern | `python/repark/tests/test_catalog_surface.py::test_list_tables_filter_pattern` |
-| Missing schema raises `SCHEMA_NOT_FOUND` | `python/repark/tests/test_catalog_surface.py::test_list_tables_missing_schema_raises` |
-| No-arg `listTables()` uses `currentDatabase` | `python/repark/tests/test_catalog_surface.py::test_list_tables_no_arg_uses_current_database` |
-| `listTables` is **list-on-access** (live Iceberg `Catalog::list_tables`, not the DF provider snapshot) | `python/repark/tests/test_catalog_staleness.py::test_list_tables_sees_oob_create`; engine half `crates/repark-iceberg/src/catalog/tests.rs::live_list_sees_oob_create_and_drop_while_provider_snapshot_stale` |
-| `SHOW NAMESPACES IN <catalog>` is the implemented **SQL** sibling of `listDatabases` | `python/repark/tests/test_catalog_surface.py::test_show_namespaces_lists_registered_namespaces` |
+| `listTables(db)` returns MANAGED Iceberg tables + TEMPORARY views with the live PySpark field shape | `python/repark/tests/session/test_catalog_surface.py::test_list_tables_field_shape_and_temps` |
+| `listTables` pattern filter (`*`, `\|`) matches Spark filterPattern | `python/repark/tests/session/test_catalog_surface.py::test_list_tables_filter_pattern` |
+| Missing schema raises `SCHEMA_NOT_FOUND` | `python/repark/tests/session/test_catalog_surface.py::test_list_tables_missing_schema_raises` |
+| No-arg `listTables()` uses `currentDatabase` | `python/repark/tests/session/test_catalog_surface.py::test_list_tables_no_arg_uses_current_database` |
+| `listTables` is **list-on-access** (live Iceberg `Catalog::list_tables`, not the DF provider snapshot) | `python/repark/tests/session/test_catalog_staleness.py::test_list_tables_sees_oob_create`; engine half `crates/repark-iceberg/src/catalog/tests.rs::live_list_sees_oob_create_and_drop_while_provider_snapshot_stale` |
+| `SHOW NAMESPACES IN <catalog>` is the implemented **SQL** sibling of `listDatabases` | `python/repark/tests/session/test_catalog_surface.py::test_show_namespaces_lists_registered_namespaces` |
 
 Facade implementation note (not a second contract): `Catalog.list_tables` documents the
 list-on-access path and the ST-1 refusal of `SHOW TABLES IN` at
@@ -52,7 +52,7 @@ list-on-access path and the ST-1 refusal of `SHOW TABLES IN` at
 
 | Claim | Pin |
 |---|---|
-| `SHOW TABLES IN <catalog>.…` raises `UnsupportedOperationException` naming `SHOW TABLES` | `python/repark/tests/test_catalog_surface.py::test_show_tables_in_not_implemented_divergence` |
+| `SHOW TABLES IN <catalog>.…` raises `UnsupportedOperationException` naming `SHOW TABLES` | `python/repark/tests/session/test_catalog_surface.py::test_show_tables_in_not_implemented_divergence` |
 | Semantics live only in the divergence registry | [../spark-sql-iceberg-parity.md](../spark-sql-iceberg-parity.md) §2.4 **ST-1** |
 
 Rationale (registry ST-1, not restated as a new decision): a partial SQL implementation that
@@ -124,10 +124,10 @@ Implementation homes (for navigators, not additional guarantees): Spark
 | Claim | Pin |
 |---|---|
 | Spark door (Rust session): bare `INSERT` applies when the returned frame is dropped uncollected; follow-up SELECT sees the row | `crates/repark-spark/tests/dml_sessions.rs::session_sql_bare_dml_applies_eagerly` |
-| Facade: bare `INSERT` applies without collect (value + Arrow type on `to_arrow`) | `python/repark/tests/test_sql_dml_eager.py::test_bare_sql_insert_applies_without_collect` |
+| Facade: bare `INSERT` applies without collect (value + Arrow type on `to_arrow`) | `python/repark/tests/sql/test_sql_dml_eager.py::test_bare_sql_insert_applies_without_collect` |
 | Facade: bare `DELETE` / `UPDATE` same | `test_bare_sql_delete_applies_without_collect`, `test_bare_sql_update_applies_without_collect` |
-| Facade: collect of the returned frame does not double-apply | `python/repark/tests/test_sql_dml_eager.py::test_bare_sql_insert_applies_exactly_once_when_collected` |
-| Facade: a failing DML raises at `sql()` time and commits nothing | `python/repark/tests/test_sql_dml_eager.py::test_bare_sql_failing_dml_raises_base_pyspark_exception_at_sql_time` |
+| Facade: collect of the returned frame does not double-apply | `python/repark/tests/sql/test_sql_dml_eager.py::test_bare_sql_insert_applies_exactly_once_when_collected` |
+| Facade: a failing DML raises at `sql()` time and commits nothing | `python/repark/tests/sql/test_sql_dml_eager.py::test_bare_sql_failing_dml_raises_base_pyspark_exception_at_sql_time` |
 
 "Commit boundary" here means: **one successful `sql()` call that routes a write has already
 committed that write before the call returns** (Iceberg snapshot commit on the write path). It
@@ -162,18 +162,18 @@ through a door):
 
 | Claim | Pin |
 |---|---|
-| After an out-of-band create (no DF reregister), `listTables` includes the new name | `python/repark/tests/test_catalog_staleness.py::test_list_tables_sees_oob_create` |
-| After an OOB drop, `listTables` omits the name (no phantom) | `python/repark/tests/test_catalog_staleness.py::test_list_tables_drop_oob_absent_not_phantom` |
-| OOB drop of a **DF-known** name: `listTables` succeeds, omits victim, keeps siblings (no information_schema hard-fail) | `python/repark/tests/test_catalog_staleness.py::test_list_tables_oob_drop_df_known_absent_not_crash` |
-| Temp views still list alongside live Iceberg names | `python/repark/tests/test_catalog_staleness.py::test_list_tables_temps_still_appended_with_live_iceberg` |
+| After an out-of-band create (no DF reregister), `listTables` includes the new name | `python/repark/tests/session/test_catalog_staleness.py::test_list_tables_sees_oob_create` |
+| After an OOB drop, `listTables` omits the name (no phantom) | `python/repark/tests/session/test_catalog_staleness.py::test_list_tables_drop_oob_absent_not_phantom` |
+| OOB drop of a **DF-known** name: `listTables` succeeds, omits victim, keeps siblings (no information_schema hard-fail) | `python/repark/tests/session/test_catalog_staleness.py::test_list_tables_oob_drop_df_known_absent_not_crash` |
+| Temp views still list alongside live Iceberg names | `python/repark/tests/session/test_catalog_staleness.py::test_list_tables_temps_still_appended_with_live_iceberg` |
 | Engine: live `list_table_names` sees OOB create/drop while the DF provider snapshot stays stale | `crates/repark-iceberg/src/catalog/tests.rs::live_list_sees_oob_create_and_drop_while_provider_snapshot_stale` |
 
 #### B. Product SQL DDL + Catalog existence on the same session
 
 | Claim | Pin |
 |---|---|
-| After product CTAS, `tableExists` is true; subsequent MERGE / SELECT see the table | `python/repark/tests/test_catalog_flow.py::test_silver_publish_flow` |
-| Product CREATE TABLE via `sql()` is visible to a later `listTables` / field-shape listing (fixture creates then lists) | `python/repark/tests/test_catalog_surface.py` fixture + `test_list_tables_field_shape_and_temps` |
+| After product CTAS, `tableExists` is true; subsequent MERGE / SELECT see the table | `python/repark/tests/parity/test_catalog_flow.py::test_silver_publish_flow` |
+| Product CREATE TABLE via `sql()` is visible to a later `listTables` / field-shape listing (fixture creates then lists) | `python/repark/tests/session/test_catalog_surface.py` fixture + `test_list_tables_field_shape_and_temps` |
 | WITH information_schema conf: a door-created table enumerates in `information_schema` / bare `SHOW TABLES` on the **same** session (product DDL path invalidates the DF name directory) | `crates/repark-sql/tests/introspection.rs::information_schema_enumerates_an_iceberg_catalog_through_the_ansi_door`, `show_tables_and_describe_delegate_through_the_ansi_door` |
 
 Product DDL (CREATE/DROP TABLE, CTAS, schema DDL, …) invalidates the **touched namespace** on
@@ -191,7 +191,7 @@ product mutations without a manual full rebuild. Pins for the invalidate primiti
 The silver publish flow is the standing acceptance kernel for "create if missing → write →
 read back on the same session":
 
-- Pin: `python/repark/tests/test_catalog_flow.py::test_silver_publish_flow`
+- Pin: `python/repark/tests/parity/test_catalog_flow.py::test_silver_publish_flow`
   (`tableExists` false → CTAS → `tableExists` true → MERGE → SELECT).
 
 That is the guarantee a sequential dbt-style consumer needs when it uses Catalog probes +
@@ -210,7 +210,7 @@ product SQL — **not** a claim about concurrent sessions or external writers.
 
 | Claim | Pin |
 |---|---|
-| `refresh_catalog_provider(catalog)` rebuilds the DF provider (SQL / information_schema residual recovery) | `python/repark/tests/test_catalog_staleness.py::test_refresh_catalog_provider_round_trip` |
+| `refresh_catalog_provider(catalog)` rebuilds the DF provider (SQL / information_schema residual recovery) | `python/repark/tests/session/test_catalog_staleness.py::test_refresh_catalog_provider_round_trip` |
 
 ADR-0004 names explicit refresh as the free-SQL OOB recovery path; this contract does not
 expand that ADR — it only records the consumer-visible obligation and the pin.

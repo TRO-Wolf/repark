@@ -128,7 +128,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause is walked against recorded Spark answers — 30 must-change refusal cells across every door, source class and wrap, 27 store cells and the LTZ-STORE-INT-1 refusal control, and the 3,645-cell Step 0 matrix re-run. Narrowing fold: the 7,034-statement re-verify corpus, its 10 direct probes and the 3,943-statement Step 0 matrix replayed on the narrowed head against the recorded base and Spark answers.
-      artifacts: [python/repark/tests/test_store_ts_to_numeric_1.py, python/repark/tests/store_ts_to_numeric_1_spark_oracle.json]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_to_numeric_1.py, python/repark/tests/timestamps/store_ts_to_numeric_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: Bare, derived-table, temp-view, column-list, BY NAME, multi-row VALUES, `-(NULL)`, UNION of `-NULL` and NULL, joins in the MERGE probes, and numeric, STRING and DECIMAL targets for `-NULL` are exercised; partitioned inserts, unmapped columns and unplannable sources fall through to base behaviour.
@@ -136,7 +136,7 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal is a planning error raised before any file is staged; the replay test reads back the target after each refusal and matches Spark's unchanged rows, including the seeded row UPDATE and MERGE UPDATE would have changed and the OVERWRITE target.
-      artifacts: [python/repark/tests/test_store_ts_to_numeric_1.py]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_to_numeric_1.py]
     - id: AT-4
       status: N/A
       justification: No shared mutable state; the view resolver is a plain function stored in the session config and the cached view plan is immutable.
@@ -146,7 +146,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: No stored-format change; the silent epoch-seconds, STRING and NULL writes are closed and the replay test asserts refused statements leave prior rows intact.
-      artifacts: [python/repark/tests/test_store_ts_to_numeric_1.py]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_to_numeric_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: The INSERT gate loads the target schema and plans the source once per INSERT, and only when the table has a DATE, BOOLEAN, TIMESTAMP, BINARY or floating-point column; the VALUES gate probes non-literal cells for numeric, DATE and BOOLEAN targets. Measured cost is recorded in residue R-STN-6.
@@ -158,11 +158,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Every new refusal carries Spark's class, condition and SQLSTATE through the facade's stamped-message parse; the replay test compares all three with the recorded oracle.
-      artifacts: [python/repark/tests/test_store_ts_to_numeric_1.py]
+      artifacts: [python/repark/tests/timestamps/test_store_ts_to_numeric_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Each mechanism has a mutation that reds the replay test while the LTZ-STORE-INT-1 pins stay green; the lineage walk has positive and negative unit tests; the judged-target classifier has a unit test.
-      artifacts: [crates/repark-iceberg/src/write/negated_null_store.rs, crates/repark-spark/src/void_type/ltz_values_store.rs, python/repark/tests/test_store_ts_to_numeric_1.py]
+      artifacts: [crates/repark-iceberg/src/write/negated_null_store.rs, crates/repark-spark/src/void_type/ltz_values_store.rs, python/repark/tests/timestamps/test_store_ts_to_numeric_1.py]
   complete: true
 ```
 

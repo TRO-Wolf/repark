@@ -47,7 +47,7 @@ every clause is PROVEN; the pipeline's real names never enter the tree ("the cut
 - **Failing scenario.** A regression in the replace path, or in anything the gold models exercise
   on Glue, first shows up in production, because no workflow runs those shapes.
 - **Evidence.** `.github/workflows/aws-acceptance.yml` runs only
-  `python/repark/tests/test_aws_acceptance.py`. Nightly run 34824917757 (2026-09-14) is green on
+  `python/repark/tests/parity/test_aws_acceptance.py`. Nightly run 34824917757 (2026-09-14) is green on
   the silver legs.
 - **Done when.**
   - The fork pin moves to the merged F-GLUE-REPLACE-1 revision (rp-NN ledger).

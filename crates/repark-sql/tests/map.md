@@ -14,6 +14,24 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
+  the ANSI door's twin of the Spark pins, through `AnsiDialect` on a `ReparkSession` with
+  `SparkExtension` (the opt-in session sets `repark.sql.allowLocalFilesystemDDL=true` at
+  build): the wrapped `COPY`, the symlink escapes, the `..` and dangling-symlink destinations
+  and the byte-5/7/9 locations refuse with the policy error and write nothing; plain
+  `EXPLAIN` answers; the warehouse, in-warehouse-symlink and opt-in controls write. Red on
+  main 5 of 8; the opt-in control of the PA-04 test is red on main because the ANSI door's
+  conf reader never matched the real extension's key.
+  pins: pa-local-fs-policy-1/C-001, C-002, C-003, C-005, C-006, C-008, C-009, C-011, C-012, C-013, C-014, C-015, C-017
+  **Fix round (2026-10-15, owner ruling 103):** the ANSI twins of the Spark door's `v01_*`,
+  `v02_*`, `v03_*`, leading-space, symlinked-root and metadata-error pins, each outside pin
+  named "writes outside on today's head", each asserting no file in the sibling `out/`; the cwd
+  pins run in a child process of the test binary and restore the cwd.
+  pins: pa-local-fs-policy-1/C-012, C-019, C-020, C-021, C-022, C-024
+  **Fix round 2 (2026-10-16, owner ruling 114 (b)):** the ANSI twins `rv01_ansi_*`, `rv02_ansi_*`,
+  `rv03_ansi_*` and `ansi_the_cells_of_ruling_114_write_where_the_written_path_lands`, each
+  asserting the file at its computed path on a write and nowhere under the base on a refusal.
+  pins: pa-local-fs-policy-1/C-026, C-027, C-028, C-029
 - `ansi_door_u9_types.rs` — **WO U9-TYPES-1 (2026-09-25):** the native door's row for the
   Spark door's new type spellings: `TIMESTAMP_LTZ` in a column definition refuses
   `Unsupported SQL type TIMESTAMP_LTZ` and creates nothing. pins: u9-types-1/C-004
@@ -103,6 +121,65 @@ holds behavior observed from outside the crate.
   the backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
   statements succeed; a missing table keeps its own error.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- `ice_tsns_type_planner_1_lattice.rs` — **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):**
+  the planner and lattice pins on both doors (a Spark-door session and an `AnsiDialect`
+  session over one four-column batch: microsecond and nanosecond, naive and zoned).
+  `written_type_names_plan_to_the_spark_types_on_both_doors` reads the Arrow type of
+  `CAST(… AS TIMESTAMP)`, the `TIMESTAMP '…'` literal, `TIMESTAMP_NTZ`, `timestamp_ns` and
+  `timestamptz_ns`; `mixed_unit_positions_take_the_finest_unit_on_both_doors` reads
+  `coalesce`, `UNION ALL`, `CASE` and `array` over the eight mixed ordered pairs;
+  `join_keys_share_the_finest_unit_in_the_optimized_plan` reads the `on` keys and the
+  filter operands of the **optimized** join for `=`, `<` and `<=>`;
+  `equal_units_plan_no_cast_on_both_doors` holds the rule off equal units;
+  `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` is ruling 94
+  (Q6, 2026-10-15): type and ticks of `TIMESTAMP`, the `TIMESTAMP '…'` literal and
+  `TIMESTAMPTZ` over a nanosecond-precision wall, and `CAST(1 AS …)` reading seconds; the
+  type-name cells expect the naive wall for `TIMESTAMP` on the ANSI door only; the carried
+  R-013 cell that held the ANSI door off the by-name kernels is gone (2026-10-15): the
+  by-name registration stays, as main and U-6 pin it;
+  `an_aggregate_zero_takes_the_unit_of_its_array_elements` is the M3 aggregate cell (a
+  `TIMESTAMP` zero beside nanosecond elements answers nanoseconds, equal to a
+  `timestamptz_ns` zero; pins: ice-tsns-type-planner-1/C-017);
+  `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors` is the M3
+  UNION cell: a branch over fields that carry `PARQUET:field_id` against an untagged one,
+  in both orders, equals `SELECT DISTINCT` over the `UNION ALL` (pins:
+  ice-tsns-type-planner-1/C-018);
+  `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7's cell.
+  Result types are read from the optimized plan: a frame's own schema is the unanalyzed
+  one. On head `07cbe563` five of the six are green; the R-013 cell is red because the
+  by-name registration stays (the unit ledger, section 5).
+  pins: ice-tsns-type-planner-1/C-010, C-011, C-015, C-017, C-018
+- `ansi_store_kernel_registry.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), parity
+  row R-013:** at session build the ANSI door resolves every name of
+  `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
+  entry names its own kernel, and the wall names equal `repark-functions`' constants. The
+  Spark door's twin is `repark-spark/tests/store_kernel_registry.rs`. pins: ice-struct-pairing-1/C-014
+- `ansi_update_subquery_refusal.rs` — **ICE-STRUCT-PAIRING-1 exception round (2026-10-15),
+  owner rulings 74(a) and 90(a):** the ANSI door's twin of
+  `repark-spark/tests/update_subquery_refusal.rs`. Tables seeded by CTAS; `UPDATE … SET col =
+  (SELECT …)` and the subquery with its own `WHERE`, under `WHERE true`, an `IN` list and no
+  `WHERE`, refuse with the ruling 90 text for a flat INT column and a struct column fed
+  reordered and in order, the rows unchanged. **Owner ruling 95 (2026-10-15):** every refused
+  cell also holds the table's current snapshot id, snapshot count, metadata location and the
+  file names under its `metadata/` directory unchanged, read through the session's own catalog;
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_ansi_door` adds
+  `WHERE false` and `WHERE id BETWEEN 100 AND 200` for both columns (12 cells);
+  `ruling_95_the_whole_refused_family_answers_one_text_on_both_doors` runs the file's 30-cell
+  family on this door and on a Spark SQL door session and holds both sets of texts, the
+  `Error during planning: ` prefix removed, to the one ruling 90 text;
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_ansi_door` holds that the text
+  names no data-deleting action.
+  **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
+  `ruling_99_c_a_scalar_subquery_inside_the_set_expression_refuses_on_the_ansi_door` holds
+  `SET v = 1 + (SELECT …)`, `COALESCE((SELECT …), 0)` and `CASE … THEN (SELECT …) END` under
+  `WHERE true` to the ruling-90 text with the seeded rows unchanged.
+  pins: ice-struct-pairing-1/C-034, C-036
+- `ansi_subquery_where_identity.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner
+  ruling 106 (a)):** the ANSI door answers its five identity forms with Spark 4.1.2's rows:
+  `UPDATE … WHERE id IN (SELECT …)`, and `DELETE … WHERE` with `id IN (SELECT …)`, a correlated
+  `EXISTS`, `id NOT IN (SELECT …)` and an `EXISTS` that matches no row. The router passes the
+  identity exemption to the shared G3-E8 refusal; without it these five statements refuse.
+  Green on main and on the head. pins: repark-sql-update-subquery-where-1/C-006
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

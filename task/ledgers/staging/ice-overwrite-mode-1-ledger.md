@@ -79,15 +79,15 @@ errors.
   static mode `PARTITION (id)` is Spark's whole-table replace (C-002, C-003).
 - `crates/repark-sql/src/partition_overwrite.rs::dynamic_partition_overwrite_keeps_absent_partitions`
   and `::empty_dynamic_partition_overwrite_refuses`: now under `door_with_mode(Dynamic)` (C-009).
-- `python/repark/tests/test_dml_b_partition_overwrite.py::test_sql_dynamic_partition_overwrite_keeps_absent_partitions`
+- `python/repark/tests/writes/test_dml_b_partition_overwrite.py::test_sql_dynamic_partition_overwrite_keeps_absent_partitions`
   and `::test_sql_empty_dynamic_partition_overwrite_refuses`: now on a `dynamic` fixture that
   restores the mode; the static-mode twin
   `test_sql_static_mode_partition_without_values_replaces_whole_table` pins C-002/C-003.
-- `python/repark/tests/test_ice_v3_write_default_1.py::test_dynamic_partition_named_list_fills_write_default`:
+- `python/repark/tests/writes/test_ice_v3_write_default_1.py::test_dynamic_partition_named_list_fills_write_default`:
   compared the table to seed + written rows (dynamic reading) and only checked the Spark cell by
   containment; Spark's recorded table is the written row alone (whole-table replace). Now it
   equals the recorded cells exactly.
-- `python/repark/tests/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_refuses`
+- `python/repark/tests/writes/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_refuses`
   → `test_mixed_static_dynamic_partition_matches_spark`: answers the recorded `MIX_*` rows on
   `(id, cat, payload)`; the probe's table carried a `c` write-default RePark cannot create
   (`CREATE TABLE … DEFAULT` is unsupported), so `c` is out of the compare.
@@ -106,7 +106,7 @@ pin asserting the old refusal or the old dynamic reading; the PIN O5 transform r
   and `crates/repark-sql/src/partition_overwrite.rs::empty_dynamic_partition_overwrite_refuses`
   → `…_commits_nothing`: Spark commits nothing (cell `OW2-R2-PDYN-EMPTY-DYN`); both now
   assert the snapshot count and every row unchanged (C-011).
-- `python/repark/tests/test_dml_b_partition_overwrite.py::test_sql_empty_dynamic_partition_overwrite_refuses`
+- `python/repark/tests/writes/test_dml_b_partition_overwrite.py::test_sql_empty_dynamic_partition_overwrite_refuses`
   → `…_commits_nothing`; `test_writer_v2.py::test_write_to_overwrite_partitions_replaces_source_partitions_only`'s
   empty arm; `test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_refuses`
   → `…_empty_commits_nothing` (registry EX-W2-2, Spark measured the no-op 2026-09-04) (C-011).
@@ -248,14 +248,14 @@ COVERAGE_ATTESTATION:
         oracle, which equals the orchestrator's independent harness recording on 60/60
         cells; the live leg re-derives it. The decision table cites Spark's and
         Iceberg's source rules and each row is exercised by a recorded cell.
-      artifacts: [python/repark/tests/ice_overwrite_mode_1_spark_oracle.json, python/repark/tests/_record_ice_overwrite_mode_1_oracle.py]
+      artifacts: [python/repark/tests/writes/ice_overwrite_mode_1_spark_oracle.json, python/repark/tests/writes/_record_ice_overwrite_mode_1_oracle.py]
     - id: AT-2
       status: ATTACKED
       evidence: Red on main for exactly the 20 differing non-RTAS cells plus the
         refusal test (40 controls green, 4 RTAS xfail); green after the fix. The
         flipped pins asserted the old dynamic reading or the old refusal, and the
         v3 write-default pin had hidden the divergence behind a containment check.
-      artifacts: [python/repark/tests/test_ice_overwrite_mode_1.py, python/repark/tests/test_ice_v3_write_default_1.py]
+      artifacts: [python/repark/tests/writes/test_ice_overwrite_mode_1.py, python/repark/tests/writes/test_ice_v3_write_default_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Every cell on v2 and v3, both SQL doors, SQL and DataFrame writer
@@ -276,7 +276,7 @@ COVERAGE_ATTESTATION:
         chooses it; the NON_PARTITION_COLUMN check runs before any staging or
         commit and leaves the table untouched (pinned). Both typed flags at once
         refuse instead of picking one.
-      artifacts: [python/repark/tests/test_ice_overwrite_mode_1.py, crates/repark-python/src/session_write_options.rs]
+      artifacts: [python/repark/tests/writes/test_ice_overwrite_mode_1.py, crates/repark-python/src/session_write_options.rs]
     - id: AT-6
       status: ATTACKED
       evidence: Rows, Arrow types and the seven snapshot counters are pinned per cell;
@@ -306,7 +306,7 @@ COVERAGE_ATTESTATION:
         overwritePartitions or overwrite-mode ran green offline, the harness replay
         matches Spark on every non-RTAS cell, and the per-crate Rust suites around
         overwrite, partition, by-name, insert, write-option and dialect pass.
-      artifacts: [python/repark/tests/test_dml_b_partition_overwrite.py, python/repark/tests/test_writer_v2.py, crates/repark-spark/src/tests/partition_overwrite.rs]
+      artifacts: [python/repark/tests/writes/test_dml_b_partition_overwrite.py, python/repark/tests/writes/test_writer_v2.py, crates/repark-spark/src/tests/partition_overwrite.rs]
   complete: true
 ```
 

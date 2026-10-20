@@ -27,6 +27,38 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `local_fs_policy.rs` (+ [local_fs_policy/](local_fs_policy/map.md)) — **PA-LOCAL-FS-POLICY-1
+  (2026-10-15, audit PA-02 to PA-04; fix rounds of 2026-10-15 and 2026-10-16, owner rulings 103,
+  104 and 114 (b)):** the one local-filesystem write policy, beside `CatalogRegistry`. The guard
+  judges where the bytes land. The location is read the way the write reads it:
+  `ListingTableUrl::parse`, the call DataFusion's `COPY` planner and `CREATE EXTERNAL TABLE`
+  factory make, gives the written path (a URL's dot segments, `%2e` forms included, removed
+  lexically; one percent decode; `file:x` as `/x`; a bare relative or leading-space path read
+  against the cwd; a bare path cut at its first glob character, as DataFusion cuts it); any other
+  scheme is remote; a parse failure or a `file://<host>` is unreadable and refuses.
+  `resolve_physical_destination` makes a path absolute, finds the nearest ancestor
+  `symlink_metadata` reports, `canonicalize`s it and appends the remaining components; a `..` in
+  those components, a dangling symlink, a loop or a metadata read failing other than not-found is
+  indeterminate (`None`). `location_under_any_warehouse` holds when the written path resolved so
+  lies under a warehouse root, each root read as a plain path or `file:` URL with no glob split
+  (`catalog_state::memory_warehouse_fallback_root`, the repo's one reading of a warehouse string)
+  and resolved the same way. `local_filesystem_path` returns the written path.
+  `refuse_local_filesystem_writes` walks the plan with `TreeNode::apply` and checks every `Copy`
+  and `CreateExternalTable` node at any depth (`Analyze` and `Prepare` inputs included), skipping
+  below a plain `Explain`. `allow_local_filesystem_ddl` reads the opt-in from the `repark.sql`
+  config extension only, accepting its field unprefixed (the real `extensions_options!` shape) or
+  prefixed; absent means closed. `refuse_local_filesystem_plan` is the read plus the walk, for the
+  two doors. `LocalFsGuardedDialect` (ruling 113, 2026-10-16) wraps the dialect it is handed
+  (`wrapping`): it plans the statement on the session's state, runs the walk with no conf read,
+  and on a pass hands the statement to the inner dialect; `execute_with_write_options`,
+  `on_session_built`, `type_planner` and `configure_analyzer_rules` forward to it, so the inner
+  dialect's planner and analyzer rules shape both plans. `ReparkSessionBuilder::with_local_fs_guard`
+  sets the builder's `local_fs_guard`, and `session_dialect` wraps, at build, whichever dialect the
+  builder would otherwise use (the one handed in, else `DataFusionDialect`); `repark.sql()`'s
+  native door uses it. Its refusal says `repark.sql() does not allow local-file DDL` and that the
+  entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci`
+  from here; its private copy is deleted.
+  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029, C-030, C-031
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
@@ -956,6 +988,30 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
   AST rewrites) deliberately stay at the doors. New pre-execute refusals land in `guard`, never
   at a door — per-door wiring missed the native door twice (measured).
+- `dialect.rs`, `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** both seams gain
+  `type_planner()` (default `None`), and `SqlDialect` gains `configure_analyzer_rules`
+  (default identity). `session/df_guards.rs` registers the planner once on the
+  `SessionStateBuilder` (the extension's, else the dialect's) and lets the dialect place
+  rules in the analyzer list after the extension has. Core names no planner: the crate
+  sits below `repark-functions`, so each door hands its own in (the Spark extension, the
+  ANSI dialect, the Python native door's extension). `build()` now resolves the dialect
+  before the context is assembled. pins: ice-tsns-type-planner-1/C-011
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)):** `guard` also
+  runs `refuse_update_from_subquery`. An `UPDATE` plan whose input projection assigns a scalar
+  subquery (under an alias, a cast, `arrow_cast` or one of RePark's `__repark_*` store kernels,
+  the wrappers the Spark door's struct fold adds) refuses with one text, `UPDATE with SET column =
+  (SELECT ...) is not supported on this statement: RePark cannot write the subquery value
+  here, so it refuses before any write.` The plan only reaches `guard` when no identity path
+  ran first (the Spark door's `try_execute_identity_dml`, the ANSI door's
+  `execute_identity_or_delegate`); `repark.sql()` has none. Before, the fork provider's
+  `update` received the decorrelated subquery as a column of the target's own name and wrote
+  nothing. **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
+  `assigns_a_subquery` walks the whole assigned expression (`Expr::contains_scalar_subquery`),
+  so any scalar subquery in the `SET` value refuses with that same text, including
+  `1 + (SELECT …)`, `(SELECT …) + 1`, `-(SELECT …)`, `abs((SELECT …))`,
+  `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct built around
+  `(SELECT …)`. A subquery in the `WHERE` only stays silent. The identity path still runs
+  first and is unchanged. Storing the value is card `update-subquery-store-1`.
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2; **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**
@@ -971,6 +1027,43 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   without owning the session. pins: ice-views-1/C-018
   `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a), the stopgap):**
+  `DataFusionDialect::execute` runs the belt's steps itself: plan, then
+  `repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate` with no
+  identity exemption on the statement parsed with the session's `sql_parser.dialect` (the parse
+  `create_logical_plan` uses), then `guard`, then execute. Every `UPDATE` or `DELETE` whose
+  `WHERE` holds a subquery now refuses with the G3-E8 text on `repark.sql()` and on any session
+  built without a dialect, where it wrote every row or emptied the table. *(Corrected
+  2026-10-17, V106-F6: "every" held for the bare statement; under `PREPARE` the statement still
+  wrote until ruling 135, below.)* The refusal sits
+  beside `guard`, not in it: it reads the parsed statement, and only this door has no identity
+  path, while the ANSI router calls the same function with the exemption. A plan error still
+  comes first, so a statement that does not plan keeps its text. `PreExecute::run` keeps its
+  contract and its tests; this door no longer calls it. Routing `repark.sql()` through the ANSI
+  door stays on the card. pins: repark-sql-update-subquery-where-1/C-005
+  **Owner ruling 131 (b), 2026-10-16:** `refuse_dml_subquery_where` unwraps `EXPLAIN` and
+  `EXPLAIN ANALYZE`, with or without `VERBOSE` or `FORMAT`, at any depth (`explained_statement`
+  recurses over DataFusion's `DFStatement::Explain`, bounded by the parser's recursion limit)
+  and refuses the inner statement with no exemption. It follows the Spark router's
+  `executed_writes` in `repark-spark/src/router/nested_ns.rs`, but fires on plain `EXPLAIN`
+  too, where the router skips it, because reading a plain `EXPLAIN` of a DML writes on this
+  door. A plain `EXPLAIN` of a DML without a subquery predicate still behaves as on main (card
+  EXPLAIN-DML-WRITE-1). The ANSI door and the shared function are unchanged. *(Superseded
+  2026-10-17 by ruling 135, below: a plain `EXPLAIN` is no longer refused.)*
+  pins: repark-sql-update-subquery-where-1/C-012, C-013
+  **Owner ruling 135 (a), 2026-10-17:** `refuse_dml_subquery_where` runs the shared refusal,
+  with no exemption, on every statement that
+  `repark_iceberg::write::statement_writes::executed_writes` answers, the walk the Spark SQL
+  router uses: through `PREPARE`, through `EXPLAIN ANALYZE`, and every `UPDATE` and `DELETE` in
+  the statement. DataFusion parses a leading
+  `EXPLAIN` itself (`DFStatement::Explain`), so the function peels those layers first under the
+  walk's rule: `EXPLAIN ANALYZE` reaches the statement it wraps, a plain `EXPLAIN` executes
+  nothing and is not refused. `explained_statement` is gone. So `PREPARE p AS DELETE … WHERE id
+  IN (SELECT …)`, which `EXECUTE p` used to run, refuses at `PREPARE`, alone, parameterised or
+  around `EXPLAIN ANALYZE`; a plain `EXPLAIN` of a subquery-predicate `DELETE` or `UPDATE`
+  answers its plan again, as on main, and leaves an Iceberg table unchanged (on an in-memory
+  table, reading it writes, as on main). The parse still uses the session's dialect.
+  pins: repark-sql-update-subquery-where-1/C-017, C-020, C-021
 - `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1
   (2026-09-18, round 1):** `SparkRangeFunc`, RePark's `range` table function —
   non-nullable `id: Int64` column, 1–4 literal arguments (the 4th is

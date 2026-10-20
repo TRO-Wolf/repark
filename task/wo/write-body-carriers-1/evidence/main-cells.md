@@ -1,6 +1,6 @@
 # WRITE-BODY-CARRIERS-1 step 0: main's answer
 
-Recorded 2026-10-14 on the main release module (repark 1.5.5, memory catalog) by `python/repark/tests/_record_write_body_carriers_1_main.py`. Full texts and row values live in [main-cells.json](main-cells.json); these tables are a view over it. `s`/`r`/`f` are the snapshot count, row count and data-file count before `->` after.
+Recorded 2026-10-14 on the main release module (repark 1.5.5, memory catalog) by `python/repark/tests/writes/_record_write_body_carriers_1_main.py`. Full texts and row values live in [main-cells.json](main-cells.json); these tables are a view over it. `s`/`r`/`f` are the snapshot count, row count and data-file count before `->` after.
 
 ## CTAS cells
 

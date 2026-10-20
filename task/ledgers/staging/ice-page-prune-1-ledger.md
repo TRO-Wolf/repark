@@ -85,7 +85,7 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: The full predicate grid on five tables (20 base/del queries, 10 evolution queries, unfiltered, v2 and v3) on the SQL door with lineage and Arrow int64 checks, the DataFrame door on ids, plus 8 self-consistency predicates on two 300k-row RePark-written tables.
-      artifacts: [python/repark/tests/test_ice_page_prune_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_page_prune_1.py]
     - id: AT-3
       status: N/A
       justification: No product code changed in this round (tests, fixtures, recorder, maps, ledger, docs only); the Rust panic and async bans are untouched.
@@ -98,21 +98,21 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Red-first throughout: the decimal cells, the del_v2 reads and the frame lineage select all failed red before their disposed pins; the evo v9/v10 misread during development was a scratch-glob error, not a pin, corrected to the int-sorted newest metadata the test uses.
-      artifacts: [python/repark/tests/test_ice_page_prune_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_page_prune_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: Offline file green (7 passed), live leg green under the JVM lock (1 passed, 35 s), ruff check and format clean on both new modules, comment-ban hits=0, the four doc gates green.
-      artifacts: [python/repark/tests/test_ice_page_prune_1.py, python/repark/tests/_record_ice_page_prune_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_page_prune_1.py, python/repark/tests/iceberg/_record_ice_page_prune_1.py]
     - id: AT-8
       status: ATTACKED
       evidence: The only Spark oracle is the recorded truth: the recorder re-derives every cell from live Spark 4.1.2, matches the fork lane truth cell for cell, and fails on drift; hand-computed values appear nowhere except Python-side mirrors of engine semantics in the self-consistency leg.
-      artifacts: [python/repark/tests/_record_ice_page_prune_1.py, /tmp/oc-worker/pb-oracle/page_prune_truth.json]
+      artifacts: [python/repark/tests/iceberg/_record_ice_page_prune_1.py, /tmp/oc-worker/pb-oracle/page_prune_truth.json]
     - id: AT-9
       status: N/A
       justification: No registry, example, or public-name change in this round; error needles pin existing contracts (ICE-NAN-DECIMAL-LITERAL-1, the manifest-size refusal).
     - id: AT-10
       status: ATTACKED
       evidence: The del_v2 and decimal pins assert loud-failure needles with recorded fix targets rather than absorbing the divergence; the frame door asserts ids where lineage is unavailable, never NULL-filled rows.
-      artifacts: [python/repark/tests/test_ice_page_prune_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_page_prune_1.py]
   complete: true
 ```

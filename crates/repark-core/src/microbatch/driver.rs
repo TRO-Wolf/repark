@@ -474,7 +474,7 @@ pub(crate) struct QueryShared {
     pub(crate) run_id: RunId,
     pub(crate) name: Option<String>,
     pub(crate) sink: TableTarget,
-    sink_uuid: TableUuid,
+    pub(crate) sink_uuid: TableUuid,
     pub(crate) trigger: Trigger,
     stop_timeout: Option<Duration>,
     pub(crate) polling_delay: Duration,

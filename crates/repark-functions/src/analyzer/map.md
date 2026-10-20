@@ -57,7 +57,7 @@ lax (`Timestamp → Int64` is not). Wiring either to the other would break TZ-5.
 - Up: [../map.md](../map.md) — the rule file and every rewrite it dispatches
 - The gate runs during analysis because `unix_date` lowers to `Expr::Cast(arg, Int32)` during
   optimizer simplification; placing it later would reject its own remedy.
-- The recorded cross-engine rows: `python/repark/tests/test_cast_failure_parity.py`
+- The recorded cross-engine rows: `python/repark/tests/types/test_cast_failure_parity.py`
 
 ## Debug
 

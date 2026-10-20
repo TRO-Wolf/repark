@@ -20,7 +20,7 @@ Tests for [`overwrite_filter.rs`](../overwrite_filter.rs), which declares `#[cfg
   push-down table, the one-element `IN` fold (the `notNull AND notIn` shape is pinned on a
   two-element list), and the out-of-range integer folds. Round 3 (2026-09-25): the conjunct-split
   refusal texts, the `<=>` / beyond-i64 constants, and fractional rounding, each case taken
-  from `python/repark/tests/u8_write_sql_spark_oracle.json`. Round 5 (2026-09-25, verifier
+  from `python/repark/tests/writes/u8_write_sql_spark_oracle.json`. Round 5 (2026-09-25, verifier
   V-001): `a_refusal_renders_the_first_unconvertible_conjunct_as_spark_does` also holds the
   ten `r4/…` renderings of a fractional comparison beside an unconvertible conjunct (`<` as
   `< ceil`, `<=` as `<= floor`, `>` as `> floor`, `>=` as `>= ceil`, `NOT BETWEEN`). Round 4 (2026-09-25, critic r3

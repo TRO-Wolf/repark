@@ -37,7 +37,7 @@ bindings) plus 43 Rust unit pins and 182 facade pins.
 
 **What Spark does (Spark 4.1.2, `local[1]`, probes `probe0.py`–`probe7.py`, outputs
 `w0-spark.json`–`w7-spark.json`; the replayed subset is committed as
-`python/repark/tests/text_write_timestamp_zone_1_fixture.json`).** Session zone
+`python/repark/tests/timestamps/text_write_timestamp_zone_1_fixture.json`).** Session zone
 America/New_York unless noted:
 
 | Cell | Spark |
@@ -99,7 +99,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every must-change oracle cell replays byte-or-class exact across 4 zones plus a fixed-offset zone; DST gap/overlap, frac 0/3/6, NTZ, DATE, NULL, pre-1900 LMT seconds, user formats per kind, header option, and nested JSON all pin Spark's bytes.
-      artifacts: [python/repark/tests/test_text_write_timestamp_zone_1.py, python/repark/tests/text_write_timestamp_zone_1_fixture.json]
+      artifacts: [python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py, python/repark/tests/timestamps/text_write_timestamp_zone_1_fixture.json]
     - id: AT-2
       status: ATTACKED
       evidence: CSV and JSON doors, local and s3a routes, LTZ/NTZ/DATE value kinds, struct/list/map recursion, partition-column exclusion, case-duplicate temporal columns all wrapped (quoted identifiers resolve case-sensitively; verifier fold VC-8); parquet/ORC/Iceberg and reads verified untouched by the neighbour diff.
@@ -107,18 +107,18 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: Every refusal class per pattern kind pins Spark's class and message (eager INVALID_DATETIME_PATTERN/INCONSISTENT_BEHAVIOR, lazy Unsupported-field/ZoneId/structural); zone-name patterns refuse loudly and pin the divergence instead of guessing bytes.
-      artifacts: [crates/repark-core/src/session/text_write_format.rs, python/repark/tests/test_text_write_timestamp_zone_1.py]
+      artifacts: [crates/repark-core/src/session/text_write_format.rs, python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py]
     - id: AT-4
       status: N/A
       justification: Pure function of (value, pattern, zone); no shared or mutable state; the UDF holds no cache.
     - id: AT-5
       status: ATTACKED
       evidence: The s3a leg runs against moto with fake credentials only; no AWS access, no secret in output; zone ids ride quoted identifiers and patterns ride string literals that double every backslash before doubling quotes (the COPY tokenizer passes backslash pairs verbatim and treats backslash-quote as an escape, so undoubled input would break the literal; the UDF halves the pairs back — ordinal-probed round-trip, verifier fold VC-6).
-      artifacts: [python/repark/tests/test_text_write_timestamp_zone_1.py]
+      artifacts: [python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py]
     - id: AT-6
       status: ATTACKED
       evidence: Written bytes round-trip the instant on same-zone read-back (CSV infers timestamp; JSON keeps the string and CAST recovers it); the s3a object bytes equal the local bytes. Explicit-schema CSV read-back of LMT offset-seconds refuses loud (Arrow parser gap, residue R-6, card CSV-READ-OFFSET-SECONDS-1; verifier fold VC-7).
-      artifacts: [python/repark/tests/test_text_write_timestamp_zone_1.py]
+      artifacts: [python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py]
     - id: AT-7
       status: N/A
       justification: No performance claim; formatting is one pass over temporal columns only, and non-temporal frames keep byte-identical SELECT *.
@@ -129,11 +129,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Refusals compare Spark's class plus the full message head on eager paths and the lazy message on execution paths; the four flipped pins now assert honored bytes with their Spark keys.
-      artifacts: [python/repark/tests/test_text_write_timestamp_zone_1.py, python/repark/tests/test_r2_read_formats2.py]
+      artifacts: [python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py, python/repark/tests/io/test_r2_read_formats2.py]
     - id: AT-10
       status: ATTACKED
       evidence: M1 forces the builder zone to UTC and 71 zone pins red while pure NTZ/DATE pins stay green, proving the zone legs are load-bearing and the zone-free legs are independent; revert is clean and green.
-      artifacts: [crates/repark-core/src/session/text_write_format/select.rs, python/repark/tests/test_text_write_timestamp_zone_1.py]
+      artifacts: [crates/repark-core/src/session/text_write_format/select.rs, python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py]
   complete: true
 ```
 

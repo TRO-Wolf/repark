@@ -22,8 +22,8 @@ deviation is recorded here, not silent.
 
 | Artifact | Path | Role |
 |---|---|---|
-| Differential corpus | [`python/repark/tests/test_merge_differential_parity.py`](../../../python/repark/tests/test_merge_differential_parity.py) | 10 rows + lifecycle helper + assertions |
-| Record driver | [`python/repark/tests/_record_merge_differential_goldens.py`](../../../python/repark/tests/_record_merge_differential_goldens.py) | Spark+Iceberg provision; re-derive goldens |
+| Differential corpus | [`python/repark/tests/writes/test_merge_differential_parity.py`](../../../python/repark/tests/writes/test_merge_differential_parity.py) | 10 rows + lifecycle helper + assertions |
+| Record driver | [`python/repark/tests/writes/_record_merge_differential_goldens.py`](../../../python/repark/tests/writes/_record_merge_differential_goldens.py) | Spark+Iceberg provision; re-derive goldens |
 | Tests map | [`python/repark/tests/map.md`](../../../python/repark/tests/map.md) | lockstep entry |
 | This ledger | `task/n2-merge-ledger.md` | linked from [`task/map.md`](../../../task/map.md) |
 
@@ -64,7 +64,7 @@ org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0
 ```bash
 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \
   PYTHONPATH=python/repark-parity/src \
-  .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py
+  .venv/bin/python python/repark/tests/writes/_record_merge_differential_goldens.py
 ```
 
 Record basis: `master("local[2]")`, `spark.sql.ansi.enabled=true`,
@@ -122,7 +122,7 @@ unit; a live-tier abstraction is a daytime follow-up.
 ### 4.1 Corpus suite (repark facade, JVM-free)
 
 ```
-python/repark/tests/test_merge_differential_parity.py — 13 passed
+python/repark/tests/writes/test_merge_differential_parity.py — 13 passed
 ```
 
 ### 4.2 Record mode (zulu-17 + Iceberg GAV)

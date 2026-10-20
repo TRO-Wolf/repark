@@ -291,7 +291,7 @@ Arrow's cast), the kernel's return-field pin fails, and 70 of the 133 facade tes
 | `cargo test --locked -p repark-spark --test timestamptz_ns_wall_doors` | 0 | 3 passed |
 | `cargo test --locked -p repark-spark --test timestamp_ns_wall_doors --test timestamp_ns_nested_shapes` | 0 | 7 + 6 passed |
 | `make develop` | 0 | |
-| `pytest python/repark/tests/test_ice_tstzns_wall_1.py python/repark/tests/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 487 passed |
+| `pytest python/repark/tests/timestamps/test_ice_tstzns_wall_1.py python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py -q -n 8` | 0 | 487 passed |
 | `pytest python/repark/tests -q -n 8 -k "iceberg or v3 or merge or timestamp or nested or struct"` | 0 | 3680 passed, 140 skipped, 11 xfailed |
 | `ruff check .` and `ruff format --check .` (0.15.22) | 0 | |
 | `make check-rust-file-size`, `make check-lib-rs` | 0 | |

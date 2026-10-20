@@ -26,6 +26,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   COPY statement comes from `writer_layout.text_write_copy_sql` (plain
   inner `SELECT`, resolved `STORED AS` name, merged spec OPTIONS); the
   `_build_text_write_select` entry is gone.
+- `writer_layout.py`, `writer_readwriter.py`, `writer_save.py` — **ICE-STRUCT-PAIRING-1 step 4
+  (2026-10-14), parity row R-016:** the three DataFrame doors Spark pairs by name set
+  `source_by_name=True`: `writeTo(t).append()` and the `saveAsTable` append through the new
+  `run_by_name_append`, `overwritePartitions()` through `run_overwrite_partitions`. The flag
+  reaches the struct pairing of the conform; `insertInto` keeps by position.
 - `writer_layout.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
   `text_write_select` carries writer state to the `session_text_write_select`
   binding, which returns the COPY inner `SELECT`.
@@ -230,26 +235,26 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (`frame_root` in `__init__`, `frame_derived` in `_spawn` with an optional
   caller node, joins keep today's spawn); the unemitted-id family moves to
   `unemitted_ids.py` behind `DataFrame` bindings (3652 → 3595, with the CAP-1
-  mirror). Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  mirror). Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
   **ATTR-ID-1 SJ-3 (2026-10-02):** `_join_on_condition_h1` prepares the
   condition in Rust (`prepare_join_condition`) and spawns with the returned
   `Join` node; the USING paths unpack `(frame, node)` from `join_on_names`;
   `__init__` indexes each frame by node id in the shared `alive_token` box
   (`frame_registry`, weak) so the names map resolves birth frames without a
-  global. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  global. Pins: `python/repark/tests/resolution/test_attr_id_1_sj3.py`.
   **ATTR-ID-1 SJ-4 (2026-10-02):** the 13 post-join surfaces funnel the user's
   Columns through `_refuse_self_join_refs` before any rebind (nine direct call
   sites; `withColumn`/`where`/`sort`/`sortWithinPartitions`/`DataFrame.agg`
   ride delegation); the repartition trio moves to `repartition_ops.py` behind
   same-named bindings (3583 → 3494, with the CAP-1 mirror). Pins:
-  `python/repark/tests/test_attr_id_1_sj4.py`.
+  `python/repark/tests/resolution/test_attr_id_1_sj4.py`.
   **ATTR-ID-1 SJ-5 (2026-10-03):** `crossJoin` is
   `_join_on_condition_h1(other, None, "cross")`; the `None` path skips the
   preparer but keeps the join projection, the `remint_shared` map from the new
   `join_shared_remint` native, and the `Join` node. `groupBy`/`cube`/`rollup`
   keep the caller's raw keys on the `GroupedData` and defer the key check to
   the terminal, so keys and aggregate references refuse once. Pins:
-  `python/repark/tests/test_attr_id_1_sj5.py`.
+  `python/repark/tests/resolution/test_attr_id_1_sj5.py`.
   CASESENS-2 port (2026-10-03): the charter's `written_names.py` (written-name,
   withColumn/rename, subset and join-condition bodies behind `core.py` call
   sites) is deleted, and no `core.py` call site reaches it: the cherry-picks kept
@@ -282,7 +287,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   condition still emits `CROSS JOIN` with no `ON`, so `crossJoin` and
   `join(other, None, "cross")` keep main's plan and rows. Net zero lines (3461, ceiling
   unchanged). A list of Columns and shared names under `"cross"` keep main's refusals, pinned
-  beside the fix. Pins: `python/repark/tests/test_cross_join_condition_1.py`.
+  beside the fix. Pins: `python/repark/tests/dataframe/test_cross_join_condition_1.py`.
   pins: cross-join-condition-1/C-001, C-002, C-003, C-004
 - `frame_nodes.py` — **ATTR-ID-1 PERF-1 (2026-10-03):** the lazy lineage-node
   home. `_bind_frame_node` attaches `_frame_node` as a property at package
@@ -405,7 +410,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_spark_sql_state` from the conditioned engine error. pins: df-rust-3/C-003, C-004
   **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
   **ATTR-ID-1 SJ-2 (2026-10-02):** `checkpoint` re-roots the child's frame
-  node with `frame_root`. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  node with `frame_root`. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
 - `plan_introspect.py` owns the DF-PLAN-INTROSPECT-1 method bodies (2026-09-14;
   follow-up 2026-09-15) behind the one-line class bindings: `inputFiles` lists
   source files through the native `input_files` walk (cache reads the stashed
@@ -885,7 +890,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `DataFrame` keeps the frozen surface. pins: attr-id-1/C-041
   **ATTR-ID-1 SJ-2 (2026-10-02):** `_ATTR_TOKEN_RE` takes the `F<frame>` field
   (`__REPARK_ATTR_<id>__F<frame>__<quals>__`); the qualifier group moves from 2
-  to 3. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  to 3. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
   **ATTR-ID-1 SJ-3 (2026-10-02):** the siding block is deleted outright
   (`_attr_token_exact_side`, `_ATTR_SIDE_BOUNDARY_RE`,
   `_same_object_attr_alternation_safe`, `_resolve_join_token_sides`,
@@ -894,12 +899,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   here from `core.py` (pure move, CAP-1 split): it walks by position so
   chained-join duplicate displays do not hit `AMBIGUOUS_REFERENCE`, engine
   ordinals stay unique across chained duplicates, and bare `joined["b"]` stays
-  `AMBIGUOUS`. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  `AMBIGUOUS`. Pins: `python/repark/tests/resolution/test_attr_id_1_sj3.py`.
   **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):** `_ATTR_TOKEN_RE` takes the optional
   `__D<hex>__` leaf group (group 4; old-form tokens still match with group 4
   unset); `_join_condition_attr_names` falls back to the decoded leaf when the
   birth frame is dead or no longer emits the id. Only a token with neither
-  stays out of the map. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  stays out of the map. Pins: `python/repark/tests/resolution/test_attr_id_1_sj3.py`.
   **STAMP-2-R5P6-1 (2026-10-07):** `_select_via_attr_sql` plans natively,
   skipping the scratch view and `sql_built` (~1.5 ms a call), when the
   projection is attribute-exact (`_attr_exact_child`). Every token in a
@@ -936,7 +941,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   fills pass the exactness check with the SQL route's answers (a union whose
   later input differs at the twin positions included). The attribution and the
   pre-measure (r5p6 1.182 → 1.128 against main `575f57ca`) are in the unit ledger.
-  Pins: `python/repark/tests/test_stamp_2_r5p6_1.py`.
+  Pins: `python/repark/tests/resolution/test_stamp_2_r5p6_1.py`.
   pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-005, C-006
   **STAMP-2-R5P6-2 (2026-10-07):** `_join_exact_or_sql` is the H1 join door's route
   switch (`core.py`'s `_join_on_condition_h1` calls it in place of `sql_built`).
@@ -963,17 +968,17 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   coercion is the same on both routes (0.68 ms saved a condition join).
   The unit's answers gate (replay corpus, suites, sort grid) and its lane-side speed
   runs are in the ledger.
-  Pins: `python/repark/tests/test_stamp_2_r5p6_2.py`.
+  Pins: `python/repark/tests/resolution/test_stamp_2_r5p6_2.py`.
   pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006, C-007, C-008, C-011, C-012
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`
   at the size ceiling (pure move; `DataFrame` binds the four spellings). Pins:
-  `python/repark/tests/test_attr_id_1_sj2.py`.
+  `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
   **ATTR-ID-1 SJ-4 (2026-10-02):** also owns `_refuse_self_join_refs`, the
   post-join funnel: it returns early unless the frame node renews, else makes
   the one native `refuse_self_join_refs` call over the Columns'
-  `join_sql_part()` tokens. Pins: `python/repark/tests/test_attr_id_1_sj4.py`.
+  `join_sql_part()` tokens. Pins: `python/repark/tests/resolution/test_attr_id_1_sj4.py`.
   **Fold SM-2 R6 (2026-10-06):** the funnel also runs the USING-key column
   choke first when the frame carries a mark, covering filter/sort/select
   `Column` args (filter has no other qualified rebind). pins: attr-id-1/C-066

@@ -55,11 +55,11 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause is walked against Spark's measured answer on the same door; the new suite pins every named field and the U9 replay holds the uuid step EQUAL.
-      artifacts: [python/repark/tests/test_partname_1.py, python/repark/tests/test_u9_types_1.py]
+      artifacts: [python/repark/tests/iceberg/test_partname_1.py, python/repark/tests/timestamps/test_u9_types_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Every named transform is pinned on its door (bucket, truncate, years, months, days, hours, identity, a named field), with the DROP and REPLACE edges; the redundancy boundary is measured and recorded, not pinned.
-      artifacts: [python/repark/tests/test_partname_1.py]
+      artifacts: [python/repark/tests/iceberg/test_partname_1.py]
     - id: AT-3
       status: N/A
       justification: No failure path changes; the redundancy refusals in scope are a recorded residue with both engines' texts, not a contract this unit pins.
@@ -72,21 +72,21 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: No stored format changes; the U9 replay (397 steps, metadata observations included) guards the metadata shape the new pins read.
-      artifacts: [python/repark/tests/test_u9_types_1.py, python/repark/tests/u9_types_1_spark_oracle.json]
+      artifacts: [python/repark/tests/timestamps/test_u9_types_1.py, python/repark/tests/timestamps/u9_types_1_spark_oracle.json]
     - id: AT-7
       status: N/A
       justification: No performance claim; pins only, no product code.
     - id: AT-8
       status: ATTACKED
       evidence: No Rust change, no dependency, no crate edge; Spark's per-door naming contract is pinned rather than presumed, and the fork divergence is filed, not worked around.
-      artifacts: [python/repark/tests/test_partname_1.py, task/roadmap/mid-term/f-partspec-redundant-1-2026-09-26.md]
+      artifacts: [python/repark/tests/iceberg/test_partname_1.py, task/roadmap/mid-term/f-partspec-redundant-1-2026-09-26.md]
     - id: AT-9
       status: N/A
       justification: No failure path in scope; a renamed field fails its pin with the expected and observed names.
     - id: AT-10
       status: ATTACKED
       evidence: Each pin asserts exact text; M1 and M2 break one expectation and one door each and the named tests red before restore.
-      artifacts: [python/repark/tests/test_partname_1.py, python/repark/tests/test_u9_types_1.py]
+      artifacts: [python/repark/tests/iceberg/test_partname_1.py, python/repark/tests/timestamps/test_u9_types_1.py]
   complete: true
 ```
 

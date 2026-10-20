@@ -25,7 +25,7 @@ the decorrelation rules already in the optimizer list.
 `probe_dfsubq.py`, run 16b, PySpark 4.1.2 classic) — 46 cells; frames
 `emp(id int, dept string, sal int)` rows (1,a,10) (2,b,20) (3,a,30) (4,null,null) and
 `dept(dept string, budget int)` rows (a,100) (c,300), temp views `emp` / `dept`. Copied
-byte-identical to `python/repark/tests/facade_df_subquery_oracle.json`; every pin names its cell.
+byte-identical to `python/repark/tests/dataframe/facade_df_subquery_oracle.json`; every pin names its cell.
 
 **Measured quirks the pins reproduce (S-3/S-5):** on Spark classic an unqualified
 `F.col("dept") == F.col("dept").outer()` resolves BOTH sides inside the subquery, so
@@ -41,7 +41,7 @@ the unqualified cells as recorded, the qualified-alias cells against `exists_sql
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | `DataFrame.scalar()` returns a `Column` over `Expr::ScalarSubquery(self_plan)` (Rust): usable in `select` and `where`; single output column enforced at construction with AnalysisException `INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN` (`number` param, SQLSTATE 42823, message head per `scalar_multi_col`); multi-row answers `[SCALAR_SUBQUERY_TOO_MANY_ROWS] More than one row returned by a subquery used as an expression. SQLSTATE: 21000` at execution; empty subquery answers NULL; unaliased name `scalarsubquery()`, repr `Column<'([max(budget): int])'>`. Cells: `scalar_uncorrelated`, `scalar_correlated`, `scalar_correlated_qualified`, `scalar_empty`, `scalar_in_filter`, `scalar_multi_col`, `scalar_multi_row`, `scalar_no_alias_name`, `scalar_repr`. | `python/repark/tests/test_df_subquery_1.py` scalar pins driven from the fixture cells. | PROVEN | `test_scalar_uncorrelated` / `test_scalar_correlated_unqualified_binds_inner` / `test_scalar_correlated_qualified` / `test_scalar_empty_answers_null` / `test_scalar_in_filter` / `test_scalar_multi_col_raises_conditioned` / `test_scalar_multi_row_raises_21000` / `test_scalar_repr_and_default_name` — values, schema, nullability, display, both error shapes pinned cell-for-cell; `test_scalar_sql_door` covers the door. Red-first below. **Round-3 (S-11):** `test_scalar_correlated_limit_answers` + `test_scalar_correlated_limit_sql_door` pin the correlated-`LIMIT` contract (any-row pick inside the match set / NULL on `LIMIT 0`, never a physical-planning error); `scalar_guard_strips_correlated_limit_into_any_row` pins it plan-level. |
+| C-001 | `DataFrame.scalar()` returns a `Column` over `Expr::ScalarSubquery(self_plan)` (Rust): usable in `select` and `where`; single output column enforced at construction with AnalysisException `INVALID_SUBQUERY_EXPRESSION.SCALAR_SUBQUERY_RETURN_MORE_THAN_ONE_OUTPUT_COLUMN` (`number` param, SQLSTATE 42823, message head per `scalar_multi_col`); multi-row answers `[SCALAR_SUBQUERY_TOO_MANY_ROWS] More than one row returned by a subquery used as an expression. SQLSTATE: 21000` at execution; empty subquery answers NULL; unaliased name `scalarsubquery()`, repr `Column<'([max(budget): int])'>`. Cells: `scalar_uncorrelated`, `scalar_correlated`, `scalar_correlated_qualified`, `scalar_empty`, `scalar_in_filter`, `scalar_multi_col`, `scalar_multi_row`, `scalar_no_alias_name`, `scalar_repr`. | `python/repark/tests/dataframe/test_df_subquery_1.py` scalar pins driven from the fixture cells. | PROVEN | `test_scalar_uncorrelated` / `test_scalar_correlated_unqualified_binds_inner` / `test_scalar_correlated_qualified` / `test_scalar_empty_answers_null` / `test_scalar_in_filter` / `test_scalar_multi_col_raises_conditioned` / `test_scalar_multi_row_raises_21000` / `test_scalar_repr_and_default_name` — values, schema, nullability, display, both error shapes pinned cell-for-cell; `test_scalar_sql_door` covers the door. Red-first below. **Round-3 (S-11):** `test_scalar_correlated_limit_answers` + `test_scalar_correlated_limit_sql_door` pin the correlated-`LIMIT` contract (any-row pick inside the match set / NULL on `LIMIT 0`, never a physical-planning error); `scalar_guard_strips_correlated_limit_into_any_row` pins it plan-level. |
 | C-002 | `DataFrame.exists()` returns a non-nullable boolean `Column` over `Expr::Exists(self_plan)` (Rust): filters in `where`, `~` negates, answers per-row in `select` through the repark-core rewrite (EXISTS in a projection → `coalesce(scalar-subquery count > 0, false)`), unaliased name `exists()`, repr `Column<'EXISTS ([dept: string, budget: int])'>`. Cells: `exists_correlated`, `exists_not`, `exists_uncorrelated_true`, `exists_uncorrelated_empty`, `exists_in_select`, `exists_no_alias_name`, `exists_repr`, plus a qualified-alias pin matching `exists_sql` rows (1, 3). | The exists pins in the new test module. | PROVEN | `test_exists_correlated_unqualified_binds_inner` (all four rows, per the recorded quirk) / `test_exists_qualified_correlates` (ids 1,3) / `test_exists_not` (ids 2,4) / `test_exists_uncorrelated` / `test_exists_in_select` (count-rewrite, `exists()` name, non-nullable) / `test_exists_repr_and_default_name`; `test_exists_sql_door` pins the SQL spelling. |
 | C-003 | `Column.outer()` lowers to `Expr::OuterReferenceColumn` (Rust): inside a subquery plan it resolves against the consuming frame at decorrelation; outside any subquery it resolves as the plain column (Spark classic's answer, `outer_outside_subquery` → rows 1, 3); qualified spellings `e.dept` resolve against `df.alias("e")` plans. | The `outer_outside_subquery` pin; the qualified pins in C-001/C-002/C-004. | PROVEN | `test_outer_outside_subquery_resolves_plain` (`lit(1).outer()` → `[1,2]`); qualified refs work because `df.alias` now wraps the plan in a real `SubqueryAlias` node (temp-view side effect kept) — `d.dept`/`e.dept` resolve in the C-001/C-002/C-004 qualified pins. Refusals: `test_lateral_outer_ref_under_generator_refused` pins `0A000` + the oracle message on the `explode`/`pivot` paths. Residual: the optimizer-raised refusal carries condition+SQLSTATE in message text but `getCondition()` is unpopulated — recorded on the DF-SUBQUERY-1 row. |
 | C-004 | `DataFrame.lateralJoin(other, on=None, how=None)`: `how` defaults inner; `inner`/`cross`/`left`/`leftouter`/`left_outer` accepted case-insensitively; any other `how` raises AnalysisException `UNSUPPORTED_JOIN_TYPE` SQLSTATE 0A000 with Spark's message and `typ`/`supported` params (`lateral_right`, `lateral_full`, `lateral_semi`, `lateral_bad_how`); `on` str / list-of-str joins on names, `on` Column joins on the predicate with both `dept` columns kept (`lateral_on`); right-side projection reading outer columns answers (`lateral_outer_expr` → `dbl = sal*2` incl. the NULL row); outer refs under a generator raise AnalysisException `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE` SQLSTATE 0A000 (`lateral_tvf_like`); non-DataFrame `other` → PySparkTypeError `NOT_DATAFRAME`, non-str `how` → `NOT_STR`. | The lateral pins in the new test module; the qualified-alias variant pinned to `lateral_sql` rows. | PROVEN | `test_lateral_basic` / `test_lateral_left` / `test_lateral_cross` / `test_lateral_on_qualified` / `test_lateral_on_qualified_correlates` (`d.dept = e.dept` → `(1,100),(3,100),(4,300)`) / `test_lateral_outer_expr_in_projection` (`(1,[100]),(2,None),(3,[100]),(4,None)`) / `test_lateral_unsupported_how_raises` (`right`/`full`/`left_semi`/`nope` → `UNSUPPORTED_JOIN_TYPE` `0A000`) / `test_lateral_how_accepts_supported_spellings` / `test_lateral_on_str_names` (str `on`, right-key drop) / `test_lateral_rejects_non_dataframe_and_non_str_how` (`NOT_DATAFRAME`, `NOT_STR`); `test_lateral_sql_door` pins the `JOIN LATERAL` spelling. **Round-3 (S-10/S-12/S-13):** `test_lateral_sql_door_outer_ref_aliased` / `test_lateral_sql_door_outer_ref_qualified_filter` / `test_lateral_sql_door_outer_ref_aliased_on` / `test_lateral_on_hoisted_column` / `test_lateral_sql_door_aliased_correlated_filter` pin the preserved `SubqueryAlias` qualifier; `test_lateral_left_qualified_keeps_unmatched_rows` pins the inner/left difference and reds on an `inner` revert; `test_lateral_outer_ref_under_generator_refused` docstring narrowed to the parts it reads (condition/head/SQLSTATE — not `sqlExprs`, not `getCondition()`); `lateral_hoist_keeps_alias_qualifier_on_outputs` pins it plan-level. |
@@ -306,7 +306,7 @@ Python, each with its reason:
 | gate | result |
 |---|---|
 | Red first — unit test file on the base tree | `0355ef5e` + branch `.so`: **34 failed, 5 passed** — the 5 green are the pre-existing outer/plain and SQL-door pins; every new-surface pin reds individually (TableArg import made tolerant so the module collects on base) |
-| Unit test file | `python/repark/tests/test_df_subquery_1.py` — **41 passed** |
+| Unit test file | `python/repark/tests/dataframe/test_df_subquery_1.py` — **41 passed** |
 | Rust tests added | `crates/repark-core/src/session/tests/subquery.rs` — **5 passed** (exists rewrite, scalar guard wrap, lateral hoist, uncorrelated unwrap, generator refusal) |
 | `make verify` | **green** — fmt, clippy both passes (`-D warnings`; `-D unwrap_used`/`expect_used`/`disallowed_methods`), crate-dag, lib-rs, rust-file-size, lib-py, python-conventions, docstring-presence, example-coverage, manifest, ledger-check, ledger-grammar |
 | `test_dfcore_1_exports.py` | **10 passed** — four names + `subquery` submodule added via the declared-delta protocol in `_dfcore_1_expected.py` |
@@ -320,7 +320,7 @@ Python, each with its reason:
 | gate | result |
 |---|---|
 | Red first — new pins on `b3fae405` binary | **7 failed, 1 passed** — the 7 red are the S-10/S-11 pins (5 alias/limit pins above + the two correlated-`LIMIT` pins: `UnsupportedOperationException: Physical plan does not support logical expression ScalarSubquery(<subquery>)`); the S-13 pin stayed green on head because `left` is not exercised there — its red proof is the `left`→`Inner` revert run above |
-| Unit test file | `python/repark/tests/test_df_subquery_1.py` — **49 passed** |
+| Unit test file | `python/repark/tests/dataframe/test_df_subquery_1.py` — **49 passed** |
 | Rust subquery pins | `cargo test -p repark-core --lib -- session::tests::subquery` — **7 passed** |
 | `cargo test -p repark-core --lib -- session::tests` | **107 passed, 0 failed** |
 | `make verify` | **green** — 3539 tests passed / 0 failed across 56 targets; fmt, clippy (`-D warnings`, disallowed-methods), crate-dag, lib-rs, rust-file-size (582), lib-py (753), python-conventions, docstring-presence, example-coverage, manifest, ledger-check, ledger-grammar (167 ledgers), docs-compaction, docs-links (5690), owner-ruling, parity-live dual-wire, matrix-liveness, ruff, taplo, typos all green |
@@ -340,7 +340,7 @@ COVERAGE_ATTESTATION:
         fixture cell and the verdict table carries the per-clause evidence; the measured
         Spark-classic quirks (inner-first unqualified binding, right-key drop, exists() field
         name) are pinned as recorded, not as assumed.
-      artifacts: [task/ledgers/staging/df-subquery-1-ledger.md, python/repark/tests/test_df_subquery_1.py, python/repark/tests/facade_df_subquery_oracle.json]
+      artifacts: [task/ledgers/staging/df-subquery-1-ledger.md, python/repark/tests/dataframe/test_df_subquery_1.py, python/repark/tests/dataframe/facade_df_subquery_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: >
@@ -349,7 +349,7 @@ COVERAGE_ATTESTATION:
         scalar, two-column scalar, `on` as None/str/list/Column, `how` as bad str/non-str,
         non-DataFrame `other`, TableArg ordering violations, uncorrelated vs qualified vs
         unqualified correlation.
-      artifacts: [python/repark/tests/test_df_subquery_1.py]
+      artifacts: [python/repark/tests/dataframe/test_df_subquery_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: >
@@ -360,7 +360,7 @@ COVERAGE_ATTESTATION:
         TableArg ordering. Round 3: a correlated `LIMIT >1` / unbounded correlated scalar now
         reaches the conditioned `Correlated scalar subquery must be aggregated to return at
         most one row` AnalysisException instead of a physical-planning crash.
-      artifacts: [python/repark/tests/test_df_subquery_1.py, crates/repark-core/src/session/tests/subquery.rs]
+      artifacts: [python/repark/tests/dataframe/test_df_subquery_1.py, crates/repark-core/src/session/tests/subquery.rs]
     - id: AT-4
       status: ATTACKED
       evidence: >
@@ -368,7 +368,7 @@ COVERAGE_ATTESTATION:
         double-partition refusals), in-partition UDTF ordering, per-partition fresh handler
         instances; no shared mutable state — the single_row UDAF accumulator is per-group and
         SubqueryAlias wraps per-plan.
-      artifacts: [python/repark/tests/test_df_subquery_1.py]
+      artifacts: [python/repark/tests/dataframe/test_df_subquery_1.py]
     - id: AT-5
       status: N/A
       justification: No privileged action, secret, or new trust-boundary crossing; the TABLE() call-arg parser is string-splitting inside the existing SQL-door UDTF path, no new SQL grammar.
@@ -380,7 +380,7 @@ COVERAGE_ATTESTATION:
         battery stayed green); export surface extended via the declared-delta protocol;
         `astable_tvf_explode_unchanged` pins the pre-existing explode path including its
         recorded nullability gap.
-      artifacts: [python/repark/tests/test_dfcore_1_exports.py, python/repark/tests/_dfcore_1_expected.py, python/repark/tests/test_df_subquery_1.py]
+      artifacts: [python/repark/tests/dataframe/test_dfcore_1_exports.py, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_df_subquery_1.py]
     - id: AT-7
       status: N/A
       justification: Not system-breaking — the scalar guard adds one zero-group Aggregate node per scalar subquery; no unbounded growth, no hot loop; the UDTF table-arg path is row-batched through the existing Arrow bridge.
@@ -400,7 +400,7 @@ COVERAGE_ATTESTATION:
         and message parameters; the two residuals on the optimizer-raised CORRELATED_REFERENCE
         (getCondition() unpopulated; sqlExprs quoting the internal array id rather than Spark's
         explode(array(id, sal))) are measured and recorded on the DF-SUBQUERY-1 registry row.
-      artifacts: [python/repark/tests/test_df_subquery_1.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/dataframe/test_df_subquery_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-10
       status: ATTACKED
       evidence: >
@@ -409,6 +409,6 @@ COVERAGE_ATTESTATION:
         pins (7 failed, 1 passed — the 5 S-10/S-11 pins red on the head binary; the S-13
         pin reds on a local `left`→`Inner` revert, `assert 2 == 4`); every new facade branch
         has a nameable input that changes the output.
-      artifacts: [python/repark/tests/test_df_subquery_1.py, crates/repark-core/src/session/tests/subquery.rs]
+      artifacts: [python/repark/tests/dataframe/test_df_subquery_1.py, crates/repark-core/src/session/tests/subquery.rs]
   complete: true
 ```

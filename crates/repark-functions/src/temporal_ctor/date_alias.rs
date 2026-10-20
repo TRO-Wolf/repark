@@ -314,7 +314,7 @@ mod tests {
     fn ctx_with(ansi: bool, zone: &str) -> SessionContext {
         let config = crate::ansi::with_spark_ansi_config(SessionConfig::new(), ansi);
         let config = crate::session_time_zone::with_session_time_zone(config, zone);
-        let ctx = SessionContext::new_with_config(config);
+        let ctx = crate::spark_type_planner::planned_context(config);
         crate::register_all(&ctx);
         for rule in crate::analyzer_rules() {
             ctx.add_analyzer_rule(rule);

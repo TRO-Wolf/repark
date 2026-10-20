@@ -517,7 +517,7 @@ accepts both names and was rerun three times green.
 | attr-id and sort suites (27 files, `-n 8`) | 869 passed, 9 skipped, 3 xfailed on head and on main's sources |
 | Every suite touching `fillna` / `.fill(` (14 files) | 498 passed, 65 skipped, 3 xfailed on head and on main's sources |
 | Self-join suites (every file naming `_self_join`, `self-join` or `_LEGACY_ERROR_TEMP_1182`) | main's 21 files: 835 passed, 3 xfailed; head's 23 files: 925 passed, 3 xfailed. The difference is this unit's two new files (33 and 57 tests) |
-| `python/repark/tests/test_dfcore_1_exports.py` | 10 passed; `dataframe/core.py` gains no module-level name and ratchets 3462 → 3456 |
+| `python/repark/tests/dataframe/test_dfcore_1_exports.py` | 10 passed; `dataframe/core.py` gains no module-level name and ratchets 3462 → 3456 |
 | Parity-harness suite (`python/repark-parity/tests`, the CAP-1 and REG-1 mirrors included) | 788 passed, 32 skipped, 12 xfailed; the CAP-1 mirror row for `core.py` follows the ratchet |
 
 The main baseline for the grid and the corpus is main's Python tree (`origin/main`, a detached
@@ -663,10 +663,10 @@ which is not a small change to the `COPY`.
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | (Rewritten in fold 1.) `duplicate_tolerant_names` answers `None` without an exact duplicate and otherwise unique engine names that step around every display name; `rename_duplicate_tolerant` renames positionally and records each display name in field metadata; `recorded_display_names` reads only that record, so a column's spelling never decides its display name. | Unit pins on exact, case-twin and collision cases, the record, and unrecorded prefix-shaped names. | PROVEN | `crates/repark-core/src/session/tests/duplicate_names.rs` (`names_without_an_exact_duplicate_answer_none`, `repeated_names_take_their_position_and_unique_names_stay`, `generated_names_step_around_a_user_column_of_the_same_shape`, `display_names_are_read_from_the_record_never_from_a_name`, `rename_gives_unique_engine_names_and_keeps_a_plain_frame`). |
-| C-002 | (Narrowed in fold 1.) A csv path write of a frame with exact-duplicate display names writes instead of refusing, and its header carries the display names, for the self, mixed and `USING` joins, every measured option and mode, temporal columns and the empty frame, on the local and the s3a route. A user column named like a generated name keeps its name. Bytes other than the header names are the csv door's own. | One pin per step-0 csv cell with `header` set explicitly; the prefix cells; the s3a route. | PROVEN | `python/repark/tests/test_fa_5_duplicate_csv.py`; `crates/repark-core/src/session/tests/duplicate_names.rs` (the `csv_*`, routing, option round-trip and batch-rename pins); `test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_writes_the_display_header`. |
-| C-003 | A csv `partitionBy` over a duplicate display name refuses before any file is created, with text that names only display columns: Spark's `AMBIGUOUS_REFERENCE` (candidates sorted) for two attributes, Spark's not-found text for a case-sensitive spelling miss, and a declared sentence for a same-origin repeat. A unique partition column writes and the header drops it. | One pin per measured cell. | PROVEN | `python/repark/tests/test_fa_5_duplicate_csv.py` (`test_csv_partition_*`, nine tests). |
+| C-002 | (Narrowed in fold 1.) A csv path write of a frame with exact-duplicate display names writes instead of refusing, and its header carries the display names, for the self, mixed and `USING` joins, every measured option and mode, temporal columns and the empty frame, on the local and the s3a route. A user column named like a generated name keeps its name. Bytes other than the header names are the csv door's own. | One pin per step-0 csv cell with `header` set explicitly; the prefix cells; the s3a route. | PROVEN | `python/repark/tests/resolution/test_fa_5_duplicate_csv.py`; `crates/repark-core/src/session/tests/duplicate_names.rs` (the `csv_*`, routing, option round-trip and batch-rename pins); `test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_writes_the_display_header`. |
+| C-003 | A csv `partitionBy` over a duplicate display name refuses before any file is created, with text that names only display columns: Spark's `AMBIGUOUS_REFERENCE` (candidates sorted) for two attributes, Spark's not-found text for a case-sensitive spelling miss, and a declared sentence for a same-origin repeat. A unique partition column writes and the header drops it. | One pin per measured cell. | PROVEN | `python/repark/tests/resolution/test_fa_5_duplicate_csv.py` (`test_csv_partition_*`, nine tests). |
 | C-004 | parquet, json and orc keep refusing a duplicate-display-name frame, and a frame without duplicates writes the same csv bytes as on main. | Control pins per door; unique-name csv bytes compared with a main native module. | PROVEN | `test_fa_5_duplicate_csv.py::test_other_file_doors_keep_refusing_duplicate_names`, `::test_csv_of_unique_names_is_unchanged`; the C-061 pins in `test_attr_id_1_sm2_dupwrites.py`; `parts_route_recorded_csv_to_the_sink_and_leave_the_rest`; the main-native comparison under "Fold 1 gates". |
-| C-005 | (Rewritten in fold 1.) The four temp-view doors refuse a frame with exact-duplicate display names exactly as on main, so no statement can read such a view. | Main's pins unchanged, plus a pin that a bare name beside the refused view finds no view. | PROVEN | `python/repark/tests/test_attr_id_1_sm2_dupviews.py` (main's 11 tests, byte-identical); `test_fa_5_duplicate_csv.py::test_a_duplicate_name_view_stays_refused_so_no_bare_name_binds_beside_it`. |
+| C-005 | (Rewritten in fold 1.) The four temp-view doors refuse a frame with exact-duplicate display names exactly as on main, so no statement can read such a view. | Main's pins unchanged, plus a pin that a bare name beside the refused view finds no view. | PROVEN | `python/repark/tests/resolution/test_attr_id_1_sm2_dupviews.py` (main's 11 tests, byte-identical); `test_fa_5_duplicate_csv.py::test_a_duplicate_name_view_stays_refused_so_no_bare_name_binds_beside_it`. |
 | C-006 | (Round 1.) A reference to a duplicated name on a registered duplicate-name view refuses `AMBIGUOUS_REFERENCE` on both doors. | n/a | REJECTED (withdrawn in fold 1: the verifier found scopes that answered wrongly without an error; see "Why FA-6 was withdrawn") | The verdict's S1 1 to 3. |
 | C-007 | (Round 1.) Durable SQL over a registered duplicate-name view refuses `COLUMN_ALREADY_EXISTS`. | n/a | REJECTED (withdrawn in fold 1 with the view registration it guarded) | The fold-1 ruling. |
 | C-008 | No regression: the attr-id, sort, fill and self-join suites, the 394-cell sort grid and the replay corpus answer as on main, and a unique-name csv write costs what it cost. | The suites and both harnesses on head and on a main native module; the timing bar. | PROVEN | "Fold 1 gates" below. |
@@ -683,7 +683,7 @@ which is not a small change to the `COPY`.
 | attr-id and sort suites (27 files) | 869 passed, 9 skipped, 3 xfailed, as on main |
 | fill suites (14 files) | 498 passed, 65 skipped, 3 xfailed, as on main |
 | self-join suites | 22 files, 877 passed, 3 xfailed: main's 21 files and 835 tests plus this unit's file of 42 |
-| `python/repark/tests/test_dfcore_1_exports.py` | 10 passed; `core.py` is main's file again, ceiling 3462 |
+| `python/repark/tests/dataframe/test_dfcore_1_exports.py` | 10 passed; `core.py` is main's file again, ceiling 3462 |
 | Parity-harness suite (`python/repark-parity/tests`) | 788 passed, 32 skipped, 12 xfailed |
 | pyarrow in the clone's venv | 25.0.1 |
 | Sort grid (394 cells), head against a real main (main sources over the main native module) | 394/394 equal, and equal to `s4_orch.json` |
@@ -729,11 +729,11 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: A user column spelled like a generated name, alone and beside a repeat; a generated name colliding with a display name; empty, comma, quote and non-ASCII names through the hex option; case twins; same-origin repeats; a USING join whose engine names repeat; an empty frame; temporal twins; both case flags; every save mode.
-      artifacts: [crates/repark-core/src/session/tests/duplicate_names.rs, python/repark/tests/test_fa_5_duplicate_csv.py]
+      artifacts: [crates/repark-core/src/session/tests/duplicate_names.rs, python/repark/tests/resolution/test_fa_5_duplicate_csv.py]
     - id: AT-3
       status: ATTACKED
       evidence: Every partition refusal, the parquet and json controls and the view refusal assert that nothing was created and that the text names no scratch view. A display list whose length does not match the writer plan's input is a loud plan error; bad hex in the option refuses.
-      artifacts: [python/repark/tests/test_fa_5_duplicate_csv.py, crates/repark-core/src/session/tests/duplicate_names.rs]
+      artifacts: [python/repark/tests/resolution/test_fa_5_duplicate_csv.py, crates/repark-core/src/session/tests/duplicate_names.rs]
     - id: AT-4
       status: N/A
       justification: No shared state. The record is field metadata on a scratch copy of the frame and an option on one COPY statement; the serializer's map is immutable per write.
@@ -743,7 +743,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The verifier's three silent wrong answers on views cannot occur, because the view is refused as on main and no view, catalog-surface or column-resolution file differs from main. The prefix rename of a user's column is gone and pinned on five doors. Unique-name csv bytes are identical to a main native module on 171 cells.
-      artifacts: [python/repark/tests/test_fa_5_duplicate_csv.py, python/repark/tests/test_attr_id_1_sm2_dupviews.py, task/ledgers/staging/fa-5-6-ledger.md]
+      artifacts: [python/repark/tests/resolution/test_fa_5_duplicate_csv.py, python/repark/tests/resolution/test_attr_id_1_sm2_dupviews.py, task/ledgers/staging/fa-5-6-ledger.md]
     - id: AT-7
       status: ATTACKED
       evidence: A unique-name csv write costs 0.9985 and 1.0115 of main's on a real main native module, inside the 3 percent bar. No statement pays for an audit, since the audit is removed. The batch rename runs only when a display list is present.
@@ -751,11 +751,11 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: Refusals assert Spark's condition, SQLSTATE and first line where Spark refuses, and the one declared refusal where Spark writes is a named _divergence pin and a line on registry row FA-5. Registry row FA-6 is main's wording plus one dated line.
-      artifacts: [python/repark/tests/test_fa_5_duplicate_csv.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/resolution/test_fa_5_duplicate_csv.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-9
       status: ATTACKED
       evidence: No csv refusal or written byte carries a scratch view name or a generated name, each asserted; the registry row no longer overstates the bytes and lists the door's own differences from Spark.
-      artifacts: [python/repark/tests/test_fa_5_duplicate_csv.py, docs/spark-sql-iceberg-parity.md]
+      artifacts: [python/repark/tests/resolution/test_fa_5_duplicate_csv.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-10
       status: ATTACKED
       evidence: The verifier's two surviving mutations are red, its three others stay red, and the fold adds its own on both tiers, including one that reopens the view door and turns main's refusal pins red.

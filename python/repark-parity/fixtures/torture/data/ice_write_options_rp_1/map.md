@@ -7,7 +7,7 @@ The measured Spark 4.1.2 answers for ICE-WRITE-OPTIONS-RP-1: a caller-supplied
 `insertInto` overwrite, `writeTo(t).overwritePartitions()`). Recorded 2026-09-18 on
 PySpark 4.1.2 + `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`, Hadoop
 catalog, `local[2]`. The facade pins in
-`python/repark/tests/test_ice_write_options_rp_1.py` read every expectation from the
+`python/repark/tests/writes/test_ice_write_options_rp_1.py` read every expectation from the
 oracle file; no summary value is a literal in a test body.
 
 ## Contents
@@ -27,7 +27,7 @@ oracle file; no summary value is a literal in a test body.
 
 ## Provenance
 
-Never hand-edited: re-run `python/repark/tests/_record_ice_write_options_rp_1.py` on
+Never hand-edited: re-run `python/repark/tests/writes/_record_ice_write_options_rp_1.py` on
 live PySpark to re-record. Raw-recording SHA-256: `spark_rp_oracle.json`
 `2d67f856b20d38876ae24bf57379fede1b25efe8f8ae563845fc9616f4e3f4a6`
 (byte-identical to the recording).
@@ -51,6 +51,6 @@ pins: ice-write-options-rp-1/C-001, C-002
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Consumer: [../../../../../repark/tests/test_ice_write_options_rp_1.py](../../../../../repark/tests/test_ice_write_options_rp_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_write_options_rp_1.py](../../../../../repark/tests/_record_ice_write_options_rp_1.py)
+- Consumer: [../../../../../repark/tests/test_ice_write_options_rp_1.py](../../../../../repark/tests/writes/test_ice_write_options_rp_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_write_options_rp_1.py](../../../../../repark/tests/writes/_record_ice_write_options_rp_1.py)
 - Ledger: `task/ledgers/staging/ice-write-options-rp-1-ledger.md`

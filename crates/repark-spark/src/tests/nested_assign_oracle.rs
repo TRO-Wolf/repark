@@ -8,7 +8,7 @@ use super::common::*;
 
 const ORACLE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../python/repark/tests/u8_write_sql_nested_spark_oracle.json"
+    "/../../python/repark/tests/writes/u8_write_sql_nested_spark_oracle.json"
 ));
 
 const TABLE: &str = "ice.sales.nested";
@@ -192,5 +192,5 @@ async fn every_nested_assignment_measurement_answers_as_spark_did() {
         replay(key, case, &guarded).await;
         replayed += 1;
     }
-    assert_eq!(replayed, 152, "{replayed} cases replayed");
+    assert_eq!(replayed, 154, "{replayed} cases replayed");
 }

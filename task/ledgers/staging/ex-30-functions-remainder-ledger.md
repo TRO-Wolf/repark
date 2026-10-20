@@ -11,7 +11,7 @@ slate row.
 
 **Writable paths:** `docs/examples/functions/`, `docs/examples/backlog.txt`, the
 `BACKLOG_BASELINE` constant in `scripts/check_example_coverage.py`,
-`docs/spark-sql-iceberg-parity.md` §7, `python/repark/tests/test_examples_functions_b.py`,
+`docs/spark-sql-iceberg-parity.md` §7, `python/repark/tests/parity/test_examples_functions_b.py`,
 lockstep `map.md` files, and this ledger with its `staging/map.md` row. Closed: `crates/`,
 `python/repark/src/`, every other `scripts/` line, `.github/`, `STATUS.md`, every other
 ledger, `briefs/next-sequence.md`.
@@ -238,7 +238,7 @@ stopped before the first).
 |---|---|
 | `.venv/bin/python scripts/check_example_coverage.py` | 0 — `927 public names; 806 covered; 119 backlog; 2 exceptions; 214 examples` |
 | `.venv/bin/python scripts/check_example_coverage.py --require-execute` | 0 — same counts line; all 214 examples execute green |
-| `.venv/bin/python -m pytest python/repark/tests/test_examples_functions_b.py -q` | 0 — 5 passed |
+| `.venv/bin/python -m pytest python/repark/tests/parity/test_examples_functions_b.py -q` | 0 — 5 passed |
 | `make check-docs-links` | 0 |
 | `make check-map-sync` | 0 |
 | `make check-ledger-grammar` | 0 |
@@ -321,7 +321,7 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Pins: [../../../python/repark/tests/test_examples_functions_b.py](../../../python/repark/tests/test_examples_functions_b.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_functions_b.py](../../../python/repark/tests/parity/test_examples_functions_b.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 EX-FN-22..23
 - Sibling: [ex-29-class-remainder-ledger.md](ex-29-class-remainder-ledger.md)
 

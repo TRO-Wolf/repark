@@ -9,6 +9,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
 use datafusion::sql::sqlparser::ast::{
@@ -19,6 +20,7 @@ use datafusion::sql::sqlparser::ast::{
 use crate::void_type::refuse_insert_void_values;
 use crate::{local_fs_ddl, window_range};
 use repark_core::CatalogRegistry;
+use repark_iceberg::StoreOverflowCast;
 use repark_iceberg::write::insert_defaults;
 
 /// Plan + execute one passthrough statement with Spark's ORDER BY null-placement defaults.
@@ -29,20 +31,32 @@ pub(crate) async fn execute_passthrough(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Result<DataFrame> {
+    execute_passthrough_by(ctx, catalogs, sql, false).await
+}
+
+pub(crate) async fn execute_passthrough_by(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    source_by_name: bool,
+) -> Result<DataFrame> {
     let mut sort_rewrite_fired = false;
-    match execute_passthrough_inner(ctx, catalogs, sql, false, true, &mut sort_rewrite_fired).await
-    {
+    let mode = Passthrough {
+        insert_source: false,
+        source_by_name,
+    };
+    match execute_passthrough_inner(ctx, catalogs, sql, mode, true, &mut sort_rewrite_fired).await {
         Err(_) if sort_rewrite_fired => Box::pin(execute_passthrough_inner(
             ctx,
             catalogs,
             sql,
-            false,
+            mode,
             false,
             &mut sort_rewrite_fired,
         ))
         .await
-        .map_err(crate::keyword_lower::map_door_keyword_errors),
-        outcome => outcome.map_err(crate::keyword_lower::map_door_keyword_errors),
+        .map_err(door_error),
+        outcome => outcome.map_err(door_error),
     }
 }
 
@@ -50,21 +64,53 @@ pub(crate) async fn execute_insert_source(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    source_by_name: bool,
 ) -> Result<DataFrame> {
     let mut sort_rewrite_fired = false;
-    match execute_passthrough_inner(ctx, catalogs, sql, true, true, &mut sort_rewrite_fired).await {
+    let mode = Passthrough {
+        insert_source: true,
+        source_by_name,
+    };
+    match execute_passthrough_inner(ctx, catalogs, sql, mode, true, &mut sort_rewrite_fired).await {
         Err(_) if sort_rewrite_fired => Box::pin(execute_passthrough_inner(
             ctx,
             catalogs,
             sql,
-            true,
+            mode,
             false,
             &mut sort_rewrite_fired,
         ))
         .await
-        .map_err(crate::keyword_lower::map_door_keyword_errors),
-        outcome => outcome.map_err(crate::keyword_lower::map_door_keyword_errors),
+        .map_err(door_error),
+        outcome => outcome.map_err(door_error),
     }
+}
+
+fn door_error(error: DataFusionError) -> DataFusionError {
+    crate::keyword_lower::map_door_keyword_errors(peel_store_rule_context(error))
+}
+
+fn peel_store_rule_context(error: DataFusionError) -> DataFusionError {
+    match error {
+        DataFusionError::Context(rule, inner) if rule == StoreOverflowCast.name() => *inner,
+        other => other,
+    }
+}
+
+fn install_statement_pairing(state: &mut SessionState, source_by_name: bool) {
+    let case_sensitive = !crate::spark_door_case_insensitive(state.config().options());
+    state.config_mut().options_mut().extensions.insert(
+        repark_iceberg::write::struct_pairing::StatementPairing {
+            source_by_name,
+            case_sensitive,
+        },
+    );
+}
+
+#[derive(Clone, Copy)]
+struct Passthrough {
+    insert_source: bool,
+    source_by_name: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -145,11 +191,12 @@ async fn execute_passthrough_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-    insert_source: bool,
+    mode: Passthrough,
     allow_sort_rewrite: bool,
     sort_rewrite_fired: &mut bool,
 ) -> Result<DataFrame> {
-    let state = Box::new(ctx.state());
+    let mut state = Box::new(ctx.state());
+    install_statement_pairing(&mut state, mode.source_by_name);
     let session_dialect = state.config().options().sql_parser.dialect;
     let dialect = crate::dialect_for_executing_parse(sql, session_dialect);
     // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
@@ -240,7 +287,7 @@ async fn execute_passthrough_inner(
         None => plan,
     };
     let plan = crate::insert_timestamp_ns::after_analysis(plan)?;
-    if insert_source {
+    if mode.insert_source {
         return ctx.execute_logical_plan(insert_input(&plan)?).await;
     }
     let dataframe = ctx.execute_logical_plan(plan).await?;

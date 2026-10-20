@@ -69,7 +69,7 @@ wrapped optimizer rule) and declares this directory.
 - [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
   Its design note, the DataFusion contracts it reads, and the routes it does not take are in
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and
-  `python/repark/tests/test_win_slide_1.py`.
+  `python/repark/tests/functions/test_win_slide_1.py`.
   pins: win-slide-1/C-001, C-005
 - `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** attribute identity as a function of the plan.
   Every output field of a DataFrame plan carries one attribute id in its field metadata under
@@ -243,7 +243,7 @@ wrapped optimizer rule) and declares this directory.
   with the type-group cast and const-foldable literal casts). Only these strict
   shapes resolve; anything else reads `None` so the caller keeps the old miss
   behavior. Re-exported through `frame_names`. Pins:
-  `python/repark/tests/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression
+  `python/repark/tests/resolution/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression
   pins). pins: attr-id-1/C-040
   **CASESENS-2 port phase 2 (2026-10-03):** `sort_hits_meet_at_join(plan,
   positions)` follows output positions down through `Filter`, `Sort`, `Limit`,
@@ -709,7 +709,7 @@ wrapped optimizer rule) and declares this directory.
   rule over SQL text through the Databricks-dialect parser (subqueries,
   CTEs and a top-level FROM decline to scan).
   Pins: the `sort_names` unit module, `../tests/case_bind.rs`,
-  `python/repark/tests/test_attr_id_1_sj5.py`.
+  `python/repark/tests/resolution/test_attr_id_1_sj5.py`.
   **ATTR-ID-1 SJ-5 F2 (2026-10-03):** `free_sql_names` also collects
   compound identifiers as qualifier plus written name.
   `sql_mentions_duplicate` skips the parse when no word or backquoted token
@@ -761,7 +761,7 @@ wrapped optimizer rule) and declares this directory.
   alias), and
   `repark_projection_exists` (a projection `Exists`/`Not(Exists)` becomes a
   `count(*)`-comparison boolean that keeps the plan's field name).
-  Pins: `../tests/subquery.rs` and `python/repark/tests/test_df_subquery_1.py`.
+  Pins: `../tests/subquery.rs` and `python/repark/tests/dataframe/test_df_subquery_1.py`.
   This module is the ledger's rust-first roll-call home: all scope resolution, the
   single-row guard, the exists rewrite, the projection hoist, and the Unnest
   refusal live here in repark-core.

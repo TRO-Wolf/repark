@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use iceberg::table::Table;
@@ -9,24 +9,27 @@ use repark_common::Generation;
 use repark_iceberg::microbatch::error::MicroBatchError;
 use repark_iceberg::microbatch::offset::{
     EPOCH_KEY, Epoch, OffsetFormatVersion, OffsetVector, QUERY_ID_KEY, QueryId, RUN_ID_KEY, RunId,
-    SinkDoor, SinkRecord,
+    SinkDoor, SinkRecord, TableUuid,
 };
 use repark_iceberg::microbatch::window::WindowLimit;
-use repark_iceberg::write::sink_offsets::{CommitStamp, commit_stamp_only};
+use repark_iceberg::write::sink_offsets::{BatchScope, CommitStamp, commit_stamp_only};
+use tokio::sync::oneshot;
 
 use crate::Session;
 use crate::microbatch::driver::{
-    BatchBody, QueryHandle, QueryState, SinkSpec, StreamSpec, StreamingQueryManager, Trigger,
+    BatchBody, QueryHandle, QueryState, ShutdownOutcome, SinkSpec, StreamSpec,
+    StreamingQueryManager, Trigger,
 };
-use crate::microbatch::lifecycle_tests::{Mode, ONE, Probe, ended, eventually, named};
+use crate::microbatch::lifecycle_tests::{BOUND, Mode, ONE, Probe, ended, eventually, named};
 use crate::microbatch::progress::StatusMessage;
-use crate::microbatch::table_door_tests::{FLAKY_SINK, LoadHook, flaky};
-use crate::microbatch::testing::{Fixture, SINK, SOURCE, options};
+use crate::microbatch::table_door_tests::{FLAKY_SINK, FaultCatalog, LoadHook, LoadedHook, flaky};
+use crate::microbatch::testing::{Fixture, SINK, SOURCE, creation, options};
 use crate::time_travel::microbatch_source::MicroBatchSource;
 
 const DOORS: [bool; 2] = [false, true];
 const RACE_ROUNDS: usize = 20;
 const FILES: u64 = 3;
+const FIRST_BATCH_LOAD: usize = 1;
 
 fn spec(sink: &str, body: Option<&Arc<Probe>>, trigger: Trigger, name: &str) -> StreamSpec {
     let sink = sink.to_string();
@@ -177,6 +180,174 @@ async fn two_drivers_on_one_sink_land_each_epoch_exactly_once() {
             }
             let sink = fixture.table("silver").await;
             assert_eq!(epochs_of(&sink, a.id()), every_epoch, "{context}");
+        }
+    }
+}
+
+async fn gated_session(fixture: &Fixture) -> (Session, Arc<FaultCatalog>) {
+    let catalog = flaky(fixture).await;
+    let other = Session::builder().build().expect("a second session");
+    other
+        .register_iceberg_catalog("ice", Arc::clone(&catalog) as Arc<dyn Catalog>)
+        .await
+        .expect("the gated catalog registers");
+    (other, catalog)
+}
+
+type Gate = (oneshot::Sender<bool>, oneshot::Receiver<()>);
+
+fn parked_at(
+    nth: usize,
+    probe: CommitStamp,
+) -> (LoadedHook, oneshot::Receiver<bool>, oneshot::Sender<()>) {
+    let (parked, on_park) = oneshot::channel();
+    let (release, on_release) = oneshot::channel();
+    let gate: Arc<Mutex<Option<Gate>>> = Arc::new(Mutex::new(Some((parked, on_release))));
+    let seen = Arc::new(AtomicUsize::new(0));
+    let hook: LoadedHook = Arc::new(move |table: &Table| {
+        let fires =
+            table.identifier().name() == "silver" && seen.fetch_add(1, Ordering::SeqCst) == nth;
+        let armed = fires
+            .then(|| gate.lock().expect("the gate").take())
+            .flatten();
+        let free =
+            armed.is_some() && BatchScope::enter(TableUuid::of(table), probe.clone()).is_ok();
+        Box::pin(async move {
+            if let Some((parked, on_release)) = armed {
+                parked.send(free).expect("the test waits for the park");
+                on_release.await.expect("the test releases the load");
+            }
+        })
+    });
+    (hook, on_park, release)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_winner_that_commits_during_the_batch_load_never_lets_a_fenced_body_run() {
+    for foreach in DOORS {
+        let fixture = Fixture::new().await;
+        for value in 1..=FILES {
+            fixture.insert(SOURCE, &format!("({value})")).await;
+        }
+        let (other, catalog) = gated_session(&fixture).await;
+        let every_epoch: Vec<u64> = (0..FILES).collect();
+        let (left, right) = (Probe::new(Mode::Record), Probe::new(Mode::Record));
+        let draining = Trigger::AvailableNow;
+        let a = registered(
+            &fixture.session,
+            spec(SINK, foreach.then_some(&left), draining, "gated"),
+        )
+        .await;
+        let b = registered(
+            &other,
+            spec(SINK, foreach.then_some(&right), draining, "gated"),
+        )
+        .await;
+        assert_eq!(a.id(), b.id());
+        let probe = first_epoch_of(&fixture, b.id(), RunId::fresh()).await;
+        let (hook, on_park, release) = parked_at(FIRST_BATCH_LOAD, probe);
+        catalog.after_load(Some(hook));
+        b.start_below_catalog_check().expect("start");
+        let free = tokio::time::timeout(BOUND, on_park)
+            .await
+            .expect("the batch load parks within the bound")
+            .expect("the hook reports the scope");
+        if free {
+            a.start_below_catalog_check().expect("start");
+            assert_eq!(
+                ended(&a).await,
+                Ok(true),
+                "the winner drains while the loser loads"
+            );
+        }
+        release.send(()).expect("the parked load waits");
+        let ended_b = ended(&b).await;
+        catalog.after_load(None);
+        if !free {
+            a.start_below_catalog_check().expect("start");
+        }
+        let ended_a = ended(&a).await;
+        let context = format!(
+            "foreachBatch: {foreach}, scope free at the load: {free}: {ended_a:?} {ended_b:?}"
+        );
+        assert_eq!(ended_a, Ok(true), "{context}");
+        assert!(
+            ended_b == Ok(true) || fenced_by(&ended_b, a.run_id()),
+            "{context}"
+        );
+        let sink = fixture.table("silver").await;
+        assert_eq!(epochs_of(&sink, a.id()), every_epoch, "{context}");
+        if foreach {
+            let mut delivered: Vec<u64> = left
+                .seen()
+                .into_iter()
+                .chain(right.seen())
+                .map(|(epoch, _)| epoch)
+                .collect();
+            delivered.sort_unstable();
+            assert_eq!(delivered, every_epoch, "a fenced body ran: {context}");
+        } else {
+            let mut landed = fixture.ids(SINK).await;
+            landed.sort_unstable();
+            assert_eq!(landed, [1, 2, 3], "{context}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_sink_replaced_between_batches_takes_the_next_batch_under_its_own_scope() {
+    for foreach in DOORS {
+        let fixture = Fixture::new().await;
+        fixture.insert(SOURCE, "(1)").await;
+        let body = Probe::new(Mode::Record);
+        let polling = Trigger::ProcessingTime(Duration::ZERO);
+        let handle = registered(
+            &fixture.session,
+            spec(SINK, foreach.then_some(&body), polling, "replaced"),
+        )
+        .await;
+        handle.start_below_catalog_check().expect("start");
+        eventually("epoch 0 never landed", || handle.durable().is_some()).await;
+        let catalog = fixture
+            .session
+            .catalogs_snapshot()
+            .get("ice")
+            .cloned()
+            .expect("the memory catalog");
+        let sales = NamespaceIdent::new("sales".to_string());
+        catalog
+            .drop_table(&TableIdent::new(sales.clone(), "silver".to_string()))
+            .await
+            .expect("the sink drops");
+        let location = format!("{root}/sales/silver_again", root = fixture.root());
+        catalog
+            .create_table(&sales, creation("silver", &location))
+            .await
+            .expect("the sink is created again");
+        fixture.insert(SOURCE, "(2)").await;
+        eventually("epoch 1 never landed on the replaced sink", || {
+            handle
+                .durable()
+                .is_some_and(|record| record.epoch == Epoch::FIRST.next())
+        })
+        .await;
+        let stopped = tokio::time::timeout(BOUND, handle.stop())
+            .await
+            .expect("stop returns");
+        assert!(
+            matches!(&stopped, ShutdownOutcome::Stopped { durable: Some(record) } if record.epoch == Epoch::FIRST.next()),
+            "foreachBatch: {foreach}: {stopped:?}"
+        );
+        let sink = fixture.table("silver").await;
+        assert_eq!(
+            epochs_of(&sink, handle.id()),
+            [1],
+            "foreachBatch: {foreach}"
+        );
+        if foreach {
+            assert_eq!(body.seen(), [(0, vec![1]), (1, vec![2])]);
+        } else {
+            assert_eq!(fixture.ids(SINK).await, [2]);
         }
     }
 }

@@ -28,6 +28,17 @@ works, so the attribute is gone rather than documented.
   one per row (600k rows on one file: 31.0 → 11.5 ms, 66,000,000 → 110 B retained). It lives
   here rather than in the parent because `predicate_dml.rs` sits at an exact line ceiling (1142 since RP-7). **RP-7 (2026-09-02):** `push_pairs_from_batch` moved here for the same reason; both identity collectors now stream and call it once per arriving batch.
   pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-009
+- `lineage.rs`, `../predicate_dml.rs` — **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):**
+  an identity `UPDATE … WHERE` into a `TIMESTAMP` (the microsecond instant) narrows its SET
+  value as the MERGE insert arm does. `analyzed_identity_update` (here, called by the
+  parent's `collect_identity_update_rows`) analyzes the plain projection once;
+  `instant_store_columns` names each instant target whose analyzed value
+  `ntz_store::needs_ltz_instant_cast` flags (a nanosecond, NTZ or date value); the
+  projection is planned again with `update_cast::store_assignment_cast_sql` around those
+  values. Before, the raw nanosecond value reached U-3's guard (`store of column v would
+  coarsen a timestamp … outside the narrowing kernel`) while the same SET without `WHERE`,
+  and with a written `CAST(… AS TIMESTAMP)`, stored the floor. U-3's guard stays.
+  pins: ice-tsns-type-planner-1/C-019
 - `lineage.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `update_projection_sql` wraps an
   assigned value whose target is `Timestamp(µs, None)` in the `ntz_store` wall-cast UDF
   call, so an identity UPDATE stores the session-zone wall; every other target keeps
@@ -71,6 +82,18 @@ works, so the attribute is gone rather than documented.
   answers false, so the statement keeps the old loud path). Primitive-only
   selections stay on the identity path with no behaviour or performance change.
   pins: ice-list-null-2/C-001, C-003
+- `subquery_where.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling
+  106 (a)):** the one home of the G3-E8 refusal for the ANSI door and `repark.sql()`.
+  `refuse_dml_subquery_predicate(statement, identity_forms_execute)` refuses a `DELETE` or
+  `UPDATE` whose `WHERE` holds a subquery, with the G3-E8 text byte for byte. With
+  `identity_forms_execute` true it first lets the allow-listed forms through
+  (`try_allowed_delete_in`, `try_allowed_update_in`), because the caller's identity path
+  answers them. The ANSI router passes true; `DataFusionDialect`, the `repark.sql()` door,
+  passes false, so there every form refuses. Moved from `repark-sql/src/guards.rs` without
+  its comments; it reuses this module's subquery probe (`expression_contains_subquery`)
+  where the guard had its own. The Spark SQL door keeps its copy in
+  `repark-spark/src/normalize.rs` (ruling Q7 of round 2; a later tidy unit folds it).
+  pins: repark-sql-update-subquery-where-1/C-007
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 - `plain.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `selection_refs_non_primitive` becomes
   `selection_refs_needs_fork`: a `uuid` column in the `WHERE` joins the non-primitive ones on

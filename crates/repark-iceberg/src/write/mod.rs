@@ -59,12 +59,14 @@ pub mod sink_offsets;
 pub mod snapshot_refs;
 pub mod sort_order;
 pub mod sql_text;
+pub mod statement_writes;
 mod static_value;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
 pub mod store_cast;
 pub(crate) mod store_fold;
 pub mod store_overflow;
+pub mod struct_pairing;
 pub mod summary_collision;
 pub mod table_admin;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).

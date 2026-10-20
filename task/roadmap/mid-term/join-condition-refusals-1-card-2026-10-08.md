@@ -44,7 +44,7 @@ Scope is the conditions above. Other refusal gaps are not in the ask.
 ## Pointers
 
 - [cross-join-condition-1-ledger.md](../../ledgers/staging/cross-join-condition-1-ledger.md), clause C-008, which carries the eight cells and the ruling.
-- The cross-equals-inner pins in [test_cross_join_condition_1.py](../../../python/repark/tests/test_cross_join_condition_1.py), which hold the current leniency until this card lands.
+- The cross-equals-inner pins in [test_cross_join_condition_1.py](../../../python/repark/tests/dataframe/test_cross_join_condition_1.py), which hold the current leniency until this card lands.
 
 ## Close (2026-10-08)
 

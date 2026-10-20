@@ -1,9 +1,13 @@
 //! SQL dialect seam for plugging a statement front end into [`ReparkSession::sql`].
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use async_trait::async_trait;
+use datafusion::logical_expr::planner::TypePlanner;
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::parser::Statement as DFStatement;
 
 use crate::catalog_state::CatalogRegistry;
 use crate::session_time_zone::SessionTimeZone;
@@ -105,6 +109,18 @@ pub trait SqlDialect: Send + Sync {
     fn on_session_built(&self, ctx: &SessionContext) {
         let _ = ctx;
     }
+
+    fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
+        None
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        Ok(rules)
+    }
 }
 
 /// The default dialect, using plain `SessionContext::sql`.
@@ -119,8 +135,36 @@ impl SqlDialect for DataFusionDialect {
         query: &str,
     ) -> datafusion::error::Result<DataFrame> {
         // Keep the native door's plan → guard → execute ordering.
-        crate::PreExecute::from_engine_context(&cx).run(query).await
+        let belt = crate::PreExecute::from_engine_context(&cx);
+        let plan = belt.plan(query).await?;
+        refuse_dml_subquery_where(cx.ctx, query)?;
+        belt.guard(&plan)?;
+        belt.execute(plan).await
     }
+}
+
+fn refuse_dml_subquery_where(ctx: &SessionContext, query: &str) -> datafusion::error::Result<()> {
+    let state = ctx.state();
+    let dialect = state.config_options().sql_parser.dialect;
+    let Ok(parsed) = state.sql_to_statement(query, &dialect) else {
+        return Ok(());
+    };
+    let mut wrapped = &parsed;
+    while let DFStatement::Explain(explain) = wrapped {
+        if !explain.analyze {
+            return Ok(());
+        }
+        wrapped = explain.statement.as_ref();
+    }
+    let DFStatement::Statement(statement) = wrapped else {
+        return Ok(());
+    };
+    for write in repark_iceberg::write::statement_writes::executed_writes(statement) {
+        repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate(
+            &write, false,
+        )?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

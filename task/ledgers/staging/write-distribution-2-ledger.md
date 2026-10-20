@@ -4,7 +4,7 @@
 
 The critic passed round 1; then CI's debug import-smoke job (`wheels.yml`, 4-CPU
 runner, debug native) failed one pin this unit's behaviour change invalidates:
-`python/repark/tests/test_mw7_scale_smoke.py::test_copy_on_write_leg_is_a_zero_delete_control`
+`python/repark/tests/perf/test_mw7_scale_smoke.py::test_copy_on_write_leg_is_a_zero_delete_control`
 (MW-7 C-003). The old control asserted the copy-on-write leg's data-file count grows
 across the six MERGEs (`checkpoints[-1].census.data_files >
 checkpoints[0].census.data_files`); with one partition value routed to one writer the
@@ -124,7 +124,7 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: Identity int, NULL-heavy nullable string, bucket(4) + day over a timestamp, unequal stream batches, MERGE through its own entry with the branch asserted, truncate over a view-typed string, a partitioned abort; the facade over overwrite, merge and truncate; live Spark on the overwrite and merge seeds plus the full four-statement bed.
-      artifacts: [crates/repark-iceberg/src/write/distribution.rs, python/repark/tests/test_write_distribution_2.py]
+      artifacts: [crates/repark-iceberg/src/write/distribution.rs, python/repark/tests/writes/test_write_distribution_2.py]
     - id: AT-3
       status: ATTACKED
       evidence: No unwrap or expect in production; the slot arithmetic is checked (`u32`/`u64`/`usize` fallible conversions with typed errors); an oversized batch is a loud Execution error, not a wrap. make rust-panic-ban exit 0.
@@ -140,7 +140,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Live Spark 4.1.2 (banner 4.1.2, UTC) writes the same (partition value, record count) layout for the overwrite and merge seeds; the written row set and sums are unchanged (count(*), sum(id) asserted on every pin). 5 passed under REPARK_PARITY_LIVE=1, one JVM, killed at exit.
-      artifacts: [python/repark/tests/test_write_distribution_2.py]
+      artifacts: [python/repark/tests/writes/test_write_distribution_2.py]
     - id: AT-7
       status: ATTACKED
       evidence: Mutation M2 (drop the cast) reds the Rust truncate pin with the fork's Utf8View rejection; the base dispatcher reds five of seven stream Rust pins and both always-run layout facade pins. The facade-shaped M2 is refuted with its mechanism, not absorbed. Section 6.
@@ -252,7 +252,7 @@ post-commit re-run on the unit's final tree; the suite exits were read before th
 | gate | exit | result |
 |---|---|---|
 | `make verify` | 0 | `ci` (fmt, workspace clippy, `rust-panic-ban`, the structure gates, py-lint, py-format, lock, toml, spell) plus the Rust workspace suite — `repark-iceberg` 419 lib tests green, every crate green |
-| `.venv/bin/python -m pytest python/repark/tests/test_write_distribution_1.py python/repark/tests/test_write_distribution_2.py python/repark/tests/test_perf_ice_writepath_1.py -q` | 0 | 13 passed, 5 skipped (the live legs, without `REPARK_PARITY_LIVE`) on the release native |
+| `.venv/bin/python -m pytest python/repark/tests/writes/test_write_distribution_1.py python/repark/tests/writes/test_write_distribution_2.py python/repark/tests/perf/test_perf_ice_writepath_1.py -q` | 0 | 13 passed, 5 skipped (the live legs, without `REPARK_PARITY_LIVE`) on the release native |
 | the WD2 file under `REPARK_PARITY_LIVE=1` (Spark 4.1.2, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, ivy redirected into the lane) | 0 | 5 passed, 23.62 s, one JVM beside one foreign-lane JVM, mine exited with the run |
 | `make py-test-facade` | 0 | 5,130 passed, 250 skipped in 979.69 s (the target's maturin step leaves a DEBUG native in the venv; the release native was restored afterwards and the 13 always-run pins re-read green) |
 | `make py-test-dbt` | 0 | 59 passed, 1 skipped in 35.94 s |

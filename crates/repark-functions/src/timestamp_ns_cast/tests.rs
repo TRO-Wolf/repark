@@ -330,3 +330,54 @@ fn the_return_field_is_nullable_where_an_overflow_answers_null() {
     ));
     assert!(nullable(true, DataType::Utf8));
 }
+
+fn encodings_of(plain: &ArrayRef) -> Vec<ArrayRef> {
+    let dictionary_type = DataType::Dictionary(
+        Box::new(DataType::Int32),
+        Box::new(plain.data_type().clone()),
+    );
+    let dictionary = cast(plain.as_ref(), &dictionary_type).unwrap();
+    let run_ends = datafusion::arrow::array::Int32Array::from(vec![1, 2]);
+    let run_end: ArrayRef = Arc::new(
+        datafusion::arrow::array::RunArray::<datafusion::arrow::datatypes::Int32Type>::try_new(
+            &run_ends,
+            plain.as_ref(),
+        )
+        .unwrap(),
+    );
+    vec![dictionary, run_end]
+}
+
+#[test]
+fn an_encoded_source_gets_the_verdict_and_the_value_of_its_value_type() {
+    let plain: ArrayRef = Arc::new(
+        datafusion::arrow::array::TimestampNanosecondArray::from(vec![
+            Some(1_767_323_045_123_456_789),
+            Some(-1),
+        ])
+        .with_timezone("UTC"),
+    );
+    for zoned in [false, true] {
+        let kernel = SparkTimestampNsCast::new(zoned);
+        let want = conversion(zoned, "America/New_York", true)
+            .convert(&plain)
+            .unwrap();
+        for encoded in encodings_of(&plain) {
+            assert_eq!(
+                kernel.return_type(&[encoded.data_type().clone()]).unwrap(),
+                kernel.return_type(&[plain.data_type().clone()]).unwrap()
+            );
+            let got = conversion(zoned, "America/New_York", true)
+                .convert(&encoded)
+                .unwrap();
+            assert_eq!(&got, &want, "{}", encoded.data_type());
+        }
+    }
+    let encoded_integers =
+        DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Int64));
+    let error = SparkTimestampNsCast::new(false)
+        .return_type(&[encoded_integers])
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("CAST_WITHOUT_SUGGESTION"), "{error}");
+}

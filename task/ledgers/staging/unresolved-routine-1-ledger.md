@@ -94,7 +94,7 @@ Probe: the brief's `msg.py` over `b2-oracle.json` with the clone `.venv`
 
 ## 1b. Red-run evidence (step 3, base native)
 
-`.venv/bin/python -m pytest python/repark/tests/test_unresolved_routine_1.py -q -p no:cacheprovider`
+`.venv/bin/python -m pytest python/repark/tests/functions/test_unresolved_routine_1.py -q -p no:cacheprovider`
 → `41 failed, 4 passed`. The 4 passes are the already-green `UR-PY-00`
 (`call_function`), the LATERAL VIEW backlog disclosure, the `typeof` control,
 and the fixture-presence check. Sample failure (`UR-SQL-00`):
@@ -240,7 +240,7 @@ per the card's edit-only-the-assertion rule.
 | PYPERF-001/002 | HAND-OFF rows (H-003/H-005) | `functions_byname.py` / `catalog_surface.py` are 18a/18b files; no edit. |
 | ORCH-001 | FIX in this round | `engine_err_for_sql` moved above the `engine_err` doc comment; no new doc. The pre-commit comment grep shows exactly one `+///` line, which is that pre-existing doc comment relocated by the move — no new comment in code. |
 | UR3-SQL-14/15 | GUARD pins | Arity errors and parse errors bypass the mapper (critic null report); pins hold that. |
-| RED (round 2) | `.venv/bin/python -m pytest python/repark/tests/test_unresolved_routine_1.py -q -p no:cacheprovider` → 8 failed, 58 passed on `63f40f67`. The 8 are UR3-SQL-00…07 (literal-case leak, three decoy positions, backticked REQUIRES class, two backticked renders, dotted-quotient structure); UR3-SQL-08…15 and all UR3-PY pins already hold (guards for the rewrite). |
+| RED (round 2) | `.venv/bin/python -m pytest python/repark/tests/functions/test_unresolved_routine_1.py -q -p no:cacheprovider` → 8 failed, 58 passed on `63f40f67`. The 8 are UR3-SQL-00…07 (literal-case leak, three decoy positions, backticked REQUIRES class, two backticked renders, dotted-quotient structure); UR3-SQL-08…15 and all UR3-PY pins already hold (guards for the rewrite). |
 
 Retired-assertion re-check (L-004 table): `binary` — Spark HAS (TYPEOF-SQL-24 ok), pin records repark's refusal, docstring claims blockage only; `try_*` ×12 — Spark HAS, ANSI-door unresolved pins, no Spark-shape claim; `shuffle`-over-NULL — Spark HAS shuffle, ANSI unreachability pin, Spark-door answers beside it; `withField`/`dropFields`/`astype`/`name`/`outer` — Spark SQL lacks the names, true-shape pins; `schema_of_csv` — Spark HAS (UR3-SQL-13 execution error), reframed tripwire above; w0 absents — planning-miss disjunct, classifier needle added (F-004).
 
@@ -333,7 +333,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every in-scope oracle cell (UR-SQL, UR-PY, UR3-SQL, UR3-PY) is pinned with the full Spark message; red on base, green on the head.
-      artifacts: [python/repark/tests/test_unresolved_routine_1.py, python/repark/tests/unresolved_routine_1_spark_oracle.json]
+      artifacts: [python/repark/tests/functions/test_unresolved_routine_1.py, python/repark/tests/functions/unresolved_routine_1_spark_oracle.json]
     - id: AT-2
       status: N/A
       justification: No numeric result; the error path is formatted only when a query already fails.
@@ -350,7 +350,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Arity and parse errors bypass the mapper (UR3-SQL-14/15 guard pins), so a known function's error is never rewritten.
-      artifacts: [python/repark/tests/test_unresolved_routine_1.py]
+      artifacts: [python/repark/tests/functions/test_unresolved_routine_1.py]
     - id: AT-7
       status: ATTACKED
       evidence: One tokenizer pass only on the failure path; the success path is unchanged (both S2-21 reads).

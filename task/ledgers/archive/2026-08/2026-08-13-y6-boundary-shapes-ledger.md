@@ -14,8 +14,8 @@ families; `_live_parity.py` / live pins; registry file; ML / pandas-udf.
 
 | Artifact | Path | Role |
 |---|---|---|
-| Boundary-shape corpus | [`python/repark/tests/test_boundary_shapes_parity.py`](../../../../python/repark/tests/test_boundary_shapes_parity.py) | 10 rows + semantics-gated budget + classifier |
-| Record driver | [`python/repark/tests/_record_boundary_shapes_goldens.py`](../../../../python/repark/tests/_record_boundary_shapes_goldens.py) | re-derive Spark halves; `--emit` |
+| Boundary-shape corpus | [`python/repark/tests/test_boundary_shapes_parity.py`](../../../../python/repark/tests/io/test_boundary_shapes_parity.py) | 10 rows + semantics-gated budget + classifier |
+| Record driver | [`python/repark/tests/_record_boundary_shapes_goldens.py`](../../../../python/repark/tests/io/_record_boundary_shapes_goldens.py) | re-derive Spark halves; `--emit` |
 | Maps | `python/repark/tests/map.md`, `task/map.md` | lockstep navigation |
 | This ledger | `task/y6-boundary-shapes-ledger.md` | linked from [`task/map.md`](../../../map.md) |
 

@@ -6,7 +6,7 @@
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
-**Hand-off note to run 17a (read first):** `python/repark/tests/test_fnp11a_temporal.py`
+**Hand-off note to run 17a (read first):** `python/repark/tests/functions/test_fnp11a_temporal.py`
 is 17a's file. This unit's only sanctioned edit there is removing the three skip
 sets it closes: `BARE_UNIT_NAMES` handling (line 271), `D4_BLOCKED_SQL` (line 93),
 `BARE_NULLARY_SQL` (line 97). The removal lands in this unit's C-008 / C-005 /

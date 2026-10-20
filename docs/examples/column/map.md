@@ -55,7 +55,7 @@ ruling S2-22 they left the example inventory entirely (EX-31): the gate's named
 Two bare-name arms the live oracle measured divergent are filed as §7 registry rows
 ([EX-COL-1](../../spark-sql-iceberg-parity.md), EX-COL-2) with pins
 (`test_col_cast_qualified_projection_name`, `test_get_field_bare_projection_name`) in
-`python/repark/tests/test_examples_column_a.py`, while the examples keep the arms where the
+`python/repark/tests/parity/test_examples_column_a.py`, while the examples keep the arms where the
 engines agree: an unaliased `select(F.col("v").cast("double"))` keeps the child name `v`
 like Spark (EX-COL-1, CLOSED 2026-09-28 by CASESENS-1 VC-3; the df-bound and aliased `cast`
 arms were already Spark-equal, and `bitwise_cast.py` keeps those), and an unaliased
@@ -65,4 +65,4 @@ read).
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Pins: [../../../python/repark/tests/test_examples_column_a.py](../../../python/repark/tests/test_examples_column_a.py)
+- Pins: [../../../python/repark/tests/parity/test_examples_column_a.py](../../../python/repark/tests/parity/test_examples_column_a.py)

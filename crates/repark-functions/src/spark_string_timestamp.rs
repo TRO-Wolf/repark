@@ -4,7 +4,7 @@ use arrow::array::timezone::Tz;
 use arrow::array::{Array, ArrayRef, AsArray, TimestampMicrosecondArray};
 use chrono::{DateTime, Utc};
 use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::DataType;
+use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{ColumnarValue, Expr, ExprSchemable};
@@ -136,7 +136,8 @@ pub(crate) fn rewrite_string_try_cast(expr: &Expr, schema: &DFSchema, zone: &str
     let Expr::TryCast(try_cast) = expr else {
         return None;
     };
-    if !matches!(try_cast.field.data_type(), DataType::Timestamp(_, _)) {
+    if !matches!(try_cast.field.data_type(), DataType::Timestamp(unit, _) if *unit != TimeUnit::Nanosecond)
+    {
         return None;
     }
     let source = try_cast.expr.get_type(schema).ok()?;

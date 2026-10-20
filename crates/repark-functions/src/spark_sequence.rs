@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{
     Array, ArrayRef, Date32Array, Int8Array, Int16Array, Int32Array, Int64Array,
-    IntervalMonthDayNanoArray, ListArray, TimestampMicrosecondArray,
+    IntervalMonthDayNanoArray, ListArray,
 };
 use datafusion::common::ScalarValue;
 
@@ -274,11 +274,11 @@ fn scalar_interval(value: &ColumnarValue) -> Result<Option<IntervalMonthDayNano>
     }
 }
 
-fn scalar_micros(value: &ColumnarValue) -> Result<Option<i64>> {
+fn scalar_ticks(value: &ColumnarValue, element_type: &DataType) -> Result<Option<i64>> {
     match value {
         ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
         ColumnarValue::Scalar(scalar) => {
-            let single = as_micros(&scalar.to_array_of_size(1)?)?;
+            let single = as_ticks(&scalar.to_array_of_size(1)?, element_type)?;
             Ok(if single.is_null(0) {
                 None
             } else {
@@ -347,8 +347,9 @@ fn scalar_dates(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarVa
 }
 
 fn scalar_timestamps(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarValue> {
-    let start = scalar_micros(&args[0])?;
-    let stop = scalar_micros(&args[1])?;
+    let unit = timestamp_unit(element)?;
+    let start = scalar_ticks(&args[0], element.data_type())?;
+    let stop = scalar_ticks(&args[1], element.data_type())?;
     let stride = if args.len() > 2 {
         Some(scalar_interval(&args[2])?)
     } else {
@@ -358,23 +359,23 @@ fn scalar_timestamps(element: &FieldRef, args: &[ColumnarValue]) -> Result<Colum
         let explicit = match stride {
             None => None,
             Some(None) => {
-                let shaped = shape_timestamps(Vec::new());
+                let shaped = shape_timestamps(element, Vec::new())?;
                 return finish_one(element, shaped, false);
             }
             Some(Some(given)) => Some(given),
         };
-        match rows::timestamp_row(start, stop, explicit)? {
+        match rows::timestamp_row(start, stop, explicit, unit)? {
             None => {
-                let shaped = shape_timestamps(Vec::new());
+                let shaped = shape_timestamps(element, Vec::new())?;
                 finish_one(element, shaped, false)
             }
             Some(pieces) => {
-                let shaped = shape_timestamps(pieces);
+                let shaped = shape_timestamps(element, pieces)?;
                 finish_one(element, shaped, true)
             }
         }
     } else {
-        let shaped = shape_timestamps(Vec::new());
+        let shaped = shape_timestamps(element, Vec::new())?;
         finish_one(element, shaped, false)
     }
 }
@@ -416,8 +417,16 @@ fn shape_dates(values: Vec<i32>) -> ArrayRef {
     Arc::new(Date32Array::from(values))
 }
 
-fn shape_timestamps(values: Vec<i64>) -> ArrayRef {
-    Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"))
+fn timestamp_unit(element: &FieldRef) -> Result<TimeUnit> {
+    match element.data_type() {
+        DataType::Timestamp(unit, _) => Ok(*unit),
+        other => exec_err!("sequence cannot build {other} elements on the timestamp arm"),
+    }
+}
+
+fn shape_timestamps(element: &FieldRef, values: Vec<i64>) -> Result<ArrayRef> {
+    let ticks: ArrayRef = Arc::new(Int64Array::from(values));
+    Ok(cast(ticks.as_ref(), element.data_type())?)
 }
 
 fn invoke_ints(arrays: &[ArrayRef], row_count: usize, element: &FieldRef) -> Result<ColumnarValue> {
@@ -508,8 +517,9 @@ fn invoke_timestamps(
     offsets.push(0);
     let mut validity: Vec<bool> = Vec::with_capacity(row_count);
     let mut any_null = false;
-    let starts = as_micros(&arrays[0])?;
-    let stops = as_micros(&arrays[1])?;
+    let unit = timestamp_unit(element)?;
+    let starts = as_ticks(&arrays[0], element.data_type())?;
+    let stops = as_ticks(&arrays[1], element.data_type())?;
     let strides = if arrays.len() > 2 {
         Some(as_interval(&arrays[2])?)
     } else {
@@ -523,7 +533,7 @@ fn invoke_timestamps(
             any_null = true;
         } else {
             let interval = strides.as_ref().map(|strides| strides.value(row));
-            match rows::timestamp_row(starts.value(row), stops.value(row), interval) {
+            match rows::timestamp_row(starts.value(row), stops.value(row), interval, unit) {
                 Err(error) => return Err(error),
                 Ok(None) => {
                     validity.push(false);
@@ -537,7 +547,7 @@ fn invoke_timestamps(
         }
         offsets.push(fit_i32(values.len())?);
     }
-    let shaped = shape_timestamps(values);
+    let shaped = shape_timestamps(element, values)?;
     finish_list(element, offsets, validity, any_null, shaped)
 }
 
@@ -566,17 +576,11 @@ fn as_date_days(array: &ArrayRef) -> Result<Date32Array> {
     downcast_primitive(&cast(array.as_ref(), &DataType::Date32)?, "date")
 }
 
-fn microsecond_utc() -> DataType {
-    DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
-}
-
-fn as_micros(array: &ArrayRef) -> Result<TimestampMicrosecondArray> {
-    if array.data_type() == &microsecond_utc() {
-        return downcast_primitive(array, "timestamp");
-    }
+fn as_ticks(array: &ArrayRef, element_type: &DataType) -> Result<Int64Array> {
     match array.data_type() {
         DataType::Timestamp(_, _) => {
-            downcast_primitive(&cast(array.as_ref(), &microsecond_utc())?, "timestamp")
+            let typed = cast(array.as_ref(), element_type)?;
+            downcast_primitive(&cast(typed.as_ref(), &DataType::Int64)?, "timestamp")
         }
         _ => Err(DataFusionError::Execution(
             "sequence timestamp arm needs timestamp values".to_owned(),
@@ -803,5 +807,70 @@ mod tests {
             .map(|day| rows::format_days(day.expect("date value")).expect("format date"))
             .collect();
         assert_eq!(rendered, vec!["2024-01-31", "2024-02-29", "2024-03-31"]);
+    }
+
+    async fn nanosecond_row(sql: &str) -> (DataType, Vec<i64>) {
+        let ctx = ctx();
+        let columns: Vec<(&str, ArrayRef)> = vec![
+            (
+                "a",
+                Arc::new(datafusion::arrow::array::TimestampNanosecondArray::from(
+                    vec![1_000_000_000_123_456_789_i64],
+                )),
+            ),
+            (
+                "b",
+                Arc::new(
+                    datafusion::arrow::array::TimestampNanosecondArray::from(vec![
+                        1_000_000_002_123_456_789_i64,
+                    ])
+                    .with_timezone("UTC"),
+                ),
+            ),
+        ];
+        let batch = datafusion::arrow::array::RecordBatch::try_from_iter(columns)
+            .expect("nanosecond batch");
+        ctx.register_batch("t", batch).expect("register t");
+        let batches = ctx
+            .sql(sql)
+            .await
+            .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("execute {sql}: {error}"));
+        let lists = batches[0].column(0).as_list::<i32>();
+        let row = lists.value(0);
+        let ticks = cast(row.as_ref(), &DataType::Int64).expect("ticks");
+        let ticks = ticks.as_primitive::<datafusion::arrow::datatypes::Int64Type>();
+        (row.data_type().clone(), ticks.values().to_vec())
+    }
+
+    #[tokio::test]
+    async fn a_nanosecond_sequence_steps_and_builds_in_its_element_unit_and_zone() {
+        let start = 1_000_000_000_123_456_789_i64;
+        let steps = vec![start, start + 1_000_000_000, start + 2_000_000_000];
+        let (naive, naive_ticks) =
+            nanosecond_row("SELECT sequence(a, a + INTERVAL '2' SECOND) FROM t").await;
+        assert_eq!(naive, DataType::Timestamp(TimeUnit::Nanosecond, None));
+        assert_eq!(naive_ticks, steps);
+        let (zoned, zoned_ticks) = nanosecond_row(
+            "SELECT sequence(b - INTERVAL '2' SECOND, b, INTERVAL '1' SECOND) FROM t",
+        )
+        .await;
+        assert_eq!(
+            zoned,
+            DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()))
+        );
+        assert_eq!(zoned_ticks, steps);
+        let (_, day_ticks) =
+            nanosecond_row("SELECT sequence(a, a + INTERVAL '1' DAY, INTERVAL '1' DAY) FROM t")
+                .await;
+        assert_eq!(day_ticks, vec![start, start + 86_400_000_000_000]);
+        let (_, month_ticks) =
+            nanosecond_row("SELECT sequence(a, a + INTERVAL '1' MONTH, INTERVAL '1' MONTH) FROM t")
+                .await;
+        assert_eq!(month_ticks.len(), 2);
+        assert_eq!(month_ticks[0], start);
+        assert_eq!(month_ticks[1].rem_euclid(1_000), 789);
     }
 }

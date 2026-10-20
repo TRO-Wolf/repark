@@ -38,7 +38,7 @@ plus the two commits.
 ## Pointers
 
 - Up: [../map.md](../map.md). Design: `../../../../docs/design/sql-doors.md`.
-- Oracle: `../../../../python/repark/tests/ice_rtas_byname_1_spark_oracle.json`.
+- Oracle: `../../../../python/repark/tests/writes/ice_rtas_byname_1_spark_oracle.json`.
 - Ledger: `../../../../task/ledgers/staging/ice-rtas-byname-1-ledger.md`.
 
 ## Debug
@@ -204,13 +204,3 @@ pins: u8-write-sql/C-008, C-010
 
 ## U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001)
 
-- `nested.rs` — `refuse_nested_mismatch` plans the source once (only when the table has a
-  struct column) and walks each name-bound column's struct type against the table's:
-  a table sub-field the source lacks refuses `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA`
-  with the dotted back-quoted path (`` `s`.`b` ``), checked in table order and depth first,
-  before any extra; a source sub-field the table lacks refuses
-  `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS` (`Cannot write extra fields `c` to the
-  struct `s``). Names fold by `spark.sql.caseSensitive`. Only `by_name_source_query` (the
-  `overwrite(condition)` door) calls it. In-file units pin the missing, extra, reordered and
-  case-folded shapes. Structs inside lists and maps are not walked.
-  pins: u7-write-df-2/C-013

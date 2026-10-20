@@ -28,9 +28,7 @@ use crate::write::merge::{
     register_streaming_target, reserved_name_guard, resolve_write_column, scratch_schema,
 };
 use crate::write::position_delete::PositionDeletePair;
-use crate::write::predicate_dml::lineage::{
-    project_update_data_batch, update_projection_sql, update_values_schema,
-};
+use crate::write::predicate_dml::lineage::{project_update_data_batch, update_values_schema};
 use crate::write::predicate_dml::residual::identity_scan_residual;
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use cow_commit::{commit_identity_cow, commit_identity_update_cow};
@@ -394,22 +392,22 @@ async fn collect_identity_update_rows(
     let assignments = spec.assignments.as_ref().ok_or_else(|| {
         DataFusionError::Internal("identity UPDATE SELECT requires SET assignments".to_string())
     })?;
-    let projections = update_projection_sql(values_schema, &spec.target_alias, assignments);
-    let sql = format!(
-        "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
-        file = quote_ident(FILE_PATH_COL),
-        pos = quote_ident(POS_COL),
-        scratch = crate::write::merge::cow_scratch::quote_scratch_name(target_name),
-        alias = quote_ident(&spec.target_alias),
-        selection = spec.selection_sql,
-    );
-    let raw = crate::write::store_overflow::analyzed_store_source(ctx, &sql).await?;
+    let raw = lineage::analyzed_identity_update(ctx, target_name, spec, assignments, values_schema)
+        .await?;
     let targets: Vec<(String, datafusion::arrow::datatypes::DataType)> = values_schema
         .fields()
         .iter()
         .map(|field| (field.name().clone(), field.data_type().clone()))
         .collect();
-    let plan = crate::write::store_overflow::wrap_store_outputs(raw, &targets, true, false, None)?;
+    let plan = crate::write::store_overflow::wrap_store_outputs(
+        raw,
+        &targets,
+        true,
+        false,
+        None,
+        crate::write::struct_pairing::StructPairing::by_name(!spec.case_insensitive),
+        "``",
+    )?;
     let mut stream = ctx
         .execute_logical_plan(plan)
         .await?
@@ -669,7 +667,7 @@ fn scalar_set_assignments(
         if !seen.insert(column.to_ascii_lowercase()) {
             return None;
         }
-        if expression_contains_subquery(&assignment.value) {
+        if subquery_outside(&assignment.value, true) {
             return None;
         }
         let mut value = assignment.value.clone();
@@ -703,19 +701,22 @@ fn assignment_column_name(
 }
 
 fn expression_contains_subquery(expr: &Expr) -> bool {
-    struct Nested {
-        seen: bool,
-    }
+    subquery_outside(expr, false)
+}
+
+fn subquery_outside(expr: &Expr, scalar: bool) -> bool {
+    struct Nested(bool);
     impl Visitor for Nested {
         type Break = ();
 
-        fn pre_visit_query(&mut self, _query: &Query) -> std::ops::ControlFlow<Self::Break> {
-            self.seen = true;
+        fn pre_visit_query(&mut self, query: &Query) -> std::ops::ControlFlow<Self::Break> {
+            if self.0 && is_simple_uncorrelated_in_subquery(query) {
+                return std::ops::ControlFlow::Continue(());
+            }
             std::ops::ControlFlow::Break(())
         }
     }
-    let mut visitor = Nested { seen: false };
-    expr.visit(&mut visitor).is_break() || visitor.seen
+    expr.visit(&mut Nested(scalar)).is_break()
 }
 
 fn update_target_and_alias(
@@ -983,6 +984,7 @@ mod mor_commit;
 pub mod plain;
 pub use plain::{try_allowed_plain_update, try_allowed_update_in};
 mod residual;
+pub mod subquery_where;
 
 #[cfg(test)]
 mod tests;

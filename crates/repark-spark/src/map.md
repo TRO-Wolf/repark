@@ -35,6 +35,10 @@ pins: rp-4-fork-repin/C-005, C-006
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s
   `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
   binding's native join door. pins: stamp-2-r5p6-2/C-002
+- `insert_by_name.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_by_name/nested.rs` (`refuse_nested_mismatch`) is
+  deleted: the BY NAME append hands `wrap_store_outputs` the by-name mode under the session's
+  case rule and the table label, and the by-name source of `REPLACE WHERE` pairs at the planned
+  INSERT.
 - `router.rs`, `catalog_ops.rs`, `merge.rs`, `insert_overwrite.rs`, `insert_by_name.rs`,
   `append_with_options.rs`, `truncate.rs`, `ctas.rs`, `spark_ast.rs` — **ENC-1 round 2
   (2026-10-09):** the Spark seats of the keyed-table refusal. `catalog_ops.rs` gains
@@ -53,6 +57,18 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark-iceberg` refuses the file and the commit without them. Pinned in
   `tests/enc_1_fold.rs`.
   pins: enc-1/C-007, C-008
+- `router.rs`, `spark_ast.rs`, `append_with_options.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the DataFrame door's
+  `source_by_name` reaches the conform: `execute_passthrough_inner` puts a `StatementPairing`
+  (`source_by_name`, `case_sensitive`) on the statement's own state snapshot, where
+  `StoreOverflowCast` reads it; `execute_passthrough_by` and `execute_insert_source` take the
+  flag, and the plain-INSERT route of `execute_insert_routed` and the write-options append pass
+  it. **Build round 2 (2026-10-14):** both passthrough entries map their error through
+  `door_error`, which first peels the `StoreOverflowCast` rule's own analyzer context (the
+  label is the rule's `name()`, `repark_store_overflow_cast`; no message is read), so a
+  refusal raised inside the rule reaches Python with its Spark condition on the head. The
+  `overwrite(condition)` cells of `test_ice_write_df_2_overwrite.py` pin it.
+  `install_statement_pairing` and the one-line source SQL of `append_with_options.rs` keep both
+  functions under clippy's line ceiling. pins: ice-struct-pairing-1/C-015
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
@@ -247,6 +263,9 @@ pins: rp-4-fork-repin/C-005, C-006
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
   before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+- `insert_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the stage-then-swap path hands `conform_types` the door's
+  mode (by name for `overwritePartitions`, by position otherwise) and the table label. The
+  static-partition route keeps no pairing site: hint H-1 guards its cast.
 - `insert_overwrite.rs` — **RP-56 (2026-09-28):** the empty-overwrite target probe reads
   through a scratch alias (engine machinery, like its sibling probes), and the
   ambiguous-overwrite read-back counts (`SELECT 1 … HAVING COUNT(*)=1`) instead of starring.
@@ -269,6 +288,18 @@ pins: rp-4-fork-repin/C-005, C-006
   baseline): `conform_types` resolves the positional targets and runs
   `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
   through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
+- `keyword_lower.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the AST lowering of
+  `CAST(… AS timestamp_ns)` / `timestamptz_ns` to a kernel call is deleted
+  (`timestamp_ns_cast_name`, `lower_timestamp_ns_cast`, the probe arm). The names reach
+  DataFusion's planner as custom types and `SparkTypePlanner` types them, in every
+  statement kind, so `UPDATE` and `DELETE` plan them too (R-010). The three entry points
+  keep their names; they still lower `TIMESTAMP_NTZ` casts, mark `VALUES` casts and lower
+  empty `map()`. pins: ice-tsns-type-planner-1/C-013
+- `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkExtension::type_planner`
+  hands the session builder `repark_functions::SparkTypePlanner`, so every `CAST(… AS T)`
+  and typed literal the Spark door plans takes its unit from the written name. The DDL
+  column type and `Column.cast("timestamp")` do not go through it; both already answer
+  microseconds and are pinned there. pins: ice-tsns-type-planner-1/C-011
 - `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the
   extension registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules
   (it consumes `SparkExprSemantics`' guarded division shape, so it must run after it —
@@ -599,6 +630,14 @@ pins: rp-4-fork-repin/C-005, C-006
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
+  F-05, parity row R-016:** `refuse_incompatible_update_cast` reads the session's
+  `spark.sql.caseSensitive` and judges a struct SET value by name under it
+  (`StructPairing::by_name`), instead of a fixed case-insensitive pairing: with
+  `caseSensitive=true`, `named_struct('a', 1, 'A', 2)` answers Spark's `CANNOT_FIND_DATA` for
+  `` `st`.`b` `` and `named_struct('a', 1, 'b', 2, 'A', 3)` its `EXTRA_STRUCT_FIELDS`, not
+  `AMBIGUOUS_COLUMN_NAME` (verifier 1's eight cells, v2 and v3, with and without `WHERE`).
+  pins: ice-struct-pairing-1/C-029
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `execute_update` calls
   `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR
   refusals and before `execute_passthrough`: bare-column SET targets resolve on the
@@ -831,7 +870,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ipi-30-orphan-guard-narrow-1/C-003, C-005
 - [call/branch_ops.rs](call/branch_ops.rs) — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`,
   `cherrypick_snapshot`, `set_current_snapshot`, `rollback_to_timestamp` (Spark 4.1.2
-  parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
+  parity, oracle-pinned in `python/repark/tests/iceberg/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
 - `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
@@ -1183,7 +1222,7 @@ pins: rp-4-fork-repin/C-005, C-006
   keys unescape with their own quote type. Rust pins in
   [tests/string_literal_escape_1.rs](tests/string_literal_escape_1.rs) (own
   leaf; the SQP-1 leaf is byte-frozen), facade pins in
-  `python/repark/tests/test_string_literal_escape_1.py`.
+  `python/repark/tests/sql/test_string_literal_escape_1.py`.
   pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
   **DIFF-PROBE fold (2026-09-29):** verbatim keep-exact now applies only to
   query-expression literals and `OPTIONS` values; DDL property lists
@@ -2093,6 +2132,17 @@ pins: rp-4-fork-repin/C-005, C-006
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
   pins: rp-9-repin-f23/C-005
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 139 (2026-10-17):**
+  `normalize.rs::refuse_dml_subquery_predicate_in_statement` keeps its allow-list exemption for
+  the top-level statement only, then refuses each `DELETE` and `UPDATE` that
+  `repark_iceberg::write::statement_writes::executed_writes` returns (through `PREPARE`, through a
+  sqlparser `EXPLAIN ANALYZE`, and a DML nested in a query), with no exemption, in the G3-E8 text.
+  Both repark-spark doors (the `SparkDialect` session door and the router API) reach it through
+  `execute_passthrough_inner`, so `PREPARE p AS DELETE … WHERE id IN (SELECT …)`, which `EXECUTE
+  p` used to run on DataFusion's DML planner over every row, refuses at `PREPARE`. DataFusion's own
+  `EXPLAIN ANALYZE` takes the `DfStatement::Explain` arm and never reaches the function; by
+  ruling 139 it stays with card EXPLAIN-DML-WRITE-1.
+  pins: repark-sql-update-subquery-where-1/C-025, C-027
   **ICE-LIST-NULL-2 (2026-09-19):** the plain-identity attach declines through
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection returns `None` to the fork DELETE path. Door battery:
@@ -2391,6 +2441,12 @@ pins: rp-4-fork-repin/C-005, C-006
   retired).
   pins: u9-types-1/C-010
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
+  **PA-LOCAL-FS-POLICY-1 (2026-10-15):** the module now re-exports
+  `repark_core::local_fs_policy::refuse_local_filesystem_plan` (the opt-in read scoped to the
+  `repark.sql` extension, then the walk over every `Copy` and `CreateExternalTable` node); its
+  private classification, strip, canonicalization and containment copies are deleted, and the
+  in-module tests import `local_filesystem_path` from core. The 9 tests are unchanged.
+  pins: pa-local-fs-policy-1/C-006, C-011, C-014, C-016
 - `catalog_ops.rs` — **C-2d fold 1 (2026-10-07), N5:** `catalog_handle` refuses a mounted Postgres source with
   `source_read_only_message` as `NotImplemented` (the Unsupported class), and
   `refuse_read_only_dml_table_sql` prefers that text. A legacy read-only catalog keeps the P11
@@ -2539,7 +2595,7 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
      `repark_core::time_travel::read_table_at` and **keeps** the registration: that view backs the
      `DataFrame` handed to the user and has no statement boundary to release at. This is a
      DOCUMENTED RESIDUAL, not a bug, and it is what makes the facade pin
-     `python/repark/tests/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables`
+     `python/repark/tests/iceberg/test_time_travel.py::test_time_travel_temp_views_hidden_from_list_tables`
      non-vacuous (the `listTables` prefix filter has something real to hide).
   3. **The ANSI door** — `repark-sql`'s `FOR … AS OF` composes its `__repark_ansi_tt_<n>` view
      over the same `read_table_at`, so it minted a `__repark_tt_<n>` underneath. It leaked until

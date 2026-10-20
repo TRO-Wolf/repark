@@ -18,7 +18,7 @@ doors. Slices (a), (b) and (c) follow after this lands.
 | D-1 | Kernels in `crates/repark-functions/src/`, registered in `register_all` (`lib.rs`) for the SQL door. The facade reaches a new aggregate through the aggregate-kind match tables in `crates/repark-python/src/column/function_dispatch.rs` — ADD arms only, never edit or reorder existing arms. |
 | D-2 | Never edit `dataframe/**`, `column.py`, `session/**`, `catalog.py`, `types.py`, the SQL parser/dialect. `cube`/`rollup` live in GroupedData: use them as they are. |
 | D-3 | Registry: one section-7 row per residual divergence measured, each with a pin. Slice (d) lands `FNP-AGG-1-18B` FIXED with its passing pin. |
-| D-4 | Pins: `python/repark/tests/test_fnp_agg_1.py`, both doors, parametrized over the oracle cells; Rust unit tests beside each UDAF. Floats compare exactly (Spark's value); nullability is pinned except the VALUES-derived grouping key. |
+| D-4 | Pins: `python/repark/tests/functions/test_fnp_agg_1.py`, both doors, parametrized over the oracle cells; Rust unit tests beside each UDAF. Floats compare exactly (Spark's value); nullability is pinned except the VALUES-derived grouping key. |
 | D-5 | Performance: each UDAF implements `merge_batch`/`state` (multi-partition safe); `retract_batch` is NOT required. No per-row allocation in `update_batch` beyond what the algorithm needs. |
 
 ## Grouping rulings applied in this slice
@@ -69,15 +69,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every grouping clause is pinned per door against the recorded 4.1.2 cells; the exact-order rule and both error classes are pinned on both doors.
-      artifacts: [python/repark/tests/test_fnp_agg_1.py, python/repark/tests/test_fnp_agg_1_critic.py]
+      artifacts: [python/repark/tests/functions/test_fnp_agg_1.py, python/repark/tests/functions/test_fnp_agg_1_critic.py]
     - id: AT-2
       status: ATTACKED
       evidence: Zero-arg, subset, reversed-arg, non-set-column and plain-GROUP-BY shapes are all pinned; empty-frame behavior rides the shared cube path.
-      artifacts: [python/repark/tests/test_fnp_agg_1_critic.py]
+      artifacts: [python/repark/tests/functions/test_fnp_agg_1_critic.py]
     - id: AT-3
       status: ATTACKED
       evidence: Both grouping error classes are pinned with Spark's message shape on both doors; the refusal mapping stamps UNRESOLVED_ROUTINE for unknown routines.
-      artifacts: [python/repark/tests/test_fnp_agg_1.py, crates/repark-python/src/unresolved_routine.rs]
+      artifacts: [python/repark/tests/functions/test_fnp_agg_1.py, crates/repark-python/src/unresolved_routine.rs]
     - id: AT-4
       status: N/A
       justification: No shared state or ordering; the rule rewrites one plan and the UDAFs are pure accumulators.
@@ -87,7 +87,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The grouping label moves Int32 to Int8 on both doors with values unchanged; the live carve-out pins the (int8, int8) pair.
-      artifacts: [python/repark/tests/test_types_1.py]
+      artifacts: [python/repark/tests/types/test_types_1.py]
     - id: AT-7
       status: N/A
       justification: No hot path changes; the analyzer rule runs once per plan and the accumulator holds constant state.
@@ -102,7 +102,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: 16 card pins plus 8 critic pins plus 10 grouping-filter kernel tests; the exact-order, reversed-arg and subset branches each have a nameable refusing input.
-      artifacts: [python/repark/tests/test_fnp_agg_1.py, crates/repark-functions/src/grouping.rs]
+      artifacts: [python/repark/tests/functions/test_fnp_agg_1.py, crates/repark-functions/src/grouping.rs]
   reattested: []
   complete: true
 ```

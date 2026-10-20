@@ -3,11 +3,10 @@
 use std::ops::ControlFlow;
 
 use datafusion::error::{DataFusionError, Result};
-use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     AlterSchemaOperation, AlterTableOperation, ColumnOption, Delete, Expr, FromTable, ObjectName,
-    Query, Set, Statement, TableFactor, TableWithJoins, Update, Visit, Visitor,
+    Set, Statement, TableFactor, TableWithJoins, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
@@ -18,12 +17,6 @@ use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
 
 /// Needle pinned by the G15 refusal tests (both doors).
 pub(crate) const COLLATION_REFUSAL_NEEDLE: &str = "does not implement collation";
-
-/// The conf key that opens the SEC-02 local-filesystem gate.
-pub(crate) const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesystemDDL";
-
-/// DataFusion's `extensions_options!` macro registers this field under the session key.
-const ALLOW_LOCAL_FILESYSTEM_DDL_OPTION: &str = "repark.sql.allow_local_filesystem_ddl";
 
 /// Run text guards first in [`crate::router::execute`], before any rewrite.
 pub(crate) fn run_text_guards(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
@@ -307,223 +300,7 @@ fn delete_target_name(delete: &Delete) -> Option<&ObjectName> {
     tables.first().and_then(object_name_of)
 }
 
-// Guard 5: SEC-02 local-filesystem plans, runs after planning.
-
-/// Gate DataFusion filesystem-as-data plans.
-pub(crate) fn refuse_local_filesystem_plan(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    plan: &LogicalPlan,
-) -> Result<()> {
-    if allow_local_filesystem_ddl(ctx) {
-        return Ok(());
-    }
-    match plan {
-        LogicalPlan::Ddl(DdlStatement::CreateExternalTable(create)) => {
-            refuse_local_path(catalogs, "CREATE EXTERNAL TABLE", &create.location)
-        }
-        LogicalPlan::Copy(copy_to) => refuse_local_path(catalogs, "COPY TO", &copy_to.output_url),
-        _ => Ok(()),
-    }
-}
-
-/// Read the gate conf from live session options without the `repark-functions` extension.
-fn allow_local_filesystem_ddl(ctx: &SessionContext) -> bool {
-    ctx.copied_config()
-        .options()
-        .entries()
-        .into_iter()
-        .find(|entry| entry.key == ALLOW_LOCAL_FILESYSTEM_DDL_OPTION)
-        .and_then(|entry| entry.value)
-        .is_some_and(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "true" | "1"))
-}
-
-fn refuse_local_path(catalogs: &CatalogRegistry, surface: &str, raw_location: &str) -> Result<()> {
-    let Some(local_path) = local_filesystem_path(raw_location) else {
-        return Ok(());
-    };
-    if path_under_any_warehouse(catalogs, &local_path) {
-        return Ok(());
-    }
-    Err(DataFusionError::Plan(format!(
-        "{surface} to local filesystem path `{raw_location}` is disabled by default. Set conf \
-         `{ALLOW_LOCAL_FILESYSTEM_DDL_KEY}` = true to allow local CREATE EXTERNAL TABLE / COPY TO \
-         outside the session warehouse root, or use a path under a registered warehouse \
-         (grandfather). Remote locations (s3://, s3a://) are unaffected."
-    )))
-}
-
-/// Map a location to a local path when it is bare or file-schemed; remote schemes return None.
-fn local_filesystem_path(location: &str) -> Option<std::path::PathBuf> {
-    const REMOTE_SCHEMES: &[&str] = &[
-        "s3://",
-        "s3a://",
-        "s3n://",
-        "http://",
-        "https://",
-        "hdfs://",
-        "viewfs://",
-        "gs://",
-        "abfs://",
-        "abfss://",
-        "wasb://",
-        "wasbs://",
-    ];
-    let trimmed = location.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    let lower = trimmed.to_ascii_lowercase();
-    if REMOTE_SCHEMES
-        .iter()
-        .any(|scheme| lower.starts_with(scheme))
-    {
-        return None;
-    }
-    if let Some(rest) = strip_prefix_ci(trimmed, "file://") {
-        let path = strip_prefix_ci(rest, "localhost").unwrap_or(rest);
-        return Some(std::path::PathBuf::from(path));
-    }
-    if let Some(rest) = strip_prefix_ci(trimmed, "file:") {
-        return Some(std::path::PathBuf::from(rest));
-    }
-    // An unknown but well-formed scheme is somebody else's object store — leave it to DataFusion.
-    if let Some(index) = trimmed.find("://") {
-        let scheme = &trimmed[..index];
-        if !scheme.is_empty()
-            && scheme
-                .chars()
-                .all(|ch| ch.is_ascii_alphanumeric() || ch == '+' || ch == '-' || ch == '.')
-        {
-            return None;
-        }
-    }
-    Some(std::path::PathBuf::from(trimmed))
-}
-
-fn strip_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
-    if value.len() >= prefix.len() && value[..prefix.len()].eq_ignore_ascii_case(prefix) {
-        Some(&value[prefix.len()..])
-    } else {
-        None
-    }
-}
-
-fn path_under_any_warehouse(catalogs: &CatalogRegistry, path: &std::path::Path) -> bool {
-    let target = canonicalize_best_effort(path);
-    catalogs.local_warehouse_roots().iter().any(|root| {
-        let root = canonicalize_best_effort(std::path::Path::new(root));
-        target == root || target.starts_with(&root)
-    })
-}
-
-/// Canonicalize existing paths; fall back to the parent when a COPY destination does not exist.
-fn canonicalize_best_effort(path: &std::path::Path) -> std::path::PathBuf {
-    if let Ok(canonical) = path.canonicalize() {
-        return canonical;
-    }
-    if let Some(parent) = path.parent()
-        && let Ok(canonical_parent) = parent.canonicalize()
-    {
-        return match path.file_name() {
-            Some(name) => canonical_parent.join(name),
-            None => canonical_parent,
-        };
-    }
-    // Lexical dot and dot-dot handling blocks traversal bypass when canonicalization fails.
-    let mut out = std::path::PathBuf::new();
-    for component in path.components() {
-        match component {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                out.pop();
-            }
-            other => out.push(other.as_os_str()),
-        }
-    }
-    out
-}
-
-// Guard 6: G3-E8 subquery-predicate DML valve, runs on the parsed statement.
-
-/// The DML verb a G3-E8 subquery-predicate refusal names.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DmlSubqueryVerb {
-    /// SQL `DELETE`.
-    Delete,
-    /// SQL `UPDATE`.
-    Update,
-}
-
-impl DmlSubqueryVerb {
-    /// The SQL verb, for the refusal message.
-    const fn verb(self) -> &'static str {
-        match self {
-            Self::Delete => "DELETE",
-            Self::Update => "UPDATE",
-        }
-    }
-
-    /// What the statement would silently do today, for the refusal message.
-    const fn consequence(self) -> &'static str {
-        match self {
-            Self::Delete => "delete EVERY row of the table",
-            Self::Update => "update EVERY row of the table",
-        }
-    }
-
-    /// The `MERGE INTO` arm the workaround uses, for the refusal message.
-    const fn merge_action(self) -> &'static str {
-        match self {
-            Self::Delete => "DELETE",
-            Self::Update => "UPDATE SET <assignments>",
-        }
-    }
-}
-
-/// Refuse delegated `DELETE` / `UPDATE` whose `WHERE` subquery can become a match-all write.
-pub(crate) fn refuse_dml_subquery_predicate(statement: &Statement) -> Result<()> {
-    let (verb, selection, target) = match statement {
-        Statement::Delete(delete) => (
-            DmlSubqueryVerb::Delete,
-            delete.selection.as_ref(),
-            delete_target(delete).map_or_else(|| "<table>".to_string(), ToString::to_string),
-        ),
-        Statement::Update(update) => (
-            DmlSubqueryVerb::Update,
-            update.selection.as_ref(),
-            update_target(update).map_or_else(|| update.table.to_string(), ToString::to_string),
-        ),
-        _ => return Ok(()),
-    };
-    if repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)?.is_some()
-        || repark_iceberg::write::predicate_dml::try_allowed_update_in(statement)?.is_some()
-    {
-        return Ok(());
-    }
-    let Some(selection) = selection else {
-        return Ok(());
-    };
-    if !expression_contains_subquery(selection) {
-        return Ok(());
-    }
-    Err(DataFusionError::Plan(dml_subquery_refusal_message(
-        verb, &target,
-    )))
-}
-
-/// The `ObjectName` a `DELETE` targets from the parse tree, including `FROM t` forms.
-fn delete_target(delete: &Delete) -> Option<&ObjectName> {
-    let tables = match &delete.from {
-        FromTable::WithFromKeyword(tables) | FromTable::WithoutKeyword(tables) => tables,
-    };
-    object_name_of(tables.first()?)
-}
-
-/// The `ObjectName` an `UPDATE` targets — the primary relation of its `TableWithJoins`.
-fn update_target(update: &Update) -> Option<&ObjectName> {
-    object_name_of(&update.table)
-}
+pub(crate) use repark_core::local_fs_policy::refuse_local_filesystem_plan;
 
 /// The plain table name of a `TableWithJoins`' primary relation, if it is one.
 fn object_name_of(table: &TableWithJoins) -> Option<&ObjectName> {
@@ -531,38 +308,6 @@ fn object_name_of(table: &TableWithJoins) -> Option<&ObjectName> {
         TableFactor::Table { name, .. } => Some(name),
         _ => None,
     }
-}
-
-/// Return true when a `Query` node appears inside `expr`, so the expression carries a subquery.
-fn expression_contains_subquery(expr: &Expr) -> bool {
-    struct SawSubquery;
-    struct SubqueryProbe;
-    impl Visitor for SubqueryProbe {
-        type Break = SawSubquery;
-
-        fn pre_visit_query(&mut self, _query: &Query) -> ControlFlow<Self::Break> {
-            ControlFlow::Break(SawSubquery)
-        }
-    }
-    expr.visit(&mut SubqueryProbe).is_break()
-}
-
-/// The G3-E8 refusal text is byte-identical to the Spark door's.
-fn dml_subquery_refusal_message(verb: DmlSubqueryVerb, table: &str) -> String {
-    format!(
-        "{verb_name} with a subquery in its WHERE clause is refused on `{table}`: subquery \
-         predicates are silently mis-executed today — DataFusion's DML planner decorrelates \
-         IN / NOT IN / EXISTS / ANY / ALL / correlated predicates into a semi-join and then \
-         recovers NO filter for the Iceberg writer, so this statement would \
-         {consequence} instead of only the matching ones (defect G3-E8, silent data loss). \
-         Rewrite it as `MERGE INTO {table} AS target USING (<the subquery>) AS source \
-         ON <join keys> WHEN MATCHED THEN {action}` — the RePark-owned MERGE executor never \
-         crosses that seam, and it is the dbt adapter's proven vehicle. Support returns when the \
-         underlying fix lands; non-subquery {verb_name} predicates are unaffected.",
-        verb_name = verb.verb(),
-        consequence = verb.consequence(),
-        action = verb.merge_action(),
-    )
 }
 
 // Guard: G15 collation refuse at parse altitude.

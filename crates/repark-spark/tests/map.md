@@ -82,6 +82,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   refuses, as the kernel refuses an encoded argument). Kills the mutant that stops seeing
   through `Dictionary` for the zoned target at the store.
   pins: ice-tstzns-wall-1/C-003, C-004, C-005, C-010
+- [ice_tsns_type_planner_1_update_forms.rs](ice_tsns_type_planner_1_update_forms.rs) —
+  **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):** in an America/New_York session, a
+  `timestamp_ns` and a `timestamptz_ns` source into a `TIMESTAMP` column, copy-on-write and
+  merge-on-read: `UPDATE … SET v = c`, the same with `WHERE id >= 0`, and `SET v = CAST(c
+  AS TIMESTAMP) WHERE id >= 0` store one value (a pre-1970 value with digits below the
+  microsecond among them). Red with the identity UPDATE seam reverted alone.
+  pins: ice-tsns-type-planner-1/C-019
 - [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
   (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
   an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`
@@ -113,6 +120,55 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
   The two nested store pins of fold 1 left with the split; the nested pins are the next row.
   pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
+- [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2
+  (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
+  `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
+  entry names its own kernel, and the wall names equal `repark-functions`' constants. The ANSI
+  door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`. pins: ice-struct-pairing-1/C-014
+- [struct_pairing_doors.rs](struct_pairing_doors.rs) —
+  **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
+  the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
+  writers' SQL, overwrite intent and `source_by_name`) × the shapes `reordered`, `renamed`,
+  `extra`, `missing` of a top-level `STRUCT<a: INT, b: INT>`. The expected answer comes from
+  Spark's rule in the test (by position on `INSERT`, `VALUES`, `INSERT OVERWRITE`, `REPLACE
+  WHERE` and `insertInto`; by name elsewhere), with the refusal's full text and table label.
+  `UPDATE` with no `WHERE` keeps main's raw refusal for the reordered shape (parity row
+  R-014). Red on main: 34 of 64 cells. **Correction (2026-10-14):** `INSERT … VALUES` with a
+  surplus or a missing field keeps main's raw planner refusal (list L1, parity row R-018), as
+  the facade fixture holds it; red on main is 32 of 64 cells. Build round 2: the count of
+  written rows is `i32::from`, for clippy's `bool_to_int_with_if`; and
+  `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins hint H-1 on
+  the partition overwrite route: `PARTITION (p = 1)` (S3, `strict_partition_store_cast`)
+  refuses with the static-partition hint and `PARTITION (p)` (S2 through
+  `write_overwrite_staged_files_from_stream`) with the batch hint, the seeded row kept; the
+  same static statement with the struct in the table's field order stores.
+  pins: ice-struct-pairing-1/C-002, C-008, C-009, C-011, C-013
+  **Build round 3 (2026-10-14, ruling 55(a) F-07):**
+  `a_by_name_frame_door_pairs_under_the_session_case_rule` drives the by-name DataFrame door
+  (`source_by_name`) with a recased struct under each value of the session's case carrier:
+  case-insensitive it stores `{a:1, b:2}`, case-sensitive it refuses with Spark's
+  `CANNOT_FIND_DATA` for `` `st`.`a` `` and stores nothing (kills verifier 1's mutant O5, the
+  passthrough dropping `caseSensitive`). pins: ice-struct-pairing-1/C-032
+  **Exception round (2026-10-15, V2-02):**
+  `multi_row_values_refuse_as_spark_when_rows_disagree_on_struct_names` drives a two-row
+  `VALUES` through the three column-list spellings (none, `(id, st)`, `(st, id)`) with field
+  names that disagree, rows that disagree only in order, and rows that differ only in case
+  under each value of the session's case carrier: each disagreement refuses with Spark's
+  `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE` text for `col2` (`col1` for the
+  swapped list) and writes neither row; rows that agree, in case-insensitive mode or in an order
+  other than the table's, store by position as Spark does. pins: ice-struct-pairing-1/C-033
+  **Exception round (2026-10-15, verifier 2's V2-03): the four mutant pins.**
+  `a_paired_struct_leaf_spark_refuses_refuses_on_every_insert_spelling` (`INSERT … SELECT`,
+  `VALUES`, column-list `VALUES` and `INSERT OVERWRITE` of `named_struct('b', '5', 'a', 1)`
+  into `STRUCT<a: BIGINT, b: STRING>` refuse Spark's `CANNOT_SAFELY_CAST` for `` `st`.`a` ``,
+  nothing written; kills `V2_L1`, the door-level leaf judge off);
+  `a_column_list_values_row_maps_each_value_to_its_listed_column` (`(st, id)` and `(id, st)`
+  lists store by position into their listed columns; kills `V2_N3`);
+  `the_update_refusal_pairs_under_the_session_case_rule` (case twins under
+  `caseSensitive=true`, with and without `WHERE`, refuse `CANNOT_FIND_DATA` for `` `st`.`b` ``;
+  kills `V2_N4`); `an_update_from_a_column_subquery_with_a_comparison_stores_spark_value`
+  (`WHERE id = 0` from a reordered and an in-order source stores `{a: 1, b: 2}`; kills
+  `V2_N5`). pins: ice-struct-pairing-1/C-037
   **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
   `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
   `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE
@@ -123,6 +179,40 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   answer must differ from plain `INSERT` in a UTC session. The verify's mutants M2 (the MERGE
   insert arm reads the wall as UTC) and M10 (the wall is not localised) each red it.
   pins: ice-tsns-floor-doors-1/C-015
+- [update_subquery_refusal.rs](update_subquery_refusal.rs) —
+  **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), owner rulings 74(a) and 90(a):** the
+  Spark SQL door. `UPDATE t SET col = (SELECT col FROM t_src)` and the subquery with its own
+  `WHERE`, under `WHERE true`, `WHERE id IN (0, 3)` and no `WHERE`, refuse with the ruling 90
+  text and leave both rows as seeded: for a flat INT column
+  (`ruling_74_a_flat_int_update_from_a_subquery_refuses_on_the_spark_door`) and a struct
+  column fed reordered and in order
+  (`ruling_90_a_struct_update_from_a_subquery_refuses_on_the_spark_door`).
+  `the_identity_update_from_a_subquery_still_stores_on_the_spark_door` holds `WHERE id = 0` to
+  Spark's value on the same three columns.
+  `ruling_90_a_an_update_from_a_subquery_refuses_for_every_column_type` holds the refusal and
+  the unchanged table for twelve column types (STRING, BIGINT, DOUBLE, DECIMAL, BOOLEAN, DATE,
+  TIMESTAMP, TIMESTAMP_NTZ, ARRAY, MAP, a nested struct, an array of structs) under
+  `WHERE true`. The ANSI door's twin is `repark-sql/tests/ansi_update_subquery_refusal.rs`.
+  **Owner ruling 95 (2026-10-15):** every refused cell also reads, before and after the
+  statement, the table's current snapshot id, its snapshot count, its metadata location and the
+  file names under its `metadata/` directory, through the session's own catalog, and fails on
+  any change.
+  `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_spark_door` holds the
+  same refusal under `WHERE false` and `WHERE id BETWEEN 100 AND 200` (a filter the identity
+  path declines that matches no row; `WHERE id > 100` is a scalar comparison the identity path
+  runs) for the INT column and both struct sources: 12 cells.
+  `ruling_95_the_whole_refused_family_answers_one_text_on_the_spark_door` collects the text of
+  every refused cell of the file (42 cells) and holds them, the door's
+  `Error during planning: ` prefix removed, to the one ruling 90 text;
+  `ruling_95_the_refusal_names_no_data_deleting_action_on_the_spark_door` holds that no text
+  names `DROP`, `DELETE`, `TRUNCATE`, `OVERWRITE`, `REPLACE`, `PURGE`, `expire` or
+  `remove_orphan`, in any case.
+  **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
+  `ruling_99_c_a_scalar_subquery_inside_the_set_expression_refuses_on_the_spark_door` holds
+  `SET v = 1 + (SELECT v FROM src)`, `COALESCE((SELECT v FROM src), 0)` and
+  `CASE WHEN true THEN (SELECT v FROM src) ELSE 0 END`, each under `WHERE true` (the identity
+  path does not run), to the ruling-90 text with both seeded rows unchanged.
+  pins: ice-struct-pairing-1/C-034, C-035, C-036
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,
@@ -148,6 +238,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
   `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
   pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
+  **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
+  R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
+  (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that
+  `UPDATE … SET v = CASE WHEN id > 0 THEN c ELSE NULL END` and its three sibling spellings
+  (`NULL_SIBLING_UPDATES`) store what `SET v = c` stores, nine digits, for a `timestamp_ns`
+  and a `timestamptz_ns` source. Oracle: Spark 4.1.2's microsecond twin of the four statements
+  (Iceberg 1.11.0, New York, 2026-10-15) stores `c` unchanged; a NULL takes its sibling's
+  type. pins: ice-tsns-type-planner-1/C-033
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to
@@ -183,10 +281,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
 | See the TA SQL route pinned bit-exact | [ta_window.rs](ta_window.rs) |
 | See the session-timezone class pinned at the Spark door + DataFrame API | [session_timezone.rs](session_timezone.rs) |
 | See the same class at the ANSI door | [../../repark-sql/tests/session_timezone_ansi_door.rs](../../repark-sql/tests/session_timezone_ansi_door.rs) |
-| See the same class at the facade | [../../../python/repark/tests/test_session_timezone_parity.py](../../../python/repark/tests/test_session_timezone_parity.py) |
+| See the same class at the facade | [../../../python/repark/tests/timestamps/test_session_timezone_parity.py](../../../python/repark/tests/timestamps/test_session_timezone_parity.py) |
 | See the timestamp-cast epoch-seconds class at the Spark door + DataFrame API | [timestamp_cast_seconds.rs](timestamp_cast_seconds.rs) |
 | See that class at the ANSI door | [../../repark-sql/tests/timestamp_cast_ansi_door.rs](../../repark-sql/tests/timestamp_cast_ansi_door.rs) |
-| See that class at the facade | [../../../python/repark/tests/test_timestamp_cast_parity.py](../../../python/repark/tests/test_timestamp_cast_parity.py) |
+| See that class at the facade | [../../../python/repark/tests/timestamps/test_timestamp_cast_parity.py](../../../python/repark/tests/timestamps/test_timestamp_cast_parity.py) |
 
 ## Pointers
 

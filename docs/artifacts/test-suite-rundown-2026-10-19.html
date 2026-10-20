@@ -1,0 +1,132 @@
+<title>Test Suite Reorganisation</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f7f6f2;--fg:#1d1f1c;--muted:#5d625c;--line:#d9d6cc;--card:#ffffff;--accent:#1f6f50;--accent-ink:#ffffff;--warn:#9a5b00;--code-bg:#eeece5;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171a;--fg:#e8e6e0;--muted:#a3a79f;--line:#30343a;--card:#1d2024;--accent:#55b98c;--accent-ink:#0e1a14;--warn:#e0a84a;--code-bg:#23272c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15171a;--fg:#e8e6e0;--muted:#a3a79f;--line:#30343a;--card:#1d2024;--accent:#55b98c;--accent-ink:#0e1a14;--warn:#e0a84a;--code-bg:#23272c;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:16px;line-height:1.5;margin:0;padding-block:32px 64px;padding-inline:16px}
+main{max-width:980px;margin:0 auto}
+h1{font-size:2rem;line-height:1.15;margin:0 0 6px;text-wrap:balance;font-weight:600}
+h2{font-size:1.3rem;margin:44px 0 12px;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:22px 0 8px;font-weight:600}
+p{max-width:68ch;margin:0 0 12px}
+.sub{color:var(--muted);margin-bottom:28px;max-width:72ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0 8px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+.tile .n{font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .l{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:6px}
+.tile .d{font-size:.9rem;color:var(--muted);margin-top:4px}
+.tbl{overflow-x:auto;margin:10px 0 16px}
+table{border-collapse:collapse;width:100%;font-size:.94rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.04em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.86rem;background:var(--code-bg);padding:12px 14px;border-radius:6px;overflow-x:auto;margin:8px 0 16px}
+ul,ol{max-width:72ch;padding-left:22px}
+li{margin-bottom:6px}
+.tag{display:inline-block;font-size:.74rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:var(--accent);color:var(--accent-ink)}
+.tag.open{background:transparent;color:var(--warn);border:1px solid var(--warn)}
+.decision{border-left:3px solid var(--accent);padding:10px 14px;background:var(--card);border-radius:0 6px 6px 0;margin:12px 0}
+.decision strong{display:block;margin-bottom:4px}
+.small{font-size:.86rem;color:var(--muted)}
+</style>
+<main>
+<h1>Test suite reorganisation, 19 October 2026</h1>
+<p class="sub">Everything that landed today under the owner's override of the 3 October test-speed ruling: the scheduler fix, the pytest configuration and fast tier, the thirteen-directory layout, and the deep-battery split. Measured on the owner's box under <code>taskset -c 0-25</code> and on hosted CI.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="n">23:53 → 5:55</div><div class="l">facade suite, local</div><div class="d">16 workers; 6:41 with the three merged PRs, 5:55 with #1115</div></div>
+  <div class="tile"><div class="n">89 s</div><div class="l">fast tier</div><div class="d"><code>make py-test-facade-fast</code>, 15,273 tests</div></div>
+  <div class="tile"><div class="n">1 → 13</div><div class="l">test directories</div><div class="d">535 files, same 20,704 node ids</div></div>
+  <div class="tile"><div class="n">6.8 → 5.1</div><div class="l">slowest CI shard, min</div><div class="d">now the type-planner census file, not the battery</div></div>
+  <div class="tile"><div class="n">342 → 286 s</div><div class="l">suite floor</div><div class="d">one 20,000-term OR build; product code, see findings</div></div>
+  <div class="tile"><div name="counts" class="n">20066 / 493 / 151</div><div class="l">passed / skipped / xfailed</div><div class="d">identical in every run today</div></div>
+</div>
+
+<h2>1. The pull requests</h2>
+<div class="tbl"><table>
+<tr><th>PR</th><th>Unit</th><th>Executor</th><th>Result</th><th>State</th></tr>
+<tr><td>#1112</td><td>FACADE-XDIST-SCHED-1: <code>-n 16 --dist loadgroup --maxschedchunk=8</code> in the Makefile and <code>-n 4</code> plus the same flags in every smoke shard; <code>xdist_group</code> on the two batteries; <code>timeout-minutes: 45</code> on the facade job; the duplicate <code>ci.yml</code> map rows merged.</td><td>this session</td><td>23:53 → 6:41 locally; CI slowest shard 6.8 → 5.5 min</td><td><span class="tag">merged</span> 14:50 EDT</td></tr>
+<tr><td>#1114</td><td>FACADE-PYTEST-CONFIG-1: <code>[tool.pytest.ini_options]</code> with <code>--strict-markers --strict-config</code>, <code>xfail_strict</code>, a 1200 s per-test timeout through <code>pytest-timeout</code>, registered <code>perf</code> and <code>slow</code> markers; shared <code>spark</code> and <code>spark_with_warehouse</code> fixtures in <code>conftest.py</code> for new files; <code>slow</code> on the 19 files above 30 s; <code>make py-test-facade-fast</code>.</td><td>Sonnet 5.5</td><td>zero XPASS, so strict xfail is on; fast tier 89 s</td><td><span class="tag">merged</span> 15:26, <code>72a6c0db</code></td></tr>
+<tr><td>#1113</td><td>FACADE-TESTS-LAYOUT-1: thirteen subsystem directories by <code>git mv</code>; 135 files changed only in a path expression; four Rust oracle paths, the smoke shard split (<code>find</code> instead of <code>ls</code>), 118 markdown links and the prose mentions repointed; a <code>map.md</code> per directory; the layout rule in <code>docs/testing.md</code> and <code>DEVELOPMENT.md</code>.</td><td>Opus 5.5</td><td>collect-only node ids identical modulo directory (diff 0 lines)</td><td><span class="tag">merged</span> 15:45, <code>1199cf94</code></td></tr>
+<tr><td>#1115</td><td>DEEP-BATTERY-SPLIT-1: each shape of the four deep batteries runs in its own isolated interpreter in its own test; every assertion line byte-identical; the module-wide <code>xdist_group</code> marks go, one two-test group stays.</td><td>Opus 5.5</td><td>batteries 398 → 308 s at 8 workers; suite 6:41 → 5:55</td><td><span class="tag open">open, CI running</span></td></tr>
+<tr><td>#1111</td><td>Docs: this page, the morning rundown and the evaluation page under <code>docs/artifacts/</code>.</td><td>this session</td><td></td><td><span class="tag open">open</span></td></tr>
+</table></div>
+
+<h2>2. What changes day to day</h2>
+<ul>
+<li><strong>A new test goes in the directory of the subsystem it pins.</strong> A new subsystem is a new directory with its own <code>map.md</code>. The rule is written in <code>docs/testing.md</code>; the nine shared helpers and <code>conftest.py</code> stay at the root, and pytest's import mode puts both the root and the file's own directory on the path.</li>
+<li><strong>Inner loop:</strong> <code>make py-test-facade-fast</code> runs everything except the 19 <code>slow</code> files in about 90 seconds after the build. CI still runs everything.</li>
+<li><strong>Full facade stage:</strong> <code>make py-test-facade</code> is about six minutes after the build, against 24 this morning and 69 two days ago. <code>FACADE_WORKERS</code> overrides the worker count.</li>
+<li><strong>Strictness:</strong> an unregistered marker or an unknown ini key is now an error; an xfail that passes is now a failure; a test that runs past 1200 s is killed and named.</li>
+<li><strong>New files may use the shared fixtures</strong> <code>spark</code> (per-test session named after the node, stopped on teardown; 93 of the 283 local fixtures had this exact body) and <code>spark_with_warehouse</code> (a <code>mem</code> catalog rooted at <code>tmp_path</code> with namespace <code>mem.ns</code>; the second-commonest body at 17 files). Existing files were not rewritten.</li>
+<li><strong>Open branches with test files</strong> (#1048, #1047, #1038, #1037, #1014, #1011, #1000, #888, #884, #881, #643, #411) merge main normally: git resolves rename-plus-modify, and a new file they add at the flat root is still collected. Move it into its directory when the branch is picked up.</li>
+</ul>
+
+<h2>3. The layout</h2>
+<div class="tbl"><table>
+<tr><th>Directory</th><th class="num">Tests</th><th class="num">Helpers</th><th class="num">Data</th><th>Charter</th></tr>
+<tr><td><code>functions/</code></td><td class="num">89</td><td class="num">2</td><td class="num">24</td><td>The <code>repark.spark.functions</code> surface and its SQL-door twins</td></tr>
+<tr><td><code>iceberg/</code></td><td class="num">76</td><td class="num">20</td><td class="num">17</td><td>Table format: catalogs, DDL and evolution, metadata, time travel, branches, maintenance, views, scans</td></tr>
+<tr><td><code>dataframe/</code></td><td class="num">73</td><td class="num">2</td><td class="num">13</td><td>The DataFrame door: transformations, joins, grouping, Column and Row, display, eager semantics</td></tr>
+<tr><td><code>writes/</code></td><td class="num">62</td><td class="num">28</td><td class="num">17</td><td>The Iceberg write path on every door: INSERT, OVERWRITE, CTAS/RTAS, MERGE, UPDATE, DELETE, writers, options</td></tr>
+<tr><td><code>io/</code></td><td class="num">41</td><td class="num">5</td><td class="num">3</td><td>Readers and writers, Postgres, S3, source mounts, ingestion, pandas and polars interchange</td></tr>
+<tr><td><code>session/</code></td><td class="num">34</td><td class="num">0</td><td class="num">2</td><td>Builder, config, catalog API, error taxonomy, threading, tracing, secrets, local filesystem policy</td></tr>
+<tr><td><code>resolution/</code></td><td class="num">30</td><td class="num">1</td><td class="num">2</td><td>Attribute ids, self-joins, duplicate names, case sensitivity, aliases, temp-view semantics</td></tr>
+<tr><td><code>timestamps/</code></td><td class="num">28</td><td class="num">31</td><td class="num">23</td><td>LTZ and NTZ, nanosecond types, zones, timestamp casts and store doors</td></tr>
+<tr><td><code>types/</code></td><td class="num">27</td><td class="num">4</td><td class="num">12</td><td>Data types, cast vocabulary and failures, numeric semantics, literal typing</td></tr>
+<tr><td><code>perf/</code></td><td class="num">26</td><td class="num">0</td><td class="num">0</td><td>Perf gates, spill and memory pools, cache retention, small-stack gates, bench harnesses</td></tr>
+<tr><td><code>parity/</code></td><td class="num">26</td><td class="num">3</td><td class="num">0</td><td>Acceptance and cutover batteries, the live PySpark oracle tier, dogfood records, the EX examples</td></tr>
+<tr><td><code>sql/</code></td><td class="num">18</td><td class="num">2</td><td class="num">2</td><td>Grammar and literals, the native sql door, SET and RESET, routing, the four deep batteries</td></tr>
+<tr><td><code>ml/</code></td><td class="num">5</td><td class="num">0</td><td class="num">0</td><td><code>repark.spark.ml</code></td></tr>
+<tr><td>root</td><td class="num">0</td><td class="num">9</td><td class="num">1</td><td><code>conftest.py</code>, the shared helpers, <code>fixtures/</code></td></tr>
+</table></div>
+<p class="small">Examples folded into <code>parity/</code>; no <code>streaming/</code> (one file, and it pins a batch frame); <code>ml/</code> stays small because it is its own package. The root <code>map.md</code> keeps its 10,611 lines of dated history and the 876 ledger citations, with a Layout section on top.</p>
+
+<h2>4. Measurements</h2>
+<div class="tbl"><table>
+<tr><th>Run</th><th>Where</th><th class="num">Wall</th></tr>
+<tr><td>Facade, 8 workers, <code>load</code> (this morning's main)</td><td>local</td><td class="num">23:53</td></tr>
+<tr><td>Facade, 16 workers, <code>load</code></td><td>local</td><td class="num">14:55</td></tr>
+<tr><td>Facade, 16 workers, <code>worksteal</code></td><td>local</td><td class="num">11:16</td></tr>
+<tr><td>Facade, 16 workers, <code>loadgroup --maxschedchunk=8</code> + two groups (#1112)</td><td>local</td><td class="num">6:41</td></tr>
+<tr><td>Facade after the battery split (#1115)</td><td>local</td><td class="num">5:55</td></tr>
+<tr><td>Fast tier, <code>-m "not slow"</code>, 15,273 tests</td><td>local</td><td class="num">1:29</td></tr>
+<tr><td>Two batteries alone, 8 workers, before → after split</td><td>local</td><td class="num">398 s → 308 s</td></tr>
+<tr><td>Slowest smoke shard before today (battery alone)</td><td>CI</td><td class="num">6.8 min</td></tr>
+<tr><td>Slowest smoke shard after #1113 (type-planner census alone)</td><td>CI</td><td class="num">5.1 min</td></tr>
+<tr><td>Wheel build, cache hit</td><td>CI</td><td class="num">10.7 min</td></tr>
+</table></div>
+<p>Where the suite's time goes did not change: 62 worker-minutes of test time, 82 percent in twenty files, now spread so that no worker holds a long tail. The remaining floor is one test, the 20,000-term OR refusal, at 286 s.</p>
+
+<h2>5. Findings for the owner</h2>
+<ol>
+<li><strong>The 20,000-term OR build is quadratic on the Python door.</strong> Building <code>reduce(lambda x, y: x | y, …)</code> over Column objects costs 2.3 s at 2,500 terms, 11.0 s at 5,000, 58.2 s at 10,000 and 286 s at 20,000, while the <code>filter().count()</code> refusal itself stays under 0.1 s. That is product code in the facade's Column expression build, not the test, and it is now the whole floor of the suite. A perf unit could measure where the growth is (string rendering of the fragment at each level, or the binding) and fix it under the usual like-for-like gate.</li>
+<li><strong>A timing pin flaked under load.</strong> <code>perf/test_perf_unpivot_1.py::test_stack_is_linear_in_columns</code> failed once in a baseline run with an exponent of 1.415 against its 1.1 bound while other work had the box at load 10 to 17; it passed in every run on a quiet box. It is the fourth timing-shaped flake candidate after the spill, OCC and fence cards.</li>
+<li><strong>One cold wheel build on CI.</strong> The config PR's wheel took 29.9 min compiling 487 crates: rust-cache's environment hash rotated between the morning and the afternoon, so no key matched. Main re-saved under the new hash at 19:11 UTC and the next PR hit again at 10.7 min. Nothing in the PRs caused it; a bumped runner image is the usual reason.</li>
+<li><strong>One frozen digest re-recorded.</strong> <code>python/repark-parity/tests/test_sqp_1_record.py</code> is byte-frozen by a digest in the PR-245 revalidation pin; its only change is the path of a test file it reads. The digest was re-recorded, the same remedy the v3 lineage tripwire uses.</li>
+<li><strong>Squash merges lose shared history.</strong> Each of the three branches had merged the previous one, and after each squash the next branch still needed a hand merge of main. Stacked PRs in this repo cost one hand merge per step; a single PR per step would not.</li>
+<li><strong>Stale dated entries stay.</strong> The scheduler entry in the tests map still describes the module-wide groups that #1115 removes; the sql directory map records the change. The three code comments that say a file "lives at python/repark/tests/" were left, since rewriting them would add comment lines.</li>
+</ol>
+
+<h2>6. Decisions that are yours</h2>
+<div class="decision"><strong>Merge #1115.</strong> Green locally with every assertion byte-identical; CI was running when this page was written. It takes the facade from 6:41 to 5:55 and moves the floor onto a product finding.</div>
+<div class="decision"><strong>Rewrite the 3 October ruling in the lessons file.</strong> Clause 1 now reads: shared fixtures for new files, no rewrite of existing bodies; layout changes by <code>git mv</code> under the rule in <code>docs/testing.md</code>. Clauses 2 to 4 stand; the memory pin file moved as a whole and was never split.</div>
+<div class="decision"><strong>Open a perf unit on the Column OR build</strong>, or leave the 286 s floor. Everything else in the suite finishes within about three minutes at 16 workers.</div>
+<div class="decision"><strong>The earlier open items are unchanged:</strong> C-006 storm tolerance, the PA-15 bound on slow disk, the ledger moves, the opt-level-1 wheel measurement, and the three flake cards.</div>
+
+<h2>7. Mechanics and housekeeping</h2>
+<ul>
+<li>Agents: one Sonnet 5.5 (config), two Opus 5.5 (layout, battery split), each in a scratch clone from GitHub with the noreply identity and the repo hooks; the scheduler PR was made in the measured clone. Trailers are <code>Authored-By: Claude (&lt;model&gt;)</code> only.</li>
+<li>Merges through the chain script with the update-branch API; each branch that conflicted was merged with main by hand and pushed without force.</li>
+<li>Scratch: the config and layout clones are deleted; the battery-split clone keeps its built environment for a verifier; the measured clone from this morning is kept. 502 GB free.</li>
+</ul>
+
+<h2>Sources</h2>
+<ul class="small">
+<li>PRs #1112, #1113, #1114, #1115 and their bodies; smoke runs 39288729274 (#1112), 39306119175 (#1114, cold wheel), 39311171775 (#1113).</li>
+<li>Hand-backs under the session scratch directory: <code>testorg/b/handback.md</code>, <code>testorg/c/handback.md</code>, <code>testorg/d/handback.md</code>; measurement logs <code>testeval/logs/measure*.log</code>, <code>testorg/logs/pr-a-facade.log</code>.</li>
+<li>The evaluation page of this morning and the CI speed rundown, both filed by PR #1111.</li>
+</ul>
+</main>

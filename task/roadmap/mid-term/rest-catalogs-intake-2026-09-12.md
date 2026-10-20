@@ -451,7 +451,7 @@ without either vendor's auth.
 
 **Tier 3 — owner-gated live tier.** RePark's precedent is not `REPARK_LIVE` — it is
 `REPARK_AWS_ACCEPTANCE`: a module-level `pytest.mark.skipif` at
-`python/repark/tests/test_aws_acceptance.py:80-86` ("real-AWS acceptance harness: set
+`python/repark/tests/parity/test_aws_acceptance.py:80-86` ("real-AWS acceptance harness: set
 REPARK_AWS_ACCEPTANCE=1 to run"), with the secrets supplied only by a dedicated workflow that
 carries an owner-approved GitHub environment — `.github/workflows/aws-acceptance.yml:13-18`
 (nightly cron + `workflow_dispatch`), `:32` (`environment: aws-acceptance`), `:65-71` (OIDC role

@@ -11,7 +11,7 @@ Build `/tmp/oc-worker/direct/wo/attr-id-1/replay/`. It needs one driver, `replay
 **Cells come from:**
 - `/tmp/oc-worker/direct/wo/cs2-verify-evidence/probe*.py`;
 - `reverify-cs2-evidence/`, `reverify2-cs2-evidence/`, `reverify3-cs2-evidence/`, `reverify4-cs2/corpus/` and `reverify5-cs2/`;
-- `python/repark/tests/casesens_2_spark_oracle.json`, read from `/tmp/xs-cs1`, the #881 lane at 121c4bd0. Main does not have that file.
+- `python/repark/tests/resolution/casesens_2_spark_oracle.json`, read from `/tmp/xs-cs1`, the #881 lane at 121c4bd0. Main does not have that file.
 
 Port the cells into the one driver. Do not import the verifiers' scripts in place, and never modify or delete anything in those folders.
 

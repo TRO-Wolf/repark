@@ -36,7 +36,7 @@ VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 ### 1a. The pins are red on main for the named reason (2026-09-18)
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4
+.venv/bin/python -m pytest python/repark/tests/sql/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4
 22 failed, 7 passed in 1.26s
 ```
 
@@ -64,7 +64,7 @@ is untouched. Rust pins live file-backed in `range_table/tests.rs`.
 
 | Command | Result |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4` | 0 — 29 passed |
+| `.venv/bin/python -m pytest python/repark/tests/sql/test_range_tvf_id_1.py -q -p no:cacheprovider -n 4` | 0 — 29 passed |
 | `test_profiles1_table_properties.py` + `test_date_fn_1.py` + `test_f1_sql_expander.py` (`-n 4`) | 0 — 84 passed |
 | `test_perf_ice_catalog_io_1.py` (all range-seed tests; glue/s3tables acceptance and the peak-RSS subprocess excluded) | 0 — 33 passed |
 | `cargo test -p repark-core range_table` | 0 — 12 passed |
@@ -108,19 +108,19 @@ COVERAGE_ATTESTATION:
         SQL doors (§1a red, §3 green) and the DataFrame door; each pin asserts the
         measured schema string, nullability, and rows, and the value cells redden
         when the column is `value`.
-      artifacts: [python/repark/tests/test_range_tvf_id_1.py]
+      artifacts: [python/repark/tests/sql/test_range_tvf_id_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The Spark cells are the verbatim orchestrator recording (Spark 4.1.2,
         local[2], UTC), committed under range_tvf_id_1/ with SHA-256; the committed
         `_record_range_tvf_id_1.py` driver re-derives them and exits non-zero on drift.
-      artifacts: [python/repark/tests/_record_range_tvf_id_1.py]
+      artifacts: [python/repark/tests/sql/_record_range_tvf_id_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Refusal paths are pinned by class on both doors (zero step, SELECT
         value); the 4-argument acceptance, negative step, empty frame, and string
         coercion are pinned as answers. No silent path exists.
-      artifacts: [python/repark/tests/test_range_tvf_id_1.py, crates/repark-core/src/range_table/tests.rs]
+      artifacts: [python/repark/tests/sql/test_range_tvf_id_1.py, crates/repark-core/src/range_table/tests.rs]
     - id: AT-4
       status: ATTACKED
       evidence: The new provider holds no mutable state (pure argument coercion over
@@ -136,7 +136,7 @@ COVERAGE_ATTESTATION:
       evidence: Every pinned value is a measured value (§1, §3 verbatim blocks), not
         prose: the `id` schema strings, the row lists, the AnalysisException classes,
         the declared `sum(range().id)` display name.
-      artifacts: [python/repark/tests/test_range_tvf_id_1.py]
+      artifacts: [python/repark/tests/sql/test_range_tvf_id_1.py]
     - id: AT-7
       status: N/A
       justification: No wall-clock claim anywhere in the change.

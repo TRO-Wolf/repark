@@ -9,7 +9,7 @@ name) with no write since, the added column in a predicate / merge key / `NOT MA
 arm, the v3 `ADD COLUMN … DEFAULT` refusal, and the v3 `_row_id` /
 `_last_updated_sequence_number` read of the same evolved tables — and one Spark-created,
 Spark-evolved table the JVM-free tier adopts with `register_table`. Recorded 2026-09-17 by
-`python/repark/tests/_record_ice_evo_dml_1.py` on PySpark 4.1.2 +
+`python/repark/tests/writes/_record_ice_evo_dml_1.py` on PySpark 4.1.2 +
 iceberg-spark-runtime-4.1_2.13:1.11.0 (ANSI on, Hadoop catalog). Four recordings as the catalog
 grew (109 cases, then 141 with `rename_swap`, then 145 with `lineage_read`, then 183 with the
 round-3 L-02 shapes) agree on every shared case. Never hand-edited: re-run the driver.
@@ -33,8 +33,8 @@ round-3 L-02 shapes) agree on every shared case. Never hand-edited: re-run the d
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Cells: [../../../../../repark/tests/test_ice_evo_dml_1.py](../../../../../repark/tests/test_ice_evo_dml_1.py)
-- Driver: [../../../../../repark/tests/_record_ice_evo_dml_1.py](../../../../../repark/tests/_record_ice_evo_dml_1.py)
+- Cells: [../../../../../repark/tests/test_ice_evo_dml_1.py](../../../../../repark/tests/writes/test_ice_evo_dml_1.py)
+- Driver: [../../../../../repark/tests/_record_ice_evo_dml_1.py](../../../../../repark/tests/writes/_record_ice_evo_dml_1.py)
 - Ledger: `task/ledgers/staging/ice-evo-dml-1-ledger.md`
 
 pins: ice-evo-dml-1/C-001, C-009, C-016, C-017

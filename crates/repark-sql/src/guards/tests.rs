@@ -3,9 +3,12 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::Catalog;
+use repark_core::local_fs_policy::ALLOW_LOCAL_FILESYSTEM_DDL_KEY;
 use repark_core::{CatalogRegistry, LocationPolicy};
+use repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate;
 use tempfile::TempDir;
 
 use super::*;
@@ -553,7 +556,7 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
         // A subquery reached only through a CTE-bearing subquery body.
         "DELETE FROM t WHERE id IN (WITH c AS (SELECT id FROM k) SELECT id FROM c)",
     ] {
-        let refusal = refuse_dml_subquery_predicate(&parsed(sql))
+        let refusal = refuse_dml_subquery_predicate(&parsed(sql), true)
             .expect_err(&format!("the valve must fire on {sql:?}"))
             .to_string();
         assert!(
@@ -592,7 +595,7 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
          (SELECT k.id FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
         "UPDATE ice.sales.tgt SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
     ] {
-        refuse_dml_subquery_predicate(&parsed(sql))
+        refuse_dml_subquery_predicate(&parsed(sql), true)
             .unwrap_or_else(|err| panic!("the valve must NOT fire on {sql:?}: {err}"));
     }
 }
@@ -601,7 +604,7 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
 #[test]
 fn dml_subquery_refusal_names_its_verb_and_target() {
     let sql = "DELETE FROM ice.sales.t WHERE id = (SELECT max(id) FROM ice.sales.k)";
-    let delete = refuse_dml_subquery_predicate(&parsed(sql))
+    let delete = refuse_dml_subquery_predicate(&parsed(sql), true)
         .unwrap_err()
         .to_string();
     assert!(delete.contains("DELETE with a subquery"), "{delete}");
@@ -612,7 +615,7 @@ fn dml_subquery_refusal_names_its_verb_and_target() {
     assert!(delete.contains("delete EVERY row"), "{delete}");
 
     let sql = "UPDATE ice.sales.t SET name = 'z' WHERE id = (SELECT max(id) FROM ice.sales.k)";
-    let update = refuse_dml_subquery_predicate(&parsed(sql))
+    let update = refuse_dml_subquery_predicate(&parsed(sql), true)
         .unwrap_err()
         .to_string();
     assert!(update.contains("UPDATE with a subquery"), "{update}");
@@ -647,7 +650,7 @@ fn dml_subquery_refusal_renders_a_usable_target_for_every_spelling() {
             "ice.sales.t",
         ),
     ] {
-        let refusal = refuse_dml_subquery_predicate(&parsed(sql))
+        let refusal = refuse_dml_subquery_predicate(&parsed(sql), true)
             .unwrap_err()
             .to_string();
         assert!(

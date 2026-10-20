@@ -39,7 +39,7 @@ the control the after column must equal — and does.
 Reproduce (from the repo root, release module):
 
 ```
-.venv/bin/python -m pytest python/repark/tests/test_dfcore_6_eager_preview.py::test_preview_doors_never_count python/repark/tests/test_dfcore_6_eager_preview.py::test_mapinarrow_preview_bounds_udf_rows -q
+.venv/bin/python -m pytest python/repark/tests/dataframe/test_dfcore_6_eager_preview.py::test_preview_doors_never_count python/repark/tests/dataframe/test_dfcore_6_eager_preview.py::test_mapinarrow_preview_bounds_udf_rows -q
 ```
 
 The pins re-derive the counts mechanically. The wall medians come from a

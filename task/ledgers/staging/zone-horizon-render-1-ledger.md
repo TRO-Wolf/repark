@@ -43,7 +43,7 @@ gives `12:00:00`.
 ## Grid
 
 Step 0, measured before any code change. Spark: live PySpark 4.1.2, `local[1]`, ANSI on,
-recorded 2026-10-08 into `python/repark/tests/zone_horizon_render_1_spark_oracle.json` (one
+recorded 2026-10-08 into `python/repark/tests/timestamps/zone_horizon_render_1_spark_oracle.json` (one
 answer per cell; the recorder rebuilds each statement from the stored probes). Main: `156be81c`
 through the facade, the same statements; its answer for each of the 1516 cells that differ from
 Spark is in [zone-horizon-render-1-main-answers.json](zone-horizon-render-1-main-answers.json)
@@ -215,7 +215,7 @@ already right.
 
 ## Residue
 
-The 832 cells of `python/repark/tests/zone_horizon_render_1_residue.json`, each pinned as still
+The 832 cells of `python/repark/tests/timestamps/zone_horizon_render_1_residue.json`, each pinned as still
 differing:
 
 | Class | Functions | Cells | At 2099 too |

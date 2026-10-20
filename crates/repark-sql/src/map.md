@@ -167,6 +167,23 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+- `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13; ruling 94, 2026-10-15):**
+  `AnsiDialect::type_planner` hands the session builder the ANSI variant
+  (`spark_type_planner::ansi_type_planner`), so the ANSI door types `TIMESTAMP` as the naive
+  microsecond wall, `TIMESTAMPTZ` and `TIMESTAMP_LTZ` as the microsecond instant,
+  `TIMESTAMP_NTZ` as the naive microsecond wall and the two nanosecond names as
+  nanoseconds; `on_session_built` installs the ANSI `PlannedTimestampCast` so an `Int64`
+  cast to `TIMESTAMP` or `TIMESTAMPTZ` still reads seconds.
+  `configure_analyzer_rules` places `SparkTimestampUnitWiden` before `type_coercion`
+  (amendment 1). `create_table.rs` resolves declared column types on a copy of the
+  session state whose planner answers nothing (`declared_type_state`), so `CREATE TABLE`
+  keeps DataFusion's mapping and its refusals of a nanosecond `TIMESTAMP` column and of
+  `TIMESTAMP_LTZ`. pins: ice-tsns-type-planner-1/C-011, C-012, C-015
+- `dialect.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), owner question 47:**
+  `on_session_built` calls `repark_iceberg::write::store_cast::register_store_cast_udfs`, the
+  one registration of the by-name store kernels. The shared MERGE and UPDATE text names the
+  pairing kernel `__repark_store_pair__`; without it this door answered `Invalid function`
+  where main stored a struct. Pinned by `../tests/ansi_store_kernel_registry.rs`.
 - `dialect.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `on_session_built` registers the zoned
   nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
   and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this
@@ -204,6 +221,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate`, called from the
   router's named `DELETE`/`UPDATE` arm because it needs the PARSED statement — it reads both the
   `WHERE` expression and the target off the parse tree, so a quoted target renders usably).
+  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)):** the valve moved to
+  `repark_iceberg::write::predicate_dml::subquery_where`, its one home for this door and
+  `repark.sql()`; `router.rs` calls it at both sites with the identity exemption, and the text
+  is unchanged. pins: repark-sql-update-subquery-where-1/C-006, C-007
   SEC-02 scope: it gates DataFusion's own filesystem-as-data DDL (`CREATE EXTERNAL TABLE`,
   `COPY TO`), NOT an intercepted `CREATE TABLE … WITH (location = …)`, which the catalog's
   `LocationPolicy` governs instead.
@@ -215,6 +236,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   V3-COW-1 valve; MERGE and subquery-WHERE DML still refuse. `dml_target_ident` reads
   the AST and completes short names.
   pins: rp-6-fork-repin/C-002
+  **PA-LOCAL-FS-POLICY-1 (2026-10-15):** guard 5 re-exports
+  `repark_core::local_fs_policy::refuse_local_filesystem_plan`; the door's own conf keys,
+  entries reader, classification, strip and canonicalization are deleted. The shared reader
+  matches the real `repark.sql` extension's unprefixed field, so the ANSI door's explicit
+  opt-in now opens (it never did on main). pins: pa-local-fs-policy-1/C-005, C-016, C-017
 - `guards.rs`, `router.rs`, `merge.rs`, `insert_overwrite.rs`, `truncate.rs`, `create_table.rs` —
   **ENC-1 round 2 (2026-10-09):** the ANSI seats of the keyed-table refusal. `guards.rs` gains
   `refuse_encrypted_write_target` / `refuse_encrypted_dml_target` (short names completed
@@ -470,7 +496,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 
 | Symptom | First check |
 |---|---|
-| A `DELETE`/`UPDATE` with a subquery `WHERE` was refused | By design (G3-E8): `guards::refuse_dml_subquery_predicate`, the twin of the Spark door's valve, same refusal text. Re-implemented rather than shared — door→door product edges are banned |
+| A `DELETE`/`UPDATE` with a subquery `WHERE` was refused | By design (G3-E8): `repark_iceberg::write::predicate_dml::subquery_where::refuse_dml_subquery_predicate`, called from `router.rs` with the identity exemption since 2026-10-16 (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1); `repark.sql()` calls it without one. The Spark door keeps its own twin with the same text (door→door product edges are banned) |
 | A guard fired on text inside a string literal | It cannot — the guards read `scan::blank_out_quoted_and_comments` output; check the scrubber's tests |
 | A statement was delegated that should have been intercepted | `router.rs` match arms — no text path bypasses the statement match, including `$` metadata references |
 | The wrong-door sniff fired on ANSI-legal SQL | `sniff.rs` `scope_for` / `Scope::Leading` — tokens with an ANSI reading (`USING`, `NAMESPACE`, `BRANCH`/`TAG`) fire only under their leading keyword |

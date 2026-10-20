@@ -11,7 +11,9 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (pandas and polars nanosecond frames enter as floored microseconds, R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (carried; no fresh scoreboard run since `e845b73b`). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md).
+**v1.5.6 (in flight):** ICE-STRUCT-PAIRING-1 closes R-016, R-021, R-022 on its branch: Spark's struct pairing on every write door. [Notes draft](task/roadmap/mid-term/v1-5-6-release-notes-draft.md).
+
+**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (pandas and polars nanosecond frames enter as floored microseconds, R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (fresh 2026-10-13 run on release build `293896ce`). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md).
 
 **v1.5.4 (2026-10-10):** R-007, ENC-1, CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
 
@@ -29,14 +31,12 @@ metadata-table and time-travel reads, DataFrame and SQL writes, MERGE/UPDATE/DEL
 properties, `TIMESTAMP_NTZ` literals and casts; the UUID refusal no longer panics on non-ASCII SQL. Notes:
 [v1-5-0-release-notes-draft-2026-09-27.md](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
 
-**v1.4.2 (2026-09-15) — the second patch on 1.4.0, cut so DECIMAL-CACHE-1 (#632) reaches PyPI.**
-Decimal arithmetic that overflows 38 digits now types like PySpark 4.1.2 (`decimal(38,10) * 5` →
-`decimal(38,8)`) and materializes through `.eager()` / `.cache()` / `.persist()`; the cache view
-conforms every batch to the analyzed schema and names both fields when it cannot.
+**v1.4.2 (2026-09-15):** DECIMAL-CACHE-1 (#632): decimal overflow past 38 digits types like
+PySpark 4.1.2 (`decimal(38,10) * 5` → `decimal(38,8)`) and materializes through `.eager()` /
+`.cache()` / `.persist()`; the cache view conforms every batch or names both fields.
 
-**v1.4.1 (2026-09-14) — the first patch on 1.4.0, cut so the five-leg wheel set reaches PyPI:**
-Windows x86_64, macOS arm64 and x86_64, Linux aarch64 and x86_64 — each leg an import
-smoke and one collect, no platform acceptance (PLATFORM-2..4 stay slated for 1.6).
+**v1.4.1 (2026-09-14):** the five-leg wheel set on PyPI (Windows, macOS arm64/x86_64, Linux
+aarch64/x86_64), each an import smoke and one collect; PLATFORM-2..4 stay slated for 1.6.
 
 **v1.4.0 (2026-09-12) — the maintenance minor on 1.3**, additive under the API freeze (no frozen
 name or required parameter changed). Roadmap 1.4 closes: the maintenance policy shipped in 1.2 and
@@ -194,6 +194,8 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   wrong answers, two failure shapes filed (`H3-SPILL-NLJ-1`, `H3-SPILL-COLLECT-1`); the pool
   bounds only the operators that register with it:
   [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md). **Next:** those two.
+  **COLUMN-OR-BUILD-1 (candidate, 2026-10-19, after U-9):** a 20,000-term `|` OR builds in 302 s,
+  quadratic, refusal under 0.2 s; [baseline](docs/perf/column-or-build-cost-2026-10-19.md).
   **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal.
   **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
 <!-- /ws -->
@@ -282,12 +284,9 @@ entry rather than moving it. Nothing is described in both places.
   NULL str and a non-foldable `partNum` 0 errors where Spark short-circuits to NULL. Live-verified
   2026-08-19; [task/fn-gt1-ledger.md](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
 
-**Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
-**2026-08-10** — see
-[docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md).
-The Spark-door time-travel view leak was fixed in unit H-1b on **2026-08-11** — see
-[docs/history/hardening-h1/h1b-ledger.md](docs/history/hardening-h1/h1b-ledger.md).
-Deleted at the campaign's close-out.
+**Closed out (2026-08):** the `$`-metadata rider, H-1c
+([ADR 0006](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)); the time-travel
+view leak, H-1b ([ledger](docs/history/hardening-h1/h1b-ledger.md)).
 
 ## Architectural risks
 

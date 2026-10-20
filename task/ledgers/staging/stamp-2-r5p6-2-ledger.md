@@ -257,15 +257,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Each clause walked against its pin or measurement. The card's premise that main built the doors natively was checked against main's code and corrected; the brief's reuse of the earlier predicate was applied as its shape test, with the reason its function does not fit recorded.
-      artifacts: [task/ledgers/staging/stamp-2-r5p6-2-ledger.md, python/repark/tests/test_stamp_2_r5p6_2.py, crates/repark-python/src/join_exact_tests.rs]
+      artifacts: [task/ledgers/staging/stamp-2-r5p6-2-ledger.md, python/repark/tests/resolution/test_stamp_2_r5p6_2.py, crates/repark-python/src/join_exact_tests.rs]
     - id: AT-2
       status: ATTACKED
       evidence: Boundaries of the exactness rule pinned on both sides of each guard — spaced and case-twin fields, an unheld source, a missing key, a bare alias, 14 inexact prepared conditions, 20 key-type pairs with mixed types, six join types and both operand orders.
-      artifacts: [crates/repark-core/src/session/df_guards/join_exact.rs, crates/repark-python/src/join_exact_tests.rs, python/repark/tests/test_stamp_2_r5p6_2.py]
+      artifacts: [crates/repark-core/src/session/df_guards/join_exact.rs, crates/repark-python/src/join_exact_tests.rs, python/repark/tests/resolution/test_stamp_2_r5p6_2.py]
     - id: AT-3
       status: ATTACKED
       evidence: Refusals keep the SQL route's class and text — the preparer's refusals run before the route, a raising native attempt is a miss, and the map-key refusal is pinned on both routes and on the fallback; M2 reds it.
-      artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/test_stamp_2_r5p6_2.py]
+      artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/resolution/test_stamp_2_r5p6_2.py]
     - id: AT-4
       status: ATTACKED
       evidence: The native join takes the live session state as sql_built does (pinned across a conf change); the rule cache is per handle over an immutable state snapshot, inherited only where the child keeps the parent's state, with a debug assertion under every binding test and a pin across a conf change.
@@ -276,7 +276,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: LogicalPlan equality against sql_built in Rust; the replay corpus of 43,989 cells shows no deterministic change; 136 suite files give main's counts plus the unit's pins; the sort grid is 394/394; every pinned row answer was measured equal on live Spark 4.1.
-      artifacts: [crates/repark-python/src/join_exact_tests.rs, python/repark/tests/test_stamp_2_r5p6_2.py]
+      artifacts: [crates/repark-python/src/join_exact_tests.rs, python/repark/tests/resolution/test_stamp_2_r5p6_2.py]
     - id: AT-7
       status: ATTACKED
       evidence: The unit is a performance fix; cProfile, perf with DWARF call graphs, micro-benchmarks and three interleaved family runs are recorded above, with the load spike named and the gate-set ratios marked indicative.
@@ -291,7 +291,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       evidence: Every guard and branch added has a pinned input that changes its output (M1 to M10); a key-type guard that the shared analysis made redundant was measured and deleted, and one equivalent mutant is recorded.
-      artifacts: [python/repark/tests/test_stamp_2_r5p6_2.py, crates/repark-python/src/join_exact_tests.rs]
+      artifacts: [python/repark/tests/resolution/test_stamp_2_r5p6_2.py, crates/repark-python/src/join_exact_tests.rs]
   complete: true
 ```
 

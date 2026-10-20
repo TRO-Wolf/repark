@@ -16,8 +16,8 @@ file; locks; planning/hardening.
 |---|---|---|
 | Nested comparator | [`python/repark-parity/src/repark_parity/compare.py`](../../../../python/repark-parity/src/repark_parity/compare.py) | order-insensitive path for list/struct/map |
 | Comparator unit tests | [`python/repark-parity/tests/test_compare.py`](../../../../python/repark-parity/tests/test_compare.py) | 4 hard invariants + extras |
-| Nested corpus | [`python/repark/tests/test_nested_container_parity.py`](../../../../python/repark/tests/test_nested_container_parity.py) | 6 rows + budget pin + classifier |
-| Record driver | [`python/repark/tests/_record_nested_container_goldens.py`](../../../../python/repark/tests/_record_nested_container_goldens.py) | re-derive Spark halves; `--emit` |
+| Nested corpus | [`python/repark/tests/test_nested_container_parity.py`](../../../../python/repark/tests/types/test_nested_container_parity.py) | 6 rows + budget pin + classifier |
+| Record driver | [`python/repark/tests/_record_nested_container_goldens.py`](../../../../python/repark/tests/types/_record_nested_container_goldens.py) | re-derive Spark halves; `--emit` |
 | Maps | parity `map.md` ×2, `python/repark/tests/map.md` | lockstep navigation |
 | This ledger | `task/x5-nested-comparator-ledger.md` | linked from [`task/map.md`](../../../map.md) |
 

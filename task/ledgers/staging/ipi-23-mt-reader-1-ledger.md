@@ -17,7 +17,7 @@ three-part loader; `read_sql` quotes the un-pinned read); one-line-each wiring i
 `crates/repark-core/src/time_travel.rs`; net deletion in
 `crates/repark-spark/src/time_travel.rs`; the Rust pin in
 `crates/repark-spark/src/tests/metadata_tables_asof.rs`; the facade pins in
-`python/repark/tests/test_ice_mt_reader_1.py`; the MT-1 reader paragraph; five `map.md`
+`python/repark/tests/iceberg/test_ice_mt_reader_1.py`; the MT-1 reader paragraph; five `map.md`
 files; and this ledger. The fork, every `Cargo.toml`, `Cargo.lock`, `STATUS.md`,
 `crates/repark-spark/src/wap.rs` and `crates/repark-sql/**` are untouched; no code
 comment added anywhere.
@@ -330,15 +330,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Answering clauses walk the reader to the SQL door on the same table — rows plus schema field names on snapshots/files/history/refs (C-001/C-002), the table API (C-003), versionAsOf on four types (C-004), timestampAsOf (C-005) — except C-010, which pins the reader's rows standalone, and the live C-013, which compares the selected rows only; the two recorded Spark cells replayed equal (rows append/append/overwrite, record_count [2]).
-      artifacts: [python/repark/tests/test_ice_mt_reader_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_reader_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: The seed exercises a two-append history with a delete so pins sit mid-history; the Rust pin drives the moved provider_for_spec through read_table_at and the SQL door for one scoped case (one row, rendered batches equal) and one empty case (zero rows, schema names equal); paired refusals pin class plus full text on both doors, the standalone refusal pins carry their literal texts.
-      artifacts: [python/repark/tests/test_ice_mt_reader_1.py, crates/repark-spark/src/tests/metadata_tables_asof.rs]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_reader_1.py, crates/repark-spark/src/tests/metadata_tables_asof.rs]
     - id: AT-3
       status: ATTACKED
       evidence: The 'nope'/too-old/all_* refusals assert the reader's class and text equal the SQL door's, the 'nope' and too-old #802 texts pinned as literals and the all_files text by its `Cannot select snapshot in table: ALL_FILES` sentence; legacy options keep the #800 IllegalArgumentException texts; the unknown suffix keeps the reader's measured Analysis text.
-      artifacts: [python/repark/tests/test_ice_mt_reader_1.py]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_reader_1.py]
     - id: AT-4
       status: ATTACKED
       evidence: Resolution runs per query through Session state; the metadata provider registers one temp view per read with no shared mutable state or global registration, mirroring the existing read_table_at tail.
@@ -349,7 +349,7 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: Registry row MT-1 gains the served reader leg; every previously green behavior in scope (plain loads, selectors, real metadata-named tables, unknown suffix, legacy refusals) is pinned unchanged, and no existing test's expected value moved. Critic r3 re-marks C-015/C-019 router-equivalence-only — Spark 4.1.2 refuses the quoted-dollar spellings (pre-existing divergence filed for follow-up).
-      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_mt_reader_1.py]
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/iceberg/test_ice_mt_reader_1.py]
     - id: AT-7
       status: N/A
       justification: The scan streams through the existing provider and temp-view tail with two catalog existence probes per pinned read; no added materialization, unbounded growth, or hot-loop pattern.
@@ -360,11 +360,11 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: Paired reader refusals carry the SQL door's class and `getSqlState()`; the refusal text is asserted equal only where a test pairs it — C-006, C-014, C-017, C-021 and C-022 reader-vs-SQL, C-015 pairwise across its three SQL spellings — while C-011 pins the reader's own literal text beside the paired SQLSTATE and C-012 stands alone on literals. A real table wins over the metadata route when the probe answers it exists (the nested-namespace Rust pin `metadata_asof_nested_namespace_real_table_wins`); a `DataInvalid` probe on a multi-level namespace counts as "no such table", the same rule the SQL door has used since #219 (`metadata_tables.rs`), so reader and SQL door probe alike.
-      artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, crates/repark-spark/src/tests/metadata_tables_asof.rs, python/repark/tests/test_ice_mt_reader_1.py]
+      artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, crates/repark-spark/src/tests/metadata_tables_asof.rs, python/repark/tests/iceberg/test_ice_mt_reader_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Two recorded cells replayed verbatim plus twenty-two facade pins and two Rust pins, every clause carrying a pins: citation in the test file and the touched map.md rows; C-001 asserts schema field names alongside values, and after critic r2 the field type and nullability are pinned as the live Spark leg measures them (`test_live_spark_reader_matches_sql`); the recorded cells establish rows and column names only.
-      artifacts: [python/repark/tests/test_ice_mt_reader_1.py, python/repark/tests/map.md, crates/repark-core/src/time_travel/map.md]
+      artifacts: [python/repark/tests/iceberg/test_ice_mt_reader_1.py, python/repark/tests/map.md, crates/repark-core/src/time_travel/map.md]
 ```
 
 Every clause above except C-015 and C-019 is PROVEN — the paired ones against

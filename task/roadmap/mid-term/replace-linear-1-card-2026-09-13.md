@@ -24,11 +24,11 @@ measured ~×3.3 memory per entry: 28 MB at a 12-entry dict, 297 MB at 16. A 40-e
 
 | step | worker | what |
 |---|---|---|
-| 0 | Devin | Measure: the D-2 oracle cells (live Spark, box alone, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`), today's facade answers beside them, and the red-first memory pin. The pin is a 40-entry replace dict planned and collected in a subprocess under `RLIMIT_AS` (S2-8: `VmSize_at_apply + 3 × limit`) with a per-entry RSS bound, in the style of `python/repark/tests/test_abs_expr_1.py`. It must be red on the base tree. |
+| 0 | Devin | Measure: the D-2 oracle cells (live Spark, box alone, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`), today's facade answers beside them, and the red-first memory pin. The pin is a 40-entry replace dict planned and collected in a subprocess under `RLIMIT_AS` (S2-8: `VmSize_at_apply + 3 × limit`) with a per-entry RSS bound, in the style of `python/repark/tests/functions/test_abs_expr_1.py`. It must be red on the base tree. |
 | 1 | Devin | D-1 rewrite; the answer pins and the memory pin green; the ledger's COVERAGE_ATTESTATION. |
 
 **Home:** `python/repark/src/repark/spark/dataframe/core.py` (`replace`) and a sibling helper module if needed,
-`python/repark/tests/test_replace_linear_1.py`, an oracle fixture or pin file beside it. **Gates:** the new pins,
+`python/repark/tests/dataframe/test_replace_linear_1.py`, an oracle fixture or pin file beside it. **Gates:** the new pins,
 existing `replace` pins (`grep -rln "\.replace(" python/repark/tests`), `make verify`, `make preflight`, the parity suite;
 S2-21 Python reviewer and Grok critic-logic before the PR.
 

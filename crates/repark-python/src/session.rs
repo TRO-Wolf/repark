@@ -156,7 +156,9 @@ impl PyReparkSession {
     ) -> PyResult<Self> {
         fenced_span!("py.session", "PyReparkSession.native", {
             let builder =
-                apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
+                apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?
+                    .with_extension(Arc::new(crate::session_runtime::NativeDoorTypes))
+                    .with_local_fs_guard();
             let handle = finish_session(py, builder)?;
             crate::session_runtime::register_native_door_functions(handle.session.context());
             Ok(handle)

@@ -1,169 +1,18 @@
-//! Local-filesystem DDL gate.
-
-use std::path::{Component, Path, PathBuf};
-
-use datafusion::error::{DataFusionError, Result};
-use datafusion::logical_expr::{DdlStatement, LogicalPlan};
-use datafusion::prelude::SessionContext;
-use repark_functions::cardinality::{
-    ALLOW_LOCAL_FILESYSTEM_DDL_KEY, repark_sql_settings_from_options,
-};
-
-use repark_core::CatalogRegistry;
-
-/// Refuse local-fs CREATE EXTERNAL TABLE / COPY TO when conf is false and the path is off-root.
-/// # Errors
-/// [`DataFusionError::Plan`] naming [`ALLOW_LOCAL_FILESYSTEM_DDL_KEY`] when blocked.
-pub fn refuse_local_filesystem_plan(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    plan: &LogicalPlan,
-) -> Result<()> {
-    let settings = repark_sql_settings_from_options(ctx.copied_config().options());
-    if settings.allow_local_filesystem_ddl {
-        return Ok(());
-    }
-    match plan {
-        LogicalPlan::Ddl(DdlStatement::CreateExternalTable(create)) => {
-            refuse_local_path(catalogs, "CREATE EXTERNAL TABLE", &create.location)
-        }
-        LogicalPlan::Copy(copy_to) => refuse_local_path(catalogs, "COPY TO", &copy_to.output_url),
-        _ => Ok(()),
-    }
-}
-
-fn refuse_local_path(catalogs: &CatalogRegistry, surface: &str, raw_location: &str) -> Result<()> {
-    let Some(local_path) = local_filesystem_path(raw_location) else {
-        return Ok(());
-    };
-    if path_under_any_warehouse(catalogs, &local_path) {
-        return Ok(());
-    }
-    Err(DataFusionError::Plan(format!(
-        "{surface} to local filesystem path `{raw_location}` is disabled by default. Set conf \
-         `{ALLOW_LOCAL_FILESYSTEM_DDL_KEY}` = true to allow local CREATE EXTERNAL TABLE / COPY TO \
-         outside the session warehouse root, or use a path under a registered warehouse \
-         (grandfather). Remote locations (s3://, s3a://) are unaffected."
-    )))
-}
-
-/// Case-insensitive strip of an ASCII scheme prefix (`file://`, `file:`).
-fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
-    let prefix_len = prefix.len();
-    if value.len() >= prefix_len && value[..prefix_len].eq_ignore_ascii_case(prefix) {
-        Some(&value[prefix_len..])
-    } else {
-        None
-    }
-}
-
-/// Map a location string to a local [`PathBuf`] when it is bare or `file://`; `None` for remote.
-#[must_use]
-pub fn local_filesystem_path(location: &str) -> Option<PathBuf> {
-    let trimmed = location.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    let lower = trimmed.to_ascii_lowercase();
-    if lower.starts_with("s3://")
-        || lower.starts_with("s3a://")
-        || lower.starts_with("s3n://")
-        || lower.starts_with("http://")
-        || lower.starts_with("https://")
-        || lower.starts_with("hdfs://")
-        || lower.starts_with("viewfs://")
-        || lower.starts_with("gs://")
-        || lower.starts_with("abfs://")
-        || lower.starts_with("abfss://")
-        || lower.starts_with("wasb://")
-        || lower.starts_with("wasbs://")
-    {
-        return None;
-    }
-    // file:// first (before bare `file:`), case-insensitive — FILE:// must stay local.
-    if let Some(rest) = strip_ascii_prefix_ci(trimmed, "file://") {
-        // file:///abs → /abs; file://localhost/abs → /abs; LocalHost variant too.
-        let path = strip_ascii_prefix_ci(rest, "localhost").unwrap_or(rest);
-        return Some(PathBuf::from(path));
-    }
-    if let Some(rest) = strip_ascii_prefix_ci(trimmed, "file:") {
-        return Some(PathBuf::from(rest));
-    }
-    // scheme-looking tokens that are not file: leave to remote / DF
-    if let Some(idx) = trimmed.find("://") {
-        let scheme = &trimmed[..idx];
-        if scheme
-            .chars()
-            .all(|ch| ch.is_ascii_alphanumeric() || ch == '+' || ch == '-' || ch == '.')
-            && !scheme.is_empty()
-        {
-            return None;
-        }
-    }
-    Some(PathBuf::from(trimmed))
-}
-
-fn path_under_any_warehouse(catalogs: &CatalogRegistry, path: &Path) -> bool {
-    let roots = catalogs.local_warehouse_roots();
-    if roots.is_empty() {
-        return false;
-    }
-    let canonical_target = canonicalize_best_effort(path);
-    for root in roots {
-        let canonical_root = canonicalize_best_effort(Path::new(root));
-        if path_is_under(&canonical_target, &canonical_root) {
-            return true;
-        }
-    }
-    false
-}
-
-fn canonicalize_best_effort(path: &Path) -> PathBuf {
-    if let Ok(canon) = path.canonicalize() {
-        return canon;
-    }
-    // Parent may exist when the leaf does not yet (COPY TO destination).
-    if let Some(parent) = path.parent()
-        && let Ok(canon_parent) = parent.canonicalize()
-    {
-        if let Some(name) = path.file_name() {
-            return canon_parent.join(name);
-        }
-        return canon_parent;
-    }
-    normalize_lexically(path)
-}
-
-/// Collapse `.` / `..` without requiring the path to exist.
-fn normalize_lexically(path: &Path) -> PathBuf {
-    let mut out = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                let _ = out.pop();
-            }
-            other => out.push(other.as_os_str()),
-        }
-    }
-    out
-}
-
-fn path_is_under(path: &Path, root: &Path) -> bool {
-    if path == root {
-        return true;
-    }
-    path.starts_with(root)
-}
+pub(crate) use repark_core::local_fs_policy::refuse_local_filesystem_plan;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::path::PathBuf;
     use std::sync::Arc;
 
     use datafusion::prelude::{SessionConfig, SessionContext};
-    use repark_functions::cardinality::{ReparkSqlSettings, with_repark_sql_config};
+    use repark_core::CatalogRegistry;
+    use repark_core::local_fs_policy::local_filesystem_path;
+    use repark_functions::cardinality::{
+        ALLOW_LOCAL_FILESYSTEM_DDL_KEY, ReparkSqlSettings, with_repark_sql_config,
+    };
     use tempfile::TempDir;
 
     #[test]

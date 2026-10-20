@@ -86,7 +86,7 @@ PYTHONPATH=python/repark-parity/src /tmp/jb-wd/.venv/bin/python -m pytest python
 
 Other-tests sweep: `grep -rn "V3-COV-3\|COUNTSTAR" python docs --include=*.py`
 hits only `test_v3_cov_docs.py` (rewritten) and a docstring at
-`python/repark/tests/test_v3_statement_coverage.py:366` on the live VALUES-shape
+`python/repark/tests/iceberg/test_v3_statement_coverage.py:366` on the live VALUES-shape
 engine pin, which reads no registry text and needs a live session, so it stays
 and was not run. No in-repo link targets the retired V3-COV-3 heading slug.
 

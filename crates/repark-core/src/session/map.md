@@ -398,6 +398,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
   `session.rs` 1002 → 988 and the CAP-1 exception retired (under the default ceiling).
   pins: csv-infer-perf-1/C-006
+- `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
+  `context_with_df_54_1_rule_guards` takes the dialect beside the extension and registers
+  the door's `TypePlanner` (`with_type_planner`) when one of them hands one in; the
+  dialect's `configure_analyzer_rules` runs after the extension's. A session with neither
+  keeps DataFusion's type mapping. pins: ice-tsns-type-planner-1/C-011
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
@@ -577,7 +582,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     original column name is restored with `NamePreserver`, because DataFusion spells an
     `AggregateUDF` window function's schema name with `", "` between arguments and a `WindowUDF`'s
     with `","`.
-  Pins: `tests/window_rescan.rs` and `python/repark/tests/test_win_slide_1.py`. It sits under
+  Pins: `tests/window_rescan.rs` and `python/repark/tests/functions/test_win_slide_1.py`. It sits under
   `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard
   and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
   pins: win-slide-1/C-001, C-002, C-005, C-006, C-007
@@ -588,7 +593,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   Round 3 (2026-09-16): `__repark_any_row` joins the guard family for a stripped
   correlated `LIMIT 1`, and the projection hoist carries a `SubqueryAlias`
   qualifier through to its lifted outputs.
-  Pins: `tests/subquery.rs` and `python/repark/tests/test_df_subquery_1.py`.
+  Pins: `tests/subquery.rs` and `python/repark/tests/dataframe/test_df_subquery_1.py`.
   pins: df-subquery-1/C-001, C-002, C-003, C-004
 - `tests/subquery.rs` — **DF-SUBQUERY-1:** plan-level pins for the three subquery
   rules: the scalar guard wraps a non-singleton subplan and leaves a zero-group

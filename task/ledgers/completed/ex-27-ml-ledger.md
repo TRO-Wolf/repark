@@ -279,7 +279,7 @@ COVERAGE_ATTESTATION:
 - Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Pins: [../../../python/repark/tests/test_examples_ml.py](../../../python/repark/tests/test_examples_ml.py)
+- Pins: [../../../python/repark/tests/test_examples_ml.py](../../../python/repark/tests/parity/test_examples_ml.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 EX-ML-1..9
 - Siblings: [ex-26-io-session-ledger.md](ex-26-io-session-ledger.md), [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md)
 

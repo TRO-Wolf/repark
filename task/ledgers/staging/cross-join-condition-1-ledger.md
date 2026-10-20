@@ -57,7 +57,7 @@ Measured on `cj.py` (`a = [(1,a),(2,b),(3,c)]`, `b = [(2,x),(3,y),(4,z),(9,q)]`)
 ## Mutations
 
 Each is one edit (M1-M3 to `core.py`, M4 to `join_attr_tokens.py`), run against
-`pytest python/repark/tests/test_cross_join_condition_1.py` (20 cells), then reverted with
+`pytest python/repark/tests/dataframe/test_cross_join_condition_1.py` (20 cells), then reverted with
 `git checkout --`:
 
 | Id | Edit | Red |
@@ -197,15 +197,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Clauses C-001..C-007 walked against behavior — every cj.py cell on head against the brief's Spark column, the refusal texts byte-compared with main, the card and map diffs read.
-      artifacts: [task/ledgers/staging/cross-join-condition-1-ledger.md, python/repark/tests/test_cross_join_condition_1.py]
+      artifacts: [task/ledgers/staging/cross-join-condition-1-ledger.md, python/repark/tests/dataframe/test_cross_join_condition_1.py]
     - id: AT-2
       status: ATTACKED
       evidence: Equality, inequality, false, aliased, join-then-filter, None, shared name, name list, Column list, and two self-join shapes run as cells; the None/empty-list/Column/garbage partition of the join door is unchanged outside the remapped branch. Fold 1 adds the eq-and-rand and untyped-null leniency shapes.
-      artifacts: [python/repark/tests/test_cross_join_condition_1.py]
+      artifacts: [python/repark/tests/dataframe/test_cross_join_condition_1.py]
     - id: AT-3
       status: ATTACKED
       evidence: Both kept refusals pin class and text; M3 shows routing without the None guard fails loud (UnboundLocalError) rather than answering wrong rows, and the None path is pinned unmoved.
-      artifacts: [python/repark/tests/test_cross_join_condition_1.py]
+      artifacts: [python/repark/tests/dataframe/test_cross_join_condition_1.py]
     - id: AT-4
       status: N/A
       justification: Routing-only change; no new state, no ordering or concurrency surface. Scratch-view registration and the try/finally drop are untouched.
@@ -215,19 +215,19 @@ COVERAGE_ATTESTATION:
     - id: AT-6
       status: ATTACKED
       evidence: The unmoved Cartesian cells, the byte-identical refusals, and the neighbour run (same 3 pre-existing failures, zero flips) hold compatibility; the #997 differential pin stays green.
-      artifacts: [python/repark/tests/test_cross_join_condition_1.py, task/ledgers/staging/cross-join-condition-1-ledger.md]
+      artifacts: [python/repark/tests/dataframe/test_cross_join_condition_1.py, task/ledgers/staging/cross-join-condition-1-ledger.md]
     - id: AT-7
       status: N/A
       justification: No new plan pass; a cross with a condition now plans exactly as the same inner join. Not a system-breaking surface.
     - id: AT-8
       status: ATTACKED
       evidence: The facade signature is unchanged; refusal classes and texts are pinned byte-identical; the pre-existing test_join_rejects_unsupported_how pin stays green; the native call receives the inner shape it already serves.
-      artifacts: [python/repark/tests/test_cross_join_condition_1.py]
+      artifacts: [python/repark/tests/dataframe/test_cross_join_condition_1.py]
     - id: AT-9
       status: N/A
       justification: No new error text, log, or metric; the only texts on the touched paths are main's, pinned.
     - id: AT-10
       status: ATTACKED
       evidence: Spark literals on both routes (stronger than the #997 differential); M1/M2/M3/M4 each red the legs they target; branch liveness: the remap arm changes output exactly for cross-with-condition (M1/M2), and its None guard is load-bearing (M3).
-      artifacts: [python/repark/tests/test_cross_join_condition_1.py, task/ledgers/staging/cross-join-condition-1-ledger.md]
+      artifacts: [python/repark/tests/dataframe/test_cross_join_condition_1.py, task/ledgers/staging/cross-join-condition-1-ledger.md]
 ```

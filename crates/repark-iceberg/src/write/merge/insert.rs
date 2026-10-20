@@ -12,6 +12,7 @@ use super::{InsertAction, InsertClause, MatchedAction, quote_ident};
 use crate::write::insert_defaults::{ColumnDefaults, column_defaults, schema_has_primitive_fill};
 use crate::write::name_resolution::{dedup_key, resolve_arrow_field, resolve_write_column};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
+use crate::write::struct_pairing::{StructPairing, column_root, store_pair_sql};
 use crate::write::void_store::refuse_void_writes;
 use iceberg::table::Table;
 
@@ -87,6 +88,14 @@ pub(super) fn insert_projection_with_defaults(
     for field in write_schema.fields() {
         let quoted = quote_ident(field.name());
         if let Some(expr) = assigned.get(field.name().as_str()) {
+            let paired = store_pair_sql(
+                expr,
+                field.data_type(),
+                StructPairing::by_name(!case_insensitive),
+                "``",
+                &column_root(std::slice::from_ref(field.name())),
+            );
+            let expr = paired.as_deref().unwrap_or(expr);
             projection.push(format!("({expr}) AS {quoted}"));
         } else if let Some(fill) = defaults.get(&field.name().to_ascii_lowercase()) {
             projection.push(format!("({}) AS {quoted}", fill.sql_text()?));
@@ -187,6 +196,8 @@ pub(super) async fn insert_stream_checked(
         true,
         true,
         None,
+        StructPairing::by_name(false),
+        "``",
     )?;
     let dataframe = ctx.execute_logical_plan(wrapped).await?;
     let dataframe = if let Some(stream_sql) = stream_sql {
@@ -197,6 +208,8 @@ pub(super) async fn insert_stream_checked(
             true,
             true,
             None,
+            StructPairing::by_name(false),
+            "``",
         )?;
         ctx.execute_logical_plan(wrapped).await?
     } else {
@@ -238,6 +251,7 @@ fn validate_insert_store_assignment(
             target_field.name(),
             plan_field.data_type(),
             target_field.data_type(),
+            StructPairing::by_name(false),
         )?;
     }
     Ok(())
@@ -259,6 +273,8 @@ pub(super) async fn update_stream_checked(
         true,
         false,
         None,
+        StructPairing::by_name(!sql.spec.case_insensitive),
+        "``",
     )?;
     ctx.execute_logical_plan(wrapped)
         .await?
@@ -272,13 +288,14 @@ pub(super) async fn validate_update_store_assignment(
     sql: &super::MergeSql<'_>,
     write_schema: &ArrowSchema,
 ) -> Result<()> {
+    let pairing = StructPairing::by_name(!sql.spec.case_insensitive);
     if let Some((probe_sql, target_columns)) = update_assignment_probe_sql(sql, write_schema)? {
-        gate_update_probe(ctx, write_schema, &probe_sql, target_columns).await?;
+        gate_update_probe(ctx, write_schema, &probe_sql, target_columns, pairing).await?;
     }
     if let Some((probe_sql, target_columns)) =
         super::not_matched_by_source::update_assignment_probe_sql(sql, write_schema)?
     {
-        gate_update_probe(ctx, write_schema, &probe_sql, target_columns).await?;
+        gate_update_probe(ctx, write_schema, &probe_sql, target_columns, pairing).await?;
     }
     Ok(())
 }
@@ -288,6 +305,7 @@ async fn gate_update_probe(
     write_schema: &ArrowSchema,
     probe_sql: &str,
     target_columns: Vec<String>,
+    pairing: StructPairing,
 ) -> Result<()> {
     let plan = ctx.state().create_logical_plan(probe_sql).await?;
     let targets: Vec<(&str, &DataType)> = target_columns
@@ -326,6 +344,7 @@ async fn gate_update_probe(
             &target_name,
             plan_field.data_type(),
             target_field.data_type(),
+            pairing,
         )?;
     }
     Ok(())
@@ -382,16 +401,17 @@ fn refuse_unless_ansi_store_assignable(
     column: &str,
     source_type: &DataType,
     target_type: &DataType,
+    pairing: StructPairing,
 ) -> Result<()> {
-    let is_map = |data_type: &DataType| {
-        matches!(
-            store_assign::normalize_for_assignment(data_type),
-            DataType::Map(_, _)
-        )
+    let nested = |data_type: &DataType| {
+        let data_type = store_assign::normalize_for_assignment(data_type);
+        matches!(data_type, DataType::Map(_, _))
+            || crate::write::struct_pairing::holds_struct_type(data_type)
     };
-    if (is_map(source_type) || is_map(target_type))
-        && let Some(text) = crate::write::update_cast::incompatible_nested_message(
-            &format!("`{column}`"),
+    if (nested(source_type) || nested(target_type))
+        && let Some(text) = crate::write::update_cast::incompatible_paired_message(
+            pairing,
+            &column_root(&[column.to_string()]),
             source_type,
             target_type,
         )
@@ -466,6 +486,7 @@ mod insert_gate_tests {
             "flag",
             &DataType::Boolean,
             &DataType::Int32,
+            crate::write::struct_pairing::StructPairing::by_name(false),
         )
         .expect_err("bool→int must refuse");
         let text = err.to_string();

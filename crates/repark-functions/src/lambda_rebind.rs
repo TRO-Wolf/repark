@@ -37,15 +37,19 @@ pub fn analyzer_rules_with_higher_order_preparation(
     };
     rules.insert(
         position,
+        Arc::new(crate::timestamp_unit_widen::SparkTimestampUnitWiden),
+    );
+    rules.insert(
+        position + 1,
         Arc::new(crate::integer_spark::fractional_division::SparkFractionalDivision),
     );
-    rules.insert(position + 1, Arc::new(HigherOrderPreparation));
+    rules.insert(position + 2, Arc::new(HigherOrderPreparation));
     rules.insert(
-        position + 2,
+        position + 3,
         Arc::new(crate::java_double::SparkFloatStringify),
     );
     rules.insert(
-        position + 3,
+        position + 4,
         Arc::new(crate::decimal_precision::SparkDecimalPrecision),
     );
     Ok(rules)

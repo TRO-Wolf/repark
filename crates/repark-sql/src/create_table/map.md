@@ -49,7 +49,7 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
   as `NULL`) and `spec_source_ids`. pins: u7-write-df-2/C-011
   **ICE-RTAS-OPS-2 round 2 (2026-09-18):** the native-door
   snapshot-operation pins for fixture `rtas_ops`
-  (`python/repark/tests/ice_rtas_byname_1_spark_oracle.json`), declared as
+  (`python/repark/tests/writes/ice_rtas_byname_1_spark_oracle.json`), declared as
   `#[cfg(test)] mod rtas_ops_tests;` in `../create_table.rs`. A memory catalog under
   `RequireExplicitLocation` (staged) or `ServiceManagedLocation` (create-first).
   RTAS cells: `native_ctas_then_rtas_records_append_then_overwrite`,
