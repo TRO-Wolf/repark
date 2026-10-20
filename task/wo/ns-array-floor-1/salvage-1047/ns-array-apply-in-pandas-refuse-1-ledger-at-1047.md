@@ -4,7 +4,7 @@
 (`origin/main`) · **Commit:** item-3 commit on the branch; fold 1 is the commits after
 `b1c5ae1b`, on main `f3f98823` ·
 **Model:** Muse Spark (`muse-spark-1.3-contributor`); fold 1: Claude Opus 5.5 (executor) ·
-**Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Policy:** [../../../../AGENTS.md](../../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
