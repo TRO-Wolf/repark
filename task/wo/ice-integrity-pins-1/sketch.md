@@ -13,6 +13,8 @@ live half of [ICE-COMMIT-UNKNOWN-1](../../../task/ledgers/completed/ice-commit-u
 those two revs. A fork path carries the prefix `fork:`; it was checked in the cargo checkout of
 that rev. **Target:** 1.5.6, with U-11 after it (§0).
 
+Fork lines are cited at `076d5f98`; re-read them at the current pin `d80a2884` before building.
+
 ## 0. Why, and what is out of scope
 
 The v2 and v3 labels need "integrity under failure" (closeout plan §1): a writer killed between

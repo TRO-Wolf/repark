@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-15. **Filed by:** Muse Spark (muse-spark-1.3-contributor), clerk, from the owner's rulings 84 and 85 of 2026-10-15.
 
-**Status:** open, not scheduled.
+**Status:** fork half done, U-9 drill half open. The fork change merged as fork #368 (`409ff330`), pinned in RePark by #1095 (`1ce895a0`), and the pin has since moved to `d80a2884` by #1103 (RP-59). The retire condition's other half, U-9's live drill showing no double append, stays open.
 
 **Retires:** when the fork change merges with a pin that runs the exact sequence below, and U-9's live drill shows no double append.
 

@@ -905,7 +905,7 @@ declines it (a dated ruling in the intake, then the archive).
   #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
   `timestamp_ns` target leaf.
 - [ice-commit-rebase-dup-1-card-2026-10-15.md](ice-commit-rebase-dup-1-card-2026-10-15.md) —
-  **card ICE-COMMIT-REBASE-DUP-1 (2026-10-15, open, not scheduled):** the fork's
+  **card ICE-COMMIT-REBASE-DUP-1 (2026-10-15; fork half done via fork #368 and RePark #1095, pin now `d80a2884`; U-9 drill half open):** the fork's
   re-base after a CAS rejection can append the same rows twice (a lost reply, an
   SDK re-send, a stale rejection, then the re-base), from the owner's ruling 84;
   fork work (refresh and check for our snapshot id before re-basing, SDK retry
