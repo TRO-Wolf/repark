@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-09. **Filed by:** Claude (Opus 5.5), ENC-1 fold 2, from the Opus re-verify of PR #1019 head `78349722`.
 
-**Status:** open. Not scheduled. Each item needs an owner call: accept, or close.
+**Status:** items 2, 3, 4 and 6 accepted by the owner on 2026-10-14 (ruling 32). Items 1 and 5: built in #1071; final verifier FAIL (V1 to V5, 2026-10-17); parked under ruling 121(b) until Iceberg v2 and v3 read PRODUCTION; the 2026-10-20 plan proposes a dated carve-out row on the v2 label (decision P9), awaiting the owner.
 
 **Retires:** when every item below is ruled (accepted in words, or closed by a change with a pin).
 
@@ -27,3 +27,33 @@ The ENC-1 refusal holds: 862 keyed write attempts, 0 plaintext data, delete, man
 ## Interim rulings to confirm (orchestrator, 2026-10-09)
 
 These refuse on a keyed table and are kept until the owner says otherwise: `CREATE BRANCH` on a table with no snapshot, `compute_table_stats`, `compute_partition_stats`, `rewrite_table_path`.
+
+## Owner rulings (2026-10-14, questions 22 to 27, ruling 32)
+
+Round 2 of 2026-10-14, ruling 32: "CLOSE items 1 and 5, ACCEPT 2, 3, 4, 6". Questions 22 to
+27 are items 1 to 6 in order. This record was written on PR #1071's branch (`pr-1071`, this
+card) and is carried to main here without the branch's build; read on `pr-1071` head
+`787a3357`.
+
+1. Built in #1071; final verifier FAIL (V1 to V5, 2026-10-17); parked under ruling 121(b)
+   until Iceberg v2 and v3 read PRODUCTION; the 2026-10-20 plan proposes a dated carve-out
+   row on the v2 label (decision P9), awaiting the owner. Main still behaves as item 1
+   above describes (the 2026-10-20 triage, by reading main `085d77e8`; not run).
+2. **Accepted 2026-10-14.** An unkeyed table placed under a keyed table's location writes
+   plaintext there, and that is accepted: nothing is written into the keyed table; the
+   files belong to the other table. Documented with one docs line where the ENC-1
+   behaviour is documented for users (the ENC-1 section of
+   [the divergence registry](../../../docs/spark-sql-iceberg-parity.md)).
+3. **Accepted 2026-10-14.** Ref-only commits stay as they are, naming `publish_changes`
+   as the one exception: it refuses, and only by its entry check, while its twins run
+   pointer moves.
+4. **Accepted 2026-10-14.** Unchanged state resting on the entry checks is accepted:
+   plaintext safety does not depend on them and the refused shapes stay clean through
+   them.
+5. Built in #1071; final verifier FAIL (V1 to V5, 2026-10-17); parked under ruling 121(b)
+   until Iceberg v2 and v3 read PRODUCTION; the 2026-10-20 plan proposes a dated carve-out
+   row on the v2 label (decision P9), awaiting the owner. Main still behaves as item 5
+   above describes (the 2026-10-20 triage, by reading main `085d77e8`; not run).
+6. **Accepted 2026-10-14.** A commit that moves a keyed table's metadata directory
+   refuses on Glue, and that stays a documented refusal, with one acceptance cell to
+   add when U-9's legs are built.
