@@ -56,6 +56,16 @@ write stores what `SELECT` yields.
 | the nested-NTZ store and update casts | `crates/repark-iceberg/src/write/ntz_store.rs`, `update_cast.rs` (name the same UDFs) |
 | the write-side gates the seam will make partly redundant | `crates/repark-iceberg/src/write/nested_ns_gate.rs`, `crates/repark-spark/src/router/nested_ns.rs` (after #1124) |
 
+**What the ZONE-ORACLE-1 corpus (PR #1128) adds to the scope, 2026-10-20 later:** the container
+cast is format-wrong as well as zone-wrong (to `STRING` it renders ISO `T`/`Z` text, to `BIGINT`
+microseconds where Spark gives seconds, in UTC too), so the seam routes every container leaf
+through the leaf UDFs rather than correcting the zone of a native cast; `to_json` of an instant
+leaf is already EQUAL and the `to_json` step is the `TIMESTAMP_NTZ` rendering (trailing `Z`); the
+SQL leaf `TRY_CAST(x AS TIMESTAMP_NTZ)` is not session-aware; `to_utc_timestamp` and
+`from_utc_timestamp` of a wall literal return `TIMESTAMP_NTZ` where Spark returns `TIMESTAMP`.
+The sketch names each of these as a (source, target) pair or a function site, and the corpus
+cells it closes.
+
 **The seam (proposed; the sketch decides the exact placement):** one plan-level rewrite in
 `repark-functions`, run where `rewrite_ntz_target_cast` runs today, that replaces any
 `Expr::Cast`/`Expr::TryCast` whose target type holds, at any depth, a naive timestamp, a string
@@ -78,8 +88,8 @@ fine; no ceiling rises.
    unreachable once the seam lands (name them; do not remove them here); the cells of the card's
    tables each step closes; the expression corpus of ZONE-ORACLE-1 as the pin. To the
    orchestrator before step 1.
-1. **Red first:** the ZONE-ORACLE-1 corpus replayed on main, the DIFFERENT cells listed in the
-   ledger; Rust pins for each (source, target) pair red on main.
+1. **Red first:** the ZONE-ORACLE-1 corpus (PR #1128; 400 DIFFERENT, 20 REFUSED, 70 ERROR of
+   1,640 on main `754fb6e5`) replayed, the cells this unit will close listed in the ledger by id; Rust pins for each (source, target) pair red on main.
 2. **The seam** (one or two commits): the rewrite and its unit tests in `repark-functions`.
 3. **`to_json`** (one commit).
 4. **Pins green**, on `repark.sql()`, the Spark SQL door and the DataFrame door: the card's plain

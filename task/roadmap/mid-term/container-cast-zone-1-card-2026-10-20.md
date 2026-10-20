@@ -58,6 +58,26 @@ not reach these writers.
 `writeTo().append()`, carries the UTC wall into the table on main and on the PR head; the
 cast, not the write, produced it.
 
+## 2026-10-20, later: what the ZONE-ORACLE-1 corpus adds (PR #1128, 1,640 plain `SELECT` cells on main `754fb6e5`)
+
+- **Confirmed on plain `SELECT`.** Every container cast of an instant to a naive leaf is DIFFERENT
+  in `America/New_York`, `Asia/Kolkata` and `+05:30`, and EQUAL in `UTC` and `Etc/UTC`; the date
+  cast differs only in New York (the UTC date and the Kolkata date coincide for the probe instant).
+- **The container cast is format-wrong, not only zone-wrong.** A container cast to `STRING` renders
+  ISO text with `T` and `Z` where Spark renders `yyyy-MM-dd HH:mm:ss[.SSSSSS]` in the session zone,
+  and a container cast to `BIGINT` gives microseconds where Spark gives seconds, in every zone, UTC
+  included. Fixing the zone alone leaves those DIFFERENT; routing each container leaf through the
+  leaf UDFs (the ZONE-SEAM-1 shape) fixes both at once.
+- **`to_json` is narrower than first written.** `to_json` of an instant leaf is EQUAL in all five
+  zones; `to_json` of a `TIMESTAMP_NTZ` leaf is DIFFERENT in all five (a trailing `Z`). The seam's
+  `to_json` step is the NTZ rendering, not the instant.
+- **A leaf conversion inside a container is EQUAL in every zone** wherever the engine answers:
+  `named_struct('v', CAST(x AS TIMESTAMP_NTZ))` is right; only the cast of the container is wrong.
+- **Two leaf defects join the seam.** The SQL leaf `TRY_CAST(x AS TIMESTAMP_NTZ)` is not
+  session-aware on this corpus (the DataFrame `try_cast` is, per U-8's verifier). `to_utc_timestamp`
+  and `from_utc_timestamp` of a wall literal return `TIMESTAMP_NTZ` with a shifted wall where Spark
+  returns `TIMESTAMP` (NTZ-7 pinned the instant input only).
+
 ## Why U-8 does not close it
 
 U-8 (row R-011, T-3) refuses an instant that reaches a nested microsecond `TIMESTAMP_NTZ` leaf

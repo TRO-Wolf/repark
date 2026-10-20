@@ -33,6 +33,11 @@ Frames, innermost first: `datafusion_common::utils::list_to_arrays`,
 "repark internal error in PyReparkSession.sql: list array (a Rust panic was caught at the
 Python boundary …)". Spark 4.1.2 answers every row.
 
+**Wider than a column (ZONE-ORACLE-1, PR #1128, 2026-10-20):** `map('k', <function result>)` panics
+the same way for any non-literal value, sixty ERROR cells of the 1,640-cell corpus on main
+`754fb6e5`, in every zone. The one-row view the corpus reads from is `FROM range(1)`; a view of
+bare literals is folded and the panic does not show.
+
 ## Where to look
 
 - `MapFunc` builds its key and value arrays with `list_to_arrays`, which expects a list array;
