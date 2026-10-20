@@ -6,11 +6,81 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::table::Table;
 
+const MICROS_HINT: &str = "A TIMESTAMP value is not written into a nested TIMESTAMP_NTZ field \
+                           while the session time zone is not UTC: write the field from \
+                           CAST(<value> AS TIMESTAMP_NTZ) to store the session wall time (in an \
+                           UPDATE, assign the field itself), or set spark.sql.session.timeZone \
+                           to UTC for the statement.";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NaiveLeaf {
+    Nanos,
+    Micros,
+}
+
+impl NaiveLeaf {
+    fn unit(self) -> TimeUnit {
+        match self {
+            Self::Nanos => TimeUnit::Nanosecond,
+            Self::Micros => TimeUnit::Microsecond,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Supply {
     Absent,
     Null,
     Value,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Feed<'a> {
+    Expr {
+        value: &'a Expr,
+        path: Vec<String>,
+    },
+    SourceColumn {
+        position: Option<usize>,
+        name: Option<String>,
+    },
+    SourceStar,
+    Opaque,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Supplied<'a> {
+    supply: Supply,
+    feeds: Vec<Feed<'a>>,
+}
+
+impl<'a> Supplied<'a> {
+    fn absent() -> Self {
+        Self {
+            supply: Supply::Absent,
+            feeds: Vec::new(),
+        }
+    }
+
+    fn null() -> Self {
+        Self {
+            supply: Supply::Null,
+            feeds: Vec::new(),
+        }
+    }
+
+    fn value(feed: Feed<'a>) -> Self {
+        Self {
+            supply: Supply::Value,
+            feeds: vec![feed],
+        }
+    }
+
+    fn join(mut self, other: Self) -> Self {
+        self.supply = self.supply.max(other.supply);
+        self.feeds.extend(other.feeds);
+        self
+    }
 }
 
 pub struct InsertSupply<'a> {
@@ -28,17 +98,25 @@ pub enum NestedWrite<'a> {
     Unreadable,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct NestedSupply<'a> {
+    pub column: String,
+    pub data_type: DataType,
+    pub leaf: Vec<String>,
+    pub feeds: Vec<Feed<'a>>,
+}
+
+fn is_naive(data_type: &DataType, leaf: NaiveLeaf) -> bool {
+    matches!(data_type, DataType::Timestamp(unit, None) if *unit == leaf.unit())
+}
+
 #[must_use]
-pub fn nested_ns_leaf(data_type: &DataType) -> Option<Vec<String>> {
+pub fn nested_naive_leaf(data_type: &DataType, leaf: NaiveLeaf) -> Option<Vec<String>> {
     let below = |field: &Field, step: &str| {
-        let naive = matches!(
-            field.data_type(),
-            DataType::Timestamp(TimeUnit::Nanosecond, None)
-        );
-        let mut path = if naive {
+        let mut path = if is_naive(field.data_type(), leaf) {
             Some(Vec::new())
         } else {
-            nested_ns_leaf(field.data_type())
+            nested_naive_leaf(field.data_type(), leaf)
         }?;
         path.insert(0, step.to_string());
         Some(path)
@@ -61,22 +139,88 @@ pub fn nested_ns_leaf(data_type: &DataType) -> Option<Vec<String>> {
 }
 
 #[must_use]
-pub fn nested_ns_refusal(table: &str, column: &str, leaf: &[String]) -> DataFusionError {
+pub fn holds_zoned_timestamp(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Timestamp(_, Some(_)) => true,
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| holds_zoned_timestamp(field.data_type())),
+        DataType::Union(fields, _) => fields
+            .iter()
+            .any(|(_, field)| holds_zoned_timestamp(field.data_type())),
+        DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::ListView(field)
+        | DataType::LargeListView(field)
+        | DataType::FixedSizeList(field, _)
+        | DataType::Map(field, _) => holds_zoned_timestamp(field.data_type()),
+        DataType::Dictionary(_, values) => holds_zoned_timestamp(values),
+        DataType::RunEndEncoded(_, values) => holds_zoned_timestamp(values.data_type()),
+        _ => false,
+    }
+}
+
+fn reaches_leaf(data_type: &DataType, path: &[String], leaf: NaiveLeaf) -> bool {
+    let Some((step, rest)) = path.split_first() else {
+        return is_naive(data_type, leaf) || nested_naive_leaf(data_type, leaf).is_some();
+    };
+    let DataType::Struct(fields) = data_type else {
+        return true;
+    };
+    fields
+        .iter()
+        .find(|field| same(field.name(), step))
+        .is_none_or(|field| reaches_leaf(field.data_type(), rest, leaf))
+}
+
+#[must_use]
+pub fn lands_on_naive_leaf(data_type: &DataType, path: &[String], leaf: NaiveLeaf) -> bool {
+    let Some((step, rest)) = path.split_first() else {
+        return is_naive(data_type, leaf);
+    };
+    let DataType::Struct(fields) = data_type else {
+        return false;
+    };
+    fields
+        .iter()
+        .find(|field| same(field.name(), step))
+        .is_some_and(|field| lands_on_naive_leaf(field.data_type(), rest, leaf))
+}
+
+#[must_use]
+pub fn nested_naive_refusal(
+    table: &str,
+    column: &str,
+    leaf: &[String],
+    unit: NaiveLeaf,
+) -> DataFusionError {
     let quoted = |part: &String| format!("`{}`", part.replace('`', "``"));
     let path = std::iter::once(column.to_string())
         .chain(leaf.iter().cloned())
         .collect::<Vec<_>>();
     let path = path.iter().map(quoted).collect::<Vec<_>>().join(".");
+    let (target, reason) = match unit {
+        NaiveLeaf::Nanos => (
+            "TIMESTAMP_NS",
+            format!(
+                "A nested timestamp_ns leaf is not writable yet: omit the column `{column}` or \
+                 supply NULL for it."
+            ),
+        ),
+        NaiveLeaf::Micros => ("TIMESTAMP_NTZ", MICROS_HINT.to_string()),
+    };
     DataFusionError::Plan(format!(
         "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the \
-         table {table}: Cannot safely cast {path} to \"TIMESTAMP_NS\". A nested timestamp_ns \
-         leaf is not writable yet: omit the column `{column}` or supply NULL for it. SQLSTATE: \
-         KD000"
+         table {table}: Cannot safely cast {path} to \"{target}\". {reason} SQLSTATE: KD000"
     ))
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn refuse_nested_ns_supply(table: &Table, label: &str, write: &NestedWrite<'_>) -> Result<()> {
+pub fn nested_supplies<'a>(
+    table: &Table,
+    write: &NestedWrite<'a>,
+    leaf: NaiveLeaf,
+) -> Result<Vec<NestedSupply<'a>>> {
     let schema = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
         .map_err(|error| DataFusionError::External(Box::new(error)))?;
     let names: Vec<&str> = schema
@@ -84,21 +228,49 @@ pub fn refuse_nested_ns_supply(table: &Table, label: &str, write: &NestedWrite<'
         .iter()
         .map(|field| field.name().as_str())
         .collect();
+    let mut answered = Vec::new();
     for field in schema.fields() {
-        let Some(leaf) = nested_ns_leaf(field.data_type()) else {
+        let Some(path) = nested_naive_leaf(field.data_type(), leaf) else {
             continue;
         };
-        let supply = match write {
+        let supplied = match write {
             NestedWrite::Insert(insert) => insert_supply(insert, &names, field.name()),
             NestedWrite::Update(assignments) => assigned(assignments, field.name()),
             NestedWrite::Merge(clauses) => merged(clauses, &names, field.name()),
-            NestedWrite::Unreadable => Supply::Value,
+            NestedWrite::Unreadable => Supplied::value(Feed::Opaque),
         };
-        if supply == Supply::Value {
-            return Err(nested_ns_refusal(label, field.name(), &leaf));
+        if supplied.supply != Supply::Value {
+            continue;
         }
+        let feeds = supplied
+            .feeds
+            .into_iter()
+            .filter(|feed| match feed {
+                Feed::Expr { path: into, .. } => reaches_leaf(field.data_type(), into, leaf),
+                _ => true,
+            })
+            .collect();
+        answered.push(NestedSupply {
+            column: field.name().clone(),
+            data_type: field.data_type().clone(),
+            leaf: path,
+            feeds,
+        });
     }
-    Ok(())
+    Ok(answered)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_nested_ns_supply(table: &Table, label: &str, write: &NestedWrite<'_>) -> Result<()> {
+    match nested_supplies(table, write, NaiveLeaf::Nanos)?.first() {
+        Some(supply) => Err(nested_naive_refusal(
+            label,
+            &supply.column,
+            &supply.leaf,
+            NaiveLeaf::Nanos,
+        )),
+        None => Ok(()),
+    }
 }
 
 fn same(left: &str, right: &str) -> bool {
@@ -158,14 +330,14 @@ fn items(query: &Query) -> Option<Vec<(Option<String>, bool)>> {
     }
 }
 
-fn at(found: Option<&(Option<String>, bool)>) -> Supply {
+fn at<'a>(found: Option<&(Option<String>, bool)>, feed: Feed<'a>) -> Supplied<'a> {
     match found {
-        Some((_, true)) => Supply::Null,
-        _ => Supply::Value,
+        Some((_, true)) => Supplied::null(),
+        _ => Supplied::value(feed),
     }
 }
 
-fn insert_supply(insert: &InsertSupply<'_>, fields: &[&str], column: &str) -> Supply {
+fn insert_supply<'a>(insert: &InsertSupply<'_>, fields: &[&str], column: &str) -> Supplied<'a> {
     let found = insert.source.and_then(items);
     let by_position = || {
         let targets: Vec<&str> = if insert.listed.is_empty() {
@@ -174,28 +346,36 @@ fn insert_supply(insert: &InsertSupply<'_>, fields: &[&str], column: &str) -> Su
             insert.listed.iter().map(String::as_str).collect()
         };
         let Some(index) = targets.iter().position(|target| same(target, column)) else {
-            return Supply::Absent;
+            return Supplied::absent();
+        };
+        let feed = Feed::SourceColumn {
+            position: (!insert.partitioned).then_some(index),
+            name: None,
         };
         match &found {
-            Some(found) if !insert.partitioned => at(found.get(index)),
-            _ => Supply::Value,
+            Some(found) if !insert.partitioned => at(found.get(index), feed),
+            _ => Supplied::value(feed),
         }
     };
     let by_name = || {
+        let feed = Feed::SourceColumn {
+            position: None,
+            name: Some(column.to_string()),
+        };
         let Some(found) = &found else {
-            return Supply::Value;
+            return Supplied::value(feed);
         };
         let named = found
             .iter()
             .find(|(name, _)| name.as_deref().is_some_and(|name| same(name, column)));
         match named {
-            Some(named) => at(Some(named)),
-            None if found.iter().any(|(name, _)| name.is_none()) => Supply::Value,
-            None => Supply::Absent,
+            Some(named) => at(Some(named), feed),
+            None if found.iter().any(|(name, _)| name.is_none()) => Supplied::value(feed),
+            None => Supplied::absent(),
         }
     };
     match (insert.positional, insert.by_name) {
-        (true, true) => by_position().max(by_name()),
+        (true, true) => by_position().join(by_name()),
         (false, true) => by_name(),
         _ => by_position(),
     }
@@ -205,15 +385,15 @@ fn wild(name: &str) -> bool {
     name.starts_with("__repark_")
 }
 
-fn assigned(assignments: &[Assignment], column: &str) -> Supply {
+fn assigned<'a>(assignments: &'a [Assignment], column: &str) -> Supplied<'a> {
     if assignments.is_empty() {
-        return Supply::Value;
+        return Supplied::value(Feed::Opaque);
     }
     assignments
         .iter()
         .map(|assignment| {
             let AssignmentTarget::ColumnName(name) = &assignment.target else {
-                return Supply::Value;
+                return Supplied::value(Feed::Opaque);
             };
             let parts: Vec<String> = name
                 .0
@@ -221,30 +401,35 @@ fn assigned(assignments: &[Assignment], column: &str) -> Supply {
                 .map(|part| part.as_ident().map(|ident| ident.value.clone()))
                 .collect::<Option<Vec<String>>>()
                 .unwrap_or_default();
-            if parts.is_empty() || parts.iter().any(|part| wild(part)) {
-                return Supply::Value;
+            if parts.is_empty() {
+                return Supplied::value(Feed::Opaque);
             }
-            if !parts.iter().any(|part| same(part, column)) {
-                return Supply::Absent;
+            if parts.iter().any(|part| wild(part)) {
+                return Supplied::value(Feed::SourceStar);
             }
+            let Some(named) = parts.iter().position(|part| same(part, column)) else {
+                return Supplied::absent();
+            };
             let whole = parts.last().is_some_and(|part| same(part, column));
             if whole && is_null(&assignment.value) {
-                Supply::Null
+                Supplied::null()
             } else {
-                Supply::Value
+                Supplied::value(Feed::Expr {
+                    value: &assignment.value,
+                    path: parts[named + 1..].to_vec(),
+                })
             }
         })
-        .max()
-        .unwrap_or(Supply::Value)
+        .fold(Supplied::absent(), Supplied::join)
 }
 
-fn inserted(insert: &MergeInsertExpr, fields: &[&str], column: &str) -> Supply {
+fn inserted<'a>(insert: &'a MergeInsertExpr, fields: &[&str], column: &str) -> Supplied<'a> {
     let listed: Option<Vec<String>> = insert.columns.iter().map(last_part).collect();
     let Some(listed) = listed else {
-        return Supply::Value;
+        return Supplied::value(Feed::Opaque);
     };
     if listed.iter().any(|name| wild(name)) {
-        return Supply::Value;
+        return Supplied::value(Feed::SourceStar);
     }
     let targets: Vec<&str> = if listed.is_empty() {
         fields.to_vec()
@@ -252,308 +437,35 @@ fn inserted(insert: &MergeInsertExpr, fields: &[&str], column: &str) -> Supply {
         listed.iter().map(String::as_str).collect()
     };
     let Some(index) = targets.iter().position(|target| same(target, column)) else {
-        return Supply::Absent;
+        return Supplied::absent();
     };
     match &insert.kind {
-        MergeInsertKind::Values(values) => {
-            let null = !values.rows.is_empty()
-                && values
-                    .rows
-                    .iter()
-                    .all(|row| row.content.get(index).is_some_and(is_null));
-            if null { Supply::Null } else { Supply::Value }
-        }
-        MergeInsertKind::Row => Supply::Value,
+        MergeInsertKind::Values(values) if !values.rows.is_empty() => values
+            .rows
+            .iter()
+            .map(|row| match row.content.get(index) {
+                Some(value) if is_null(value) => Supplied::null(),
+                Some(value) => Supplied::value(Feed::Expr {
+                    value,
+                    path: Vec::new(),
+                }),
+                None => Supplied::value(Feed::Opaque),
+            })
+            .fold(Supplied::absent(), Supplied::join),
+        MergeInsertKind::Values(_) | MergeInsertKind::Row => Supplied::value(Feed::Opaque),
     }
 }
 
-fn merged(clauses: &[MergeClause], fields: &[&str], column: &str) -> Supply {
+fn merged<'a>(clauses: &'a [MergeClause], fields: &[&str], column: &str) -> Supplied<'a> {
     clauses
         .iter()
         .map(|clause| match &clause.action {
             MergeAction::Update(update) => assigned(&update.assignments, column),
             MergeAction::Insert(insert) => inserted(insert, fields, column),
-            MergeAction::Delete { .. } => Supply::Absent,
+            MergeAction::Delete { .. } => Supplied::absent(),
         })
-        .max()
-        .unwrap_or(Supply::Absent)
+        .fold(Supplied::absent(), Supplied::join)
 }
 
 #[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
-    use datafusion::sql::sqlparser::ast::Statement;
-    use datafusion::sql::sqlparser::dialect::GenericDialect;
-    use datafusion::sql::sqlparser::parser::Parser;
-
-    use super::{InsertSupply, Supply, assigned, insert_supply, merged, nested_ns_leaf};
-
-    fn item(data_type: DataType) -> Arc<Field> {
-        Arc::new(Field::new("item", data_type, true))
-    }
-
-    fn record(name: &str, data_type: DataType) -> DataType {
-        DataType::Struct(Fields::from(vec![
-            Field::new("n", DataType::Int32, true),
-            Field::new(name, data_type, true),
-        ]))
-    }
-
-    fn map(key: DataType, value: DataType) -> DataType {
-        let entries = DataType::Struct(Fields::from(vec![
-            Field::new("key", key, false),
-            Field::new("value", value, true),
-        ]));
-        DataType::Map(Arc::new(Field::new("entries", entries, false)), false)
-    }
-
-    #[test]
-    fn every_container_kind_is_searched_for_a_naive_nanosecond_leaf() {
-        let nanos = DataType::Timestamp(TimeUnit::Nanosecond, None);
-        let found: [(DataType, &[&str]); 12] = [
-            (record("v", nanos.clone()), &["v"]),
-            (record("i", record("v", nanos.clone())), &["i", "v"]),
-            (DataType::List(item(nanos.clone())), &["element"]),
-            (DataType::LargeList(item(nanos.clone())), &["element"]),
-            (DataType::ListView(item(nanos.clone())), &["element"]),
-            (DataType::LargeListView(item(nanos.clone())), &["element"]),
-            (
-                DataType::FixedSizeList(item(nanos.clone()), 2),
-                &["element"],
-            ),
-            (
-                DataType::List(item(record("v", nanos.clone()))),
-                &["element", "v"],
-            ),
-            (
-                record("a", DataType::List(item(nanos.clone()))),
-                &["a", "element"],
-            ),
-            (map(DataType::Utf8, nanos.clone()), &["value"]),
-            (map(nanos.clone(), DataType::Int32), &["key"]),
-            (
-                map(DataType::Utf8, record("v", nanos.clone())),
-                &["value", "v"],
-            ),
-        ];
-        for (data_type, path) in found {
-            let leaf = nested_ns_leaf(&data_type);
-            let expected: Vec<String> = path.iter().map(ToString::to_string).collect();
-            assert_eq!(leaf, Some(expected), "{data_type}");
-        }
-        let zoned = DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("+00:00")));
-        let micros = DataType::Timestamp(TimeUnit::Microsecond, None);
-        for data_type in [
-            nanos,
-            record("v", zoned.clone()),
-            record("v", micros.clone()),
-            DataType::List(item(zoned.clone())),
-            DataType::List(item(micros.clone())),
-            map(zoned, micros),
-            DataType::Int64,
-        ] {
-            assert_eq!(nested_ns_leaf(&data_type), None, "{data_type}");
-        }
-    }
-
-    fn statement(sql: &str) -> Statement {
-        let mut parsed = Parser::parse_sql(&GenericDialect {}, sql).expect(sql);
-        parsed.remove(0)
-    }
-
-    const FIELDS: [&str; 3] = ["id", "st", "k"];
-
-    fn insert(sql: &str, by_name: bool) -> Supply {
-        let Statement::Insert(insert) = statement(sql) else {
-            panic!("not an insert: {sql}");
-        };
-        let listed: Vec<String> = insert.columns.iter().map(ToString::to_string).collect();
-        let supply = InsertSupply {
-            listed: &listed,
-            source: insert.source.as_deref(),
-            partitioned: false,
-            positional: !by_name,
-            by_name,
-        };
-        insert_supply(&supply, &FIELDS, "st")
-    }
-
-    #[test]
-    fn an_insert_supplies_the_column_unless_it_omits_it_or_gives_a_bare_null() {
-        for (sql, by_name, expected) in [
-            ("INSERT INTO t VALUES (1, x, 0)", false, Supply::Value),
-            ("INSERT INTO t VALUES (1, NULL, 0)", false, Supply::Null),
-            (
-                "INSERT INTO t VALUES (1, NULL, 0), (2, x, 0)",
-                false,
-                Supply::Value,
-            ),
-            (
-                "INSERT INTO t VALUES (1, (NULL), 0), (2, NULL, 0)",
-                false,
-                Supply::Null,
-            ),
-            (
-                "INSERT INTO t VALUES (1, CAST(NULL AS INT), 0)",
-                false,
-                Supply::Value,
-            ),
-            ("INSERT INTO t (id, k) VALUES (1, 0)", false, Supply::Absent),
-            ("INSERT INTO t (id, ST) VALUES (1, x)", false, Supply::Value),
-            (
-                "INSERT INTO t (k, st) SELECT 1, NULL FROM s",
-                false,
-                Supply::Null,
-            ),
-            ("INSERT INTO t SELECT id, v, 0 FROM s", false, Supply::Value),
-            (
-                "INSERT INTO t SELECT id, NULL, 0 FROM s",
-                false,
-                Supply::Null,
-            ),
-            ("INSERT INTO t SELECT * FROM s", false, Supply::Value),
-            ("INSERT INTO t SELECT id FROM s", false, Supply::Value),
-            (
-                "INSERT INTO t SELECT a, b, c FROM s UNION ALL SELECT a, b, c FROM s",
-                false,
-                Supply::Value,
-            ),
-            ("INSERT INTO t TABLE s", false, Supply::Value),
-            (
-                "INSERT INTO t SELECT 0 AS k, id FROM s",
-                true,
-                Supply::Absent,
-            ),
-            (
-                "INSERT INTO t SELECT 0 AS k, NULL AS st, id FROM s",
-                true,
-                Supply::Null,
-            ),
-            (
-                "INSERT INTO t SELECT 0 AS k, v AS St, id FROM s",
-                true,
-                Supply::Value,
-            ),
-            (
-                "INSERT INTO t SELECT 0 AS k, s.st, id FROM s",
-                true,
-                Supply::Value,
-            ),
-            (
-                "INSERT INTO t SELECT 0 AS k, f(v), id FROM s",
-                true,
-                Supply::Value,
-            ),
-            ("INSERT INTO t SELECT * FROM s", true, Supply::Value),
-        ] {
-            assert_eq!(insert(sql, by_name), expected, "{sql}");
-        }
-    }
-
-    #[test]
-    fn a_partition_clause_or_a_frame_written_by_name_is_read_as_a_value() {
-        let Statement::Insert(parsed) = statement("INSERT INTO t SELECT id, NULL, 0 FROM s") else {
-            panic!("not an insert");
-        };
-        let supply = |partitioned, positional, by_name| {
-            let supply = InsertSupply {
-                listed: &[],
-                source: parsed.source.as_deref(),
-                partitioned,
-                positional,
-                by_name,
-            };
-            insert_supply(&supply, &FIELDS, "st")
-        };
-        assert_eq!(supply(false, true, false), Supply::Null);
-        assert_eq!(supply(true, true, false), Supply::Value);
-        assert_eq!(supply(false, true, true), Supply::Value);
-        let absent = InsertSupply {
-            listed: &[],
-            source: None,
-            partitioned: false,
-            positional: true,
-            by_name: false,
-        };
-        assert_eq!(insert_supply(&absent, &FIELDS, "st"), Supply::Value);
-    }
-
-    #[test]
-    fn an_assignment_supplies_the_column_when_any_part_of_its_path_names_it() {
-        for (sql, expected) in [
-            ("UPDATE t SET k = 1", Supply::Absent),
-            ("UPDATE t SET st = x", Supply::Value),
-            ("UPDATE t SET k = 1, ST = x", Supply::Value),
-            ("UPDATE t SET st = NULL", Supply::Null),
-            ("UPDATE t SET t.st = NULL", Supply::Null),
-            ("UPDATE t SET st.v = NULL", Supply::Value),
-            ("UPDATE t SET st.v = x", Supply::Value),
-            ("UPDATE t SET t.st.v = x", Supply::Value),
-            ("UPDATE t SET (id, st) = (1, x)", Supply::Value),
-            (
-                "UPDATE t SET __repark_merge_star_sentinel__ = 1",
-                Supply::Value,
-            ),
-        ] {
-            let Statement::Update(update) = statement(sql) else {
-                panic!("not an update: {sql}");
-            };
-            assert_eq!(assigned(&update.assignments, "st"), expected, "{sql}");
-        }
-        assert_eq!(assigned(&[], "st"), Supply::Value);
-    }
-
-    #[test]
-    fn a_merge_supplies_the_column_through_any_one_clause() {
-        let on = "MERGE INTO t USING s ON t.id = s.id";
-        for (clauses, expected) in [
-            ("WHEN MATCHED THEN DELETE", Supply::Absent),
-            ("WHEN MATCHED THEN UPDATE SET k = 1", Supply::Absent),
-            ("WHEN MATCHED THEN UPDATE SET st = s.v", Supply::Value),
-            ("WHEN MATCHED THEN UPDATE SET t.st.v = s.v", Supply::Value),
-            ("WHEN MATCHED THEN UPDATE SET st = NULL", Supply::Null),
-            (
-                "WHEN NOT MATCHED THEN INSERT (id, k) VALUES (s.id, 0)",
-                Supply::Absent,
-            ),
-            (
-                "WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.v)",
-                Supply::Value,
-            ),
-            (
-                "WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, NULL)",
-                Supply::Null,
-            ),
-            (
-                "WHEN NOT MATCHED THEN INSERT VALUES (s.id, s.v, 0)",
-                Supply::Value,
-            ),
-            (
-                "WHEN NOT MATCHED THEN INSERT VALUES (s.id, NULL, 0)",
-                Supply::Null,
-            ),
-            (
-                "WHEN NOT MATCHED THEN INSERT (__repark_merge_star_sentinel__) VALUES (1)",
-                Supply::Value,
-            ),
-            (
-                "WHEN MATCHED THEN UPDATE SET k = 1 \
-                 WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.v)",
-                Supply::Value,
-            ),
-            (
-                "WHEN MATCHED THEN UPDATE SET st = NULL \
-                 WHEN NOT MATCHED THEN INSERT (id, k) VALUES (s.id, 0)",
-                Supply::Null,
-            ),
-        ] {
-            let sql = format!("{on} {clauses}");
-            let Statement::Merge(merge) = statement(&sql) else {
-                panic!("not a merge: {sql}");
-            };
-            assert_eq!(merged(&merge.clauses, &FIELDS, "st"), expected, "{sql}");
-        }
-    }
-}
+mod tests;

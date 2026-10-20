@@ -859,7 +859,7 @@ declines it (a dated ruling in the intake, then the archive).
   ICE-NTZ-NESTED-WALL-1 (2026-10-10, open, target v1.5.5, own unit):** a nested microsecond `TIMESTAMP_NTZ` field stores
   the session wall through field assignment (28 cells) and the UTC wall through every other door (106 cells) (parity row
   R-011). The release note must say that nested NTZ values written by INSERT before the fix hold the UTC wall. Sibling:
-  ICE-TSNS-NESTED-1.
+  ICE-TSNS-NESTED-1. **2026-10-20:** the stopgap refusal shipped by U-8 (ICE-NTZ-NESTED-REFUSE-1); the lift is 1.5.7.
 - [write-body-carriers-1-card-2026-10-10.md](write-body-carriers-1-card-2026-10-10.md) — **card
   WRITE-BODY-CARRIERS-1 (2026-10-10, build round 1 landed 2026-10-14):** owner ruling 2026-10-10 that `CREATE [OR REPLACE] TABLE
   z AS INSERT INTO t ...` refuses at parse, as Spark does; today it commits the inner INSERT and then fails with

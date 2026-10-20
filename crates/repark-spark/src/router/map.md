@@ -152,6 +152,24 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   from there. The moved walk also answers a `DELETE`, which this file's match ignores, and the
   statement itself still comes first, so the `BY NAME` index and every answer stay as they were.
   pins: repark-sql-update-subquery-where-1/C-021
+  **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20, parity row R-011, ruling T-3):** after R-015's call on
+  the same loaded table, `refuse_zoned_micros` refuses a value for a column with a nested
+  microsecond `TIMESTAMP_NTZ` leaf when the session zone is not UTC (canonical id `UTC`,
+  `+00:00` or `-00:00`; `Etc/UTC` refuses) or the statement is a `PREPARE` (`EXECUTE` can run it
+  after a `SET` of the zone). For each supplied column it reads the type of each feed by
+  planning one `SELECT` through `router::execute_calibrated`, never executed: an INSERT's source
+  (with the outer `WITH` of `WITH … INSERT`), the column at the source position, of the column's
+  name, or every column when neither resolves; `SELECT <values> FROM <table> [AS <alias>]` for
+  UPDATE and `… FROM <table> [AS <alias>], <source>` for MERGE, the table being the loaded
+  table's name, so `t.branch_x` reads as `t`; `SELECT * FROM <source>` for a MERGE star. It
+  refuses when a type holds a zoned timestamp, when the plan fails (fail closed), and, on a
+  plain `UPDATE` whose path stops above the leaf, when any planned sub-expression is zoned
+  (`converts_a_zoned_value`). **Why that last rule:** that door alone converts a
+  `CAST(<instant> AS TIMESTAMP_NTZ)` inside a struct with UTC (8 cells on main), and the
+  refusal's hint names that cast; MERGE and the field assignment convert it in the session zone.
+  **Why plan and not read the AST:** a column, a view, a by-name frame and a scalar subquery
+  have no type in the AST; the router's own planner gives the type the write sees.
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005
 
 ## Pointers
 

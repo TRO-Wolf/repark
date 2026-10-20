@@ -53,6 +53,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   more-than-one-seam halt fires (C-006 OPEN); scope and non-measurement stated
   (C-007). `risk_tier: standard`. Branch `fix/ice-tsns-floor-doors-1`.
   pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
+- [ice-ntz-nested-refuse-1-ledger.md](ice-ntz-nested-refuse-1-ledger.md) —
+  **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20), parity row R-011, ruling T-3:** a nested
+  microsecond `TIMESTAMP_NTZ` leaf refuses a value that is not provably naive outside UTC, on
+  every door, with one hint. C-001 the seam, C-002 to C-007 the doors, the text and the
+  carriers, C-008 the controls, C-009 and C-010 the facade and Spark, C-011 the matrix against
+  main, C-012 and C-013 mutants and gates; C-014 (the verifier) OPEN.
 - [ice-struct-pairing-1-ledger.md](ice-struct-pairing-1-ledger.md) —
   **ICE-STRUCT-PAIRING-1 (U-6, 2026-10-14), parity row R-016:** one rule pairs struct fields on
   every write door. C-001 to C-009 are the sentences of the rule, C-010 to C-015 how the doors

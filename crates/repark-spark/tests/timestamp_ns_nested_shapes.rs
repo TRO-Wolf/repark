@@ -436,13 +436,17 @@ async fn a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows()
     }
 }
 
+/// Re-pinned 2026-10-20 (ICE-NTZ-NESTED-REFUSE-1, ruling T-3): the nested `TIMESTAMP_NTZ`
+/// row stored the UTC wall of this instant in New York. It now takes R-011's refusal, not
+/// this gate's text. The zoned rows are unchanged.
+///
+/// pins: ice-tsns-merge-wall-1/C-042, ice-ntz-nested-refuse-1/C-008
 #[tokio::test]
 async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
     let session = session("America/New_York");
     let _warehouse = catalog(&session).await;
     for (index, (leaf_type, ticks)) in [
         ("timestamptz_ns", 1_767_323_045_123_456_000_i64),
-        ("TIMESTAMP_NTZ", 1_767_323_045_123_456),
         ("TIMESTAMP", 1_767_323_045_123_456),
     ]
     .into_iter()
@@ -474,6 +478,23 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
             "{leaf_type}"
         );
     }
+    run(
+        &session,
+        "CREATE TABLE ice.ns.ntz (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    let refused = attempt(
+        &session,
+        "INSERT INTO ice.ns.ntz SELECT id, named_struct('v', x, 'n', 1) FROM ice.ns.src",
+    )
+    .await
+    .expect_err("refused by R-011");
+    assert!(
+        refused.contains("Cannot safely cast `st`.`v` to \"TIMESTAMP_NTZ\""),
+        "{refused}"
+    );
+    assert!(!refused.contains(NOT_YET), "{refused}");
 }
 
 const NULL_SIBLING_UPDATES: [&str; 4] = [

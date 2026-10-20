@@ -1,4 +1,4 @@
-# ICE-NTZ-NESTED-REFUSE-1 (U-8, R-011, ruling T-3): every door refuses a mixed-wall nested microsecond NTZ store with one hint     grade: A   engine: Claude Opus 5.5 (`claude-opus-5-5`)   release: 1.5.5
+# ICE-NTZ-NESTED-REFUSE-1 (U-8, R-011, ruling T-3): every door refuses a mixed-wall nested microsecond NTZ store with one hint     grade: A   engine: Claude Opus 5.5 (`claude-opus-5-5`)   release: the next tag (v1.5.6 notes draft)
 
 **Status:** order of record, dispatched 2026-10-20 as step 2 of the one Opus 5.5 lane of the
 2026-10-20 Iceberg re-prioritisation (order table row U-8), adopted by the owner the same day.

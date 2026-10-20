@@ -3392,7 +3392,7 @@ still open is `isModifiable`.
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
 
-### ICE-TSNS-SQL-1-R-011 — OPEN, PARKED 2026-10-12 (measured 2026-10-09): a nested microsecond `TIMESTAMP_NTZ` field stores two walls
+### ICE-TSNS-SQL-1-R-011 — REFUSED 2026-10-20 (U-8, ICE-NTZ-NESTED-REFUSE-1; measured 2026-10-09, parked 2026-10-12): a nested microsecond `TIMESTAMP_NTZ` field stored two walls
 
 - **repark** — the microsecond twin of the nested split R-007's fold 1 closed for
   `timestamp_ns`, on main `40fc916f` and unchanged at head. Into
@@ -3419,6 +3419,34 @@ still open is `isModifiable`.
 - **Status 2026-10-12 (owner):** narrowing deferred, design in
   [task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md](../task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md). PRs #1037 and #1038
   are parked as drafts; no further fold round is planned on them.
+- **Status 2026-10-20: REFUSED (U-8, ICE-NTZ-NESTED-REFUSE-1, ruling T-3).** In a session
+  whose zone is not UTC (canonical id other than `UTC`, `+00:00`, `-00:00`; `Etc/UTC` refuses)
+  or under `PREPARE`, a write that supplies a column whose type holds a naive microsecond
+  timestamp below the top level is refused before any file is written, on every door R-015
+  lists, when a value reaching the column is not provably naive: its planned type holds a zoned
+  timestamp anywhere, the router cannot plan it, or (the plain `UPDATE` that assigns a struct
+  above the leaf) a planned sub-expression is zoned. Text: ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]
+  Cannot write incompatible data for the table <table>: Cannot safely cast `<column>`.`<leaf>`
+  to "TIMESTAMP_NTZ". A TIMESTAMP value is not written into a nested TIMESTAMP_NTZ field while
+  the session time zone is not UTC: write the field from CAST(<value> AS TIMESTAMP_NTZ) to store
+  the session wall time (in an UPDATE, assign the field itself), or set
+  spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000``. A wall, a
+  `TIMESTAMP_NTZ` column and the hint's `CAST` store as before (the `CAST` stores Spark's
+  session wall); a UTC session refuses nothing. Measured on main `c516c54a` with #1037's door
+  probe plus the hint's spelling (1980 cells): 192 move, every one to the refusal: 176 instant
+  cells (108 UTC wall, 32 session wall by field assignment, 36 raw errors) and, on the plain
+  `UPDATE` door, 8 `CAST` cells that stored the UTC wall and 8 raw errors; no other cell
+  moves. **Why RePark and Spark differ:** Spark 4.1.2 stores the session wall on every door
+  (174 recorded cells, `python/repark/tests/timestamps/ice_ntz_nested_refuse_1_spark.json`);
+  RePark refuses those cells outside UTC until the lift. **Over-refusal, by design:** a value
+  holding a zoned leaf anywhere is refused even when that leaf pairs with a zoned sibling of the
+  target (pairing is R-016's rule). **Lift:** the 1.5.7 unit that extends ICE-TSNS-NESTED-1 to
+  the microsecond leaf from #1037's oracles and #1038's localise half. Pins:
+  `crates/repark-spark/tests/ntz_nested_refuse.rs`,
+  `timestamp_ns_wall_doors.rs` `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`
+  (the rewritten pin), `crates/repark-spark/src/tests/ntz_nested_refuse_routes.rs`,
+  `python/repark/tests/timestamps/test_ice_ntz_nested_refuse_1.py`. Ledger
+  `task/ledgers/staging/ice-ntz-nested-refuse-1-ledger.md`.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 
@@ -3515,7 +3543,9 @@ still open is `isModifiable`.
   calls, reads and time travel, `CREATE TABLE … AS SELECT` (the leaf takes the source's own
   type), and schema evolution. A DataFrame writer is refused when the frame has a column of
   that name, a `lit(None)` column included. `timestamptz_ns` and microsecond nested leaves
-  are not refused and answer as main does (rows R-008, R-011).
+  are not refused and answer as main does (rows R-008, R-011). *(2026-10-20: a naive
+  microsecond nested leaf now takes R-011's own refusal outside UTC; this gate is first and
+  unchanged.)*
   **This changes main:** a nested `timestamp_ns` write that stored on main (the session wall
   through `INSERT … SELECT`, `append` and field assignment, the UTC wall through
   `INSERT OVERWRITE`, MERGE and the overwrite writers) now refuses.

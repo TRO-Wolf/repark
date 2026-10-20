@@ -12,6 +12,7 @@ pins.
 
 - [test_cast_ts_string_1.py](test_cast_ts_string_1.py) — CAST-TS-STRING-1 — ``CAST(<string> AS TIMESTAMP)`` answers Spark 4.1.2 on every door.
 - [test_current_date_session_zone_1.py](test_current_date_session_zone_1.py) — CURRENT-DATE-SESSION-ZONE-1 — ``current_date()`` answers the session-zone date.
+- [test_ice_ntz_nested_refuse_1.py](test_ice_ntz_nested_refuse_1.py) — ICE-NTZ-NESTED-REFUSE-1: an instant for a nested NTZ leaf refuses outside UTC (DataFrame writers, the 174 recorded Spark cells, the live re-derivation). pins: ice-ntz-nested-refuse-1/C-009, C-010
 - [test_ice_tsns_coercion_1.py](test_ice_tsns_coercion_1.py) — The ICE-TSNS-COERCION-1 slice 0 fixture is complete and matches its summary.
 - [test_ice_tsns_floor_doors_1.py](test_ice_tsns_floor_doors_1.py) — ICE-TSNS-FLOOR-DOORS-1: every write door stores the nanosecond floor in the session zone.
 - [test_ice_tsns_frame_door_1.py](test_ice_tsns_frame_door_1.py) — ICE-TSNS-FRAME-DOOR-1: a pandas or polars nanosecond timestamp column enters as microseconds.
@@ -54,6 +55,8 @@ pins.
 - [_record_ice_tsns_coercion_1_try_cast.py](_record_ice_tsns_coercion_1_try_cast.py) — Record TRY_CAST(x AS TIMESTAMP) for a microsecond, a nanosecond and a string.
 - [_record_ice_tsns_coercion_1_twins.py](_record_ice_tsns_coercion_1_twins.py) — Record the ICE-TSNS-COERCION-1 twin matrix from the installed build.
 - [_record_ice_tsns_floor_doors_1_main.py](_record_ice_tsns_floor_doors_1_main.py) — ICE-TSNS-FLOOR-DOORS-1 step 0 recorder of main microsecond narrowing per door.
+- [_ice_ntz_nested_refuse_1_doors.py](_ice_ntz_nested_refuse_1_doors.py) — ICE-NTZ-NESTED-REFUSE-1: twelve of PR #1037's nested NTZ doors × five sources, run on either engine, and the ruled RePark answer. pins: ice-ntz-nested-refuse-1/C-010, C-011
+- [_record_ice_ntz_nested_refuse_1.py](_record_ice_ntz_nested_refuse_1.py) — ICE-NTZ-NESTED-REFUSE-1: record what Spark 4.1.2 stores through those doors in three zones.
 - [_record_ice_tsns_frame_door_1.py](_record_ice_tsns_frame_door_1.py) — ICE-TSNS-FRAME-DOOR-1: record what Spark answers for a pandas nanosecond timestamp frame.
 - [_record_ice_tsns_merge_wall_1_main.py](_record_ice_tsns_merge_wall_1_main.py) — ICE-TSNS-MERGE-WALL-1: record what the installed build stores in every matrix cell.
 - [_record_ice_tsns_sql_1_oracle.py](_record_ice_tsns_sql_1_oracle.py) — Record and check the ICE-TSNS-SQL-1 oracle: the Iceberg spec plus a PyIceberg 0.12.0 read-back.
@@ -72,6 +75,7 @@ pins.
 - [cast_ts_string_1_spark_oracle.json](cast_ts_string_1_spark_oracle.json) — Recorded Spark oracle (604 cells) read by `test_cast_ts_string_1.py`; re-derived by `_record_cast_ts_string_1.py`.
 - [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) — Recorded data (1540 cells) read by `test_ice_tsns_coercion_1.py`.
 - [ice_tsns_coercion_1_twins.json](ice_tsns_coercion_1_twins.json) — Recorded data read by `_ice_tsns_type_planner_1_cells.py`, `test_ice_tsns_coercion_1.py`.
+- [ice_ntz_nested_refuse_1_spark.json](ice_ntz_nested_refuse_1_spark.json) — Recorded Spark oracle (174 cells, 2026-10-20) read by `test_ice_ntz_nested_refuse_1.py`.
 - [ice_tsns_frame_door_1_spark.json](ice_tsns_frame_door_1_spark.json) — Recorded Spark oracle (90 cells) read by `test_ice_tsns_frame_door_1.py`.
 - [ice_tsns_merge_wall_1_main.json](ice_tsns_merge_wall_1_main.json) — RePark recording (760 cells) read by `test_ice_tsns_merge_wall_1.py`, `test_ice_tstzns_wall_1.py`; re-derived by `_record_ice_tsns_merge_wall_1_main.py`.
 - [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json) — ICE-TSNS-SQL-1 recording: the PyIceberg read-back of the DataFrame-door control, RePark's `.partitions` answer, the literals with their nanoseconds, and the SQL-door statements; read by `test_ice_tsns_sql_1.py`.

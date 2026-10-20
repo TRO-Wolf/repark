@@ -120,6 +120,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
   The two nested store pins of fold 1 left with the split; the nested pins are the next row.
   pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
+  **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control above is rewritten into
+  `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`: in New York and Kolkata the
+  six doors refuse the instant with R-011's text and the three seeded rows keep a NULL leaf; in
+  UTC they store `1767323045123456`, the wall main stored. pins: ice-ntz-nested-refuse-1/C-002, C-003
 - [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2
   (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
@@ -238,6 +242,35 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
   `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
   pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
+  **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control's nested `TIMESTAMP_NTZ` row stored the
+  UTC wall of a New York instant; it now asserts R-011's refusal (not R-015's text), dated in
+  the test's doc comment. pins: ice-ntz-nested-refuse-1/C-008
+- [ntz_nested_refuse.rs](ntz_nested_refuse.rs) — **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20),
+  parity row R-011:** outside UTC a nested microsecond `TIMESTAMP_NTZ` leaf refuses an instant.
+  `every_door_refuses_an_instant_outside_utc_and_writes_nothing`: five shapes (struct, struct in
+  struct, array, array of struct, map value) through eighteen doors (`INSERT` with `VALUES`,
+  `SELECT`, a column list, `BY NAME` named and star, `OVERWRITE` both, `REPLACE WHERE`, the
+  MERGE insert arms built in the source and in the clause, `INSERT *`, MERGE update and
+  `UPDATE SET *`, `UPDATE` with and without `WHERE`, a temporary view, a subquery, a scalar
+  subquery in `VALUES`) in New York and Kolkata: the text with the leaf path, no file, no
+  snapshot. `a_field_assignment_of_an_instant_refuses_too`: five field doors that stored the
+  session wall on main. `the_refusal_names_the_table_the_column_and_the_leaf`: the whole text
+  and no deleting word in it. `a_wall_or_the_hints_cast_stores_outside_utc_and_the_plain_update_refuses_the_cast`:
+  sixteen doors store a wall and the hint's `CAST` stores the session wall, except the plain
+  `UPDATE` above the leaf, which refuses the cast; the field assignment of the cast stores the
+  session wall. `a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows`: ten
+  statements and two maintenance calls keep the stored wall.
+  `a_zoned_leaf_and_a_top_level_ntz_column_are_not_guarded`: the controls, and R-015's text
+  first on a struct holding both leaves.
+  `the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed`: a wall through
+  `WITH … INSERT` passes the gate (main answers "not implemented"), an instant through it
+  refuses, an instant into a zoned sibling field
+  stores, and an unplannable value refuses. **Mutants (§7 of the ledger):** M1 the zone
+  condition always on, M2 a failed plan read as naive, M3 the plain `UPDATE` sub-expression
+  rule removed, M4 the struct arm of `holds_zoned_timestamp` removed, M5 the field-path pruning
+  removed, M6 `PREPARE` decided by the zone, M7 the every-column fallback removed (M2b: a
+  failed INSERT plan read as naive); each reds a named pin.
+  pins: ice-ntz-nested-refuse-1/C-002, C-004, C-005, C-006, C-007, C-008, C-012, C-013
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

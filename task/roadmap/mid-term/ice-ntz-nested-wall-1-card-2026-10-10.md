@@ -3,6 +3,7 @@
 **Date:** 2026-10-10. **Filed by:** the v1.5.4 docs lane (Claude Haiku 5.5), from the parity row R-011 measured on 2026-10-09.
 
 **Status:** open. Target v1.5.5. One unit of its own.
+**Status 2026-10-20:** stopgap shipped by U-8 (ICE-NTZ-NESTED-REFUSE-1, ruling T-3): outside UTC every door refuses an instant for such a leaf with one hint; this card's lift is the 1.5.7 unit.
 
 **Sibling:** card ICE-TSNS-NESTED-1, which refuses a nested `timestamp_ns` leaf by name:
 [ice-tsns-nested-1-card-2026-10-09.md](ice-tsns-nested-1-card-2026-10-09.md).

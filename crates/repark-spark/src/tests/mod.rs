@@ -96,6 +96,7 @@ mod nested_column_ddl;
 mod nested_ns_routes;
 mod normalize;
 mod ntz_door;
+mod ntz_nested_refuse_routes;
 mod ntz_store;
 mod ntz_store_quotes;
 mod ntz_values_mix;
