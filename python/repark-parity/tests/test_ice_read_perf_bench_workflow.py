@@ -14,7 +14,7 @@ _AWS_YML = _REPO / ".github" / "workflows" / "aws-acceptance.yml"
 
 LIVE_AWS_CONDITION = "github.event_name == 'schedule' || inputs.leg == 'acceptance'"
 BENCH_CONDITION = "github.event_name == 'workflow_dispatch' && inputs.leg == 'ice-read-perf-bench'"
-UPLOAD_ARTIFACT = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+UPLOAD_ARTIFACT = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
 MODES = ("cold", "warm", "concurrent", "concurrent-cold")
 REF_GUARD = "if: github.ref != 'refs/heads/main'"
 ORDERED_MARKERS = (
