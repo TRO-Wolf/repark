@@ -3,8 +3,7 @@
 **Date:** 2026-10-20. **Filed by:** Claude (claude-opus-5-5), clerk, step 0 of the 2026-10-20
 Iceberg re-prioritisation.
 
-**Status:** open. Not scheduled. The 2026-10-20 plan names the unit that takes it,
-PARITY-LIVE-RERECORD-1, as step 1 of the one Opus 5.5 lane; that plan awaits the owner's adopt.
+**Status:** in flight. The owner adopted the 2026-10-20 plan the same day; PARITY-LIVE-RERECORD-1 ran as step 1 and proved candidate cause 2 by measurement: the live test called the recorder in-process, and `getOrCreate` borrowed the `local[2]` SparkContext that `test_acceptance_cross_read_local.py` builds first in collection order since `d96028ee`; the three-row seed writes two files on two cores. The fix is PR #1122 (the check runs in its own interpreter; the recorder refuses any master other than `local[1]`; the fixture is byte-identical). The two green mornings of P5 count from its merge.
 
 **Retires:** when the drifting cells are explained (a Spark behaviour change re-recorded with a
 dated note, or a recorder defect fixed) and the `parity-live` nightly is green two mornings in
