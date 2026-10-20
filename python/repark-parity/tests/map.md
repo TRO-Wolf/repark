@@ -159,7 +159,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `acceptance` default) and `purpose`. The bench job runs only on its dispatch, behind
   `environment: aws-acceptance`, the ref guard, job-scoped `id-token: write`,
   `persist-credentials: false` and no `continue-on-error`. It uses the same action SHAs as
-  `live-aws` plus the repo's `upload-artifact` SHA. Step order: build, then credentials, then
+  `live-aws` plus the repo's `upload-artifact` SHA (`cf430e03`, v7.0.2, since #1072). Step order: build, then credentials, then
   S3 Tables create, compaction `disabled` and read back, S3 Tables write, Glue create and write,
   both run loops, the bytes summary, the upload. It runs four modes on both catalogs at
   `BENCH_REPEAT: "1"` (Q-24a-1) under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
@@ -577,6 +577,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   to the ruling. The attribution-blind density gate stays absent. CAP-1's exact-baseline Rust and
   Python source gates remain wired. No source-comment sweep belongs to this unit.
   `pins: pr-247-revalidation/C-001, C-002, C-003, C-004, C-005, C-006, C-007`
+- `test_model_ban.py` — provocations for `scripts/check_model_ban.py`, the 2026-10-17 Opus 5.0
+  ban gate: the live tree is clean, every banned spelling is caught, the allowed id and prose
+  pass, the gate is wired in `make ci` and ci.yml, and every map names it.
 - `test_proc_1_tiered_review.py` — **PR-244 revalidation:** current source and map guards, tiered
   SEPMO `review_profile` and `critic_engine` bindings in `binding-manifest.md`, MW-6 evidence,
   disk guidance, clause pins, and ledger lifecycle. B-MOR-3 (2026-09-03): the handoff F-7

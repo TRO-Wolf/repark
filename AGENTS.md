@@ -23,6 +23,16 @@ ratchets are the mechanical gates, and a new file carries no comments.
 Authorship is undetectable; review holds this rule. The gate preserves bytes. Required
 docstrings, Rust banners, and invariant comments remain. No sweep.
 
+# OWNER RULING (2026-10-17) — OPUS 5.0 IS BANNED FOREVER; OPUS MEANS OPUS 5.5
+
+**EFFECTIVE IMMEDIATELY AND PERMANENTLY. NO AGENT, LANE, EXECUTOR, VERIFIER, SKETCHER OR CLERK RUNS ON OPUS 5.0. EVERY OPUS DISPATCH IS CLAUDE OPUS 5.5 (`claude-opus-5-5`) AND NOTHING ELSE.**
+
+*Mechanics (owner, 2026-10-17, same night):* a brief, trailer, workflow, launcher or skill that names an
+Opus model names `claude-opus-5-5`; the bare alias `opus` is allowed only where the tool resolves it to
+that id, and the resolution is verified from the agent transcript, never from the brief. Two gates hold
+it: `make check-model-ban` fails any tracked file that names a 5.0 Opus id, and `make check-owner-ruling`
+preserves this block byte-for-byte in `AGENTS.md` and `CLAUDE.md`.
+
 This is the **single authoritative project contract** for repark, written for **any contributor —
 human or automated agent**, naming no tool or model: the precedence chain, the architectural
 invariants, the change-location guide, required verification, and the safety boundaries. When a

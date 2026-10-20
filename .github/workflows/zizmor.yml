@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1 (node24)
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.0.1 (node24)
         with:
           version: "0.9.5"  # Makefile UV_VERSION
       - name: Run zizmor
@@ -34,7 +34,7 @@ jobs:
       - name: zizmor SARIF
         if: always()
         run: uvx zizmor@1.26.1 --format sarif . > zizmor.sarif
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         if: always()  # upload the SARIF for triage even when the gate fails
         with:
           name: zizmor-sarif

@@ -109,6 +109,8 @@ A capability claims production-grade only with evidence scoped to what it touche
 - for CDC, the guarantees the CDC north-star card defines: crash recovery, durability of
   acknowledged data, replay, bounded resources, observable progress.
 
+The term's definition and review rubric: [docs/production-grade.md](docs/production-grade.md).
+
 ## Performance posture
 
 Performance is advanced, not only defended. Each load-bearing surface has a reference workload;
