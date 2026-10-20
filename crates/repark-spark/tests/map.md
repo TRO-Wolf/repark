@@ -300,8 +300,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   whole struct, `to_timestamp_ntz(<instant>)` (also over `coalesce` of a zoned column) stores
   the session wall, and a wall beside a zoned column that feeds only an `INT` field or a
   condition stores the wall, in New York and Kolkata, as Spark and main do; round 1 refused all
-  four (verifier S1-2).
-  pins: ice-ntz-nested-refuse-1/C-022
+  four (verifier S1-2). `the_cast_walk_reads_only_what_reaches_the_column`: a container cast
+  of an instant in an `EXISTS` of a `WHERE`, in a `WHERE` and in a sibling `ARRAY<STRING>`
+  column no longer refuses and the wall stores; through a derived table, a `UNION ALL` branch,
+  a join side, `first_value … OVER`, a `GROUP BY`, a temporary view and a MERGE source it still
+  refuses and adds no snapshot (verifier S1-3). With the walk disabled, each of the seven
+  stores.
+  pins: ice-ntz-nested-refuse-1/C-022, C-023
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

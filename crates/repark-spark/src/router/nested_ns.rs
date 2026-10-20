@@ -1,11 +1,12 @@
+use std::collections::HashSet;
 use std::ops::ControlFlow;
 
-use datafusion::arrow::datatypes::FieldRef;
-use datafusion::common::DFSchema;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::{Column, DFSchema, JoinType};
 use datafusion::datasource::source_as_provider;
 use datafusion::error::Result;
-use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan};
+use datafusion::logical_expr::expr::{Exists, InSubquery, SetComparison};
+use datafusion::logical_expr::{Distinct, Expr, ExprSchemable, LogicalPlan, TableScan};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     Expr as SqlExpr, Insert, Query, Statement, TableFactor, TableObject, TableWithJoins, Value,
@@ -341,17 +342,20 @@ async fn proven_naive(
     else {
         return false;
     };
-    let fields: Vec<FieldRef> = plan.schema().fields().iter().cloned().collect();
+    let fields = plan.schema().fields();
+    let columns: Vec<usize> = (0..fields.len()).collect();
     if fields.len() != values.len()
         || fields
             .iter()
             .any(|field| holds_zoned_timestamp(field.data_type()))
-        || plan_has(&plan, casts_a_zoned_value_to_naive)
+        || lineage_has(&plan, &columns, casts_a_zoned_value_to_naive)
     {
         return false;
     }
     let above_leaf = values.iter().any(|(_, whole)| *whole);
-    !(matches!(scope, Scope::Update(_)) && above_leaf && plan_has(&plan, shifts_in_an_update))
+    !(matches!(scope, Scope::Update(_))
+        && above_leaf
+        && lineage_has(&plan, &columns, shifts_in_an_update))
 }
 
 async fn naive_columns(
@@ -364,25 +368,28 @@ async fn naive_columns(
     let Some(plan) = planned(ctx, catalogs, sql).await else {
         return false;
     };
-    let fields: Vec<FieldRef> = plan.schema().fields().iter().cloned().collect();
-    let mut picked: Vec<&FieldRef> = position
-        .and_then(|position| fields.get(position))
+    let fields = plan.schema().fields();
+    let mut picked: Vec<usize> = position
+        .filter(|position| *position < fields.len())
         .into_iter()
         .collect();
     if let Some(name) = name {
         picked.extend(
             fields
                 .iter()
-                .filter(|field| field.name().eq_ignore_ascii_case(name)),
+                .enumerate()
+                .filter(|(_, field)| field.name().eq_ignore_ascii_case(name))
+                .map(|(index, _)| index),
         );
     }
     if picked.is_empty() {
-        picked = fields.iter().collect();
+        picked = (0..fields.len()).collect();
     }
     !picked
         .iter()
+        .filter_map(|index| fields.get(*index))
         .any(|field| holds_zoned_timestamp(field.data_type()))
-        && !plan_has(&plan, casts_a_zoned_value_to_naive)
+        && !lineage_has(&plan, &picked, casts_a_zoned_value_to_naive)
 }
 
 async fn planned(
@@ -408,7 +415,213 @@ fn alias_of(factor: &TableFactor) -> String {
     }
 }
 
-fn plan_has(plan: &LogicalPlan, test: fn(&Expr, &DFSchema) -> bool) -> bool {
+type Test = fn(&Expr, &DFSchema) -> bool;
+
+const MAX_LINEAGE_STEPS: usize = 65_536;
+
+enum Next<'a> {
+    Column(&'a LogicalPlan, usize),
+    Whole(&'a LogicalPlan),
+    View(Box<LogicalPlan>, Option<usize>),
+}
+
+fn lineage_has(plan: &LogicalPlan, columns: &[usize], test: Test) -> bool {
+    let mut roots = vec![(plan.clone(), columns.to_vec())];
+    let mut steps = 0_usize;
+    while let Some((root, columns)) = roots.pop() {
+        let mut seen = HashSet::new();
+        let mut pending: Vec<(&LogicalPlan, usize)> =
+            columns.iter().map(|column| (&root, *column)).collect();
+        while let Some((node, column)) = pending.pop() {
+            if !seen.insert((std::ptr::from_ref(node), column)) {
+                continue;
+            }
+            steps += 1;
+            let mut next = Vec::new();
+            if steps > MAX_LINEAGE_STEPS || step(node, column, test, &mut next) {
+                return true;
+            }
+            for reach in next {
+                match reach {
+                    Next::Column(input, index) => pending.push((input, index)),
+                    Next::Whole(plan) => {
+                        if plan_has(plan, test) {
+                            return true;
+                        }
+                    }
+                    Next::View(view, Some(index)) => roots.push((*view, vec![index])),
+                    Next::View(view, None) => {
+                        if plan_has(&view, test) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+fn step<'a>(node: &'a LogicalPlan, column: usize, test: Test, next: &mut Vec<Next<'a>>) -> bool {
+    let passed = match node {
+        LogicalPlan::Projection(projection) => {
+            return match projection.expr.get(column) {
+                Some(expr) => feeds(node, [expr], test, next),
+                None => whole(node, next),
+            };
+        }
+        LogicalPlan::Window(window) => {
+            match column.checked_sub(window.input.schema().fields().len()) {
+                None => Some(window.input.as_ref()),
+                Some(index) => {
+                    return match window.window_expr.get(index) {
+                        Some(expr) => feeds(node, [expr], test, next),
+                        None => whole(node, next),
+                    };
+                }
+            }
+        }
+        LogicalPlan::Aggregate(aggregate) => {
+            let exprs = aggregate.group_expr.iter().chain(&aggregate.aggr_expr);
+            return feeds(node, exprs, test, next);
+        }
+        LogicalPlan::Values(values) => {
+            let exprs = values.values.iter().filter_map(|row| row.get(column));
+            return feeds(node, exprs, test, next);
+        }
+        LogicalPlan::Union(union) => {
+            for input in &union.inputs {
+                next.push(Next::Column(input.as_ref(), column));
+            }
+            return false;
+        }
+        LogicalPlan::Join(join) => {
+            let width = join.left.schema().fields().len();
+            match join.join_type {
+                JoinType::Inner | JoinType::Left | JoinType::Right | JoinType::Full => {
+                    match column.checked_sub(width) {
+                        None => Some(join.left.as_ref()),
+                        Some(index) => {
+                            next.push(Next::Column(join.right.as_ref(), index));
+                            return false;
+                        }
+                    }
+                }
+                JoinType::LeftSemi | JoinType::LeftAnti => Some(join.left.as_ref()),
+                JoinType::RightSemi | JoinType::RightAnti => Some(join.right.as_ref()),
+                JoinType::LeftMark | JoinType::RightMark => None,
+            }
+        }
+        LogicalPlan::TableScan(scan) => {
+            scanned(scan, column, next);
+            return false;
+        }
+        LogicalPlan::EmptyRelation(_) => return false,
+        LogicalPlan::Filter(filter) => Some(filter.input.as_ref()),
+        LogicalPlan::Sort(sort) => Some(sort.input.as_ref()),
+        LogicalPlan::Limit(limit) => Some(limit.input.as_ref()),
+        LogicalPlan::Repartition(repartition) => Some(repartition.input.as_ref()),
+        LogicalPlan::SubqueryAlias(alias) => Some(alias.input.as_ref()),
+        LogicalPlan::Subquery(subquery) => Some(subquery.subquery.as_ref()),
+        LogicalPlan::Distinct(Distinct::All(input)) => Some(input.as_ref()),
+        _ => None,
+    };
+    match passed {
+        Some(input) => {
+            next.push(Next::Column(input, column));
+            false
+        }
+        None => whole(node, next),
+    }
+}
+
+fn whole<'a>(node: &'a LogicalPlan, next: &mut Vec<Next<'a>>) -> bool {
+    next.push(Next::Whole(node));
+    false
+}
+
+fn scanned(scan: &TableScan, column: usize, next: &mut Vec<Next<'_>>) {
+    let Ok(provider) = source_as_provider(&scan.source) else {
+        return;
+    };
+    let Some(view) = definition_plan(provider.as_ref()) else {
+        return;
+    };
+    let index = match &scan.projection {
+        Some(projection) => projection.get(column).copied(),
+        None => Some(column),
+    };
+    let aligned = view.schema().fields().len() == provider.schema().fields().len();
+    next.push(Next::View(Box::new(view), index.filter(|_| aligned)));
+}
+
+fn feeds<'a>(
+    node: &'a LogicalPlan,
+    exprs: impl IntoIterator<Item = &'a Expr>,
+    test: Test,
+    next: &mut Vec<Next<'a>>,
+) -> bool {
+    let schema = input_schema(node);
+    let mut found = false;
+    let mut columns: Vec<&'a Column> = Vec::new();
+    for expr in exprs {
+        let _ = expr.apply(|inner| {
+            if test(inner, &schema) {
+                found = true;
+                return Ok(TreeNodeRecursion::Stop);
+            }
+            match inner {
+                Expr::Column(column) => columns.push(column),
+                Expr::ScalarSubquery(subquery)
+                | Expr::Exists(Exists { subquery, .. })
+                | Expr::InSubquery(InSubquery { subquery, .. })
+                | Expr::SetComparison(SetComparison { subquery, .. }) => {
+                    next.push(Next::Whole(subquery.subquery.as_ref()));
+                    columns.extend(subquery.outer_ref_columns.iter().filter_map(
+                        |outer| match outer {
+                            Expr::OuterReferenceColumn(_, column) => Some(column),
+                            _ => None,
+                        },
+                    ));
+                }
+                _ => {}
+            }
+            Ok(TreeNodeRecursion::Continue)
+        });
+        if found {
+            return true;
+        }
+    }
+    let inputs = node.inputs();
+    for column in columns {
+        let resolved = inputs.iter().find_map(|input| {
+            input
+                .schema()
+                .maybe_index_of_column(column)
+                .map(|index| (*input, index))
+        });
+        match resolved {
+            Some((input, index)) => next.push(Next::Column(input, index)),
+            None if inputs.is_empty() => return true,
+            None => next.extend(inputs.iter().map(|input| Next::Whole(input))),
+        }
+    }
+    false
+}
+
+fn input_schema(node: &LogicalPlan) -> DFSchema {
+    let inputs = node.inputs();
+    let mut schema = DFSchema::empty();
+    if inputs.is_empty() {
+        schema.merge(node.schema());
+    }
+    for input in inputs {
+        schema.merge(input.schema());
+    }
+    schema
+}
+
+fn plan_has(plan: &LogicalPlan, test: Test) -> bool {
     let mut pending = vec![plan.clone()];
     while let Some(next) = pending.pop() {
         let mut found = false;

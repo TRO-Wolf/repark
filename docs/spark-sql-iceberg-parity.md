@@ -3436,7 +3436,12 @@ still open is `isModifiable`.
   the plain `UPDATE` that assigns a whole struct or array above the leaf, the value holds a
   `TIMESTAMP_NTZ` cast of any input *(fix round 2: a zoned sub-expression alone no longer
   refuses there; `to_timestamp_ntz(<instant>)` and a zoned column feeding only an `INT` field
-  or a condition store Spark's value, as on main)*. **Why the container cast:**
+  or a condition store Spark's value, as on main)*. *(Fix round 2: the cast and the plain
+  `UPDATE`'s cast test read only what reaches the column: the expression that produces it,
+  followed through aliases, derived tables, views, joins, unions, windows and values rows. A
+  cast in a predicate, in an `EXISTS` of a `WHERE`, or in a sibling column no longer refuses;
+  a subquery inside the column's own expression (scalar, `IN`, `EXISTS`), an aggregate and
+  any other plan node are read whole.)* **Why the container cast:**
   RePark's cast of a whole struct, array or map converts a zoned leaf with UTC even in a bare
   `SELECT` (`CAST(array(TIMESTAMP '2026-01-02 03:04:05.123456+00:00') AS
   ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark 4.1.2 answers

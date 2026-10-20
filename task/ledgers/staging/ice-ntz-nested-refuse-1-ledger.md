@@ -59,6 +59,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-020 | Each round-1 refusal has a pin that a one-line revert kills (seven hand mutants). | §10. | **PROVEN** | §10. |
 | C-021 | The round's gates are green with real exit codes. | §11. | **PROVEN** | §11. |
 | C-022 | Outside UTC the plain `UPDATE` that assigns a whole struct or array above the leaf no longer refuses a value for holding a zoned sub-expression; it still refuses a `TIMESTAMP_NTZ` cast in the value (C-017), a planned type holding a zoned timestamp and a container cast of an instant. `to_timestamp_ntz(<instant>)` and `to_timestamp_ntz(coalesce(z, <instant>))` store the session wall, a wall literal beside `IF(z IS NULL, 1, 2)` and `named_struct('v', st.v, 'n', CAST(year(coalesce(z, <instant>)) AS INT))` keep the wall, as Spark 4.1.2 and main store them. No wrong wall re-opens. *(Supersedes the zoned-sub-expression arm of C-001, C-005 and §1, fix round 2, verifier S1-2.)* | The four cells in New York and Kolkata at the Rust door; the 3168-cell matrix and the 84-cell probe on the build against `c20c3e25`. | **PROVEN** | §12. `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`. |
+| C-023 | Outside UTC the container-cast test (C-015) and the plain `UPDATE`'s cast test (C-017) read only the lineage of the supplied column: the expression that produces it in the typing plan, followed column by column through projections, aliases, derived tables, filters, sorts, limits, `DISTINCT`, the side of a join it comes from, every branch of a union, windows, values rows and a `ReplanningTempView`'s definition plan. A predicate, an `EXISTS` in a `WHERE`, a join condition and a sibling column are not read, so a container cast of an instant there no longer refuses and the wall stores. Read whole, fail closed: a subquery inside the column's expression (its outer references followed), an aggregate's group and aggregate expressions, any other node, a column that resolves in no input. A cast that reaches the column through a derived table, a union branch, a join side, a window, a grouping, a temporary view or a MERGE source still refuses. *(Supersedes the whole-statement walk of C-015, fix round 2, verifier S1-3.)* | The Rust door in New York and Kolkata, three shapes off the lineage, seven on it, with the walk disabled as the control; the verifier's cells; the 3168-cell matrix and the 84-cell probe against `c20c3e25`. | **PROVEN** | §12. `the_cast_walk_reads_only_what_reaches_the_column`. |
 
 ## §1 The rule and the seam
 
@@ -256,4 +257,34 @@ The 3168-cell door matrix (`probe.py run`, 112 s) answers cell for cell as the c
 `repark-head.jsonl` of `c20c3e25` (0 cells differ; 360 moved against main, every one refused),
 and the 84-cell named-shape probe (`probe.py attack`) as the committed `attack-head.jsonl`
 (0 cells differ). No cell that held a wrong wall on main stores on this build.
+
+### §12.2 S1-3, the walk's reach (C-023)
+
+`lineage_has` (`crates/repark-spark/src/router/nested_ns.rs`) replaces the whole-statement
+`plan_has` at both call sites of the type read; `plan_has` stays as the whole read of a
+subquery, an aggregate's input expressions and any node the lineage does not model. It fits
+the file (`nested_ns.rs` 685 lines, ceiling 1000); no new module.
+
+Build of items 1 and 2 (`taskset -c 0-25`, load 6.89 at the probe start), New York:
+
+| Verifier cell | Spark 4.1.2 | main | `c20c3e25` | this build |
+|---|---|---|---|---|
+| wall column, `WHERE EXISTS (SELECT … CAST(named_struct('v', x, 'n', 1) AS STRUCT<…>) IS NOT NULL)` | the wall | the wall | refused | the wall |
+| wall column, `WHERE element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1) IS NOT NULL` | the wall | the wall | refused | the wall |
+| wall column beside a sibling `ARRAY<STRING>` fed by `CAST(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>) AS ARRAY<STRING>)` | the wall | the wall | refused | the wall |
+
+The 3168-cell matrix (135 s) and the 84-cell probe answer cell for cell as at `c20c3e25`
+(0 cells differ in either; every one of the 360 refusals holds). The verifier's other named
+shapes (`cases_a`, `cases_b`, `cases_d`, `cases_e`, UTC and New York) answer as at
+`c20c3e25` but for the cells of C-022 and C-023 above, which store the value main and Spark
+store, and the row order of three two-row `MERGE` reads in UTC. Every container cast that
+reaches the column still refuses: `CASE`, `COALESCE`, `IF`, `struct`, `named_struct` of an
+element, `transform`, `map_from_entries`, `map_from_arrays`, a CTE read twice, a CTE
+self-join, `first_value … OVER`, a cast of `lag`, `TRY_CAST`, a scalar subquery, temporary,
+catalog, DataFrame and nested views, MERGE sources, `BY NAME`, a reordered column list,
+dynamic `INSERT OVERWRITE`, a `UNION ALL` branch, `VALUES`.
+
+`sibling_col_cast_ctrl` still refuses, by the zoned-pairing over-refusal (R-011: the sibling
+column holds its own nested `TIMESTAMP_NTZ` leaf and is written from a value with a zoned
+leaf), not by the walk.
 

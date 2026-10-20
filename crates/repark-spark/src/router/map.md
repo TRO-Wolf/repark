@@ -164,14 +164,24 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   table's name, so `t.branch_x` reads as `t`; `SELECT * FROM <source>` for a MERGE star. It
   refuses when a type holds a zoned timestamp, when the plan fails (fail closed), when the plan
   holds a `CAST` or `TRY_CAST` from a type holding a zoned timestamp to one holding a naive one
-  (`casts_a_zoned_value_to_naive`; `plan_has` walks every node, every subquery, and the plan
-  behind a DataFrame view or a `ReplanningTempView`), and, on a plain `UPDATE` whose path stops
+  (`casts_a_zoned_value_to_naive`), and, on a plain `UPDATE` whose path stops
   above the leaf, when any planned sub-expression calls the `TIMESTAMP_NTZ` cast
   (`shifts_in_an_update`). *(Fix round 2, 2026-10-20: that door no longer refuses a zoned
   sub-expression as such. `to_timestamp_ntz(<instant>)`, a zoned column feeding only an `INT`
   field or a condition, store Spark's value there; the cast arm and the planned type cover every
-  wrong wall measured on that door; ledger C-022.)* A `PREPARE` that holds a parameter is read
-  as `Scope::Unreadable`, so every supply of the column refuses. **Why the container cast:** the planner's cast of a whole
+  wrong wall measured on that door; ledger C-022.)* **Where the walk reads (fix round 2,
+  2026-10-20, ledger C-023):** both tests run over the lineage of the supplied column only
+  (`lineage_has`), not the whole statement: from the output column of the typing plan it reads
+  the expression that produces it and follows each column it references through projections,
+  aliases, derived tables, filters, sorts, limits, `DISTINCT`, joins (the side the column comes
+  from), unions (every branch), windows, values rows and a `ReplanningTempView`'s definition
+  plan (a DataFusion or catalog view is inlined by the plan builder before the walk). A
+  predicate, a join condition and a sibling column are not read. Read whole, fail closed: a
+  subquery inside a read expression (scalar, `IN`, `EXISTS`; its outer references are followed
+  as columns), every group and aggregate expression of an aggregate, and any other node
+  (`plan_has`, the round-1 walk). A column that resolves in no input reads every input whole.
+  A `PREPARE` that holds a parameter is read as `Scope::Unreadable`, so every supply of the
+  column refuses. **Why the container cast:** the planner's cast of a whole
   struct, array or map converts a zoned leaf with UTC even in a bare `SELECT`
   (`CAST(array(<instant>) AS ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark
   `1767305045123456`), and its planned type is naive; the leaf `CAST(<value> AS TIMESTAMP_NTZ)`
@@ -187,7 +197,7 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `TIMESTAMP_NTZ`), so no declared type proves a wall. **Why plan and not read the AST:** a
   column, a view, a by-name frame and a scalar subquery have no type in the AST; the router's own
   planner gives the type the write sees.
-  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023
 
 ## Pointers
 

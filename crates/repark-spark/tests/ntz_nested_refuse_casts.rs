@@ -634,6 +634,97 @@ async fn the_plain_update_stores_a_wall_beside_a_zoned_sub_expression() {
     assert_eq!(wrong, Vec::<String>::new());
 }
 
+const OFF_LINEAGE: [&str; 3] = [
+    "INSERT INTO ice.ns.t SELECT id, named_struct('v', w, 'n', 1), 0, NULL FROM ice.ns.src s \
+     WHERE EXISTS (SELECT 1 FROM ice.ns.src WHERE {C} IS NOT NULL)",
+    "INSERT INTO ice.ns.t SELECT id, named_struct('v', w, 'n', 1), 0, NULL FROM ice.ns.src \
+     WHERE element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1) IS NOT NULL",
+    "INSERT INTO ice.ns.t SELECT id, named_struct('v', w, 'n', 1), 0, \
+     CAST(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>) AS ARRAY<STRING>) FROM ice.ns.src",
+];
+
+const ON_LINEAGE: [&str; 7] = [
+    "INSERT INTO ice.ns.t SELECT id + 1, s, 0, NULL FROM (SELECT id, {C} AS s FROM ice.ns.src) q \
+     WHERE id > 0",
+    "INSERT INTO ice.ns.t SELECT id + 1, named_struct('v', w, 'n', 1), 0, NULL FROM ice.ns.src \
+     UNION ALL SELECT id + 2, {C}, 0, NULL FROM ice.ns.src",
+    "INSERT INTO ice.ns.t SELECT a.id + 1, b.s, 0, NULL FROM ice.ns.src a \
+     JOIN (SELECT id, {C} AS s FROM ice.ns.src) b ON a.id = b.id",
+    "INSERT INTO ice.ns.t SELECT id + 1, first_value({C}) OVER (PARTITION BY id), 0, NULL \
+     FROM ice.ns.src",
+    "INSERT INTO ice.ns.t SELECT q.id + 1, q.s, 0, NULL FROM (SELECT id, {C} AS s \
+     FROM ice.ns.src) q GROUP BY q.id, q.s",
+    "INSERT INTO ice.ns.t SELECT id + 1, s, 0, NULL FROM lineage_view",
+    "MERGE INTO ice.ns.t t USING (SELECT id, {C} AS s FROM ice.ns.src) s ON t.id = s.id \
+     WHEN MATCHED THEN UPDATE SET t.st = s.s",
+];
+
+/// The cast walk reads only what reaches the supplied column: the expression that produces it,
+/// through aliases, derived tables, views, joins, unions, windows and groupings. A container
+/// cast of an instant that feeds a predicate, an `EXISTS` in a `WHERE` or a sibling column no
+/// longer refuses, and the wall stores; one that reaches the column through any of those
+/// shapes still refuses and writes nothing.
+///
+/// pins: ice-ntz-nested-refuse-1/C-023
+#[tokio::test]
+async fn the_cast_walk_reads_only_what_reaches_the_column() {
+    let cast = format!("CAST(named_struct('v', x, 'n', 1) AS {S})");
+    let mut wrong = Vec::new();
+    for (zone, _) in ZONES {
+        let session = session(zone);
+        let _warehouse = catalog(&session).await;
+        run(
+            &session,
+            &format!(
+                "CREATE TEMPORARY VIEW lineage_view AS SELECT id, {cast} AS s, w FROM ice.ns.src"
+            ),
+        )
+        .await;
+        for (index, write) in OFF_LINEAGE.iter().enumerate() {
+            let name = format!("o{index}");
+            let write = write
+                .replace("{C}", &cast)
+                .replace("ice.ns.t ", &format!("ice.ns.{name} "));
+            run(
+                &session,
+                &format!(
+                    "CREATE TABLE ice.ns.{name} (id INT, st {S}, k INT, z ARRAY<STRING>) USING \
+                     iceberg TBLPROPERTIES ('format-version'='2')"
+                ),
+            )
+            .await;
+            if let Err(error) = attempt(&session, &write).await {
+                wrong.push(format!("{zone} / {write}: {error}"));
+                continue;
+            }
+            let values = stored(&session, &format!("SELECT st FROM ice.ns.{name}")).await;
+            if values != vec![Some(UTC_WALL)] {
+                wrong.push(format!("{zone} / {write}: {values:?}"));
+            }
+        }
+        run(
+            &session,
+            &format!(
+                "CREATE TABLE ice.ns.t (id INT, st {S}, k INT, z ARRAY<STRING>) USING iceberg \
+                 TBLPROPERTIES ('format-version'='2')"
+            ),
+        )
+        .await;
+        run(&session, "INSERT INTO ice.ns.t (id, k) VALUES (1, 0)").await;
+        for write in ON_LINEAGE {
+            let write = write.replace("{C}", &cast);
+            match attempt(&session, &write).await {
+                Err(error) if error.contains(HINT) => {}
+                outcome => wrong.push(format!("{zone} / {write}: {outcome:?}")),
+            }
+        }
+        if snapshots(&session, "t").await != vec![Some(1)] {
+            wrong.push(format!("{zone}: a snapshot was added"));
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
 fn counted(calls: &Arc<AtomicUsize>) -> datafusion::logical_expr::ScalarUDF {
     let calls = Arc::clone(calls);
     create_udf(
