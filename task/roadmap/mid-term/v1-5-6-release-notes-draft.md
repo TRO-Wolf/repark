@@ -127,7 +127,9 @@ Tables already written keep the values they hold; this release ships no migratio
   session (ICE-NTZ-NESTED-REFUSE-1, R-011).** Every door now refuses it with
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` and a hint, where before field assignment
   stored the session wall and every other door the UTC wall; the leaf cast
-  `CAST(<value> AS TIMESTAMP_NTZ)` and a UTC session still store, while a `CAST` of a whole
+  `CAST(<value> AS TIMESTAMP_NTZ)` still stores, and a UTC session still stores for every
+  statement but `PREPARE` (a `PREPARE` of an instant or of a parameter that supplies the
+  column refuses in every zone, UTC included), while a `CAST` of a whole
   struct, array or map holding an instant, a parameterised `PREPARE` that supplies the column,
   and a `TIMESTAMP_NTZ` cast inside a struct assigned by a plain `UPDATE` refuse too. Nested `TIMESTAMP_NTZ` values that `INSERT` wrote before this
   release in a session whose zone was not UTC hold the UTC wall.

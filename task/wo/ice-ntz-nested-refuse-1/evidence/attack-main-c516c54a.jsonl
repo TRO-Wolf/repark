@@ -6,7 +6,7 @@
 {"case": "merge_update_set_struct_cast", "ticks_us": [1767323045123456], "zone": "UTC"}
 {"case": "merge_update_star_struct_cast", "ticks_us": [1767323045123456], "zone": "UTC"}
 {"case": "insert_partition_struct_cast", "ticks_us": [1767323045123456], "zone": "UTC"}
-{"case": "insert_branch_struct_cast", "ticks_us": [], "zone": "UTC"}
+{"case": "insert_branch_struct_cast", "ticks_us": [1767323045123456], "zone": "UTC"}
 {"case": "insert_temp_view_struct_cast", "ticks_us": [1767323045123456], "zone": "UTC"}
 {"case": "df_overwrite_condition_struct_cast", "ticks_us": [1767323045123456], "zone": "UTC"}
 {"case": "insert_select_array_cast", "ticks_us": [1767323045123456], "zone": "UTC"}
@@ -34,7 +34,7 @@
 {"case": "merge_update_set_struct_cast", "ticks_us": [1767323045123456], "zone": "America/New_York"}
 {"case": "merge_update_star_struct_cast", "ticks_us": [1767323045123456], "zone": "America/New_York"}
 {"case": "insert_partition_struct_cast", "ticks_us": [1767323045123456], "zone": "America/New_York"}
-{"case": "insert_branch_struct_cast", "ticks_us": [], "zone": "America/New_York"}
+{"case": "insert_branch_struct_cast", "ticks_us": [1767323045123456], "zone": "America/New_York"}
 {"case": "insert_temp_view_struct_cast", "ticks_us": [1767323045123456], "zone": "America/New_York"}
 {"case": "df_overwrite_condition_struct_cast", "ticks_us": [1767323045123456], "zone": "America/New_York"}
 {"case": "insert_select_array_cast", "ticks_us": [1767323045123456], "zone": "America/New_York"}
@@ -62,7 +62,7 @@
 {"case": "merge_update_set_struct_cast", "ticks_us": [1767323045123456], "zone": "Asia/Kolkata"}
 {"case": "merge_update_star_struct_cast", "ticks_us": [1767323045123456], "zone": "Asia/Kolkata"}
 {"case": "insert_partition_struct_cast", "ticks_us": [1767323045123456], "zone": "Asia/Kolkata"}
-{"case": "insert_branch_struct_cast", "ticks_us": [], "zone": "Asia/Kolkata"}
+{"case": "insert_branch_struct_cast", "ticks_us": [1767323045123456], "zone": "Asia/Kolkata"}
 {"case": "insert_temp_view_struct_cast", "ticks_us": [1767323045123456], "zone": "Asia/Kolkata"}
 {"case": "df_overwrite_condition_struct_cast", "ticks_us": [1767323045123456], "zone": "Asia/Kolkata"}
 {"case": "insert_select_array_cast", "ticks_us": [1767323045123456], "zone": "Asia/Kolkata"}

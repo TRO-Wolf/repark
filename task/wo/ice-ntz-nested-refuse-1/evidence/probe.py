@@ -824,6 +824,7 @@ ATTACK_TABLE = (
     "TBLPROPERTIES ('format-version'='2')"
 )
 ATTACK_SEED = "INSERT INTO ice.ns.t (id, k) VALUES (1, 0)"
+ATTACK_READS = {"insert_branch_struct_cast": "ice.ns.t.branch_bx"}
 ATTACK_STRUCT_CAST = f"CAST(named_struct('v', x, 'n', 1) AS {NTZ_STRUCT})"
 ATTACKS: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
     (
@@ -1042,7 +1043,8 @@ def attack_cell(zone: str, warehouse: Path, case: tuple[str, str, tuple[str, ...
             spark.sql(act[len("FRAME ") :]).writeTo("ice.ns.t").overwrite(condition("repark"))
         else:
             spark.sql(act).collect()
-        arrow = spark.sql("SELECT st AS v FROM ice.ns.t WHERE st IS NOT NULL").toArrow()
+        read = ATTACK_READS.get(name, "ice.ns.t")
+        arrow = spark.sql(f"SELECT st AS v FROM {read} WHERE st IS NOT NULL").toArrow()
         record["ticks_us"] = flat_ticks(arrow.column("v").combine_chunks())
     except Exception as error:
         record.update(error_record(error))

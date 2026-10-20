@@ -3470,7 +3470,11 @@ still open is `isModifiable`.
   statement the router cannot plan (`INSERT … TABLE`, `LATERAL VIEW`, an arity mismatch,
   `DISTRIBUTE BY`, CTAS of `INSERT`) takes it too, where main raised its own error. A wall,
   a `TIMESTAMP_NTZ` column, a container cast of a wall or a string, and the leaf cast store
-  as before (the leaf cast stores Spark's session wall); a UTC session refuses nothing.
+  as before (the leaf cast stores Spark's session wall). *(Corrected 2026-10-20, fix round 2,
+  verifier S2-3: round 1 said "a UTC session refuses nothing".)* A UTC session refuses no
+  write but a `PREPARE`: a `PREPARE` is decided as if the zone were not UTC, because `EXECUTE`
+  can run it after a `SET` of the zone, so every `PREPARE` of such a write whose value is an
+  instant, a cast of one or any parameter refuses in every zone, UTC included.
   **Cells**, measured on main `c516c54a` and on the build with #1037's door probe plus the
   hint's spellings and three round-1 sources (`ntz_text_cast`, `ts_struct_cast`,
   `ts_struct_cast_column`; 28 doors, both row-level modes, 8 sources, 3 zones, 3 schemas:
@@ -3482,16 +3486,31 @@ still open is `isModifiable`.
   the 2112 cells of a zoned leaf and of a top-level `TIMESTAMP_NTZ` column, every UTC cell,
   and the leaf cast's 132 session-wall cells keep their value. A second probe of 28 named
   shapes in three zones (84 cells: the verifier's container casts, `PREPARE` forms and plain
-  `UPDATE` casts, with the leaf-cast controls) refuses every shape that stored a wrong wall
-  and keeps every control's value, except two `PREPARE` controls whose parameter is now
-  refused by design. **Why RePark and Spark differ:** Spark 4.1.2 answers 174 recorded cells
+  `UPDATE` casts, with the leaf-cast controls) moves 48, every one to the refusal: 38 wrong
+  walls (24 container-cast cells in New York and Kolkata, the 2 on a branch now read from the
+  branch; 8 `PREPARE` cells of an instant parameter in those zones; 6 plain-`UPDATE` cast
+  cells) and 10 correct cells (the 6 of the two parameterised `PREPARE` controls in three
+  zones, and 4 UTC cells of a `PREPARE` of an instant parameter, whose UTC wall is the session
+  wall there). Every other cell keeps its value. *(Corrected 2026-10-20, fix round 2, verifier
+  S2-3: round 1 read 42 wrong walls and 6 controls; the probe read the base table for the
+  branch write.)* **Why RePark and Spark differ:** Spark 4.1.2 answers 174 recorded cells
   (`python/repark/tests/timestamps/ice_ntz_nested_refuse_1_spark.json`: 12 doors, 5 sources,
   3 zones, less the two column sources on `insert_values`): the instant's session wall in each
   of the 138 instant and cast cells, the literal's own wall in the 36 `TIMESTAMP_NTZ` literal
   cells. RePark refuses the instant cells outside UTC until the lift. **Over-refusal, by
   design:** a value holding a zoned leaf anywhere is refused even when that leaf pairs with a
   zoned sibling of the target (pairing is R-016's rule); a parameterised `PREPARE` that
-  supplies the column refuses wherever the parameter sits. **Not reached by this gate, dated
+  supplies the column refuses wherever the parameter sits, and a `PREPARE` of an instant
+  refuses in UTC as well. Measured cost of the `PREPARE` rules, 2026-10-20 (fix round 2,
+  verifier S2-4): 17 correct cells refused, 12 of them by the parameter (the PR's named-shape
+  probe: a parameter in a sibling column and one through the leaf cast, three zones each; the
+  verifier's: a parameter only in `WHERE`, only in `LIMIT`, only in a sibling column, UTC and
+  New York) and 5 by the zone (UTC cells where main stored the UTC wall, which is the session
+  wall there: four instant parameters in the PR's probe, one instant literal with no
+  parameter in the verifier's). A subquery inside the column's own expression is read whole,
+  so an `IN` or `EXISTS` there that holds a container cast of an instant refuses though its
+  result is a boolean: 1 correct cell measured (`IF(EXISTS (…), named_struct('v', w, 'n', 1),
+  NULL)`, New York; Spark and main store the wall). **Not reached by this gate, dated
   2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
   frame or a table built from a container cast of an instant carries the UTC wall the cast
   produced; the container cast's own conversion in a `SELECT` is the defect, for the lift. A

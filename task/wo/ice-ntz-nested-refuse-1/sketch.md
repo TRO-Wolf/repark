@@ -42,7 +42,10 @@ A write is refused, before any file is written, when ALL of these hold:
 
 A naive value whose type the router reads is not refused: a `TIMESTAMP_NTZ` literal or column,
 `CAST(… AS TIMESTAMP_NTZ)` on every door but the one in correction 1, a string, a date. A UTC
-session refuses nothing. The nanosecond leaf keeps R-015 exactly (decided first, its own text).
+session refuses nothing *(corrected 2026-10-20, fix round 2, ledger C-025: but for `PREPARE`,
+which the zone rule above decides as if the zone were not UTC; such a write of an instant or a
+parameter refuses in UTC too)*. The nanosecond leaf keeps R-015 exactly (decided first, its own
+text).
 A `timestamptz_ns` or zoned microsecond leaf is a control and is not matched (R-008).
 
 **Where a zoned leaf sits in the value is not read.** A value holding a zoned leaf anywhere is

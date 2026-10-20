@@ -314,7 +314,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   scan whose source carries a logical plan, and a SQL temporary view leaves a
   `ReplanningTempView` scan; the premise on which round 1's frame-view branch was removed as
   dead (verifier S3-2).
-  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024
+  The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
+  a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
+  correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
+  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

@@ -61,6 +61,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-022 | Outside UTC the plain `UPDATE` that assigns a whole struct or array above the leaf no longer refuses a value for holding a zoned sub-expression; it still refuses a `TIMESTAMP_NTZ` cast in the value (C-017), a planned type holding a zoned timestamp and a container cast of an instant. `to_timestamp_ntz(<instant>)` and `to_timestamp_ntz(coalesce(z, <instant>))` store the session wall, a wall literal beside `IF(z IS NULL, 1, 2)` and `named_struct('v', st.v, 'n', CAST(year(coalesce(z, <instant>)) AS INT))` keep the wall, as Spark 4.1.2 and main store them. No wrong wall re-opens. *(Supersedes the zoned-sub-expression arm of C-001, C-005 and §1, fix round 2, verifier S1-2.)* | The four cells in New York and Kolkata at the Rust door; the 3168-cell matrix and the 84-cell probe on the build against `c20c3e25`. | **PROVEN** | §12. `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`. |
 | C-023 | Outside UTC the container-cast test (C-015) and the plain `UPDATE`'s cast test (C-017) read only the lineage of the supplied column: the expression that produces it in the typing plan, followed column by column through projections, aliases, derived tables, filters, sorts, limits, `DISTINCT`, the side of a join it comes from, every branch of a union, windows, values rows and a `ReplanningTempView`'s definition plan. A predicate, an `EXISTS` in a `WHERE`, a join condition and a sibling column are not read, so a container cast of an instant there no longer refuses and the wall stores. Read whole, fail closed: a subquery inside the column's expression (its outer references followed), an aggregate's group and aggregate expressions, any other node, a column that resolves in no input. A cast that reaches the column through a derived table, a union branch, a join side, a window, a grouping, a temporary view or a MERGE source still refuses. *(Supersedes the whole-statement walk of C-015, fix round 2, verifier S1-3.)* | The Rust door in New York and Kolkata, three shapes off the lineage, seven on it, with the walk disabled as the control; the verifier's cells; the 3168-cell matrix and the 84-cell probe against `c20c3e25`. | **PROVEN** | §12. `the_cast_walk_reads_only_what_reaches_the_column`. |
 | C-024 | A subquery inside the expression that produces the column is read whole: a scalar subquery returning a container cast of an instant (directly, through a derived table, as a MERGE update value) refuses outside UTC, and so does an `IN` or `EXISTS` subquery holding one in the column's own expression; a scalar subquery of a wall or of the leaf cast stores. The walk does not descend a scan source's own logical plan: DataFusion 54.1.0 (`datafusion-expr` `logical_plan/builder.rs`, `scan_with_filters_inner`) inlines every scan whose source carries a plan and has no filters, and the SQL planner, `read_table` and the session's table reads build scans with no filters, so a catalog view or a frame view never reaches the walk as such a scan; the branch that read it (verifier M9) is removed as dead. *(Fix round 2, verifier S1-4 and S3-2.)* | The Rust door in New York and Kolkata with the subquery read removed as the control; the premise pin over the three view kinds; the verifier's M9 and M10 and their round-2 equivalents (§12). | **PROVEN** | §12. `a_subquery_in_the_columns_expression_is_read_whole`, `a_view_the_write_reads_is_inlined_before_the_walk`. |
+| C-025 | A UTC session refuses no write but a `PREPARE`: every `PREPARE` of a write that supplies such a column with an instant, a cast of one or any parameter refuses in every zone, UTC included. Measured cost in correct cells: 17, 12 by the parameter rule (the named-shape probe's two parameterised controls in three zones, 6; the verifier's parameter only in `WHERE`, only in `LIMIT`, only in a sibling column, in UTC and New York, 6) and 5 by the zone rule (UTC cells whose UTC wall is the session wall: four instant parameters in the probe, one parameterless instant in the verifier's cells). The named-shape probe's 48 moves are 38 wrong walls (24 container-cast, 2 of them on a branch, 8 `PREPARE`, 6 plain-`UPDATE` cast) and 10 correct cells (6 parameterised controls, 4 UTC `PREPARE` cells); the probe reads the branch write from the branch. *(Supersedes C-003's "a UTC session refuses nothing" and the breakdown of §9 and C-019, fix round 2, verifier S2-3 and S2-4.)* | The committed probe re-run on main and the build; the verifier's `PREPARE` cells. | **PROVEN** | §12. `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone`, `a_prepared_write_of_an_instant_refuses_in_a_utc_session_too`. |
 
 ## §1 The rule and the seam
 
@@ -313,4 +314,31 @@ every shape answers as main.
 The frame-view branch (`scan.source.get_logical_plan()`) is removed, not pinned: no plan the
 router builds can reach it (C-024). `a_view_the_write_reads_is_inlined_before_the_walk` pins
 the premise, so a DataFusion upgrade that stops inlining reds it.
+
+### §12.4 S2-3 and S2-4, the counts and the UTC sentence (C-025)
+
+The named-shape probe's `insert_branch_struct_cast` wrote to `ice.ns.t.branch_bx` and read
+`ice.ns.t`, so its cells read empty on main. `probe.py attack` now reads that case from the
+branch (`ATTACK_READS`). Re-run on main `c516c54a` (load 6.91) and on the build of items 1 to
+3 (load 6.76): the branch cells read `1767323045123456` on main in every zone, and every other
+cell answers as the committed files. Against main the probe moves 48 cells, every one to the
+refusal:
+
+| Moved cells | Count | Main stored |
+|---|---|---|
+| container casts, 12 shapes × New York and Kolkata | 24 | the UTC wall (the 2 branch cells now read) |
+| `PREPARE` of an instant parameter, 4 shapes × New York and Kolkata | 8 | the UTC wall |
+| plain-`UPDATE` casts of a string, a date and an array element × New York and Kolkata | 6 | the wall plus the offset, midnight plus the offset |
+| **wrong walls** | **38** | |
+| `PREPARE` with a parameter in a sibling column or through the leaf cast × 3 zones | 6 | the wall, the session wall |
+| `PREPARE` of an instant parameter, 4 shapes × UTC | 4 | the UTC wall, which is the session wall in UTC |
+| **correct cells refused, by design** | **10** | |
+
+Round 1's §9 read "42 wrong walls (… 4 `PREPARE` shapes × 3 zones …) and 6 cells of the two
+parameterised controls"; the 4 UTC `PREPARE` cells were counted as wrong and the 2 branch cells
+were unread. The verifier's cells (`cases_b`, UTC and New York) add 7 correct cells the
+`PREPARE` rules refuse: a parameter only in `WHERE`, only in `LIMIT`, only in a sibling column
+(6), and a parameterless `PREPARE` of an instant literal in UTC (1). A `PREPARE` whose parameter
+does not supply the column (`INSERT (id, k) VALUES ($1, 0)`, `UPDATE … SET k = 9 WHERE id = $1`)
+prepares and runs. The row, the v1.5.6 notes line and the sketch now say this.
 
