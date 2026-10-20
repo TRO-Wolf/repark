@@ -80,7 +80,7 @@ jobs:
           python-version: "3.12"
       # SHA-pinned: dtolnay/rust-toolchain refs are branches (not tags), so a floating ref would
       # run unreviewed action code forever. The `toolchain:` input below selects the compiler.
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-07-11
         with:
           toolchain: "1.96.0"
           components: rustfmt, clippy
@@ -128,7 +128,7 @@ jobs:
         with:
           python-version: "3.12"
       # SHA-pinned (see rust-lint).
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-07-11
         with:
           toolchain: "1.96.0"
       # prefix-key AND shared-key MUST match cache-warm.yml's warm-test job (see rust-lint note).
@@ -136,7 +136,7 @@ jobs:
         with:
           prefix-key: "v3-df54-test"
           shared-key: "test"
-      - uses: taiki-e/install-action@fcf5432d9f50d67e37ee6e29bdb7a224ff67b4a7  # v2
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8  # v2
         with:
           tool: cargo-nextest@0.9.143
       - name: test
@@ -172,7 +172,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-07-11
         with:
           toolchain: "1.96.0"
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
@@ -237,10 +237,10 @@ jobs:
           fetch-depth: 0
       # Needed by the crate-DAG guard: its wrapper runs `cargo metadata --locked` (a manifest
       # read, no build). SHA-pinned — see the rust job note.
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-07-11
         with:
           toolchain: "1.96.0"
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1 (node24)
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.0.1 (node24)
         with:
           version: "0.9.5"  # Makefile UV_VERSION
           python-version: "3.12"
@@ -309,7 +309,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1 (node24)
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.0.1 (node24)
         with:
           version: "0.9.5"  # Makefile UV_VERSION
           python-version: "3.12"
