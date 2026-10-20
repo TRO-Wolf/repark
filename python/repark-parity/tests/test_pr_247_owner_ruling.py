@@ -21,9 +21,12 @@ def _load_checker() -> ModuleType:
 def _write_contracts(tree: Path, checker: ModuleType) -> None:
     agents = (
         f"{checker.expected_prefix(checker.DOCUMENT_TITLES['AGENTS.md'])}"
-        f"{checker.EXPECTED_BOUNDARY}\n\n"
+        f"{checker.EXPECTED_BOUNDARY}\n\n{checker.EXPECTED_RULING_OPUS}\n\n"
     )
-    claude = checker.expected_prefix(checker.DOCUMENT_TITLES["CLAUDE.md"])
+    claude = (
+        f"{checker.expected_prefix(checker.DOCUMENT_TITLES['CLAUDE.md'])}"
+        f"{checker.EXPECTED_RULING_OPUS}\n\n"
+    )
     (tree / "AGENTS.md").write_text(agents, encoding="utf-8")
     (tree / "CLAUDE.md").write_text(claude, encoding="utf-8")
 
@@ -126,6 +129,52 @@ def test_duplicated_enforcement_boundary_fails_closed(tmp_path: Path) -> None:
     ]
 
 
+def test_one_byte_opus_ban_mutation_in_adapter_fails_closed(tmp_path: Path) -> None:
+    checker = _load_checker()
+    _write_contracts(tmp_path, checker)
+    path = tmp_path / "CLAUDE.md"
+    text = path.read_text(encoding="utf-8").replace("BANNED FOREVER", "banned forever", 1)
+    path.write_text(text, encoding="utf-8")
+    assert checker.findings(tmp_path) == [
+        "CLAUDE.md: Opus 5.0 ban ruling is missing or changed after the comment ruling"
+    ]
+
+
+def test_relocated_opus_ban_in_contract_fails_closed(tmp_path: Path) -> None:
+    checker = _load_checker()
+    _write_contracts(tmp_path, checker)
+    path = tmp_path / "AGENTS.md"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(
+        text.replace(f"{checker.EXPECTED_RULING_OPUS}\n\n", "contract body\n\n")
+        + f"{checker.EXPECTED_RULING_OPUS}\n",
+        encoding="utf-8",
+    )
+    assert checker.findings(tmp_path) == [
+        "AGENTS.md: Opus 5.0 ban ruling is missing or changed after the enforcement boundary"
+    ]
+
+
+def test_duplicated_opus_ban_fails_closed(tmp_path: Path) -> None:
+    checker = _load_checker()
+    _write_contracts(tmp_path, checker)
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        path = tmp_path / name
+        text = path.read_text(encoding="utf-8")
+        path.write_text(f"{text}{checker.EXPECTED_RULING_OPUS}\n", encoding="utf-8")
+    assert checker.findings(tmp_path) == [
+        "CLAUDE.md: Opus 5.0 ban ruling must appear exactly once",
+        "AGENTS.md: Opus 5.0 ban ruling must appear exactly once",
+    ]
+
+
+def test_opus_ban_names_the_allowed_id_and_no_banned_spelling() -> None:
+    checker = _load_checker()
+    banned = re.compile(r"claude[-_]opus[-_]5[-_.]0\b|\bopus[-_]5[-_.]0\b", re.IGNORECASE)
+    assert "claude-opus-5-5" in checker.EXPECTED_RULING_OPUS
+    assert banned.search(checker.EXPECTED_RULING_OPUS) is None
+
+
 def test_immediate_gate_is_narrow_and_cap_1_remains_wired() -> None:
     """pins: pr-247-revalidation/C-002, C-005, C-007."""
     makefile = (_REPO / "Makefile").read_text(encoding="utf-8")
@@ -133,6 +182,8 @@ def test_immediate_gate_is_narrow_and_cap_1_remains_wired() -> None:
     workflow = (_REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "check-owner-ruling" in ci_line
     assert "run: python3 scripts/check_owner_ruling.py" in workflow
+    assert "check-model-ban" in ci_line
+    assert "run: python3 scripts/check_model_ban.py" in workflow
     assert "check-comment-density" not in makefile
     assert not (_REPO / "scripts/check_comment_density.py").exists()
     assert not (_REPO / "scripts/comment_ceilings.json").exists()

@@ -1,0 +1,245 @@
+<title>Iceberg Closeout Replan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#F2F5F7;--panel:#FFFFFF;--fg:#16232B;--muted:#56666F;--line:#D3DCE1;--accent:#0E6C88;--accent-soft:#E1EEF3;--ok:#1E6E3C;--ok-soft:#E3F3E8;--warn:#9A5B00;--warn-soft:#FFF4DE;--bad:#9B2C2C;--bad-soft:#FBE7E7;--idle:#5D6B73;--idle-soft:#ECEFF1;--code-bg:#E8EEF1;--display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;--body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0E1418;--panel:#151D22;--fg:#E4ECF0;--muted:#9BAAB2;--line:#2A363D;--accent:#4DB1CF;--accent-soft:#16303A;--ok:#6CCB8E;--ok-soft:#12291B;--warn:#F0B35A;--warn-soft:#2E2411;--bad:#F08C8C;--bad-soft:#331717;--idle:#A3B1B8;--idle-soft:#202D33;--code-bg:#1C262C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1418;--panel:#151D22;--fg:#E4ECF0;--muted:#9BAAB2;--line:#2A363D;--accent:#4DB1CF;--accent-soft:#16303A;--ok:#6CCB8E;--ok-soft:#12291B;--warn:#F0B35A;--warn-soft:#2E2411;--bad:#F08C8C;--bad-soft:#331717;--idle:#A3B1B8;--idle-soft:#202D33;--code-bg:#1C262C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding-inline:16px;padding-block:28px 64px}
+.wrap{max-width:1020px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.25rem;font-weight:600;border-bottom:2px solid var(--accent);padding-bottom:6px}
+h3{font-size:1.02rem;font-weight:600}
+p{margin:0;max-width:74ch}
+section{display:flex;flex-direction:column;gap:12px}
+.kicker{font-family:var(--mono);font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:500}
+.meta{color:var(--muted);font-size:.86rem;max-width:none}
+code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);padding:1px 4px;border-radius:3px}
+.verdict{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.verdict p{max-width:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .n{font-family:var(--display);font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .l{font-size:.84rem;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:.9rem}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--bg);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-family:var(--mono);font-size:.72rem;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap;letter-spacing:.03em}
+.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}.bad{background:var(--bad-soft);color:var(--bad)}.idle{background:var(--idle-soft);color:var(--idle)}.acc{background:var(--accent-soft);color:var(--accent)}
+ul,ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+li{max-width:78ch}
+.note{font-size:.86rem;color:var(--muted)}
+.week{display:grid;grid-template-columns:150px 1fr;gap:12px;border-top:1px solid var(--line);padding:12px 0}
+.week:last-child{border-bottom:1px solid var(--line)}
+.week .w{font-family:var(--display);font-weight:600}
+.week .w small{display:block;font-family:var(--mono);font-weight:400;color:var(--muted);font-size:.74rem}
+.week .b{display:flex;flex-direction:column;gap:6px;min-width:0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.gate li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+@media (max-width:560px){.week{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:8px">
+  <span class="kicker">RePark · Iceberg production grade · plan of record proposal</span>
+  <h1>Iceberg closeout replan, 2026-10-17 night</h1>
+  <p class="meta">Written from RePark main <code>2d08afa3</code>, fork main <code>2001c6d6f</code>, the 10-17 status page, the 10-13 plan page, the U-9 sketch on #1067 with its 10-15 rulings, the registry rows, the two 10-11 audits, the PR and workflow run records. Every claim below was checked against those records tonight, not restated from the status page.</p>
+</header>
+
+<div class="verdict">
+  <span class="kicker">Bottom line</span>
+  <p><strong>The v2 label is three units of real work away, and two of those are un-dispatched rather than blocked.</strong> U-9 (integrity pins) has had every one of its ten owner questions answered since 2026-10-15, and its only hard precondition, the fork's double-append fix, merged today. U-8 (R-011) was adopted as a refusal on 10-14 and only needs an order. U-11 (resource bound) has no card. The critical path is U-9 → the first live nightly → U-11's bound → the label PR.</p>
+  <p><strong>Proposed dates:</strong> v2 PRODUCTION on <strong>Tue 2026-11-03</strong> (buffer to 11-05), v3 core PRODUCTION on <strong>Sun 2026-11-08</strong> (buffer to 11-13), v1.5.6 ships both. The original 11-01 and 11-08 slip by two days on v2 and hold on v3, provided the lanes open Monday and nothing else takes the Opus builder.</p>
+</div>
+
+<div class="grid">
+  <div class="tile"><span class="n">7 / 13</span><span class="l">closeout units on main or in flight (U-1, U-3, U-5, U-6, U-7 merged; U-10 half; U-12 in CI)</span></div>
+  <div class="tile"><span class="n">3</span><span class="l">units on the v2 critical path with no lane: U-8, U-9, U-11</span></div>
+  <div class="tile"><span class="n">4</span><span class="l">items the 10-13 plan did not have (parity drift, EXPLAIN carriers, two fork v3 red suites)</span></div>
+  <div class="tile"><span class="n">1</span><span class="l">Opus builder at a time, by standing rule; this plan schedules around it</span></div>
+</div>
+
+<section>
+  <h2>1. Corrections to the record, verified tonight</h2>
+  <p>The 10-17 status page is right on the grades and the merges. Five of its "blocked" readings are stale, and the plan below depends on knowing that.</p>
+  <ul>
+    <li><strong>U-9 is not waiting on the owner.</strong> The ten questions in the sketch's §8 carry owner rulings 79 to 88, dated 2026-10-15, written into the sketch on #1067's branch: no product hook (79, 80), PyPI 1.5.4 hash-checked for the cross-release pin (81), the full lost-reply → re-send → stale rejection → re-base sequence as the live drill (84), the workflow wired as written with one clerk PR carrying U-9's step and U-10's AWS leg (86). The fork fix that 84 demanded, ICE-COMMIT-REBASE-DUP-1, merged on the fork as #368 and reached RePark today as #1095. U-9 can build Monday.</li>
+    <li><strong>U-8's T-3 was adopted.</strong> The owner's "T-1..T-7 adopted" of 10-13 late was confirmed at the 10-14 08:00 triage. R-011 refuses with a hint; #1037 and #1038 stay parked; the lift belongs to ICE-TSNS-NESTED-1. The unit needs an order and a sketch of the one seam, nothing else.</li>
+    <li><strong>The parity-live red is a recorder drift, not a RePark answer.</strong> The failing cell is <code>test_live_oracle_fixture_reproduces</code> in <code>test_ice_meta_delete_1.py</code>: the recorder's <code>--check</code> re-derives the 72 Spark cells and exits 1 when a fresh recording differs from the committed fixture. Four red mornings in a row, same cell, since 10-14. No card tracks it. The grades lean on this tier, so it is a gate item.</li>
+    <li><strong>The fork's own CI was dead for three weeks and is now alive.</strong> Its test job failed at <code>docker-up</code> on every run since 09-24 (the MinIO images vanished from quay.io). PR #367 restored it today and <code>main</code> is now branch-protected on the two test jobs. Its weekly interop nightly has been red since 08-29; two of the four red suites are v3 behaviour, not infrastructure: <code>v3-maintenance</code> (Java <code>next_row_id</code> 30 vs Rust 24 after a maintenance commit) and <code>remove-dangling</code> (a Rust-built DV table reports no dangling partitions where the hand-declared set is <code>{dv}</code>). Row lineage and deletion vectors are on the v3 core label's own list, so these two are v3 gate rows that nobody has on a board.</li>
+    <li><strong>Housekeeping state:</strong> #1044 (the definition) was conflicting; it is rebased onto main tonight and mergeable again. GitHub's tags stop at v1.5.4 and PyPI's latest is 1.5.4, so v1.5.5 was never tagged or uploaded; its notes exist. The cross-release pin keeps 1.5.4 either way (ruling 81). #1090 (106) sits at round-4 head <code>054c3fbb</code> with its final verifier's verdict not yet filed; #1071 (ENC-1) is mergeable and behind main.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. What "done" means, as a checklist</h2>
+  <p>A label moves when every row for it is green on main with a dated pin, or carries a dated owner carve-out. The rows are the 10-13 plan's, mapped onto the #1044 attributes, with tonight's state.</p>
+  <div class="cols">
+    <div class="card">
+      <h3>v2 HARDENED-NARROW → PRODUCTION</h3>
+      <ul class="gate">
+        <li><span class="chip ok">done</span><span>No silent value: R-016 struct pairing (U-6, #1062); CTAS write body refuses (U-7, #1057); SET-subquery walk (#1083); double append on a lost reply (#1095).</span></li>
+        <li><span class="chip warn">open</span><span>No silent value: R-011 nested NTZ wall refuses (U-8); subquery-WHERE DML (#1090, verdict pending); EXPLAIN ANALYZE and PREPARE carriers refuse on every door (EXPLAIN-DML-WRITE-1).</span></li>
+        <li><span class="chip ok">done</span><span>Boundary and secrecy: PA-01 to PA-04 (U-5, #1075, #1088); ENC-CTAS-REPLACE-1 dated row (ruling 98).</span></li>
+        <li><span class="chip acc">in CI</span><span>ENC-1 items 1 and 5 pinned, items 2, 3, 4 and 6 accepted on main (U-12, #1071).</span></li>
+        <li><span class="chip bad">not started</span><span>Integrity under failure: kill mid-write pin, live unknown-outcome drill on Glue and S3 Tables running the full double-append sequence, cross-release pin (U-9).</span></li>
+        <li><span class="chip warn">half</span><span>A second engine reads what we write: local leg green (U-10, #1056); AWS leg written, never run (#1070).</span></li>
+        <li><span class="chip bad">not started</span><span>A stated resource bound: PP-01, PP-02, PA-10, PA-11 measured, the bound written, exceeded means refused (U-11).</span></li>
+        <li><span class="chip bad">red</span><span>Evidence tier green: parity-live nightly green two consecutive mornings; acceptance 12 of 12 on the label commit.</span></li>
+        <li><span class="chip warn">partly</span><span>Truth-up (U-13): #1044 merged; matrix re-run once on the release build after the last write-path merge; registry rows re-dated; STATUS maturity section; label PR with carve-out rows; 1.5.6 note lines.</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>v3 core HARDENED-NARROW → PRODUCTION</h3>
+      <ul class="gate">
+        <li><span class="chip acc">rides v2</span><span>Everything on the v2 list measured on v3 tables. Every U-8, U-9, U-10 and U-11 pin runs both format versions by construction; the plan asks each hand-back for the v3 cell count by name.</span></li>
+        <li><span class="chip ok">done</span><span>The twenty north-star rows ✅ or DECLARED (audited 10-13); re-checked once on the release build in U-13.</span></li>
+        <li><span class="chip bad">new, red</span><span>Row lineage and deletion vectors agree with Java after maintenance: the fork's <code>v3-maintenance</code> and <code>remove-dangling</code> interop suites green, then the fix pinned into RePark (RP-59) with acceptance 12 of 12.</span></li>
+        <li><span class="chip warn">carve-out</span><span>Nanosecond columns stay HARDENED-NARROW on their own row under a dated R-002 carve-out (T-2); the U-10 AWS leg records SPARK-CANNOT-READ on the ns tables as that row's evidence. R-024 is dated to 1.5.7; R-015 is DECLARED; R-020 (U-2) moves to 1.5.7 under decision D6; R-012 (U-4) and R-010, R-013, R-018(1), R-001 are measured once on main, now the planner head.</span></li>
+        <li><span class="chip warn">partly</span><span>Truth-up: v3 label PR with the carve-out table, 1.5.6 notes, tag.</span></li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">Ladder, from the 10-13 pages and #1044: PROD = contract written, failure paths tested, live evidence at the current pin; H-N = correct inside a named envelope; EXP = a silent wrong value is reachable or no oracle exists; DECL = refused by a dated registry row. A refusal with a hint never disqualifies; a silent value always does.</p>
+</section>
+
+<section>
+  <h2>3. The critical path</h2>
+  <p>Only one Opus lane builds at a time (standing guidance 3, ruling 78). So the order of Opus builds is the schedule. Everything that does not need an Opus builder runs beside it on Muse or as a clerk PR.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Link in the chain</th><th>Why it is on the path</th><th>Earliest</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td>U-9 build, three pins, lane A</td><td>The only Opus build the v2 label still needs. Design is ruled; the harness (kill child, SigV4 gate, cross-release venv) is design-heavy, so it stays Opus by ruling 78.</td><td class="n">Mon 10-19 → Fri 10-23</td></tr>
+      <tr><td class="n">2</td><td>Owner wires #1070, first live nightly</td><td>Tier 2 never runs unmerged code; the first dispatched run is the proof (ruling 86). Carries U-10's AWS leg in the same run.</td><td class="n">Sat 10-24 → Sun 10-25</td></tr>
+      <tr><td class="n">3</td><td>U-11 bound design, lane B, then Muse build</td><td>Needs the K pin to tell an exceeded bound from a crash (10-13 plan). Measurement starts Monday on Muse; only the design waits.</td><td class="n">design Thu 10-22; build Mon 10-26 → Wed 10-28</td></tr>
+      <tr><td class="n">4</td><td>Last v2 write-path merge, then the one matrix re-run</td><td>Standing guidance 6: matrix and registry re-date run once, after the last write-path merge.</td><td class="n">Fri 10-30 → Sat 10-31</td></tr>
+      <tr><td class="n">5</td><td>v2 label PR</td><td>Clerk docs: STATUS maturity section, carve-out rows, two consecutive green parity mornings in hand.</td><td class="n">Mon 11-02 → Tue 11-03</td></tr>
+    </tbody>
+  </table></div>
+  <p>U-8, EXPLAIN-DML-WRITE-1, ENC-1, the parity drift, U-4 and the fork rows are off the critical path and fill the Muse and lane-B capacity beside it. If any of them needs an Opus build, it queues behind U-9, never beside it.</p>
+</section>
+
+<section>
+  <h2>4. The units, re-cut</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Unit</th><th>What it does</th><th>Lane</th><th>Exit proof</th><th>Target</th></tr></thead>
+    <tbody>
+      <tr><td><strong>U-9</strong><br><span class="note">ICE-INTEGRITY-PINS-1</span></td><td>Build the ruled sketch in three hand-backs. <strong>K:</strong> the kill-mid-write pin, 18 children (7 doors × 2 versions + 2 controls × 2), each asserting reached-and-killed, unchanged, orphans counted at most the crashed commit's files (ruling 82), the dry-run report agrees, writable. <strong>U:</strong> the SigV4 endpoint gate (test-only, standard library, published vectors beside it, one moto cross-check in the hand-back), the offline twin on the memory catalog, and 12 live cells on Glue and S3 Tables that run the lost reply → SDK re-send → stale rejection → fork re-base sequence and assert exactly one append; snapshot ids we wrote, never the metadata location (87). <strong>X:</strong> v1.5.4 from PyPI, exact version, hash-checked, installed before any credential; four table kinds × two catalogs × two versions × both directions. Live cells merge skipped-by-default.</td><td>Opus A builds; Opus B one scoped verifier per pin; Muse runs and folds</td><td>K pin in the Rust suite, green in CI. The three live legs green on two consecutive nightlies after the owner wires #1070. The U drill shows one append and the orphan report line per cell. X row-equal both directions. #1067 merged as the record.</td><td class="n">merge 10-23<br>proof 10-25<br>fold ≤10-27</td></tr>
+      <tr><td><strong>U-10</strong><br><span class="note">ICE-SPARK-CROSS-READ-1, AWS leg</span></td><td>Rides the same #1070 wiring and the same first run. Spark 4.1.2 with Iceberg 1.11 reads every table the acceptance legs wrote on both catalogs.</td><td>none new; owner wires; Muse folds</td><td>EQUAL on every non-nanosecond table; SPARK-CANNOT-READ recorded by name on the ns tables, cited by the R-002 carve-out row.</td><td class="n">10-25</td></tr>
+      <tr><td><strong>U-8</strong><br><span class="note">ICE-NTZ-NESTED-WALL-1, R-011</span></td><td>Decision T-3: a nested microsecond <code>TIMESTAMP_NTZ</code> write that would store a second wall refuses before any file, exactly as R-015 refuses a nested nanosecond leaf. The sketch names the one seam in the conform and the refusal text (ruling 76: a hint never names a data-deleting action; the workaround text is the fields-in-table-order form or a top-level column). The 28 field-assignment cells that already store the session wall keep their value; the 106 other-door cells become refusals. The pin <code>a_nested_microsecond_ntz_field_keeps_the_split_main_has</code> is rewritten to the refusal.</td><td>Opus B sketch (half day); Muse xhigh build; Opus scoped verifier</td><td>Every door that stored two walls refuses on v2 and v3 in three session zones with nothing written; top-level NTZ unchanged by count; R-011 row re-dated DECLARED with the lift under ICE-TSNS-NESTED-1; P2 report with acceptance run id.</td><td class="n">sketch 10-19<br>merge ≤10-22</td></tr>
+      <tr><td><strong>U-11</strong><br><span class="note">ICE-RESOURCE-BOUND-1</span></td><td>Card and order written Sunday from the audit sections. <strong>Measure (Muse):</strong> PP-01 ordered writes at 100k and 1M rows × 8 columns, unpartitioned and 32 identity partitions, writers 1 and 4, pool 32 and 128 MiB, RSS outside the pool, spill bytes, first-file latency, per-file order; PP-02 MoR MERGE at 200k and 1M rows over 32 files, match fractions 1, 10 and 100 %, a NOT MATCHED BY SOURCE leg, join peak and retained update bytes; PA-10 nested-cgroup, cgroup v1 and non-Linux fixtures; PA-11 a large changelog under a small pool with LIMIT and narrow projection. <strong>Design (Opus B):</strong> the bound as a function of input bytes and pool, the refusal class and text, the detection rule, and which arm spills versus refuses. <strong>Build (Muse):</strong> the refusal, the detector, the docs table.</td><td>Muse measurement; Opus B design; Muse build; Opus verifier</td><td>A bound table under docs/perf with run ids; one refusal cell above the bound on each version that leaves the old snapshot intact; the K pin tells a crash from a refusal; detection unit tests plus one constrained-process integration test.</td><td class="n">measure 10-19 → 10-22<br>design 10-22 → 10-23<br>merge ≤10-30</td></tr>
+      <tr><td><strong>106</strong><br><span class="note">#1090, REPARK-SQL-UPDATE-SUBQUERY-WHERE-1</span></td><td>The round the owner allowed under Q135 is built (head <code>054c3fbb</code>); the verdict is pending. PASS: merge, acceptance run, P2 report. FAIL: park, no further round, and EXPLAIN-DML-WRITE-1 absorbs the ANSI twin and the PREPARE wrapper from main.</td><td>verdict only</td><td>Either outcome recorded Sunday; the 1.5.6 known-issue line follows it.</td><td class="n">10-18</td></tr>
+      <tr><td><strong>EXPLAIN-DML-WRITE-1</strong><br><span class="note">card 10-16, rulings 136, 138, 139</span></td><td><code>EXPLAIN ANALYZE</code> of DML refuses on every door; <code>PREPARE</code> whose body is a write refuses on every door while <code>PREPARE</code> of a query keeps working; wrapper pins on real Iceberg tables with snapshot counts, one under a non-generic dialect. The walk-level refusal shape was already built once for repark-spark in 106, so the ANSI twin is a known shape.</td><td>Opus B sketch; Muse xhigh build; Opus scoped verifier (decision D3; ruling 139 said "106's Opus slot")</td><td>Statement × wrapper × door × table kind table all refusing where Spark refuses; zero snapshots after each refusal on both versions; card retired; P2.</td><td class="n">open 10-19<br>merge ≤10-28</td></tr>
+      <tr><td><strong>U-12</strong><br><span class="note">ENC-1-RESIDUE-1, #1071</span></td><td>Merge main, add ruling 145's map line, CI, then the final scoped verifier at fork rev <code>409ff330</code> (ruling 141). Items 1 and 5: one pin per operation family plus the 13-site census pin (71); double wrap refuses once (72).</td><td>clerk, then Opus B verifier</td><td>Merged with P2; items 2, 3, 4 and 6's accepted records on main; card retired.</td><td class="n">≤10-20</td></tr>
+      <tr><td><strong>PARITY-LIVE-DRIFT-1</strong><br><span class="note">new, tests only</span></td><td>Run the meta-delete recorder's <code>--check</code> on this box against Spark 4.1.2, print the drifting cells and the fields that differ, and classify: a runner-side Spark or Iceberg jar drift, a field the comparison should not read (file split or order), or a real Spark behaviour change. Re-record only in the third case, with a dated note; otherwise pin the comparison to the stable projection. File the card.</td><td>Muse xhigh</td><td>parity-live green two consecutive mornings; cause named in the card; no RePark answer changed.</td><td class="n">≤10-20</td></tr>
+      <tr><td><strong>U-4</strong><br><span class="note">R-012</span></td><td>The 16 out-of-range typed-literal cells on main, which is now the planner head. Fold only if still red.</td><td>Muse xhigh</td><td>16 cells report CAST_OVERFLOW, or the row closes as fixed by U-1.</td><td class="n">≤10-21</td></tr>
+      <tr><td><strong>FORK-V3-MAINT-ROWID-1</strong><br><span class="note">new, fork</span></td><td>After a v3 maintenance commit Java's <code>next_row_id</code> is 30 and Rust's is 24 (starting from 12): one engine assigns row ids to rewritten files and the other does not. Sketch which side the spec backs, then conform. This is row lineage, a v3 core feature.</td><td>Opus B sketch; fork lane builds (Muse if mechanical); interop nightly dispatched as the verifier</td><td><code>run-interop-v3-maintenance.sh</code> green; RePark pin bump RP-59; acceptance 12 of 12; a RePark pin on the v3 DV maintenance cell asserting <code>next_row_id</code>.</td><td class="n">sketch 10-23<br>merge ≤11-04</td></tr>
+      <tr><td><strong>FORK-DV-REMOVE-DANGLING-1</strong><br><span class="note">new, fork</span></td><td>A Rust-built DV table reports no removed partitions where the hand-declared set is <code>{dv}</code>: remove-dangling deletes misses a Rust-written deletion vector. Red since 09-26, which is inside the DV fold series F-22 to F-26.</td><td>fork lane; Opus verifier</td><td><code>run-interop-remove-dangling.sh</code> green; carried by the same RP-59 bump.</td><td class="n">≤11-04</td></tr>
+      <tr><td><strong>FORK-INTEROP-INFRA-1</strong><br><span class="note">new, tests only</span></td><td>Prime <code>iceberg-aws-1.10.0.jar</code> in the nightly's Maven step so <code>pr5a-catalog-commit-decode</code> runs; update the <code>validate-append-only</code> mirror test to the current writer-builder API.</td><td>Muse xhigh</td><td>Interop nightly at 65 of 65 once the two fork rows above land.</td><td class="n">≤10-24</td></tr>
+      <tr><td><strong>U-2</strong><br><span class="note">R-020, NS-ARRAY-FLOOR-1</span></td><td>Moves out of the label path to 1.5.7 as a dated carve-out (decision D6). It is nanosecond work; the ns row stays HARDENED-NARROW with or without it, and it is the only other unit that would need the Opus builder.</td><td>deferred</td><td>Dated row and card pointer in the v3 label PR.</td><td class="n">1.5.7</td></tr>
+      <tr><td><strong>U-13</strong><br><span class="note">truth-up and labels</span></td><td>#1044 merge (rebased tonight). After the last v2 write-path merge: the matrix on the release build once, registry re-date, STATUS header and per-capability maturity section, the v2 label PR with every carve-out row (the static-partition routing row 58, ENC-CTAS-REPLACE-1, R-024, R-002), 1.5.6 note lines for every stored-value change. Then the v3 label PR and the tag.</td><td>Muse runs; Haiku docs; clerk PRs; owner tags</td><td>Two label PRs merged; v1.5.6 tagged with both labels; v1.5.5 tagged first.</td><td class="n">v2 11-03<br>v3 11-08</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>5. The schedule, by day and lane</h2>
+  <div class="week"><div class="w">This weekend<small>Sat 10-17 → Sun 10-18</small></div><div class="b">
+    <p><strong>No Opus builds.</strong> Unblocking and records only.</p>
+    <ul>
+      <li>Owner: the usage reading; the #1090 verdict handled per its outcome; merge #1044 and #1067 (both docs); tag v1.5.5 from its release commit and upload to PyPI.</li>
+      <li>Clerk (me): #1044 rebased and pushed (done); this page filed under docs/artifacts; U-8 order and U-11 card plus order drafted in <code>task/wo</code> at their grades, from T-3 and the audit sections, so Monday's lanes open from records on main.</li>
+      <li>Muse: PARITY-LIVE-DRIFT-1 runs the recorder check locally and files the card.</li>
+      <li>Fork: the three fork cards filed in its ledger (ROWID, REMOVE-DANGLING, INTEROP-INFRA).</li>
+    </ul>
+  </div></div>
+  <div class="week"><div class="w">Week 1<small>Mon 10-19 → Sun 10-25</small></div><div class="b">
+    <ul>
+      <li><strong>Lane A (Opus build):</strong> U-9 K (Mon–Tue), U (Wed–Thu), X (Fri). One hand-back per pin with the v2 and v3 cell counts; CI green before each verifier. Merge skipped-by-default Fri 10-23.</li>
+      <li><strong>Lane B (Opus sketch and verify):</strong> Mon U-8 sketch, then the ENC-1 final verifier; Tue–Fri the U-9 per-pin verifiers as they land; Thu–Fri U-11 bound design from Muse's measurements; Fri the FORK-V3-MAINT-ROWID-1 sketch; the EXPLAIN-DML-WRITE-1 sketch whenever a verifier slot is free.</li>
+      <li><strong>Muse (cap 4):</strong> U-8 build Tue–Wed; U-11 measurement Mon–Thu; U-4 cell Mon; FORK-INTEROP-INFRA-1; EXPLAIN-DML-WRITE-1 build after its sketch; folds.</li>
+      <li><strong>Owner:</strong> wire #1070 the day U-9 merges (Fri or Sat); dispatch the first run; merge U-8 and ENC-1 on their P2 reports.</li>
+      <li><strong>Milestones:</strong> ENC-1 merged 10-20; parity-live green 10-20; U-8 merged 10-22; U-9 merged 10-23; first integrity nightly 10-25.</li>
+    </ul>
+  </div></div>
+  <div class="week"><div class="w">Week 2<small>Mon 10-26 → Sun 11-01</small></div><div class="b">
+    <ul>
+      <li><strong>Lane A:</strong> idle for builds unless the first nightly is red, in which case the fold is Muse and lane A verifies. Opens the fork ROWID build only if the sketch shows it is design-heavy; otherwise Muse.</li>
+      <li><strong>Lane B:</strong> U-11 verifier; EXPLAIN-DML-WRITE-1 verifier; the second-nightly check of U-9 and U-10; the fork re-verifier by dispatching the interop nightly.</li>
+      <li><strong>Muse:</strong> U-11 build Mon–Wed; FORK-DV-REMOVE-DANGLING-1 and ROWID builds; the one matrix re-run on the release build after the last v2 write-path merge (Fri 10-30); registry re-date.</li>
+      <li><strong>Milestones:</strong> U-9 legs green two nightlies 10-26 and 10-27; EXPLAIN-DML-WRITE-1 merged 10-28; U-11 merged 10-30; matrix count in hand 10-31.</li>
+    </ul>
+  </div></div>
+  <div class="week"><div class="w">Week 3<small>Mon 11-02 → Sun 11-08</small></div><div class="b">
+    <ul>
+      <li><strong>Clerk:</strong> the v2 label PR Mon–Tue (STATUS maturity section, carve-out rows, 1.5.6 note lines); <strong>v2 PRODUCTION Tue 11-03.</strong></li>
+      <li><strong>Fork:</strong> ROWID and REMOVE-DANGLING green on a dispatched interop run; RP-59 pin bump into RePark with acceptance 12 of 12 by Wed 11-04; a RePark pin on <code>next_row_id</code> after v3 maintenance.</li>
+      <li><strong>Muse:</strong> the twenty north-star rows re-checked on the release build; R-010, R-013, R-018(1) and R-001 measured on main and their rows closed or kept; the v3 cells of every closeout pin counted by name into the v3 label PR.</li>
+      <li><strong>Clerk:</strong> the v3 label PR with the R-002 carve-out row and the nanosecond table; the 1.5.6 release notes; <strong>v3 core PRODUCTION Sun 11-08</strong>; owner tags v1.5.6.</li>
+    </ul>
+  </div></div>
+  <div class="week"><div class="w">Buffer<small>Mon 11-09 → Fri 11-13</small></div><div class="b">
+    <p>Slips land here. Nothing new opens in the buffer; a unit that is not green by 11-13 gets a dated carve-out row or the label waits, and the owner decides which the same day.</p>
+  </div></div>
+</section>
+
+<section>
+  <h2>6. Decisions for the owner</h2>
+  <p>Each has a lean. Nothing in section 5 opens before D1 and D2 are answered, by the standing rule that no plan lane opens before the owner adopts.</p>
+  <ol>
+    <li><strong>D1, adopt the dates.</strong> v2 PRODUCTION Tue 11-03 with buffer to 11-05; v3 core Sun 11-08 with buffer to 11-13; v1.5.6 ships both. Lean: adopt.</li>
+    <li><strong>D2, U-9 is the only Opus build until it merges.</strong> Lane A opens Monday from the ruled sketch; U-8, U-11 and EXPLAIN-DML-WRITE-1 build on Muse with Opus sketches and verifiers. Lean: yes; it is what ruling 78 already says, applied to the one unit that is design-heavy.</li>
+    <li><strong>D3, EXPLAIN-DML-WRITE-1's engine.</strong> Ruling 139 gave it "106's Opus slot". The walk-level refusal was built once in 106 for repark-spark, so the ANSI twin is a known shape. Lean: Opus sketch, Muse build, Opus scoped verifier, so it never competes with U-9 for the builder.</li>
+    <li><strong>D4, the two fork v3 suites are v3 gate rows.</strong> Row lineage after maintenance and DV removal are on the v3 core list. Lean: yes; fix on the fork, pin in RePark through RP-59, and the v3 label waits on them rather than carving them out.</li>
+    <li><strong>D5, parity-live gates the label PRs.</strong> Two consecutive green mornings before either label PR opens. Lean: yes.</li>
+    <li><strong>D6, U-2 (R-020) moves to 1.5.7.</strong> It is nanosecond work with no effect on the ns row's ceiling, and the only other unit that wants the Opus builder. Lean: yes, with a dated row in the v3 label PR.</li>
+    <li><strong>D7, v1.5.5.</strong> Tag and upload now from the release commit; the cross-release pin keeps 1.5.4 per ruling 81 and the release checklist moves it at each later tag. Lean: tag this weekend.</li>
+    <li><strong>D8, the Opus ceiling.</strong> I cannot read the usage meter. 10-16 spent about $535 of Opus in one day, most of it on repeated verifier and fix rounds. This plan's Opus work is roughly: U-9 three builds and four verifiers, U-8 sketch and verifier, U-11 design and verifier, EXPLAIN sketch and verifier, ENC-1 verifier, two fork sketches and verifiers. Lean: a weekly Opus ceiling the owner names on Monday 08:00, with verifiers scoped to the finding class every time; the 10-20 re-evaluation stands.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>7. Halt rules and risks</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>Halts, carried from the standing guidance</h3>
+      <ul>
+        <li>A FAIL verdict parks the unit and the owner hears first; no third round unless the owner names it (55, 73).</li>
+        <li>A second seam in any sketch halts the same day and re-plans the label date (8).</li>
+        <li>A red acceptance run stops every lane until it is explained (63).</li>
+        <li>The U drill showing a double append stops the live leg and v2 waits (84).</li>
+        <li>Any statement main answers that a head refuses, outside the named carve-outs, halts (70).</li>
+        <li>Every write-path merge carries its P2 report, cell count, verdicts first, acceptance run id, before the next lane opens (standing guidance 4).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Risks, with the fallback</h3>
+      <ul>
+        <li><strong>PP-01 cannot be bounded without a redesign.</strong> The audit says the input vector must become budgeted or spillable. Fallback: the bound is declared and exceeded means refused; the definition allows "refuses cleanly where it cannot spill". Spilling is a later unit.</li>
+        <li><strong>The fork's <code>next_row_id</code> fix is large.</strong> Row lineage is v3 core; it cannot be carved out. Fallback: the v3 label slides into the buffer, v2 does not.</li>
+        <li><strong>The first integrity nightly is red for harness reasons</strong> (gate signing, S3 Tables maintenance mid-drill). One Muse fold with a scoped re-verifier; retry once on maintenance (87).</li>
+        <li><strong>The parity drift is a real Spark behaviour change.</strong> Re-record with a dated note; the affected registry rows are re-measured in U-13.</li>
+        <li><strong>Opus usage crosses the line mid-week.</strong> Lane A finishes its commit and hands back; verifiers continue; Muse continues.</li>
+        <li><strong>Box disk.</strong> Every finished lane's clone is removed at merge; U-9's cross-release venv and the fork clones are the new consumers.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>8. Cadence</h2>
+  <ul>
+    <li>08:00 board every morning: verdicts by time first, merges with acceptance run ids, halts, spend by lane, the day's dispatch list ordered by this page.</li>
+    <li>Every hand-back reports the round count per finding class and the v2 and v3 cell counts by name.</li>
+    <li>Every question for the owner goes out as plain text in the same message as the report it belongs to, and is re-sent when told it was not seen.</li>
+    <li>This page is re-dated, not rewritten, when a date moves; the record of why lives in the morning board of that day.</li>
+  </ul>
+</section>
+
+<p class="note">Proposal by the Frontier agent (Claude, claude-fable-5-1) for the owner, 2026-10-17 night. The plan of record stays the 10-13 page until the owner adopts D1 and D2; this page then supersedes its section 3 schedule and adds the units in section 4 that the 10-13 page did not have.</p>
+</div>
