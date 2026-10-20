@@ -305,8 +305,16 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   column no longer refuses and the wall stores; through a derived table, a `UNION ALL` branch,
   a join side, `first_value … OVER`, a `GROUP BY`, a temporary view and a MERGE source it still
   refuses and adds no snapshot (verifier S1-3). With the walk disabled, each of the seven
-  stores.
-  pins: ice-ntz-nested-refuse-1/C-022, C-023
+  stores. `a_subquery_in_the_columns_expression_is_read_whole`: a scalar subquery returning a
+  container cast of an instant (directly, through a derived table, as a MERGE update value)
+  refuses, and so does an `IN` or `EXISTS` subquery holding one inside the column's own
+  expression (read whole, fail closed); a scalar subquery of a wall or of the leaf cast stores
+  (verifier S1-4: removing the subquery read stores the UTC wall).
+  `a_view_the_write_reads_is_inlined_before_the_walk`: a catalog view and a frame view leave no
+  scan whose source carries a logical plan, and a SQL temporary view leaves a
+  `ReplanningTempView` scan; the premise on which round 1's frame-view branch was removed as
+  dead (verifier S3-2).
+  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

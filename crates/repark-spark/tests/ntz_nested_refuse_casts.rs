@@ -5,7 +5,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use datafusion::arrow::array::{Array, ArrayRef, AsArray};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Int64Type};
-use datafusion::logical_expr::{ColumnarValue, Volatility, create_udf};
+use datafusion::common::tree_node::TreeNodeRecursion;
+use datafusion::logical_expr::{ColumnarValue, LogicalPlan, Volatility, create_udf};
 use repark_core::ReparkSession;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
@@ -723,6 +724,107 @@ async fn the_cast_walk_reads_only_what_reaches_the_column() {
         }
     }
     assert_eq!(wrong, Vec::<String>::new());
+}
+
+const IN_A_SUBQUERY: [&str; 5] = [
+    "INSERT INTO ice.ns.t SELECT 2, (SELECT {C} FROM ice.ns.src), 0",
+    "INSERT INTO ice.ns.t SELECT 2, (SELECT s FROM (SELECT {C} AS s FROM ice.ns.src) q), 0",
+    "MERGE INTO ice.ns.t t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN \
+     UPDATE SET t.st = (SELECT {C} FROM ice.ns.src)",
+    "INSERT INTO ice.ns.t SELECT id + 1, IF(id IN (SELECT id FROM ice.ns.src \
+     WHERE element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1) IS NOT NULL), \
+     named_struct('v', w, 'n', 1), NULL), 0 FROM ice.ns.src",
+    "INSERT INTO ice.ns.t SELECT id + 1, IF(EXISTS (SELECT 1 FROM ice.ns.src \
+     WHERE {C} IS NOT NULL), named_struct('v', w, 'n', 1), NULL), 0 FROM ice.ns.src",
+];
+
+/// A subquery inside the expression that produces the column is read whole: a scalar subquery
+/// that returns a container cast of an instant (directly, through a derived table, in a MERGE
+/// update) refuses outside UTC, and so does an `IN` or `EXISTS` subquery in the column's own
+/// expression that holds one, though its result is a boolean (fail closed). A scalar subquery
+/// that returns a wall, or the leaf cast, stores.
+///
+/// pins: ice-ntz-nested-refuse-1/C-024
+#[tokio::test]
+async fn a_subquery_in_the_columns_expression_is_read_whole() {
+    let cast = format!("CAST(named_struct('v', x, 'n', 1) AS {S})");
+    let mut wrong = Vec::new();
+    for (zone, session_wall) in ZONES {
+        let session = session(zone);
+        let _warehouse = catalog(&session).await;
+        table(&session, "t", S, "").await;
+        run(&session, "INSERT INTO ice.ns.t (id, k) VALUES (1, 0)").await;
+        for write in IN_A_SUBQUERY {
+            let write = write.replace("{C}", &cast);
+            match attempt(&session, &write).await {
+                Err(error) if error.contains(HINT) => {}
+                outcome => wrong.push(format!("{zone} / {write}: {outcome:?}")),
+            }
+        }
+        if snapshots(&session, "t").await != vec![Some(1)] {
+            wrong.push(format!("{zone}: a snapshot was added"));
+        }
+        for (index, (value, expected)) in [
+            ("named_struct('v', w, 'n', 1)", UTC_WALL),
+            (
+                "named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n', 1)",
+                session_wall,
+            ),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let name = format!("q{index}");
+            table(&session, &name, S, "").await;
+            let write =
+                format!("INSERT INTO ice.ns.{name} SELECT 2, (SELECT {value} FROM ice.ns.src), 0");
+            if let Err(error) = attempt(&session, &write).await {
+                wrong.push(format!("{zone} / {write}: {error}"));
+                continue;
+            }
+            let values = stored(&session, &format!("SELECT st FROM ice.ns.{name}")).await;
+            if values != vec![Some(expected)] {
+                wrong.push(format!("{zone} / {write}: {values:?}"));
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+/// A view the write reads is already inlined when the type read walks its plan: a catalog view
+/// and a `DataFrame` frame view leave no `TableScan` whose source carries a logical plan (the
+/// plan builder replaces it with the view's plan), and a SQL temporary view leaves a
+/// `ReplanningTempView` scan, which the walk opens through its definition plan. So the walk
+/// needs no descent through a source's own logical plan.
+///
+/// pins: ice-ntz-nested-refuse-1/C-024
+#[tokio::test]
+async fn a_view_the_write_reads_is_inlined_before_the_walk() {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    container_tables(&session).await;
+    for view in ["ice.ns.cast_kept", "cast_frame", "cast_view"] {
+        let frame = session
+            .sql(&format!("SELECT st FROM {view}"))
+            .await
+            .expect("plan");
+        let mut carried = 0;
+        let mut scans = 0;
+        frame
+            .logical_plan()
+            .apply_with_subqueries(|node| {
+                if let LogicalPlan::TableScan(scan) = node {
+                    scans += 1;
+                    if scan.source.get_logical_plan().is_some() {
+                        carried += 1;
+                    }
+                }
+                Ok(TreeNodeRecursion::Continue)
+            })
+            .expect("walk");
+        assert!(scans > 0, "{view}");
+        assert_eq!(carried, 0, "{view}");
+    }
 }
 
 fn counted(calls: &Arc<AtomicUsize>) -> datafusion::logical_expr::ScalarUDF {

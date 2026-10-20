@@ -626,15 +626,11 @@ fn plan_has(plan: &LogicalPlan, test: Test) -> bool {
     while let Some(next) = pending.pop() {
         let mut found = false;
         let _ = next.apply_with_subqueries(|node| {
-            if let LogicalPlan::TableScan(scan) = node {
-                if let Some(view) = scan.source.get_logical_plan() {
-                    pending.push(view.into_owned());
-                }
-                if let Ok(provider) = source_as_provider(&scan.source)
-                    && let Some(view) = definition_plan(provider.as_ref())
-                {
-                    pending.push(view);
-                }
+            if let LogicalPlan::TableScan(scan) = node
+                && let Ok(provider) = source_as_provider(&scan.source)
+                && let Some(view) = definition_plan(provider.as_ref())
+            {
+                pending.push(view);
             }
             let inputs = node.inputs();
             let mut schema = DFSchema::empty();

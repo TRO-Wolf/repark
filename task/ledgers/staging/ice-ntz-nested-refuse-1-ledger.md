@@ -60,6 +60,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-021 | The round's gates are green with real exit codes. | §11. | **PROVEN** | §11. |
 | C-022 | Outside UTC the plain `UPDATE` that assigns a whole struct or array above the leaf no longer refuses a value for holding a zoned sub-expression; it still refuses a `TIMESTAMP_NTZ` cast in the value (C-017), a planned type holding a zoned timestamp and a container cast of an instant. `to_timestamp_ntz(<instant>)` and `to_timestamp_ntz(coalesce(z, <instant>))` store the session wall, a wall literal beside `IF(z IS NULL, 1, 2)` and `named_struct('v', st.v, 'n', CAST(year(coalesce(z, <instant>)) AS INT))` keep the wall, as Spark 4.1.2 and main store them. No wrong wall re-opens. *(Supersedes the zoned-sub-expression arm of C-001, C-005 and §1, fix round 2, verifier S1-2.)* | The four cells in New York and Kolkata at the Rust door; the 3168-cell matrix and the 84-cell probe on the build against `c20c3e25`. | **PROVEN** | §12. `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`. |
 | C-023 | Outside UTC the container-cast test (C-015) and the plain `UPDATE`'s cast test (C-017) read only the lineage of the supplied column: the expression that produces it in the typing plan, followed column by column through projections, aliases, derived tables, filters, sorts, limits, `DISTINCT`, the side of a join it comes from, every branch of a union, windows, values rows and a `ReplanningTempView`'s definition plan. A predicate, an `EXISTS` in a `WHERE`, a join condition and a sibling column are not read, so a container cast of an instant there no longer refuses and the wall stores. Read whole, fail closed: a subquery inside the column's expression (its outer references followed), an aggregate's group and aggregate expressions, any other node, a column that resolves in no input. A cast that reaches the column through a derived table, a union branch, a join side, a window, a grouping, a temporary view or a MERGE source still refuses. *(Supersedes the whole-statement walk of C-015, fix round 2, verifier S1-3.)* | The Rust door in New York and Kolkata, three shapes off the lineage, seven on it, with the walk disabled as the control; the verifier's cells; the 3168-cell matrix and the 84-cell probe against `c20c3e25`. | **PROVEN** | §12. `the_cast_walk_reads_only_what_reaches_the_column`. |
+| C-024 | A subquery inside the expression that produces the column is read whole: a scalar subquery returning a container cast of an instant (directly, through a derived table, as a MERGE update value) refuses outside UTC, and so does an `IN` or `EXISTS` subquery holding one in the column's own expression; a scalar subquery of a wall or of the leaf cast stores. The walk does not descend a scan source's own logical plan: DataFusion 54.1.0 (`datafusion-expr` `logical_plan/builder.rs`, `scan_with_filters_inner`) inlines every scan whose source carries a plan and has no filters, and the SQL planner, `read_table` and the session's table reads build scans with no filters, so a catalog view or a frame view never reaches the walk as such a scan; the branch that read it (verifier M9) is removed as dead. *(Fix round 2, verifier S1-4 and S3-2.)* | The Rust door in New York and Kolkata with the subquery read removed as the control; the premise pin over the three view kinds; the verifier's M9 and M10 and their round-2 equivalents (§12). | **PROVEN** | §12. `a_subquery_in_the_columns_expression_is_read_whole`, `a_view_the_write_reads_is_inlined_before_the_walk`. |
 
 ## §1 The rule and the seam
 
@@ -287,4 +288,29 @@ dynamic `INSERT OVERWRITE`, a `UNION ALL` branch, `VALUES`.
 `sibling_col_cast_ctrl` still refuses, by the zoned-pairing over-refusal (R-011: the sibling
 column holds its own nested `TIMESTAMP_NTZ` leaf and is written from a value with a zoned
 leaf), not by the walk.
+
+### §12.3 S1-4 and S3-2, the subquery read and the frame-view branch (C-024)
+
+New York, `cases_r3` (UTC and New York; main `c516c54a`, the build of items 1 and 2, Spark
+4.1.2 `local[1]`, load 4.20 at the Spark start, 26 s):
+
+| Shape | Spark | main | this build |
+|---|---|---|---|
+| `INSERT … SELECT 2, (SELECT CAST(named_struct('v', x, 'n', 1) AS STRUCT<…>) FROM src), 0` | session wall | UTC wall | refused |
+| the same through a derived table in the subquery | session wall | UTC wall | refused |
+| `MERGE … UPDATE SET t.st = (SELECT <the cast> FROM src)` | session wall | UTC wall | refused |
+| `IF(id IN (SELECT id FROM src WHERE element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1) IS NOT NULL), named_struct('v', w, 'n', 1), NULL)` | the wall | raw error (`This feature is not implemented`) | refused |
+| `IF(EXISTS (SELECT 1 FROM src WHERE <the cast> IS NOT NULL), named_struct('v', w, 'n', 1), NULL)` | the wall | the wall | refused (over-refusal, by design) |
+| a scalar subquery of `named_struct('v', w, 'n', 1)` | the wall | the wall | the wall |
+| a scalar subquery of the leaf cast | session wall | session wall | session wall |
+| the cast through a derived table, a join side, a `GROUP BY` | session wall | UTC wall | refused |
+
+With the subquery read removed (the round-2 equivalent of the verifier's M10), the three
+scalar shapes store the UTC wall, the `EXISTS` shape stores and the `IN` shape raises the
+engine's error; `a_subquery_in_the_columns_expression_is_read_whole` fails on each. In UTC
+every shape answers as main.
+
+The frame-view branch (`scan.source.get_logical_plan()`) is removed, not pinned: no plan the
+router builds can reach it (C-024). `a_view_the_write_reads_is_inlined_before_the_walk` pins
+the premise, so a DataFusion upgrade that stops inlining reds it.
 

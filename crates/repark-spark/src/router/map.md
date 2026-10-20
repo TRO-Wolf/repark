@@ -180,6 +180,10 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   subquery inside a read expression (scalar, `IN`, `EXISTS`; its outer references are followed
   as columns), every group and aggregate expression of an aggregate, and any other node
   (`plan_has`, the round-1 walk). A column that resolves in no input reads every input whole.
+  Neither walk descends a scan source's own logical plan (round 1's frame-view branch, removed
+  in fix round 2, ledger C-024): DataFusion 54's `LogicalPlanBuilder::scan` replaces a scan
+  whose source carries a plan (a catalog view's `ViewTable`, a frame's `into_view()`) with that
+  plan before the router sees it, and every planner path builds scans through it.
   A `PREPARE` that holds a parameter is read as `Scope::Unreadable`, so every supply of the
   column refuses. **Why the container cast:** the planner's cast of a whole
   struct, array or map converts a zoned leaf with UTC even in a bare `SELECT`
@@ -197,7 +201,7 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `TIMESTAMP_NTZ`), so no declared type proves a wall. **Why plan and not read the AST:** a
   column, a view, a by-name frame and a scalar subquery have no type in the AST; the router's own
   planner gives the type the write sees.
-  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023, C-024
 
 ## Pointers
 
