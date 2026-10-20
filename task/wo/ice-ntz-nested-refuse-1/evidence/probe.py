@@ -19,11 +19,23 @@ import pyarrow as pa
 TS_LIT = "TIMESTAMP '2026-01-02 03:04:05.123456+00:00'"
 NTZ_LIT = "TIMESTAMP_NTZ '2026-01-02 03:04:05.123456'"
 NTZ_CAST = f"CAST({TS_LIT} AS TIMESTAMP_NTZ)"
+NTZ_TEXT_CAST = "CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ)"
+NTZ_STRUCT = "STRUCT<v: TIMESTAMP_NTZ, n: INT>"
 INSTANT_US = 1_767_323_045_123_456
 ZONES = ("UTC", "America/New_York", "Asia/Kolkata")
 SCHEMAS = ("ntz_nested", "ltz_nested", "ntz_top")
-SOURCES = ("ts_literal", "ts_column", "ntz_literal", "ntz_cast", "ntz_cast_column")
-COLUMN_SOURCES = ("ts_column", "ntz_cast_column")
+SOURCES = (
+    "ts_literal",
+    "ts_column",
+    "ntz_literal",
+    "ntz_cast",
+    "ntz_cast_column",
+    "ntz_text_cast",
+    "ts_struct_cast",
+    "ts_struct_cast_column",
+)
+COLUMN_SOURCES = ("ts_column", "ntz_cast_column", "ts_struct_cast_column")
+STRUCT_CAST_SOURCES = ("ts_struct_cast", "ts_struct_cast_column")
 SESSION_WALL = {
     "UTC": INSTANT_US,
     "America/New_York": 1_767_305_045_123_456,
@@ -87,8 +99,27 @@ SEED_DOORS = {
 }
 
 
+def instant_at(place: str) -> str:
+    """Return the instant column at `place` (`bare`, `src` or `s`)."""
+    if place == "s":
+        return "s.l"
+    if place == "src":
+        return "l"
+    return "(SELECT l FROM ice.ns.src)"
+
+
+def struct_cast(source: str, place: str) -> str:
+    """Return a cast of a whole struct that holds the instant to a naive struct."""
+    instant = TS_LIT if source == "ts_struct_cast" else instant_at(place)
+    return f"CAST(named_struct('v', {instant}, 'n', 1) AS {NTZ_STRUCT})"
+
+
 def inner_expr(source: str, place: str) -> str:
     """Return the SQL of one source value at `place` (`bare`, `src` or `s`)."""
+    if source in STRUCT_CAST_SOURCES:
+        return f"{struct_cast(source, place)}.v"
+    if source == "ntz_text_cast":
+        return NTZ_TEXT_CAST
     if source == "ts_literal":
         return TS_LIT
     if source == "ntz_literal":
@@ -127,6 +158,8 @@ def packed(schema: str, source: str, place: str) -> str:
     inner = inner_expr(source, place)
     if schema == "ntz_top":
         return inner
+    if source in STRUCT_CAST_SOURCES:
+        return struct_cast(source, place)
     return f"named_struct('v', {inner}, 'n', 1)"
 
 
@@ -140,7 +173,9 @@ def null_sql(schema: str) -> str:
 
 def source_type(source: str) -> str:
     """Return the SQL type of a sibling column that holds `source`."""
-    if source in ("ntz_literal", "ntz_cast", "ntz_cast_column"):
+    if source in ("ntz_literal", "ntz_cast", "ntz_cast_column", "ntz_text_cast"):
+        return "TIMESTAMP_NTZ"
+    if source in STRUCT_CAST_SOURCES:
         return "TIMESTAMP_NTZ"
     return "TIMESTAMP"
 
@@ -784,6 +819,278 @@ def load_cells(path: Path) -> dict[tuple[str, str, str, str, str], dict[str, Any
     return found
 
 
+ATTACK_TABLE = (
+    "CREATE TABLE ice.ns.t (id INT, st {type}, k INT) USING iceberg {extra}"
+    "TBLPROPERTIES ('format-version'='2')"
+)
+ATTACK_SEED = "INSERT INTO ice.ns.t (id, k) VALUES (1, 0)"
+ATTACK_STRUCT_CAST = f"CAST(named_struct('v', x, 'n', 1) AS {NTZ_STRUCT})"
+ATTACKS: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
+    (
+        "insert_select_struct_cast",
+        NTZ_STRUCT,
+        (),
+        f"INSERT INTO ice.ns.t SELECT id, {ATTACK_STRUCT_CAST}, 0 FROM ice.ns.src",
+    ),
+    (
+        "insert_values_struct_cast",
+        NTZ_STRUCT,
+        (),
+        f"INSERT INTO ice.ns.t VALUES (1, CAST(named_struct('v', {TS_LIT}, 'n', 1) "
+        f"AS {NTZ_STRUCT}), 0)",
+    ),
+    (
+        "insert_select_try_cast",
+        NTZ_STRUCT,
+        (),
+        f"INSERT INTO ice.ns.t SELECT id, TRY_CAST(named_struct('v', x, 'n', 1) "
+        f"AS {NTZ_STRUCT}), 0 FROM ice.ns.src",
+    ),
+    (
+        "insert_select_cast_of_zoned_struct_column",
+        NTZ_STRUCT,
+        (
+            "CREATE TABLE ice.ns.z (id INT, st STRUCT<v: TIMESTAMP, n: INT>) USING iceberg",
+            "INSERT INTO ice.ns.z SELECT id, named_struct('v', x, 'n', 1) FROM ice.ns.src",
+        ),
+        f"INSERT INTO ice.ns.t SELECT id, CAST(st AS {NTZ_STRUCT}), 0 FROM ice.ns.z",
+    ),
+    (
+        "merge_insert_values_struct_cast",
+        NTZ_STRUCT,
+        (),
+        "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN NOT MATCHED THEN "
+        "INSERT (id, st, k) VALUES "
+        f"(s.id, CAST(named_struct('v', s.x, 'n', 1) AS {NTZ_STRUCT}), 0)",
+    ),
+    (
+        "merge_update_set_struct_cast",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN "
+        f"UPDATE SET t.st = CAST(named_struct('v', s.x, 'n', 1) AS {NTZ_STRUCT})",
+    ),
+    (
+        "merge_update_star_struct_cast",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        f"MERGE INTO ice.ns.t t USING (SELECT id, {ATTACK_STRUCT_CAST} AS st, 0 AS k "
+        "FROM ice.ns.src) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *",
+    ),
+    (
+        "insert_partition_struct_cast",
+        NTZ_STRUCT,
+        ("PARTITIONED",),
+        f"INSERT INTO ice.ns.t PARTITION (k = 0) SELECT id, {ATTACK_STRUCT_CAST} FROM ice.ns.src",
+    ),
+    (
+        "insert_branch_struct_cast",
+        NTZ_STRUCT,
+        (ATTACK_SEED, "ALTER TABLE ice.ns.t CREATE BRANCH bx"),
+        f"INSERT INTO ice.ns.t.branch_bx SELECT id + 1, {ATTACK_STRUCT_CAST}, 0 FROM ice.ns.src",
+    ),
+    (
+        "insert_temp_view_struct_cast",
+        NTZ_STRUCT,
+        (
+            f"CREATE TEMPORARY VIEW cast_view AS SELECT id, {ATTACK_STRUCT_CAST} AS st, "
+            "0 AS k FROM ice.ns.src",
+        ),
+        "INSERT INTO ice.ns.t SELECT id, st, k FROM cast_view",
+    ),
+    (
+        "df_overwrite_condition_struct_cast",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        f"FRAME SELECT id, {ATTACK_STRUCT_CAST} AS st, 0 AS k FROM ice.ns.src",
+    ),
+    (
+        "insert_select_array_cast",
+        "ARRAY<TIMESTAMP_NTZ>",
+        (),
+        "INSERT INTO ice.ns.t SELECT id, CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 0 FROM ice.ns.src",
+    ),
+    (
+        "insert_select_leaf_cast",
+        NTZ_STRUCT,
+        (),
+        "INSERT INTO ice.ns.t SELECT id, named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n', 1), 0 "
+        "FROM ice.ns.src",
+    ),
+    (
+        "insert_select_array_of_leaf_cast",
+        "ARRAY<TIMESTAMP_NTZ>",
+        (),
+        "INSERT INTO ice.ns.t SELECT id, array(CAST(x AS TIMESTAMP_NTZ)), 0 FROM ice.ns.src",
+    ),
+    (
+        "insert_select_transform_leaf_cast",
+        "ARRAY<TIMESTAMP_NTZ>",
+        (),
+        "INSERT INTO ice.ns.t SELECT id, transform(array(x), e -> CAST(e AS TIMESTAMP_NTZ)), 0 "
+        "FROM ice.ns.src",
+    ),
+    (
+        "insert_select_struct_cast_of_a_wall",
+        NTZ_STRUCT,
+        (),
+        f"INSERT INTO ice.ns.t SELECT id, CAST(named_struct('v', w, 'n', 1) AS {NTZ_STRUCT}), 0 "
+        "FROM ice.ns.src",
+    ),
+    (
+        "prepare_typed_timestamp_select",
+        NTZ_STRUCT,
+        (
+            "PREPARE p(TIMESTAMP) AS INSERT INTO ice.ns.t SELECT 5, "
+            "named_struct('v', $1, 'n', 1), 0",
+        ),
+        f"EXECUTE p({TS_LIT})",
+    ),
+    (
+        "prepare_untyped_select",
+        NTZ_STRUCT,
+        ("PREPARE p AS INSERT INTO ice.ns.t SELECT 5, named_struct('v', $1, 'n', 1), 0",),
+        f"EXECUTE p({TS_LIT})",
+    ),
+    (
+        "prepare_untyped_values",
+        NTZ_STRUCT,
+        ("PREPARE p AS INSERT INTO ice.ns.t VALUES (5, named_struct('v', $1, 'n', 1), 0)",),
+        f"EXECUTE p({TS_LIT})",
+    ),
+    (
+        "prepare_typed_timestamp_ntz_select",
+        NTZ_STRUCT,
+        (
+            "PREPARE p(TIMESTAMP_NTZ) AS INSERT INTO ice.ns.t SELECT 5, "
+            "named_struct('v', $1, 'n', 1), 0",
+        ),
+        f"EXECUTE p({TS_LIT})",
+    ),
+    (
+        "prepare_untyped_leaf_cast",
+        NTZ_STRUCT,
+        (
+            "PREPARE p AS INSERT INTO ice.ns.t SELECT 5, "
+            "named_struct('v', CAST($1 AS TIMESTAMP_NTZ), 'n', 1), 0",
+        ),
+        f"EXECUTE p({TS_LIT})",
+    ),
+    (
+        "prepare_int_parameter_wall",
+        NTZ_STRUCT,
+        (
+            "PREPARE p(INT) AS INSERT INTO ice.ns.t SELECT id + $1, "
+            "named_struct('v', w, 'n', 1), 0 FROM ice.ns.src",
+        ),
+        "EXECUTE p(10)",
+    ),
+    (
+        "update_whole_text_cast",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        f"UPDATE ice.ns.t SET st = named_struct('v', {NTZ_TEXT_CAST}, 'n', 1) WHERE id >= 0",
+    ),
+    (
+        "update_whole_date_cast",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        "UPDATE ice.ns.t SET st = named_struct('v', CAST(DATE '2026-01-02' AS TIMESTAMP_NTZ), "
+        "'n', 1) WHERE id >= 0",
+    ),
+    (
+        "update_whole_array_text_cast",
+        "ARRAY<TIMESTAMP_NTZ>",
+        (ATTACK_SEED,),
+        f"UPDATE ice.ns.t SET st = array({NTZ_TEXT_CAST}) WHERE id >= 0",
+    ),
+    (
+        "update_whole_wall_literal",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        f"UPDATE ice.ns.t SET st = named_struct('v', {NTZ_LIT}, 'n', 1) WHERE id >= 0",
+    ),
+    (
+        "update_whole_to_timestamp_ntz",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        "UPDATE ice.ns.t SET st = named_struct('v', "
+        "to_timestamp_ntz('2026-01-02 03:04:05.123456'), 'n', 1) WHERE id >= 0",
+    ),
+    (
+        "update_field_text_cast",
+        NTZ_STRUCT,
+        (ATTACK_SEED,),
+        f"UPDATE ice.ns.t SET st.v = {NTZ_TEXT_CAST} WHERE id >= 0",
+    ),
+)
+
+
+def attack_cell(zone: str, warehouse: Path, case: tuple[str, str, tuple[str, ...], str]) -> dict:
+    """Run one attack case on a fresh catalog and return what it stored or raised."""
+    name, column_type, setup, act = case
+    spark = open_repark(zone, warehouse)
+    record: dict[str, Any] = {"case": name, "zone": zone}
+    try:
+        create_source_columns(spark)
+        extra = "PARTITIONED BY (k) " if "PARTITIONED" in setup else ""
+        spark.sql(ATTACK_TABLE.format(type=column_type, extra=extra))
+        for statement in setup:
+            if statement != "PARTITIONED":
+                spark.sql(statement).collect()
+        if act.startswith("FRAME "):
+            spark.sql(act[len("FRAME ") :]).writeTo("ice.ns.t").overwrite(condition("repark"))
+        else:
+            spark.sql(act).collect()
+        arrow = spark.sql("SELECT st AS v FROM ice.ns.t WHERE st IS NOT NULL").toArrow()
+        record["ticks_us"] = flat_ticks(arrow.column("v").combine_chunks())
+    except Exception as error:
+        record.update(error_record(error))
+    finally:
+        spark.stop()
+    return record
+
+
+def create_source_columns(spark: Any) -> None:
+    """Write the instant and its wall into `ice.ns.src (id, x, w)`."""
+    spark.sql(
+        "CREATE TABLE ice.ns.src (id INT, x TIMESTAMP, w TIMESTAMP_NTZ) USING iceberg "
+        "TBLPROPERTIES ('format-version'='2')"
+    )
+    spark.sql(f"INSERT INTO ice.ns.src VALUES (1, {TS_LIT}, {NTZ_LIT})")
+
+
+def flat_ticks(column: Any) -> list[int | None]:
+    """Return the microsecond ticks of every timestamp leaf in `column`."""
+    kind = column.type
+    if pa.types.is_struct(kind):
+        found: list[int | None] = []
+        for index in range(kind.num_fields):
+            found.extend(flat_ticks(column.field(index)))
+        return found
+    if pa.types.is_list(kind) or pa.types.is_large_list(kind):
+        return flat_ticks(column.flatten())
+    if pa.types.is_timestamp(kind):
+        return column.cast(pa.int64(), safe=False).to_pylist()
+    return []
+
+
+def command_attack(arguments: argparse.Namespace) -> None:
+    """Run every attack case in every zone and write one JSON line per cell."""
+    zones = parse_list(arguments.zones, ZONES)
+    output = Path(arguments.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    root = Path(arguments.warehouse)
+    with output.open("w", encoding="utf-8") as handle:
+        for zone in zones:
+            for index, case in enumerate(ATTACKS):
+                warehouse = root / zone.replace("/", "_") / str(index)
+                warehouse.mkdir(parents=True, exist_ok=True)
+                cell = attack_cell(zone, warehouse, case)
+                handle.write(json.dumps(cell, sort_keys=True) + "\n")
+                handle.flush()
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the probe's argument parser."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -809,6 +1116,11 @@ def build_parser() -> argparse.ArgumentParser:
     head.add_argument("--main", required=True)
     head.add_argument("--summary", required=True)
     head.set_defaults(func=command_summary_head)
+    attacks = sub.add_parser("attack")
+    attacks.add_argument("--warehouse", required=True)
+    attacks.add_argument("--output", required=True)
+    attacks.add_argument("--zones", default="")
+    attacks.set_defaults(func=command_attack)
     return parser
 
 

@@ -271,6 +271,30 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   removed, M6 `PREPARE` decided by the zone, M7 the every-column fallback removed (M2b: a
   failed INSERT plan read as naive); each reds a named pin.
   pins: ice-ntz-nested-refuse-1/C-002, C-004, C-005, C-006, C-007, C-008, C-012, C-013
+- [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
+  round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
+  `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
+  of a whole struct or array holding an instant, through fourteen doors (`INSERT … SELECT`,
+  `VALUES`, `TRY_CAST`, a cast of a zoned struct column, MERGE insert values, MERGE update set
+  and `UPDATE SET *`, the plain `UPDATE`, a static `PARTITION`, a branch, a temporary view, a
+  catalog view, `REPLACE WHERE` from a frame view, an array) in New York and Kolkata: the
+  refusal, no file, no snapshot. `a_container_cast_of_an_instant_stores_the_wall_in_a_utc_session`:
+  the same doors store the UTC wall in UTC. `the_leaf_cast_and_a_container_cast_of_a_wall_still_store_outside_utc`:
+  the hint's leaf cast (struct, array, `transform`, MERGE) stores the session wall, a container
+  cast of a wall or a string stores the wall.
+  `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone`: six
+  parameterised `PREPARE` forms refuse in UTC and New York; a `PREPARE` that does not supply
+  the column, and two with no parameter, prepare and execute.
+  `the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside_utc`: a string,
+  `TRY_CAST`, a cast of a wall literal and an array refuse there; a literal, `to_timestamp_ntz`,
+  the field assignment and MERGE store the wall; UTC stores the wall, a date cast midnight.
+  `the_type_read_never_runs_the_source`: a counting function is called as often in New York as
+  in UTC across an `INSERT`, an `UPDATE` and a `MERGE`; refused, it is never called, and no
+  snapshot, file or view is left. The container cast of a map is not pinned: it panics in the
+  engine on main as well, before any store. The round's door matrix and named-shape probe
+  (`task/wo/ice-ntz-nested-refuse-1/evidence/`) and its seven hand mutants (ledger §10: each
+  one-line revert of a round-1 rule reds one of these pins) back the same rules.
+  pins: ice-ntz-nested-refuse-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

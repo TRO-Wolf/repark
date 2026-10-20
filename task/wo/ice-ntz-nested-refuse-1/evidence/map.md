@@ -1,9 +1,10 @@
-# task/wo/ice-ntz-nested-refuse-1/evidence/ — the step-0 measurement of R-011 on main
+# task/wo/ice-ntz-nested-refuse-1/evidence/ — the measurement of R-011 on main and on the build
 
-The cells behind §5 of [../sketch.md](../sketch.md) and C-011 of the ledger. Measured on main `c516c54a` and on the build, 2026-10-20.
+The cells behind §5 of [../sketch.md](../sketch.md) and C-011 and C-019 of the ledger. Measured on main `c516c54a` and on the build, 2026-10-20; re-measured in fix round 1 the same day with three more sources and a probe of named shapes.
 
-- [probe.py](probe.py) — PR #1037's door probe (28 doors, both row-level modes, three zones, three schemas), with two sources added: `ntz_cast` (`CAST(<instant literal> AS TIMESTAMP_NTZ)`) and `ntz_cast_column` (`CAST(<TIMESTAMP column> AS TIMESTAMP_NTZ)`), the spelling the refusal's hint names. `run --engine repark` writes one JSON line per cell.
-- [repark-main-c516c54a.jsonl](repark-main-c516c54a.jsonl) — the 1980 cells on main, one array per cell: schema, door, mode, zone, source, and the stored microseconds or the first line of the error.
-- [repark-head.jsonl](repark-head.jsonl) — the same 1980 cells on the unit's build (2026-10-20): 192 cells move, every one to the refusal (ledger C-011).
+- [probe.py](probe.py) — PR #1037's door probe (28 doors, both row-level modes, three zones, three schemas) with five sources added over #1037's three: `ntz_cast` (`CAST(<instant literal> AS TIMESTAMP_NTZ)`) and `ntz_cast_column` (the same from a `TIMESTAMP` column), the spelling the refusal's hint names; and, in fix round 1, `ntz_text_cast` (`CAST('<wall>' AS TIMESTAMP_NTZ)`, verifier finding S2-1), `ts_struct_cast` and `ts_struct_cast_column` (a `CAST` of a whole struct holding the instant, S1-1; on a field door the leaf is read back with `.v`). `run --engine repark` writes one JSON line per cell. `attack` runs 28 named shapes (the verifier's container casts, `PREPARE` forms and plain-`UPDATE` casts, with the leaf-cast and wall controls) in three zones on a fresh catalog each.
+- [repark-main-c516c54a.jsonl](repark-main-c516c54a.jsonl) — the 3168 matrix cells on main, one array per cell: schema, door, mode, zone, source, and the stored microseconds or the first line of the error. Its 1980 round-0 cells equal the round-0 file.
+- [repark-head.jsonl](repark-head.jsonl) — the same 3168 cells on the fix-round-1 build: 360 cells move, every one to the refusal (ledger C-019); the round-0 cells answer as in round 0 but for the new text.
+- [attack-main-c516c54a.jsonl](attack-main-c516c54a.jsonl) and [attack-head.jsonl](attack-head.jsonl) — the 84 named-shape cells, one JSON object per cell: case, zone, and the stored ticks or the error. 48 move: 42 wrong walls to the refusal, and the two parameterised `PREPARE` controls (6 cells), refused by design (C-016).
 
 Up: [../map.md](../map.md).

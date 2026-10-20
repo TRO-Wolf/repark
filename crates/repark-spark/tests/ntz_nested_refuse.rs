@@ -17,8 +17,8 @@ const ZONES: [(&str, i64); 2] = [
 ];
 const HEAD: &str = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible \
                     data for the table `ice`.`ns`.";
-const HINT: &str = "A TIMESTAMP value is not written into a nested TIMESTAMP_NTZ field while the \
-                    session time zone is not UTC";
+const HINT: &str = "A value that is not provably a TIMESTAMP_NTZ wall time is not written into a \
+                    nested TIMESTAMP_NTZ field while the session time zone is not UTC";
 
 fn session(zone: &str) -> ReparkSession {
     ReparkSession::builder()
@@ -360,11 +360,13 @@ async fn the_refusal_names_the_table_the_column_and_the_leaf() {
     .expect_err("refused");
     let expected = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible \
                     data for the table `ice`.`ns`.`t`: Cannot safely cast `st`.`b` to \
-                    \"TIMESTAMP_NTZ\". A TIMESTAMP value is not written into a nested \
-                    TIMESTAMP_NTZ field while the session time zone is not UTC: write the field \
-                    from CAST(<value> AS TIMESTAMP_NTZ) to store the session wall time (in an \
-                    UPDATE, assign the field itself), or set spark.sql.session.timeZone to UTC \
-                    for the statement. SQLSTATE: KD000";
+                    \"TIMESTAMP_NTZ\". A value that is not provably a TIMESTAMP_NTZ wall time \
+                    is not written into a nested TIMESTAMP_NTZ field while the session time zone \
+                    is not UTC: cast the leaf itself, as in named_struct('<field>', \
+                    CAST(<value> AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS \
+                    TIMESTAMP_NTZ)), to store the session wall time (a CAST of the whole struct, \
+                    array or map is refused, and in an UPDATE assign the field itself), or set \
+                    spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000";
     assert!(refused.ends_with(expected), "{refused}");
     let lowered = expected.to_lowercase();
     for word in [
@@ -397,7 +399,8 @@ async fn stored_by(
 
 /// A naive value still stores outside UTC: a wall stores itself, and the hint's
 /// `CAST(<instant> AS TIMESTAMP_NTZ)` stores the session wall Spark stores. The plain
-/// `UPDATE` that assigns the whole struct converts with UTC, so there the cast refuses.
+/// `UPDATE` that assigns the whole struct adds the session offset to a `TIMESTAMP_NTZ` cast,
+/// so there the cast refuses.
 ///
 /// pins: ice-ntz-nested-refuse-1/C-004, C-005
 #[tokio::test]

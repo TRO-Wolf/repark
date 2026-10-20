@@ -12,7 +12,7 @@ pins.
 
 - [test_cast_ts_string_1.py](test_cast_ts_string_1.py) — CAST-TS-STRING-1 — ``CAST(<string> AS TIMESTAMP)`` answers Spark 4.1.2 on every door.
 - [test_current_date_session_zone_1.py](test_current_date_session_zone_1.py) — CURRENT-DATE-SESSION-ZONE-1 — ``current_date()`` answers the session-zone date.
-- [test_ice_ntz_nested_refuse_1.py](test_ice_ntz_nested_refuse_1.py) — ICE-NTZ-NESTED-REFUSE-1: an instant for a nested NTZ leaf refuses outside UTC (DataFrame writers, the 174 recorded Spark cells, the live re-derivation). pins: ice-ntz-nested-refuse-1/C-009, C-010
+- [test_ice_ntz_nested_refuse_1.py](test_ice_ntz_nested_refuse_1.py) — ICE-NTZ-NESTED-REFUSE-1: an instant for a nested NTZ leaf refuses outside UTC (DataFrame writers, a frame holding a container cast of an instant on seven writers, the 174 recorded Spark cells, the live re-derivation). pins: ice-ntz-nested-refuse-1/C-009, C-010, C-015
 - [test_ice_tsns_coercion_1.py](test_ice_tsns_coercion_1.py) — The ICE-TSNS-COERCION-1 slice 0 fixture is complete and matches its summary.
 - [test_ice_tsns_floor_doors_1.py](test_ice_tsns_floor_doors_1.py) — ICE-TSNS-FLOOR-DOORS-1: every write door stores the nanosecond floor in the session zone.
 - [test_ice_tsns_frame_door_1.py](test_ice_tsns_frame_door_1.py) — ICE-TSNS-FRAME-DOOR-1: a pandas or polars nanosecond timestamp column enters as microseconds.

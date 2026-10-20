@@ -3424,30 +3424,75 @@ still open is `isModifiable`.
 - **Status 2026-10-12 (owner):** narrowing deferred, design in
   [task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md](../task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md). PRs #1037 and #1038
   are parked as drafts; no further fold round is planned on them.
-- **Status 2026-10-20: REFUSED (U-8, ICE-NTZ-NESTED-REFUSE-1, ruling T-3).** In a session
-  whose zone is not UTC (canonical id other than `UTC`, `+00:00`, `-00:00`; `Etc/UTC` refuses)
-  or under `PREPARE`, a write that supplies a column whose type holds a naive microsecond
-  timestamp below the top level is refused before any file is written, on every door R-015
-  lists, when a value reaching the column is not provably naive: its planned type holds a zoned
-  timestamp anywhere, the router cannot plan it, or (the plain `UPDATE` that assigns a struct
-  above the leaf) a planned sub-expression is zoned. Text: ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]
-  Cannot write incompatible data for the table <table>: Cannot safely cast `<column>`.`<leaf>`
-  to "TIMESTAMP_NTZ". A TIMESTAMP value is not written into a nested TIMESTAMP_NTZ field while
-  the session time zone is not UTC: write the field from CAST(<value> AS TIMESTAMP_NTZ) to store
-  the session wall time (in an UPDATE, assign the field itself), or set
-  spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000``. A wall, a
-  `TIMESTAMP_NTZ` column and the hint's `CAST` store as before (the `CAST` stores Spark's
-  session wall); a UTC session refuses nothing. Measured on main `c516c54a` with #1037's door
-  probe plus the hint's spelling (1980 cells): 192 move, every one to the refusal: 176 instant
+- **Status 2026-10-20: REFUSED (U-8, ICE-NTZ-NESTED-REFUSE-1, ruling T-3; fix round 1 the
+  same day, after the verifier's FAIL on PR #1124).** In a session whose zone is not UTC
+  (canonical id other than `UTC`, `+00:00`, `-00:00`; `Etc/UTC` refuses) or under `PREPARE`, a
+  write that supplies a column whose type holds a naive microsecond timestamp below the top
+  level is refused before any file is written, on every door R-015 lists, when a value
+  reaching the column is not provably a wall: its planned type holds a zoned timestamp
+  anywhere; its plan holds a `CAST` or `TRY_CAST` from a type holding a zoned timestamp to one
+  holding a naive one (in a subquery, a temporary or catalog view, or a DataFrame's frame
+  too); the router cannot plan it; the statement is a `PREPARE` that holds a parameter; or, on
+  the plain `UPDATE` that assigns a whole struct or array above the leaf, the value holds a
+  zoned sub-expression or a `TIMESTAMP_NTZ` cast of any input. **Why the container cast:**
+  RePark's cast of a whole struct, array or map converts a zoned leaf with UTC even in a bare
+  `SELECT` (`CAST(array(TIMESTAMP '2026-01-02 03:04:05.123456+00:00') AS
+  ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark 4.1.2 answers
+  `1767305045123456`), and its type is naive; the leaf cast `CAST(<value> AS TIMESTAMP_NTZ)`
+  stores the session wall and passes. **Why a parameter:** `EXECUTE` binds the argument after
+  the decision and casts an instant to the declared type through its UTC wall (a `STRING` or
+  a `TIMESTAMP_NTZ` parameter stores `1767323045123456` in New York), so no declared type
+  proves a wall; Spark 4.1.2 has no `PREPARE`, so no Spark cell is lost. **The plain `UPDATE`
+  door (mechanism corrected in fix round 1):** it adds the session offset to every
+  `TIMESTAMP_NTZ` cast inside an assigned struct or array, on main and on the build:
+  `named_struct('v', CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ), 'n', 1)` stores
+  `1767341045123456` in New York and `1767303245123456` in Kolkata where Spark stores
+  `1767323045123456`; `CAST(DATE '2026-01-02' AS TIMESTAMP_NTZ)` stores midnight plus the
+  offset; the cast of an instant lands on its UTC wall. A `TIMESTAMP_NTZ` literal,
+  `to_timestamp_ntz`, `make_timestamp_ntz`, a column, the field assignment and the MERGE door
+  store the wall there. The round-0 text of this row said that door "converts with UTC"; the
+  measured mechanism is the session offset. Text:
+  ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the
+  table <table>: Cannot safely cast `<column>`.`<leaf>` to "TIMESTAMP_NTZ". A value that is
+  not provably a TIMESTAMP_NTZ wall time is not written into a nested TIMESTAMP_NTZ field
+  while the session time zone is not UTC: cast the leaf itself, as in
+  named_struct('<field>', CAST(<value> AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS
+  TIMESTAMP_NTZ)), to store the session wall time (a CAST of the whole struct, array or map
+  is refused, and in an UPDATE assign the field itself), or set spark.sql.session.timeZone to
+  UTC for the statement. SQLSTATE: KD000``. The text names no source type, because a
+  statement the router cannot plan (`INSERT … TABLE`, `LATERAL VIEW`, an arity mismatch,
+  `DISTRIBUTE BY`, CTAS of `INSERT`) takes it too, where main raised its own error. A wall,
+  a `TIMESTAMP_NTZ` column, a container cast of a wall or a string, and the leaf cast store
+  as before (the leaf cast stores Spark's session wall); a UTC session refuses nothing.
+  **Cells**, measured on main `c516c54a` and on the build with #1037's door probe plus the
+  hint's spellings and three round-1 sources (`ntz_text_cast`, `ts_struct_cast`,
+  `ts_struct_cast_column`; 28 doors, both row-level modes, 8 sources, 3 zones, 3 schemas:
+  3168 cells): 360 move, every one to the refusal. Of the round-0 sources, 192: 176 instant
   cells (108 UTC wall, 32 session wall by field assignment, 36 raw errors) and, on the plain
-  `UPDATE` door, 8 `CAST` cells that stored the UTC wall and 8 raw errors; no other cell
-  moves. **Why RePark and Spark differ:** Spark 4.1.2 stores the session wall on every door
-  (174 recorded cells, `python/repark/tests/timestamps/ice_ntz_nested_refuse_1_spark.json`);
-  RePark refuses those cells outside UTC until the lift. **Over-refusal, by design:** a value
-  holding a zoned leaf anywhere is refused even when that leaf pairs with a zoned sibling of the
-  target (pairing is R-016's rule). **Lift:** the 1.5.7 unit that extends ICE-TSNS-NESTED-1 to
-  the microsecond leaf from #1037's oracles and #1038's localise half. Pins:
+  `UPDATE` door, 8 `CAST` cells that stored the UTC wall and 8 raw errors. Of the round-1
+  sources, 168: 100 container-cast cells that stored the UTC wall, 4 string-cast cells on the
+  plain `UPDATE` that stored the wall plus the offset, and 64 raw errors. No other cell moves:
+  the 2112 cells of a zoned leaf and of a top-level `TIMESTAMP_NTZ` column, every UTC cell,
+  and the leaf cast's 132 session-wall cells keep their value. A second probe of 28 named
+  shapes in three zones (84 cells: the verifier's container casts, `PREPARE` forms and plain
+  `UPDATE` casts, with the leaf-cast controls) refuses every shape that stored a wrong wall
+  and keeps every control's value, except two `PREPARE` controls whose parameter is now
+  refused by design. **Why RePark and Spark differ:** Spark 4.1.2 answers 174 recorded cells
+  (`python/repark/tests/timestamps/ice_ntz_nested_refuse_1_spark.json`: 12 doors, 5 sources,
+  3 zones, less the two column sources on `insert_values`): the instant's session wall in each
+  of the 138 instant and cast cells, the literal's own wall in the 36 `TIMESTAMP_NTZ` literal
+  cells. RePark refuses the instant cells outside UTC until the lift. **Over-refusal, by
+  design:** a value holding a zoned leaf anywhere is refused even when that leaf pairs with a
+  zoned sibling of the target (pairing is R-016's rule); a parameterised `PREPARE` that
+  supplies the column refuses wherever the parameter sits. **Not reached by this gate, dated
+  2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
+  frame or a table built from a container cast of an instant carries the UTC wall the cast
+  produced; the container cast's own conversion in a `SELECT` is the defect, for the lift. A
+  container cast of a map panics in the engine (`list array`) on main and on the build before
+  any store. **Lift:** the 1.5.7 unit that extends ICE-TSNS-NESTED-1 to the microsecond leaf
+  from #1037's oracles and #1038's localise half. Pins:
   `crates/repark-spark/tests/ntz_nested_refuse.rs`,
+  `crates/repark-spark/tests/ntz_nested_refuse_casts.rs`,
   `timestamp_ns_wall_doors.rs` `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`
   (the rewritten pin), `crates/repark-spark/src/tests/ntz_nested_refuse_routes.rs`,
   `python/repark/tests/timestamps/test_ice_ntz_nested_refuse_1.py`. Ledger

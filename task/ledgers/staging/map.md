@@ -58,7 +58,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   microsecond `TIMESTAMP_NTZ` leaf refuses a value that is not provably naive outside UTC, on
   every door, with one hint. C-001 the seam, C-002 to C-007 the doors, the text and the
   carriers, C-008 the controls, C-009 and C-010 the facade and Spark, C-011 the matrix against
-  main, C-012 and C-013 mutants and gates; C-014 (the verifier) OPEN.
+  main, C-012 and C-013 mutants and gates; C-014 (the verifier) OPEN after a round-0 FAIL.
+  Fix round 1 (2026-10-20): C-015 a container cast of an instant, C-016 a parameterised
+  `PREPARE`, C-017 the plain `UPDATE`'s `TIMESTAMP_NTZ` cast, C-018 the type read never runs,
+  C-019 to C-021 the cells, mutants and gates.
 - [ice-struct-pairing-1-ledger.md](ice-struct-pairing-1-ledger.md) —
   **ICE-STRUCT-PAIRING-1 (U-6, 2026-10-14), parity row R-016:** one rule pairs struct fields on
   every write door. C-001 to C-009 are the sentences of the rule, C-010 to C-015 how the doors

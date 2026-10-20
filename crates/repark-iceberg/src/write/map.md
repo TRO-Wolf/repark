@@ -764,8 +764,8 @@ repark-core's error map.
   **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20, parity row R-011, ruling T-3):** the same file serves
   the microsecond leaf. `NaiveLeaf::{Nanos, Micros}` parameterises the walk
   (`nested_naive_leaf`, which `nested_ns_leaf` became) and the text (`nested_naive_refusal`:
-  `"TIMESTAMP_NS"` with R-015's sentence, or `"TIMESTAMP_NTZ"` with the hint "write the field
-  from CAST(<value> AS TIMESTAMP_NTZ) … or set spark.sql.session.timeZone to UTC"). The supply
+  `"TIMESTAMP_NS"` with R-015's sentence, or `"TIMESTAMP_NTZ"` with the hint "cast the leaf
+  itself … or set spark.sql.session.timeZone to UTC"). The supply
   functions now answer the supply and the **feeds** of a supplied column: an assignment or MERGE
   `VALUES` cell with its field path (`Feed::Expr`), an INSERT source column by position and/or
   name (`Feed::SourceColumn`), a MERGE star (`Feed::SourceStar`), or nothing readable
@@ -774,13 +774,18 @@ repark-core's error map.
   (`reaches_leaf`; an unknown step keeps it). `refuse_nested_ns_supply` is R-015 over it and
   reads only the supply, so R-015 decides as before. `holds_zoned_timestamp` finds a zoned
   timestamp at any depth and in any layout (struct, every list, map, dictionary, run-end,
-  union); `lands_on_naive_leaf` says whether a field path ends on the leaf itself. **Why the
+  union), and `holds_naive_timestamp` a naive one; `casts_zoned_to_naive(source, target)` is
+  the router's container-cast test (a zoned timestamp in the source, a naive one in the target;
+  fix round 1, 2026-10-20). `lands_on_naive_leaf` says whether a field path ends on the leaf
+  itself. The hint names the leaf cast (`named_struct('<field>', CAST(<value> AS
+  TIMESTAMP_NTZ), ...)`, `array(CAST(<value> AS TIMESTAMP_NTZ))`), says a cast of the whole
+  struct, array or map is refused, and names no source type. **Why the
   type is read here and not in R-015:** a naive value is right on every door (379 agreeing
   cells), so refusing it would regress them; R-015 refuses every value because no door was
   right. The type itself is planned by the router (`repark-spark/src/router/nested_ns.rs`).
   The unit tests moved to [nested_ns_gate/tests.rs](nested_ns_gate/map.md) when the file passed
   the 1000-line ceiling.
-  pins: ice-ntz-nested-refuse-1/C-001
+  pins: ice-ntz-nested-refuse-1/C-001, C-015
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

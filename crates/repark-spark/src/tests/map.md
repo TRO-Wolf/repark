@@ -751,8 +751,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statement) refuse and a plain `EXPLAIN` runs; a `PREPARE` refuses an instant in a UTC
   session and a prepared wall runs after the zone changes; eight UTC spellings let an instant
   through and five other zones refuse it. The harness registers `repark_functions::register_all`
-  so the type read can plan a `TIMESTAMP_NTZ` literal.
-  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-003, C-004, C-007
+  so the type read can plan a `TIMESTAMP_NTZ` literal. Fix round 1 (2026-10-20) re-pinned the
+  refusal's text, which no longer names the source type.
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-003, C-004, C-006, C-007
 - `nested_ns_routes.rs` — **ICE-TSNS-MERGE-WALL-1, split fold 1 (2026-10-10):** the nested
   `timestamp_ns` refusal on the routes the router rewrites.
   `a_branch_or_wap_write_of_a_nested_nanosecond_leaf_is_refused_and_writes_nothing`: fifteen

@@ -10,8 +10,9 @@ const NESTED: &str = "CREATE TABLE ice.sales.t (id INT, st STRUCT<v: TIMESTAMP_N
 const INSTANT: &str = "named_struct('v', TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'n', 1)";
 const WALL: &str = "named_struct('v', TIMESTAMP_NTZ '2026-01-02 03:04:05.123456', 'n', 1)";
 const REFUSED: &str = "Cannot write incompatible data for the table `ice`.`sales`.`t`: Cannot \
-                       safely cast `st`.`v` to \"TIMESTAMP_NTZ\". A TIMESTAMP value is not \
-                       written into a nested TIMESTAMP_NTZ field";
+                       safely cast `st`.`v` to \"TIMESTAMP_NTZ\". A value that is not provably \
+                       a TIMESTAMP_NTZ wall time is not written into a nested TIMESTAMP_NTZ \
+                       field";
 
 fn set_zone(ctx: &SessionContext, zone: &str) {
     let mut carrier = SessionTimeZoneConfig::default();

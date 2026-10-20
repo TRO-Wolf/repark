@@ -162,14 +162,29 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   name, or every column when neither resolves; `SELECT <values> FROM <table> [AS <alias>]` for
   UPDATE and `… FROM <table> [AS <alias>], <source>` for MERGE, the table being the loaded
   table's name, so `t.branch_x` reads as `t`; `SELECT * FROM <source>` for a MERGE star. It
-  refuses when a type holds a zoned timestamp, when the plan fails (fail closed), and, on a
-  plain `UPDATE` whose path stops above the leaf, when any planned sub-expression is zoned
-  (`converts_a_zoned_value`). **Why that last rule:** that door alone converts a
-  `CAST(<instant> AS TIMESTAMP_NTZ)` inside a struct with UTC (8 cells on main), and the
-  refusal's hint names that cast; MERGE and the field assignment convert it in the session zone.
-  **Why plan and not read the AST:** a column, a view, a by-name frame and a scalar subquery
-  have no type in the AST; the router's own planner gives the type the write sees.
-  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005
+  refuses when a type holds a zoned timestamp, when the plan fails (fail closed), when the plan
+  holds a `CAST` or `TRY_CAST` from a type holding a zoned timestamp to one holding a naive one
+  (`casts_a_zoned_value_to_naive`; `plan_has` walks every node, every subquery, and the plan
+  behind a DataFrame view or a `ReplanningTempView`), and, on a plain `UPDATE` whose path stops
+  above the leaf, when any planned sub-expression is zoned or calls the `TIMESTAMP_NTZ` cast
+  (`shifts_in_an_update`). A `PREPARE` that holds a parameter is read as `Scope::Unreadable`, so
+  every supply of the column refuses. **Why the container cast:** the planner's cast of a whole
+  struct, array or map converts a zoned leaf with UTC even in a bare `SELECT`
+  (`CAST(array(<instant>) AS ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark
+  `1767305045123456`), and its planned type is naive; the leaf `CAST(<value> AS TIMESTAMP_NTZ)`
+  is lowered to the session-aware cast function, never to a planner cast, so it still passes.
+  **Why the plain `UPDATE` rule (corrected 2026-10-20, fix round 1):** that door adds the session
+  offset to every `TIMESTAMP_NTZ` cast inside an assigned struct or array, whatever the input:
+  `CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ)` stores `1767341045123456` in New York
+  (Spark `1767323045123456`), a date cast stores midnight plus the offset, and the cast of an
+  instant lands on its UTC wall; a literal, `to_timestamp_ntz`, a column, the field assignment
+  and MERGE store the wall. The round-0 text said the door "converts with UTC"; the measured
+  mechanism is the offset. **Why a parameter refuses:** `EXECUTE` binds the argument after the
+  decision and casts an instant to the declared type through its UTC wall (`STRING`,
+  `TIMESTAMP_NTZ`), so no declared type proves a wall. **Why plan and not read the AST:** a
+  column, a view, a by-name frame and a scalar subquery have no type in the AST; the router's own
+  planner gives the type the write sees.
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018
 
 ## Pointers
 

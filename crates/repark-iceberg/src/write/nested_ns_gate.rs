@@ -6,11 +6,13 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::table::Table;
 
-const MICROS_HINT: &str = "A TIMESTAMP value is not written into a nested TIMESTAMP_NTZ field \
-                           while the session time zone is not UTC: write the field from \
-                           CAST(<value> AS TIMESTAMP_NTZ) to store the session wall time (in an \
-                           UPDATE, assign the field itself), or set spark.sql.session.timeZone \
-                           to UTC for the statement.";
+const MICROS_HINT: &str = "A value that is not provably a TIMESTAMP_NTZ wall time is not written \
+                           into a nested TIMESTAMP_NTZ field while the session time zone is not \
+                           UTC: cast the leaf itself, as in named_struct('<field>', CAST(<value> \
+                           AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS TIMESTAMP_NTZ)), to \
+                           store the session wall time (a CAST of the whole struct, array or map \
+                           is refused, and in an UPDATE assign the field itself), or set \
+                           spark.sql.session.timeZone to UTC for the statement.";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NaiveLeaf {
@@ -140,22 +142,36 @@ pub fn nested_naive_leaf(data_type: &DataType, leaf: NaiveLeaf) -> Option<Vec<St
 
 #[must_use]
 pub fn holds_zoned_timestamp(data_type: &DataType) -> bool {
+    holds_timestamp(data_type, true)
+}
+
+#[must_use]
+pub fn holds_naive_timestamp(data_type: &DataType) -> bool {
+    holds_timestamp(data_type, false)
+}
+
+#[must_use]
+pub fn casts_zoned_to_naive(source: &DataType, target: &DataType) -> bool {
+    holds_zoned_timestamp(source) && holds_naive_timestamp(target)
+}
+
+fn holds_timestamp(data_type: &DataType, zoned: bool) -> bool {
     match data_type {
-        DataType::Timestamp(_, Some(_)) => true,
+        DataType::Timestamp(_, zone) => zone.is_some() == zoned,
         DataType::Struct(fields) => fields
             .iter()
-            .any(|field| holds_zoned_timestamp(field.data_type())),
+            .any(|field| holds_timestamp(field.data_type(), zoned)),
         DataType::Union(fields, _) => fields
             .iter()
-            .any(|(_, field)| holds_zoned_timestamp(field.data_type())),
+            .any(|(_, field)| holds_timestamp(field.data_type(), zoned)),
         DataType::List(field)
         | DataType::LargeList(field)
         | DataType::ListView(field)
         | DataType::LargeListView(field)
         | DataType::FixedSizeList(field, _)
-        | DataType::Map(field, _) => holds_zoned_timestamp(field.data_type()),
-        DataType::Dictionary(_, values) => holds_zoned_timestamp(values),
-        DataType::RunEndEncoded(_, values) => holds_zoned_timestamp(values.data_type()),
+        | DataType::Map(field, _) => holds_timestamp(field.data_type(), zoned),
+        DataType::Dictionary(_, values) => holds_timestamp(values, zoned),
+        DataType::RunEndEncoded(_, values) => holds_timestamp(values.data_type(), zoned),
         _ => false,
     }
 }

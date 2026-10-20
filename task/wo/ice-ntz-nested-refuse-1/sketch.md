@@ -81,7 +81,18 @@ This over-refusal is stated in the registry row.
   - A plan error is a refusal (fail closed). The read costs one extra planning of the source
     and runs only for a table with such a leaf, in a non-UTC session, on a supplying statement.
 
-## 3. Correction 1: the plain `UPDATE` door converts inside a struct with UTC
+## 3. Correction 1: the plain `UPDATE` door shifts a `TIMESTAMP_NTZ` cast inside a struct
+
+*Corrected 2026-10-20 (fix round 1, verifier finding S2-1).* This section first said the door
+"converts inside a struct with UTC". The measured mechanism: the door adds the session offset
+to every `TIMESTAMP_NTZ` cast inside the assigned struct or array, whatever the cast's input.
+The cast of an instant first yields the session wall, and the offset lands it on the UTC wall
+(the table below). The cast of a string yields the wall, and the offset shifts it:
+`named_struct('v', CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ), 'n', 1)` stores
+`1767341045123456` in New York and `1767303245123456` in Kolkata, where Spark stores
+`1767323045123456`. A `TIMESTAMP_NTZ` literal, `to_timestamp_ntz`, `make_timestamp_ntz`, a
+column, the field assignment and the MERGE door store the wall. Fix round 1 refuses every
+`TIMESTAMP_NTZ` cast in such a value outside UTC (ledger C-017).
 
 Measured on main, `struct<v: TIMESTAMP_NTZ, n: INT>`, America/New_York:
 

@@ -42,8 +42,8 @@ SEEDED_DOORS = (
 )
 CAST_REFUSED_DOORS = ("update_whole_where",)
 REFUSAL = (
-    "A TIMESTAMP value is not written into a nested TIMESTAMP_NTZ field while the session time "
-    "zone is not UTC"
+    "A value that is not provably a TIMESTAMP_NTZ wall time is not written into a nested "
+    "TIMESTAMP_NTZ field while the session time zone is not UTC"
 )
 
 

@@ -5,12 +5,15 @@ on every DataFrame writer, before any file is written. A naive leaf stores its w
 session stores the UTC wall as before. The SQL doors are pinned at the Rust door
 (``crates/repark-spark/tests/ntz_nested_refuse.rs``).
 
-Spark 4.1.2 stores the session wall of an instant on every one of PR #1037's doors
-(``ice_ntz_nested_refuse_1_spark.json``, 174 cells). RePark refuses those cells outside UTC
+Spark 4.1.2 answers 174 recorded cells on twelve of PR #1037's doors
+(``ice_ntz_nested_refuse_1_spark.json``: 12 doors, 5 sources, 3 zones, less the two column
+sources on ``insert_values``): the session wall of the instant in each of the 138 instant and
+cast cells, and the literal's own wall in the 36 ``TIMESTAMP_NTZ`` literal cells. RePark refuses
+the instant cells outside UTC
 (parity row ICE-TSNS-SQL-1-R-011) and answers Spark's value everywhere else, the hint's
 ``CAST`` spelling included, except on the plain ``UPDATE`` that assigns the whole struct.
 
-pins: ice-ntz-nested-refuse-1/C-009, C-010
+pins: ice-ntz-nested-refuse-1/C-009, C-010, C-015
 """
 
 from __future__ import annotations
@@ -41,9 +44,9 @@ NAIVE = pa.timestamp("us")
 ONE_INT = pa.array([1], pa.int32())
 REFUSED = (
     r"\[INCOMPATIBLE_DATA_FOR_TABLE\.CANNOT_SAFELY_CAST\] Cannot write incompatible data for "
-    r"the table `ice`\.`ns`\.`t`: Cannot safely cast {path} to \"TIMESTAMP_NTZ\"\. A TIMESTAMP "
-    r"value is not written into a nested TIMESTAMP_NTZ field while the session time zone is "
-    r"not UTC"
+    r"the table `ice`\.`ns`\.`t`: Cannot safely cast {path} to \"TIMESTAMP_NTZ\"\. A value "
+    r"that is not provably a TIMESTAMP_NTZ wall time is not written into a nested TIMESTAMP_NTZ "
+    r"field while the session time zone is not UTC"
 )
 
 
@@ -180,6 +183,36 @@ def test_a_utc_session_stores_the_utc_wall_as_before(tmp_path: Path, door: str) 
     try:
         DOORS[door](spark, frame_of(spark, "zoned", struct_of(ZONED)))
         assert stored_leaf(spark) == [INSTANT_MICROS]
+    finally:
+        spark.stop()
+
+
+CAST_DOORS = [door for door in DOORS if door != "cached_frame"]
+CONTAINER_CAST = (
+    "SELECT 1 AS id, CAST(named_struct('v', TIMESTAMP '2026-01-02 03:04:05.123456+00:00', "
+    "'n', 1) AS STRUCT<v: TIMESTAMP_NTZ, n: INT>) AS st"
+)
+
+
+@pytest.mark.parametrize("door", CAST_DOORS)
+def test_a_frame_holding_a_container_cast_of_an_instant_refuses_outside_utc(
+    tmp_path: Path, door: str
+) -> None:
+    """A frame whose struct is a ``CAST`` of a zoned struct refuses at every writer, no file.
+
+    The planner's cast of a whole struct keeps the UTC wall, so the frame's naive type alone
+    would pass; the router reads the cast in the frame's plan. A cached frame holds the cast's
+    result, not the cast, and is not in this set.
+
+    pins: ice-ntz-nested-refuse-1/C-015
+    """
+    spark = open_session(NEW_YORK, tmp_path, "STRUCT<v: TIMESTAMP_NTZ, n: INT>")
+    try:
+        frame = spark.sql(CONTAINER_CAST)
+        before = files_under(tmp_path)
+        with pytest.raises(Exception, match=REFUSED.format(path=re.escape("`st`.`v`"))):
+            DOORS[door](spark, frame)
+        assert files_under(tmp_path) == before
     finally:
         spark.stop()
 

@@ -1,10 +1,15 @@
+use std::ops::ControlFlow;
+
 use datafusion::arrow::datatypes::FieldRef;
+use datafusion::common::DFSchema;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::datasource::source_as_provider;
 use datafusion::error::Result;
-use datafusion::logical_expr::{ExprSchemable, LogicalPlan};
+use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Insert, Query, Statement, TableFactor, TableObject, TableWithJoins, With,
+    Expr as SqlExpr, Insert, Query, Statement, TableFactor, TableObject, TableWithJoins, Value,
+    ValueWithSpan, With, visit_expressions,
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
@@ -12,9 +17,11 @@ use iceberg::table::Table;
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_functions::session_time_zone::session_time_zone_from_options;
+use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
 use repark_iceberg::write::nested_ns_gate::{
-    Feed, InsertSupply, NaiveLeaf, NestedSupply, NestedWrite, holds_zoned_timestamp,
-    lands_on_naive_leaf, nested_naive_refusal, nested_supplies, refuse_nested_ns_supply,
+    Feed, InsertSupply, NaiveLeaf, NestedSupply, NestedWrite, casts_zoned_to_naive,
+    holds_naive_timestamp, holds_zoned_timestamp, lands_on_naive_leaf, nested_naive_refusal,
+    nested_supplies, refuse_nested_ns_supply,
 };
 use repark_iceberg::write::statement_writes::executed_writes;
 
@@ -22,6 +29,7 @@ use super::insert_positional::replace_where::parse_replace_where;
 use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::insert_overwrite::object_name_last;
 use crate::normalize::{object_name_from_table_with_joins, parse_single_normalized};
+use crate::view_ddl::temp_view::definition_plan;
 use crate::write_to_branch::{
     RefSelectorKind, qualify_table_parts, split_write_ref_parts, written_targets,
 };
@@ -89,7 +97,9 @@ pub(super) async fn refuse_nested_supply(
         }
         return Ok(());
     };
-    let micros = micros || matches!(statement, Statement::Prepare { .. });
+    let prepared = matches!(statement, Statement::Prepare { .. });
+    let micros = micros || prepared;
+    let parameterised = prepared && holds_a_parameter(&statement);
     let outer = match &statement {
         Statement::Query(query) => query.with.as_ref(),
         _ => None,
@@ -98,20 +108,21 @@ pub(super) async fn refuse_nested_supply(
         let by_name = by_name && index == 0;
         match write {
             Statement::Insert(insert) => {
-                let flags = (by_name, source_by_name, micros);
+                let flags = (by_name, source_by_name, micros, parameterised);
                 refuse_insert(ctx, catalogs, insert, outer, flags).await?;
             }
             Statement::Update(update) => {
                 if let Some(name) = object_name_from_table_with_joins(&update.table) {
                     let write = NestedWrite::Update(&update.assignments);
-                    let scope = Scope::Update(&update.table);
+                    let scope = typed_unless(parameterised, Scope::Update(&update.table));
                     refuse(ctx, catalogs, &name_parts(name), &write, scope, micros).await?;
                 }
             }
             Statement::Merge(merge) => {
                 if let TableFactor::Table { name, .. } = &merge.table {
                     let write = NestedWrite::Merge(&merge.clauses);
-                    let scope = Scope::Merge(&merge.table, &merge.source);
+                    let scope =
+                        typed_unless(parameterised, Scope::Merge(&merge.table, &merge.source));
                     refuse(ctx, catalogs, &name_parts(name), &write, scope, micros).await?;
                 }
             }
@@ -119,6 +130,30 @@ pub(super) async fn refuse_nested_supply(
         }
     }
     Ok(())
+}
+
+fn holds_a_parameter(statement: &Statement) -> bool {
+    visit_expressions(statement, |expr| {
+        if matches!(
+            expr,
+            SqlExpr::Value(ValueWithSpan {
+                value: Value::Placeholder(_),
+                ..
+            })
+        ) {
+            return ControlFlow::Break(());
+        }
+        ControlFlow::Continue(())
+    })
+    .is_break()
+}
+
+fn typed_unless(parameterised: bool, scope: Scope<'_>) -> Scope<'_> {
+    if parameterised {
+        Scope::Unreadable
+    } else {
+        scope
+    }
 }
 
 fn explained_statement(sql: &str) -> Option<(bool, String)> {
@@ -150,7 +185,7 @@ async fn refuse_insert(
     catalogs: &CatalogRegistry,
     insert: &Insert,
     outer: Option<&With>,
-    (by_name, source_by_name, micros): (bool, bool, bool),
+    (by_name, source_by_name, micros, parameterised): (bool, bool, bool, bool),
 ) -> Result<()> {
     let TableObject::TableName(name) = &insert.table else {
         return Ok(());
@@ -166,7 +201,10 @@ async fn refuse_insert(
         positional: !by_name,
         by_name: by_name || source_by_name,
     });
-    let scope = Scope::Insert(insert.source.as_deref(), outer);
+    let scope = typed_unless(
+        parameterised,
+        Scope::Insert(insert.source.as_deref(), outer),
+    );
     refuse(ctx, catalogs, &name_parts(name), &write, scope, micros).await
 }
 
@@ -308,11 +346,12 @@ async fn proven_naive(
         || fields
             .iter()
             .any(|field| holds_zoned_timestamp(field.data_type()))
+        || plan_has(&plan, casts_a_zoned_value_to_naive)
     {
         return false;
     }
     let above_leaf = values.iter().any(|(_, whole)| *whole);
-    !(matches!(scope, Scope::Update(_)) && above_leaf && converts_a_zoned_value(&plan))
+    !(matches!(scope, Scope::Update(_)) && above_leaf && plan_has(&plan, shifts_in_an_update))
 }
 
 async fn naive_columns(
@@ -343,6 +382,7 @@ async fn naive_columns(
     !picked
         .iter()
         .any(|field| holds_zoned_timestamp(field.data_type()))
+        && !plan_has(&plan, casts_a_zoned_value_to_naive)
 }
 
 async fn planned(
@@ -368,25 +408,67 @@ fn alias_of(factor: &TableFactor) -> String {
     }
 }
 
-fn converts_a_zoned_value(plan: &LogicalPlan) -> bool {
-    let mut zoned = false;
-    let _ = plan.apply(|node| {
-        let inputs = node.inputs();
-        let Some(input) = inputs.first() else {
-            return Ok(TreeNodeRecursion::Continue);
-        };
-        let schema = input.schema();
-        node.apply_expressions(|expr| {
-            expr.apply(|inner| {
-                let typed = inner.get_type(schema.as_ref());
-                if typed.is_err() || typed.is_ok_and(|data_type| holds_zoned_timestamp(&data_type))
-                {
-                    zoned = true;
-                    return Ok(TreeNodeRecursion::Stop);
+fn plan_has(plan: &LogicalPlan, test: fn(&Expr, &DFSchema) -> bool) -> bool {
+    let mut pending = vec![plan.clone()];
+    while let Some(next) = pending.pop() {
+        let mut found = false;
+        let _ = next.apply_with_subqueries(|node| {
+            if let LogicalPlan::TableScan(scan) = node {
+                if let Some(view) = scan.source.get_logical_plan() {
+                    pending.push(view.into_owned());
                 }
-                Ok(TreeNodeRecursion::Continue)
+                if let Ok(provider) = source_as_provider(&scan.source)
+                    && let Some(view) = definition_plan(provider.as_ref())
+                {
+                    pending.push(view);
+                }
+            }
+            let inputs = node.inputs();
+            let mut schema = DFSchema::empty();
+            if inputs.is_empty() {
+                schema.merge(node.schema());
+            }
+            for input in inputs {
+                schema.merge(input.schema());
+            }
+            node.apply_expressions(|expr| {
+                expr.apply(|inner| {
+                    if test(inner, &schema) {
+                        found = true;
+                        return Ok(TreeNodeRecursion::Stop);
+                    }
+                    Ok(TreeNodeRecursion::Continue)
+                })
             })
-        })
-    });
-    zoned
+        });
+        if found {
+            return true;
+        }
+    }
+    false
+}
+
+fn casts_a_zoned_value_to_naive(expr: &Expr, schema: &DFSchema) -> bool {
+    let (input, target) = match expr {
+        Expr::Cast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        Expr::TryCast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        _ => return false,
+    };
+    holds_naive_timestamp(target)
+        && input
+            .get_type(schema)
+            .map_or(true, |source| casts_zoned_to_naive(&source, target))
+}
+
+fn shifts_in_an_update(expr: &Expr, schema: &DFSchema) -> bool {
+    if let Expr::ScalarFunction(function) = expr
+        && matches!(
+            function.func.name(),
+            TIMESTAMP_NTZ_CAST_NAME | TRY_TIMESTAMP_NTZ_CAST_NAME
+        )
+    {
+        return true;
+    }
+    expr.get_type(schema)
+        .map_or(true, |data_type| holds_zoned_timestamp(&data_type))
 }
