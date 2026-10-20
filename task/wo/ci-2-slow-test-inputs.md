@@ -1,5 +1,12 @@
 # CI-2 — the ten slowest facade tests reuse their immutable inputs per worker · grade C · clerk band · after CI-1
 
+> **Superseded (2026-10-19).** The owner's override of 2026-10-19 authorised the four units this order
+> kept out: FACADE-XDIST-SCHED-1 (#1112), FACADE-PYTEST-CONFIG-1 (#1114), FACADE-TESTS-LAYOUT-1 (#1113)
+> and DEEP-BATTERY-SPLIT-1 (#1115). Rows 1 to 5 of §2 now run one isolated interpreter per shape, so
+> their "Leave the file" action no longer describes the tree; rows 6, 8, 9 and 10 stand as handed back;
+> row 7 stands. The §1 rulings that survive are restated in [../lessons.md](../lessons.md)
+> (2026-10-19). Nothing further runs from this order.
+
 Clerk grade, after CI-1 (merged as `ffee8692`). The shape is [TEMPLATE.md](TEMPLATE.md). The measurements are CI-1's `--durations=25` on run `37121982216`. Every path below is at that commit. A fixture line that does not match the file is a halt before any edit.
 
 ## 0. Why, and what is out
