@@ -3622,6 +3622,11 @@ still open is `isModifiable`.
   (the rewritten pin), `crates/repark-spark/src/tests/ntz_nested_refuse_routes.rs`,
   `python/repark/tests/timestamps/test_ice_ntz_nested_refuse_1.py`. Ledger
   `task/ledgers/staging/ice-ntz-nested-refuse-1-ledger.md`.
+- **Status 2026-10-21: MERGED** (PR #1124, main `c91f69c5`, 18:02 UTC): four fix rounds, three
+  Opus 5.5 verifier rounds and a narrow re-check (verdict PASS, nothing open). The rule, the alias
+  set, the over-refusal list with its counts and the cost ruling are the ones stated above; the
+  ledger runs C-001..C-051. Residues: CONTAINER-CAST-ZONE-1, LATERAL-CORRELATED-MEMORY-1,
+  GATE-RETIRE-1 after ZONE-SEAM-1.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 
