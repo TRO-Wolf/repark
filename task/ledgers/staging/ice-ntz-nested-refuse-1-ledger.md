@@ -98,6 +98,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-040 | Two of the verifier's round-2 notes, stated: S3-1, `crates/repark-spark/src/router/nested_ns.rs` measured 729 lines (`git show 75475b71:…` piped to `wc -l`) at `75475b71`, not the 726 that the fix-round-2 brief and hand-back gave, and 796 after fix round 3 (ceiling 1000); S3-3, the C-024 premise pin plans its three `SELECT`s through `ReparkSession::sql`, and that is the plan the type read's `planned()` builds: `ReparkSession::sql` → `SparkDialect::execute` → `router::execute_in_session`, which canonicalises verbatim literals and routes temporary-view DDL, then calls `router::execute_calibrated`, the function `planned()` calls; the pin's statements hold no literal and no DDL, so the same SQL text reaches the same planner, and neither path runs the optimizer (no router path calls `into_optimized_plan`). *(Fix round 3, verifier round-2 S3-1 and S3-3.)* | `wc -l` on both heads; the call chain in `crates/repark-core/src/session.rs`, `crates/repark-spark/src/dialect.rs` and `crates/repark-spark/src/router.rs`. | **PROVEN** | §13.4. `a_view_the_write_reads_is_inlined_before_the_walk`. |
 | C-041 | Owner ruling 1 (2026-10-21): outside UTC the lineage walk does not read an `IN`, `EXISTS` or quantified subquery in the column's expression (its left operand still is), and reads a scalar subquery only through its one output column, the node's input pushed as the scope its outer references resolve in. A scalar subquery that returns a container cast of an instant (directly, through a derived table, as a MERGE update value, over a temporary view, nested, or as an outer column followed back out) still refuses; one whose cast feeds only its own `WHERE` or a column it does not return, a correlated one whose outer reference feeds only its `WHERE`, and an `EXISTS` in the value store Spark's wall. Cells moved, on main `c516c54a`, Spark 4.1.2 and the build: the verifier's 4 scalar-subquery cells (New York, Kolkata) and the 2 `EXISTS` cells store the wall as main and Spark do; the `IN` shape raises the engine's own error, as on main (round 2 refused it). The `LATERAL` outer-reference walk (C-033) is a plan node under a join and is unchanged. *(Supersedes C-024's whole read of a subquery in the column's expression and C-035's classes (1) and (2) for these 6 cells; the lineage over-refusal is 14 cells, 7 shapes.)* | The Rust door in New York and Kolkata, each storing cell red on the round-2 walk; the verifier's `cases_o.py` and this round's subquery cells on Spark, main and the build. | **PROVEN** | §13.6. `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped`. |
 | C-042 | Owner ruling 3 (2026-10-21): a session zone counts as UTC when its id, as written or as the session canonicalises it, is a pure UTC alias (`UTC`, `UCT`, `Universal`, `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`, `Greenwich`, their `Etc/` forms, `+00:00`, `-00:00`), held in one set in `crates/repark-spark/src/router/nested_ns.rs`; `Africa/Abidjan`, `Atlantic/Reykjavik` and `Europe/London` stay refused (a pre-1912 local-mean-time offset in tzdb for the first two, a summer offset for London) and stay listed with 126 correct cells per zone. Cells moved: the verifier's five instant shapes store Spark's wall in `Etc/UTC`, `Etc/GMT`, `Etc/Universal` and `Etc/Zulu` (20 cells, refused before) and still refuse in the three geographic zones; the 28-door matrix in `Etc/GMT` moves 0 cells against main (180 before the ruling), in `Europe/London` 180 as before. *(Supersedes C-003's "`Etc/UTC` refuses" and C-035's class (4) for the pure aliases.)* | The unit test over both lists; the zone pin; the verifier's `cases_z.py` and the matrix in two zones on the build against main and the verifier's Spark cells. | **PROVEN** | §13.7. `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc`, `only_a_utc_zone_lets_an_instant_through`. |
+| C-043 | After owner rulings 1 and 3, on the round's final head: the 3168-cell door matrix moves the same 360 cells against main `c516c54a`, every one to the refusal, and the 84-cell named-shape probe the same 48 (38 wrong walls, 10 correct cells); neither probe holds a subquery shape or an `Etc/` zone, so the rulings move none of their cells, and both answer cell for cell as the committed `repark-head.jsonl` and `attack-head.jsonl`. Every mutant whose code or killing pin the rulings touched, and eight new ones on the rulings (Q1 to Q4, Z1 to Z4), was re-run alone: each is killed by a named pin but L11 and L17 (equivalent, C-034), M10 and Q2, each equivalent on stored values: the only plans that reach them (a scalar subquery inside a frame's `DISTINCT ON`; a correlated scalar subquery returning an outer column) raise `Physical plan does not support logical expression ScalarSubquery` on main and the build in every zone, so the mutant only trades that error for the refusal or the refusal for it. M10b, N5 and V2 mutated code the rulings removed; Q1 and Q3, R2 and Q2, Z3 and Z4 take their place. *(Fix round 3, after the owner's rulings of 2026-10-21.)* | `probe.py run` and `probe.py attack` on the final build; the targeted mutant pass. | **PROVEN** | §13.8. `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`, `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc`. |
 
 ## §1 The rule and the seam
 
@@ -748,3 +749,40 @@ unit test checks each name raw and through `SessionTimeZoneConfig::set_zone`. Bu
 | the same in `GMT`, `+00:00` (10) | the wall | the wall | the wall | the wall |
 | 28-door matrix, `Etc/GMT` (352) | — | — | 180 moved | 0 moved (58 s) |
 | 28-door matrix, `Europe/London` (352) | — | — | 180 moved | 180 moved: 126 correct, 54 raw errors |
+
+### §13.8 After the rulings: cells and mutants (C-043)
+
+Final build (ruling 3's `maturin develop --profile ci`, 215 s); `probe.py run` 270 s and
+`probe.py attack` 8 s, load 16.66 and 23.84 at start (other work on the box), 40 G cap:
+
+| Probe | Verifier (round 2) | Fix round 3 before the rulings | Final head |
+|---|---|---|---|
+| door matrix, 3168 cells, moved against main | 360, all refused | 360, all refused; 0 differ from the committed head file | 360, all refused; 0 differ |
+| named-shape probe, 84 cells, moved against main | 48 (38 + 10) | 48; 0 differ | 48; 0 differ |
+| main re-run against the committed main files | 0 differ | 0 differ | — |
+
+The matrix and the probe moved only by lateral cells would have changed; they hold none, so
+they did not move. The lateral cells are §13.1's (17 refused, the control stores).
+
+The targeted mutant pass ran each mutant alone over the same suites (baseline 144 passed, one
+more test than §13.2: the alias unit test), 170–490 s each under box load up to 50:
+
+| Mutant | Result |
+|---|---|
+| M1, M12, V1, N10, L5, L12, L16, L19, R1 to R7 | killed, as in §13.2 (the renamed subquery pin among the killers of M1, M12, R2, R7) |
+| M8a, the whole read's temporary-view descent | survived the first pass; killed by `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`, which adds a `DISTINCT ON` frame over a SQL temporary view |
+| M10, the whole read's subquery descent | equivalent on stored values (C-043) |
+| Q1, a scalar subquery not walked | `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped` |
+| Q2, a scalar subquery walked without its scope | equivalent on stored values (C-043) |
+| Q3, a scalar subquery read whole (round 2) | the same pin (its storing cells) |
+| Q4, an `EXISTS` body read whole (round 2) | the same pin |
+| Z1, `Europe/London` read as UTC; Z2, `Africa/Abidjan` and `Atlantic/Reykjavik` read as UTC | `only_a_pure_utc_alias_counts_as_utc`, `only_a_utc_zone_lets_an_instant_through` |
+| Z3, `Etc/UTC` dropped from the set | `only_a_utc_zone_lets_an_instant_through` and, once its list is written out, `only_a_pure_utc_alias_counts_as_utc` |
+| Z4, the raw `UTC`/`+00:00`/`-00:00` match restored | `only_a_utc_zone_lets_an_instant_through` |
+| L11, L17 | equivalent (§13.2) |
+
+The other mutants of §13.2 mutate code and pins the rulings did not touch; their kills stand
+from that pass on `a0baf803`.
+
+`crates/repark-spark/src/router/nested_ns.rs` is 868 lines after the rulings (`wc -l`; 796 at
+`a0baf803`, C-040), its test module included; ceiling 1000.

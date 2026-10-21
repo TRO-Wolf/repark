@@ -355,6 +355,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `GMT0` beside the spellings it held, and refuses in `Africa/Abidjan`, `Atlantic/Reykjavik`,
   `Europe/London` and the non-zero zones.
   pins: ice-ntz-nested-refuse-1/C-042
+  After the rulings (ledger C-043): `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`
+  adds a `DISTINCT ON` frame over a SQL temporary view, read whole into the view (mutant M8a),
+  and `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc` writes its alias list out
+  rather than reading the set it tests (mutant Z3).
+  pins: ice-ntz-nested-refuse-1/C-043
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).

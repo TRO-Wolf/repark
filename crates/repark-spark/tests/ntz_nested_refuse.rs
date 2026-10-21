@@ -661,8 +661,8 @@ async fn the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed() {
 
 /// A frame whose plan holds a repartition or a node the walk does not model (`DISTINCT ON`)
 /// above a container cast of an instant: the walk follows the column through the first and
-/// reads the second whole, so a write from each frame's view refuses outside UTC and adds no
-/// snapshot.
+/// reads the second whole, into a SQL temporary view it scans too, so a write from each frame's
+/// view refuses outside UTC and adds no snapshot.
 ///
 /// pins: ice-ntz-nested-refuse-1/C-034
 #[tokio::test]
@@ -684,6 +684,16 @@ async fn a_frame_through_a_repartition_or_an_unmodelled_node_refuses() {
             )
             .await
             .expect("frame");
+        run(
+            &session,
+            "CREATE TEMPORARY VIEW cast_rows AS SELECT id, CAST(named_struct('v', x, 'n', 1) AS \
+             STRUCT<v: TIMESTAMP_NTZ, n: INT>) AS st, 0 AS k FROM ice.ns.src",
+        )
+        .await;
+        let viewed = session
+            .sql("SELECT id, st, k FROM cast_rows")
+            .await
+            .expect("viewed");
         let shaped = [
             (
                 "spread",
@@ -696,6 +706,10 @@ async fn a_frame_through_a_repartition_or_an_unmodelled_node_refuses() {
                     vec![col("id"), col("st"), col("k")],
                     None,
                 ),
+            ),
+            (
+                "first_of_a_view",
+                viewed.distinct_on(vec![col("id")], vec![col("id"), col("st"), col("k")], None),
             ),
         ];
         for (name, shaped) in shaped {

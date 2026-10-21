@@ -161,7 +161,8 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   the zero offsets, matched as written and as the session canonicalises them, and no
   geographic zone: `Africa/Abidjan`, `Atlantic/Reykjavik` and `Europe/London` still refuse,
   their tzdb history holding a local-mean-time or summer offset; the unit test
-  `only_a_pure_utc_alias_counts_as_utc` holds both lists) or the statement is a `PREPARE` (`EXECUTE` can run it
+  `only_a_pure_utc_alias_counts_as_utc` holds both lists, each written out in the test so a
+  name dropped from the set reds it, ledger C-043) or the statement is a `PREPARE` (`EXECUTE` can run it
   after a `SET` of the zone). For each supplied column it reads the type of each feed by
   planning one `SELECT` through `router::execute_calibrated`, never executed: an INSERT's source
   (with the outer `WITH` of `WITH … INSERT`), the column at the source position, of the column's

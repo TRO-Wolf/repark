@@ -738,7 +738,7 @@ mod tests {
 
     use repark_functions::session_time_zone::SessionTimeZoneConfig;
 
-    use super::{UTC_ALIASES, casts_a_zoned_value_to_naive, lineage_has, names_utc};
+    use super::{casts_a_zoned_value_to_naive, lineage_has, names_utc};
 
     fn instant_cast() -> LogicalPlan {
         let instant = lit(ScalarValue::TimestampMicrosecond(
@@ -823,7 +823,29 @@ mod tests {
     /// pins: ice-ntz-nested-refuse-1/C-042
     #[test]
     fn only_a_pure_utc_alias_counts_as_utc() {
-        for alias in UTC_ALIASES {
+        for alias in [
+            "UTC",
+            "UCT",
+            "Universal",
+            "Zulu",
+            "Z",
+            "GMT",
+            "GMT0",
+            "GMT+0",
+            "GMT-0",
+            "Greenwich",
+            "Etc/UTC",
+            "Etc/UCT",
+            "Etc/Universal",
+            "Etc/Zulu",
+            "Etc/GMT",
+            "Etc/GMT0",
+            "Etc/GMT+0",
+            "Etc/GMT-0",
+            "Etc/Greenwich",
+            "+00:00",
+            "-00:00",
+        ] {
             let mut carrier = SessionTimeZoneConfig::default();
             carrier.set_zone(alias);
             assert!(names_utc(alias), "{alias}");
