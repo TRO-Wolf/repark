@@ -269,12 +269,6 @@ async fn seeded(session: &ReparkSession, table: &str, column_type: &str) {
     .await;
 }
 
-/// Every door refuses an instant for a nested microsecond `TIMESTAMP_NTZ` leaf outside UTC.
-///
-/// Five shapes go through eighteen doors in two zones. Each must take the named refusal
-/// with the target's leaf path. Per shape no file may appear and no snapshot be added.
-///
-/// pins: ice-ntz-nested-refuse-1/C-002
 #[tokio::test]
 async fn every_door_refuses_an_instant_outside_utc_and_writes_nothing() {
     let mut wrong = Vec::new();
@@ -323,9 +317,6 @@ const FIELD_DOORS: [&str; 5] = [
     "UPDATE {t} SET st.v = (SELECT x FROM ice.ns.src) WHERE id >= 0",
 ];
 
-/// A field assignment of an instant refuses too, though it stored the session wall on main.
-///
-/// pins: ice-ntz-nested-refuse-1/C-002
 #[tokio::test]
 async fn a_field_assignment_of_an_instant_refuses_too() {
     for (zone, _) in ZONES {
@@ -346,9 +337,6 @@ async fn a_field_assignment_of_an_instant_refuses_too() {
     }
 }
 
-/// The whole text: the table, the column and the leaf, and a hint that deletes nothing.
-///
-/// pins: ice-ntz-nested-refuse-1/C-006
 #[tokio::test]
 async fn the_refusal_names_the_table_the_column_and_the_leaf() {
     let session = session("America/New_York");
@@ -401,12 +389,6 @@ async fn stored_by(
     Ok(values)
 }
 
-/// A naive value still stores outside UTC: a wall stores itself, and the hint's
-/// `CAST(<instant> AS TIMESTAMP_NTZ)` stores the session wall Spark stores. The plain
-/// `UPDATE` that assigns the whole struct adds the session offset to a `TIMESTAMP_NTZ` cast,
-/// so there the cast refuses.
-///
-/// pins: ice-ntz-nested-refuse-1/C-004, C-005
 #[tokio::test]
 async fn a_wall_or_the_hints_cast_stores_outside_utc_and_the_plain_update_refuses_the_cast() {
     let mut wrong = Vec::new();
@@ -474,9 +456,6 @@ const UNSUPPLIED: [&str; 10] = [
     "DELETE FROM ice.ns.t WHERE id = 11",
 ];
 
-/// A statement that does not supply the column runs outside UTC and keeps the stored wall.
-///
-/// pins: ice-ntz-nested-refuse-1/C-007
 #[tokio::test]
 async fn a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows() {
     let session = session("America/New_York");
@@ -515,9 +494,6 @@ async fn a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows()
     }
 }
 
-/// Controls: a zoned or nanosecond leaf and a top-level `TIMESTAMP_NTZ` answer as on main.
-///
-/// pins: ice-ntz-nested-refuse-1/C-008
 #[tokio::test]
 async fn a_zoned_leaf_and_a_top_level_ntz_column_are_not_guarded() {
     let session = session("America/New_York");
@@ -578,13 +554,6 @@ async fn a_zoned_leaf_and_a_top_level_ntz_column_are_not_guarded() {
     );
 }
 
-/// The type read: a `WITH` clause before the `INSERT` types its source (a wall passes the gate
-/// and gets main's own answer, an instant refuses), an instant into a zoned sibling field is
-/// not a supply of the naive leaf, a static `PARTITION` clause reads every source column, and
-/// a value the router cannot plan refuses (fail closed) where main raised the planner's own
-/// error.
-///
-/// pins: ice-ntz-nested-refuse-1/C-001, C-004
 #[tokio::test]
 async fn the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed() {
     let session = session("America/New_York");
@@ -659,12 +628,6 @@ async fn the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed() {
     .await;
 }
 
-/// A frame whose plan holds a repartition or a node the walk does not model (`DISTINCT ON`)
-/// above a container cast of an instant: the walk follows the column through the first and
-/// reads the second whole, into a SQL temporary view it scans too, so a write from each frame's
-/// view refuses outside UTC and adds no snapshot.
-///
-/// pins: ice-ntz-nested-refuse-1/C-034
 #[tokio::test]
 async fn a_frame_through_a_repartition_or_an_unmodelled_node_refuses() {
     let mut wrong = Vec::new();

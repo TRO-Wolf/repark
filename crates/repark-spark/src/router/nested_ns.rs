@@ -752,10 +752,6 @@ mod tests {
             .expect("plan")
     }
 
-    /// A column the lineage cannot resolve in any input reads every input whole, so a cast
-    /// there still refuses (fail closed).
-    ///
-    /// pins: ice-ntz-nested-refuse-1/C-023
     #[test]
     fn a_column_that_resolves_in_no_input_reads_every_input_whole() {
         let fields = vec![Field::new("b", DataType::Int32, true)];
@@ -776,10 +772,6 @@ mod tests {
         ));
     }
 
-    /// An outer reference that resolves in no enclosing join's other side refuses: the walk
-    /// cannot see the value it names (fail closed).
-    ///
-    /// pins: ice-ntz-nested-refuse-1/C-033
     #[test]
     fn an_outer_reference_no_enclosing_join_resolves_fails_closed() {
         let field = Arc::new(Field::new("c", DataType::Int32, true));
@@ -791,11 +783,6 @@ mod tests {
         assert!(lineage_has(&plan, &[0], casts_a_zoned_value_to_naive));
     }
 
-    /// A node the walk does not model, inside the side of a join it reaches, is read whole, and
-    /// when it holds an outer reference the join's other side is read whole as well, so a cast
-    /// that reaches the column only through that reference refuses (fail closed).
-    ///
-    /// pins: ice-ntz-nested-refuse-1/C-033
     #[test]
     fn an_unmodelled_node_that_refers_out_reads_the_other_side_whole() {
         let naive = Arc::new(Field::new(
@@ -815,12 +802,6 @@ mod tests {
         assert!(lineage_has(&plan, &[1], casts_a_zoned_value_to_naive));
     }
 
-    /// A session zone counts as UTC by its id: every pure UTC alias (no transition and no
-    /// local-mean-time offset in its tzdb history), as written and as the session canonicalises
-    /// it, and no geographic zone, though `Africa/Abidjan`, `Atlantic/Reykjavik` and
-    /// `Europe/London` (in winter) sit at offset zero today.
-    ///
-    /// pins: ice-ntz-nested-refuse-1/C-042
     #[test]
     fn only_a_pure_utc_alias_counts_as_utc() {
         for alias in [

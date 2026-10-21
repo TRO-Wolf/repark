@@ -270,7 +270,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   rule removed, M4 the struct arm of `holds_zoned_timestamp` removed, M5 the field-path pruning
   removed, M6 `PREPARE` decided by the zone, M7 the every-column fallback removed (M2b: a
   failed INSERT plan read as naive); each reds a named pin.
-  pins: ice-ntz-nested-refuse-1/C-002, C-004, C-005, C-006, C-007, C-008, C-012, C-013
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-006, C-007, C-008, C-012, C-013,
+  C-034
+  (`the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` holds C-001 and C-004;
+  `a_frame_through_a_repartition_or_an_unmodelled_node_refuses` holds C-034, described with
+  `ntz_nested_refuse_casts.rs` below.)
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
@@ -388,6 +392,15 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   recorded in `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`. The earlier
   equivalence claim for M10 (C-043) is superseded by C-046.
   pins: ice-ntz-nested-refuse-1/C-045, C-046
+  **Comment strip (fix round 4, ledger C-047):** the `///` lines the unit added to
+  `ntz_nested_refuse.rs` (37), `ntz_nested_refuse_casts.rs` (63), `timestamp_ns_nested_shapes.rs`
+  (5) and `timestamp_ns_wall_doors.rs` (7) are removed; the rows above hold every test's reason
+  and its `pins:` citation. `timestamp_ns_wall_doors.rs`'s main-pin rewrite of 2026-10-20 (the
+  six doors now refuse an instant outside UTC with one text and write nothing; UTC stores the
+  walls it stored before) and `timestamp_ns_nested_shapes.rs`'s re-pin of the same day (the
+  nested `TIMESTAMP_NTZ` row takes R-011's refusal, not the gate's text) are described in the
+  paragraphs headed ICE-NTZ-NESTED-REFUSE-1 (2026-10-20) in their rows.
+  pins: ice-ntz-nested-refuse-1/C-047
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

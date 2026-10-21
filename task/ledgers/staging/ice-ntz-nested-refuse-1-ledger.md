@@ -102,6 +102,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-044 | Fix round 3's gates are green on the final code head `f795a0ff` with real exit codes but one carded flake, and the round costs nothing measurable: `make verify` 7746 passed; `make rust-panic-ban` exit 0; `make ci` on every commit; the facade suite 20227 passed and 1 failed, `test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool` (SPILL-REACH-FAIR-POOL-FLAKE-1, carded 2026-10-14; alone it failed 1 of 8 runs on main `c516c54a` and 1 of 10 on this head); the live leg alone 67 passed and co-collected 5924 passed, the live cell passing in both; every interleaved 50-run median ratio against main within the 1.05x gate. | §13.9. | **PROVEN** | §13.9. |
 | C-045 | C-014, verifier round 3 (2026-10-21, head `d9943218`, Opus 5.5): **FAIL**, with S1-1 (mutant M10 is not equivalent: a scalar subquery that returns a container cast, under an `Unnest` node, stored the UTC wall in New York), S1-2 (the unit adds 153 code comment lines against `d6ee0411`), S2-1 (a sibling-field shape of ruling 2 has no count), S2-2 (one armed facade run hung at 99 % with no test name), S2-3 (the New York nested `INSERT` reads 1.090 and 1.050) and S3-1 to S3-4; fix round 4 answers S1-1 (C-046), S1-2 (C-047), S2-1 (C-048) and S2-2 and S2-3 (C-049, stated, not changed). The code held on every cell the verifier measured: the lateral walk, rulings 1 and 3, every count, 39 mutants killed. *(Supersedes C-039's `pending`; C-014 stays OPEN until a verifier finds no S0 or S1 defect. Fix round 4.)* | The round-3 verifier's hand-back. | **PROVEN** | §14.1; PR #1124. |
 | C-046 | Mutant M10 (`plan_has` reads a whole-read node with `apply` in place of `apply_with_subqueries`) is not equivalent on stored values, and a pin now holds it. A DataFrame `explode` puts an `Unnest` node, which the walk reads whole, above a projection whose scalar subquery returns the container cast of an instant; it runs on main and stored the UTC wall in New York where Spark 4.1.2 stores the New York wall (the verifier's three doors and a temporary view: `writeTo(…).append()`, `withColumn` and `append`, `write.insertInto`, `INSERT … SELECT … FROM <view>`). `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses` plans that frame with `DataFrame::unnest_columns`, registers it as a temporary view and writes it: it refuses in New York and Kolkata with the hint and adds no snapshot, and the same frame whose subquery returns the wall stores the UTC wall. Under M10 the pin fails on both zones (cast stored, one snapshot), and it is the one test that fails across the `ntz_nested_refuse`, `ntz_nested_refuse_casts` and `ntz_nested_refuse_routes` binaries. No rule in `nested_ns.rs` changed. *(Supersedes C-043's equivalence claim for M10 and §13.8's M10 row; Q2 stays equivalent on stored values. Fix round 4.)* | The pin on the build and under M10; the full binaries under M10. | **PROVEN** | §14.2. `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`; `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses`. |
+| C-047 | The unit adds no comment line to any code file. Against the merge base `d6ee0411`, the unit had added 153 `///` lines to six Rust files (`ntz_nested_refuse_casts.rs` 63, `ntz_nested_refuse.rs` 37, `ntz_nested_refuse_routes.rs` 22, `nested_ns.rs` 19, `timestamp_ns_wall_doors.rs` 7, `timestamp_ns_nested_shapes.rs` 5), 30 of them `/// pins:` citations. All 153 are deleted. No `///` line of `d6ee0411` was reworded: the 10 lines that fix round 3 reworded were this unit's own round-2 lines, and the six files hold no comment line at `d6ee0411`, so nothing needed restoring. Every `C-NNN` a deleted line cited is in the matching `map.md` row (`crates/repark-spark/src/router/map.md`, `src/tests/map.md`, `tests/map.md`); C-033 and C-042 were added to the `nested_ns.rs` row's citation and C-001 and C-034 to the `ntz_nested_refuse.rs` row's. No `missing_docs` lint fired, so no `///` line was kept. *(Owner ruling of 2026-08-26, verifier round-3 S1-2. Fix round 4.)* | `git diff d6ee0411...HEAD -- '*.rs' '*.py' '*.sh' '*.toml' '*.yml' '*.yaml'` piped through the comment-line grep prints nothing; `make ci`; the clippy gate. | **PROVEN** | §14.3. The `map.md` rows of the three directories. |
 
 ## §1 The rule and the seam
 
@@ -877,3 +878,24 @@ applied by `sed`, the pin fails (both zones: the cast row stored, one snapshot);
 `ntz_nested_refuse` binary fails that one test (8 of 9 pass), `ntz_nested_refuse_casts` passes
 10 of 10, and `--lib nested` (the routes module and the router's unit tests) passes 102 with 1
 ignored (IDENT-STRUCT-KW-1). The file was restored with `git checkout`.
+
+### §14.3 S1-2, the comment strip (C-047)
+
+Lines deleted, per file (`grep -cE '^\s*(///|//!|//)'` before and after; the files held none at
+`d6ee0411`):
+
+| File | `///` lines deleted | of them `pins:` |
+|---|---|---|
+| `crates/repark-spark/tests/ntz_nested_refuse_casts.rs` | 63 | 10 |
+| `crates/repark-spark/tests/ntz_nested_refuse.rs` | 37 | 8 |
+| `crates/repark-spark/src/tests/ntz_nested_refuse_routes.rs` | 22 | 6 |
+| `crates/repark-spark/src/router/nested_ns.rs` (unit tests) | 19 | 4 |
+| `crates/repark-spark/tests/timestamp_ns_wall_doors.rs` | 7 | 1 |
+| `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs` | 5 | 1 |
+| Total | 153 | 30 |
+
+The brief expected 10 reworded existing `///` lines to restore from `d6ee0411`. The diff
+against `d6ee0411` removes no comment line (0 removed, 153 added), because the 10 lines are the
+unit's own and do not exist there. The reasons the deleted lines carried are in the three
+`map.md` rows; the citations the rows lacked (C-033, C-042 on the router row; C-001, C-034 on
+the `ntz_nested_refuse.rs` row) are added there.

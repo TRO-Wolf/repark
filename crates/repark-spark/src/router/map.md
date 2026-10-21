@@ -234,7 +234,14 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `TIMESTAMP_NTZ`), so no declared type proves a wall. **Why plan and not read the AST:** a
   column, a view, a by-name frame and a scalar subquery have no type in the AST; the router's own
   planner gives the type the write sees.
-  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023, C-024
+  **Fix round 4 (2026-10-21, ledger C-047):** the `///` lines the unit had put on this file's
+  four unit tests (`a_column_that_resolves_in_no_input_reads_every_input_whole`,
+  `an_outer_reference_no_enclosing_join_resolves_fails_closed`,
+  `an_unmodelled_node_that_refers_out_reads_the_other_side_whole`,
+  `only_a_pure_utc_alias_counts_as_utc`) are removed; each test's reason and its `pins:` citation
+  are in the paragraphs above (the fail-closed read of an unresolved column, the two fail-closed
+  arms of the lateral walk, the alias set).
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023, C-024, C-033, C-042, C-047
 
 ## Pointers
 

@@ -762,6 +762,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `Zulu`, `GMT0` beside `UTC`, `Z`, `GMT`, `UT` and the zero offsets) and refuses in
   `Africa/Abidjan`, `Atlantic/Reykjavik`, `Europe/London` and the non-zero zones.
   pins: ice-ntz-nested-refuse-1/C-042
+  *(Fix round 4, 2026-10-21, ledger C-047:)* the `///` lines on this file's six tests are
+  removed; the paragraphs above hold each test's reason and its citation.
+  pins: ice-ntz-nested-refuse-1/C-047
 - `nested_ns_routes.rs` — **ICE-TSNS-MERGE-WALL-1, split fold 1 (2026-10-10):** the nested
   `timestamp_ns` refusal on the routes the router rewrites.
   `a_branch_or_wap_write_of_a_nested_nanosecond_leaf_is_refused_and_writes_nothing`: fifteen

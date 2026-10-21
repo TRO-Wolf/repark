@@ -246,11 +246,6 @@ fn spelled(write: &str) -> String {
     write.replace("{S}", S).replace("{I}", INSTANT)
 }
 
-/// A `CAST` or `TRY_CAST` of a whole struct or array that turns a zoned leaf into a
-/// naive one refuses outside UTC on every door, writes no file and adds no snapshot. The
-/// planner's container cast keeps the UTC wall, so the planned type alone read as naive.
-///
-/// pins: ice-ntz-nested-refuse-1/C-015
 #[tokio::test]
 async fn a_container_cast_of_an_instant_refuses_on_every_door_outside_utc() {
     let mut wrong = Vec::new();
@@ -278,9 +273,6 @@ async fn a_container_cast_of_an_instant_refuses_on_every_door_outside_utc() {
     assert_eq!(wrong, Vec::<String>::new());
 }
 
-/// In a UTC session the same container casts store the UTC wall, which is the session wall.
-///
-/// pins: ice-ntz-nested-refuse-1/C-015
 #[tokio::test]
 async fn a_container_cast_of_an_instant_stores_the_wall_in_a_utc_session() {
     let session = session("UTC");
@@ -305,11 +297,6 @@ async fn a_container_cast_of_an_instant_stores_the_wall_in_a_utc_session() {
     assert_eq!(wrong, Vec::<String>::new());
 }
 
-/// The leaf cast the hint names stores the session wall outside UTC: inside a struct, in an
-/// array, through `transform`, in a `MERGE` value. A container cast whose input holds no zoned
-/// leaf (a wall, a string) stores its wall.
-///
-/// pins: ice-ntz-nested-refuse-1/C-015
 #[tokio::test]
 async fn the_leaf_cast_and_a_container_cast_of_a_wall_still_store_outside_utc() {
     let mut wrong = Vec::new();
@@ -415,13 +402,6 @@ const PREPARED: [(&str, &str); 6] = [
     ),
 ];
 
-/// A `PREPARE` that holds a parameter and supplies the column refuses in every zone, typed or
-/// untyped, in a `SELECT` or a `VALUES` source, wherever the parameter sits: `EXECUTE` binds
-/// the argument after the decision and casts an instant to the declared type through its UTC
-/// wall (a `STRING`, a `TIMESTAMP_NTZ`). A `PREPARE` with no parameter is decided as the write
-/// it runs, and one that does not supply the column prepares; both execute.
-///
-/// pins: ice-ntz-nested-refuse-1/C-016
 #[tokio::test]
 async fn a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone() {
     let mut wrong = Vec::new();
@@ -469,12 +449,6 @@ async fn a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_e
     assert_eq!(wrong, Vec::<String>::new());
 }
 
-/// The plain `UPDATE` that assigns a whole struct or array adds the session offset to every
-/// `TIMESTAMP_NTZ` cast in the value, whatever its input, so outside UTC such a value refuses
-/// there (fail closed). A literal, `to_timestamp_ntz`, the field assignment and the `MERGE`
-/// door store the wall; a UTC session stores it on every door.
-///
-/// pins: ice-ntz-nested-refuse-1/C-017
 #[tokio::test]
 async fn the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside_utc() {
     let shifted = [
@@ -573,12 +547,6 @@ async fn the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside
     assert_eq!(wrong, Vec::<String>::new());
 }
 
-/// The plain `UPDATE` that assigns a whole struct stores a value whose zoned sub-expression is
-/// not a `TIMESTAMP_NTZ` cast: `to_timestamp_ntz` of an instant stores the session wall, and a
-/// zoned column that feeds only an `INT` field or a condition leaves the wall as written. Spark
-/// 4.1.2 and main store the same values; fix round 1 refused all four.
-///
-/// pins: ice-ntz-nested-refuse-1/C-022
 #[tokio::test]
 async fn the_plain_update_stores_a_wall_beside_a_zoned_sub_expression() {
     let cases = [
@@ -680,16 +648,6 @@ const ON_LINEAGE: [&str; 16] = [
      LATERAL (SELECT m.s FROM (SELECT a.c AS c) a, LATERAL (SELECT a.c AS s) m) l",
 ];
 
-/// The cast walk reads only what reaches the supplied column: the expression that produces it,
-/// through aliases, derived tables, views, joins, unions, windows (their input columns too),
-/// groupings, `DISTINCT`, limits, a top-level sort, every values row and the outer reference
-/// a `LATERAL` subquery returns from the join's other side (the nearest scope that holds it,
-/// when an outer relation shares the alias). A container
-/// cast of an instant that feeds a predicate, an `EXISTS` in a `WHERE` or a sibling column no
-/// longer refuses, and the wall stores; one that reaches the column through any of those
-/// shapes still refuses and writes nothing.
-///
-/// pins: ice-ntz-nested-refuse-1/C-023
 #[tokio::test]
 async fn the_cast_walk_reads_only_what_reaches_the_column() {
     let cast = format!("CAST(named_struct('v', x, 'n', 1) AS {S})");
@@ -771,15 +729,6 @@ const BESIDE_A_SUBQUERY: [&str; 4] = [
      WHERE b.id = q.id), 'n', 1), 0 FROM (SELECT id, {C} AS s FROM ice.ns.src) q",
 ];
 
-/// A scalar subquery inside the expression that produces the column is read through its one
-/// output column: one that returns a container cast of an instant (directly, through a derived
-/// table, in a MERGE update, over a temporary view, nested in another scalar subquery, or as an
-/// outer column the walk follows back out) refuses outside UTC; one whose cast feeds only its
-/// own `WHERE` or a column it does not return stores the wall, and so does an `EXISTS` in the
-/// column's own expression, whose body is not read (a boolean carries no timestamp). A scalar
-/// subquery that returns a wall, or the leaf cast, stores.
-///
-/// pins: ice-ntz-nested-refuse-1/C-024, C-041
 #[tokio::test]
 async fn a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped() {
     let cast = format!("CAST(named_struct('v', x, 'n', 1) AS {S})");
@@ -846,13 +795,6 @@ async fn a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipp
     assert_eq!(wrong, Vec::<String>::new());
 }
 
-/// A view the write reads is already inlined when the type read walks its plan: a catalog view
-/// and a `DataFrame` frame view leave no `TableScan` whose source carries a logical plan (the
-/// plan builder replaces it with the view's plan), and a SQL temporary view leaves a
-/// `ReplanningTempView` scan, which the walk opens through its definition plan. So the walk
-/// needs no descent through a source's own logical plan.
-///
-/// pins: ice-ntz-nested-refuse-1/C-024
 #[tokio::test]
 async fn a_view_the_write_reads_is_inlined_before_the_walk() {
     let session = session("America/New_York");
@@ -926,11 +868,6 @@ async fn calls_of(zone: &str, writes: &[String]) -> (usize, Vec<bool>, usize, us
     (calls.load(Ordering::SeqCst), outcomes, count, added)
 }
 
-/// The type read plans its `SELECT` and never runs it: a volatile function in the source is
-/// called as often in New York as in UTC, where the gate does not run; a refused write calls
-/// it never, adds no snapshot, writes no file, and leaves no view.
-///
-/// pins: ice-ntz-nested-refuse-1/C-018
 #[tokio::test]
 async fn the_type_read_never_runs_the_source() {
     let allowed = [

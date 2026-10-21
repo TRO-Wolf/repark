@@ -116,9 +116,6 @@ fn routes(value: &str) -> Vec<Route> {
     ]
 }
 
-/// A branch or WAP write of an instant into a nested `TIMESTAMP_NTZ` leaf refuses outside UTC.
-///
-/// pins: ice-ntz-nested-refuse-1/C-007
 #[tokio::test]
 async fn a_branch_or_wap_write_of_an_instant_refuses_and_writes_nothing() {
     let wh = TempDir::new().unwrap();
@@ -140,10 +137,6 @@ async fn a_branch_or_wap_write_of_an_instant_refuses_and_writes_nothing() {
     assert_eq!(snapshots(&catalogs).await, 1);
 }
 
-/// The same routes pass the gate with a wall outside UTC: the type read plans through a branch
-/// and WAP. `UPDATE` of a branch fails with main's raw Arrow error in every zone, after the gate.
-///
-/// pins: ice-ntz-nested-refuse-1/C-004, C-007
 #[tokio::test]
 async fn a_branch_or_wap_write_of_a_wall_passes_the_gate() {
     let wh = TempDir::new().unwrap();
@@ -164,10 +157,6 @@ async fn a_branch_or_wap_write_of_a_wall_passes_the_gate() {
     }
 }
 
-/// A frame written by name is decided by the type of the column of that name, not by the
-/// column at the target's position (here an `INT`).
-///
-/// pins: ice-ntz-nested-refuse-1/C-002, C-004
 #[tokio::test]
 async fn a_frame_written_by_name_is_decided_by_the_column_of_that_name() {
     let wh = TempDir::new().unwrap();
@@ -205,9 +194,6 @@ fn wrapped_writes() -> Vec<String> {
     ]
 }
 
-/// A statement that carries a write is decided as the write it runs; a plain `EXPLAIN` runs.
-///
-/// pins: ice-ntz-nested-refuse-1/C-007
 #[tokio::test]
 async fn a_statement_that_wraps_a_write_of_an_instant_is_decided_as_that_write() {
     let wh = TempDir::new().unwrap();
@@ -228,9 +214,6 @@ async fn a_statement_that_wraps_a_write_of_an_instant_is_decided_as_that_write()
     assert_eq!(attempt(&ctx, &catalogs, &planned).await, Ok(()));
 }
 
-/// `PREPARE` is decided without the zone: `EXECUTE` can run it after the zone changes.
-///
-/// pins: ice-ntz-nested-refuse-1/C-001, C-007
 #[tokio::test]
 async fn a_prepared_write_of_an_instant_refuses_in_a_utc_session_too() {
     let wh = TempDir::new().unwrap();
@@ -245,11 +228,6 @@ async fn a_prepared_write_of_an_instant_refuses_in_a_utc_session_too() {
     assert_eq!(snapshots(&catalogs).await, 2);
 }
 
-/// Only a zone whose id is a pure UTC alias (`Etc/UTC`, `Etc/GMT`, `Zulu`, `GMT0` among them) or
-/// a zero offset lets an instant through; `Africa/Abidjan`, `Atlantic/Reykjavik` and
-/// `Europe/London` refuse, though their offset is zero on the value's date.
-///
-/// pins: ice-ntz-nested-refuse-1/C-001, C-003, C-042
 #[tokio::test]
 async fn only_a_utc_zone_lets_an_instant_through() {
     let wh = TempDir::new().unwrap();

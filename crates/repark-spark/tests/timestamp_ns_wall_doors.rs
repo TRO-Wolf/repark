@@ -589,13 +589,6 @@ const NTZ_NESTED_DOORS: [&str; 6] = [
     "merge insert",
 ];
 
-/// Rewritten 2026-10-20 (ICE-NTZ-NESTED-REFUSE-1, ruling T-3): this pin held the split main
-/// had, field assignment on the session wall and the other doors on the UTC wall. Outside UTC
-/// the six doors now refuse an instant with one text and write nothing. In UTC they store the
-/// walls they stored before. The text was re-pinned the same day, in fix round 1: the hint no
-/// longer names the source's type.
-///
-/// pins: ice-ntz-nested-refuse-1/C-002, C-003
 #[tokio::test]
 async fn a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc() {
     let lit = NESTED_INSTANT;
