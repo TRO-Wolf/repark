@@ -1,0 +1,20 @@
+# The pin file on the head (b868db05), serial, flag armed by conftest.py: 5 passed. Built with maturin develop --profile ci.
+# command: pytest python/repark/tests/session/test_panic_fatal_suite_1.py -v --tb=short
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- .venv/bin/python3
+rootdir: python/repark
+configfile: pyproject.toml
+plugins: timeout-2.4.0, xdist-3.8.0
+timeout: 1200.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 5 items
+
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed PASSED [ 20%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[arrow_stream] PASSED [ 40%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[sql_method] PASSED [ 60%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream] PASSED [ 80%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method] PASSED [100%]
+
+============================== 5 passed in 1.49s ===============================

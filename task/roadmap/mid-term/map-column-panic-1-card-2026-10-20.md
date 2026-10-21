@@ -12,6 +12,7 @@ to point here. Two follow-ups await the owner: the native `repark.sql()` door st
 `map('a', <column>)`, since it does not install the Spark analyzer rules; and the new `REPARK_PANIC_FATAL=1`
 switch in `crates/repark-python/src/fence.rs` reads the environment on the caught-panic arm, which the owner
 weighs against ADR 0004's ban on environment reads at query time before any suite sets it.
+**Update 2026-10-21:** `REPARK_PANIC_FATAL` settled by PANIC-FATAL-SUITE-1 (PR #1134): the read moved to module initialisation and the facade suite sets the flag. The native-door follow-up stays open.
 
 **Retires:** when every statement below answers Spark's value, with a pin per door, and the
 Python boundary no longer reports a caught Rust panic for any `map()` over a column.

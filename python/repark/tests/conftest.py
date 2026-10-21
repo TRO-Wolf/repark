@@ -8,6 +8,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+os.environ.setdefault("REPARK_PANIC_FATAL", "1")
+
 import _live_parity as lp
 import pytest
 

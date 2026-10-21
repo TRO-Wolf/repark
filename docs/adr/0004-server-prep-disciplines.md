@@ -61,3 +61,18 @@ authority commits. "Do not build Ballista-for-writes" is unchanged; only its sta
 narrows, from "cannot serialize" to "must not commit from tasks". The audit's §26.D and §27
 carry the evidence by file and line; its recommendation is to DEPEND on the four Ballista
 crates at a pinned tag rather than import them.
+
+## Amendment — a process-start read into a static (2026-10-21, owner ruling)
+
+Decision 1 bans environment reads at query time. A read at process start is a different class and is
+allowed: the process or the module reads the environment once when it initialises, stores the answer
+in a static, and the query path reads that static and never the environment. The static answers its
+default when initialisation never ran, so code that runs without the module initialiser (a unit test
+calling the function directly) does not depend on the caller's environment.
+
+`REPARK_PANIC_FATAL` is the first such switch. `crates/repark-python/src/fence.rs` reads it once
+when `repark._native` initialises, into a `OnceLock<bool>`; the panic fences read that static only.
+With the value `1` a panic caught at the Python boundary resumes unwinding instead of becoming the
+`repark internal error` exception, and the facade test suite sets the variable, so a caught panic in
+any test is a hard failure. The first version of the switch read the environment on the caught-panic
+arm, at query time; the owner ruled on 2026-10-21 to keep the switch and move the read.
