@@ -64,6 +64,9 @@ and the `EngineContext` construction contract.
   A `MERGE` under either wrapper keeps DataFusion's plan refusal (`Unsupported SQL statement:
   MERGE INTO …`) on this door, because the door plans before the refusal runs; the two pins
   assert that text there and the held table (ledger §3).
+  **Fix round 1 (2026-10-21, verifier S1-1):** `every_spelling_of_a_wrapped_write_refuses_and_writes_nothing`
+  runs a trailing `;`, a leading `--` comment line and lower case under both wrappers; it goes red
+  when the refusal is skipped on a trailing `;`. pins: explain-dml-write-1/C-014
 ## Pointers
 
 - Up: [../map.md](../map.md)

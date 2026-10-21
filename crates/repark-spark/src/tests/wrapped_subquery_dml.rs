@@ -170,6 +170,38 @@ async fn a_prepared_write_refuses_on_the_router_door() {
 }
 
 #[tokio::test]
+async fn every_spelling_of_a_wrapped_write_refuses_on_the_router_door() {
+    for (statement, text) in [
+        (
+            "EXPLAIN ANALYZE DELETE FROM ice.sales.t WHERE id = 2;",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nEXPLAIN ANALYZE UPDATE ice.sales.t SET v = 5 WHERE id = 2",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "explain analyze insert into ice.sales.t values (5, 50)",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "PREPARE p AS DELETE FROM ice.sales.t WHERE id = 2;",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nPREPARE p AS UPDATE ice.sales.t SET v = 5 WHERE id = 2",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "prepare p as insert into ice.sales.t values (5, 50)",
+            PREPARE_REFUSAL,
+        ),
+    ] {
+        refuses_and_holds(text, statement).await;
+    }
+}
+
+#[tokio::test]
 async fn a_prepared_query_still_runs_on_the_router_door() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = seeded(&wh).await;

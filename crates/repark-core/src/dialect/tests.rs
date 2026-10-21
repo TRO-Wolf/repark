@@ -395,6 +395,47 @@ async fn a_prepared_write_refuses_and_leaves_nothing_to_execute() {
 }
 
 #[tokio::test]
+async fn every_spelling_of_a_wrapped_write_refuses_and_writes_nothing() {
+    let warehouse = tempfile::TempDir::new().expect("warehouse");
+    let root = warehouse.path().to_str().expect("utf-8 path");
+    let session = seeded_default_session(root).await;
+    for (statement, text) in [
+        (
+            "EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2;",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nEXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id = 2",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "explain analyze insert into ice.ns.t values (5, 50)",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "PREPARE p AS DELETE FROM ice.ns.t WHERE id = 2;",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nPREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id = 2",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "prepare p as insert into ice.ns.t values (5, 50)",
+            PREPARE_REFUSAL,
+        ),
+    ] {
+        refuse_wrapper_and_hold(&session, text, statement).await;
+        run(&session, "EXECUTE p").await.expect_err(statement);
+        assert_eq!(
+            target_state(&session).await,
+            (SEEDED_T.to_vec(), 1),
+            "{statement}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn a_prepared_query_and_a_plain_explain_still_answer() {
     let warehouse = tempfile::TempDir::new().expect("warehouse");
     let root = warehouse.path().to_str().expect("utf-8 path");

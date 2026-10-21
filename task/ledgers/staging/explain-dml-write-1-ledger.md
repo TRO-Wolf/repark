@@ -399,3 +399,35 @@ COVERAGE_ATTESTATION:
 ## Hand-back
 
 `Model: claude-opus-5-5`. `risk_tier: standard`. Verifier: pending. Owner merges.
+
+## 9. Fix round 1 (2026-10-21, after the verifier's FAIL at `eccd920a`)
+
+The verifier (fresh Opus 5.5, hostile) found the product right on every door and failed the unit
+on one S1 and three S2 findings. The orchestrator ruled each item under the owner's grant of
+2026-10-21 20:35 UTC. One commit per item.
+
+### 9.1 S1-1: the ruling-142 spellings on every Rust door
+
+The verifier's mutant `if !<sql>.trim_end().ends_with(';') { refuse_wrapped_write(..)?; }` at the
+three call sites survived every door pin, and with it `EXPLAIN ANALYZE DELETE … WHERE id = 2;`
+deleted row 2 on the ANSI door, the router API and the native door. Each door's own test file
+gains one pin over six spellings: a trailing `;`, a leading `--` comment line and lower case, each
+under `EXPLAIN ANALYZE` and under `PREPARE`, over `DELETE`, `UPDATE` and `INSERT`; each asserts the
+ruled text, that `EXECUTE p` finds nothing, and the unchanged table:
+`every_spelling_of_a_wrapped_write_refuses_and_writes_nothing` (`repark-core` `dialect/tests.rs`),
+`the_ansi_door_refuses_every_spelling_of_a_wrapped_write` (`ansi_explain_dml_write.rs`),
+`every_spelling_of_a_wrapped_write_refuses_on_the_router_door` (`wrapped_subquery_dml.rs`). Green
+on the head: 15, 4 and 11 passed.
+
+The kill, with the mutant applied at all three sites at once, then restored (evidence
+[mutant-trailing-semicolon.txt](../../wo/explain-dml-write-1/evidence/mutant-trailing-semicolon.txt)):
+
+| Door | Suite | Red under the mutant |
+|---|---|---|
+| `repark.sql()` (native) | `cargo test -p repark-core --lib dialect` | 1 failed, 14 passed: `every_spelling_of_a_wrapped_write_refuses_and_writes_nothing` panicked at `dialect/tests.rs:233:49`: `EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2;: [RecordBatch { … plan_type … plan …` (the statement answered its plan) |
+| ANSI | `cargo test -p repark-sql --test ansi_explain_dml_write` | 1 failed, 3 passed: `the_ansi_door_refuses_every_spelling_of_a_wrapped_write` panicked at `ansi_explain_dml_write.rs:111:53`: `EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2;: [RecordBatch { …` |
+| router API | `cargo test -p repark-spark --lib wrapped_subquery_dml` | 1 failed, 10 passed: `every_spelling_of_a_wrapped_write_refuses_on_the_router_door` panicked at `wrapped_subquery_dml.rs:104:10`: `EXPLAIN ANALYZE DELETE FROM ice.sales.t WHERE id = 2;: [RecordBatch { …` |
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-014 | Fix round 1, S1-1 (2026-10-21): on `repark.sql()`, the ANSI door and the router API, a wrapped write spelled with a trailing `;`, a leading `--` comment or in lower case refuses with the ruled text and holds the table; with the refusal skipped on a trailing `;` at all three call sites, each door's pins go red. | The three `every_spelling…` pins; the mutant run. | **PROVEN** | §9.1; the evidence file. |

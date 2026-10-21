@@ -150,6 +150,40 @@ async fn the_ansi_door_refuses_a_prepared_write_and_leaves_nothing_to_execute() 
 }
 
 #[tokio::test]
+async fn the_ansi_door_refuses_every_spelling_of_a_wrapped_write() {
+    let (session, _warehouse) = seeded_ansi_session().await;
+    for (statement, text) in [
+        (
+            "EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2;",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nEXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id = 2",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "explain analyze insert into ice.ns.t values (5, 50)",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "PREPARE p AS DELETE FROM ice.ns.t WHERE id = 2;",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nPREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id = 2",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "prepare p as insert into ice.ns.t values (5, 50)",
+            PREPARE_REFUSAL,
+        ),
+    ] {
+        refuses_and_holds(&session, text, statement).await;
+    }
+    assert_eq!(target_state(&session).await.0, SEEDED_T.to_vec());
+}
+
+#[tokio::test]
 async fn the_ansi_door_still_answers_a_prepared_query_and_a_plain_explain() {
     let (session, _warehouse) = seeded_ansi_session().await;
     let before = target_state(&session).await;

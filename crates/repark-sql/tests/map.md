@@ -190,6 +190,9 @@ holds behavior observed from outside the crate.
   `EXECUTE p` finds nothing, rows and snapshots hold. On main each ran.
   `the_ansi_door_still_answers_a_prepared_query_and_a_plain_explain` is the control.
   pins: explain-dml-write-1/C-003, C-005, C-006
+  **Fix round 1 (2026-10-21, verifier S1-1):** `the_ansi_door_refuses_every_spelling_of_a_wrapped_write`:
+  a trailing `;`, a leading `--` comment line and lower case under both wrappers; red when the
+  refusal is skipped on a trailing `;`. pins: explain-dml-write-1/C-014
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

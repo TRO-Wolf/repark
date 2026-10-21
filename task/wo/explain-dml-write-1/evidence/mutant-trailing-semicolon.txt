@@ -1,0 +1,19 @@
+EXPLAIN-DML-WRITE-1 fix round 1 (2026-10-21), verifier finding S1-1.
+Mutant, applied at all three call sites at once on the fix-round tree, then restored:
+  if !<sql>.trim_end().ends_with(';') { refuse_wrapped_write(..)?; }
+  crates/repark-core/src/dialect.rs (query), crates/repark-sql/src/router.rs (sql),
+  crates/repark-spark/src/spark_ast.rs (sql).
+Each door's suite, its red line (the wrapped write answered its plan and ran):
+
+== repark.sql() door: cargo test -p repark-core --lib dialect
+thread 'dialect::tests::every_spelling_of_a_wrapped_write_refuses_and_writes_nothing' panicked at crates/repark-core/src/dialect/tests.rs:233:49:
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2;: [RecordBatch { schema: Schema { fields: [Field { name: "plan_type", data_type: Utf8 }, Field { name: "plan", data_type: Utf8 }], metadata: {} }, …
+test result: FAILED. 14 passed; 1 failed; 0 ignored; 0 measured; 1483 filtered out; finished in 0.29s
+== ANSI door: cargo test -p repark-sql --test ansi_explain_dml_write
+thread 'the_ansi_door_refuses_every_spelling_of_a_wrapped_write' panicked at crates/repark-sql/tests/ansi_explain_dml_write.rs:111:53:
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2;: [RecordBatch { schema: Schema { fields: [Field { name: "plan_type", data_type: Utf8 }, Field { name: "plan", data_type: Utf8 }], metadata: {} }, …
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+== router API: cargo test -p repark-spark --lib wrapped_subquery_dml
+thread 'tests::wrapped_subquery_dml::every_spelling_of_a_wrapped_write_refuses_on_the_router_door' panicked at crates/repark-spark/src/tests/wrapped_subquery_dml.rs:104:10:
+EXPLAIN ANALYZE DELETE FROM ice.sales.t WHERE id = 2;: [RecordBatch { schema: Schema { fields: [Field { name: "plan_type", data_type: Utf8 }, Field { name: "plan", data_type: Utf8 }], metadata: {} }, …
+test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 2773 filtered out; finished in 9.64s

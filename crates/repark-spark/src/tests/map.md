@@ -1771,6 +1771,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `a_prepared_query_still_runs_on_the_router_door`,
   `explain_and_explain_analyze_of_a_select_answer_on_the_router_door`, the bare `IN` forms, and a
   plain `EXPLAIN` of each non-`MERGE` write. pins: explain-dml-write-1/C-004, C-005, C-006, C-008
+  **Fix round 1 (2026-10-21, verifier S1-1):** `every_spelling_of_a_wrapped_write_refuses_on_the_router_door`:
+  a trailing `;`, a leading `--` comment line and lower case under both wrappers; red when the
+  refusal is skipped on a trailing `;`. pins: explain-dml-write-1/C-014
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
   `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),

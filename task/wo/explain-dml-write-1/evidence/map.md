@@ -19,5 +19,8 @@ ledger's §6 ([../../../ledgers/staging/explain-dml-write-1-ledger.md](../../../
   head's `11e5bd48…`), `spark-session` (the Spark SQL session, the same modules), `ansi`
   (`AnsiDialect`, Rust) and `router` (`repark_spark::execute`, Rust); the Rust "main" runs are
   the head tree with the three call sites restored to `origin/main`.
+- [mutant-trailing-semicolon.txt](mutant-trailing-semicolon.txt) — fix round 1 (2026-10-21,
+  verifier S1-1): the red line of each door's suite with the refusal skipped on a trailing `;` at
+  all three call sites.
 
 Up: [../map.md](../map.md).
