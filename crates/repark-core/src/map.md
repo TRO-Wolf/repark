@@ -1064,6 +1064,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   answers its plan again, as on main, and leaves an Iceberg table unchanged (on an in-memory
   table, reading it writes, as on main). The parse still uses the session's dialect.
   pins: repark-sql-update-subquery-where-1/C-017, C-020, C-021
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):** `refuse_dml_subquery_where`
+  calls `repark_iceberg::write::statement_writes::refuse_wrapped_write` on the statement it
+  parsed, before 106's walk: on `repark.sql()` an `EXPLAIN ANALYZE` or a `PREPARE` of any write
+  refuses with the ruled text, after planning, so a wrapped statement that does not plan (a
+  `MERGE`, which DataFusion does not plan) keeps its plan error and writes nothing.
+  pins: explain-dml-write-1/C-001, C-002, C-007
 - `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1
   (2026-09-18, round 1):** `SparkRangeFunc`, RePark's `range` table function —
   non-nullable `id: Int64` column, 1–4 literal arguments (the 4th is

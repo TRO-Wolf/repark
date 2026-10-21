@@ -53,6 +53,23 @@ and the `EngineContext` construction contract.
   tests.
   pins: repark-sql-update-subquery-where-1/C-017, C-018, C-019, C-020, C-022
 
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138, 140 to 142):** a wrapper never performs a
+  write on `repark.sql()`. `an_explain_analyze_of_a_write_refuses_and_writes_nothing` and
+  `a_prepared_write_refuses_and_leaves_nothing_to_execute` run `DELETE`, `UPDATE`, `INSERT` and
+  `MERGE` (plain and `IN (SELECT …)` predicates) under `EXPLAIN ANALYZE` and `PREPARE`: each
+  refuses with the wrapper's ruled text, `EXECUTE p` finds nothing, the rows and snapshots hold.
+  `a_prepared_query_and_a_plain_explain_still_answer` is the control. The three 106 pins on
+  wrapped subquery forms now assert the wrapper's text, since the refusal runs first inside
+  `refuse_dml_subquery_where`. pins: explain-dml-write-1/C-001, C-002, C-005, C-006, C-008
+  A `MERGE` under either wrapper keeps DataFusion's plan refusal (`Unsupported SQL statement:
+  MERGE INTO …`) on this door, because the door plans before the refusal runs; the two pins
+  assert that text there and the held table (ledger §3).
+  **Fix round 1 (2026-10-21, verifier S1-1):** `every_spelling_of_a_wrapped_write_refuses_and_writes_nothing`
+  runs a trailing `;`, a leading `--` comment line and lower case under both wrappers; it goes red
+  when the refusal is skipped on a trailing `;`. pins: explain-dml-write-1/C-014
+  **Fix round 1, Q-B1 ruled as built (2026-10-21):** on this door every wrapped write DataFusion
+  cannot plan (`MERGE`, CTE-carried, missing table or column, `FORMAT`, `DESCRIBE ANALYZE`) keeps
+  DataFusion's own error and writes nothing. pins: explain-dml-write-1/C-016
 ## Pointers
 
 - Up: [../map.md](../map.md)

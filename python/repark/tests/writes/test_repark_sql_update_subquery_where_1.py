@@ -6,9 +6,6 @@ as seeded, and no file appears under the warehouse. On main the same statements 
 emptied the table, or refused with DataFusion's planner text. Spark 4.1.2 answers each form with
 the matching rows only; the sketch records its answers.
 
-Owner ruling 131 (b): the refusal also fires inside ``EXPLAIN ANALYZE``, which executes the
-statement it wraps.
-
 Owner ruling 135 (a): every pin seeds its tables through the Iceberg catalog and asserts the scan
 is an ``IcebergTableScan``, so no pin can fall back to an in-memory table unnoticed; each checks the
 rows, the snapshot count and the warehouse files. The refusal reads every write the statement
@@ -40,6 +37,15 @@ MEM_SEED = "CREATE TABLE mem3 AS SELECT * FROM (VALUES (1), (2), (3)) AS x(a)"
 SEEDED_T = [(1, 10), (2, 20), (3, 30), (4, 40)]
 SEEDED_SNAPSHOTS = 1
 UNPREPARED = "Prepared statement 'p' does not exist"
+EXPLAIN_ANALYZE_REFUSAL = (
+    "EXPLAIN ANALYZE is refused: its statement writes to a table, and EXPLAIN ANALYZE runs the "
+    "statement it explains. A plain EXPLAIN of the same statement still shows its plan without "
+    "running it, and EXPLAIN ANALYZE of a query still works."
+)
+PREPARE_REFUSAL = (
+    "PREPARE `p` is refused: its statement writes to a table, and a prepared write would run "
+    "later, at EXECUTE. PREPARE of a query still works."
+)
 SEEDED_MEM = [1, 2, 3]
 PREDICATES = (
     ("in", "id IN (SELECT id FROM ice.ns.s)"),
@@ -211,6 +217,16 @@ def refuse_and_hold(
     assert target_state(native, warehouse) == before, statement
 
 
+def refuse_wrapper_and_hold(
+    statement: str, text: str, warehouse: Path, native: PyReparkSession
+) -> None:
+    before = target_state(native, warehouse)
+    with pytest.raises(AnalysisException) as caught:
+        repark.sql(statement).collect()
+    assert text in str(caught.value), str(caught.value)
+    assert target_state(native, warehouse) == before, statement
+
+
 @pytest.mark.parametrize(("verb", "predicate"), ICEBERG_CELLS)
 def test_a_subquery_predicate_refuses_on_an_iceberg_table(
     verb: str, predicate: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -299,17 +315,18 @@ def test_an_explain_analyze_of_a_subquery_predicate_refuses(
 ) -> None:
     """EXPLAIN ANALYZE executes the statement it wraps, so either verb refuses, writing nothing."""
     warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
-    refuse_and_hold(statement, verb, "ice.ns.t", warehouse, native)
+    assert verb in statement
+    refuse_wrapper_and_hold(statement, EXPLAIN_ANALYZE_REFUSAL, warehouse, native)
 
 
 @pytest.mark.parametrize(("verb", "prepare", "execute"), PREPARED_CELLS)
 def test_a_prepared_subquery_predicate_refuses(
     verb: str, prepare: str, execute: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """PREPARE refuses with the G3-E8 text, so EXECUTE finds no statement and nothing is written."""
     warehouse, native = seeded_warehouse(tmp_path, monkeypatch)
     before = target_state(native, warehouse)
-    refuse_and_hold(prepare, verb, "ice.ns.t", warehouse, native)
+    assert verb in prepare
+    refuse_wrapper_and_hold(prepare, PREPARE_REFUSAL, warehouse, native)
     with pytest.raises(PySparkException, match=UNPREPARED):
         repark.sql(execute).collect()
     assert target_state(native, warehouse) == before, execute

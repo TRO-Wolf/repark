@@ -431,6 +431,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   and a `timestamptz_ns` source. Oracle: Spark 4.1.2's microsecond twin of the four statements
   (Iceberg 1.11.0, New York, 2026-10-15) stores `c` unchanged; a NULL takes its sibling's
   type. pins: ice-tsns-type-planner-1/C-033
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 141):** the three prepared `INSERT` controls of
+  `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone` now take the
+  ruled `PREPARE` text (never the NTZ hint), their `EXECUTE`s fail and nothing is stored.
+  pins: explain-dml-write-1/C-008
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to

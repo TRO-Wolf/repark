@@ -428,24 +428,45 @@ async fn a_statement_that_wraps_a_write_is_decided_as_the_write_it_runs() {
     assert_eq!(snapshots(&catalogs, "t").await, 1);
 }
 
+const EXPLAIN_ANALYZE_REFUSAL: &str = "EXPLAIN ANALYZE is refused: its statement writes to a \
+     table, and EXPLAIN ANALYZE runs the statement it explains. A plain EXPLAIN of the same \
+     statement still shows its plan without running it, and EXPLAIN ANALYZE of a query still works.";
+
+const PREPARE_REFUSAL: &str = "is refused: its statement writes to a table, and a prepared write \
+     would run later, at EXECUTE. PREPARE of a query still works.";
+
+async fn meets_the_wrapper_refusal(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+    write: &str,
+) {
+    let refusal = attempt(ctx, catalogs, write).await.expect_err(write);
+    let text = if write.starts_with("PREPARE") {
+        PREPARE_REFUSAL
+    } else {
+        EXPLAIN_ANALYZE_REFUSAL
+    };
+    assert!(refusal.contains(text), "{write}: {refusal}");
+    assert!(!refusal.contains(NOT_YET), "{write}: {refusal}");
+    assert_eq!(snapshots(catalogs, table).await, 1, "{write}");
+}
+
 #[tokio::test]
-async fn a_wrapped_statement_that_does_not_supply_the_column_still_runs() {
+async fn a_wrapped_statement_that_does_not_supply_the_column_meets_the_wrapper_refusal() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = seeded(&wh, NESTED, "t").await;
-    let allowed = [
+    for write in [
         "EXPLAIN ANALYZE INSERT INTO ice.sales.t (id, k) VALUES (7, 0)",
         "EXPLAIN ANALYZE INSERT INTO ice.sales.t VALUES (8, NULL, 0)",
         "EXPLAIN ANALYZE UPDATE ice.sales.t SET k = 3 WHERE id = 1",
         "EXPLAIN ANALYZE VERBOSE INSERT INTO ice.sales.t (id, k) SELECT 9, 0",
-    ];
-    for (index, write) in allowed.into_iter().enumerate() {
-        assert_eq!(attempt(&ctx, &catalogs, write).await, Ok(()), "{write}");
-        assert_eq!(snapshots(&catalogs, "t").await, index + 2, "{write}");
+        "PREPARE omitted AS INSERT INTO ice.sales.t (id, k) VALUES (10, 0)",
+    ] {
+        meets_the_wrapper_refusal(&ctx, &catalogs, "t", write).await;
     }
-    let prepared = "PREPARE omitted AS INSERT INTO ice.sales.t (id, k) VALUES (10, 0)";
-    assert_eq!(attempt(&ctx, &catalogs, prepared).await, Ok(()));
-    assert_eq!(attempt(&ctx, &catalogs, "EXECUTE omitted").await, Ok(()));
-    assert_eq!(snapshots(&catalogs, "t").await, 6);
+    assert!(attempt(&ctx, &catalogs, "EXECUTE omitted").await.is_err());
+    assert_eq!(snapshots(&catalogs, "t").await, 1);
 }
 
 #[tokio::test]
@@ -456,15 +477,13 @@ async fn a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated() {
         format!("EXPLAIN ANALYZE INSERT INTO ice.sales.p SELECT 5, {VALUE}, 0"),
         format!("EXPLAIN ANALYZE INSERT INTO ice.sales.p (id, st) VALUES (6, {VALUE})"),
         "EXPLAIN ANALYZE UPDATE ice.sales.p SET k = 3 WHERE id = 1".to_string(),
+        format!("PREPARE plain AS INSERT INTO ice.sales.p SELECT 7, {VALUE}, 0"),
     ];
-    for (index, write) in writes.iter().enumerate() {
-        assert_eq!(attempt(&ctx, &catalogs, write).await, Ok(()), "{write}");
-        assert_eq!(snapshots(&catalogs, "p").await, index + 2, "{write}");
+    for write in &writes {
+        meets_the_wrapper_refusal(&ctx, &catalogs, "p", write).await;
     }
-    let prepared = format!("PREPARE plain AS INSERT INTO ice.sales.p SELECT 7, {VALUE}, 0");
-    assert_eq!(attempt(&ctx, &catalogs, &prepared).await, Ok(()));
-    assert_eq!(attempt(&ctx, &catalogs, "EXECUTE plain").await, Ok(()));
-    assert_eq!(snapshots(&catalogs, "p").await, 5);
+    assert!(attempt(&ctx, &catalogs, "EXECUTE plain").await.is_err());
+    assert_eq!(snapshots(&catalogs, "p").await, 1);
     let malformed = attempt(&ctx, &catalogs, "UPDATE ice.sales.p SET k = 1 WHERE (").await;
     assert!(
         !malformed

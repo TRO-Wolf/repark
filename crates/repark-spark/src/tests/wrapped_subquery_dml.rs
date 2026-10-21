@@ -70,41 +70,57 @@ async fn seeded(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
     (ctx, catalogs)
 }
 
-fn assert_g3e8(text: &str, verb: &str, sql: &str) {
-    for part in [
-        format!("{verb} with a subquery in its WHERE clause is refused on `"),
-        "subquery predicates are silently mis-executed".to_string(),
-        "(defect G3-E8, silent data loss)".to_string(),
-        "MERGE INTO".to_string(),
-        "Support returns when the underlying fix lands".to_string(),
-    ] {
-        assert!(text.contains(&part), "{sql}: missing {part:?} in {text}");
+const EXPLAIN_ANALYZE_REFUSAL: &str = "EXPLAIN ANALYZE is refused: its statement writes to a \
+     table, and EXPLAIN ANALYZE runs the statement it explains. A plain EXPLAIN of the same \
+     statement still shows its plan without running it, and EXPLAIN ANALYZE of a query still works.";
+
+const PREPARE_REFUSAL: &str = "PREPARE `p` is refused: its statement writes to a table, and a \
+     prepared write would run later, at EXECUTE. PREPARE of a query still works.";
+
+const IN_SUBQUERY: &str = "id IN (SELECT id FROM ice.sales.s)";
+
+fn wrapped_writes() -> Vec<String> {
+    let mut writes = Vec::new();
+    for predicate in ["id = 2", IN_SUBQUERY] {
+        writes.push(format!("DELETE FROM ice.sales.t WHERE {predicate}"));
+        writes.push(format!("UPDATE ice.sales.t SET v = 5 WHERE {predicate}"));
+        writes.push(format!(
+            "INSERT INTO ice.sales.t SELECT id + 10, w FROM ice.sales.s WHERE {predicate}"
+        ));
+        writes.push(format!(
+            "MERGE INTO ice.sales.t AS target USING (SELECT id, w FROM ice.sales.s WHERE \
+             {predicate}) AS source ON target.id = source.id \
+             WHEN MATCHED THEN UPDATE SET v = source.w"
+        ));
     }
+    writes
 }
 
-async fn refuses_and_holds(verb: &str, prepare: &str) {
+async fn refuses_and_holds(text: &str, statement: &str) {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = seeded(&wh).await;
-    let refusal = outcome(&ctx, &catalogs, prepare).await.expect_err(prepare);
-    assert_g3e8(&refusal, verb, prepare);
+    let refusal = outcome(&ctx, &catalogs, statement)
+        .await
+        .expect_err(statement);
+    assert!(refusal.contains(text), "{statement}: {refusal}");
     let missing = outcome(&ctx, &catalogs, "EXECUTE p")
         .await
-        .expect_err(prepare);
+        .expect_err(statement);
     assert!(
         missing.contains("Prepared statement 'p' does not exist"),
-        "{prepare}: {missing}"
+        "{statement}: {missing}"
     );
     assert_eq!(
         state(&ctx, &catalogs).await,
         (SEEDED.to_vec(), 1),
-        "{prepare}"
+        "{statement}"
     );
 }
 
 #[tokio::test]
 async fn a_prepared_subquery_delete_refuses_on_the_router_door() {
     refuses_and_holds(
-        "DELETE",
+        PREPARE_REFUSAL,
         "PREPARE p AS DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.s)",
     )
     .await;
@@ -113,7 +129,7 @@ async fn a_prepared_subquery_delete_refuses_on_the_router_door() {
 #[tokio::test]
 async fn a_prepared_subquery_update_refuses_on_the_router_door() {
     refuses_and_holds(
-        "UPDATE",
+        PREPARE_REFUSAL,
         "PREPARE p AS UPDATE ice.sales.t SET v = 5 WHERE id IN (SELECT id FROM ice.sales.s)",
     )
     .await;
@@ -122,11 +138,106 @@ async fn a_prepared_subquery_update_refuses_on_the_router_door() {
 #[tokio::test]
 async fn a_prepared_explain_analyze_subquery_delete_refuses_on_the_router_door() {
     refuses_and_holds(
-        "DELETE",
+        PREPARE_REFUSAL,
         "PREPARE p AS EXPLAIN ANALYZE DELETE FROM ice.sales.t \
          WHERE id IN (SELECT id FROM ice.sales.s)",
     )
     .await;
+}
+
+#[tokio::test]
+async fn an_explain_analyze_of_a_write_refuses_on_the_router_door() {
+    for write in wrapped_writes() {
+        refuses_and_holds(EXPLAIN_ANALYZE_REFUSAL, &format!("EXPLAIN ANALYZE {write}")).await;
+    }
+    refuses_and_holds(
+        EXPLAIN_ANALYZE_REFUSAL,
+        "EXPLAIN ANALYZE VERBOSE DELETE FROM ice.sales.t WHERE id = 2",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_prepared_write_refuses_on_the_router_door() {
+    for write in wrapped_writes() {
+        refuses_and_holds(PREPARE_REFUSAL, &format!("PREPARE p AS {write}")).await;
+    }
+    refuses_and_holds(
+        PREPARE_REFUSAL,
+        "PREPARE p(INT) AS DELETE FROM ice.sales.t WHERE id = $1",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn every_spelling_of_a_wrapped_write_refuses_on_the_router_door() {
+    for (statement, text) in [
+        (
+            "EXPLAIN ANALYZE DELETE FROM ice.sales.t WHERE id = 2;",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nEXPLAIN ANALYZE UPDATE ice.sales.t SET v = 5 WHERE id = 2",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "explain analyze insert into ice.sales.t values (5, 50)",
+            EXPLAIN_ANALYZE_REFUSAL,
+        ),
+        (
+            "PREPARE p AS DELETE FROM ice.sales.t WHERE id = 2;",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "-- a leading comment\nPREPARE p AS UPDATE ice.sales.t SET v = 5 WHERE id = 2",
+            PREPARE_REFUSAL,
+        ),
+        (
+            "prepare p as insert into ice.sales.t values (5, 50)",
+            PREPARE_REFUSAL,
+        ),
+    ] {
+        refuses_and_holds(text, statement).await;
+    }
+}
+
+#[tokio::test]
+async fn a_prepared_query_still_runs_on_the_router_door() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh).await;
+    let prepare = "PREPARE q AS SELECT v FROM ice.sales.t WHERE id = 2";
+    outcome(&ctx, &catalogs, prepare).await.expect(prepare);
+    let batches = outcome(&ctx, &catalogs, "EXECUTE q")
+        .await
+        .expect("EXECUTE q");
+    let answered: Vec<i32> = batches
+        .iter()
+        .flat_map(|batch| {
+            batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int32Array>()
+                .expect("v is INT")
+                .values()
+                .to_vec()
+        })
+        .collect();
+    assert_eq!(answered, vec![20]);
+    assert_eq!(state(&ctx, &catalogs).await, (SEEDED.to_vec(), 1));
+}
+
+#[tokio::test]
+async fn explain_and_explain_analyze_of_a_select_answer_on_the_router_door() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh).await;
+    for statement in [
+        "EXPLAIN SELECT * FROM ice.sales.t WHERE id = 2",
+        "EXPLAIN ANALYZE SELECT * FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.s)",
+    ] {
+        let batches = outcome(&ctx, &catalogs, statement).await.expect(statement);
+        assert!(!batches.is_empty(), "{statement}");
+    }
+    assert_eq!(state(&ctx, &catalogs).await, (SEEDED.to_vec(), 1));
 }
 
 #[tokio::test]
@@ -149,24 +260,12 @@ async fn the_bare_in_subquery_dml_changes_exactly_the_matching_rows_on_the_route
 }
 
 #[tokio::test]
-async fn a_plain_predicate_prepare_still_runs_on_the_router_door() {
-    for (prepare, expected) in [
-        (
-            "PREPARE p AS DELETE FROM ice.sales.t WHERE id = 2",
-            vec![(1, 10), (3, 30), (4, 40)],
-        ),
-        (
-            "PREPARE p AS UPDATE ice.sales.t SET v = 5 WHERE id = 2",
-            vec![(1, 10), (2, 5), (3, 30), (4, 40)],
-        ),
+async fn a_plain_predicate_prepare_refuses_on_the_router_door() {
+    for prepare in [
+        "PREPARE p AS DELETE FROM ice.sales.t WHERE id = 2",
+        "PREPARE p AS UPDATE ice.sales.t SET v = 5 WHERE id = 2",
     ] {
-        let wh = TempDir::new().unwrap();
-        let (ctx, catalogs) = seeded(&wh).await;
-        outcome(&ctx, &catalogs, prepare).await.expect(prepare);
-        outcome(&ctx, &catalogs, "EXECUTE p")
-            .await
-            .expect("EXECUTE p");
-        assert_eq!(state(&ctx, &catalogs).await, (expected, 2), "{prepare}");
+        refuses_and_holds(PREPARE_REFUSAL, prepare).await;
     }
 }
 
@@ -174,14 +273,21 @@ async fn a_plain_predicate_prepare_still_runs_on_the_router_door() {
 async fn a_plain_explain_of_the_subquery_delete_answers_its_plan_on_the_router_door() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = seeded(&wh).await;
-    let statement = "EXPLAIN DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.s)";
-    let batches = outcome(&ctx, &catalogs, statement).await.expect(statement);
-    let plan = datafusion::arrow::util::pretty::pretty_format_batches(&batches)
-        .expect("render the plan")
-        .to_string();
-    assert!(
-        plan.contains("logical_plan") && plan.contains("physical_plan"),
-        "{plan}"
-    );
+    for write in wrapped_writes() {
+        if write.starts_with("MERGE") {
+            continue;
+        }
+        let statement = format!("EXPLAIN {write}");
+        let batches = outcome(&ctx, &catalogs, &statement)
+            .await
+            .expect(&statement);
+        let plan = datafusion::arrow::util::pretty::pretty_format_batches(&batches)
+            .expect("render the plan")
+            .to_string();
+        assert!(
+            plan.contains("logical_plan") && plan.contains("physical_plan"),
+            "{statement}: {plan}"
+        );
+    }
     assert_eq!(state(&ctx, &catalogs).await, (SEEDED.to_vec(), 1));
 }

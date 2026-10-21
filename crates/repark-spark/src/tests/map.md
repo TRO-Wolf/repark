@@ -69,6 +69,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and warehouse objects unchanged; expiry, orphan sweep, rollback, dry-run planning,
   SELECT, CREATE and the lookalike keys run. The step-1 ported probe is the first pin.
   pins: enc-1/C-001, C-002, C-003, C-004, C-005
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 141):** `encrypted_table_explain_analyze_insert_refuses`
+  now asserts the ruled `EXPLAIN ANALYZE` text, which the seam raises before the ENC-1 refusal;
+  the table is unchanged as before. pins: explain-dml-write-1/C-008
 - `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as
   pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in
   copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the
@@ -765,6 +768,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   *(Fix round 4, 2026-10-21, ledger C-047:)* the `///` lines on this file's six tests are
   removed; the paragraphs above hold each test's reason and its citation.
   pins: ice-ntz-nested-refuse-1/C-047
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 141):** in
+  `a_prepared_write_of_an_instant_refuses_in_a_utc_session_too` the `walled` control no longer
+  prepares: it takes the ruled `PREPARE` text, `EXECUTE walled` fails, one snapshot.
+  pins: explain-dml-write-1/C-008
 - `nested_ns_routes.rs` — **ICE-TSNS-MERGE-WALL-1, split fold 1 (2026-10-10):** the nested
   `timestamp_ns` refusal on the routes the router rewrites.
   `a_branch_or_wap_write_of_a_nested_nanosecond_leaf_is_refused_and_writes_nothing`: fifteen
@@ -797,6 +804,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated`: the same wrappers on a
   `struct<v: TIMESTAMP>` table, and main's parser text for a malformed UPDATE there.
   pins: ice-tsns-merge-wall-1/C-053, C-054
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136 and 141):** a wrapped write the nested gate
+  lets through now meets the wrapper refusal instead of running:
+  `a_wrapped_statement_that_does_not_supply_the_column_meets_the_wrapper_refusal` (formerly
+  `…_still_runs`) and `a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated` assert the
+  ruled `EXPLAIN ANALYZE` or `PREPARE` text, never the nested refusal, and one snapshot.
+  pins: explain-dml-write-1/C-008
 - `v3_timestamp_ns_door.rs` (zoned name) — **ICE-TSTZNS-WALL-1 (2026-10-10):**
   `ns_wall_udf_name_matches_the_registered_udf` also pins
   `ntz_store::NS_INSTANT_CAST_UDF_NAME` equal to `TIMESTAMPTZ_NS_CAST_NAME`.
@@ -1748,6 +1761,19 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `DELETE` answers its plan. The Spark SQL session door's twin is
   `python/repark/tests/writes/test_repark_sql_update_subquery_where_1_spark_door.py`.
   pins: repark-sql-update-subquery-where-1/C-025, C-026
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138, 140 to 142):** on the router door every write
+  under a wrapper refuses: `an_explain_analyze_of_a_write_refuses_on_the_router_door` and
+  `a_prepared_write_refuses_on_the_router_door` run `DELETE`, `UPDATE`, `INSERT` and `MERGE`
+  with plain and `IN (SELECT …)` predicates, plus `VERBOSE` and a parameterised `PREPARE`; each
+  takes the wrapper's ruled text, `EXECUTE p` finds nothing, the rows and snapshots hold. The
+  three `PREPARE` pins above now assert the `PREPARE` text, and the plain-predicate pin is
+  `a_plain_predicate_prepare_refuses_on_the_router_door` (ruling 138). Controls:
+  `a_prepared_query_still_runs_on_the_router_door`,
+  `explain_and_explain_analyze_of_a_select_answer_on_the_router_door`, the bare `IN` forms, and a
+  plain `EXPLAIN` of each non-`MERGE` write. pins: explain-dml-write-1/C-004, C-005, C-006, C-008
+  **Fix round 1 (2026-10-21, verifier S1-1):** `every_spelling_of_a_wrapped_write_refuses_on_the_router_door`:
+  a trailing `;`, a leading `--` comment line and lower case under both wrappers; red when the
+  refusal is skipped on a trailing `;`. pins: explain-dml-write-1/C-014
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
   `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),

@@ -1,6 +1,15 @@
 use std::ops::ControlFlow;
 
-use datafusion::sql::sqlparser::ast::{Statement, visit_statements};
+use datafusion::error::{DataFusionError, Result};
+use datafusion::sql::parser::Statement as DFStatement;
+use datafusion::sql::sqlparser::ast::{Ident, Statement, visit_statements};
+
+const EXPLAIN_ANALYZE_REFUSAL: &str = "EXPLAIN ANALYZE is refused: its statement writes to a \
+     table, and EXPLAIN ANALYZE runs the statement it explains. A plain EXPLAIN of the same \
+     statement still shows its plan without running it, and EXPLAIN ANALYZE of a query still works.";
+
+const PREPARE_REFUSAL_TAIL: &str = "is refused: its statement writes to a table, and a prepared \
+     write would run later, at EXECUTE. PREPARE of a query still works.";
 
 #[must_use]
 pub fn executed_writes(statement: &Statement) -> Vec<Statement> {
@@ -33,3 +42,36 @@ pub fn executed_writes(statement: &Statement) -> Vec<Statement> {
         }
     }
 }
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_wrapped_write(statement: &DFStatement) -> Result<()> {
+    let mut analyzed = false;
+    let mut current = statement;
+    while let DFStatement::Explain(explain) = current {
+        if !explain.analyze {
+            return Ok(());
+        }
+        analyzed = true;
+        current = explain.statement.as_ref();
+    }
+    let DFStatement::Statement(inner) = current else {
+        return Ok(());
+    };
+    let refusal = match inner.as_ref() {
+        _ if analyzed => EXPLAIN_ANALYZE_REFUSAL.to_string(),
+        Statement::Explain { analyze: true, .. } => EXPLAIN_ANALYZE_REFUSAL.to_string(),
+        Statement::Prepare { name, .. } => prepare_refusal(name),
+        _ => return Ok(()),
+    };
+    if executed_writes(inner).is_empty() {
+        return Ok(());
+    }
+    Err(DataFusionError::Plan(refusal))
+}
+
+fn prepare_refusal(name: &Ident) -> String {
+    format!("PREPARE `{name}` {PREPARE_REFUSAL_TAIL}")
+}
+
+#[cfg(test)]
+mod tests;

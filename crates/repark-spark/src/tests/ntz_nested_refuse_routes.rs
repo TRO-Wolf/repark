@@ -214,6 +214,9 @@ async fn a_statement_that_wraps_a_write_of_an_instant_is_decided_as_that_write()
     assert_eq!(attempt(&ctx, &catalogs, &planned).await, Ok(()));
 }
 
+const PREPARED_WRITE_REFUSAL: &str = "PREPARE `walled` is refused: its statement writes to a \
+     table, and a prepared write would run later, at EXECUTE. PREPARE of a query still works.";
+
 #[tokio::test]
 async fn a_prepared_write_of_an_instant_refuses_in_a_utc_session_too() {
     let wh = TempDir::new().unwrap();
@@ -222,10 +225,12 @@ async fn a_prepared_write_of_an_instant_refuses_in_a_utc_session_too() {
     let refused = attempt(&ctx, &catalogs, &zoned).await.expect_err("refused");
     assert!(refused.contains(REFUSED), "{refused}");
     let wall = format!("PREPARE walled AS INSERT INTO ice.sales.t SELECT 6, {WALL}, 0");
-    assert_eq!(attempt(&ctx, &catalogs, &wall).await, Ok(()));
+    let refused = attempt(&ctx, &catalogs, &wall).await.expect_err("refused");
+    assert!(refused.contains(PREPARED_WRITE_REFUSAL), "{refused}");
+    assert!(!refused.contains(REFUSED), "{refused}");
     set_zone(&ctx, "America/New_York");
-    assert_eq!(attempt(&ctx, &catalogs, "EXECUTE walled").await, Ok(()));
-    assert_eq!(snapshots(&catalogs).await, 2);
+    assert!(attempt(&ctx, &catalogs, "EXECUTE walled").await.is_err());
+    assert_eq!(snapshots(&catalogs).await, 1);
 }
 
 #[tokio::test]

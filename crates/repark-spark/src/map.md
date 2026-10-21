@@ -1007,6 +1007,12 @@ pins: rp-4-fork-repin/C-005, C-006
   refused where Spark answers (MC-UPD-01/02). No unique case-insensitive match leaves the
   requested spelling alone, so the ambiguity and missing-column refusals still fire there.
   pins: ice-session-write-conf-1/C-063
+- `spark_ast.rs` — **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):**
+  `execute_passthrough_inner` calls `repark_iceberg::write::statement_writes::refuse_wrapped_write`
+  right after `sql_to_statement`, before the `DfStatement` match: DataFusion's own
+  `EXPLAIN ANALYZE` (the `Explain` arm, which never reached the strict pregate) and a `PREPARE` of
+  any write refuse on both repark-spark doors with the ruled texts, before the strict pregate;
+  the nested-NTZ gate (`router.rs`) still runs first. pins: explain-dml-write-1/C-004, C-007
 - `spark_ast.rs` — **WO CASESENS-1 slice 2 (2026-09-27):**
   `try_execute_identity_dml` runs the `false` branch through
   `canonicalize_identity_selection` as before and the `true` branch through the

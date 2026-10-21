@@ -798,6 +798,19 @@ repark-core's error map.
   `repark.sql()` (`repark-core`'s `DataFusionDialect`, which cannot depend on `repark-spark`)
   share it. `DELETE` is new to the walk; the router's match ignores it, so the Spark SQL door
   answers as before. Its tests are the two callers' pins.
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):**
+  `refuse_wrapped_write(&DFStatement)` is the one wrapper refusal every door calls on the
+  statement it parsed, before anything executes. It looks through DataFusion's `EXPLAIN` layers
+  (a plain one answers `Ok`, since it runs nothing) and refuses when an `EXPLAIN ANALYZE`, or a
+  `PREPARE` at the top, wraps a statement whose `executed_writes` is not empty: any `INSERT`,
+  `UPDATE`, `MERGE` or `DELETE` (ruling 141). The text follows the outermost wrapper and is the
+  owner's (ruling 140); it names no data-deleting action. A refused `PREPARE` is never stored, so
+  `EXECUTE` finds nothing. Callers: `repark-core/src/dialect.rs` (`repark.sql()`), the ANSI
+  `repark-sql/src/router.rs`, `repark-spark/src/spark_ast.rs` (both repark-spark doors). Its unit
+  tests are in [statement_writes/tests.rs](statement_writes/map.md).
+  pins: explain-dml-write-1/C-007
+  **Fix round 1 (2026-10-21):** the prepared name in the `PREPARE` text is the `Ident` as written,
+  quoting included. pins: explain-dml-write-1/C-015
   pins: repark-sql-update-subquery-where-1/C-021
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI

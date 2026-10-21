@@ -805,8 +805,15 @@ async fn encrypted_table_explain_analyze_insert_refuses() {
         &catalogs,
         "EXPLAIN ANALYZE INSERT INTO ice.sales.enc VALUES (3, 'c')",
     )
-    .await;
-    assert_refusal(error, "sales.enc");
+    .await
+    .to_string();
+    assert!(
+        error.contains(
+            "EXPLAIN ANALYZE is refused: its statement writes to a table, and EXPLAIN ANALYZE \
+             runs the statement it explains."
+        ),
+        "{error}"
+    );
     assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
 }
 

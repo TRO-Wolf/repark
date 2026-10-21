@@ -167,6 +167,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
   pins: ice-list-null-2/C-003
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):** `execute_time_travelled`
+  calls `repark_iceberg::write::statement_writes::refuse_wrapped_write` on the parsed statement
+  before any routing, so `EXPLAIN ANALYZE` (which went straight to `delegate`) and `PREPARE`
+  (the `_` arm) of a write refuse on the ANSI door with the ruled texts.
+  pins: explain-dml-write-1/C-003, C-007
 - `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13; ruling 94, 2026-10-15):**
   `AnsiDialect::type_planner` hands the session builder the ANSI variant
   (`spark_type_planner::ansi_type_planner`), so the ANSI door types `TIMESTAMP` as the naive

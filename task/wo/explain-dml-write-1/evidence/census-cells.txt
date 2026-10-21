@@ -1,0 +1,351 @@
+bare_delete|in
+DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+
+bare_update|in
+UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_delete|in
+EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_delete|in
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_update|in
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)
+
+prepare_delete|in
+PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+prepare_update|in
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+bare_delete|not_in
+DELETE FROM ice.ns.t WHERE id NOT IN (SELECT id FROM ice.ns.s)
+
+bare_update|not_in
+UPDATE ice.ns.t SET v = 5 WHERE id NOT IN (SELECT id FROM ice.ns.s)
+
+explain_delete|not_in
+EXPLAIN DELETE FROM ice.ns.t WHERE id NOT IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_delete|not_in
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id NOT IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_update|not_in
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id NOT IN (SELECT id FROM ice.ns.s)
+
+prepare_delete|not_in
+PREPARE p AS DELETE FROM ice.ns.t WHERE id NOT IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+prepare_update|not_in
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id NOT IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+bare_delete|exists
+DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s)
+
+bare_update|exists
+UPDATE ice.ns.t SET v = 5 WHERE EXISTS (SELECT 1 FROM ice.ns.s)
+
+explain_delete|exists
+EXPLAIN DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s)
+
+explain_analyze_delete|exists
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s)
+
+explain_analyze_update|exists
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE EXISTS (SELECT 1 FROM ice.ns.s)
+
+prepare_delete|exists
+PREPARE p AS DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s)
+EXECUTE p
+
+prepare_update|exists
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE EXISTS (SELECT 1 FROM ice.ns.s)
+EXECUTE p
+
+bare_delete|exists_corr
+DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+bare_update|exists_corr
+UPDATE ice.ns.t SET v = 5 WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+explain_delete|exists_corr
+EXPLAIN DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+explain_analyze_delete|exists_corr
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+explain_analyze_update|exists_corr
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+prepare_delete|exists_corr
+PREPARE p AS DELETE FROM ice.ns.t WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+EXECUTE p
+
+prepare_update|exists_corr
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+EXECUTE p
+
+bare_delete|not_exists_corr
+DELETE FROM ice.ns.t WHERE NOT EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+bare_update|not_exists_corr
+UPDATE ice.ns.t SET v = 5 WHERE NOT EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+explain_delete|not_exists_corr
+EXPLAIN DELETE FROM ice.ns.t WHERE NOT EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+explain_analyze_delete|not_exists_corr
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE NOT EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+explain_analyze_update|not_exists_corr
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE NOT EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+
+prepare_delete|not_exists_corr
+PREPARE p AS DELETE FROM ice.ns.t WHERE NOT EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+EXECUTE p
+
+prepare_update|not_exists_corr
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE NOT EXISTS (SELECT 1 FROM ice.ns.s WHERE s.id = t.id)
+EXECUTE p
+
+bare_delete|corr_in
+DELETE FROM ice.ns.t WHERE id IN (SELECT s.id FROM ice.ns.s WHERE s.w > t.v)
+
+bare_update|corr_in
+UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT s.id FROM ice.ns.s WHERE s.w > t.v)
+
+explain_delete|corr_in
+EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT s.id FROM ice.ns.s WHERE s.w > t.v)
+
+explain_analyze_delete|corr_in
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT s.id FROM ice.ns.s WHERE s.w > t.v)
+
+explain_analyze_update|corr_in
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT s.id FROM ice.ns.s WHERE s.w > t.v)
+
+prepare_delete|corr_in
+PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (SELECT s.id FROM ice.ns.s WHERE s.w > t.v)
+EXECUTE p
+
+prepare_update|corr_in
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT s.id FROM ice.ns.s WHERE s.w > t.v)
+EXECUTE p
+
+bare_delete|eq_scalar
+DELETE FROM ice.ns.t WHERE id = (SELECT max(id) FROM ice.ns.s)
+
+bare_update|eq_scalar
+UPDATE ice.ns.t SET v = 5 WHERE id = (SELECT max(id) FROM ice.ns.s)
+
+explain_delete|eq_scalar
+EXPLAIN DELETE FROM ice.ns.t WHERE id = (SELECT max(id) FROM ice.ns.s)
+
+explain_analyze_delete|eq_scalar
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = (SELECT max(id) FROM ice.ns.s)
+
+explain_analyze_update|eq_scalar
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id = (SELECT max(id) FROM ice.ns.s)
+
+prepare_delete|eq_scalar
+PREPARE p AS DELETE FROM ice.ns.t WHERE id = (SELECT max(id) FROM ice.ns.s)
+EXECUTE p
+
+prepare_update|eq_scalar
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id = (SELECT max(id) FROM ice.ns.s)
+EXECUTE p
+
+bare_delete|in_and_lit
+DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s) AND v > 25
+
+bare_update|in_and_lit
+UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s) AND v > 25
+
+explain_delete|in_and_lit
+EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s) AND v > 25
+
+explain_analyze_delete|in_and_lit
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s) AND v > 25
+
+explain_analyze_update|in_and_lit
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s) AND v > 25
+
+prepare_delete|in_and_lit
+PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s) AND v > 25
+EXECUTE p
+
+prepare_update|in_and_lit
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id IN (SELECT id FROM ice.ns.s) AND v > 25
+EXECUTE p
+
+bare_delete|eq_any
+DELETE FROM ice.ns.t WHERE id = ANY (SELECT id FROM ice.ns.s)
+
+bare_update|eq_any
+UPDATE ice.ns.t SET v = 5 WHERE id = ANY (SELECT id FROM ice.ns.s)
+
+explain_delete|eq_any
+EXPLAIN DELETE FROM ice.ns.t WHERE id = ANY (SELECT id FROM ice.ns.s)
+
+explain_analyze_delete|eq_any
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = ANY (SELECT id FROM ice.ns.s)
+
+explain_analyze_update|eq_any
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id = ANY (SELECT id FROM ice.ns.s)
+
+prepare_delete|eq_any
+PREPARE p AS DELETE FROM ice.ns.t WHERE id = ANY (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+prepare_update|eq_any
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id = ANY (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+bare_delete|plain_eq
+DELETE FROM ice.ns.t WHERE id = 2
+
+bare_update|plain_eq
+UPDATE ice.ns.t SET v = 5 WHERE id = 2
+
+explain_delete|plain_eq
+EXPLAIN DELETE FROM ice.ns.t WHERE id = 2
+
+explain_analyze_delete|plain_eq
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2
+
+explain_analyze_update|plain_eq
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id = 2
+
+prepare_delete|plain_eq
+PREPARE p AS DELETE FROM ice.ns.t WHERE id = 2
+EXECUTE p
+
+prepare_update|plain_eq
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id = 2
+EXECUTE p
+
+bare_delete|plain_in_list
+DELETE FROM ice.ns.t WHERE id IN (1, 3)
+
+bare_update|plain_in_list
+UPDATE ice.ns.t SET v = 5 WHERE id IN (1, 3)
+
+explain_delete|plain_in_list
+EXPLAIN DELETE FROM ice.ns.t WHERE id IN (1, 3)
+
+explain_analyze_delete|plain_in_list
+EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (1, 3)
+
+explain_analyze_update|plain_in_list
+EXPLAIN ANALYZE UPDATE ice.ns.t SET v = 5 WHERE id IN (1, 3)
+
+prepare_delete|plain_in_list
+PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (1, 3)
+EXECUTE p
+
+prepare_update|plain_in_list
+PREPARE p AS UPDATE ice.ns.t SET v = 5 WHERE id IN (1, 3)
+EXECUTE p
+
+prepare_explain_delete|in
+PREPARE p AS EXPLAIN DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+prepare_explain_analyze_delete|in
+PREPARE p AS EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+prepare_param_delete|eq
+PREPARE p(INT) AS DELETE FROM ice.ns.t WHERE id = $1
+EXECUTE p(2)
+
+prepare_param_delete|in
+PREPARE p(INT) AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s WHERE w > $1)
+EXECUTE p(0)
+
+prepare_select
+PREPARE q AS SELECT v FROM ice.ns.t WHERE id = 2
+EXECUTE q
+
+prepare_select_param
+PREPARE q(INT) AS SELECT v FROM ice.ns.t WHERE id = $1
+EXECUTE q(3)
+
+bare_insert_values
+INSERT INTO ice.ns.t VALUES (5, 50)
+
+bare_insert_select_in
+INSERT INTO ice.ns.t SELECT id + 10, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_insert
+EXPLAIN INSERT INTO ice.ns.t SELECT id + 10, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_insert
+EXPLAIN ANALYZE INSERT INTO ice.ns.t SELECT id + 10, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_insert_values
+EXPLAIN ANALYZE INSERT INTO ice.ns.t VALUES (5, 50)
+
+prepare_insert
+PREPARE p AS INSERT INTO ice.ns.t SELECT id + 10, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+bare_merge
+MERGE INTO ice.ns.t AS target USING (SELECT id, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)) AS source ON target.id = source.id WHEN MATCHED THEN UPDATE SET v = source.w
+
+explain_analyze_merge
+EXPLAIN ANALYZE MERGE INTO ice.ns.t AS target USING (SELECT id, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)) AS source ON target.id = source.id WHEN MATCHED THEN UPDATE SET v = source.w
+
+prepare_merge
+PREPARE p AS MERGE INTO ice.ns.t AS target USING (SELECT id, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)) AS source ON target.id = source.id WHEN MATCHED THEN UPDATE SET v = source.w
+EXECUTE p
+
+cte_delete
+WITH c AS (SELECT 2 AS id) DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM c)
+
+explain_analyze_cte_delete
+EXPLAIN ANALYZE WITH c AS (SELECT 2 AS id) DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM c)
+
+prepare_cte_delete
+PREPARE p AS WITH c AS (SELECT 2 AS id) DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM c)
+EXECUTE p
+
+explain_analyze_verbose_delete|eq
+EXPLAIN ANALYZE VERBOSE DELETE FROM ice.ns.t WHERE id = 2
+
+explain_verbose_delete|in
+EXPLAIN VERBOSE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_delete_nowhere
+EXPLAIN ANALYZE DELETE FROM ice.ns.t
+
+prepare_delete_nowhere
+PREPARE p AS DELETE FROM ice.ns.t
+EXECUTE p
+
+explain_analyze_prepare_delete|in
+EXPLAIN ANALYZE PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+EXECUTE p
+
+explain_explain_analyze_delete|eq
+EXPLAIN EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2
+
+select_in
+SELECT id FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s) ORDER BY id
+
+explain_select_in
+EXPLAIN SELECT id FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_select_in
+EXPLAIN ANALYZE SELECT id FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+
+explain_analyze_verbose_select
+EXPLAIN ANALYZE VERBOSE SELECT * FROM ice.ns.t
+
+ctas_in
+CREATE TABLE ice.ns.c AS SELECT * FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s)
+SELECT count(*) FROM ice.ns.c
