@@ -4,6 +4,8 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, ArrayRef, AsArray};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Int64Type};
+use datafusion::logical_expr::Partitioning;
+use datafusion::prelude::col;
 use repark_core::ReparkSession;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
@@ -655,4 +657,61 @@ async fn the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed() {
          FROM ice.ns.src",
     )
     .await;
+}
+
+/// A frame whose plan holds a repartition or a node the walk does not model (`DISTINCT ON`)
+/// above a container cast of an instant: the walk follows the column through the first and
+/// reads the second whole, so a write from each frame's view refuses outside UTC and adds no
+/// snapshot.
+///
+/// pins: ice-ntz-nested-refuse-1/C-034
+#[tokio::test]
+async fn a_frame_through_a_repartition_or_an_unmodelled_node_refuses() {
+    let mut wrong = Vec::new();
+    for (zone, _) in ZONES {
+        let session = session(zone);
+        let _warehouse = catalog(&session).await;
+        run(
+            &session,
+            "CREATE TABLE ice.ns.t (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT) USING \
+             iceberg TBLPROPERTIES ('format-version'='2')",
+        )
+        .await;
+        let frame = session
+            .sql(
+                "SELECT id, CAST(named_struct('v', x, 'n', 1) AS STRUCT<v: TIMESTAMP_NTZ, n: INT>) \
+                 AS st, 0 AS k FROM ice.ns.src",
+            )
+            .await
+            .expect("frame");
+        let shaped = [
+            (
+                "spread",
+                frame.clone().repartition(Partitioning::RoundRobinBatch(2)),
+            ),
+            (
+                "first_by_id",
+                frame.clone().distinct_on(
+                    vec![col("id")],
+                    vec![col("id"), col("st"), col("k")],
+                    None,
+                ),
+            ),
+        ];
+        for (name, shaped) in shaped {
+            session
+                .create_or_replace_temp_view_from(name, &shaped.expect(name))
+                .expect("view");
+            let write = format!("INSERT INTO ice.ns.t SELECT id, st, k FROM {name}");
+            match attempt(&session, &write).await {
+                Err(error) if error.contains(HINT) => {}
+                outcome => wrong.push(format!("{zone} / {name}: {outcome:?}")),
+            }
+        }
+        let count = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
+        if count != vec![Some(0)] {
+            wrong.push(format!("{zone}: {count:?} snapshots"));
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
 }

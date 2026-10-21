@@ -323,6 +323,16 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `Subquery` node that stops the walk, stores it again). A lateral that returns only the wall
   sibling of that cast stores the wall, so the walk follows the one outer reference the column
   uses, not the whole left side.
+  The same pin now holds every lineage arm that opens a hole when it stops (ledger C-034,
+  verifier round-2 S1-3): `SELECT DISTINCT`, a `LIMIT` inside a derived table, a derived table
+  read beside a window, `VALUES` whose second row holds the cast, a top-level `ORDER BY`, and a
+  lateral whose outer relation shares its alias with an outer relation that holds a wall, and a
+  lateral nested in a lateral's body under the same alias (the reference resolves in the
+  nearest scope, and past it in the scopes outside it). `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`
+  (`ntz_nested_refuse.rs`) writes from a frame view through `repartition` and one through
+  `distinct_on` (read whole); each refuses and adds no snapshot. Each pin fails under its
+  one-line mutant (L5, L7, L8, L9, L13, L14, L18, R5, R6).
+  pins: ice-ntz-nested-refuse-1/C-034
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).

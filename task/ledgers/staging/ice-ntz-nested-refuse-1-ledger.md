@@ -81,6 +81,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-031 | Every hand mutant of both verifier rounds that still applies, and fifteen of this round's, is killed by a named pin (35 run; the frame-view branch of M9 is gone). | §12. | **PROVEN** | §12. |
 | C-032 | The round's gates are green with real exit codes, and the round costs nothing measurable (every 10-run median ratio against main within the 1.05x gate). | §12. | **PROVEN** | §12. |
 | C-033 | Outside UTC the lineage walk follows a `LATERAL` subquery's outer reference into the join's other side: a container cast of an instant that reaches the column through `LATERAL (SELECT a.c AS s)` (comma, `CROSS JOIN LATERAL`, `JOIN LATERAL … ON true`, `LEFT JOIN LATERAL`, an array element, an `ARRAY` column, a temporary view, `BY NAME`, a MERGE insert and a MERGE update, a lateral of a lateral) refuses and writes nothing, and a lateral that returns only a wall sibling of that cast stores the wall. Fail closed: an outer reference no enclosing join resolves refuses, and a node read whole inside the join's right side that holds an outer reference reads the left side whole too. *(Supersedes C-023's reading of a `Subquery` node as a pass-through, fix round 3, verifier round-2 S1-1.)* | The verifier's 17 cells and control re-run on the build; this round's lateral cells on Spark, main and the build; the two Rust lateral pins with mutant L16 as the control; two synthetic-plan pins for the fail-closed arms. | **PROVEN** | §13.1. `the_cast_walk_reads_only_what_reaches_the_column`, `router::nested_ns::tests::an_outer_reference_no_enclosing_join_resolves_fails_closed`, `router::nested_ns::tests::an_unmodelled_node_that_refers_out_reads_the_other_side_whole`. |
+| C-034 | Every lineage arm that opens a hole when it stops has a pin that a one-line mutant of the arm reds: `DISTINCT` (L7), a limit inside a derived table (L9), a window's input columns (L13), a values row past the first (L14), a top-level sort (L8), a repartition (L18), a node the walk does not model read whole (L5), the `LATERAL` outer reference (L16, R1, R2, R7), the nearest scope that holds it (R5) and the scopes outside the one it resolves in (R6). Every hand mutant of the three verifier rounds that still applies, and this round's, is killed by a named pin but two, each equivalent on every plan the type read builds: L11 (no scan the type read reaches carries a projection) and L17 (the step bound only refuses past 65,536 steps). *(Supersedes C-031's mutant set, fix round 3, verifier round-2 S1-3.)* | 61 mutants on the round's head, each alone over the four integration files, `--lib nested` and repark-iceberg `--lib nested_ns_gate`; the survivors re-run after the pins. | **PROVEN** | §13.2. `the_cast_walk_reads_only_what_reaches_the_column`, `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`. |
 
 ## §1 The rule and the seam
 
@@ -573,3 +574,82 @@ in the file's test module: `an_outer_reference_no_enclosing_join_resolves_fails_
 when an unresolved reference is skipped, and
 `an_unmodelled_node_that_refers_out_reads_the_other_side_whole` (a `DISTINCT ON` holding the
 reference, cross-joined to an instant cast) fails when the scope read is dropped.
+
+**Correction to §13.1 (2026-10-21, same round).** §13.1 says the seven lateral shapes that raise
+on main are refused on the build "because their type read cannot plan". Measured on the build in
+UTC, planning alone: five of them plan and raise only when run (the scalar subquery of the outer
+column and its wall twin in the physical planner; the derived table, `DISTINCT` and `UNION ALL`
+inside the lateral in `repark_lateral_projection_hoist`), and two fail to plan (`explode`
+unresolved; `a.c.v`, `Nested identifiers are not yet supported for OuterReferenceColumn`). The
+five that plan are refused by the walk: the outer reference is followed, or, for the scalar
+subquery, the whole read of the subquery holds an outer reference and reads the left side whole.
+No cell changes; no correct cell is lost (main raises on all seven in every zone).
+
+### §13.2 S1-3, pins per arm and every mutant (C-034)
+
+`the_cast_walk_reads_only_what_reaches_the_column` (`crates/repark-spark/tests/ntz_nested_refuse_casts.rs`)
+gains on its on-lineage list, each refusing in New York and Kolkata with no snapshot added:
+`SELECT DISTINCT id + 1, <cast>, …` (L7), a derived table `… LIMIT 5` (L9), a derived table
+read beside `row_number() OVER (ORDER BY id)` (L13), `VALUES` whose second row holds the cast
+(L14), a top-level `ORDER BY id` (L8), a lateral whose outer relation shares its alias `b`
+with an outer relation holding a wall (R5), and a lateral whose body joins a derived table
+aliased `a` over the outer `a.c` to an inner lateral of `a.c` (R6; it plans, and raises in
+the optimizer on main and in UTC, so the pin holds only the walk's refusal outside UTC). `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`
+(`crates/repark-spark/tests/ntz_nested_refuse.rs`) writes from two frame views over the cast,
+one through `repartition(RoundRobinBatch(2))` (L18) and one through `distinct_on` (L5, read
+whole). A frame through `sort` does not reach the walk as a `Sort` node (the view's plan is
+inlined without it), so the sort pin is the top-level `ORDER BY`.
+
+61 mutants: the verifier's round-0 set (V1 to V11; V6 is M6), round-1 set (M1 to M13; M9's
+branch is gone, M8 and M10 split into a and b) and round-2 set (N1 to N10, L1 to L19), and
+this round's R1 to R7 on the lateral walk. Each was applied alone to the round's head, the
+suites `--test ntz_nested_refuse --test ntz_nested_refuse_casts --test timestamp_ns_wall_doors
+--test timestamp_ns_nested_shapes`, `--lib nested` and repark-iceberg `--lib nested_ns_gate`
+run (baseline 143 passed), and the source restored (`git status` clean of the source after
+each pass). 158–211 s each, `taskset -c 0-25`, `CARGO_BUILD_JOBS=12`. The first pass left L8,
+L11, L17, R5 and R6 alive; the ORDER BY and two alias pins were added and the survivors, L5
+and L18 re-run alone (baseline 143 passed).
+
+| Mutant | Change | Killed by (pins failing) |
+|---|---|---|
+| M1 | `Expr::Cast` arm removed | 6, `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc` among them |
+| M2 | `Expr::TryCast` arm removed | `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc` |
+| M3 | `PREPARE` parameter check inverted | 2, the `PREPARE` pins |
+| M4 / V3 | the plain `UPDATE`'s cast test off | 2, `a_wall_or_the_hints_cast_stores_outside_utc_and_the_plain_update_refuses_the_cast` among them |
+| M5, M5b, V4 | the hint names a deleting or overwriting action | `the_refusal_names_the_table_the_column_and_the_leaf` |
+| M6 / V6 | the typing `SELECT` executed | `the_type_read_never_runs_the_source` |
+| M7 | the leaf-cast function read as a cast | 4 |
+| M8a | the whole read's temporary-view descent removed | `a_subquery_in_the_columns_expression_is_read_whole` |
+| M8b | the lineage's temporary-view descent removed | 2 |
+| M10, M10b | the subquery descent of the whole read, the lineage's subquery read | `a_subquery_in_the_columns_expression_is_read_whole` |
+| M11 | the INSERT cast test removed | 4 |
+| M12 | the UPDATE and MERGE cast test removed | 3 |
+| M13 | the zoned-sub-expression arm restored | `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression` |
+| V1 | the zone condition inverted | 18 |
+| V2 | `Etc/UTC` read as UTC | `only_a_utc_zone_lets_an_instant_through` |
+| V5 | the nanosecond leaf takes the microsecond text | 9 |
+| V7 | the outer `WITH` ignored | `the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` |
+| V8 | the map arm of the zone test dropped | 2 |
+| V9 | the MERGE source dropped from the typing `FROM` | 4 |
+| V10 | a supply with no value feed refuses | 13 |
+| V11 | `PREPARE` decided by the zone | 2 |
+| N1 to N4, N6, N8 | the lineage read whole; a filter's predicate read; a join's right side read on the left; one union branch; an aggregate not read; a window expression not read | `the_cast_walk_reads_only_what_reaches_the_column` |
+| N5 | a subquery's outer references not followed | `a_subquery_in_the_columns_expression_is_read_whole` |
+| N7 | a values row not read | 2 |
+| N9 | a projection's column references not followed | 4 |
+| N10 | a column that resolves in no input not read | `a_column_that_resolves_in_no_input_reads_every_input_whole` |
+| L1, L2, L4, L12 | a projection, an alias, a subquery alias stops; whole reads skipped | 4 to 8 each |
+| L3, L6, L7, L9, L10, L13, L14, L15, L16 | the last union arm; a join's right side; `DISTINCT`; a limit; a filter; a window's input columns; values past the first row; group expressions; a `Subquery` node | `the_cast_walk_reads_only_what_reaches_the_column` |
+| L5 | an unmodelled node treated as safe | `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`, `an_unmodelled_node_that_refers_out_reads_the_other_side_whole` |
+| L8 | a sort stops | `the_cast_walk_reads_only_what_reaches_the_column` (top-level `ORDER BY`; survived the first pass) |
+| L18 | a repartition stops | `a_frame_through_a_repartition_or_an_unmodelled_node_refuses` |
+| L19 | the view descent read whole | 2 |
+| R1 | the join's left side not pushed as a scope | `the_cast_walk_reads_only_what_reaches_the_column` (both lateral pins, as a refusal of the wall-sibling control) |
+| R2 | an outer reference not followed | `the_cast_walk_reads_only_what_reaches_the_column` |
+| R3 | an outer reference that resolves nowhere treated as safe | `an_outer_reference_no_enclosing_join_resolves_fails_closed` |
+| R4 | a whole read in a scope ignores outer references | `an_unmodelled_node_that_refers_out_reads_the_other_side_whole` |
+| R5 | an outer reference resolved in the outermost scope first | `the_cast_walk_reads_only_what_reaches_the_column` (alias-shadow lateral; survived the first pass) |
+| R6 | a followed outer reference keeps the scopes inside the one it resolves in | `the_cast_walk_reads_only_what_reaches_the_column` (nested alias-shadow lateral; survived the first pass) |
+| R7 | a lateral reads the whole left side | `the_cast_walk_reads_only_what_reaches_the_column` (the wall-sibling lateral) |
+| L11 | the view scan maps the column with `projection.first()` | equivalent: every scan the type read reaches is built with `projection: None` (DataFusion 54.1.0 `datafusion-sql` `relation/mod.rs` and `SessionContext::read_table` call `LogicalPlanBuilder::scan(…, None)`), and only the optimizer's projection pushdown sets one, which the type read never runs (`planned()` keeps `DataFrame::logical_plan()`; no router path calls `into_optimized_plan`); the verifier's instrumented build saw no scan projection in 190 plans |
+| L17 | the step bound removed | equivalent below the bound: the walk visits each (node, column) once per root, so it ends without the bound, and the bound changes an answer only on a plan of more than 65,536 such steps, where it refuses; no plan the probes build comes near it |

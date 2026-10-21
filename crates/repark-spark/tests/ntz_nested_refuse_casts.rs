@@ -646,7 +646,7 @@ const OFF_LINEAGE: [&str; 4] = [
      named_struct('v', w, 'n', 1) AS m FROM ice.ns.src) a, LATERAL (SELECT a.m AS s) l",
 ];
 
-const ON_LINEAGE: [&str; 9] = [
+const ON_LINEAGE: [&str; 16] = [
     "INSERT INTO ice.ns.t SELECT id + 1, s, 0, NULL FROM (SELECT id, {C} AS s FROM ice.ns.src) q \
      WHERE id > 0",
     "INSERT INTO ice.ns.t SELECT id + 1, named_struct('v', w, 'n', 1), 0, NULL FROM ice.ns.src \
@@ -664,11 +664,27 @@ const ON_LINEAGE: [&str; 9] = [
      FROM ice.ns.src) a, LATERAL (SELECT a.c AS s) l",
     "MERGE INTO ice.ns.t t USING (SELECT a.id, l.s FROM (SELECT id, {C} AS c FROM ice.ns.src) a, \
      LATERAL (SELECT a.c AS s) l) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = s.s",
+    "INSERT INTO ice.ns.t SELECT DISTINCT id + 1, {C}, 0, NULL FROM ice.ns.src",
+    "INSERT INTO ice.ns.t SELECT id + 1, s, 0, NULL FROM (SELECT id, {C} AS s FROM ice.ns.src \
+     LIMIT 5)",
+    "INSERT INTO ice.ns.t SELECT id + 1, s, 0, NULL FROM (SELECT id, s, row_number() OVER \
+     (ORDER BY id) AS rn FROM (SELECT id, {C} AS s FROM ice.ns.src))",
+    "INSERT INTO ice.ns.t VALUES (2, named_struct('v', TIMESTAMP_NTZ '2026-01-02 03:04:05', \
+     'n', 1), 0, NULL), (3, CAST(named_struct('v', TIMESTAMP '2026-01-02 03:04:05+00:00', \
+     'n', 1) AS STRUCT<v: TIMESTAMP_NTZ, n: INT>), 0, NULL)",
+    "INSERT INTO ice.ns.t SELECT id + 1, {C}, 0, NULL FROM ice.ns.src ORDER BY id",
+    "INSERT INTO ice.ns.t SELECT d.id + 1, d.s, 0, NULL FROM (SELECT id, named_struct('v', w, \
+     'n', 1) AS c FROM ice.ns.src) b JOIN (SELECT b.id, l.s FROM (SELECT id, {C} AS c \
+     FROM ice.ns.src) b, LATERAL (SELECT b.c AS s) l) d ON b.id = d.id",
+    "INSERT INTO ice.ns.t SELECT a.id + 1, l.s, 0, NULL FROM (SELECT id, {C} AS c FROM ice.ns.src) a, \
+     LATERAL (SELECT m.s FROM (SELECT a.c AS c) a, LATERAL (SELECT a.c AS s) m) l",
 ];
 
 /// The cast walk reads only what reaches the supplied column: the expression that produces it,
-/// through aliases, derived tables, views, joins, unions, windows, groupings and the outer
-/// reference a `LATERAL` subquery returns from the join's other side. A container
+/// through aliases, derived tables, views, joins, unions, windows (their input columns too),
+/// groupings, `DISTINCT`, limits, a top-level sort, every values row and the outer reference
+/// a `LATERAL` subquery returns from the join's other side (the nearest scope that holds it,
+/// when an outer relation shares the alias). A container
 /// cast of an instant that feeds a predicate, an `EXISTS` in a `WHERE` or a sibling column no
 /// longer refuses, and the wall stores; one that reaches the column through any of those
 /// shapes still refuses and writes nothing.

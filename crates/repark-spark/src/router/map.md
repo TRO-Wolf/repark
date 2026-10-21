@@ -199,8 +199,13 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   synthetic plan (no planner builds one), and, from fix round 3, the two fail-closed arms of
   the lateral walk on synthetic plans: an outer reference no enclosing join resolves, and an
   unmodelled node (`DISTINCT ON`) inside the right side of a join that holds an outer reference
-  (no plan RePark can run reaches either: every lateral body but a plain projection fails to
-  plan, and a failed plan refuses before the walk).
+  (no measured lateral that RePark can execute reaches either: a scalar subquery of the outer
+  column inside the lateral reaches the whole-read arm, and it plans, then fails in the
+  physical planner on main and the build; a derived table, `DISTINCT` or `UNION ALL` inside the
+  lateral plans and fails in `repark_lateral_projection_hoist`, and the walk follows its outer
+  reference). Fix round 3 also pins the walk's reach on SQL (ledger C-034): a top-level
+  `ORDER BY`, a repartition and a `DISTINCT ON` in a frame, and the nearest scope when lateral
+  aliases shadow.
   A `PREPARE` that holds a parameter is read as `Scope::Unreadable`, so every supply of the
   column refuses. **Why the container cast:** the planner's cast of a whole
   struct, array or map converts a zoned leaf with UTC even in a bare `SELECT`
