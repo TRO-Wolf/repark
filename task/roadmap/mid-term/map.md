@@ -996,3 +996,4 @@ declines it (a dated ruling in the intake, then the archive).
   bridge wall the bound guards (ledger clause C-002 of the perf-unpivot-1
   ledger). Open question: loaded-runner timing noise at millisecond medians
   (test) or a real slope change (product). Unmeasured until N quiet runs.
+- [update-where-binary-flake-1-card-2026-10-20.md](update-where-binary-flake-1-card-2026-10-20.md) — **card UPDATE-WHERE-BINARY-FLAKE-1** (2026-10-20, open, not scheduled): `UPDATE … WHERE` after a mixed set of insert doors including a `BINARY` literal fails about one time in four on main `c516c54a` with `Mismatch between schema and batches`; found by the U-8 verifier, outside U-8; lead is a per-door Arrow field difference on the `BINARY` column.
