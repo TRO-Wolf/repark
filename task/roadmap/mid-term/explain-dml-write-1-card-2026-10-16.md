@@ -13,6 +13,7 @@ owner merges. The card retires when that PR merges with the verifier's PASS. Ver
 `eccd920a` (pins only; the behaviour held on every door); fix round 1 the same day. On
 `repark.sql()`, which plans before the refusal runs, every wrapped write that DataFusion cannot plan keeps DataFusion's own error and writes nothing: a `MERGE`, a CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column, `EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE` (orchestrator ruling under
 the owner's grant, 2026-10-21, below).
+P2 report filed: `docs/cutover/p2-report-explain-dml-write-1-2026-10-21.md`.
 
 **Retires:** when `EXPLAIN ANALYZE` of DML refuses on every door, a `PREPARE` whose body is a write
 refuses on every door while `PREPARE` of a query still works, and the wrapper pins below hold on
