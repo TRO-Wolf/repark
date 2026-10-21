@@ -19,17 +19,14 @@ re-derived by its `_record_map_column_panic_1.py --check` (exit 0).
   controls), the unresolved `create_map` refusal, the ordering refusal and the odd-count divergence pin.
 - [fence-mutation-red.txt](fence-mutation-red.txt) — the `REPARK_PANIC_FATAL` pins go red when the resume is
   disabled.
-- [corpus-delta.json](corpus-delta.json) — ZONE-ORACLE-1 (PR 1128, not on main when this was measured) replayed on
-  main and on the head: `--main --check` on `e6ff5375` reports `drift=0` against the list recorded on `754fb6e5`
-  (EQUAL 1150, DIFFERENT 400, REFUSED 20, ERROR 70); on the head the counts are EQUAL 1199, DIFFERENT 411,
-  REFUSED 20, ERROR 10. Of the 60 `map(...)` ERROR cells, 49 become EQUAL and leave the list; 11 stay listed as
-  DIFFERENT: they are container casts of a map over a timestamp column (`MAP<STRING, TIMESTAMP_NTZ>` of an
-  instant, `MAP<STRING, STRING>` of an instant, `MAP<STRING, TIMESTAMP>` of a wall) whose zone answer is wrong
-  for CONTAINER-CAST-ZONE-1; the panic used to hide that value, and now the value shows.
-  No cell without `map(` changed, and no cell joined the list.
-- [zone_oracle_1_main_difference.head.json](zone_oracle_1_main_difference.head.json) — the list re-recorded on the
-  head (`--main --base e6ff5375`); it replaces `zone_oracle_1_main_difference.json` when PR 1128 and this change
-  meet, whichever merges second.
+- [corpus-delta.json](corpus-delta.json) — ZONE-ORACLE-1 replayed on main and on the head: `--main --check` on
+  `e6ff5375` reports `drift=0` against the list recorded on `754fb6e5` (EQUAL 1150, DIFFERENT 400, REFUSED 20, ERROR
+  70); on the head the counts are EQUAL 1199, DIFFERENT 411, REFUSED 20, ERROR 10. Of the 60 `map(...)` ERROR cells,
+  49 become EQUAL and leave the list; 11 stay listed as DIFFERENT: they are container casts of a map over a timestamp
+  column (`MAP<STRING, TIMESTAMP_NTZ>` of an instant, `MAP<STRING, STRING>` of an instant, `MAP<STRING, TIMESTAMP>` of
+  a wall) whose zone answer is wrong for CONTAINER-CAST-ZONE-1; the panic used to hide that value, and now the value
+  shows. No cell without `map(` changed, and no cell joined the list. PR 1128 merged (`5c8c811e`) while this change was
+  open, so the change carries the re-recorded `zone_oracle_1_main_difference.json` itself (`--main --base 5c8c811e`).
 - [cost.json](cost.json) — 10 runs per query over `range(1000000)`: the shapes main answers take 0.97x
   (literal map), 0.21x (`map(id, id + 1)`) and 0.98x (a materialised literal map) of main's median; the shapes main
   cannot answer take 7 to 25 ms.
