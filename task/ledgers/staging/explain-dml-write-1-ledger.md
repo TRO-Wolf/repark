@@ -355,6 +355,9 @@ COVERAGE_ATTESTATION:
         around PREPARE, PREPARE around EXPLAIN [ANALYZE], parameterised PREPARE, a WHERE-less
         DELETE, a CTE-carried DELETE, COPY under EXPLAIN ANALYZE, PREPARE of a view.
       artifacts: [crates/repark-iceberg/src/write/statement_writes/tests.rs, task/wo/explain-dml-write-1/evidence/census-cells.txt]
+      fix_round_1: A trailing semicolon, a leading comment and lower case are pinned on every Rust
+        door (C-014); on repark.sql() a wrapped write that does not plan, the CTE-carried one
+        included, keeps DataFusion's error, ruled as built (C-016).
     - id: AT-3
       status: ATTACKED
       evidence: A refused statement writes nothing - rows, snapshot count and warehouse files read
@@ -452,3 +455,21 @@ red: `tests.rs:64:5`: `Error during planning: PREPARE `My P` is refused: …`.
 | Date | Where | As written | Correct |
 |---|---|---|---|
 | 2026-10-21 | §4.1, the dated-row split | "ruling 136 for the 200 `EXPLAIN ANALYZE` cells and 138 for the 150 `PREPARE` cells" | 225 rows cite ruling 136 (`explain_analyze_insert` 125 + `explain_analyze_update` 100) and 125 cite ruling 138 (`prepare_execute_insert` 125); the total of 350 and the per-route counts stand. The rows in `ice_tsns_type_planner_1_dated.json` were right; only the sentence was wrong (verifier finding S2-1). |
+
+### 9.4 S2-2 and Q-B1: the plan-first class on `repark.sql()`
+
+Ruled (orchestrator, under the owner's grant, 2026-10-21): **accepted as built.** On
+`repark.sql()` the call stays after `belt.plan` (106's AT-3 order holds), so every wrapped write
+that fails DataFusion planning keeps DataFusion's own error and writes nothing: `MERGE`, a
+CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column,
+`EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE`. The verifier measured 16 such cells of 91 on
+that door, each the same error on main. The ANSI door and both repark-spark doors give each the
+ruled text. This unit's own census shows the CTE case on `repark.sql()`
+(`census-repark-sql-head.txt`, `explain_analyze_cte_delete` and `prepare_cte_delete`: `Query …
+not implemented yet`, the table held). The card, the registry line and the 1.5.6 notes now name
+the whole class; the card carries the follow-up "moving the native-door call before planning
+would move 16 refusal texts and no write; unscheduled".
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-016 | Fix round 1, S2-2 (2026-10-21; C-005 stays as written): on `repark.sql()` a CTE-carried wrapped write, and every other wrapped write DataFusion cannot plan, refuses with DataFusion's plan error, not the ruled text, because that door plans before the refusal runs (106's AT-3 order, ruled to hold); nothing is written; the other three doors give the ruled text. | The `repark.sql()` census cells `explain_analyze_cte_delete`, `prepare_cte_delete`, `explain_analyze_merge`, `prepare_merge`; the `MERGE` cells of `dialect/tests.rs` and `test_explain_dml_write_1.py`. | **PROVEN** | §3, §6, §9.4; the verifier's 16 cells. |

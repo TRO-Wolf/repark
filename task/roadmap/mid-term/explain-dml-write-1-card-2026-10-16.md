@@ -9,7 +9,10 @@ day 106 (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1) merges or parks. If 106 merges, its
 first.
 
 **Status, 2026-10-21:** built on branch `feat/explain-dml-write-1` (PR #1137), verifier pending,
-owner merges. The card retires when that PR merges with the verifier's PASS.
+owner merges. The card retires when that PR merges with the verifier's PASS. Verifier FAIL at
+`eccd920a` (pins only; the behaviour held on every door); fix round 1 the same day. On
+`repark.sql()`, which plans before the refusal runs, every wrapped write that DataFusion cannot plan keeps DataFusion's own error and writes nothing: a `MERGE`, a CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column, `EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE` (orchestrator ruling under
+the owner's grant, 2026-10-21, below).
 
 **Retires:** when `EXPLAIN ANALYZE` of DML refuses on every door, a `PREPARE` whose body is a write
 refuses on every door while `PREPARE` of a query still works, and the wrapper pins below hold on
@@ -32,6 +35,13 @@ every door.
   a query, `EXPLAIN [ANALYZE] SELECT` and `df.explain("cost")` answer as before. On
   `repark.sql()`, which plans before the refusal, a wrapped `MERGE` keeps DataFusion's plan
   refusal (`Unsupported SQL statement: MERGE INTO …`) and writes nothing.
+- **Q-B1, orchestrator ruling under the owner's grant, 2026-10-21: accepted as built.** On
+  `repark.sql()` the call stays after `belt.plan` (106's AT-3 order holds), so every wrapped write that DataFusion cannot plan keeps DataFusion's own error and writes nothing: a `MERGE`, a CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column, `EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE`.
+  The verifier measured 16 such cells of 91 on that door; main gave the same errors. The ANSI
+  door and both repark-spark doors give each of them the ruled text. The prepared name in the
+  `PREPARE` text is the identifier as written, quoting included (same ruling).
+- **Follow-up:** moving the native-door call before planning would move 16 refusal texts and no
+  write; unscheduled.
 - **The `INSERT` and `MERGE` rows (ruling 141), measured 2026-10-21 on main `c91f69c5` and on the
   branch, Iceberg seeds as below:**
 

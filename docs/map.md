@@ -48,7 +48,8 @@ repo.
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
   single home for how repark differs from Apache Spark. **2026-10-21 (EXPLAIN-DML-WRITE-1,
   verifier pending):** the REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 row gains the wrapper refusal on
-  every door (`EXPLAIN ANALYZE` and `PREPARE` of any write). **2026-10-21 (ICE-NTZ-NESTED-REFUSE-1
+  every door (`EXPLAIN ANALYZE` and `PREPARE` of any write); on `repark.sql()` a wrapped write that
+  does not plan keeps DataFusion's error. **2026-10-21 (ICE-NTZ-NESTED-REFUSE-1
   fix round 4):** row R-011's ruling-2 list counts 16 correct cells in 8 shapes (a scalar
   subquery returning a `named_struct` with a sibling `size(CAST(…))` field joined the class) and
   says the count covers the shapes measured and the class is open-ended; the nested-NTZ

@@ -768,7 +768,9 @@ declines it (a dated ruling in the intake, then the archive).
   `EXPLAIN ANALYZE` of DML and `PREPARE` of a write refuse on every door and the wrapper pins hold;
   takes 106's Opus slot the day 106 merges or parks.
   **2026-10-21:** built (PR #1137, verifier pending) under rulings 140 to 144: one wrapper refusal on
-  every door; `INSERT` and `MERGE` rows added to the measured table.
+  every door; `INSERT` and `MERGE` rows added to the measured table. Fix round 1 (2026-10-21): on
+  `repark.sql()` a wrapped write DataFusion cannot plan keeps DataFusion's error (ruled as built);
+  follow-up to move that call before planning, unscheduled.
 - [ice-struct-inline-table-from-1-card-2026-10-15.md](ice-struct-inline-table-from-1-card-2026-10-15.md) **card
   ICE-STRUCT-INLINE-TABLE-FROM-1 (2026-10-15, open, not this round, clerk under owner ruling 107 (a),
   struct-pairing family of ruling 57):** an inline table in `FROM` stores a reordered struct by name

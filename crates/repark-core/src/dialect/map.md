@@ -67,6 +67,9 @@ and the `EngineContext` construction contract.
   **Fix round 1 (2026-10-21, verifier S1-1):** `every_spelling_of_a_wrapped_write_refuses_and_writes_nothing`
   runs a trailing `;`, a leading `--` comment line and lower case under both wrappers; it goes red
   when the refusal is skipped on a trailing `;`. pins: explain-dml-write-1/C-014
+  **Fix round 1, Q-B1 ruled as built (2026-10-21):** on this door every wrapped write DataFusion
+  cannot plan (`MERGE`, CTE-carried, missing table or column, `FORMAT`, `DESCRIBE ANALYZE`) keeps
+  DataFusion's own error and writes nothing. pins: explain-dml-write-1/C-016
 ## Pointers
 
 - Up: [../map.md](../map.md)

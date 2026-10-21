@@ -9884,7 +9884,9 @@ the pin rather than obeying it.
   106's walk and the strict pregate: `EXPLAIN ANALYZE` (DataFusion's own included) and `PREPARE` of
   any `DELETE`, `UPDATE`, `INSERT` or `MERGE` refuse with the ruled texts, as Spark 4.1.2 refuses
   both at parse; the wrapped subquery forms above now take the wrapper's text instead of G3-E8.
-  The bare forms are unchanged. Pins: `python/repark/tests/writes/test_explain_dml_write_1.py`,
+  The bare forms are unchanged. On `repark.sql()`, which plans before the refusal runs, every wrapped write that DataFusion cannot plan keeps DataFusion's own error and writes nothing: a `MERGE`, a CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column, `EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE`
+  (orchestrator ruling under the owner's grant, 2026-10-21); the other doors give them the ruled
+  text. Pins: `python/repark/tests/writes/test_explain_dml_write_1.py`,
   `crates/repark-sql/tests/ansi_explain_dml_write.rs`,
   `crates/repark-spark/src/tests/wrapped_subquery_dml.rs`, `crates/repark-core/src/dialect/tests.rs`.
 - **Apache Spark** — 4.1.2 with Iceberg 1.11.0 updates only the matching rows. *(measured by
