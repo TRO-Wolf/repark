@@ -2682,11 +2682,11 @@
      ],
      [
       "msg",
-      "datafusion engine error: Execution error: map key cannot be null"
+      "datafusion engine error: Execution error: [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E"
      ],
      [
       "state",
-      null
+      "2200E"
      ]
     ]
    }
@@ -2727,11 +2727,11 @@
      ],
      [
       "msg",
-      "datafusion engine error: Execution error: map key must be unique, duplicate key found: d"
+      "datafusion engine error: Execution error: [DUPLICATED_MAP_KEY] Duplicate map key d was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505"
      ],
      [
       "state",
-      null
+      "23505"
      ]
     ]
    }

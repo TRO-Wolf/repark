@@ -3,8 +3,11 @@
 **Date:** 2026-10-20. **Filed by:** Claude (claude-fable-5-1), orchestrator, from the second
 hostile verification of PR #1124 (ICE-NTZ-NESTED-REFUSE-1, U-8) on main `c516c54a`.
 
-**Status:** open, not scheduled. An engine defect outside U-8; U-8's row R-011 misnamed it as a
-container cast of a map, and its fix round 2 corrects the row to point here.
+**Status:** fixed on branch `fix/map-column-panic-1` (2026-10-20, builder Claude Sonnet 5.5; the pull request
+awaits the owner's merge). The analyzer rule `SparkMapRewrite` sends every non-constant `map(...)` to the Spark
+per-row kernel on every door; the evidence is under `task/wo/map-column-panic-1/evidence/`. An engine defect
+outside U-8; U-8's row R-011 misnamed it as a container cast of a map, and its fix round 2 corrects the row
+to point here.
 
 **Retires:** when every statement below answers Spark's value, with a pin per door, and the
 Python boundary no longer reports a caught Rust panic for any `map()` over a column.

@@ -1,11 +1,10 @@
-use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::Int32Array;
 use datafusion::arrow::array::{Array, ArrayRef, MapArray, StructArray, new_empty_array};
 use datafusion::arrow::buffer::OffsetBuffer;
-use datafusion::arrow::compute::{concat, take};
+use datafusion::arrow::compute::interleave;
+use datafusion::arrow::compute::kernels::cmp::eq;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::{Result, ScalarValue, exec_err};
 use datafusion::logical_expr::type_coercion::binary::comparison_coercion;
@@ -14,27 +13,38 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
+pub const SQL_MAP_NAME: &str = "__repark_create_map__";
+const DATAFRAME_MAP_NAME: &str = "create_map";
+
 #[must_use]
 pub fn create_map_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(SparkCreateMap::new()))
+    Arc::new(ScalarUDF::from(SparkCreateMap::new(DATAFRAME_MAP_NAME)))
+}
+
+/// The same kernel under an internal name: the Spark SQL door lowers `map(...)` onto it.
+#[must_use]
+pub fn sql_map_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkCreateMap::new(SQL_MAP_NAME)))
 }
 
 #[derive(Debug)]
 struct SparkCreateMap {
     signature: Signature,
+    name: &'static str,
 }
 
 impl SparkCreateMap {
-    fn new() -> Self {
+    fn new(name: &'static str) -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            name,
         }
     }
 }
 
 impl PartialEq for SparkCreateMap {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
     }
 }
 
@@ -103,8 +113,7 @@ fn value_contains_null(arg_fields: &[FieldRef]) -> bool {
         .any(|field| field.is_nullable())
 }
 
-fn null_key(key: &ScalarValue) -> datafusion::error::DataFusionError {
-    let _ = key;
+fn null_key() -> datafusion::error::DataFusionError {
     datafusion::error::DataFusionError::Execution(
         "[NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E".to_string(),
     )
@@ -112,19 +121,92 @@ fn null_key(key: &ScalarValue) -> datafusion::error::DataFusionError {
 
 fn duplicate_key(key: &ScalarValue) -> datafusion::error::DataFusionError {
     datafusion::error::DataFusionError::Execution(format!(
-        "Duplicate map key '{key}' was found, please check the input data. If you want to \
-         remove the duplicated keys, you can set spark.sql.mapKeyDedupPolicy to \"LAST_WIN\" \
-         so that the key inserted at last takes precedence."
+        "[DUPLICATED_MAP_KEY] Duplicate map key {key} was found, please check the input data.\n\
+         If you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" \
+         to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505"
     ))
 }
 
-fn row_slice(array: &ArrayRef, row: usize) -> Result<ArrayRef> {
-    let indices = Int32Array::from(vec![i32::try_from(row).unwrap_or(0)]);
-    Ok(take(array.as_ref(), &indices, None)?)
+fn first_null_key(keys: &[&ArrayRef]) -> Option<(usize, usize)> {
+    keys.iter()
+        .enumerate()
+        .filter_map(|(index, key)| {
+            let nulls = key.logical_nulls()?;
+            let row = nulls.iter().position(|valid| !valid)?;
+            Some((row, index))
+        })
+        .min()
+}
+
+fn first_equal_row(left: &ArrayRef, right: &ArrayRef) -> Result<Option<usize>> {
+    if !left.data_type().is_floating()
+        && let Ok(equal) = eq(left, right)
+    {
+        return Ok(equal.iter().position(|flag| flag == Some(true)));
+    }
+    for row in 0..left.len() {
+        if ScalarValue::try_from_array(left, row)? == ScalarValue::try_from_array(right, row)? {
+            return Ok(Some(row));
+        }
+    }
+    Ok(None)
+}
+
+fn first_duplicate_key(keys: &[&ArrayRef]) -> Result<Option<(usize, usize, usize)>> {
+    let mut first: Option<(usize, usize, usize)> = None;
+    for later in 1..keys.len() {
+        for earlier in 0..later {
+            let Some(row) = first_equal_row(keys[earlier], keys[later])? else {
+                continue;
+            };
+            if first.is_none_or(|(best_row, best_later, _)| (row, later) < (best_row, best_later)) {
+                first = Some((row, later, earlier));
+            }
+        }
+    }
+    Ok(first)
+}
+
+fn refuse_bad_keys(keys: &[&ArrayRef]) -> Result<()> {
+    let null = first_null_key(keys);
+    let duplicate = first_duplicate_key(keys)?;
+    match (null, duplicate) {
+        (Some((null_row, null_index)), Some((row, later, _)))
+            if (row, later) < (null_row, null_index) =>
+        {
+            Err(duplicate_key(&ScalarValue::try_from_array(
+                keys[later],
+                row,
+            )?))
+        }
+        (Some(_), _) => Err(null_key()),
+        (None, Some((row, later, _))) => Err(duplicate_key(&ScalarValue::try_from_array(
+            keys[later],
+            row,
+        )?)),
+        (None, None) => Ok(()),
+    }
+}
+
+fn flatten(columns: &[&ArrayRef], rows: usize) -> Result<ArrayRef> {
+    if let [only] = columns {
+        return Ok(Arc::clone(only));
+    }
+    let sources: Vec<&dyn Array> = columns.iter().map(AsRef::as_ref).collect();
+    let indices: Vec<(usize, usize)> = (0..rows)
+        .flat_map(|row| (0..columns.len()).map(move |column| (column, row)))
+        .collect();
+    Ok(interleave(&sources, &indices)?)
 }
 
 impl ScalarUDFImpl for SparkCreateMap {
-    crate::shim_udf_boilerplate!("create_map");
+    fn name(&self) -> &str {
+        self.name
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         let (key, value) = key_value_types(arg_types)?;
@@ -189,46 +271,23 @@ impl ScalarUDFImpl for SparkCreateMap {
                 false,
             )?)));
         }
-        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        let arrays = args
+            .args
+            .iter()
+            .map(|argument| argument.to_array(rows))
+            .collect::<Result<Vec<ArrayRef>>>()?;
         let pairs = arrays.len() / 2;
-        let mut keys: Vec<ArrayRef> = Vec::with_capacity(rows * pairs);
-        let mut values: Vec<ArrayRef> = Vec::with_capacity(rows * pairs);
-        let mut offsets: Vec<i32> = Vec::with_capacity(rows + 1);
-        offsets.push(0);
-        let mut length = 0_i32;
-        for row in 0..rows {
-            let mut seen: HashSet<ScalarValue> = HashSet::with_capacity(pairs);
-            for index in 0..pairs {
-                let key_array = &arrays[index * 2];
-                if key_array.is_null(row) {
-                    return Err(null_key(&ScalarValue::try_from_array(key_array, row)?));
-                }
-                let key = ScalarValue::try_from_array(key_array, row)?;
-                if !seen.insert(key.clone()) {
-                    return Err(duplicate_key(&key));
-                }
-                keys.push(row_slice(key_array, row)?);
-                values.push(row_slice(&arrays[index * 2 + 1], row)?);
-            }
-            length += i32::try_from(pairs).unwrap_or(0);
-            offsets.push(length);
-        }
-        let key_refs: Vec<&dyn Array> = keys.iter().map(AsRef::as_ref).collect();
-        let value_refs: Vec<&dyn Array> = values.iter().map(AsRef::as_ref).collect();
-        let key_column = if key_refs.is_empty() {
-            new_empty_array(&key_type)
-        } else {
-            concat(&key_refs)?
-        };
-        let value_column = if value_refs.is_empty() {
-            new_empty_array(&value_type)
-        } else {
-            concat(&value_refs)?
-        };
-        let structs = StructArray::try_new(pair.clone(), vec![key_column, value_column], None)?;
+        let keys: Vec<&ArrayRef> = arrays.iter().step_by(2).collect();
+        let values: Vec<&ArrayRef> = arrays.iter().skip(1).step_by(2).collect();
+        refuse_bad_keys(&keys)?;
+        let structs = StructArray::try_new(
+            pair.clone(),
+            vec![flatten(&keys, rows)?, flatten(&values, rows)?],
+            None,
+        )?;
         Ok(ColumnarValue::Array(Arc::new(MapArray::try_new(
             entries_field,
-            OffsetBuffer::new(offsets.into()),
+            OffsetBuffer::from_lengths(std::iter::repeat_n(pairs, rows)),
             structs,
             None,
             false,
@@ -251,6 +310,21 @@ mod tests {
             .build()
             .expect("runtime");
         runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    fn column_strings(sql: &str) -> Vec<String> {
+        let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        let mut cells = Vec::new();
+        for batch in &batches {
+            for row in 0..batch.num_rows() {
+                cells.push(
+                    ScalarValue::try_from_array(batch.column(0), row)
+                        .expect("scalar")
+                        .to_string(),
+                );
+            }
+        }
+        cells
     }
 
     fn shown(sql: &str) -> String {
@@ -279,5 +353,116 @@ mod tests {
             duplicate.to_string().contains("Duplicate map key"),
             "{duplicate}"
         );
+    }
+
+    #[test]
+    fn create_map_builds_one_map_per_row_from_columns_and_scalars() {
+        assert_eq!(
+            column_strings(
+                "SELECT create_map(k, v, 'z', w) FROM \
+                 (VALUES ('a', 1, 10), ('b', 2, 20)) AS t(k, v, w)"
+            ),
+            ["[{a:1,z:10}]", "[{b:2,z:20}]"]
+        );
+        assert_eq!(
+            column_strings("SELECT create_map('a', v) FROM (VALUES (1), (2), (3)) AS t(v)"),
+            ["[{a:1}]", "[{a:2}]", "[{a:3}]"]
+        );
+        assert_eq!(
+            column_strings("SELECT create_map(v, 'x') FROM (VALUES (1), (2)) AS t(v)"),
+            ["[{1:x}]", "[{2:x}]"]
+        );
+    }
+
+    #[test]
+    fn create_map_keeps_nulls_and_nested_values() {
+        assert_eq!(
+            column_strings(
+                "SELECT create_map('a', v, 'b', w) FROM \
+                 (VALUES (CAST(NULL AS INT), 1), (2, 3)) AS t(v, w)"
+            ),
+            ["[{a:,b:1}]", "[{a:2,b:3}]"]
+        );
+        assert_eq!(
+            column_strings(
+                "SELECT create_map('a', named_struct('x', v)) FROM (VALUES (1), (5)) AS t(v)"
+            ),
+            ["[{a:{x: 1}}]", "[{a:{x: 5}}]"]
+        );
+        assert_eq!(
+            column_strings(
+                "SELECT create_map('a', make_array(v, v + 1)) FROM (VALUES (1), (5)) AS t(v)"
+            ),
+            ["[{a:[1, 2]}]", "[{a:[5, 6]}]"]
+        );
+    }
+
+    #[test]
+    fn create_map_reports_the_first_bad_row_in_row_order() {
+        let duplicate_second = run(
+            "SELECT create_map(x, 1, y, 2) FROM (VALUES ('a', 'b'), ('c', 'c'), ('d', 'd')) AS t(x, y)",
+        )
+        .expect_err("a duplicate key must raise");
+        assert!(
+            duplicate_second.to_string().contains("key c "),
+            "{duplicate_second}"
+        );
+        let null_first = run("SELECT create_map(x, 1, y, 2) FROM \
+             (VALUES (CAST(NULL AS STRING), 'b'), ('c', 'c')) AS t(x, y)")
+        .expect_err("a null key must raise");
+        assert!(
+            null_first.to_string().contains("NULL_MAP_KEY"),
+            "{null_first}"
+        );
+        let duplicate_first = run("SELECT create_map(x, 1, y, 2) FROM \
+             (VALUES ('c', 'c'), (CAST(NULL AS STRING), 'b')) AS t(x, y)")
+        .expect_err("a duplicate key must raise");
+        assert!(
+            duplicate_first.to_string().contains("DUPLICATED_MAP_KEY"),
+            "{duplicate_first}"
+        );
+    }
+
+    #[test]
+    fn create_map_finds_duplicates_among_struct_and_nan_keys() {
+        let structs = run("SELECT create_map(named_struct('a', 1), 1, named_struct('a', 1), 2)")
+            .expect_err("equal struct keys must raise");
+        assert!(
+            structs.to_string().contains("DUPLICATED_MAP_KEY"),
+            "{structs}"
+        );
+        let nan = run("SELECT create_map(CAST('NaN' AS DOUBLE), 1, CAST('NaN' AS DOUBLE), 2)")
+            .expect_err("equal NaN keys must raise");
+        assert!(nan.to_string().contains("DUPLICATED_MAP_KEY"), "{nan}");
+        assert_eq!(
+            column_strings("SELECT create_map(named_struct('a', 1), 1, named_struct('a', 2), 2)"),
+            ["[{{a: 1}:1,{a: 2}:2}]"]
+        );
+    }
+
+    #[test]
+    fn the_sql_name_is_internal_and_create_map_stays_unregistered() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        let refused = runtime
+            .block_on(async { ctx.sql("SELECT create_map('a', 1)").await?.collect().await })
+            .expect_err("create_map is not a SQL function");
+        assert!(
+            refused.to_string().contains("Invalid function"),
+            "{refused}"
+        );
+        let internal = runtime
+            .block_on(async {
+                ctx.sql(&format!("SELECT {}('a', 1)", super::SQL_MAP_NAME))
+                    .await?
+                    .collect()
+                    .await
+            })
+            .expect("the internal name resolves");
+        assert_eq!(internal[0].num_rows(), 1);
     }
 }

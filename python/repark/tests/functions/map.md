@@ -84,6 +84,7 @@ pins.
 - [test_lrs4_door_domain.py](test_lrs4_door_domain.py) — LRS-4 — per-door divergence pins (C-012): SQL door and facade resolve different kernels.
 - [test_lrs6_regexp_divergences.py](test_lrs6_regexp_divergences.py) — LRS-6 — RE-2 divergence pins, measured but not closed (BACKLOG row).
 - [test_lrs7_unordered_window.py](test_lrs7_unordered_window.py) — LRS-7 — a window with no ORDER BY frames the whole partition, as Spark documents.
+- [test_map_column_panic_1.py](test_map_column_panic_1.py) — MAP-COLUMN-PANIC-1 — `map(<key>, <non-literal value>)` equals Spark 4.1.2 on `sql`, `selectExpr`, `expr`, a string `filter` and INSERT, UPDATE and MERGE, in rows, type and nullability; Spark's duplicate-key, NULL-key and odd-arity errors; two divergences pinned (no condition on runtime errors, DataFusion's odd-arity text through `expr`).
 - [test_sem1_extract_all_group_default.py](test_sem1_extract_all_group_default.py) — SEM-1 — the two-argument ``regexp_extract_all`` defaults to capture group 1, as Spark does.
 - [test_sem1_spark_log.py](test_sem1_spark_log.py) — SEM-1 LOG-1 — Spark-door ``log`` is the natural log, dual-arity, null-guarded.
 - [test_sem3_string_idx.py](test_sem3_string_idx.py) — SEM-3 — ``regexp_extract_all`` accepts a string ``idx``, as every other door already does.
@@ -100,6 +101,7 @@ pins.
 - [test_win_slide_1.py](test_win_slide_1.py) — WIN-SLIDE-1: the thirteen non-retractable aggregates answer over a sliding frame.
 - [test_window_parity.py](test_window_parity.py) — Window-function differential corpus (H-2 gap G5) — G5 frames never compared to live Spark.
 - [_record_float_agg_goldens.py](_record_float_agg_goldens.py) — Record mode for the float-agg corpus — re-derive every `spark` half from live PySpark.
+- [_record_map_column_panic_1.py](_record_map_column_panic_1.py) — Record mode for MAP-COLUMN-PANIC-1 — re-derive the 33 cells from live PySpark 4.1.2 (`--check` compares).
 - [_record_window_goldens.py](_record_window_goldens.py) — Record mode for the window-function corpus — re-derive every `spark` half from live PySpark.
 - [fnp11_spark_oracle.json](fnp11_spark_oracle.json) — Live PySpark 4.1.2 recording (2026-09-14): 846 cells over the shared and TIME frames, both ANSI settings and two zones; read by `test_fnp11a_temporal.py`.
 - [fnp11a_r2_spark_oracle.json](fnp11a_r2_spark_oracle.json) — Live PySpark 4.1.2 recording (2026-09-15, orchestrator-run, run 15a): 112 cells settling the round-2 review findings L-001..L-011, both ANSI settings, UTC and America/New_York.
@@ -124,6 +126,7 @@ pins.
 - [fnp_misc_1_arrow2_spark_oracle.json](fnp_misc_1_arrow2_spark_oracle.json) — Recorded Spark oracle (13 cells) read by `test_fnp_misc_1.py`.
 - [fnp_misc_1_arrow_bucket_spark_oracle.json](fnp_misc_1_arrow_bucket_spark_oracle.json) — Recorded Spark oracle (11 cells) read by `test_fnp_misc_1.py`.
 - [fnp_win_1_spark_oracle.json](fnp_win_1_spark_oracle.json) — Recorded Spark oracle (320 cells) read by `test_fnp_win_1.py`.
+- [map_column_panic_1_spark_oracle.json](map_column_panic_1_spark_oracle.json) — Live PySpark 4.1.2 recording (2026-10-20, `local[1]`, zone UTC, ANSI on): 33 cells over the three-row temp view; read by `test_map_column_panic_1.py`.
 - [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) — Recorded Spark oracle (42 cells) read by `test_unresolved_routine_1.py`.
 
 ## Path expressions

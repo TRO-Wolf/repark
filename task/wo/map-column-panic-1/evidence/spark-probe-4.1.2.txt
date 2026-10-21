@@ -1,0 +1,30 @@
+# MAP-COLUMN-PANIC-1 ad-hoc Spark probe, live PySpark 4.1.2, local[1], session zone UTC, ANSI on (default), 2026-10-20
+# view t = SELECT CAST(id AS INT) id, CAST(id AS BIGINT) big, 'k'||id k, TIMESTAMP '2026-01-02 03:04:05.123456+00:00' ts, NULL nk, NULL nv FROM range(2)
+# one line per statement: the result type and rows, or the error condition and the first message line
+SELECT map('a', id) AS m FROM t => struct<m:map<string,int>> [{'a': 0}, {'a': 1}]
+SELECT map('a', year(ts)) AS m FROM t => struct<m:map<string,int>> [{'a': 2026}, {'a': 2026}]
+SELECT map('a', CAST(id AS BIGINT)) AS m FROM t => struct<m:map<string,bigint>> [{'a': 0}, {'a': 1}]
+SELECT map('a', named_struct('x', id)) AS m FROM t => struct<m:map<string,struct<x:int>>> [{'a': Row(x=0)}, {'a': Row(x=1)}]
+SELECT map('a', array(id, id + 1)) AS m FROM t => struct<m:map<string,array<int>>> [{'a': [0, 1]}, {'a': [1, 2]}]
+SELECT map('a', id, 'b', id + 1) AS m FROM t => struct<m:map<string,int>> [{'a': 0, 'b': 1}, {'a': 1, 'b': 2}]
+SELECT map('a', id, 'a', id + 1) AS m FROM t => ERR SparkRuntimeException DUPLICATED_MAP_KEY [DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.
+SELECT map(nk, id) AS m FROM t => ERR SparkRuntimeException NULL_MAP_KEY [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E
+SELECT map(CAST(NULL AS STRING), id) AS m FROM t => ERR SparkRuntimeException NULL_MAP_KEY [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E
+SELECT map('a', id, 'b') AS m FROM t => ERR AnalysisException WRONG_NUM_ARGS.WITHOUT_SUGGESTION [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLST
+SELECT map(k, id) AS m FROM t => struct<m:map<string,int>> [{'k0': 0}, {'k1': 1}]
+SELECT map('a', id, 'b', 2.5) AS m FROM t => struct<m:map<string,decimal(11,1)>> [{'a': Decimal('0.0'), 'b': Decimal('2.5')}, {'a': Decimal('1.0'), 'b': Decimal('2.5')}]
+SELECT map('a', id, 'b', big) AS m FROM t => struct<m:map<string,bigint>> [{'a': 0, 'b': 0}, {'a': 1, 'b': 1}]
+SELECT map(id, 'x', big, 'y') AS m FROM t => ERR SparkRuntimeException DUPLICATED_MAP_KEY [DUPLICATED_MAP_KEY] Duplicate map key 0 was found, please check the input data.
+SELECT map('a', nv) AS m FROM t => struct<m:map<string,int>> [{'a': None}, {'a': None}]
+SELECT map('a', id, 'b', nv) AS m FROM t => struct<m:map<string,int>> [{'a': 0, 'b': None}, {'a': 1, 'b': None}]
+SELECT map('a', 1, 'a', 2) AS m => ERR SparkRuntimeException DUPLICATED_MAP_KEY [DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.
+SELECT map('a', 1, 'b', 2.5) AS m => struct<m:map<string,decimal(11,1)>> [{'a': Decimal('1.0'), 'b': Decimal('2.5')}]
+SELECT map('a', 1, 'b') AS m => ERR AnalysisException WRONG_NUM_ARGS.WITHOUT_SUGGESTION [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLST
+SELECT map(1, 'a', 'b', 2) AS m => ERR NumberFormatException CAST_INVALID_INPUT [CAST_INVALID_INPUT] The value 'a' of the type "STRING" cannot be cast to "BIGINT" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate m
+SELECT map('a', id, 'b', 'x') AS m FROM t => ERR NumberFormatException CAST_INVALID_INPUT [CAST_INVALID_INPUT] The value 'x' of the type "STRING" cannot be cast to "BIGINT" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate m
+SELECT map() AS m FROM t => struct<m:map<void,void>> [{}, {}]
+SELECT map('a', ts) AS m FROM t => struct<m:map<string,timestamp>> [{'a': datetime.datetime(2026, 1, 1, 22, 4, 5, 123456)}, {'a': datetime.datetime(2026, 1, 1, 22, 4, 5, 123456)}]
+SELECT map(id, id) AS m FROM t => struct<m:map<int,int>> [{0: 0}, {1: 1}]
+SELECT map('a', map('b', id)) AS m FROM t => struct<m:map<string,map<string,int>>> [{'a': {'b': 0}}, {'a': {'b': 1}}]
+SELECT map('a', id)['a'] AS v FROM t => struct<v:int> [0, 1]
+SELECT create_map('a', id) AS m FROM t => ERR AnalysisException UNRESOLVED_ROUTINE [UNRESOLVED_ROUTINE] Cannot resolve routine `create_map` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7

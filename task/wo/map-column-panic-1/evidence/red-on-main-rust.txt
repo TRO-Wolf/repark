@@ -1,0 +1,30 @@
+# MAP-COLUMN-PANIC-1 Rust pins against main e6ff5375 (cargo test -p repark-spark --lib map_column_panic_1), 2026-10-20
+# result: 18 failed, 2 passed (the passing two are the controls: a column key beside a column value, and the literal maps)
+
+test a_cast_value_builds_one_map_per_row ... FAILED
+test a_column_key_and_an_integer_key_build_one_map_per_row ... ok
+test a_column_value_builds_one_map_per_row ... FAILED
+test a_duplicate_key_raises_spark_error ... FAILED
+test a_function_value_builds_one_map_per_row ... FAILED
+test a_map_feeds_lookup_size_and_predicate ... FAILED
+test a_map_value_builds_one_map_per_row ... FAILED
+test an_array_value_builds_one_map_per_row ... FAILED
+test an_insert_select_stores_a_column_map_into_a_map_table ... FAILED
+test an_insert_select_stores_a_two_pair_function_map_into_a_map_table ... FAILED
+test an_odd_argument_count_raises_spark_error_at_planning ... FAILED
+test a_null_key_raises_spark_error ... FAILED
+test a_single_row_answers_as_many_rows_do ... FAILED
+test a_struct_value_builds_one_map_per_row ... FAILED
+test a_timestamp_value_and_a_wall_cast_value_build_one_map_per_row ... FAILED
+test literal_maps_keep_answering_as_before ... ok
+test mixed_value_types_widen_to_spark_common_type ... FAILED
+test null_values_stay_in_the_map ... FAILED
+test two_pairs_keep_their_order_in_every_row ... FAILED
+test update_and_merge_assign_a_column_map ... FAILED
+
+# the failing messages, counted:
+     11 Execution error: map requires key and value lists to have the same length
+      2 list array
+      2 called `Result::unwrap()` on an `Err` value: Execution("map requires key and value lists to have the same length")
+
+test result: FAILED. 2 passed; 18 failed; 0 ignored; 0 measured; 2744 filtered out; finished in 0.41s

@@ -1,0 +1,55 @@
+# MAP-COLUMN-PANIC-1 facade pins against main e6ff5375 (maturin develop --profile ci), 2026-10-20
+# command: pytest python/repark/tests/functions/test_map_column_panic_1.py -rA   result: 35 failed, 9 passed
+# the engine errors the failures raise, counted:
+     17 PySparkException: Execution error: map requires key and value lists to have the same length
+     17 ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+      1 PySparkException: repark internal error in PyReparkSession.sql: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+      1 PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+      1 PySparkException: datafusion engine error: Execution error: map requires key and value lists to have the same length
+      1 ArrowInvalid: External error: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+
+# per test:
+FAILED test_map_column_panic_1.py::test_a_failed_insert_leaves_the_table_unchanged
+FAILED test_map_column_panic_1.py::test_a_key_error_raised_through_an_expression_door_is_spark_text
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[array_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[cast_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[column_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[column_value_one_row]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[function_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[lookup]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[map_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[map_values]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[ntz_cast_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[partial_null_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[predicate]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[size]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[struct_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[timestamp_value]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[two_pairs]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[widen_bigint]
+FAILED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[widen_decimal]
+FAILED test_map_column_panic_1.py::test_an_insert_select_stores_the_column_map_into_a_map_table
+FAILED test_map_column_panic_1.py::test_a_planning_refusal_raises_spark_condition_sqlstate_and_text[odd_arity_literal]
+FAILED test_map_column_panic_1.py::test_a_planning_refusal_raises_spark_condition_sqlstate_and_text[odd_arity_one]
+FAILED test_map_column_panic_1.py::test_a_planning_refusal_raises_spark_condition_sqlstate_and_text[odd_arity_three]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_carries_spark_text_and_never_a_panic[duplicate_key]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_carries_spark_text_and_never_a_panic[duplicate_literal]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_carries_spark_text_and_never_a_panic[null_key_cast]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_carries_spark_text_and_never_a_panic[null_key_column]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_carries_spark_text_and_never_a_panic[null_key_literal]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_has_no_condition_divergence[duplicate_key]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_has_no_condition_divergence[duplicate_literal]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_has_no_condition_divergence[null_key_cast]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_has_no_condition_divergence[null_key_column]
+FAILED test_map_column_panic_1.py::test_a_runtime_refusal_has_no_condition_divergence[null_key_literal]
+FAILED test_map_column_panic_1.py::test_the_expression_doors_equal_the_sql_door
+FAILED test_map_column_panic_1.py::test_update_and_merge_store_a_column_map
+PASSED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[column_key]
+PASSED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[empty_control]
+PASSED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[int_key]
+PASSED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[literal_control]
+PASSED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[map_keys]
+PASSED test_map_column_panic_1.py::test_an_answered_cell_equals_spark_in_rows_type_and_nullability[null_value]
+PASSED test_map_column_panic_1.py::test_an_odd_count_through_an_expression_door_keeps_the_planner_text_divergence
+PASSED test_map_column_panic_1.py::test_a_planning_refusal_raises_spark_condition_sqlstate_and_text[create_map_unresolved]
+PASSED test_map_column_panic_1.py::test_a_planning_refusal_raises_spark_condition_sqlstate_and_text[ordering_refusal]

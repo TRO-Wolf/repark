@@ -990,10 +990,12 @@ declines it (a dated ruling in the intake, then the archive).
   see a value that passed through another type first. Owner rules: grow U-8, or fix the cast as
   its own unit (the orchestrator's lean).
 - [map-column-panic-1-card-2026-10-20.md](map-column-panic-1-card-2026-10-20.md) — **card
-  MAP-COLUMN-PANIC-1 (2026-10-20, open, not scheduled):** `map('a', <column>)` over any column
-  value panics `list array` in DataFusion's `MapFunc` (`list_to_arrays`) on every door, in a
-  plain `SELECT` and in an `INSERT`, on main `c516c54a`; literals store. U-8's row R-011 had
-  misnamed it as a container cast of a map.
+  MAP-COLUMN-PANIC-1 (2026-10-20, fixed on branch `fix/map-column-panic-1`, awaits the owner's merge):**
+  `map('a', <column>)` over any non-literal value panicked `list array` in DataFusion's `MapFunc`
+  (`list_to_arrays`), or raised `map requires key and value lists to have the same length`, on every door,
+  in a plain `SELECT` and in an `INSERT`, on main `c516c54a`; literals stored. U-8's row R-011 had
+  misnamed it as a container cast of a map. Evidence under
+  [`task/wo/map-column-panic-1/`](../../wo/map-column-panic-1/map.md).
 - [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
   ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, open, not scheduled, awaits the owner's adopt of the
   2026-10-20 plan):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE

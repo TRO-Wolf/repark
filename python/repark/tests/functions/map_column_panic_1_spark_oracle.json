@@ -1,0 +1,1089 @@
+{
+ "ansi": "true",
+ "cells": [
+  {
+   "id": "column_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        0
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        2
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "column_value_one_row",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', id) AS m FROM map_column_panic_1_src WHERE id = 1",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "function_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        2026
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        2026
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        2026
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', year(ts)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "cast_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        0
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        2
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', CAST(id AS BIGINT)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,bigint>>"
+  },
+  {
+   "id": "ntz_cast_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        "2026-01-02T03:04:05.123456"
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        "2026-01-03T03:04:05.123456"
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        "2026-01-04T03:04:05.123456"
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', CAST(ts AS TIMESTAMP_NTZ)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,timestamp_ntz>>"
+  },
+  {
+   "id": "timestamp_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        "2026-01-02T03:04:05.123456"
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        "2026-01-03T03:04:05.123456"
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        "2026-01-04T03:04:05.123456"
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', ts) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,timestamp>>"
+  },
+  {
+   "id": "struct_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        {
+         "struct": [
+          [
+           "x",
+           0
+          ],
+          [
+           "y",
+           "k0"
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        {
+         "struct": [
+          [
+           "x",
+           1
+          ],
+          [
+           "y",
+           "k1"
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        {
+         "struct": [
+          [
+           "x",
+           2
+          ],
+          [
+           "y",
+           "k2"
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', named_struct('x', id, 'y', k)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,struct<x:int,y:string>>>"
+  },
+  {
+   "id": "array_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        [
+         0,
+         1
+        ]
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        [
+         1,
+         2
+        ]
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        [
+         2,
+         3
+        ]
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', array(id, id + 1)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,array<int>>>"
+  },
+  {
+   "id": "map_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        {
+         "map": [
+          [
+           "b",
+           0
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        {
+         "map": [
+          [
+           "b",
+           1
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        {
+         "map": [
+          [
+           "b",
+           2
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', map('b', id)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,map<string,int>>>"
+  },
+  {
+   "id": "two_pairs",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        0
+       ],
+       [
+        "b",
+        1
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ],
+       [
+        "b",
+        2
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        2
+       ],
+       [
+        "b",
+        3
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', id, 'b', id + 1) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "column_key",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "k0",
+        0
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "k1",
+        1
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "k2",
+        2
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map(k, id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "int_key",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        0,
+        "k0"
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        1,
+        "k1"
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        2,
+        "k2"
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map(id, k) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<int,string>>"
+  },
+  {
+   "id": "widen_bigint",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        0
+       ],
+       [
+        "b",
+        0
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ],
+       [
+        "b",
+        1
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        2
+       ],
+       [
+        "b",
+        2
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', id, 'b', big) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,bigint>>"
+  },
+  {
+   "id": "widen_decimal",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        "0.0"
+       ],
+       [
+        "b",
+        "2.5"
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        "1.0"
+       ],
+       [
+        "b",
+        "2.5"
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        "2.0"
+       ],
+       [
+        "b",
+        "2.5"
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', id, 'b', 2.5) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,decimal(11,1)>>"
+  },
+  {
+   "id": "null_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        null
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        null
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        null
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', nv) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "partial_null_value",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        0
+       ],
+       [
+        "b",
+        0
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        null
+       ],
+       [
+        "b",
+        1
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        2
+       ],
+       [
+        "b",
+        2
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', mid, 'b', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "lookup",
+   "nullable": [
+    false,
+    true
+   ],
+   "rows": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ]
+   ],
+   "sql": "SELECT id, map('a', id)['a'] AS v FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,v:int>"
+  },
+  {
+   "id": "map_keys",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     [
+      "k0",
+      "b"
+     ]
+    ],
+    [
+     1,
+     [
+      "k1",
+      "b"
+     ]
+    ],
+    [
+     2,
+     [
+      "k2",
+      "b"
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map_keys(map(k, id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,v:array<string>>"
+  },
+  {
+   "id": "map_values",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     [
+      0,
+      1
+     ]
+    ],
+    [
+     1,
+     [
+      1,
+      2
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      3
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map_values(map('a', id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,v:array<int>>"
+  },
+  {
+   "id": "size",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     2
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     2
+    ]
+   ],
+   "sql": "SELECT id, size(map('a', id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,v:int>"
+  },
+  {
+   "id": "predicate",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "sql": "SELECT id FROM map_column_panic_1_src WHERE map('a', id)['a'] = 1",
+   "type": "struct<id:int>"
+  },
+  {
+   "id": "literal_control",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ],
+       [
+        "b",
+        2
+       ]
+      ]
+     }
+    ],
+    [
+     1,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ],
+       [
+        "b",
+        2
+       ]
+      ]
+     }
+    ],
+    [
+     2,
+     {
+      "map": [
+       [
+        "a",
+        1
+       ],
+       [
+        "b",
+        2
+       ]
+      ]
+     }
+    ]
+   ],
+   "sql": "SELECT id, map('a', 1, 'b', 2) AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<string,int>>"
+  },
+  {
+   "id": "empty_control",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     0,
+     {
+      "map": []
+     }
+    ],
+    [
+     1,
+     {
+      "map": []
+     }
+    ],
+    [
+     2,
+     {
+      "map": []
+     }
+    ]
+   ],
+   "sql": "SELECT id, map() AS m FROM map_column_panic_1_src ORDER BY id",
+   "type": "struct<id:int,m:map<void,void>>"
+  },
+  {
+   "class": "AnalysisException",
+   "error": "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE",
+   "id": "ordering_refusal",
+   "message": "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(map(a, id) = map(b, id))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 44;\n'Project ['id]\n+- 'Filter (map(a, id#382) = map(b, id#382))\n   +- SubqueryAlias map_column_panic_1_src\n      +- View (`map_column_panic_1_src`, [id#382, big#383L, k#384, ts#385, nk#386, nv#387, mid#388])\n         +- Project [cast(id#375 as int) AS id#382, cast(big#376L as bigint) AS big#383L, cast(k#377 as string) AS k#384, cast(ts#378 as timestamp) AS ts#385, cast(nk#379 as string) AS nk#386, cast(nv#380 as int) AS nv#387, cast(mid#381 as int) AS mid#388]\n            +- Project [cast(id#389L as int) AS id#375, cast(id#389L as bigint) AS big#376L, concat(k, cast(id#389L as string)) AS k#377, timestamp_micros((1767323045123456 + (id#389L * 86400000000))) AS ts#378, cast(null as string) AS nk#379, cast(null as int) AS nv#380, CASE WHEN (id#389L = cast(1 as bigint)) THEN cast(null as int) ELSE cast(id#389L as int) END AS mid#381]\n               +- Range (0, 3, step=1)",
+   "sql": "SELECT id FROM map_column_panic_1_src WHERE map('a', id) = map('b', id)",
+   "sqlstate": "42K09"
+  },
+  {
+   "class": "AnalysisException",
+   "error": "UNRESOLVED_ROUTINE",
+   "id": "create_map_unresolved",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `create_map` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "sql": "SELECT id, create_map('a', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "sqlstate": "42883"
+  },
+  {
+   "class": "SparkRuntimeException",
+   "error": "DUPLICATED_MAP_KEY",
+   "id": "duplicate_key",
+   "message": "[DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505",
+   "sql": "SELECT id, map('a', id, 'a', id + 1) AS m FROM map_column_panic_1_src ORDER BY id",
+   "sqlstate": "23505"
+  },
+  {
+   "class": "SparkRuntimeException",
+   "error": "DUPLICATED_MAP_KEY",
+   "id": "duplicate_literal",
+   "message": "[DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505",
+   "sql": "SELECT map('a', 1, 'a', 2) AS m",
+   "sqlstate": "23505"
+  },
+  {
+   "class": "SparkRuntimeException",
+   "error": "NULL_MAP_KEY",
+   "id": "null_key_column",
+   "message": "[NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "sql": "SELECT id, map(nk, id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "sqlstate": "2200E"
+  },
+  {
+   "class": "SparkRuntimeException",
+   "error": "NULL_MAP_KEY",
+   "id": "null_key_cast",
+   "message": "[NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "sql": "SELECT id, map(CAST(NULL AS STRING), id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "sqlstate": "2200E"
+  },
+  {
+   "class": "SparkRuntimeException",
+   "error": "NULL_MAP_KEY",
+   "id": "null_key_literal",
+   "message": "[NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "sql": "SELECT map(NULL, 1) AS m",
+   "sqlstate": "2200E"
+  },
+  {
+   "class": "AnalysisException",
+   "error": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "id": "odd_arity_three",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "sql": "SELECT id, map('a', id, 'b') AS m FROM map_column_panic_1_src ORDER BY id",
+   "sqlstate": "42605"
+  },
+  {
+   "class": "AnalysisException",
+   "error": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "id": "odd_arity_one",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "sql": "SELECT id, map('a') AS m FROM map_column_panic_1_src ORDER BY id",
+   "sqlstate": "42605"
+  },
+  {
+   "class": "AnalysisException",
+   "error": "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
+   "id": "odd_arity_literal",
+   "message": "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "sql": "SELECT map('a', 1, 'b') AS m",
+   "sqlstate": "42605"
+  }
+ ],
+ "spark": "4.1.2",
+ "view": "CREATE OR REPLACE TEMP VIEW map_column_panic_1_src AS SELECT CAST(id AS INT) AS id, CAST(id AS BIGINT) AS big, concat('k', id) AS k, timestamp_micros(1767323045123456 + id * 86400000000) AS ts, CAST(NULL AS STRING) AS nk, CAST(NULL AS INT) AS nv, CASE WHEN id = 1 THEN CAST(NULL AS INT) ELSE CAST(id AS INT) END AS mid FROM range(3)",
+ "zone": "UTC"
+}

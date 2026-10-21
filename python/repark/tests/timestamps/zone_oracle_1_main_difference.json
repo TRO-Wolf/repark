@@ -1,15 +1,15 @@
 {
  "provenance": {
   "recorded": "2026-10-20",
-  "main": "754fb6e5",
+  "main": "5c8c811e",
   "build": "maturin develop --profile ci",
   "generator_sha256": "72bef6e69102fd6932b0cfffb0acc5b9434830ecc03149afbe69e8e788749a17",
   "cells": 1640,
   "counts": {
-   "EQUAL": 1150,
-   "DIFFERENT": 400,
+   "EQUAL": 1199,
+   "DIFFERENT": 411,
    "REFUSED": 20,
-   "ERROR": 70
+   "ERROR": 10
   },
   "recorder": "python/repark/tests/timestamps/_record_zone_oracle_1.py --main"
  },
@@ -1809,126 +1809,6 @@
    "type": "string",
    "value": "[{\"a\":\"2026-01-02T03:04:05.123Z\"}]"
   },
-  "map.col_inst.to_json.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.to_json.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.to_json.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.to_json.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.to_json.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_string.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_string.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_string.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_string.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_string.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_date.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_date.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_date.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_date.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.cast_date.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.date_format.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.date_format.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.date_format.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.date_format.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.date_format.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.to_date.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.to_date.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.to_date.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.to_date.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.inst.to_date.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.wall.cast_string.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.wall.cast_string.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.wall.cast_string.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.wall.cast_string.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.wall.cast_string.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
   "struct.col_inst.ccast_ntz.new_york": {
    "status": "DIFFERENT",
    "type": "timestamp_ntz",
@@ -2039,125 +1919,60 @@
    "type": "timestamp",
    "value": 1767323045123456
   },
-  "map.col_inst.cast_ntz.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_ntz.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_ntz.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_ntz.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_ntz.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_string.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_string.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_string.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_string.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.cast_string.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_wall.cast_ltz.inner.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_wall.cast_ltz.inner.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_wall.cast_ltz.inner.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_wall.cast_ltz.inner.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_wall.cast_ltz.inner.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.ccast_ntz.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
   "map.col_inst.ccast_ntz.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "timestamp_ntz",
+   "value": 1767323045123456
   },
   "map.col_inst.ccast_ntz.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "timestamp_ntz",
+   "value": 1767323045123456
   },
   "map.col_inst.ccast_ntz.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_inst.ccast_ntz.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "timestamp_ntz",
+   "value": 1767323045123456
   },
   "map.col_inst.ccast_string.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "string",
+   "value": "2026-01-02T03:04:05.123456Z"
   },
   "map.col_inst.ccast_string.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "string",
+   "value": "2026-01-02T03:04:05.123456Z"
   },
   "map.col_inst.ccast_string.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "string",
+   "value": "2026-01-02T03:04:05.123456Z"
   },
   "map.col_inst.ccast_string.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "string",
+   "value": "2026-01-02T03:04:05.123456Z"
   },
   "map.col_inst.ccast_string.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_wall.ccast_ltz.utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "string",
+   "value": "2026-01-02T03:04:05.123456Z"
   },
   "map.col_wall.ccast_ltz.new_york": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "timestamp",
+   "value": 1767323045123456
   },
   "map.col_wall.ccast_ltz.kolkata": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "timestamp",
+   "value": 1767323045123456
   },
   "map.col_wall.ccast_ltz.p0530": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
-  },
-  "map.col_wall.ccast_ltz.etc_utc": {
-   "status": "ERROR",
-   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)"
+   "status": "DIFFERENT",
+   "type": "timestamp",
+   "value": 1767323045123456
   },
   "through.struct_inst_string_ntz.new_york": {
    "status": "DIFFERENT",
