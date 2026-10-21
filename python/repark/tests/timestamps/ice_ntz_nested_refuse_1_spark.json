@@ -1,0 +1,876 @@
+{
+ "cells": {
+  "America/New_York|df_append|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|df_append|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|df_append|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|df_append|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|df_append|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|df_insert_into|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|df_insert_into|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|df_insert_into|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|df_insert_into|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|df_insert_into|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_by_name|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_by_name|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_by_name|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|insert_by_name|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_by_name|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_overwrite|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_overwrite|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_overwrite|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|insert_overwrite|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_overwrite|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_select|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_select|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_select|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|insert_select|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_select|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_values|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|insert_values|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|insert_values|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert_star|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert_star|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert_star|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|merge_insert_star|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert_star|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|merge_insert|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_insert|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_field|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_field|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_field|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|merge_update_field|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_field|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_whole|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_whole|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_whole|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|merge_update_whole|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|merge_update_whole|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_field_where|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_field_where|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_field_where|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|update_field_where|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_field_where|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_whole_where|ntz_cast": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_whole_where|ntz_cast_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_whole_where|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "America/New_York|update_whole_where|ts_column": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "America/New_York|update_whole_where|ts_literal": {
+   "stored": [
+    1767305045123456
+   ]
+  },
+  "Asia/Kolkata|df_append|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|df_append|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|df_append|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|df_append|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|df_append|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|df_insert_into|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|df_insert_into|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|df_insert_into|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|df_insert_into|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|df_insert_into|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_by_name|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_by_name|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_by_name|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|insert_by_name|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_by_name|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_overwrite|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_overwrite|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_overwrite|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|insert_overwrite|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_overwrite|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_select|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_select|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_select|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|insert_select|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_select|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_values|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|insert_values|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|insert_values|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert_star|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert_star|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert_star|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert_star|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert_star|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_insert|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_field|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_field|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_field|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_field|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_field|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_whole|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_whole|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_whole|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_whole|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|merge_update_whole|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_field_where|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_field_where|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_field_where|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|update_field_where|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_field_where|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_whole_where|ntz_cast": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_whole_where|ntz_cast_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_whole_where|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "Asia/Kolkata|update_whole_where|ts_column": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "Asia/Kolkata|update_whole_where|ts_literal": {
+   "stored": [
+    1767342845123456
+   ]
+  },
+  "UTC|df_append|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_append|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_append|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_append|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_append|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_insert_into|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_insert_into|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_insert_into|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_insert_into|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|df_insert_into|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_by_name|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_by_name|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_by_name|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_by_name|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_by_name|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_overwrite|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_overwrite|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_overwrite|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_overwrite|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_overwrite|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_select|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_select|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_select|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_select|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_select|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_values|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_values|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|insert_values|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert_star|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert_star|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert_star|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert_star|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert_star|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_insert|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_field|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_field|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_field|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_field|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_field|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_whole|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_whole|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_whole|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_whole|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|merge_update_whole|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_field_where|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_field_where|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_field_where|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_field_where|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_field_where|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_whole_where|ntz_cast": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_whole_where|ntz_cast_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_whole_where|ntz_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_whole_where|ts_column": {
+   "stored": [
+    1767323045123456
+   ]
+  },
+  "UTC|update_whole_where|ts_literal": {
+   "stored": [
+    1767323045123456
+   ]
+  }
+ },
+ "iceberg": "1.11.0",
+ "spark": "4.1.2"
+}

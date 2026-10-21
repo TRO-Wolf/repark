@@ -442,7 +442,6 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
     let _warehouse = catalog(&session).await;
     for (index, (leaf_type, ticks)) in [
         ("timestamptz_ns", 1_767_323_045_123_456_000_i64),
-        ("TIMESTAMP_NTZ", 1_767_323_045_123_456),
         ("TIMESTAMP", 1_767_323_045_123_456),
     ]
     .into_iter()
@@ -474,6 +473,23 @@ async fn a_nested_zoned_or_microsecond_leaf_is_not_guarded() {
             "{leaf_type}"
         );
     }
+    run(
+        &session,
+        "CREATE TABLE ice.ns.ntz (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+    )
+    .await;
+    let refused = attempt(
+        &session,
+        "INSERT INTO ice.ns.ntz SELECT id, named_struct('v', x, 'n', 1) FROM ice.ns.src",
+    )
+    .await
+    .expect_err("refused by R-011");
+    assert!(
+        refused.contains("Cannot safely cast `st`.`v` to \"TIMESTAMP_NTZ\""),
+        "{refused}"
+    );
+    assert!(!refused.contains(NOT_YET), "{refused}");
 }
 
 const NULL_SIBLING_UPDATES: [&str; 4] = [

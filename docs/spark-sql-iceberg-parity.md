@@ -3397,7 +3397,7 @@ still open is `isModifiable`.
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
 
-### ICE-TSNS-SQL-1-R-011 — OPEN, PARKED 2026-10-12 (measured 2026-10-09): a nested microsecond `TIMESTAMP_NTZ` field stores two walls
+### ICE-TSNS-SQL-1-R-011 — REFUSED 2026-10-20 (U-8, ICE-NTZ-NESTED-REFUSE-1; measured 2026-10-09, parked 2026-10-12): a nested microsecond `TIMESTAMP_NTZ` field stored two walls
 
 - **repark** — the microsecond twin of the nested split R-007's fold 1 closed for
   `timestamp_ns`, on main `40fc916f` and unchanged at head. Into
@@ -3424,6 +3424,204 @@ still open is `isModifiable`.
 - **Status 2026-10-12 (owner):** narrowing deferred, design in
   [task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md](../task/wo/ice-ntz-nested-wall-1/fable-q3/answer.md). PRs #1037 and #1038
   are parked as drafts; no further fold round is planned on them.
+- **Status 2026-10-20: REFUSED (U-8, ICE-NTZ-NESTED-REFUSE-1, ruling T-3; fix round 1 the
+  same day, after the verifier's FAIL on PR #1124).** In a session whose zone is not UTC
+  (canonical id other than `UTC`, `+00:00`, `-00:00`; `Etc/UTC` refuses; *owner ruling 3,
+  2026-10-21:* a zone counts as UTC when its id is a pure UTC alias, `UTC`, `UCT`, `Universal`,
+  `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`, `Greenwich`, their `Etc/` forms and the zero
+  offsets `+00:00` and `-00:00`, the tzdb names with no transition and no local-mean-time offset
+  anywhere in their history; `Africa/Abidjan` and `Atlantic/Reykjavik` carry a pre-1912
+  local-mean-time offset and `Europe/London` a summer offset, so a wall there can differ from
+  UTC under Spark's Java zone rules, and they stay refused) or under `PREPARE`, a
+  write that supplies a column whose type holds a naive microsecond timestamp below the top
+  level is refused before any file is written, on every door R-015 lists, when a value
+  reaching the column is not provably a wall: its planned type holds a zoned timestamp
+  anywhere; its plan holds a `CAST` or `TRY_CAST` from a type holding a zoned timestamp to one
+  holding a naive one (in a subquery, a temporary or catalog view, or a DataFrame's frame
+  too); the router cannot plan it; the statement is a `PREPARE` that holds a parameter; or, on
+  the plain `UPDATE` that assigns a whole struct or array above the leaf, the value holds a
+  `TIMESTAMP_NTZ` cast of any input *(fix round 2: a zoned sub-expression alone no longer
+  refuses there; `to_timestamp_ntz(<instant>)` and a zoned column feeding only an `INT` field
+  or a condition store Spark's value, as on main)*. *(Fix round 2: the cast and the plain
+  `UPDATE`'s cast test read only what reaches the column: the expression that produces it,
+  followed through aliases, derived tables, views, joins, unions, windows and values rows. A
+  cast in a predicate, in an `EXISTS` of a `WHERE`, or in a sibling column no longer refuses;
+  a subquery inside the column's own expression (scalar, `IN`, `EXISTS`), an aggregate and any
+  other plan node are read whole.)* *(Fix round 3, 2026-10-21, verifier round-2 S1-1: a
+  `LATERAL` subquery's outer reference is followed into the join's other side, so a container
+  cast of an instant that reaches the column through `LATERAL (SELECT a.c AS s)` refuses (17
+  cells that stored the UTC wall on round 2 and on main); a reference no enclosing join resolves
+  refuses.)* *(Owner ruling 1, 2026-10-21: an `IN`, `EXISTS` or quantified subquery in the
+  column's own expression is not read, and a scalar subquery is read through the lineage of its
+  one output column, its outer references followed into the node it sits in; a scalar subquery
+  that returns a container cast of an instant still refuses. A `LATERAL` is a plan node under a
+  join, not a subquery expression, and keeps the outer-reference walk.)* **Why the container
+  cast:**
+  RePark's cast of a whole struct, array or map converts a zoned leaf with UTC even in a bare
+  `SELECT` (`CAST(array(TIMESTAMP '2026-01-02 03:04:05.123456+00:00') AS
+  ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark 4.1.2 answers
+  `1767305045123456`), and its type is naive; the leaf cast `CAST(<value> AS TIMESTAMP_NTZ)`
+  stores the session wall and passes. **Why a parameter:** `EXECUTE` binds the argument after
+  the decision and casts an instant to the declared type through its UTC wall (a `STRING` or
+  a `TIMESTAMP_NTZ` parameter stores `1767323045123456` in New York), so no declared type
+  proves a wall; Spark 4.1.2 has no `PREPARE`, so no Spark cell is lost. **The plain `UPDATE`
+  door (mechanism corrected in fix round 1):** it adds the session offset to every
+  `TIMESTAMP_NTZ` cast inside an assigned struct or array, on main and on the build:
+  `named_struct('v', CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ), 'n', 1)` stores
+  `1767341045123456` in New York and `1767303245123456` in Kolkata where Spark stores
+  `1767323045123456`; `CAST(DATE '2026-01-02' AS TIMESTAMP_NTZ)` stores midnight plus the
+  offset; the cast of an instant lands on its UTC wall. A `TIMESTAMP_NTZ` literal,
+  `to_timestamp_ntz`, `make_timestamp_ntz`, a column, the field assignment and the MERGE door
+  store the wall there. The round-0 text of this row said that door "converts with UTC"; the
+  measured mechanism is the session offset. Text:
+  ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the
+  table <table>: Cannot safely cast `<column>`.`<leaf>` to "TIMESTAMP_NTZ". A value that is
+  not provably a TIMESTAMP_NTZ wall time is not written into a nested TIMESTAMP_NTZ field
+  while the session time zone is not UTC: cast the leaf itself, as in
+  named_struct('<field>', CAST(<value> AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS
+  TIMESTAMP_NTZ)) in SQL, or col.cast("timestamp_ntz") on the leaf column of a DataFrame (a
+  CAST written inside expr() is refused), to store the session wall time (a CAST of the whole
+  struct, array or map is refused, and in an UPDATE assign the field itself), or set
+  spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000``. *(Fix round 2,
+  verifier S3-1: the DataFrame door's `F.expr("named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n',
+  1)")` does not lower the leaf cast to the session-aware cast function, so main stores the UTC
+  wall there and the build refuses it; the hint now names `col.cast("timestamp_ntz")`, which
+  stores the session wall, as the DataFrame remedy. The lowering of `expr()` lies outside this
+  unit's files and stays a residue.)* The text names no source type, because a
+  statement the router cannot plan (`INSERT … TABLE`, `LATERAL VIEW`, an arity mismatch,
+  `DISTRIBUTE BY`, CTAS of `INSERT`) takes it too, where main raised its own error. A wall,
+  a `TIMESTAMP_NTZ` column, a container cast of a `TIMESTAMP_NTZ` value or of a string
+  literal, and the leaf cast store as before (the leaf cast stores Spark's session wall).
+  **Not gated, dated 2026-10-20 (fix round 2, verifier S1-1 and S2-1; round 1 read "a
+  container cast of a wall or a string … store as before"):** a container cast or
+  `from_json(to_json(…))` whose zoned leaf passes through `STRING`, `DATE` or `BIGINT`
+  (`CAST(CAST(named_struct('v', x, 'n', 1) AS STRUCT<v: STRING, n: INT>) AS STRUCT<v:
+  TIMESTAMP_NTZ, n: INT>)`, the same through `DATE` or `BIGINT`, `CAST(CAST(array(x) AS
+  ARRAY<STRING>) AS ARRAY<TIMESTAMP_NTZ>)`, the leaf cast over an element of such an array,
+  `from_json(to_json(named_struct('v', x, 'n', 1)), 'v TIMESTAMP_NTZ, n INT')`) stores the UTC
+  wall (the UTC date through `DATE`, the UTC wall to the millisecond through JSON) outside UTC
+  on main and on the build, on `INSERT … SELECT` and a MERGE update; the gate does not see it,
+  because no single cast there reads a zoned type and produces a naive one. Spark 4.1.2 stores
+  the session wall through `STRING`, the session date through `DATE`, refuses `BIGINT`
+  (`DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`) and stores NULL through JSON. The six
+  table-creating writers (CTAS, `CREATE OR REPLACE TABLE … AS SELECT`, `REPLACE TABLE … AS
+  SELECT`, `saveAsTable` in mode `overwrite`, `writeTo().create()`, `.replace()`,
+  `.createOrReplace()`) are not gated and carry the same value: a container cast of an instant
+  stores the UTC wall outside UTC on main and on the build where Spark stores the session
+  wall. One mechanism: the container cast and `to_json` render a zoned leaf in UTC for every
+  target type, in a plain `SELECT` as in a write. Carded as CONTAINER-CAST-ZONE-1
+  (`task/roadmap/mid-term/container-cast-zone-1-card-2026-10-20.md`); the owner rules whether
+  this unit grows to gate it. *(Corrected 2026-10-20, fix round 2,
+  verifier S2-3: round 1 said "a UTC session refuses nothing".)* A UTC session refuses no
+  write but a `PREPARE`: a `PREPARE` is decided as if the zone were not UTC, because `EXECUTE`
+  can run it after a `SET` of the zone, so every `PREPARE` of such a write whose value is an
+  instant, a cast of one or any parameter refuses in every zone, UTC included.
+  **Cells**, measured on main `c516c54a` and on the build with #1037's door probe plus the
+  hint's spellings and three round-1 sources (`ntz_text_cast`, `ts_struct_cast`,
+  `ts_struct_cast_column`; 28 doors, both row-level modes, 8 sources, 3 zones, 3 schemas:
+  3168 cells): 360 move, every one to the refusal. Of the round-0 sources, 192: 176 instant
+  cells (108 UTC wall, 32 session wall by field assignment, 36 raw errors) and, on the plain
+  `UPDATE` door, 8 `CAST` cells that stored the UTC wall and 8 raw errors. Of the round-1
+  sources, 168: 100 container-cast cells that stored the UTC wall, 4 string-cast cells on the
+  plain `UPDATE` that stored the wall plus the offset, and 64 raw errors. No other cell moves:
+  the 2112 cells of a zoned leaf and of a top-level `TIMESTAMP_NTZ` column, every UTC cell,
+  and the leaf cast's 132 session-wall cells keep their value. A second probe of 28 named
+  shapes in three zones (84 cells: the verifier's container casts, `PREPARE` forms and plain
+  `UPDATE` casts, with the leaf-cast controls) moves 48, every one to the refusal: 38 wrong
+  walls (24 container-cast cells in New York and Kolkata, the 2 on a branch now read from the
+  branch; 8 `PREPARE` cells of an instant parameter in those zones; 6 plain-`UPDATE` cast
+  cells) and 10 correct cells (the 6 of the two parameterised `PREPARE` controls in three
+  zones, and 4 UTC cells of a `PREPARE` of an instant parameter, whose UTC wall is the session
+  wall there). Every other cell keeps its value. *(Corrected 2026-10-20, fix round 2, verifier
+  S2-3: round 1 read 42 wrong walls and 6 controls; the probe read the base table for the
+  branch write.)* *(Fix round 2 re-measured both probes on its build: the 3168 matrix cells
+  answer as at `c20c3e25`, refusal for refusal and value for value, and the 84 named-shape
+  cells too; only the refusal text is the round-2 hint.)* **Why RePark and Spark differ:** Spark 4.1.2 answers 174 recorded cells
+  (`python/repark/tests/timestamps/ice_ntz_nested_refuse_1_spark.json`: 12 doors, 5 sources,
+  3 zones, less the two column sources on `insert_values`): the instant's session wall in each
+  of the 138 instant and cast cells, the literal's own wall in the 36 `TIMESTAMP_NTZ` literal
+  cells. RePark refuses the instant cells outside UTC until the lift. **Over-refusal, by
+  design:** a value holding a zoned leaf anywhere is refused even when that leaf pairs with a
+  zoned sibling of the target (pairing is R-016's rule); a parameterised `PREPARE` that
+  supplies the column refuses wherever the parameter sits, and a `PREPARE` of an instant
+  refuses in UTC as well. Measured cost of the `PREPARE` rules, 2026-10-20 (fix round 2,
+  verifier S2-4): 17 correct cells refused, 12 of them by the parameter (the PR's named-shape
+  probe: a parameter in a sibling column and one through the leaf cast, three zones each; the
+  verifier's: a parameter only in `WHERE`, only in `LIMIT`, only in a sibling column, UTC and
+  New York) and 5 by the zone (UTC cells where main stored the UTC wall, which is the session
+  wall there: four instant parameters in the PR's probe, one instant literal with no
+  parameter in the verifier's). A subquery inside the column's own expression is read whole,
+  so an `IN` or `EXISTS` there that holds a container cast of an instant refuses though its
+  result is a boolean: 1 correct cell measured (`IF(EXISTS (…), named_struct('v', w, 'n', 1),
+  NULL)`, New York; Spark and main store the wall). The zone rule reads the zone's id, not its
+  offset at the value: a zone whose offset is zero at the value refuses as any other non-UTC
+  zone (`Europe/London` on 2026-01-02: the plain `UPDATE`'s string cast, its instant cast and
+  an `INSERT` of a container cast of an instant refuse where Spark and main store the same
+  wall; 3 cells measured), as `Etc/UTC` does. *(Fix round 3, 2026-10-21, verifier round-2 S1-2
+  and S2-1: every measured over-refusal class with its count; no rule changed.)* (1) **What the
+  walk reads whole without following, 16 correct cells** (8 shapes, New York and Kolkata; each
+  writes the wall column `w`, so the cast never reaches the stored value, and Spark 4.1.2 and
+  main store the wall; every shape stores in UTC): aggregate expressions read whole, the cast in
+  `HAVING max(…)`, in `HAVING count(element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1))` or
+  in a sibling `size(collect_list(…))` column (3 shapes, 6 cells); a grouping key read, `GROUP
+  BY id, s` over the cast (1 shape, 2 cells); a `CASE` or `IF` condition or a sibling field of
+  the same `named_struct` read, `CASE WHEN element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1)
+  IS NOT NULL THEN w END`, `IF(<cast> IS NULL, 1, 2)` or `size(CAST(array(x) AS
+  ARRAY<TIMESTAMP_NTZ>))` into the `INT` field, or that same `size(…)` in the `INT` field of a
+  `named_struct` a scalar subquery returns, `(SELECT named_struct('v', w, 'n',
+  size(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>))) FROM ice.ns.src LIMIT 1)` (4 shapes, 8 cells;
+  the last found by the verifier in round 3). The counts cover the shapes measured; the class
+  is open-ended, so a shape not listed here that reads a cast only through an aggregate, a
+  grouping key, a condition or a sibling field refuses likewise. *Ruled 2026-10-21 (owner,
+  ruling 2): accepted as cost until GATE-RETIRE-1.* (2) **Subquery reads, no longer refused
+  (owner ruling 1, 2026-10-21):** an `IN`, `EXISTS` or quantified subquery in the column's own
+  expression is not read (a boolean carries no timestamp) and a scalar subquery is read through
+  its one output column, so the 4 scalar-subquery cells round 2 listed (its cast only in the
+  subquery's own `WHERE` or in a column it does not return; New York and Kolkata) and the
+  `EXISTS` cells (`IF(EXISTS (…), named_struct('v', w, 'n', 1), NULL)`, 2 cells, New York and
+  Kolkata; round 2 measured the New York one) store Spark's wall; the `IN` shape raises the
+  engine's own error, as on main. (3) **`PREPARE`, 17 cells** (above). (4) **Zero-offset
+  zones.** The zone rule reads the zone's id, so a zone whose offset is zero but whose id the
+  session does not read as UTC refuses every instant write: `Africa/Abidjan` and
+  `Atlantic/Reykjavik` all year, `Europe/London` in winter. *(Owner ruling 3, 2026-10-21: the
+  pure UTC aliases, `Etc/UTC`, `Etc/GMT`, `Etc/Universal` and `Etc/Zulu` among them, now count
+  as UTC and store Spark's value; round 2 refused them too.)* On the 28-door matrix (the
+  `ntz_nested` schema, 352 cells per zone) 180 cells move per zone, every one to the refusal:
+  126 correct cells (main stored `1767323045123456`, the session wall there, the value Spark
+  stores) and 54 raw errors on main. The verifier measured `Europe/London` and
+  `Atlantic/Reykjavik` (126 and 54 each); fix round 3 measured `Europe/London` and `Etc/GMT`
+  (126 and 54 each) before ruling 3, and after it `Europe/London` 180 (126 and 54) and `Etc/GMT`
+  0: every `Etc/GMT` cell answers as main. Five instant shapes refuse in `Africa/Abidjan`,
+  `Atlantic/Reykjavik` and `Europe/London`, where main stores the wall, and store in `Etc/UTC`,
+  `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `GMT` and `+00:00`. This supersedes the "3 cells
+  measured" above. The owner ruled 2026-10-21: the walk narrows for subqueries (ruling 1, above)
+  and not for aggregates, conditions or sibling fields (ruling 2); a pure UTC alias counts as
+  UTC and a geographic zone does not (ruling 3, above). *Ruled 2026-10-21 (owner): the nested-NTZ
+  INSERT cell (an INSERT of a named_struct holding a TIMESTAMP_NTZ value in a non-UTC session
+  zone; New York measured) reads 1.00-1.15x across six measurements (builder 1.082 and 1.038,
+  verifier 1.090 and 1.050, fix round 4 1.147 and 1.004; main's 10-run rounds spread 24-33 ms,
+  so the cell is bimodal), at or over the 1.05x gate on four of them; accepted as cost until
+  GATE-RETIRE-1 removes the type read; every other cell is inside the gate.* **Not reached by this gate, dated
+  2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
+  frame or a table built from a container cast of an instant carries the UTC wall the cast
+  produced; the container cast's own conversion in a `SELECT` is the defect, for the lift.
+  *(Corrected 2026-10-20, fix round 2, verifier S2-2; round 1 said a container cast of a map
+  panics.)* The `list array` panic is DataFusion's `map()` constructor over a column value,
+  not the cast: `MapFunc::invoke_with_args` → `datafusion_common::utils::list_to_arrays` →
+  `arrow-array` 58.4.0 `cast.rs:929`, for any value type (`INSERT INTO … SELECT id, map('a',
+  id)` into `MAP<STRING, INT>` panics too) and in a plain `SELECT map('a', id) FROM
+  ice.ns.src`, on main and on the build, before any store; a `map()` of literals stores.
+  Carded as MAP-COLUMN-PANIC-1
+  (`task/roadmap/mid-term/map-column-panic-1-card-2026-10-20.md`). A container cast of a map
+  literal does not panic: `SELECT CAST(map('a', <instant>) AS MAP<STRING, TIMESTAMP_NTZ>)['a']`
+  returns the UTC wall in New York, the mechanism carded as CONTAINER-CAST-ZONE-1. **Lift:** the 1.5.7 unit that extends ICE-TSNS-NESTED-1 to the microsecond leaf
+  from #1037's oracles and #1038's localise half. Pins:
+  `crates/repark-spark/tests/ntz_nested_refuse.rs`,
+  `crates/repark-spark/tests/ntz_nested_refuse_casts.rs`,
+  `timestamp_ns_wall_doors.rs` `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`
+  (the rewritten pin), `crates/repark-spark/src/tests/ntz_nested_refuse_routes.rs`,
+  `python/repark/tests/timestamps/test_ice_ntz_nested_refuse_1.py`. Ledger
+  `task/ledgers/staging/ice-ntz-nested-refuse-1-ledger.md`.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 
@@ -3520,7 +3718,9 @@ still open is `isModifiable`.
   calls, reads and time travel, `CREATE TABLE … AS SELECT` (the leaf takes the source's own
   type), and schema evolution. A DataFrame writer is refused when the frame has a column of
   that name, a `lit(None)` column included. `timestamptz_ns` and microsecond nested leaves
-  are not refused and answer as main does (rows R-008, R-011).
+  are not refused and answer as main does (rows R-008, R-011). *(2026-10-20: a naive
+  microsecond nested leaf now takes R-011's own refusal outside UTC; this gate is first and
+  unchanged.)*
   **This changes main:** a nested `timestamp_ns` write that stored on main (the session wall
   through `INSERT … SELECT`, `append` and field assignment, the UTC wall through
   `INSERT OVERWRITE`, MERGE and the overwrite writers) now refuses.

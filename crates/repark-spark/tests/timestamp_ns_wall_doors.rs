@@ -580,19 +580,19 @@ async fn untouched_rows_carry_their_nanosecond_ticks() {
     }
 }
 
-const NTZ_NESTED_DOORS: [(&str, bool); 6] = [
-    ("insert values", false),
-    ("insert select", false),
-    ("merge set field", true),
-    ("merge set struct", false),
-    ("update set field", true),
-    ("merge insert", false),
+const NTZ_NESTED_DOORS: [&str; 6] = [
+    "insert values",
+    "insert select",
+    "merge set field",
+    "merge set struct",
+    "update set field",
+    "merge insert",
 ];
 
 #[tokio::test]
-async fn a_nested_microsecond_ntz_field_keeps_the_split_main_has() {
+async fn a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc() {
     let lit = NESTED_INSTANT;
-    for (zone, wall) in NESTED_WALLS {
+    for (zone, _) in NESTED_WALLS {
         let session = session_at(zone);
         let _warehouse = catalog(&session).await;
         run(
@@ -601,12 +601,15 @@ async fn a_nested_microsecond_ntz_field_keeps_the_split_main_has() {
              USING iceberg TBLPROPERTIES ('format-version'='3')",
         )
         .await;
+        run(
+            &session,
+            "INSERT INTO ice.ns.t VALUES (3, named_struct('v', NULL, 'n', 1)), \
+             (4, named_struct('v', NULL, 'n', 1)), (5, named_struct('v', NULL, 'n', 1))",
+        )
+        .await;
         let writes = [
             format!("INSERT INTO ice.ns.t VALUES (1, named_struct('v', {lit}, 'n', 1))"),
             format!("INSERT INTO ice.ns.t SELECT 2, named_struct('v', {lit}, 'n', 1)"),
-            "INSERT INTO ice.ns.t VALUES (3, named_struct('v', NULL, 'n', 1)), \
-             (4, named_struct('v', NULL, 'n', 1)), (5, named_struct('v', NULL, 'n', 1))"
-                .to_string(),
             format!(
                 "MERGE INTO ice.ns.t t USING (SELECT 3 AS id, {lit} AS x) s ON t.id = s.id \
                  WHEN MATCHED THEN UPDATE SET t.st.v = s.x"
@@ -621,22 +624,35 @@ async fn a_nested_microsecond_ntz_field_keeps_the_split_main_has() {
                  WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('v', s.x, 'n', 1))"
             ),
         ];
-        for write in &writes {
-            run(&session, write).await;
+        let mut outcomes = Vec::new();
+        for (door, write) in NTZ_NESTED_DOORS.iter().zip(&writes) {
+            let outcome = attempt(&session, write).await;
+            let refused = outcome.as_ref().is_err_and(|error| {
+                error.contains(
+                    "Cannot safely cast `st`.`v` to \"TIMESTAMP_NTZ\". A value that is not \
+                     provably a TIMESTAMP_NTZ wall time is not written into a nested \
+                     TIMESTAMP_NTZ field while the session time zone is not UTC",
+                )
+            });
+            outcomes.push((*door, outcome.is_ok(), refused));
         }
         let stored = nested_ticks(&session, "ice.ns.t").await;
-        let utc_wall = NESTED_WALLS[0].1 / 1_000;
-        let expected: Vec<Option<i64>> = NTZ_NESTED_DOORS
-            .iter()
-            .map(|(_, session_wall)| {
-                Some(if *session_wall {
-                    wall / 1_000
-                } else {
-                    utc_wall
-                })
-            })
-            .collect();
-        assert_eq!(stored, expected, "{zone}");
+        if zone == "UTC" {
+            let wall = Some(NESTED_WALLS[0].1 / 1_000);
+            let expected: Vec<_> = NTZ_NESTED_DOORS
+                .iter()
+                .map(|door| (*door, true, false))
+                .collect();
+            assert_eq!(outcomes, expected, "{zone}");
+            assert_eq!(stored, vec![wall; 6], "{zone}");
+        } else {
+            let expected: Vec<_> = NTZ_NESTED_DOORS
+                .iter()
+                .map(|door| (*door, false, true))
+                .collect();
+            assert_eq!(outcomes, expected, "{zone}");
+            assert_eq!(stored, vec![None; 3], "{zone}");
+        }
     }
 }
 

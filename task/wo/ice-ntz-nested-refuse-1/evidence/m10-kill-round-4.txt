@@ -1,0 +1,40 @@
+ICE-NTZ-NESTED-REFUSE-1, fix round 4 (2026-10-21): the kill of mutant M10 by the new pin.
+
+Mutant M10 (ledger C-046), crates/repark-spark/src/router/nested_ns.rs, plan_has:
+-        let _ = next.apply_with_subqueries(|node| {
++        let _ = next.apply(|node| {
+
+Pin: crates/repark-spark/tests/ntz_nested_refuse.rs,
+a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses.
+
+--- head d9943218 plus the pin (no mutant) ---
+$ cargo test -p repark-spark --test ntz_nested_refuse a_scalar_subquery_returning
+running 1 test
+test a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.43s
+
+--- M10 applied with sed, the pin alone ---
+running 1 test
+test a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses ... FAILED
+assertion `left == right` failed
+  left: ["America/New_York / cast: Ok(())", "America/New_York: [Some(1)] snapshots",
+         "America/New_York / wall: [Some(1767323045123456), Some(1767323045123456)]",
+         "Asia/Kolkata / cast: Ok(())", "Asia/Kolkata: [Some(1)] snapshots",
+         "Asia/Kolkata / wall: [Some(1767323045123456), Some(1767323045123456)]"]
+ right: []
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out
+
+--- M10 applied, every ntz_nested_refuse* binary and the routes module ---
+$ cargo test -p repark-spark --no-fail-fast --test ntz_nested_refuse --test ntz_nested_refuse_casts
+ntz_nested_refuse:        9 tests, 8 passed, 1 failed
+  FAILED a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses
+ntz_nested_refuse_casts: 10 tests, 10 passed, 0 failed
+exit 101, wall 19 s
+$ cargo test -p repark-spark --no-fail-fast --lib nested
+(includes tests::ntz_nested_refuse_routes::* and router::nested_ns::tests::*)
+102 passed, 0 failed, 1 ignored (IDENT-STRUCT-KW-1, not this unit's)
+exit 0, wall 123 s
+
+The one failing test under M10 is
+ntz_nested_refuse::a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses.
+The file was restored with git checkout; git status showed only the pin.

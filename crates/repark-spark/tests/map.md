@@ -120,6 +120,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
   The two nested store pins of fold 1 left with the split; the nested pins are the next row.
   pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
+  **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control above is rewritten into
+  `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`: in New York and Kolkata the
+  six doors refuse the instant with R-011's text and the three seeded rows keep a NULL leaf; in
+  UTC they store `1767323045123456`, the wall main stored. pins: ice-ntz-nested-refuse-1/C-002, C-003
 - [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2
   (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
@@ -238,6 +242,187 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
   `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
   pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
+  **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control's nested `TIMESTAMP_NTZ` row stored the
+  UTC wall of a New York instant; it now asserts R-011's refusal (not R-015's text), dated in
+  the test's doc comment. pins: ice-ntz-nested-refuse-1/C-008
+- [ntz_nested_refuse.rs](ntz_nested_refuse.rs) — **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20),
+  parity row R-011:** outside UTC a nested microsecond `TIMESTAMP_NTZ` leaf refuses an instant.
+  `every_door_refuses_an_instant_outside_utc_and_writes_nothing`: five shapes (struct, struct in
+  struct, array, array of struct, map value) through eighteen doors (`INSERT` with `VALUES`,
+  `SELECT`, a column list, `BY NAME` named and star, `OVERWRITE` both, `REPLACE WHERE`, the
+  MERGE insert arms built in the source and in the clause, `INSERT *`, MERGE update and
+  `UPDATE SET *`, `UPDATE` with and without `WHERE`, a temporary view, a subquery, a scalar
+  subquery in `VALUES`) in New York and Kolkata: the text with the leaf path, no file, no
+  snapshot. `a_field_assignment_of_an_instant_refuses_too`: five field doors that stored the
+  session wall on main. `the_refusal_names_the_table_the_column_and_the_leaf`: the whole text
+  and no deleting word in it. `a_wall_or_the_hints_cast_stores_outside_utc_and_the_plain_update_refuses_the_cast`:
+  sixteen doors store a wall and the hint's `CAST` stores the session wall, except the plain
+  `UPDATE` above the leaf, which refuses the cast; the field assignment of the cast stores the
+  session wall. `a_statement_that_does_not_supply_the_column_runs_and_carries_its_rows`: ten
+  statements and two maintenance calls keep the stored wall.
+  `a_zoned_leaf_and_a_top_level_ntz_column_are_not_guarded`: the controls, and R-015's text
+  first on a struct holding both leaves.
+  `the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed`: a wall through
+  `WITH … INSERT` passes the gate (main answers "not implemented"), an instant through it
+  refuses, an instant into a zoned sibling field
+  stores, and an unplannable value refuses. **Mutants (§7 of the ledger):** M1 the zone
+  condition always on, M2 a failed plan read as naive, M3 the plain `UPDATE` sub-expression
+  rule removed, M4 the struct arm of `holds_zoned_timestamp` removed, M5 the field-path pruning
+  removed, M6 `PREPARE` decided by the zone, M7 the every-column fallback removed (M2b: a
+  failed INSERT plan read as naive); each reds a named pin.
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-006, C-007, C-008, C-012, C-013,
+  C-034
+  (`the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` holds C-001 and C-004;
+  `a_frame_through_a_repartition_or_an_unmodelled_node_refuses` holds C-034, described with
+  `ntz_nested_refuse_casts.rs` below.)
+- [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
+  round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
+  `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
+  of a whole struct or array holding an instant, through fourteen doors (`INSERT … SELECT`,
+  `VALUES`, `TRY_CAST`, a cast of a zoned struct column, MERGE insert values, MERGE update set
+  and `UPDATE SET *`, the plain `UPDATE`, a static `PARTITION`, a branch, a temporary view, a
+  catalog view, `REPLACE WHERE` from a frame view, an array) in New York and Kolkata: the
+  refusal, no file, no snapshot. `a_container_cast_of_an_instant_stores_the_wall_in_a_utc_session`:
+  the same doors store the UTC wall in UTC. `the_leaf_cast_and_a_container_cast_of_a_wall_still_store_outside_utc`:
+  the hint's leaf cast (struct, array, `transform`, MERGE) stores the session wall, a container
+  cast of a wall or a string stores the wall.
+  `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone`: six
+  parameterised `PREPARE` forms refuse in UTC and New York; a `PREPARE` that does not supply
+  the column, and two with no parameter, prepare and execute.
+  `the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside_utc`: a string,
+  `TRY_CAST`, a cast of a wall literal and an array refuse there; a literal, `to_timestamp_ntz`,
+  the field assignment and MERGE store the wall; UTC stores the wall, a date cast midnight.
+  `the_type_read_never_runs_the_source`: a counting function is called as often in New York as
+  in UTC across an `INSERT`, an `UPDATE` and a `MERGE`; refused, it is never called, and no
+  snapshot, file or view is left. A map value built by `map(<column>)` is not pinned: DataFusion's
+  `map()` constructor over a column value panics (`list array`) on main as well, for any value
+  type and in a plain `SELECT`, before any store (MAP-COLUMN-PANIC-1; corrected in fix round 2,
+  round 1 blamed the container cast). The round's door matrix and named-shape probe
+  (`task/wo/ice-ntz-nested-refuse-1/evidence/`) and its seven hand mutants (ledger §10: each
+  one-line revert of a round-1 rule reds one of these pins) back the same rules.
+  pins: ice-ntz-nested-refuse-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021
+  **Fix round 2 (2026-10-20, after the verifier's round-1 FAIL):**
+  `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`: on the plain `UPDATE` of a
+  whole struct, `to_timestamp_ntz(<instant>)` (also over `coalesce` of a zoned column) stores
+  the session wall, and a wall beside a zoned column that feeds only an `INT` field or a
+  condition stores the wall, in New York and Kolkata, as Spark and main do; round 1 refused all
+  four (verifier S1-2). `the_cast_walk_reads_only_what_reaches_the_column`: a container cast
+  of an instant in an `EXISTS` of a `WHERE`, in a `WHERE` and in a sibling `ARRAY<STRING>`
+  column no longer refuses and the wall stores; through a derived table, a `UNION ALL` branch,
+  a join side, `first_value … OVER`, a `GROUP BY`, a temporary view and a MERGE source it still
+  refuses and adds no snapshot (verifier S1-3). With the walk disabled, each of the seven
+  stores. `a_subquery_in_the_columns_expression_is_read_whole`: a scalar subquery returning a
+  container cast of an instant (directly, through a derived table, as a MERGE update value)
+  refuses, and so does an `IN` or `EXISTS` subquery holding one inside the column's own
+  expression (read whole, fail closed); a scalar subquery of a wall or of the leaf cast stores
+  (verifier S1-4: removing the subquery read stores the UTC wall).
+  `a_view_the_write_reads_is_inlined_before_the_walk`: a catalog view and a frame view leave no
+  scan whose source carries a logical plan, and a SQL temporary view leaves a
+  `ReplanningTempView` scan; the premise on which round 1's frame-view branch was removed as
+  dead (verifier S3-2).
+  **Fix round 3 (2026-10-21, after the verifier's round-2 FAIL, ledger C-033):**
+  `the_cast_walk_reads_only_what_reaches_the_column` adds `LATERAL (SELECT a.c AS s)` over a
+  derived table that holds a container cast of an instant, on `INSERT` and as a MERGE source:
+  each refuses and adds no snapshot (round 2 stored the UTC wall; the verifier's mutant L16, a
+  `Subquery` node that stops the walk, stores it again). A lateral that returns only the wall
+  sibling of that cast stores the wall, so the walk follows the one outer reference the column
+  uses, not the whole left side.
+  The same pin now holds every lineage arm that opens a hole when it stops (ledger C-034,
+  verifier round-2 S1-3): `SELECT DISTINCT`, a `LIMIT` inside a derived table, a derived table
+  read beside a window, `VALUES` whose second row holds the cast, a top-level `ORDER BY`, and a
+  lateral whose outer relation shares its alias with an outer relation that holds a wall, and a
+  lateral nested in a lateral's body under the same alias (the reference resolves in the
+  nearest scope, and past it in the scopes outside it). `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`
+  (`ntz_nested_refuse.rs`) writes from a frame view through `repartition` and one through
+  `distinct_on` (read whole); each refuses and adds no snapshot. Each pin fails under its
+  one-line mutant (L5, L7, L8, L9, L13, L14, L18, R5, R6).
+  pins: ice-ntz-nested-refuse-1/C-034
+  The over-refusal classes the round lists with their counts (ledger C-035) are held by pins
+  already here: the `PREPARE` pins and, in `src/tests/`, `only_a_utc_zone_lets_an_instant_through`.
+  pins: ice-ntz-nested-refuse-1/C-035
+  `a_view_the_write_reads_is_inlined_before_the_walk` plans through `ReparkSession::sql`, which
+  reaches `router::execute_calibrated`, the function the type read's `planned()` calls, on the
+  same text (ledger C-040, verifier round-2 S3-3). The verifier rounds' outcomes are C-036 to
+  C-039.
+  pins: ice-ntz-nested-refuse-1/C-036, C-037, C-038, C-040
+  **Owner ruling 1 (2026-10-21, ledger C-041):** `a_subquery_in_the_columns_expression_is_read_whole`
+  is renamed `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped`. A
+  scalar subquery that returns a container cast of an instant (directly, through a derived
+  table, as a MERGE update value, over a temporary view, nested, or as an outer column followed
+  back out) still refuses and adds no snapshot; a scalar subquery whose cast feeds only its own
+  `WHERE`, or a column it does not return, a correlated one whose outer reference feeds only its
+  `WHERE`, and an `EXISTS` in the value store the wall in New York and Kolkata. Each storing
+  cell refuses on the round-2 walk.
+  pins: ice-ntz-nested-refuse-1/C-041
+  **Owner ruling 3 (2026-10-21, ledger C-042):** `only_a_utc_zone_lets_an_instant_through`
+  (`src/tests/`) now stores in `Etc/UTC`, `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `Zulu` and
+  `GMT0` beside the spellings it held, and refuses in `Africa/Abidjan`, `Atlantic/Reykjavik`,
+  `Europe/London` and the non-zero zones.
+  pins: ice-ntz-nested-refuse-1/C-042
+  After the rulings (ledger C-043): `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`
+  adds a `DISTINCT ON` frame over a SQL temporary view, read whole into the view (mutant M8a),
+  and `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc` writes its alias list out
+  rather than reading the set it tests (mutant Z3).
+  pins: ice-ntz-nested-refuse-1/C-043, C-044
+  The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
+  a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
+  correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
+  The map residue named above is C-026. Not pinned, stated as a residue (CONTAINER-CAST-ZONE-1,
+  C-027): a container cast or `from_json(to_json(…))` whose zoned leaf passes through `STRING`,
+  `DATE` or `BIGINT`, and the six table-creating writers, store the UTC wall outside UTC on main
+  as on this build. The plain `UPDATE` pins above hold C-028's corrected statement.
+  The whole-text pin in `ntz_nested_refuse.rs` holds fix round 2's hint, which names
+  `col.cast("timestamp_ntz")` for a DataFrame (C-029).
+  The round's door matrix and named-shape probe (C-030), its 35 hand mutants, each killed by
+  one of these pins or the router's unit test (C-031), and its gates (C-032) back the same
+  rules.
+  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030,
+  C-031, C-032
+  **Fix round 4 (2026-10-21, after the verifier's round-3 FAIL, ledger C-045, C-046):**
+  `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses` (`ntz_nested_refuse.rs`)
+  plans a frame whose projection holds a scalar subquery that returns the container cast of an
+  instant, unnests an array column above it (`DataFrame::unnest_columns`, the node a DataFrame
+  `explode` builds, read whole), registers the frame as a temporary view and runs
+  `INSERT INTO … SELECT … FROM <view>`: it refuses in New York and Kolkata with the hint and adds
+  no snapshot. The control, the same frame whose subquery returns the wall, stores the UTC wall.
+  The pin fails under mutant M10 (`plan_has` reads a whole-read node with `apply` in place of
+  `apply_with_subqueries`), which survived the 144 earlier pins and stored the UTC wall in New
+  York on a DataFrame `explode` written through `writeTo(…).append()`, `withColumn` and
+  `append`, `write.insertInto` and an `INSERT … SELECT` from a temporary view; the kill is
+  recorded in `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`. The earlier
+  equivalence claim for M10 (C-043) is superseded by C-046.
+  pins: ice-ntz-nested-refuse-1/C-045, C-046
+  **Comment strip (fix round 4, ledger C-047):** the `///` lines the unit added to
+  `ntz_nested_refuse.rs` (37), `ntz_nested_refuse_casts.rs` (63), `timestamp_ns_nested_shapes.rs`
+  (5) and `timestamp_ns_wall_doors.rs` (7) are removed; the rows above hold every test's reason
+  and its `pins:` citation. `timestamp_ns_wall_doors.rs`'s main-pin rewrite of 2026-10-20 (the
+  six doors now refuse an instant outside UTC with one text and write nothing; UTC stores the
+  walls it stored before) and `timestamp_ns_nested_shapes.rs`'s re-pin of the same day (the
+  nested `TIMESTAMP_NTZ` row takes R-011's refusal, not the gate's text) are described in the
+  paragraphs headed ICE-NTZ-NESTED-REFUSE-1 (2026-10-20) in their rows.
+  pins: ice-ntz-nested-refuse-1/C-047
+  **Count (fix round 4, ledger C-048):** `docs/spark-sql-iceberg-parity.md` R-011 counts ruling 2's
+  over-refused correct cells as 16 in 8 shapes: the verifier's scalar-subquery shape, `INSERT INTO
+  ice.ns.t SELECT id, (SELECT named_struct('v', w, 'n', size(CAST(array(x) AS
+  ARRAY<TIMESTAMP_NTZ>))) FROM ice.ns.src LIMIT 1), 0 FROM ice.ns.src`, joins the sibling-field
+  class (2 cells, New York and Kolkata; Spark and main store the wall, the build refuses). The
+  count covers the shapes measured and the class is open-ended.
+  pins: ice-ntz-nested-refuse-1/C-048
+  **Gates (fix round 4, ledger C-049):** on the merged head the 3168-cell door matrix and the
+  84-cell named-shape probe answer cell for cell as the committed head files (360 and 48 moved
+  against main, every one to the refusal), and the unit's live module passes 67 of 67.
+  pins: ice-ntz-nested-refuse-1/C-049
+  **Owner ruling (2026-10-21, ledger C-050):** the New York nested-NTZ `INSERT` cell, which reads
+  1.04–1.09x of main across four measurements (the type read's planning, about 3 ms per
+  statement), is accepted as cost until GATE-RETIRE-1; the 1.05x gate does not move.
+  pins: ice-ntz-nested-refuse-1/C-050
+  **Cost ruling restated (2026-10-21, ledger C-051):** the ruled cell is an `INSERT` of a
+  `named_struct` holding a `TIMESTAMP_NTZ` value in a non-UTC session zone (New York measured).
+  It reads 1.00–1.15x of main across six measurements (builder 1.082 and 1.038, verifier 1.090
+  and 1.050, fix round 4 1.147 and 1.004; main's 10-run rounds spread 24–33 ms, so the cell is
+  bimodal), at or over the 1.05x gate on four of them; R-011 and the v1.5.6 notes draft state
+  all six.
+  pins: ice-ntz-nested-refuse-1/C-051
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

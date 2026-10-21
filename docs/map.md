@@ -46,7 +46,12 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **2026-10-20 (clerk records):** row
+  single home for how repark differs from Apache Spark. **2026-10-21 (ICE-NTZ-NESTED-REFUSE-1
+  fix round 4):** row R-011's ruling-2 list counts 16 correct cells in 8 shapes (a scalar
+  subquery returning a `named_struct` with a sibling `size(CAST(…))` field joined the class) and
+  says the count covers the shapes measured and the class is open-ended; the nested-NTZ
+  `INSERT` cost in a non-UTC zone (1.00–1.15x across six measurements) is accepted as cost
+  until GATE-RETIRE-1 (owner, 2026-10-21). **2026-10-20 (clerk records):** row
   ICE-TSNS-SQL-1-R-026 filed OPEN, parked with #1037/#1038 (a naive struct member coerced to
   `TIMESTAMP` reads its wall as UTC; Spark oracle on branch `pr-1038`); the ENC-1 section records
   the owner's 2026-10-14 acceptance of ENC-1-RESIDUE-1 items 2, 3, 4 and 6 (ruling 32).

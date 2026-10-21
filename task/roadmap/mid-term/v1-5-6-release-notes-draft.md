@@ -125,6 +125,35 @@ Tables already written keep the values they hold; this release ships no migratio
 
 ## Behaviour changes
 
+- **An instant written into a nested microsecond `TIMESTAMP_NTZ` field refuses outside a UTC
+  session (ICE-NTZ-NESTED-REFUSE-1, R-011).** Every door now refuses it with
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` and a hint, where before field assignment
+  stored the session wall and every other door the UTC wall; the leaf cast
+  `CAST(<value> AS TIMESTAMP_NTZ)` still stores, and a UTC session still stores for every
+  statement but `PREPARE` (a `PREPARE` of an instant or of a parameter that supplies the
+  column refuses in every zone, UTC included), while a `CAST` of a whole
+  struct, array or map holding an instant, a parameterised `PREPARE` that supplies the column,
+  and a `TIMESTAMP_NTZ` cast inside a struct assigned by a plain `UPDATE` refuse too. Nested `TIMESTAMP_NTZ` values that `INSERT` wrote before this
+  release in a session whose zone was not UTC hold the UTC wall. Not gated (CONTAINER-CAST-ZONE-1,
+  owner's ruling pending): a container cast or `from_json(to_json(…))` whose zoned leaf passes
+  through `STRING`, `DATE` or `BIGINT` still stores the UTC wall outside UTC, and the six
+  table-creating writers (CTAS, `CREATE OR REPLACE`/`REPLACE TABLE … AS SELECT`,
+  `saveAsTable` in mode `overwrite`, `writeTo().create()`/`.replace()`/`.createOrReplace()`)
+  carry the same value. Refused by design, measured (R-011 lists each class): 16 correct cells
+  (8 shapes; the count covers the shapes measured and the class is open-ended) where a cast in an
+  aggregate, a grouping key, a `CASE`/`IF` condition or a sibling field never
+  reaches the stored value (accepted as cost until GATE-RETIRE-1, owner ruling 2026-10-21); 17
+  `PREPARE` cells; and every instant write in a geographic zone at offset zero
+  (`Africa/Abidjan`, `Atlantic/Reykjavik`, `Europe/London` in winter: 126 correct cells per zone
+  on the 28-door matrix), whose tzdb history holds a local-mean-time or summer offset. A pure
+  UTC alias (`UTC`, `UCT`, `Universal`, `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`,
+  `Greenwich`, their `Etc/` forms) counts as UTC (owner ruling 2026-10-21). An `IN`, `EXISTS` or quantified subquery in the value is not read, and a scalar
+  subquery is read through its output column (owner ruling 2026-10-21), so a cast that only
+  feeds such a subquery's predicate stores.
+  An `INSERT` of a `named_struct` holding a `TIMESTAMP_NTZ` value in a non-UTC session zone
+  carries about 3 to 4 ms of planning per statement (the type read) until GATE-RETIRE-1 (owner
+  ruling 2026-10-21).
+
 - **The local-file write policy checks writes below the root (PA-LOCAL-FS-POLICY-1, audit
   PA-02).** With `repark.sql.allowLocalFilesystemDDL=false` (the default), `EXPLAIN ANALYZE
   COPY … TO '<outside>'` now refuses with the policy error and writes nothing, as the bare

@@ -152,6 +152,96 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   from there. The moved walk also answers a `DELETE`, which this file's match ignores, and the
   statement itself still comes first, so the `BY NAME` index and every answer stay as they were.
   pins: repark-sql-update-subquery-where-1/C-021
+  **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20, parity row R-011, ruling T-3):** after R-015's call on
+  the same loaded table, `refuse_zoned_micros` refuses a value for a column with a nested
+  microsecond `TIMESTAMP_NTZ` leaf when the session zone is not UTC (canonical id `UTC`,
+  `+00:00` or `-00:00`; `Etc/UTC` refuses; *owner ruling 3, 2026-10-21, ledger C-042:* the one
+  set `UTC_ALIASES` and `names_utc` in this file hold every pure UTC alias, `UTC`, `UCT`,
+  `Universal`, `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`, `Greenwich`, their `Etc/` forms and
+  the zero offsets, matched as written and as the session canonicalises them, and no
+  geographic zone: `Africa/Abidjan`, `Atlantic/Reykjavik` and `Europe/London` still refuse,
+  their tzdb history holding a local-mean-time or summer offset; the unit test
+  `only_a_pure_utc_alias_counts_as_utc` holds both lists, each written out in the test so a
+  name dropped from the set reds it, ledger C-043) or the statement is a `PREPARE` (`EXECUTE` can run it
+  after a `SET` of the zone). For each supplied column it reads the type of each feed by
+  planning one `SELECT` through `router::execute_calibrated`, never executed: an INSERT's source
+  (with the outer `WITH` of `WITH … INSERT`), the column at the source position, of the column's
+  name, or every column when neither resolves; `SELECT <values> FROM <table> [AS <alias>]` for
+  UPDATE and `… FROM <table> [AS <alias>], <source>` for MERGE, the table being the loaded
+  table's name, so `t.branch_x` reads as `t`; `SELECT * FROM <source>` for a MERGE star. It
+  refuses when a type holds a zoned timestamp, when the plan fails (fail closed), when the plan
+  holds a `CAST` or `TRY_CAST` from a type holding a zoned timestamp to one holding a naive one
+  (`casts_a_zoned_value_to_naive`), and, on a plain `UPDATE` whose path stops
+  above the leaf, when any planned sub-expression calls the `TIMESTAMP_NTZ` cast
+  (`shifts_in_an_update`). *(Fix round 2, 2026-10-20: that door no longer refuses a zoned
+  sub-expression as such. `to_timestamp_ntz(<instant>)`, a zoned column feeding only an `INT`
+  field or a condition, store Spark's value there; the cast arm and the planned type cover every
+  wrong wall measured on that door; ledger C-022.)* **Where the walk reads (fix round 2,
+  2026-10-20, ledger C-023):** both tests run over the lineage of the supplied column only
+  (`lineage_has`), not the whole statement: from the output column of the typing plan it reads
+  the expression that produces it and follows each column it references through projections,
+  aliases, derived tables, filters, sorts, limits, `DISTINCT`, joins (the side the column comes
+  from), unions (every branch), windows, values rows and a `ReplanningTempView`'s definition
+  plan (a DataFusion or catalog view is inlined by the plan builder before the walk). A
+  predicate, a join condition and a sibling column are not read. *(Owner ruling 1, 2026-10-21,
+  ledger C-041: an `IN`, `EXISTS` or quantified subquery inside a read expression is not read,
+  its left operand still is; a scalar subquery is walked through its one output column as a
+  scope entry (`Next::Lateral` with the node's input as the scope), so an outer reference in
+  its output is followed back out and one in its `WHERE` is not. Round 2 read every subquery
+  expression whole and followed its outer references as columns.)* Read whole, fail closed:
+  every group and aggregate expression of an aggregate (owner ruling 2, 2026-10-21: kept), and
+  any other node (`plan_has`, the round-1 walk). A column that resolves in no input reads every input whole.
+  **A `LATERAL` subquery (fix round 3, 2026-10-21, ledger C-033):** DataFusion 54 plans a
+  lateral factor as a join whose right side is a `Subquery` node, and the lateral's projection
+  names the left side's column as an outer reference (`Expr::OuterReferenceColumn`). Each entry
+  of the walk carries the scopes it sits in: entering a join's right side pushes the join's left
+  input as a scope, and an outer reference is followed into the innermost scope that resolves
+  it, as a column, so `LATERAL (SELECT a.c AS s)` reads the expression that produces `a.c` and
+  a sibling column of `a` is not read. Fail closed: an outer reference that resolves in no scope
+  refuses, and a node read whole inside a scope that holds an outer reference reads every
+  enclosing scope whole as well. Round 2 followed the column into the subquery and dropped the
+  reference, so a container cast of an instant through `LATERAL (SELECT a.c AS s)` stored the
+  UTC wall (verifier round 2, S1-1).
+  Neither walk descends a scan source's own logical plan (round 1's frame-view branch, removed
+  in fix round 2, ledger C-024): DataFusion 54's `LogicalPlanBuilder::scan` replaces a scan
+  whose source carries a plan (a catalog view's `ViewTable`, a frame's `into_view()`) with that
+  plan before the router sees it, and every planner path builds scans through it. The file's
+  `#[cfg(test)]` module pins the fail-closed read of a column that resolves in no input on a
+  synthetic plan (no planner builds one), and, from fix round 3, the two fail-closed arms of
+  the lateral walk on synthetic plans: an outer reference no enclosing join resolves, and an
+  unmodelled node (`DISTINCT ON`) inside the right side of a join that holds an outer reference
+  (no measured lateral that RePark can execute reaches either: a scalar subquery of the outer
+  column inside the lateral reaches the whole-read arm, and it plans, then fails in the
+  physical planner on main and the build; a derived table, `DISTINCT` or `UNION ALL` inside the
+  lateral plans and fails in `repark_lateral_projection_hoist`, and the walk follows its outer
+  reference). Fix round 3 also pins the walk's reach on SQL (ledger C-034): a top-level
+  `ORDER BY`, a repartition and a `DISTINCT ON` in a frame, and the nearest scope when lateral
+  aliases shadow.
+  A `PREPARE` that holds a parameter is read as `Scope::Unreadable`, so every supply of the
+  column refuses. **Why the container cast:** the planner's cast of a whole
+  struct, array or map converts a zoned leaf with UTC even in a bare `SELECT`
+  (`CAST(array(<instant>) AS ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark
+  `1767305045123456`), and its planned type is naive; the leaf `CAST(<value> AS TIMESTAMP_NTZ)`
+  is lowered to the session-aware cast function, never to a planner cast, so it still passes.
+  **Why the plain `UPDATE` rule (corrected 2026-10-20, fix round 1):** that door adds the session
+  offset to every `TIMESTAMP_NTZ` cast inside an assigned struct or array, whatever the input:
+  `CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ)` stores `1767341045123456` in New York
+  (Spark `1767323045123456`), a date cast stores midnight plus the offset, and the cast of an
+  instant lands on its UTC wall; a literal, `to_timestamp_ntz`, a column, the field assignment
+  and MERGE store the wall. The round-0 text said the door "converts with UTC"; the measured
+  mechanism is the offset. **Why a parameter refuses:** `EXECUTE` binds the argument after the
+  decision and casts an instant to the declared type through its UTC wall (`STRING`,
+  `TIMESTAMP_NTZ`), so no declared type proves a wall. **Why plan and not read the AST:** a
+  column, a view, a by-name frame and a scalar subquery have no type in the AST; the router's own
+  planner gives the type the write sees.
+  **Fix round 4 (2026-10-21, ledger C-047):** the `///` lines the unit had put on this file's
+  four unit tests (`a_column_that_resolves_in_no_input_reads_every_input_whole`,
+  `an_outer_reference_no_enclosing_join_resolves_fails_closed`,
+  `an_unmodelled_node_that_refers_out_reads_the_other_side_whole`,
+  `only_a_pure_utc_alias_counts_as_utc`) are removed; each test's reason and its `pins:` citation
+  are in the paragraphs above (the fail-closed read of an unresolved column, the two fail-closed
+  arms of the lateral walk, the alias set).
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023, C-024, C-033, C-042, C-047
 
 ## Pointers
 

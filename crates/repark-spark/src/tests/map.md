@@ -745,6 +745,26 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and the sweep pins the temporary spellings, the lowercase keyword, an
   `options` alias in the CTAS select list, further non-iceberg providers,
   and the missing-USING shape at their exact end states.
+- `ntz_nested_refuse_routes.rs` — **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** R-011's refusal
+  on the routes the router rewrites, in a session whose zone is set on the config carrier.
+  Seven branch and WAP routes refuse an instant, add no Parquet file and no snapshot; the same
+  routes pass the gate with a wall (`UPDATE` of a branch keeps main's raw Arrow error, which
+  it raises in UTC too); a by-name frame is decided by the column of that name; the wrapped
+  writes (`EXPLAIN ANALYZE`, `PREPARE`, CTAS of `INSERT`, `WITH … INSERT`, an unparsed
+  statement) refuse and a plain `EXPLAIN` runs; a `PREPARE` refuses an instant in a UTC
+  session and a prepared wall runs after the zone changes; eight UTC spellings let an instant
+  through and five other zones refuse it. The harness registers `repark_functions::register_all`
+  so the type read can plan a `TIMESTAMP_NTZ` literal. Fix round 1 (2026-10-20) re-pinned the
+  refusal's text, which no longer names the source type.
+  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-003, C-004, C-006, C-007
+  *(Owner ruling 3, 2026-10-21, ledger C-042:)* `only_a_utc_zone_lets_an_instant_through`
+  stores in every pure UTC alias it names (`Etc/UTC`, `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`,
+  `Zulu`, `GMT0` beside `UTC`, `Z`, `GMT`, `UT` and the zero offsets) and refuses in
+  `Africa/Abidjan`, `Atlantic/Reykjavik`, `Europe/London` and the non-zero zones.
+  pins: ice-ntz-nested-refuse-1/C-042
+  *(Fix round 4, 2026-10-21, ledger C-047:)* the `///` lines on this file's six tests are
+  removed; the paragraphs above hold each test's reason and its citation.
+  pins: ice-ntz-nested-refuse-1/C-047
 - `nested_ns_routes.rs` — **ICE-TSNS-MERGE-WALL-1, split fold 1 (2026-10-10):** the nested
   `timestamp_ns` refusal on the routes the router rewrites.
   `a_branch_or_wap_write_of_a_nested_nanosecond_leaf_is_refused_and_writes_nothing`: fifteen

@@ -53,6 +53,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   more-than-one-seam halt fires (C-006 OPEN); scope and non-measurement stated
   (C-007). `risk_tier: standard`. Branch `fix/ice-tsns-floor-doors-1`.
   pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
+- [ice-ntz-nested-refuse-1-ledger.md](ice-ntz-nested-refuse-1-ledger.md) —
+  **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20), parity row R-011, ruling T-3:** a nested
+  microsecond `TIMESTAMP_NTZ` leaf refuses a value that is not provably naive outside UTC, on
+  every door, with one hint. C-001 the seam, C-002 to C-007 the doors, the text and the
+  carriers, C-008 the controls, C-009 and C-010 the facade and Spark, C-011 the matrix against
+  main, C-012 and C-013 mutants and gates; C-014 (the verifier) OPEN after a round-0 FAIL.
+  Fix round 1 (2026-10-20): C-015 a container cast of an instant, C-016 a parameterised
+  `PREPARE`, C-017 the plain `UPDATE`'s `TIMESTAMP_NTZ` cast, C-018 the type read never runs,
+  C-019 to C-021 the cells, mutants and gates. Fix rounds 2 and 3 are §12 and §13. Fix round 4
+  (2026-10-21, after the verifier's round-3 FAIL): C-045 the verdict, C-046 the mutant-M10 pin, C-047 the unit's 153 code comment lines removed, C-048 the ruling-2 count (16 cells, 8 shapes), C-049 the round's gates and the
+  New York nested-NTZ `INSERT` cost, C-050 the owner's ruling accepting that cell as cost until
+  GATE-RETIRE-1, C-051 the same ruling restated with all six readings.
 - [ice-struct-pairing-1-ledger.md](ice-struct-pairing-1-ledger.md) —
   **ICE-STRUCT-PAIRING-1 (U-6, 2026-10-14), parity row R-016:** one rule pairs struct fields on
   every write door. C-001 to C-009 are the sentences of the rule, C-010 to C-015 how the doors
