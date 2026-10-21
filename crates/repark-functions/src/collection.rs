@@ -37,6 +37,7 @@ mod flatten;
 mod map_concat;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
 mod map_from_entries;
+mod map_rewrite;
 mod size;
 
 /// The collection shims registered after DataFusion's defaults.
@@ -58,6 +59,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         array_insert::array_insert_udf(),
         arrays_zip::arrays_zip_udf(),
         map_concat::map_concat_udf(),
+        create_map::sql_map_udf(),
         crate::spark_sequence::sequence_udf(),
         array_append::spark_array_append_udf(),
         array_append::spark_array_prepend_udf(),
@@ -136,6 +138,9 @@ pub fn map_concat_udf() -> Arc<ScalarUDF> {
 pub fn create_map_udf() -> Arc<ScalarUDF> {
     create_map::create_map_udf()
 }
+
+pub use create_map::SQL_MAP_NAME;
+pub use map_rewrite::SparkMapRewrite;
 
 #[must_use]
 pub fn array_contains_udf() -> Arc<ScalarUDF> {

@@ -1,5 +1,7 @@
 # map — repark-spark/src
 
+MAP-COLUMN-PANIC-1 (2026-10-20): `keyword_lower.rs` lowers an unqualified odd-arity `map(...)` call to the internal `__repark_create_map__` kernel (`repark_functions::collection::SQL_MAP_NAME`), and `map_door_keyword_errors` rewrites the kernel's arity error into Spark's `[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is N` (SQLSTATE 42605), where DataFusion's planner says `make_map requires an even number of arguments` with no count. An even-arity call is left to the planner here: the analyzer rule `SparkMapRewrite` in `repark-functions` sends every non-constant one to the Spark per-row kernel, on every door. `spark_ast.rs` and `merge.rs` keep their calls and names; `has_empty_map_or_timestamp_ns_cast` also finds an odd-arity call, so a MERGE lowers it.
+
 CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `extension.rs` seats `normalize/join_condition.rs`'s `JoinConditionRefusals` between `spark_integral_literal` and `type_coercion` (one line; `lib.rs` stays at its 156-line ceiling, so the rule lives under `normalize/` with its one `mod` line in `normalize.rs`). `extension/tests.rs` pins the new seat. pins: cross-join-condition-1/C-008
 
 U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. On a `TempFallbackAllowed` catalog only, an orphan scan refuses a path that holds another table's metadata file or an unreadable one, or whose ancestor walk (`call/map.md`) reaches a `metadata/` directory holding one (the other table of any catalog); and a path that holds another table of the same catalog, lies inside one outside the swept table's own location, or lies inside the swept table's own location when another table shares it. See `tests/map.md` and `call/map.md`. pins: u1-mem-layout-1/C-002, C-011, C-014, C-020, C-025, C-029
@@ -1143,6 +1145,7 @@ pins: rp-4-fork-repin/C-005, C-006
   cell is left for the µs rule and widened like `INSERT … SELECT`. Both hooks return a
   non-insert plan without moving it. Rust tests: `tests/v3_timestamp_ns_door.rs`.
   pins: ice-tsns-sql-1/C-002, C-010
+- `keyword_lower.rs` — **MAP-COLUMN-PANIC-1 (2026-10-20):** `lower_empty_map_call` gains a sibling, `lower_map_call`: an unqualified odd-arity `map(...)` (unnamed arguments, no `OVER`, `FILTER`, `DISTINCT`) takes the name `__repark_create_map__`, so planning raises the kernel's arity error and `map_wrong_arity_error` (inside `map_door_keyword_errors`) renders Spark's `WRONG_NUM_ARGS` text with the argument count. The `map()` lowering, the statement, DML and MERGE hooks and the three `pub(crate)` entry points keep their names. Rust tests in the file and `tests/map_column_panic_1.rs`.
 - `keyword_lower.rs` — **WO U9-TYPES-1 (2026-09-25):** `lower_expression` rewrites an
   unqualified zero-argument `map()` (no `OVER`, no `FILTER`) into
   `map(make_array(), make_array())`, Spark's empty `map<void,void>` (cell `TY-MAP`). The name

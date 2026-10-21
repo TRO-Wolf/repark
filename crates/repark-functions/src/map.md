@@ -1,5 +1,7 @@
 # map — repark-functions/src
 
+**MAP-COLUMN-PANIC-1 (2026-10-20):** `collection.rs` registers `create_map::sql_map_udf()` (the internal name `__repark_create_map__`, so `create_map` stays unregistered on the SQL door, as Spark leaves it) and re-exports `SQL_MAP_NAME` and `SparkMapRewrite`; `registration.rs` appends the rule to `analyzer_rules()` after the second `LambdaRebind`. Details in [collection/map.md](collection/map.md).
+
 **SOURCE-URL-REDACT-1-FN (2026-10-06):** the `case_sensitive.rs`, `ansi.rs` and `merge_schema.rs` boolean-knob refusals return `BooleanConfRefusal` (`key`, `raw`). `Debug` prints `key` and `raw_len`. `repark-python` and `repark-spark` format the Spark sentence with `mask_value_credentials`. The builder door masks every `Configuration` message. No `repark-functions` → `repark-common` edge. pins: source-url-redact-1/C-035, C-055
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule

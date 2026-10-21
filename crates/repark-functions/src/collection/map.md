@@ -1,5 +1,7 @@
 # map — repark-functions/src/collection
 
+MAP-COLUMN-PANIC-1 (2026-10-20): `create_map.rs` serves the Spark SQL door too. `sql_map_udf()` is the same kernel under the internal name `__repark_create_map__` (`SQL_MAP_NAME`), registered in `functions()`; `create_map` itself stays unregistered, as Spark leaves it. The kernel no longer slices one row at a time: one key and one value array per pair, null and repeated keys found with vectorised kernels, the pairs interleaved in one pass. `map_rewrite.rs` is the analyzer rule that sends a non-constant `map(make_array(keys), make_array(values))` to it.
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 
@@ -45,6 +47,7 @@ needed.
   a key repeated across the concatenated maps raises `DUPLICATED_MAP_KEY` with the text
   `map_from_entries` and `str_to_map` already use; no arguments answer an empty
   `MAP<STRING,STRING>`. pins: fnp-9-collections-json/C-006
+- `map_rewrite.rs` — **MAP-COLUMN-PANIC-1 (2026-10-20):** `SparkMapRewrite`, an `AnalyzerRule` appended after the second `LambdaRebind`. DataFusion plans `map(k1, v1, k2, v2)` as `map(make_array(k1, k2), make_array(v1, v2))`, whose kernel builds a map only when both lists are constants or both are per row; a constant list beside a per-row list panics `list array` or answers `map requires key and value lists to have the same length`. The rule keeps a map whose keys and values are all literals (through a cast or a negation, or a constant `array`, `named_struct`, `struct` or `map`), with distinct non-NULL keys, on DataFusion's kernel and its consumers (the CSV option fold, the map-ordering refusal text, the nullability marker). Every other map takes the per-row kernel, which raises Spark's `NULL_MAP_KEY` and `DUPLICATED_MAP_KEY`. The rule keeps the output column name.
 - `create_map.rs` — **FNP-9 (2026-09-05):** the PySpark-only `create_map(k1, v1, …)` name. It is
   NOT in `functions()`: the Spark door spells this `map(...)` and already has it, so the kernel
   reaches only the facade through `expr_fn::create_map`. Its own kernel rather than DataFusion's
@@ -54,6 +57,7 @@ needed.
   now derive the map's `values` field nullability from the value arguments —
   Spark's `valueContainsNull` is false when every value expression is non-nullable,
   which `posexplode`'s `value` column needs to stay non-nullable.
+  **MAP-COLUMN-PANIC-1 (2026-10-20):** the kernel also answers SQL as `__repark_create_map__` (see the dated paragraph above); a repeated key raises Spark 4.1.2's full `[DUPLICATED_MAP_KEY]` text with SQLSTATE 23505 and the key unquoted. Rust tests sit in the file.
   pins: fnp-9-collections-json/C-006, fnp-gen-1/C-002
 - `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
   (asc NULLS FIRST, desc NULLS LAST).

@@ -8,6 +8,7 @@ use datafusion::sql::sqlparser::ast::{
     UnaryOperator, Value, ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
+use repark_functions::collection::SQL_MAP_NAME;
 
 mod ltz_values_cast;
 mod ntz_cast_lower;
@@ -43,21 +44,37 @@ fn function_call(name: &str, args: Vec<Expr>) -> Expr {
     })
 }
 
-fn is_empty_map_call(node: &Expr) -> bool {
+const CREATE_MAP_ARITY_MARKER: &str = "`create_map` requires an even number of arguments, got ";
+
+fn map_call_argument_count(node: &Expr) -> Option<usize> {
     let Expr::Function(function) = node else {
-        return false;
+        return None;
     };
-    let empty_arguments = match &function.args {
-        FunctionArguments::List(list) => list.args.is_empty() && list.clauses.is_empty(),
-        FunctionArguments::None | FunctionArguments::Subquery(_) => false,
+    let FunctionArguments::List(list) = &function.args else {
+        return None;
     };
     let [ObjectNamePart::Identifier(name)] = function.name.0.as_slice() else {
-        return false;
+        return None;
     };
-    empty_arguments
+    let plain = list.clauses.is_empty()
+        && list.duplicate_treatment.is_none()
         && function.over.is_none()
         && function.filter.is_none()
-        && name.value.eq_ignore_ascii_case("map")
+        && function.null_treatment.is_none()
+        && function.within_group.is_empty()
+        && list
+            .args
+            .iter()
+            .all(|argument| matches!(argument, FunctionArg::Unnamed(FunctionArgExpr::Expr(_))));
+    (plain && name.value.eq_ignore_ascii_case("map")).then_some(list.args.len())
+}
+
+fn is_empty_map_call(node: &Expr) -> bool {
+    map_call_argument_count(node) == Some(0)
+}
+
+fn is_odd_map_call(node: &Expr) -> bool {
+    map_call_argument_count(node).is_some_and(|count| count % 2 == 1)
 }
 
 fn lower_empty_map_call(node: &mut Expr) -> bool {
@@ -74,8 +91,21 @@ fn lower_empty_map_call(node: &mut Expr) -> bool {
     true
 }
 
+fn lower_map_call(node: &mut Expr) -> bool {
+    if lower_empty_map_call(node) {
+        return true;
+    }
+    if !is_odd_map_call(node) {
+        return false;
+    }
+    if let Expr::Function(function) = node {
+        function.name = ObjectName::from(vec![Ident::new(SQL_MAP_NAME)]);
+    }
+    true
+}
+
 fn lower_expression(node: &mut Expr) {
-    if ntz_cast_lower::lower_timestamp_ntz_cast(node) || lower_empty_map_call(node) {
+    if ntz_cast_lower::lower_timestamp_ntz_cast(node) || lower_map_call(node) {
         return;
     }
     if let Expr::RLike {
@@ -135,7 +165,7 @@ impl VisitorMut for TimestampNsCastLower {
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
         if !ntz_cast_lower::lower_timestamp_ntz_cast(expr) && self.empty_maps {
-            lower_empty_map_call(expr);
+            lower_map_call(expr);
         }
         ControlFlow::Continue(())
     }
@@ -150,21 +180,23 @@ pub(crate) fn lower_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
     let _ = node.visit(&mut TimestampNsCastLower { empty_maps: false });
 }
 
+/// Lower every empty or odd-arity `map(...)` call and every `TIMESTAMP_NTZ` cast.
 pub(crate) fn lower_empty_maps_and_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
     let _ = node.visit(&mut TimestampNsCastLower { empty_maps: true });
 }
 
+/// Lower every empty or odd-arity `map(...)` call.
 pub(crate) fn lower_empty_map_calls<T: VisitMut>(node: &mut T) {
-    let _ = node.visit(&mut EmptyMapLower);
+    let _ = node.visit(&mut MapCallLower);
 }
 
-struct EmptyMapLower;
+struct MapCallLower;
 
-impl VisitorMut for EmptyMapLower {
+impl VisitorMut for MapCallLower {
     type Break = Infallible;
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        lower_empty_map_call(expr);
+        lower_map_call(expr);
         ControlFlow::Continue(())
     }
 }
@@ -192,12 +224,13 @@ impl Visitor for TimestampNsCastProbe {
             Expr::TypedString(typed) if matches!(typed.data_type, DataType::TimestampNtz(_)) => {
                 ControlFlow::Break(())
             }
-            _ if is_empty_map_call(expr) => ControlFlow::Break(()),
+            _ if is_empty_map_call(expr) || is_odd_map_call(expr) => ControlFlow::Break(()),
             _ => ControlFlow::Continue(()),
         }
     }
 }
 
+/// Find an empty or odd-arity `map(...)` call or a timestamp cast that lowering rewrites.
 pub(crate) fn has_empty_map_or_timestamp_ns_cast<T: Visit>(node: &T) -> bool {
     node.visit(&mut TimestampNsCastProbe).is_break()
 }
@@ -219,8 +252,26 @@ pub(crate) fn map_unsupported_timestamp_ntz(error: DataFusionError) -> DataFusio
     }
 }
 
+fn map_wrong_arity_error(error: DataFusionError) -> DataFusionError {
+    let text = error.to_string();
+    let Some((_, tail)) = text.split_once(CREATE_MAP_ARITY_MARKER) else {
+        return error;
+    };
+    let count: String = tail.chars().take_while(char::is_ascii_digit).collect();
+    if count.is_empty() {
+        return error;
+    }
+    DataFusionError::Plan(format!(
+        "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the \
+         actual number is {count}. Please, refer to \
+         'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605"
+    ))
+}
+
 pub(crate) fn map_door_keyword_errors(error: DataFusionError) -> DataFusionError {
-    map_unsupported_timestamp_ntz(crate::bare_nullary::map_bare_nullary_column_error(error))
+    map_wrong_arity_error(map_unsupported_timestamp_ntz(
+        crate::bare_nullary::map_bare_nullary_column_error(error),
+    ))
 }
 
 #[cfg(test)]
@@ -267,6 +318,99 @@ mod tests {
                 && quoted.contains("map(make_array(), make_array()) AS b")
                 && quoted.contains("`s`.`map`() AS c"),
             "{quoted}"
+        );
+    }
+
+    #[test]
+    fn an_odd_map_call_lowers_to_the_internal_kernel_so_the_error_carries_the_count() {
+        let text = lowered(
+            "SELECT map('a', id, 'b') AS a, map('a') AS b, `MAP`('a', 1, 'b') AS c, \
+             map('a', 1, 'b', 2, 'c') AS d FROM t",
+        )
+        .to_string();
+        for expected in [
+            "__repark_create_map__('a', id, 'b') AS a",
+            "__repark_create_map__('a') AS b",
+            "__repark_create_map__('a', 1, 'b') AS c",
+            "__repark_create_map__('a', 1, 'b', 2, 'c') AS d",
+        ] {
+            assert!(text.contains(expected), "{expected}: {text}");
+        }
+    }
+
+    #[test]
+    fn an_even_or_unusual_map_call_is_left_to_the_planner() {
+        let before = "SELECT map('a', id) AS a, map(k, 1, 'b', v) AS b, map(NULL, 1) AS c, \
+                      s.map('a', id, 'b') AS d, map(a => 'x', b => id, c => 1) AS e, \
+                      map(DISTINCT 'a', id, 'b') AS f, map('k', map('j', 1)) AS g";
+        assert_eq!(lowered(before).to_string(), before);
+    }
+
+    #[test]
+    fn lowering_a_map_call_twice_changes_nothing_more() {
+        let mut statement =
+            Parser::parse_sql(&DatabricksDialect {}, "SELECT map('a', id, 'b') AS m")
+                .unwrap()
+                .remove(0);
+        lower_spark_keywords(&mut statement);
+        let once = statement.to_string();
+        lower_spark_keywords(&mut statement);
+        assert_eq!(statement.to_string(), once);
+    }
+
+    #[test]
+    fn the_probe_finds_an_odd_map_call_in_dml_and_merge() {
+        let parse = |sql: &str| {
+            Parser::parse_sql(&DatabricksDialect {}, sql)
+                .unwrap()
+                .remove(0)
+        };
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+            "UPDATE t SET c = map('a', id, 'b') WHERE id = 0"
+        )));
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+            "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN UPDATE SET c = map('a')"
+        )));
+        assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
+            "UPDATE t SET c = map('a', id) WHERE id = 0"
+        )));
+        let mut merge =
+            parse("MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN UPDATE SET c = map('a')");
+        lower_empty_maps_and_timestamp_ns_casts(&mut merge);
+        assert!(
+            merge.to_string().contains("c = __repark_create_map__('a')"),
+            "{merge}"
+        );
+        let mut update = parse("UPDATE t SET c = map('a', id, 'b'), d = map() WHERE id = 0");
+        lower_empty_map_calls(&mut update);
+        let text = update.to_string();
+        assert!(
+            text.contains("c = __repark_create_map__('a', id, 'b')"),
+            "{text}"
+        );
+        assert!(
+            text.contains("d = map(make_array(), make_array())"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn an_odd_argument_count_error_names_spark_map_and_the_count() {
+        let error = DataFusionError::Plan(
+            "Error during planning: Execution error: Function '__repark_create_map__' \
+             user-defined coercion failed with: Execution error: \
+             [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] `create_map` requires an even number of \
+             arguments, got 3. No function matches the given name and argument types."
+                .to_string(),
+        );
+        let mapped = map_door_keyword_errors(error);
+        assert!(matches!(mapped, DataFusionError::Plan(_)), "{mapped:?}");
+        assert_eq!(
+            mapped.to_string(),
+            "Error during planning: [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n \
+             (n > 0) parameters but the actual number is 3. Please, refer to \
+             'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. \
+             SQLSTATE: 42605"
         );
     }
 
