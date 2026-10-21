@@ -337,6 +337,17 @@ async fn a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute() {
 
 const IN_SUBQUERY: &str = "id IN (SELECT id FROM ice.ns.s)";
 
+const MERGE_PLAN_REFUSAL: &str =
+    "This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t";
+
+fn refusal_for(text: &'static str, write: &str) -> &'static str {
+    if write.starts_with("MERGE") {
+        MERGE_PLAN_REFUSAL
+    } else {
+        text
+    }
+}
+
 fn wrapped_writes() -> Vec<String> {
     let mut writes = Vec::new();
     for predicate in ["id = 2", IN_SUBQUERY] {
@@ -360,7 +371,8 @@ async fn an_explain_analyze_of_a_write_refuses_and_writes_nothing() {
     let session = seeded_default_session(root).await;
     for write in wrapped_writes() {
         let statement = format!("EXPLAIN ANALYZE {write}");
-        refuse_wrapper_and_hold(&session, EXPLAIN_ANALYZE_REFUSAL, &statement).await;
+        let text = refusal_for(EXPLAIN_ANALYZE_REFUSAL, &write);
+        refuse_wrapper_and_hold(&session, text, &statement).await;
     }
 }
 
@@ -371,7 +383,8 @@ async fn a_prepared_write_refuses_and_leaves_nothing_to_execute() {
     let session = seeded_default_session(root).await;
     for write in wrapped_writes() {
         let prepare = format!("PREPARE p AS {write}");
-        refuse_wrapper_and_hold(&session, PREPARE_REFUSAL, &prepare).await;
+        let text = refusal_for(PREPARE_REFUSAL, &write);
+        refuse_wrapper_and_hold(&session, text, &prepare).await;
         run(&session, "EXECUTE p").await.expect_err(&prepare);
         assert_eq!(
             target_state(&session).await,

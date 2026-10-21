@@ -61,6 +61,9 @@ and the `EngineContext` construction contract.
   `a_prepared_query_and_a_plain_explain_still_answer` is the control. The three 106 pins on
   wrapped subquery forms now assert the wrapper's text, since the refusal runs first inside
   `refuse_dml_subquery_where`. pins: explain-dml-write-1/C-001, C-002, C-005, C-006, C-008
+  A `MERGE` under either wrapper keeps DataFusion's plan refusal (`Unsupported SQL statement:
+  MERGE INTO …`) on this door, because the door plans before the refusal runs; the two pins
+  assert that text there and the held table (ledger §3).
 ## Pointers
 
 - Up: [../map.md](../map.md)

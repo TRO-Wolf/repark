@@ -9,7 +9,7 @@ import pytest
 import repark
 from repark import ReparkSession
 from repark._native import PyReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import AnalysisException, PySparkException, UnsupportedOperationException
 
 SEED = (
     "CREATE TABLE ice.ns.t (id INT, v INT)",
@@ -30,6 +30,7 @@ PREPARE_REFUSAL = (
     "PREPARE `p` is refused: its statement writes to a table, and a prepared write would run "
     "later, at EXECUTE. PREPARE of a query still works."
 )
+MERGE_PLAN_REFUSAL = "This feature is not implemented: Unsupported SQL statement: MERGE INTO"
 DOORS = ("repark_sql", "spark_session")
 PREDICATES = {"plain": "id = 2", "in": IN_SUBQUERY}
 VERBS = {
@@ -74,6 +75,7 @@ class Door:
     def __init__(self, warehouse: Path, spark: ReparkSession | None) -> None:
         self.warehouse = warehouse
         self.spark = spark
+        self.plans_before_the_seam = spark is None
 
     def run(self, statement: str) -> list[Any]:
         raise NotImplementedError(statement)
@@ -158,7 +160,11 @@ def door(
 
 def refuses_and_holds(door: Door, statement: str, text: str) -> None:
     before = door.state()
-    with pytest.raises(AnalysisException) as caught:
+    refusal: type[Exception] = AnalysisException
+    if door.plans_before_the_seam and "MERGE INTO" in statement:
+        refusal = UnsupportedOperationException
+        text = MERGE_PLAN_REFUSAL
+    with pytest.raises(refusal) as caught:
         door.run(statement)
     assert text in str(caught.value), str(caught.value)
     with pytest.raises(PySparkException, match=UNPREPARED):

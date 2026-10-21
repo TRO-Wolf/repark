@@ -206,3 +206,34 @@ MERGE …` keep `This feature is not implemented: Unsupported SQL statement: MER
 as on main, and write nothing. The ANSI and repark-spark doors call the seam before planning and
 give `MERGE` the ruled texts. The `repark.sql()` `MERGE` cells pin the plan refusal and the held
 table; the question is in the hand-back (Q-B1).
+
+## 4. Pins green (step 4)
+
+The head release module (`maturin develop --profile ci` on `b8f862ec`'s code; sha256
+`11e5bd48809075f1e4a33ff3b6907347c75c96fd90ffe10d85be79231765062e`):
+
+- **Python:** the four files of §1.1: **111 passed**, 0 failed.
+- **Rust:** `cargo test -p repark-core --lib dialect` 14 passed; `cargo test -p repark-sql --test
+  ansi_explain_dml_write` 3 passed; `cargo test -p repark-spark --lib -- wrapped_subquery_dml
+  nested_ns_routes ntz_nested_refuse_routes enc_1` 74 passed; `cargo test -p repark-spark --test
+  ntz_nested_refuse_casts` 10 passed; `cargo test -p repark-iceberg --lib statement_writes` 4
+  passed.
+- **The `repark.sql()` `MERGE` cells (§3):** `an_explain_analyze_of_a_write_refuses_and_writes_nothing`
+  and `a_prepared_write_refuses_and_leaves_nothing_to_execute` in `dialect/tests.rs`, and the
+  `repark_sql-merge_*` cells of `test_explain_dml_write_1.py`, assert the plan refusal
+  (`Unsupported SQL statement: MERGE INTO …`) and the held table on that door; the other doors
+  assert the ruled texts.
+
+### 4.1 The planner census (ruling 144)
+
+The scratch replica of §1.4 on the head's module: all 450 cells on the three routes refuse (300
+with the `EXPLAIN ANALYZE` text, 150 with the `PREPARE` text). 350 of them are red or lost for
+the harness (175 lost, the cells `ice_tsns_type_planner_1_main.json` records as answered; 175 more
+red, where main's recorded twin answered): `explain_analyze_insert` 125, `explain_analyze_update`
+100, `prepare_execute_insert` 125. The other 100 errored on the recorded main with a recorded
+twin that errored too, and stay green. One dated row per red or lost cell lands in
+`ice_tsns_type_planner_1_dated.json`: date 2026-10-21, class `ruled refusal`, ruling 136 for the
+200 `EXPLAIN ANALYZE` cells and 138 for the 150 `PREPARE` cells, owner text naming this unit; 290
+rows before, 640 after. No harness or route change. `pytest
+python/repark/tests/timestamps/test_ice_tsns_type_planner_1.py -n 8` on the head's module: **60
+passed** in 249 s.

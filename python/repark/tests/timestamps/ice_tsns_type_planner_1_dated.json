@@ -1739,6 +1739,2106 @@
    "ruling": "93",
    "owner": "H5 residue: a shape outside amendment 1's position table",
    "class": "residue"
+  },
+  "census|-03:30|ltz|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ltz|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|ts_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|-03:30|tz_ns|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ltz|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|ts_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|America/New_York|tz_ns|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ltz|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|ts_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Asia/Kolkata|tz_ns|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ltz|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|ts_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|Australia/Lord_Howe|tz_ns|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ltz|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|ts_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|ns|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|array|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|array|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|array|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|case|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|case|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|case|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|coalesce|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|coalesce|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|if|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|if|untyped_null|explain_analyze_update": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|if|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|union|untyped_null|explain_analyze_insert": {
+   "date": "2026-10-21",
+   "ruling": "136",
+   "owner": "EXPLAIN-DML-WRITE-1: EXPLAIN ANALYZE of a write refuses on every door (rulings 136, 141, 144); the route stores nothing",
+   "class": "ruled refusal"
+  },
+  "census|UTC|tz_ns|tzns_utc|union|untyped_null|prepare_execute_insert": {
+   "date": "2026-10-21",
+   "ruling": "138",
+   "owner": "EXPLAIN-DML-WRITE-1: PREPARE of a write refuses on every door (rulings 138, 141, 144); EXECUTE finds nothing",
+   "class": "ruled refusal"
   }
  }
 }
