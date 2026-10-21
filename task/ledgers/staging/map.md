@@ -18,6 +18,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `statement_writes::refuse_wrapped_write`, with the two ruled texts. Step 1 (red first) on main
   `c91f69c5`; the flipped pins and the docstrings touched are listed. `risk_tier: standard`.
   Branch `feat/explain-dml-write-1`.
+  Steps 2 to 7 (2026-10-21): the seam and three call sites, pins green on every door, three
+  reverts and five mutants killed, the census of 424 cells on four doors with no answer lost
+  outside the card's table, 350 dated planner rows (ruling 144), records; 13 of 13 clauses
+  PROVEN. Verifier pending.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

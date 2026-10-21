@@ -8,9 +8,44 @@
 day 106 (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1) merges or parks. If 106 merges, its P2 report is filed
 first.
 
+**Status, 2026-10-21:** built on branch `feat/explain-dml-write-1` (PR #1137), verifier pending,
+owner merges. The card retires when that PR merges with the verifier's PASS.
+
 **Retires:** when `EXPLAIN ANALYZE` of DML refuses on every door, a `PREPARE` whose body is a write
 refuses on every door while `PREPARE` of a query still works, and the wrapper pins below hold on
 every door.
+
+## 2026-10-21: the build (owner rulings 140 to 144)
+
+- **Rulings.** 140: the `EXPLAIN ANALYZE` text, adopted as the step-0 sketch proposed it, and the
+  `PREPARE` text written under ruling 138. 141: `INSERT` and `MERGE` refuse under both wrappers
+  too, one rule: a wrapper never performs a write. 142: a row of the table below covers every
+  spelling of its wrapper and verb. 143: false docstring sentences in the flipped pins are
+  deleted, never reworded. 144: the planner census gains one dated row per lost cell.
+- **What holds on the branch.** One function, `repark_iceberg::write::statement_writes::refuse_wrapped_write`,
+  called once per door on the statement it parsed (`repark.sql()`'s `dialect.rs`, the ANSI
+  `router.rs`, `spark_ast.rs` for both repark-spark doors), refuses `EXPLAIN ANALYZE` of any
+  `DELETE`, `UPDATE`, `INSERT` or `MERGE` and `PREPARE` of one, with the texts:
+  - `EXPLAIN ANALYZE is refused: its statement writes to a table, and EXPLAIN ANALYZE runs the statement it explains. A plain EXPLAIN of the same statement still shows its plan without running it, and EXPLAIN ANALYZE of a query still works.`
+  - ``PREPARE `<name>` is refused: its statement writes to a table, and a prepared write would run later, at EXECUTE. PREPARE of a query still works.``
+  A refused `PREPARE` is never stored, so `EXECUTE` finds nothing. A plain `EXPLAIN`, `PREPARE` of
+  a query, `EXPLAIN [ANALYZE] SELECT` and `df.explain("cost")` answer as before. On
+  `repark.sql()`, which plans before the refusal, a wrapped `MERGE` keeps DataFusion's plan
+  refusal (`Unsupported SQL statement: MERGE INTO …`) and writes nothing.
+- **The `INSERT` and `MERGE` rows (ruling 141), measured 2026-10-21 on main `c91f69c5` and on the
+  branch, Iceberg seeds as below:**
+
+| Statement | `repark.sql()` | ANSI door | Spark SQL session and router API | Spark 4.1.2 |
+|---|---|---|---|---|
+| `EXPLAIN ANALYZE INSERT INTO t SELECT … WHERE id IN (SELECT id FROM s)` | main: 2 rows inserted, snapshots 1→2; branch: refused, 1→1 | the same | the same | refused (`ParseException`) |
+| `EXPLAIN ANALYZE INSERT INTO t VALUES (5, 50)` | main: 1 row inserted; branch: refused | the same | the same | refused |
+| `PREPARE p AS INSERT …; EXECUTE p` | main: 2 rows inserted at `EXECUTE`; branch: refused at `PREPARE`, nothing to execute | the same | the same | refused |
+| `EXPLAIN ANALYZE MERGE INTO t USING (…) …` | main and branch: DataFusion's plan refusal, no write | main: plan refusal; branch: the ruled refusal | the same as ANSI | refused |
+| `PREPARE p AS MERGE …; EXECUTE p` | main and branch: plan refusal, no write | main: plan refusal; branch: the ruled refusal | the same as ANSI | refused |
+
+  The full census (106 cells on each of four doors, main and branch) is in
+  [the unit's evidence](../../wo/explain-dml-write-1/evidence/map.md) and its reading in the
+  [unit ledger](../../ledgers/staging/explain-dml-write-1-ledger.md) §6.
 
 ## 2026-10-17: owner rulings 136, 138 and 139, and the measured table
 

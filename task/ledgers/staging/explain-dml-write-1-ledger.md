@@ -40,21 +40,21 @@ routing `repark.sql()` through the ANSI door; `Cargo.toml`, `Cargo.lock`, `.gith
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | On `repark.sql()`, `EXPLAIN ANALYZE` of `DELETE`, `UPDATE`, `INSERT` and `MERGE`, each with a plain and an `IN (SELECT …)` predicate, refuses with the ruling-140 text; the Iceberg table's rows, snapshot count and warehouse files hold. | `test_explain_dml_write_1.py` `test_an_explain_analyze_of_a_write_refuses_and_writes_nothing[repark_sql-*]`; `an_explain_analyze_of_a_write_refuses_and_writes_nothing` in `crates/repark-core/src/dialect/tests.rs`. | OPEN (step 1: red on main) | §1. |
-| C-002 | On `repark.sql()`, `PREPARE p AS` each of the same eight writes refuses with the ruling-138 text; `EXECUTE p` then finds no prepared statement; rows, snapshots and files hold. | `test_a_prepared_write_refuses_and_leaves_nothing_to_execute[repark_sql-*]`; `a_prepared_write_refuses_and_leaves_nothing_to_execute` (Rust). | OPEN (step 1: red on main) | §1. |
-| C-003 | On the ANSI door (`AnsiDialect`), both wrappers refuse each of the eight writes with their texts, `EXECUTE p` finds nothing, and the rows and snapshots hold; every seed passes an `IcebergTableScan` guard (VF-1). | `crates/repark-sql/tests/ansi_explain_dml_write.rs`. | OPEN (step 1: red on main) | §1. |
-| C-004 | On both repark-spark doors (the Spark SQL session and the router API), both wrappers refuse each of the eight writes with their texts, `EXECUTE p` finds nothing, rows and snapshots hold. | `test_explain_dml_write_1.py[spark_session-*]`; `wrapped_subquery_dml.rs` `an_explain_analyze_of_a_write_refuses_on_the_router_door`, `a_prepared_write_refuses_on_the_router_door`. | OPEN (step 1: red on main) | §1. |
-| C-005 | Ruling 142's spellings refuse on every door: `EXPLAIN ANALYZE VERBOSE`, a parameterised `PREPARE`, `PREPARE` around `EXPLAIN ANALYZE`, `EXPLAIN ANALYZE` around `PREPARE`, a CTE-carried write; the text follows the outermost wrapper. | `test_every_spelling_of_a_wrapped_write_refuses`; the Rust door pins; the unit tests of `statement_writes`. | OPEN (step 1: red on main) | §1. |
-| C-006 | Controls answer on every door, before and after: `PREPARE q AS SELECT …` then `EXECUTE q`; a plain `EXPLAIN` of `DELETE`, `UPDATE` and `INSERT` answers its plan and writes nothing; `EXPLAIN SELECT` and `EXPLAIN ANALYZE SELECT` answer; `df.explain("cost")` answers; the bare `IN` forms keep the matching rows on the Spark SQL door. | The control pins of the four door files. | OPEN (step 1: green on main) | §1. |
-| C-007 | One seam: `repark_iceberg::write::statement_writes::refuse_wrapped_write(&DFStatement)` beside `executed_writes`, with its unit tests; one call per door in `repark-core/src/dialect.rs`, `repark-sql/src/router.rs` and `repark-spark/src/spark_ast.rs`; no other product file, no ceiling raised, no crate edge, no comment line. | Steps 2 and 3; `make check-rust-file-size`, `make check-crate-dag`, the comment gate. | OPEN | §2, §3. |
-| C-008 | Every existing pin that rulings 136, 138 and 141 flip is re-asserted in place with the wrapper's text, listed here with its red line; docstrings touched only as ruling 143 allows. | §1.3. | OPEN (step 1: red on main) | §1. |
-| C-009 | Each call site removed alone reds that door's pins; the seam's `Explain` look-through and `Prepare` arm, each removed alone, red named pins. | Step 5. | OPEN | §5. |
-| C-010 | Never worse: the 106 census shape re-run on main and head on each door; every lost answer is a row of the card's table under rulings 141 and 142. | Step 6. | OPEN | §6. |
-| C-011 | The planner census (`test_ice_tsns_type_planner_1.py`) passes on the head with one dated row per cell the head loses on the `explain_analyze_insert`, `explain_analyze_update` and `prepare_execute_insert` routes, and no other change to the harness or the routes. | Ruling 144; step 1 and step 4 counts. | OPEN | §1.4, §4. |
-| C-012 | The records say what holds: the card, the 1.5.6 known-issue lines, the registry rows, the maps of every touched directory, this ledger. | Step 7. | OPEN | §7. |
-| C-013 | The gates are green on the final commit. | Order §5. | OPEN | §8. |
+| C-001 | On `repark.sql()`, `EXPLAIN ANALYZE` of `DELETE`, `UPDATE`, `INSERT` and `MERGE`, each with a plain and an `IN (SELECT …)` predicate, refuses with the ruling-140 text; the Iceberg table's rows, snapshot count and warehouse files hold. | `test_explain_dml_write_1.py` `test_an_explain_analyze_of_a_write_refuses_and_writes_nothing[repark_sql-*]`; `an_explain_analyze_of_a_write_refuses_and_writes_nothing` in `crates/repark-core/src/dialect/tests.rs`. | **PROVEN** (2026-10-21; a `MERGE` under either wrapper keeps DataFusion's plan refusal on this door, which plans first, and writes nothing, §3) | Red on main (§1), green on the head (§4). |
+| C-002 | On `repark.sql()`, `PREPARE p AS` each of the same eight writes refuses with the ruling-138 text; `EXECUTE p` then finds no prepared statement; rows, snapshots and files hold. | `test_a_prepared_write_refuses_and_leaves_nothing_to_execute[repark_sql-*]`; `a_prepared_write_refuses_and_leaves_nothing_to_execute` (Rust). | **PROVEN** (2026-10-21; the same `MERGE` note as C-001) | Red on main (§1), green on the head (§4). |
+| C-003 | On the ANSI door (`AnsiDialect`), both wrappers refuse each of the eight writes with their texts, `EXECUTE p` finds nothing, and the rows and snapshots hold; every seed passes an `IcebergTableScan` guard (VF-1). | `crates/repark-sql/tests/ansi_explain_dml_write.rs`. | **PROVEN** | Red on main (§1.2), green on the head (§4); the guard passes on every seed (§6: 106 of 106). |
+| C-004 | On both repark-spark doors (the Spark SQL session and the router API), both wrappers refuse each of the eight writes with their texts, `EXECUTE p` finds nothing, rows and snapshots hold. | `test_explain_dml_write_1.py[spark_session-*]`; `wrapped_subquery_dml.rs` `an_explain_analyze_of_a_write_refuses_on_the_router_door`, `a_prepared_write_refuses_on_the_router_door`. | **PROVEN** | Red on main (§1), green on the head (§4). |
+| C-005 | Ruling 142's spellings refuse on every door: `EXPLAIN ANALYZE VERBOSE`, a parameterised `PREPARE`, `PREPARE` around `EXPLAIN ANALYZE`, `EXPLAIN ANALYZE` around `PREPARE`, a CTE-carried write; the text follows the outermost wrapper. | `test_every_spelling_of_a_wrapped_write_refuses`; the Rust door pins; the unit tests of `statement_writes`. | **PROVEN** | §1, §4; unit tests §2; the census §6. |
+| C-006 | Controls answer on every door, before and after: `PREPARE q AS SELECT …` then `EXECUTE q`; a plain `EXPLAIN` of `DELETE`, `UPDATE` and `INSERT` answers its plan and writes nothing; `EXPLAIN SELECT` and `EXPLAIN ANALYZE SELECT` answer; `df.explain("cost")` answers; the bare `IN` forms keep the matching rows on the Spark SQL door. | The control pins of the four door files. | **PROVEN** | Green on main (§1) and on the head (§4); unchanged in the census (§6). |
+| C-007 | One seam: `repark_iceberg::write::statement_writes::refuse_wrapped_write(&DFStatement)` beside `executed_writes`, with its unit tests; one call per door in `repark-core/src/dialect.rs`, `repark-sql/src/router.rs` and `repark-spark/src/spark_ast.rs`; no other product file, no ceiling raised, no crate edge, no comment line. | Steps 2 and 3; `make check-rust-file-size`, `make check-crate-dag`, the comment gate. | **PROVEN** | §2, §3, §8. |
+| C-008 | Every existing pin that rulings 136, 138 and 141 flip is re-asserted in place with the wrapper's text, listed here with its red line; docstrings touched only as ruling 143 allows. | §1.3. | **PROVEN** | §1.3 lists each pin, its ruling and its red line; green on the head (§4). |
+| C-009 | Each call site removed alone reds that door's pins; the seam's `Explain` look-through and `Prepare` arm, each removed alone, red named pins. | Step 5. | **PROVEN** | §5: three call-site reverts and five mutants, none survived. |
+| C-010 | Never worse: the 106 census shape re-run on main and head on each door; every lost answer is a row of the card's table under rulings 141 and 142. | Step 6. | **PROVEN** | §6: 424 cells, 0 changed outside the table, 0 tables not held. |
+| C-011 | The planner census (`test_ice_tsns_type_planner_1.py`) passes on the head with one dated row per cell the head loses on the `explain_analyze_insert`, `explain_analyze_update` and `prepare_execute_insert` routes, and no other change to the harness or the routes. | Ruling 144; step 1 and step 4 counts. | **PROVEN** | §1.4, §4.1: 350 dated rows; the harness passes 60 of 60 on the head. |
+| C-012 | The records say what holds: the card, the 1.5.6 known-issue lines, the registry rows, the maps of every touched directory, this ledger. | Step 7. | **PROVEN** | §7. |
+| C-013 | The gates are green on the final commit. | Order §5. | **PROVEN** | §8. |
 
-VERDICT: 13 clauses, 0 PROVEN, 13 OPEN, 0 REJECTED (step 1).
+VERDICT: 13 clauses, 0 PROVEN, 13 OPEN, 0 REJECTED (step 1). **2026-10-21, step 7:** 13 clauses, 13 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 1. Red first (step 1, tests only)
 
@@ -304,3 +304,98 @@ The card's measured table gains the `INSERT` and `MERGE` rows (ruling 141), from
 | `PREPARE p AS MERGE …; EXECUTE p` | plan refusal → the same | plan refusal → ruled refusal | plan refusal → ruled refusal | plan refusal → ruled refusal |
 | `EXPLAIN INSERT …` (control) | plan, no write → the same | the same | the same | the same |
 | bare `INSERT … SELECT … IN (SELECT …)` (control) | 2 rows → the same | the same | the same | the same |
+
+## 7. Records (step 7)
+
+- **Card** [EXPLAIN-DML-WRITE-1](../../roadmap/mid-term/explain-dml-write-1-card-2026-10-16.md):
+  a dated status line (built, PR #1137, verifier pending) and a section for rulings 140 to 144
+  with what holds, the two texts, and the `INSERT` and `MERGE` rows of the measured table
+  (ruling 141), from §6.
+- **1.5.6 notes** (`task/roadmap/mid-term/v1-5-6-release-notes-draft.md`): the EXPLAIN-DML-WRITE-1
+  known-issue line gains a dated "built, verifier pending" note; the 106 line gains the measured
+  VF-2 wording from 106 ledger §13.6 and the wrapper text.
+- **Registry** (`docs/spark-sql-iceberg-parity.md`): the REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 row,
+  the one that cites this card, gains the dated wrapper-refusal line with its pins.
+- **Maps:** every touched directory's `map.md` in the commit that touched it (the test and
+  product directories, `task/wo/explain-dml-write-1/` and its `evidence/`, `task/ledgers/staging/`,
+  `task/roadmap/mid-term/`, `docs/`, `python/repark/tests/timestamps/`).
+
+## 8. Gates
+
+On the head before the records commit (`7ab3b8b4`; the records commit adds documents only):
+
+| Command | Result |
+|---|---|
+| `cargo test --no-fail-fast -p repark-iceberg` | exit 0, 1026 passed, 62 s |
+| `cargo test --no-fail-fast -p repark-core` | exit 0, 1541 passed, 2 ignored, 129 s |
+| `cargo test --no-fail-fast -p repark-sql` | exit 0, 579 passed, 4 ignored, 218 s |
+| `cargo test --no-fail-fast -p repark-spark` | exit 0, 2935 passed, 5 ignored, 458 s |
+| `pytest python/repark/tests/writes -k "subquery_where or explain_dml"` (head module) | 101 passed |
+| `test_write_body_carriers_1`, `test_df_explain_1`, `test_pa_local_fs_policy_1`, `test_ice_tsns_merge_wall_1`, `test_ice_ntz_nested_refuse_1`, `test_ice_tsns_coercion_1`, `test_dataframe_x3_census` (head module) | 497 passed, 1 skipped (live Spark) |
+| `test_ice_tsns_type_planner_1.py` (head module) | 60 passed, 249 s |
+| `make ci` (step 4 head `57031982`) | exit 0, 512 s; it carries `rust-clippy`, `rust-panic-ban`, `check-rust-file-size`, `check-crate-dag`, the docs and ledger gates, `check-model-ban` |
+| the comment gate of the lane brief, `git diff origin/main...HEAD` | prints nothing |
+
+`make verify` and `make preflight` run the whole workspace suite and the whole facade suite; under
+AGENTS.md "Delegated-agent standing rules" (owner, 2026-09-18) the lane runs the scoped gate above
+and CI runs the rest. `make ci` on the final commit is in the hand-back.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: explain-dml-write-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each clause is pinned on every door it names, red on main and green on the head;
+        the four verbs under both wrappers, plain and subquery predicates, Iceberg seeds behind a guard.
+      artifacts: [python/repark/tests/writes/test_explain_dml_write_1.py, crates/repark-sql/tests/ansi_explain_dml_write.rs, crates/repark-spark/src/tests/wrapped_subquery_dml.rs, crates/repark-core/src/dialect/tests.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary spellings - VERBOSE, nested EXPLAIN in both orders, EXPLAIN ANALYZE
+        around PREPARE, PREPARE around EXPLAIN [ANALYZE], parameterised PREPARE, a WHERE-less
+        DELETE, a CTE-carried DELETE, COPY under EXPLAIN ANALYZE, PREPARE of a view.
+      artifacts: [crates/repark-iceberg/src/write/statement_writes/tests.rs, task/wo/explain-dml-write-1/evidence/census-cells.txt]
+    - id: AT-3
+      status: ATTACKED
+      evidence: A refused statement writes nothing - rows, snapshot count and warehouse files read
+        before and after; a refused PREPARE is never stored, so EXECUTE finds nothing.
+      artifacts: [python/repark/tests/writes/test_explain_dml_write_1.py]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The refusal is a pure function of the parsed statement; it holds no state and runs
+        before execute_logical_plan on every door.
+      artifacts: [crates/repark-iceberg/src/write/statement_writes.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Memory catalogs under temporary directories only; no network, no credentials.
+        The texts name no data-deleting action (ruling 76 (a)), pinned.
+      artifacts: [crates/repark-iceberg/src/write/statement_writes/tests.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The change removes a write path (wrappers that wrote, and with a subquery
+        emptied or rewrote the table); the census lists every changed answer on four doors.
+      artifacts: [task/wo/explain-dml-write-1/evidence/map.md]
+    - id: AT-7
+      status: N/A
+      justification: The refusal walks the parsed statement once more per SQL call, bounded by
+        the parse already done; no wall-clock claim is made.
+    - id: AT-8
+      status: ATTACKED
+      evidence: No crate edge, no Cargo.toml, Cargo.lock or .github change; the error is the
+        DataFusionError::Plan the G3-E8 refusal returns; the facade maps it to AnalysisException.
+      artifacts: [crates/repark-iceberg/src/write/statement_writes.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The texts say what is refused, why, and what still works; the card, the 1.5.6
+        notes, the registry row and the maps record the rule.
+      artifacts: [task/roadmap/mid-term/explain-dml-write-1-card-2026-10-16.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Three call-site reverts and five mutants each red named pins (section 5).
+      artifacts: [crates/repark-iceberg/src/write/statement_writes/tests.rs, crates/repark-sql/tests/ansi_explain_dml_write.rs]
+  complete: true
+```
+
+## Hand-back
+
+`Model: claude-opus-5-5`. `risk_tier: standard`. Verifier: pending. Owner merges.
