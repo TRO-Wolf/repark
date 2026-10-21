@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+MAP-COLUMN-PANIC-1 (2026-10-20): `map_column_panic_1.rs` pins `map(<key>, <non-literal value>)` through production-built sessions over a three-row Iceberg table: a column, a function, a cast, a struct, an array and a map value, two pairs, a column key, widening to the common value type, NULL values, a timestamp and a wall-cast value, lookup, `size` and a predicate over the map, Spark's `DUPLICATED_MAP_KEY`, `NULL_MAP_KEY` and `WRONG_NUM_ARGS` texts, the literal controls, and INSERT, UPDATE and MERGE into a `MAP<STRING, INT>` table. Red on main `e6ff5375`: 18 of 20 (a one-row source panics `list array`; many rows answer `map requires key and value lists to have the same length`); the two controls answer on main. Green on head.
+
 CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `join_condition_refusals.rs` gains the `IN`-subquery cell (a refused join nested in a subquery expression, killing the m5 plan-descent mutant). pins: cross-join-condition-1/C-008
 
 CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `join_condition_refusals.rs` pins the join-condition rule through production-built sessions (two Iceberg tables, the oracle frames): nondeterministic conditions refuse with Spark's `INVALID_NON_DETERMINISTIC_EXPRESSIONS` head on inner/left/left-semi (plus uuid, shuffle and an EXISTS-subquery recursion cell), non-boolean conditions with `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE` (NULL/VOID, 1/INT, 'true'/STRING, bare `rand(1)`/DOUBLE for the type-first order), and the equality/TRUE/typed-NULL/current_timestamp controls answer their rows. pins: cross-join-condition-1/C-008
@@ -29,6 +31,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 ## Contents
 
+- `map_column_panic_1.rs` — **MAP-COLUMN-PANIC-1 (2026-10-20):** the 20 pins above; they read each answer as rendered rows and the Arrow key and value types, and assert the map field is never nullable.
 - `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
   the Spark door's local-file write policy at default conf: `EXPLAIN ANALYZE COPY` outside
   refuses naming `repark.sql.allowLocalFilesystemDDL` with no file written; plain `EXPLAIN`
