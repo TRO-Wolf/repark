@@ -446,3 +446,9 @@ red: `tests.rs:64:5`: `Error during planning: PREPARE `My P` is refused: …`.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-015 | Fix round 1, S2-3 (2026-10-21): the `PREPARE` refusal names the prepared statement as written, quoting included; an unquoted name renders as before. | `a_prepare_of_a_write_refuses_with_its_text`; the revert to `name.value`. | **PROVEN** | §9.2. |
+
+### 9.3 S2-1: correction to §4.1 (2026-10-21)
+
+| Date | Where | As written | Correct |
+|---|---|---|---|
+| 2026-10-21 | §4.1, the dated-row split | "ruling 136 for the 200 `EXPLAIN ANALYZE` cells and 138 for the 150 `PREPARE` cells" | 225 rows cite ruling 136 (`explain_analyze_insert` 125 + `explain_analyze_update` 100) and 125 cite ruling 138 (`prepare_execute_insert` 125); the total of 350 and the per-route counts stand. The rows in `ice_tsns_type_planner_1_dated.json` were right; only the sentence was wrong (verifier finding S2-1). |
