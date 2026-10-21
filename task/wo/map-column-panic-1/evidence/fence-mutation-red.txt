@@ -1,0 +1,8 @@
+# Mutation check of the REPARK_PANIC_FATAL pins (2026-10-20): the resume_unwind in fence and fence_stream_poll disabled with 'if false && panics_are_fatal()'.
+# command: cargo test -p repark-python --lib fence::tests::a_caught
+test fence::tests::a_caught_panic_fails_the_run_when_the_fatal_flag_is_on ... FAILED
+test fence::tests::a_caught_panic_keeps_its_message_when_the_fatal_flag_is_off ... ok
+test fence::tests::probe_child_converts_a_fenced_panic ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 163 filtered out; finished in 0.01s
+probe-boom
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 162 filtered out; finished in 0.06s

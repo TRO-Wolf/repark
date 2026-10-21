@@ -1,0 +1,198 @@
+{
+ "note": "median wall seconds of 10 runs per query, same box and CPU set (taskset 0-25), wheels built with maturin develop --profile ci; main is e6ff5375, head is fix/map-column-panic-1. Queries over range(1000000); the size() sums force evaluation; 'materialized' reads the map column through to_arrow(). A query main cannot answer has no main median.",
+ "queries": {
+  "literal": "SELECT sum(size(map('a', 1, 'b', 2))) FROM range(1000000)",
+  "both_columns": "SELECT sum(size(map(id, id + 1))) FROM range(1000000)",
+  "materialized_both": "SELECT map(id, id + 1) AS m FROM range(1000000) via to_arrow",
+  "materialized_literal": "SELECT map('a', 1, 'b', 2) AS m FROM range(1000000) via to_arrow",
+  "column_value": "SELECT sum(size(map('a', id))) FROM range(1000000)",
+  "two_pairs_value": "SELECT sum(size(map('a', id, 'b', id + 1))) FROM range(1000000)",
+  "materialized": "SELECT map('a', id) AS m FROM range(1000000) via to_arrow"
+ },
+ "results": {
+  "literal": {
+   "main_median_s": 0.007875808514654636,
+   "main_status": "ok",
+   "head_median_s": 0.007633908535353839,
+   "head_status": "ok",
+   "head_over_main": 0.969,
+   "main_runs": [
+    0.07987037498969585,
+    0.01114286994561553,
+    0.015766836004331708,
+    0.007466040086001158,
+    0.007479154970496893,
+    0.0073586381040513515,
+    0.007822924060747027,
+    0.00678501499351114,
+    0.007928692968562245,
+    0.00980075600091368
+   ],
+   "head_runs": [
+    0.07642953691538423,
+    0.009210153948515654,
+    0.008778629009611905,
+    0.009176469990052283,
+    0.0075725329807028174,
+    0.007695284090004861,
+    0.007545522064901888,
+    0.007266846019774675,
+    0.006722457939758897,
+    0.0067742569372057915
+   ]
+  },
+  "both_columns": {
+   "main_median_s": 0.06999096000799909,
+   "main_status": "ok",
+   "head_median_s": 0.014574689499568194,
+   "head_status": "ok",
+   "head_over_main": 0.208,
+   "main_runs": [
+    0.08080565999262035,
+    0.07747132692020386,
+    0.07207496301271021,
+    0.0680309709860012,
+    0.07029844995122403,
+    0.07141283305827528,
+    0.06510815501678735,
+    0.06775998999364674,
+    0.06968347006477416,
+    0.06895286089275032
+   ],
+   "head_runs": [
+    0.012514160014688969,
+    0.01294584502466023,
+    0.010517491027712822,
+    0.01095948601141572,
+    0.013673629029653966,
+    0.015475749969482422,
+    0.01777059107553214,
+    0.01633281703107059,
+    0.01581941801123321,
+    0.017992930952459574
+   ]
+  },
+  "materialized_both": {
+   "main_median_s": 0.06469016597839072,
+   "main_status": "ok",
+   "head_median_s": 0.01491813751636073,
+   "head_status": "ok",
+   "head_over_main": 0.231,
+   "main_runs": [
+    0.29033722705207765,
+    0.06478088698349893,
+    0.06919256295077503,
+    0.06555402697995305,
+    0.06459944497328252,
+    0.06073477095924318,
+    0.06514956301543862,
+    0.0606362649705261,
+    0.06404132198076695,
+    0.06319789006374776
+   ],
+   "head_runs": [
+    0.2018720150226727,
+    0.012601293972693384,
+    0.011496979976072907,
+    0.015020070015452802,
+    0.011397000984288752,
+    0.0152421590173617,
+    0.01341530098579824,
+    0.014816205017268658,
+    0.016244129976257682,
+    0.015632896102033556
+   ]
+  },
+  "materialized_literal": {
+   "main_median_s": 0.05026446148985997,
+   "main_status": "ok",
+   "head_median_s": 0.049346134008374065,
+   "head_status": "ok",
+   "head_over_main": 0.982,
+   "main_runs": [
+    0.07710489595774561,
+    0.050281753996387124,
+    0.05024716898333281,
+    0.050186372944153845,
+    0.05011120205745101,
+    0.05033255007583648,
+    0.09108841593842953,
+    0.05029480904340744,
+    0.05024188896641135,
+    0.05003958602901548
+   ],
+   "head_runs": [
+    0.0715227359905839,
+    0.04962240008171648,
+    0.04933405597694218,
+    0.04935821203980595,
+    0.04929969098884612,
+    0.04932944697793573,
+    0.04928657703567296,
+    0.058087548008188605,
+    0.049323967075906694,
+    0.04951039899606258
+   ]
+  },
+  "column_value": {
+   "main_median_s": null,
+   "main_status": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "head_median_s": 0.010887769982218742,
+   "head_status": "ok",
+   "head_over_main": null,
+   "main_runs": null,
+   "head_runs": [
+    0.012105648987926543,
+    0.010946189984679222,
+    0.010259635047987103,
+    0.009721699985675514,
+    0.01153623394202441,
+    0.01074640394654125,
+    0.011822753935121,
+    0.010829349979758263,
+    0.009653490036725998,
+    0.011715383036062121
+   ]
+  },
+  "two_pairs_value": {
+   "main_median_s": null,
+   "main_status": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "head_median_s": 0.024698080960661173,
+   "head_status": "ok",
+   "head_over_main": null,
+   "main_runs": null,
+   "head_runs": [
+    0.025767465005628765,
+    0.026498605962842703,
+    0.02587542904075235,
+    0.02401298296172172,
+    0.02335865900386125,
+    0.025383178959600627,
+    0.020249609951861203,
+    0.021862955996766686,
+    0.026155958999879658,
+    0.021644812892191112
+   ]
+  },
+  "materialized": {
+   "main_median_s": null,
+   "main_status": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "head_median_s": 0.006988886510953307,
+   "head_status": "ok",
+   "head_over_main": null,
+   "main_runs": null,
+   "head_runs": [
+    0.007118085050024092,
+    0.006040901993401349,
+    0.010154846939258277,
+    0.00902050593867898,
+    0.006936382036656141,
+    0.00684765400364995,
+    0.006920312065631151,
+    0.006443973048590124,
+    0.007041390985250473,
+    0.007644427940249443
+   ]
+  }
+ }
+}
