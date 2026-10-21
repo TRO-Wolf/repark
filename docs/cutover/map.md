@@ -64,6 +64,14 @@ named only as "the cutover pipeline" here.
   merged `0b9195ca` at 19:24 EDT under ruling 132), acceptance run `39078930301` (12 cells:
   acceptance module 11 passed in 382.96s, dbt gold module 1 passed in 59.94s), the write-path
   change with owner ruling 146 verbatim, and the follow-ups (EXPLAIN-DML-WRITE-1, VF-1, VF-2).
+- [p2-report-explain-dml-write-1-2026-10-21.md](p2-report-explain-dml-write-1-2026-10-21.md) —
+  **the P2 report for #1137, EXPLAIN-DML-WRITE-1 (2026-10-21):** verifier verdicts by time (FAIL at
+  `eccd920a` on a surviving trailing-semicolon mutant, the 225/125 dated-row split, the
+  `repark.sql()` plan-first class and the prepared name's quoting; fix round 1 to `4b72871b`; PASS
+  in round 2; merged `b7a20167` at 19:32 EDT), owner rulings 140 to 144 and the Q-B1 ruling, the
+  gate tables (no live AWS acceptance run recorded), the write-path change (the
+  `refuse_wrapped_write` seam, three call sites, the two ruled texts, the four-door never-worse
+  census, the mutant tables), and the follow-ups (the native-door plan-first class, two S3 nits).
 
 ## Pointers
 

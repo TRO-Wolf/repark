@@ -214,7 +214,7 @@ Tables already written keep the values they hold; this release ships no migratio
   `EXECUTE`; `EXPLAIN ANALYZE` of the statement itself still writes there (EXPLAIN-DML-WRITE-1).
   *(VF-2, measured wording, 106 ledger §13.6: on main the prepared subquery forms emptied the table,
   rewrote every row, or wrote the wrong rows (`IN … AND v > 25` deleted ids 3 and 4), then
-  `EXECUTE`. From EXPLAIN-DML-WRITE-1, verifier pending, every wrapped write on every door,
+  `EXECUTE`. From EXPLAIN-DML-WRITE-1 (merged #1137, `b7a20167`), every wrapped write on every door,
   these forms included, refuses with the wrapper's text instead of the G3-E8 text. On
   `repark.sql()` a wrapped write that DataFusion cannot plan keeps DataFusion's own error instead,
   and writes nothing either way.)*
@@ -225,8 +225,8 @@ Tables already written keep the values they hold; this release ships no migratio
   REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 lands. Spark refuses both forms. A plain `EXPLAIN` shows the
   plan and does not write on an Iceberg table. The
   [EXPLAIN-DML-WRITE-1 card](explain-dml-write-1-card-2026-10-16.md) tracks the fix.
-  *(Updated 2026-10-21, EXPLAIN-DML-WRITE-1 built, verifier pending: on every door `EXPLAIN
+  *(Updated 2026-10-21, EXPLAIN-DML-WRITE-1 merged, #1137 at `b7a20167`: on every door `EXPLAIN
   ANALYZE` of a `DELETE`, `UPDATE`, `INSERT` or `MERGE`, and `PREPARE` of one, refuse and write
   nothing, as Spark refuses both; `EXECUTE` then finds no prepared statement. A plain `EXPLAIN`,
   `PREPARE` of a query and `EXPLAIN ANALYZE` of a query still answer. On `repark.sql()`, which
-  plans first, every wrapped write that DataFusion cannot plan keeps DataFusion's own error and writes nothing: a `MERGE`, a CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column, `EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE`. This line becomes a behaviour change when the unit merges.)*
+  plans first, every wrapped write that DataFusion cannot plan keeps DataFusion's own error and writes nothing: a `MERGE`, a CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column, `EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE`. The unit has merged; this line is now a behaviour change.)*
