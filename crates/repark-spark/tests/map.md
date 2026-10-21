@@ -338,6 +338,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   column's expression refuses), the `PREPARE` pins, and, in `src/tests/`,
   `only_a_utc_zone_lets_an_instant_through` (`Etc/UTC` refuses).
   pins: ice-ntz-nested-refuse-1/C-035
+  `a_view_the_write_reads_is_inlined_before_the_walk` plans through `ReparkSession::sql`, which
+  reaches `router::execute_calibrated`, the function the type read's `planned()` calls, on the
+  same text (ledger C-040, verifier round-2 S3-3). The verifier rounds' outcomes are C-036 to
+  C-039.
+  pins: ice-ntz-nested-refuse-1/C-036, C-037, C-038, C-040
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
