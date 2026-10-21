@@ -316,6 +316,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   scan whose source carries a logical plan, and a SQL temporary view leaves a
   `ReplanningTempView` scan; the premise on which round 1's frame-view branch was removed as
   dead (verifier S3-2).
+  **Fix round 3 (2026-10-21, after the verifier's round-2 FAIL, ledger C-033):**
+  `the_cast_walk_reads_only_what_reaches_the_column` adds `LATERAL (SELECT a.c AS s)` over a
+  derived table that holds a container cast of an instant, on `INSERT` and as a MERGE source:
+  each refuses and adds no snapshot (round 2 stored the UTC wall; the verifier's mutant L16, a
+  `Subquery` node that stops the walk, stores it again). A lateral that returns only the wall
+  sibling of that cast stores the wall, so the walk follows the one outer reference the column
+  uses, not the whole left side.
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).

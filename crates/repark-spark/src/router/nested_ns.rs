@@ -421,6 +421,8 @@ const MAX_LINEAGE_STEPS: usize = 65_536;
 
 enum Next<'a> {
     Column(&'a LogicalPlan, usize),
+    Lateral(&'a LogicalPlan, usize, &'a LogicalPlan),
+    Outer(&'a Column),
     Whole(&'a LogicalPlan),
     View(Box<LogicalPlan>, Option<usize>),
 }
@@ -430,9 +432,11 @@ fn lineage_has(plan: &LogicalPlan, columns: &[usize], test: Test) -> bool {
     let mut steps = 0_usize;
     while let Some((root, columns)) = roots.pop() {
         let mut seen = HashSet::new();
-        let mut pending: Vec<(&LogicalPlan, usize)> =
-            columns.iter().map(|column| (&root, *column)).collect();
-        while let Some((node, column)) = pending.pop() {
+        let mut pending: Vec<(&LogicalPlan, usize, Vec<&LogicalPlan>)> = columns
+            .iter()
+            .map(|column| (&root, *column, Vec::new()))
+            .collect();
+        while let Some((node, column, scopes)) = pending.pop() {
             if !seen.insert((std::ptr::from_ref(node), column)) {
                 continue;
             }
@@ -443,9 +447,28 @@ fn lineage_has(plan: &LogicalPlan, columns: &[usize], test: Test) -> bool {
             }
             for reach in next {
                 match reach {
-                    Next::Column(input, index) => pending.push((input, index)),
+                    Next::Column(input, index) => pending.push((input, index, scopes.clone())),
+                    Next::Lateral(input, index, outer) => {
+                        let mut inner = scopes.clone();
+                        inner.push(outer);
+                        pending.push((input, index, inner));
+                    }
+                    Next::Outer(column) => {
+                        let reached = scopes.iter().enumerate().rev().find_map(|(depth, scope)| {
+                            let index = scope.schema().maybe_index_of_column(column)?;
+                            Some((*scope, index, scopes[..depth].to_vec()))
+                        });
+                        match reached {
+                            Some(reached) => pending.push(reached),
+                            None => return true,
+                        }
+                    }
                     Next::Whole(plan) => {
-                        if plan_has(plan, test) {
+                        if plan_has(plan, test)
+                            || (!scopes.is_empty()
+                                && plan_has(plan, refers_out)
+                                && scopes.iter().any(|scope| plan_has(scope, test)))
+                        {
                             return true;
                         }
                     }
@@ -502,7 +525,7 @@ fn step<'a>(node: &'a LogicalPlan, column: usize, test: Test, next: &mut Vec<Nex
                     match column.checked_sub(width) {
                         None => Some(join.left.as_ref()),
                         Some(index) => {
-                            next.push(Next::Column(join.right.as_ref(), index));
+                            next.push(Next::Lateral(join.right.as_ref(), index, &join.left));
                             return false;
                         }
                     }
@@ -572,6 +595,7 @@ fn feeds<'a>(
             }
             match inner {
                 Expr::Column(column) => columns.push(column),
+                Expr::OuterReferenceColumn(_, column) => next.push(Next::Outer(column)),
                 Expr::ScalarSubquery(subquery)
                 | Expr::Exists(Exists { subquery, .. })
                 | Expr::InSubquery(InSubquery { subquery, .. })
@@ -669,6 +693,10 @@ fn casts_a_zoned_value_to_naive(expr: &Expr, schema: &DFSchema) -> bool {
             .map_or(true, |source| casts_zoned_to_naive(&source, target))
 }
 
+fn refers_out(expr: &Expr, _: &DFSchema) -> bool {
+    matches!(expr, Expr::OuterReferenceColumn(..))
+}
+
 fn shifts_in_an_update(expr: &Expr, _: &DFSchema) -> bool {
     matches!(
         expr,
@@ -725,5 +753,44 @@ mod tests {
             &[0],
             casts_a_zoned_value_to_naive
         ));
+    }
+
+    /// An outer reference that resolves in no enclosing join's other side refuses: the walk
+    /// cannot see the value it names (fail closed).
+    ///
+    /// pins: ice-ntz-nested-refuse-1/C-033
+    #[test]
+    fn an_outer_reference_no_enclosing_join_resolves_fails_closed() {
+        let field = Arc::new(Field::new("c", DataType::Int32, true));
+        let outer = Expr::OuterReferenceColumn(field, Column::from_name("c"));
+        let plan = LogicalPlanBuilder::empty(true)
+            .project(vec![outer.alias("s")])
+            .and_then(LogicalPlanBuilder::build)
+            .expect("plan");
+        assert!(lineage_has(&plan, &[0], casts_a_zoned_value_to_naive));
+    }
+
+    /// A node the walk does not model, inside the side of a join it reaches, is read whole, and
+    /// when it holds an outer reference the join's other side is read whole as well, so a cast
+    /// that reaches the column only through that reference refuses (fail closed).
+    ///
+    /// pins: ice-ntz-nested-refuse-1/C-033
+    #[test]
+    fn an_unmodelled_node_that_refers_out_reads_the_other_side_whole() {
+        let naive = Arc::new(Field::new(
+            "a",
+            DataType::Timestamp(TimeUnit::Microsecond, None),
+            true,
+        ));
+        let outer = Expr::OuterReferenceColumn(naive, Column::from_name("a"));
+        let lateral = LogicalPlanBuilder::empty(true)
+            .distinct_on(vec![lit(1)], vec![outer.alias("s")], None)
+            .and_then(LogicalPlanBuilder::build)
+            .expect("lateral");
+        let plan = LogicalPlanBuilder::from(instant_cast())
+            .cross_join(lateral)
+            .and_then(LogicalPlanBuilder::build)
+            .expect("join");
+        assert!(lineage_has(&plan, &[1], casts_a_zoned_value_to_naive));
     }
 }

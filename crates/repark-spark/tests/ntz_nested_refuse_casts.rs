@@ -635,16 +635,18 @@ async fn the_plain_update_stores_a_wall_beside_a_zoned_sub_expression() {
     assert_eq!(wrong, Vec::<String>::new());
 }
 
-const OFF_LINEAGE: [&str; 3] = [
+const OFF_LINEAGE: [&str; 4] = [
     "INSERT INTO ice.ns.t SELECT id, named_struct('v', w, 'n', 1), 0, NULL FROM ice.ns.src s \
      WHERE EXISTS (SELECT 1 FROM ice.ns.src WHERE {C} IS NOT NULL)",
     "INSERT INTO ice.ns.t SELECT id, named_struct('v', w, 'n', 1), 0, NULL FROM ice.ns.src \
      WHERE element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1) IS NOT NULL",
     "INSERT INTO ice.ns.t SELECT id, named_struct('v', w, 'n', 1), 0, \
      CAST(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>) AS ARRAY<STRING>) FROM ice.ns.src",
+    "INSERT INTO ice.ns.t SELECT a.id, l.s, 0, NULL FROM (SELECT id, {C} AS c, \
+     named_struct('v', w, 'n', 1) AS m FROM ice.ns.src) a, LATERAL (SELECT a.m AS s) l",
 ];
 
-const ON_LINEAGE: [&str; 7] = [
+const ON_LINEAGE: [&str; 9] = [
     "INSERT INTO ice.ns.t SELECT id + 1, s, 0, NULL FROM (SELECT id, {C} AS s FROM ice.ns.src) q \
      WHERE id > 0",
     "INSERT INTO ice.ns.t SELECT id + 1, named_struct('v', w, 'n', 1), 0, NULL FROM ice.ns.src \
@@ -658,10 +660,15 @@ const ON_LINEAGE: [&str; 7] = [
     "INSERT INTO ice.ns.t SELECT id + 1, s, 0, NULL FROM lineage_view",
     "MERGE INTO ice.ns.t t USING (SELECT id, {C} AS s FROM ice.ns.src) s ON t.id = s.id \
      WHEN MATCHED THEN UPDATE SET t.st = s.s",
+    "INSERT INTO ice.ns.t SELECT a.id + 1, l.s, 0, NULL FROM (SELECT id, {C} AS c \
+     FROM ice.ns.src) a, LATERAL (SELECT a.c AS s) l",
+    "MERGE INTO ice.ns.t t USING (SELECT a.id, l.s FROM (SELECT id, {C} AS c FROM ice.ns.src) a, \
+     LATERAL (SELECT a.c AS s) l) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = s.s",
 ];
 
 /// The cast walk reads only what reaches the supplied column: the expression that produces it,
-/// through aliases, derived tables, views, joins, unions, windows and groupings. A container
+/// through aliases, derived tables, views, joins, unions, windows, groupings and the outer
+/// reference a `LATERAL` subquery returns from the join's other side. A container
 /// cast of an instant that feeds a predicate, an `EXISTS` in a `WHERE` or a sibling column no
 /// longer refuses, and the wall stores; one that reaches the column through any of those
 /// shapes still refuses and writes nothing.

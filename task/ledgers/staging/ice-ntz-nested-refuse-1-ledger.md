@@ -28,6 +28,16 @@ is not this unit's (carded CONTAINER-CAST-ZONE-1, owner's ruling pending) and ar
 residue, not gated. The round's cells are C-030, its mutants C-031, its gates C-032. C-014 stays
 **OPEN**: the verifier's round 1 (`c20c3e25`) returned FAIL, answered here; round 2 is pending.
 
+**Fix round 3 (2026-10-21).** The verifier's round-2 verdict on `75475b71` was FAIL: S1-1 (a
+container cast of an instant that reaches the column through `LATERAL (SELECT a.c …)` stores
+the UTC wall; 17 cells), S1-2 (18 correct cells the lineage walk refuses are not listed with a
+count), S1-3 (four `lineage_has` arms no pin holds: `DISTINCT`, a limit, a window's input
+columns, a values row past the first), S2-1 (the zero-offset-zone cost is 126 matrix cells per
+zone, not 3) and S3-1 to S3-4. Main `d6ee0411` is merged in first (merge `4bb1f82f`). Each
+finding became a dated clause from C-033 on; earlier rows stand as written. No rule changes:
+the walk is not narrowed and the zone rule is not changed; the over-refusal list is the
+owner's to rule on.
+
 **Why.** In a session whose zone is not UTC, an instant written into a nested microsecond
 `TIMESTAMP_NTZ` leaf stored the session wall through field assignment and the UTC wall through
 every other door, so one table held two walls for one input. Two folds that stored the right
@@ -70,6 +80,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-030 | On the round-2 build, against main `c516c54a`: the 3168-cell door matrix moves the same 360 cells, every one to the refusal, and answers every cell as `c20c3e25` does (refusal for refusal, value for value; only the text is the round-2 hint); the 84-cell named-shape probe moves 48 (38 wrong walls, 10 correct cells by design) and answers as `c20c3e25` with the branch now read; the verifier's named shapes answer as `c20c3e25` but for the cells of C-022 to C-024, each of which now stores the value Spark and main store or refuses a wrong wall. | `probe.py run` and `probe.py attack` on main and the build; the verifier's case files re-run. | **PROVEN** | §12. `task/wo/ice-ntz-nested-refuse-1/evidence/`. |
 | C-031 | Every hand mutant of both verifier rounds that still applies, and fifteen of this round's, is killed by a named pin (35 run; the frame-view branch of M9 is gone). | §12. | **PROVEN** | §12. |
 | C-032 | The round's gates are green with real exit codes, and the round costs nothing measurable (every 10-run median ratio against main within the 1.05x gate). | §12. | **PROVEN** | §12. |
+| C-033 | Outside UTC the lineage walk follows a `LATERAL` subquery's outer reference into the join's other side: a container cast of an instant that reaches the column through `LATERAL (SELECT a.c AS s)` (comma, `CROSS JOIN LATERAL`, `JOIN LATERAL … ON true`, `LEFT JOIN LATERAL`, an array element, an `ARRAY` column, a temporary view, `BY NAME`, a MERGE insert and a MERGE update, a lateral of a lateral) refuses and writes nothing, and a lateral that returns only a wall sibling of that cast stores the wall. Fail closed: an outer reference no enclosing join resolves refuses, and a node read whole inside the join's right side that holds an outer reference reads the left side whole too. *(Supersedes C-023's reading of a `Subquery` node as a pass-through, fix round 3, verifier round-2 S1-1.)* | The verifier's 17 cells and control re-run on the build; this round's lateral cells on Spark, main and the build; the two Rust lateral pins with mutant L16 as the control; two synthetic-plan pins for the fail-closed arms. | **PROVEN** | §13.1. `the_cast_walk_reads_only_what_reaches_the_column`, `router::nested_ns::tests::an_outer_reference_no_enclosing_join_resolves_fails_closed`, `router::nested_ns::tests::an_unmodelled_node_that_refers_out_reads_the_other_side_whole`. |
 
 ## §1 The rule and the seam
 
@@ -513,3 +524,52 @@ runs after 3 warm-ups (the verifier's `cost.py`); the table gives the median of 
 | nested-NTZ `UPDATE` | 40.64 | 40.92 | 1.007 | 40.43 | 41.17 | 1.018 |
 | nested-NTZ `MERGE` | 67.32 | 67.97 | 1.010 | 73.62 | 76.14 | 1.034 |
 
+
+## §13 Fix round 3: what each finding became
+
+### §13.1 S1-1, the `LATERAL` outer reference (C-033)
+
+DataFusion 54.1.0 plans `FROM a, LATERAL (SELECT a.c AS s) l` as
+`Join(a, SubqueryAlias(Subquery { subquery, outer_ref_columns }))`, and the lateral's
+projection holds `Expr::OuterReferenceColumn(a.c)`. Round 2's `step` passed the column into the
+subquery and `feeds` collected only `Expr::Column`, so the reference was dropped and the left
+side, where the cast sits, was never read. The walk in `crates/repark-spark/src/router/nested_ns.rs`
+now carries, with each entry, the scopes it sits in: a join's right side is entered with the
+join's left input pushed as a scope (`Next::Lateral`), and `feeds` turns an outer reference into
+`Next::Outer`, which the walk resolves in the innermost scope holding the column and follows as
+a column there (with the scopes outside it). Fail closed: an outer reference that resolves in no
+scope refuses, and a node read whole (`Next::Whole`) inside a scope that holds an outer
+reference (`refers_out`) reads every enclosing scope whole as well. The fix stays in
+`nested_ns.rs` (796 lines as measured by `wc -l`, its test module from line 711; 729 at `75475b71`; ceiling 1000).
+
+Build `maturin develop --profile ci` (190 s, load 2.96 at start); the verifier's
+`cases_lat.py` and the four lateral cases of `cases_l.py` in UTC, New York and Kolkata, every
+probe under `taskset -c 0-25` and a 40 G memory cap, load 5.26 at start:
+
+| Cells | Spark 4.1.2 | main `c516c54a` | round 2 `75475b71` | this build |
+|---|---|---|---|---|
+| the verifier's 17 (9 shapes: comma, `CROSS JOIN LATERAL`, `JOIN LATERAL … ON true` (New York), array element, `ARRAY` column, temporary view, `BY NAME`, MERGE insert, MERGE update; New York and Kolkata) | session wall | UTC wall | UTC wall | refused, no snapshot |
+| `lateral_join_outer_ref` in Kolkata, `lateral_outer_ref`, `merge_src_join_lateral` (New York, Kolkata) | session wall | UTC wall | UTC wall | refused |
+| `lat_outer_ref_wrapped` (`a.c.v`) | session wall | raw error | refused | refused |
+| `lat_ctrl_wall` (a wall through the same lateral; 3 zones) | UTC wall | UTC wall | UTC wall | UTC wall |
+| every lateral cell in UTC | UTC wall | UTC wall | UTC wall | UTC wall |
+
+This round's lateral cells (`cases_r4lat.py`, 12 shapes × 3 zones, Spark, main and the build):
+a lateral returning only the wall sibling `a.m` of the cast stores the wall in every zone on
+all three; returning the cast `a.c`, through `LEFT JOIN LATERAL`, or through a lateral of a
+lateral, Spark stores the session wall, main the UTC wall, the build refuses outside UTC. The
+other seven shapes (a scalar subquery of the outer column, `explode`, a derived table, `DISTINCT`
+or a `UNION ALL` inside the lateral, a field of the outer column, a `CASE`) raise on main in
+every zone (`repark_lateral_projection_hoist`, `Nested identifiers are not yet supported`,
+`explode` unresolved, a physical-plan error) and are refused on the build outside UTC because
+their type read cannot plan (fail closed, as before this round); no correct cell is lost.
+
+Pins: `the_cast_walk_reads_only_what_reaches_the_column` gains the lateral on `INSERT` and as a
+MERGE source (on-lineage, refuse, no snapshot) and the wall-sibling lateral (off-lineage,
+stores). Both lateral pins fail on round 2's walk and under the verifier's L16 (a `Subquery`
+node stops the walk); the wall-sibling pin fails if the left side is read whole. The two
+fail-closed arms are reached by no plan RePark can run, so each is pinned on a synthetic plan
+in the file's test module: `an_outer_reference_no_enclosing_join_resolves_fails_closed` fails
+when an unresolved reference is skipped, and
+`an_unmodelled_node_that_refers_out_reads_the_other_side_whole` (a `DISTINCT ON` holding the
+reference, cross-joined to an instant cast) fails when the scope read is dropped.

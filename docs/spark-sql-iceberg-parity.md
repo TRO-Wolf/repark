@@ -3441,7 +3441,11 @@ still open is `isModifiable`.
   followed through aliases, derived tables, views, joins, unions, windows and values rows. A
   cast in a predicate, in an `EXISTS` of a `WHERE`, or in a sibling column no longer refuses;
   a subquery inside the column's own expression (scalar, `IN`, `EXISTS`), an aggregate and
-  any other plan node are read whole.)* **Why the container cast:**
+  any other plan node are read whole.)* *(Fix round 3, 2026-10-21, verifier round-2 S1-1: a
+  `LATERAL` subquery's outer reference is followed into the join's other side, so a container
+  cast of an instant that reaches the column through `LATERAL (SELECT a.c AS s)` refuses (17
+  cells that stored the UTC wall on round 2 and on main); a reference no enclosing join
+  resolves refuses.)* **Why the container cast:**
   RePark's cast of a whole struct, array or map converts a zoned leaf with UTC even in a bare
   `SELECT` (`CAST(array(TIMESTAMP '2026-01-02 03:04:05.123456+00:00') AS
   ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark 4.1.2 answers

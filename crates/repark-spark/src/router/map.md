@@ -180,12 +180,27 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   subquery inside a read expression (scalar, `IN`, `EXISTS`; its outer references are followed
   as columns), every group and aggregate expression of an aggregate, and any other node
   (`plan_has`, the round-1 walk). A column that resolves in no input reads every input whole.
+  **A `LATERAL` subquery (fix round 3, 2026-10-21, ledger C-033):** DataFusion 54 plans a
+  lateral factor as a join whose right side is a `Subquery` node, and the lateral's projection
+  names the left side's column as an outer reference (`Expr::OuterReferenceColumn`). Each entry
+  of the walk carries the scopes it sits in: entering a join's right side pushes the join's left
+  input as a scope, and an outer reference is followed into the innermost scope that resolves
+  it, as a column, so `LATERAL (SELECT a.c AS s)` reads the expression that produces `a.c` and
+  a sibling column of `a` is not read. Fail closed: an outer reference that resolves in no scope
+  refuses, and a node read whole inside a scope that holds an outer reference reads every
+  enclosing scope whole as well. Round 2 followed the column into the subquery and dropped the
+  reference, so a container cast of an instant through `LATERAL (SELECT a.c AS s)` stored the
+  UTC wall (verifier round 2, S1-1).
   Neither walk descends a scan source's own logical plan (round 1's frame-view branch, removed
   in fix round 2, ledger C-024): DataFusion 54's `LogicalPlanBuilder::scan` replaces a scan
   whose source carries a plan (a catalog view's `ViewTable`, a frame's `into_view()`) with that
   plan before the router sees it, and every planner path builds scans through it. The file's
   `#[cfg(test)]` module pins the fail-closed read of a column that resolves in no input on a
-  synthetic plan (no planner builds one).
+  synthetic plan (no planner builds one), and, from fix round 3, the two fail-closed arms of
+  the lateral walk on synthetic plans: an outer reference no enclosing join resolves, and an
+  unmodelled node (`DISTINCT ON`) inside the right side of a join that holds an outer reference
+  (no plan RePark can run reaches either: every lateral body but a plain projection fails to
+  plan, and a failed plan refuses before the walk).
   A `PREPARE` that holds a parameter is read as `Scope::Unreadable`, so every supply of the
   column refuses. **Why the container cast:** the planner's cast of a whole
   struct, array or map converts a zoned leaf with UTC even in a bare `SELECT`
