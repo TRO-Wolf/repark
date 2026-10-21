@@ -401,6 +401,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   nested `TIMESTAMP_NTZ` row takes R-011's refusal, not the gate's text) are described in the
   paragraphs headed ICE-NTZ-NESTED-REFUSE-1 (2026-10-20) in their rows.
   pins: ice-ntz-nested-refuse-1/C-047
+  **Count (fix round 4, ledger C-048):** `docs/spark-sql-iceberg-parity.md` R-011 counts ruling 2's
+  over-refused correct cells as 16 in 8 shapes: the verifier's scalar-subquery shape, `INSERT INTO
+  ice.ns.t SELECT id, (SELECT named_struct('v', w, 'n', size(CAST(array(x) AS
+  ARRAY<TIMESTAMP_NTZ>))) FROM ice.ns.src LIMIT 1), 0 FROM ice.ns.src`, joins the sibling-field
+  class (2 cells, New York and Kolkata; Spark and main store the wall, the build refuses). The
+  count covers the shapes measured and the class is open-ended.
+  pins: ice-ntz-nested-refuse-1/C-048
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

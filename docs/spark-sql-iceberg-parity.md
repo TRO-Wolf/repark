@@ -3559,7 +3559,7 @@ still open is `isModifiable`.
   an `INSERT` of a container cast of an instant refuse where Spark and main store the same
   wall; 3 cells measured), as `Etc/UTC` does. *(Fix round 3, 2026-10-21, verifier round-2 S1-2
   and S2-1: every measured over-refusal class with its count; no rule changed.)* (1) **What the
-  walk reads whole without following, 14 correct cells** (7 shapes, New York and Kolkata; each
+  walk reads whole without following, 16 correct cells** (8 shapes, New York and Kolkata; each
   writes the wall column `w`, so the cast never reaches the stored value, and Spark 4.1.2 and
   main store the wall; every shape stores in UTC): aggregate expressions read whole, the cast in
   `HAVING max(…)`, in `HAVING count(element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1))` or
@@ -3567,7 +3567,12 @@ still open is `isModifiable`.
   BY id, s` over the cast (1 shape, 2 cells); a `CASE` or `IF` condition or a sibling field of
   the same `named_struct` read, `CASE WHEN element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1)
   IS NOT NULL THEN w END`, `IF(<cast> IS NULL, 1, 2)` or `size(CAST(array(x) AS
-  ARRAY<TIMESTAMP_NTZ>))` into the `INT` field (3 shapes, 6 cells). *Ruled 2026-10-21 (owner,
+  ARRAY<TIMESTAMP_NTZ>))` into the `INT` field, or that same `size(…)` in the `INT` field of a
+  `named_struct` a scalar subquery returns, `(SELECT named_struct('v', w, 'n',
+  size(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>))) FROM ice.ns.src LIMIT 1)` (4 shapes, 8 cells;
+  the last found by the verifier in round 3). The counts cover the shapes measured; the class
+  is open-ended, so a shape not listed here that reads a cast only through an aggregate, a
+  grouping key, a condition or a sibling field refuses likewise. *Ruled 2026-10-21 (owner,
   ruling 2): accepted as cost until GATE-RETIRE-1.* (2) **Subquery reads, no longer refused
   (owner ruling 1, 2026-10-21):** an `IN`, `EXISTS` or quantified subquery in the column's own
   expression is not read (a boolean carries no timestamp) and a scalar subquery is read through

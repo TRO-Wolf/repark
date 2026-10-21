@@ -138,8 +138,9 @@ Tables already written keep the values they hold; this release ships no migratio
   through `STRING`, `DATE` or `BIGINT` still stores the UTC wall outside UTC, and the six
   table-creating writers (CTAS, `CREATE OR REPLACE`/`REPLACE TABLE … AS SELECT`,
   `saveAsTable` in mode `overwrite`, `writeTo().create()`/`.replace()`/`.createOrReplace()`)
-  carry the same value. Refused by design, measured (R-011 lists each class): 14 correct cells
-  where a cast in an aggregate, a grouping key, a `CASE`/`IF` condition or a sibling field never
+  carry the same value. Refused by design, measured (R-011 lists each class): 16 correct cells
+  (8 shapes; the count covers the shapes measured and the class is open-ended) where a cast in an
+  aggregate, a grouping key, a `CASE`/`IF` condition or a sibling field never
   reaches the stored value (accepted as cost until GATE-RETIRE-1, owner ruling 2026-10-21); 17
   `PREPARE` cells; and every instant write in a geographic zone at offset zero
   (`Africa/Abidjan`, `Atlantic/Reykjavik`, `Europe/London` in winter: 126 correct cells per zone
