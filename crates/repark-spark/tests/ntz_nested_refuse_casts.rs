@@ -726,8 +726,12 @@ async fn the_cast_walk_reads_only_what_reaches_the_column() {
     assert_eq!(wrong, Vec::<String>::new());
 }
 
-const IN_A_SUBQUERY: [&str; 5] = [
+const IN_A_SUBQUERY: [&str; 8] = [
     "INSERT INTO ice.ns.t SELECT 2, (SELECT {C} FROM ice.ns.src), 0",
+    "INSERT INTO ice.ns.t SELECT 2, (SELECT s FROM subquery_view), 0",
+    "INSERT INTO ice.ns.t SELECT 2, (SELECT (SELECT {C} FROM ice.ns.src)), 0",
+    "INSERT INTO ice.ns.t SELECT q.id + 1, (SELECT q.s), 0 FROM (SELECT id, {C} AS s \
+     FROM ice.ns.src) q",
     "INSERT INTO ice.ns.t SELECT 2, (SELECT s FROM (SELECT {C} AS s FROM ice.ns.src) q), 0",
     "MERGE INTO ice.ns.t t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN \
      UPDATE SET t.st = (SELECT {C} FROM ice.ns.src)",
@@ -740,9 +744,10 @@ const IN_A_SUBQUERY: [&str; 5] = [
 
 /// A subquery inside the expression that produces the column is read whole: a scalar subquery
 /// that returns a container cast of an instant (directly, through a derived table, in a MERGE
-/// update) refuses outside UTC, and so does an `IN` or `EXISTS` subquery in the column's own
-/// expression that holds one, though its result is a boolean (fail closed). A scalar subquery
-/// that returns a wall, or the leaf cast, stores.
+/// update, over a temporary view, nested in another scalar subquery, or as an outer column the
+/// walk follows back out) refuses outside UTC, and so does an
+/// `IN` or `EXISTS` subquery in the column's own expression that holds one, though its result
+/// is a boolean (fail closed). A scalar subquery that returns a wall, or the leaf cast, stores.
 ///
 /// pins: ice-ntz-nested-refuse-1/C-024
 #[tokio::test]
@@ -754,6 +759,13 @@ async fn a_subquery_in_the_columns_expression_is_read_whole() {
         let _warehouse = catalog(&session).await;
         table(&session, "t", S, "").await;
         run(&session, "INSERT INTO ice.ns.t (id, k) VALUES (1, 0)").await;
+        run(
+            &session,
+            &format!(
+                "CREATE TEMPORARY VIEW subquery_view AS SELECT id, {cast} AS s FROM ice.ns.src"
+            ),
+        )
+        .await;
         for write in IN_A_SUBQUERY {
             let write = write.replace("{C}", &cast);
             match attempt(&session, &write).await {

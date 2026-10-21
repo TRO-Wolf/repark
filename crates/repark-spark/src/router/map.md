@@ -183,7 +183,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   Neither walk descends a scan source's own logical plan (round 1's frame-view branch, removed
   in fix round 2, ledger C-024): DataFusion 54's `LogicalPlanBuilder::scan` replaces a scan
   whose source carries a plan (a catalog view's `ViewTable`, a frame's `into_view()`) with that
-  plan before the router sees it, and every planner path builds scans through it.
+  plan before the router sees it, and every planner path builds scans through it. The file's
+  `#[cfg(test)]` module pins the fail-closed read of a column that resolves in no input on a
+  synthetic plan (no planner builds one).
   A `PREPARE` that holds a parameter is read as `Scope::Unreadable`, so every supply of the
   column refuses. **Why the container cast:** the planner's cast of a whole
   struct, array or map converts a zoned leaf with UTC even in a bare `SELECT`

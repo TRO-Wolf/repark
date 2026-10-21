@@ -679,3 +679,51 @@ fn shifts_in_an_update(expr: &Expr, _: &DFSchema) -> bool {
             )
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
+    use datafusion::common::{Column, DFSchema, ScalarValue};
+    use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, Projection, cast, lit};
+
+    use super::{casts_a_zoned_value_to_naive, lineage_has};
+
+    fn instant_cast() -> LogicalPlan {
+        let instant = lit(ScalarValue::TimestampMicrosecond(
+            Some(0),
+            Some("UTC".into()),
+        ));
+        let naive = DataType::Timestamp(TimeUnit::Microsecond, None);
+        LogicalPlanBuilder::empty(true)
+            .project(vec![cast(instant, naive).alias("a")])
+            .and_then(LogicalPlanBuilder::build)
+            .expect("plan")
+    }
+
+    /// A column the lineage cannot resolve in any input reads every input whole, so a cast
+    /// there still refuses (fail closed).
+    ///
+    /// pins: ice-ntz-nested-refuse-1/C-023
+    #[test]
+    fn a_column_that_resolves_in_no_input_reads_every_input_whole() {
+        let fields = vec![Field::new("b", DataType::Int32, true)];
+        let schema =
+            DFSchema::from_unqualified_fields(fields.into(), HashMap::new()).expect("schema");
+        let outer = Projection::try_new_with_schema(
+            vec![Expr::Column(Column::from_name("b"))],
+            Arc::new(instant_cast()),
+            Arc::new(schema),
+        )
+        .expect("projection");
+        let outer = LogicalPlan::Projection(outer);
+        assert!(lineage_has(&outer, &[0], casts_a_zoned_value_to_naive));
+        assert!(lineage_has(
+            &instant_cast(),
+            &[0],
+            casts_a_zoned_value_to_naive
+        ));
+    }
+}

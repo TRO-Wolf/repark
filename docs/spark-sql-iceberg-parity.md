@@ -3519,7 +3519,9 @@ still open is `isModifiable`.
   zones, and 4 UTC cells of a `PREPARE` of an instant parameter, whose UTC wall is the session
   wall there). Every other cell keeps its value. *(Corrected 2026-10-20, fix round 2, verifier
   S2-3: round 1 read 42 wrong walls and 6 controls; the probe read the base table for the
-  branch write.)* **Why RePark and Spark differ:** Spark 4.1.2 answers 174 recorded cells
+  branch write.)* *(Fix round 2 re-measured both probes on its build: the 3168 matrix cells
+  answer as at `c20c3e25`, refusal for refusal and value for value, and the 84 named-shape
+  cells too; only the refusal text is the round-2 hint.)* **Why RePark and Spark differ:** Spark 4.1.2 answers 174 recorded cells
   (`python/repark/tests/timestamps/ice_ntz_nested_refuse_1_spark.json`: 12 doors, 5 sources,
   3 zones, less the two column sources on `insert_values`): the instant's session wall in each
   of the 138 instant and cast cells, the literal's own wall in the 36 `TIMESTAMP_NTZ` literal
@@ -3536,7 +3538,11 @@ still open is `isModifiable`.
   parameter in the verifier's). A subquery inside the column's own expression is read whole,
   so an `IN` or `EXISTS` there that holds a container cast of an instant refuses though its
   result is a boolean: 1 correct cell measured (`IF(EXISTS (…), named_struct('v', w, 'n', 1),
-  NULL)`, New York; Spark and main store the wall). **Not reached by this gate, dated
+  NULL)`, New York; Spark and main store the wall). The zone rule reads the zone's id, not its
+  offset at the value: a zone whose offset is zero at the value refuses as any other non-UTC
+  zone (`Europe/London` on 2026-01-02: the plain `UPDATE`'s string cast, its instant cast and
+  an `INSERT` of a container cast of an instant refuse where Spark and main store the same
+  wall; 3 cells measured), as `Etc/UTC` does. **Not reached by this gate, dated
   2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
   frame or a table built from a container cast of an instant carries the UTC wall the cast
   produced; the container cast's own conversion in a `SELECT` is the defect, for the lift.

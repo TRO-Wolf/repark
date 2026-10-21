@@ -25,7 +25,8 @@ walk reads the whole statement, not the column's value), S1-4 (no pin holds the 
 descent), and S2-1 to S2-4. Each became a dated clause from C-022 on; earlier rows stand as
 written and the later row supersedes where they differ. S1-1 and S2-1 are one mechanism that
 is not this unit's (carded CONTAINER-CAST-ZONE-1, owner's ruling pending) and are stated as a
-residue, not gated.
+residue, not gated. The round's cells are C-030, its mutants C-031, its gates C-032. C-014 stays
+**OPEN**: the verifier's round 1 (`c20c3e25`) returned FAIL, answered here; round 2 is pending.
 
 **Why.** In a session whose zone is not UTC, an instant written into a nested microsecond
 `TIMESTAMP_NTZ` leaf stored the session wall through field assignment and the UTC wall through
@@ -66,6 +67,9 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-027 | Not gated, stated (owner's ruling pending): outside UTC, a container cast or `from_json(to_json(…))` whose zoned leaf passes through `STRING`, `DATE` or `BIGINT` stores the UTC wall (the UTC date, the UTC wall to the millisecond) on main and on the build, on `INSERT … SELECT` and a MERGE update, and the six table-creating writers (CTAS, `CREATE OR REPLACE TABLE … AS SELECT`, `REPLACE TABLE … AS SELECT`, `saveAsTable` in mode `overwrite`, `writeTo().create()`, `.replace()`, `.createOrReplace()`) store the UTC wall of a container cast of an instant; Spark 4.1.2 stores the session wall (`STRING`, the writers), the session date (`DATE`), refuses `BIGINT` and stores NULL through JSON. One mechanism, the container cast and `to_json` rendering a zoned leaf in UTC for every target type, carded as CONTAINER-CAST-ZONE-1 (`task/roadmap/mid-term/container-cast-zone-1-card-2026-10-20.md`); the owner rules whether this unit grows to gate it. *(Supersedes C-015's "a container cast of a wall or a string still store[s]" as a description of what passes; fix round 2, verifier S1-1 and S2-1.)* | The verifier's cells re-run on the build against main and Spark. | **PROVEN** | §12. Residue, not gated; the residue line in `crates/repark-spark/tests/map.md`. |
 | C-028 | After fix round 2 the plain `UPDATE` that assigns a whole struct or array above the leaf refuses, outside UTC, a value whose lineage calls the `TIMESTAMP_NTZ` cast, and no other value for that reason. Every cell that rule moves in the 3168-cell matrix (8 `CAST` cells that stored the UTC wall, 8 raw errors, 4 string casts that stored the wall plus the offset) and in the named-shape probe (6 string, date and array-element casts that stored the wall or midnight plus the offset) held a wrong value or raised on main, in New York and Kolkata; the four EQUAL cells round 1's zoned arm refused store again (C-022). A zone whose offset is zero at the value is still a zone that is not UTC: in `Europe/London` on 2026-01-02 the string cast, the instant cast and a container cast of an instant refuse though Spark and main store the same wall (3 cells measured), by design, as `Etc/UTC` does. *(Supersedes C-017's "No EQUAL cell moves", fix round 2, verifier S1-2.)* | The matrix and the probes on the build; the London cells on Spark, main and the build. | **PROVEN** | §12. `the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside_utc`, `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`. |
 | C-029 | The hint names the DataFrame remedy: a leaf cast written inside `F.expr(…)` is not lowered to the session-aware cast function, so on main `F.expr("named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n', 1)")` stores the UTC wall in New York (Spark 4.1.2 the session wall) and the build refuses it; the hint now reads "… or array(CAST(<value> AS TIMESTAMP_NTZ)) in SQL, or col.cast(\"timestamp_ntz\") on the leaf column of a DataFrame (a CAST written inside expr() is refused), …", and `col.cast("timestamp_ntz")` stores the session wall on that door. The text still names no dropping, truncating, overwriting, recreating, deleting or replacing action. The lowering of `expr()` is outside this unit's files: a residue line in R-011, not a change. *(Supersedes C-006's text, fix round 2, verifier S3-1.)* | The whole-text pin; the `F.expr` and `col.cast` cells on Spark, main and the build. | **PROVEN** | §12. `the_refusal_names_the_table_the_column_and_the_leaf`. |
+| C-030 | On the round-2 build, against main `c516c54a`: the 3168-cell door matrix moves the same 360 cells, every one to the refusal, and answers every cell as `c20c3e25` does (refusal for refusal, value for value; only the text is the round-2 hint); the 84-cell named-shape probe moves 48 (38 wrong walls, 10 correct cells by design) and answers as `c20c3e25` with the branch now read; the verifier's named shapes answer as `c20c3e25` but for the cells of C-022 to C-024, each of which now stores the value Spark and main store or refuses a wrong wall. | `probe.py run` and `probe.py attack` on main and the build; the verifier's case files re-run. | **PROVEN** | §12. `task/wo/ice-ntz-nested-refuse-1/evidence/`. |
+| C-031 | Every hand mutant of both verifier rounds that still applies, and fifteen of this round's, is killed by a named pin (35 run; the frame-view branch of M9 is gone). | §12. | **PROVEN** | §12. |
+| C-032 | The round's gates are green with real exit codes, and the round costs nothing measurable (every 10-run median ratio against main within the 1.05x gate). | §12. | **PROVEN** | §12. |
 
 ## §1 The rule and the seam
 
@@ -417,4 +421,95 @@ TIMESTAMP_NTZ)) in SQL, or col.cast("timestamp_ntz") on the leaf column of a Dat
 written inside expr() is refused), to store the session wall time (a CAST of the whole struct,
 array or map is refused, and in an UPDATE assign the field itself), or set
 spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000``
+
+### §12.8 The round's cells (C-030)
+
+Build `eb81d0a5` (`maturin develop --profile ci`, 220 s, load 24.74 at start); main `c516c54a`
+(the verifier's worktree and module). Every probe under `taskset -c 0-25`.
+
+| Probe | Main | `c20c3e25` (committed) | This build |
+|---|---|---|---|
+| door matrix, 3168 cells (`probe.py run`, 116 s, load 6.80) | 360 cells differ from the build | 360 refused | 360 refused; 0 cells differ from `c20c3e25` in outcome; the 360 carry the round-2 hint |
+| named-shape probe, 84 cells (`probe.py attack`, branch read from the branch) | 48 differ: 38 wrong walls, 10 correct | 48 refused | 48 refused, the same cells |
+| the verifier's `cases_a` … `cases_e` (UTC, New York) | as the verifier measured | as the verifier measured | as `c20c3e25` but for 7 cells: the 4 of C-022 and the 3 of C-023 store the value main and Spark store |
+| `cases_r3` (this round's subquery, lineage and `F.expr` shapes, UTC and New York) | see §12.3 and §12.7 | — | see §12.3 and §12.7 |
+
+The committed `repark-head.jsonl` and `attack-head.jsonl` are this build's; the committed
+`attack-main-c516c54a.jsonl` is the fixed probe on main.
+
+### §12.9 The round's mutants (C-031)
+
+Each applied alone, the suites `--test ntz_nested_refuse --test ntz_nested_refuse_casts --test
+timestamp_ns_wall_doors --test timestamp_ns_nested_shapes`, `--lib nested` and repark-iceberg
+`--lib nested_ns_gate` run, the source restored (baseline 139 passed; 140 after the last pin).
+M8a, M10 and N10 survived the first pass and are killed by the pins added after it (two
+subquery shapes, one unit test); each was re-run alone.
+
+| Mutant | Change | Killed by |
+|---|---|---|
+| M1 | `Expr::Cast` arm removed from `casts_a_zoned_value_to_naive` | `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc` and two more |
+| M2 | `Expr::TryCast` arm removed | `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc` |
+| M3 | `PREPARE` parameter check inverted | `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone`, `a_prepared_write_of_an_instant_refuses_in_a_utc_session_too` |
+| M4 / V3 | the plain `UPDATE`'s `TIMESTAMP_NTZ`-cast test off | `the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside_utc`, `a_wall_or_the_hints_cast_stores_outside_utc_and_the_plain_update_refuses_the_cast` |
+| M5, M5b, V4 | the hint names dropping, recreating or overwriting | `the_refusal_names_the_table_the_column_and_the_leaf` |
+| M6 / V6 | the typing `SELECT` executed | `the_type_read_never_runs_the_source`, `every_door_refuses_an_instant_outside_utc_and_writes_nothing` |
+| M7 | the leaf-cast function of a zoned input read as a cast | four pins, `the_leaf_cast_and_a_container_cast_of_a_wall_still_store_outside_utc` among them |
+| M8a | the `ReplanningTempView` descent of the whole read removed | `a_subquery_in_the_columns_expression_is_read_whole` (a scalar subquery over a temporary view) |
+| M8b | the `ReplanningTempView` descent of the lineage removed | `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`, `the_cast_walk_reads_only_what_reaches_the_column` |
+| M9 | frame-view descent removed | not applicable: the branch is removed as dead (C-024) |
+| M10 | the whole read's `apply_with_subqueries` → `apply` | `a_subquery_in_the_columns_expression_is_read_whole` (a scalar subquery nested in a scalar subquery) |
+| M10b | the lineage's subquery read removed | `a_subquery_in_the_columns_expression_is_read_whole` |
+| M11 | the INSERT cast test removed | three pins |
+| M12 | the UPDATE and MERGE cast test removed | three pins |
+| M13 | the zoned-sub-expression arm restored | `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression` |
+| V1 | the zone condition inverted | 17 pins |
+| V2 | `Etc/UTC` read as UTC | `only_a_utc_zone_lets_an_instant_through` |
+| V5 | the nanosecond leaf takes the microsecond text | 9 pins |
+| V7 | the outer `WITH` ignored | `the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` |
+| V8 | the map arm of the zone test dropped | `every_door_refuses_an_instant_outside_utc_and_writes_nothing`, `a_zoned_timestamp_is_found_at_any_depth_and_in_any_layout` |
+| V9 | the MERGE source dropped from the typing `FROM` | four pins |
+| V10 | a supply with no value feed refuses | 13 pins |
+| V11 | `PREPARE` decided by the zone | the two `PREPARE` pins |
+| N1 | the lineage read as the whole statement | `the_cast_walk_reads_only_what_reaches_the_column` |
+| N2 | a filter's predicate read | the same pin |
+| N3 | a join's right side read on the left | the same pin |
+| N4 | only a union's first branch read | the same pin |
+| N5 | a subquery's outer references not followed | `a_subquery_in_the_columns_expression_is_read_whole` |
+| N6 | an aggregate not read | `the_cast_walk_reads_only_what_reaches_the_column` |
+| N7 | a values row not read | `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc` |
+| N8 | a window expression not read | `the_cast_walk_reads_only_what_reaches_the_column` |
+| N9 | a projection's column references not followed | two pins |
+| N10 | a column that resolves in no input not read | `router::nested_ns::tests::a_column_that_resolves_in_no_input_reads_every_input_whole` |
+
+Not run: the lineage's step bound (`MAX_LINEAGE_STEPS`, fail closed past 65,536 steps); no plan
+the probes build comes near it.
+
+### §12.10 The round's gates and cost (C-032)
+
+Every heavy command under `taskset -c 0-25` with `CARGO_BUILD_JOBS=12`; the box carried other
+work at times, so the load average at each start is given.
+
+| Gate | Result | Wall | Load |
+|---|---|---|---|
+| `cargo fmt --all`, `python3 scripts/sync_map_md.py`, `python3 scripts/check_model_ban.py` | clean on every commit (418 maps) | — | — |
+| `make ci` on every commit | exit 0 | 84–218 s | 2.5–7.5 |
+| `make check-comment-density` | not a target on this branch (dropped before #247; AGENTS.md); no comment line is added or removed in any code file (diff check) | — | — |
+| `make verify` | exit 0; 7700 tests run, 7700 passed (3 slow), 97 skipped | 368 s | 2.54 |
+| `make rust-panic-ban` | exit 0 | 1 s | 11.49 |
+| facade suite (`-n 16 --dist loadgroup --maxschedchunk=8`) | 20168 passed, 484 skipped, 151 xfailed, 0 failed | 429 s | 10.04 |
+| live leg, the module alone (`REPARK_PARITY_LIVE=1`) | 67 passed; `test_live_spark_stores_the_recorded_session_wall` PASSED | 72 s | 12.70, no other JVM |
+| live leg co-collected (`tests/parity tests/writes` + the module, one run) | 5923 passed, 1 failed, 13 skipped, 3 xfailed; the module's live cell passed; the failure is `writes/test_ice_meta_delete_1.py::test_live_oracle_fixture_reproduces` (52 DRIFT cells), the carded PARITY-LIVE-DRIFT-1, which passes alone on this build (1 passed, 56 s) and which this branch does not touch | 809 s | 5.86, no other JVM |
+
+Cost, main `c516c54a` against this build, alternating, 3 rounds; each round the median of 10
+runs after 3 warm-ups (the verifier's `cost.py`); the table gives the median of the three
+(load 3.8–4.4):
+
+| Write | UTC main | UTC build | ratio | New York main | New York build | ratio |
+|---|---|---|---|---|---|---|
+| plain `INSERT` | 19.30 ms | 19.11 ms | 0.990 | 19.49 | 19.61 | 1.007 |
+| plain `UPDATE` | 43.07 | 43.70 | 1.015 | 42.79 | 43.43 | 1.015 |
+| plain `MERGE` | 73.95 | 75.08 | 1.015 | 74.01 | 74.03 | 1.000 |
+| nested-NTZ `INSERT` | 23.51 | 22.90 | 0.974 | 23.25 | 24.06 | 1.035 |
+| nested-NTZ `UPDATE` | 40.64 | 40.92 | 1.007 | 40.43 | 41.17 | 1.018 |
+| nested-NTZ `MERGE` | 67.32 | 67.97 | 1.010 | 73.62 | 76.14 | 1.034 |
 

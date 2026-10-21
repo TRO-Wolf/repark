@@ -325,7 +325,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   as on this build. The plain `UPDATE` pins above hold C-028's corrected statement.
   The whole-text pin in `ntz_nested_refuse.rs` holds fix round 2's hint, which names
   `col.cast("timestamp_ntz")` for a DataFrame (C-029).
-  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029
+  The round's door matrix and named-shape probe (C-030), its 35 hand mutants, each killed by
+  one of these pins or the router's unit test (C-031), and its gates (C-032) back the same
+  rules.
+  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030,
+  C-031, C-032
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that
