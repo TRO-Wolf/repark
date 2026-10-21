@@ -100,6 +100,8 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-042 | Owner ruling 3 (2026-10-21): a session zone counts as UTC when its id, as written or as the session canonicalises it, is a pure UTC alias (`UTC`, `UCT`, `Universal`, `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`, `Greenwich`, their `Etc/` forms, `+00:00`, `-00:00`), held in one set in `crates/repark-spark/src/router/nested_ns.rs`; `Africa/Abidjan`, `Atlantic/Reykjavik` and `Europe/London` stay refused (a pre-1912 local-mean-time offset in tzdb for the first two, a summer offset for London) and stay listed with 126 correct cells per zone. Cells moved: the verifier's five instant shapes store Spark's wall in `Etc/UTC`, `Etc/GMT`, `Etc/Universal` and `Etc/Zulu` (20 cells, refused before) and still refuse in the three geographic zones; the 28-door matrix in `Etc/GMT` moves 0 cells against main (180 before the ruling), in `Europe/London` 180 as before. *(Supersedes C-003's "`Etc/UTC` refuses" and C-035's class (4) for the pure aliases.)* | The unit test over both lists; the zone pin; the verifier's `cases_z.py` and the matrix in two zones on the build against main and the verifier's Spark cells. | **PROVEN** | §13.7. `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc`, `only_a_utc_zone_lets_an_instant_through`. |
 | C-043 | After owner rulings 1 and 3, on the round's final head: the 3168-cell door matrix moves the same 360 cells against main `c516c54a`, every one to the refusal, and the 84-cell named-shape probe the same 48 (38 wrong walls, 10 correct cells); neither probe holds a subquery shape or an `Etc/` zone, so the rulings move none of their cells, and both answer cell for cell as the committed `repark-head.jsonl` and `attack-head.jsonl`. Every mutant whose code or killing pin the rulings touched, and eight new ones on the rulings (Q1 to Q4, Z1 to Z4), was re-run alone: each is killed by a named pin but L11 and L17 (equivalent, C-034), M10 and Q2, each equivalent on stored values: the only plans that reach them (a scalar subquery inside a frame's `DISTINCT ON`; a correlated scalar subquery returning an outer column) raise `Physical plan does not support logical expression ScalarSubquery` on main and the build in every zone, so the mutant only trades that error for the refusal or the refusal for it. M10b, N5 and V2 mutated code the rulings removed; Q1 and Q3, R2 and Q2, Z3 and Z4 take their place. *(Fix round 3, after the owner's rulings of 2026-10-21.)* | `probe.py run` and `probe.py attack` on the final build; the targeted mutant pass. | **PROVEN** | §13.8. `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`, `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc`. |
 | C-044 | Fix round 3's gates are green on the final code head `f795a0ff` with real exit codes but one carded flake, and the round costs nothing measurable: `make verify` 7746 passed; `make rust-panic-ban` exit 0; `make ci` on every commit; the facade suite 20227 passed and 1 failed, `test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool` (SPILL-REACH-FAIR-POOL-FLAKE-1, carded 2026-10-14; alone it failed 1 of 8 runs on main `c516c54a` and 1 of 10 on this head); the live leg alone 67 passed and co-collected 5924 passed, the live cell passing in both; every interleaved 50-run median ratio against main within the 1.05x gate. | §13.9. | **PROVEN** | §13.9. |
+| C-045 | C-014, verifier round 3 (2026-10-21, head `d9943218`, Opus 5.5): **FAIL**, with S1-1 (mutant M10 is not equivalent: a scalar subquery that returns a container cast, under an `Unnest` node, stored the UTC wall in New York), S1-2 (the unit adds 153 code comment lines against `d6ee0411`), S2-1 (a sibling-field shape of ruling 2 has no count), S2-2 (one armed facade run hung at 99 % with no test name), S2-3 (the New York nested `INSERT` reads 1.090 and 1.050) and S3-1 to S3-4; fix round 4 answers S1-1 (C-046), S1-2 (C-047), S2-1 (C-048) and S2-2 and S2-3 (C-049, stated, not changed). The code held on every cell the verifier measured: the lateral walk, rulings 1 and 3, every count, 39 mutants killed. *(Supersedes C-039's `pending`; C-014 stays OPEN until a verifier finds no S0 or S1 defect. Fix round 4.)* | The round-3 verifier's hand-back. | **PROVEN** | §14.1; PR #1124. |
+| C-046 | Mutant M10 (`plan_has` reads a whole-read node with `apply` in place of `apply_with_subqueries`) is not equivalent on stored values, and a pin now holds it. A DataFrame `explode` puts an `Unnest` node, which the walk reads whole, above a projection whose scalar subquery returns the container cast of an instant; it runs on main and stored the UTC wall in New York where Spark 4.1.2 stores the New York wall (the verifier's three doors and a temporary view: `writeTo(…).append()`, `withColumn` and `append`, `write.insertInto`, `INSERT … SELECT … FROM <view>`). `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses` plans that frame with `DataFrame::unnest_columns`, registers it as a temporary view and writes it: it refuses in New York and Kolkata with the hint and adds no snapshot, and the same frame whose subquery returns the wall stores the UTC wall. Under M10 the pin fails on both zones (cast stored, one snapshot), and it is the one test that fails across the `ntz_nested_refuse`, `ntz_nested_refuse_casts` and `ntz_nested_refuse_routes` binaries. No rule in `nested_ns.rs` changed. *(Supersedes C-043's equivalence claim for M10 and §13.8's M10 row; Q2 stays equivalent on stored values. Fix round 4.)* | The pin on the build and under M10; the full binaries under M10. | **PROVEN** | §14.2. `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`; `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses`. |
 
 ## §1 The rule and the seam
 
@@ -827,3 +829,51 @@ median of the six:
 
 Main `c516c54a` is the baseline the verifier used. The build also carries main's commits up to
 `d6ee0411`.
+
+## §14 Fix round 4: what each finding became
+
+Verifier round 3 returned FAIL on PR #1124 at `d9943218`: two S1 findings, three S2 and four S3
+(C-045). The code held on every cell the verifier measured. The round adds one pin, strips the
+unit's code comments, corrects one count, merges main and records the gates; no rule in
+`nested_ns.rs` changes.
+
+### §14.1 The verdict (C-045)
+
+| Finding | One line | Answered by |
+|---|---|---|
+| S1-1 | Mutant M10 survives all 144 pins; a scalar subquery returning the container cast under an `Unnest` stores the UTC wall in New York | C-046 |
+| S1-2 | The unit adds 153 `///` lines to six Rust files and rewords 10 of its own | C-047 |
+| S2-1 | The sibling-field shape `named_struct('v', w, 'n', size(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>)))` in a scalar subquery has no count (2 cells) | C-048 |
+| S2-2 | One armed facade run hung at 99 % and no test was named | C-049 |
+| S2-3 | The New York nested `INSERT` reads 1.090 (6 x 10) and 1.050 (6 x 50) against the 1.05x gate | C-049, for the owner |
+| S3-1 | Q2 is equivalent on stored values, and a pin on `q2_lat_shadow` would kill it | not in scope |
+| S3-2 | W1, W2 and W3 survive and are equivalent on stored values | not in scope |
+| S3-3 | The "34 mutants not re-run" are 42 names, 39 runnable, all killed | stated |
+| S3-4 | The builder's `.config("spark.sql.session.timeZone", z)` rejects five spellings that `SET TIME ZONE` accepts (main and head alike) | not this unit's |
+
+### §14.2 S1-1, the M10 pin (C-046)
+
+The verifier built M10 into a native module and ran the plan on three doors in New York
+(`ice.ns.src (id INT, x TIMESTAMP, w TIMESTAMP_NTZ)`, target `ice.ns.t (id INT, st STRUCT<v:
+TIMESTAMP_NTZ, n: INT>, k INT)`):
+
+| Engine | Stored `st.v` |
+|---|---|
+| Spark 4.1.2 | `1767305045123456` (New York wall) |
+| main | `1767323045123456` (UTC wall) |
+| head `d9943218` | refused, no snapshot |
+| head with M10 | `1767323045123456` (UTC wall) |
+
+The pin reaches `Unnest` from Rust: the frame is `SELECT id, (SELECT CAST(named_struct('v', x,
+'n', 1) AS STRUCT<v: TIMESTAMP_NTZ, n: INT>) FROM ice.ns.src LIMIT 1) AS st, array(0) AS k
+FROM ice.ns.src`, unnested on `k` with `DataFrame::unnest_columns` and registered as a temporary
+view. The walk reaches the node through the view's scan, reads it whole, and finds the cast only
+inside the scalar subquery, which `apply` does not enter. The earlier pin
+(`a_frame_through_a_repartition_or_an_unmodelled_node_refuses`) puts the cast directly in the
+projection, where `apply` finds it too.
+
+Kill, recorded in `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`: with M10
+applied by `sed`, the pin fails (both zones: the cast row stored, one snapshot); the
+`ntz_nested_refuse` binary fails that one test (8 of 9 pass), `ntz_nested_refuse_casts` passes
+10 of 10, and `--lib nested` (the routes module and the router's unit tests) passes 102 with 1
+ignored (IDENT-STRUCT-KW-1). The file was restored with `git checkout`.

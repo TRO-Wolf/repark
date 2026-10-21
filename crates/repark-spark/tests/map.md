@@ -374,6 +374,20 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   rules.
   pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030,
   C-031, C-032
+  **Fix round 4 (2026-10-21, after the verifier's round-3 FAIL, ledger C-045, C-046):**
+  `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses` (`ntz_nested_refuse.rs`)
+  plans a frame whose projection holds a scalar subquery that returns the container cast of an
+  instant, unnests an array column above it (`DataFrame::unnest_columns`, the node a DataFrame
+  `explode` builds, read whole), registers the frame as a temporary view and runs
+  `INSERT INTO … SELECT … FROM <view>`: it refuses in New York and Kolkata with the hint and adds
+  no snapshot. The control, the same frame whose subquery returns the wall, stores the UTC wall.
+  The pin fails under mutant M10 (`plan_has` reads a whole-read node with `apply` in place of
+  `apply_with_subqueries`), which survived the 144 earlier pins and stored the UTC wall in New
+  York on a DataFrame `explode` written through `writeTo(…).append()`, `withColumn` and
+  `append`, `write.insertInto` and an `INSERT … SELECT` from a temporary view; the kill is
+  recorded in `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`. The earlier
+  equivalence claim for M10 (C-043) is superseded by C-046.
+  pins: ice-ntz-nested-refuse-1/C-045, C-046
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

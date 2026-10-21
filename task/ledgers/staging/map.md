@@ -61,7 +61,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   main, C-012 and C-013 mutants and gates; C-014 (the verifier) OPEN after a round-0 FAIL.
   Fix round 1 (2026-10-20): C-015 a container cast of an instant, C-016 a parameterised
   `PREPARE`, C-017 the plain `UPDATE`'s `TIMESTAMP_NTZ` cast, C-018 the type read never runs,
-  C-019 to C-021 the cells, mutants and gates.
+  C-019 to C-021 the cells, mutants and gates. Fix rounds 2 and 3 are §12 and §13. Fix round 4
+  (2026-10-21, after the verifier's round-3 FAIL): C-045 the verdict, C-046 the mutant-M10 pin.
 - [ice-struct-pairing-1-ledger.md](ice-struct-pairing-1-ledger.md) —
   **ICE-STRUCT-PAIRING-1 (U-6, 2026-10-14), parity row R-016:** one rule pairs struct fields on
   every write door. C-001 to C-009 are the sentences of the rule, C-010 to C-015 how the doors

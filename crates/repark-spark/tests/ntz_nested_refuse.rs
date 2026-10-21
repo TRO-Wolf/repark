@@ -729,3 +729,67 @@ async fn a_frame_through_a_repartition_or_an_unmodelled_node_refuses() {
     }
     assert_eq!(wrong, Vec::<String>::new());
 }
+
+#[tokio::test]
+async fn a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses() {
+    let mut wrong = Vec::new();
+    for (zone, _) in ZONES {
+        let session = session(zone);
+        let _warehouse = catalog(&session).await;
+        run(
+            &session,
+            "CREATE TABLE ice.ns.t (id INT, st STRUCT<v: TIMESTAMP_NTZ, n: INT>, k INT) USING \
+             iceberg TBLPROPERTIES ('format-version'='2')",
+        )
+        .await;
+        let exploded = |value: &str| {
+            format!(
+                "SELECT id, (SELECT {value} FROM ice.ns.src LIMIT 1) AS st, array(0) AS k FROM ice.ns.src"
+            )
+        };
+        let cast =
+            exploded("CAST(named_struct('v', x, 'n', 1) AS STRUCT<v: TIMESTAMP_NTZ, n: INT>)");
+        let frame = session
+            .sql(&cast)
+            .await
+            .expect("frame")
+            .unnest_columns(&["k"])
+            .expect("unnest");
+        session
+            .create_or_replace_temp_view_from("exploded_cast", &frame)
+            .expect("view");
+        match attempt(
+            &session,
+            "INSERT INTO ice.ns.t SELECT id, st, k FROM exploded_cast",
+        )
+        .await
+        {
+            Err(error) if error.contains(HINT) => {}
+            outcome => wrong.push(format!("{zone} / cast: {outcome:?}")),
+        }
+        let count = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
+        if count != vec![Some(0)] {
+            wrong.push(format!("{zone}: {count:?} snapshots"));
+        }
+        let wall = exploded("named_struct('v', w, 'n', 1)");
+        let frame = session
+            .sql(&wall)
+            .await
+            .expect("frame")
+            .unnest_columns(&["k"])
+            .expect("unnest");
+        session
+            .create_or_replace_temp_view_from("exploded_wall", &frame)
+            .expect("view");
+        run(
+            &session,
+            "INSERT INTO ice.ns.t SELECT id, st, k FROM exploded_wall",
+        )
+        .await;
+        let walls = stored(&session, "SELECT st FROM ice.ns.t").await;
+        if walls != vec![Some(UTC_WALL)] {
+            wrong.push(format!("{zone} / wall: {walls:?}"));
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
