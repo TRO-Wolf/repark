@@ -4,6 +4,8 @@
 
 Timestamp semantics across every door: TIMESTAMP_LTZ / TIMESTAMP_NTZ, `timestamp_ns` / `timestamptz_ns`, session time zones and zone spellings, timestamp casts and store assignment, epoch constructors and wall-clock rendering.
 
+MAP-COLUMN-PANIC-1 (2026-10-20): the four dated rows `repro|v2_map_element_site|…` (the `list array` panic of `coalesce(element_at(map('a', c), 'a'), ts)`, ruling 93) leave `ice_tsns_type_planner_1_dated.json` because the cells now store; `ice_tsns_type_planner_1_main.json` stays the snapshot of the older main it recorded. The U9-TYPES-1 residue R-9 of the two `INSERT … VALUES (map(NULL, 1))` and `(map('d', 1, 'd', 2))` steps moves in `u9_types_1_spark_oracle.json` from DataFusion's `map key cannot be null` and `map key must be unique` to Spark's `[NULL_MAP_KEY]` and `[DUPLICATED_MAP_KEY]` text with SQLSTATE 2200E and 23505; Spark still answers `INVALID_INLINE_TABLE`, so the residue stays.
+
 Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live in
 [../map.md](../map.md) "Layout". A new test goes in the directory of the subsystem it
 pins.
