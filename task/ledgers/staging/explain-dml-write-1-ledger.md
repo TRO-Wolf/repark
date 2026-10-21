@@ -176,3 +176,13 @@ routes, run on main's module above: `explain_analyze_insert` 150 answered; `expl
 refuses every statement on these routes, so the harness fails each cell the head makes red or
 lost; the exact set is measured on the head's module in step 4 and the dated rows land there,
 with the count in §4.
+
+## 2. The shared refusal (step 2)
+
+`crates/repark-iceberg/src/write/statement_writes.rs` (35 → 78 lines) gains
+`pub fn refuse_wrapped_write(statement: &DFStatement) -> Result<()>` beside `executed_writes`,
+which is unchanged. `#[allow(clippy::missing_errors_doc)]` as `predicate_dml/subquery_where.rs`
+carries it: the comment ban leaves no `# Errors` line. The two texts are `const`s with the
+prepared name substituted; the error is `DataFusionError::Plan`. No comment line. Its unit tests,
+`write::statement_writes::tests` (new `statement_writes/tests.rs` and `map.md`):
+`cargo test -p repark-iceberg --lib statement_writes`: **4 passed**, 0 failed.
