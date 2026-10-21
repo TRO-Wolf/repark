@@ -333,6 +333,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `distinct_on` (read whole); each refuses and adds no snapshot. Each pin fails under its
   one-line mutant (L5, L7, L8, L9, L13, L14, L18, R5, R6).
   pins: ice-ntz-nested-refuse-1/C-034
+  The over-refusal classes the round lists with their counts (ledger C-035) are held by pins
+  already here: `a_subquery_in_the_columns_expression_is_read_whole` (an `IN` or `EXISTS` in the
+  column's expression refuses), the `PREPARE` pins, and, in `src/tests/`,
+  `only_a_utc_zone_lets_an_instant_through` (`Etc/UTC` refuses).
+  pins: ice-ntz-nested-refuse-1/C-035
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
