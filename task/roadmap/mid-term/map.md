@@ -996,6 +996,13 @@ declines it (a dated ruling in the intake, then the archive).
   in a plain `SELECT` and in an `INSERT`, on main `c516c54a`; literals stored. U-8's row R-011 had
   misnamed it as a container cast of a map. Evidence under
   [`task/wo/map-column-panic-1/`](../../wo/map-column-panic-1/map.md).
+- [lateral-correlated-memory-1-card-2026-10-21.md](lateral-correlated-memory-1-card-2026-10-21.md) —
+  **card LATERAL-CORRELATED-MEMORY-1 (2026-10-21, open, not scheduled; the owner schedules):** a
+  `LATERAL` subquery with its own `FROM` and a predicate on the outer column (`LATERAL (SELECT
+  a.c AS s FROM ice.ns.src b WHERE b.id = a.id)`) over a one-row table grows past 100 GB
+  resident before any result on main `c516c54a` (112 GB measured by U-8's verifier; stopped by
+  the OOM killer at a 40 G scope cap after 166 s in fix round 3). It predates U-8 and is not its
+  gate. Probes of this shape run under a memory cap.
 - [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
   ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, open, not scheduled, awaits the owner's adopt of the
   2026-10-20 plan):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE

@@ -686,3 +686,13 @@ and 796 at this round's head; the fix-round-2 figure of 726 was wrong. S3-4: C-0
 edited; C-036 to C-039 carry each verifier round's outcome as a dated row. S3-3: the premise pin
 is not re-planned through `planned()`; C-040 states why `session.sql` reaches the same planner
 on the same text.
+
+### §13.5 S3-2, the memory incident, carded
+
+`LATERAL (SELECT a.c AS s FROM ice.ns.src b WHERE b.id = a.id)` over a one-row source grows
+past 100 GB resident before any result on main `c516c54a` (the verifier: 112 GB; this round,
+under a 40 G scope cap in UTC, stopped by the OOM killer after 166 s, load 10.17 at start). It
+predates this unit and is not its gate (in UTC the gate does not run; outside UTC the type read
+plans and never runs the source, C-018). Carded as LATERAL-CORRELATED-MEMORY-1
+(`task/roadmap/mid-term/lateral-correlated-memory-1-card-2026-10-21.md`); the owner schedules.
+No fix in this round.
