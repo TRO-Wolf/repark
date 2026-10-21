@@ -253,9 +253,8 @@ Cost, verifier round 1 (10-run medians, main against head, ratios at most 1.05x)
   RePark's refusal is `DataFusionError::Plan`, an `AnalysisException` on the facade.
 - **Records still open.** The unit ledger's header says it moves to `../completed/` in the unit's
   last commit after the verifier's PASS and the owner's merge; on `b7a20167` it is still in
-  `task/ledgers/staging/`. The card's own text still reads "verifier pending, owner merges", and
-  the 1.5.6 release-notes lines for the unit still read "built, verifier pending" and "This line
-  becomes a behaviour change when the unit merges". The 1.5.6 line for the unit is the clerk's to
-  turn into a behaviour-change line at release.
+  `task/ledgers/staging/`, and it moves in a later unit. The card, the 1.5.6 release-notes lines and
+  the registry row said "verifier pending" on `b7a20167`; this PR's second commit turns each into
+  "merged #1137 at `b7a20167`".
 - **Not run locally by the builder:** `make verify` and `make preflight` (CI ran the same surface,
   green). `make check-comment-density` is not a target on main.

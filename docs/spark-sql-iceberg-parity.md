@@ -9883,8 +9883,8 @@ the pin rather than obeying it.
   subquery-predicate statement, alone or around `EXPLAIN ANALYZE`, refuses there, where `EXECUTE`
   changed every row; the bare forms keep Spark's rows. DataFusion's own `EXPLAIN ANALYZE` on those
   doors is card EXPLAIN-DML-WRITE-1's.
-  **2026-10-21, EXPLAIN-DML-WRITE-1 (rulings 140 to 142, branch `feat/explain-dml-write-1`,
-  verifier pending):** one wrapper refusal,
+  **2026-10-21, EXPLAIN-DML-WRITE-1 (rulings 140 to 142, merged #1137 at
+  `b7a20167`):** one wrapper refusal,
   `repark_iceberg::write::statement_writes::refuse_wrapped_write`, runs on every door before
   106's walk and the strict pregate: `EXPLAIN ANALYZE` (DataFusion's own included) and `PREPARE` of
   any `DELETE`, `UPDATE`, `INSERT` or `MERGE` refuse with the ruled texts, as Spark 4.1.2 refuses

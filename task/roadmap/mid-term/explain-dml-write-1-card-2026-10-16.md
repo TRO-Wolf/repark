@@ -8,8 +8,8 @@
 day 106 (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1) merges or parks. If 106 merges, its P2 report is filed
 first.
 
-**Status, 2026-10-21:** built on branch `feat/explain-dml-write-1` (PR #1137), verifier pending,
-owner merges. The card retires when that PR merges with the verifier's PASS. Verifier FAIL at
+**Status, 2026-10-21:** merged as PR #1137 at `b7a20167` on 2026-10-21 23:32 UTC, after verifier
+round 1 FAIL, fix round 1 and verifier round 2 PASS (nothing open). Verifier FAIL at
 `eccd920a` (pins only; the behaviour held on every door); fix round 1 the same day. On
 `repark.sql()`, which plans before the refusal runs, every wrapped write that DataFusion cannot plan keeps DataFusion's own error and writes nothing: a `MERGE`, a CTE-carried `DELETE`, `UPDATE` or `INSERT` and a DML-in-CTE query, a missing table or column, `EXPLAIN ANALYZE … FORMAT x`, `DESCRIBE ANALYZE` (orchestrator ruling under
 the owner's grant, 2026-10-21, below).

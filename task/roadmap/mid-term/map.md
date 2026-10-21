@@ -767,7 +767,7 @@ declines it (a dated ruling in the intake, then the archive).
   136). Carries the measured table of 2026-10-17 and rulings 136, 138 and 139. Retires when
   `EXPLAIN ANALYZE` of DML and `PREPARE` of a write refuse on every door and the wrapper pins hold;
   takes 106's Opus slot the day 106 merges or parks.
-  **2026-10-21:** built (PR #1137, verifier pending) under rulings 140 to 144: one wrapper refusal on
+  **2026-10-21:** merged (PR #1137, `b7a20167`) under rulings 140 to 144: one wrapper refusal on
   every door; `INSERT` and `MERGE` rows added to the measured table. Fix round 1 (2026-10-21): on
   `repark.sql()` a wrapped write DataFusion cannot plan keeps DataFusion's error (ruled as built);
   follow-up to move that call before planning, unscheduled. P2 report filed:
