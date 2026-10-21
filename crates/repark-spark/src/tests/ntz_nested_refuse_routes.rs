@@ -245,9 +245,11 @@ async fn a_prepared_write_of_an_instant_refuses_in_a_utc_session_too() {
     assert_eq!(snapshots(&catalogs).await, 2);
 }
 
-/// Only a zone whose id is UTC or a zero offset lets an instant through.
+/// Only a zone whose id is a pure UTC alias (`Etc/UTC`, `Etc/GMT`, `Zulu`, `GMT0` among them) or
+/// a zero offset lets an instant through; `Africa/Abidjan`, `Atlantic/Reykjavik` and
+/// `Europe/London` refuse, though their offset is zero on the value's date.
 ///
-/// pins: ice-ntz-nested-refuse-1/C-001, C-003
+/// pins: ice-ntz-nested-refuse-1/C-001, C-003, C-042
 #[tokio::test]
 async fn only_a_utc_zone_lets_an_instant_through() {
     let wh = TempDir::new().unwrap();
@@ -263,6 +265,12 @@ async fn only_a_utc_zone_lets_an_instant_through() {
         "-00:00",
         "GMT+0",
         "UTC+00:00",
+        "Etc/UTC",
+        "Etc/GMT",
+        "Etc/Universal",
+        "Etc/Zulu",
+        "Zulu",
+        "GMT0",
     ] {
         set_zone(&ctx, zone);
         assert_eq!(attempt(&ctx, &catalogs, &write).await, Ok(()), "{zone}");
@@ -270,7 +278,8 @@ async fn only_a_utc_zone_lets_an_instant_through() {
         assert_eq!(snapshots(&catalogs).await, stored, "{zone}");
     }
     for zone in [
-        "Etc/UTC",
+        "Africa/Abidjan",
+        "Atlantic/Reykjavik",
         "Europe/London",
         "+01:00",
         "-05:00",

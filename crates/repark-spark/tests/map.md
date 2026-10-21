@@ -350,6 +350,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `WHERE`, and an `EXISTS` in the value store the wall in New York and Kolkata. Each storing
   cell refuses on the round-2 walk.
   pins: ice-ntz-nested-refuse-1/C-041
+  **Owner ruling 3 (2026-10-21, ledger C-042):** `only_a_utc_zone_lets_an_instant_through`
+  (`src/tests/`) now stores in `Etc/UTC`, `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `Zulu` and
+  `GMT0` beside the spellings it held, and refuses in `Africa/Abidjan`, `Atlantic/Reykjavik`,
+  `Europe/London` and the non-zero zones.
+  pins: ice-ntz-nested-refuse-1/C-042
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).

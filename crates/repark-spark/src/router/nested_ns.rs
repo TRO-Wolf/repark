@@ -42,12 +42,37 @@ enum Scope<'a> {
     Unreadable,
 }
 
+const UTC_ALIASES: [&str; 21] = [
+    "UTC",
+    "UCT",
+    "Universal",
+    "Zulu",
+    "Z",
+    "GMT",
+    "GMT0",
+    "GMT+0",
+    "GMT-0",
+    "Greenwich",
+    "Etc/UTC",
+    "Etc/UCT",
+    "Etc/Universal",
+    "Etc/Zulu",
+    "Etc/GMT",
+    "Etc/GMT0",
+    "Etc/GMT+0",
+    "Etc/GMT-0",
+    "Etc/Greenwich",
+    "+00:00",
+    "-00:00",
+];
+
+fn names_utc(zone: &str) -> bool {
+    UTC_ALIASES.contains(&zone)
+}
+
 fn session_is_utc(ctx: &SessionContext) -> bool {
     let state = ctx.state();
-    matches!(
-        session_time_zone_from_options(state.config().options()),
-        "UTC" | "+00:00" | "-00:00"
-    )
+    names_utc(session_time_zone_from_options(state.config().options()))
 }
 
 pub(super) async fn refuse_nested_supply(
@@ -711,7 +736,9 @@ mod tests {
     use datafusion::common::{Column, DFSchema, ScalarValue};
     use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, Projection, cast, lit};
 
-    use super::{casts_a_zoned_value_to_naive, lineage_has};
+    use repark_functions::session_time_zone::SessionTimeZoneConfig;
+
+    use super::{UTC_ALIASES, casts_a_zoned_value_to_naive, lineage_has, names_utc};
 
     fn instant_cast() -> LogicalPlan {
         let instant = lit(ScalarValue::TimestampMicrosecond(
@@ -786,5 +813,34 @@ mod tests {
             .and_then(LogicalPlanBuilder::build)
             .expect("join");
         assert!(lineage_has(&plan, &[1], casts_a_zoned_value_to_naive));
+    }
+
+    /// A session zone counts as UTC by its id: every pure UTC alias (no transition and no
+    /// local-mean-time offset in its tzdb history), as written and as the session canonicalises
+    /// it, and no geographic zone, though `Africa/Abidjan`, `Atlantic/Reykjavik` and
+    /// `Europe/London` (in winter) sit at offset zero today.
+    ///
+    /// pins: ice-ntz-nested-refuse-1/C-042
+    #[test]
+    fn only_a_pure_utc_alias_counts_as_utc() {
+        for alias in UTC_ALIASES {
+            let mut carrier = SessionTimeZoneConfig::default();
+            carrier.set_zone(alias);
+            assert!(names_utc(alias), "{alias}");
+            assert!(names_utc(carrier.zone()), "{alias} as {}", carrier.zone());
+        }
+        for zone in [
+            "Africa/Abidjan",
+            "Atlantic/Reykjavik",
+            "Europe/London",
+            "America/New_York",
+            "+01:00",
+            "Etc/GMT+1",
+        ] {
+            let mut carrier = SessionTimeZoneConfig::default();
+            carrier.set_zone(zone);
+            assert!(!names_utc(zone), "{zone}");
+            assert!(!names_utc(carrier.zone()), "{zone} as {}", carrier.zone());
+        }
     }
 }

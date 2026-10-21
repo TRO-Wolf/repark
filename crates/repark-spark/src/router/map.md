@@ -155,7 +155,13 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20, parity row R-011, ruling T-3):** after R-015's call on
   the same loaded table, `refuse_zoned_micros` refuses a value for a column with a nested
   microsecond `TIMESTAMP_NTZ` leaf when the session zone is not UTC (canonical id `UTC`,
-  `+00:00` or `-00:00`; `Etc/UTC` refuses) or the statement is a `PREPARE` (`EXECUTE` can run it
+  `+00:00` or `-00:00`; `Etc/UTC` refuses; *owner ruling 3, 2026-10-21, ledger C-042:* the one
+  set `UTC_ALIASES` and `names_utc` in this file hold every pure UTC alias, `UTC`, `UCT`,
+  `Universal`, `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`, `Greenwich`, their `Etc/` forms and
+  the zero offsets, matched as written and as the session canonicalises them, and no
+  geographic zone: `Africa/Abidjan`, `Atlantic/Reykjavik` and `Europe/London` still refuse,
+  their tzdb history holding a local-mean-time or summer offset; the unit test
+  `only_a_pure_utc_alias_counts_as_utc` holds both lists) or the statement is a `PREPARE` (`EXECUTE` can run it
   after a `SET` of the zone). For each supplied column it reads the type of each feed by
   planning one `SELECT` through `router::execute_calibrated`, never executed: an INSERT's source
   (with the outer `WITH` of `WITH … INSERT`), the column at the source position, of the column's

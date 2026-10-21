@@ -3426,7 +3426,13 @@ still open is `isModifiable`.
   are parked as drafts; no further fold round is planned on them.
 - **Status 2026-10-20: REFUSED (U-8, ICE-NTZ-NESTED-REFUSE-1, ruling T-3; fix round 1 the
   same day, after the verifier's FAIL on PR #1124).** In a session whose zone is not UTC
-  (canonical id other than `UTC`, `+00:00`, `-00:00`; `Etc/UTC` refuses) or under `PREPARE`, a
+  (canonical id other than `UTC`, `+00:00`, `-00:00`; `Etc/UTC` refuses; *owner ruling 3,
+  2026-10-21:* a zone counts as UTC when its id is a pure UTC alias, `UTC`, `UCT`, `Universal`,
+  `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`, `Greenwich`, their `Etc/` forms and the zero
+  offsets `+00:00` and `-00:00`, the tzdb names with no transition and no local-mean-time offset
+  anywhere in their history; `Africa/Abidjan` and `Atlantic/Reykjavik` carry a pre-1912
+  local-mean-time offset and `Europe/London` a summer offset, so a wall there can differ from
+  UTC under Spark's Java zone rules, and they stay refused) or under `PREPARE`, a
   write that supplies a column whose type holds a naive microsecond timestamp below the top
   level is refused before any file is written, on every door R-015 lists, when a value
   reaching the column is not provably a wall: its planned type holds a zoned timestamp
@@ -3571,18 +3577,21 @@ still open is `isModifiable`.
   Kolkata; round 2 measured the New York one) store Spark's wall; the `IN` shape raises the
   engine's own error, as on main. (3) **`PREPARE`, 17 cells** (above). (4) **Zero-offset
   zones.** The zone rule reads the zone's id, so a zone whose offset is zero but whose id the
-  session does not read as UTC refuses every instant write: `Etc/UTC`, `Etc/GMT`,
-  `Etc/Universal`, `Etc/Zulu`, `Africa/Abidjan` and `Atlantic/Reykjavik` all year,
-  `Europe/London` in winter (`GMT` and `+00:00` read as UTC and store). On the 28-door matrix
-  (the `ntz_nested` schema, 352 cells per zone) 180 cells move per zone, every one to the
-  refusal: 126 correct cells (main stored `1767323045123456`, the session wall there, the value
-  Spark stores) and 54 raw errors on main. The verifier measured `Europe/London` and
+  session does not read as UTC refuses every instant write: `Africa/Abidjan` and
+  `Atlantic/Reykjavik` all year, `Europe/London` in winter. *(Owner ruling 3, 2026-10-21: the
+  pure UTC aliases, `Etc/UTC`, `Etc/GMT`, `Etc/Universal` and `Etc/Zulu` among them, now count
+  as UTC and store Spark's value; round 2 refused them too.)* On the 28-door matrix (the
+  `ntz_nested` schema, 352 cells per zone) 180 cells move per zone, every one to the refusal:
+  126 correct cells (main stored `1767323045123456`, the session wall there, the value Spark
+  stores) and 54 raw errors on main. The verifier measured `Europe/London` and
   `Atlantic/Reykjavik` (126 and 54 each); fix round 3 measured `Europe/London` and `Etc/GMT`
-  (126 and 54 each). Five instant shapes refuse in each of the seven zones named, where main
-  stores the wall, and store in `GMT` and `+00:00`. This supersedes the "3 cells measured"
-  above. The owner ruled 2026-10-21: the walk narrows for subqueries (ruling 1, above) and not
-  for aggregates, conditions or sibling fields (ruling 2); whether a fixed zero-offset zone
-  counts as UTC is ruling 3. **Not reached by this gate, dated
+  (126 and 54 each) before ruling 3, and after it `Europe/London` 180 (126 and 54) and `Etc/GMT`
+  0: every `Etc/GMT` cell answers as main. Five instant shapes refuse in `Africa/Abidjan`,
+  `Atlantic/Reykjavik` and `Europe/London`, where main stores the wall, and store in `Etc/UTC`,
+  `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `GMT` and `+00:00`. This supersedes the "3 cells
+  measured" above. The owner ruled 2026-10-21: the walk narrows for subqueries (ruling 1, above)
+  and not for aggregates, conditions or sibling fields (ruling 2); a pure UTC alias counts as
+  UTC and a geographic zone does not (ruling 3, above). **Not reached by this gate, dated
   2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
   frame or a table built from a container cast of an instant carries the UTC wall the cast
   produced; the container cast's own conversion in a `SELECT` is the defect, for the lift.

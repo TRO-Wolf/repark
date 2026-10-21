@@ -141,10 +141,11 @@ Tables already written keep the values they hold; this release ships no migratio
   carry the same value. Refused by design, measured (R-011 lists each class): 14 correct cells
   where a cast in an aggregate, a grouping key, a `CASE`/`IF` condition or a sibling field never
   reaches the stored value (accepted as cost until GATE-RETIRE-1, owner ruling 2026-10-21); 17
-  `PREPARE` cells; and every instant write in a zero-offset zone the session does not read as
-  UTC (`Etc/UTC`, `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `Africa/Abidjan`,
-  `Atlantic/Reykjavik`, `Europe/London` in winter: 126 correct cells per zone on the 28-door
-  matrix). An `IN`, `EXISTS` or quantified subquery in the value is not read, and a scalar
+  `PREPARE` cells; and every instant write in a geographic zone at offset zero
+  (`Africa/Abidjan`, `Atlantic/Reykjavik`, `Europe/London` in winter: 126 correct cells per zone
+  on the 28-door matrix), whose tzdb history holds a local-mean-time or summer offset. A pure
+  UTC alias (`UTC`, `UCT`, `Universal`, `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`,
+  `Greenwich`, their `Etc/` forms) counts as UTC (owner ruling 2026-10-21). An `IN`, `EXISTS` or quantified subquery in the value is not read, and a scalar
   subquery is read through its output column (owner ruling 2026-10-21), so a cast that only
   feeds such a subquery's predicate stores.
 
