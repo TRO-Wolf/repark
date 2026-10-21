@@ -1,0 +1,358 @@
+bare_delete|in	seed	iceberg
+bare_delete|in	0	ok [()]
+bare_delete|in	state	[(1, 10), (4, 40)] snapshots=2
+bare_update|in	seed	iceberg
+bare_update|in	0	ok [()]
+bare_update|in	state	[(1, 10), (2, 5), (3, 5), (4, 40)] snapshots=2
+explain_delete|in	seed	iceberg
+explain_delete|in	0	answered
+explain_delete|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|in	seed	iceberg
+explain_analyze_delete|in	0	answered
+explain_analyze_delete|in	state	[] snapshots=2
+explain_analyze_update|in	seed	iceberg
+explain_analyze_update|in	0	answered
+explain_analyze_update|in	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|in	seed	iceberg
+prepare_delete|in	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|in	seed	iceberg
+prepare_update|in	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|not_in	seed	iceberg
+bare_delete|not_in	0	ok [()]
+bare_delete|not_in	state	[(2, 20), (3, 30)] snapshots=2
+bare_update|not_in	seed	iceberg
+bare_update|not_in	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|not_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|not_in	seed	iceberg
+explain_delete|not_in	0	answered
+explain_delete|not_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|not_in	seed	iceberg
+explain_analyze_delete|not_in	0	answered
+explain_analyze_delete|not_in	state	[] snapshots=2
+explain_analyze_update|not_in	seed	iceberg
+explain_analyze_update|not_in	0	answered
+explain_analyze_update|not_in	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|not_in	seed	iceberg
+prepare_delete|not_in	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|not_in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|not_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|not_in	seed	iceberg
+prepare_update|not_in	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|not_in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|not_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|exists	seed	iceberg
+bare_delete|exists	0	ok [()]
+bare_delete|exists	state	[] snapshots=2
+bare_update|exists	seed	iceberg
+bare_update|exists	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|exists	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|exists	seed	iceberg
+explain_delete|exists	0	answered
+explain_delete|exists	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|exists	seed	iceberg
+explain_analyze_delete|exists	0	answered
+explain_analyze_delete|exists	state	[] snapshots=2
+explain_analyze_update|exists	seed	iceberg
+explain_analyze_update|exists	0	answered
+explain_analyze_update|exists	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|exists	seed	iceberg
+prepare_delete|exists	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|exists	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|exists	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|exists	seed	iceberg
+prepare_update|exists	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|exists	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|exists	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|exists_corr	seed	iceberg
+bare_delete|exists_corr	0	ok [()]
+bare_delete|exists_corr	state	[(1, 10), (4, 40)] snapshots=2
+bare_update|exists_corr	seed	iceberg
+bare_update|exists_corr	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|exists_corr	seed	iceberg
+explain_delete|exists_corr	0	answered
+explain_delete|exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|exists_corr	seed	iceberg
+explain_analyze_delete|exists_corr	0	answered
+explain_analyze_delete|exists_corr	state	[] snapshots=2
+explain_analyze_update|exists_corr	seed	iceberg
+explain_analyze_update|exists_corr	0	answered
+explain_analyze_update|exists_corr	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|exists_corr	seed	iceberg
+prepare_delete|exists_corr	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|exists_corr	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|exists_corr	seed	iceberg
+prepare_update|exists_corr	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|exists_corr	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|not_exists_corr	seed	iceberg
+bare_delete|not_exists_corr	0	ok [()]
+bare_delete|not_exists_corr	state	[(2, 20), (3, 30)] snapshots=2
+bare_update|not_exists_corr	seed	iceberg
+bare_update|not_exists_corr	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|not_exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|not_exists_corr	seed	iceberg
+explain_delete|not_exists_corr	0	answered
+explain_delete|not_exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|not_exists_corr	seed	iceberg
+explain_analyze_delete|not_exists_corr	0	answered
+explain_analyze_delete|not_exists_corr	state	[] snapshots=2
+explain_analyze_update|not_exists_corr	seed	iceberg
+explain_analyze_update|not_exists_corr	0	answered
+explain_analyze_update|not_exists_corr	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|not_exists_corr	seed	iceberg
+prepare_delete|not_exists_corr	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|not_exists_corr	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|not_exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|not_exists_corr	seed	iceberg
+prepare_update|not_exists_corr	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|not_exists_corr	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|not_exists_corr	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|corr_in	seed	iceberg
+bare_delete|corr_in	0	ok [()]
+bare_delete|corr_in	state	[(1, 10), (2, 20), (4, 40)] snapshots=2
+bare_update|corr_in	seed	iceberg
+bare_update|corr_in	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|corr_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|corr_in	seed	iceberg
+explain_delete|corr_in	0	answered
+explain_delete|corr_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|corr_in	seed	iceberg
+explain_analyze_delete|corr_in	0	answered
+explain_analyze_delete|corr_in	state	[] snapshots=2
+explain_analyze_update|corr_in	seed	iceberg
+explain_analyze_update|corr_in	0	answered
+explain_analyze_update|corr_in	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|corr_in	seed	iceberg
+prepare_delete|corr_in	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|corr_in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|corr_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|corr_in	seed	iceberg
+prepare_update|corr_in	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|corr_in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|corr_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|eq_scalar	seed	iceberg
+bare_delete|eq_scalar	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_delete|eq_scalar	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_update|eq_scalar	seed	iceberg
+bare_update|eq_scalar	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|eq_scalar	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|eq_scalar	seed	iceberg
+explain_delete|eq_scalar	0	answered
+explain_delete|eq_scalar	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|eq_scalar	seed	iceberg
+explain_analyze_delete|eq_scalar	0	answered
+explain_analyze_delete|eq_scalar	state	[] snapshots=2
+explain_analyze_update|eq_scalar	seed	iceberg
+explain_analyze_update|eq_scalar	0	answered
+explain_analyze_update|eq_scalar	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|eq_scalar	seed	iceberg
+prepare_delete|eq_scalar	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|eq_scalar	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|eq_scalar	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|eq_scalar	seed	iceberg
+prepare_update|eq_scalar	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|eq_scalar	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|eq_scalar	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|in_and_lit	seed	iceberg
+bare_delete|in_and_lit	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_delete|in_and_lit	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_update|in_and_lit	seed	iceberg
+bare_update|in_and_lit	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|in_and_lit	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|in_and_lit	seed	iceberg
+explain_delete|in_and_lit	0	answered
+explain_delete|in_and_lit	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|in_and_lit	seed	iceberg
+explain_analyze_delete|in_and_lit	0	answered
+explain_analyze_delete|in_and_lit	state	[(1, 10), (2, 20)] snapshots=2
+explain_analyze_update|in_and_lit	seed	iceberg
+explain_analyze_update|in_and_lit	0	answered
+explain_analyze_update|in_and_lit	state	[(1, 10), (2, 20), (3, 5), (4, 5)] snapshots=2
+prepare_delete|in_and_lit	seed	iceberg
+prepare_delete|in_and_lit	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|in_and_lit	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|in_and_lit	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|in_and_lit	seed	iceberg
+prepare_update|in_and_lit	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|in_and_lit	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|in_and_lit	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|eq_any	seed	iceberg
+bare_delete|eq_any	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_delete|eq_any	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_update|eq_any	seed	iceberg
+bare_update|eq_any	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+bare_update|eq_any	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_delete|eq_any	seed	iceberg
+explain_delete|eq_any	0	answered
+explain_delete|eq_any	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|eq_any	seed	iceberg
+explain_analyze_delete|eq_any	0	answered
+explain_analyze_delete|eq_any	state	[] snapshots=2
+explain_analyze_update|eq_any	seed	iceberg
+explain_analyze_update|eq_any	0	answered
+explain_analyze_update|eq_any	state	[(1, 5), (2, 5), (3, 5), (4, 5)] snapshots=2
+prepare_delete|eq_any	seed	iceberg
+prepare_delete|eq_any	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_delete|eq_any	1	err Execution error: Prepared statement 'p' does not exist
+prepare_delete|eq_any	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_update|eq_any	seed	iceberg
+prepare_update|eq_any	0	err Error during planning: UPDATE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_update|eq_any	1	err Execution error: Prepared statement 'p' does not exist
+prepare_update|eq_any	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_delete|plain_eq	seed	iceberg
+bare_delete|plain_eq	0	ok [()]
+bare_delete|plain_eq	state	[(1, 10), (3, 30), (4, 40)] snapshots=2
+bare_update|plain_eq	seed	iceberg
+bare_update|plain_eq	0	ok [()]
+bare_update|plain_eq	state	[(1, 10), (2, 5), (3, 30), (4, 40)] snapshots=2
+explain_delete|plain_eq	seed	iceberg
+explain_delete|plain_eq	0	answered
+explain_delete|plain_eq	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|plain_eq	seed	iceberg
+explain_analyze_delete|plain_eq	0	answered
+explain_analyze_delete|plain_eq	state	[(1, 10), (3, 30), (4, 40)] snapshots=2
+explain_analyze_update|plain_eq	seed	iceberg
+explain_analyze_update|plain_eq	0	answered
+explain_analyze_update|plain_eq	state	[(1, 10), (2, 5), (3, 30), (4, 40)] snapshots=2
+prepare_delete|plain_eq	seed	iceberg
+prepare_delete|plain_eq	0	ok []
+prepare_delete|plain_eq	1	ok [(1)]
+prepare_delete|plain_eq	state	[(1, 10), (3, 30), (4, 40)] snapshots=2
+prepare_update|plain_eq	seed	iceberg
+prepare_update|plain_eq	0	ok []
+prepare_update|plain_eq	1	ok [(1)]
+prepare_update|plain_eq	state	[(1, 10), (2, 5), (3, 30), (4, 40)] snapshots=2
+bare_delete|plain_in_list	seed	iceberg
+bare_delete|plain_in_list	0	ok [(2)]
+bare_delete|plain_in_list	state	[(2, 20), (4, 40)] snapshots=2
+bare_update|plain_in_list	seed	iceberg
+bare_update|plain_in_list	0	ok [(2)]
+bare_update|plain_in_list	state	[(1, 5), (2, 20), (3, 5), (4, 40)] snapshots=2
+explain_delete|plain_in_list	seed	iceberg
+explain_delete|plain_in_list	0	answered
+explain_delete|plain_in_list	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete|plain_in_list	seed	iceberg
+explain_analyze_delete|plain_in_list	0	answered
+explain_analyze_delete|plain_in_list	state	[(2, 20), (4, 40)] snapshots=2
+explain_analyze_update|plain_in_list	seed	iceberg
+explain_analyze_update|plain_in_list	0	answered
+explain_analyze_update|plain_in_list	state	[(1, 5), (2, 20), (3, 5), (4, 40)] snapshots=2
+prepare_delete|plain_in_list	seed	iceberg
+prepare_delete|plain_in_list	0	ok []
+prepare_delete|plain_in_list	1	ok [(2)]
+prepare_delete|plain_in_list	state	[(2, 20), (4, 40)] snapshots=2
+prepare_update|plain_in_list	seed	iceberg
+prepare_update|plain_in_list	0	ok []
+prepare_update|plain_in_list	1	ok [(2)]
+prepare_update|plain_in_list	state	[(1, 5), (2, 20), (3, 5), (4, 40)] snapshots=2
+prepare_explain_delete|in	seed	iceberg
+prepare_explain_delete|in	0	ok []
+prepare_explain_delete|in	1	ok [(logical_plan, Dml: op=[Delete] table=[ice.ns.t]
+  LeftSemi Join: ice.ns.t.id = __correlated_sq_1.id
+    TableScan: ice.ns.t projection=[id, v]
+    SubqueryAlias: __correlated_sq_1
+      TableScan: ice.ns.s projection=[id]), (physical_plan, CooperativeExec
+  IcebergDeleteExec: table=ns.t, mode=CopyOnWrite
+)]
+prepare_explain_delete|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_explain_analyze_delete|in	seed	iceberg
+prepare_explain_analyze_delete|in	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_explain_analyze_delete|in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_explain_analyze_delete|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_param_delete|eq	seed	iceberg
+prepare_param_delete|eq	0	ok []
+prepare_param_delete|eq	1	ok [(1)]
+prepare_param_delete|eq	state	[(1, 10), (3, 30), (4, 40)] snapshots=2
+prepare_param_delete|in	seed	iceberg
+prepare_param_delete|in	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_param_delete|in	1	err Execution error: Prepared statement 'p' does not exist
+prepare_param_delete|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_select	seed	iceberg
+prepare_select	0	ok []
+prepare_select	1	ok [(20)]
+prepare_select	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_select_param	seed	iceberg
+prepare_select_param	0	ok []
+prepare_select_param	1	ok [(30)]
+prepare_select_param	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+bare_insert_values	seed	iceberg
+bare_insert_values	0	ok [(1)]
+bare_insert_values	state	[(1, 10), (2, 20), (3, 30), (4, 40), (5, 50)] snapshots=2
+bare_insert_select_in	seed	iceberg
+bare_insert_select_in	0	ok [(2)]
+bare_insert_select_in	state	[(1, 10), (2, 20), (3, 30), (4, 40), (12, 20), (13, 99)] snapshots=2
+explain_insert	seed	iceberg
+explain_insert	0	answered
+explain_insert	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_insert	seed	iceberg
+explain_analyze_insert	0	answered
+explain_analyze_insert	state	[(1, 10), (2, 20), (3, 30), (4, 40), (12, 20), (13, 99)] snapshots=2
+explain_analyze_insert_values	seed	iceberg
+explain_analyze_insert_values	0	answered
+explain_analyze_insert_values	state	[(1, 10), (2, 20), (3, 30), (4, 40), (5, 50)] snapshots=2
+prepare_insert	seed	iceberg
+prepare_insert	0	ok []
+prepare_insert	1	ok [(2)]
+prepare_insert	state	[(1, 10), (2, 20), (3, 30), (4, 40), (12, 20), (13, 99)] snapshots=2
+bare_merge	seed	iceberg
+bare_merge	0	ok [()]
+bare_merge	state	[(1, 10), (2, 20), (3, 99), (4, 40)] snapshots=2
+explain_analyze_merge	seed	iceberg
+explain_analyze_merge	0	err This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t AS target USING (SELECT id, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)) AS source ON target.id = source.id WHEN MATCHED THEN …
+explain_analyze_merge	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_merge	seed	iceberg
+prepare_merge	0	err This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t AS target USING (SELECT id, w FROM ice.ns.s WHERE id IN (SELECT id FROM ice.ns.s)) AS source ON target.id = source.id WHEN MATCHED THEN …
+prepare_merge	1	err Execution error: Prepared statement 'p' does not exist
+prepare_merge	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+cte_delete	seed	iceberg
+cte_delete	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+cte_delete	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_cte_delete	seed	iceberg
+explain_analyze_cte_delete	0	err This feature is not implemented: Query DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM c) not implemented yet
+explain_analyze_cte_delete	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+prepare_cte_delete	seed	iceberg
+prepare_cte_delete	0	err Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`: subquery predicates are silently mis-executed today — DataFusion's DML planner decorrelates IN / NOT IN / EXISTS / ANY / ALL / …
+prepare_cte_delete	1	err Execution error: Prepared statement 'p' does not exist
+prepare_cte_delete	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_verbose_delete|eq	seed	iceberg
+explain_analyze_verbose_delete|eq	0	answered
+explain_analyze_verbose_delete|eq	state	[(1, 10), (3, 30), (4, 40)] snapshots=2
+explain_verbose_delete|in	seed	iceberg
+explain_verbose_delete|in	0	answered
+explain_verbose_delete|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_delete_nowhere	seed	iceberg
+explain_analyze_delete_nowhere	0	answered
+explain_analyze_delete_nowhere	state	[] snapshots=2
+prepare_delete_nowhere	seed	iceberg
+prepare_delete_nowhere	0	ok []
+prepare_delete_nowhere	1	ok [(4)]
+prepare_delete_nowhere	state	[] snapshots=2
+explain_analyze_prepare_delete|in	seed	iceberg
+explain_analyze_prepare_delete|in	0	err This feature is not implemented: Unsupported logical plan: Statement(Prepare)
+explain_analyze_prepare_delete|in	1	err Execution error: Prepared statement 'p' does not exist
+explain_analyze_prepare_delete|in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_explain_analyze_delete|eq	seed	iceberg
+explain_explain_analyze_delete|eq	0	answered
+explain_explain_analyze_delete|eq	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+select_in	seed	iceberg
+select_in	0	ok [(2), (3)]
+select_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_select_in	seed	iceberg
+explain_select_in	0	answered
+explain_select_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_select_in	seed	iceberg
+explain_analyze_select_in	0	answered
+explain_analyze_select_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+explain_analyze_verbose_select	seed	iceberg
+explain_analyze_verbose_select	0	answered
+explain_analyze_verbose_select	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1
+ctas_in	seed	iceberg
+ctas_in	0	ok [()]
+ctas_in	1	ok [(2)]
+ctas_in	state	[(1, 10), (2, 20), (3, 30), (4, 40)] snapshots=1

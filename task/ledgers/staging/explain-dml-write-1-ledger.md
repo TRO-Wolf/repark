@@ -256,3 +256,51 @@ Each change applied alone to the head `57031982`, the named suites run, the file
 
 The Python doors' revert is main's module itself, whose product code is main's byte for byte:
 the 50 pins of §1.1 are red on it and green on the head's module (§4).
+
+## 6. Never worse (step 6)
+
+106's §13.6 census shape, widened to the four verbs and four doors (evidence:
+[census](../../wo/explain-dml-write-1/evidence/map.md)). 106 cells per door; every seed is an
+`IcebergTableScan` on main and head (424 of 424). Main is `c91f69c5`'s code (module `60286bb3…`
+for the Python doors; the three call sites restored to `origin/main` for the Rust doors); head is
+`57031982` (module `11e5bd48…`).
+
+| Door | Unchanged | Wrote on main, ruled refusal on head | Refused on main, ruled refusal on head | Outside the class, or the table not held |
+|---|---|---|---|---|
+| `repark.sql()` | 52 | 15 | 39 | 0 |
+| ANSI door | 48 | 53 | 5 | 0 |
+| Spark SQL session | 48 | 33 | 25 | 0 |
+| router API | 48 | 33 | 25 | 0 |
+
+- **Every changed cell** is a write under `EXPLAIN ANALYZE` or `PREPARE`: a row of the card's
+  table under rulings 141 and 142 (any predicate or none, `VERBOSE`, parameterised, `PREPARE`
+  around `EXPLAIN ANALYZE`, `EXPLAIN ANALYZE` around `PREPARE`, CTE-carried, `INSERT`, `MERGE`).
+  On the head each refuses with the ruled text of its outermost wrapper and the table holds
+  (rows as seeded, one snapshot); after a refused `PREPARE`, `EXECUTE p` answers `Prepared
+  statement 'p' does not exist`. No answer is lost outside the table.
+- **"Wrote on main"** on the ANSI door includes every subquery form (no refusal there before) and
+  `PREPARE`/`EXECUTE`, which emptied the table or rewrote every row (106's critical class); on
+  the repark-spark doors the `EXPLAIN ANALYZE` forms of every predicate and the plain-predicate
+  `PREPARE` forms; on `repark.sql()` the plain-predicate and `INSERT` forms (106 refused the
+  subquery ones with the G3-E8 text, now the wrapper's text).
+- **Unchanged, among them:** every bare statement (the Spark SQL session and the router keep the
+  matching rows for the `IN`, `NOT IN`, `EXISTS`, `NOT EXISTS` and correlated `IN` forms; the ANSI
+  door its identity forms; `repark.sql()` its G3-E8 refusals), every plain `EXPLAIN` (plan, no
+  write), `PREPARE` of a query and its `EXECUTE`, `EXPLAIN [ANALYZE] SELECT`, the bare `INSERT …
+  SELECT … IN`, the bare `MERGE` (RePark's executor on three doors, DataFusion's plan refusal on
+  `repark.sql()`), nested `EXPLAIN EXPLAIN ANALYZE` and the CTAS.
+- **`repark.sql()`'s `MERGE`:** `EXPLAIN ANALYZE MERGE` and `PREPARE … AS MERGE` are unchanged
+  there (the plan refusal, §3), so they count as unchanged; the other doors moved them from that
+  refusal to the ruled text.
+
+The card's measured table gains the `INSERT` and `MERGE` rows (ruling 141), from these cells:
+
+| Statement | `repark.sql()` main → head | ANSI door main → head | Spark SQL session main → head | router API main → head |
+|---|---|---|---|---|
+| `EXPLAIN ANALYZE INSERT INTO t SELECT … WHERE id IN (SELECT …)` | 2 rows inserted, 1 → 2 → refused, 1 → 1 | the same | the same | the same |
+| `EXPLAIN ANALYZE INSERT INTO t VALUES (5, 50)` | 1 row inserted → refused | the same | the same | the same |
+| `PREPARE p AS INSERT … ; EXECUTE p` | 2 rows inserted at `EXECUTE` → refused at `PREPARE`, nothing to execute | the same | the same | the same |
+| `EXPLAIN ANALYZE MERGE INTO t USING (… IN (SELECT …)) …` | DataFusion's plan refusal → the same | plan refusal → ruled refusal | plan refusal → ruled refusal | plan refusal → ruled refusal |
+| `PREPARE p AS MERGE …; EXECUTE p` | plan refusal → the same | plan refusal → ruled refusal | plan refusal → ruled refusal | plan refusal → ruled refusal |
+| `EXPLAIN INSERT …` (control) | plan, no write → the same | the same | the same | the same |
+| bare `INSERT … SELECT … IN (SELECT …)` (control) | 2 rows → the same | the same | the same | the same |
