@@ -1,0 +1,51 @@
+# What the four children print (2026-10-21, head b868db05): the last 1200 characters of stdout plus stderr per child.
+# 'armed' inherits REPARK_PANIC_FATAL=1: the sql-method fence resumes into PyO3 (PanicException, a BaseException, exit 1);
+# the Arrow C stream fence cannot unwind across extern "C" and aborts (exit -6, SIGABRT). 'cleared' has the variable removed.
+
+===== sql_method armed rc 1
+
+thread 'tokio-rt-worker' (422093) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:
+list array
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Traceback (most recent call last):
+  File "<string>", line 12, in <module>
+  File "python/repark/src/repark/__init__.py", line 98, in sql
+    return DataFrame(_ANSI_NATIVE.sql(query), _ANSI_NATIVE, _ANSI_ALIVE)
+                     ^^^^^^^^^^^^^^^^^^^^^^^
+pyo3_runtime.PanicException: list array
+
+===== sql_method cleared rc 0
+child-caught repark internal error in PyReparkSession.sql: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+
+thread 'tokio-rt-worker' (422116) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:
+list array
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+===== arrow_stream armed rc -6
+rrow12_GLOBAL__N_122ArrayStreamBatchReaderILb0EE8ReadNextEPSt10shared_ptrINS_11RecordBatchEE.lto_priv.0
+  14:     0x7ae7dd75d779 - _ZN5arrow17RecordBatchReader15ToRecordBatchesEv.localalias
+  15:     0x7ae7dd7658bd - _ZN5arrow17RecordBatchReader7ToTableEv
+  16:     0x7ae89ca79631 - _ZL53__pyx_pw_7pyarrow_3lib_17RecordBatchReader_14read_allP7_objectPKS0_lS0_.lto_priv.0
+  17:           0x54986f - PyObject_VectorcallMethod
+  18:     0x7ae89ca114a8 - _ZL31__pyx_pw_7pyarrow_3lib_227tableP7_objectPKS0_lS0_.lto_priv.0
+  19:           0x5499b5 - PyObject_Vectorcall
+  20:           0x5d710f - _PyEval_EvalFrameDefault
+  21:           0x5d55eb - PyEval_EvalCode
+  22:           0x608733 - PyRun_StringFlags
+  23:           0x6b40de - PyRun_SimpleStringFlags
+  24:           0x6bcda1 - Py_RunMain
+  25:           0x6bc7bd - Py_BytesMain
+  26:     0x7ae8b342a1ca - __libc_start_call_main
+                               at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  27:     0x7ae8b342a28b - __libc_start_main_impl
+                               at ./csu/../csu/libc-start.c:360:3
+  28:           0x657a05 - _start
+  29:                0x0 - <unknown>
+thread caused non-unwinding panic. aborting.
+
+===== arrow_stream cleared rc 0
+child-caught repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+
+thread 'tokio-rt-worker' (422198) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:
+list array
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

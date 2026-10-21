@@ -1,0 +1,97 @@
+# Rust measurements (2026-10-21). Debug test profile; every command under taskset -c 0-25 with CARGO_BUILD_JOBS=12.
+# The workspace count on main is the head count minus the two new tests (7715 - 2 = 7713); only repark-python was re-run on main.
+
+## fence tests on the head (cargo nextest run --locked -p repark-python --lib fence::)
+Starting 15 tests across 1 binary (151 tests skipped)
+        PASS [   0.036s] ( 1/15) repark-python fence::tests::probe_child_converts_both_fences_without_the_init
+        PASS [   0.037s] ( 2/15) repark-python fence::tests::fence_with_span_emits_py_entry_family_and_passes_through
+        PASS [   0.038s] ( 3/15) repark-python fence::tests::fence_stream_poll_converts_panic_to_terminal_arrow_error
+        PASS [   0.038s] ( 4/15) repark-python fence::tests::fence_stream_poll_passes_through_end_of_stream
+        PASS [   0.041s] ( 5/15) repark-python fence::tests::probe_child_converts_a_fenced_panic
+        PASS [   0.042s] ( 6/15) repark-python fence::tests::fence_with_span_fields_are_static_labels_only
+        PASS [   0.045s] ( 7/15) repark-python fence::tests::probe_child_converts_a_stream_panic
+        PASS [   0.050s] ( 8/15) repark-python fence::tests::fence_converts_str_panic_to_pyspark_exception_with_message_preserved
+        PASS [   0.050s] ( 9/15) repark-python fence::tests::fence_converts_string_panic_payload
+        PASS [   0.050s] (10/15) repark-python fence::tests::fence_degrades_non_string_panic_payload_to_stable_label
+        PASS [   0.050s] (11/15) repark-python fence::tests::fence_passes_through_a_non_panicking_body
+        PASS [   0.071s] (12/15) repark-python fence::tests::a_panic_is_converted_when_the_environment_says_one_but_the_init_never_ran
+        PASS [   0.089s] (13/15) repark-python fence::tests::a_caught_panic_keeps_its_message_when_the_fatal_flag_is_off
+        PASS [   0.099s] (14/15) repark-python fence::tests::a_caught_panic_fails_the_run_when_the_fatal_flag_is_on
+        PASS [   0.165s] (15/15) repark-python fence::tests::only_the_value_one_turns_the_fatal_flag_on
+────────────
+     Summary [   0.167s] 15 tests run: 15 passed, 151 skipped
+
+
+## mutation, not committed: panics_are_fatal() reads the environment again
+Starting 15 tests across 1 binary (151 tests skipped)
+        PASS [   0.031s] ( 1/15) repark-python fence::tests::fence_stream_poll_converts_panic_to_terminal_arrow_error
+        PASS [   0.032s] ( 2/15) repark-python fence::tests::fence_with_span_fields_are_static_labels_only
+        PASS [   0.032s] ( 3/15) repark-python fence::tests::fence_stream_poll_passes_through_end_of_stream
+        PASS [   0.033s] ( 4/15) repark-python fence::tests::probe_child_converts_both_fences_without_the_init
+        PASS [   0.042s] ( 5/15) repark-python fence::tests::fence_converts_string_panic_payload
+        PASS [   0.042s] ( 6/15) repark-python fence::tests::fence_degrades_non_string_panic_payload_to_stable_label
+        PASS [   0.043s] ( 7/15) repark-python fence::tests::fence_passes_through_a_non_panicking_body
+        PASS [   0.044s] ( 8/15) repark-python fence::tests::fence_converts_str_panic_to_pyspark_exception_with_message_preserved
+        PASS [   0.030s] ( 9/15) repark-python fence::tests::fence_with_span_emits_py_entry_family_and_passes_through
+        PASS [   0.031s] (10/15) repark-python fence::tests::probe_child_converts_a_fenced_panic
+        PASS [   0.037s] (11/15) repark-python fence::tests::probe_child_converts_a_stream_panic
+        FAIL [   0.070s] (12/15) repark-python fence::tests::a_panic_is_converted_when_the_environment_says_one_but_the_init_never_ran
+  stdout ───
+
+    running 1 test
+    test fence::tests::a_panic_is_converted_when_the_environment_says_one_but_the_init_never_ran ... FAILED
+
+    failures:
+
+    failures:
+        fence::tests::a_panic_is_converted_when_the_environment_says_one_but_the_init_never_ran
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 165 filtered out; finished in 0.04s
+
+  stderr ───
+
+    thread 'fence::tests::a_panic_is_converted_when_the_environment_says_one_but_the_init_never_ran' (256258) panicked at crates/repark-python/src/fence.rs:310:9:
+
+    running 1 test
+    test fence::tests::probe_child_converts_both_fences_without_the_init ... FAILED
+
+    failures:
+
+    failures:
+        fence::tests::probe_child_converts_both_fences_without_the_init
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 165 filtered out; finished in 0.01s
+
+
+    thread 'fence::tests::probe_child_converts_both_fences_without_the_init' (256273) panicked at crates/repark-python/src/fence.rs:294:66:
+    probe-boom
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.098s] (13/15) repark-python fence::tests::a_caught_panic_keeps_its_message_when_the_fatal_flag_is_off
+        PASS [   0.092s] (14/15) repark-python fence::tests::a_caught_panic_fails_the_run_when_the_fatal_flag_is_on
+        PASS [   0.166s] (15/15) repark-python fence::tests::only_the_value_one_turns_the_fatal_flag_on
+────────────
+     Summary [   0.167s] 15 tests run: 14 passed, 1 failed, 151 skipped
+        FAIL [   0.070s] (12/15) repark-python fence::tests::a_panic_is_converted_when_the_environment_says_one_but_the_init_never_ran
+error: test run failed
+EXIT=100
+
+
+## repark-python crate, main f0918cb5 (fence.rs and lib.rs from main)
+    Starting 189 tests across 2 binaries
+     Summary [   5.632s] 189 tests run: 189 passed, 0 skipped
+EXIT=0
+
+## repark-python crate, head
+    Starting 191 tests across 2 binaries
+     Summary [   7.968s] 191 tests run: 191 passed, 0 skipped
+EXIT=0
+
+## make verify on the head (cargo nextest run --locked --workspace, then doctests); exit 0
+    Starting 7715 tests across 74 binaries (97 tests skipped)
+     Summary [ 224.987s] 7715 tests run: 7715 passed (10 slow), 97 skipped
+
+## make rust-panic-ban on the head: exit 0
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.36s

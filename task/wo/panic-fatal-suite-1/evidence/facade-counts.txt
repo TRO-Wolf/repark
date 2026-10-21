@@ -1,0 +1,66 @@
+# Facade suite counts, 2026-10-21. Every run under taskset -c 0-25; the box was shared with another builder, so the load figures matter for the two wall-clock failures.
+
+## main f0918cb5, flag not set (the unmodified conftest.py), maturin develop --profile ci
+command: PYTHONPATH=python/repark-parity/src pytest python/repark/tests -q -n 16 --dist loadgroup --maxschedchunk=8 -p no:cacheprovider
+box load at start: 53.81 40.89 24.92
+1 failed, 20161 passed, 484 skipped, 151 xfailed, 274 warnings in 843.72s (0:14:03)
+
+_ test_a_pool_refusal_is_the_documented_spark_shaped_exception[window_unbounded-64M] _
+[gw14] linux -- Python 3.12.3 .venv/bin/python3
+
+operator = 'window_unbounded', pool = '64M'
+
+    @pytest.mark.parametrize(("operator", "pool"), _REFUSING_CELLS)
+    def test_a_pool_refusal_is_the_documented_spark_shaped_exception(operator: str, pool: str) -> None:
+        spark = _session(pool, operator)
+        _register(spark, operator, _SPILL_ROWS)
+>       with pytest.raises(PySparkException) as raised:
+E       Failed: DID NOT RAISE PySparkException
+
+python/repark/tests/perf/test_h3_spill_matrix.py:170: Failed
+
+Alone, on the same build: pytest python/repark/tests/perf/test_h3_spill_matrix.py -k test_a_pool_refusal_is_the_documented_spark_shaped_exception -> 7 passed in 34.09s (box load 95).
+
+## head, flag armed by conftest.py, same command
+Run A (-q, first armed run, box load 7.9 at launch, before the child source turned core dumps off with prctl): stalled at 99 % with 3 tests outstanding, no failure printed, killed after 40 minutes (exit 143). The worker that never finished (gw10) had last created a temporary directory at 05:49:22, in perf/test_perf_ice_writepath_1.py; its tests cannot be named because -q prints no names. The same code finished in runs B and C. Cause not identified.
+
+Run B (-v, box load at launch not recorded): == 20167 passed, 484 skipped, 151 xfailed, 276 warnings in 689.62s (0:11:29) ===
+
+Run C (-v -o faulthandler_timeout=600, head b868db05, box load at launch: 6.69 9.47 15.59, 22 to 26 as sampled while it ran): = 1 failed, 20166 passed, 484 skipped, 151 xfailed, 278 warnings in 637.39s (0:10:37) =
+
+_______________________ test_stack_is_linear_in_columns ________________________
+[gw14] linux -- Python 3.12.3 .venv/bin/python3
+
+spark = <repark.spark.session.session_core.ReparkSession object at 0x75af401333c0>
+
+    def test_stack_is_linear_in_columns(spark: ReparkSession) -> None:
+        """stack over a one-row 50/250/500-column frame fits exponent <= 1.1.
+
+        pins: perf-unpivot-1/C-002
+        """
+        widths = (50, 250, 500)
+        medians: dict[int, float] = {}
+        for width in widths:
+            _time_stack(spark, width)
+            samples = [_time_stack(spark, width) for _ in range(3)]
+            medians[width] = _median(samples)
+        log_x = [math.log(width) for width in widths]
+        log_y = [math.log(max(medians[width], 1e-9)) for width in widths]
+        x_mean = sum(log_x) / 3
+        y_mean = sum(log_y) / 3
+        numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(log_x, log_y, strict=True))
+        denominator = sum((x - x_mean) ** 2 for x in log_x)
+        exponent = numerator / denominator
+>       assert exponent <= 1.1, (
+            f"stack wall must be linear in columns; exponent={exponent:.3f} "
+            f"medians={medians} (bridge shape was 21.5s / 0.7s call at 500 columns)"
+        )
+E       AssertionError: stack wall must be linear in columns; exponent=1.521 medians={50: 0.007645318983122706, 250: 0.23666850302834064, 500: 0.1879307379713282} (bridge shape was 21.5s / 0.7s call at 500 columns)
+E       assert 1.5213243950764246 <= 1.1
+
+python/repark/tests/perf/test_perf_unpivot_1.py:149: AssertionError
+
+Alone, armed: pytest python/repark/tests/perf/test_perf_unpivot_1.py -> 9 passed in 0.55s; 60 serial repeats of the file were all green.
+
+## Skipped and xfailed sets against main
+The SKIPPED lines (170 lines, 484 tests) and the XFAIL lines (151) of run C are identical to main's after the path is made relative (diff exit 0 on both sorted lists).

@@ -1,0 +1,38 @@
+# xdist proof (2026-10-21, head b868db05): -n 2 --dist each runs every test on both workers, so the order pin and the
+# two child-interpreter legs ran in gw0 and gw1; both workers report the module initialised armed. 10 passed.
+# command: pytest python/repark/tests/session/test_panic_fatal_suite_1.py -v --tb=short -n 2 --dist each
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- .venv/bin/python3
+rootdir: python/repark
+configfile: pyproject.toml
+plugins: timeout-2.4.0, xdist-3.8.0
+timeout: 1200.0s
+timeout method: signal
+timeout func_only: False
+created: 2/2 workers
+2 workers [5 items]
+
+scheduling tests via EachScheduling
+
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed
+[gw0] [ 20%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[arrow_stream]
+[gw1] [ 20%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[arrow_stream]
+[gw0] [ 40%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[arrow_stream]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[sql_method]
+[gw1] [ 40%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[arrow_stream]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[sql_method]
+[gw0] [ 60%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[sql_method]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream]
+[gw1] [ 60%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[sql_method]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream]
+[gw0] [ 80%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method]
+[gw1] [ 80%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method]
+[gw0] [100%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method]
+[gw1] [100%] PASSED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method]
+
+============================== 10 passed in 2.34s ==============================

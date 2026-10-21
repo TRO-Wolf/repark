@@ -2,6 +2,7 @@
 
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::OnceLock;
 
 use arrow::array::RecordBatch;
 use arrow::error::ArrowError;
@@ -11,9 +12,23 @@ use crate::PySparkException;
 
 pub(crate) const PANIC_FATAL_ENVIRONMENT_VARIABLE: &str = "REPARK_PANIC_FATAL";
 
+static PANIC_FATAL_POLICY: OnceLock<bool> = OnceLock::new();
+
+/// Read `REPARK_PANIC_FATAL` once, store the answer and return it.
+///
+/// The module initialiser calls this first. A later call returns the stored answer and never
+/// reads the environment again, so the query path stays free of environment reads.
+pub(crate) fn initialise_panic_policy() -> bool {
+    *PANIC_FATAL_POLICY.get_or_init(|| {
+        std::env::var_os(PANIC_FATAL_ENVIRONMENT_VARIABLE).is_some_and(|value| value == "1")
+    })
+}
+
 /// Report whether a caught panic must end the run instead of becoming an error.
+///
+/// Reads the stored policy only. A policy that was never initialised answers `false`.
 fn panics_are_fatal() -> bool {
-    std::env::var_os(PANIC_FATAL_ENVIRONMENT_VARIABLE).is_some_and(|value| value == "1")
+    PANIC_FATAL_POLICY.get().copied().unwrap_or(false)
 }
 
 /// Extract panic text and add the boundary operation to the internal-error message.
@@ -218,6 +233,8 @@ mod tests {
     const PROBE_CHILD_ENVIRONMENT_VARIABLE: &str = "REPARK_FENCE_PROBE_CHILD";
     const CONVERTING_PROBE: &str = "fence::tests::probe_child_converts_a_fenced_panic";
     const STREAM_PROBE: &str = "fence::tests::probe_child_converts_a_stream_panic";
+    const UNINITIALISED_PROBE: &str =
+        "fence::tests::probe_child_converts_both_fences_without_the_init";
     const FENCED_MESSAGE: &str = "repark internal error in Probe.op: probe-boom (a Rust panic was \
          caught at the Python boundary; this is a bug \u{2014} please report it)";
 
@@ -247,6 +264,7 @@ mod tests {
         if std::env::var_os(PROBE_CHILD_ENVIRONMENT_VARIABLE).is_none() {
             return;
         }
+        initialise_panic_policy();
         Python::attach(|py| {
             let result: Result<(), PyErr> = fence("Probe.op", || panic!("probe-boom"));
             let error = result.expect_err("the flag is off, so the panic becomes an error");
@@ -259,11 +277,38 @@ mod tests {
         if std::env::var_os(PROBE_CHILD_ENVIRONMENT_VARIABLE).is_none() {
             return;
         }
+        initialise_panic_policy();
         let item = fence_stream_poll("Probe.op", || panic!("probe-boom"));
         let error = item
             .expect("a fenced panic yields an item")
             .expect_err("the flag is off, so the panic becomes an error item");
         assert!(error.to_string().contains(FENCED_MESSAGE), "{error}");
+    }
+
+    #[test]
+    fn probe_child_converts_both_fences_without_the_init() {
+        if std::env::var_os(PROBE_CHILD_ENVIRONMENT_VARIABLE).is_none() {
+            return;
+        }
+        Python::attach(|py| {
+            let result: Result<(), PyErr> = fence("Probe.op", || panic!("probe-boom"));
+            let error =
+                result.expect_err("the policy was never read, so the panic becomes an error");
+            assert_eq!(error.value(py).to_string(), FENCED_MESSAGE);
+        });
+        let item = fence_stream_poll("Probe.op", || panic!("probe-boom"));
+        let error = item
+            .expect("a fenced panic yields an item")
+            .expect_err("the policy was never read, so the panic becomes an error item");
+        assert!(error.to_string().contains(FENCED_MESSAGE), "{error}");
+    }
+
+    #[test]
+    fn a_panic_is_converted_when_the_environment_says_one_but_the_init_never_ran() {
+        let output = run_probe_child(UNINITIALISED_PROBE, true);
+        let text = combined_output(&output);
+        assert!(output.status.success(), "{text}");
+        assert!(text.contains("1 passed"), "the probe did not run: {text}");
     }
 
     #[test]

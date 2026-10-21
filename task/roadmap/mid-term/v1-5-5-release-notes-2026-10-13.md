@@ -8,7 +8,7 @@ every write door (R-008) and the pandas/polars nanosecond frame door (R-019) —
 merge-module split, two lock-only dependency bumps, and test and docs groundwork.
 
 The tag target is the release commit; the last product commit is `f8f1d252`
-(CASESENS-1, metadata by version number). Tagged `v1.5.5` at `293896ce` on 2026-10-20 (16:00 UTC). Two RustSec advisories published that evening (RUSTSEC-2026-0382, rustls-webpki accepted distrusted emSign intermediates; RUSTSEC-2026-0381, webpki-roots bundled the root) reached the tagged lock, so the tag was re-pointed at 23:40 UTC to `7fb5f6b2` (#1127: rustls-webpki 0.103.16 and webpki-roots 1.0.10, no other change) before any upload; the release wheels build from the re-pointed tag. The PyPI upload is TODO(owner).
+(CASESENS-1, metadata by version number). Tagged `v1.5.5` at `293896ce` on 2026-10-20 (16:00 UTC). Two RustSec advisories published that evening (RUSTSEC-2026-0382, rustls-webpki accepted distrusted emSign intermediates; RUSTSEC-2026-0381, webpki-roots bundled the root) reached the tagged lock, so the tag was re-pointed at 23:40 UTC to `7fb5f6b2` (#1127: rustls-webpki 0.103.16 and webpki-roots 1.0.10, no other change) before any upload; the release wheels build from the re-pointed tag. The PyPI upload is TODO(owner). Published to PyPI on 2026-10-21 at 12:41 UTC from the re-pointed tag (release run 39520041725): five `cp312-abi3` wheels, manylinux x86_64 and aarch64, macOS arm64 and x86_64, Windows x86_64. The pre-fix release run for `293896ce` was cancelled before its gate.
 
 ## One instant for one wall in `timestamptz_ns` (R-008, `26b378a4`)
 

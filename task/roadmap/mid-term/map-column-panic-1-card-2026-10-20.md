@@ -3,11 +3,16 @@
 **Date:** 2026-10-20. **Filed by:** Claude (claude-fable-5-1), orchestrator, from the second
 hostile verification of PR #1124 (ICE-NTZ-NESTED-REFUSE-1, U-8) on main `c516c54a`.
 
-**Status:** fixed on branch `fix/map-column-panic-1` (2026-10-20, builder Claude Sonnet 5.5; the pull request
-awaits the owner's merge). The analyzer rule `SparkMapRewrite` sends every non-constant `map(...)` to the Spark
+**Status:** merged to main as PR #1131 (`d6ee0411`, 2026-10-21 04:00 UTC, builder Claude Sonnet 5.5, orchestrator
+review under the 2026-10-20 overnight grant). The analyzer rule `SparkMapRewrite` sends every non-constant `map(...)` to the Spark
 per-row kernel on every door; the evidence is under `task/wo/map-column-panic-1/evidence/`. An engine defect
 outside U-8; U-8's row R-011 misnamed it as a container cast of a map, and its fix round 2 corrects the row
-to point here.
+to point here. Two follow-ups await the owner: the native `repark.sql()` door still raises
+`map requires key and value lists to have the same length` (several rows) or panics `list array` (one row) on
+`map('a', <column>)`, since it does not install the Spark analyzer rules; and the new `REPARK_PANIC_FATAL=1`
+switch in `crates/repark-python/src/fence.rs` reads the environment on the caught-panic arm, which the owner
+weighs against ADR 0004's ban on environment reads at query time before any suite sets it.
+**Update 2026-10-21:** `REPARK_PANIC_FATAL` settled by PANIC-FATAL-SUITE-1 (PR #1134): the read moved to module initialisation and the facade suite sets the flag. The native-door follow-up stays open.
 
 **Retires:** when every statement below answers Spark's value, with a pin per door, and the
 Python boundary no longer reports a caught Rust panic for any `map()` over a column.

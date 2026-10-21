@@ -1,0 +1,92 @@
+<title>Overnight Watch 2026-10-21</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f6f4ef;--fg:#1d1b17;--muted:#5f5a50;--line:#d9d3c6;--card:#fffdf8;--accent:#8a3b12;--ok:#2d6a3e;--warn:#9a6b00;--bad:#9c2a2a;--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17160f;--fg:#ece7da;--muted:#a79f8e;--line:#3a362c;--card:#201e16;--accent:#e08a52;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17160f;--fg:#ece7da;--muted:#a79f8e;--line:#3a362c;--card:#201e16;--accent:#e08a52;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0;padding-block:24px 48px;padding-inline:16px}
+main{max-width:860px;margin:0 auto}
+h1{font-size:1.6rem;font-weight:600;margin:0 0 4px;text-wrap:balance}
+h2{font-size:1.05rem;font-weight:600;margin:28px 0 8px;letter-spacing:.01em}
+.sub{color:var(--muted);margin:0 0 20px}
+.lede{border-left:3px solid var(--accent);padding:4px 14px;margin:0 0 18px;background:var(--card)}
+code{font-family:var(--mono);font-size:.88em}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em}
+td.n{font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+.wrap{overflow-x:auto}
+.tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:3px;border:1px solid currentColor}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+ul{padding-left:20px;margin:6px 0}
+li{margin:4px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cell{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:0}
+.cell b{display:block;font-size:.8rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.q{counter-reset:q}
+.q li{list-style:none;position:relative;padding-left:0;margin:10px 0}
+.q li::before{counter-increment:q;content:"Q" counter(q);font-family:var(--mono);color:var(--accent);margin-right:8px}
+footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+<main>
+<h1>Overnight Watch, 2026-10-21</h1>
+<p class="sub">Autonomous management grant 00:05 to 08:00 UTC, written 09:05 UTC. Main is at <code>f0918cb5</code>.</p>
+
+<p class="lede">Four merges under the grant, two before it, one security re-tag done, the map panic fixed on every door, and U-8 sent back for a third fix round after a FAIL on one real hole. Nothing broke. Three rulings and one upload wait for you.</p>
+
+<h2>Merged</h2>
+<div class="wrap"><table>
+<tr><th>PR</th><th>What</th><th>Main sha</th><th>When (UTC)</th></tr>
+<tr><td class="n">#1122</td><td>Parity-live re-record infra (step 1 of the plan)</td><td class="n">c86f08d7</td><td class="n">10-20 eve</td></tr>
+<tr><td class="n">#1127</td><td>RustSec lock bump: rustls-webpki 0.103.16, webpki-roots 1.0.10</td><td class="n">7fb5f6b2</td><td class="n">10-20 eve</td></tr>
+<tr><td class="n">#1125</td><td>CONTAINER-CAST-ZONE-1 and MAP-COLUMN-PANIC-1 cards</td><td class="n">f4058c59</td><td class="n">10-20 eve</td></tr>
+<tr><td class="n">#1126</td><td>Zone-seam plan, ZONE-SEAM-1 and ZONE-ORACLE-1 orders</td><td class="n">5844d951</td><td class="n">10-20 eve</td></tr>
+<tr><td class="n">#1130</td><td>v1.5.5 re-tag record (tag now at 7fb5f6b2)</td><td class="n">e6ff5375</td><td class="n">10-21 00:3x</td></tr>
+<tr><td class="n">#1128</td><td>ZONE-ORACLE-1: 1,640-cell Spark 4.1.2 expression corpus</td><td class="n">5c8c811e</td><td class="n">10-21 00:4x</td></tr>
+<tr><td class="n">#1131</td><td>MAP-COLUMN-PANIC-1: non-constant <code>map(...)</code> on the Spark kernel</td><td class="n">d6ee0411</td><td class="n">10-21 04:00</td></tr>
+<tr><td class="n">#1132</td><td>Map-panic card and roadmap row record the merge</td><td class="n">f0918cb5</td><td class="n">10-21 04:40</td></tr>
+</table></div>
+<p>The v1.5.5 wheels were rebuilt on the re-pointed tag (run 39520041626, success). The PyPI upload is still yours.</p>
+
+<h2>Map panic, fixed</h2>
+<p>Sonnet 5.5 found the real shape: DataFusion plans <code>map(k, v)</code> as two <code>make_array</code> lists and its kernel panics when one list is a constant and the other is per-row. A new analyzer rule sends every non-constant map to the existing <code>create_map</code> kernel, which covers <code>spark.sql</code>, <code>selectExpr</code>, <code>expr</code>, string <code>filter</code>, INSERT, UPDATE and MERGE with one mechanism. I reviewed it myself, re-diffed the corpus lists, and merged.</p>
+<div class="grid">
+<div class="cell"><b>Oracle corpus, main before</b><span class="n">EQUAL 1150 · DIFFERENT 400 · REFUSED 20 · ERROR 70</span></div>
+<div class="cell"><b>Oracle corpus, main after</b><span class="n">EQUAL 1199 · DIFFERENT 411 · REFUSED 20 · ERROR 10</span></div>
+<div class="cell"><b>Cells that moved</b>60, all <code>map.*</code>: 49 now EQUAL, 11 stay DIFFERENT (the container-cast zone bug the panic had hidden)</div>
+<div class="cell"><b>Cost, head over main</b><span class="n">literal map 0.97x · map(id, id+1) 0.21x</span></div>
+</div>
+<p>Two follow-ups the builder handed up: the native <code>repark.sql()</code> door does not install the Spark rules and still panics there; and the new <code>REPARK_PANIC_FATAL=1</code> switch reads the environment on the caught-panic arm, which brushes ADR 0004. Both are recorded on the card.</p>
+
+<h2>U-8, round 2 verdict <span class="tag bad">FAIL</span></h2>
+<p>The Opus 5.5 re-verifier reproduced every count, every gate and the cost bound, then found one hole the round-2 lineage walk opened and four arms no pin guards.</p>
+<ul>
+<li><b>S1-1, real hole.</b> A <code>LATERAL</code> subquery's outer reference drops out of the walk, so 17 cells over 9 shapes store the UTC wall where Spark stores the session wall. Round 1's whole-plan read had refused them.</li>
+<li><b>S1-3, pins that do not pin.</b> <code>DISTINCT</code>, <code>LIMIT</code>, a window, and a <code>VALUES</code> second row each survive a mutant that opens a hole.</li>
+<li><b>S1-2 and S2-1, costs not listed.</b> 18 correct cells refused because subqueries, aggregates, conditions and sibling fields are read whole; and zero-offset zones cost 126 correct cells per zone, not the 3 the row says.</li>
+<li><b>Incident.</b> A correlated lateral with a <code>FROM</code> drove main to 112 GB RSS. Pre-existing; a card is being filed.</li>
+</ul>
+<p><b>Fix round 3</b> is running on Opus 5.5 from a brief that allows only in-unit work: the lateral walk, one pin per arm, the full over-refusal list with counts, ledger rows per verifier round, and the memory card. Four commits are in the clone as of 08:59 UTC; gates are running; nothing is pushed yet. Then a fresh re-verifier, round 3. #1124 stays open for you.</p>
+
+<h2>Rulings waiting for you</h2>
+<ol class="q">
+<li><b>IN/EXISTS and scalar subqueries.</b> Skip the body of a boolean subquery and read a scalar subquery by its output column only. Costs 5 correct cells today. Verifier and I both lean yes.</li>
+<li><b>Aggregates, conditions, sibling fields.</b> Narrow the walk to the expression that produces the column. Costs 18 correct cells today. Lean yes, but it is a fourth round on a gate that GATE-RETIRE-1 retires after the seam, so the alternative is to accept the listed cost.</li>
+<li><b>Fixed zero-offset zones.</b> Treat <code>Etc/GMT</code>, <code>Etc/UTC</code>, <code>Africa/Abidjan</code>, <code>Atlantic/Reykjavik</code> and kin as UTC; keep the name rule for zones with transitions such as London. 126 correct cells per zone. Lean yes.</li>
+<li><b>REPARK_PANIC_FATAL</b> versus ADR 0004, and whether <code>conftest.py</code> adopts it as a separate small unit.</li>
+<li><b>PyPI upload</b> of the v1.5.5 wheels, and the v2 label date (11-10 under the seam plan).</li>
+</ol>
+
+<h2>Running now</h2>
+<ul>
+<li>U-8 fix round 3 (Opus 5.5, the single Opus lane).</li>
+<li>Parity-live nightly run 39562925424, started 07:34 UTC, the first with #1122's re-record; result expected near 09:45 UTC.</li>
+<li>EXPLAIN-DML-WRITE-1 sketch waits behind U-8 under the one-Opus rule; then ZONE-SEAM-1.</li>
+</ul>
+
+<h2>Housekeeping</h2>
+<p>Dropped the consumed verifier and oracle build trees (149 G and 60 G). Disk went from 84 G free at 09:00 to 292 G. The U-8 build clone keeps its 154 G warm target until the unit lands. Dependabot #1129 untouched, as ruled.</p>
+
+<footer>Repark overnight watch. Source of record: the memory file overnight-2026-10-20 and the hand-backs under the session scratchpad. Filed as <code>docs/artifacts/overnight-watch-2026-10-21.html</code>.</footer>
+</main>
