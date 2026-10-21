@@ -1,0 +1,508 @@
+{
+ "base": "main e6ff5375 (the recorded list is main 754fb6e5; `--main --check` on e6ff5375 reports drift=0, so the two agree)",
+ "cells_not_containing_map_whose_entry_changed_or_left": [],
+ "counts_head": {
+  "DIFFERENT": 411,
+  "EQUAL": 1199,
+  "ERROR": 10,
+  "REFUSED": 20
+ },
+ "counts_main": {
+  "DIFFERENT": 400,
+  "EQUAL": 1150,
+  "ERROR": 70,
+  "REFUSED": 20
+ },
+ "head": "fix/map-column-panic-1",
+ "join_the_list": [],
+ "leave_the_list_to_EQUAL": {
+  "map.col_inst.cast_ntz.inner.etc_utc": {
+   "sql": "SELECT map('k', CAST(c_inst AS TIMESTAMP_NTZ)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_ntz.inner.kolkata": {
+   "sql": "SELECT map('k', CAST(c_inst AS TIMESTAMP_NTZ)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_ntz.inner.new_york": {
+   "sql": "SELECT map('k', CAST(c_inst AS TIMESTAMP_NTZ)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_ntz.inner.p0530": {
+   "sql": "SELECT map('k', CAST(c_inst AS TIMESTAMP_NTZ)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_ntz.inner.utc": {
+   "sql": "SELECT map('k', CAST(c_inst AS TIMESTAMP_NTZ)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_string.inner.etc_utc": {
+   "sql": "SELECT map('k', CAST(c_inst AS STRING)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_string.inner.kolkata": {
+   "sql": "SELECT map('k', CAST(c_inst AS STRING)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_string.inner.new_york": {
+   "sql": "SELECT map('k', CAST(c_inst AS STRING)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_string.inner.p0530": {
+   "sql": "SELECT map('k', CAST(c_inst AS STRING)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.cast_string.inner.utc": {
+   "sql": "SELECT map('k', CAST(c_inst AS STRING)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_ntz.etc_utc": {
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, TIMESTAMP_NTZ>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_ntz.utc": {
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, TIMESTAMP_NTZ>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.to_json.etc_utc": {
+   "sql": "SELECT to_json(map('k', c_inst)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.to_json.kolkata": {
+   "sql": "SELECT to_json(map('k', c_inst)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.to_json.new_york": {
+   "sql": "SELECT to_json(map('k', c_inst)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.to_json.p0530": {
+   "sql": "SELECT to_json(map('k', c_inst)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.to_json.utc": {
+   "sql": "SELECT to_json(map('k', c_inst)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.cast_ltz.inner.etc_utc": {
+   "sql": "SELECT map('k', CAST(c_wall AS TIMESTAMP)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.cast_ltz.inner.kolkata": {
+   "sql": "SELECT map('k', CAST(c_wall AS TIMESTAMP)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.cast_ltz.inner.new_york": {
+   "sql": "SELECT map('k', CAST(c_wall AS TIMESTAMP)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.cast_ltz.inner.p0530": {
+   "sql": "SELECT map('k', CAST(c_wall AS TIMESTAMP)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.cast_ltz.inner.utc": {
+   "sql": "SELECT map('k', CAST(c_wall AS TIMESTAMP)) AS v FROM zone_oracle_1_one_row",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.ccast_ltz.etc_utc": {
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_wall) AS MAP<STRING, TIMESTAMP>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.ccast_ltz.utc": {
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_wall) AS MAP<STRING, TIMESTAMP>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_date.inner.etc_utc": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS DATE)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_date.inner.kolkata": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS DATE)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_date.inner.new_york": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS DATE)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_date.inner.p0530": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS DATE)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_date.inner.utc": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS DATE)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_string.inner.etc_utc": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_string.inner.kolkata": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_string.inner.new_york": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_string.inner.p0530": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.cast_string.inner.utc": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.date_format.inner.etc_utc": {
+   "sql": "SELECT map('k', date_format(TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'yyyy-MM-dd HH:mm:ss')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.date_format.inner.kolkata": {
+   "sql": "SELECT map('k', date_format(TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'yyyy-MM-dd HH:mm:ss')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.date_format.inner.new_york": {
+   "sql": "SELECT map('k', date_format(TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'yyyy-MM-dd HH:mm:ss')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.date_format.inner.p0530": {
+   "sql": "SELECT map('k', date_format(TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'yyyy-MM-dd HH:mm:ss')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.date_format.inner.utc": {
+   "sql": "SELECT map('k', date_format(TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'yyyy-MM-dd HH:mm:ss')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.to_date.inner.etc_utc": {
+   "sql": "SELECT map('k', to_date(TIMESTAMP '2026-01-02 03:04:05.123456+00:00')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.to_date.inner.kolkata": {
+   "sql": "SELECT map('k', to_date(TIMESTAMP '2026-01-02 03:04:05.123456+00:00')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.to_date.inner.new_york": {
+   "sql": "SELECT map('k', to_date(TIMESTAMP '2026-01-02 03:04:05.123456+00:00')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.to_date.inner.p0530": {
+   "sql": "SELECT map('k', to_date(TIMESTAMP '2026-01-02 03:04:05.123456+00:00')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.inst.to_date.inner.utc": {
+   "sql": "SELECT map('k', to_date(TIMESTAMP '2026-01-02 03:04:05.123456+00:00')) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.wall.cast_string.inner.etc_utc": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP_NTZ '2026-01-02 03:04:05.123456' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.wall.cast_string.inner.kolkata": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP_NTZ '2026-01-02 03:04:05.123456' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.wall.cast_string.inner.new_york": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP_NTZ '2026-01-02 03:04:05.123456' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.wall.cast_string.inner.p0530": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP_NTZ '2026-01-02 03:04:05.123456' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.wall.cast_string.inner.utc": {
+   "sql": "SELECT map('k', CAST(TIMESTAMP_NTZ '2026-01-02 03:04:05.123456' AS STRING)) AS v",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  }
+ },
+ "stay_on_the_list_with_a_new_answer": {
+  "map.col_inst.ccast_ntz.kolkata": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "timestamp_ntz",
+    "value": 1767323045123456
+   },
+   "spark": 1767342845123456,
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, TIMESTAMP_NTZ>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_ntz.new_york": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "timestamp_ntz",
+    "value": 1767323045123456
+   },
+   "spark": 1767305045123456,
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, TIMESTAMP_NTZ>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_ntz.p0530": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "timestamp_ntz",
+    "value": 1767323045123456
+   },
+   "spark": 1767342845123456,
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, TIMESTAMP_NTZ>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_string.etc_utc": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "string",
+    "value": "2026-01-02T03:04:05.123456Z"
+   },
+   "spark": "2026-01-02 03:04:05.123456",
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, STRING>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_string.kolkata": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "string",
+    "value": "2026-01-02T03:04:05.123456Z"
+   },
+   "spark": "2026-01-02 08:34:05.123456",
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, STRING>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_string.new_york": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "string",
+    "value": "2026-01-02T03:04:05.123456Z"
+   },
+   "spark": "2026-01-01 22:04:05.123456",
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, STRING>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_string.p0530": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "string",
+    "value": "2026-01-02T03:04:05.123456Z"
+   },
+   "spark": "2026-01-02 08:34:05.123456",
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, STRING>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_inst.ccast_string.utc": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "string",
+    "value": "2026-01-02T03:04:05.123456Z"
+   },
+   "spark": "2026-01-02 03:04:05.123456",
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, STRING>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.ccast_ltz.kolkata": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "timestamp",
+    "value": 1767323045123456
+   },
+   "spark": 1767303245123456,
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_wall) AS MAP<STRING, TIMESTAMP>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.ccast_ltz.new_york": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "timestamp",
+    "value": 1767323045123456
+   },
+   "spark": 1767341045123456,
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_wall) AS MAP<STRING, TIMESTAMP>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  },
+  "map.col_wall.ccast_ltz.p0530": {
+   "now": {
+    "status": "DIFFERENT",
+    "type": "timestamp",
+    "value": 1767323045123456
+   },
+   "spark": 1767303245123456,
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_wall) AS MAP<STRING, TIMESTAMP>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "was": {
+    "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+    "status": "ERROR"
+   }
+  }
+ }
+}

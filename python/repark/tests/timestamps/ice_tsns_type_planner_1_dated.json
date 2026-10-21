@@ -1686,30 +1686,6 @@
    "owner": "H5 residue: a shape outside amendment 1's position table",
    "class": "residue"
   },
-  "repro|v2_map_element_site|ns|America/New_York": {
-   "date": "2026-10-15",
-   "ruling": "93",
-   "owner": "H5 residue: a shape outside amendment 1's position table",
-   "class": "residue"
-  },
-  "repro|v2_map_element_site|ns|UTC": {
-   "date": "2026-10-15",
-   "ruling": "93",
-   "owner": "H5 residue: a shape outside amendment 1's position table",
-   "class": "residue"
-  },
-  "repro|v2_map_element_site|tzns|America/New_York": {
-   "date": "2026-10-15",
-   "ruling": "93",
-   "owner": "H5 residue: a shape outside amendment 1's position table",
-   "class": "residue"
-  },
-  "repro|v2_map_element_site|tzns|UTC": {
-   "date": "2026-10-15",
-   "ruling": "93",
-   "owner": "H5 residue: a shape outside amendment 1's position table",
-   "class": "residue"
-  },
   "repro|v3_integer_argument|ns|America/New_York": {
    "date": "2026-10-15",
    "ruling": "93",

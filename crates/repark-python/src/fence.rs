@@ -9,6 +9,13 @@ use pyo3::prelude::PyErr;
 
 use crate::PySparkException;
 
+pub(crate) const PANIC_FATAL_ENVIRONMENT_VARIABLE: &str = "REPARK_PANIC_FATAL";
+
+/// Report whether a caught panic must end the run instead of becoming an error.
+fn panics_are_fatal() -> bool {
+    std::env::var_os(PANIC_FATAL_ENVIRONMENT_VARIABLE).is_some_and(|value| value == "1")
+}
+
 /// Extract panic text and add the boundary operation to the internal-error message.
 fn describe_panic(operation: &str, payload: &(dyn Any + Send)) -> String {
     let detail = if let Some(text) = payload.downcast_ref::<&'static str>() {
@@ -25,15 +32,22 @@ fn describe_panic(operation: &str, payload: &(dyn Any + Send)) -> String {
 }
 
 /// Run a `#[pymethods]` body under the panic fence.
+///
+/// With `REPARK_PANIC_FATAL=1` a caught panic resumes unwinding instead of becoming an error.
 pub(crate) fn fence<T>(
     operation: &str,
     body: impl FnOnce() -> Result<T, PyErr>,
 ) -> Result<T, PyErr> {
     match catch_unwind(AssertUnwindSafe(body)) {
         Ok(result) => result,
-        Err(payload) => Err(PySparkException::new_err(
-            crate::exceptions::mask_user_visible(describe_panic(operation, payload.as_ref())),
-        )),
+        Err(payload) => {
+            if panics_are_fatal() {
+                std::panic::resume_unwind(payload);
+            }
+            Err(PySparkException::new_err(
+                crate::exceptions::mask_user_visible(describe_panic(operation, payload.as_ref())),
+            ))
+        }
     }
 }
 
@@ -70,15 +84,22 @@ pub(crate) fn fenced_panic_detail(error: &ArrowError) -> Option<&str> {
 }
 
 /// Run one Arrow-C-stream batch poll under the panic fence.
+///
+/// With `REPARK_PANIC_FATAL=1` a caught panic resumes unwinding instead of becoming an error item.
 pub(crate) fn fence_stream_poll(
     operation: &str,
     body: impl FnOnce() -> Option<Result<RecordBatch, ArrowError>>,
 ) -> Option<Result<RecordBatch, ArrowError>> {
     match catch_unwind(AssertUnwindSafe(body)) {
         Ok(item) => item,
-        Err(payload) => Some(Err(ArrowError::ExternalError(Box::new(FencedStreamPanic(
-            describe_panic(operation, payload.as_ref()),
-        ))))),
+        Err(payload) => {
+            if panics_are_fatal() {
+                std::panic::resume_unwind(payload);
+            }
+            Some(Err(ArrowError::ExternalError(Box::new(FencedStreamPanic(
+                describe_panic(operation, payload.as_ref()),
+            )))))
+        }
     }
 }
 
@@ -192,6 +213,98 @@ mod tests {
             item.is_none(),
             "None (end of stream) passes through untouched"
         );
+    }
+
+    const PROBE_CHILD_ENVIRONMENT_VARIABLE: &str = "REPARK_FENCE_PROBE_CHILD";
+    const CONVERTING_PROBE: &str = "fence::tests::probe_child_converts_a_fenced_panic";
+    const STREAM_PROBE: &str = "fence::tests::probe_child_converts_a_stream_panic";
+    const FENCED_MESSAGE: &str = "repark internal error in Probe.op: probe-boom (a Rust panic was \
+         caught at the Python boundary; this is a bug \u{2014} please report it)";
+
+    fn run_probe_child(test_name: &str, fatal: bool) -> std::process::Output {
+        let mut command =
+            std::process::Command::new(std::env::current_exe().expect("test binary path"));
+        command
+            .args(["--exact", test_name, "--nocapture", "--test-threads=1"])
+            .env(PROBE_CHILD_ENVIRONMENT_VARIABLE, "1")
+            .env_remove(PANIC_FATAL_ENVIRONMENT_VARIABLE);
+        if fatal {
+            command.env(PANIC_FATAL_ENVIRONMENT_VARIABLE, "1");
+        }
+        command.output().expect("the test binary starts")
+    }
+
+    fn combined_output(output: &std::process::Output) -> String {
+        format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        )
+    }
+
+    #[test]
+    fn probe_child_converts_a_fenced_panic() {
+        if std::env::var_os(PROBE_CHILD_ENVIRONMENT_VARIABLE).is_none() {
+            return;
+        }
+        Python::attach(|py| {
+            let result: Result<(), PyErr> = fence("Probe.op", || panic!("probe-boom"));
+            let error = result.expect_err("the flag is off, so the panic becomes an error");
+            assert_eq!(error.value(py).to_string(), FENCED_MESSAGE);
+        });
+    }
+
+    #[test]
+    fn probe_child_converts_a_stream_panic() {
+        if std::env::var_os(PROBE_CHILD_ENVIRONMENT_VARIABLE).is_none() {
+            return;
+        }
+        let item = fence_stream_poll("Probe.op", || panic!("probe-boom"));
+        let error = item
+            .expect("a fenced panic yields an item")
+            .expect_err("the flag is off, so the panic becomes an error item");
+        assert!(error.to_string().contains(FENCED_MESSAGE), "{error}");
+    }
+
+    #[test]
+    fn a_caught_panic_keeps_its_message_when_the_fatal_flag_is_off() {
+        for probe in [CONVERTING_PROBE, STREAM_PROBE] {
+            let output = run_probe_child(probe, false);
+            let text = combined_output(&output);
+            assert!(output.status.success(), "{probe}: {text}");
+            assert!(text.contains("1 passed"), "{probe} did not run: {text}");
+        }
+    }
+
+    #[test]
+    fn a_caught_panic_fails_the_run_when_the_fatal_flag_is_on() {
+        for probe in [CONVERTING_PROBE, STREAM_PROBE] {
+            let output = run_probe_child(probe, true);
+            let text = combined_output(&output);
+            assert!(!output.status.success(), "{probe}: {text}");
+            assert!(text.contains("probe-boom"), "{probe}: {text}");
+            assert!(!text.contains("repark internal error"), "{probe}: {text}");
+            assert!(text.contains("1 failed"), "{probe} did not run: {text}");
+        }
+    }
+
+    #[test]
+    fn only_the_value_one_turns_the_fatal_flag_on() {
+        for (value, expected) in [("1", true), ("0", false), ("", false), ("true", false)] {
+            let mut command =
+                std::process::Command::new(std::env::current_exe().expect("test binary path"));
+            command
+                .args([
+                    "--exact",
+                    CONVERTING_PROBE,
+                    "--nocapture",
+                    "--test-threads=1",
+                ])
+                .env(PROBE_CHILD_ENVIRONMENT_VARIABLE, "1")
+                .env(PANIC_FATAL_ENVIRONMENT_VARIABLE, value);
+            let output = command.output().expect("the test binary starts");
+            assert_eq!(!output.status.success(), expected, "value {value:?}");
+        }
     }
 
     struct FamilyOperationVisitor<'a> {

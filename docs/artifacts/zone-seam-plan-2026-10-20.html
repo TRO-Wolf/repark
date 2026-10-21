@@ -1,0 +1,91 @@
+<title>Zone Seam Plan</title>
+<meta name="description" content="The stability pathway adopted on 2026-10-20: fix the zone conversion at its root, prove parity at the expression level, and the revised Iceberg closeout dates.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f7f5f0;--fg:#1f1d1a;--muted:#5d5852;--line:#d8d2c6;--accent:#8a3b12;--accent-soft:#f3e4d8;--ok:#2d6a4f;--ok-soft:#dff0e6;--warn:#8a6d00;--warn-soft:#f7edc6;--bad:#9b2226;--bad-soft:#f6dcdc;--card:#fffdf9;--code:#efeae0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#17161a;--fg:#ece8e1;--muted:#a79f94;--line:#3a3740;--accent:#e4905f;--accent-soft:#3a2a20;--ok:#8fd3ad;--ok-soft:#1f3a2d;--warn:#e6c866;--warn-soft:#3b3214;--bad:#f0a0a0;--bad-soft:#3f1f20;--card:#1f1e23;--code:#26242b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17161a;--fg:#ece8e1;--muted:#a79f94;--line:#3a3740;--accent:#e4905f;--accent-soft:#3a2a20;--ok:#8fd3ad;--ok-soft:#1f3a2d;--warn:#e6c866;--warn-soft:#3b3214;--bad:#f0a0a0;--bad-soft:#3f1f20;--card:#1f1e23;--code:#26242b;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.55;margin:0}
+main{max-width:860px;margin:0 auto;padding-block:40px 64px;padding-inline:16px}
+h1,h2,h3{font-family:"Source Serif 4",Georgia,serif;text-wrap:balance;line-height:1.2}
+h1{font-size:2rem;margin:0 0 6px;font-weight:600}
+h2{font-size:1.35rem;margin:40px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font-size:1.05rem;margin:22px 0 8px}
+.kicker{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.lede{color:var(--muted);font-size:1.02rem;max-width:62ch;margin:0 0 18px}
+p{max-width:68ch}
+code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;background:var(--code);padding:1px 5px;border-radius:3px}
+pre{background:var(--code);padding:12px 14px;border-radius:6px;overflow-x:auto;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.84rem;line-height:1.45}
+.tbl{overflow-x:auto;margin:12px 0 4px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.8rem;letter-spacing:.04em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+.card h3{margin:0 0 6px}
+.card p{margin:0;font-size:.92rem;color:var(--muted)}
+.pill{display:inline-block;font-size:.74rem;font-weight:600;padding:1px 8px;border-radius:999px;letter-spacing:.03em;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}.bad{background:var(--bad-soft);color:var(--bad)}.acc{background:var(--accent-soft);color:var(--accent)}
+.rule{border-left:3px solid var(--accent);padding:4px 14px;margin:14px 0;background:var(--card)}
+.rule strong{display:block;margin-bottom:2px}
+ul{padding-left:20px}li{margin:4px 0;max-width:68ch}
+.src{font-size:.82rem;color:var(--muted);margin-top:28px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+<main>
+<div class="kicker">RePark · Iceberg closeout · adopted 2026-10-20</div>
+<h1>Zone Seam Plan</h1>
+<p class="lede">The owner asked what pathway puts RePark on a stable, reliable path on par with Spark. The answer: stop gating symptoms at the write doors, fix the one zone conversion underneath them, and prove parity where Spark can be measured cheaply. Adopted the same evening ("Do it, proceed with recommendations and implementation").</p>
+
+<h2>1. What the evidence says</h2>
+<p>Every timestamp unit since v1.5.3 has been the same defect seen from a different door: R-007 (the MERGE wall), R-015 and R-011 (nested leaves), ENC-1, and now the container cast. RePark converts a zoned timestamp on two paths.</p>
+<div class="grid">
+<div class="card"><h3><span class="pill ok">matches Spark</span> the leaf cast</h3><p><code>CAST(x AS TIMESTAMP_NTZ)</code> is lowered at the SQL AST to the UDF <code>__repark_cast_timestamp_ntz__</code>, which reads <code>spark.sql.session.timeZone</code>. Every leaf spelling the U-8 verifier tried stores the session wall.</p></div>
+<div class="card"><h3><span class="pill bad">renders in UTC</span> everything else</h3><p>A <code>CAST</code>/<code>TRY_CAST</code> of a struct, array or map holding a zoned leaf, and <code>to_json</code>, go through DataFusion's native cast. Measured wrong in a plain <code>SELECT</code>, in every write, and in the six table-creating writers (CTAS, <code>CREATE OR REPLACE … AS SELECT</code>, <code>REPLACE TABLE … AS SELECT</code>, <code>saveAsTable</code>, <code>writeTo().create()/.replace()/.createOrReplace()</code>).</p></div>
+</div>
+<p>U-8's gate sits downstream of that split. Each verifier round found a new shape that slipped past it, and each patch over-refused a correct cell somewhere else. Two rounds in: 360 refusals, four cells of over-refusal, and still a silent wrong wall through STRING, DATE, BIGINT and JSON routes. That loop does not converge.</p>
+<div class="tbl"><table>
+<tr><th>New York, instant <code>2026-01-02 03:04:05.123456+00:00</code></th><th>Spark 4.1.2</th><th>RePark main</th></tr>
+<tr><td><code>SELECT CAST(array(x) AS ARRAY&lt;TIMESTAMP_NTZ&gt;)[0]</code></td><td>1767305045123456</td><td>1767323045123456</td></tr>
+<tr><td>through <code>STRING</code> inside a struct, then to <code>TIMESTAMP_NTZ</code></td><td>1767305045123456</td><td>1767323045123456</td></tr>
+<tr><td>through <code>DATE</code></td><td>2026-01-01 (New York)</td><td>2026-01-02 (UTC)</td></tr>
+<tr><td>control: <code>SELECT CAST(x AS TIMESTAMP_NTZ)</code></td><td>1767305045123456</td><td>1767305045123456</td></tr>
+</table></div>
+
+<h2>2. The pathway, in order</h2>
+<div class="rule"><strong>1. One zone seam.</strong> A single Rust conversion point that every zoned-to-naive, zoned-to-string and zoned-to-date operation passes through, container casts and <code>to_json</code> included, reusing the leaf UDFs that already exist. Once the cast is right a plain <code>SELECT</code> is right, and every door inherits it because a write stores what <code>SELECT</code> yields. Unit <strong>ZONE-SEAM-1</strong>.</div>
+<div class="rule"><strong>2. Expression-level oracle, not door matrices.</strong> Record Spark 4.1.2 once over a generated corpus of value sources × conversions × containers × target types × zones on plain <code>SELECT</code> (about 1,500 cells) and replay it on RePark, asserting the exact set of cells that differ on main so a fix and a regression both show. A shape EQUAL on <code>SELECT</code> needs no per-door write cell. Unit <strong>ZONE-ORACLE-1</strong>, the seam's pin and the nightly's guard.</div>
+<div class="rule"><strong>3. Refuse only what Spark refuses.</strong> Rulings 136 and 138 (EXPLAIN ANALYZE of DML, PREPARE of a write) are true parity. A refusal that exists because RePark's own cast is wrong is debt with an eviction date. After the seam lands, <strong>GATE-RETIRE-1</strong> removes the R-011 and R-015 arms the seam makes unreachable and keeps the ones Spark shares.</div>
+<div class="rule"><strong>4. No panic reaches a user.</strong> <code>map('a', &lt;column&gt;)</code> panics inside DataFusion's map constructor through a caught boundary. The panic ban covers RePark's crates, not its dependencies. <strong>MAP-COLUMN-PANIC-1</strong> fixes the lowering and adds a boundary pin that a caught panic is a test failure.</div>
+
+<h2>3. Units and lanes</h2>
+<div class="tbl"><table>
+<tr><th>Unit</th><th>What</th><th>Lane</th><th>Window</th><th>State</th></tr>
+<tr><td>U-8 ICE-NTZ-NESTED-REFUSE-1</td><td>PR #1124; fix round 2 on the verifier's in-unit findings; residues stated, not grown</td><td>Opus 5.5</td><td>Tue 10-20 → Wed 10-21</td><td><span class="pill warn">fix round 2 running</span></td></tr>
+<tr><td>ZONE-ORACLE-1</td><td>the expression corpus, recorder, replay test, main-difference list</td><td>Sonnet 5.5 xhigh, parallel</td><td>Wed 10-21 → Sat 10-24</td><td><span class="pill acc">dispatching</span></td></tr>
+<tr><td>EXPLAIN-DML-WRITE-1</td><td>rulings 136/138/139; sketch to the orchestrator first</td><td>Opus 5.5</td><td>Wed 10-21 → Sun 10-25</td><td><span class="pill acc">brief ready</span></td></tr>
+<tr><td>ZONE-SEAM-1</td><td>the seam; sketch first; hostile verifier</td><td>Opus 5.5</td><td>Mon 10-26 → Mon 11-02</td><td><span class="pill acc">order filed</span></td></tr>
+<tr><td>GATE-RETIRE-1</td><td>remove the arms the seam makes unreachable</td><td>Opus 5.5, one small round</td><td>Tue 11-03</td><td>after the seam's PASS</td></tr>
+<tr><td>MAP-COLUMN-PANIC-1</td><td>map lowering fix and the boundary pin</td><td>Sonnet 5.5 xhigh, after the oracle</td><td>Mon 10-26 → Wed 10-28</td><td>card filed (#1126)</td></tr>
+<tr><td>U-9 ICE-TSNS-TYPE-PLANNER-1</td><td>unchanged, inherits the seam</td><td>Opus 5.5</td><td>Wed 11-04 → Fri 11-06</td><td>ruled</td></tr>
+<tr><td>U-11 ICE-RESOURCE-BOUND-1</td><td>unchanged</td><td>Opus 5.5</td><td>Sat 11-07 → Mon 11-09</td><td>order on main</td></tr>
+<tr><td>v2 label PR</td><td>after two green parity-live mornings (P5)</td><td>docs</td><td>Tue 11-10, buffer Thu 11-12</td><td>was 11-05</td></tr>
+<tr><td>U-4 + ns truth-up, v3 label PR</td><td>unchanged</td><td>Opus 5.5 + docs</td><td>Wed 11-11 → Tue 11-17, buffer Thu 11-19</td><td>was 11-10</td></tr>
+</table></div>
+<p>One Opus agent at a time, as ruled. The Sonnet lane runs beside it for the two lower-logic units (the 2026-10-07 ruling). The 1.5.7 list is unchanged: U-2, the create door, the R-011 µs lift, R-024, ENC-1 items 1 and 5.</p>
+
+<h2>4. What it costs and what it buys</h2>
+<ul>
+<li><strong>Dates.</strong> The v2 label slips about a week, from 11-05 to 11-10. The alternative, labelling v2 on time with nested timestamps still rated EXPERIMENTAL (the 2026-10-13 re-rating) and the seam as a v3 precondition, stays open to the owner; the plan takes the slip, because a reader that stores a wrong wall through CTAS should not carry a production label.</li>
+<li><strong>Fewer rounds.</strong> One seam unit with one corpus replaces the per-door gate rounds; the U-8 pattern (build, verify, fix, verify, fix) was two Opus days for one door family.</li>
+<li><strong>A guard that lasts.</strong> The corpus is a fixture; the nightly replays it. A future zone regression shows as a cell leaving or joining the difference list, not as a verifier finding weeks later.</li>
+</ul>
+
+<h2>5. Decisions still the owner's</h2>
+<ul>
+<li>Merge words for <strong>#1122</strong> (the parity-live recorder fix, CLEAN; needed before the 07:17 UTC nightly), <strong>#1125</strong> (the BINARY flake card, CLEAN) and <strong>#1126</strong> (the two cards, these orders and this page).</li>
+<li>Whether to take the one-week slip on the v2 label or label on time with the EXPERIMENTAL rating kept (§4). The plan assumes the slip.</li>
+<li>The EXPLAIN ANALYZE refusal text, when the EXPLAIN-DML-WRITE-1 sketch proposes it.</li>
+</ul>
+
+<div class="src">Sources: card CONTAINER-CAST-ZONE-1 and card MAP-COLUMN-PANIC-1 (<code>task/roadmap/mid-term/</code>, 2026-10-20); the U-8 second verification hand-back (PR #1124, head <code>c20c3e25</code>, measured against main <code>c516c54a</code> and Spark 4.1.2); orders <code>task/wo/zone-seam-1/order.md</code> and <code>task/wo/zone-oracle-1/order.md</code>; the 2026-10-20 closeout priorities (<code>docs/artifacts/iceberg-closeout-priorities-2026-10-20.html</code>); main <code>754fb6e5</code>. Written by Claude (claude-fable-5-1), orchestrator, 2026-10-20.</div>
+</main>
