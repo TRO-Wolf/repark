@@ -60,6 +60,10 @@ fn a_prepare_of_a_write_refuses_with_its_text() {
     assert!(text.contains(PREPARE_TEXT), "{text}");
     let named = refusal("PREPARE remove_one AS UPDATE t SET v = 1");
     assert!(named.contains("PREPARE `remove_one` is refused"), "{named}");
+    let quoted = refusal("PREPARE \"My P\" AS DELETE FROM t WHERE id = 2");
+    assert!(quoted.contains("PREPARE `\"My P\"` is refused"), "{quoted}");
+    let cased = refusal("PREPARE MyP AS DELETE FROM t WHERE id = 2");
+    assert!(cased.contains("PREPARE `MyP` is refused"), "{cased}");
 }
 
 #[test]

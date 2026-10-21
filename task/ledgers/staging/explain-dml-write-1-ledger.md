@@ -431,3 +431,18 @@ The kill, with the mutant applied at all three sites at once, then restored (evi
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-014 | Fix round 1, S1-1 (2026-10-21): on `repark.sql()`, the ANSI door and the router API, a wrapped write spelled with a trailing `;`, a leading `--` comment or in lower case refuses with the ruled text and holds the table; with the refusal skipped on a trailing `;` at all three call sites, each door's pins go red. | The three `every_spelling…` pins; the mutant run. | **PROVEN** | §9.1; the evidence file. |
+
+### 9.2 S2-3: the prepared name as written
+
+Ruled (orchestrator, under the owner's grant, 2026-10-21): `{name}` renders the identifier as the
+user wrote it, quoting included, the `Ident` display the sketch §6 named. `statement_writes.rs`'s
+`prepare_refusal` formats `{name}` (the `Ident`) instead of `name.value`. An unquoted name renders
+the same bytes as before, so no existing pin changes. `a_prepare_of_a_write_refuses_with_its_text`
+gains `PREPARE "My P" AS DELETE …`, whose text carries ``PREPARE `"My P"` is refused``, and
+`PREPARE MyP …` (``PREPARE `MyP` ``, the case as written). With `name.value` restored the pin is
+red: `tests.rs:64:5`: `Error during planning: PREPARE `My P` is refused: …`.
+`cargo test -p repark-iceberg --lib statement_writes`: 4 passed.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-015 | Fix round 1, S2-3 (2026-10-21): the `PREPARE` refusal names the prepared statement as written, quoting included; an unquoted name renders as before. | `a_prepare_of_a_write_refuses_with_its_text`; the revert to `name.value`. | **PROVEN** | §9.2. |

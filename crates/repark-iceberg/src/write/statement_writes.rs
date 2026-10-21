@@ -70,7 +70,7 @@ pub fn refuse_wrapped_write(statement: &DFStatement) -> Result<()> {
 }
 
 fn prepare_refusal(name: &Ident) -> String {
-    format!("PREPARE `{}` {PREPARE_REFUSAL_TAIL}", name.value)
+    format!("PREPARE `{name}` {PREPARE_REFUSAL_TAIL}")
 }
 
 #[cfg(test)]

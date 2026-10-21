@@ -809,6 +809,8 @@ repark-core's error map.
   `repark-sql/src/router.rs`, `repark-spark/src/spark_ast.rs` (both repark-spark doors). Its unit
   tests are in [statement_writes/tests.rs](statement_writes/map.md).
   pins: explain-dml-write-1/C-007
+  **Fix round 1 (2026-10-21):** the prepared name in the `PREPARE` text is the `Ident` as written,
+  quoting included. pins: explain-dml-write-1/C-015
   pins: repark-sql-update-subquery-where-1/C-021
 - `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
   (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI

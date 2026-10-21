@@ -23,5 +23,8 @@ refusal `refuse_wrapped_write` (EXPLAIN-DML-WRITE-1, 2026-10-21). The parent's p
   door's call removed alone reds that door's pins (ledger §5). pins: explain-dml-write-1/C-009
   The unit's never-worse census on four doors (§6), its records (§7) and its gates (§8) are in
   the ledger. pins: explain-dml-write-1/C-010, C-012, C-013
+  **Fix round 1 (2026-10-21, verifier S2-3):** the `PREPARE` text names the statement as written,
+  quoting included (`PREPARE "My P" …` → ``PREPARE `"My P"` …``); an unquoted name is unchanged.
+  pins: explain-dml-write-1/C-015
 
 Up: [../map.md](../map.md).
