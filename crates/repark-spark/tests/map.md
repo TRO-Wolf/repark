@@ -408,6 +408,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   class (2 cells, New York and Kolkata; Spark and main store the wall, the build refuses). The
   count covers the shapes measured and the class is open-ended.
   pins: ice-ntz-nested-refuse-1/C-048
+  **Gates (fix round 4, ledger C-049):** on the merged head the 3168-cell door matrix and the
+  84-cell named-shape probe answer cell for cell as the committed head files (360 and 48 moved
+  against main, every one to the refusal), and the unit's live module passes 67 of 67.
+  pins: ice-ntz-nested-refuse-1/C-049
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

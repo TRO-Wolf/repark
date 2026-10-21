@@ -104,6 +104,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-046 | Mutant M10 (`plan_has` reads a whole-read node with `apply` in place of `apply_with_subqueries`) is not equivalent on stored values, and a pin now holds it. A DataFrame `explode` puts an `Unnest` node, which the walk reads whole, above a projection whose scalar subquery returns the container cast of an instant; it runs on main and stored the UTC wall in New York where Spark 4.1.2 stores the New York wall (the verifier's three doors and a temporary view: `writeTo(…).append()`, `withColumn` and `append`, `write.insertInto`, `INSERT … SELECT … FROM <view>`). `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses` plans that frame with `DataFrame::unnest_columns`, registers it as a temporary view and writes it: it refuses in New York and Kolkata with the hint and adds no snapshot, and the same frame whose subquery returns the wall stores the UTC wall. Under M10 the pin fails on both zones (cast stored, one snapshot), and it is the one test that fails across the `ntz_nested_refuse`, `ntz_nested_refuse_casts` and `ntz_nested_refuse_routes` binaries. No rule in `nested_ns.rs` changed. *(Supersedes C-043's equivalence claim for M10 and §13.8's M10 row; Q2 stays equivalent on stored values. Fix round 4.)* | The pin on the build and under M10; the full binaries under M10. | **PROVEN** | §14.2. `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`; `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses`. |
 | C-047 | The unit adds no comment line to any code file. Against the merge base `d6ee0411`, the unit had added 153 `///` lines to six Rust files (`ntz_nested_refuse_casts.rs` 63, `ntz_nested_refuse.rs` 37, `ntz_nested_refuse_routes.rs` 22, `nested_ns.rs` 19, `timestamp_ns_wall_doors.rs` 7, `timestamp_ns_nested_shapes.rs` 5), 30 of them `/// pins:` citations. All 153 are deleted. No `///` line of `d6ee0411` was reworded: the 10 lines that fix round 3 reworded were this unit's own round-2 lines, and the six files hold no comment line at `d6ee0411`, so nothing needed restoring. Every `C-NNN` a deleted line cited is in the matching `map.md` row (`crates/repark-spark/src/router/map.md`, `src/tests/map.md`, `tests/map.md`); C-033 and C-042 were added to the `nested_ns.rs` row's citation and C-001 and C-034 to the `ntz_nested_refuse.rs` row's. No `missing_docs` lint fired, so no `///` line was kept. *(Owner ruling of 2026-08-26, verifier round-3 S1-2. Fix round 4.)* | `git diff d6ee0411...HEAD -- '*.rs' '*.py' '*.sh' '*.toml' '*.yml' '*.yaml'` piped through the comment-line grep prints nothing; `make ci`; the clippy gate. | **PROVEN** | §14.3. The `map.md` rows of the three directories. |
 | C-048 | R-011's ruling-2 count is 16 correct cells in 8 shapes, not 14 in 7. The eighth shape is a scalar subquery that returns a `named_struct` whose `INT` field holds a read of the container cast, `INSERT INTO ice.ns.t SELECT id, (SELECT named_struct('v', w, 'n', size(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>))) FROM ice.ns.src LIMIT 1), 0 FROM ice.ns.src` (the verifier's `q_sq_returned_sibling_field`), 2 cells, New York and Kolkata: Spark 4.1.2 and main store the wall, the build refuses. It belongs to the sibling-field class, which is now 4 shapes and 8 cells. The registry sentence states that the count covers the shapes measured and that the class is open-ended; the release-notes draft repeats the count and is corrected the same way. No rule changed; ruling 2's cost stays accepted until GATE-RETIRE-1. *(Supersedes C-041's `14 cells, 7 shapes`, §13.6's `7 shapes` and the preamble's `14 cells`. Fix round 4, verifier round-3 S2-1.)* | The shape re-run on Spark 4.1.2, main and the build in New York and Kolkata under the 40 G cap; the registry sentence. | **PROVEN** | §14.4. `docs/spark-sql-iceberg-parity.md` R-011, clause (1). |
+| C-049 | Fix round 4's gates are green on the merged code head `e0fb2731` (main `bdf38d41`, which brings #1134's `REPARK_PANIC_FATAL=1` arming in `conftest.py`, merged cleanly) with real exit codes and no failure to excuse: `cargo fmt --check` and `make ci` exit 0, `scripts/sync_map_md.py` and `scripts/check_model_ban.py` exit 0; `make verify` 7749 tests run, 7749 passed, 97 skipped; `make rust-panic-ban` exit 0; the facade suite, armed by `conftest.py`, 20233 passed, 0 failed, 485 skipped, 151 xfailed, no hang, so the carded SPILL-REACH-FAIR-POOL-FLAKE-1 test was not needed as an excuse; the live leg alone 67 passed and co-collected 5924 passed, 0 failed, the live cell passing in both and no `DRIFT`; the 3168-cell door matrix moves 360 cells against main `c516c54a` and the 84-cell named-shape probe 48, every one to the refusal, and 0 cells differ from the committed head files. `_native.__panic_fatal__` prints `True` with `REPARK_PANIC_FATAL=1` and `False` without it. The commits after `e0fb2731` change only the ledger, `map.md` files and records. Cost, the New York nested-NTZ `INSERT` against main `c516c54a`, alternating, load under 5: 1.147 on 6 rounds of 10-run medians (27.66 ms, 31.73 ms) and 1.004 on 6 rounds of 50-run medians (38.32 ms, 38.46 ms); no code changed for it (verifier round-3 S2-3, ruled in C-050). *(Fix round 4.)* | The gate commands of §14.5 on the merged head; the two probes with the round-3 scripts; the verifier's cost script reduced to that one cell. | **PROVEN** | §14.5. |
 
 ## §1 The rule and the seam
 
@@ -918,3 +919,43 @@ cells), a grouping key (1 shape, 2 cells), and the sibling-field class (4 shapes
 in a `named_struct` a scalar subquery returns). The sentence states that the counts cover the
 shapes measured and that the class is open-ended. The ledger's earlier `14 cells, 7 shapes`
 (preamble, C-041, §13.6) stand as written and are superseded here.
+
+### §14.5 The round's gates and cost (C-049)
+
+Merged code head `e0fb2731`; every heavy command under `taskset -c 0-25` with
+`CARGO_BUILD_JOBS=12`; every Python probe under `systemd-run --user --scope -p MemoryMax=40G`
+(the facade suite under 64 G); one suite at a time. The load at each start is given (1 minute,
+then 5 and 15 minutes).
+
+| Gate | Result | Wall | Load at start |
+|---|---|---|---|
+| `cargo fmt --check` | exit 0 | 5 s | 1.88 |
+| `make ci` | exit 0 | 114 s | 2.05 |
+| `python3 scripts/sync_map_md.py`, `python3 scripts/check_model_ban.py` | exit 0, exit 0 | 1 s, 2 s | 2.62 |
+| `maturin develop --profile ci` (after the merge) | exit 0 | 179 s | 2.66 |
+| `_native.__panic_fatal__`, `REPARK_PANIC_FATAL=1` / variable unset | `True` / `False` | 1 s | 5.70 |
+| `make verify` | exit 0; 7749 tests run, 7749 passed (4 slow), 97 skipped | 271 s | 5.70 |
+| `make rust-panic-ban` | exit 0 | 1 s | 12.18 |
+| facade `-n 16 --dist loadgroup --maxschedchunk=8 -o faulthandler_timeout=900`, armed by `conftest.py` | exit 0; 20233 passed, 0 failed, 485 skipped, 151 xfailed; no hang | 488 s | 12.18 |
+| live leg, `test_ice_ntz_nested_refuse_1.py` alone (`REPARK_PARITY_LIVE=1`, 40 G) | exit 0; 67 passed; `test_live_spark_stores_the_recorded_session_wall` PASSED | 75 s | 20.43, 0 other JVMs |
+| live leg co-collected after `tests/parity` and `tests/writes` (40 G) | exit 0; 5924 passed, 13 skipped, 3 xfailed, 0 failed; the live cell PASSED; 0 `DRIFT` lines | 927 s | 8.69, 1 other JVM |
+| door matrix (3168 cells, `probe.py run`) | 3168 cells, 360 moved against main `c516c54a`, every one to the refusal; UTC 0 moved, controls 2112 moved 0; 0 differ from the committed head file | 143 s | 4.50 |
+| named-shape probe (84 cells, `probe.py attack`) | 84 cells, 48 moved, every one to the refusal; 0 differ from the committed head file | 5 s | 5.85 |
+
+The brief names `python/repark/tests/parity_live` for the live leg; that directory does not
+exist after the facade test layout move, so the live leg is the unit's module, as in
+fix round 3 (67 tests). The item-2 gate over `d6ee0411...HEAD` prints main's own six
+`/// Read REPARK_PANIC_FATAL once…` lines in `crates/repark-python/src/fence.rs` (from #1134,
+brought by the merge); over `origin/main...HEAD` it prints nothing.
+
+Cost, the New York nested-NTZ `INSERT` (the verifier's `nested_ntz/insert`, `cost10.py` and
+`cost50.py` reduced to that cell), main `c516c54a` (`.venv`) against the build (`.venv`),
+alternating, 3 warm-ups per run:
+
+| Method | Load | Main | Build | Ratio |
+|---|---|---|---|---|
+| 6 rounds, median of 10 runs | 4.0–4.2 | 27.66 ms | 31.73 ms | 1.147 (per round 1.154, 1.126, 1.170, 0.874, 1.069, 1.403; median 1.140) |
+| 6 rounds, median of 50 runs | 3.3–3.6 | 38.32 ms | 38.46 ms | 1.004 (per round 1.054, 1.057, 0.990, 0.970, 1.021, 0.934; median 1.006) |
+
+Main's own rounds spread 24.1–33.0 ms on the first method, so the cell is bimodal and the ratio
+moves with which mode a round lands in. No code changed for it.
