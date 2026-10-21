@@ -202,6 +202,7 @@ async fn execute_passthrough_inner(
     // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
     crate::collation::refuse_type_position_collation_in_sql(sql)?;
     let mut statement = Box::new(state.sql_to_statement(sql, &dialect)?);
+    repark_iceberg::write::statement_writes::refuse_wrapped_write(&statement)?;
     let mut may_have_bare_range_bound = false;
     let mut insert_columns: Option<Vec<String>> = None;
     let mut preloaded: Option<Box<iceberg::table::Table>> = None;

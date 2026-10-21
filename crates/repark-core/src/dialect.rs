@@ -149,6 +149,7 @@ fn refuse_dml_subquery_where(ctx: &SessionContext, query: &str) -> datafusion::e
     let Ok(parsed) = state.sql_to_statement(query, &dialect) else {
         return Ok(());
     };
+    repark_iceberg::write::statement_writes::refuse_wrapped_write(&parsed)?;
     let mut wrapped = &parsed;
     while let DFStatement::Explain(explain) = wrapped {
         if !explain.analyze {

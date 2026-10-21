@@ -101,6 +101,7 @@ async fn execute_time_travelled(
             return Err(sniff::upgrade_error(sql, err));
         }
     };
+    repark_iceberg::write::statement_writes::refuse_wrapped_write(&statement)?;
     if let DFStatement::Reset(datafusion::sql::parser::ResetStatement::Variable(name)) = &statement
     {
         guards::refuse_collation_reset_variable(&name.to_string())?;

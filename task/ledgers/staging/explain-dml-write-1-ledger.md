@@ -186,3 +186,23 @@ carries it: the comment ban leaves no `# Errors` line. The two texts are `const`
 prepared name substituted; the error is `DataFusionError::Plan`. No comment line. Its unit tests,
 `write::statement_writes::tests` (new `statement_writes/tests.rs` and `map.md`):
 `cargo test -p repark-iceberg --lib statement_writes`: **4 passed**, 0 failed.
+
+## 3. The three call sites (step 3)
+
+One line each, on the parsed `DFStatement` the door already holds, before `execute_logical_plan`:
+
+| Door | File | Place | Lines |
+|---|---|---|---|
+| `repark.sql()` | `crates/repark-core/src/dialect.rs` | `refuse_dml_subquery_where`, after the parse, before 106's `EXPLAIN` peel and walk | 171 → 172 |
+| ANSI | `crates/repark-sql/src/router.rs` | `execute_time_travelled`, after `sql_to_statement`, before the `RESET` arm | 365 → 366 |
+| router API and Spark SQL session | `crates/repark-spark/src/spark_ast.rs` | `execute_passthrough_inner`, after `sql_to_statement`, before the `DfStatement` match | 830 → 831 |
+
+`normalize.rs` is untouched; `make check-rust-file-size` reports no ceiling change.
+
+**Found at green, by measurement (not a second seam):** on `repark.sql()` the call runs after
+`belt.plan`, as 106 placed its walk (106 AT-3: a statement that does not plan keeps its plan
+error). DataFusion 54.1 does not plan `MERGE`, so `EXPLAIN ANALYZE MERGE …` and `PREPARE p AS
+MERGE …` keep `This feature is not implemented: Unsupported SQL statement: MERGE INTO …` there,
+as on main, and write nothing. The ANSI and repark-spark doors call the seam before planning and
+give `MERGE` the ruled texts. The `repark.sql()` `MERGE` cells pin the plan refusal and the held
+table; the question is in the hand-back (Q-B1).
