@@ -981,6 +981,19 @@ declines it (a dated ruling in the intake, then the archive).
   change to re-record with a dated note, or a recorder defect (a `local[1]` `getOrCreate` that may
   reuse a `local[2]` session, a lead by reading). The 2026-10-20 plan's PARITY-LIVE-RERECORD-1,
   gate D5/P5 two green mornings; awaits the owner's adopt.
+- [container-cast-zone-1-card-2026-10-20.md](container-cast-zone-1-card-2026-10-20.md) — **card
+  CONTAINER-CAST-ZONE-1 (2026-10-20, open, not scheduled):** a `CAST`/`TRY_CAST` of a struct,
+  array or map holding a zoned timestamp leaf, and `to_json` of one, render the leaf in UTC
+  instead of the session zone for every target type (`TIMESTAMP_NTZ`, `STRING`, `DATE`,
+  `BIGINT`), in a plain `SELECT`, in every write and in the six table-creating writers, on main
+  `c516c54a`; the leaf cast is session-aware. Found by U-8's second verifier; U-8's gate does not
+  see a value that passed through another type first. Owner rules: grow U-8, or fix the cast as
+  its own unit (the orchestrator's lean).
+- [map-column-panic-1-card-2026-10-20.md](map-column-panic-1-card-2026-10-20.md) — **card
+  MAP-COLUMN-PANIC-1 (2026-10-20, open, not scheduled):** `map('a', <column>)` over any column
+  value panics `list array` in DataFusion's `MapFunc` (`list_to_arrays`) on every door, in a
+  plain `SELECT` and in an `INSERT`, on main `c516c54a`; literals store. U-8's row R-011 had
+  misnamed it as a container cast of a map.
 - [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
   ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, open, not scheduled, awaits the owner's adopt of the
   2026-10-20 plan):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE
@@ -996,3 +1009,4 @@ declines it (a dated ruling in the intake, then the archive).
   bridge wall the bound guards (ledger clause C-002 of the perf-unpivot-1
   ledger). Open question: loaded-runner timing noise at millisecond medians
   (test) or a real slope change (product). Unmeasured until N quiet runs.
+- [update-where-binary-flake-1-card-2026-10-20.md](update-where-binary-flake-1-card-2026-10-20.md) — **card UPDATE-WHERE-BINARY-FLAKE-1** (2026-10-20, open, not scheduled): `UPDATE … WHERE` after a mixed set of insert doors including a `BINARY` literal fails about one time in four on main `c516c54a` with `Mismatch between schema and batches`; found by the U-8 verifier, outside U-8; lead is a per-door Arrow field difference on the `BINARY` column.
