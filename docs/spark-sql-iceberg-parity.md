@@ -3596,10 +3596,12 @@ still open is `isModifiable`.
   `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `GMT` and `+00:00`. This supersedes the "3 cells
   measured" above. The owner ruled 2026-10-21: the walk narrows for subqueries (ruling 1, above)
   and not for aggregates, conditions or sibling fields (ruling 2); a pure UTC alias counts as
-  UTC and a geographic zone does not (ruling 3, above). *Ruled 2026-10-21 (owner): the New York
-  nested-NTZ INSERT cell reads 1.04-1.09x across four measurements, at or over the 1.05x gate;
-  accepted as cost until GATE-RETIRE-1 removes the type read; every other cell is inside the
-  gate.* **Not reached by this gate, dated
+  UTC and a geographic zone does not (ruling 3, above). *Ruled 2026-10-21 (owner): the nested-NTZ
+  INSERT cell (an INSERT of a named_struct holding a TIMESTAMP_NTZ value in a non-UTC session
+  zone; New York measured) reads 1.00-1.15x across six measurements (builder 1.082 and 1.038,
+  verifier 1.090 and 1.050, fix round 4 1.147 and 1.004; main's 10-run rounds spread 24-33 ms,
+  so the cell is bimodal), at or over the 1.05x gate on four of them; accepted as cost until
+  GATE-RETIRE-1 removes the type read; every other cell is inside the gate.* **Not reached by this gate, dated
   2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
   frame or a table built from a container cast of an instant carries the UTC wall the cast
   produced; the container cast's own conversion in a `SELECT` is the defect, for the lift.

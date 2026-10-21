@@ -416,6 +416,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   1.04–1.09x of main across four measurements (the type read's planning, about 3 ms per
   statement), is accepted as cost until GATE-RETIRE-1; the 1.05x gate does not move.
   pins: ice-ntz-nested-refuse-1/C-050
+  **Cost ruling restated (2026-10-21, ledger C-051):** the ruled cell is an `INSERT` of a
+  `named_struct` holding a `TIMESTAMP_NTZ` value in a non-UTC session zone (New York measured).
+  It reads 1.00–1.15x of main across six measurements (builder 1.082 and 1.038, verifier 1.090
+  and 1.050, fix round 4 1.147 and 1.004; main's 10-run rounds spread 24–33 ms, so the cell is
+  bimodal), at or over the 1.05x gate on four of them; R-011 and the v1.5.6 notes draft state
+  all six.
+  pins: ice-ntz-nested-refuse-1/C-051
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

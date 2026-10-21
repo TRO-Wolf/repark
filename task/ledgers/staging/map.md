@@ -64,7 +64,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-019 to C-021 the cells, mutants and gates. Fix rounds 2 and 3 are §12 and §13. Fix round 4
   (2026-10-21, after the verifier's round-3 FAIL): C-045 the verdict, C-046 the mutant-M10 pin, C-047 the unit's 153 code comment lines removed, C-048 the ruling-2 count (16 cells, 8 shapes), C-049 the round's gates and the
   New York nested-NTZ `INSERT` cost, C-050 the owner's ruling accepting that cell as cost until
-  GATE-RETIRE-1.
+  GATE-RETIRE-1, C-051 the same ruling restated with all six readings.
 - [ice-struct-pairing-1-ledger.md](ice-struct-pairing-1-ledger.md) —
   **ICE-STRUCT-PAIRING-1 (U-6, 2026-10-14), parity row R-016:** one rule pairs struct fields on
   every write door. C-001 to C-009 are the sentences of the rule, C-010 to C-015 how the doors
