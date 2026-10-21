@@ -4,9 +4,7 @@ Every CTAS cell replays step 0 against the head module: the 40 recorded cells
 (2 creators x 5 bodies x z new and existing x format versions 2 and 3) refuse
 with Spark 4.1.2's measured class, condition, SQLSTATE and leading keyword,
 and ``t`` and ``z`` read back unchanged. ``REPLACE TABLE`` and parenthesised
-bodies refuse the same way. The 14 wrapper cells and the 5 ANSI cells pin
-main's measured answers, and the neighbour group pins the CTAS shapes that
-keep answering.
+bodies refuse the same way.
 
 Expected refusal values come from
 ``task/wo/write-body-carriers-1/evidence/spark-cells.json`` (class
@@ -61,6 +59,17 @@ CREATORS: dict[str, str] = {
 VERSIONS: tuple[int, ...] = (2, 3)
 
 SEED_ROWS: list[list[Any]] = [[1, "a"], [2, "b"]]
+
+EXPLAIN_ANALYZE_REFUSAL = (
+    "EXPLAIN ANALYZE is refused: its statement writes to a table, and EXPLAIN ANALYZE runs the "
+    "statement it explains. A plain EXPLAIN of the same statement still shows its plan without "
+    "running it, and EXPLAIN ANALYZE of a query still works."
+)
+
+PREPARE_REFUSAL = (
+    "PREPARE `{name}` is refused: its statement writes to a table, and a prepared write would run "
+    "later, at EXECUTE. PREPARE of a query still works."
+)
 
 
 @pytest.fixture()
@@ -284,40 +293,31 @@ def test_replace_missing_write_body_refuses_before_any_write(spark: ReparkSessio
             assert _state(spark, z) == {"exists": False}, cell
 
 
-def test_wrappers_keep_running_their_write(spark: ReparkSession) -> None:
-    """EXPLAIN ANALYZE and PREPARE/EXECUTE answer as main answers them."""
-    expected_rows: dict[str, list[list[Any]]] = {
-        "insert": [[1, "a"], [2, "b"], [3, "c"]],
-        "overwrite": [[10, "w"]],
-        "update": [[1, "x"], [2, "b"]],
-        "delete": [[1, "a"]],
-    }
+def test_wrappers_refuse_their_write(spark: ReparkSession) -> None:
     for version in VERSIONS:
         for body in BODIES:
             cell = f"explain_{body}_v{version}"
             t = f"{CATALOG}.{NAMESPACE}.t_{cell}"
             _seed(spark, t, version)
             before = _snapshots(spark, t)
-            if body == "merge":
-                with pytest.raises(UnsupportedOperationException) as caught:
-                    spark.sql(f"EXPLAIN ANALYZE {BODIES[body].format(t=t)}").collect()
-                assert type(caught.value) is UnsupportedOperationException
-                assert _snapshots(spark, t) == before, cell
-                assert _rows(spark, t) == SEED_ROWS, cell
-            else:
+            with pytest.raises(AnalysisException) as caught:
                 spark.sql(f"EXPLAIN ANALYZE {BODIES[body].format(t=t)}").collect()
-                assert _snapshots(spark, t) == before + 1, cell
-                assert _rows(spark, t) == expected_rows[body], cell
+            assert EXPLAIN_ANALYZE_REFUSAL in str(caught.value), cell
+            assert _snapshots(spark, t) == before, cell
+            assert _rows(spark, t) == SEED_ROWS, cell
         for body in ("insert", "overwrite"):
             cell = f"prepare_{body}_v{version}"
             t = f"{CATALOG}.{NAMESPACE}.t_{cell}"
             name = f"wbc_{cell}"
             _seed(spark, t, version)
             before = _snapshots(spark, t)
-            spark.sql(f"PREPARE {name} AS {BODIES[body].format(t=t)}").collect()
-            spark.sql(f"EXECUTE {name}").collect()
-            assert _snapshots(spark, t) == before + 1, cell
-            assert _rows(spark, t) == expected_rows[body], cell
+            with pytest.raises(AnalysisException) as caught:
+                spark.sql(f"PREPARE {name} AS {BODIES[body].format(t=t)}").collect()
+            assert PREPARE_REFUSAL.format(name=name) in str(caught.value), cell
+            with pytest.raises(Exception, match=f"Prepared statement '{name}' does not exist"):
+                spark.sql(f"EXECUTE {name}").collect()
+            assert _snapshots(spark, t) == before, cell
+            assert _rows(spark, t) == SEED_ROWS, cell
 
 
 def test_ansi_door_refuses_before_any_write(ansi: dict[str, Any]) -> None:

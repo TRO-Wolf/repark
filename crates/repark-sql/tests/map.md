@@ -180,6 +180,16 @@ holds behavior observed from outside the crate.
   `EXISTS`, `id NOT IN (SELECT …)` and an `EXISTS` that matches no row. The router passes the
   identity exemption to the shared G3-E8 refusal; without it these five statements refuse.
   Green on main and on the head. pins: repark-sql-update-subquery-where-1/C-006
+- `ansi_explain_dml_write.rs` — **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138, 140 to 142):**
+  the ANSI door's twin of the wrapper pins, seeded as `ansi_subquery_where_identity.rs` is and
+  guarded by an `IcebergTableScan` check on each seed (finding VF-1 of the 106 P2 report).
+  `the_ansi_door_refuses_an_explain_analyze_of_a_write` and
+  `the_ansi_door_refuses_a_prepared_write_and_leaves_nothing_to_execute`: `DELETE`, `UPDATE`,
+  `INSERT` and `MERGE`, plain and `IN (SELECT …)`, plus `VERBOSE`, `PREPARE` around
+  `EXPLAIN ANALYZE` and a parameterised `PREPARE`, each refuse with the wrapper's ruled text,
+  `EXECUTE p` finds nothing, rows and snapshots hold. On main each ran.
+  `the_ansi_door_still_answers_a_prepared_query_and_a_plain_explain` is the control.
+  pins: explain-dml-write-1/C-003, C-005, C-006
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted

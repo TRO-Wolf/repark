@@ -12,6 +12,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   session-zone carrier. Fold 1 (C-007, C-008 PROVEN): carrier-absent fallback to
   `execution.time_zone` plus a midnight-adjacent pin. `risk_tier: standard`. Branch
   `fix/current-date-session-zone-1`.
+- [explain-dml-write-1-ledger.md](explain-dml-write-1-ledger.md) — **EXPLAIN-DML-WRITE-1
+  (2026-10-21, rulings 136, 138 to 144):** `EXPLAIN ANALYZE` and `PREPARE` of a write
+  (`DELETE`, `UPDATE`, `INSERT`, `MERGE`) refuse on every door through one seam,
+  `statement_writes::refuse_wrapped_write`, with the two ruled texts. Step 1 (red first) on main
+  `c91f69c5`; the flipped pins and the docstrings touched are listed. `risk_tier: standard`.
+  Branch `feat/explain-dml-write-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

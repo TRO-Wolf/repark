@@ -1,0 +1,178 @@
+# Unit ledger — EXPLAIN-DML-WRITE-1 · `EXPLAIN ANALYZE` and `PREPARE` of a write refuse on every door
+
+**Date:** 2026-10-21 · **Branch:** `feat/explain-dml-write-1` · **Base:** `origin/main` (`c91f69c5`)
+· **Model:** Claude Opus 5.5 (`claude-opus-5-5`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. `risk_tier: standard`. **Order:**
+[order.md](../../wo/explain-dml-write-1/order.md). **Sketch (step 0):**
+[sketch.md](../../wo/explain-dml-write-1/sketch.md) (`9bcd0da5`). **Card:**
+[EXPLAIN-DML-WRITE-1](../../roadmap/mid-term/explain-dml-write-1-card-2026-10-16.md).
+
+**Retires:** this ledger moves to `../completed/` in the unit's last commit after the verifier's
+PASS and the owner's merge.
+
+**Why.** On every RePark door `EXPLAIN ANALYZE` of a write performs the write, and `PREPARE` of
+one stores a plan that `EXECUTE` runs; with a subquery in a `DELETE` or `UPDATE` `WHERE` either
+form changed every row (card, 101 measured cells). Spark 4.1.2 has neither form and refuses both
+at parse.
+
+**Rulings this unit runs under.** 136, 138 and 139 (card); the owner's step-0 rulings of
+2026-10-21:
+- **Ruling 140:** the `EXPLAIN ANALYZE` text, adopted verbatim as the sketch proposed it; the
+  `PREPARE` text adopted as the sketch wrote it under ruling 138. Both are **ruled 2026-10-21
+  (owner ruling 140)**:
+  - `EXPLAIN ANALYZE is refused: its statement writes to a table, and EXPLAIN ANALYZE runs the statement it explains. A plain EXPLAIN of the same statement still shows its plan without running it, and EXPLAIN ANALYZE of a query still works.`
+  - ``PREPARE `{name}` is refused: its statement writes to a table, and a prepared write would run later, at EXECUTE. PREPARE of a query still works.``
+- **Ruling 141 (sketch Q1, halt 6):** (a). `INSERT` and `MERGE` refuse under both wrappers too, in
+  this unit, on every door, through the same seam: one rule, a wrapper never performs a write.
+- **Ruling 142 (Q2):** a row of the card's table covers every spelling of that wrapper and verb
+  (any or no predicate, `VERBOSE`, `FORMAT`, a parameterised `PREPARE`, a CTE-carried statement,
+  `EXPLAIN ANALYZE` around `PREPARE`).
+- **Ruling 143 (Q3):** delete only false docstring sentences; add no docstring text; never reword.
+- **Ruling 144 (Q4):** one dated row per lost planner census cell in
+  `ice_tsns_type_planner_1_dated.json`, class "ruled refusal", ruling 136 for `EXPLAIN ANALYZE`
+  cells and 138 for `PREPARE` cells; the order's §2 file list gains that fixture.
+
+**Not in this unit:** a plain `EXPLAIN` of DML on an in-memory table (ruling 136); `EXPLAIN` or
+`EXPLAIN ANALYZE` of a query; the bare subquery-predicate `DELETE`/`UPDATE` (106's, unchanged);
+routing `repark.sql()` through the ANSI door; `Cargo.toml`, `Cargo.lock`, `.github`.
+
+## PROPOSITION LEDGER — EXPLAIN-DML-WRITE-1 — 2026-10-21
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-001 | On `repark.sql()`, `EXPLAIN ANALYZE` of `DELETE`, `UPDATE`, `INSERT` and `MERGE`, each with a plain and an `IN (SELECT …)` predicate, refuses with the ruling-140 text; the Iceberg table's rows, snapshot count and warehouse files hold. | `test_explain_dml_write_1.py` `test_an_explain_analyze_of_a_write_refuses_and_writes_nothing[repark_sql-*]`; `an_explain_analyze_of_a_write_refuses_and_writes_nothing` in `crates/repark-core/src/dialect/tests.rs`. | OPEN (step 1: red on main) | §1. |
+| C-002 | On `repark.sql()`, `PREPARE p AS` each of the same eight writes refuses with the ruling-138 text; `EXECUTE p` then finds no prepared statement; rows, snapshots and files hold. | `test_a_prepared_write_refuses_and_leaves_nothing_to_execute[repark_sql-*]`; `a_prepared_write_refuses_and_leaves_nothing_to_execute` (Rust). | OPEN (step 1: red on main) | §1. |
+| C-003 | On the ANSI door (`AnsiDialect`), both wrappers refuse each of the eight writes with their texts, `EXECUTE p` finds nothing, and the rows and snapshots hold; every seed passes an `IcebergTableScan` guard (VF-1). | `crates/repark-sql/tests/ansi_explain_dml_write.rs`. | OPEN (step 1: red on main) | §1. |
+| C-004 | On both repark-spark doors (the Spark SQL session and the router API), both wrappers refuse each of the eight writes with their texts, `EXECUTE p` finds nothing, rows and snapshots hold. | `test_explain_dml_write_1.py[spark_session-*]`; `wrapped_subquery_dml.rs` `an_explain_analyze_of_a_write_refuses_on_the_router_door`, `a_prepared_write_refuses_on_the_router_door`. | OPEN (step 1: red on main) | §1. |
+| C-005 | Ruling 142's spellings refuse on every door: `EXPLAIN ANALYZE VERBOSE`, a parameterised `PREPARE`, `PREPARE` around `EXPLAIN ANALYZE`, `EXPLAIN ANALYZE` around `PREPARE`, a CTE-carried write; the text follows the outermost wrapper. | `test_every_spelling_of_a_wrapped_write_refuses`; the Rust door pins; the unit tests of `statement_writes`. | OPEN (step 1: red on main) | §1. |
+| C-006 | Controls answer on every door, before and after: `PREPARE q AS SELECT …` then `EXECUTE q`; a plain `EXPLAIN` of `DELETE`, `UPDATE` and `INSERT` answers its plan and writes nothing; `EXPLAIN SELECT` and `EXPLAIN ANALYZE SELECT` answer; `df.explain("cost")` answers; the bare `IN` forms keep the matching rows on the Spark SQL door. | The control pins of the four door files. | OPEN (step 1: green on main) | §1. |
+| C-007 | One seam: `repark_iceberg::write::statement_writes::refuse_wrapped_write(&DFStatement)` beside `executed_writes`, with its unit tests; one call per door in `repark-core/src/dialect.rs`, `repark-sql/src/router.rs` and `repark-spark/src/spark_ast.rs`; no other product file, no ceiling raised, no crate edge, no comment line. | Steps 2 and 3; `make check-rust-file-size`, `make check-crate-dag`, the comment gate. | OPEN | §2, §3. |
+| C-008 | Every existing pin that rulings 136, 138 and 141 flip is re-asserted in place with the wrapper's text, listed here with its red line; docstrings touched only as ruling 143 allows. | §1.3. | OPEN (step 1: red on main) | §1. |
+| C-009 | Each call site removed alone reds that door's pins; the seam's `Explain` look-through and `Prepare` arm, each removed alone, red named pins. | Step 5. | OPEN | §5. |
+| C-010 | Never worse: the 106 census shape re-run on main and head on each door; every lost answer is a row of the card's table under rulings 141 and 142. | Step 6. | OPEN | §6. |
+| C-011 | The planner census (`test_ice_tsns_type_planner_1.py`) passes on the head with one dated row per cell the head loses on the `explain_analyze_insert`, `explain_analyze_update` and `prepare_execute_insert` routes, and no other change to the harness or the routes. | Ruling 144; step 1 and step 4 counts. | OPEN | §1.4, §4. |
+| C-012 | The records say what holds: the card, the 1.5.6 known-issue lines, the registry rows, the maps of every touched directory, this ledger. | Step 7. | OPEN | §7. |
+| C-013 | The gates are green on the final commit. | Order §5. | OPEN | §8. |
+
+VERDICT: 13 clauses, 0 PROVEN, 13 OPEN, 0 REJECTED (step 1).
+
+## 1. Red first (step 1, tests only)
+
+The product code of the tree is main's `c91f69c5` byte for byte (`git diff origin/main --
+crates/` touches only `#[cfg(test)]` files). The release module was built from it with
+`maturin develop --profile ci`: sha256
+`60286bb37aaae7728dfe3c1c332d691f19d2e546b24b2583f8a35762f478d522`. Every seed is created through
+the Iceberg catalog and checked for an `IcebergTableScan` before the cell.
+
+### 1.1 Python, main's module
+
+`pytest` on the four files (`test_explain_dml_write_1.py`, the two 106 files,
+`test_write_body_carriers_1.py`): **50 failed, 61 passed**. Every control passed. The red
+lines, one per kind:
+
+| Pins | Red on main |
+|---|---|
+| `test_an_explain_analyze_of_a_write_refuses_and_writes_nothing` (both doors; `delete`, `update`, `insert` × plain and `in`) | `Failed: DID NOT RAISE AnalysisException` (the write ran) or, for the `IN` `DELETE`/`UPDATE` forms on `repark.sql()`, `AssertionError: Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`…` (106's G3-E8 text, not the wrapper's) |
+| the same, `merge_plain`, `merge_in` (both doors) | `repark.errors.UnsupportedOperationException: This feature is not implemented: Unsupported SQL statement: MERGE INTO ice.ns.t AS target USING …` |
+| `test_a_prepared_write_refuses_and_leaves_nothing_to_execute` (both doors, eight writes) | `Failed: DID NOT RAISE AnalysisException` (stored); the `IN` `DELETE`/`UPDATE` forms the G3-E8 text; `MERGE` the `UnsupportedOperationException` above |
+| `test_every_spelling_of_a_wrapped_write_refuses` (both doors, 3 spellings) | `DID NOT RAISE` or the G3-E8 text |
+| 106: `test_an_explain_analyze_of_a_subquery_predicate_refuses` (P-E3, P-E4), `test_a_prepared_subquery_predicate_refuses` (P-P1 to P-P4) | `test_repark_sql_update_subquery_where_1.py:226: AssertionError: Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`…` |
+| 106 Spark door: `test_a_prepared_subquery_predicate_refuses` (P-S1 to P-S3) | `…_spark_door.py:107: AssertionError: Error during planning: DELETE with a subquery in its WHERE clause is refused on `ice.ns.t`…` |
+| 106 Spark door: `test_a_plain_predicate_prepare_refuses` (2) | `…_spark_door.py:127: Failed: DID NOT RAISE AnalysisException` |
+| `test_write_body_carriers_1.py::test_wrappers_refuse_their_write` | `test_write_body_carriers_1.py:303: Failed: DID NOT RAISE AnalysisException` |
+
+### 1.2 Rust, main's product code
+
+`cargo test -p repark-core --lib dialect`: 5 failed, 9 passed. `cargo test -p repark-sql --test
+ansi_explain_dml_write`: 2 failed, 1 passed. `cargo test -p repark-spark --lib --
+wrapped_subquery_dml nested_ns_routes ntz_nested_refuse_routes enc_1`: 10 failed, 64 passed.
+`cargo test -p repark-spark --test ntz_nested_refuse_casts`: 1 failed, 9 passed. The controls
+(`a_prepared_query_and_a_plain_explain_still_answer`,
+`the_ansi_door_still_answers_a_prepared_query_and_a_plain_explain`,
+`a_prepared_query_still_runs_on_the_router_door`,
+`explain_and_explain_analyze_of_a_select_answer_on_the_router_door`, the bare-`IN` and
+plain-`EXPLAIN` router pins) pass.
+
+| Pin | Where | Red on main |
+|---|---|---|
+| `only_explain_analyze_reaches_the_statement_it_wraps` | `crates/repark-core/src/dialect/tests.rs:465:9` | `EXPLAIN ANALYZE DELETE FROM t WHERE id IN (SELECT id FROM s): Error during planning: DELETE with a subquery in its WHERE clause is refused …` |
+| `a_prepared_write_refuses_and_leaves_nothing_to_execute` | `crates/repark-core/src/dialect/tests.rs:233:49` | `PREPARE p AS DELETE FROM ice.ns.t WHERE id = 2: []` |
+| `the_default_dialect_refuses_an_explain_analyze_of_a_subquery_dml` | `crates/repark-core/src/dialect/tests.rs:234:5` | `EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s): Error during planning: DELETE with a subquery in its WHERE …` |
+| `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute` | `crates/repark-core/src/dialect/tests.rs:234:5` | `PREPARE p AS DELETE FROM ice.ns.t WHERE id IN (SELECT id FROM ice.ns.s): Error during planning: DELETE with a subquery in its WHERE clause …` |
+| `an_explain_analyze_of_a_write_refuses_and_writes_nothing` | `crates/repark-core/src/dialect/tests.rs:233:49` | `EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2: [RecordBatch { schema: Schema { fields: [Field { name: "plan_type", data_type: Utf8 }, …` |
+| `the_ansi_door_refuses_a_prepared_write_and_leaves_nothing_to_execute` | `crates/repark-sql/tests/ansi_explain_dml_write.rs:111:53` | `PREPARE p AS DELETE FROM ice.ns.t WHERE id = 2: []` |
+| `the_ansi_door_refuses_an_explain_analyze_of_a_write` | `crates/repark-sql/tests/ansi_explain_dml_write.rs:111:53` | `EXPLAIN ANALYZE DELETE FROM ice.ns.t WHERE id = 2: [RecordBatch { schema: Schema { fields: [Field { name: "plan_type", data_type: Utf8 }, …` |
+| `encrypted_table_explain_analyze_insert_refuses` | `crates/repark-spark/src/tests/enc_1.rs:810:5` | `External error: Table sales.enc carries property 'encryption.key-id': RePark has no table encryption and refuses to write plaintext into a …` |
+| `a_wrapped_statement_that_does_not_supply_the_column_meets_the_wrapper_refusal` | `crates/repark-spark/src/tests/nested_ns_routes.rs:444:55` | `EXPLAIN ANALYZE INSERT INTO ice.sales.t (id, k) VALUES (7, 0): ` (it answered) |
+| `a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated` | `crates/repark-spark/src/tests/nested_ns_routes.rs:444:55` | `EXPLAIN ANALYZE INSERT INTO ice.sales.p SELECT 5, named_struct('v', TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'n', 1), 0:` |
+| `a_prepared_write_of_an_instant_refuses_in_a_utc_session_too` | `crates/repark-spark/src/tests/ntz_nested_refuse_routes.rs:228:57` | `refused: ` (the `PREPARE walled` answered `Ok(())`) |
+| `a_plain_predicate_prepare_refuses_on_the_router_door` | `crates/repark-spark/src/tests/wrapped_subquery_dml.rs:104:10` | `PREPARE p AS DELETE FROM ice.sales.t WHERE id = 2: []` |
+| `a_prepared_subquery_delete_refuses_on_the_router_door` | `crates/repark-spark/src/tests/wrapped_subquery_dml.rs:105:5` | `PREPARE p AS DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.s): Error during planning: DELETE with a subquery in its WHERE …` |
+| `a_prepared_explain_analyze_subquery_delete_refuses_on_the_router_door` | `crates/repark-spark/src/tests/wrapped_subquery_dml.rs:105:5` | `PREPARE p AS EXPLAIN ANALYZE DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.s): Error during planning: DELETE with a …` |
+| `a_prepared_subquery_update_refuses_on_the_router_door` | `crates/repark-spark/src/tests/wrapped_subquery_dml.rs:105:5` | `PREPARE p AS UPDATE ice.sales.t SET v = 5 WHERE id IN (SELECT id FROM ice.sales.s): Error during planning: UPDATE with a subquery in its …` |
+| `a_prepared_write_refuses_on_the_router_door` | `crates/repark-spark/src/tests/wrapped_subquery_dml.rs:104:10` | `PREPARE p AS DELETE FROM ice.sales.t WHERE id = 2: []` |
+| `an_explain_analyze_of_a_write_refuses_on_the_router_door` | `crates/repark-spark/src/tests/wrapped_subquery_dml.rs:104:10` | `EXPLAIN ANALYZE DELETE FROM ice.sales.t WHERE id = 2: [RecordBatch { schema: Schema { fields: [Field { name: "plan_type", data_type: Utf8 …` |
+| `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone` | `crates/repark-spark/tests/ntz_nested_refuse_casts.rs:454:5` | `assertion left == right failed`: the `wrong` list holds the three prepared controls, which answered, and their stored walls |
+
+### 1.3 Existing pins this unit flips, by ruling
+
+- **Refusal to refusal, text only (the seam runs before 106's walk):** repark-core
+  `the_default_dialect_refuses_an_explain_analyze_of_a_subquery_dml`,
+  `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute`,
+  `only_explain_analyze_reaches_the_statement_it_wraps`; router
+  `a_prepared_subquery_delete_refuses_on_the_router_door`,
+  `a_prepared_subquery_update_refuses_on_the_router_door`,
+  `a_prepared_explain_analyze_subquery_delete_refuses_on_the_router_door`; Python P-E3, P-E4,
+  P-P1 to P-P4, P-S1 to P-S3; `enc_1.rs::encrypted_table_explain_analyze_insert_refuses` (the ENC-1
+  text gives way to the ruling-140 text; ruling 141).
+- **Answer to refusal, ruling 138:** `a_plain_predicate_prepare_still_runs_on_the_router_door`,
+  now `a_plain_predicate_prepare_refuses_on_the_router_door`; the Spark door's
+  `test_a_plain_predicate_prepare_still_runs`, now `test_a_plain_predicate_prepare_refuses`.
+- **Answer to refusal, ruling 136:** the `EXPLAIN ANALYZE UPDATE` and `DELETE` cells of
+  `test_write_body_carriers_1.py::test_wrappers_keep_running_their_write`, now
+  `test_wrappers_refuse_their_write`.
+- **Answer to refusal, ruling 141 (the six `INSERT` tests):**
+  1. `nested_ns_routes.rs::a_wrapped_statement_that_does_not_supply_the_column_still_runs`, now
+     `…_meets_the_wrapper_refusal` (its `EXPLAIN ANALYZE UPDATE` cell is ruling 136);
+  2. `nested_ns_routes.rs::a_wrapped_write_to_a_table_with_no_such_leaf_is_not_gated` (the
+     nested gate still lets each through; the wrapper refusal follows, never `NOT_YET`);
+  3. `ntz_nested_refuse_routes.rs::a_prepared_write_of_an_instant_refuses_in_a_utc_session_too`
+     (the `walled` control);
+  4. `ntz_nested_refuse_casts.rs::a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone`
+     (the `keyed`, `fixed` and `walled` controls);
+  5. `enc_1.rs::encrypted_table_explain_analyze_insert_refuses` (text);
+  6. `test_write_body_carriers_1.py::test_wrappers_refuse_their_write` (the `insert` and
+     `overwrite` cells under both wrappers, and the `merge` cell, which refused with
+     `UnsupportedOperationException` and now with the ruling-140 text).
+  Their red lines are in §1.1 and §1.2.
+- **Docstrings (ruling 143), every one touched:**
+  - `test_repark_sql_update_subquery_where_1.py`, module docstring: the paragraph "Owner ruling
+    131 (b): the refusal also fires inside ``EXPLAIN ANALYZE``, which executes the statement it
+    wraps." deleted (the G3-E8 refusal no longer fires there; the wrapper refusal does).
+  - the same file, `test_a_prepared_subquery_predicate_refuses`: its one-sentence docstring
+    ("PREPARE refuses with the G3-E8 text, …") deleted, the docstring with it.
+  - `test_repark_sql_update_subquery_where_1_spark_door.py`, module docstring: the sentences
+    "``PREPARE`` of a subquery-predicate ``DELETE`` or ``UPDATE``, alone or around ``EXPLAIN
+    ANALYZE``, refuses with the G3-E8 text, so ``EXECUTE`` finds nothing to run; on main it
+    emptied the table or rewrote every row." and "The bare ``id IN (SELECT ...)`` forms still
+    change exactly the matching rows on RePark's own executor, a ``PREPARE`` with a plain
+    predicate still runs, and a plain ``EXPLAIN`` answers its plan." deleted.
+  - the same file: the docstrings of `test_a_prepared_subquery_predicate_refuses` and of the
+    flipped plain-`PREPARE` test deleted; `assert_g3e8` and `G3E8_PARTS`, unused after the flip,
+    deleted with the helper's docstring.
+  - `test_write_body_carriers_1.py`, module docstring: the sentence "The 14 wrapper cells and the
+    5 ANSI cells pin main's measured answers, and the neighbour group pins the CTAS shapes that
+    keep answering." deleted; the flipped test's docstring ("EXPLAIN ANALYZE and PREPARE/EXECUTE
+    answer as main answers them.") deleted.
+  No docstring gained text and no line was reworded; no presence gate covers a test file.
+
+### 1.4 The planner census, main's side (ruling 144)
+
+`test_ice_tsns_type_planner_1.py` runs the three wrapper routes through `doors.measure` for 450
+census cells (150 per route, 30 groups). A scratch replica of `_census_run` restricted to those
+routes, run on main's module above: `explain_analyze_insert` 150 answered; `explain_analyze_update`
+120 answered, 30 errored; `prepare_execute_insert` 150 answered. `ice_tsns_type_planner_1_main.json`
+(the harness's record of an older main) lists 175 of the 450 as answered (65, 45 and 65). The head
+refuses every statement on these routes, so the harness fails each cell the head makes red or
+lost; the exact set is measured on the head's module in step 4 and the dated rows land there,
+with the count in §4.

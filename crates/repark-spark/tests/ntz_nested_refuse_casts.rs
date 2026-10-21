@@ -402,6 +402,9 @@ const PREPARED: [(&str, &str); 6] = [
     ),
 ];
 
+const PREPARED_WRITE_REFUSAL: &str = "is refused: its statement writes to a table, and a \
+     prepared write would run later, at EXECUTE. PREPARE of a query still works.";
+
 #[tokio::test]
 async fn a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone() {
     let mut wrong = Vec::new();
@@ -425,12 +428,15 @@ async fn a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_e
              SELECT 7, named_struct('v', CAST(x AS TIMESTAMP_NTZ), 'n', 1), 0 FROM ice.ns.src",
             "PREPARE walled AS INSERT INTO ice.ns.t \
              SELECT 8, named_struct('v', w, 'n', 1), 0 FROM ice.ns.src",
-            "EXECUTE keyed(10)",
-            "EXECUTE fixed",
-            "EXECUTE walled",
         ] {
-            if let Err(error) = attempt(&session, prepare).await {
-                wrong.push(format!("{zone} / {prepare}: {error}"));
+            match attempt(&session, prepare).await {
+                Err(error) if error.contains(PREPARED_WRITE_REFUSAL) && !error.contains(HINT) => {}
+                outcome => wrong.push(format!("{zone} / {prepare}: {outcome:?}")),
+            }
+        }
+        for execute in ["EXECUTE keyed(10)", "EXECUTE fixed", "EXECUTE walled"] {
+            if attempt(&session, execute).await.is_ok() {
+                wrong.push(format!("{zone} / {execute}: ran"));
             }
         }
         let walls = stored(
@@ -438,12 +444,11 @@ async fn a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_e
             "SELECT st FROM ice.ns.t WHERE st IS NOT NULL ORDER BY id",
         )
         .await;
-        let session_wall = if zone == "UTC" { UTC_WALL } else { ZONES[0].1 };
-        if walls != vec![Some(session_wall), Some(UTC_WALL)] {
+        if !walls.is_empty() {
             wrong.push(format!("{zone}: {walls:?}"));
         }
-        if snapshots(&session, "t").await != vec![Some(3)] {
-            wrong.push(format!("{zone}: the three executions did not commit"));
+        if snapshots(&session, "t").await != vec![Some(0)] {
+            wrong.push(format!("{zone}: a prepared write committed"));
         }
     }
     assert_eq!(wrong, Vec::<String>::new());
