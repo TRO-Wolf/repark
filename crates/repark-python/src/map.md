@@ -1,5 +1,7 @@
 # map — repark-python/src
 
+MAP-COLUMN-PANIC-1 (2026-10-20): `fence.rs` reads `REPARK_PANIC_FATAL`. With the value `1`, a panic caught by `fence` or `fence_stream_poll` resumes unwinding instead of becoming the `repark internal error` exception, so a test run that sets the flag fails at the first panic; on an Arrow C stream callback the resumed panic cannot unwind across `extern "C"` and ends the process. Any other value, and an unset variable, keep the exception and its message byte for byte. The read sits on the cold arm after a panic is already caught, not on a query path. Child-process tests in `fence.rs` pin both settings for both fences. No suite sets the flag yet.
+
 ICE-MIXED-CASE-1 (2026-09-17, round 21b rebase): `session_runtime.rs` is main's version — `spark.sql.caseSensitive` writes `SparkCaseSensitiveConfig` (ICE-RTAS-BYNAME-1) and the Spark-door column fold reads that one carrier; the unit's second carrier is gone. pins: ice-mixed-case-1/C-006
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
