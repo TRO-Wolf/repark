@@ -5,7 +5,6 @@ use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, JoinType};
 use datafusion::datasource::source_as_provider;
 use datafusion::error::Result;
-use datafusion::logical_expr::expr::{Exists, InSubquery, SetComparison};
 use datafusion::logical_expr::{Distinct, Expr, ExprSchemable, LogicalPlan, TableScan};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
@@ -596,17 +595,12 @@ fn feeds<'a>(
             match inner {
                 Expr::Column(column) => columns.push(column),
                 Expr::OuterReferenceColumn(_, column) => next.push(Next::Outer(column)),
-                Expr::ScalarSubquery(subquery)
-                | Expr::Exists(Exists { subquery, .. })
-                | Expr::InSubquery(InSubquery { subquery, .. })
-                | Expr::SetComparison(SetComparison { subquery, .. }) => {
-                    next.push(Next::Whole(subquery.subquery.as_ref()));
-                    columns.extend(subquery.outer_ref_columns.iter().filter_map(
-                        |outer| match outer {
-                            Expr::OuterReferenceColumn(_, column) => Some(column),
-                            _ => None,
-                        },
-                    ));
+                Expr::ScalarSubquery(subquery) => {
+                    let body = subquery.subquery.as_ref();
+                    match node.inputs().first() {
+                        Some(input) => next.push(Next::Lateral(body, 0, input)),
+                        None => next.push(Next::Column(body, 0)),
+                    }
                 }
                 _ => {}
             }

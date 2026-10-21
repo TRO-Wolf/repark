@@ -176,10 +176,14 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   aliases, derived tables, filters, sorts, limits, `DISTINCT`, joins (the side the column comes
   from), unions (every branch), windows, values rows and a `ReplanningTempView`'s definition
   plan (a DataFusion or catalog view is inlined by the plan builder before the walk). A
-  predicate, a join condition and a sibling column are not read. Read whole, fail closed: a
-  subquery inside a read expression (scalar, `IN`, `EXISTS`; its outer references are followed
-  as columns), every group and aggregate expression of an aggregate, and any other node
-  (`plan_has`, the round-1 walk). A column that resolves in no input reads every input whole.
+  predicate, a join condition and a sibling column are not read. *(Owner ruling 1, 2026-10-21,
+  ledger C-041: an `IN`, `EXISTS` or quantified subquery inside a read expression is not read,
+  its left operand still is; a scalar subquery is walked through its one output column as a
+  scope entry (`Next::Lateral` with the node's input as the scope), so an outer reference in
+  its output is followed back out and one in its `WHERE` is not. Round 2 read every subquery
+  expression whole and followed its outer references as columns.)* Read whole, fail closed:
+  every group and aggregate expression of an aggregate (owner ruling 2, 2026-10-21: kept), and
+  any other node (`plan_has`, the round-1 walk). A column that resolves in no input reads every input whole.
   **A `LATERAL` subquery (fix round 3, 2026-10-21, ledger C-033):** DataFusion 54 plans a
   lateral factor as a join whose right side is a `Subquery` node, and the lateral's projection
   names the left side's column as an outer reference (`Expr::OuterReferenceColumn`). Each entry

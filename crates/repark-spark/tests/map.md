@@ -334,15 +334,22 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   one-line mutant (L5, L7, L8, L9, L13, L14, L18, R5, R6).
   pins: ice-ntz-nested-refuse-1/C-034
   The over-refusal classes the round lists with their counts (ledger C-035) are held by pins
-  already here: `a_subquery_in_the_columns_expression_is_read_whole` (an `IN` or `EXISTS` in the
-  column's expression refuses), the `PREPARE` pins, and, in `src/tests/`,
-  `only_a_utc_zone_lets_an_instant_through` (`Etc/UTC` refuses).
+  already here: the `PREPARE` pins and, in `src/tests/`, `only_a_utc_zone_lets_an_instant_through`.
   pins: ice-ntz-nested-refuse-1/C-035
   `a_view_the_write_reads_is_inlined_before_the_walk` plans through `ReparkSession::sql`, which
   reaches `router::execute_calibrated`, the function the type read's `planned()` calls, on the
   same text (ledger C-040, verifier round-2 S3-3). The verifier rounds' outcomes are C-036 to
   C-039.
   pins: ice-ntz-nested-refuse-1/C-036, C-037, C-038, C-040
+  **Owner ruling 1 (2026-10-21, ledger C-041):** `a_subquery_in_the_columns_expression_is_read_whole`
+  is renamed `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped`. A
+  scalar subquery that returns a container cast of an instant (directly, through a derived
+  table, as a MERGE update value, over a temporary view, nested, or as an outer column followed
+  back out) still refuses and adds no snapshot; a scalar subquery whose cast feeds only its own
+  `WHERE`, or a column it does not return, a correlated one whose outer reference feeds only its
+  `WHERE`, and an `EXISTS` in the value store the wall in New York and Kolkata. Each storing
+  cell refuses on the round-2 walk.
+  pins: ice-ntz-nested-refuse-1/C-041
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).

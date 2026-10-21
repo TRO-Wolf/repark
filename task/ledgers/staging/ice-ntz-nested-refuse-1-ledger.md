@@ -38,6 +38,14 @@ finding became a dated clause from C-033 on; earlier rows stand as written. No r
 the walk is not narrowed and the zone rule is not changed; the over-refusal list is the
 owner's to rule on.
 
+**Owner rulings folded into fix round 3 (2026-10-21, about 09:30 UTC).** Ruling 1, yes: an
+`IN`, `EXISTS` or quantified subquery in the column's expression is not read, and a scalar
+subquery is read through its one output column (C-041). Ruling 2, no: aggregates, conditions and
+sibling fields stay read whole; the 14 cells that remain are accepted as cost until
+GATE-RETIRE-1. Ruling 3, yes for the pure UTC aliases only: a zone id with no transition and no
+local-mean-time offset in its tzdb history counts as UTC; `Africa/Abidjan`, `Atlantic/Reykjavik`
+and `Europe/London` stay refused (C-042).
+
 **Why.** In a session whose zone is not UTC, an instant written into a nested microsecond
 `TIMESTAMP_NTZ` leaf stored the session wall through field assignment and the UTC wall through
 every other door, so one table held two walls for one input. Two folds that stored the right
@@ -88,6 +96,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-038 | C-014, verifier round 2 (2026-10-21, head `75475b71`): **FAIL**, with S1-1 (a container cast of an instant through `LATERAL (SELECT a.c …)` stored the UTC wall, 17 cells), S1-2 (18 correct cells refused and not listed with a count), S1-3 (four lineage arms no pin held), S2-1 (the zero-offset-zone cost understated) and S3-1 to S3-4; fix round 3 answers each (C-033 to C-042; S3-2 as the LATERAL-CORRELATED-MEMORY-1 card). *(A dated row for C-014's round 2, fix round 3, verifier round-2 S3-4.)* | The round-2 verifier's hand-back. | **PROVEN** | The ledger's fix-round-3 preamble; PR #1124. |
 | C-039 | C-014, verifier round 3 on fix round 3's head: pending. C-014 stays OPEN until a verifier round on a fresh agent finds no S0 or S1 defect. *(A dated row, fix round 3, verifier round-2 S3-4.)* | The round-3 verifier's hand-back. | **OPEN** | Round 3 has not run. |
 | C-040 | Two of the verifier's round-2 notes, stated: S3-1, `crates/repark-spark/src/router/nested_ns.rs` measured 729 lines (`git show 75475b71:…` piped to `wc -l`) at `75475b71`, not the 726 that the fix-round-2 brief and hand-back gave, and 796 after fix round 3 (ceiling 1000); S3-3, the C-024 premise pin plans its three `SELECT`s through `ReparkSession::sql`, and that is the plan the type read's `planned()` builds: `ReparkSession::sql` → `SparkDialect::execute` → `router::execute_in_session`, which canonicalises verbatim literals and routes temporary-view DDL, then calls `router::execute_calibrated`, the function `planned()` calls; the pin's statements hold no literal and no DDL, so the same SQL text reaches the same planner, and neither path runs the optimizer (no router path calls `into_optimized_plan`). *(Fix round 3, verifier round-2 S3-1 and S3-3.)* | `wc -l` on both heads; the call chain in `crates/repark-core/src/session.rs`, `crates/repark-spark/src/dialect.rs` and `crates/repark-spark/src/router.rs`. | **PROVEN** | §13.4. `a_view_the_write_reads_is_inlined_before_the_walk`. |
+| C-041 | Owner ruling 1 (2026-10-21): outside UTC the lineage walk does not read an `IN`, `EXISTS` or quantified subquery in the column's expression (its left operand still is), and reads a scalar subquery only through its one output column, the node's input pushed as the scope its outer references resolve in. A scalar subquery that returns a container cast of an instant (directly, through a derived table, as a MERGE update value, over a temporary view, nested, or as an outer column followed back out) still refuses; one whose cast feeds only its own `WHERE` or a column it does not return, a correlated one whose outer reference feeds only its `WHERE`, and an `EXISTS` in the value store Spark's wall. Cells moved, on main `c516c54a`, Spark 4.1.2 and the build: the verifier's 4 scalar-subquery cells (New York, Kolkata) and the 2 `EXISTS` cells store the wall as main and Spark do; the `IN` shape raises the engine's own error, as on main (round 2 refused it). The `LATERAL` outer-reference walk (C-033) is a plan node under a join and is unchanged. *(Supersedes C-024's whole read of a subquery in the column's expression and C-035's classes (1) and (2) for these 6 cells; the lineage over-refusal is 14 cells, 7 shapes.)* | The Rust door in New York and Kolkata, each storing cell red on the round-2 walk; the verifier's `cases_o.py` and this round's subquery cells on Spark, main and the build. | **PROVEN** | §13.6. `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped`. |
 
 ## §1 The rule and the seam
 
@@ -696,3 +705,28 @@ predates this unit and is not its gate (in UTC the gate does not run; outside UT
 plans and never runs the source, C-018). Carded as LATERAL-CORRELATED-MEMORY-1
 (`task/roadmap/mid-term/lateral-correlated-memory-1-card-2026-10-21.md`); the owner schedules.
 No fix in this round.
+
+### §13.6 Owner ruling 1: subqueries in the column's expression (C-041)
+
+`feeds` (`crates/repark-spark/src/router/nested_ns.rs`) no longer reads an `Exists`,
+`InSubquery` or `SetComparison` body, nor follows its outer references; `Expr::apply` still
+visits the left operand. A `ScalarSubquery` becomes `Next::Lateral(body, 0, input)`: the walk
+enters the subquery's plan at its one output column with the node's input as the scope, so an
+`Expr::OuterReferenceColumn` in the output is followed back into the input (the C-033
+mechanism) and one in the subquery's `WHERE` is not reached. Build `maturin develop --profile
+ci` (190 s, load 20.13 at the end, other work on the box); probes under `taskset -c 0-25` and a
+40 G cap:
+
+| Cells | Spark 4.1.2 | main `c516c54a` | round 3 before the ruling | this build |
+|---|---|---|---|---|
+| `cases_o.py` scalar subquery, cast only in its `WHERE` (New York, Kolkata) | the wall | the wall | refused | the wall |
+| `cases_o.py` scalar subquery, cast in a column it does not return (New York, Kolkata) | the wall | the wall | refused | the wall |
+| `cases_o.py`, the other 7 shapes (New York, Kolkata) | the wall | the wall | refused | refused (ruling 2) |
+| `IF(EXISTS (… <cast> …), named_struct('v', w, 'n', 1), NULL)` (New York, Kolkata) | the wall | the wall | refused | the wall |
+| `IF(id IN (… <cast> …), …)` (New York, Kolkata) | the wall | raw error | refused | raw error, as main |
+| a scalar subquery returning the cast; the outer column followed back out (New York, Kolkata) | session wall | UTC wall; raw error | refused | refused |
+| every cell in UTC | as main | — | as main | as main |
+
+The Rust pin adds four storing writes (the two `cases_o.py` scalar shapes, a correlated scalar
+subquery whose outer reference feeds only its `WHERE`, the `EXISTS` in the value); each fails on
+the round-2 walk (`git show HEAD:…nested_ns.rs`, the pin red with the refusal text).

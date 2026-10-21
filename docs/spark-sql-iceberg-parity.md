@@ -3440,12 +3440,17 @@ still open is `isModifiable`.
   `UPDATE`'s cast test read only what reaches the column: the expression that produces it,
   followed through aliases, derived tables, views, joins, unions, windows and values rows. A
   cast in a predicate, in an `EXISTS` of a `WHERE`, or in a sibling column no longer refuses;
-  a subquery inside the column's own expression (scalar, `IN`, `EXISTS`), an aggregate and
-  any other plan node are read whole.)* *(Fix round 3, 2026-10-21, verifier round-2 S1-1: a
+  a subquery inside the column's own expression (scalar, `IN`, `EXISTS`), an aggregate and any
+  other plan node are read whole.)* *(Fix round 3, 2026-10-21, verifier round-2 S1-1: a
   `LATERAL` subquery's outer reference is followed into the join's other side, so a container
   cast of an instant that reaches the column through `LATERAL (SELECT a.c AS s)` refuses (17
-  cells that stored the UTC wall on round 2 and on main); a reference no enclosing join
-  resolves refuses.)* **Why the container cast:**
+  cells that stored the UTC wall on round 2 and on main); a reference no enclosing join resolves
+  refuses.)* *(Owner ruling 1, 2026-10-21: an `IN`, `EXISTS` or quantified subquery in the
+  column's own expression is not read, and a scalar subquery is read through the lineage of its
+  one output column, its outer references followed into the node it sits in; a scalar subquery
+  that returns a container cast of an instant still refuses. A `LATERAL` is a plan node under a
+  join, not a subquery expression, and keeps the outer-reference walk.)* **Why the container
+  cast:**
   RePark's cast of a whole struct, array or map converts a zoned leaf with UTC even in a bare
   `SELECT` (`CAST(array(TIMESTAMP '2026-01-02 03:04:05.123456+00:00') AS
   ARRAY<TIMESTAMP_NTZ>)[0]` is `1767323045123456` in New York; Spark 4.1.2 answers
@@ -3548,32 +3553,36 @@ still open is `isModifiable`.
   an `INSERT` of a container cast of an instant refuse where Spark and main store the same
   wall; 3 cells measured), as `Etc/UTC` does. *(Fix round 3, 2026-10-21, verifier round-2 S1-2
   and S2-1: every measured over-refusal class with its count; no rule changed.)* (1) **What the
-  walk reads whole without following, 18 correct cells** (9 shapes, New York and Kolkata; each
+  walk reads whole without following, 14 correct cells** (7 shapes, New York and Kolkata; each
   writes the wall column `w`, so the cast never reaches the stored value, and Spark 4.1.2 and
-  main store the wall; every shape stores in UTC): a scalar subquery read whole, its cast only
-  in the subquery's own `WHERE` or in a column it does not return (2 shapes, 4 cells); aggregate
-  expressions read whole, the cast in `HAVING max(…)`, in `HAVING count(element_at(CAST(array(x)
-  AS ARRAY<TIMESTAMP_NTZ>), 1))` or in a sibling `size(collect_list(…))` column (3 shapes, 6
-  cells); a grouping key read, `GROUP BY id, s` over the cast (1 shape, 2 cells); a `CASE` or
-  `IF` condition or a sibling field of the same `named_struct` read, `CASE WHEN
-  element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1) IS NOT NULL THEN w END`, `IF(<cast> IS
-  NULL, 1, 2)` or `size(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>))` into the `INT` field (3 shapes,
-  6 cells). (2) **An `IN` or `EXISTS` subquery in the column's own expression, 1 cell** (above);
-  the 4 scalar-subquery cells of (1) belong with it, 5 cells of subquery reads in all. (3)
-  **`PREPARE`, 17 cells** (above). (4) **Zero-offset zones.** The zone rule reads the zone's id,
-  so a zone whose offset is zero but whose id the session does not read as UTC refuses every
-  instant write: `Etc/UTC`, `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `Africa/Abidjan` and
-  `Atlantic/Reykjavik` all year, `Europe/London` in winter (`GMT` and `+00:00` read as UTC and
-  store). On the 28-door matrix (the `ntz_nested` schema, 352 cells per zone) 180 cells move per
-  zone, every one to the refusal: 126 correct cells (main stored `1767323045123456`, the session
-  wall there, the value Spark stores) and 54 raw errors on main. The verifier measured
-  `Europe/London` and `Atlantic/Reykjavik` (126 and 54 each); fix round 3 measured
-  `Europe/London` and `Etc/GMT` (126 and 54 each). Five instant shapes refuse in each of the
-  seven zones named, where main stores the wall, and store in `GMT` and `+00:00`. This supersedes the "3
-  cells measured" above. **The owner decides** whether the walk narrows (a scalar subquery read
-  by its output column, an aggregate by the expression that produces the column, a condition and
-  sibling fields skipped, `IN` and `EXISTS` bodies skipped) and whether a fixed zero-offset zone
-  counts as UTC. **Not reached by this gate, dated
+  main store the wall; every shape stores in UTC): aggregate expressions read whole, the cast in
+  `HAVING max(…)`, in `HAVING count(element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1))` or
+  in a sibling `size(collect_list(…))` column (3 shapes, 6 cells); a grouping key read, `GROUP
+  BY id, s` over the cast (1 shape, 2 cells); a `CASE` or `IF` condition or a sibling field of
+  the same `named_struct` read, `CASE WHEN element_at(CAST(array(x) AS ARRAY<TIMESTAMP_NTZ>), 1)
+  IS NOT NULL THEN w END`, `IF(<cast> IS NULL, 1, 2)` or `size(CAST(array(x) AS
+  ARRAY<TIMESTAMP_NTZ>))` into the `INT` field (3 shapes, 6 cells). *Ruled 2026-10-21 (owner,
+  ruling 2): accepted as cost until GATE-RETIRE-1.* (2) **Subquery reads, no longer refused
+  (owner ruling 1, 2026-10-21):** an `IN`, `EXISTS` or quantified subquery in the column's own
+  expression is not read (a boolean carries no timestamp) and a scalar subquery is read through
+  its one output column, so the 4 scalar-subquery cells round 2 listed (its cast only in the
+  subquery's own `WHERE` or in a column it does not return; New York and Kolkata) and the
+  `EXISTS` cells (`IF(EXISTS (…), named_struct('v', w, 'n', 1), NULL)`, 2 cells, New York and
+  Kolkata; round 2 measured the New York one) store Spark's wall; the `IN` shape raises the
+  engine's own error, as on main. (3) **`PREPARE`, 17 cells** (above). (4) **Zero-offset
+  zones.** The zone rule reads the zone's id, so a zone whose offset is zero but whose id the
+  session does not read as UTC refuses every instant write: `Etc/UTC`, `Etc/GMT`,
+  `Etc/Universal`, `Etc/Zulu`, `Africa/Abidjan` and `Atlantic/Reykjavik` all year,
+  `Europe/London` in winter (`GMT` and `+00:00` read as UTC and store). On the 28-door matrix
+  (the `ntz_nested` schema, 352 cells per zone) 180 cells move per zone, every one to the
+  refusal: 126 correct cells (main stored `1767323045123456`, the session wall there, the value
+  Spark stores) and 54 raw errors on main. The verifier measured `Europe/London` and
+  `Atlantic/Reykjavik` (126 and 54 each); fix round 3 measured `Europe/London` and `Etc/GMT`
+  (126 and 54 each). Five instant shapes refuse in each of the seven zones named, where main
+  stores the wall, and store in `GMT` and `+00:00`. This supersedes the "3 cells measured"
+  above. The owner ruled 2026-10-21: the walk narrows for subqueries (ruling 1, above) and not
+  for aggregates, conditions or sibling fields (ruling 2); whether a fixed zero-offset zone
+  counts as UTC is ruling 3. **Not reached by this gate, dated
   2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
   frame or a table built from a container cast of an instant carries the UTC wall the cast
   produced; the container cast's own conversion in a `SELECT` is the defect, for the lift.
