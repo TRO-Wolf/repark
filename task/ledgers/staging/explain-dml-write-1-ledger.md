@@ -237,3 +237,22 @@ twin that errored too, and stay green. One dated row per red or lost cell lands 
 rows before, 640 after. No harness or route change. `pytest
 python/repark/tests/timestamps/test_ice_tsns_type_planner_1.py -n 8` on the head's module: **60
 passed** in 249 s.
+
+## 5. Revert check and mutants (step 5)
+
+Each change applied alone to the head `57031982`, the named suites run, the file restored
+(`git status` clean after). No variant survived.
+
+| Variant | Suite | Result | Killed by |
+|---|---|---|---|
+| R1: the `dialect.rs` call removed | `cargo test -p repark-core --lib dialect` | 5 failed, 9 passed | `an_explain_analyze_of_a_write_refuses_and_writes_nothing`, `a_prepared_write_refuses_and_leaves_nothing_to_execute`, `a_prepared_subquery_dml_refuses_and_leaves_nothing_to_execute`, `the_default_dialect_refuses_an_explain_analyze_of_a_subquery_dml`, `only_explain_analyze_reaches_the_statement_it_wraps` |
+| R2: the ANSI `router.rs` call removed | `cargo test -p repark-sql --test ansi_explain_dml_write` | 2 failed, 1 passed | `the_ansi_door_refuses_an_explain_analyze_of_a_write`, `the_ansi_door_refuses_a_prepared_write_and_leaves_nothing_to_execute` |
+| R3: the `spark_ast.rs` call removed | `cargo test -p repark-spark --lib wrapped_subquery_dml` | 6 failed, 4 passed | `an_explain_analyze_of_a_write_refuses_on_the_router_door`, `a_prepared_write_refuses_on_the_router_door`, `a_plain_predicate_prepare_refuses_on_the_router_door`, the three `a_prepared_…_refuses_on_the_router_door` pins |
+| M1: the `Explain` look-through removed (an `EXPLAIN ANALYZE` answers `Ok`) | `statement_writes` unit tests; ANSI pins | 2 failed; 1 failed | `an_explain_analyze_of_a_write_refuses_with_its_text`, `neither_refusal_names_a_data_deleting_action`; `the_ansi_door_refuses_an_explain_analyze_of_a_write` |
+| M2: the `Prepare` arm removed | the same | 1 failed; 1 failed | `a_prepare_of_a_write_refuses_with_its_text`; `the_ansi_door_refuses_a_prepared_write_and_leaves_nothing_to_execute` |
+| M3: a plain `EXPLAIN` refused | the same | 1 failed; 3 failed | `a_query_a_plain_explain_and_a_bare_statement_answer_nothing`; all three ANSI pins (the seed's `EXPLAIN SELECT` guard and the controls) |
+| M4: only `DELETE` and `UPDATE` refused (ruling 141 undone) | the same | 2 failed; 2 failed | `an_explain_analyze_of_a_write_refuses_with_its_text`, `a_prepare_of_a_write_refuses_with_its_text`; both ANSI refusal pins (their `INSERT` cells) |
+| M5: the `analyzed` arm removed | the same | 2 failed; 1 failed | `an_explain_analyze_of_a_write_refuses_with_its_text`, `neither_refusal_names_a_data_deleting_action`; `the_ansi_door_refuses_an_explain_analyze_of_a_write` |
+
+The Python doors' revert is main's module itself, whose product code is main's byte for byte:
+the 50 pins of §1.1 are red on it and green on the head's module (§4).
