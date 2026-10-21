@@ -99,6 +99,7 @@ as R-015 does for a nested `timestamp_ns` leaf.
 | C-041 | Owner ruling 1 (2026-10-21): outside UTC the lineage walk does not read an `IN`, `EXISTS` or quantified subquery in the column's expression (its left operand still is), and reads a scalar subquery only through its one output column, the node's input pushed as the scope its outer references resolve in. A scalar subquery that returns a container cast of an instant (directly, through a derived table, as a MERGE update value, over a temporary view, nested, or as an outer column followed back out) still refuses; one whose cast feeds only its own `WHERE` or a column it does not return, a correlated one whose outer reference feeds only its `WHERE`, and an `EXISTS` in the value store Spark's wall. Cells moved, on main `c516c54a`, Spark 4.1.2 and the build: the verifier's 4 scalar-subquery cells (New York, Kolkata) and the 2 `EXISTS` cells store the wall as main and Spark do; the `IN` shape raises the engine's own error, as on main (round 2 refused it). The `LATERAL` outer-reference walk (C-033) is a plan node under a join and is unchanged. *(Supersedes C-024's whole read of a subquery in the column's expression and C-035's classes (1) and (2) for these 6 cells; the lineage over-refusal is 14 cells, 7 shapes.)* | The Rust door in New York and Kolkata, each storing cell red on the round-2 walk; the verifier's `cases_o.py` and this round's subquery cells on Spark, main and the build. | **PROVEN** | §13.6. `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped`. |
 | C-042 | Owner ruling 3 (2026-10-21): a session zone counts as UTC when its id, as written or as the session canonicalises it, is a pure UTC alias (`UTC`, `UCT`, `Universal`, `Zulu`, `Z`, `GMT`, `GMT0`, `GMT+0`, `GMT-0`, `Greenwich`, their `Etc/` forms, `+00:00`, `-00:00`), held in one set in `crates/repark-spark/src/router/nested_ns.rs`; `Africa/Abidjan`, `Atlantic/Reykjavik` and `Europe/London` stay refused (a pre-1912 local-mean-time offset in tzdb for the first two, a summer offset for London) and stay listed with 126 correct cells per zone. Cells moved: the verifier's five instant shapes store Spark's wall in `Etc/UTC`, `Etc/GMT`, `Etc/Universal` and `Etc/Zulu` (20 cells, refused before) and still refuse in the three geographic zones; the 28-door matrix in `Etc/GMT` moves 0 cells against main (180 before the ruling), in `Europe/London` 180 as before. *(Supersedes C-003's "`Etc/UTC` refuses" and C-035's class (4) for the pure aliases.)* | The unit test over both lists; the zone pin; the verifier's `cases_z.py` and the matrix in two zones on the build against main and the verifier's Spark cells. | **PROVEN** | §13.7. `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc`, `only_a_utc_zone_lets_an_instant_through`. |
 | C-043 | After owner rulings 1 and 3, on the round's final head: the 3168-cell door matrix moves the same 360 cells against main `c516c54a`, every one to the refusal, and the 84-cell named-shape probe the same 48 (38 wrong walls, 10 correct cells); neither probe holds a subquery shape or an `Etc/` zone, so the rulings move none of their cells, and both answer cell for cell as the committed `repark-head.jsonl` and `attack-head.jsonl`. Every mutant whose code or killing pin the rulings touched, and eight new ones on the rulings (Q1 to Q4, Z1 to Z4), was re-run alone: each is killed by a named pin but L11 and L17 (equivalent, C-034), M10 and Q2, each equivalent on stored values: the only plans that reach them (a scalar subquery inside a frame's `DISTINCT ON`; a correlated scalar subquery returning an outer column) raise `Physical plan does not support logical expression ScalarSubquery` on main and the build in every zone, so the mutant only trades that error for the refusal or the refusal for it. M10b, N5 and V2 mutated code the rulings removed; Q1 and Q3, R2 and Q2, Z3 and Z4 take their place. *(Fix round 3, after the owner's rulings of 2026-10-21.)* | `probe.py run` and `probe.py attack` on the final build; the targeted mutant pass. | **PROVEN** | §13.8. `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`, `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc`. |
+| C-044 | Fix round 3's gates are green on the final code head `f795a0ff` with real exit codes but one carded flake, and the round costs nothing measurable: `make verify` 7746 passed; `make rust-panic-ban` exit 0; `make ci` on every commit; the facade suite 20227 passed and 1 failed, `test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool` (SPILL-REACH-FAIR-POOL-FLAKE-1, carded 2026-10-14; alone it failed 1 of 8 runs on main `c516c54a` and 1 of 10 on this head); the live leg alone 67 passed and co-collected 5924 passed, the live cell passing in both; every interleaved 50-run median ratio against main within the 1.05x gate. | §13.9. | **PROVEN** | §13.9. |
 
 ## §1 The rule and the seam
 
@@ -786,3 +787,43 @@ from that pass on `a0baf803`.
 
 `crates/repark-spark/src/router/nested_ns.rs` is 868 lines after the rulings (`wc -l`; 796 at
 `a0baf803`, C-040), its test module included; ceiling 1000.
+
+### §13.9 The round's gates and cost (C-044)
+
+Final code head `f795a0ff`; every heavy command under `taskset -c 0-25` with
+`CARGO_BUILD_JOBS=12`; the box carried other work, so the load at each start is given.
+
+| Gate | Result | Wall | Load at start |
+|---|---|---|---|
+| `cargo fmt`, `python3 scripts/sync_map_md.py`, `python3 scripts/check_model_ban.py`, no comment line added in a code file | clean on every commit | — | — |
+| `make ci` on every commit | exit 0 | 89–485 s | 2.2–51.6 |
+| `maturin develop --profile ci` | ok | 214 s | 17.25 |
+| `make verify` | exit 0; 7746 tests run, 7746 passed (4 slow), 97 skipped | 276 s | 7.76 |
+| `make rust-panic-ban` | exit 0 | 1 s | 12.73 |
+| facade suite (`-n 16 --dist loadgroup --maxschedchunk=8`) | 20227 passed, 1 failed, 485 skipped, 151 xfailed | 540 s | 12.73 |
+| live leg, the module alone (`REPARK_PARITY_LIVE=1`, 40 G cap) | 67 passed; `test_live_spark_stores_the_recorded_session_wall` PASSED | 98 s | 13.81, no other JVM |
+| live leg co-collected after `tests/parity` and `tests/writes` (40 G cap) | 5924 passed, 13 skipped, 3 xfailed, 0 failed; the live cell PASSED; no DRIFT | 902 s | 6.09, one other JVM on the box |
+
+The facade failure is `perf/test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool`
+(`Resources exhausted` in `ExternalSorterMerge` under a 64 MiB fair pool), carded as
+SPILL-REACH-FAIR-POOL-FLAKE-1 on 2026-10-14. Run alone, it failed 1 of 8 runs on main
+`c516c54a` and 1 of 10 runs on this head; it touches no write and no zone. It was not re-run
+into the gate.
+
+Cost, main `c516c54a` against this build. The first pass (verifier's `cost.py`, 3 rounds, each
+the median of 10 runs after 3 warm-ups, load 5.3–6.2) read 1.196x for the UTC plain `UPDATE`,
+1.080x for the UTC plain `INSERT` and 1.082x for the New York nested `INSERT`. Main's own rounds
+spread 41.8–49.5 ms on the first of these, and in UTC the round's code runs nothing but the
+alias lookup. A focused interleaved run settles them: 6 rounds of main and the build
+alternating, each the median of 50 runs after 3 warm-ups, load 3.96–5.85; the ratio is the
+median of the six:
+
+| Write | UTC | New York |
+|---|---|---|
+| plain `INSERT` | 0.987 | 1.034 |
+| plain `UPDATE` | 0.993 | 1.011 |
+| nested-NTZ `INSERT` | 1.002 | 1.038 |
+| nested-NTZ `UPDATE` | 0.981 | 1.032 |
+
+Main `c516c54a` is the baseline the verifier used. The build also carries main's commits up to
+`d6ee0411`.

@@ -359,7 +359,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   adds a `DISTINCT ON` frame over a SQL temporary view, read whole into the view (mutant M8a),
   and `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc` writes its alias list out
   rather than reading the set it tests (mutant Z3).
-  pins: ice-ntz-nested-refuse-1/C-043
+  pins: ice-ntz-nested-refuse-1/C-043, C-044
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
