@@ -28,6 +28,7 @@ pins.
 - [test_getorcreate_catalogs.py](test_getorcreate_catalogs.py) — ``getOrCreate`` on an existing session registers NEWLY-configured catalogs (R-GETORCREATE).
 - [test_namespace_location_guard.py](test_namespace_location_guard.py) — Facade pin: namespace-create location guard (G-6 Q1 / R-6).
 - [test_pa_local_fs_policy_1.py](test_pa_local_fs_policy_1.py) — PA-02 local-filesystem policy: `EXPLAIN ANALYZE COPY` outside the warehouse refuses and writes nothing.
+- [test_panic_fatal_suite_1.py](test_panic_fatal_suite_1.py) — PANIC-FATAL-SUITE-1 (2026-10-21): the suite runs with `REPARK_PANIC_FATAL=1` armed by `conftest.py`; the module reports `_native.__panic_fatal__` true, and a child interpreter that inherits the suite environment dies on the native `repark.sql()` door's `map('a', <column>)` panic with no `repark internal error` (`CREATE TABLE … AS SELECT` through the `sql`-method fence, a lazy `SELECT` read through Arrow through the stream fence) while the same child with the flag cleared keeps the message. The child turns core dumps off with `prctl`, since the stream shape aborts.
 - [test_production_file_size.py](test_production_file_size.py) — Pin the session split compatibility contract.
 - [test_profiles1_probe_rerun.py](test_profiles1_probe_rerun.py) — PROFILES-1 probe re-runnability pins — REVIEW-FIX-8 (Q-21, Q-55, Q-56).
 - [test_pyc_1_nested_defs.py](test_pyc_1_nested_defs.py) — PYC-1: ``core.py``, ``plan_collapse.py``, and ``udf_bridge.py`` have no nested ``def``.

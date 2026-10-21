@@ -1,0 +1,56 @@
+# Mutation check, not committed (2026-10-21, head b868db05): the conftest.py line set to
+#   os.environ.setdefault("REPARK_PANIC_FATAL", "0")
+# The order pin and both inheriting child legs go red: 3 failed, 2 passed. The cleared-flag legs stay green, as they must.
+# command: pytest python/repark/tests/session/test_panic_fatal_suite_1.py -v --tb=short
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- .venv/bin/python3
+rootdir: python/repark
+configfile: pyproject.toml
+plugins: timeout-2.4.0, xdist-3.8.0
+timeout: 1200.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 5 items
+
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed FAILED [ 20%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[arrow_stream] PASSED [ 40%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[sql_method] PASSED [ 60%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream] FAILED [ 80%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method] FAILED [100%]
+
+=================================== FAILURES ===================================
+_________ test_the_native_module_initialised_with_the_suite_flag_armed _________
+python/repark/tests/session/test_panic_fatal_suite_1.py:86: in test_the_native_module_initialised_with_the_suite_flag_armed
+    assert os.environ.get(_VARIABLE) == "1"
+E   AssertionError: assert '0' == '1'
+E
+E     - 1
+E     + 0
+_ test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream] _
+python/repark/tests/session/test_panic_fatal_suite_1.py:107: in test_the_known_panic_ends_a_child_that_inherits_the_suite_environment
+    assert completed.returncode != 0, text
+E   AssertionError: child-caught repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+E
+E     thread 'tokio-rt-worker' (420638) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:
+E     list array
+E     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+E
+E   assert 0 != 0
+E    +  where 0 = CompletedProcess(args=['.venv/bin/python3', '-c', '\nimport ctypes\nimport sys\n\nif sys.platform == "linux":\n    ctypes.CDLL(None).prctl(4, 0, 0, 0, 0)\n\nimport repark\nfrom repark.errors import PySparkException\n\ntry:\n    repark.sql("SELECT map(\'a\', id) AS m FROM range(1)").to_arrow()\nexcept PySparkException as error:\n    print(\'child-caught\', error)\nelse:\n    print(\'child-survived\')\n'], returncode=0, stdout='child-caught repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)\n', stderr="\nthread 'tokio-rt-worker' (420638) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:\nlist array\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n").returncode
+_ test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method] _
+python/repark/tests/session/test_panic_fatal_suite_1.py:107: in test_the_known_panic_ends_a_child_that_inherits_the_suite_environment
+    assert completed.returncode != 0, text
+E   AssertionError: child-caught repark internal error in PyReparkSession.sql: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+E
+E     thread 'tokio-rt-worker' (420690) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:
+E     list array
+E     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+E
+E   assert 0 != 0
+E    +  where 0 = CompletedProcess(args=['.venv/bin/python3', '-c', '\nimport ctypes\nimport sys\n\nif sys.platform == "linux":\n    ctypes.CDLL(None).prctl(4, 0, 0, 0, 0)\n\nimport repark\nfrom repark.errors import PySparkException\n\ntry:\n    repark.sql("CREATE TABLE panic_fatal_probe AS SELECT map(\'a\', id) AS m FROM range(1)")\nexcept PySparkException as error:\n    print(\'child-caught\', error)\nelse:\n    print(\'child-survived\')\n'], returncode=0, stdout='child-caught repark internal error in PyReparkSession.sql: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)\n', stderr="\nthread 'tokio-rt-worker' (420690) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:\nlist array\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n").returncode
+=========================== short test summary info ============================
+FAILED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed
+FAILED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[arrow_stream]
+FAILED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[sql_method]
+========================= 3 failed, 2 passed in 1.56s ==========================
