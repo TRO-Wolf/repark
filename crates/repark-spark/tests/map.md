@@ -412,6 +412,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   84-cell named-shape probe answer cell for cell as the committed head files (360 and 48 moved
   against main, every one to the refusal), and the unit's live module passes 67 of 67.
   pins: ice-ntz-nested-refuse-1/C-049
+  **Owner ruling (2026-10-21, ledger C-050):** the New York nested-NTZ `INSERT` cell, which reads
+  1.04–1.09x of main across four measurements (the type read's planning, about 3 ms per
+  statement), is accepted as cost until GATE-RETIRE-1; the 1.05x gate does not move.
+  pins: ice-ntz-nested-refuse-1/C-050
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that

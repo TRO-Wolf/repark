@@ -150,6 +150,8 @@ Tables already written keep the values they hold; this release ships no migratio
   `Greenwich`, their `Etc/` forms) counts as UTC (owner ruling 2026-10-21). An `IN`, `EXISTS` or quantified subquery in the value is not read, and a scalar
   subquery is read through its output column (owner ruling 2026-10-21), so a cast that only
   feeds such a subquery's predicate stores.
+  A nested `TIMESTAMP_NTZ` write outside UTC carries about 3 ms of planning per statement (the
+  type read) until GATE-RETIRE-1 (owner ruling 2026-10-21).
 
 - **The local-file write policy checks writes below the root (PA-LOCAL-FS-POLICY-1, audit
   PA-02).** With `repark.sql.allowLocalFilesystemDDL=false` (the default), `EXPLAIN ANALYZE

@@ -3596,7 +3596,10 @@ still open is `isModifiable`.
   `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `GMT` and `+00:00`. This supersedes the "3 cells
   measured" above. The owner ruled 2026-10-21: the walk narrows for subqueries (ruling 1, above)
   and not for aggregates, conditions or sibling fields (ruling 2); a pure UTC alias counts as
-  UTC and a geographic zone does not (ruling 3, above). **Not reached by this gate, dated
+  UTC and a geographic zone does not (ruling 3, above). *Ruled 2026-10-21 (owner): the New York
+  nested-NTZ INSERT cell reads 1.04-1.09x across four measurements, at or over the 1.05x gate;
+  accepted as cost until GATE-RETIRE-1 removes the type read; every other cell is inside the
+  gate.* **Not reached by this gate, dated
   2026-10-20:** a value materialised before the write keeps the wall it holds, so a cached
   frame or a table built from a container cast of an instant carries the UTC wall the cast
   produced; the container cast's own conversion in a `SELECT` is the defect, for the lift.
