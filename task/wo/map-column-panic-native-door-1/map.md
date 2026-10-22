@@ -19,7 +19,7 @@ runs 16 of the Spark recording's cells on `repark.sql()` through the Arrow path,
 PANIC-FATAL pin: it had used this door's panic as its probe, so `_native.__panic_probe__(shape)` (underscore-named test surface, registered
 ungated like `__panic_fatal__`) now raises a Rust panic on purpose inside a method fence and inside the Arrow C stream poll fence, and
 the pin keeps both legs: armed, the method child ends in `PanicException` (exit 1) and the stream child aborts (SIGABRT); unarmed, both keep
-the `repark internal error` text. The `conftest.py` mutation (flag `0`) is red on three tests. The probe lives in its own module `panic_probe.rs`, with `fence.rs` unchanged: the first placement inside `fence.rs` moved the CI runner's memory pin (`test_replace_dict_depth40_memory_linear`) over its bound, and the bisect that found it is in [evidence/](evidence/map.md). Third, these records.
+the `repark internal error` text. The `conftest.py` mutation (flag `0`) is red on three tests. The probe lives in its own module `panic_probe.rs`, with `fence.rs` unchanged. One finding stays open: the CI runner's memory pin `test_replace_dict_depth40_memory_linear` passes without the probe (commit 1 alone, and commit 1 with one unrelated registered function) and fails with it, in `fence.rs` or in its own module (9.03 MB and 9.99 MB against a bound of about 8.4 MB to 8.6 MB); the numbers and the bisect are in [evidence/](evidence/map.md), and the pin needs the owner's ruling. Third, these records.
 the `repark internal error` text. The `conftest.py` mutation (flag `0`) is red on three tests. Third, these records. Fourth, the ANSI door.
 
 What the measurements say: on the native door the 47 statements of the oracle replay answer without a panic on the head (5 panics and 14

@@ -1,15 +1,19 @@
 # test_replace_dict_depth40_memory_linear on the CI runner (facade shard 1 of the smoke workflow), 2026-10-22 UTC.
-# The test prints nothing when it passes, so a diagnostic commit on a throwaway draft branch (tmp/map-native-bisect, closed and deleted after the read)
+# The test prints nothing when it passes, so a diagnostic commit on a throwaway draft branch (tmp/map-native-bisect, closed and deleted after the reads)
 # added a warnings.warn line with the two measured deltas and the bound; the diagnostic is not part of this change.
 # bound = max(2 x control delta, 8 MiB floor 8388608). Units are bytes of peak RSS growth in a fresh worker process.
 #
-# push A  commit 1 alone (the rule on the native door) + diagnostic      control 4800512  replace 7520256  bound 9601024  PASS
-# push B  commits 1 + 2 (the probe in fence.rs) + diagnostic              control 3813376  replace 9031680  bound 8388608  FAIL
-# PR head with commits 1-3 (probe in fence.rs), first run                 control 3809280  replace 9035776  bound 8388608  FAIL
-# PR head with commits 1-3, one re-run of the failed jobs                 control 3813376  replace 9039872  bound 8388608  FAIL
-# main (b7a20167 and later): no passing main run prints the value; the test is silent on a pass, so main's value is not known.
+# build                                                                     control   replace   bound     result
+# A      commit 1 alone (the rule on the native door) + diagnostic          4800512   7520256   9601024   PASS
+# dummy  commit 1 + one unrelated registered pyfunction + diagnostic        4796416   7565312   9592832   PASS
+# B      commits 1 + 2, the probe inside fence.rs, + diagnostic             3813376   9031680   8388608   FAIL
+# PR     commits 1-3, the probe inside fence.rs (first run)                 3809280   9035776   8388608   FAIL
+# PR     the same, one re-run of the failed jobs                            3813376   9039872   8388608   FAIL
+# PR     commits 1-4, the probe moved to its own module panic_probe.rs      4276224   9998336   8552448   FAIL
+# main   no passing main run prints the value; the test is silent on a pass, so main's value is not known.
 #
-# Reading (a hypothesis, not proven): the value moves with commit 2. The control (a flat 40-column select) and the replace measure move by about 1 MB in opposite
-# directions with a small change in the wheel, which looks like a step in how the process commits memory or touches the wheel, not a cost of the probe: neither
-# measured path runs the probe. Commit 2 as first written put the probe in fence.rs; it now lives in its own module panic_probe.rs and
-# fence.rs is byte-identical to main's.
+# Reading (a hypothesis, not proven): the value moves with the presence of the probe, wherever it lives. A one-function change does not move it
+# (dummy), the probe's code in fence.rs moves it by about 1.5 MB, and the same code in its own module by about 2.5 MB; the control moves too. Neither
+# measured path runs the probe, so this is not a cost of running it. The pin measures peak RSS growth, which includes pages of the wheel that the
+# replace path touches for the first time, and a larger insertion into the wheel shifts which pages those are; the bound sits close enough on the runner that
+# such a shift crosses it. Moving the probe out of fence.rs did not bring the pin back under its bound.
