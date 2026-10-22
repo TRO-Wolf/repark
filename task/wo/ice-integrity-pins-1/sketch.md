@@ -146,6 +146,19 @@ equality). It proves nothing about the real v1.5.4 wheel or about delete files; 
 
 ## 3. Pin K: kill between the data files and the commit
 
+**Built 2026-10-22 (pin K, local).** `crates/repark-spark/src/tests/kill_mid_write.rs` and
+`kill_mid_write_hold.rs`: the 18 cells of §3.3 green, 20 of 20 runs, four mutations red
+([the unit ledger](../../ledgers/staging/ice-integrity-pins-1-ledger.md)). Premises corrected on
+main `18626942` and fork `d80a2884`: the fork lines moved (`Transaction::commit` `:373`,
+`do_commit` `:495`, `update_table` call `:574`, reconcile `:424`); the `Catalog` trait gained
+`publish_create_table` and `publish_replace_table`, so the decorator forwards every method and
+follows `EncryptionGuardCatalog`; K-7 holds `publish_create_table`, the second hook point §7
+anticipated, and reads back as the created table, because the staged metadata file is the local
+commit (orchestrator ruling K-1, the local catalog only); `type=hadoop` is the memory catalog
+with Hadoop file names. Flagged for pin U, not acted on: the fork's `do_commit` already checks
+`rejected_attempt_landed` before re-basing (`mod.rs:497`), the first half of ruling 84's card.
+The live leg (§3.3, 12 cells) and pins U and X await #1070.
+
 ### 3.1 Where it sits today
 
 Every write door ends in one fork call, `Transaction::commit`

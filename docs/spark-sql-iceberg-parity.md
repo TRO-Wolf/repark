@@ -1131,6 +1131,40 @@ perfectly good read.
   needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
   makes the unconfirmed commit nameable in an alert.
 
+#### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
+
+- **repark** — the local catalog keeps its table pointer in process memory. That is the
+  in-process memory catalog, which `type=hadoop` reaches with Hadoop file names; a bare
+  `type=memory` is refused without the extensions key. After a process dies, the reopen this
+  row covers is `CALL <catalog>.system.register_table` on the newest metadata file under
+  `<table>/metadata/`, which is then the table. A path read of a `type=hadoop` table follows
+  `version-hint.text` instead and can read an older version, so it is outside this row (card
+  [ICE-HADOOP-HINT-WINDOW-1](../task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md),
+  owner decision pending). A writer killed inside the
+  catalog's commit call, before the metadata file is written (every data file, delete file,
+  manifest and manifest list durable), leaves the table as it was: the same metadata file,
+  snapshot set and rows. The files that writer wrote stay on disk as orphans, never more than the
+  files the crashed commit wrote, and `remove_orphan_files` lists them once they are older than
+  its 24-hour floor. A writer killed after the metadata file is written reads back as
+  committed. A `CREATE TABLE … AS SELECT` writes its staged metadata file before the catalog's
+  publish call (fork `d80a2884`, `crates/iceberg/src/transaction/staged_table.rs:271-306`), so a
+  CTAS killed at the publish reads back as the created table with every row and no orphan.
+  **This is the local catalog's rule only:** Glue and S3 Tables follow the catalog pointer, and
+  a kill there is drilled by the live leg of ICE-INTEGRITY-PINS-1 (pin U, awaiting #1070,
+  unmeasured).
+- **Apache Spark** — Iceberg's `HadoopCatalog` has no pointer outside the file system either: a
+  table is its highest-versioned metadata file (`version-hint.text` is a hint), so a metadata
+  file once written is the commit. *(oracle: documented.)*
+- **Pin** — `crates/repark-spark/src/tests/kill_mid_write.rs` (18 cells: `INSERT … SELECT`,
+  the same with a session write key, `INSERT OVERWRITE`, `MERGE` copy-on-write and
+  merge-on-read, `DELETE`, CTAS, each on format v2 and v3, and the controls K-C0 and K-C1, all
+  in a killed child process), with the test-only hold decorator in `kill_mid_write_hold.rs`.
+- **Rationale** — DECLARED (ICE-INTEGRITY-PINS-1 pin K, 2026-10-22). Owner ruling 83
+  (2026-10-15): "Confirmed as the local catalog's rule only. The pin names it so; Glue and REST
+  follow the catalog pointer, and the AWS drill pins that." Ruling 82 sets the orphan ceiling;
+  the CTAS answer is orchestrator ruling K-1 (2026-10-22, under the owner's grant). A durable
+  pointer for the local catalog is out of scope (the U-9 sketch §0).
+
 #### DML-6 — `INSERT … BY NAME`
 
 - **repark** — **FIXED 2026-09-17 (ICE-RTAS-BYNAME-1).** `INSERT INTO t BY NAME

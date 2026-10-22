@@ -74,6 +74,12 @@ mod insert_arity;
 mod insert_overwrite;
 mod join_condition_refusals;
 mod join_null_keys;
+#[cfg(unix)]
+mod kill_mid_write;
+#[cfg(unix)]
+mod kill_mid_write_hold;
+#[cfg(unix)]
+mod kill_mid_write_release;
 mod lambda_door;
 mod list_null_compound;
 mod local_fs_ddl;
