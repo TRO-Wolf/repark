@@ -16,6 +16,7 @@ pins.
 - [test_acceptance_v3_helpers.py](test_acceptance_v3_helpers.py) — AWS-free structural pins for the LIVE-v3 leg body and its two live legs.
 - [test_aws_acceptance.py](test_aws_acceptance.py) — Env-gated real-AWS acceptance harness — the source publish job's path against Glue.
 - [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) — AWS cross-read leg: live Spark reads the AWS acceptance tables.
+- [test_acceptance_commit_gate.py](test_acceptance_commit_gate.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): the commit gate and its SigV4 signer, AWS-free on every pull request: the 26 published AWS vectors, the regional allow list, commit recognition on both catalogs, the scratch-namespace refusal, every script against a loopback fake endpoint, the second signature, no header logged, and one RePark session reaching Glue through the gate.
 - [test_catalog_flow.py](test_catalog_flow.py) — The source publish job's path, end to end from Python — the acceptance kernel.
 - [test_cutover_schema_1.py](test_cutover_schema_1.py) — Nullability derived the way Spark derives it on the cutover shapes.
 - [test_dogfood_gaps.py](test_dogfood_gaps.py) — Group F — production-job gaps from the dogfood run.
@@ -36,9 +37,22 @@ pins.
 - [test_pr_245_revalidation.py](test_pr_245_revalidation.py) — PR-245 public-door revalidation against the pinned PySpark 4.1.2 measurements.
 - [test_pyspark_compat_smoke.py](test_pyspark_compat_smoke.py) — C2 compat smoke — subprocess wrapper.
 - [test_v3_acceptance_local.py](test_v3_acceptance_local.py) — LIVE-v3: the Glue / S3 Tables v3 leg body, pinned against the local catalog.
+- [_acceptance_commit_gate.py](_acceptance_commit_gate.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): the catalog endpoint gate of pin U. A loopback HTTP server the writer session's `uri` (Glue) or `endpoint_url` (S3 Tables) names; it recognises the commit (`AWSGlue.UpdateTable`; `PUT …/metadata-location`), refuses any namespace but the scratch one, any other table bucket and any delete, signs every request again for the region's Glue or S3 Tables endpoint (the only upstreams it accepts), never logs a header, and runs one script per cell: forward, drop or land the commit, reset its reply or answer a throttle, cut later requests, or hold.
+- [_acceptance_cross_release_runner.py](_acceptance_cross_release_runner.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): the one script both releases run in leg X, with calls 1.5.5 has (the builder, `sql`, `to_arrow`): it refuses unless its version and install origin (`index-wheel` or `local-build`) are its role's, adopts a local table's newest metadata file, creates one of the X kinds, appends, or reads, and writes the read to Arrow IPC with the current snapshot's id, `total-records` and delete files.
+- [_acceptance_sigv4.py](_acceptance_sigv4.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): SigV4 header signing in the standard library (ruling 88 and Q10), test-only.
 - [_acceptance_cross_read.py](_acceptance_cross_read.py) — Spark reads RePark-written tables and answers row-equal.
 - [_acceptance_replace.py](_acceptance_replace.py) — CREATE OR REPLACE TABLE … AS twice leg body for the real-AWS acceptance harness.
 - [_acceptance_v3.py](_acceptance_v3.py) — Format-version-3 leg body for the real-AWS acceptance harness (LIVE-v3).
+
+## ICE-INTEGRITY-PINS-1 pins U and X (2026-10-22)
+
+The live legs go here beside `test_aws_acceptance.py` (FACADE-TESTS-LAYOUT-1 moved the facade tests
+after the sketch named `python/repark/tests/`). Data files:
+
+- [sigv4_v4_vectors.json](sigv4_v4_vectors.json) — 26 header-mode vectors of the published AWS SigV4 suite (aws-c-auth v0.9.0 `aws-signing-test-suite/v4`, Apache-2.0, as vendored in the `aws-sigv4` 1.5.1 crate): request, context, canonical request, string to sign and signature; `double-encode-path` carries the canonical request only. The three vectors whose context differs from the gate's path (`get-space-normalized`, and the two `x-www-form-urlencoded` vectors that sign `x-amz-content-sha256`) are left out.
+- [previous_release_requirements.txt](previous_release_requirements.txt) — the previous release for leg X, compiled with `uv pip compile --generate-hashes --only-binary :all:` from `repark==1.5.5`. Its five wheel hashes equal PyPI's for 1.5.5. The workflow installs it with `--require-hashes` into `.venv-previous` before any credential exists. One release-checklist line moves it to the newest previous release at each tag (ruling 81).
+
+The gate's unit test, the vectors and the botocore cross-check (once, in a throwaway moto 5.2.3 venv built offline from the uv cache; recorded in the ledger) pins: ice-integrity-pins-1/C-032, C-033. The requirements file pins: ice-integrity-pins-1/C-034
 
 ## Path expressions
 
