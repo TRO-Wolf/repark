@@ -374,3 +374,57 @@ async fn a_partitioned_overwrite_in_utc_stores_the_utc_read() {
     }
     assert_eq!(wrong, Vec::<String>::new());
 }
+
+#[tokio::test]
+async fn an_update_of_an_inner_struct_with_a_wall_refuses_outside_utc() {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    let inner = "STRUCT<i: STRUCT<v: TIMESTAMP>>";
+    run(
+        &session,
+        &format!(
+            "CREATE TABLE ice.ns.q (id INT, st {inner}) USING iceberg \
+             TBLPROPERTIES ('format-version'='2')"
+        ),
+    )
+    .await;
+    run(
+        &session,
+        "INSERT INTO ice.ns.q VALUES (1, named_struct('i', named_struct('v', \
+         TIMESTAMP '2000-01-01 00:00:00+00:00')))",
+    )
+    .await;
+    let outcome = attempt(
+        &session,
+        &format!("UPDATE ice.ns.q SET st.i = named_struct('v', {WALL}) WHERE id = 1"),
+    )
+    .await;
+    let refused = "Cannot write incompatible data for the table `ice`.`ns`.`q`: Cannot safely \
+                   cast `st`.`i`.`v` to \"TIMESTAMP\"";
+    assert!(
+        outcome.as_ref().is_err_and(|error| error.contains(refused)),
+        "{outcome:?}"
+    );
+    let batches = session
+        .sql("SELECT CAST(st.i.v AS BIGINT) FROM ice.ns.q")
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    let kept = batches[0].column(0).as_primitive::<Int64Type>().value(0);
+    assert_eq!(kept, 946_684_800);
+}
+
+#[tokio::test]
+async fn a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant() {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        "UPDATE ice.ns.t SET st = named_struct('v', \
+         CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ), 'n', 1) WHERE id = 1",
+    )
+    .await;
+    assert_eq!(stored(&session).await, vec![NEW_YORK_READ]);
+}

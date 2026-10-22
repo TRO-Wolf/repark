@@ -69,6 +69,11 @@ Only tests; `mod.rs` is the module manifest.
   text keep main's New York answers. pins: zone-seam-1/C-013
   **Step 5:** `a_value_under_a_null_struct_never_reaches_an_ansi_leaf` holds the parent-null mask
   (a malformed string under a NULL struct row does not raise under ANSI). pins: zone-seam-1/C-010
+  **Fix round 1 (2026-10-22, verifier S1-2):**
+  `a_container_cast_converts_every_element_of_every_row_of_a_list` casts a column of two list
+  rows (three and four elements, one NULL) of instants to `ARRAY<TIMESTAMP_NTZ>` in New York and
+  holds every element's wall and the offsets; it reds when the list arm converts only the first
+  value. pins: zone-seam-1/C-018
   pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers

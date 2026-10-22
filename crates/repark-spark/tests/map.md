@@ -292,6 +292,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   count unchanged from the seed's, no value stored. Red on `58321e94` (all 36 cells stored);
   `a_partitioned_overwrite_in_utc_stores_the_utc_read` is the UTC control on the same twelve
   writes. pins: zone-seam-1/C-016, C-017
+  *Fix round 1 (2026-10-22, verifier S1-2):* `an_update_of_an_inner_struct_with_a_wall_refuses_outside_utc`
+  (`UPDATE … SET st.i = named_struct('v', TIMESTAMP_NTZ …)` on `STRUCT<i: STRUCT<v: TIMESTAMP>>`
+  refuses naming `st`.`i`.`v`, the seed kept; reds when `type_at` answers the column type for any
+  path) and `a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant` (the plain
+  `UPDATE` exemption: `CAST('<wall>' AS TIMESTAMP_NTZ)` in the struct stores Spark's New York
+  instant; reds when the exemption is removed). pins: zone-seam-1/C-018
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`

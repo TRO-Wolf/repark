@@ -121,6 +121,24 @@ def test_the_dataframe_door_casts_a_container_to_the_session_wall(tmp_path: Path
         spark.stop()
 
 
+def test_a_pandas_instant_zoned_outside_utc_casts_in_a_struct_to_the_session_wall(
+    tmp_path: Path,
+) -> None:
+    """A pandas column zoned ``America/New_York`` casts inside a struct to the session wall."""
+    import pandas as pd
+
+    spark = open_session(NEW_YORK, tmp_path)
+    try:
+        instant = pd.Timestamp("2026-01-02 03:04:05.123456", tz="UTC").tz_convert(NEW_YORK)
+        spark.createDataFrame(pd.DataFrame({"x": [instant, instant]})).createOrReplaceTempView(
+            "zoned"
+        )
+        cast = spark.sql(f"SELECT {CONTAINER_CAST} AS st FROM zoned").toArrow()
+        assert leaf_ticks(cast.column(0)) == [NEW_YORK_WALL, NEW_YORK_WALL]
+    finally:
+        spark.stop()
+
+
 def test_the_dataframe_door_refuses_a_struct_or_array_cast_type_as_on_main(tmp_path: Path) -> None:
     """``Column.cast`` to a struct or array type is not parsed by the facade, on main too."""
     spark = open_session(NEW_YORK, tmp_path)

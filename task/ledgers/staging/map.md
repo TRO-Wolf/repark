@@ -2538,5 +2538,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   matrix against live Spark, the cost table; clauses C-001 to C-015, all PROVEN, and the
   attestation. `risk_tier: standard`. Branch `feat/zone-seam-1`.
   *Fix round 1 (2026-10-22, after verifier round 1's FAIL):* the partitioned `INSERT OVERWRITE`
-  position (S1-1, C-016), the partitioned door census of sixteen named shapes (C-017), and the
-  round's further items as they land.
+  position (S1-1, C-016), the partitioned door census of sixteen named shapes (C-017), the four
+  pins that kill S1-2's surviving mutants (C-018), and the round's further items as they land.

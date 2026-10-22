@@ -539,3 +539,50 @@ async fn a_value_under_a_null_struct_never_reaches_an_ansi_leaf() {
         1_767_341_045_123_456
     );
 }
+
+#[tokio::test]
+async fn a_container_cast_converts_every_element_of_every_row_of_a_list() {
+    let hour = 3_600_000_000_i64;
+    let shift = 5 * hour;
+    let elements: Vec<Option<i64>> = vec![
+        Some(INSTANT),
+        Some(INSTANT + hour),
+        Some(INSTANT + 2 * hour),
+        Some(INSTANT + 3 * hour),
+        None,
+        Some(INSTANT + 4 * hour),
+        Some(INSTANT + 5 * hour),
+    ];
+    let values =
+        arrow::array::TimestampMicrosecondArray::from(elements.clone()).with_timezone("UTC");
+    let field = Arc::new(Field::new_list_field(values.data_type().clone(), true));
+    let offsets = arrow::buffer::OffsetBuffer::new(vec![0_i32, 3, 7].into());
+    let lists = arrow::array::ListArray::try_new(field, offsets, Arc::new(values), None)
+        .expect("two rows of lists");
+    let batch =
+        RecordBatch::try_from_iter(vec![("a", Arc::new(lists) as ArrayRef)]).expect("one column");
+    let ctx = context("America/New_York");
+    let cast = Expr::Cast(Cast::new(
+        Box::new(datafusion::prelude::col("a")),
+        wrap_type(Shape::Array, leaf_type(Kind::Ntz)),
+    ));
+    let batches = ctx
+        .read_batch(batch)
+        .expect("frame")
+        .select(vec![cast.alias("v")])
+        .expect("select")
+        .collect()
+        .await
+        .expect("collect");
+    let column = batches[0].column(0).as_list::<i32>();
+    assert_eq!(column.len(), 2);
+    assert_eq!(column.value_offsets(), &[0, 3, 7]);
+    let leaf = column.values().as_primitive::<TimestampMicrosecondType>();
+    assert_eq!(leaf.data_type(), &leaf_type(Kind::Ntz));
+    let walls: Vec<Option<i64>> = leaf.iter().collect();
+    let expected: Vec<Option<i64>> = elements
+        .iter()
+        .map(|element| element.map(|micros| micros - shift))
+        .collect();
+    assert_eq!(walls, expected);
+}

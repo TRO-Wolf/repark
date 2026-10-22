@@ -614,9 +614,26 @@ every one to the refusal (24 wrong on main and head, 9 EQUAL on main and wrong o
 errors on main and head at the 1969 wall), no WRONG cell is left on the fix, and every refused
 cell holds the seed's file only.
 
+**Item 3, S1-2, four pins and no product change.** One pin per surviving mutant, each green on
+the fix and red with its mutant applied (the verifier's mutant texts, applied by exact text and
+reverted):
+
+| mutant | pin | layer | result |
+|---|---|---|---|
+| `X-first-array-element-only` (the list arm converts only the first value) | `zone_seam_pairs.rs` `a_container_cast_converts_every_element_of_every_row_of_a_list` (two rows, seven elements, one NULL) | `repark-functions --lib` | killed, 1 failed of 967 |
+| `X-instant-tz-only-UTC` (`is_instant` matches only `"UTC"`) | `test_zone_seam_1.py` `test_a_pandas_instant_zoned_outside_utc_casts_in_a_struct_to_the_session_wall` | native build with the mutant, the three Python pin files | killed, 1 failed, 128 passed (survives the Rust layer, 967 passed) |
+| `X-type-at-wrong-leaf` (`type_at` answers the column type for any path) | `ntz_into_ltz_nested.rs` `an_update_of_an_inner_struct_with_a_wall_refuses_outside_utc` | the three `repark-spark` refusal binaries | killed, 1 failed |
+| `X-no-update-shift-exemption` | `ntz_into_ltz_nested.rs` `a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant` | the three `repark-spark` refusal binaries | killed, 1 failed |
+
+The builder's 17 (M01–M17) and the verifier's other five (`X-drop-map-leg`,
+`X-zone-utc-in-seam`, `X-skip-container-try-cast`, `X-refusal-skips-merge-insert`,
+`X-no-star-feed`) re-run on the fix: every one still killed (M15 now also reds the partitioned
+pin, M16 the partitioned UTC control). 26 of 26 killed.
+
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-016 | An INSERT with a `PARTITION` clause the door accepts names its source column by position (the table's columns less the static partition columns, or the column list; a dynamic clause reads every column), so outside UTC the ZS-9 refusal and R-011's type read see the column on every partitioned spelling; a clause the door refuses is read as before. | the gate's unit tests; the partitioned-door pin red on `58321e94`. | **PROVEN** | `nested_ns_gate/tests.rs` static-column cases; item 2's pin, 36 cells red on `58321e94`, green on the fix. |
 | C-017 | The partitioned door census (sixteen shapes by name, both DataFrame overwrites included, seven sources, two schemas, four zones, 848 cells) on main, `58321e94` and the fix against live Spark: no cell DIFFERENT on the fix, no EQUAL→DIFFERENT, UTC unchanged, the only `58321e94`→fix moves DIFFERENT→refused, no refused write leaves a file. | the census and the verifier's `wx`/`wr` drivers on the fix. | **PROVEN** | item 2's tables. |
+| C-018 | Each of the verifier's four surviving mutants (first list element only, `is_instant` only `"UTC"`, `type_at` at the wrong leaf, no plain-`UPDATE` exemption) reds one pin, and the other 22 mutants stay killed. | the mutant runs. | **PROVEN** | item 3's table: 26 of 26 killed. |
 
 Up: [map.md](map.md).
