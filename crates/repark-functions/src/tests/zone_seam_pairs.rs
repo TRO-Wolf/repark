@@ -70,6 +70,10 @@ fn wall(micros: i64) -> Expr {
     lit(ScalarValue::TimestampMicrosecond(Some(micros), None))
 }
 
+fn bigint() -> Expr {
+    Expr::Cast(Cast::new(Box::new(lit(EPOCH_SECONDS)), DataType::Int64))
+}
+
 fn day() -> Expr {
     lit(ScalarValue::Date32(Some(DAY)))
 }
@@ -270,7 +274,7 @@ async fn a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does() {
 
 #[tokio::test]
 async fn a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does() {
-    assert_refused(lit(EPOCH_SECONDS), Kind::Ntz, "row 10").await;
+    assert_refused(bigint(), Kind::Ntz, "row 10").await;
 }
 
 fn bare_try(value: Expr, kind: Kind) -> Expr {
@@ -287,7 +291,7 @@ async fn a_leaf_try_cast_answers_what_the_leaf_cast_answers() {
         (wall(INSTANT), Kind::Text, WALL_TEXTS, "wall to string"),
         (day(), Kind::Ltz, DATE_INSTANTS, "date to timestamp"),
         (
-            lit(EPOCH_SECONDS),
+            bigint(),
             Kind::Ltz,
             ["1767323045000000", "1767323045000000", "1767323045000000"],
             "bigint to timestamp",

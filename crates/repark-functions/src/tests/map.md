@@ -60,6 +60,8 @@ Only tests; `mod.rs` is the module manifest.
   `TIMESTAMP_NTZ` (rows 9–10); the bare `TRY_CAST` twins; NULL where a `TRY_CAST` leaf cannot
   convert; `to_utc_timestamp` / `from_utc_timestamp` of a wall, a date and NULL; `to_json` of a
   `TIMESTAMP_NTZ` leaf; an instant column; and the mixed-member control.
+  The `BIGINT` source is `CAST(1767323045 AS BIGINT)`, as in the corpus: the bare literal
+  fits an `INT` and `SparkIntegerLiteral` types it so.
   pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers
