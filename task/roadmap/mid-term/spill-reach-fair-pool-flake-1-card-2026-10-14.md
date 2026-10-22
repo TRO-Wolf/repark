@@ -4,6 +4,21 @@
 
 **Status:** open, not scheduled.
 
+**Status update (2026-10-22, SPILL-REACH-FAIR-POOL-FLAKE-1, branch `fix/spill-reach-fair-pool-flake-1`):** three CI
+hits are now dated: 2026-10-05 16:23 UTC facade shard 2, 2026-10-13 13:27 UTC facade shard 0, 2026-10-22 facade shard 3 on
+PR #1142 (run 39763165319, re-run on the owner's word and green). Earlier occurrences are in
+[the run 9 report](overnight-report-2026-09-12-run9.md) (2026-09-12, PR #555, `ExternalSorterMerge[0]`, 768.0 KB). Measured
+locally at the 64 MiB default, on the ci-profile module: the join probe refused 0 of 30 runs alone and 4 of 67 runs under
+`-n 16` beside `python/repark/tests/perf/` (in all seven refusals recorded in full the request exceeded the bytes the pool
+quoted as available, and in three of them that figure was zero), and 7 of 280 loaded-type runs in all; a pool of 72 MiB
+refused 0 of 221 loaded-type runs and every passing run still spilled (13 to 23 spills for the join, 7 to 10 for the
+distinct probe). The default is now 72 MiB, with a dated row in
+[the perf map](../../../python/repark/tests/perf/map.md). The runner half was not measured (the push of the diagnostic
+branch was denied on 2026-10-22), so the first CI run of the shard that holds this file is the only runner sample. Work
+order and evidence: [../../wo/spill-reach-fair-pool-flake-1/map.md](../../wo/spill-reach-fair-pool-flake-1/map.md); ledger:
+[../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md).
+The hangs found on the way are carded apart as [FAIR-POOL-HANG-1](fair-pool-hang-under-load-1-card-2026-10-22.md).
+
 **Retires:** when repeated runs settle whether the pool is too tight or the spill path has a gap, and the test or the product changes accordingly with a dated row.
 
 ## Why

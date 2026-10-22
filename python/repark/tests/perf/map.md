@@ -29,7 +29,7 @@ pins.
 - [test_perf_ice_writepath_1.py](test_perf_ice_writepath_1.py) — PERF-ICE-WRITEPATH-1 — the CTAS write node: file layout, determinism, and wall.
 - [test_perf_unpivot_1.py](test_perf_unpivot_1.py) — PERF-UNPIVOT-1 — native stack() unpivot; step 2 puts describe back on a pure plan.
 - [test_t2_sort_memory.py](test_t2_sort_memory.py) — T2 — ExternalSorter / datafusion conf passthrough / export error UX.
-- [test_t2_spill_reach.py](test_t2_spill_reach.py) — S-1 spill-reach battery — recon §3 operator classes under a small FairSpillPool.
+- [test_t2_spill_reach.py](test_t2_spill_reach.py) — S-1 spill-reach battery — recon §3 operator classes under a small FairSpillPool. SPILL-REACH-FAIR-POOL-FLAKE-1 (2026-10-22): the session helper's default pool is 72M, up from 64M, because the join probe refused 7 of 280 loaded-type runs at 64M and 0 of 221 at 72M, and every passing run still spills; the runner half was not measured (the diagnostic push was denied on 2026-10-22), so the first CI run of the shard that holds this file is the only runner sample. The assertions, the batch size and the two 16M pins are unchanged ([ledger](../../../../task/ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md)).
 - [test_tpcds_compare_unit.py](test_tpcds_compare_unit.py) — Unit pins for the TPC-DS compare kernel + runner helpers.
 - [test_tpcds_smoke.py](test_tpcds_smoke.py) — R-TPCDS-HARNESS — SF0.01 facade oracle battery (DuckDB differential).
 - [test_tpch_compare_unit.py](test_tpch_compare_unit.py) — Unit pins for the TPC-H compare kernel.

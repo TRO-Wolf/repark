@@ -1,0 +1,29 @@
+label	test	outcome	worker	loadavg_1_5_15	seconds	max_spill	spill_ops	join_or_agg_peak_mem_used_bytes	spilled_bytes_total	vmhwm_after_mib	refusal_consumer	refusal_additional_bytes	refusal_already_bytes	refusal_pool_free_bytes	refusal_pool_bytes	refusal_text
+hang-1	test_distinct_spills_under_small_fair_pool	pass	gw6	17.71,18.91,30.53	1.518	10	10,2	19390000	20684185	1067.8						
+hang-1	test_sort_merge_join_spills_under_small_fair_pool	pass	gw6	17.71,18.91,30.53	2.114	46	46,16,22	48070000	56518246	1067.8						
+hang-2	test_distinct_spills_under_small_fair_pool	pass	gw12	20.58,19.05,29.47	1.187	9	9,3	29120000	24431820	715.4						
+hang-2	test_sort_merge_join_spills_under_small_fair_pool	pass	gw12	20.58,19.05,29.47	1.299	45	45,16,20,1	44940000	56499097	790.6						
+hang-3	test_distinct_spills_under_small_fair_pool	pass	gw14	9.13,9.00,20.11	0.649	9	9,3	23570000	22229811	937.9						
+hang-3	test_sort_merge_join_spills_under_small_fair_pool	pass	gw14	9.13,9.00,20.11	0.564	45	45,18,22	49220000	56098816	1004.8						
+hang-4	test_sort_merge_join_spills_under_small_fair_pool	refused	gw3	15.82,10.65,20.02	1.533					988.1	ExternalSorterMerge[0]	268390	1723187	0	67108864	Resources exhausted: Failed to allocate additional 262.1 KB for ExternalSorterMerge[0] with 1682.8 KB already allocated for this reservation - 0.0 B remain available for the total memory pool: fair(pool_size: 64.0 MB) | REPARK: raise the FairSpillPool via SparkSession.builder.config('repark.memory.limit.gb', N).getOrCreate() (build-time; RAM-relative, cap 8 GiB; 0 = unbounded) or spark.conf.set('datafusion.runtime.memory_limit', 'NG') (runtime; same pool — one truth, not two knobs).
+hang-4	test_distinct_spills_under_small_fair_pool	pass	gw4	15.82,10.65,20.02	0.594	10	10,2	23560000	20488704	970.1						
+hang-5	test_distinct_spills_under_small_fair_pool	pass	gw2	16.42,11.52,19.72	1.143	8	8,3	29580000	23278387	1233.8						
+hang-5	test_sort_merge_join_spills_under_small_fair_pool	pass	gw15	16.42,11.52,19.72	1.585	23	15,16,23	35870000	52323942	1016.7						
+hang-6	test_sort_merge_join_spills_under_small_fair_pool	refused	gw5	20.97,13.65,19.98	1.251					789.8	ExternalSorterMerge[0]	786432	0	0	67108864	Resources exhausted: Failed to allocate additional 768.0 KB for ExternalSorterMerge[0] with 0.0 B already allocated for this reservation - 0.0 B remain available for the total memory pool: fair(pool_size: 64.0 MB) | REPARK: raise the FairSpillPool via SparkSession.builder.config('repark.memory.limit.gb', N).getOrCreate() (build-time; RAM-relative, cap 8 GiB; 0 = unbounded) or spark.conf.set('datafusion.runtime.memory_limit', 'NG') (runtime; same pool — one truth, not two knobs).
+hang-6	test_distinct_spills_under_small_fair_pool	pass	gw10	20.97,13.65,19.98	0.461	10	10,2	19530000	20485529	854.7						
+hang-7	test_distinct_spills_under_small_fair_pool	pass	gw5	22.82,15.28,20.14	1.472	9	9,3	29230000	24431820	1003.1						
+hang-7	test_sort_merge_join_spills_under_small_fair_pool	pass	gw10	22.82,15.28,20.14	1.71	27	27,16,1,20,1	47310000	49943449	1172.6						
+hang-8	test_distinct_spills_under_small_fair_pool	pass	gw0	19.65,15.48,19.86	0.439	10	10,2	19400000	21285683	1202.9						
+hang-8	test_sort_merge_join_spills_under_small_fair_pool	pass	gw11	18.75,15.24,19.81	2.635	45	45,16,1,21	44530000	56492134	744.8						
+hang-9	test_distinct_spills_under_small_fair_pool	pass	gw3	22.58,16.42,19.83	0.4	10	10,2	23560000	20884889	1365.4						
+hang-9	test_sort_merge_join_spills_under_small_fair_pool	pass	gw6	22.58,16.42,19.83	0.78	47	47,17,23	54780000	56937676	1120.0						
+hang-10	test_sort_merge_join_spills_under_small_fair_pool	pass	gw14	20.74,16.63,19.68	1.596	22	7,17,22	37320000	48339353	1166.2						
+hang-10	test_distinct_spills_under_small_fair_pool	pass	gw6	20.74,16.63,19.68	1.001	9	9,3	28550000	23278387	903.4						
+hang-11	test_distinct_spills_under_small_fair_pool	pass	gw14	28.15,20.56,19.66	1.508	10	10,2	19670000	21705523	662.7						
+hang-11	test_sort_merge_join_spills_under_small_fair_pool	pass	gw8	28.15,20.56,19.66	2.915	41	41,17,19,2	40800000	57042534	707.6						
+hang-12	test_distinct_spills_under_small_fair_pool	pass	gw4	23.97,20.57,19.73	2.387	8	8,3	29120000	22649241	987.2						
+hang-12	test_sort_merge_join_spills_under_small_fair_pool	pass	gw14	23.97,20.57,19.73	2.083	48	48,17,21	44150000	57252249	1081.6						
+hang-13	test_distinct_spills_under_small_fair_pool	pass	gw15	21.26,20.17,19.64	0.825	10	10,2	19420000	20485120	1137.3						
+hang-13	test_sort_merge_join_spills_under_small_fair_pool	pass	gw3	21.26,20.17,19.64	1.842	42	42,17,20,1	43360000	55145062	722.0						
+hang-14	test_distinct_spills_under_small_fair_pool	pass	gw2	21.95,20.64,19.83	0.559	10	10,2	19400000	20288716	948.8						
+hang-14	test_sort_merge_join_spills_under_small_fair_pool	pass	gw12	23.00,20.88,19.92	0.958	23	17,16,23	41000000	48758784	706.8						

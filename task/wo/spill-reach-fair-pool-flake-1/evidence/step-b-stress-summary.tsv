@@ -1,0 +1,5 @@
+pool	processes	rc0	rc_other	processes_with_refusal_in_summary	processes_with_assert	processes_timed_out	timed_out_in	failing_tests	load_before	wall_s
+64M	200	178	22	0	0	18	test_distinct_spills_under_small_fair_pool x4; test_hash_agg_distinct_spills_under_small_fair_pool x5; test_hash_agg_spills_under_small_fair_pool x7; test_hash_join_is_pinned_as_resources_exhausted x2	test_sort_merge_join_spills_under_small_fair_pool:other x3	9.49	568
+72M	200	189	11	0	0	10	test_distinct_spills_under_small_fair_pool x2; test_hash_agg_distinct_spills_under_small_fair_pool x3; test_hash_agg_spills_under_small_fair_pool x4; test_hash_join_is_pinned_as_resources_exhausted x1	-	30.39	487
+80M	200	198	2	0	0	1	test_hash_agg_spills_under_small_fair_pool x1	-	22.62	475
+96M	200	199	1	0	0	1	test_hash_join_is_pinned_as_resources_exhausted x1	-	40.38	451

@@ -940,6 +940,8 @@ declines it (a dated ruling in the intake, then the archive).
   `Resources exhausted` from `ExternalSorterMerge` (2026-10-05 shard 2, 2026-10-13 shard
   0; both re-runs passed). Open question: a real spill gap under a fair pool (product)
   or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
+  **2026-10-22 (SPILL-REACH-FAIR-POOL-FLAKE-1):** measured locally; the default pool of the file is now 72 MiB, the runner
+  half is unmeasured and the first CI run of the shard is the only runner sample; the card stays open until that read.
 - [fair-pool-hang-under-load-1-card-2026-10-22.md](fair-pool-hang-under-load-1-card-2026-10-22.md) — **card
   FAIR-POOL-HANG-1 (2026-10-22, open, not scheduled):** tests of `test_t2_spill_reach.py` sometimes sit inside the native
   `to_arrow_batches` / `to_arrow` call for minutes instead of one second, alone once and under contention often (step A:

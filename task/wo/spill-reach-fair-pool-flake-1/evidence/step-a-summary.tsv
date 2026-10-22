@@ -1,0 +1,9 @@
+where	condition	test	runs_recorded	pass	refused	no_spill	note
+runner	alone	test_sort_merge_join_spills_under_small_fair_pool	0	0	0	0	NOT RUN: git push and gh pr create denied by the auto-mode classifier
+runner	under shard load	test_sort_merge_join_spills_under_small_fair_pool	0	0	0	0	NOT RUN: same denial
+runner	alone	test_distinct_spills_under_small_fair_pool	0	0	0	0	NOT RUN: git push and gh pr create denied by the auto-mode classifier
+runner	under shard load	test_distinct_spills_under_small_fair_pool	0	0	0	0	NOT RUN: same denial
+local	local alone (fresh process, 26 cores, box load 6-10)	test_sort_merge_join_spills_under_small_fair_pool	30	30	0	0	30 reps per test
+local	local alone (fresh process, 26 cores, box load 6-10)	test_distinct_spills_under_small_fair_pool	30	30	0	0	30 reps per test
+local	local -n 16 beside python/repark/tests/perf	test_sort_merge_join_spills_under_small_fair_pool	67	63	4	0	68 reps; 6 reps hung or were killed and 2 spill records are missing
+local	local -n 16 beside python/repark/tests/perf	test_distinct_spills_under_small_fair_pool	67	67	0	0	68 reps; 6 reps hung or were killed and 2 spill records are missing

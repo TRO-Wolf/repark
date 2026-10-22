@@ -64,6 +64,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the same mode at depth 1 before it reads the peak; local deltas 0.79 MB flat and 0.95 MB replace
   against 4.85 MB and 7.78 MB without it. C-003 (PROVEN): bound, floor, depth and headroom unchanged.
   `risk_tier: standard`. Branch `fix/replace-linear-pin-1`.
+- [spill-reach-fair-pool-flake-1-ledger.md](spill-reach-fair-pool-flake-1-ledger.md) — **SPILL-REACH-FAIR-POOL-FLAKE-1
+  (2026-10-22, owner rulings "Re run" and "go with your recommendations"):** the small-fair-pool join probe refused
+  `ExternalSorterMerge` on CI three times; the default pool of `test_t2_spill_reach.py` moves from 64M to 72M. C-001
+  (PROVEN): at 64M the probe refuses 0 of 30 alone and 4 of 67 loaded. C-002 (PROVEN): every refusal exceeds the bytes
+  the pool quoted; alone 48M refuses 20 of 20 and 56M 9 of 20. C-003 (PROVEN): the ordered sweep is clean at 72M, 80M
+  and 96M. C-004 (PROVEN): pooled 7 of 280 at 64M against 0 of 221 at 72M. C-005 (PROVEN): one knob, assertions
+  unchanged. C-006 (OPEN): the runner half was not measured, push denied. C-007 (PROVEN): the hangs, carded apart as
+  FAIR-POOL-HANG-1. `risk_tier: standard`. Branch `fix/spill-reach-fair-pool-flake-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

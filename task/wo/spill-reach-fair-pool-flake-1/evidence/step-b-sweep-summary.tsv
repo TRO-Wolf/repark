@@ -1,0 +1,9 @@
+pool	condition	runs	all_nine_seen	all_nine_passed	runs_with_refusal	runs_with_no_spill_or_assert	runs_with_other_fail	runs_killed_by_other_perf_tests	runs_hung_in_this_file	hung_tests	failing_tests
+64M	alone	20	19	19	0	0	0	0	1	test_hash_agg_spills_under_small_fair_pool x1	-
+64M	loaded	30	29	27	0	0	3	2	3	test_distinct_spills_under_small_fair_pool x2; test_hash_agg_spills_under_small_fair_pool x1	test_distinct_spills_under_small_fair_pool:failed_no_summary x2; test_hash_agg_spills_under_small_fair_pool:failed_no_summary x1
+72M	alone	20	20	20	0	0	0	0	0	-	-
+72M	loaded	30	30	30	0	0	0	1	0	-	-
+80M	alone	20	20	20	0	0	0	0	0	-	-
+80M	loaded	30	30	29	0	0	1	0	1	test_hash_join_is_pinned_as_resources_exhausted x1	test_hash_join_is_pinned_as_resources_exhausted:failed_no_summary x1
+96M	alone	20	20	20	0	0	0	0	0	-	-
+96M	loaded	30	30	29	0	0	1	2	1	test_hash_join_is_pinned_as_resources_exhausted x1	test_hash_join_is_pinned_as_resources_exhausted:failed_no_summary x1

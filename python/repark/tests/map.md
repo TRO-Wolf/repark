@@ -6196,6 +6196,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   forbidden). Runtime-SET pool-type pin. Grouping sets over `md5`; SMJ on `md5`
   (range is pre-sorted); hash_join/array_agg use a 16 MiB pool + payload.
   ruff-format lockstep.
+  **SPILL-REACH-FAIR-POOL-FLAKE-1 (2026-10-22):** the session helper's default pool is 72 MiB, up from 64 MiB; the
+  16 MiB pins, the 8192-row batch size, the partitions, the reservation and every assertion are unchanged. At 64 MiB the
+  join probe refused `ExternalSorterMerge` 0 of 30 runs alone and 4 of 67 under `-n 16` beside `python/repark/tests/perf/`
+  (7 of 280 loaded-type runs in all), and alone 20 of 20 at 48 MiB and 9 of 20 at 56 MiB; at 72 MiB it refused 0 of 221
+  loaded-type runs and every passing run spilled (join 13 to 23, distinct 7 to 10). The runner half was not measured
+  (the diagnostic push was denied on 2026-10-22), so the first CI run of the shard that holds this file is the only
+  runner sample. The hangs found on the way are carded as FAIR-POOL-HANG-1 and are not changed here.
+  pins: spill-reach-fair-pool-flake-1/C-001, C-002, C-003, C-004, C-005, C-007
 - `test_h3_spill_matrix.py` — **H3-SPILL-1** the Never-OOM pins behind Round 3 (2026-09-05): the boundary-digest pin also compares two equal-cardinality frames with different content (`offset=1`), so a row-count digest cannot pass it.
   [docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md). Three
   families: a spilling operator spills (`spill_count > 0`) **and** its digest equals the
