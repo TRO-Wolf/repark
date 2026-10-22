@@ -30,15 +30,15 @@ footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid 
 </style>
 <main>
 <h1>Iceberg Status, 2026-10-22</h1>
-<p class="sub">Written 10:30 UTC on main <code>0512470d</code>. This page replaces every earlier Iceberg status and plan page; the artifacts older than three days were closed out this morning and their copies stay under <code>docs/artifacts/</code>.</p>
+<p class="sub">Written 10:30 UTC on main <code>0512470d</code>, refreshed 15:10 UTC on main <code>dc462ccb</code>. This page replaces every earlier Iceberg status and plan page; the artifacts older than three days were closed out this morning and their copies stay under <code>docs/artifacts/</code>.</p>
 
-<p class="lede">Both Iceberg labels still read HARDENING, and the dates of record hold: v2 PRODUCTION on Tuesday 11-10, v3 core on Tuesday 11-17, both shipped by v1.5.6. Ten of the thirteen closeout units are on main. Between main and the v2 label sit one unit in build (the zone seam), one PR waiting for your merge (pin K), two units not yet dispatched (GATE-RETIRE-1, U-11), the pins U and X wiring in #1070, one more green parity-live morning, and the label PR itself.</p>
+<p class="lede">Both Iceberg labels still read HARDENING, and the dates of record hold: v2 PRODUCTION on Tuesday 11-10, v3 core on Tuesday 11-17, both shipped by v1.5.6. Eleven of the thirteen closeout units are on main, pin K of U-9 among them since this afternoon, and the parity-live nightly has its two green mornings. Between main and the v2 label sit the zone seam at its verifier, two units not yet dispatched (GATE-RETIRE-1, U-11), the pins U and X wiring in #1070, and the label PR itself.</p>
 
 <div class="tiles">
 <div class="tile"><div class="k">v2 label PR</div><div class="v">Tue 11-10</div><div class="d">buffer 11-12</div></div>
 <div class="tile"><div class="k">v3 core label</div><div class="v">Tue 11-17</div><div class="d">buffer 11-19</div></div>
-<div class="tile"><div class="k">Closeout units on main</div><div class="v">10 of 13</div><div class="d">U-2 moved to 1.5.7 by ruling</div></div>
-<div class="tile"><div class="k">Parity-live mornings</div><div class="v">1 of 2</div><div class="d">10-21 green, 10-22 running</div></div>
+<div class="tile"><div class="k">Closeout units on main</div><div class="v">11 of 13</div><div class="d">U-2 moved to 1.5.7 by ruling; U-9 pins U and X wait on #1070</div></div>
+<div class="tile"><div class="k">Parity-live mornings</div><div class="v">2 of 2</div><div class="d">10-21 and 10-22 green; P5 met</div></div>
 <div class="tile"><div class="k">Latest release</div><div class="v">v1.5.5</div><div class="d">PyPI 10-21, tag <code>7fb5f6b2</code></div></div>
 </div>
 
@@ -53,7 +53,7 @@ footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid 
 <tr><td class="n">U-6</td><td>ICE-STRUCT-PAIRING-1, one rule pairs struct fields on every write door (R-016); the ruling-110 SET walk followed</td><td><span class="tag ok">merged</span></td><td class="n">#1062 10-15, #1083 10-16</td></tr>
 <tr><td class="n">U-7</td><td>WRITE-BODY-CARRIERS-1, a write body inside CTAS refuses at parse</td><td><span class="tag ok">merged</span></td><td class="n">#1057, 10-14</td></tr>
 <tr><td class="n">U-8</td><td>ICE-NTZ-NESTED-REFUSE-1, outside UTC every door refuses an instant for a nested microsecond NTZ leaf (R-011)</td><td><span class="tag ok">merged</span> after four fix rounds; 3168 cells, 360 move to refusal, listed over-refusal until GATE-RETIRE-1</td><td class="n">#1124, 10-21</td></tr>
-<tr><td class="n">U-9</td><td>ICE-INTEGRITY-PINS-1: pin K kill mid-write, pin U unknown-outcome drill, pin X cross-release</td><td><span class="tag acc">K ready for your merge</span> three Opus verifier rounds, last one PASS; U and X wait on #1070</td><td class="n">#1142 open</td></tr>
+<tr><td class="n">U-9</td><td>ICE-INTEGRITY-PINS-1: pin K kill mid-write, pin U unknown-outcome drill, pin X cross-release</td><td><span class="tag ok">K merged</span> three Opus verifier rounds, last one PASS; U and X wait on #1070, which you wire</td><td class="n">#1142, 10-22</td></tr>
 <tr><td class="n">U-10</td><td>ICE-SPARK-CROSS-READ-1, Spark 4.1.2 reads what the acceptance scenarios write (12th leg)</td><td><span class="tag ok">merged</span></td><td class="n">#1056, 10-14</td></tr>
 <tr><td class="n">U-11</td><td>ICE-RESOURCE-BOUND-1 (PP-01, PP-02, PA-10, PA-11)</td><td><span class="tag warn">not dispatched</span> card and order on main since #1121</td><td class="n">—</td></tr>
 <tr><td class="n">U-12</td><td>ENC-1 residue rulings</td><td><span class="tag ok">items 2, 3, 4, 6 accepted</span> on main by #1120; items 1 and 5 are a dated carve-out under 121(b) on the v2 label, rebuilt in 1.5.7; #1071 stays parked</td><td class="n">#1120, 10-20</td></tr>
@@ -67,23 +67,23 @@ footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid 
 <tr><td>PARITY-LIVE-RERECORD-1</td><td><span class="tag ok">merged</span> #1122</td><td>Recorder ran in a borrowed <code>local[2]</code> session; now a subprocess on <code>local[1]</code>. Nightly green 10-21, the first of the two P5 needs; the 10-22 run was still in progress at writing.</td></tr>
 <tr><td>EXPLAIN-DML-WRITE-1</td><td><span class="tag ok">merged</span> #1137</td><td>EXPLAIN ANALYZE text adopted, INSERT and MERGE refuse under both wrappers; P2 report #1138.</td></tr>
 <tr><td>ZONE-ORACLE-1</td><td><span class="tag ok">merged</span> #1128</td><td>Expression-level Spark oracle, 1,640 cells; the seam's red-first pin.</td></tr>
-<tr><td>ZONE-SEAM-1</td><td><span class="tag acc">in build</span> PR #1139</td><td>Steps 1 to 5 built; corpus on the head 1540 EQUAL, 90 DIFFERENT, 10 REFUSED, 0 ERROR, no cell leaves EQUAL. Two halts, both ruled: ZS-7 (three DST-edge cells belong to the shared instant kernel, carded as ZONE-HORIZON-INSTANT-1) and ZS-9 (the nested NTZ-to-TIMESTAMP store is three sites, so the seam lands with a plan-time refusal of that shape and 74 + 29 cells are listed over-refusal until WRITE-NTZ-TO-LTZ-NESTED-1). The builder is writing the refusal now, then mutants, cost and records; a fresh Opus verifier follows; it merges only on a clean PASS and a never-worse census.</td></tr>
+<tr><td>ZONE-SEAM-1</td><td><span class="tag acc">at the verifier</span> PR #1139, head 58321e94</td><td>Steps 1 to 5 built; corpus on the head 1540 EQUAL, 90 DIFFERENT, 10 REFUSED, 0 ERROR, no cell leaves EQUAL. Two halts, both ruled: ZS-7 (three DST-edge cells belong to the shared instant kernel, carded as ZONE-HORIZON-INSTANT-1) and ZS-9 (the nested NTZ-to-TIMESTAMP store is three sites, so the seam lands with a plan-time refusal of that shape and 74 + 29 cells are listed over-refusal until WRITE-NTZ-TO-LTZ-NESTED-1). The build is complete and CI green; a fresh Opus verifier is on it; it merges only on a clean PASS and a never-worse census.</td></tr>
 <tr><td>GATE-RETIRE-1</td><td><span class="tag warn">next Opus unit</span></td><td>Retires the U-8 gate arms the seam makes redundant; the listed over-refusal counts come down here.</td></tr>
-<tr><td>MAP-COLUMN-PANIC-NATIVE-DOOR-1</td><td><span class="tag hold">parked</span> #1140</td><td>Fix is complete on both doors; it waits behind REPLACE-LINEAR-PIN-1 (Sonnet, running), which re-pins the runner's memory test on the replace operation's own growth after a same-mode warm-up. Then #1140 rebases and merges.</td></tr>
+<tr><td>MAP-COLUMN-PANIC-NATIVE-DOOR-1</td><td><span class="tag ok">merged</span> #1140</td><td>Landed after REPLACE-LINEAR-PIN-1 (#1148) re-pinned the runner's memory test on the replace operation's own growth with a same-mode warm-up; the bound, floor and depth are unchanged.</td></tr>
 </table></div>
 
 <h2>Path to the v2 label, in order</h2>
 <ol>
 <li><b>ZONE-SEAM-1</b> verifier PASS and merge, this week.</li>
 <li><b>GATE-RETIRE-1</b>, the single Opus lane, about 11-03.</li>
-<li><b>U-9</b>: you merge #1142, then wire #1070 so pins U and X run on the acceptance workflow.</li>
+<li><b>U-9</b>: pin K is on main; you wire #1070 so pins U and X run on the acceptance workflow.</li>
 <li><b>U-11</b> ICE-RESOURCE-BOUND-1, about 11-07 to 11-09.</li>
-<li><b>Second green parity-live morning</b> (P5); the 10-21 morning is in hand.</li>
+<li><b>Parity-live</b>: both green mornings P5 needs are in hand (10-21, 10-22).</li>
 <li><b>U-13</b> truth-up and the v2 label PR on 11-10. Then U-4 with the ns truth-up, and the v3 core label on 11-17.</li>
 </ol>
 
 <h2>Three write-path units queued behind GATE-RETIRE-1</h2>
-<p>Each is a real product defect on main, carded this week, and each needs either its fix or a dated carve-out row before the v2 label. None has a date yet; the order is your pick.</p>
+<p>Each is a real product defect on main, carded this week, and each needs either its fix or a dated carve-out row before the v2 label. None has a date yet; the order is your pick. The crate-boundary evaluation of this afternoon (artifact VZ3s9CWz29UXKDMoDWpPJY) recommends option D for WRITE-SPINE-1, no new crate and no new edge, with its value-moving steps after the v2 label, and folds the third card below into it.</p>
 <ul>
 <li><b>ICE-HADOOP-HINT-WINDOW-1</b>, ruled 10-22 as a product fix: the path read walks past <code>version-hint.text</code> like Java's <code>HadoopTableOperations.refresh</code>. Until then ruling 83 stands and the registry row claims <code>register_table</code> only.</li>
 <li><b>ZONE-HORIZON-INSTANT-1</b>, ruled 10-22 under ZS-7: the shared DataFusion-Spark instant kernel is wrong at a DST edge, on main and head; three facade cells read honest DIFFERENT after the seam.</li>
@@ -95,22 +95,22 @@ footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid 
 <tr><th>Signal</th><th>Reading</th><th>Note</th></tr>
 <tr><td>CI on main</td><td class="ok">green</td><td>last four commits, <code>95628605</code> to <code>0512470d</code></td></tr>
 <tr><td>aws-acceptance</td><td class="ok">green</td><td>10-20, 10-21, 10-22 mornings</td></tr>
-<tr><td>parity-live nightly</td><td class="warn">1 of 2</td><td>red 10-17 to 10-20 on the recorder drift, green 10-21, 10-22 in progress</td></tr>
+<tr><td>parity-live nightly</td><td class="ok">2 of 2</td><td>red 10-17 to 10-20 on the recorder drift, green 10-21 and 10-22</td></tr>
 <tr><td>Fork nightly interop</td><td class="ok">65 of 65</td><td>10-18 on the pinned fork head <code>d80a2884</code>; the fork is off the critical path</td></tr>
 <tr><td>Fork security audit</td><td class="bad">red since 10-21</td><td>RUSTSEC-2026-0381 and 0382, the same two advisories RePark cleared with #1127; the fork needs the same lock bump, a clerk-grade PR</td></tr>
-<tr><td>Open RePark PRs</td><td class="n">16</td><td>three live (#1142, #1139, #1140), #1070 draft until K lands, dependabot #1129 untouched, the rest parked by the 10-20 triage</td></tr>
+<tr><td>Open RePark PRs</td><td class="n">13</td><td>one live (#1139), #1070 draft awaiting your wiring, dependabot #1129 untouched, the rest parked by the 10-20 triage</td></tr>
 </table></div>
 
 <h2>Running now</h2>
 <ul>
-<li><b>Opus lane:</b> the ZONE-SEAM-1 builder on step 3c (the ZS-9 refusal and its red-first pins), then mutants, the cost table, records and the push to #1139.</li>
-<li><b>Sonnet lane:</b> REPLACE-LINEAR-PIN-1 step B, the local ten-run measurement with and without the warm-up, then its PR.</li>
+<li><b>Opus lane:</b> the ZONE-SEAM-1 verifier on PR #1139.</li>
+<li><b>Sonnet lane:</b> SPILL-REACH-FAIR-POOL-FLAKE-1 step A, thirty runs alone and under shard load on the runner and locally; it stops at the measurement.</li>
 </ul>
 
 <h2>Your items</h2>
 <ol>
-<li>Merge #1142 (pin K). It is BEHIND main; the merge script updates the branch, waits for CI and squashes.</li>
-<li>Wire #1070 once K is on main, so pins U and X can be built.</li>
+<li>Wire #1070 now that K is on main, so pins U and X can be built.</li>
+<li>Rule on the crate-boundary evaluation: adopt option D with its sequencing, and whether WRITE-NTZ-TO-LTZ-NESTED-1 folds into its step 2.</li>
 <li>Pick the order of the three queued write-path units, or name the carve-out rows that let the v2 label go without them.</li>
 <li>Say whether the fork's audit lock bump may go to a clerk lane now or wait.</li>
 </ol>
