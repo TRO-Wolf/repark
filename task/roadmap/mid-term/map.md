@@ -986,6 +986,13 @@ declines it (a dated ruling in the intake, then the archive).
   change to re-record with a dated note, or a recorder defect (a `local[1]` `getOrCreate` that may
   reuse a `local[2]` session, a lead by reading). The 2026-10-20 plan's PARITY-LIVE-RERECORD-1,
   gate D5/P5 two green mornings; awaits the owner's adopt.
+- [write-spine-1-card-2026-10-22.md](write-spine-1-card-2026-10-22.md) — **card WRITE-SPINE-1
+  (2026-10-22, open, scheduled after GATE-RETIRE-1):** one conform stage every write door passes
+  through (zone rule, nanosecond floor, struct pairing applied once by construction), the
+  conversion helpers in a crate both `repark-functions` and `repark-iceberg` can call, and a door
+  matrix enumerated from the code; filed on the owner's word after ruling ZS-9 measured the nested
+  NTZ store as three sites that cannot call the seam helper. Carries the 2026-10-22 process rule: a
+  step-0 door-by-shape census in every write-path order and a "doors I did not touch" hand-back line.
 - [container-cast-zone-1-card-2026-10-20.md](container-cast-zone-1-card-2026-10-20.md) — **card
   CONTAINER-CAST-ZONE-1 (2026-10-20, open, not scheduled):** a `CAST`/`TRY_CAST` of a struct,
   array or map holding a zoned timestamp leaf, and `to_json` of one, render the leaf in UTC
