@@ -75,6 +75,10 @@ Tables already written keep the values they hold; this release ships no migratio
   … AS SELECT` killed at its publish reads back as created, because the local catalog's commit is
   its newest metadata file (registry row ICE-LOCAL-COMMIT-POINT-1). Glue and S3 Tables are
   drilled by the live legs once the workflow is wired (#1070).
+- **An unknown commit outcome and a cross-release read are pinned (ICE-INTEGRITY-PINS-1, pins U
+  and X).** Pin U pins the unknown commit outcome locally on three write doors, with live legs on
+  Glue and S3 Tables. Pin X shows that 1.5.5 and the head (the pre-bump build, which still reports 1.5.5) read each other's tables equal on the local
+  catalog, with a live leg to follow. The live legs run once #1070 is wired.
 
 ## Known issues
 
