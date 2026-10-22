@@ -48,8 +48,9 @@ B and C), with the leaf cast's DST-edge behaviour; then ZONE-SEAM-1's refusal re
 ## The cells (U-8 door matrix, 2026-10-22, `ltz_nested`, New York and Kolkata each)
 
 - Refused by ZONE-SEAM-1 until this unit: 134 per zone, of which 37 stored Spark's instant on main
-  by the cancellation (19 `ts_struct_cast` and 18 `ts_struct_cast_column` doors) and 97 were
-  DIFFERENT on main (every NTZ source on the store doors: `ntz_literal` 25, `ntz_cast` 21,
-  `ntz_text_cast` 21, `ntz_cast_column` 21, struct casts 9).
+  by the cancellation (19 `ts_struct_cast` and 18 `ts_struct_cast_column` doors) and the
+  other 97 were not Spark-equal on main: 79 DIFFERENT and 18 the engine's own error (every NTZ
+  source on the store doors: `ntz_literal` 25, `ntz_cast` 21, `ntz_text_cast` 21,
+  `ntz_cast_column` 21, struct casts 9). Counts corrected 2026-10-23 (fix round 2): 37 + 79 + 18.
 - Raw measurements: the ZONE-SEAM-1 ledger (`task/ledgers/staging/zone-seam-1-ledger.md`, the
   third halt).

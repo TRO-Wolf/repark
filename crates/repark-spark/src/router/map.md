@@ -268,6 +268,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   counts them. pins: zone-seam-1/C-019
   *Fix round 1, cost:* the refusal's extra plan of a MERGE into a nested `TIMESTAMP` target in New
   York times at 0.922x main, the six U-8 statements within 1.05x. pins: zone-seam-1/C-020
+  *Fix round 2 (2026-10-23), the records:* R-011 counts the partitioned over-refusal of
+  Spark-equal-on-main cells beside the matrix's 37 (21, 68 of 354, 24 of 231 per zone, one per
+  named census, the ZS-9 class until GATE-RETIRE-1); R-015's line states the measured change on a
+  nanosecond leaf (13 bare-`NULL` cells per zone) and that it awaits the owner's ruling. The
+  partition-column-first pins are in `tests/ntz_into_ltz_nested.rs`. pins: zone-seam-1/C-022
 
 ## Pointers
 

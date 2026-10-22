@@ -1003,6 +1003,7 @@ declines it (a dated ruling in the intake, then the archive).
   zone-aware store conversion threaded through the write path; ZONE-SEAM-1's refusal retires.
   WRITE-SPINE-1 would make it a one-site fix; the owner picks the order. *2026-10-22:* folded
   into WRITE-SPINE-1 step 2 (owner, on the crate-boundary evaluation's recommendation).
+  *2026-10-23:* the cells line reads 37 Spark-equal + 79 DIFFERENT + 18 engine error per zone.
 - [zone-horizon-instant-1-card-2026-10-22.md](zone-horizon-instant-1-card-2026-10-22.md) — **card
   ZONE-HORIZON-INSTANT-1 (2026-10-22, open; the next Opus unit after GATE-RETIRE-1; owner ruling
   ZS-7):** DataFusion-Spark's `to_utc_timestamp` / `from_utc_timestamp` of an instant, shared by

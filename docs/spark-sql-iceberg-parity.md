@@ -3653,7 +3653,20 @@ still open is `isModifiable`.
   Kolkata), of which 37 per zone stored Spark's instant on main by two cancelling defects (the
   container cast's UTC wall read back as UTC), 79 were DIFFERENT on main and 18 were the engine's
   own error on main (counts corrected 2026-10-22 in fix round 1 from the verifier's measurement;
-  the line read "97 DIFFERENT" for the last two). Card
+  the line read "97 DIFFERENT" for the last two). **The partitioned doors, counted 2026-10-23
+  (fix round 2, verifier round 2 S1-2):** the refusal also covers `INSERT OVERWRITE … PARTITION`
+  (static `PARTITION (k = 0)` and dynamic `PARTITION (k)`, the partition column first, in the
+  middle or last), the DataFrame `insertInto(overwrite=True)` and `overwritePartitions()` on a
+  partitioned table. Beside the matrix's 37, the partitioned cells that were Spark-equal on main
+  and now refuse, per zone outside UTC, by census: 21 in the builder's partitioned census (212
+  cells per zone; 10 already refused on `58321e94` and 11 the S1-1 cells), 68 of 354 in the
+  verifier's round-2 census (34 partitioned door shapes at 2 walls: the partition column first,
+  middle or last; two identity columns; `days`, `bucket` and `truncate` tables; the DataFrame
+  overwrites; `PARTITION (k = NULL)` and `PARTITION (k = '0')`), and 24 of 231 in round 1's write
+  drivers (8 shapes at 3 walls). The three censuses use different shape sets and overlap, so the
+  counts are not summed; each is the over-refusal of its own set, and all are the ZS-9 class
+  listed until GATE-RETIRE-1: an instant struct cast to `STRUCT<…TIMESTAMP_NTZ…>` written into a
+  nested `TIMESTAMP`, outside UTC, on a partitioned table. Card
   `task/roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`. Ledger
   `task/ledgers/staging/zone-seam-1-ledger.md`.
 
@@ -3772,9 +3785,21 @@ still open is `isModifiable`.
   until it is designed as its own unit, card ICE-TSNS-NESTED-1
   (`task/roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md`). Ledger clauses C-040 to
   C-042.
-- **Status 2026-10-22 (ZONE-SEAM-1, PR #1139, verifier pending):** unchanged. The seam converts
-  microsecond leaves only and the gate reads the target column's type alone, so no arm of this
-  row becomes unreachable; `timestamp_ns_nested_shapes.rs` is green on the head.
+- **Status 2026-10-23 (ZONE-SEAM-1, PR #1139, verifier round 2 S1-3; awaits the owner's
+  ruling):** one measured change on head; the 2026-10-22 line said "unchanged". The seam
+  converts microsecond leaves only and the gate reads the target column's type alone, so no arm
+  of this row becomes unreachable, and `timestamp_ns_nested_shapes.rs` is green on the head. The
+  change: on a format-version 3 table with `st STRUCT<v: timestamp_ns, n: INT>`, 13 cells per zone
+  (identical in UTC and New York) of a bare `NULL` into the struct column through a partitioned
+  `INSERT` (static and dynamic `PARTITION`, `SELECT` and `VALUES`, a column list, the partition
+  column first) store `NULL` with a new data file where main refused with this row's text. Every
+  statement that supplies a non-NULL value still refuses (19 per zone), and one cell changes only
+  its error (`PARTITION (k = 'abc')` takes the door's `CAST_INVALID_INPUT`). Spark 4.1.2 with
+  Iceberg 1.11 cannot load such a table (`Cannot convert unsupported type to Spark:
+  timestamp_ns`), so Spark answers an error where main refused and head stores. The unpartitioned
+  bare `NULL` already stored on main. This unit changes nothing here: the owner rules whether to
+  ratify the move with an R-015 line and a pin, or to keep partitioned inserts a `Value` for the
+  `Nanos` leaf.
 
 ### ICE-TSNS-SQL-1-R-016 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): one rule pairs struct fields on every write door, Spark's
 

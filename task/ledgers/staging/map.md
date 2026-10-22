@@ -2543,4 +2543,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   zone (C-019), and the cost re-timed in ten alternating rounds under load 5 with the New York
   `MERGE` into a nested `TIMESTAMP` target, every ratio within 1.05x (C-020).
   *Fix round 2 (2026-10-23, after verifier round 2's FAIL):* the partition-position pins, the
-  partition column first and in the middle, red under the verifier's Y2 and Y3 (C-021).
+  partition column first and in the middle, red under the verifier's Y2 and Y3 (C-021); R-011's
+  partitioned over-refusal counts, R-015's measured change awaiting the owner, the card's 37 + 79
+  + 18 (C-022).
