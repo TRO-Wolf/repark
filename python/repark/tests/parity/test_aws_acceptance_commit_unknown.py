@@ -197,7 +197,7 @@ def seed(spark: ReparkSession, target: Target, table: str, format_version: int) 
         if target.service == S3TABLES and format_version == 3 and refused:
             print(format_v3_refusal_record(error))
             return False
-        raise
+        raise AssertionError(mask_account_ids(f"{table}: create failed: {error!r}")) from None
     spark.sql(f"INSERT INTO {table} VALUES (1, 'a'), (2, 'b'), (3, 'c')").collect()
     metadata = read_json(target, current_metadata_location(spark, table))
     stored = metadata.get("properties", {})
@@ -272,7 +272,7 @@ def drill(service: str, door: str, spec: CellSpec, format_version: int) -> None:
             gate.stop_cutting()
             commits = gate.commits()
             refusals = gate.refusals()
-        assert not refusals, f"{label}: the gate refused {refusals}"
+        assert not refusals, mask_account_ids(f"{label}: the gate refused {refusals}")
         assert len(commits) == spec.commit_requests, (
             f"{label}: commit requests at the gate {[c.answer for c in commits]}"
         )

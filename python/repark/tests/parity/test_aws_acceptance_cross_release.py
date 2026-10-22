@@ -88,7 +88,7 @@ def assert_equal_or_v3_refused(
         if catalog == "s3tables" and format_version == 3 and refused:
             print(format_v3_refusal_record(RuntimeError(str(failure))))
             return
-        raise failure
+        raise AssertionError(mask_account_ids(str(failure))) from None
     assert cell is not None
     print(mask_account_ids(format_cells([cell])))
     assert not cell.differences, mask_account_ids(f"H-X1 {cell.label}: {cell.differences}")

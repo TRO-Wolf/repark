@@ -1140,7 +1140,7 @@ perfectly good read.
   request). They are built, with U-3's orphan check narrowed live to the held metadata file and manifest list (ruling 82's ceiling is pinned locally by pin K only), and their first run is after the owner wires #1070. Fork #368 turned
   the SDK retry off on both commit calls, so the SDK re-send the sketch's cell U-5 drilled no longer
   happens. U-5 now asserts one commit request, and U-5r drills the fork's own re-send after a
-  throttle reply against a stale rejection: rows once.
+  throttle reply against a stale rejection, where rows once is the expected answer, unmeasured until the first live run.
 - **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-14). The assessment's retry contract
   needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
   makes the unconfirmed commit nameable in an alert.
