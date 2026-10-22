@@ -73,7 +73,7 @@ in the morning.
 | C-008 | K-2 is the routed append: its attempted snapshot carries the session snapshot property `k` (`router.rs:452-459` → `commit_append_with_summary`, `append_with_options.rs:90`); no other cell's does. | All 18 cells assert the key's presence equals the cell's session key. | PROVEN | Green in step 2 (§Green). |
 | C-009 | Every assertion family fails for its reason: M1 (the hook forwards before it holds) reds the 12 K-1 to K-6 cells; M2 (the decorator not installed) reds all 18; M3 (the orphan count skips manifests) reds the 12 K-1 to K-6 cells. | §Red first, §Revert check. | PROVEN | §Revert check (step 3). |
 | C-010 | No flake: the 18 kill cells pass 20 runs in a row under the 40 G cap; per-cell run time recorded. | §No flake. | PROVEN | 20 of 20 (§No flake, step 3). |
-| C-011 | Records: the registry row beside ICE-COMMIT-UNKNOWN-1 names the local catalog's commit rule (ruling 83); production status row K3 carries the dated pin-K line; the sketch §3 carries a dated "built" line; the work-order map and the 1.5.6 notes carry the unit. | The diffs of the records commit. | OPEN | |
+| C-011 | Records: the registry row beside ICE-COMMIT-UNKNOWN-1 names the local catalog's commit rule (ruling 83); production status row K3 carries the dated pin-K line; the sketch §3 carries a dated "built" line; the work-order map and the 1.5.6 notes carry the unit. | The diffs of the records commit. | PROVEN | §Records (step 4). |
 | C-012 | Pin U: an unknown commit outcome drilled live on Glue and S3 Tables and resolved on reopen. | Sketch §4. | OPEN (awaits #1070) | Not this round: the owner's workflow wiring (ruling 86) comes first. |
 | C-013 | Pin X: the v1.5.4 wheel and the head read each other's tables on both catalogs and both format versions. | Sketch §5. | OPEN (awaits #1070) | Not this round, as C-012. |
 
@@ -197,4 +197,18 @@ also 20 of 20).
 Whole filter, wall clock per run: loaded 1.6 to 5.6 s; quiet 0.60 to 0.84 s. One serial run
 (`--test-threads=1`): loaded 37.2 s, quiet 7.9 s. Each cell spawns one child (start about 30 ms,
 step 0); the sketch's §6.4 estimate for the local pins ("under 1 min") holds.
+
+## Records (step 4, 2026-10-22)
+
+- Registry: `docs/spark-sql-iceberg-parity.md` gains **ICE-LOCAL-COMMIT-POINT-1** beside
+  ICE-COMMIT-UNKNOWN-1, DECLARED, in ruling 83's words (the local catalog's rule only; Glue and
+  REST follow the catalog pointer, and the AWS drill pins that), with the K-7 CTAS answer
+  (ruling K-1) and the orphan ceiling (ruling 82). Pin: `kill_mid_write.rs`.
+- Production status row K3 (`docs/cutover/production-iceberg-status-2026-09-14.md`) gains the
+  dated line "2026-10-22: kill pin K PROVEN locally …; live drill awaits #1070". Its rating stays
+  "PROVEN offline; no live drill".
+- The sketch's §3 carries the dated "built" line with the premises corrected; the work-order map
+  says pin K is built; the 1.5.6 notes draft gains an "Integrity under failure" line (no stored
+  value or behaviour change), and the mid-term map's row for the draft says so.
+- Not touched: `STATUS.md`, `.github/`, the fork, any product file, `Cargo.toml`.
 

@@ -36,6 +36,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-001 to C-008 PROVEN.
   Step 3 (2026-10-22): four mutations each red their cells (the decorator disabled 18 of 18);
   20 of 20 runs in a row; C-009 and C-010 PROVEN.
+  Step 4 (2026-10-22): records (registry row ICE-LOCAL-COMMIT-POINT-1, production row K3's
+  dated line, the sketch's "built" line, the 1.5.6 notes); C-001 to C-011 PROVEN, C-012 and
+  C-013 (pins U and X) OPEN, awaiting #1070. Verifier pending.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

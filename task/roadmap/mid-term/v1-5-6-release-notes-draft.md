@@ -202,6 +202,17 @@ Tables already written keep the values they hold; this release ships no migratio
   `database`, its alias `catalog` and `warehouse` through the same redaction, so a login in
   any of them shows as `u:***@host`.
 
+## Integrity under failure (no stored value or behaviour changes)
+
+- **A writer killed between its data files and its commit is pinned (ICE-INTEGRITY-PINS-1, pin
+  K).** On the local catalog, a process killed inside the commit of an `INSERT`, `INSERT
+  OVERWRITE`, `MERGE` (copy-on-write and merge-on-read) or `DELETE`, on format v2 and v3, leaves
+  the table exactly as it was; the files it wrote stay on disk, never more than the crashed
+  commit wrote, and `remove_orphan_files` lists them once past its 24-hour floor. A `CREATE TABLE
+  … AS SELECT` killed at its publish reads back as created, because the local catalog's commit is
+  its newest metadata file (registry row ICE-LOCAL-COMMIT-POINT-1). Glue and S3 Tables are
+  drilled by the live legs once the workflow is wired (#1070).
+
 ## Known issues
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-17):** `repark.sql()` refuses
