@@ -1001,7 +1001,8 @@ declines it (a dated ruling in the intake, then the archive).
   `conform` cast with no session zone in scope, `update_cast.rs`'s `arrow_cast` text, the MERGE
   `INSERT` store wrap); `repark-iceberg` depends only on `repark-common`. Fix shape: one
   zone-aware store conversion threaded through the write path; ZONE-SEAM-1's refusal retires.
-  WRITE-SPINE-1 would make it a one-site fix; the owner picks the order.
+  WRITE-SPINE-1 would make it a one-site fix; the owner picks the order. *2026-10-22:* folded
+  into WRITE-SPINE-1 step 2 (owner, on the crate-boundary evaluation's recommendation).
 - [zone-horizon-instant-1-card-2026-10-22.md](zone-horizon-instant-1-card-2026-10-22.md) — **card
   ZONE-HORIZON-INSTANT-1 (2026-10-22, open; the next Opus unit after GATE-RETIRE-1; owner ruling
   ZS-7):** DataFusion-Spark's `to_utc_timestamp` / `from_utc_timestamp` of an instant, shared by

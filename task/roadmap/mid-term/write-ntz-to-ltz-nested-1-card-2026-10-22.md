@@ -7,6 +7,8 @@ rulings ZS-8 and ZS-9 of the same day.
 refusal (ZS-9) stands in front of the three sites below outside UTC.
 WRITE-SPINE-1 (task/roadmap/mid-term/write-spine-1-card-2026-10-22.md, on main after PR #1149) is
 the architecture unit that makes this a one-site fix; the owner picks the order.
+**2026-10-22:** Folded into WRITE-SPINE-1 step 2 (owner, 2026-10-22, on the crate-boundary
+evaluation's recommendation).
 
 **Retires:** when the three sites read a nested `TIMESTAMP_NTZ` wall in the session zone, the
 U-8 door matrix's `ltz_nested` cells match Spark 4.1.2 on every store door in New York and
