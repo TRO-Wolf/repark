@@ -16,5 +16,6 @@ leaf cast already does. The root of R-007, R-015, R-011, ENC-1 and CONTAINER-CAS
   `CAST` and `TRY_CAST` fail per leaf; the `to_json` and `to_utc_timestamp` sites; the R-011 arm
   A2 named unreachable for its purpose, A1, A3 and R-015 unchanged; the card's rows and 313
   corpus cells by step, the residue; the §5 halts checked; questions Q1–Q5.
+  §10b (appended 2026-10-22): the rulings ZS-1 to ZS-7 in short, pointing at the unit ledger.
 
 Up: [../map.md](../map.md).

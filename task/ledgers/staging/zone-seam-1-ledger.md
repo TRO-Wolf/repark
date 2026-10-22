@@ -268,6 +268,33 @@ a wall, a date or a NULL first argument and delegates every other type to the in
 own coercion; it converts that argument with the same `to_timestamp_udf` kernel the seam's row 5
 and row 7 use and then calls the inner function. It holds no conversion of its own.
 
+## Second halt, park and ruling ZS-7 (2026-10-22)
+
+**The second halt.** The facade suite on the head (`dc0da5a2`) moved three EQUAL cells of the
+ZONE-HORIZON-RENDER-1 oracle to DIFFERENT: `to_utc_timestamp` of a wall at the New York overlap
+`2099-11-01 01:30` and the gaps `2100-03-14 02:30` and `2104-03-09 02:30`. The unit parked. The
+measurement while parked (18 edge walls × 2 session zones × 5 expressions on Spark, head and
+main; the table is in the card ZONE-HORIZON-INSTANT-1) showed: the leaf cast equals Spark at every edge;
+Spark's wall argument is the leaf cast composed with the instant function (36 of 36); the seam's
+`SparkUtcShift` implements exactly that composition; every remaining edge miss is the shared
+DataFusion-Spark instant kernel, the same on main and head; main's three cells matched Spark by
+value only, as `timestamp_ntz`.
+
+- **ZS-7** — owner ruling ZS-7, 2026-10-22 (option C): the unit does not grow to the instant
+  kernel; no step 2c. The three cells are accidental EQUAL on main, wrong type; honest DIFFERENT
+  after the seam; they close with ZONE-HORIZON-INSTANT-1, carded
+  (`../../roadmap/mid-term/zone-horizon-instant-1-card-2026-10-22.md`), the next Opus unit after
+  GATE-RETIRE-1.
+
+**What ZS-7 does to the pins.** The suite's grammar is a residue list: each key in
+`zone_horizon_render_1_residue.json` must differ from the oracle's Spark value, and every other
+key must equal it. So the three cells are expected-divergence rows whose recorded expectation is
+Spark's value (`2099-11-01 05:30:00`, `2100-03-14 07:30:00`, `2104-03-09 07:30:00`), not
+red-by-design tests. The list was re-derived on the head with the recorder's `--engine repark
+--residue`: 15 cells leave (the wall edge cells the seam now answers as Spark does), 3 join.
+`test_zone_horizon_render_1.py` passes (12 passed, the live cell skipped). The 3 joining cells are
+explained by the suite's named class `_UPSTREAM_SHIFT`.
+
 ## PROPOSITION LEDGER — ZONE-SEAM-1 — 2026-10-22
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -284,6 +311,7 @@ and row 7 use and then calls the inner function. It holds no conversion of its o
 | C-010 | Each seam arm removed alone reds a pin; the seam call removed reds the corpus. | mutants. | **OPEN** | Step 5. |
 | C-011 | Cost: the U-8 verifier's six statements, 10-run medians, head ≤ 1.05x main, load under 5. | timing table. | **OPEN** | Step 6. |
 | C-013 | `from_json` reads a `TIMESTAMP_NTZ` field: a text with no zone in Spark's form is its wall in every session zone; a text with `Z` or an offset is NULL; a space separator and a date-only text keep main's answer (ZS-6). | the two `from_json` pins, red on main. | **OPEN** | Step 3b. |
+| C-014 | The ZONE-HORIZON-RENDER-1 residue on the head: 15 wall edge cells leave, 3 New York `to_utc_timestamp_wall` cells join as expected-divergence rows (ZS-7), every other cell unchanged. | `--engine repark --residue` on the head; the suite green. | **OPEN** | Recorded 2026-10-22. |
 | C-012 | Records: the card (follow-up lines of ZS-1 and ZS-5), R-011 and R-015 status lines, the v1.5.6 notes line, the ZONE-ORACLE-1 order follow-up (ZS-3), `map.md`s. | the diff. | **OPEN** | Step 7. |
 
 Up: [map.md](map.md).

@@ -994,6 +994,13 @@ declines it (a dated ruling in the intake, then the archive).
   `c516c54a`; the leaf cast is session-aware. Found by U-8's second verifier; U-8's gate does not
   see a value that passed through another type first. Owner rules: grow U-8, or fix the cast as
   its own unit (the orchestrator's lean).
+- [zone-horizon-instant-1-card-2026-10-22.md](zone-horizon-instant-1-card-2026-10-22.md) — **card
+  ZONE-HORIZON-INSTANT-1 (2026-10-22, open; the next Opus unit after GATE-RETIRE-1; owner ruling
+  ZS-7):** DataFusion-Spark's `to_utc_timestamp` / `from_utc_timestamp` of an instant, shared by
+  main and ZONE-SEAM-1's head, misses Spark 4.1.2 at DST gaps and overlaps and after 2099 (19 and
+  10 of 36 measured edge cells). The 180-cell edge table on Spark, head and main; the 102
+  instant-argument residue cells of ZONE-HORIZON-RENDER-1 and the three ZS-7 cells it would
+  close; the fallback ZS-7 did not take, with its cost. Names the kernel only, no fix.
 - [map-column-panic-1-card-2026-10-20.md](map-column-panic-1-card-2026-10-20.md) — **card
   MAP-COLUMN-PANIC-1 (2026-10-20, merged as PR #1131 `d6ee0411` on 2026-10-21; the native-door follow-up awaits the owner; `REPARK_PANIC_FATAL` settled by PANIC-FATAL-SUITE-1, PR #1134):**
   `map('a', <column>)` over any non-literal value panicked `list array` in DataFusion's `MapFunc`

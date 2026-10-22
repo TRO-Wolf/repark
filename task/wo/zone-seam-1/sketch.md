@@ -335,6 +335,20 @@ natively EQUAL pair are untouched.
   this unit. The alternative, the seam rule added to `NativeDoorTypes`, would also need the leaf
   rewrites there, which is new semantics on that door.
 
+## 10b. Rulings on this sketch (appended 2026-10-22)
+
+The orchestrator ruled ZS-1 to ZS-6 under the owner's grant and the owner ruled ZS-7; the text of
+each, and the halts that led to ZS-6 and ZS-7, are in the unit ledger
+(`task/ledgers/staging/zone-seam-1-ledger.md`). In short: ZS-1 the §4 gate is zero DIFFERENT among
+§8's cells with the residue listed by cause; ZS-2 the `DATE` and `NULL` arguments of
+`to_utc_timestamp` / `from_utc_timestamp` are in; ZS-3 non-`BIGINT` numeric targets and map keys
+stay native; ZS-4 the U-8 refusals the seam lifts are listed refusal→EQUAL moves; ZS-5 the native
+`repark.sql()` door is an unchanged control; ZS-6 the unit takes the `from_json`
+`TIMESTAMP_NTZ` site (step 3b); **ZS-7 (owner, 2026-10-22): the unit does not grow to the shared
+instant kernel of `to_utc_timestamp` / `from_utc_timestamp`; three ZONE-HORIZON-RENDER-1 cells
+that were EQUAL on main by value only become honest DIFFERENT and close with
+ZONE-HORIZON-INSTANT-1.**
+
 ## 11. Steps 1–7, as the order orders them
 
 1. Red first: a ledger `task/ledgers/staging/zone-seam-1-ledger.md` lists §8's cells by id;
