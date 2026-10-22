@@ -72,7 +72,8 @@ the overnight watch of 2026-10-22 saw hang once, hung 2 of 30 repeats and 4 of 2
 
 Step 0, for an Opus 5.5 agent (`claude-opus-5-5`), on a branch and never on `main`:
 
-- Reproduce on demand with the stress recipe (about 1 process in 20 hangs at 72M, about 1 in 11 at 64M): 200 processes of the
+- Reproduce on demand with the stress recipe (about 1 process in 20 hangs at 72M, about 1 in 11 at 64M, 1 in 200 at the file's
+  default of 80M, so set the pool to 64M or 72M for the run): 200 processes of the
   file, 20 at a time, `pytest-timeout` thread method, `faulthandler_timeout` set.
 - While a process is stuck, take its native stacks with `gdb -p <pid> -batch -ex "thread apply all bt"` and record whether
   it is spinning (CPU ticks advancing over ten seconds) or blocked (state `S`, ticks flat), and what the others are doing.

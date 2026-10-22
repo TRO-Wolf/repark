@@ -1,0 +1,12 @@
+phase	rep	loadavg_1_5_15_before	pytest_last_line
+alone	1	67.51,37.19,21.23	9 passed in 10.04s
+alone	2	58.77,36.77,21.35	9 passed in 8.26s
+alone	3	52.87,36.23,21.34	9 passed in 8.87s
+alone	4	49.16,35.98,21.42	9 passed in 7.90s
+alone	5	47.57,36.08,21.61	9 passed in 10.01s
+alone	6	44.76,35.84,21.69	9 passed in 11.03s
+alone	7	53.66,38.16,22.67	9 passed in 10.17s
+alone	8	64.63,41.35,23.96	9 passed in 14.71s
+alone	9	67.75,43.63,25.09	9 passed in 12.73s
+alone	10	62.69,43.68,25.40	9 passed in 18.29s
+n16-perf-dir	1	59.42,44.17,25.95	604 passed, 24 skipped, 33 warnings in 410.24s (0:06:50)

@@ -942,6 +942,7 @@ declines it (a dated ruling in the intake, then the archive).
   or a pool sized too tight for the runner (test). Unmeasured until N repeated runs.
   **2026-10-22 (SPILL-REACH-FAIR-POOL-FLAKE-1):** measured locally; the default pool of the file is now 72 MiB, the runner
   half is unmeasured and the first CI run of the shard is the only runner sample; the card stays open until that read.
+  Orchestrator ruling the same day: the default is 80 MiB, not 72 MiB, because the stress table's hang counts decide.
 - [fair-pool-hang-under-load-1-card-2026-10-22.md](fair-pool-hang-under-load-1-card-2026-10-22.md) — **card
   FAIR-POOL-HANG-1 (2026-10-22, open, not scheduled):** tests of `test_t2_spill_reach.py` sometimes sit inside the native
   `to_arrow_batches` / `to_arrow` call for minutes instead of one second, alone once and under contention often (step A:

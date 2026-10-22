@@ -28,6 +28,13 @@ alone once and under contention often (64M, 200 processes: 18 hung; 72M: 10; 80M
 default to 72M lowers that rate and does not remove it. It is a product finding, not a test one, and it is carded apart as
 [FAIR-POOL-HANG-1](../../roadmap/mid-term/fair-pool-hang-under-load-1-card-2026-10-22.md); this unit does not absorb it.
 
+**Ruling of 2026-10-22 (orchestrator, under the owner's "go with your recommendations"): the default is 80M, not 72M.** The
+figures above are what was measured and stay; the paragraph above names the order as first built. The ordered criterion could
+not separate 64M from 72M on a quieter box, so the stress table decides: in CI a hang costs a 45-minute job timeout and a
+re-run, a refusal one red cell, and 80M cut the pool-dependent hangs from 16 of 200 stress processes (64M) and 9 (72M) to 1,
+with 0 refusals in 229 loaded-type runs and the join still spilling 12 to 14 times. A later commit on the same branch changes
+the default argument and the docstring digit that names the pool; the assertions are untouched.
+
 The evidence is in [evidence/](evidence/map.md). The unit's ledger is
 [../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md);
 it stays in staging because clause C-006 (the runner sample) is open.

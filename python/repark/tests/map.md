@@ -6204,6 +6204,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (the diagnostic push was denied on 2026-10-22), so the first CI run of the shard that holds this file is the only
   runner sample. The hangs found on the way are carded as FAIR-POOL-HANG-1 and are not changed here.
   pins: spill-reach-fair-pool-flake-1/C-001, C-002, C-003, C-004, C-005, C-007
+  **Orchestrator ruling 2026-10-22 (under the owner's "go with your recommendations"): the default is 80 MiB, not
+  72 MiB.** The ordered criterion could not separate 64 MiB from 72 MiB on a quieter box, so the stress table decides: a
+  CI hang costs a 45-minute job timeout and a re-run, a refusal one red cell, and 80 MiB cut the hangs in the
+  pool-dependent tests from 16 of 200 processes (64 MiB) and 9 (72 MiB) to 1, with 0 refusals in 229 loaded-type runs and
+  the join probe still spilling 12 to 14 times, the distinct probe 6 to 8. The `spill_count > 0` assertions are unchanged;
+  the runner half was still not measured, so the first CI run of the shard that holds this file is the only runner sample.
+  pins: spill-reach-fair-pool-flake-1/C-008
 - `test_h3_spill_matrix.py` — **H3-SPILL-1** the Never-OOM pins behind Round 3 (2026-09-05): the boundary-digest pin also compares two equal-cardinality frames with different content (`offset=1`), so a row-count digest cannot pass it.
   [docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md). Three
   families: a spilling operator spills (`spill_count > 0`) **and** its digest equals the

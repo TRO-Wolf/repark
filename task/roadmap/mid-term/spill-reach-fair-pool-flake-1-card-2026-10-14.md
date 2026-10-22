@@ -19,6 +19,14 @@ order and evidence: [../../wo/spill-reach-fair-pool-flake-1/map.md](../../wo/spi
 [../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md).
 The hangs found on the way are carded apart as [FAIR-POOL-HANG-1](fair-pool-hang-under-load-1-card-2026-10-22.md).
 
+**Status update, later the same day (orchestrator ruling 2026-10-22, under the owner's "go with your recommendations"):** the
+default is 80 MiB, not the 72 MiB above; the 72 MiB figures stay as measured. The ordered criterion could not separate 64 MiB
+from 72 MiB on a quieter box, so the stress table decides: in CI a hang costs a 45-minute job timeout and a re-run while a
+refusal costs one red cell, and 80 MiB cut the hangs in the pool-dependent tests from 16 of 200 stress processes (64 MiB) and 9
+(72 MiB) to 1, with 0 refusals in 229 loaded-type runs and the join probe still spilling 12 to 14 times. The `spill_count > 0`
+assertions are unchanged. The test step of the first CI run of the shard that holds the file, on the 72 MiB head, was green; the runner half is
+still not measured at 80 MiB.
+
 **Retires:** when repeated runs settle whether the pool is too tight or the spill path has a gap, and the test or the product changes accordingly with a dated row.
 
 ## Why

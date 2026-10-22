@@ -71,7 +71,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the pool quoted; alone 48M refuses 20 of 20 and 56M 9 of 20. C-003 (PROVEN): the ordered sweep is clean at 72M, 80M
   and 96M. C-004 (PROVEN): pooled 7 of 280 at 64M against 0 of 221 at 72M. C-005 (PROVEN): one knob, assertions
   unchanged. C-006 (OPEN): the runner half was not measured, push denied. C-007 (PROVEN): the hangs, carded apart as
-  FAIR-POOL-HANG-1. `risk_tier: standard`. Branch `fix/spill-reach-fair-pool-flake-1`.
+  FAIR-POOL-HANG-1. C-008 (PROVEN, orchestrator ruling 2026-10-22): the default is 80M, not 72M, on the stress table's hang counts.
+  `risk_tier: standard`. Branch `fix/spill-reach-fair-pool-flake-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

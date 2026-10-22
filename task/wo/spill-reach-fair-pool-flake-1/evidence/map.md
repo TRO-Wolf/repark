@@ -36,4 +36,11 @@ Step B supplement (the ordered sweep could not separate the pools: the 64M contr
 
 The hangs found on the way: [hang-samples.md](hang-samples.md).
 
+Ruling of 2026-10-22, the default is 80M: no new sweep was run for it, the 80M rows of the sweep and stress above are its
+evidence. The final file on the 80M head was run once more:
+
+- [step-b-final-file-gates-80m.tsv](step-b-final-file-gates-80m.tsv) — 10 alone runs of `test_t2_spill_reach.py` (9 passed
+  each) and `python/repark/tests/perf` once under `-n 16` (604 passed, 24 skipped in 410 s), at a box load of 45 to 68 from
+  other builders.
+
 Up: [../map.md](../map.md).
