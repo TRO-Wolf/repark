@@ -207,6 +207,67 @@ text. It stays a residue (follow-up line on the card).
 | `through.json_inst_ntz.p0530` | from_json | DIFFERENT | `timestamp_ntz` `None` | `timestamp_ntz` `1767323045123000` |
 | `through.json_inst_ntz.etc_utc` | from_json | DIFFERENT | `timestamp_ntz` `None` | `timestamp_ntz` `1767323045123000` |
 
+## Halt after step 3 and ruling ZS-6 (2026-10-22)
+
+**The halt.** The corpus replay of the head after step 3 (`6286e40e`) moved three EQUAL cells to
+DIFFERENT: `through.json_wall_ntz` in New York, Kolkata and +05:30. Spark answers
+`1767323045123000` in every zone; the head answered `1767341045123000` (New York) and
+`1767303245123000` (Kolkata, +05:30). `from_json` into a `TIMESTAMP_NTZ` field read a text with
+no zone in the session zone and kept the UTC wall of that instant; on main the cell was EQUAL
+because `to_json` wrote the wall shifted into the session zone with its offset and `from_json`
+turned that text back into the wall. Step 3 fixed the first defect and exposed the second.
+
+- **ZS-6** — orchestrator ruling ZS-6, 2026-10-22, under the owner's grant (the owner may
+  reverse it): this unit takes the `from_json` `TIMESTAMP_NTZ` site in `json/decode.rs`, in its
+  own commit "step 3b, from_json reads a TIMESTAMP_NTZ field as a wall", so a revert of that one
+  commit restores today's `from_json`. Red first on main; the change is the zone handling only;
+  every other spelling keeps today's grammar and answer; the store path and the leaf cast are
+  untouched; after step 3b the corpus shows 0 EQUAL→other against main, and a second halt parks
+  the unit.
+
+**Step 3b, red on main.** `from_json` is unchanged from main at `6286e40e`, so the pins ran there:
+
+```
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 964 filtered out
+from_json_reads_a_timestamp_ntz_field_as_its_wall_and_a_zoned_text_as_null
+{"a":"2026-01-02T03:04:05.123"} America/New_York: (Some(Ntz), "1767341045123000") want 1767323045123000
+{"a":"2026-01-02T03:04:05.123"} Asia/Kolkata: (Some(Ntz), "1767303245123000") want 1767323045123000
+{"a":"2026-01-02T03:04:05.123Z"} America/New_York: (Some(Ntz), "1767323045123000") want NULL
+{"a":"2026-01-02T03:04:05.123Z"} Asia/Kolkata: (Some(Ntz), "1767323045123000") want NULL
+{"a":"2026-01-01T22:04:05.123-05:00"} America/New_York: (Some(Ntz), "1767323045123000") want NULL
+{"a":"2026-01-01T22:04:05.123-05:00"} Asia/Kolkata: (Some(Ntz), "1767323045123000") want NULL
+from_json_keeps_main_answer_for_a_space_separator_or_a_date_only_text ... ok   (the unchanged controls)
+```
+
+**Step 3b, the change.** In `build_timestamp`, a field whose type is `Timestamp(_, None)` reads a
+text through `wall_micros`: a text that the two zoned patterns parse (`Z` or an offset, `T` or a
+space) answers NULL; a text of the pattern `%Y-%m-%dT%H:%M:%S%.f` (Spark's `TIMESTAMP_NTZ` JSON
+form, any fraction width) is its wall with no zone; every other spelling (a space separator,
+minutes only, a date only) takes today's `timestamp_micros` path and keeps today's answer, which
+reads it in the session zone (the two controls pin a space separator and a date only in New York
+at main's values). Those spellings are not held by the corpus and stay as they are. A zoned
+field (`TIMESTAMP`) is unchanged. **Untouched:** the `TIMESTAMP_NTZ` store path
+(`crates/repark-iceberg/src/write/ntz_store.rs`, `update_cast.rs`) and the leaf
+`CAST(<text> AS TIMESTAMP_NTZ)` (`timestamp_ntz_cast.rs`).
+
+**Residue move (appended; the table above is as recorded at step 1).** `through.json_inst_ntz`
+leaves the residue: its five cells close by step 3b (Spark NULL; the head NULL). The residue is
+now 20 expressions, 90 DIFFERENT and 10 REFUSED cells. The three `through.json_wall_ntz` cells
+return to EQUAL by step 3b's own reading of the wall.
+
+**Why `SparkUtcShift` is a second registration, not a second seam.** The order's §2 names the
+`to_utc_timestamp` / `from_utc_timestamp` site. For a wall and an untyped NULL an analyzer
+rewrite of the argument would have been enough, but a `DATE` argument is rejected while the
+plan is built, before any analyzer rule runs: building the projection asks the expression for its
+field, which calls `verify_function_arguments` → `fields_with_udf`
+(`datafusion-expr` 54.1.0, `src/expr_schema.rs` line 724, raising from
+`src/type_coercion/functions.rs` line 868, "Function 'to_utc_timestamp' requires Timestamp, but
+received Date"), because DataFusion-Spark's signature is `Coercion::new_implicit(Timestamp,
+[String])`. So `SparkUtcShift` wraps the same two UDFs with a user-defined signature that admits
+a wall, a date or a NULL first argument and delegates every other type to the inner signature's
+own coercion; it converts that argument with the same `to_timestamp_udf` kernel the seam's row 5
+and row 7 use and then calls the inner function. It holds no conversion of its own.
+
 ## PROPOSITION LEDGER — ZONE-SEAM-1 — 2026-10-22
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -222,6 +283,7 @@ text. It stays a residue (follow-up line on the card).
 | C-009 | The U-8 door matrix on main and head: every changed cell is a listed refusal→EQUAL move of ZS-4 or DIFFERENT→EQUAL; no EQUAL cell moves. | `probe.py` on both builds. | **OPEN** | Step 6. |
 | C-010 | Each seam arm removed alone reds a pin; the seam call removed reds the corpus. | mutants. | **OPEN** | Step 5. |
 | C-011 | Cost: the U-8 verifier's six statements, 10-run medians, head ≤ 1.05x main, load under 5. | timing table. | **OPEN** | Step 6. |
+| C-013 | `from_json` reads a `TIMESTAMP_NTZ` field: a text with no zone in Spark's form is its wall in every session zone; a text with `Z` or an offset is NULL; a space separator and a date-only text keep main's answer (ZS-6). | the two `from_json` pins, red on main. | **OPEN** | Step 3b. |
 | C-012 | Records: the card (follow-up lines of ZS-1 and ZS-5), R-011 and R-015 status lines, the v1.5.6 notes line, the ZONE-ORACLE-1 order follow-up (ZS-3), `map.md`s. | the diff. | **OPEN** | Step 7. |
 
 Up: [map.md](map.md).

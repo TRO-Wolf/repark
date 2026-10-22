@@ -467,3 +467,38 @@ async fn an_instant_kept_as_an_instant_and_a_naive_member_stay_native() {
         "7"
     );
 }
+
+fn from_json_ntz(text: &str) -> Expr {
+    crate::json::from_json_udf().call(vec![lit(text), lit("a TIMESTAMP_NTZ")])
+}
+
+#[tokio::test]
+async fn from_json_reads_a_timestamp_ntz_field_as_its_wall_and_a_zoned_text_as_null() {
+    let cases: [(&str, &str); 3] = [
+        (r#"{"a":"2026-01-02T03:04:05.123"}"#, "1767323045123000"),
+        (r#"{"a":"2026-01-02T03:04:05.123Z"}"#, "NULL"),
+        (r#"{"a":"2026-01-01T22:04:05.123-05:00"}"#, "NULL"),
+    ];
+    let mut wrong = Vec::new();
+    for (text, want) in cases {
+        for zone in ["America/New_York", "Asia/Kolkata"] {
+            let got = answer(zone, from_json_ntz(text)).await;
+            if got != (Some(Kind::Ntz), want.to_string()) {
+                wrong.push(format!("{text} {zone}: {got:?} want {want}"));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[tokio::test]
+async fn from_json_keeps_main_answer_for_a_space_separator_or_a_date_only_text() {
+    let cases: [(&str, &str); 2] = [
+        (r#"{"a":"2026-01-02 03:04:05.123"}"#, "1767341045123000"),
+        (r#"{"a":"2026-01-02"}"#, "1767330000000000"),
+    ];
+    for (text, want) in cases {
+        let got = answer("America/New_York", from_json_ntz(text)).await;
+        assert_eq!(got, (Some(Kind::Ntz), want.to_string()), "{text}");
+    }
+}
