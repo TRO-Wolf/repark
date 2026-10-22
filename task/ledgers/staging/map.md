@@ -39,6 +39,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Step 4 (2026-10-22): records (registry row ICE-LOCAL-COMMIT-POINT-1, production row K3's
   dated line, the sketch's "built" line, the 1.5.6 notes); C-001 to C-011 PROVEN, C-012 and
   C-013 (pins U and X) OPEN, awaiting #1070. Verifier pending.
+  Verifier round 1 (2026-10-22): FAIL (S1-1, four S2, six S3, a §7 halt on the `type=hadoop`
+  path read). Fix round 1 rows C-014 onward; C-014: the hold ends when the parent is gone.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

@@ -212,3 +212,14 @@ step 0); the sketch's §6.4 estimate for the local pins ("under 1 min") holds.
   value or behaviour change), and the mid-term map's row for the draft says so.
 - Not touched: `STATUS.md`, `.github/`, the fork, any product file, `Cargo.toml`.
 
+## Verifier round 1 (2026-10-22): FAIL, and fix round 1
+
+A fresh Opus 5.5 verifier read PR #1142 at `4a439694` and returned FAIL: one S1, four S2, six
+S3 and a §7 halt (ruling 83 on the `type=hadoop` path read). The fix round's orders came from the
+orchestrator on 2026-10-22. Each finding gets one dated row below, with its disposition. Rows
+land one per commit, and the earlier clauses stand unedited.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-014 | (Verifier S1-1, 2026-10-22.) A held child that loses its parent ends its hold by itself and exits non-zero without committing. The hold polls `getppid()` every 20 ms against the parent recorded at the child's start, and it is also bounded at 120 s (`HOLD_LIMIT`). On either release the child calls `std::process::exit(75)`, so no commit is made. | `tests::kill_mid_write::a_held_child_whose_parent_is_gone_exits_without_committing`: an intermediate process (`kill_mid_write_orphaning_parent`) spawns the K-1 v2 child, waits for its marker, records its pid and exits 0 without killing it; the test then requires the child gone within 10 s and no metadata file past the pre-state's. | PROVEN | **Red that motivated it:** the verifier sent SIGTERM to a K-4 v3 parent while its child held. The parent exited 143, and the child was re-parented to the systemd user manager, still `Sl` 23 s later, with its temp directory leaked (`u9v` `r1/sigterm.sh`). **Red of the pin:** under the old bare `std::future::pending()` hold, the new test fails with `a held child outlived its parent by 10 s (the hold limit is 120s)`, and the test kills the stranded child itself. **Green:** 21 of 21 (`kill_mid_write`). **Residual:** a parent killed from outside still leaves its own `TempDir`, as any killed test does; only the child's hold is fixed. |
+

@@ -1,6 +1,8 @@
 use super::super::*;
 use super::common::*;
-use super::kill_mid_write_hold::{HoldCatalog, HoldMode, local_path, reachable, snapshot_ids};
+use super::kill_mid_write_hold::{
+    HOLD_LIMIT, HoldCatalog, HoldMode, local_path, reachable, snapshot_ids,
+};
 use super::session_write_conf::set_session_conf;
 use std::collections::{BTreeMap, BTreeSet};
 use std::os::unix::process::ExitStatusExt;
@@ -11,6 +13,8 @@ use std::time::{Duration, Instant};
 const CHILD_CELL: &str = "REPARK_KILL_MID_WRITE_CHILD";
 const CHILD_DIR: &str = "REPARK_KILL_MID_WRITE_DIR";
 const CHILD_TEST: &str = "tests::kill_mid_write::kill_mid_write_child";
+const ORPHANING_PARENT: &str = "REPARK_KILL_MID_WRITE_ORPHANING_PARENT";
+const ORPHANING_TEST: &str = "tests::kill_mid_write::kill_mid_write_orphaning_parent";
 const SESSION_KEY: &str = "spark.sql.iceberg.snapshot-property.k";
 const MERGE: &str = "MERGE INTO fault.sales.t AS t USING src AS s ON t.id = s.id \
                      WHEN MATCHED AND s.id = 2 THEN UPDATE SET name = 'm' \
@@ -685,6 +689,7 @@ async fn kill_mid_write_child() {
         inner: catalogs["ice"].clone(),
         mode: cell.mode,
         marker: root.join("marker"),
+        parent: std::os::unix::process::parent_id(),
     });
     register_hold(&ctx, &mut catalogs, hold, &warehouse).await;
     if cell.session_key {
@@ -781,4 +786,71 @@ async fn kc1_killed_after_the_metadata_file_reads_committed_v2() {
 #[tokio::test(flavor = "multi_thread")]
 async fn kc1_killed_after_the_metadata_file_reads_committed_v3() {
     kill_cell("K-C1", 3).await;
+}
+
+fn still_running(pid: &str) -> bool {
+    std::fs::read_to_string(format!("/proc/{pid}/stat"))
+        .ok()
+        .and_then(|stat| {
+            stat.rsplit_once(')')
+                .map(|(_, rest)| rest.trim_start().to_string())
+        })
+        .is_some_and(|rest| !rest.starts_with('Z'))
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn kill_mid_write_orphaning_parent() {
+    let Ok(root) = std::env::var(ORPHANING_PARENT) else {
+        return;
+    };
+    let root = PathBuf::from(root);
+    let mut child = spawn_child(cell("K-1"), 2, &root);
+    let early_exit = await_marker_or_exit(&mut child, &root.join("marker"), &root).await;
+    assert!(
+        early_exit.is_none(),
+        "the child must reach the hold\n{}",
+        child_output(&root)
+    );
+    std::fs::write(root.join("child.pid"), child.id().to_string()).expect("record the child");
+    std::process::exit(0);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_held_child_whose_parent_is_gone_exits_without_committing() {
+    let root = TempDir::new().expect("the cell's directory");
+    let warehouse = root.path().join("warehouse");
+    std::fs::create_dir(&warehouse).expect("the warehouse directory");
+    let pre = seed(&warehouse, cell("K-1"), 2).await;
+    std::fs::write(root.path().join("pre"), &pre.metadata).expect("record the pre-state");
+    let status = Command::new(std::env::current_exe().expect("the test binary"))
+        .args([ORPHANING_TEST, "--exact", "--test-threads=1", "--nocapture"])
+        .env(ORPHANING_PARENT, root.path())
+        .stdin(Stdio::null())
+        .stdout(std::fs::File::create(root.path().join("parent.out")).expect("parent stdout"))
+        .stderr(std::fs::File::create(root.path().join("parent.err")).expect("parent stderr"))
+        .status()
+        .expect("run the parent that leaves its child");
+    assert!(
+        status.success(),
+        "the orphaning parent must exit 0 with its child still held, got {status}\n{}",
+        child_output(root.path())
+    );
+    let pid = std::fs::read_to_string(root.path().join("child.pid")).expect("the child's pid");
+    let gone_by = Instant::now() + Duration::from_secs(10);
+    while still_running(&pid) {
+        if Instant::now() > gone_by {
+            Command::new("kill")
+                .args(["-9", &pid])
+                .status()
+                .expect("kill the stranded child");
+            panic!("a held child outlived its parent by 10 s (the hold limit is {HOLD_LIMIT:?})");
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let marker = read_marker(&root.path().join("marker"));
+    assert_eq!(
+        newest_metadata(&marker.location),
+        pre.metadata,
+        "the released child must not commit: no metadata file past the pre-state"
+    );
 }

@@ -1,6 +1,7 @@
 use super::common::*;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use iceberg::io::FileIO;
 use iceberg::spec::{DataContentType, Snapshot, TableMetadata};
@@ -20,7 +21,11 @@ pub(super) struct HoldCatalog {
     pub(super) inner: Arc<dyn Catalog>,
     pub(super) mode: HoldMode,
     pub(super) marker: PathBuf,
+    pub(super) parent: u32,
 }
+
+pub(super) const HOLD_LIMIT: Duration = Duration::from_mins(2);
+pub(super) const HOLD_RELEASED_EXIT: i32 = 75;
 
 pub(super) fn local_path(path: &str) -> String {
     path.strip_prefix("file://")
@@ -96,6 +101,14 @@ async fn attempted_files(
 }
 
 impl HoldCatalog {
+    async fn hold(&self) -> iceberg::Result<Table> {
+        let deadline = Instant::now() + HOLD_LIMIT;
+        while std::os::unix::process::parent_id() == self.parent && Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        std::process::exit(HOLD_RELEASED_EXIT)
+    }
+
     fn write_marker(
         &self,
         attempted: &[Snapshot],
@@ -132,7 +145,7 @@ impl HoldCatalog {
             .collect();
         let files = attempted_files(base.file_io(), base.metadata(), &attempted, Some(&base)).await;
         self.write_marker(&attempted, base.metadata().location(), &files);
-        std::future::pending::<iceberg::Result<Table>>().await
+        self.hold().await
     }
 
     async fn forward_commit(&self, commit: TableCommit) -> iceberg::Result<Table> {
@@ -157,7 +170,7 @@ impl HoldCatalog {
         .await;
         self.write_marker(&attempted, committed.metadata().location(), &files);
         if self.mode == HoldMode::ForwardThenHold {
-            return std::future::pending::<iceberg::Result<Table>>().await;
+            return self.hold().await;
         }
         Ok(committed)
     }
@@ -286,7 +299,7 @@ impl Catalog for HoldCatalog {
         }
         self.write_marker(&attempted, table.metadata().location(), &files);
         if self.mode == HoldMode::Hold {
-            return std::future::pending::<iceberg::Result<Table>>().await;
+            return self.hold().await;
         }
         self.inner.publish_create_table(table).await
     }
