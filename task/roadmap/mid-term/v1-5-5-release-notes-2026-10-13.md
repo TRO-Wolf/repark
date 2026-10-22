@@ -5,7 +5,11 @@ v1.5.5 is the fifth patch on 1.5.0. It follows v1.5.4 (`f4e424c1`, notes
 timestamp fixes that lead this release — one instant for one wall in `timestamptz_ns` on
 every write door (R-008) and the pandas/polars nanosecond frame door (R-019) — plus
 `current_date` in the session zone, the Postgres write core with both-door routing, a
-merge-module split, two lock-only dependency bumps, and test and docs groundwork.
+merge-module split, two lock-only dependency bumps, and test and docs groundwork. The re-pointed tag
+of 2026-10-20 (below) also ships every unit merged between the 2026-10-13 release commit and
+`7fb5f6b2`; the section "Added by the re-pointed tag" lists them (reconciled 2026-10-22; the lines
+were drafted for v1.5.6 and moved here), and "Known issues in this release" lists what the wheel
+carries that main has since fixed.
 
 The tag target is the release commit; the last product commit is `f8f1d252`
 (CASESENS-1, metadata by version number). Tagged `v1.5.5` at `293896ce` on 2026-10-20 (16:00 UTC). Two RustSec advisories published that evening (RUSTSEC-2026-0382, rustls-webpki accepted distrusted emSign intermediates; RUSTSEC-2026-0381, webpki-roots bundled the root) reached the tagged lock, so the tag was re-pointed at 23:40 UTC to `7fb5f6b2` (#1127: rustls-webpki 0.103.16 and webpki-roots 1.0.10, no other change) before any upload; the release wheels build from the re-pointed tag. The PyPI upload is TODO(owner). Published to PyPI on 2026-10-21 at 12:41 UTC from the re-pointed tag (release run 39520041725): five `cp312-abi3` wheels, manylinux x86_64 and aarch64, macOS arm64 and x86_64, Windows x86_64. The pre-fix release run for `293896ce` was cancelled before its gate.
@@ -87,23 +91,237 @@ Ledger: [current-date-session-zone-1-ledger.md](../../ledgers/staging/current-da
   R-020 and the type-planner card (`be011012`); production-readiness and
   performance audits (`6fe92e12`); the cluster-feature tests in CI (`ba71b593`).
 
+## Added by the re-pointed tag (merged 2026-10-14 to 2026-10-20; reconciled 2026-10-22)
+
+The tag moved from `293896ce` to `7fb5f6b2` on 2026-10-20 for the lock bump, and with it the wheels
+carry twenty-seven commits the 2026-10-13 draft above does not list. The stored-value and behaviour
+lines below are the ones drafted for v1.5.6 as each unit landed, moved here unchanged; the rest is
+summarised.
+
+### Stored values that change
+
+- **Nanosecond values into a microsecond `TIMESTAMP` column read a naive wall in the session zone
+  on the overwrite doors (ICE-TSNS-FLOOR-DOORS-1, R-009).** `INSERT OVERWRITE` (plain, with a
+  column list, `BY NAME`, with a static `PARTITION`), `INSERT … BY NAME`, the MERGE insert arm
+  (every spelling), `overwritePartitions` and `insertInto(overwrite=True)` now read a
+  `timestamp_ns` wall in the session zone, as INSERT does. Before this release they read it as
+  UTC, so in a session whose zone is not UTC every naive nanosecond value written through them
+  moved by the zone offset, not only values before 1970: in America/New_York
+  `2026-03-08 02:30:00.000000001` stored `1772937000000000` where INSERT stores
+  `1772955000000000`.
+- **A nanosecond value before 1970 with digits below the microsecond now floors on every door,
+  `TIMESTAMP_NTZ` included.** Narrowed into a microsecond `TIMESTAMP` or `TIMESTAMP_NTZ`
+  column, `-1 ns` stores `-1 µs` on every write door, INSERT into `TIMESTAMP_NTZ` among them;
+  before, the overwrite doors above and every door into `TIMESTAMP_NTZ` truncated toward zero
+  and stored `0`.
+- **The read `CAST(ns AS TIMESTAMP_NTZ)` floors the same way.** `CAST` of a `timestamp_ns` or
+  `timestamptz_ns` value to `TIMESTAMP_NTZ` in a query answers `-1 µs` for `-1 ns`, where it
+  answered `0`, as `CAST(… AS TIMESTAMP)` already did.
+- **A NULL beside a nanosecond value no longer cuts it to microseconds
+  (ICE-TSNS-TYPE-PLANNER-1, R-017).** `coalesce(ns, NULL)`, `nvl`, `array(ns, NULL)`,
+  `CASE … ELSE NULL`, `if(…, ns, NULL)` and the other positions that join two values keep
+  all nine fraction digits and the nanosecond type, so `INSERT … SELECT coalesce(ns, NULL)`
+  into a `timestamp_ns` column stores `…123456789` where it stored `…123456000`.
+- **A microsecond and a nanosecond timestamp joined in one position take nanoseconds.**
+  `coalesce(ns, TIMESTAMP '…')`, `array(ns, ts)`, `CASE`, `UNION`, comparisons and
+  `aggregate(array(ns), CAST(NULL AS TIMESTAMP), …)` answer `timestamp[ns]` with the
+  nanosecond digits kept, where they answered microseconds.
+- **A written `CAST(ns AS TIMESTAMP)` floors to microseconds on every door.** `UPDATE T SET
+  v = CAST(c AS TIMESTAMP)` with no `WHERE` into a `timestamp_ns` column stores `-1000` for
+  `-1 ns`, where it kept `-1`.
+- **`UPDATE` and `DELETE` with a `CAST('…' AS timestamp_ns)` or `timestamptz_ns` literal
+  now store (R-010).** They raised `Unsupported SQL type timestamp_ns`.
+- **`sequence` over a nanosecond column answers nanoseconds.** It raised `ListArray
+  expected data type Timestamp(ns)…`.
+- **The Rust ANSI door (`repark_sql::AnsiDialect`) types `TIMESTAMP` as the naive
+  microsecond wall and `TIMESTAMPTZ` as the microsecond instant.** `CAST('…789' AS
+  TIMESTAMP)` answers `timestamp[us]` without the last three digits, where it answered
+  `timestamp[ns]`.
+- **The Python `repark.sql()` callable types `TIMESTAMP` as the naive microsecond wall and
+  `TIMESTAMPTZ` as the microsecond instant.** `CAST('2024-01-02 03:04:05.123456789' AS
+  TIMESTAMP)` answers `timestamp[us]` `…123456`, where it answered `timestamp[ns]`
+  `…123456789`; `CAST(DATE '2020-01-01' AS TIMESTAMP)` answers `timestamp[us]`.
+- **An `INT`, `SMALLINT` or `TINYINT` cast to `TIMESTAMP` reads seconds, as Spark does.**
+  `CAST(CAST(1 AS INT) AS TIMESTAMP)` answers `1970-01-01 00:00:01`, where it answered
+  `1970-01-01 00:00:00`.
+- **A refusal on the Python door names a timestamp argument `TIMESTAMP`.** `degrees` and
+  `radians` over a timestamp column said `TIMESTAMP_LTZ`; they now say `TIMESTAMP`, as Spark.
+- **A `TIMESTAMP_NTZ` inside an `ARRAY` or `STRUCT` cast target answers.**
+  `CAST(array('2024-01-01 00:00:00') AS ARRAY<TIMESTAMP_NTZ>)` answers
+  `[2024-01-01 00:00:00]` where it refused `UNSUPPORTED_TIMESTAMP_NTZ`, and `UPDATE … SET
+  int_column = CAST(c AS TIMESTAMP_NTZ)` refuses with Spark's `CANNOT_SAFELY_CAST` text.
+- **A struct value pairs its fields by position on `INSERT`, `REPLACE WHERE` and `insertInto`, as
+  Spark does (ICE-STRUCT-PAIRING-1, R-016).** `INSERT INTO t SELECT 1, named_struct('b', 2, 'a', 1)`
+  into `st STRUCT<a: INT, b: INT>` now stores `a = 2, b = 1`: the first source field feeds the
+  first table field, whatever its name. Before this release these doors paired by name, so the
+  same statement stored `a = 1, b = 2`, and a renamed field stored NULL with no error. The same
+  holds for `INSERT … VALUES`, `INSERT OVERWRITE` (without a `PARTITION` clause),
+  `INSERT INTO … REPLACE WHERE` and `insertInto` with and without `overwrite=True`, at every
+  depth and inside arrays and maps. A struct with more or fewer fields than the column now
+  refuses (`EXTRA_STRUCT_FIELDS`, `STRUCT_MISSING_FIELDS`).
+- **A struct field Spark's store assignment refuses now refuses, where it was stored.** After
+  a struct pairs, each of its fields is held to the same rule a plain column is:
+  `INSERT INTO t SELECT 1, named_struct('a', '5', 'b', 'y')` into
+  `st STRUCT<a: BIGINT, b: STRING>` now refuses `CANNOT_SAFELY_CAST` (``Cannot safely cast
+  `st`.`a` "STRING" to "BIGINT"``) and writes nothing; before it stored `a = 5`. The same
+  holds for a BOOLEAN into an INT field, a STRING into a DATE field, a field that meets a
+  struct where the table has a plain value (or the reverse), at every depth and inside arrays
+  and maps, on every door, `INSERT OVERWRITE … PARTITION (…)` included. A struct with more or
+  fewer fields than the column refuses there with `EXTRA_STRUCT_FIELDS` or
+  `STRUCT_MISSING_FIELDS`, as on the other doors. Widening (`INT` into `BIGINT`) and any value
+  into a STRING field still store.
+- **`INSERT INTO t (st, id) VALUES (…)` with a column list pairs a struct by position.** The
+  struct written to `st` feeds `st`'s fields in order, as every other `INSERT` door does:
+  `INSERT INTO t (st, id) VALUES (named_struct('b', 2, 'a', 1), 1)` stores `a = 2, b = 1`, and a
+  renamed field stores its value; before, this spelling paired by name and stored NULL for a
+  renamed field.
+- **By-name struct fields match letter case as Spark does, beyond ASCII.** Under
+  `spark.sql.caseSensitive=false` a source field `É` feeds the table's `é` and `ẞ` feeds `ß`
+  on `INSERT … BY NAME`, `writeTo().append()`, `saveAsTable`, `overwritePartitions()`, every
+  MERGE arm and `UPDATE`; before, MERGE and `UPDATE` refused and the DataFrame writers stored
+  NULL or paired the wrong field. `ß` and `SS` still do not match, as on Spark.
+- **`UPDATE t SET st = (SELECT st FROM src) WHERE id = 0` stores the subquery's struct.** With a
+  `WHERE` that compares a column to a value, on the Spark SQL door, an uncorrelated
+  `(SELECT column FROM table …)` assigned in `SET` now stores its value, its struct fields
+  paired by name; before, the statement succeeded and left the row unchanged.
+- **`UPDATE … SET col = (SELECT …)` with `WHERE true`, an `IN` list or no `WHERE` now refuses,
+  for every column type, where it reported success and wrote nothing.** The refusal reads
+  `UPDATE with SET column = (SELECT ...) is not supported on this statement: RePark cannot
+  write the subquery value here, so it refuses before any write.` and no row changes. On
+  `repark.sql()` every `UPDATE` whose `SET` value is a subquery refuses this way.
+- **`writeTo().append()` and `saveAsTable` in append mode refuse a struct they cannot pair by
+  name, where they stored NULL.** A source struct missing one of the column's fields, or
+  carrying one it lacks, now refuses `CANNOT_FIND_DATA` or `EXTRA_STRUCT_FIELDS` and writes
+  nothing; before, the missing field was stored NULL and the extra one dropped, `merge-schema`
+  included. A struct whose fields differ only in order stores as before; one whose fields
+  differ only in letter case now stores by name, where it refused. `overwritePartitions()`
+  pairs the same way.
+- **`writeTo().overwrite(condition)` stores a struct field spelled in another letter case.**
+  Under the default `spark.sql.caseSensitive=false`, a source field `A` now feeds the table's
+  `a`, as Spark does; before, that field was stored NULL.
+- **The Rust append API and the streaming sink refuse a struct whose fields are not the table's,
+  in order.** They do not pair struct fields; a batch whose struct column names its fields
+  differently or in another order now refuses `CANNOT_SAFELY_CAST` with a hint to write the
+  table's field names in the table's order, where the batch cast paired it by a rule of its
+  own. `INSERT OVERWRITE … PARTITION (…)` refuses such a struct the same way, where it stored
+  by name (Spark stores it by position).
+- **`repark.sql()` refuses an `UPDATE` or `DELETE` whose `WHERE` holds a subquery, where it
+  wrote every row (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 106 (a), 2026-10-16).**
+  `IN`, `NOT IN`, `EXISTS`, `= (SELECT …)`, `= ANY (SELECT …)`, a correlated subquery, and a
+  subquery beside other conditions now raise the G3-E8 refusal, the ANSI door's text, and
+  nothing is written, whether the statement runs bare, under `PREPARE` (then `EXECUTE`), or
+  under `EXPLAIN ANALYZE`. A plain `EXPLAIN` of such a statement answers its plan. Before this release `UPDATE` rewrote every row and
+  `DELETE` emptied the table, and both reported success: `DELETE FROM t WHERE id IN (SELECT id
+  FROM s)` deleted all of `t`.
+
+### Behaviour changes
+
+- **The local-file write policy checks writes below the root (PA-LOCAL-FS-POLICY-1, audit
+  PA-02).** With `repark.sql.allowLocalFilesystemDDL=false` (the default), `EXPLAIN ANALYZE
+  COPY … TO '<outside>'` now refuses with the policy error and writes nothing, as the bare
+  `COPY` already did; plain `EXPLAIN` still answers.
+- **Containment follows symlinks through missing parents (audit PA-03).** A destination such
+  as `<warehouse>/link/new/sub/export`, where `link` points outside and the middle
+  directories are absent, now refuses; a `..` after a missing directory and a dangling
+  symlink refuse as indeterminate.
+- **The guard reads a location the way the write reads it (owner ruling 103).** A symlink
+  followed by `..` (`<warehouse>/deep/../../out`), a percent-encoded dot segment in a `file:`
+  URL (`%2e%2e`, `%2E%2E`, `.%2e`) and a relative `file:` URL (read as `/x`, not against the
+  working directory) no longer write outside the warehouse. The guard judges where the bytes
+  land (owner ruling 114, 2026-10-16), so a `..` that the write itself removes is judged after
+  it is removed: `<warehouse>/deep/../x`, `<warehouse>/x/../y` and `file://<warehouse>/x/%2e%2e/y`
+  keep writing inside the warehouse. A `[`, `?` or `*` in a registered warehouse path is an
+  ordinary character of the root; a bare `COPY` location under such a warehouse is cut at that
+  character by DataFusion and lands in its parent, so it now refuses (before, it wrote there);
+  the `file:` URL spelling of the same location writes inside.
+- **Not yet covered:** the policy does not yet cover a Spark-door `CREATE TABLE … LOCATION` to a
+  local path outside the warehouse. Card: LOCAL-FS-CREATE-TABLE-LOCATION-1.
+- **Non-ASCII locations classify instead of panicking (audit PA-04).** A location whose
+  multibyte character straddles byte 5, 7 or 9 (`aaaaé`, `aaaaaaé`, `file://aaaaaaaaé`) now
+  gets the policy refusal (or writes, under the opt-in) instead of an internal error.
+- **`repark.sql()` applies the same policy (owner ruling 2026-10-15).** A local `COPY` or
+  `CREATE EXTERNAL TABLE` outside every registered warehouse now refuses on that entry,
+  wrapped or not; it has no opt-in. Before, it wrote anywhere the process could.
+- **Dated loss (2026-10-15, owner ruling 104): `repark.sql()` no longer runs any local-file
+  DDL.** That entry registers no warehouse, so every `COPY … TO` a local path (absolute,
+  relative, `file:`, `file://`, `file://localhost`), every `EXPLAIN ANALYZE COPY` to one, and
+  every `CREATE EXTERNAL TABLE` with a local location, the read-only registration of an existing
+  local file or directory included, now refuses with "repark.sql() does not allow local-file
+  DDL". The entry has no opt-in: `SET repark.sql.allowLocalFilesystemDDL = true` fails there,
+  and no session config reaches it. Before this release all of these ran. Card:
+  REPARK-SQL-LOCAL-DDL-1.
+- **The ANSI door's opt-in opens.** A session whose `repark.sql` extension sets
+  `allowLocalFilesystemDDL=true` now writes outside on the ANSI door; before, the door
+  refused regardless.
+
+### Messages that change
+
+- **dbt-repark's profile-mismatch refusal and `dbt debug` no longer print property values
+  (audit PA-01).** The refusal names the live and requested `database` (the profile's
+  `catalog`) and `warehouse` and the changed `catalog_properties.<key>` and
+  `session_properties.<key>` names. The connection report, and the Jinja `target` built from
+  it, show `catalog_properties` values as `getAll` does, secrets as `***`. They pass
+  `database`, its alias `catalog` and `warehouse` through the same redaction, so a login in
+  any of them shows as `u:***@host`.
+
+### Also in the re-pointed tag
+
+- **A write body inside `CREATE TABLE … AS` refuses at parse (WRITE-BODY-CARRIERS-1, U-7, `564649b8`).**
+- **Fork repins:** RP-58 (`1ce895a0`, fork `409ff330`): a lost commit reply, the SDK re-send and a
+  stale rejection no longer append twice; RP-59 (`cfb20a16`, fork `d80a2884`): the four red
+  nightly-interop suites fixed as tests and oracle only.
+- **A fenced `foreachBatch` body never runs inside one process (MB-FENCE-BODY-FLAKE-1, `476586cd`):**
+  a batch enters the sink's scope before it loads the sink.
+- **Lock-only dependency bumps:** rustls 0.23.46 (`813bf02b`, RUSTSEC-2026-0346 to 0349),
+  quinn-proto 0.11.19 (`31066e9d`, RUSTSEC-2026-0338 to 0342), rustls-webpki 0.103.16 and
+  webpki-roots 1.0.10 (`7fb5f6b2`, RUSTSEC-2026-0381 and 0382); the actions group (`ac282e0d`).
+- **Tests and CI, no stored value changes:** Spark 4.1.2 reads what the acceptance scenarios write
+  (ICE-SPARK-CROSS-READ-1, U-10, `d96028ee`); the parity-live recorder runs its meta-delete check in
+  its own interpreter (`c86f08d7`); the facade suite's thirteen subsystem directories, pytest
+  config, loadgroup scheduling, eight xdist workers, seven shards, ci-profile builds, nextest, warm
+  caches, the deep-battery split and the blocking zizmor gate (`1199cf94`, `72a6c0db`, `3f092274`,
+  `c765d3ac`, `02bf6fe5`, `3beb0a61`, `ba6b5bc4`, `218d085e`, `210ee778`, `99dfc21b`, `978858a2`).
+
+### Known issues in this release
+
+Each is fixed on main after `7fb5f6b2` and ships in v1.5.6, except the last.
+
+- **`EXPLAIN ANALYZE` and `PREPARE` of a write perform the write (EXPLAIN-DML-WRITE-1, critical).**
+  On the Spark SQL session and the ANSI door, `EXPLAIN ANALYZE` of a `DELETE` or `UPDATE` performs
+  the write, and so does the same statement run as `PREPARE` then `EXECUTE`; when its `WHERE` holds
+  a subquery, either form changes every row of the table instead of the matching ones. Spark
+  refuses both. A plain `EXPLAIN` shows the plan and does not write. Fixed by #1137 (`b7a20167`).
+- **`map(<key>, <non-literal value>)` panics.** `SELECT map('a', id)` and `INSERT INTO t SELECT id,
+  map('a', id)` over a column, a function or a cast value panic `list array` on one source row or
+  raise `map requires key and value lists to have the same length` on several, on `spark.sql`,
+  `repark.sql()` and the Rust ANSI door. A map whose keys and values are all literals works. Fixed
+  by #1131 (`d6ee0411`) and #1140 (`a556289d`).
+- **A nested microsecond `TIMESTAMP_NTZ` field stores two walls outside UTC (R-011).** An instant
+  written into `struct<v: TIMESTAMP_NTZ, …>` in a session whose zone is not UTC stores the session
+  wall through field assignment and the UTC wall through every other door, silently; Spark stores
+  the session wall on every door. A UTC session is unaffected. Main refuses the shape since
+  #1124 (`c91f69c5`, ICE-NTZ-NESTED-REFUSE-1).
+- **`repark.sql()` refuses every `UPDATE` or `DELETE` whose `WHERE` holds a subquery**, including the
+  `IN`, `NOT IN` and `EXISTS` forms the Spark SQL session answers with the matching rows
+  (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, in this release). Run those statements through the Spark SQL
+  session until `repark.sql()` is routed through the ANSI door. This one stays in v1.5.6.
+
 ## Known, not in this release
 
 The registry is [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
 
-- **ICE-TSNS-SQL-1-R-017, parked 2026-10-13:** a nanosecond value beside an untyped NULL is
-  typed as microseconds, so a read drops the digits below a microsecond. Two designs were
-  closed unmerged (#1027, #1042); the row's dated park record lists them. Next step: card
-  [ice-tsns-type-planner-1-card-2026-10-13.md](ice-tsns-type-planner-1-card-2026-10-13.md)
-  (1.5.6).
-- **ICE-TSNS-SQL-1-R-011, parked:** a nested microsecond `TIMESTAMP_NTZ` field stores two
-  walls (card [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md)).
-- The create door (1.5.6).
+- **ICE-TSNS-SQL-1-R-017:** parked on 2026-10-13 after two designs closed unmerged (#1027,
+  #1042); then fixed by ICE-TSNS-TYPE-PLANNER-1 (`c7121437`, U-1), which the re-pointed tag
+  ships (see "Added by the re-pointed tag"). Reconciled 2026-10-22.
+- **ICE-TSNS-SQL-1-R-011, in this release as a known issue** (above); refused on main since
+  #1124, v1.5.6.
+- The create door (1.5.7 by the 2026-10-20 ruling).
 - **ICE-TSNS-SQL-1-R-020, unit reinterpretation:** `applyInPandas` copies the ticks of a
   nanosecond datetime array into an `array<timestamp>` or `array<timestamp_ntz>` column and
   reads them as microseconds, so the stored instant is wrong, not rounded. Spark 4.1.2
   floors the array under `array<timestamp>` and refuses it under `array<timestamp_ntz>`.
-  Card [ns-array-floor-1-card-2026-10-13.md](ns-array-floor-1-card-2026-10-13.md) (1.5.6);
+  Card [ns-array-floor-1-card-2026-10-13.md](ns-array-floor-1-card-2026-10-13.md) (U-2, 1.5.7
+  by the 2026-10-20 ruling);
   the struct and map cases are card
   [ns-nested-pandas-1-card-2026-10-13.md](ns-nested-pandas-1-card-2026-10-13.md), unscheduled.
 
@@ -113,6 +331,10 @@ The 842-cell matrix on a fresh release build of the release commit `293896ce` (s
 2026-10-13, the v1.5.4 harness and compare rules with the one change recorded below) reads
 **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT**, with no per-family
 count moved against v1.5.4.
+
+The matrix was not re-run on the re-pointed tag `7fb5f6b2`; the units it adds each carried their
+own verifier census, and the AWS acceptance workflow passed on main at and after the tag on
+2026-10-20, 2026-10-21 and 2026-10-22 (reconciled 2026-10-22).
 
 Harness record, 2026-10-13: the first run read 704 EQUAL and 1 DIFFERENT. The cell was
 `P-RTP-DEFAULT` (`rewrite_table_path`), and the only differing field was the random
