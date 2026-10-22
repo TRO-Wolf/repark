@@ -368,6 +368,14 @@ Each cell runs on Glue and S3 Tables, v2 and v3, for three doors: `INSERT … SE
 | U-4 absent, reads open | read it, do not forward, reset; forward reads | `CommitStateUnknownException`: the refresh shows the snapshot absent and the fork surfaces the original error | not committed; rows equal the pre-state |
 | U-5 landed, the SDK's resend forwarded | forward; reset its response; forward the SDK's resends and every read | succeeds or raises the class; either way rows exactly once | rows exactly once; at most one snapshot with the id |
 
+**2026-10-22, U-3's orphan check narrowed live (fix round 1, verifier S1-3).** The built leg U
+does not count U-3's orphans as pin K does. Its live check is `metadata=1 lists=1`: the held
+metadata file and the attempt's manifest list exist on storage. The data files and manifests
+are not counted, and ruling 82's ceiling (at most the files the crashed commit wrote) is not
+asserted live. The reasons: pyarrow cannot read the Avro manifest list, `register_table` is
+refused on S3 Tables (R126), and pin K counts the files and asserts the ceiling on the local
+catalog. Ledger C-044.
+
 **U-5's prediction, unmeasured.** The SDK resends the commit (M3). The resend carries the base
 version (Glue `VersionId`, the S3 Tables version token), so the service answers a conflict, which
 the fork maps to a retryable `CatalogCommitConflicts`. `Transaction::commit` then re-applies the

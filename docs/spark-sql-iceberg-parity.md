@@ -1137,7 +1137,7 @@ perfectly good read.
   resolves each one by id, once or not at all. The live legs on Glue and S3 Tables are
   `python/repark/tests/parity/test_aws_acceptance_commit_unknown.py`, 96 statements through a
   catalog endpoint gate (`_acceptance_commit_gate.py`, whose AWS-free test runs on every pull
-  request). They are built, and their first run is after the owner wires #1070. Fork #368 turned
+  request). They are built, with U-3's orphan check narrowed live to the held metadata file and manifest list (ruling 82's ceiling is pinned locally by pin K only), and their first run is after the owner wires #1070. Fork #368 turned
   the SDK retry off on both commit calls, so the SDK re-send the sketch's cell U-5 drilled no longer
   happens. U-5 now asserts one commit request, and U-5r drills the fork's own re-send after a
   throttle reply against a stale rejection: rows once.
