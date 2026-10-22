@@ -1,0 +1,12 @@
+# green-head-rust: the same command on the head with the rule pushed in NativeDoorTypes::configure_analyzer_rules.
+
+
+running 4 tests
+test session_tests::native_session_keeps_a_constant_map_on_the_datafusion_constructor ... ok
+test session_tests::native_session_answers_a_map_over_a_column_instead_of_panicking ... ok
+test session_tests::native_session_answers_a_per_row_map_with_two_pairs ... ok
+test session_tests::native_session_is_not_spark_doored ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 165 filtered out; finished in 0.05s
+
+cargo exit 0

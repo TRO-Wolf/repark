@@ -1,0 +1,34 @@
+# ansi-red-on-main: the three pins of tests/ansi_door_map_column.rs on main's code (the rule not yet pushed in AnsiDialect).
+# command: cargo test --locked -p repark-sql --test ansi_door_map_column   (CARGO_BUILD_JOBS=12, taskset -c 0-25)
+# result: 2 failed (the one-row map panics list array; the three-row two-pair map raises map requires key and value lists to have the same length), 1 passed (the constant-map control).
+
+
+running 3 tests
+test a_constant_map_keeps_the_datafusion_constructor ... ok
+test a_map_over_a_column_answers_one_row_instead_of_panicking ... FAILED
+test a_two_pair_map_over_three_rows_answers_instead_of_raising_the_length_error ... FAILED
+
+failures:
+
+---- a_map_over_a_column_answers_one_row_instead_of_panicking stdout ----
+
+thread 'a_map_over_a_column_answers_one_row_instead_of_panicking' (3976179) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:
+list array
+
+thread 'a_map_over_a_column_answers_one_row_instead_of_panicking' (3976179) panicked at crates/repark-sql/tests/ansi_door_map_column.rs:22:47:
+the ANSI door panicked on SELECT map('a', id) AS m FROM range(1)
+
+---- a_two_pair_map_over_three_rows_answers_instead_of_raising_the_length_error stdout ----
+
+thread 'a_two_pair_map_over_three_rows_answers_instead_of_raising_the_length_error' (3976180) panicked at crates/repark-sql/tests/ansi_door_map_column.rs:23:38:
+the ANSI door answers SELECT map('a', id, 'b', id + 1) AS m FROM range(3) ORDER BY id: Execution error: map requires key and value lists to have the same length
+
+
+failures:
+    a_map_over_a_column_answers_one_row_instead_of_panicking
+    a_two_pair_map_over_three_rows_answers_instead_of_raising_the_length_error
+
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p repark-sql --test ansi_door_map_column`
+cargo exit 101

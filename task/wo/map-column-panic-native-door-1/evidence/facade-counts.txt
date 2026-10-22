@@ -1,0 +1,5 @@
+# The full facade suite on the head after the probe moved to panic_probe.rs and the ANSI door commit (2026-10-21), armed by conftest.py (REPARK_PANIC_FATAL=1), wheel built with maturin develop --profile ci.
+# command: PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv taskset -c 0-25 uv run --no-project python -m pytest python/repark/tests -q -n 16 --dist loadgroup --maxschedchunk=8 -p no:cacheprovider -o faulthandler_timeout=900
+# box load 5 to 25 (another builder was running)
+20312 passed, 485 skipped, 151 xfailed, 281 warnings in 733.64s (0:12:13)
+# 0 failed, 0 errors. The skipped set is the REPARK_PARITY_LIVE-gated live-oracle tier; the carded flake perf/test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool did not fail.

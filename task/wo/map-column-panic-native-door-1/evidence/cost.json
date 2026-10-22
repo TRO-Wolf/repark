@@ -1,0 +1,104 @@
+{
+ "build": "maturin develop --profile ci",
+ "door": "native repark.sql()",
+ "queries": {
+  "select_1": "SELECT 1 AS one",
+  "map_1000": "SELECT map(id, id + 1) AS m FROM range(1000)"
+ },
+ "unit": "milliseconds",
+ "rounds": [
+  {
+   "set": "10-run rounds",
+   "round": 1,
+   "runs": 10,
+   "select_1": {
+    "main_median_ms": 0.434,
+    "head_median_ms": 0.444,
+    "head_over_main": 1.023
+   },
+   "map_1000": {
+    "main_median_ms": 1.993,
+    "head_median_ms": 1.624,
+    "head_over_main": 0.815
+   }
+  },
+  {
+   "set": "10-run rounds",
+   "round": 2,
+   "runs": 10,
+   "select_1": {
+    "main_median_ms": 0.429,
+    "head_median_ms": 0.445,
+    "head_over_main": 1.039
+   },
+   "map_1000": {
+    "main_median_ms": 1.759,
+    "head_median_ms": 1.565,
+    "head_over_main": 0.89
+   }
+  },
+  {
+   "set": "10-run rounds",
+   "round": 3,
+   "runs": 10,
+   "select_1": {
+    "main_median_ms": 0.428,
+    "head_median_ms": 0.446,
+    "head_over_main": 1.042
+   },
+   "map_1000": {
+    "main_median_ms": 2.023,
+    "head_median_ms": 1.603,
+    "head_over_main": 0.792
+   }
+  },
+  {
+   "set": "30-run rounds",
+   "round": 1,
+   "runs": 30,
+   "select_1": {
+    "main_median_ms": 0.427,
+    "head_median_ms": 0.441,
+    "head_over_main": 1.033
+   },
+   "map_1000": {
+    "main_median_ms": 2.072,
+    "head_median_ms": 1.576,
+    "head_over_main": 0.761
+   }
+  },
+  {
+   "set": "30-run rounds",
+   "round": 2,
+   "runs": 30,
+   "select_1": {
+    "main_median_ms": 0.427,
+    "head_median_ms": 0.442,
+    "head_over_main": 1.035
+   },
+   "map_1000": {
+    "main_median_ms": 2.022,
+    "head_median_ms": 1.612,
+    "head_over_main": 0.797
+   }
+  }
+ ],
+ "select_1_ratios": [
+  1.023,
+  1.039,
+  1.042,
+  1.033,
+  1.035
+ ],
+ "select_1_median_ratio": 1.035,
+ "select_1_max_ratio": 1.042,
+ "map_1000_ratios": [
+  0.815,
+  0.89,
+  0.792,
+  0.761,
+  0.797
+ ],
+ "map_1000_median_ratio": 0.797,
+ "map_1000_max_ratio": 0.89
+}

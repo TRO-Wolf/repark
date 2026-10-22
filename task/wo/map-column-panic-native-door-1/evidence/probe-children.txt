@@ -1,0 +1,19 @@
+# The two children of test_panic_fatal_suite_1.py, run by hand on the head (2026-10-22).
+# armed = REPARK_PANIC_FATAL=1 in the child environment; unarmed = variable removed.
+== armed=1 shape=method
+
+thread '<unnamed>' (378109) panicked at crates/repark-python/src/panic_probe.rs:13:5:
+repark panic probe
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Traceback (most recent call last):
+  File "child.py", line 4, in <module>
+    _native.__panic_probe__("method")
+pyo3_runtime.PanicException: repark panic probe
+exit=1
+== armed=0 shape=method
+
+thread '<unnamed>' (378140) panicked at crates/repark-python/src/panic_probe.rs:13:5:
+repark panic probe
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+child-caught repark internal error in PanicProbe.method: repark panic probe (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+exit=0

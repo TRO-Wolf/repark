@@ -1,0 +1,11 @@
+# ansi-green-head: the same command on the head with the rule pushed in AnsiDialect::configure_analyzer_rules.
+
+
+running 3 tests
+test a_constant_map_keeps_the_datafusion_constructor ... ok
+test a_map_over_a_column_answers_one_row_instead_of_panicking ... ok
+test a_two_pair_map_over_three_rows_answers_instead_of_raising_the_length_error ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+cargo exit 0

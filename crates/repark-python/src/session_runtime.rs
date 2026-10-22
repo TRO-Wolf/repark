@@ -408,7 +408,11 @@ impl repark_core::SessionExtension for NativeDoorTypes {
     ) -> datafusion::error::Result<
         Vec<std::sync::Arc<dyn datafusion::optimizer::AnalyzerRule + Send + Sync>>,
     > {
-        repark_functions::analyzer_rules_with_timestamp_unit_widen(rules)
+        let mut rules = repark_functions::analyzer_rules_with_timestamp_unit_widen(rules)?;
+        rules.push(std::sync::Arc::new(
+            repark_functions::collection::SparkMapRewrite,
+        ));
+        Ok(rules)
     }
 }
 

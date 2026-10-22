@@ -1,0 +1,1249 @@
+{
+ "door": "spark",
+ "results": {
+  "corpus:map.col_inst.cast_ntz.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(c_inst AS TIMESTAMP_NTZ)) AS v FROM zone_oracle_1_one_row",
+   "status": "ok",
+   "types": [
+    "map<string, timestamp[us]>"
+   ]
+  },
+  "corpus:map.col_inst.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02 03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(c_inst AS STRING)) AS v FROM zone_oracle_1_one_row",
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "corpus:map.col_inst.ccast_ntz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+    ]
+   ],
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, TIMESTAMP_NTZ>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "status": "ok",
+   "types": [
+    "timestamp[us]"
+   ]
+  },
+  "corpus:map.col_inst.ccast_string": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "2026-01-02T03:04:05.123456Z"
+    ]
+   ],
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, STRING>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "status": "ok",
+   "types": [
+    "string"
+   ]
+  },
+  "corpus:map.col_inst.to_json": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "{\"k\":\"2026-01-02T03:04:05.123Z\"}"
+    ]
+   ],
+   "sql": "SELECT to_json(map('k', c_inst)) AS v FROM zone_oracle_1_one_row",
+   "status": "ok",
+   "types": [
+    "string"
+   ]
+  },
+  "corpus:map.col_wall.cast_ltz.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(c_wall AS TIMESTAMP)) AS v FROM zone_oracle_1_one_row",
+   "status": "ok",
+   "types": [
+    "map<string, timestamp[us, tz=UTC]>"
+   ]
+  },
+  "corpus:map.col_wall.ccast_ltz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+    ]
+   ],
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_wall) AS MAP<STRING, TIMESTAMP>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "status": "ok",
+   "types": [
+    "timestamp[us, tz=UTC]"
+   ]
+  },
+  "corpus:map.inst.cast_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS DATE)) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.inst.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02 03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS STRING)) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "corpus:map.inst.date_format.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02 03:04:05"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', date_format(TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'yyyy-MM-dd HH:mm:ss')) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "corpus:map.inst.to_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', to_date(TIMESTAMP '2026-01-02 03:04:05.123456+00:00')) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.wall.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02 03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(TIMESTAMP_NTZ '2026-01-02 03:04:05.123456' AS STRING)) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "pin:array_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       [
+        0,
+        1
+       ]
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       [
+        1,
+        2
+       ]
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       [
+        2,
+        3
+       ]
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', array(id, id + 1)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, list<element: int32>>"
+   ]
+  },
+  "pin:cast_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', CAST(id AS BIGINT)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int64>"
+   ]
+  },
+  "pin:column_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "k0",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "k1",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "k2",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map(k, id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:column_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:column_value_one_row": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', id) AS m FROM map_column_panic_1_src WHERE id = 1",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:create_map_unresolved": {
+   "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `create_map` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "sql": "SELECT id, create_map('a', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:duplicate_key": {
+   "error": "PySparkException: Execution error: [DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505",
+   "sql": "SELECT id, map('a', id, 'a', id + 1) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:duplicate_literal": {
+   "error": "PySparkException: Execution error: [DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505",
+   "sql": "SELECT map('a', 1, 'a', 2) AS m",
+   "status": "error"
+  },
+  "pin:empty_control": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     []
+    ],
+    [
+     1,
+     []
+    ],
+    [
+     2,
+     []
+    ]
+   ],
+   "sql": "SELECT id, map() AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<null, null>"
+   ]
+  },
+  "pin:function_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       2026
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       2026
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2026
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', year(ts)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:int_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       0,
+       "k0"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       1,
+       "k1"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       2,
+       "k2"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map(id, k) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<int32, string>"
+   ]
+  },
+  "pin:literal_control": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', 1, 'b', 2) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:lookup": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ]
+   ],
+   "sql": "SELECT id, map('a', id)['a'] AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "int32"
+   ]
+  },
+  "pin:map_keys": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      "k0",
+      "b"
+     ]
+    ],
+    [
+     1,
+     [
+      "k1",
+      "b"
+     ]
+    ],
+    [
+     2,
+     [
+      "k2",
+      "b"
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map_keys(map(k, id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "list<item: string>"
+   ]
+  },
+  "pin:map_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       [
+        [
+         "b",
+         0
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       [
+        [
+         "b",
+         1
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       [
+        [
+         "b",
+         2
+        ]
+       ]
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', map('b', id)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, map<string, int32>>"
+   ]
+  },
+  "pin:map_values": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      0,
+      1
+     ]
+    ],
+    [
+     1,
+     [
+      1,
+      2
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      3
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map_values(map('a', id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "list<item: int32 not null>"
+   ]
+  },
+  "pin:ntz_cast_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 3, 3, 4, 5, 123456)"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 4, 3, 4, 5, 123456)"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', CAST(ts AS TIMESTAMP_NTZ)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, timestamp[us]>"
+   ]
+  },
+  "pin:null_key_cast": {
+   "error": "PySparkException: Execution error: [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "sql": "SELECT id, map(CAST(NULL AS STRING), id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:null_key_column": {
+   "error": "PySparkException: Execution error: [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "sql": "SELECT id, map(nk, id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:null_key_literal": {
+   "error": "PySparkException: Execution error: [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "sql": "SELECT map(NULL, 1) AS m",
+   "status": "error"
+  },
+  "pin:null_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', nv) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:odd_arity_literal": {
+   "error": "AnalysisException: Error during planning: [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "sql": "SELECT map('a', 1, 'b') AS m",
+   "status": "error"
+  },
+  "pin:odd_arity_one": {
+   "error": "AnalysisException: Error during planning: [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 1. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "sql": "SELECT id, map('a') AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:odd_arity_three": {
+   "error": "AnalysisException: Error during planning: [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is 3. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605",
+   "sql": "SELECT id, map('a', id, 'b') AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:ordering_refusal": {
+   "error": "AnalysisException: Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(map(a, id) = map(b, id))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09",
+   "sql": "SELECT id FROM map_column_panic_1_src WHERE map('a', id) = map('b', id)",
+   "status": "error"
+  },
+  "pin:partial_null_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ],
+      [
+       "b",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       null
+      ],
+      [
+       "b",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', mid, 'b', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:predicate": {
+   "names": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "sql": "SELECT id FROM map_column_panic_1_src WHERE map('a', id)['a'] = 1",
+   "status": "ok",
+   "types": [
+    "int32"
+   ]
+  },
+  "pin:size": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     2
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     2
+    ]
+   ],
+   "sql": "SELECT id, size(map('a', id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "int32"
+   ]
+  },
+  "pin:struct_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       {
+        "x": 0,
+        "y": "k0"
+       }
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       {
+        "x": 1,
+        "y": "k1"
+       }
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       {
+        "x": 2,
+        "y": "k2"
+       }
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', named_struct('x', id, 'y', k)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, struct<x: int32, y: string>>"
+   ]
+  },
+  "pin:timestamp_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 3, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 4, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', ts) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, timestamp[us, tz=UTC]>"
+   ]
+  },
+  "pin:two_pairs": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ],
+      [
+       "b",
+       1
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       3
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', id, 'b', id + 1) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:widen_bigint": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ],
+      [
+       "b",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', id, 'b', big) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int64>"
+   ]
+  },
+  "pin:widen_decimal": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       "Decimal('0.0')"
+      ],
+      [
+       "b",
+       "Decimal('2.5')"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       "Decimal('1.0')"
+      ],
+      [
+       "b",
+       "Decimal('2.5')"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       "Decimal('2.0')"
+      ],
+      [
+       "b",
+       "Decimal('2.5')"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', id, 'b', 2.5) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, decimal128(11, 1)>"
+   ]
+  },
+  "target:range_map": {
+   "names": [
+    "m"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "a",
+       0
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('a', id) AS m FROM range(1)",
+   "status": "ok",
+   "types": [
+    "map<string, int64>"
+   ]
+  },
+  "target:select_1": {
+   "names": [
+    "one"
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "sql": "SELECT 1 AS one",
+   "status": "ok",
+   "types": [
+    "int32"
+   ]
+  }
+ },
+ "views": {
+  "pin": "ok",
+  "zone": "ok"
+ }
+}

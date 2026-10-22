@@ -1,0 +1,105 @@
+# red-on-main-facade: test_map_column_panic_native_door_1.py against the main wheel, REPARK_PANIC_FATAL=0 (the armed suite aborts at the first panic).
+# command: REPARK_PANIC_FATAL=0 PYTHONPATH=<main wheel package>:python/repark-parity/src pytest python/repark/tests/functions/test_map_column_panic_native_door_1.py -q --tb=line -rf
+# result: 17 failed, 5 passed. The five that pass already answered on main: column_key, int_key, null_value, map_keys, literal_control.
+
+FFFFFFF..F.FF.FFFFFFF.                                                   [100%]
+=================================== FAILURES ===================================
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+----------------------------- Captured stderr call -----------------------------
+
+thread 'tokio-rt-worker' (3637656) panicked at ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/arrow-array-58.4.0/src/cast.rs:929:28:
+list array
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+<scratch> repark.errors.PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   pyarrow.lib.ArrowInvalid: External error: Execution error: map requires key and value lists to have the same length
+
+The above exception was the direct cause of the following exception:
+E   repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+<scratch> repark.errors.PySparkException: Execution error: map requires key and value lists to have the same length
+E   AssertionError: Execution error: map key must be unique, duplicate key found: a
+    assert '[DUPLICATED_MAP_KEY]' in 'Execution error: map key must be unique, duplicate key found: a'
+python/repark/tests/functions/test_map_column_panic_native_door_1.py:108: AssertionError: Execution error: map key must be unique, duplicate key found: a
+E   AssertionError: Execution error: map key must be unique, duplicate key found: a
+    assert '[DUPLICATED_MAP_KEY]' in 'Execution error: map key must be unique, duplicate key found: a'
+python/repark/tests/functions/test_map_column_panic_native_door_1.py:108: AssertionError: Execution error: map key must be unique, duplicate key found: a
+E   AssertionError: Execution error: map key cannot be null
+    assert '[NULL_MAP_KEY]' in 'Execution error: map key cannot be null'
+python/repark/tests/functions/test_map_column_panic_native_door_1.py:108: AssertionError: Execution error: map key cannot be null
+E   AssertionError: Execution error: map key cannot be null
+    assert '[NULL_MAP_KEY]' in 'Execution error: map key cannot be null'
+python/repark/tests/functions/test_map_column_panic_native_door_1.py:108: AssertionError: Execution error: map key cannot be null
+E   AssertionError: Execution error: map key cannot be null
+    assert '[NULL_MAP_KEY]' in 'Execution error: map key cannot be null'
+python/repark/tests/functions/test_map_column_panic_native_door_1.py:108: AssertionError: Execution error: map key cannot be null
+=========================== short test summary info ============================
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[column_value]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[column_value_one_row]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[cast_value]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[ntz_cast_value]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[struct_value]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[map_value]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[two_pairs]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[widen_bigint]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[partial_null_value]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[lookup]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[map_values]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_the_native_door_answers_the_recorded_spark_rows[predicate]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_a_repeated_or_null_key_refuses_with_spark_text_and_never_a_panic[duplicate_key]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_a_repeated_or_null_key_refuses_with_spark_text_and_never_a_panic[duplicate_literal]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_a_repeated_or_null_key_refuses_with_spark_text_and_never_a_panic[null_key_cast]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_a_repeated_or_null_key_refuses_with_spark_text_and_never_a_panic[null_key_column]
+FAILED python/repark/tests/functions/test_map_column_panic_native_door_1.py::test_a_repeated_or_null_key_refuses_with_spark_text_and_never_a_panic[null_key_literal]
+17 failed, 5 passed in 0.22s

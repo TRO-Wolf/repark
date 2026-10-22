@@ -4,9 +4,7 @@
 it once when it initialises. These pins prove the order (the module reports the policy it
 initialised with), prove that a caught panic ends a child interpreter that inherits the suite
 environment, and prove that the same panic keeps its ``repark internal error`` message when the
-variable is cleared. Both panic shapes are the native ``repark.sql()`` door's
-``map('a', <column>)`` defect: ``CREATE TABLE … AS SELECT`` panics inside the ``sql`` method
-fence, and a lazy ``SELECT`` read through Arrow panics inside the Arrow C stream poll fence.
+variable is cleared.
 """
 
 from __future__ import annotations
@@ -22,29 +20,15 @@ from repark import _native
 _VARIABLE = "REPARK_PANIC_FATAL"
 _CONVERTED_PREFIX = "repark internal error in "
 _CONVERTED_SUFFIX = "a Rust panic was caught at the Python boundary"
-_PANIC_TEXT = "list array"
+_PANIC_TEXT = "repark panic probe"
 _TIMEOUT_SECONDS = 300
 
 _PREAMBLE = """
-import ctypes
-import sys
-
-if sys.platform == "linux":
-    ctypes.CDLL(None).prctl(4, 0, 0, 0, 0)
-
-import repark
-from repark.errors import PySparkException
+from repark import _native
 """
 
 _SHAPES: dict[str, tuple[str, str]] = {
-    "sql_method": (
-        "repark.sql(\"CREATE TABLE panic_fatal_probe AS SELECT map('a', id) AS m FROM range(1)\")",
-        "PyReparkSession.sql",
-    ),
-    "arrow_stream": (
-        "repark.sql(\"SELECT map('a', id) AS m FROM range(1)\").to_arrow()",
-        "PyDataFrame.__arrow_c_stream__.next",
-    ),
+    "method": ("_native.__panic_probe__('method')", "PanicProbe.method"),
 }
 
 
@@ -54,7 +38,7 @@ def _child_source(statement: str) -> str:
         f"{_PREAMBLE}\n"
         "try:\n"
         f"    {statement}\n"
-        "except PySparkException as error:\n"
+        "except Exception as error:\n"
         "    print('child-caught', error)\n"
         "else:\n"
         "    print('child-survived')\n"
