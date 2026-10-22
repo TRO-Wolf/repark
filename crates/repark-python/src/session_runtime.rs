@@ -90,7 +90,13 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_catalog_names, module)?)?;
     module.add_function(wrap_pyfunction!(session_refused_catalog_names, module)?)?;
     module.add_function(wrap_pyfunction!(register_late_catalog_block, module)?)?;
+    module.add_function(wrap_pyfunction!(layout_dummy, module)?)?;
     Ok(())
+}
+
+#[pyfunction]
+pub fn layout_dummy() -> u64 {
+    7
 }
 
 #[pyfunction]
