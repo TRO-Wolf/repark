@@ -1898,6 +1898,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_replace_duplicate_name_join_columns` pins P2-3 (qualifier-bound multi-name
   equi-join output, both `x` columns rewritten, `subset=["x"]` still AMBIGUOUS).
   pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
+  **REPLACE-LINEAR-PIN-1 (2026-10-22):** the pin's child now runs the same mode once at depth 1 (a
+  one-column flat select, a one-entry `replace`) before it reads `VmHWM`, so the first touch of the
+  native module's code pages no longer counts toward the delta; `_DEPTH`, `_HEADROOM`, `_DELTA_FLOOR`
+  and the bound `max(2 × control, floor)` are unchanged. On the runner the failures were `RssFile`
+  growth inside the `_native` mapping (`RssAnon` 74 to 106 KB), the same `.so` reading 8.26 MB and
+  9.90 MB; the local deltas are 0.79 MB flat and 0.95 MB replace with the warm-up, 4.85 MB and 7.78 MB
+  without it, and the runner reads 0.34 MB and 0.49 MB with it.
+  pins: replace-linear-pin-1/C-001, C-002, C-003
 - [test_door_converge_1.py](functions/test_door_converge_1.py) — **DOOR-CONVERGE-1 (2026-09-15):**
   both-door oracle pins for the eight clause names — `base64`/`unbase64` (padding,
   76-char CRLF chunking, lenient decode of `'!!'`/unpadded), `hypot` (rescaled
