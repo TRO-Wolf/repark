@@ -1,0 +1,92 @@
+<title>Overnight Watch 2026-10-22</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f6f4ef;--fg:#1d1b17;--muted:#5f5a50;--line:#d9d3c6;--card:#fffdf8;--accent:#8a3b12;--ok:#2d6a3e;--warn:#9a6b00;--bad:#9c2a2a;--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17160f;--fg:#ece7da;--muted:#a79f8e;--line:#3a362c;--card:#201e16;--accent:#e08a52;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17160f;--fg:#ece7da;--muted:#a79f8e;--line:#3a362c;--card:#201e16;--accent:#e08a52;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0;padding-block:24px 48px;padding-inline:16px}
+main{max-width:860px;margin:0 auto}
+h1{font-size:1.6rem;font-weight:600;margin:0 0 4px;text-wrap:balance}
+h2{font-size:1.05rem;font-weight:600;margin:28px 0 8px;letter-spacing:.01em}
+.sub{color:var(--muted);margin:0 0 20px}
+.lede{border-left:3px solid var(--accent);padding:4px 14px;margin:0 0 18px;background:var(--card)}
+code{font-family:var(--mono);font-size:.88em}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em}
+td.n{font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+.wrap{overflow-x:auto}
+.tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:3px;border:1px solid currentColor}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+ul{padding-left:20px;margin:6px 0}
+li{margin:4px 0}
+.q{counter-reset:q}
+.q li{list-style:none;position:relative;padding-left:0;margin:12px 0}
+.q li::before{counter-increment:q;content:"Q" counter(q);font-family:var(--mono);color:var(--accent);margin-right:8px}
+footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+<main>
+<h1>Overnight Watch, 2026-10-22</h1>
+<p class="sub">Autonomous management grant 23:55 UTC 10-21 to 08:00 UTC 10-22, written 08:00 UTC. Main is at <code>18626942</code>.</p>
+
+<p class="lede">One merge, three units worked, nothing broke, and three decisions wait for you. The zone seam is parked on a DST-edge finding that is older than the seam. The native-door map panic is fixed but its PR sits on a CI memory pin that varies from build to build. Pin K of the integrity pins is built, twice verified, fixed twice on test-only findings, and under its third verifier; its verifier surfaced a real product question about the hadoop catalog's version hint.</p>
+
+<h2>Merged under the grant</h2>
+<div class="wrap"><table>
+<tr><th>PR</th><th>What</th><th>Main sha</th><th>When (UTC)</th></tr>
+<tr><td class="n">#1138</td><td>P2 report for EXPLAIN-DML-WRITE-1 (#1137, merged 23:32 just before the grant)</td><td class="n">18626942</td><td class="n">10-21 23:53</td></tr>
+</table></div>
+<p>Nothing else reached main overnight by design: ZONE-SEAM-1 parked on a halt, #1140 parked on a pin, #1142 is yours to merge.</p>
+
+<h2>ZONE-SEAM-1 <span class="tag warn">parked, your call</span></h2>
+<p>The seam itself works. The sketch (PR #1139) and six of seven steps are built in the clone, unpushed: one <code>zone_seam.rs</code> in repark-functions, the first call of the container cast rewrite, and a from_json step 3b under my reversible ruling ZS-6. The corpus on the head reads 1540 EQUAL, 90 DIFFERENT, 10 REFUSED, 0 ERROR, with zero cells moving from EQUAL to anything else.</p>
+<p>The halt: three ZONE-HORIZON-RENDER-1 facade cells go EQUAL to DIFFERENT, all <code>to_utc_timestamp</code> of a wall at a New York DST edge. Live measurement shows the cause is the shared DataFusion-Spark instant kernel, wrong on main too; main's three cells were EQUAL by value with the wrong type. My rulings ZS-1 to ZS-6 and the full edge table are in the memory file and the park hand-back.</p>
+<ol class="q">
+<li><b>Seam unpark.</b> My recommendation: option C, unpark without changing the kernel, list the three cells as accidental EQUAL now honest DIFFERENT with a dated note, and card ZONE-HORIZON-INSTANT-1 as the next Opus unit. Alternatives: the builder's lean, fix the kernel inside the seam (step 2c, a bigger unit), or the fallback that restricts the UTC-shift wrapper to DATE and NULL and loses 30 cells.</li>
+</ol>
+
+<h2>Native-door map panic <span class="tag warn">PR #1140 parked on a pin</span></h2>
+<p>Sonnet fixed it: the native <code>repark.sql()</code> door and the Rust-embedded ANSI door each push the existing <code>SparkMapRewrite</code> rule. On the 47-statement replay main's native door panicked on 5 and errored on 14; the head does neither. The PANIC-FATAL suite pin now uses a test-only probe. Every local gate is green, including the armed facade suite at 20309 passed.</p>
+<p>The runner's memory pin <code>test_replace_dict_depth40_memory_linear</code> is the blocker. A bisect on a throwaway draft PR traced the shift to the probe's presence in the wheel; a method-only probe then passed, but two later builds of identical sources failed again. The number belongs to the built wheel, a re-run repeats it, it does not reproduce locally, and main's value is never printed because the test is silent on a pass.</p>
+<div class="wrap"><table>
+<tr><th>Head</th><th>Sources</th><th>Replace delta</th><th>Bound</th><th>Result</th></tr>
+<tr><td class="n">f0648f5f</td><td>method-only probe</td><td class="n">not printed</td><td class="n">8,388,608</td><td class="ok">pass</td></tr>
+<tr><td class="n">41fa2655</td><td>same, docstring delete</td><td class="n">10,006,528</td><td class="n">8,388,608</td><td class="bad">fail</td></tr>
+<tr><td class="n">46ab4255</td><td>same, records only</td><td class="n">10,002,432</td><td class="n">8,388,608</td><td class="bad">fail</td></tr>
+</table></div>
+<ol class="q" start="2">
+<li><b>The memory pin.</b> No bound was raised, nothing skipped, no re-run. Either rule it a build-to-build flake and say what course you want, or change what it measures (anonymous RSS excludes first-touch pages of the wheel). Main's own runs pass it every time; main's one red run last night was a different runner perf pin, unpivot linearity at 1.1006 against 1.1.</li>
+</ol>
+
+<h2>U-9 pin K <span class="tag warn">PR #1142, verifier round 3</span></h2>
+<p>The kill-mid-write pin is built on Opus: a <code>HoldCatalog</code> decorator and a child arm kill a writer at the entry of the catalog commit call, after every data, delete, manifest and list file is on disk and before the metadata file. Eighteen cells over seven doors and two formats. Two fresh Opus verifiers reproduced the orphan sets exactly from their own listings and ran the cells 40 and 20 times with no flake.</p>
+<ul>
+<li><b>Round 1 FAIL.</b> A child could hold forever if only its parent died; records overstated the reopen rule and the release note; the delete-file format was unpinned. All fixed, ledger rows C-014 to C-025.</li>
+<li><b>Round 2 FAIL.</b> The 120 s backstop had no pin and the parent check had a start-up window; the orphan pin could not see the child's exit code. Fix round 2 is pushed at <code>223e34be</code> with CI green: the parent pid passes through the environment, the hold limit is overridable with a 1 s pin on a live parent that never kills, and the child writes a <code>released</code> line with its exit code for the pins to read. A third fresh Opus verifier is on it.</li>
+<li><b>Halt for you.</b> On <code>type=hadoop</code> the fork writes <code>v(N+1).metadata.json</code> before it advances <code>version-hint.text</code>. RePark's path read stops at the hint, so after a crash in that window it reads 1 row where <code>register_table</code>, Spark's HadoopCatalog and Spark's path load all read 2. Existing product behaviour, not the PR; the pin never takes that path. Card ICE-HADOOP-HINT-WINDOW-1 is filed and the registry row now claims <code>register_table</code> only.</li>
+</ul>
+<ol class="q" start="3">
+<li><b>Hadoop hint window.</b> Walk past the hint the way Java's <code>HadoopTableOperations.refresh</code> does (a product fix, a small Opus unit), or narrow ruling 83 to <code>register_table</code> and leave the path read as is. The verifier and I lean to the product fix: Spark reads the newer file through both doors.</li>
+</ol>
+
+<h2>Rulings I made under the grant</h2>
+<ul>
+<li><b>ZS-1 to ZS-6</b> on the seam (gate, scope, native door as control, from_json step 3b), all reversible.</li>
+<li><b>K-1 to K-4</b> on pin K: CTAS on the local catalog commits at its staged metadata write (local only), kill point at the commit call's entry, orphan set equals the crashed commit's files, reopen through <code>register_table</code>.</li>
+<li><b>Native door:</b> the rule is a panic fix, not a Spark semantic, so every door gets it; the probe shrank to its method leg with the stream fence pinned in Rust.</li>
+<li><b>Ruling 143 applied:</b> a Sonnet docstring rewrite was turned into a deletion before review.</li>
+</ul>
+
+<h2>Running now and next</h2>
+<ul>
+<li>Pin K verifier round 3 (Opus, the single Opus lane); on a PASS I review and #1142 is yours to merge. Pins U and X still wait on #1070.</li>
+<li>Held: SPILL-REACH-FAIR-POOL-FLAKE-1 (Opus slot), GATE-RETIRE-1 after the seam lands, ZONE-HORIZON-INSTANT-1 card if you take option C, native-door zone semantics, dependabot #1129.</li>
+<li>Environmental facade noise seen overnight, all passing alone: io/ pandas-UDF oracles, the carded spill flake, one hang on its sibling <code>test_distinct_spills_under_small_fair_pool</code>, and the unpivot linearity pin under 16 workers.</li>
+</ul>
+
+<h2>Housekeeping</h2>
+<p>Disk at 222 G free after dropping the finished native-door build target; the seam clone and its main worktree keep their warm targets until the unit lands, and pin K's builder target is shared by its verifiers. Throwaway bisect PR #1141 is closed and its branch deleted. One Sonnet worker overshot a "stop at the sketch" rule when a brief premise was wrong; the result was right and is noted for the record.</p>
+
+<footer>Repark overnight watch. Source of record: the memory file overnight-2026-10-21 and the hand-backs under the session scratchpad. Filed as <code>docs/artifacts/overnight-watch-2026-10-22.html</code>.</footer>
+</main>
