@@ -1,0 +1,15 @@
+# test_replace_dict_depth40_memory_linear on the CI runner (facade shard 1 of the smoke workflow), 2026-10-22 UTC.
+# The test prints nothing when it passes, so a diagnostic commit on a throwaway draft branch (tmp/map-native-bisect, closed and deleted after the read)
+# added a warnings.warn line with the two measured deltas and the bound; the diagnostic is not part of this change.
+# bound = max(2 x control delta, 8 MiB floor 8388608). Units are bytes of peak RSS growth in a fresh worker process.
+#
+# push A  commit 1 alone (the rule on the native door) + diagnostic      control 4800512  replace 7520256  bound 9601024  PASS
+# push B  commits 1 + 2 (the probe in fence.rs) + diagnostic              control 3813376  replace 9031680  bound 8388608  FAIL
+# PR head with commits 1-3 (probe in fence.rs), first run                 control 3809280  replace 9035776  bound 8388608  FAIL
+# PR head with commits 1-3, one re-run of the failed jobs                 control 3813376  replace 9039872  bound 8388608  FAIL
+# main (b7a20167 and later): no passing main run prints the value; the test is silent on a pass, so main's value is not known.
+#
+# Reading (a hypothesis, not proven): the value moves with commit 2. The control (a flat 40-column select) and the replace measure move by about 1 MB in opposite
+# directions with a small change in the wheel, which looks like a step in how the process commits memory or touches the wheel, not a cost of the probe: neither
+# measured path runs the probe. Commit 2 as first written put the probe in fence.rs; it now lives in its own module panic_probe.rs and
+# fence.rs is byte-identical to main's.
