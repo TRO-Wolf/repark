@@ -543,4 +543,28 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
+## Fix round 1 (2026-10-22, after verifier round 1's FAIL on `58321e94`)
+
+Owner's word, 2026-10-22: one fix round, the unit does not grow, then a fresh verifier round 2.
+The scope is the verifier's five items (S1-1, the partitioned-door pin and census, S1-2's four
+pins, S3-1's counts, the cost re-timed on a quiet box) and one dated line on the
+WRITE-NTZ-TO-LTZ-NESTED-1 card.
+
+**Item 1, S1-1, the one product change.** A partitioned INSERT handed the gate
+`Feed::SourceColumn { position: None, name: None }` (`nested_ns_gate.rs`, the `partitioned`
+flag), the router's `column_type` picked no column, and `refuse_naive_into_instant` let every
+`INSERT OVERWRITE … PARTITION (…)` through to store site A. The fix resolves the clause's static
+columns with the partition-overwrite door's own three calls and reads the source column at its
+position among the table's columns less the static ones (or the column list); one mechanism, the
+feed's position. A clause the door refuses stays unresolved and the door's error stops the
+write. Red on `58321e94` and green on the fix: `ntz_into_ltz_nested.rs`
+`a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file` (item 2). The
+nested refusal binaries (`ntz_nested_refuse`, `ntz_nested_refuse_casts`,
+`timestamp_ns_wall_doors`, `timestamptz_ns_wall_doors`, `timestamp_ns_nested_shapes`,
+`ice_tsns_type_planner_1_update_forms`) and `nested_ns_gate`'s unit tests stay green.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-016 | An INSERT with a `PARTITION` clause the door accepts names its source column by position (the table's columns less the static partition columns, or the column list; a dynamic clause reads every column), so outside UTC the ZS-9 refusal and R-011's type read see the column on every partitioned spelling; a clause the door refuses is read as before. | the gate's unit tests; the partitioned-door pin red on `58321e94`. | **PROVEN** | `nested_ns_gate/tests.rs` static-column cases; item 2's pin, 36 cells red on `58321e94`, green on the fix. |
+
 Up: [map.md](map.md).

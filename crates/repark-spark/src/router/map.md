@@ -256,6 +256,13 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `TIMESTAMP_NTZ` cast (`shifts_in_an_update`) stores as before too. The value's type is planned
   as R-011 plans it (`column_type` for an `INSERT` source or a MERGE `*`, one projection for
   assignments); a feed the router cannot type is not refused. pins: zone-seam-1/C-015
+  **ZONE-SEAM-1 fix round 1 (2026-10-22, verifier round 1, S1-1):** `refuse_insert` hands the
+  INSERT's `PARTITION` clause itself to the gate (`InsertSupply.partition`), not a flag, so the
+  gate resolves the static columns against the loaded table and names the source position; the
+  type read then picks that column on `INSERT OVERWRITE … PARTITION (…)` in every spelling (a
+  `SELECT`, `VALUES`, a column list, the `TABLE` keyword, a dynamic `PARTITION (k)`), and the
+  refusal fires there as on the unpartitioned doors. `REPLACE WHERE` passes no clause.
+  pins: zone-seam-1/C-016
 
 ## Pointers
 

@@ -91,7 +91,7 @@ pub(super) async fn refuse_nested_supply(
         let write = NestedWrite::Insert(InsertSupply {
             listed: &[],
             source: Some(replace.source()),
-            partitioned: false,
+            partition: &[],
             positional: true,
             by_name: source_by_name,
         });
@@ -244,10 +244,7 @@ async fn refuse_insert(
     let write = NestedWrite::Insert(InsertSupply {
         listed: &listed,
         source: insert.source.as_deref(),
-        partitioned: insert
-            .partitioned
-            .as_ref()
-            .is_some_and(|spec| !spec.is_empty()),
+        partition: insert.partitioned.as_deref().unwrap_or_default(),
         positional: !by_name,
         by_name: by_name || source_by_name,
     });

@@ -6,6 +6,11 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::table::Table;
 
+use crate::write::overwrite_scope::validated_static_equalities;
+use crate::write::partition_overwrite::{
+    partition_overwrite_request_from_exprs, static_partition_source_columns,
+};
+
 const MICROS_HINT: &str = "A value that is not provably a TIMESTAMP_NTZ wall time is not written \
                            into a nested TIMESTAMP_NTZ field while the session time zone is not \
                            UTC: cast the leaf itself, as in named_struct('<field>', CAST(<value> \
@@ -97,7 +102,7 @@ impl<'a> Supplied<'a> {
 pub struct InsertSupply<'a> {
     pub listed: &'a [String],
     pub source: Option<&'a Query>,
-    pub partitioned: bool,
+    pub partition: &'a [Expr],
     pub positional: bool,
     pub by_name: bool,
 }
@@ -297,13 +302,19 @@ pub fn nested_supplies<'a>(
         .iter()
         .map(|field| field.name().as_str())
         .collect();
+    let statics = match write {
+        NestedWrite::Insert(insert) => static_columns(table, insert.partition),
+        _ => Some(Vec::new()),
+    };
     let mut answered = Vec::new();
     for field in schema.fields() {
         let Some(path) = nested_naive_leaf(field.data_type(), leaf) else {
             continue;
         };
         let supplied = match write {
-            NestedWrite::Insert(insert) => insert_supply(insert, &names, field.name()),
+            NestedWrite::Insert(insert) => {
+                insert_supply(insert, statics.as_deref(), &names, field.name())
+            }
             NestedWrite::Update(assignments) => assigned(assignments, field.name()),
             NestedWrite::Merge(clauses) => merged(clauses, &names, field.name()),
             NestedWrite::Unreadable => Supplied::value(Feed::Opaque),
@@ -406,11 +417,32 @@ fn at<'a>(found: Option<&(Option<String>, bool)>, feed: Feed<'a>) -> Supplied<'a
     }
 }
 
-fn insert_supply<'a>(insert: &InsertSupply<'_>, fields: &[&str], column: &str) -> Supplied<'a> {
+fn static_columns(table: &Table, partition: &[Expr]) -> Option<Vec<String>> {
+    if partition.is_empty() {
+        return Some(Vec::new());
+    }
+    let request = partition_overwrite_request_from_exprs(partition).ok()?;
+    let equalities = validated_static_equalities(table, &request).ok()?;
+    static_partition_source_columns(table, &equalities).ok()
+}
+
+fn insert_supply<'a>(
+    insert: &InsertSupply<'_>,
+    statics: Option<&[String]>,
+    fields: &[&str],
+    column: &str,
+) -> Supplied<'a> {
     let found = insert.source.and_then(items);
     let by_position = || {
         let targets: Vec<&str> = if insert.listed.is_empty() {
-            fields.to_vec()
+            let fixed = |field: &str| {
+                statics.is_some_and(|statics| statics.iter().any(|name| same(name, field)))
+            };
+            fields
+                .iter()
+                .copied()
+                .filter(|field| !fixed(field))
+                .collect()
         } else {
             insert.listed.iter().map(String::as_str).collect()
         };
@@ -418,11 +450,11 @@ fn insert_supply<'a>(insert: &InsertSupply<'_>, fields: &[&str], column: &str) -
             return Supplied::absent();
         };
         let feed = Feed::SourceColumn {
-            position: (!insert.partitioned).then_some(index),
+            position: statics.is_some().then_some(index),
             name: None,
         };
-        match &found {
-            Some(found) if !insert.partitioned => at(found.get(index), feed),
+        match (&found, statics) {
+            (Some(found), Some(_)) => at(found.get(index), feed),
             _ => Supplied::value(feed),
         }
     };

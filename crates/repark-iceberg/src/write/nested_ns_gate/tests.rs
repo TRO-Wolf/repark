@@ -97,11 +97,11 @@ fn insert(sql: &str, by_name: bool) -> Supply {
     let supply = InsertSupply {
         listed: &listed,
         source: insert.source.as_deref(),
-        partitioned: false,
+        partition: &[],
         positional: !by_name,
         by_name,
     };
-    insert_supply(&supply, &FIELDS, "st").supply
+    insert_supply(&supply, Some(&[]), &FIELDS, "st").supply
 }
 
 #[test]
@@ -177,31 +177,53 @@ fn an_insert_supplies_the_column_unless_it_omits_it_or_gives_a_bare_null() {
 }
 
 #[test]
-fn a_partition_clause_or_a_frame_written_by_name_is_read_as_a_value() {
+fn an_unresolved_partition_clause_or_a_frame_written_by_name_is_read_as_a_value() {
     let Statement::Insert(parsed) = statement("INSERT INTO t SELECT id, NULL, 0 FROM s") else {
         panic!("not an insert");
     };
-    let supply = |partitioned, positional, by_name| {
+    let Statement::Insert(fixed) = statement("INSERT INTO t SELECT NULL, 0 FROM s") else {
+        panic!("not an insert");
+    };
+    let supply = |statics: Option<&[String]>, positional, by_name| {
         let supply = InsertSupply {
             listed: &[],
             source: parsed.source.as_deref(),
-            partitioned,
+            partition: &[],
             positional,
             by_name,
         };
-        insert_supply(&supply, &FIELDS, "st").supply
+        insert_supply(&supply, statics, &FIELDS, "st").supply
     };
-    assert_eq!(supply(false, true, false), Supply::Null);
-    assert_eq!(supply(true, true, false), Supply::Value);
-    assert_eq!(supply(false, true, true), Supply::Value);
-    let absent = InsertSupply {
+    assert_eq!(supply(Some(&[]), true, false), Supply::Null);
+    assert_eq!(supply(None, true, false), Supply::Value);
+    assert_eq!(supply(Some(&[]), true, true), Supply::Value);
+    let statics = ["ID".to_string()];
+    let partitioned = InsertSupply {
         listed: &[],
-        source: None,
-        partitioned: false,
+        source: fixed.source.as_deref(),
+        partition: &[],
         positional: true,
         by_name: false,
     };
-    assert_eq!(insert_supply(&absent, &FIELDS, "st").supply, Supply::Value);
+    assert_eq!(
+        insert_supply(&partitioned, Some(&statics), &FIELDS, "st").supply,
+        Supply::Null
+    );
+    assert_eq!(
+        insert_supply(&partitioned, Some(&[]), &FIELDS, "st").supply,
+        Supply::Value
+    );
+    let absent = InsertSupply {
+        listed: &[],
+        source: None,
+        partition: &[],
+        positional: true,
+        by_name: false,
+    };
+    assert_eq!(
+        insert_supply(&absent, Some(&[]), &FIELDS, "st").supply,
+        Supply::Value
+    );
 }
 
 #[test]
@@ -507,20 +529,25 @@ fn an_insert_names_the_source_column_by_position_by_name_or_not_at_all() {
     let Statement::Insert(parsed) = statement("INSERT INTO t SELECT id, v, 0 FROM s") else {
         panic!("not an insert");
     };
-    let feeds = |partitioned, positional, by_name| {
+    let statics = ["Id".to_string()];
+    let feeds = |statics: Option<&[String]>, positional, by_name| {
         let supply = InsertSupply {
             listed: &[],
             source: parsed.source.as_deref(),
-            partitioned,
+            partition: &[],
             positional,
             by_name,
         };
-        shown(&insert_supply(&supply, &FIELDS, "st").feeds)
+        shown(&insert_supply(&supply, statics, &FIELDS, "st").feeds)
     };
-    assert_eq!(feeds(false, true, false), vec!["column Some(1) None"]);
-    assert_eq!(feeds(true, true, false), vec!["column None None"]);
+    assert_eq!(feeds(Some(&[]), true, false), vec!["column Some(1) None"]);
     assert_eq!(
-        feeds(false, true, true),
+        feeds(Some(&statics), true, false),
+        vec!["column Some(0) None"]
+    );
+    assert_eq!(feeds(None, true, false), vec!["column None None"]);
+    assert_eq!(
+        feeds(Some(&[]), true, true),
         vec!["column Some(1) None", "column None Some(\"st\")"]
     );
     let Statement::Insert(named) = statement("INSERT INTO t SELECT 0 AS k, v AS st FROM s") else {
@@ -529,12 +556,12 @@ fn an_insert_names_the_source_column_by_position_by_name_or_not_at_all() {
     let supply = InsertSupply {
         listed: &[],
         source: named.source.as_deref(),
-        partitioned: false,
+        partition: &[],
         positional: false,
         by_name: true,
     };
     assert_eq!(
-        shown(&insert_supply(&supply, &FIELDS, "st").feeds),
+        shown(&insert_supply(&supply, Some(&[]), &FIELDS, "st").feeds),
         vec!["column None Some(\"st\")"]
     );
 }

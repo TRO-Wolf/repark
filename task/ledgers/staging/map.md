@@ -2537,3 +2537,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field outside UTC); the mutants, the U-8
   matrix against live Spark, the cost table; clauses C-001 to C-015, all PROVEN, and the
   attestation. `risk_tier: standard`. Branch `feat/zone-seam-1`.
+  *Fix round 1 (2026-10-22, after verifier round 1's FAIL):* the partitioned `INSERT OVERWRITE`
+  position (S1-1, C-016) and the round's further items as they land.
