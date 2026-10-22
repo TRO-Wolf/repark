@@ -46,7 +46,7 @@ rule to the 64 remaining banner files. Ledger:
 DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repark-common`,
 `repark-connect → repark-common` (C-1; C-2 adds `repark-core → repark-connect` and its
 policy row with the providers, R-14);
-`repark-functions` is a tier-3 leaf with no internal deps (speaks `datafusion::error::Result`);
+`repark-functions → repark-common` (tier 3; it also depends on the fork's `iceberg` crate; speaks `datafusion::error::Result`);
 `repark-ta → repark-core` **only under the `datafusion` feature** (the `TaExtension` wrapper — the
 kernel core stays dependency-light); `repark-spark → {repark-core, repark-iceberg,
 repark-functions, repark-ta}` (tier-3 door; same-tier edges to repark-functions and repark-ta are

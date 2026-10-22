@@ -1,0 +1,109 @@
+<title>Crate Boundary Evaluation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f5f4f0;--fg:#1c1b17;--muted:#5e5a52;--line:#d6d1c6;--card:#fdfcf8;--accent:#5b4a9e;--ok:#2d6a3e;--warn:#9a6b00;--bad:#9c2a2a;--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15140f;--fg:#ebe7dc;--muted:#a6a091;--line:#39352b;--card:#1e1c15;--accent:#b7a6ef;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15140f;--fg:#ebe7dc;--muted:#a6a091;--line:#39352b;--card:#1e1c15;--accent:#b7a6ef;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0;padding-block:24px 48px;padding-inline:16px}
+main{max-width:900px;margin:0 auto}
+h1{font-size:1.6rem;font-weight:600;margin:0 0 4px;text-wrap:balance}
+h2{font-size:1.05rem;font-weight:600;margin:28px 0 8px}
+.sub{color:var(--muted);margin:0 0 20px}
+.lede{border-left:3px solid var(--accent);padding:4px 14px;margin:0 0 18px;background:var(--card)}
+code{font-family:var(--mono);font-size:.88em}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+td.n{font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+.wrap{overflow-x:auto;min-width:0}
+.tag{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.acc{color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0 6px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 12px;min-width:0}
+.tile .k{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+.tile .v{font-size:1.15rem;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.tile .d{color:var(--muted);font-size:.82rem}
+ol,ul{padding-left:20px;margin:6px 0}
+li{margin:4px 0}
+footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+<main>
+<h1>Crate Boundary Evaluation, 2026-10-22</h1>
+<p class="sub">A read-only Opus evaluation of RePark's write-path crate boundary against Sail, on RePark main <code>a556289d</code> and Sail upstream main <code>d219a985</code> (pulled this morning, 66 commits past v0.7.2). Nothing was built or edited in either tree.</p>
+
+<p class="lede">The layering is not the cause, so no crate redesign. The three nested store sites come from six write doors that each build their own store projection; the doors that let the DataFusion plan do the cast already get the rule right in one place. Sail has the same crate gap and does not suffer from it, because every conversion is one plan-time projection built in its Spark-semantics crate and the format crate receives a plan already in table types. The recommendation is option D: copy that one plan-time stage inside the existing graph, with no new crate and no new edge, in four steps split around the v2 label.</p>
+
+<div class="tiles">
+<div class="tile"><div class="k">Write doors</div><div class="v">18</div><div class="d">10 Spark, 7 native, 1 streaming</div></div>
+<div class="tile"><div class="k">Doors with their own store site</div><div class="v">6</div><div class="d">BY NAME, OVERWRITE, MERGE insert, MERGE and UPDATE whole-struct, streaming</div></div>
+<div class="tile"><div class="k">Rules that straddle plan and store</div><div class="v">3 of 7</div><div class="d">zone, nanosecond floor, pairing</div></div>
+<div class="tile"><div class="k">Layering the cause?</div><div class="v">No</div><div class="d">Sail: same gap, one stage</div></div>
+<div class="tile"><div class="k">Recommended</div><div class="v">Option D</div><div class="d">no crate, no edge</div></div>
+</div>
+
+<h2>The premise of this morning's card was wrong, in a useful way</h2>
+<p>The WRITE-SPINE-1 card said the three store sites in the Iceberg crate "cannot call" the seam helper because that crate depends only on the common crate. Three facts from the code undercut that:</p>
+<ul>
+<li>The Iceberg crate already runs at plan time. It registers two analyzer rules and builds SQL text for assignments, so a plan-time stage can live there today.</li>
+<li>It already reaches the functions crate's kernels by name through the session's function registry. The store-kernel lookup in <code>ntz_store.rs</code> does exactly that. No crate edge is needed to call the seam kernel the same way.</li>
+<li>Two of the three sites have the session zone in scope. Only the batch cast at the sink does not, and once the other two conform at plan time, that one becomes the identity.</li>
+</ul>
+<p>One defect fell out of that reading: when the registry lookup finds no kernel, the code falls back to a plain cast that reads the wall as UTC, silently. Step 1 below makes it refuse instead.</p>
+
+<h2>How Sail draws the line</h2>
+<div class="wrap"><table>
+<tr><th>Question</th><th>Sail at <code>d219a985</code></th><th>RePark at <code>a556289d</code></th></tr>
+<tr><td>Who owns Spark semantics</td><td>the plan crate holds the session zone, ANSI mode and store-assignment policy; kernels in the function crate</td><td>the spark crate and the functions crate; store-assignment semantics also sit in the Iceberg crate (about 4,500 product lines over twelve files)</td></tr>
+<tr><td>Who owns the format</td><td>the Iceberg crate, with no dependency on the plan or function crates and no session-zone reference</td><td>the Iceberg crate, with the same dependency shape</td></tr>
+<tr><td>Where they meet</td><td>one pair of traits: a writer takes a logical plan already in the table's types; row-level operations take one enum (delete, update, merge)</td><td>about 45 direct calls from the two doors into the Iceberg crate's stage and commit functions</td></tr>
+<tr><td>Write entry points</td><td>10 user commands funnel into 2 shared stages; one projection of casts to table types is built by one function</td><td>18 doors; 6 build their own store projection or SQL text</td></tr>
+<tr><td>Session zone at write time</td><td>applied zero times at the write stage; the zone rides inside the Arrow type, so a zoned value is relabelled, not shifted</td><td>applied site by site; TIMESTAMP is labelled UTC and corrected per door</td></tr>
+<tr><td>Row-level sharing after #2418</td><td>one shared write node and one struct-pairing function serve Delta and Iceberg; each format keeps only its physical planner</td><td>pairing already shares one kernel; the rest does not</td></tr>
+<tr><td>What Sail does not do</td><td>no session-zone conversion at write, no nanosecond floor, ANSI store assignment only on MERGE and UPDATE, no local-file policy, no R-011/R-015 refusals, one dialect</td><td>all of these, which is the parity scope the labels are for</td></tr>
+</table></div>
+<p>By reading, Sail stores a naive value into a TIMESTAMP column as a UTC wall, the same Spark divergence ZS-9 refuses. Sail was not run, so that stays a reading.</p>
+
+<h2>The four options</h2>
+<div class="wrap"><table>
+<tr><th>Option</th><th>Change</th><th>Fixes</th><th>Cost</th><th>Verdict</th></tr>
+<tr><td>A</td><td>a new leaf crate for conversions, one conform stage in the Iceberg crate</td><td>one of the three sites</td><td>a crate and two edges; the batch-conform family gains a zone parameter at 11 call sites</td><td class="warn">fixes the literal "cannot call", not the door pattern</td></tr>
+<tr><td>B</td><td>the conform stage in the core crate</td><td>as A</td><td>needs a tier 2 to tier 3 edge the DAG gate forbids, so needs A anyway; grows the session crate ADR-0005 flags</td><td class="bad">no</td></tr>
+<tr><td>C</td><td>a Sail-shaped split: move the store-semantics files out of the Iceberg crate</td><td>the direction is right</td><td>about 4,457 lines move; dozens of re-exports, pin citations and size exceptions move; reopens the 1.8 layout ruling</td><td class="warn">right direction, wrong cost before v2</td></tr>
+<tr><td>D</td><td>one plan-time conform function inside the existing graph, reached by every door, naming the seam kernel by name</td><td>all three sites; the floor becomes one kernel on every door including streaming</td><td>about 140 lines rewritten in place; two public functions merge or gain a context argument; no crate, no edge</td><td class="ok">recommended</td></tr>
+</table></div>
+
+<h2>Option D, in four steps</h2>
+<ol>
+<li><b>Before GATE-RETIRE-1, no stored value changes.</b> Move the five function names that both crates define as separate string copies into the common crate. Make the store-kernel lookup fail closed. Disjoint from GATE-RETIRE-1's files.</li>
+<li><b>After ZONE-SEAM-1 and GATE-RETIRE-1.</b> Merge the two existing plan-time store functions into one conform function that covers nested columns through the seam kernel, and route the six self-projecting doors through it. The sink's batch cast becomes the identity on every door but the native v3 create, which stays as the control.</li>
+<li><b>Before GATE-RETIRE-1.</b> Generate the door matrix test from the router's statement arms and the write-option flags, so a door that skips the stage fails a pin. This also makes GATE-RETIRE-1's verification mechanical.</li>
+<li><b>After the v2 label of 11-10, before v3 on 11-17.</b> Retire the ZS-9 refusal and the R-011 cast arm with dated rows. ZS-9's over-refusal is honest and labelled, so the v2 label does not need this step.</li>
+</ol>
+<p>WRITE-NTZ-TO-LTZ-NESTED-1 becomes step 2 of this plan rather than a unit of its own.</p>
+
+<h2>Where the docs and the code disagree</h2>
+<ul>
+<li>ARCHITECTURE.md says ten crates and lists the connect crate as pre-declared with no directory; the workspace has eleven and the connect crate is built and depended on. Fixed in the record PR.</li>
+<li>The crates map calls the functions crate a leaf with no internal dependencies; it depends on the common crate and on the fork's Iceberg crate. Fixed in the record PR.</li>
+<li>ARCHITECTURE.md calls the Iceberg crate a thin adapter; its write directory holds about 4,500 product lines of Spark store-assignment semantics, two analyzer rules and seven store kernels. Left for you to reword.</li>
+<li>ARCHITECTURE.md says the native door refuses INSERT OVERWRITE; it executes the PARTITION forms and refuses only CALL. Left for you.</li>
+<li>The streaming micro-batch sink bypasses every router rule: no zone, no gate, floor by refusal only. A parity gap, now in the door table.</li>
+</ul>
+
+<h2>What was not measured</h2>
+<ul>
+<li>Door paths are by reading; the assignment of doors to the three sites comes from the seam's instrumented build.</li>
+<li>Sail's write-time zone and nanosecond behaviour are by reading; Sail was not run.</li>
+<li>The UPDATE shapes that fall through to the fork provider were not traced.</li>
+</ul>
+
+<h2>Your decisions</h2>
+<ol>
+<li>Adopt option D as WRITE-SPINE-1's shape, with steps 1 and 3 before GATE-RETIRE-1 and steps 2 and 4 after the v2 label.</li>
+<li>Fold WRITE-NTZ-TO-LTZ-NESTED-1 into step 2, or keep it as its own unit ahead of the spine.</li>
+<li>The two ARCHITECTURE.md wording items above.</li>
+</ol>
+
+<footer>CRATE-BOUNDARY-EVAL-1, read-only, Opus 5.5. The full evaluation with every file and line is filed as task/wo/write-spine-1/crate-boundary-eval-2026-10-22.md; the Sail boundary index is the sail-locator at the LocalEngines root. Filed as <code>docs/artifacts/crate-boundary-eval-2026-10-22.html</code>.</footer>
+</main>
