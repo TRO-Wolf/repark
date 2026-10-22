@@ -4,9 +4,7 @@
 it once when it initialises. These pins prove the order (the module reports the policy it
 initialised with), prove that a caught panic ends a child interpreter that inherits the suite
 environment, and prove that the same panic keeps its ``repark internal error`` message when the
-variable is cleared. The panic comes from the test-only ``_native.__panic_probe__('method')``,
-which panics inside a method fence. The Arrow C stream fence is pinned by the Rust child-process
-tests in ``fence.rs``.
+variable is cleared.
 """
 
 from __future__ import annotations
