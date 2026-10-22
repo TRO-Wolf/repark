@@ -549,6 +549,11 @@ async fn assert_reopened(
                 reopened.rows.rendered, source.rendered,
                 "{id} v{format}: every CTAS row"
             );
+            assert_eq!(
+                reopened.rows.types,
+                vec![DataType::Int32, DataType::Utf8],
+                "{id} v{format}: the CTAS columns' Arrow types"
+            );
         }
     }
 }

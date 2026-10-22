@@ -46,6 +46,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-018: the 1.5.6 notes line says "before the metadata file is written".
   C-019: K-5 pins the delete file's format per version.
   C-020: C-001's SIGKILL wording made honest; `try_wait()` before the kill.
+  C-021 to C-025, the S3s: K-7 compares types, the K3 line narrowed, C-009 names M4, the replace
+  doors unpinned (OPEN, for pin U/X or a later card), live orphan deletion out of scope (REJECTED).
+  Verifier round 2 pending.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6
