@@ -52,6 +52,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Verifier round 2 (2026-10-22): FAIL (S1-1, the deadline unpinned and the parent-check window;
   S2-1, the release unobservable). Fix round 2 rows C-026 onward; C-026: the parent's pid passed
   in the environment and the hold limit pinned (`kill_mid_write_release.rs`).
+  C-027: the hold writes a `released` file and the release pins assert it (F3, F5, F5b red).
+  Verifier round 3 pending.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

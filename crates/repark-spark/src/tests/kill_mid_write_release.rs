@@ -25,6 +25,10 @@ fn still_running(pid: &str) -> bool {
         .is_some_and(|rest| !rest.starts_with('Z'))
 }
 
+fn release_of(root: &Path) -> String {
+    std::fs::read_to_string(root.join("released")).unwrap_or_else(|_| "no release file".to_string())
+}
+
 async fn seeded_root() -> (TempDir, String) {
     let root = TempDir::new().expect("the cell's directory");
     let warehouse = root.path().join("warehouse");
@@ -65,7 +69,12 @@ async fn await_gone(pid: &str) {
     }
 }
 
-fn assert_no_commit(root: &Path, pre: &str) {
+fn assert_released_without_commit(root: &Path, pre: &str, reason: &str) {
+    assert_eq!(
+        release_of(root),
+        format!("released {reason} 75"),
+        "the child must end its own hold, for {reason}, with exit code 75"
+    );
     let marker = read_marker(&root.join("marker"));
     assert_eq!(
         newest_metadata(&marker.location),
@@ -107,7 +116,7 @@ async fn a_held_child_whose_parent_is_gone_exits_without_committing() {
     let (root, pre) = seeded_root().await;
     let pid = run_parent_that_leaves_its_child(root.path(), ORPHANING_PARENT, ORPHANING_TEST);
     await_gone(&pid).await;
-    assert_no_commit(root.path(), &pre);
+    assert_released_without_commit(root.path(), &pre, "parent");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -116,7 +125,7 @@ async fn a_child_whose_parent_is_gone_before_it_starts_releases_at_the_hold_with
     let pid =
         run_parent_that_leaves_its_child(root.path(), EARLY_ORPHANING_PARENT, EARLY_ORPHANING_TEST);
     await_gone(&pid).await;
-    assert_no_commit(root.path(), &pre);
+    assert_released_without_commit(root.path(), &pre, "parent");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -153,5 +162,5 @@ async fn a_held_child_whose_live_parent_never_kills_it_is_released_at_the_hold_l
         held + Duration::from_millis(100) >= limit,
         "the child left its hold after {held:?}, before the {limit:?} limit"
     );
-    assert_no_commit(root.path(), &pre);
+    assert_released_without_commit(root.path(), &pre, "deadline");
 }

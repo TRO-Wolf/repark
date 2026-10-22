@@ -111,10 +111,22 @@ async fn attempted_files(
 impl HoldCatalog {
     async fn hold(&self) -> iceberg::Result<Table> {
         let deadline = Instant::now() + self.limit;
-        while std::os::unix::process::parent_id() == self.parent && Instant::now() < deadline {
+        let reason = loop {
+            if std::os::unix::process::parent_id() != self.parent {
+                break "parent";
+            }
+            if Instant::now() >= deadline {
+                break "deadline";
+            }
             tokio::time::sleep(Duration::from_millis(20)).await;
-        }
-        std::process::exit(HOLD_RELEASED_EXIT)
+        };
+        let code = HOLD_RELEASED_EXIT;
+        std::fs::write(
+            self.marker.with_file_name("released"),
+            format!("released {reason} {code}"),
+        )
+        .expect("write the release");
+        std::process::exit(code)
     }
 
     fn write_marker(&self, attempted: &[Snapshot], location: &str, files: &Files) {
