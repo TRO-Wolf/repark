@@ -400,6 +400,23 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   walls it stored before) and `timestamp_ns_nested_shapes.rs`'s re-pin of the same day (the
   nested `TIMESTAMP_NTZ` row takes R-011's refusal, not the gate's text) are described in the
   paragraphs headed ICE-NTZ-NESTED-REFUSE-1 (2026-10-20) in their rows.
+  **ZONE-SEAM-1 (2026-10-22, ruling ZS-4):** the seam rewrites a container cast of an instant
+  before the router's gate reads the plan, so R-011's cast arm (`casts_a_zoned_value_to_naive`)
+  no longer matches it and the write stores Spark's session wall. Five pins that held the
+  refusal now hold the stored value outside UTC, per statement: in `ntz_nested_refuse_casts.rs`,
+  `a_container_cast_of_an_instant_stores_the_session_wall_on_every_door_outside_utc` (the 14
+  doors of `CONTAINER_CASTS`, a fresh catalog each), `the_cast_walk_reads_only_what_reaches_the_column`
+  (each `ON_LINEAGE` statement into its own table: the session wall, beside `w`'s UTC wall for the
+  `UNION ALL` and the `VALUES` rows) and
+  `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped` (each
+  `IN_A_SUBQUERY` statement into its own table); in `ntz_nested_refuse.rs`,
+  `a_frame_through_a_repartition_or_an_unmodelled_node_stores_the_session_wall` and
+  `a_scalar_subquery_returning_the_container_cast_under_an_unnest_stores_the_session_wall`. Two
+  statements (`(SELECT q.s)` over a derived table, and a `LATERAL` inside a `LATERAL`) fail on
+  the head with the engine's own error; the pin holds that the same statement with the wall
+  `named_struct('v', w, 'n', 1)` in place of the cast fails with the same text, so the failure is
+  not the seam's. The plain `UPDATE` refusal (`shifts_in_an_update`) and every other refusal in
+  both files are unchanged. pins: zone-seam-1/C-009
   pins: ice-ntz-nested-refuse-1/C-047
   **Count (fix round 4, ledger C-048):** `docs/spark-sql-iceberg-parity.md` R-011 counts ruling 2's
   over-refused correct cells as 16 in 8 shapes: the verifier's scalar-subquery shape, `INSERT INTO

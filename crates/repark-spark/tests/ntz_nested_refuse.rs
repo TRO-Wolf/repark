@@ -629,9 +629,9 @@ async fn the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed() {
 }
 
 #[tokio::test]
-async fn a_frame_through_a_repartition_or_an_unmodelled_node_refuses() {
+async fn a_frame_through_a_repartition_or_an_unmodelled_node_stores_the_session_wall() {
     let mut wrong = Vec::new();
-    for (zone, _) in ZONES {
+    for (zone, session_wall) in ZONES {
         let session = session(zone);
         let _warehouse = catalog(&session).await;
         run(
@@ -680,23 +680,22 @@ async fn a_frame_through_a_repartition_or_an_unmodelled_node_refuses() {
                 .create_or_replace_temp_view_from(name, &shaped.expect(name))
                 .expect("view");
             let write = format!("INSERT INTO ice.ns.t SELECT id, st, k FROM {name}");
-            match attempt(&session, &write).await {
-                Err(error) if error.contains(HINT) => {}
-                outcome => wrong.push(format!("{zone} / {name}: {outcome:?}")),
+            if let Err(error) = attempt(&session, &write).await {
+                wrong.push(format!("{zone} / {name}: {error}"));
             }
         }
-        let count = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
-        if count != vec![Some(0)] {
-            wrong.push(format!("{zone}: {count:?} snapshots"));
+        let walls = stored(&session, "SELECT st FROM ice.ns.t").await;
+        if walls != vec![Some(session_wall); 3] {
+            wrong.push(format!("{zone}: {walls:?}"));
         }
     }
     assert_eq!(wrong, Vec::<String>::new());
 }
 
 #[tokio::test]
-async fn a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses() {
+async fn a_scalar_subquery_returning_the_container_cast_under_an_unnest_stores_the_session_wall() {
     let mut wrong = Vec::new();
-    for (zone, _) in ZONES {
+    for (zone, session_wall) in ZONES {
         let session = session(zone);
         let _warehouse = catalog(&session).await;
         run(
@@ -721,18 +720,13 @@ async fn a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses(
         session
             .create_or_replace_temp_view_from("exploded_cast", &frame)
             .expect("view");
-        match attempt(
+        if let Err(error) = attempt(
             &session,
             "INSERT INTO ice.ns.t SELECT id, st, k FROM exploded_cast",
         )
         .await
         {
-            Err(error) if error.contains(HINT) => {}
-            outcome => wrong.push(format!("{zone} / cast: {outcome:?}")),
-        }
-        let count = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
-        if count != vec![Some(0)] {
-            wrong.push(format!("{zone}: {count:?} snapshots"));
+            wrong.push(format!("{zone} / cast: {error}"));
         }
         let wall = exploded("named_struct('v', w, 'n', 1)");
         let frame = session
@@ -749,8 +743,11 @@ async fn a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses(
             "INSERT INTO ice.ns.t SELECT id, st, k FROM exploded_wall",
         )
         .await;
-        let walls = stored(&session, "SELECT st FROM ice.ns.t").await;
-        if walls != vec![Some(UTC_WALL)] {
+        let mut walls = stored(&session, "SELECT st FROM ice.ns.t").await;
+        walls.sort_unstable();
+        let mut expected = vec![Some(UTC_WALL), Some(session_wall)];
+        expected.sort_unstable();
+        if walls != expected {
             wrong.push(format!("{zone} / wall: {walls:?}"));
         }
     }
