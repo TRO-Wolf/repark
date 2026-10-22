@@ -50,7 +50,8 @@ repo.
   R-011's status line records the cells the seam moves from the refusal to Spark's stored value,
   the cast arm named for GATE-RETIRE-1, and ZS-9's over-refusal of a nested `TIMESTAMP_NTZ` value
   into a nested `TIMESTAMP` field outside UTC until WRITE-NTZ-TO-LTZ-NESTED-1; R-015's line says
-  it is unchanged. **2026-10-21 (EXPLAIN-DML-WRITE-1,
+  it is unchanged; *fix round 1, the same day:* the over-refused cells per zone are counted as
+  37 Spark-equal, 79 DIFFERENT and 18 engine errors on main. **2026-10-21 (EXPLAIN-DML-WRITE-1,
   merged #1137 at `b7a20167`):** the REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 row gains the wrapper refusal on
   every door (`EXPLAIN ANALYZE` and `PREPARE` of any write); on `repark.sql()` a wrapped write that
   does not plan keeps DataFusion's error. **2026-10-21 (ICE-NTZ-NESTED-REFUSE-1

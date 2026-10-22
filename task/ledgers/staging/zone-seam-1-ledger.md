@@ -630,10 +630,20 @@ The builder's 17 (M01–M17) and the verifier's other five (`X-drop-map-leg`,
 `X-no-star-feed`) re-run on the fix: every one still killed (M15 now also reds the partitioned
 pin, M16 the partitioned UTC control). 26 of 26 killed.
 
+**Item 4, S3-1, the counts (dated 2026-10-22, appended; the earlier text stands as written).**
+The 134 `ltz_nested` cells per zone that the ZS-9 refusal holds (New York and Kolkata) were, on
+main, 37 Spark-equal, 79 DIFFERENT and 18 the engine's own error; the third-halt paragraph above
+counts the 97 non-equal cells as DIFFERENT ("all DIFFERENT on main and head before"), and so did
+R-011's status line, which now reads 37 + 79 + 18. Re-measured on the fix (the U-8 matrix, all
+3,168 cells, against the verifier's main, head and live Spark readings): per zone in New York and
+Kolkata EQUAL→refused 37, DIFFERENT→refused 79, error→refused 18, and every cell answers exactly
+as on `58321e94`.
+
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-016 | An INSERT with a `PARTITION` clause the door accepts names its source column by position (the table's columns less the static partition columns, or the column list; a dynamic clause reads every column), so outside UTC the ZS-9 refusal and R-011's type read see the column on every partitioned spelling; a clause the door refuses is read as before. | the gate's unit tests; the partitioned-door pin red on `58321e94`. | **PROVEN** | `nested_ns_gate/tests.rs` static-column cases; item 2's pin, 36 cells red on `58321e94`, green on the fix. |
 | C-017 | The partitioned door census (sixteen shapes by name, both DataFrame overwrites included, seven sources, two schemas, four zones, 848 cells) on main, `58321e94` and the fix against live Spark: no cell DIFFERENT on the fix, no EQUAL→DIFFERENT, UTC unchanged, the only `58321e94`→fix moves DIFFERENT→refused, no refused write leaves a file. | the census and the verifier's `wx`/`wr` drivers on the fix. | **PROVEN** | item 2's tables. |
 | C-018 | Each of the verifier's four surviving mutants (first list element only, `is_instant` only `"UTC"`, `type_at` at the wrong leaf, no plain-`UPDATE` exemption) reds one pin, and the other 22 mutants stay killed. | the mutant runs. | **PROVEN** | item 3's table: 26 of 26 killed. |
+| C-019 | R-011's status line counts the 134 over-refused `ltz_nested` cells per zone as 37 Spark-equal, 79 DIFFERENT and 18 engine errors on main, as the matrix measures them. | the matrix on the fix against main and Spark. | **PROVEN** | item 4. |
 
 Up: [map.md](map.md).

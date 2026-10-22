@@ -263,6 +263,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `SELECT`, `VALUES`, a column list, the `TABLE` keyword, a dynamic `PARTITION (k)`), and the
   refusal fires there as on the unpartitioned doors. `REPLACE WHERE` passes no clause.
   pins: zone-seam-1/C-016
+  *Fix round 1, S3-1:* on the U-8 matrix the refusal holds 134 `ltz_nested` cells per zone (New
+  York, Kolkata), on main 37 Spark-equal, 79 DIFFERENT and 18 engine errors, as R-011's line now
+  counts them. pins: zone-seam-1/C-019
 
 ## Pointers
 

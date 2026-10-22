@@ -3651,7 +3651,9 @@ still open is `isModifiable`.
   cast the leaf to TIMESTAMP before nesting it, as in named_struct('<field>', CAST(<value> AS
   TIMESTAMP), ...). SQLSTATE: KD000``: 134 matrix cells per zone (`ltz_nested`, New York and
   Kolkata), of which 37 per zone stored Spark's instant on main by two cancelling defects (the
-  container cast's UTC wall read back as UTC) and 97 were DIFFERENT on main. Card
+  container cast's UTC wall read back as UTC), 79 were DIFFERENT on main and 18 were the engine's
+  own error on main (counts corrected 2026-10-22 in fix round 1 from the verifier's measurement;
+  the line read "97 DIFFERENT" for the last two). Card
   `task/roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`. Ledger
   `task/ledgers/staging/zone-seam-1-ledger.md`.
 
