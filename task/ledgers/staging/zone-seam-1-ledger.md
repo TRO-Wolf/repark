@@ -295,6 +295,43 @@ red-by-design tests. The list was re-derived on the head with the recorder's `--
 `test_zone_horizon_render_1.py` passes (12 passed, the live cell skipped). The 3 joining cells are
 explained by the suite's named class `_UPSTREAM_SHIFT`.
 
+## Step 4, the doors (2026-10-22, after merging main `0512470d`, no conflict)
+
+`python/repark/tests/timestamps/test_zone_seam_1.py` (38 tests, green on the head build):
+
+- **Spark SQL door:** the card's plain `SELECT` rows (array, struct, map; leaf control) answer the
+  session wall in New York (`1767305045123456`) and the UTC wall in UTC. The "through another type"
+  rows store Spark's value in New York: the session wall through `STRING` (`INSERT`, an array, the
+  leaf cast over a string the container made, a `MERGE` update), the New York midnight through
+  `DATE` (`1767225600000000`), NULL through `from_json(to_json(…))`.
+- **Through `BIGINT`:** the `SELECT` raises Spark's `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`.
+  The `INSERT` raises it in UTC; outside UTC R-011's gate plans the source first, the plan raises,
+  and the gate answers with its own text (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`, "the
+  router cannot plan it"). No row is written. Main stored the UTC wall there
+  (`1767323045123456`, measured 2026-10-22), where Spark refuses: a DIFFERENT cell that now
+  refuses, with R-011's condition instead of Spark's outside UTC.
+- **Six table-creating writers and a cached frame:** CTAS, `CREATE OR REPLACE TABLE … AS SELECT`,
+  `REPLACE TABLE … AS SELECT`, `saveAsTable` overwrite, `writeTo().create()`, `.replace()`,
+  `.createOrReplace()`, and a cached frame with `writeTo().append()` store the session wall in New
+  York and the UTC wall in UTC.
+- **DataFrame door:** `Column.cast(MapType(StringType(), TimestampNTZType()))` and `expr` casts of
+  a struct and an array answer the session wall. `Column.cast` to a `StructType` or `ArrayType`
+  raises `unknown cast type` on main and on the head alike (measured 2026-10-22): a facade grammar
+  gap outside this unit, pinned as unchanged.
+- **Native `repark.sql()` door (ZS-5):** measured on main and on the head with the same script: the
+  struct, `make_array` and leaf casts of `TIMESTAMP '…+00:00'` answer `1767323045123456` (the
+  native door reads that literal as a naive wall) and the struct cast to a `STRING` leaf answers
+  `2026-01-02T03:04:05.123456`, identical on both builds; pinned as unchanged controls.
+- **U-8 frame pins (ZS-4):** `test_ice_ntz_nested_refuse_1.py`'s frame holding a container cast of
+  an instant now stores the New York wall on the seven writers (was the refusal).
+- **R-NTZ-S2-9 retired:** `w_ref_from` in `ntz_9_verify_spark_oracle.json` loses its
+  `divergence` and `repark_error_contains` annotations; `from_utc_timestamp` of a string returns
+  `TIMESTAMP` through `SparkUtcShift`, so the `UPDATE` refusal names the source `"TIMESTAMP"` as
+  Spark does (the declared divergence of `task/ledgers/staging/ntz-1-ledger.md` row R-NTZ-S2-9 is
+  closed by this unit; that ledger is another unit's and is not edited).
+- **Controls unchanged:** the leaf casts, a UTC session, a wall source (Rust `ntz_nested_refuse*`
+  pins), and the `timestamp_ns` refusal of R-015 (`timestamp_ns_nested_shapes.rs`, green).
+
 ## PROPOSITION LEDGER — ZONE-SEAM-1 — 2026-10-22
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |

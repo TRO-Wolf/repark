@@ -284,9 +284,7 @@
   {
    "key": "w_ref_from",
    "sql": "UPDATE sc.ns.u_int SET id = from_utc_timestamp('2024-01-01 12:00:00','UTC') WHERE id = 1",
-   "divergence": "R-NTZ-S2-9",
-   "spark_error": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"TIMESTAMP\" to \"INT\". SQLSTATE: KD000",
-   "repark_error_contains": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"TIMESTAMP_NTZ\" to \"INT\". SQLSTATE: KD000"
+   "spark_error": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"TIMESTAMP\" to \"INT\". SQLSTATE: KD000"
   },
   {
    "key": "w_ref_cast",
