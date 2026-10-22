@@ -3,12 +3,13 @@
 **Date:** 2026-10-22. **Filed by:** Claude (claude-opus-5-5) in fix round 1 of ICE-INTEGRITY-PINS-1
 (PR #1142), from the §7 halt of that unit's verifier round 1.
 
-**Status:** open, owner decision pending. This is existing product behaviour, not code from PR
-#1142. Pin K runs on uuid naming, so it never takes this path. The registry row
+**Status:** open, owner ruled 2026-10-22: option 1, the product change. The path read walks past
+the hint as Java's `HadoopTableOperations.refresh` does, in its own Opus unit after ZONE-SEAM-1;
+ruling 83 stands as written. This is existing product behaviour, not code from PR #1142. Pin K runs on uuid naming, so it never takes this path. The registry row
 [ICE-LOCAL-COMMIT-POINT-1](../../../docs/spark-sql-iceberg-parity.md) is narrowed to
-`register_table` until the owner rules.
+`register_table` until that unit lands.
 
-**Retires:** when the owner picks one of the two options below and the unit that carries it lands.
+**Retires:** when the unit that carries option 1 lands and the registry row widens again.
 
 ## What was measured
 
@@ -46,4 +47,5 @@ logs a warning, so a live process can commit `v(N+1)` and keep the hint at `N`.
 2. **Narrow ruling 83:** ruling 83, and registry row ICE-LOCAL-COMMIT-POINT-1, cover
    `register_table` on the newest metadata file only.
 
-This card names no fix and picks no option.
+This card named no fix when it was filed; the owner picked option 1 on 2026-10-22, in the morning
+read of the overnight watch, with the orchestrator's and the verifier's lean.
