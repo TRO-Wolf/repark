@@ -62,7 +62,7 @@ pub(super) async fn setup_with_sql_settings(
     settings: repark_functions::cardinality::ReparkSqlSettings,
 ) -> (SessionContext, CatalogRegistry) {
     setup_with_owner_and_settings(
-        wh,
+        wh.path(),
         ansi_enabled,
         settings,
         repark_core::session_owner_snapshot(),
@@ -76,7 +76,7 @@ pub(super) async fn setup_with_owner(
     owner: &str,
 ) -> (SessionContext, CatalogRegistry) {
     setup_with_owner_and_settings(
-        wh,
+        wh.path(),
         true,
         repark_functions::cardinality::ReparkSqlSettings::default(),
         owner.to_string(),
@@ -87,7 +87,7 @@ pub(super) async fn setup_with_owner(
 
 pub(super) async fn setup_at_zone(wh: &TempDir, zone: &str) -> (SessionContext, CatalogRegistry) {
     setup_with_owner_and_settings(
-        wh,
+        wh.path(),
         true,
         repark_functions::cardinality::ReparkSqlSettings::default(),
         repark_core::session_owner_snapshot(),
@@ -96,14 +96,28 @@ pub(super) async fn setup_at_zone(wh: &TempDir, zone: &str) -> (SessionContext, 
     .await
 }
 
+pub(super) async fn setup_v3_at(warehouse: &std::path::Path) -> (SessionContext, CatalogRegistry) {
+    setup_with_owner_and_settings(
+        warehouse,
+        true,
+        repark_functions::cardinality::ReparkSqlSettings {
+            allow_create_format_version_3: true,
+            ..repark_functions::cardinality::ReparkSqlSettings::default()
+        },
+        repark_core::session_owner_snapshot(),
+        "UTC",
+    )
+    .await
+}
+
 async fn setup_with_owner_and_settings(
-    wh: &TempDir,
+    warehouse: &std::path::Path,
     ansi_enabled: bool,
     settings: repark_functions::cardinality::ReparkSqlSettings,
     owner: String,
     zone: &str,
 ) -> (SessionContext, CatalogRegistry) {
-    let warehouse = wh.path().to_str().unwrap().to_string();
+    let warehouse = warehouse.to_str().unwrap().to_string();
     let catalog = repark_iceberg::catalog::EncryptionGuardCatalog::install(Arc::new(
         MemoryCatalogBuilder::default()
             .with_storage_factory(Arc::new(LocalFsStorageFactory))

@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+ICE-INTEGRITY-PINS-1 pin K (U-9, 2026-10-22): `kill_mid_write.rs` and `kill_mid_write_hold.rs` kill a writer between its data files and its commit. The test re-runs its own binary as a child (`REPARK_KILL_MID_WRITE_CHILD` names the cell); the child's session catalog is wrapped in `HoldCatalog`, a test-only decorator that forwards every `Catalog` method and holds the commit call (`update_table` for K-1 to K-6, `publish_create_table` for K-7) after writing a marker with the attempted snapshot and its new files; the parent sends SIGKILL, reopens in a fresh session through `CALL ice.system.register_table` on the newest metadata file, and checks the pre-state, the orphans against ruling 82's ceiling and the per-kind counts, the `remove_orphan_files` dry run and a following write. K-7 asserts the local catalog's CTAS answer (the staged metadata file is the commit; orchestrator ruling K-1, local catalog only); K-C0 and K-C1 are the forwarding controls. Red on main `18626942` without the decorator (18 of 18); green on head. `#[cfg(unix)]`. pins: ice-integrity-pins-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+
 MAP-COLUMN-PANIC-1 (2026-10-20): `map_column_panic_1.rs` pins `map(<key>, <non-literal value>)` through production-built sessions over a three-row Iceberg table: a column, a function, a cast, a struct, an array and a map value, two pairs, a column key, widening to the common value type, NULL values, a timestamp and a wall-cast value, lookup, `size` and a predicate over the map, Spark's `DUPLICATED_MAP_KEY`, `NULL_MAP_KEY` and `WRONG_NUM_ARGS` texts, the literal controls, and INSERT, UPDATE and MERGE into a `MAP<STRING, INT>` table. Red on main `e6ff5375`: 18 of 20 (a one-row source panics `list array`; many rows answer `map requires key and value lists to have the same length`); the two controls answer on main. Green on head.
 
 CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `join_condition_refusals.rs` gains the `IN`-subquery cell (a refused join nested in a subquery expression, killing the m5 plan-descent mutant). pins: cross-join-condition-1/C-008
@@ -32,6 +34,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `map_column_panic_1.rs` — **MAP-COLUMN-PANIC-1 (2026-10-20):** the 20 pins above; they read each answer as rendered rows and the Arrow key and value types, and assert the map field is never nullable.
+- `kill_mid_write.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22):** the 18 kill cells
+  (K-1 to K-7 on format v2 and v3, controls K-C0 and K-C1), the child entry
+  `kill_mid_write_child`, the reopen and the orphan, dry-run and write checks; `#[cfg(unix)]`.
+- `kill_mid_write_hold.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22):** `HoldCatalog`, the
+  test-only catalog decorator (hold, forward-then-hold, forward), its marker, and the reachable
+  and attempted file sets; `#[cfg(unix)]`.
 - `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
   the Spark door's local-file write policy at default conf: `EXPLAIN ANALYZE COPY` outside
   refuses naming `repark.sql.allowLocalFilesystemDDL` with no file written; plain `EXPLAIN`
@@ -1051,6 +1059,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   / overwrite / BY NAME / missing-table fall-through without the condition.
   pins: ice-error-conditions-1/C-011
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`,
+  **ICE-INTEGRITY-PINS-1 (2026-10-22):** `setup_v3_at` builds the format-v3-allowed session over
+  a warehouse path, so a child process and a fresh reopen share one warehouse.
   **FNP-4B critic:** `setup()` applies `apply_spark_parser_dialect` and registers
   `__repark_spark_as__`. pins: fnp-4b/C-017
   `register_view_typed_source` (CTAS-VIEW-1 Utf8View+BinaryView), `table_rows`, …)

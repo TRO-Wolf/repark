@@ -32,6 +32,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   on v2 and v3 plus two controls). Step 1 red first on main `18626942`: the decorator taken
   away reds all 18, the hook forwarding before it holds reds the 12 K-1 to K-6 cells. Pins U
   and X await #1070. `risk_tier: standard`. Branch `feat/ice-integrity-pins-1-k`.
+  Step 2 (2026-10-22): the decorator `HoldCatalog` and the child arm, 18 of 18 cells green;
+  C-001 to C-008 PROVEN.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6
