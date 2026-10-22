@@ -368,3 +368,31 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   ([task/roadmap/mid-term/write-spine-1-card-2026-10-22.md](roadmap/mid-term/write-spine-1-card-2026-10-22.md)),
   the architecture unit after GATE-RETIRE-1, on the owner's word of 2026-10-22.
 
+
+## 2026-10-22 — two Opus 5.5 lanes at a time; re-evaluate by 2026-11-22
+
+- **DO run at most two Opus 5.5 builds concurrently, not one.** *Why:* the one-lane rule of
+  2026-09-26 came from the September usage spikes (eight Opus executors live at once), and the
+  10-20 plan kept one lane only because the 10-17 halt was lifted for one; the closeout dates then
+  slipped a day for every day that lane ran long. The owner relaxed it on 2026-10-22 ("allow for
+  2 lanes at a time for sure"). Both lanes keep the standing limits: `claude-opus-5-5` only, one
+  Rust suite per clone, inside the 26-core cap, timed measurements on a quiet box only, verifiers
+  and read-only evaluations count toward the two unless the owner says otherwise. Lane 2 opened
+  the same day with ICE-INTEGRITY-PINS-1 pins U and X beside the ZONE-SEAM-1 fix round.
+- **DO re-evaluate the lane count by 2026-11-22.** *Why:* the owner asked for a re-evaluation
+  within a month. Inputs: usage against the owner's ceiling, box contention (cost-gate failures or
+  load-induced test timeouts, as the seam verifier saw on 10-22), and whether the v2 and v3 label
+  dates moved. The CLAUDE.md capability-tier section is unchanged: Opus still only on the owner's
+  explicit word, which this ruling is.
+
+## 2026-10-22 — CI re-runs: a stall may be re-run once, a failed test waits for the owner
+
+- **DO re-run once, yourself, a CI job that was cancelled at its time cap with every test step
+  green up to the stall.** *Why:* a re-run is one `gh run rerun --failed` and needs no agent; the
+  stall is the hang class the FAIR-POOL-HANG-1 card tracks, so the stalled log is kept under the
+  unit's scratch and the card gains one dated line. Owner, 2026-10-22 ("adopt"), after a builder
+  re-ran a hung facade shard on its own.
+- **DO NOT re-run a job with a failed test without the owner's dated word, and never from an
+  agent.** *Why:* a re-run can hide a real flake behind a green check; the orchestrator reads the
+  failed job's log first and reports the test and the assertion, as it did for #1158's wall-clock
+  pin the same evening.
