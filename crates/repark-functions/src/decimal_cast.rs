@@ -11,7 +11,7 @@ use datafusion::logical_expr::{
 };
 
 pub(crate) const DECIMAL_CAST_NULLABLE_NAME: &str = "__repark_decimal_cast_nullable__";
-pub(crate) const SPARK_NONNULL_NAME: &str = "__repark_spark_nonnull__";
+pub const SPARK_NONNULL_NAME: &str = "__repark_spark_nonnull__";
 
 pub(crate) fn nullable_spark_cast(cast: &Cast, schema: &DFSchema) -> Option<Expr> {
     let (_, child) = cast.expr.to_field(schema).ok()?;

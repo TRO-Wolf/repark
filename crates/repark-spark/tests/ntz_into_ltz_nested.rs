@@ -538,3 +538,161 @@ async fn a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant()
     .await;
     assert_eq!(stored(&session).await, vec![NEW_YORK_READ]);
 }
+
+const SYDNEY_READ: i64 = 1_767_283_445_123_456;
+const MIXED: &str = "STRUCT<v: TIMESTAMP, u: TIMESTAMP, n: INT>";
+
+const UNSHIFTED_UPDATES: [(&str, &str, &str, &str); 3] = [
+    (
+        "an extract of a container cast beside the cast leaf",
+        MIXED,
+        "named_struct('v', CAST({INSTANT} AS TIMESTAMP_NTZ), 'u', \
+         CAST(array({INSTANT}) AS ARRAY<TIMESTAMP_NTZ>)[0], 'n', 1)",
+        "SELECT unix_micros(st.v), unix_micros(st.u) FROM ice.ns.m",
+    ),
+    (
+        "an extract leaf with the cast only inside an INT field",
+        LTZ,
+        "named_struct('v', CAST(array({INSTANT}) AS ARRAY<TIMESTAMP_NTZ>)[0], 'n', \
+         CASE WHEN CAST({INSTANT} AS TIMESTAMP_NTZ) IS NOT NULL THEN 1 ELSE 0 END)",
+        "SELECT unix_micros(st.v) FROM ice.ns.m",
+    ),
+    (
+        "a TIMESTAMP_NTZ literal beside the cast leaf",
+        MIXED,
+        "named_struct('v', CAST({INSTANT} AS TIMESTAMP_NTZ), 'u', {WALL}, 'n', 1)",
+        "SELECT unix_micros(st.v), unix_micros(st.u) FROM ice.ns.m",
+    ),
+];
+
+async fn mixed(session: &ReparkSession, struct_type: &str) -> TempDir {
+    let warehouse = catalog(session).await;
+    for setup in [
+        format!(
+            "CREATE TABLE ice.ns.m (id INT, st {struct_type}, k INT) USING iceberg \
+             TBLPROPERTIES ('format-version'='2')"
+        ),
+        "INSERT INTO ice.ns.m (id, k) VALUES (1, 0)".to_string(),
+    ] {
+        run(session, &setup).await;
+    }
+    warehouse
+}
+
+async fn micros(session: &ReparkSession, sql: &str) -> Vec<Option<i64>> {
+    let batches = session
+        .sql(sql)
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    batches
+        .iter()
+        .flat_map(|batch| {
+            batch.columns().iter().flat_map(|column| {
+                let ticks = cast(column, &DataType::Int64).expect("ticks");
+                ticks.as_primitive::<Int64Type>().iter().collect::<Vec<_>>()
+            })
+        })
+        .collect()
+}
+
+fn resolved(value: &str) -> String {
+    value.replace("{INSTANT}", INSTANT).replace("{WALL}", WALL)
+}
+
+#[tokio::test]
+async fn a_plain_update_with_an_unshifted_wall_beside_the_shifted_cast_refuses_outside_utc() {
+    let refusal = REFUSAL.replace("`ice`.`ns`.`t`", "`ice`.`ns`.`m`");
+    let mut wrong = Vec::new();
+    for zone in ["America/New_York", "Australia/Sydney"] {
+        for (case, struct_type, value, read) in UNSHIFTED_UPDATES {
+            let value = resolved(value);
+            for (door, write) in [
+                (
+                    "UPDATE",
+                    format!("UPDATE ice.ns.m SET st = {value} WHERE id >= 0"),
+                ),
+                (
+                    "MERGE UPDATE",
+                    format!(
+                        "MERGE INTO ice.ns.m t USING ice.ns.src s ON t.id = s.id WHEN MATCHED \
+                         THEN UPDATE SET t.st = {value}"
+                    ),
+                ),
+            ] {
+                let session = session(zone);
+                let warehouse = mixed(&session, struct_type).await;
+                let before = data_files(warehouse.path());
+                let outcome = attempt(&session, &write).await;
+                if !outcome
+                    .as_ref()
+                    .is_err_and(|error| error.contains(&refusal))
+                {
+                    wrong.push(format!("{zone} {door} {case}: {outcome:?}"));
+                }
+                if data_files(warehouse.path()) != before {
+                    wrong.push(format!("{zone} {door} {case}: a data file was written"));
+                }
+                if micros(&session, read).await.iter().any(Option::is_some) {
+                    wrong.push(format!("{zone} {door} {case}: a value was written"));
+                }
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn a_plain_update_with_two_walls_in_utc_stores_the_utc_read() {
+    let mut wrong = Vec::new();
+    for (case, struct_type, value, read) in UNSHIFTED_UPDATES {
+        let session = session("UTC");
+        let _warehouse = mixed(&session, struct_type).await;
+        let write = format!("UPDATE ice.ns.m SET st = {} WHERE id >= 0", resolved(value));
+        if let Err(error) = attempt(&session, &write).await {
+            wrong.push(format!("{case}: {error}"));
+            continue;
+        }
+        let values = micros(&session, read).await;
+        if values.is_empty() || values.iter().any(|value| *value != Some(UTC_READ)) {
+            wrong.push(format!("{case}: {values:?}"));
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn a_plain_update_whose_only_wall_is_the_shifted_cast_stores_spark_instant() {
+    let mut wrong = Vec::new();
+    for (zone, text_read) in [
+        ("America/New_York", NEW_YORK_READ),
+        ("Australia/Sydney", SYDNEY_READ),
+    ] {
+        for (value, expected) in [
+            (
+                "named_struct('v', CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ), 'n', 1)"
+                    .to_string(),
+                text_read,
+            ),
+            (
+                format!("named_struct('v', CAST({INSTANT} AS TIMESTAMP_NTZ), 'n', 1)"),
+                UTC_READ,
+            ),
+        ] {
+            let session = session(zone);
+            let _warehouse = mixed(&session, LTZ).await;
+            let write = format!("UPDATE ice.ns.m SET st = {value} WHERE id >= 0");
+            if let Err(error) = attempt(&session, &write).await {
+                wrong.push(format!("{zone} {value}: {error}"));
+                continue;
+            }
+            let values = micros(&session, "SELECT unix_micros(st.v) FROM ice.ns.m").await;
+            if values != vec![Some(expected)] {
+                wrong.push(format!("{zone} {value}: {values:?}"));
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}

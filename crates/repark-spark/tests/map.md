@@ -316,6 +316,16 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   column has one index with or without the partition skip. Red on the verifier's mutants Y2 (the
   router hands the gate an empty clause) and Y3 (a dynamic name skipped as static). pins:
   zone-seam-1/C-021
+  *Fix round 3 (2026-10-23, item A):*
+  `a_plain_update_with_an_unshifted_wall_beside_the_shifted_cast_refuses_outside_utc`: three
+  values (an extract of a container cast beside the cast leaf; an extract leaf with the cast only
+  inside an `INT` field's `CASE`; a `TIMESTAMP_NTZ` literal beside the cast leaf) through the
+  plain `UPDATE` and the MERGE twin (the control), in New York and Sydney: the whole refusal, the
+  data file count unchanged, no value stored. Red on `b74f17e0`: the six plain-`UPDATE` cells
+  stored. `a_plain_update_with_two_walls_in_utc_stores_the_utc_read` is the UTC control;
+  `a_plain_update_whose_only_wall_is_the_shifted_cast_stores_spark_instant` holds the exemption
+  (the text cast stores the New York and Sydney read, the instant cast stores the instant).
+  pins: zone-seam-1/C-024
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`

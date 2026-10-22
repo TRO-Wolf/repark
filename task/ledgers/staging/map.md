@@ -2547,4 +2547,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   partitioned over-refusal counts, R-015's measured change awaiting the owner, the card's 37 + 79
   + 18 (C-022).
   *Fix round 3 (2026-10-23):* the nanosecond leaf's refusal restored on partitioned inserts under
-  the owner's ruling (C-023).
+  the owner's ruling (C-023); the plain-`UPDATE` exemption narrowed to a struct whose every naive
+  leaf is the shifted cast (C-024).

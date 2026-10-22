@@ -891,6 +891,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
+  *ZONE-SEAM-1 fix round 3 (2026-10-23):* `decimal_cast::SPARK_NONNULL_NAME` is `pub`, so the
+  router's ZS-9 gate (`repark-spark/src/router/nested_ns.rs`) can look through the non-null
+  marker around a `named_struct` when it reads an UPDATE's assigned struct leaf by leaf.
+  pins: zone-seam-1/C-024
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the

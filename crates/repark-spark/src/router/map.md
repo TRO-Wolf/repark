@@ -266,6 +266,19 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   *Fix round 1, S3-1:* on the U-8 matrix the refusal holds 134 `ltz_nested` cells per zone (New
   York, Kolkata), on main 37 Spark-equal, 79 DIFFERENT and 18 engine errors, as R-011's line now
   counts them. pins: zone-seam-1/C-019
+  **ZONE-SEAM-1 fix round 3 (2026-10-23, item A, found by the calibration verifier):** the plain
+  `UPDATE` exemption from the ZS-9 refusal was read from the whole value's lineage (any
+  `TIMESTAMP_NTZ` cast anywhere), while the plain-UPDATE door shifts only that cast's own leaf; a
+  second naive leaf beside it (an extract of a container cast, a `TIMESTAMP_NTZ` literal) or a
+  cast that sat only inside a non-timestamp field's expression let the struct store the session
+  wall read as UTC, unrefused. `only_shifted_walls` now reads the planned value leaf by leaf
+  (`shifted_leaves`): through an alias, the non-null marker, `named_struct` values and `struct`
+  arguments, every sub-value whose type holds a naive timestamp must be the `TIMESTAMP_NTZ` cast
+  call itself; anything else holding one (an extract, a literal, a column, a `CASE`, an array)
+  makes the statement refuse, as the MERGE twin already does. A struct whose only naive leaf is
+  the cast still stores Spark's instant; UTC is untouched. pins: zone-seam-1/C-024
+  The file's four unit tests moved unchanged to [nested_ns/tests.rs](nested_ns/map.md) to keep
+  the file under the 1000-line ceiling. pins: zone-seam-1/C-024
   *Fix round 1, cost:* the refusal's extra plan of a MERGE into a nested `TIMESTAMP` target in New
   York times at 0.922x main, the six U-8 statements within 1.05x. pins: zone-seam-1/C-020
   *Fix round 2 (2026-10-23), the records:* R-011 counts the partitioned over-refusal of
