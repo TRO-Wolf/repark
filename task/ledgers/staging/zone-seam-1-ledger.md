@@ -332,6 +332,37 @@ explained by the suite's named class `_UPSTREAM_SHIFT`.
 - **Controls unchanged:** the leaf casts, a UTC session, a wall source (Rust `ntz_nested_refuse*`
   pins), and the `timestamp_ns` refusal of R-015 (`timestamp_ns_nested_shapes.rs`, green).
 
+## Step 5, mutants and the revert check (2026-10-22)
+
+Each mutant applied alone to the head, `cargo test -p repark-functions --lib
+tests::zone_seam_pairs`, then reverted. M01–M07 remove one `seam_leaf` arm (sketch §4 rows 1, 2
+and 8, 3, 4, 5–7, 9, 10); M08 the bare `TRY_CAST` rewrite; M09 the map-cast wrap; M10
+`SparkUtcShift`'s argument shift; M11 the parent-null mask; M12 step 3b's `wall_micros`; M13 step
+3's `wall_text` branch; M14 the `rewrite_cast` call of the seam.
+
+| mutant | pins red | which |
+|---|---|---|
+| M01-row1-wall | 2 failed | `a_container_cast_of_an_instant_column_takes_the_session_wall`, `a_container_cast_of_an_instant_to_timestamp_ntz_takes_the_session_wall` |
+| M02-row2-8-text | 3 failed | `a_container_cast_of_a_wall_to_string_renders_spark_text`, `a_container_cast_of_an_instant_to_string_renders_the_session_text`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers` |
+| M03-row3-day | 2 failed | `a_container_cast_of_an_instant_to_date_takes_the_session_date`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers` |
+| M04-row4-seconds | 2 failed | `a_container_cast_of_an_instant_to_bigint_answers_epoch_seconds`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers` |
+| M05-row5-7-instant | 5 failed | `a_container_cast_of_a_date_to_timestamp_starts_at_the_session_midnight`, `a_container_cast_of_a_wall_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_a_zoneless_string_to_timestamp_reads_it_in_the_session_zone`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers`, `to_and_from_utc_timestamp_cast_a_wall_date_or_null_to_an_instant_first` |
+| M06-row9-refused-seconds | 1 failed | `a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does` |
+| M07-row10-refused-wall | 1 failed | `a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does` |
+| M08-bare-try | 2 failed | `a_leaf_try_cast_answers_what_the_leaf_cast_answers`, `a_try_cast_answers_null_where_its_leaf_cannot_convert` |
+| M09-map-cast | 10 failed | `a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does`, `a_container_cast_of_a_date_to_timestamp_starts_at_the_session_midnight`, `a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does`, `a_container_cast_of_a_wall_to_string_renders_spark_text`, `a_container_cast_of_a_wall_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_a_zoneless_string_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_an_instant_to_bigint_answers_epoch_seconds`, `a_container_cast_of_an_instant_to_date_takes_the_session_date`, `a_container_cast_of_an_instant_to_string_renders_the_session_text`, `a_container_cast_of_an_instant_to_timestamp_ntz_takes_the_session_wall` |
+| M10-utc-shift | 1 failed | `to_and_from_utc_timestamp_cast_a_wall_date_or_null_to_an_instant_first` |
+| M11-masked | 0 failed | none (survived) |
+| M12-from-json | 1 failed | `from_json_reads_a_timestamp_ntz_field_as_its_wall_and_a_zoned_text_as_null` |
+| M13-to-json | 1 failed | `to_json_renders_a_timestamp_ntz_leaf_as_its_wall_without_a_zone` |
+| M14-seam-call | 13 failed | `a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does`, `a_container_cast_of_a_date_to_timestamp_starts_at_the_session_midnight`, `a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does`, `a_container_cast_of_a_wall_to_string_renders_spark_text`, `a_container_cast_of_a_wall_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_a_zoneless_string_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_an_instant_column_takes_the_session_wall`, `a_container_cast_of_an_instant_to_bigint_answers_epoch_seconds`, `a_container_cast_of_an_instant_to_date_takes_the_session_date`, `a_container_cast_of_an_instant_to_string_renders_the_session_text`, `a_container_cast_of_an_instant_to_timestamp_ntz_takes_the_session_wall`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers`, `a_try_cast_answers_null_where_its_leaf_cannot_convert` |
+
+M11 survived the first run; the pin `a_value_under_a_null_struct_never_reaches_an_ansi_leaf` (a
+NULL struct row whose child is a malformed string, cast under ANSI) was added and fails under M11
+(`collect` raises) and passes on the head. **Revert check:** with M14 applied the ci-profile build
+replays the ZONE-ORACLE-1 corpus at 1,272 EQUAL / 358 DIFFERENT / 10 REFUSED (the head:
+1,540 / 90 / 10), so removing the seam reds the corpus.
+
 ## PROPOSITION LEDGER — ZONE-SEAM-1 — 2026-10-22
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |

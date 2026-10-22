@@ -502,3 +502,40 @@ async fn from_json_keeps_main_answer_for_a_space_separator_or_a_date_only_text()
         assert_eq!(got, (Some(Kind::Ntz), want.to_string()), "{text}");
     }
 }
+
+#[tokio::test]
+async fn a_value_under_a_null_struct_never_reaches_an_ansi_leaf() {
+    let texts = Arc::new(arrow::array::StringArray::from(vec![
+        Some(WALL_TEXT),
+        Some("not a time"),
+    ])) as ArrayRef;
+    let fields = Fields::from(vec![Field::new("a", DataType::Utf8, true)]);
+    let structs = arrow::array::StructArray::try_new(
+        fields,
+        vec![texts],
+        Some(arrow::buffer::NullBuffer::from(vec![true, false])),
+    )
+    .expect("struct");
+    let batch =
+        RecordBatch::try_from_iter(vec![("s", Arc::new(structs) as ArrayRef)]).expect("one column");
+    let ctx = context("America/New_York");
+    let cast = Expr::Cast(Cast::new(
+        Box::new(datafusion::prelude::col("s")),
+        wrap_type(Shape::Struct, leaf_type(Kind::Ltz)),
+    ));
+    let batches = ctx
+        .read_batch(batch)
+        .expect("frame")
+        .select(vec![cast.alias("v")])
+        .expect("select")
+        .collect()
+        .await
+        .expect("a NULL struct row hides its child from the ANSI kernel");
+    let column = batches[0].column(0);
+    assert!(column.is_null(1));
+    let leaf = first_leaf(column);
+    assert_eq!(
+        leaf.as_primitive::<TimestampMicrosecondType>().value(0),
+        1_767_341_045_123_456
+    );
+}

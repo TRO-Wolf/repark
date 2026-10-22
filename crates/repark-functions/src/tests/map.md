@@ -67,6 +67,8 @@ Only tests; `mod.rs` is the module manifest.
   **Step 3b (ZS-6):** `from_json` into a `TIMESTAMP_NTZ` field — Spark's text form is the
   wall in New York and Kolkata, a `Z` or offset text is NULL; a space separator and a date-only
   text keep main's New York answers. pins: zone-seam-1/C-013
+  **Step 5:** `a_value_under_a_null_struct_never_reaches_an_ansi_leaf` holds the parent-null mask
+  (a malformed string under a NULL struct row does not raise under ANSI). pins: zone-seam-1/C-010
   pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers
