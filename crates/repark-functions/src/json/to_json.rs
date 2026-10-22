@@ -101,6 +101,12 @@ fn timestamp_text(micros: i64, zone: Tz) -> String {
     }
 }
 
+fn wall_text(micros: i64) -> String {
+    DateTime::from_timestamp_micros(micros)
+        .map(|wall| wall.naive_utc().format("%Y-%m-%dT%H:%M:%S%.3f").to_string())
+        .unwrap_or_default()
+}
+
 fn date_text(days: i32) -> String {
     Date32Type::to_naive_date_opt(days)
         .map(|found| found.format("%Y-%m-%d").to_string())
@@ -179,6 +185,9 @@ fn write_scalar(array: &dyn Array, row: usize, out: &mut String, zone: Tz) -> bo
                 &date_text(array.as_primitive::<Date32Type>().value(row)),
                 out,
             );
+        }
+        DataType::Timestamp(unit, None) => {
+            write_escaped(&wall_text(micros_of(array, row, *unit)), out);
         }
         DataType::Timestamp(unit, _) => {
             write_escaped(&timestamp_text(micros_of(array, row, *unit), zone), out);
