@@ -21,6 +21,7 @@ mod join_refusal;
 mod logical_names;
 mod ml;
 mod orc_io;
+mod panic_probe;
 mod plan_introspect;
 mod session;
 mod session_runtime;
@@ -40,9 +41,8 @@ use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::ErrorClass;
 
-pub use session::PyReparkSession;
 pub(crate) use unresolved_routine::unknown_routine_to_py_err;
-pub use {column::PyColumn, dataframe::PyDataFrame};
+pub use {column::PyColumn, dataframe::PyDataFrame, session::PyReparkSession};
 
 /// The exception taxonomy lives in [`exceptions`]; see that module for the lint expectation.
 mod exceptions;
@@ -126,6 +126,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         repark_core::built_with_debug_assertions(),
     )?;
     module.add("__panic_fatal__", panic_fatal)?;
+    panic_probe::register(module)?;
     module.add_class::<PyReparkSession>()?;
     module.add_class::<PyDataFrame>()?;
     module.add_class::<PyColumn>()?;

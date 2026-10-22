@@ -56,6 +56,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Verifier round 3 pending.
   Verifier round 3 (2026-10-22): PASS with one records S2. C-028 narrows C-027: the
   parent-path exit code is unpinned, because nothing consumes an orphan's status.
+- [replace-linear-pin-1-ledger.md](replace-linear-pin-1-ledger.md) — **REPLACE-LINEAR-PIN-1
+  (2026-10-22, owner ruling "go with recommendations"):** the depth-40 `replace` memory pin
+  counted first-touch code pages of the native module, so it failed on #1140 and moved with the
+  runner. C-001 (PROVEN): on the runner the shift is `RssFile` inside the `_native` mapping, `RssAnon`
+  74 to 106 KB, two builds of one `.so` read 8.26 MB and 9.90 MB. C-002 (PROVEN): the child runs
+  the same mode at depth 1 before it reads the peak; local deltas 0.79 MB flat and 0.95 MB replace
+  against 4.85 MB and 7.78 MB without it. C-003 (PROVEN): bound, floor, depth and headroom unchanged.
+  `risk_tier: standard`. Branch `fix/replace-linear-pin-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

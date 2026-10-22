@@ -1,0 +1,3 @@
+sources	build	head	so_sha256_16	mode	bound	pin_delta	HWM_before	HWM_after	Anon_before	Anon_after	File_before	File_after	Shmem_before	Shmem_after	RSS_before	RSS_after	native_before	native_after
+final head (warm-up)	build 1	de72533c	b3012cd5fcc800c5	flat	0	344064	337825792	338169856	89931776	90013696	247894016	248156160	0	0	337825792	338169856	160006144	160268288
+final head (warm-up)	build 1	de72533c	b3012cd5fcc800c5	replace	8388608	491520	340701184	341192704	89939968	90042368	250761216	251150336	0	0	340701184	341192704	162844672	163233792

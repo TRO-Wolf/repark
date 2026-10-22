@@ -1,5 +1,7 @@
 # map — repark-sql/src
 
+MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21, commit 4): `dialect.rs`'s `AnsiDialect::configure_analyzer_rules` pushes `repark_functions::collection::SparkMapRewrite` after the unit-widen call, the same one push as `NativeDoorTypes` in `repark-python`, so the Rust-embedded ANSI door (no Python entry) sends a non-constant `map(...)` to the Spark per-row kernel instead of panicking `list array` (one source row) or raising `map requires key and value lists to have the same length` (several rows). A repeated or NULL key raises Spark's `[DUPLICATED_MAP_KEY]` / `[NULL_MAP_KEY]` text on this door too; a literal map with distinct keys stays on DataFusion's constructor. The pins are `tests/ansi_door_map_column.rs`.
+
 ICE-MIXED-CASE-1 (2026-09-17): the ANSI door stays exact — `merge.rs`/`router.rs` force `case_insensitive = false` on the MERGE spec so only the Spark door folds case. pins: ice-mixed-case-1/C-006
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule

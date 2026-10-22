@@ -74,7 +74,7 @@ pins.
 - [test_polars_differential.py](test_polars_differential.py) — R-POLARS-CORE rider: DIFFERENTIAL pins against real polars (the brief's oracle rule).
 - [test_polars_is_duplicated_1.py](test_polars_is_duplicated_1.py) — POLARS-IS-DUPLICATED-1 — Column.is_duplicated() answers as real polars on both doors.
 - [test_polars_ns.py](test_polars_ns.py) — R-POLARS-NS — .str / .dt namespaces + fill_null(value) (value + Arrow type + NULL).
-- [test_replace_linear_1.py](test_replace_linear_1.py) — REPLACE-LINEAR-1 — ``DataFrame.replace`` oracle cells and the exponential memory pin.
+- [test_replace_linear_1.py](test_replace_linear_1.py) — REPLACE-LINEAR-1 — ``DataFrame.replace`` oracle cells and the exponential memory pin. REPLACE-LINEAR-PIN-1 (2026-10-22): the memory pin's child runs one depth-1 call of the mode it measures before it reads the peak; the bound and the floor are unchanged.
 - [test_row.py](test_row.py) — G-ROW — :class:`~repark.row.Row` API + E8 error-class pins vs live PySpark 4.1.2.
 - [test_row_tuple_1.py](test_row_tuple_1.py) — Row.count / Row.index tuple-protocol pins against the committed row oracle.
 - [test_select_global_agg.py](test_select_global_agg.py) — R-SELECT-GLOBAL-AGG: df.select(<aggregates only>) is Spark global aggregate.

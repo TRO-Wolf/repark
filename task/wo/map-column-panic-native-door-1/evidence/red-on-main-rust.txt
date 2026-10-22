@@ -1,0 +1,32 @@
+# red-on-main-rust: the three native-door pins run on main's code (the pins added, the install absent).
+# command: cargo test --locked -p repark-python --lib native_session_   (CARGO_BUILD_JOBS=12, taskset -c 0-25)
+# result: 2 failed (the one-row map panics list array; the three-row map raises map requires key and value lists to have the same length), 2 passed (the constant-map control and native_session_is_not_spark_doored).
+
+
+running 4 tests
+test session_tests::native_session_answers_a_map_over_a_column_instead_of_panicking ... FAILED
+test session_tests::native_session_keeps_a_constant_map_on_the_datafusion_constructor ... ok
+test session_tests::native_session_answers_a_per_row_map_with_two_pairs ... FAILED
+test session_tests::native_session_is_not_spark_doored ... ok
+
+failures:
+
+---- session_tests::native_session_answers_a_map_over_a_column_instead_of_panicking stdout ----
+
+thread 'session_tests::native_session_answers_a_map_over_a_column_instead_of_panicking' (3534583) panicked at crates/repark-python/src/session_tests.rs:98:19:
+the native door panicked on SELECT map('a', id) AS m FROM range(1)
+
+---- session_tests::native_session_answers_a_per_row_map_with_two_pairs stdout ----
+
+thread 'session_tests::native_session_answers_a_per_row_map_with_two_pairs' (3534584) panicked at crates/repark-python/src/session_tests.rs:97:27:
+the native door answers SELECT map('a', id, 'b', id + 1) AS m FROM range(3) ORDER BY id: Execution error: map requires key and value lists to have the same length
+
+
+failures:
+    session_tests::native_session_answers_a_map_over_a_column_instead_of_panicking
+    session_tests::native_session_answers_a_per_row_map_with_two_pairs
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 165 filtered out; finished in 0.49s
+
+error: test failed, to rerun pass `-p repark-python --lib`
+cargo exit 101
