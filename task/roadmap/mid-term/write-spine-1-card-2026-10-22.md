@@ -32,6 +32,13 @@ generated from the router arms, before GATE-RETIRE-1; (4) retire the ZS-9 refusa
 arm with dated rows after the v2 label. Retire condition (2) above is withdrawn by this reading; the
 owner rules on the shape.
 
+**Adopted 2026-10-22 (owner, "go with your recommendations"):** option D with that sequencing. Steps
+(1) and (3) open after ZONE-SEAM-1 merges and before GATE-RETIRE-1; step (2) after GATE-RETIRE-1; step
+(4) after the v2 label (11-10) and before v3 (11-17). WRITE-NTZ-TO-LTZ-NESTED-1 is folded into step
+(2): the six self-projecting doors it names are the doors step (2) routes, so it is not a separate
+unit. The two ARCHITECTURE.md wordings the evaluation left for the owner ("thin adapter"; the native
+door "refuses INSERT OVERWRITE") are corrected in the same commit as this paragraph.
+
 ## Why this card exists
 
 Four closeout units in October were the same unit in different clothes: U-3 "every staged door
