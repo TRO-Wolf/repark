@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 from _acceptance_cross_release import (
     INDEX_WHEEL,
@@ -14,6 +15,7 @@ from _acceptance_cross_release import (
     PREVIOUS_RELEASE,
     REFUSED_EXIT,
     Side,
+    compare_tables,
     cross_cell,
     format_cells,
     mixed_cell,
@@ -135,3 +137,17 @@ def test_x_c1_a_cell_whose_sides_run_one_release_fails(tmp_path: Path) -> None:
     spec = local_spec(tmp_path / "warehouse", "plain", 2, "xrel_c1_same")
     with pytest.raises(AssertionError, match="both sides would run"):
         cross_cell(writer=impostor, reader=HEAD, spec=spec, workdir=tmp_path, label="X-C1b")
+
+
+def test_x_compare_sees_an_ntz_column_read_as_an_instant() -> None:
+    values = [0, 3_600_000_000]
+    writer = pa.table({"ntz": pa.array(values, pa.timestamp("us"))})
+    reader = pa.table({"ntz": pa.array(values, pa.timestamp("us", tz="UTC"))})
+    differences = compare_tables(writer, reader)
+    assert any("ntz" in difference for difference in differences)
+
+
+def test_x_compare_sees_a_decimal_scale() -> None:
+    writer = pa.table({"amount": pa.array([1], pa.decimal128(10, 2))})
+    reader = pa.table({"amount": pa.array([1], pa.decimal128(10, 3))})
+    assert compare_tables(writer, reader)

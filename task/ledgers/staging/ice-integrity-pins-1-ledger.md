@@ -353,3 +353,32 @@ is `test_aws_acceptance_cross_release.py` (40 cells). Both rows stay OPEN as wri
 | C-037 | Leg U is built as orchestrator ruling Q-1 states: 96 statements, U-1 to U-5, U-5r, U-C0 and U-C1 × the plain door, the session-key door and `MERGE` × v2 and v3 × Glue and S3 Tables. Each drill table carries and asserts the four `commit.status-check.*` properties. The gate's commit-request count is asserted (1, or 2 on U-5r). "Unresolved" is never guessed: two reads 2 s apart must agree within 60 s, or the cell fails. The attempted snapshot and its id are read from the held metadata file through `pyarrow.fs` (ruling Q-5). A duplicate is reported as H-U5. | First live run. | OPEN | Built; first live run pending #1070 (C-012). Collected and skipped here. |
 | C-038 | Leg X is built: 40 live cells (32 one-way, 8 mixed-writer) on Glue and S3 Tables, with S3 Tables v3 recorded through `classify_v3_create_outcome` if the service refuses format 3 at create. | First live run. | OPEN | Built; first live run pending #1070 (C-013). |
 | C-039 | The legs' gating. Without `REPARK_AWS_ACCEPTANCE=1` both live modules collect and skip, 136 of 136. With the gate on and `REPARK_PREVIOUS_RELEASE_PYTHON` unset, leg X fails at its fixture with the message naming the variable, before any AWS call. | The two collections. | PROVEN | 136 skipped in 0.52 s; `ERROR at setup … REPARK_PREVIOUS_RELEASE_PYTHON is unset with REPARK_AWS_ACCEPTANCE=1`. |
+
+### Proof (step 4, 2026-10-22)
+
+The live cells cannot run here (no AWS credentials on this box, and tier 2 runs merged code
+only). So the step-4 mutants of sketch §9 are aimed at the AWS-free cells that hold each rule on
+every pull request: the gate's unit test, the resolver's unit test, X's comparison, X-C1, X-L, and
+the offline twin. Each mutant was applied alone, run and reverted (`cmp` clean). Run over
+`test_acceptance_commit_gate.py`, `test_acceptance_commit_resolver.py` and
+`test_cross_release_local.py` with `REPARK_PREVIOUS_RELEASE_PYTHON` set: 99 tests green, load
+about 13 to 25.
+
+| Mutant (sketch §9 step 4) | Red cells | Note |
+|---|---|---|
+| The gate forwards in U-3 | 4: `test_each_script_answers_as_its_cell_says[U-3-*]`, `[U-4-*]` | The twin's M-U1 reds U-3 and U-4 (12 of 24, step 1). |
+| The resolver answers "not committed" on a failed read | 1: `test_a_failed_read_is_unresolved_never_not_committed` | |
+| The status-check properties dropped | 1: `test_a_missing_status_check_property_is_named` | The twin's M-U4a reds 24 and M-U4b 12 (4 cut refreshes against 2, 34.5 s against 2 s, step 1). |
+| The runner runs the head as the previous release (X-C1) | a) the runner never refuses: 1, `test_x_c1_the_runner_refuses_a_release_its_role_does_not_name`; b) `REPARK_PREVIOUS_RELEASE_PYTHON` names the head: 20, every X-L cell (`the previous runner failed`) | The head reports 1.5.5 as well, so the install origin carries the identity. |
+| The comparison ignores types | 1: `test_x_compare_sees_an_ntz_column_read_as_an_instant` | `test_x_compare_sees_a_decimal_scale` stays green: the row set already tells `1.00` from `1.000`. |
+
+**Local run times (load average beside each):**
+- the twin: 24 cells in 2.03 s (load about 18);
+- the gate's unit test: 66 in 17.3 s (about 31 falling to 20);
+- the resolver's unit test and the comparison tests: 11 in 3.1 s;
+- X-L, X-NS, X-C0 and X-C1: 25 in 42.6 s (18 to 27).
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-040 | Leg U's resolver never guesses. Two agreeing snapshot-id reads 2 s apart resolve, and a late landing is waited for. A failed read raises `UnresolvedError`, never "not committed". Reads that never agree are unresolved at the 60 s deadline. The held metadata file must name exactly one attempt. A missing status-check property is named. | `test_acceptance_commit_resolver.py` (6 tests); leg U calls these helpers. | PROVEN | Red under the "not committed on a failed read" and "presence check dropped" mutants (table above). |
+| C-041 | X's comparison sees types. An NTZ column read back as an instant, the same values with `timestamp[us]` against `timestamp[us, tz=UTC]`, is a difference, and so is a decimal scale. | `test_x_compare_*` (2 tests). | PROVEN | Red under "the comparison ignores types" (1 cell). |

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -22,6 +21,12 @@ from _acceptance import (
     s3tables_catalog_config,
 )
 from _acceptance_commit_gate import GLUE, S3TABLES, CommitGate, Script, regional_upstream
+from _acceptance_commit_resolver import (
+    UnresolvedError,
+    attempted_snapshot,
+    missing_properties,
+    stable_snapshot_ids,
+)
 from _acceptance_sigv4 import Credentials
 from _acceptance_v3 import (
     S3T_V3_REFUSED_AT_CREATE,
@@ -51,8 +56,6 @@ SOURCE = "(VALUES (1, 'a'), (2, 'b'), (3, 'c')) AS s(id, name)"
 PRE_ROWS = [(1, "a"), (2, "b"), (3, "c")]
 INSERT_ROWS = [*PRE_ROWS, (11, "a"), (12, "b"), (13, "c")]
 MERGE_ROWS = [(1, "a"), (2, "m"), (3, "c")]
-STABLE_GAP_S = 2.0
-RESOLVE_DEADLINE_S = 60.0
 CATALOGS = (GLUE, S3TABLES)
 FORMATS = (2, 3)
 DOORS = ("plain", "session_key", "merge")
@@ -198,36 +201,16 @@ def seed(spark: ReparkSession, target: Target, table: str, format_version: int) 
     spark.sql(f"INSERT INTO {table} VALUES (1, 'a'), (2, 'b'), (3, 'c')").collect()
     metadata = read_json(target, current_metadata_location(spark, table))
     stored = metadata.get("properties", {})
-    missing = {key: value for key, value in STATUS_CHECK.items() if stored.get(key) != value}
+    missing = missing_properties(stored, STATUS_CHECK)
     assert not missing, f"{table}: the drill table lacks its status-check properties {missing}"
     return True
 
 
-def attempted_snapshot(target: Target, location: str, before: set[int]) -> dict[str, Any]:
-    metadata = read_json(target, location)
-    attempted = [
-        snapshot
-        for snapshot in metadata.get("snapshots", [])
-        if snapshot["snapshot-id"] not in before
-    ]
-    assert len(attempted) == 1, f"the held metadata file names {len(attempted)} new snapshots"
-    return attempted[0]
-
-
 def stable_snapshots(spark: ReparkSession, table: str) -> set[int]:
-    deadline = time.monotonic() + RESOLVE_DEADLINE_S
-    while time.monotonic() < deadline:
-        try:
-            first = snapshot_ids(spark, table)
-            time.sleep(STABLE_GAP_S)
-            second = snapshot_ids(spark, table)
-        except Exception as error:
-            pytest.fail(
-                f"{table}: unresolved, a resolver read failed: {mask_account_ids(str(error))}"
-            )
-        if first == second:
-            return second
-    pytest.fail(f"{table}: unresolved, two reads {STABLE_GAP_S} s apart never agreed")
+    try:
+        return stable_snapshot_ids(lambda: snapshot_ids(spark, table), label=table)
+    except UnresolvedError as unresolved:
+        pytest.fail(mask_account_ids(str(unresolved)))
 
 
 def count_operation(spark: ReparkSession, table: str, operation_id: str) -> int:
@@ -300,7 +283,7 @@ def drill(service: str, door: str, spec: CellSpec, format_version: int) -> None:
         if commits:
             location = commits[0].metadata_location
             assert location is not None, f"{label}: the commit request named no metadata file"
-            attempt = attempted_snapshot(target, location, before)
+            attempt = attempted_snapshot(read_json(target, location), before, label)
             attempt_id = int(attempt["snapshot-id"])
             operation_id = attempt.get("summary", {}).get(OPERATION_ID)
             assert operation_id, f"{label}: the attempted snapshot carries no {OPERATION_ID}"

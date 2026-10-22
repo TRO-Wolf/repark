@@ -10,6 +10,7 @@ pins.
 
 ## Contents
 
+- [test_acceptance_commit_resolver.py](test_acceptance_commit_resolver.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): leg U's resolver, AWS-free on every pull request: two agreeing reads resolve, a late landing is waited for, a failed read is "unresolved" (never "not committed"), reads that never agree are unresolved at the deadline, the held metadata file names exactly one attempt, and a missing status-check property is named.
 - [test_acceptance_cross_read_local.py](test_acceptance_cross_read_local.py) — Local cross-read leg: live Spark reads RePark-written acceptance tables.
 - [test_acceptance_helpers.py](test_acceptance_helpers.py) — AWS-free unit tests for the acceptance-harness helpers — these run EVERYWHERE (no gate).
 - [test_acceptance_replace_offline.py](test_acceptance_replace_offline.py) — Offline pin for the CREATE OR REPLACE twice acceptance helper on a memory catalog.
@@ -44,6 +45,7 @@ pins.
 - [_acceptance_cross_release.py](_acceptance_cross_release.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): leg X's driver: one side per release (role, interpreter, version, install origin), the runner as a child, and the comparison of the writer's read-back with the reader's read (the shared schema and row-set helpers plus exact Arrow types, the current snapshot, `total-records`, and the delete files).
 - [_acceptance_cross_release_runner.py](_acceptance_cross_release_runner.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): the one script both releases run in leg X, with calls 1.5.5 has (the builder, `sql`, `to_arrow`): it refuses unless its version and install origin (`index-wheel` or `local-build`) are its role's, adopts a local table's newest metadata file, creates one of the X kinds, appends, or reads, and writes the read to Arrow IPC with the current snapshot's id, `total-records` and delete files.
 - [_acceptance_sigv4.py](_acceptance_sigv4.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): SigV4 header signing in the standard library (ruling 88 and Q10), test-only.
+- [_acceptance_commit_resolver.py](_acceptance_commit_resolver.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): leg U's resolver rules: the stable snapshot-id read (two reads 2 s apart agree within 60 s, else `UnresolvedError`), the attempted snapshot from the held metadata file, and the missing status-check properties.
 - [_acceptance_cross_read.py](_acceptance_cross_read.py) — Spark reads RePark-written tables and answers row-equal.
 - [_acceptance_replace.py](_acceptance_replace.py) — CREATE OR REPLACE TABLE … AS twice leg body for the real-AWS acceptance harness.
 - [_acceptance_v3.py](_acceptance_v3.py) — Format-version-3 leg body for the real-AWS acceptance harness (LIVE-v3).
@@ -62,6 +64,9 @@ Leg U and leg X were built on 2026-10-22; their first live run is after the owne
 Locally, X-L read 20 of 20 cells equal both ways, X-C0 and X-C1 held, the two live modules collect
 136 tests that skip without the gate, and leg X fails without the previous interpreter.
 pins: ice-integrity-pins-1/C-035, C-036, C-039
+
+The resolver's unit test and X's type-aware comparison (`test_x_compare_*`), red under the step-4 mutants:
+pins: ice-integrity-pins-1/C-040, C-041
 
 ## Path expressions
 
