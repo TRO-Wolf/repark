@@ -55,7 +55,7 @@ pins.
 The live legs go here beside `test_aws_acceptance.py` (FACADE-TESTS-LAYOUT-1 moved the facade tests
 after the sketch named `python/repark/tests/`). Data files:
 
-- [sigv4_v4_vectors.json](sigv4_v4_vectors.json) — 26 header-mode vectors of the published AWS SigV4 suite (aws-c-auth v0.9.0 `aws-signing-test-suite/v4`, Apache-2.0, as vendored in the `aws-sigv4` 1.5.1 crate): request, context, canonical request, string to sign and signature; `double-encode-path` carries the canonical request only. The three vectors whose context differs from the gate's path (`get-space-normalized`, and the two `x-www-form-urlencoded` vectors that sign `x-amz-content-sha256`) are left out.
+- [sigv4_v4_vectors.json](sigv4_v4_vectors.json) — 28 header-mode vectors of the published AWS SigV4 suite (aws-c-auth v0.9.0 `aws-signing-test-suite/v4`, Apache-2.0, as vendored in the `aws-sigv4` 1.5.1 crate): request, context, canonical request, string to sign and signature; `double-encode-path` carries the canonical request only. The two `x-www-form-urlencoded` vectors are the only ones with a body, so they hold the payload hash the gate takes on every commit; their `X-Amz-Content-Sha256` is given as an input header, as the suite's context signs it (fix round 1, 2026-10-22: the earlier text left them out with a wrong reason). `get-space-normalized` is left out because it hides no gate path: the SDK sends percent-encoded paths, and the gate's double encoding is pinned by `double-encode-path`.
 - [previous_release_requirements.txt](previous_release_requirements.txt) — the previous release for leg X, compiled with `uv pip compile --generate-hashes --only-binary :all:` from `repark==1.5.5`. Its five wheel hashes equal PyPI's for 1.5.5. The workflow installs it with `--require-hashes` into `.venv-previous` before any credential exists. One release-checklist line moves it to the newest previous release at each tag (ruling 81).
 
 The gate's unit test, the vectors and the botocore cross-check (once, in a throwaway moto 5.2.3 venv built offline from the uv cache; recorded in the ledger) pins: ice-integrity-pins-1/C-032, C-033. The requirements file pins: ice-integrity-pins-1/C-034
@@ -70,6 +70,8 @@ pins: ice-integrity-pins-1/C-040, C-041
 
 Fix round 1 (2026-10-22, verifier round 1 S1-1): the gate's deny list became an allow list. `test_glue_refuses_every_request_the_drills_do_not_send` and `test_s3tables_refuses_every_request_the_drills_do_not_send` carry each request the verifier got forwarded, red on `c6d74054` (14 cells), and the `forwards_the_operations_the_drills_send` tests keep the drill operations open.
 pins: ice-integrity-pins-1/C-042
+
+Fix round 1 (2026-10-22, verifier round 1 S1-2): the vector set grows to 28 with the two body vectors, so a signer that hashes an empty payload reds them. pins: ice-integrity-pins-1/C-043
 
 ## Path expressions
 

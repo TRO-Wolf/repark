@@ -612,6 +612,74 @@
    ],
    "body": "",
    "canonical_request": "POST\n/test/%40connections/JBDvjfGEIAMCERw%253D\n\nhost:tj9n5r0m12.execute-api.us-east-1.amazonaws.com\nx-amz-date:20210511T154045Z\n\nhost;x-amz-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "name": "post-x-www-form-urlencoded",
+   "method": "POST",
+   "path": "/",
+   "query": "",
+   "headers": [
+    [
+     "Content-Type",
+     "application/x-www-form-urlencoded"
+    ],
+    [
+     "Host",
+     "example.amazonaws.com"
+    ],
+    [
+     "Content-Length",
+     "13"
+    ],
+    [
+     "X-Amz-Content-Sha256",
+     "9095672bbd1f56dfc5b65f3e153adc8731a4a654192329106275f4c7b24d0b6e"
+    ]
+   ],
+   "body": "Param1=value1",
+   "canonical_request": "POST\n/\n\ncontent-length:13\ncontent-type:application/x-www-form-urlencoded\nhost:example.amazonaws.com\nx-amz-content-sha256:9095672bbd1f56dfc5b65f3e153adc8731a4a654192329106275f4c7b24d0b6e\nx-amz-date:20150830T123600Z\n\ncontent-length;content-type;host;x-amz-content-sha256;x-amz-date\n9095672bbd1f56dfc5b65f3e153adc8731a4a654192329106275f4c7b24d0b6e",
+   "access_key": "AKIDEXAMPLE",
+   "secret_key": "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+   "token": null,
+   "region": "us-east-1",
+   "service": "service",
+   "stamp": "20150830T123600Z",
+   "string_to_sign": "AWS4-HMAC-SHA256\n20150830T123600Z\n20150830/us-east-1/service/aws4_request\nb1edd1d03544c25390e32085d55b57acc9a3961bb59415ff86c45c3d89d16cfb",
+   "signature": "d3875051da38690788ef43de4db0d8f280229d82040bfac253562e56c3f20e0b"
+  },
+  {
+   "name": "post-x-www-form-urlencoded-parameters",
+   "method": "POST",
+   "path": "/",
+   "query": "",
+   "headers": [
+    [
+     "Content-Type",
+     "application/x-www-form-urlencoded; charset=utf-8"
+    ],
+    [
+     "Host",
+     "example.amazonaws.com"
+    ],
+    [
+     "Content-Length",
+     "13"
+    ],
+    [
+     "X-Amz-Content-Sha256",
+     "9095672bbd1f56dfc5b65f3e153adc8731a4a654192329106275f4c7b24d0b6e"
+    ]
+   ],
+   "body": "Param1=value1",
+   "canonical_request": "POST\n/\n\ncontent-length:13\ncontent-type:application/x-www-form-urlencoded; charset=utf-8\nhost:example.amazonaws.com\nx-amz-content-sha256:9095672bbd1f56dfc5b65f3e153adc8731a4a654192329106275f4c7b24d0b6e\nx-amz-date:20150830T123600Z\n\ncontent-length;content-type;host;x-amz-content-sha256;x-amz-date\n9095672bbd1f56dfc5b65f3e153adc8731a4a654192329106275f4c7b24d0b6e",
+   "access_key": "AKIDEXAMPLE",
+   "secret_key": "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+   "token": null,
+   "region": "us-east-1",
+   "service": "service",
+   "stamp": "20150830T123600Z",
+   "string_to_sign": "AWS4-HMAC-SHA256\n20150830T123600Z\n20150830/us-east-1/service/aws4_request\na89f1a5b53e37702ee6363ce1da3ce8f54386f3c8f352ae652153c2982a0bc4d",
+   "signature": "328d1b9eaadca9f5818ef05e8392801e091653bafec24fcab71e7344e7f51422"
   }
  ]
 }

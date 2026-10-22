@@ -265,8 +265,14 @@ def test_signer_matches_the_published_aws_vector(vector: dict[str, Any]) -> None
 
 def test_the_vector_set_covers_the_gate_paths() -> None:
     names = {vector["name"] for vector in VECTORS["vectors"]}
-    assert len(names) == 26
-    assert {"double-encode-path", "get-vanilla-with-session-token", "post-vanilla"} <= names
+    assert len(names) == 28
+    assert {
+        "double-encode-path",
+        "get-vanilla-with-session-token",
+        "post-vanilla",
+        "post-x-www-form-urlencoded",
+        "post-x-www-form-urlencoded-parameters",
+    } <= names
 
 
 @pytest.mark.parametrize(
