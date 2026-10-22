@@ -79,6 +79,101 @@ fn native_session_is_not_spark_doored() {
     });
 }
 
+fn native_collect(
+    session: &PyReparkSession,
+    py: Python<'_>,
+    query: &str,
+) -> Vec<arrow::record_batch::RecordBatch> {
+    let frame = session
+        .sql(py, query)
+        .unwrap_or_else(|error| panic!("the native door plans {query}: {error}"));
+    let collected = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        frame
+            .runtime_handle()
+            .block_on(frame.inner().clone().collect())
+    }));
+    let answered = collected.unwrap_or_else(|_| panic!("the native door panicked on {query}"));
+    answered.unwrap_or_else(|error| panic!("the native door answers {query}: {error}"))
+}
+
+fn map_entries(batch: &arrow::record_batch::RecordBatch, row: usize) -> Vec<(String, i64)> {
+    use arrow::array::{Array, AsArray};
+    use arrow::datatypes::{Int32Type, Int64Type};
+
+    let map = batch.column(0).as_map();
+    let entries = map.value(row);
+    let keys = entries.column(0).as_string::<i32>();
+    let values = entries.column(1);
+    (0..entries.len())
+        .map(|index| {
+            let value = match values.data_type() {
+                arrow::datatypes::DataType::Int32 => {
+                    i64::from(values.as_primitive::<Int32Type>().value(index))
+                }
+                _ => values.as_primitive::<Int64Type>().value(index),
+            };
+            (keys.value(index).to_string(), value)
+        })
+        .collect()
+}
+
+#[test]
+fn native_session_answers_a_map_over_a_column_instead_of_panicking() {
+    Python::attach(|py| {
+        let session =
+            PyReparkSession::native(py, None, None, None, None).expect("native session builds");
+        let batches = native_collect(&session, py, "SELECT map('a', id) AS m FROM range(1)");
+        assert_eq!(
+            batches
+                .iter()
+                .map(arrow::record_batch::RecordBatch::num_rows)
+                .sum::<usize>(),
+            1
+        );
+        assert_eq!(map_entries(&batches[0], 0), vec![("a".to_string(), 0)]);
+    });
+}
+
+#[test]
+fn native_session_answers_a_per_row_map_with_two_pairs() {
+    Python::attach(|py| {
+        let session =
+            PyReparkSession::native(py, None, None, None, None).expect("native session builds");
+        let batches = native_collect(
+            &session,
+            py,
+            "SELECT map('a', id, 'b', id + 1) AS m FROM range(3) ORDER BY id",
+        );
+        assert_eq!(
+            batches
+                .iter()
+                .map(arrow::record_batch::RecordBatch::num_rows)
+                .sum::<usize>(),
+            3
+        );
+        let rows: Vec<Vec<(String, i64)>> = batches
+            .iter()
+            .flat_map(|batch| (0..batch.num_rows()).map(|row| map_entries(batch, row)))
+            .collect();
+        for (id, entries) in (0_i64..).zip(&rows) {
+            assert_eq!(
+                entries,
+                &vec![("a".to_string(), id), ("b".to_string(), id + 1)]
+            );
+        }
+    });
+}
+
+#[test]
+fn native_session_keeps_a_constant_map_on_the_datafusion_constructor() {
+    Python::attach(|py| {
+        let session =
+            PyReparkSession::native(py, None, None, None, None).expect("native session builds");
+        let batches = native_collect(&session, py, "SELECT map('a', 1) AS m");
+        assert_eq!(map_entries(&batches[0], 0), vec![("a".to_string(), 1)]);
+    });
+}
+
 #[test]
 fn read_excel_refuses_with_named_unsupported_operation() {
     Python::attach(|py| {
