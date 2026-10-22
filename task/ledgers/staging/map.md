@@ -26,6 +26,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   trailing-semicolon mutant (C-014), the prepared name as written (C-015) and a dated correction
   of §4.1's dated-row split (225 rows cite 136, 125 cite 138), and the plan-first class on
   `repark.sql()` ruled as built (C-016).
+- [ice-integrity-pins-1-ledger.md](ice-integrity-pins-1-ledger.md) — **ICE-INTEGRITY-PINS-1
+  (U-9), pin K (2026-10-22, orchestrator rulings K-1 to K-4 under the owner's grant):** a
+  writer killed between its data files and its commit, local Rust pin, 18 cells (seven doors
+  on v2 and v3 plus two controls). Step 1 red first on main `18626942`: the decorator taken
+  away reds all 18, the hook forwarding before it holds reds the 12 K-1 to K-6 cells. Pins U
+  and X await #1070. `risk_tier: standard`. Branch `feat/ice-integrity-pins-1-k`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6
