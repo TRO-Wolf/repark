@@ -9,6 +9,7 @@ import json
 import math
 import subprocess
 import sys
+import warnings
 
 import pytest
 
@@ -116,6 +117,10 @@ def test_replace_dict_depth40_memory_linear() -> None:
     assert control["returncode"] == 0, f"flat select control failed: {control['stderr_tail']}"
     bound = max(2 * control["delta"], _DELTA_FLOOR)
     result = _run_worker(_DEPTH, bound, "replace")
+    warnings.warn(
+        f"REPLACE-DELTA control={control['delta']} replace={result.get('delta')} bound={bound}",
+        stacklevel=1,
+    )
     assert result["returncode"] == 0, (
         f"DataFrame.replace depth-{_DEPTH} crossed the bound "
         f"{bound} B (2x flat 40-col select delta {control['delta']} B, floor "
