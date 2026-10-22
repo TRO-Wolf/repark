@@ -18,6 +18,20 @@ function; (3) a door-by-shape matrix test enumerates the doors mechanically from
 door missing from the stage fails a pin instead of waiting for a verifier; and (4) the U-8
 over-refusal lists and the ZS-9 refusal shrink to the cells Spark itself refuses, with dated rows.
 
+**Evaluated 2026-10-22 (CRATE-BOUNDARY-EVAL-1, `task/wo/write-spine-1/crate-boundary-eval-2026-10-22.md`,
+owner page `docs/artifacts/crate-boundary-eval-2026-10-22.html`):** the premise "cannot call the seam
+helper" is corrected. `repark-iceberg` already runs at plan time (two analyzer rules, SQL-text
+builders) and already reaches `repark-functions` kernels by name through the function registry
+(`write/ntz_store.rs`), and sites B and C have the session zone in scope; only site A, the batch cast
+at the sink, has none. The layering is not the cause: Sail has the same crate gap and one plan-time
+conform stage. Recommended shape = option D, no new crate and no new edge: (1) shared UDF names in
+`repark-common` and a fail-closed kernel lookup (the lookup falls back to a plain cast that reads the
+wall as UTC today), before GATE-RETIRE-1; (2) one plan-time conform function reached by the six
+self-projecting doors, naming the seam kernel, after the seam and GATE-RETIRE-1; (3) the door matrix
+generated from the router arms, before GATE-RETIRE-1; (4) retire the ZS-9 refusal and R-011's cast
+arm with dated rows after the v2 label. Retire condition (2) above is withdrawn by this reading; the
+owner rules on the shape.
+
 ## Why this card exists
 
 Four closeout units in October were the same unit in different clothes: U-3 "every staged door
