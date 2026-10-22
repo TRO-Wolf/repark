@@ -39,6 +39,15 @@ owner rules on the shape.
 unit. The two ARCHITECTURE.md wordings the evaluation left for the owner ("thin adapter"; the native
 door "refuses INSERT OVERWRITE") are corrected in the same commit as this paragraph.
 
+**Ruled 2026-10-23 (owner, "rule it"):** the nanosecond floor (a nanosecond value into a microsecond
+column floors as Spark does) and the nanosecond-leaf refusal (R-015 and the NS create-door ruling) are
+rules of the same conform stage as the zone rule, applied in step (2) by construction, so the three
+rules the crate-boundary evaluation found straddling plan time and store time land as one stage. No
+nanosecond fix unit opens before the spine; U-2 and R-024 stay in 1.5.7. The fork's half is one
+fail-closed invariant at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CLOSED-1
+([fork-ns-unit-fail-closed-1-card-2026-10-23.md](fork-ns-unit-fail-closed-1-card-2026-10-23.md)).
+
+
 ## Why this card exists
 
 Four closeout units in October were the same unit in different clothes: U-3 "every staged door

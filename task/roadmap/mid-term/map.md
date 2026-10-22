@@ -997,6 +997,7 @@ declines it (a dated ruling in the intake, then the archive).
   step-0 door-by-shape census in every write-path order and a "doors I did not touch" hand-back line.
   Adopted 2026-10-22 as option D of the crate-boundary evaluation (no new crate, no new edge);
   WRITE-NTZ-TO-LTZ-NESTED-1 folded into its step (2).
+- [fork-ns-unit-fail-closed-1-card-2026-10-23.md](fork-ns-unit-fail-closed-1-card-2026-10-23.md) — **card FORK-NS-UNIT-FAIL-CLOSED-1 (2026-10-23, open, clerk grade, next fork repin):** the fork's record-batch writer refuses an Arrow timestamp unit that is not the column's unit, before any file is written; the fork half of the owner's 2026-10-23 nanosecond ruling (the engine half is WRITE-SPINE-1 step 2).
 - [container-cast-zone-1-card-2026-10-20.md](container-cast-zone-1-card-2026-10-20.md) — **card
   CONTAINER-CAST-ZONE-1 (2026-10-20, open, not scheduled):** a `CAST`/`TRY_CAST` of a struct,
   array or map holding a zoned timestamp leaf, and `to_json` of one, render the leaf in UTC

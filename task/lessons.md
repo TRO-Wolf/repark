@@ -396,3 +396,17 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   agent.** *Why:* a re-run can hide a real flake behind a green check; the orchestrator reads the
   failed job's log first and reports the test and the assertion, as it did for #1158's wall-clock
   pin the same evening.
+
+## 2026-10-23 — nanosecond rules live in the plan-time conform stage, not in another door gate
+
+- **DO treat every nanosecond write defect as a missed feed of one rule, not as a new unit.** *Why:*
+  R-009, R-017, R-019, R-020, R-024 and the ZONE-SEAM-1 round-2 S1-3 are the same shape: Spark's
+  nanosecond floor or the nanosecond-leaf refusal copied per door, and a feed shape one copy missed
+  (the partitioned insert, the encoded source, the pandas frame). The owner ruled on 2026-10-23
+  ("rule it"): the floor and the refusal are rules of the WRITE-SPINE-1 conform stage beside the zone
+  rule; no nanosecond fix unit opens before the spine; U-2 and R-024 stay in 1.5.7; the nanosecond
+  leaf keeps its refusal on every door until then (S1-3: keep refusing).
+- **DO keep Spark semantics out of the fork, and put one fail-closed invariant in it.** *Why:* the
+  format crate receives plans already in table types (the Sail reading, crate-boundary evaluation of
+  2026-10-22); the one thing the fork can own is refusing an Arrow unit that is not the column's unit
+  at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CLOSED-1.
