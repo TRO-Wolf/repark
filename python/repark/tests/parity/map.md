@@ -73,6 +73,8 @@ pins: ice-integrity-pins-1/C-042
 
 Fix round 1 (2026-10-22, verifier round 1 S1-2): the vector set grows to 28 with the two body vectors, so a signer that hashes an empty payload reds them. pins: ice-integrity-pins-1/C-043
 
+Fix round 1 (2026-10-22, verifier round 1 S1-4): the status-check test now gives a wrong value (`num-retries = 3`) and requires it named, and `test_x_compare_sees_a_string_read_as_a_large_string` is the X cell where `compare_schemas` is silent and only the exact Arrow type check fires. pins: ice-integrity-pins-1/C-045
+
 ## Path expressions
 
 The move put every file here one level below the old flat directory. These files had a

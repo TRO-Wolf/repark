@@ -151,3 +151,10 @@ def test_x_compare_sees_a_decimal_scale() -> None:
     writer = pa.table({"amount": pa.array([1], pa.decimal128(10, 2))})
     reader = pa.table({"amount": pa.array([1], pa.decimal128(10, 3))})
     assert compare_tables(writer, reader)
+
+
+def test_x_compare_sees_a_string_read_as_a_large_string() -> None:
+    writer = pa.table({"name": pa.array(["a", "b"], pa.string())})
+    reader = pa.table({"name": pa.array(["a", "b"], pa.large_string())})
+    differences = compare_tables(writer, reader)
+    assert differences == ["column name: writer=string reader=large_string"]

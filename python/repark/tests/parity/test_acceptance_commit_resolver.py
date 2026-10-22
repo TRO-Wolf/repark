@@ -82,3 +82,5 @@ def test_a_missing_status_check_property_is_named() -> None:
     assert missing_properties({"commit.status-check.num-retries": "1"}, expected) == {
         "commit.status-check.min-wait-ms": "100"
     }
+    wrong = {"commit.status-check.num-retries": "3", "commit.status-check.min-wait-ms": "100"}
+    assert missing_properties(wrong, expected) == {"commit.status-check.num-retries": "1"}
