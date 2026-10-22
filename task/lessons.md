@@ -410,3 +410,19 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   format crate receives plans already in table types (the Sail reading, crate-boundary evaluation of
   2026-10-22); the one thing the fork can own is refusing an Arrow unit that is not the column's unit
   at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CLOSED-1.
+
+## 2026-10-23 — two verifiers on every product PR: Opus and Muse MAX, merge on the union
+
+- **DO run a Muse 1.3 MAX verifier beside the Opus verifier on every product PR, from the same
+  brief and the same head, and merge only when both PASS with no S1.** *Why:* the calibration of
+  2026-10-22 ran Muse MAX against the ZONE-SEAM-1 round-1 brief at the head where Opus had found two
+  S1 classes. Muse found half of one class and missed the other, then found two silent wrong values
+  in the plain-UPDATE exemption that two Opus rounds had walked past; the orchestrator reproduced
+  both against live Spark. Neither verifier alone was sufficient; together they cost nothing extra
+  on the Claude meter. Owner, 2026-10-23 ("Standing").
+- **DO verify a verifier's finding before it becomes a fix round.** *Why:* cheaper critics have
+  fabricated paths before (the 2026-09-27 cases); the orchestrator checks every cited path and
+  reproduces at least one value with the finder's own driver, as it did for the exemption hole.
+- **DO NOT route this repository through the Codex CLI's Sol models.** *Why:* two 2026-10-22 runs
+  of GPT-6.1 Sol at xhigh ended in OpenAI's safety filter on the repository's own content, once on
+  a rephrased brief; no hand-back either time.
