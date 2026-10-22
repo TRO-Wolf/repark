@@ -347,6 +347,155 @@ def test_s3tables_refuses_another_namespace_bucket_and_every_delete(upstream: Fa
     assert [seen.method for seen in upstream.seen] == ["GET"]
 
 
+GLUE_REFUSED: list[tuple[str, str, bytes]] = [
+    ("get-another-database", "GetDatabase", json.dumps({"Name": "prod"}).encode()),
+    (
+        "update-another-database",
+        "UpdateDatabase",
+        json.dumps({"Name": "prod", "DatabaseInput": {"Name": NAMESPACE}}).encode(),
+    ),
+    (
+        "foreign-catalog-id",
+        "CreateTable",
+        json.dumps(
+            {"CatalogId": "999999999999", "DatabaseName": NAMESPACE, "TableInput": {"Name": "t"}}
+        ).encode(),
+    ),
+    (
+        "unlisted-delete-column-statistics",
+        "DeleteColumnStatisticsForTable",
+        json.dumps({"DatabaseName": NAMESPACE, "TableName": "t", "ColumnName": "id"}).encode(),
+    ),
+    (
+        "unlisted-delete-table-optimizer",
+        "DeleteTableOptimizer",
+        json.dumps({"DatabaseName": NAMESPACE, "TableName": "t", "Type": "compaction"}).encode(),
+    ),
+    ("unlisted-delete-connection", "DeleteConnection", b'{"ConnectionName": "prod-conn"}'),
+    ("catalog-wide-search", "SearchTables", b'{"SearchText": "x"}'),
+    (
+        "duplicate-database-key",
+        "GetTable",
+        f'{{"DatabaseName":"prod","DatabaseName":"{NAMESPACE}","Name":"t"}}'.encode(),
+    ),
+    ("get-table-in-another-database", "GetTable", b'{"DatabaseName": "other", "Name": "t"}'),
+    ("unparsable-body", "GetTable", b"not json"),
+]
+GLUE_ALLOWED_CALLS: list[tuple[str, dict[str, Any]]] = [
+    ("GetDatabases", {}),
+    ("GetDatabase", {"Name": NAMESPACE}),
+    ("GetTables", {"DatabaseName": NAMESPACE}),
+    ("GetTable", {"DatabaseName": NAMESPACE, "Name": "testing_t"}),
+    ("CreateTable", {"DatabaseName": NAMESPACE, "TableInput": {"Name": "testing_t"}}),
+    ("UpdateTable", glue_commit_body()),
+]
+QUOTED_ARN = quote(ARN, safe="")
+S3TABLES_REFUSED: list[tuple[str, str, str, bytes]] = [
+    (
+        "create-another-namespace",
+        "PUT",
+        f"/namespaces/{QUOTED_ARN}",
+        json.dumps({"namespace": ["prod"]}).encode(),
+    ),
+    (
+        "rename-out-of-scratch",
+        "PUT",
+        f"/tables/{QUOTED_ARN}/{NAMESPACE}/testing_t/rename",
+        json.dumps({"newNamespaceName": "prod", "newName": "t"}).encode(),
+    ),
+    ("list-tables-in-every-namespace", "GET", f"/tables/{QUOTED_ARN}", b""),
+    (
+        "bucket-wide-maintenance-write",
+        "PUT",
+        f"/buckets/{QUOTED_ARN}/maintenance/icebergUnreferencedFileRemoval",
+        b'{"value":{"status":"disabled"}}',
+    ),
+    (
+        "metadata-location-in-another-namespace",
+        "GET",
+        f"/tables/{QUOTED_ARN}/other/testing_t/metadata-location",
+        b"",
+    ),
+    (
+        "get-table-by-table-arn",
+        "GET",
+        f"/get-table?tableArn={quote(ARN + '/table/x', safe='')}",
+        b"",
+    ),
+    (
+        "get-table-repeats-the-namespace",
+        "GET",
+        f"/get-table?tableBucketARN={QUOTED_ARN}&namespace={NAMESPACE}&namespace=prod&name=t",
+        b"",
+    ),
+]
+S3TABLES_ALLOWED_CALLS: list[tuple[str, str, bytes]] = [
+    ("GET", f"/get-table?tableBucketARN={QUOTED_ARN}&namespace={NAMESPACE}&name=testing_t", b""),
+    ("GET", f"/tables/{QUOTED_ARN}/{NAMESPACE}/testing_t/metadata-location", b""),
+    (
+        "PUT",
+        f"/tables/{QUOTED_ARN}/{NAMESPACE}/testing_t/metadata-location",
+        b'{"metadataLocation":"s3://b/m.json","versionToken":"v"}',
+    ),
+    ("GET", f"/tables/{QUOTED_ARN}?namespace={NAMESPACE}", b""),
+    ("PUT", f"/tables/{QUOTED_ARN}/{NAMESPACE}", b'{"name":"testing_t","format":"ICEBERG"}'),
+    ("GET", f"/namespaces/{QUOTED_ARN}", b""),
+    ("GET", f"/namespaces/{QUOTED_ARN}/{NAMESPACE}", b""),
+    ("PUT", f"/namespaces/{QUOTED_ARN}", json.dumps({"namespace": [NAMESPACE]}).encode()),
+]
+
+
+@pytest.mark.parametrize(
+    ("operation", "body"),
+    [case[1:] for case in GLUE_REFUSED],
+    ids=[case[0] for case in GLUE_REFUSED],
+)
+def test_glue_refuses_every_request_the_drills_do_not_send(
+    operation: str, body: bytes, upstream: FakeUpstream
+) -> None:
+    headers = {"Content-Type": "application/x-amz-json-1.1", "X-Amz-Target": f"AWSGlue.{operation}"}
+    with gate_for(GLUE, upstream) as gate:
+        assert call(gate, "POST", "/", headers, body) == "reply 403"
+        assert len(gate.refusals()) == 1
+    assert upstream.seen == []
+
+
+@pytest.mark.parametrize(
+    ("operation", "body"), GLUE_ALLOWED_CALLS, ids=[case[0] for case in GLUE_ALLOWED_CALLS]
+)
+def test_glue_forwards_the_operations_the_drills_send(
+    operation: str, body: dict[str, Any], upstream: FakeUpstream
+) -> None:
+    with gate_for(GLUE, upstream) as gate:
+        assert glue_call(gate, operation, body) == "reply 200"
+        assert gate.refusals() == []
+    assert [seen.headers["x-amz-target"] for seen in upstream.seen] == [f"AWSGlue.{operation}"]
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [case[1:] for case in S3TABLES_REFUSED],
+    ids=[case[0] for case in S3TABLES_REFUSED],
+)
+def test_s3tables_refuses_every_request_the_drills_do_not_send(
+    method: str, path: str, body: bytes, upstream: FakeUpstream
+) -> None:
+    with gate_for(S3TABLES, upstream) as gate:
+        assert call(gate, method, path, {"Content-Type": "application/json"}, body) == "reply 403"
+        assert len(gate.refusals()) == 1
+    assert upstream.seen == []
+
+
+@pytest.mark.parametrize(("method", "path", "body"), S3TABLES_ALLOWED_CALLS)
+def test_s3tables_forwards_the_operations_the_drills_send(
+    method: str, path: str, body: bytes, upstream: FakeUpstream
+) -> None:
+    with gate_for(S3TABLES, upstream) as gate:
+        assert call(gate, method, path, {"Content-Type": "application/json"}, body) == "reply 200"
+        assert gate.refusals() == []
+    assert [seen.method for seen in upstream.seen] == [method]
+
+
 @pytest.mark.parametrize("service", [GLUE, S3TABLES])
 @pytest.mark.parametrize("script", list(SCRIPT_TABLE), ids=lambda script: script.value)
 def test_each_script_answers_as_its_cell_says(

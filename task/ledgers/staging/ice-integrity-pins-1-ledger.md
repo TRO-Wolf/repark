@@ -402,3 +402,14 @@ about 13 to 25.
   lane 1, the ZONE-SEAM-1 fix round, kept it above 10. Nothing failed, so no single test needed a
   rerun.
 - PR #1157 is open: "Verifier: pending", owner merges.
+
+## Verifier round 1 (2026-10-22): FAIL, and fix round 1
+
+A fresh Opus 5.5 verifier read PR #1157 at `c6d74054` and returned FAIL with four S1 findings,
+all in test code and records. No halt fired, and every measured cell was green. The orchestrator
+ordered fix round 1 the same day: one commit per finding, nothing amended, and the unit does not
+grow. The rows below are appended, and the earlier clauses stand as written.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-042 | (Verifier S1-1, 2026-10-22; corrects C-032's "refuses another database or namespace … and every delete".) The gate forwards only an allow list of the operations the drills send, and refuses everything else before signing. Glue: `GetDatabases`, and `GetDatabase` (`Name`), `GetTables`, `GetTable`, `CreateTable` and `UpdateTable` (`DatabaseName`) naming the scratch database, with no `CatalogId` and a body that is one JSON object with unique keys. S3 Tables, by method and path shape: `GET /get-table` (only `tableBucketARN`, `namespace`, `name`, each once, the configured bucket and the scratch namespace); `GET` and `PUT …/{bucket}/{scratch}/{name}/metadata-location`; `GET /tables/{bucket}?namespace={scratch}`; `PUT /tables/{bucket}/{scratch}`; `GET /namespaces/{bucket}` and `/{bucket}/{scratch}`; `PUT /namespaces/{bucket}` with the body `{"namespace": [scratch]}`. | `test_glue_refuses_every_request_the_drills_do_not_send` (10), `test_s3tables_refuses_every_request_the_drills_do_not_send` (7), and the two `forwards_the_operations_the_drills_send` tests (6 + 8). | PROVEN | **Red on `c6d74054`:** 14 of the 17 refusal cases were forwarded by the old gate. On Glue: `GetDatabase` on `prod`, `UpdateDatabase` naming `prod`, a foreign `CatalogId`, `DeleteColumnStatisticsForTable`, `DeleteTableOptimizer`, `DeleteConnection`, `SearchTables`, a repeated `DatabaseName` key, an unparsable body. On S3 Tables: `CreateNamespace` naming `prod` in its body, `RenameTable` to `prod`, `ListTables` with no namespace, the bucket-wide maintenance `PUT`, `get-table` by `tableArn`. The other three were already refused. **Green:** the gate suite gives 97 passed. Every allowed drill operation is forwarded, and the RePark session through the gate still lists the scratch namespace. |

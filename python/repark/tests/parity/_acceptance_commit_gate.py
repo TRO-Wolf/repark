@@ -21,17 +21,19 @@ S3TABLES = "s3tables"
 GLUE_COMMIT_TARGET = "AWSGlue.UpdateTable"
 S3TABLES_COMMIT_SUFFIX = "/metadata-location"
 REGIONAL_HOST = re.compile(r"^(glue|s3tables)\.([a-z]{2}(?:-[a-z]+)+-\d)\.amazonaws\.com$")
-GLUE_DELETES = frozenset(
-    {
-        "DeleteTable",
-        "BatchDeleteTable",
-        "DeleteDatabase",
-        "DeleteTableVersion",
-        "BatchDeleteTableVersion",
-        "DeletePartition",
-        "BatchDeletePartition",
-    }
-)
+GLUE_ALLOWED: dict[str, str | None] = {
+    "GetDatabases": None,
+    "GetDatabase": "Name",
+    "GetTables": "DatabaseName",
+    "GetTable": "DatabaseName",
+    "CreateTable": "DatabaseName",
+    "UpdateTable": "DatabaseName",
+}
+S3TABLES_QUERY_KEYS: dict[str, frozenset[str]] = {
+    "GetTable": frozenset({"tableBucketARN", "namespace", "name"}),
+    "ListTables": frozenset({"namespace", "prefix", "continuationToken", "maxTables"}),
+    "ListNamespaces": frozenset({"prefix", "continuationToken", "maxNamespaces"}),
+}
 SIGNED_PASSTHROUGH = ("content-type", "x-amz-target")
 REPLY_PASSTHROUGH = ("content-type", "x-amzn-requestid", "x-amzn-errortype", "x-amz-request-id")
 THROTTLE_REPLIES: dict[str, tuple[int, str, str, bytes]] = {
@@ -157,39 +159,100 @@ def json_body(request: Request) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
+def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    keys = [key for key, _ in pairs]
+    if len(set(keys)) != len(keys):
+        msg = "a JSON object repeats a key"
+        raise ValueError(msg)
+    return dict(pairs)
+
+
+def strict_json(body: bytes) -> dict[str, Any] | None:
+    if not body:
+        return {}
+    try:
+        parsed = json.loads(body, object_pairs_hook=unique_pairs)
+    except ValueError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def glue_refusal(request: Request, namespace: str) -> str | None:
     operation = glue_operation(request)
-    if operation in GLUE_DELETES:
-        return f"refused Glue {operation}: the drills never delete"
-    body = json_body(request)
-    names = [body.get("DatabaseName"), (body.get("DatabaseInput") or {}).get("Name")]
-    for name in names:
-        if name is not None and name != namespace:
-            return f"refused Glue {operation}: database {name!r} is not the scratch namespace"
+    if operation not in GLUE_ALLOWED:
+        return f"refused Glue {operation or '<no target>'}: not an operation the drills send"
+    body = strict_json(request.body)
+    if body is None:
+        return f"refused Glue {operation}: the body is not one JSON object with unique keys"
+    if "CatalogId" in body:
+        return f"refused Glue {operation}: a CatalogId names a catalog the drills never use"
+    field = GLUE_ALLOWED[operation]
+    if field is not None and body.get(field) != namespace:
+        return (
+            f"refused Glue {operation}: database {body.get(field)!r} is not the scratch namespace"
+        )
     return None
 
 
-def s3tables_names(request: Request) -> tuple[list[str], list[str]]:
-    segments = [unquote(segment) for segment in request.path.split("/") if segment]
-    query = parse_qs(request.query)
-    arns = [segment for segment in segments if segment.startswith("arn:")]
-    arns += query.get("tableBucketARN", [])
-    namespaces = query.get("namespace", [])
-    if segments and segments[0] in ("tables", "namespaces") and len(segments) >= 3:
-        namespaces.append(segments[2])
-    return arns, namespaces
+def s3tables_shape(method: str, segments: list[str]) -> str | None:
+    match (method, segments):
+        case ("GET", ["get-table"]):
+            return "GetTable"
+        case ("GET", ["tables", _, _, _, "metadata-location"]):
+            return "GetTableMetadataLocation"
+        case ("PUT", ["tables", _, _, _, "metadata-location"]):
+            return "UpdateTableMetadataLocation"
+        case ("GET", ["tables", _]):
+            return "ListTables"
+        case ("PUT", ["tables", _, _]):
+            return "CreateTable"
+        case ("GET", ["namespaces", _]):
+            return "ListNamespaces"
+        case ("GET", ["namespaces", _, _]):
+            return "GetNamespace"
+        case ("PUT", ["namespaces", _]):
+            return "CreateNamespace"
+    return None
+
+
+def s3tables_query_refusal(
+    operation: str, query: dict[str, list[str]], namespace: str, table_bucket_arn: str
+) -> str | None:
+    allowed = S3TABLES_QUERY_KEYS.get(operation, frozenset())
+    unexpected = sorted(set(query) - allowed)
+    if unexpected:
+        return f"refused S3 Tables {operation}: query keys {unexpected} the drills never send"
+    if any(len(values) != 1 for values in query.values()):
+        return f"refused S3 Tables {operation}: a query key repeats"
+    if operation == "GetTable" and query.get("tableBucketARN") != [table_bucket_arn]:
+        return f"refused S3 Tables {operation}: a table bucket other than the configured one"
+    if operation in ("GetTable", "ListTables") and query.get("namespace") != [namespace]:
+        return f"refused S3 Tables {operation}: the namespace is not the scratch one"
+    return None
 
 
 def s3tables_refusal(request: Request, namespace: str, table_bucket_arn: str | None) -> str | None:
-    if request.method == "DELETE":
-        return "refused S3 Tables DELETE: the drills never delete"
-    arns, namespaces = s3tables_names(request)
-    for arn in arns:
-        if table_bucket_arn is not None and arn != table_bucket_arn:
-            return "refused S3 Tables request: a table bucket other than the configured one"
-    for name in namespaces:
-        if name != namespace:
-            return f"refused S3 Tables request: namespace {name!r} is not the scratch namespace"
+    if table_bucket_arn is None:
+        return "refused S3 Tables request: no table bucket is configured"
+    segments = [unquote(segment) for segment in request.path.split("/") if segment]
+    operation = s3tables_shape(request.method, segments)
+    if operation is None:
+        return (
+            f"refused S3 Tables {request.method} {request.path}: not an operation the drills send"
+        )
+    if len(segments) >= 2 and segments[1] != table_bucket_arn:
+        return f"refused S3 Tables {operation}: a table bucket other than the configured one"
+    if len(segments) >= 3 and segments[0] in ("tables", "namespaces") and segments[2] != namespace:
+        return f"refused S3 Tables {operation}: namespace {segments[2]!r} is not the scratch one"
+    refused = s3tables_query_refusal(
+        operation, parse_qs(request.query, keep_blank_values=True), namespace, table_bucket_arn
+    )
+    if refused is not None:
+        return refused
+    if operation == "CreateNamespace" and strict_json(request.body) != {"namespace": [namespace]}:
+        return (
+            f"refused S3 Tables {operation}: the body names a namespace other than the scratch one"
+        )
     return None
 
 
