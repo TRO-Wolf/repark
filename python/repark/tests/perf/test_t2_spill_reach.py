@@ -1,7 +1,7 @@
 """S-1 spill-reach battery — recon §3 operator classes under a small FairSpillPool.
 
 Needles and classes come from planning/hardening/SPILL-RECON-2026-08.md §3. Recipes stay
-small (80 MiB pool, 2 partitions, generate_series-scale ``range``). ``spill_count > 0``
+small (2 partitions, generate_series-scale ``range``). ``spill_count > 0``
 is the assertion that has teeth; hash-join and ``array_agg`` are pinned AS failures.
 """
 
