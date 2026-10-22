@@ -16,17 +16,24 @@ const MICROS_HINT: &str = "A value that is not provably a TIMESTAMP_NTZ wall tim
                            refused, and in an UPDATE assign the field itself), or set \
                            spark.sql.session.timeZone to UTC for the statement.";
 
+const INSTANT_HINT: &str = "The session time zone is not UTC, and a nested TIMESTAMP_NTZ value \
+                            cannot yet be stored into a nested TIMESTAMP field outside UTC: set \
+                            spark.sql.session.timeZone to UTC for the statement, or cast the leaf \
+                            to TIMESTAMP before nesting it, as in named_struct('<field>', \
+                            CAST(<value> AS TIMESTAMP), ...).";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NaiveLeaf {
     Nanos,
     Micros,
+    Instant,
 }
 
 impl NaiveLeaf {
     fn unit(self) -> TimeUnit {
         match self {
             Self::Nanos => TimeUnit::Nanosecond,
-            Self::Micros => TimeUnit::Microsecond,
+            Self::Micros | Self::Instant => TimeUnit::Microsecond,
         }
     }
 }
@@ -111,7 +118,50 @@ pub struct NestedSupply<'a> {
 }
 
 fn is_naive(data_type: &DataType, leaf: NaiveLeaf) -> bool {
-    matches!(data_type, DataType::Timestamp(unit, None) if *unit == leaf.unit())
+    match data_type {
+        DataType::Timestamp(unit, zone) => {
+            *unit == leaf.unit() && zone.is_some() == (leaf == NaiveLeaf::Instant)
+        }
+        _ => false,
+    }
+}
+
+#[must_use]
+pub fn naive_into_instant(source: &DataType, target: &DataType) -> bool {
+    match (source, target) {
+        (DataType::Struct(sources), DataType::Struct(targets)) => {
+            targets.iter().enumerate().any(|(index, target)| {
+                sources
+                    .iter()
+                    .find(|source| same(source.name(), target.name()))
+                    .or_else(|| sources.get(index))
+                    .is_some_and(|source| {
+                        naive_into_instant(source.data_type(), target.data_type())
+                    })
+            })
+        }
+        (DataType::List(source), DataType::List(target))
+        | (DataType::LargeList(source), DataType::LargeList(target))
+        | (DataType::FixedSizeList(source, _), DataType::FixedSizeList(target, _))
+        | (DataType::Map(source, _), DataType::Map(target, _)) => {
+            naive_into_instant(source.data_type(), target.data_type())
+        }
+        (source, target) => {
+            is_naive(source, NaiveLeaf::Micros) && is_naive(target, NaiveLeaf::Instant)
+        }
+    }
+}
+
+#[must_use]
+pub fn type_at<'a>(data_type: &'a DataType, path: &[String]) -> Option<&'a DataType> {
+    let Some((step, rest)) = path.split_first() else {
+        return Some(data_type);
+    };
+    let DataType::Struct(fields) = data_type else {
+        return None;
+    };
+    let field = fields.iter().find(|field| same(field.name(), step))?;
+    type_at(field.data_type(), rest)
 }
 
 #[must_use]
@@ -226,6 +276,7 @@ pub fn nested_naive_refusal(
             ),
         ),
         NaiveLeaf::Micros => ("TIMESTAMP_NTZ", MICROS_HINT.to_string()),
+        NaiveLeaf::Instant => ("TIMESTAMP", INSTANT_HINT.to_string()),
     };
     DataFusionError::Plan(format!(
         "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the \

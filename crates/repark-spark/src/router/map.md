@@ -242,6 +242,20 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   are in the paragraphs above (the fail-closed read of an unresolved column, the two fail-closed
   arms of the lateral walk, the alias set).
   pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023, C-024, C-033, C-042, C-047
+  **ZONE-SEAM-1 step 3c (2026-10-22, ruling ZS-9, an over-refusal by design until
+  WRITE-NTZ-TO-LTZ-NESTED-1):** outside UTC (the same zone flag as R-011, `PREPARE` included),
+  `refuse_naive_into_instant` refuses a write whose value carries a nested `TIMESTAMP_NTZ` leaf
+  into a nested `TIMESTAMP` leaf of the target column (`naive_into_instant`, struct fields by
+  name then position, list elements, map entries), on the doors whose store conversion reads the
+  wall as UTC: an `INSERT OVERWRITE` or `INSERT … BY NAME` (the sink's `conform` cast; the
+  DataFrame `insertInto(overwrite=True)` and `overwritePartitions` reach it as `INSERT
+  OVERWRITE`), a MERGE `INSERT`, and a MERGE or plain `UPDATE` assignment whose path stops above
+  the leaf (the `arrow_cast` text of `update_cast.rs`). A positional `INSERT`, `REPLACE WHERE`,
+  the appending DataFrame writers and an assignment to the leaf itself read the wall in the
+  session zone and store as before; a plain `UPDATE` value whose lineage holds a
+  `TIMESTAMP_NTZ` cast (`shifts_in_an_update`) stores as before too. The value's type is planned
+  as R-011 plans it (`column_type` for an `INSERT` source or a MERGE `*`, one projection for
+  assignments); a feed the router cannot type is not refused. pins: zone-seam-1/C-015
 
 ## Pointers
 

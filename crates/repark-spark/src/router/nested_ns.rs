@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::ops::ControlFlow;
 
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, JoinType};
 use datafusion::datasource::source_as_provider;
@@ -20,8 +21,8 @@ use repark_functions::session_time_zone::session_time_zone_from_options;
 use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
 use repark_iceberg::write::nested_ns_gate::{
     Feed, InsertSupply, NaiveLeaf, NestedSupply, NestedWrite, casts_zoned_to_naive,
-    holds_naive_timestamp, holds_zoned_timestamp, lands_on_naive_leaf, nested_naive_refusal,
-    nested_supplies, refuse_nested_ns_supply,
+    holds_naive_timestamp, holds_zoned_timestamp, lands_on_naive_leaf, naive_into_instant,
+    nested_naive_refusal, nested_supplies, refuse_nested_ns_supply, type_at,
 };
 use repark_iceberg::write::statement_writes::executed_writes;
 
@@ -96,7 +97,7 @@ pub(super) async fn refuse_nested_supply(
         });
         let scope = Scope::Insert(Some(replace.source()), None);
         let target = name_parts(replace.table());
-        return refuse(ctx, catalogs, &target, &write, scope, micros).await;
+        return refuse(ctx, catalogs, &target, &write, scope, (micros, false)).await;
     }
     let stripped = crate::insert_by_name::strip_insert_by_name(sql)
         .ok()
@@ -118,7 +119,15 @@ pub(super) async fn refuse_nested_supply(
         }
         for parts in written_targets(sql) {
             let write = NestedWrite::Unreadable;
-            refuse(ctx, catalogs, &parts, &write, Scope::Unreadable, micros).await?;
+            refuse(
+                ctx,
+                catalogs,
+                &parts,
+                &write,
+                Scope::Unreadable,
+                (micros, false),
+            )
+            .await?;
         }
         return Ok(());
     };
@@ -140,7 +149,15 @@ pub(super) async fn refuse_nested_supply(
                 if let Some(name) = object_name_from_table_with_joins(&update.table) {
                     let write = NestedWrite::Update(&update.assignments);
                     let scope = typed_unless(parameterised, Scope::Update(&update.table));
-                    refuse(ctx, catalogs, &name_parts(name), &write, scope, micros).await?;
+                    refuse(
+                        ctx,
+                        catalogs,
+                        &name_parts(name),
+                        &write,
+                        scope,
+                        (micros, true),
+                    )
+                    .await?;
                 }
             }
             Statement::Merge(merge) => {
@@ -148,7 +165,15 @@ pub(super) async fn refuse_nested_supply(
                     let write = NestedWrite::Merge(&merge.clauses);
                     let scope =
                         typed_unless(parameterised, Scope::Merge(&merge.table, &merge.source));
-                    refuse(ctx, catalogs, &name_parts(name), &write, scope, micros).await?;
+                    refuse(
+                        ctx,
+                        catalogs,
+                        &name_parts(name),
+                        &write,
+                        scope,
+                        (micros, true),
+                    )
+                    .await?;
                 }
             }
             _ => {}
@@ -230,7 +255,16 @@ async fn refuse_insert(
         parameterised,
         Scope::Insert(insert.source.as_deref(), outer),
     );
-    refuse(ctx, catalogs, &name_parts(name), &write, scope, micros).await
+    let store = insert.overwrite || by_name;
+    refuse(
+        ctx,
+        catalogs,
+        &name_parts(name),
+        &write,
+        scope,
+        (micros, store),
+    )
+    .await
 }
 
 async fn refuse(
@@ -239,14 +273,14 @@ async fn refuse(
     written: &[String],
     write: &NestedWrite<'_>,
     scope: Scope<'_>,
-    micros: bool,
+    zone: (bool, bool),
 ) -> Result<()> {
     let mut targets = vec![written.to_vec()];
     if let Some((table_parts, RefSelectorKind::Branch(_))) = split_write_ref_parts(written) {
         targets.push(table_parts);
     }
     for parts in targets {
-        refuse_at(ctx, catalogs, parts, write, scope, micros).await?;
+        refuse_at(ctx, catalogs, parts, write, scope, zone).await?;
     }
     Ok(())
 }
@@ -257,7 +291,7 @@ async fn refuse_at(
     parts: Vec<String>,
     write: &NestedWrite<'_>,
     scope: Scope<'_>,
-    micros: bool,
+    (micros, store): (bool, bool),
 ) -> Result<()> {
     let parts = qualify_table_parts(ctx, parts);
     let [catalog_name, namespace @ .., leaf] = parts.as_slice() else {
@@ -292,7 +326,113 @@ async fn refuse_at(
     if micros {
         refuse_zoned_micros(ctx, catalogs, &table, &label, write, scope).await?;
     }
+    if micros && store {
+        refuse_naive_into_instant(ctx, catalogs, &table, &label, write, scope).await?;
+    }
     Ok(())
+}
+
+async fn refuse_naive_into_instant(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &Table,
+    label: &str,
+    write: &NestedWrite<'_>,
+    scope: Scope<'_>,
+) -> Result<()> {
+    for supply in nested_supplies(table, write, NaiveLeaf::Instant)? {
+        if Box::pin(carries_a_naive_leaf(ctx, catalogs, label, &supply, scope)).await {
+            return Err(nested_naive_refusal(
+                label,
+                &supply.column,
+                &supply.leaf,
+                NaiveLeaf::Instant,
+            ));
+        }
+    }
+    Ok(())
+}
+
+async fn carries_a_naive_leaf(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    label: &str,
+    supply: &NestedSupply<'_>,
+    scope: Scope<'_>,
+) -> bool {
+    let mut values = Vec::new();
+    for feed in &supply.feeds {
+        let planned = match (feed, scope) {
+            (Feed::Expr { value, path }, Scope::Update(_) | Scope::Merge(..)) => {
+                if !lands_on_naive_leaf(&supply.data_type, path, NaiveLeaf::Instant) {
+                    values.push((value.to_string(), path.clone()));
+                }
+                None
+            }
+            (Feed::SourceColumn { position, name }, Scope::Insert(Some(source), outer)) => {
+                let sql = match outer {
+                    Some(with) => format!("{with} {source}"),
+                    None => source.to_string(),
+                };
+                column_type(ctx, catalogs, &sql, *position, name.as_deref()).await
+            }
+            (Feed::SourceStar, Scope::Merge(_, source)) => {
+                let sql = format!("SELECT * FROM {source}");
+                column_type(ctx, catalogs, &sql, None, Some(&supply.column)).await
+            }
+            _ => None,
+        };
+        if planned.is_some_and(|planned| naive_into_instant(&planned, &supply.data_type)) {
+            return true;
+        }
+    }
+    if values.is_empty() {
+        return false;
+    }
+    let from = match scope {
+        Scope::Update(table) => format!("{label}{}", alias_of(&table.relation)),
+        Scope::Merge(target, source) => format!("{label}{}, {source}", alias_of(target)),
+        Scope::Insert(..) | Scope::Unreadable => return false,
+    };
+    let projection = values
+        .iter()
+        .enumerate()
+        .map(|(index, (value, _))| format!("{value} AS __repark_feed_{index}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let Some(plan) = planned(ctx, catalogs, &format!("SELECT {projection} FROM {from}")).await
+    else {
+        return false;
+    };
+    let update = matches!(scope, Scope::Update(_));
+    values.iter().enumerate().any(|(index, (_, path))| {
+        let carried = plan
+            .schema()
+            .fields()
+            .get(index)
+            .zip(type_at(&supply.data_type, path))
+            .is_some_and(|(field, target)| naive_into_instant(field.data_type(), target));
+        carried && !(update && lineage_has(&plan, &[index], shifts_in_an_update))
+    })
+}
+
+async fn column_type(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    position: Option<usize>,
+    name: Option<&str>,
+) -> Option<DataType> {
+    let plan = planned(ctx, catalogs, sql).await?;
+    let fields = plan.schema().fields();
+    let picked = name
+        .and_then(|name| {
+            fields
+                .iter()
+                .find(|field| field.name().eq_ignore_ascii_case(name))
+        })
+        .or_else(|| position.and_then(|position| fields.get(position)))?;
+    Some(picked.data_type().clone())
 }
 
 async fn refuse_zoned_micros(

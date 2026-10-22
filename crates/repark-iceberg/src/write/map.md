@@ -789,6 +789,13 @@ repark-core's error map.
   The unit tests moved to [nested_ns_gate/tests.rs](nested_ns_gate/map.md) when the file passed
   the 1000-line ceiling.
   pins: ice-ntz-nested-refuse-1/C-001, C-015, C-029
+  **ZONE-SEAM-1 step 3c (2026-10-22, ruling ZS-9):** `NaiveLeaf::Instant` names a nested
+  microsecond `TIMESTAMP` leaf for the same walk; `naive_into_instant(source, target)` says
+  whether a value type carries a naive microsecond leaf to a position where the target holds
+  one; `type_at` reads a struct path; `nested_naive_refusal(…, NaiveLeaf::Instant)` writes the
+  refusal (`Cannot safely cast `<column>`.`<leaf>` to "TIMESTAMP". The session time zone is not
+  UTC, and a nested TIMESTAMP_NTZ value cannot yet be stored into a nested TIMESTAMP field
+  outside UTC: …`, two ways through, no data-deleting action). pins: zone-seam-1/C-015
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

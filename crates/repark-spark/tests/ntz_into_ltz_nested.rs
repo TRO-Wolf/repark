@@ -1,0 +1,227 @@
+use std::sync::Arc;
+
+use datafusion::arrow::array::{Array, ArrayRef, AsArray};
+use datafusion::arrow::compute::cast;
+use datafusion::arrow::datatypes::{DataType, Int64Type};
+use repark_core::ReparkSession;
+use repark_spark::{SparkDialect, SparkExtension};
+use tempfile::TempDir;
+
+const WALL: &str = "TIMESTAMP_NTZ '2026-01-02 03:04:05.123456'";
+const INSTANT: &str = "TIMESTAMP '2026-01-02 03:04:05.123456+00:00'";
+const LTZ: &str = "STRUCT<v: TIMESTAMP, n: INT>";
+const NTZ: &str = "STRUCT<v: TIMESTAMP_NTZ, n: INT>";
+const NEW_YORK_READ: i64 = 1_767_341_045_123_456;
+const UTC_READ: i64 = 1_767_323_045_123_456;
+const REFUSAL: &str = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible \
+                       data for the table `ice`.`ns`.`t`: Cannot safely cast `st`.`v` to \
+                       \"TIMESTAMP\". The session time zone is not UTC, and a nested \
+                       TIMESTAMP_NTZ value cannot yet be stored into a nested TIMESTAMP field \
+                       outside UTC: set spark.sql.session.timeZone to UTC for the statement, or \
+                       cast the leaf to TIMESTAMP before nesting it, as in \
+                       named_struct('<field>', CAST(<value> AS TIMESTAMP), ...). SQLSTATE: KD000";
+
+fn session(zone: &str) -> ReparkSession {
+    ReparkSession::builder()
+        .with_sql_dialect(Arc::new(SparkDialect))
+        .with_extension(Arc::new(SparkExtension))
+        .config("spark.sql.session.timeZone", zone)
+        .build()
+        .expect("session")
+}
+
+async fn attempt(session: &ReparkSession, sql: &str) -> Result<(), String> {
+    match session.sql(sql).await {
+        Ok(frame) => frame
+            .collect()
+            .await
+            .map(|_| ())
+            .map_err(|error| error.to_string()),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+async fn run(session: &ReparkSession, sql: &str) {
+    assert_eq!(attempt(session, sql).await, Ok(()), "{sql}");
+}
+
+async fn catalog(session: &ReparkSession) -> TempDir {
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    for setup in [
+        "CREATE NAMESPACE ice.ns".to_string(),
+        "CREATE TABLE ice.ns.src (id INT, x TIMESTAMP, w TIMESTAMP_NTZ) USING iceberg \
+         TBLPROPERTIES ('format-version'='2')"
+            .to_string(),
+        format!("INSERT INTO ice.ns.src VALUES (1, {INSTANT}, {WALL})"),
+        format!(
+            "CREATE TABLE ice.ns.t (id INT, st {LTZ}, k INT) USING iceberg \
+             TBLPROPERTIES ('format-version'='2')"
+        ),
+        "INSERT INTO ice.ns.t (id, k) VALUES (1, 0)".to_string(),
+    ] {
+        run(session, &setup).await;
+    }
+    warehouse
+}
+
+fn leaf(array: &ArrayRef) -> Vec<Option<i64>> {
+    match array.data_type() {
+        DataType::Struct(_) => {
+            let structs = array.as_struct();
+            let ticks = cast(structs.column(0), &DataType::Int64).expect("ticks");
+            let ticks = ticks.as_primitive::<Int64Type>();
+            (0..structs.len())
+                .map(|row| (!structs.is_null(row) && !ticks.is_null(row)).then(|| ticks.value(row)))
+                .collect()
+        }
+        _ => Vec::new(),
+    }
+}
+
+async fn stored(session: &ReparkSession) -> Vec<i64> {
+    let batches = session
+        .sql("SELECT st FROM ice.ns.t ORDER BY id")
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    batches
+        .iter()
+        .flat_map(|batch| leaf(batch.column(0)))
+        .flatten()
+        .collect()
+}
+
+const STORE_DOORS: [(&str, &str); 7] = [
+    (
+        "SQL INSERT BY NAME",
+        "INSERT INTO ice.ns.t BY NAME SELECT 2 AS id, {V} AS st, 0 AS k FROM ice.ns.src",
+    ),
+    (
+        "SQL INSERT OVERWRITE",
+        "INSERT OVERWRITE ice.ns.t SELECT id, {V}, 0 FROM ice.ns.src",
+    ),
+    (
+        "SQL INSERT OVERWRITE VALUES",
+        "INSERT OVERWRITE ice.ns.t VALUES (1, {V}, 0)",
+    ),
+    (
+        "MERGE INSERT",
+        "MERGE INTO ice.ns.t t USING (SELECT 5 AS id, x, w FROM ice.ns.src) s ON t.id = s.id \
+         WHEN NOT MATCHED THEN INSERT (id, st, k) VALUES (s.id, {V}, 0)",
+    ),
+    (
+        "MERGE UPDATE",
+        "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN \
+         UPDATE SET t.st = {V}",
+    ),
+    (
+        "MERGE UPDATE SET *",
+        "MERGE INTO ice.ns.t t USING (SELECT id, {V} AS st, 0 AS k FROM ice.ns.src) s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET *",
+    ),
+    ("UPDATE", "UPDATE ice.ns.t SET st = {V} WHERE id >= 0"),
+];
+
+const NAIVE_VALUES: [(&str, &str); 2] = [
+    (
+        "a container cast of an instant",
+        "CAST(named_struct('v', {INSTANT}, 'n', 1) AS {NTZ})",
+    ),
+    (
+        "a TIMESTAMP_NTZ literal",
+        "named_struct('v', {WALL}, 'n', 1)",
+    ),
+];
+
+fn spelled(door: &str, value: &str) -> String {
+    let value = value
+        .replace("{NTZ}", NTZ)
+        .replace("{WALL}", WALL)
+        .replace("{INSTANT}", INSTANT);
+    door.replace("{V}", &value).replace("{WALL}", WALL)
+}
+
+#[tokio::test]
+async fn a_nested_wall_into_a_nested_timestamp_refuses_outside_utc_on_every_store_door() {
+    let mut wrong = Vec::new();
+    for (door, write) in STORE_DOORS {
+        for (source, value) in NAIVE_VALUES {
+            let session = session("America/New_York");
+            let _warehouse = catalog(&session).await;
+            let outcome = attempt(&session, &spelled(write, value)).await;
+            if !outcome.as_ref().is_err_and(|error| error.contains(REFUSAL)) {
+                wrong.push(format!("{door} / {source}: {outcome:?}"));
+            }
+            if stored(&session).await != Vec::<i64>::new() {
+                wrong.push(format!("{door} / {source}: a value was written"));
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn a_utc_session_stores_the_wall_read_in_utc_on_every_store_door() {
+    let mut wrong = Vec::new();
+    for (door, write) in STORE_DOORS {
+        for (source, value) in NAIVE_VALUES {
+            let session = session("UTC");
+            let _warehouse = catalog(&session).await;
+            if let Err(error) = attempt(&session, &spelled(write, value)).await {
+                wrong.push(format!("{door} / {source}: {error}"));
+                continue;
+            }
+            let values = stored(&session).await;
+            if values.is_empty() || values.iter().any(|value| *value != UTC_READ) {
+                wrong.push(format!("{door} / {source}: {values:?}"));
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+const SEAM_DOORS: [(&str, &str); 4] = [
+    (
+        "SQL INSERT SELECT",
+        "INSERT INTO ice.ns.t SELECT 2, {V}, 0 FROM ice.ns.src",
+    ),
+    (
+        "SQL INSERT VALUES",
+        "INSERT INTO ice.ns.t VALUES (2, {V}, 0)",
+    ),
+    (
+        "MERGE UPDATE of the field",
+        "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN \
+         UPDATE SET t.st.v = {WALL}",
+    ),
+    (
+        "SQL INSERT BY NAME of a leaf cast to TIMESTAMP",
+        "INSERT INTO ice.ns.t BY NAME SELECT 2 AS id, named_struct('v', CAST(w AS TIMESTAMP), \
+         'n', 1) AS st, 0 AS k FROM ice.ns.src",
+    ),
+];
+
+#[tokio::test]
+async fn doors_that_read_the_wall_in_the_session_zone_store_spark_instant_outside_utc() {
+    let mut wrong = Vec::new();
+    for (door, write) in SEAM_DOORS {
+        let session = session("America/New_York");
+        let _warehouse = catalog(&session).await;
+        let write = spelled(write, "named_struct('v', {WALL}, 'n', 1)");
+        if let Err(error) = attempt(&session, &write).await {
+            wrong.push(format!("{door}: {error}"));
+            continue;
+        }
+        let values = stored(&session).await;
+        if values.is_empty() || values.iter().any(|value| *value != NEW_YORK_READ) {
+            wrong.push(format!("{door}: {values:?}"));
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}

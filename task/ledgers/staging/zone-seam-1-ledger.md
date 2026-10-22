@@ -363,6 +363,62 @@ NULL struct row whose child is a malformed string, cast under ANSI) was added an
 replays the ZONE-ORACLE-1 corpus at 1,272 EQUAL / 358 DIFFERENT / 10 REFUSED (the head:
 1,540 / 90 / 10), so removing the seam reds the corpus.
 
+## Third halt, ZS-8 and ZS-9: the nested NTZ→TIMESTAMP store (2026-10-22)
+
+**The halt.** Step 6's U-8 door matrix, checked against live Spark 4.1.2 (`probe.py --engine
+spark --schemas ltz_nested`, New York and Kolkata, 706 cells), found 74 cells EQUAL on main and
+DIFFERENT on the head: a container cast of an instant to `STRUCT<v: TIMESTAMP_NTZ, …>` written
+into a `STRUCT<v: TIMESTAMP, …>` column outside UTC, on 19 doors (literal source) and 18 (column
+source) per zone. Spark stores `1767323045123456`, main stored the same by two cancelling
+defects, the head stored `1767305045123456`: the seam made the cast right and the write path's
+own nested NTZ→TIMESTAMP conversion still reads the wall as UTC.
+
+- **ZS-8** — owner ruling ZS-8, 2026-10-22: fix the store conversion inside this unit (step 3c),
+  §5 halt 3 lifted for that one site, with condition 3: stop with the shape if the site is more
+  than one conversion and its pair. **Condition 3 fired.** An instrumented build located three
+  sites: A, `write/conform.rs` `entry_store_cast` at the sink with no session zone in scope
+  (`INSERT … BY NAME`, `INSERT OVERWRITE` from a query and from `VALUES`, the DataFrame
+  `insertInto(overwrite=True)` and `overwritePartitions`); B, `write/update_cast.rs`
+  `nested_leaf_cast_sql`'s `arrow_cast` text (MERGE and plain `UPDATE` assignments of the whole
+  struct, MERGE `UPDATE SET *`); C, MERGE `INSERT` (`merge/insert.rs` →
+  `store_overflow::wrap_store_outputs`). `repark-iceberg` depends only on `repark-common`, so it
+  cannot call the seam's helper.
+- **ZS-9** — orchestrator ruling ZS-9, 2026-10-22, under the owner's standing word (reversible by
+  the owner): the unit lands with a write-time refusal for exactly the moved shape; the three
+  sites become WRITE-NTZ-TO-LTZ-NESTED-1 (carded,
+  `../../roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`). Step 3c is the refusal.
+
+**Step 3c, red on the head without the refusal.** `crates/repark-spark/tests/ntz_into_ltz_nested.rs`
+with the refusal stashed:
+
+```
+test result: FAILED. 2 passed; 1 failed
+a_nested_wall_into_a_nested_timestamp_refuses_outside_utc_on_every_store_door
+  "SQL INSERT BY NAME / a container cast of an instant: Ok(())", "… : a value was written",
+  (the same for a TIMESTAMP_NTZ literal, and for INSERT OVERWRITE, INSERT OVERWRITE VALUES,
+  MERGE INSERT, MERGE UPDATE, MERGE UPDATE SET * and UPDATE: 14 cases, each Ok(()) and written)
+a_utc_session_stores_the_wall_read_in_utc_on_every_store_door ... ok   (the UTC control)
+doors_that_read_the_wall_in_the_session_zone_store_spark_instant_outside_utc ... ok
+```
+
+With the refusal: 3 passed. The refusal sits in the router's U-8 gate only (`refuse_at` →
+`refuse_naive_into_instant`), decided per door family: no door reaches sites A, B or C without
+the gate, so no predicate is added at a store site. **Top-level** NTZ→TIMESTAMP is not in scope:
+a top-level `TIMESTAMP` target is converted by `CAST(… AS TIMESTAMP)` text
+(`ntz_store::ltz_instant_cast_sql`), not by the three sites (by reading; not measured).
+
+**The matrix after step 3c** (`probe.py` on the head build, 3,168 cells, against main and the
+Spark records): every one of the 74 cells refuses outside UTC (38 `ts_struct_cast`, 36
+`ts_struct_cast_column`); the `ntz_literal` → `ltz_nested` cells that stored a wrong value on the
+head refuse, 21 per zone (42), and 4 per zone that were engine errors now refuse too; the other
+NTZ sources into `ltz_nested` on the same doors refuse (`ntz_cast` 42, `ntz_text_cast` 42,
+`ntz_cast_column` 42, and 18 more struct-cast cells that were DIFFERENT on main), all DIFFERENT on
+main and head before. Nothing refuses in UTC; no cell that was EQUAL on the head refuses; no other
+cell changes against the first head run; no cell that matches Spark on main moves. **Over-refusal
+by design, ruled 2026-10-22 (ZS-9), until WRITE-NTZ-TO-LTZ-NESTED-1:** 134 refused cells in New
+York and 134 in Kolkata (`ltz_nested`, the store doors), of which 37 per zone stored Spark's
+instant on main.
+
 ## PROPOSITION LEDGER — ZONE-SEAM-1 — 2026-10-22
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -380,6 +436,7 @@ replays the ZONE-ORACLE-1 corpus at 1,272 EQUAL / 358 DIFFERENT / 10 REFUSED (th
 | C-011 | Cost: the U-8 verifier's six statements, 10-run medians, head ≤ 1.05x main, load under 5. | timing table. | **OPEN** | Step 6. |
 | C-013 | `from_json` reads a `TIMESTAMP_NTZ` field: a text with no zone in Spark's form is its wall in every session zone; a text with `Z` or an offset is NULL; a space separator and a date-only text keep main's answer (ZS-6). | the two `from_json` pins, red on main. | **OPEN** | Step 3b. |
 | C-014 | The ZONE-HORIZON-RENDER-1 residue on the head: 15 wall edge cells leave, 3 New York `to_utc_timestamp_wall` cells join as expected-divergence rows (ZS-7), every other cell unchanged. | `--engine repark --residue` on the head; the suite green. | **OPEN** | Recorded 2026-10-22. |
+| C-015 | Outside UTC, a nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field refuses on the store doors (sites A, B, C) with the whole text and no write; UTC stores the UTC read; the plan-converting doors store the session read (ZS-9). | `ntz_into_ltz_nested.rs` red without the refusal; the DataFrame pins; the matrix. | **OPEN** | Step 3c. |
 | C-012 | Records: the card (follow-up lines of ZS-1 and ZS-5), R-011 and R-015 status lines, the v1.5.6 notes line, the ZONE-ORACLE-1 order follow-up (ZS-3), `map.md`s. | the diff. | **OPEN** | Step 7. |
 
 Up: [map.md](map.md).

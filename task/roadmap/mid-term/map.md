@@ -994,6 +994,13 @@ declines it (a dated ruling in the intake, then the archive).
   `c516c54a`; the leaf cast is session-aware. Found by U-8's second verifier; U-8's gate does not
   see a value that passed through another type first. Owner rules: grow U-8, or fix the cast as
   its own unit (the orchestrator's lean).
+- [write-ntz-to-ltz-nested-1-card-2026-10-22.md](write-ntz-to-ltz-nested-1-card-2026-10-22.md) —
+  **card WRITE-NTZ-TO-LTZ-NESTED-1 (2026-10-22, open; the next write-path Opus unit after
+  GATE-RETIRE-1; rulings ZS-8, ZS-9):** the Iceberg write path stores a nested `TIMESTAMP_NTZ`
+  value into a nested `TIMESTAMP` field as if the wall were UTC, at three sites (the sink's
+  `conform` cast with no session zone in scope, `update_cast.rs`'s `arrow_cast` text, the MERGE
+  `INSERT` store wrap); `repark-iceberg` depends only on `repark-common`. Fix shape: one
+  zone-aware store conversion threaded through the write path; ZONE-SEAM-1's refusal retires.
 - [zone-horizon-instant-1-card-2026-10-22.md](zone-horizon-instant-1-card-2026-10-22.md) — **card
   ZONE-HORIZON-INSTANT-1 (2026-10-22, open; the next Opus unit after GATE-RETIRE-1; owner ruling
   ZS-7):** DataFusion-Spark's `to_utc_timestamp` / `from_utc_timestamp` of an instant, shared by

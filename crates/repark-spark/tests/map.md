@@ -275,6 +275,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` holds C-001 and C-004;
   `a_frame_through_a_repartition_or_an_unmodelled_node_refuses` holds C-034, described with
   `ntz_nested_refuse_casts.rs` below.)
+- [ntz_into_ltz_nested.rs](ntz_into_ltz_nested.rs) — **ZONE-SEAM-1 step 3c (2026-10-22, ruling
+  ZS-9):** a nested `TIMESTAMP_NTZ` value (a container cast of an instant, a `TIMESTAMP_NTZ`
+  literal) into a `STRUCT<v: TIMESTAMP, n: INT>` column refuses outside UTC, with the whole text
+  and no value written, on the store doors (`INSERT … BY NAME`, `INSERT OVERWRITE` from a query and
+  from `VALUES`, MERGE `INSERT`, MERGE `UPDATE SET t.st =`, MERGE `UPDATE SET *`, plain `UPDATE`);
+  stores the wall read in UTC on the same doors in a UTC session; and stores the wall read in New
+  York on the doors that convert in the plan (positional `INSERT … SELECT` and `VALUES`, a MERGE
+  assignment to the leaf, `BY NAME` of a leaf cast to `TIMESTAMP`). pins: zone-seam-1/C-015
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`

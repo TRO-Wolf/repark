@@ -332,3 +332,61 @@ def test_the_native_door_renders_a_struct_string_leaf_as_on_main() -> None:
         f"SELECT CAST(named_struct('v', {INSTANT}, 'n', 1) AS STRUCT<v: STRING, n: INT>) AS v"
     ).to_arrow()
     assert table.column(0).combine_chunks().field(0).to_pylist() == ["2026-01-02T03:04:05.123456"]
+
+
+LTZ_STRUCT = "STRUCT<v: TIMESTAMP, n: INT>"
+NTZ_INTO_LTZ_REFUSAL = (
+    "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the "
+    'table `ice`.`ns`.`t`: Cannot safely cast `st`.`v` to "TIMESTAMP". The session time zone '
+    "is not UTC, and a nested TIMESTAMP_NTZ value cannot yet be stored into a nested TIMESTAMP "
+    "field outside UTC: set spark.sql.session.timeZone to UTC for the statement, or cast the "
+    "leaf to TIMESTAMP before nesting it, as in named_struct('<field>', CAST(<value> AS "
+    "TIMESTAMP), ...). SQLSTATE: KD000"
+)
+NTZ_FRAME = f"SELECT id, named_struct('v', {WALL}, 'n', 1) AS st, 0 AS k FROM ice.ns.src"
+REFUSING_WRITERS: dict[str, Callable[[Any], None]] = {
+    "insertInto overwrite": lambda frame: frame.write.insertInto("ice.ns.t", overwrite=True),
+    "overwritePartitions": lambda frame: frame.writeTo("ice.ns.t").overwritePartitions(),
+}
+STORING_WRITERS: dict[str, Callable[[Any], None]] = {
+    "writeTo append": lambda frame: frame.writeTo("ice.ns.t").append(),
+    "insertInto": lambda frame: frame.write.insertInto("ice.ns.t"),
+}
+
+
+@pytest.mark.parametrize("writer", list(REFUSING_WRITERS))
+def test_an_overwriting_dataframe_writer_refuses_a_nested_wall_into_a_timestamp_field(
+    tmp_path: Path, writer: str
+) -> None:
+    """Outside UTC a nested wall into a nested ``TIMESTAMP`` field refuses (ruling ZS-9)."""
+    spark = open_session(NEW_YORK, tmp_path)
+    try:
+        create_target(spark, "t", LTZ_STRUCT)
+        with pytest.raises(Exception) as refused:
+            REFUSING_WRITERS[writer](spark.sql(NTZ_FRAME))
+        assert NTZ_INTO_LTZ_REFUSAL in str(refused.value)
+        assert stored(spark, "t") == []
+    finally:
+        spark.stop()
+
+
+STORING_CASES: list[tuple[str, str]] = [
+    *((writer, NEW_YORK) for writer in STORING_WRITERS),
+    *((writer, "UTC") for writer in (*STORING_WRITERS, *REFUSING_WRITERS)),
+]
+
+
+@pytest.mark.parametrize(("writer", "zone"), STORING_CASES)
+def test_a_nested_wall_into_a_timestamp_field_stores_where_it_is_not_refused(
+    tmp_path: Path, writer: str, zone: str
+) -> None:
+    """The appending writers read the wall in the session zone; in UTC every writer stores."""
+    writers = {**STORING_WRITERS, **REFUSING_WRITERS}
+    spark = open_session(zone, tmp_path)
+    try:
+        create_target(spark, "t", LTZ_STRUCT)
+        writers[writer](spark.sql(NTZ_FRAME))
+        expected = 1_767_341_045_123_456 if zone == NEW_YORK else UTC_WALL
+        assert stored(spark, "t") == [expected]
+    finally:
+        spark.stop()
