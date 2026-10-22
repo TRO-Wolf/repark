@@ -384,3 +384,15 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   load-induced test timeouts, as the seam verifier saw on 10-22), and whether the v2 and v3 label
   dates moved. The CLAUDE.md capability-tier section is unchanged: Opus still only on the owner's
   explicit word, which this ruling is.
+
+## 2026-10-22 — CI re-runs: a stall may be re-run once, a failed test waits for the owner
+
+- **DO re-run once, yourself, a CI job that was cancelled at its time cap with every test step
+  green up to the stall.** *Why:* a re-run is one `gh run rerun --failed` and needs no agent; the
+  stall is the hang class the FAIR-POOL-HANG-1 card tracks, so the stalled log is kept under the
+  unit's scratch and the card gains one dated line. Owner, 2026-10-22 ("adopt"), after a builder
+  re-ran a hung facade shard on its own.
+- **DO NOT re-run a job with a failed test without the owner's dated word, and never from an
+  agent.** *Why:* a re-run can hide a real flake behind a green check; the orchestrator reads the
+  failed job's log first and reports the test and the assertion, as it did for #1158's wall-clock
+  pin the same evening.
