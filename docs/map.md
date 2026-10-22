@@ -53,7 +53,9 @@ repo.
   it is unchanged; *fix round 1, the same day:* the over-refused cells per zone are counted as
   37 Spark-equal, 79 DIFFERENT and 18 engine errors on main; *fix round 2, 2026-10-23:* the
   partitioned doors' over-refusal is counted per census (21, 68 of 354, 24 of 231) and R-015's
-  "unchanged" becomes the measured change (13 cells per zone) awaiting the owner. **2026-10-21 (EXPLAIN-DML-WRITE-1,
+  "unchanged" becomes the measured change (13 cells per zone) awaiting the owner; *fix round 3,
+  2026-10-23:* R-015 records the owner's ruling (the nanosecond leaf keeps its refusal) and its
+  pin. **2026-10-21 (EXPLAIN-DML-WRITE-1,
   merged #1137 at `b7a20167`):** the REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 row gains the wrapper refusal on
   every door (`EXPLAIN ANALYZE` and `PREPARE` of any write); on `repark.sql()` a wrapped write that
   does not plan keeps DataFusion's error. **2026-10-21 (ICE-NTZ-NESTED-REFUSE-1

@@ -812,6 +812,12 @@ repark-core's error map.
   and a container cast of an instant stored main's Spark-equal value five hours off. The same
   position now reaches R-011's read (one column in place of every column) and R-015's
   supply (a bare `NULL` at the position is no longer refused). pins: zone-seam-1/C-016
+  **ZONE-SEAM-1 fix round 3 (2026-10-23, owner ruling on verifier round 2 S1-3):** the nanosecond
+  leaf keeps its refusal on every door until WRITE-SPINE-1, so `nested_supplies` resolves no
+  static columns for `NaiveLeaf::Nanos` when the INSERT carries a `PARTITION` clause: the feed
+  stays a `Value` with no position, as on main, and a bare `NULL` there is refused by R-015 as
+  before fix round 1. The microsecond and instant leaves keep the resolved position.
+  pins: zone-seam-1/C-023
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

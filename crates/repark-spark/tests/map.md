@@ -245,6 +245,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control's nested `TIMESTAMP_NTZ` row stored the
   UTC wall of a New York instant; it now asserts R-011's refusal (not R-015's text), dated in
   the test's doc comment. pins: ice-ntz-nested-refuse-1/C-008
+  **ZONE-SEAM-1 fix round 3 (2026-10-23, owner ruling on verifier round 2 S1-3):**
+  `a_partitioned_insert_refuses_a_nested_nanosecond_leaf_even_for_a_bare_null`: a
+  format-version 3 table with `st STRUCT<v: timestamp_ns, n: INT>` partitioned by `k`, the
+  partition column last, first and in the middle; a static and a dynamic `INSERT OVERWRITE` and
+  `INSERT INTO`; a bare `NULL` and a value; UTC and New York: R-015's refusal and no new file in
+  all 48 cells. Red on fix round 2's head (`b74f17e0`): the 24 bare-`NULL` cells stored.
+  pins: zone-seam-1/C-023
 - [ntz_nested_refuse.rs](ntz_nested_refuse.rs) — **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20),
   parity row R-011:** outside UTC a nested microsecond `TIMESTAMP_NTZ` leaf refuses an instant.
   `every_door_refuses_an_instant_outside_utc_and_writes_nothing`: five shapes (struct, struct in

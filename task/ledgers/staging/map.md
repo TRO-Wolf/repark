@@ -2546,3 +2546,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   partition column first and in the middle, red under the verifier's Y2 and Y3 (C-021); R-011's
   partitioned over-refusal counts, R-015's measured change awaiting the owner, the card's 37 + 79
   + 18 (C-022).
+  *Fix round 3 (2026-10-23):* the nanosecond leaf's refusal restored on partitioned inserts under
+  the owner's ruling (C-023).

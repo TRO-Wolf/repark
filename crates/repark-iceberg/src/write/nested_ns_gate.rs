@@ -303,6 +303,9 @@ pub fn nested_supplies<'a>(
         .map(|field| field.name().as_str())
         .collect();
     let statics = match write {
+        NestedWrite::Insert(insert) if leaf == NaiveLeaf::Nanos && !insert.partition.is_empty() => {
+            None
+        }
         NestedWrite::Insert(insert) => static_columns(table, insert.partition),
         _ => Some(Vec::new()),
     };

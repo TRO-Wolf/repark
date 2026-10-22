@@ -3785,21 +3785,18 @@ still open is `isModifiable`.
   until it is designed as its own unit, card ICE-TSNS-NESTED-1
   (`task/roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md`). Ledger clauses C-040 to
   C-042.
-- **Status 2026-10-23 (ZONE-SEAM-1, PR #1139, verifier round 2 S1-3; awaits the owner's
-  ruling):** one measured change on head; the 2026-10-22 line said "unchanged". The seam
-  converts microsecond leaves only and the gate reads the target column's type alone, so no arm
-  of this row becomes unreachable, and `timestamp_ns_nested_shapes.rs` is green on the head. The
-  change: on a format-version 3 table with `st STRUCT<v: timestamp_ns, n: INT>`, 13 cells per zone
-  (identical in UTC and New York) of a bare `NULL` into the struct column through a partitioned
-  `INSERT` (static and dynamic `PARTITION`, `SELECT` and `VALUES`, a column list, the partition
-  column first) store `NULL` with a new data file where main refused with this row's text. Every
-  statement that supplies a non-NULL value still refuses (19 per zone), and one cell changes only
-  its error (`PARTITION (k = 'abc')` takes the door's `CAST_INVALID_INPUT`). Spark 4.1.2 with
-  Iceberg 1.11 cannot load such a table (`Cannot convert unsupported type to Spark:
-  timestamp_ns`), so Spark answers an error where main refused and head stores. The unpartitioned
-  bare `NULL` already stored on main. This unit changes nothing here: the owner rules whether to
-  ratify the move with an R-015 line and a pin, or to keep partitioned inserts a `Value` for the
-  `Nanos` leaf.
+- **Status 2026-10-23 (ZONE-SEAM-1, PR #1139, owner ruling 2026-10-23 on verifier round 2
+  S1-3):** unchanged from main. Verifier round 2 measured 13 cells per zone (UTC and New York) of
+  a bare `NULL` into a `STRUCT<v: timestamp_ns, n: INT>` column through a partitioned `INSERT` on
+  a format-version 3 table storing `NULL` on fix round 1's head where main refused; the owner
+  ruled that the nanosecond leaf keeps its refusal on every door until WRITE-SPINE-1, and fix
+  round 3 restores it (the partitioned position is not resolved for this leaf). Pin
+  `timestamp_ns_nested_shapes.rs`
+  `a_partitioned_insert_refuses_a_nested_nanosecond_leaf_even_for_a_bare_null` (static and
+  dynamic, overwrite and append, the partition column first, in the middle and last, a bare
+  `NULL` and a value, UTC and New York: the refusal and no file). The seam converts microsecond
+  leaves only and the gate reads the target column's type alone, so no arm of this row becomes
+  unreachable.
 
 ### ICE-TSNS-SQL-1-R-016 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): one rule pairs struct fields on every write door, Spark's
 
