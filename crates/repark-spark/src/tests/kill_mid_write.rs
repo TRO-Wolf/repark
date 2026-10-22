@@ -430,6 +430,11 @@ async fn run_child_to_the_hold(cell: &Cell, format: u8, root: &Path) -> Marker {
             child_output(root)
         ),
         (_, None) => {
+            assert!(
+                child.try_wait().expect("poll the held child").is_none(),
+                "{id} v{format}: the child must still be running at the kill\n{}",
+                child_output(root)
+            );
             child.kill().expect("kill the held child");
             child.wait().expect("reap the killed child")
         }
