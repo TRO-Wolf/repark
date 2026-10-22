@@ -276,3 +276,45 @@ stands as written.
 |---|---|---|---|---|
 | C-028 | (Verifier round 3 S2-1, 2026-10-22; narrows C-027.) **Unpinned:** the parent-path exit code (an orphaned child's release). Nothing consumes an orphan's exit status: the reaper, the systemd user manager, discards it. C-027's "only the child's own parent can read its real exit status" is wrong: a `PR_SET_CHILD_SUBREAPER` process becomes the orphan's parent and reads it. **Pinned on the parent path:** no commit, the release reason (`released parent 75` in the release file), and the bounded hold. **Pinned on the deadline path:** the hold-limit pin, as the child's own parent, reads the real exit status. | The three tests of `kill_mid_write_release.rs`. | PROVEN | The verifier's subreaper probe found that at head the parent path exits 75 in 23 of 23 releases. Under F3c the subreaper reads exit 0, with `released parent 75` and no commit, while the 24 tests stay green. The verifier's other fix, a subreaper helper under the parent-gone pin, is not built in this round. |
 | C-029 | (Owner ruling 2026-10-22, morning read of the overnight watch; closes the decision C-015 left open.) Option 1 adopted: the path read walks past `version-hint.text` as Java's `HadoopTableOperations.refresh` does, in its own Opus unit after ZONE-SEAM-1; ruling 83 stands as written; registry row ICE-LOCAL-COMMIT-POINT-1 widens again when that unit lands. | Card [ICE-HADOOP-HINT-WINDOW-1](../../roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md), status paragraph. | OPEN | Ruled, not yet proven: nothing in this unit changes, and C-015 stays OPEN until the fix unit's ledger proves the path read. |
+
+## Pins U and X (2026-10-22): branch `feat/ice-integrity-pins-1-ux`, base `a2de82aa`
+
+Lane 2 of the owner's two-Opus-lane ruling of 2026-10-22, model claude-opus-5-5. This round
+builds pins U and X as tests, helpers and records only (H-6). The fork is `d80a2884`, and every
+fork line below is on that rev. The orchestrator's rulings on the step-0 questions (2026-10-22)
+are quoted where a row rests on them. Rows are appended one per built piece; C-012 and C-013
+stand as written above.
+
+**Premise moved (step 0, recorded at the orchestrator's order).** Fork #368 (`409ff330`) landed
+both halves of ruling 84's card. It refreshes and checks for the attempt's snapshot before every
+re-base (`crates/iceberg/src/transaction/mod.rs:498`, `commit_status.rs:273`). It also turns the
+SDK retry off on the two commit calls: Glue `crates/catalog/glue/src/commit_transport.rs:137`,
+S3 Tables `crates/catalog/s3tables/src/commit_transport.rs:168`, both `RetryConfig::disabled()`.
+The only re-send left is the fork's own after a throttling reply (`refused_before_processing`,
+Glue `:76`, S3 Tables `:77`; at most `THROTTLE_ATTEMPTS = 3`). The SDK re-send that sketch cell U-5
+drilled therefore cannot happen, and U-5 as written collapses into U-1. Orchestrator ruling Q-1:
+keep U-5, now pinning that fact (exactly one commit request at the gate, rows once), and add
+U-5r. In U-5r the gate forwards the commit, answers the client a throttle in place of the real
+reply, and forwards the fork's re-send, which AWS rejects as stale. The leg grows to 96
+statements, and a double append in U-5r is still H-U5.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-030 | The offline twin of pin U: on the memory catalog, through a test-only `GateCatalog`, the 24 cells U-1 to U-4 × the plain `INSERT … SELECT`, the session-write-key append and `MERGE` copy-on-write × v2 and v3 answer as sketch §4.4 says. U-1 is `Ok`. U-2, U-3 and U-4 raise `CommitStateUnknown` through `engine_err`, with `operation_id` `None` on the plain door and the attempted snapshot's `engine.operation-id` on the other two. There is one commit call and no re-apply. The cut cells fail exactly the 2 refreshes of the status-check budget (`num-retries=1`). A fresh session adopting the newest metadata file resolves U-1 and U-2 as committed (one snapshot by operation id and by snapshot id, rows once) and U-3 and U-4 as not committed (the pre-state's snapshots and rows). | `tests::commit_unknown_doors::u{1,2,3,4}_*_v{2,3}` (24 cells). | PROVEN | 24 of 24 green on `a2de82aa` + the step-1 tree (2.05 s, `--test-threads=4`, load about 18). Red through five mutants (§Pin U offline twin, red first). |
+| C-031 | Pin U, cell U-5 after fork #368: on Glue and S3 Tables the SDK no longer re-sends a commit whose reply was lost. The gate sees exactly one commit request, the statement succeeds by reconciliation, and the rows land once. | `test_aws_acceptance_commit_unknown.py`, U-5 cells (12 statements). | OPEN | Built; first live run pending #1070. The collapse and its fork lines are recorded in the paragraph above. |
+
+### Pin U offline twin, red first (step 1, 2026-10-22)
+
+`cargo test --locked -p repark-spark --lib commit_unknown -- --test-threads=4` under
+`systemd-run --user --scope -p MemoryMax=40G` and `taskset -c 0-25`, with the load average about
+18 (lane 1 building). Main has no twin, so the red proof is the mutants. Each was applied alone,
+run, and reverted, and the tree was byte-identical afterwards (`cmp`).
+
+| Mutant | Red cells (of 24) | First failing assertion |
+|---|---|---|
+| M-U1, the gate forwards in U-3 and U-4 | 12: U-3, U-4 | `U-3 Merge v2: commits that reached the catalog`, left 1, right 0 |
+| M-U2, reads never cut | 12: U-2, U-3 | `U-2 Merge v2: refreshes cut inside the status-check budget`, left 0, right 2 |
+| M-U3, the gate answers a plain failure in place of unknown | 24 | `U-1 Plain v3: reconciliation finds the landed snapshot, got Err(External(Unexpected => the gate lost the commit reply))` |
+| M-U4a, the status-check properties dropped | 24 | `the drill table carries commit.status-check.num-retries before the statement`, left `None` |
+| M-U4b, dropped with the presence check removed | 12: U-2, U-3 (run 34.5 s against 2 s) | `U-2 Plain v2: refreshes cut inside the status-check budget`, left 4, right 2 |
+| M-U5, the plain door expected to carry an id | 6: U-2, U-3, U-4 plain | `U-2 Plain v2: the error's operation id`, left `None`, right `Some("…")` |

@@ -44,6 +44,8 @@ mod catalog_ops;
 mod collation;
 mod column_comment_ddl;
 mod column_move;
+mod commit_unknown_doors;
+mod commit_unknown_gate;
 mod count_fold;
 mod create_format_version_one;
 mod create_table;
