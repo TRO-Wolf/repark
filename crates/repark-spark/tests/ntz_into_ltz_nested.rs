@@ -225,3 +225,152 @@ async fn doors_that_read_the_wall_in_the_session_zone_store_spark_instant_outsid
     }
     assert_eq!(wrong, Vec::<String>::new());
 }
+
+const PARTITIONED_DOORS: [(&str, &str); 6] = [
+    (
+        "PARTITION (k = 0) SELECT of a literal",
+        "INSERT OVERWRITE ice.ns.p PARTITION (k = 0) SELECT 1, {L}",
+    ),
+    (
+        "PARTITION (k = 0) SELECT of a column",
+        "INSERT OVERWRITE ice.ns.p PARTITION (k = 0) SELECT id, {C} FROM ice.ns.src",
+    ),
+    (
+        "PARTITION (k = 0) VALUES",
+        "INSERT OVERWRITE ice.ns.p PARTITION (k = 0) VALUES (1, {L})",
+    ),
+    (
+        "PARTITION (k = 0) with a column list",
+        "INSERT OVERWRITE ice.ns.p PARTITION (k = 0) (id, st) SELECT 1, {L}",
+    ),
+    (
+        "TABLE keyword with PARTITION (k = 0)",
+        "INSERT OVERWRITE TABLE ice.ns.p PARTITION (k = 0) SELECT 1, {L}",
+    ),
+    (
+        "dynamic PARTITION (k)",
+        "INSERT OVERWRITE ice.ns.p PARTITION (k) SELECT 1, {L}, 0",
+    ),
+];
+
+const PARTITIONED_SOURCES: [(&str, &str, &str); 2] = [
+    (
+        "an instant struct cast to TIMESTAMP_NTZ",
+        "CAST(named_struct('v', {INSTANT}, 'n', 1) AS {NTZ})",
+        "CAST(named_struct('v', x, 'n', 1) AS {NTZ})",
+    ),
+    (
+        "a TIMESTAMP_NTZ value",
+        "named_struct('v', {WALL}, 'n', 1)",
+        "named_struct('v', w, 'n', 1)",
+    ),
+];
+
+fn data_files(root: &std::path::Path) -> usize {
+    let mut pending = vec![root.to_path_buf()];
+    let mut found = 0;
+    while let Some(directory) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(&directory) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path
+                .extension()
+                .is_some_and(|extension| extension == "parquet")
+            {
+                found += 1;
+            }
+        }
+    }
+    found
+}
+
+async fn partitioned(session: &ReparkSession) -> TempDir {
+    let warehouse = catalog(session).await;
+    for setup in [
+        format!("CREATE TABLE ice.ns.p (id INT, st {LTZ}, k INT) USING iceberg PARTITIONED BY (k)"),
+        format!("INSERT INTO ice.ns.p VALUES (1, CAST(NULL AS {LTZ}), 0)"),
+    ] {
+        run(session, &setup).await;
+    }
+    warehouse
+}
+
+async fn stored_in_p(session: &ReparkSession) -> Vec<i64> {
+    let batches = session
+        .sql("SELECT st FROM ice.ns.p ORDER BY id")
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    batches
+        .iter()
+        .flat_map(|batch| leaf(batch.column(0)))
+        .flatten()
+        .collect()
+}
+
+fn partitioned_write(door: &str, literal: &str, column: &str) -> String {
+    let resolve = |value: &str| {
+        value
+            .replace("{NTZ}", NTZ)
+            .replace("{WALL}", WALL)
+            .replace("{INSTANT}", INSTANT)
+    };
+    door.replace("{L}", &resolve(literal))
+        .replace("{C}", &resolve(column))
+}
+
+#[tokio::test]
+async fn a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file() {
+    let mut wrong = Vec::new();
+    for zone in ["America/New_York", "Australia/Sydney", "Asia/Kathmandu"] {
+        for (door, write) in PARTITIONED_DOORS {
+            for (source, literal, column) in PARTITIONED_SOURCES {
+                let session = session(zone);
+                let warehouse = partitioned(&session).await;
+                let before = data_files(warehouse.path());
+                let outcome = attempt(&session, &partitioned_write(write, literal, column)).await;
+                let refusal = REFUSAL.replace("`ice`.`ns`.`t`", "`ice`.`ns`.`p`");
+                if !outcome
+                    .as_ref()
+                    .is_err_and(|error| error.contains(&refusal))
+                {
+                    wrong.push(format!("{zone} {door} / {source}: {outcome:?}"));
+                }
+                if data_files(warehouse.path()) != before {
+                    wrong.push(format!("{zone} {door} / {source}: a data file was written"));
+                }
+                if stored_in_p(&session).await != Vec::<i64>::new() {
+                    wrong.push(format!("{zone} {door} / {source}: a value was written"));
+                }
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn a_partitioned_overwrite_in_utc_stores_the_utc_read() {
+    let mut wrong = Vec::new();
+    for (door, write) in PARTITIONED_DOORS {
+        for (source, literal, column) in PARTITIONED_SOURCES {
+            let session = session("UTC");
+            let _warehouse = partitioned(&session).await;
+            let write = partitioned_write(write, literal, column);
+            if let Err(error) = attempt(&session, &write).await {
+                wrong.push(format!("{door} / {source}: {error}"));
+                continue;
+            }
+            let values = stored_in_p(&session).await;
+            if values != vec![UTC_READ] {
+                wrong.push(format!("{door} / {source}: {values:?}"));
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}

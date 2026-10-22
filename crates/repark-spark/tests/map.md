@@ -283,6 +283,15 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   stores the wall read in UTC on the same doors in a UTC session; and stores the wall read in New
   York on the doors that convert in the plan (positional `INSERT … SELECT` and `VALUES`, a MERGE
   assignment to the leaf, `BY NAME` of a leaf cast to `TIMESTAMP`). pins: zone-seam-1/C-015
+  *Fix round 1 (2026-10-22, verifier S1-1):*
+  `a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file` holds six
+  spellings of `INSERT OVERWRITE … PARTITION` on a table partitioned by `k` (a `SELECT` of a
+  literal, a `SELECT` of a column of `ice.ns.src`, `VALUES`, a column list, the `TABLE` keyword, a
+  dynamic `PARTITION (k)`), each with an instant struct cast to `TIMESTAMP_NTZ` and with a
+  `TIMESTAMP_NTZ` value, in New York, Sydney and Kathmandu: the whole refusal text, the data file
+  count unchanged from the seed's, no value stored. Red on `58321e94` (all 36 cells stored);
+  `a_partitioned_overwrite_in_utc_stores_the_utc_read` is the UTC control on the same twelve
+  writes. pins: zone-seam-1/C-016, C-017
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`

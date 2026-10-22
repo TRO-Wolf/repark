@@ -563,8 +563,60 @@ nested refusal binaries (`ntz_nested_refuse`, `ntz_nested_refuse_casts`,
 `timestamp_ns_wall_doors`, `timestamptz_ns_wall_doors`, `timestamp_ns_nested_shapes`,
 `ice_tsns_type_planner_1_update_forms`) and `nested_ns_gate`'s unit tests stay green.
 
+**Item 2, the partitioned-door pin and census.** The pin
+(`ntz_into_ltz_nested.rs`, two tests) is red on `58321e94`: all 36 non-UTC cells returned `Ok(())`,
+wrote a data file and stored a value; green on the fix. The census (a lane script, outside the
+tree) enumerates sixteen partitioned door shapes
+by name on a table `(id INT, st <S>, k INT) PARTITIONED BY (k)` seeded with one NULL row:
+`ow_static_select`, `ow_static_values`, `ow_static_column_list`,
+`ow_static_column_list_reordered`, `ow_static_table_keyword`, `ow_dynamic_clause`,
+`ow_no_clause_on_partitioned`, `ow_static_by_name`, `append_static_select`,
+`append_static_values`, `append_static_by_name`, `append_dynamic_clause`, and the DataFrame
+`df_insertInto_overwrite` (`insertInto(overwrite=True)`), `df_overwritePartitions`,
+`df_insertInto_append`, `df_writeTo_append`; seven sources (an instant struct cast to
+`TIMESTAMP_NTZ` of a literal and of a column, a `TIMESTAMP_NTZ` literal and column, a `TIMESTAMP`
+literal and column, a leaf cast to `TIMESTAMP_NTZ`); two schemas (`STRUCT<v: TIMESTAMP, n: INT>`,
+`STRUCT<v: TIMESTAMP_NTZ, n: INT>`); four zones (UTC, New York, Sydney, Kathmandu): 212 cells per
+zone, 848 in all, on live Spark 4.1.2 (`local[1]`, Iceberg 1.11.0), main `b7a20167`, the head
+`58321e94` and the fix. UTC: 212 of 212 EQUAL on all three builds. Outside UTC, per zone, every
+zone the same: main → fix EQUAL→EQUAL 85, DIFFERENT→EQUAL 14, refused→EQUAL 30, refused→refused 30,
+DIFFERENT→refused 32, EQUAL→refused 21 (the ZS-9 class: 10 that `58321e94` already refused, the
+two overwriting DataFrame writers and the `BY NAME` and no-clause overwrites, and 11 that
+`58321e94` stored wrong, the S1-1 cells); **zero DIFFERENT on the fix**, zero EQUAL→DIFFERENT.
+`58321e94` → fix: 28 cells per zone move, every one DIFFERENT→refused (11 EQUAL on main, 17
+DIFFERENT on main); no other cell moves, so no R-011 cell and no appending door changes. Every
+refused cell holds exactly the seed's one data file. Per door, the three non-UTC zones together
+(E EQUAL, D DIFFERENT, R refused, against Spark):
+
+| door | cells | main | head `58321e94` | fix head |
+|---|---:|---|---|---|
+| `ow_static_select` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_static_values` | 24 | D6 E12 R6 | D9 E12 R3 | E12 R12 |
+| `ow_static_column_list` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_static_column_list_reordered` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_static_table_keyword` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_dynamic_clause` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_no_clause_on_partitioned` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `ow_static_by_name` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `append_static_select` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+| `append_static_values` | 24 | D6 E12 R6 | E21 R3 | E21 R3 |
+| `append_static_by_name` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `append_dynamic_clause` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+| `df_insertInto_overwrite` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `df_overwritePartitions` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `df_insertInto_append` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+| `df_writeTo_append` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+
+The verifier's S1-1 drivers re-run on the fix (its write driver, compared with its own Spark,
+main and head readings): `wx` (39 cells × New York and UTC) 15 EQUAL-on-main cells that
+`58321e94` stored wrong now refuse, nothing else moves; `wr` (192 cells × four zones) 42 cells move,
+every one to the refusal (24 wrong on main and head, 9 EQUAL on main and wrong on head, 9 engine
+errors on main and head at the 1969 wall), no WRONG cell is left on the fix, and every refused
+cell holds the seed's file only.
+
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-016 | An INSERT with a `PARTITION` clause the door accepts names its source column by position (the table's columns less the static partition columns, or the column list; a dynamic clause reads every column), so outside UTC the ZS-9 refusal and R-011's type read see the column on every partitioned spelling; a clause the door refuses is read as before. | the gate's unit tests; the partitioned-door pin red on `58321e94`. | **PROVEN** | `nested_ns_gate/tests.rs` static-column cases; item 2's pin, 36 cells red on `58321e94`, green on the fix. |
+| C-017 | The partitioned door census (sixteen shapes by name, both DataFrame overwrites included, seven sources, two schemas, four zones, 848 cells) on main, `58321e94` and the fix against live Spark: no cell DIFFERENT on the fix, no EQUAL→DIFFERENT, UTC unchanged, the only `58321e94`→fix moves DIFFERENT→refused, no refused write leaves a file. | the census and the verifier's `wx`/`wr` drivers on the fix. | **PROVEN** | item 2's tables. |
 
 Up: [map.md](map.md).
