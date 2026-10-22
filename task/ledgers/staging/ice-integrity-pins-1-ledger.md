@@ -71,8 +71,8 @@ in the morning.
 | C-006 | K-7 on the local catalog (orchestrator ruling K-1): the staged metadata file is the commit, so the reopen reads the created table, the attempted snapshot current and alone, every CTAS row, and no orphan. Claimed for the local catalog only; Glue and S3 Tables follow their pointer (pin U's cell, unmeasured). | `k7_ctas_killed_at_publish_reads_created_on_the_local_catalog_v2`, `_v3`. | PROVEN | Green in step 2 (§Green). |
 | C-007 | Controls: K-C0 (the hook forwards at once) commits, the child exits 0, the reopen reads the statement's rows once, orphans 0; K-C1 (the hook forwards, then holds and is killed) reads back as committed from the metadata file written inside `update_table` (`memory/catalog.rs:584`): ruling 83's local rule. | `kc0_*_v2`, `_v3`, `kc1_*_v2`, `_v3`. | PROVEN | Green in step 2 (§Green). |
 | C-008 | K-2 is the routed append: its attempted snapshot carries the session snapshot property `k` (`router.rs:452-459` → `commit_append_with_summary`, `append_with_options.rs:90`); no other cell's does. | All 18 cells assert the key's presence equals the cell's session key. | PROVEN | Green in step 2 (§Green). |
-| C-009 | Every assertion family fails for its reason: M1 (the hook forwards before it holds) reds the 12 K-1 to K-6 cells; M2 (the decorator not installed) reds all 18; M3 (the orphan count skips manifests) reds the 12 K-1 to K-6 cells. | §Red first, §Revert check. | OPEN | |
-| C-010 | No flake: the 18 kill cells pass 20 runs in a row under the 40 G cap; per-cell run time recorded. | §No flake. | OPEN | |
+| C-009 | Every assertion family fails for its reason: M1 (the hook forwards before it holds) reds the 12 K-1 to K-6 cells; M2 (the decorator not installed) reds all 18; M3 (the orphan count skips manifests) reds the 12 K-1 to K-6 cells. | §Red first, §Revert check. | PROVEN | §Revert check (step 3). |
+| C-010 | No flake: the 18 kill cells pass 20 runs in a row under the 40 G cap; per-cell run time recorded. | §No flake. | PROVEN | 20 of 20 (§No flake, step 3). |
 | C-011 | Records: the registry row beside ICE-COMMIT-UNKNOWN-1 names the local catalog's commit rule (ruling 83); production status row K3 carries the dated pin-K line; the sketch §3 carries a dated "built" line; the work-order map and the 1.5.6 notes carry the unit. | The diffs of the records commit. | OPEN | |
 | C-012 | Pin U: an unknown commit outcome drilled live on Glue and S3 Tables and resolved on reopen. | Sketch §4. | OPEN (awaits #1070) | Not this round: the owner's workflow wiring (ruling 86) comes first. |
 | C-013 | Pin X: the v1.5.4 wheel and the head read each other's tables on both catalogs and both format versions. | Sketch §5. | OPEN (awaits #1070) | Not this round, as C-012. |
@@ -146,4 +146,55 @@ test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 2784 filtered out; 
 
 The 19th test is the child entry. K-5's delete file is a parquet position-delete file on v2 and
 a puffin deletion vector on v3 (step-0 probe on the hook's entry). Run times: §No flake.
+
+## Revert check (step 3, 2026-10-22)
+
+On the committed pins (`55b25bc7`), each mutation applied alone to the working tree, run, and
+reverted (the tree clean after each): `cargo test --locked -p repark-spark --lib kill_mid_write
+-- --test-threads=4` under the 40 G scope.
+
+| Mutation | Red cells | First failing assertion |
+|---|---|---|
+| M1, the hook forwards before it holds (`update_table` → `forward_commit`, which then holds) | 12: K-1 to K-6, v2 and v3 | `K-1 v3: the newest metadata file is the pre-state's`, left `…/metadata/00002-….metadata.json`, right `…/metadata/00001-….metadata.json` |
+| M2, the decorator disabled (the child registers the plain session catalog as `fault`) | 18 of 18 | `K-2 v3: the child exited (exit status: 0) before the hold` |
+| M3, the orphan count skips manifests | 12: K-1 to K-6, v2 and v3 | `K-2 v3: orphans per kind`, left `[1, 0, 0, 1, 0]`, right `[1, 0, 1, 1, 0]` |
+| M4, the child drops the session write key | 2: K-2 v2 and v3 | `K-2 v2: the session snapshot property marks the routed append`, left `false`, right `true` |
+
+K-7 and the controls stay green under M1 and M3 by design: K-7's answer is the created table
+whichever way the hook forwards (ruling K-1), and the controls have no orphan.
+
+## No flake (step 3, 2026-10-22)
+
+The committed pins, the test binary run directly 20 times in a row
+(`<binary> kill_mid_write --nocapture`, default threads) under
+`systemd-run --user --scope -p MemoryMax=40G` and `taskset -c 0-25`: **20 of 20 runs passed, 18
+of 18 cells each run.** Another agent's build shared the machine (load average 27 to 38), so the
+per-cell times below are a loaded reading; a quiet reading of the same cells, taken before step
+2 split `kill_cell` into helpers (no assertion changed), sits beside it (load average about 3,
+also 20 of 20).
+
+| Cell | Loaded: median ms (min to max), 20 runs | Quiet: median ms (min to max), 20 runs |
+|---|---|---|
+| K-1 v2 | 2114 (1157 to 5045) | 415 (387 to 544) |
+| K-1 v3 | 2111 (1108 to 5360) | 407 (386 to 561) |
+| K-2 v2 | 2128 (1118 to 5042) | 409 (377 to 549) |
+| K-2 v3 | 2096 (1192 to 5042) | 411 (391 to 499) |
+| K-3 v2 | 2132 (1154 to 5045) | 431 (401 to 562) |
+| K-3 v3 | 2110 (1152 to 5057) | 433 (411 to 622) |
+| K-4 v2 | 2252 (1192 to 5355) | 529 (493 to 691) |
+| K-4 v3 | 2240 (1194 to 5357) | 549 (506 to 712) |
+| K-5 v2 | 2368 (1460 to 5426) | 539 (499 to 717) |
+| K-5 v3 | 2317 (1480 to 5452) | 546 (513 to 760) |
+| K-6 v2 | 2115 (1196 to 5057) | 444 (412 to 618) |
+| K-6 v3 | 2127 (1153 to 5034) | 447 (419 to 638) |
+| K-7 v2 | 1657 (636 to 3894) | 291 (276 to 404) |
+| K-7 v3 | 1456 (768 to 3907) | 290 (276 to 388) |
+| K-C0 v2 | 2174 (1259 to 5357) | 530 (480 to 677) |
+| K-C0 v3 | 2324 (1232 to 5361) | 540 (490 to 701) |
+| K-C1 v2 | 2323 (1235 to 5355) | 526 (494 to 676) |
+| K-C1 v3 | 2321 (1232 to 5355) | 524 (489 to 709) |
+
+Whole filter, wall clock per run: loaded 1.6 to 5.6 s; quiet 0.60 to 0.84 s. One serial run
+(`--test-threads=1`): loaded 37.2 s, quiet 7.9 s. Each cell spawns one child (start about 30 ms,
+step 0); the sketch's §6.4 estimate for the local pins ("under 1 min") holds.
 
