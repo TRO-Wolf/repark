@@ -1,41 +1,19 @@
-# The four children of test_panic_fatal_suite_1.py, run by hand on the head (2026-10-21), core dumps off with prctl.
-# armed = REPARK_PANIC_FATAL=1 in the child environment; unarmed = variable removed. Backtrace lines of the abort are cut to the first and last few.
+# The two children of test_panic_fatal_suite_1.py, run by hand on the head (2026-10-22).
+# armed = REPARK_PANIC_FATAL=1 in the child environment; unarmed = variable removed.
 == armed=1 shape=method
 
-thread '<unnamed>' (49512) panicked at crates/repark-python/src/panic_probe.rs:26:5:
+thread '<unnamed>' (378109) panicked at crates/repark-python/src/panic_probe.rs:13:5:
 repark panic probe
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 Traceback (most recent call last):
-  File "child.py", line 14, in <module>
+  File "child.py", line 4, in <module>
     _native.__panic_probe__("method")
 pyo3_runtime.PanicException: repark panic probe
-exit=1 (134 is SIGABRT through the shell; subprocess reports -6)
-== armed=1 shape=stream
-
-thread '<unnamed>' (49882) panicked at crates/repark-python/src/panic_probe.rs:26:5:
-repark panic probe
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-thread '<unnamed>' (49882) panicked at /rustc/ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96/library/core/src/panicking.rs:225:5:
-panic in a function that cannot unwind
-stack backtrace:
-   0:     0x76911dc6f17a - <<std[52919eca6bce4da3]::sys::backtrace::BacktraceLock>::print::DisplayBacktrace as core[18c8dd30382e7099]::fmt::Display>::fmt
-   ... backtrace cut ...
-  30:           0x657a05 - _start
-  31:                0x0 - <unknown>
-thread caused non-unwinding panic. aborting.
-exit=134 (134 is SIGABRT through the shell; subprocess reports -6)
+exit=1
 == armed=0 shape=method
 
-thread '<unnamed>' (50240) panicked at crates/repark-python/src/panic_probe.rs:26:5:
+thread '<unnamed>' (378140) panicked at crates/repark-python/src/panic_probe.rs:13:5:
 repark panic probe
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-child-caught PySparkException repark internal error in PanicProbe.method: repark panic probe (a Rust panic was caught at the Python boundary; this is a bug — please report it)
-exit=0 (134 is SIGABRT through the shell; subprocess reports -6)
-== armed=0 shape=stream
-
-thread '<unnamed>' (50333) panicked at crates/repark-python/src/panic_probe.rs:26:5:
-repark panic probe
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-child-caught ArrowInvalid External error: repark internal error in PanicProbe.stream.next: repark panic probe (a Rust panic was caught at the Python boundary; this is a bug — please report it)
-exit=0 (134 is SIGABRT through the shell; subprocess reports -6)
+child-caught repark internal error in PanicProbe.method: repark panic probe (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+exit=0

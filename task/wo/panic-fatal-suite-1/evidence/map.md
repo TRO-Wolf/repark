@@ -14,7 +14,7 @@ another builder, so the load figures sit beside the two wall-clock failures.
   inheriting child legs go red (3 failed, 2 passed). Not committed.
 - [mutation-order-red.txt](mutation-order-red.txt) — the line moved below the first `repark` import: the order pin goes
   red (1 failed, 4 passed). Not committed.
-- [mutation-flag-zero-red-native-door-1.txt](mutation-flag-zero-red-native-door-1.txt) — the same `conftest.py` mutation re-run on 2026-10-21 after MAP-COLUMN-PANIC-NATIVE-DOOR-1 repointed the pin at `_native.__panic_probe__` (the native `repark.sql()` door no longer panics on `map('a', <column>)`): the order pin and both inheriting child legs go red, 3 failed and 2 passed. Not committed as a code change.
+- [mutation-flag-zero-red-native-door-1.txt](mutation-flag-zero-red-native-door-1.txt) — the same `conftest.py` mutation re-run on 2026-10-21 after MAP-COLUMN-PANIC-NATIVE-DOOR-1 repointed the pin at `_native.__panic_probe__` (the native `repark.sql()` door no longer panics on `map('a', <column>)`): the order pin and the inheriting child leg go red, 2 failed and 1 passed (the pin is method-only since the sixth commit of that unit; the earlier run of this mutation had 3 failed and 2 passed with a stream leg). Not committed as a code change.
 - [child-output.txt](child-output.txt) — what the four children print: `PanicException` and exit 1 through the
   `sql`-method fence, SIGABRT and exit -6 through the Arrow C stream fence, and the unchanged message with the flag
   removed.

@@ -4,15 +4,14 @@
 it once when it initialises. These pins prove the order (the module reports the policy it
 initialised with), prove that a caught panic ends a child interpreter that inherits the suite
 environment, and prove that the same panic keeps its ``repark internal error`` message when the
-variable is cleared. Both panic shapes come from the test-only ``_native.__panic_probe__``: the
-``method`` shape panics inside a method fence, and the ``stream`` shape panics inside the Arrow C
-stream poll fence while ``pyarrow`` reads the exported stream.
+variable is cleared. The panic comes from the test-only ``_native.__panic_probe__('method')``,
+which panics inside a method fence. The Arrow C stream fence is pinned by the Rust child-process
+tests in ``fence.rs``.
 """
 
 from __future__ import annotations
 
 import os
-import re
 import subprocess
 import sys
 
@@ -27,20 +26,11 @@ _PANIC_TEXT = "repark panic probe"
 _TIMEOUT_SECONDS = 300
 
 _PREAMBLE = """
-import ctypes
-import sys
-
-if sys.platform == "linux":
-    ctypes.CDLL(None).prctl(4, 0, 0, 0, 0)
-
-import pyarrow as pa
-
 from repark import _native
 """
 
 _SHAPES: dict[str, tuple[str, str]] = {
     "method": ("_native.__panic_probe__('method')", "PanicProbe.method"),
-    "stream": ("pa.table(_native.__panic_probe__('stream'))", "PanicProbe.stream.next"),
 }
 
 
@@ -90,11 +80,7 @@ def test_the_known_panic_keeps_its_message_when_the_flag_is_cleared(shape: str) 
     completed = _run_child(_child_source(statement), armed=False)
     text = _combined(completed)
     assert completed.returncode == 0, text
-    converted = re.compile(
-        rf"child-caught (?:External error: )?{re.escape(_CONVERTED_PREFIX + operation)}: "
-        rf"{re.escape(_PANIC_TEXT)} \("
-    )
-    assert converted.search(text), text
+    assert f"child-caught {_CONVERTED_PREFIX}{operation}: {_PANIC_TEXT} (" in text, text
     assert _CONVERTED_SUFFIX in text, text
 
 
