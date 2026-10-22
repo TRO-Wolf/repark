@@ -139,6 +139,7 @@ struct Marker {
     snapshots: BTreeSet<i64>,
     summary_keys: BTreeSet<String>,
     files: BTreeMap<String, String>,
+    formats: BTreeMap<String, String>,
 }
 
 fn cell(id: &str) -> &'static Cell {
@@ -246,6 +247,7 @@ fn read_marker(path: &Path) -> Marker {
         snapshots: BTreeSet::new(),
         summary_keys: BTreeSet::new(),
         files: BTreeMap::new(),
+        formats: BTreeMap::new(),
     };
     for line in text.lines() {
         let (kind, value) = line.split_once(' ').expect("a marker line");
@@ -258,6 +260,10 @@ fn read_marker(path: &Path) -> Marker {
             }
             "summary" => {
                 marker.summary_keys.insert(value.to_string());
+            }
+            "format" => {
+                let (format, path) = value.split_once(' ').expect("a format line");
+                marker.formats.insert(path.to_string(), format.to_string());
             }
             _ => {
                 marker.files.insert(value.to_string(), kind.to_string());
@@ -566,6 +572,16 @@ async fn assert_orphans(
         counts[0], counts[1], counts[2], counts[3], counts[4]
     );
     assert_eq!(counts, cell.orphans, "{id} v{format}: orphans per kind");
+    let delete_format = if format == 2 { "Parquet" } else { "Puffin" };
+    for orphan in &orphans {
+        if marker.files.get(orphan).map(String::as_str) == Some("deletes") {
+            assert_eq!(
+                marker.formats.get(orphan).map(String::as_str),
+                Some(delete_format),
+                "{id} v{format}: the delete file {orphan} is a {delete_format} file"
+            );
+        }
+    }
     if cell.mode == HoldMode::Hold && !cell.creates {
         let written: BTreeSet<String> = marker.files.keys().cloned().collect();
         assert_eq!(

@@ -44,6 +44,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-015: the halt recorded, owner decision pending (card ICE-HADOOP-HINT-WINDOW-1); C-016 and
   C-017: the registry row narrowed to `register_table`, without `type=memory`.
   C-018: the 1.5.6 notes line says "before the metadata file is written".
+  C-019: K-5 pins the delete file's format per version.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

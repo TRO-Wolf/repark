@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use iceberg::io::FileIO;
-use iceberg::spec::{DataContentType, Snapshot, TableMetadata};
+use iceberg::spec::{DataContentType, DataFileFormat, Snapshot, TableMetadata};
 use iceberg::table::Table;
 use iceberg::view::{View, ViewCommit};
 use iceberg::{Namespace, TableCommit, TableUpdate, ViewCreation};
@@ -34,27 +34,34 @@ pub(super) fn local_path(path: &str) -> String {
         .to_string()
 }
 
+pub(super) type Files = BTreeMap<String, (&'static str, Option<DataFileFormat>)>;
+
 async fn add_snapshot_files(
     file_io: &FileIO,
     metadata: &TableMetadata,
     snapshot: &Snapshot,
-    files: &mut BTreeMap<String, &'static str>,
+    files: &mut Files,
 ) {
-    files.insert(local_path(snapshot.manifest_list()), "lists");
+    files.insert(local_path(snapshot.manifest_list()), ("lists", None));
     let list = snapshot
         .load_manifest_list(file_io, metadata)
         .await
         .expect("load a manifest list");
     for manifest_file in list.entries() {
-        files.insert(local_path(&manifest_file.manifest_path), "manifests");
+        files.insert(
+            local_path(&manifest_file.manifest_path),
+            ("manifests", None),
+        );
         let manifest = manifest_file
             .load_manifest(file_io)
             .await
             .expect("load a manifest");
         for entry in manifest.entries() {
             let kind = match entry.content_type() {
-                DataContentType::Data => "data",
-                DataContentType::PositionDeletes | DataContentType::EqualityDeletes => "deletes",
+                DataContentType::Data => ("data", None),
+                DataContentType::PositionDeletes | DataContentType::EqualityDeletes => {
+                    ("deletes", Some(entry.file_format()))
+                }
             };
             files.insert(local_path(entry.file_path()), kind);
         }
@@ -68,16 +75,16 @@ pub(super) fn snapshot_ids(metadata: &TableMetadata) -> BTreeSet<i64> {
         .collect()
 }
 
-pub(super) async fn reachable(table: &Table) -> BTreeMap<String, &'static str> {
+pub(super) async fn reachable(table: &Table) -> Files {
     let mut files = BTreeMap::new();
     for snapshot in table.metadata().snapshots() {
         add_snapshot_files(table.file_io(), table.metadata(), snapshot, &mut files).await;
     }
     if let Some(location) = table.metadata_location() {
-        files.insert(local_path(location), "metadata");
+        files.insert(local_path(location), ("metadata", None));
     }
     for entry in table.metadata().metadata_log() {
-        files.insert(local_path(&entry.metadata_file), "metadata");
+        files.insert(local_path(&entry.metadata_file), ("metadata", None));
     }
     files
 }
@@ -87,7 +94,7 @@ async fn attempted_files(
     metadata: &TableMetadata,
     attempted: &[Snapshot],
     base: Option<&Table>,
-) -> BTreeMap<String, &'static str> {
+) -> Files {
     let before = match base {
         Some(base) => reachable(base).await,
         None => BTreeMap::new(),
@@ -109,12 +116,7 @@ impl HoldCatalog {
         std::process::exit(HOLD_RELEASED_EXIT)
     }
 
-    fn write_marker(
-        &self,
-        attempted: &[Snapshot],
-        location: &str,
-        files: &BTreeMap<String, &'static str>,
-    ) {
+    fn write_marker(&self, attempted: &[Snapshot], location: &str, files: &Files) {
         let mut lines = vec![format!("location {}", local_path(location))];
         for snapshot in attempted {
             lines.push(format!("snapshot {}", snapshot.snapshot_id()));
@@ -122,8 +124,11 @@ impl HoldCatalog {
                 lines.push(format!("summary {key}"));
             }
         }
-        for (path, kind) in files {
+        for (path, (kind, format)) in files {
             lines.push(format!("{kind} {path}"));
+            if let Some(format) = format {
+                lines.push(format!("format {format:?} {path}"));
+            }
         }
         let text = lines.join("\n");
         let staged = self.marker.with_extension("partial");
@@ -295,7 +300,7 @@ impl Catalog for HoldCatalog {
             .collect();
         let mut files = attempted_files(table.file_io(), table.metadata(), &attempted, None).await;
         if let Some(location) = table.metadata_location() {
-            files.insert(local_path(location), "metadata");
+            files.insert(local_path(location), ("metadata", None));
         }
         self.write_marker(&attempted, table.metadata().location(), &files);
         if self.mode == HoldMode::Hold {
