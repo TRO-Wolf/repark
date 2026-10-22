@@ -3627,6 +3627,33 @@ still open is `isModifiable`.
   set, the over-refusal list with its counts and the cost ruling are the ones stated above; the
   ledger runs C-001..C-051. Residues: CONTAINER-CAST-ZONE-1, LATERAL-CORRELATED-MEMORY-1,
   GATE-RETIRE-1 after ZONE-SEAM-1.
+- **Status 2026-10-22 (ZONE-SEAM-1, PR #1139, verifier pending; rulings ZS-4 and ZS-9):** the
+  zone seam converts a container cast of an instant to the session wall before the router's gate
+  reads the plan, so the cast arm (`casts_a_zoned_value_to_naive`, "its plan holds a `CAST` or
+  `TRY_CAST` from a type holding a zoned timestamp to one holding a naive one") no longer matches
+  a cast that turns a zoned microsecond leaf into a naive one; it stays reachable only for casts
+  that make no UTC wall, and it is the GATE-RETIRE-1 candidate. The refusal hint's sentence "a
+  CAST of the whole struct, array or map is refused" is stale where the arm no longer matches; it
+  waits for GATE-RETIRE-1. **Moved cells (U-8 door matrix, 3168 cells, against main
+  `b7a20167`):** the `ts_struct_cast` and `ts_struct_cast_column` sources on `ntz_nested`, 50 per
+  zone in New York and Kolkata, move from the refusal to the stored session wall, equal to live
+  Spark 4.1.2 cell for cell (measured 2026-10-22); 6 per zone move from the refusal to the
+  engine's own error (a scalar subquery in `VALUES`, which Spark refuses with
+  `SCALAR_SUBQUERY_IN_VALUES`; a plain `UPDATE` with no `WHERE`, which Spark stores). **Over-refusal
+  by design, ruled 2026-10-22 (ZS-9), until WRITE-NTZ-TO-LTZ-NESTED-1:** outside UTC a nested
+  `TIMESTAMP_NTZ` value written into a nested `TIMESTAMP` field refuses on the doors whose store
+  reads the wall as UTC (`INSERT OVERWRITE`, `INSERT … BY NAME`, the DataFrame
+  `insertInto(overwrite=True)` and `overwritePartitions`, MERGE `INSERT`, MERGE and plain `UPDATE`
+  of the whole struct), with ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write
+  incompatible data for the table <table>: Cannot safely cast `<column>`.`<leaf>` to "TIMESTAMP".
+  The session time zone is not UTC, and a nested TIMESTAMP_NTZ value cannot yet be stored into a
+  nested TIMESTAMP field outside UTC: set spark.sql.session.timeZone to UTC for the statement, or
+  cast the leaf to TIMESTAMP before nesting it, as in named_struct('<field>', CAST(<value> AS
+  TIMESTAMP), ...). SQLSTATE: KD000``: 134 matrix cells per zone (`ltz_nested`, New York and
+  Kolkata), of which 37 per zone stored Spark's instant on main by two cancelling defects (the
+  container cast's UTC wall read back as UTC) and 97 were DIFFERENT on main. Card
+  `task/roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`. Ledger
+  `task/ledgers/staging/zone-seam-1-ledger.md`.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 
@@ -3743,6 +3770,9 @@ still open is `isModifiable`.
   until it is designed as its own unit, card ICE-TSNS-NESTED-1
   (`task/roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md`). Ledger clauses C-040 to
   C-042.
+- **Status 2026-10-22 (ZONE-SEAM-1, PR #1139, verifier pending):** unchanged. The seam converts
+  microsecond leaves only and the gate reads the target column's type alone, so no arm of this
+  row becomes unreachable; `timestamp_ns_nested_shapes.rs` is green on the head.
 
 ### ICE-TSNS-SQL-1-R-016 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): one rule pairs struct fields on every write door, Spark's
 

@@ -1590,7 +1590,7 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   the function returns `TIMESTAMP`. Not converted (ZONE-ORACLE-1 holds no Spark answer): numeric
   targets other than `BIGINT`, a timestamp map key, a container cast to a scalar `STRING`,
   `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`.
-  pins: zone-seam-1/C-001, C-002, C-003, C-004
+  pins: zone-seam-1/C-001, C-002, C-003, C-004, C-011, C-012
 
 ## Pointers
 

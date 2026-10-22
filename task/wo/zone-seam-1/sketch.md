@@ -347,7 +347,11 @@ stay native; ZS-4 the U-8 refusals the seam lifts are listed refusal→EQUAL mov
 `TIMESTAMP_NTZ` site (step 3b); **ZS-7 (owner, 2026-10-22): the unit does not grow to the shared
 instant kernel of `to_utc_timestamp` / `from_utc_timestamp`; three ZONE-HORIZON-RENDER-1 cells
 that were EQUAL on main by value only become honest DIFFERENT and close with
-ZONE-HORIZON-INSTANT-1.**
+ZONE-HORIZON-INSTANT-1.** ZS-8 (owner, 2026-10-22): fix the write path's nested `TIMESTAMP_NTZ` →
+`TIMESTAMP` store inside the unit, unless it is more than one site; it was three (the sink's
+`conform` cast, `update_cast.rs`'s `arrow_cast` text, the MERGE `INSERT` store wrap), so
+**ZS-9 (orchestrator, 2026-10-22, reversible by the owner): the unit refuses that shape outside UTC
+on the doors that reach those sites (step 3c) and WRITE-NTZ-TO-LTZ-NESTED-1 fixes them.**
 
 ## 11. Steps 1–7, as the order orders them
 

@@ -419,24 +419,128 @@ by design, ruled 2026-10-22 (ZS-9), until WRITE-NTZ-TO-LTZ-NESTED-1:** 134 refus
 York and 134 in Kolkata (`ltz_nested`, the store doors), of which 37 per zone stored Spark's
 instant on main.
 
+## Step 5 addendum (step 3c's mutants, 2026-10-22)
+
+`cargo test -p repark-spark --test ntz_into_ltz_nested`, each mutant alone then reverted:
+
+| mutant | pins red | which |
+|---|---|---|
+| M15 the refusal removed (`if false && micros && store`) | 1 failed | `a_nested_wall_into_a_nested_timestamp_refuses_outside_utc_on_every_store_door` |
+| M16 the zone check removed (`if store`, refuses in UTC too) | 1 failed | `a_utc_session_stores_the_wall_read_in_utc_on_every_store_door` |
+| M17 every `INSERT` a store door (`let store = true`) | 1 failed | `doors_that_read_the_wall_in_the_session_zone_store_spark_instant_outside_utc` |
+
+## Step 6, never worse (2026-10-22, the final code head `a6780177`)
+
+- **ZONE-ORACLE-1** on the head build: 1,540 EQUAL / 90 DIFFERENT / 10 REFUSED / 0 ERROR; against
+  the base replay 321 DIFFERENT→EQUAL, 10 ERROR→EQUAL, 10 REFUSED→EQUAL, 0 EQUAL→other; equal to
+  the committed difference list (0 left, 0 joined, 0 changed).
+- **U-8 door matrix** (`probe.py run --engine repark`, 3168 cells, main `b7a20167` against the
+  head): on `ntz_nested`, 50 cells per zone move from the refusal to the stored session wall, equal
+  to live Spark 4.1.2 cell for cell (`--engine spark --sources ts_struct_cast,ts_struct_cast_column`,
+  176 cells), and 6 per zone move from the refusal to the engine's own error (2 a scalar subquery
+  in `VALUES`, which Spark refuses with another condition; 4 a plain `UPDATE` with no `WHERE`,
+  which Spark stores and which errors for every source on main); on `ltz_nested`, the 134 per zone
+  of step 3c refuse, and the 54 NTZ-source cells the seam made right on the plan-converting doors
+  stay right. No cell that matches Spark on main moves to anything else (Spark measured for every
+  `ltz_nested` cell and the moved `ntz_nested` cells in New York and Kolkata); UTC cells do not
+  move.
+- **Cost** (`r1`-style script: the six U-8 statements and a container-cast `SELECT`, each process
+  one session with 3 warm-ups and the median of 10 runs; main `b7a20167` and the head alternating,
+  6 rounds per zone; the table gives the median of the six; load 2.8–4.9):
+
+| statement | UTC main | UTC head | ratio | New York main | New York head | ratio |
+|---|---:|---:|---:|---:|---:|---:|
+| plain INSERT | 25.52 ms | 26.19 ms | 1.026 | 24.68 ms | 25.01 ms | 1.013 |
+| plain UPDATE | 54.10 ms | 55.17 ms | 1.020 | 50.56 ms | 52.96 ms | 1.048 |
+| plain MERGE | 56.92 ms | 57.62 ms | 1.012 | 56.82 ms | 57.39 ms | 1.010 |
+| nested-NTZ INSERT | 30.59 ms | 30.56 ms | 0.999 | 28.37 ms | 29.72 ms | 1.047 |
+| nested-NTZ UPDATE | 55.69 ms | 57.18 ms | 1.027 | 57.87 ms | 58.27 ms | 1.007 |
+| nested-NTZ MERGE | 65.31 ms | 66.12 ms | 1.012 | 66.98 ms | 67.20 ms | 1.003 |
+| container-cast SELECT | 3.30 ms | 3.43 ms | 1.039 | 3.32 ms | 3.46 ms | 1.039 |
+
+  Every ratio is within the 1.05x gate.
+- **Gates on the head:** `cargo test -p repark-functions` 965 passed (1 ignored, pre-existing);
+  `cargo test -p repark-spark` every binary green, `ntz_into_ltz_nested` 3 passed;
+  `cargo test -p repark-iceberg --lib nested_ns_gate` 10 passed; the facade suite (`-n 8 --dist
+  loadgroup`) 20,326 passed, 485 skipped, 151 xfailed, 10 failed, all ten the `io/` live
+  PySpark-worker oracles (`ModuleNotFoundError: No module named 'pandas'` in the worker), which
+  pass alone on the head (22 passed) and on main (measured 2026-10-22); `make ci` and the
+  comment-gate grep before every push; `make check-comment-density` is not a target on this base.
+
+## Step 7, records (2026-10-22)
+
+The card CONTAINER-CAST-ZONE-1's status and its follow-up lines (TIMESTAMP-LEGALITY-PARITY-1,
+DATE-FORMAT-FRACTION-1, native-door zone semantics); the ZONE-ORACLE-1 order's follow-up line
+(ZS-3); R-011's and R-015's dated status lines; the v1.5.6 notes lines; sketch §10b; the cards
+ZONE-HORIZON-INSTANT-1 and WRITE-NTZ-TO-LTZ-NESTED-1; the `map.md` rows of every touched
+directory. Deviation from the sketch: the seam's tests live in `src/tests/zone_seam_pairs.rs`, not
+under a new `zone_seam/` directory, and the seam file is about 680 lines.
+
 ## PROPOSITION LEDGER — ZONE-SEAM-1 — 2026-10-22
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | A container `CAST` or `TRY_CAST` (struct, every list layout, map value) of a seam pair (sketch §4 rows 1–8) answers, at each seam leaf, what the bare leaf `CAST` answers in the session zone, on `CAST` and `TRY_CAST`, every other member keeping its native cast. | `zone_seam_pairs.rs` rows 1–8 in three zones, struct / array / map, `CAST` and `TRY_CAST`; the mixed-member control; the column source. | **OPEN** | Red on the base (above). |
-| C-002 | A container cast of a wall to `BIGINT` and of a `BIGINT` to `TIMESTAMP_NTZ` refuses with `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`, as the leaf and Spark do. | rows 9–10 pins. | **OPEN** | Red on the base. |
-| C-003 | A bare `TRY_CAST` of an instant to `STRING`, `DATE` or `BIGINT`, of a wall to `TIMESTAMP` or `STRING`, of a date or a `BIGINT` to `TIMESTAMP` answers what the bare `CAST` answers; `TRY_CAST` answers NULL where its leaf cannot convert (an unplaceable wall, a malformed string, a `BIGINT` overflow). | the leaf `TRY_CAST` pin and the NULL pin. | **OPEN** | Red on the base. |
-| C-004 | `to_utc_timestamp` and `from_utc_timestamp` of a wall, a date or an untyped NULL cast the argument to `TIMESTAMP` in the session zone first and return `TIMESTAMP` (ZS-2). | the function-site pin. | **OPEN** | Red on the base. |
-| C-005 | `to_json` renders a `TIMESTAMP_NTZ` leaf as its wall with no zone, `yyyy-MM-ddTHH:mm:ss.SSS`, in every zone; an instant leaf is unchanged. | the `to_json` pin. | **OPEN** | Red on the base. |
-| C-006 | The ZONE-ORACLE-1 corpus on the head: every cell of § Corpus cells EQUAL, the non-EQUAL set exactly the residue above (plus the watched cell if it stays), no EQUAL cell of the base moves. | replay on main and head; `zone_oracle_1_main_difference.json` re-recorded on the head. | **OPEN** | Step 6. |
-| C-007 | The card's tables on the Spark SQL door and the DataFrame door answer Spark's values; the native `repark.sql()` door answers on the head as on main (ZS-5). | step 4 pins. | **OPEN** | Step 4. |
-| C-008 | The six table-creating writers and a cached frame store the session wall for a container cast of an instant outside UTC. | step 4 pins. | **OPEN** | Step 4. |
-| C-009 | The U-8 door matrix on main and head, and the U-8 Rust pins that held a container-cast refusal (rewritten to the stored session wall, ZS-4; the two engine-error statements fail as their wall twin does): every changed cell is a listed refusal→EQUAL move of ZS-4 or DIFFERENT→EQUAL; no EQUAL cell moves. | `probe.py` on both builds. | **OPEN** | Step 6. |
-| C-010 | Each seam arm removed alone reds a pin; the seam call removed reds the corpus. | mutants. | **OPEN** | Step 5. |
-| C-011 | Cost: the U-8 verifier's six statements, 10-run medians, head ≤ 1.05x main, load under 5. | timing table. | **OPEN** | Step 6. |
-| C-013 | `from_json` reads a `TIMESTAMP_NTZ` field: a text with no zone in Spark's form is its wall in every session zone; a text with `Z` or an offset is NULL; a space separator and a date-only text keep main's answer (ZS-6). | the two `from_json` pins, red on main. | **OPEN** | Step 3b. |
-| C-014 | The ZONE-HORIZON-RENDER-1 residue on the head: 15 wall edge cells leave, 3 New York `to_utc_timestamp_wall` cells join as expected-divergence rows (ZS-7), every other cell unchanged. | `--engine repark --residue` on the head; the suite green. | **OPEN** | Recorded 2026-10-22. |
-| C-015 | Outside UTC, a nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field refuses on the store doors (sites A, B, C) with the whole text and no write; UTC stores the UTC read; the plan-converting doors store the session read (ZS-9). | `ntz_into_ltz_nested.rs` red without the refusal; the DataFrame pins; the matrix. | **OPEN** | Step 3c. |
-| C-012 | Records: the card (follow-up lines of ZS-1 and ZS-5), R-011 and R-015 status lines, the v1.5.6 notes line, the ZONE-ORACLE-1 order follow-up (ZS-3), `map.md`s. | the diff. | **OPEN** | Step 7. |
+| C-001 | A container `CAST` or `TRY_CAST` (struct, every list layout, map value) of a seam pair (sketch §4 rows 1–8) answers, at each seam leaf, what the bare leaf `CAST` answers in the session zone, on `CAST` and `TRY_CAST`, every other member keeping its native cast. | `zone_seam_pairs.rs` rows 1–8 in three zones, struct / array / map, `CAST` and `TRY_CAST`; the mixed-member control; the column source. | **PROVEN** | `zone_seam_pairs.rs` rows 1–8, the column source, the mixed-member control, the null-mask pin; step 5 M01–M05, M09, M11, M14. |
+| C-002 | A container cast of a wall to `BIGINT` and of a `BIGINT` to `TIMESTAMP_NTZ` refuses with `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`, as the leaf and Spark do. | rows 9–10 pins. | **PROVEN** | rows 9–10 pins; M06, M07. |
+| C-003 | A bare `TRY_CAST` of an instant to `STRING`, `DATE` or `BIGINT`, of a wall to `TIMESTAMP` or `STRING`, of a date or a `BIGINT` to `TIMESTAMP` answers what the bare `CAST` answers; `TRY_CAST` answers NULL where its leaf cannot convert (an unplaceable wall, a malformed string, a `BIGINT` overflow). | the leaf `TRY_CAST` pin and the NULL pin. | **PROVEN** | the leaf `TRY_CAST` and NULL pins; M08. |
+| C-004 | `to_utc_timestamp` and `from_utc_timestamp` of a wall, a date or an untyped NULL cast the argument to `TIMESTAMP` in the session zone first and return `TIMESTAMP` (ZS-2). | the function-site pin. | **PROVEN** | the function-site pin; M10; `w_ref_from` (R-NTZ-S2-9) retired. |
+| C-005 | `to_json` renders a `TIMESTAMP_NTZ` leaf as its wall with no zone, `yyyy-MM-ddTHH:mm:ss.SSS`, in every zone; an instant leaf is unchanged. | the `to_json` pin. | **PROVEN** | the `to_json` pin; M13. |
+| C-006 | The ZONE-ORACLE-1 corpus on the head: every cell of § Corpus cells EQUAL, the non-EQUAL set exactly the residue above (plus the watched cell if it stays), no EQUAL cell of the base moves. | replay on main and head; `zone_oracle_1_main_difference.json` re-recorded on the head. | **PROVEN** | Step 6: 1,540 / 90 / 10 / 0, 0 EQUAL→other; the residue table; M14 reds the corpus. |
+| C-007 | The card's tables on the Spark SQL door and the DataFrame door answer Spark's values; the native `repark.sql()` door answers on the head as on main (ZS-5). | step 4 pins. | **PROVEN** | `test_zone_seam_1.py`; the native door measured on main and the head. |
+| C-008 | The six table-creating writers and a cached frame store the session wall for a container cast of an instant outside UTC. | step 4 pins. | **PROVEN** | `test_zone_seam_1.py` writers in New York and UTC. |
+| C-009 | The U-8 door matrix on main and head, and the U-8 Rust pins that held a container-cast refusal (rewritten to the stored session wall, ZS-4; the two engine-error statements fail as their wall twin does): every changed cell is a listed refusal→EQUAL move of ZS-4 or DIFFERENT→EQUAL; no EQUAL cell moves. | `probe.py` on both builds. | **PROVEN** | Step 6 matrix; the rewritten U-8 Rust and Python pins. |
+| C-010 | Each seam arm removed alone reds a pin; the seam call removed reds the corpus. | mutants. | **PROVEN** | Step 5 and its addendum: 17 mutants, each reds a pin; M14 reds the corpus. |
+| C-011 | Cost: the U-8 verifier's six statements, 10-run medians, head ≤ 1.05x main, load under 5. | timing table. | **PROVEN** | Step 6 cost table, every ratio within 1.05x. |
+| C-013 | `from_json` reads a `TIMESTAMP_NTZ` field: a text with no zone in Spark's form is its wall in every session zone; a text with `Z` or an offset is NULL; a space separator and a date-only text keep main's answer (ZS-6). | the two `from_json` pins, red on main. | **PROVEN** | the two `from_json` pins, red on main; M12. |
+| C-014 | The ZONE-HORIZON-RENDER-1 residue on the head: 15 wall edge cells leave, 3 New York `to_utc_timestamp_wall` cells join as expected-divergence rows (ZS-7), every other cell unchanged. | `--engine repark --residue` on the head; the suite green. | **PROVEN** | the residue re-derived; the suite green. |
+| C-015 | Outside UTC, a nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field refuses on the store doors (sites A, B, C) with the whole text and no write; UTC stores the UTC read; the plan-converting doors store the session read (ZS-9). | `ntz_into_ltz_nested.rs` red without the refusal; the DataFrame pins; the matrix. | **PROVEN** | `ntz_into_ltz_nested.rs` red without the refusal; the DataFrame pins; the matrix; M15–M17. |
+| C-012 | Records: the card (follow-up lines of ZS-1 and ZS-5), R-011 and R-015 status lines, the v1.5.6 notes line, the ZONE-ORACLE-1 order follow-up (ZS-3), `map.md`s. | the diff. | **PROVEN** | Step 7. |
+
+## Coverage
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: zone-seam-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: The order's pairs, sites and card tables were walked against Spark 4.1.2's recorded ZONE-ORACLE-1 corpus, live Spark runs of the U-8 door matrix and the ZONE-HORIZON-RENDER-1 edges; every assigned corpus cell is EQUAL and the residue is listed by cause.
+      artifacts: [crates/repark-functions/src/tests/zone_seam_pairs.rs, python/repark/tests/timestamps/test_zone_seam_1.py, python/repark/tests/timestamps/zone_oracle_1_main_difference.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Struct, list and map shapes, a column source, NULL parents with a malformed child, an unplaceable wall, a malformed string and a BIGINT overflow under TRY_CAST, gap and overlap walls at the UTC-function site, five session zones.
+      artifacts: [crates/repark-functions/src/tests/zone_seam_pairs.rs, task/roadmap/mid-term/zone-horizon-instant-1-card-2026-10-22.md]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Depth-0 CAST, the inner level, natively EQUAL pairs and zoned to_json are untouched; the corpus shows 0 EQUAL→other; a second analysis pass is pinned.
+      artifacts: [crates/repark-functions/src/zone_seam.rs, crates/repark-functions/src/tests/zone_seam_pairs.rs]
+    - id: AT-4
+      status: N/A
+      justification: Stateless analyzer rewrite and scalar kernels; no shared or mutable state.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, credential, deserialization or path handling; the refusal names no data-deleting action.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every refusal pin asserts no value is written; the U-8 matrix compared stored values with main and live Spark on every door.
+      artifacts: [crates/repark-spark/tests/ntz_into_ltz_nested.rs, crates/repark-spark/tests/ntz_nested_refuse_casts.rs]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Seven statements in two zones, main and head alternating, every 10-run median ratio within 1.05x.
+      artifacts: [task/ledgers/staging/zone-seam-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No new crate edge; repark-iceberg still depends only on repark-common; the to_utc_timestamp wrapper delegates to DataFusion-Spark's own coercion and kernel; no ceiling rises.
+      artifacts: [crates/repark-functions/src/zone_seam.rs, crates/repark-iceberg/src/write/nested_ns_gate.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The refusals carry Spark's conditions (CAST_WITHOUT_SUGGESTION, CANNOT_SAFELY_CAST) and the new hint is pinned byte for byte per door family.
+      artifacts: [crates/repark-spark/tests/ntz_into_ltz_nested.rs, python/repark/tests/timestamps/test_zone_seam_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Seventeen mutants each red a pin; the seam call removed reds the corpus; M11 was a surviving mutant until its pin was added.
+      artifacts: [crates/repark-functions/src/tests/zone_seam_pairs.rs, crates/repark-spark/tests/ntz_into_ltz_nested.rs]
+  complete: true
+```
 
 Up: [map.md](map.md).

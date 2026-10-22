@@ -2532,5 +2532,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   session-zone seam for every container cast, leaf `TRY_CAST`, `to_utc_timestamp` /
   `from_utc_timestamp` argument and `to_json` rendering of a zoned or naive timestamp. The
   orchestrator's rulings ZS-1 to ZS-5 on the sketch; the red pins on the base; the corpus cells
-  to close; every residue cell by cause with Spark's and main's values; clauses C-001 to
-  C-012. `risk_tier: standard`. Branch `feat/zone-seam-1`.
+  to close; every residue cell by cause with Spark's and main's values; the halts and rulings
+  ZS-6 to ZS-9 (step 3b `from_json`, the ZONE-HORIZON-RENDER-1 residue, step 3c's refusal of a
+  nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field outside UTC); the mutants, the U-8
+  matrix against live Spark, the cost table; clauses C-001 to C-015, all PROVEN, and the
+  attestation. `risk_tier: standard`. Branch `feat/zone-seam-1`.
