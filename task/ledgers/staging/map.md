@@ -2527,3 +2527,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   count is unchanged (C-004). Replays (C-005) and the pin's second failure, its 10 s bound on
   a slow disk (C-006, open on the card). `risk_tier: standard`. Branch
   `fix/mb-fence-body-flake-1`.
+- [zone-seam-1-ledger.md](zone-seam-1-ledger.md) —
+  **ZONE-SEAM-1 (2026-10-22), card CONTAINER-CAST-ZONE-1, rows R-011 and R-015:** one
+  session-zone seam for every container cast, leaf `TRY_CAST`, `to_utc_timestamp` /
+  `from_utc_timestamp` argument and `to_json` rendering of a zoned or naive timestamp. The
+  orchestrator's rulings ZS-1 to ZS-5 on the sketch; the red pins on the base; the corpus cells
+  to close; every residue cell by cause with Spark's and main's values; clauses C-001 to
+  C-012. `risk_tier: standard`. Branch `feat/zone-seam-1`.

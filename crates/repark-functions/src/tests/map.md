@@ -52,6 +52,16 @@ Only tests; `mod.rs` is the module manifest.
   `unix_timestamp_of_an_overlap_answers_the_earlier_offset` pins a New York
   overlap wall and its post-2099 twin to the earlier offset.
 
+- `zone_seam_pairs.rs` — **ZONE-SEAM-1 (2026-10-22):** the seam's (source, target) pairs
+  through the analyzer in UTC, New York and Kolkata, against Spark 4.1.2's ZONE-ORACLE-1 values:
+  a container `CAST` and `TRY_CAST` (struct, list, map) of an instant to `TIMESTAMP_NTZ`,
+  `STRING`, `DATE` and `BIGINT`, of a wall, a zoneless string and a date to `TIMESTAMP`, of a
+  wall to `STRING` (rows 1–8); the refusals of a wall to `BIGINT` and a `BIGINT` to
+  `TIMESTAMP_NTZ` (rows 9–10); the bare `TRY_CAST` twins; NULL where a `TRY_CAST` leaf cannot
+  convert; `to_utc_timestamp` / `from_utc_timestamp` of a wall, a date and NULL; `to_json` of a
+  `TIMESTAMP_NTZ` leaf; an instant column; and the mixed-member control.
+  pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
