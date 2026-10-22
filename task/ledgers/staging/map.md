@@ -2540,4 +2540,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   *Fix round 1 (2026-10-22, after verifier round 1's FAIL):* the partitioned `INSERT OVERWRITE`
   position (S1-1, C-016), the partitioned door census of sixteen named shapes (C-017), the four
   pins that kill S1-2's surviving mutants (C-018), R-011's counts corrected to 37 + 79 + 18 per
-  zone (C-019), and the round's further items as they land.
+  zone (C-019), and the cost re-timed in ten alternating rounds under load 5 with the New York
+  `MERGE` into a nested `TIMESTAMP` target, every ratio within 1.05x (C-020).

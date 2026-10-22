@@ -639,11 +639,48 @@ R-011's status line, which now reads 37 + 79 + 18. Re-measured on the fix (the U
 Kolkata EQUAL→refused 37, DIFFERENT→refused 79, error→refused 18, and every cell answers exactly
 as on `58321e94`.
 
+**Item 5, the cost re-timed (2026-10-22, after the other lane handed back).** The U-8 verifier's six
+statements and a New York `MERGE` into a `STRUCT<v: TIMESTAMP, n: INT>` target (`LTZ-nested
+MERGE`, the one place the refusal adds planning work outside UTC), each process one session with 3
+warm-ups and the median of 10 runs, main `b7a20167` and the fix alternating, ten rounds per zone;
+the table gives the median of the ten. Every process started at a one-minute load under 5
+(3.75–4.96); one process ended at 9.22 (round 8, UTC, the fix), every other at 5.00 or less.
+
+| statement | UTC main | UTC head | ratio | New York main | New York head | ratio |
+|---|---:|---:|---:|---:|---:|---:|
+| plain INSERT | 25.66 ms | 25.46 ms | 0.992 | 24.82 ms | 24.73 ms | 0.997 |
+| plain UPDATE | 52.82 ms | 51.72 ms | 0.979 | 50.99 ms | 52.65 ms | 1.033 |
+| plain MERGE | 55.24 ms | 55.72 ms | 1.009 | 55.08 ms | 56.69 ms | 1.029 |
+| nested-NTZ INSERT | 30.12 ms | 29.95 ms | 0.995 | 32.22 ms | 32.02 ms | 0.994 |
+| nested-NTZ UPDATE | 54.60 ms | 54.47 ms | 0.998 | 55.12 ms | 55.53 ms | 1.007 |
+| nested-NTZ MERGE | 62.05 ms | 62.62 ms | 1.009 | 63.60 ms | 64.18 ms | 1.009 |
+| LTZ-nested MERGE | 49.91 ms | 49.65 ms | 0.995 | 53.22 ms | 49.06 ms | 0.922 |
+
+Load at each process's start / end:
+
+| round | UTC main | UTC head | NY main | NY head |
+|---:|---|---|---|---|
+| 1 | 4.76 / 4.86 | 4.86 / 4.63 | 4.63 / 4.34 | 4.34 / 4.15 |
+| 2 | 4.15 / 4.15 | 4.15 / 3.98 | 3.98 / 3.98 | 3.98 / 3.90 |
+| 3 | 3.90 / 4.39 | 4.39 / 4.36 | 4.36 / 4.17 | 4.17 / 3.99 |
+| 4 | 3.99 / 3.75 | 3.75 / 3.85 | 3.85 / 4.59 | 4.59 / 4.46 |
+| 5 | 4.46 / 4.58 | 4.58 / 4.46 | 4.46 / 4.50 | 4.50 / 4.62 |
+| 6 | 4.62 / 4.49 | 4.49 / 4.29 | 4.29 / 4.35 | 4.35 / 4.40 |
+| 7 | 4.40 / 4.37 | 4.37 / 4.26 | 4.26 / 4.32 | 4.32 / 4.21 |
+| 8 | 4.21 / 4.27 | 4.27 / 9.22 | 4.96 / 4.88 | 4.88 / 4.89 |
+| 9 | 4.89 / 4.82 | 4.82 / 5.00 | 4.76 / 4.86 | 4.86 / 4.63 |
+| 10 | 4.63 / 4.90 | 4.90 / 4.75 | 4.75 / 4.85 | 4.85 / 4.62 |
+
+Every ratio is within the 1.05x gate (worst 1.033, New York plain `UPDATE`). An earlier six-round
+set taken while another lane held the box (starts 3.5–4.96) read New York nested-NTZ `INSERT` at
+1.056 with per-round medians spread 26–32 ms on both builds; that set was held, not used.
+
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-016 | An INSERT with a `PARTITION` clause the door accepts names its source column by position (the table's columns less the static partition columns, or the column list; a dynamic clause reads every column), so outside UTC the ZS-9 refusal and R-011's type read see the column on every partitioned spelling; a clause the door refuses is read as before. | the gate's unit tests; the partitioned-door pin red on `58321e94`. | **PROVEN** | `nested_ns_gate/tests.rs` static-column cases; item 2's pin, 36 cells red on `58321e94`, green on the fix. |
 | C-017 | The partitioned door census (sixteen shapes by name, both DataFrame overwrites included, seven sources, two schemas, four zones, 848 cells) on main, `58321e94` and the fix against live Spark: no cell DIFFERENT on the fix, no EQUAL→DIFFERENT, UTC unchanged, the only `58321e94`→fix moves DIFFERENT→refused, no refused write leaves a file. | the census and the verifier's `wx`/`wr` drivers on the fix. | **PROVEN** | item 2's tables. |
 | C-018 | Each of the verifier's four surviving mutants (first list element only, `is_instant` only `"UTC"`, `type_at` at the wrong leaf, no plain-`UPDATE` exemption) reds one pin, and the other 22 mutants stay killed. | the mutant runs. | **PROVEN** | item 3's table: 26 of 26 killed. |
 | C-019 | R-011's status line counts the 134 over-refused `ltz_nested` cells per zone as 37 Spark-equal, 79 DIFFERENT and 18 engine errors on main, as the matrix measures them. | the matrix on the fix against main and Spark. | **PROVEN** | item 4. |
+| C-020 | Cost: the U-8 verifier's six statements and the New York `MERGE` into a nested `TIMESTAMP` target, ten alternating rounds of 10-run medians, every process started under load 5: the fix ≤ 1.05x main in UTC and New York. | timing table with the loads. | **PROVEN** | item 5's tables; worst 1.033. |
 
 Up: [map.md](map.md).
