@@ -5,10 +5,13 @@ pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import subprocess
 import sys
+import warnings
+from pathlib import Path
 
 import pytest
 
@@ -59,18 +62,54 @@ def peak_rss_bytes():
     return 0
 
 
+def status_fields():
+    fields = {}
+    for line in open("/proc/self/status"):
+        key, _, rest = line.partition(":")
+        if key in ("VmHWM", "VmRSS", "RssAnon", "RssFile", "RssShmem"):
+            fields[key] = int(rest.split()[0]) * 1024
+    return fields
+
+
+def native_rss_bytes():
+    total = 0
+    inside = False
+    for line in open("/proc/self/smaps"):
+        head = line.split()
+        if len(head) >= 5 and "-" in head[0] and not head[0].endswith(":"):
+            inside = "/repark/_native" in line
+        elif inside and line.startswith("Rss:"):
+            total += int(head[1]) * 1024
+    return total
+
+
 resource.setrlimit(resource.RLIMIT_AS, (vm_size_bytes() + headroom,) * 2)
 
+if mode == "flat":
+    frame.select(*[(F.col("x") + i).alias(f"c{i}") for i in range(1)]).collect()
+else:
+    frame.replace({i: i + 1000 for i in range(1)}, subset=["x"]).collect()
+
 before = peak_rss_bytes()
+snap_before = status_fields()
+native_before = native_rss_bytes()
 if mode == "flat":
     frame.select(*[(F.col("x") + i).alias(f"c{i}") for i in range(entries)]).collect()
 else:
     frame.replace({i: i + 1000 for i in range(entries)}, subset=["x"]).collect()
 delta = peak_rss_bytes() - before
+snap_after = status_fields()
+native_after = native_rss_bytes()
+diag = {
+    "mode": mode,
+    "before": snap_before,
+    "after": snap_after,
+    "native_rss": [native_before, native_after],
+}
 if bound and delta > bound:
-    print("JSON" + json.dumps({"crossed": entries, "delta": delta}), flush=True)
+    print("JSON" + json.dumps({"crossed": entries, "delta": delta, "diag": diag}), flush=True)
     sys.exit(2)
-print("JSON" + json.dumps({"delta": delta}), flush=True)
+print("JSON" + json.dumps({"delta": delta, "diag": diag}), flush=True)
 """
 
 
@@ -105,6 +144,24 @@ def _run_worker(entries: int, bound: int, mode: str) -> dict:
     marker = tail[-1]
     assert marker.startswith("JSON"), f"{mode} worker bad tail: {marker[:200]}"
     result = json.loads(marker[len("JSON") :])
+    import repark._native as native
+
+    digest = hashlib.sha256()
+    with Path(native.__file__).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    warnings.warn(
+        "DIAG "
+        + json.dumps(
+            {
+                "entries": entries,
+                "bound": bound,
+                "so_sha256": digest.hexdigest()[:16],
+                "result": result,
+            }
+        ),
+        stacklevel=1,
+    )
     result["returncode"] = completed.returncode
     result["stderr_tail"] = completed.stderr[-600:]
     return result
