@@ -62,6 +62,8 @@ Only tests; `mod.rs` is the module manifest.
   `TIMESTAMP_NTZ` leaf; an instant column; and the mixed-member control.
   The `BIGINT` source is `CAST(1767323045 AS BIGINT)`, as in the corpus: the bare literal
   fits an `INT` and `SparkIntegerLiteral` types it so.
+  Each pin is analysed eagerly and then executed, so the analyzer runs twice, as on the
+  Spark door.
   pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers

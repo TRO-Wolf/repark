@@ -1581,7 +1581,8 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   `try_to_timestamp_udf`) with the call's own config. A wall to `BIGINT` and a `BIGINT` to
   `TIMESTAMP_NTZ` refuse at planning with `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`. A bare
   `TRY_CAST` of an instant to `STRING` / `DATE` / `BIGINT`, a wall to `TIMESTAMP` / `STRING` or a
-  date to `TIMESTAMP` takes the same kernel; a bare `TRY_CAST` of a `BIGINT` to `TIMESTAMP` reads
+  date to `TIMESTAMP` calls the bare leaf UDF directly (no typed-NULL carrier, which a second
+  analysis would narrow from `BIGINT` to `INT`); a bare `TRY_CAST` of a `BIGINT` to `TIMESTAMP` reads
   seconds (`TRY_CAST` to `Timestamp(Second)`, then to microseconds; an overflow is NULL).
   `SparkUtcShift` wraps DataFusion-Spark's `to_utc_timestamp` / `from_utc_timestamp` (registered
   over them in `registration.rs`, and named by `expr_fn.rs`): a wall, a date or an untyped NULL

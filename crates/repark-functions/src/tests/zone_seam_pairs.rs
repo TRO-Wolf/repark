@@ -132,7 +132,8 @@ async fn selected(zone: &str, expr: Expr) -> datafusion::error::Result<RecordBat
         .sql("SELECT 1 AS one")
         .await?
         .select(vec![expr.alias("v")])?;
-    let batches = frame.collect().await?;
+    let analyzed = crate::analyze_eagerly(&ctx.state(), frame.logical_plan().clone())?;
+    let batches = ctx.execute_logical_plan(analyzed).await?.collect().await?;
     Ok(batches.into_iter().next().expect("one batch"))
 }
 

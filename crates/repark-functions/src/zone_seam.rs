@@ -263,11 +263,23 @@ fn leaf_try_cast(cast: &TryCast, schema: &DFSchema) -> Option<Expr> {
             Arc::clone(&cast.field),
         )));
     }
-    match seam_leaf(&source, target)? {
-        Leaf::Text | Leaf::Day | Leaf::Seconds => seam_call(*cast.expr.clone(), target, true),
-        Leaf::Instant if !is_text(&source) => seam_call(*cast.expr.clone(), target, true),
-        _ => None,
+    let leaf = seam_leaf(&source, target)?;
+    let bare = matches!(leaf, Leaf::Text | Leaf::Day | Leaf::Seconds)
+        || (leaf == Leaf::Instant && !is_text(&source));
+    if !bare {
+        return None;
     }
+    let call = Expr::ScalarFunction(ScalarFunction::new_udf(
+        leaf_udf(leaf, &source, false)?,
+        vec![*cast.expr.clone()],
+    ));
+    if call.get_type(schema).ok().as_ref() == Some(target) {
+        return Some(call);
+    }
+    Some(Expr::Cast(Cast::new_from_field(
+        Box::new(call),
+        Arc::clone(&cast.field),
+    )))
 }
 
 fn map_cast(function: &ScalarFunction, schema: &DFSchema) -> Option<Expr> {
