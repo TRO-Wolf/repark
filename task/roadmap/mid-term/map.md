@@ -994,6 +994,8 @@ declines it (a dated ruling in the intake, then the archive).
   matrix enumerated from the code; filed on the owner's word after ruling ZS-9 measured the nested
   NTZ store as three sites that cannot call the seam helper. Carries the 2026-10-22 process rule: a
   step-0 door-by-shape census in every write-path order and a "doors I did not touch" hand-back line.
+  Adopted 2026-10-22 as option D of the crate-boundary evaluation (no new crate, no new edge);
+  WRITE-NTZ-TO-LTZ-NESTED-1 folded into its step (2).
 - [container-cast-zone-1-card-2026-10-20.md](container-cast-zone-1-card-2026-10-20.md) — **card
   CONTAINER-CAST-ZONE-1 (2026-10-20, open, not scheduled):** a `CAST`/`TRY_CAST` of a struct,
   array or map holding a zoned timestamp leaf, and `to_json` of one, render the leaf in UTC

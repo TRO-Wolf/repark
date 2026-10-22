@@ -65,9 +65,12 @@ Rules that hold at every tier (the enforced ones point at their SSOT — prose n
   deliberately does **not** edge to `repark-sql` (no ANSI surface from Python) or `repark-iceberg`
   (Iceberg is reached only through `ReparkSession` and SQL text).
 - **`repark-common` depends on nothing internal** — it is the bottom that keeps the DAG acyclic.
-- **The table-format engine lives in the owned fork, not here.** `repark-iceberg` is a thin adapter:
-  catalog wiring + a Spark-semantics write layer (MERGE INTO, append, overwrite, ALTER) over the
-  fork; DELETE/UPDATE/INSERT are planned onto the fork's `iceberg-datafusion` `TableProvider`.
+- **The table-format engine lives in the owned fork, not here.** `repark-iceberg` is catalog
+  wiring plus a Spark-semantics write layer (MERGE INTO, append, overwrite, ALTER) over the fork;
+  DELETE/UPDATE/INSERT are planned onto the fork's `iceberg-datafusion` `TableProvider`. The write
+  layer is not thin: about 4,500 product lines of Spark store-assignment semantics across twelve
+  files, two analyzer rules and seven store kernels (measured 2026-10-22,
+  [task/wo/write-spine-1/crate-boundary-eval-2026-10-22.md](task/wo/write-spine-1/crate-boundary-eval-2026-10-22.md)).
 
 Crate-by-crate responsibilities: [crates/map.md](crates/map.md) and each crate's `map.md`.
 
@@ -126,7 +129,7 @@ session.sql(text)
          │ → parse (stock DataFusion `Generic` dialect)                          │
          │ → match: intercept Iceberg catalog DDL (CREATE/DROP TABLE,            │
          │   CREATE/DROP SCHEMA, ALTER TABLE), lower MERGE, TRUNCATE,            │
-         │   refuse set (INSERT OVERWRITE / CALL)                                │
+         │   INSERT OVERWRITE (PARTITION forms execute), refuse CALL             │
          │ → else DELEGATE to DataFusion (SEC-02 local-fs guard between plan     │
          │   and execute); DELETE/UPDATE/INSERT ride the fork TableProvider      │
          └───────────────────────────────────────────────────────────────────────┘
