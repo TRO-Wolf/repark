@@ -272,6 +272,20 @@ S3 Tables maintenance may commit in between (§7).
 
 ## 4. Pin U: the unknown commit outcome, live
 
+**Built 2026-10-22 (pin U, legs pending #1070).**
+- The offline twin is `crates/repark-spark/src/tests/commit_unknown_doors.rs` with
+  `commit_unknown_gate.rs`: the 24 cells of §4.5, green, and red under five mutants.
+- The live leg is `python/repark/tests/parity/test_aws_acceptance_commit_unknown.py`, with its
+  gate in `_acceptance_commit_gate.py`, its signer in `_acceptance_sigv4.py` and its resolver in
+  `_acceptance_commit_resolver.py`. The gate's and the resolver's AWS-free tests run on every pull
+  request.
+- One premise moved. Fork #368, carried by the pin `d80a2884`, turned the SDK retry off on both
+  commit calls, so the SDK re-send that §4.4's U-5 drilled no longer happens. Under the
+  orchestrator's ruling of 2026-10-22, U-5 asserts one commit request, and U-5r drills the fork's
+  own re-send after a throttle reply. That makes 96 statements.
+- Paths follow #1113 to `python/repark/tests/parity/`.
+- The [unit ledger](../../ledgers/staging/ice-integrity-pins-1-ledger.md) holds C-030 to C-041.
+
 ### 4.1 Where it sits today
 
 - **The fork decides the kind.** Glue: `map_glue_commit_sdk_error`
@@ -377,6 +391,17 @@ pins (PR-5A) cover it, named here and not run. Count: (5 + 2) × 3 doors × 2 fo
   or `None`) and the same resolution. U-5 has no offline twin: it is the SDK's behaviour.
 
 ## 5. Pin X: the previous release and the head read each other's tables
+
+**Built 2026-10-22 (pin X, live leg pending #1070).**
+- The previous release is **1.5.5** (the orchestrator's ruling, by ruling 81's checklist line),
+  hash-pinned in `python/repark/tests/parity/previous_release_requirements.txt`.
+- The runner is `_acceptance_cross_release_runner.py` and the driver is `_acceptance_cross_release.py`.
+- The live leg is `test_aws_acceptance_cross_release.py`, 40 cells.
+- The local control is `test_cross_release_local.py`: X-L reads 20 of 20 cells equal in both
+  directions, X-NS prints equal, and X-C0 and X-C1 run on every pull request.
+- The head still reports 1.5.5, so a side's identity is its version plus its install origin.
+- X-D's `total-records` counts data-file records under merge-on-read (1,050 against 900 rows
+  read), so §5.3 item 3 is asserted as the two sides agreeing.
 
 ### 5.1 Where it sits today
 

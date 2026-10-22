@@ -382,3 +382,23 @@ about 13 to 25.
 |---|---|---|---|---|
 | C-040 | Leg U's resolver never guesses. Two agreeing snapshot-id reads 2 s apart resolve, and a late landing is waited for. A failed read raises `UnresolvedError`, never "not committed". Reads that never agree are unresolved at the 60 s deadline. The held metadata file must name exactly one attempt. A missing status-check property is named. | `test_acceptance_commit_resolver.py` (6 tests); leg U calls these helpers. | PROVEN | Red under the "not committed on a failed read" and "presence check dropped" mutants (table above). |
 | C-041 | X's comparison sees types. An NTZ column read back as an instant, the same values with `timestamp[us]` against `timestamp[us, tz=UTC]`, is a difference, and so is a decimal scale. | `test_x_compare_*` (2 tests). | PROVEN | Red under "the comparison ignores types" (1 cell). |
+
+### Records (step 5, 2026-10-22)
+
+- Registry row ICE-COMMIT-UNKNOWN-1 (`docs/spark-sql-iceberg-parity.md`) gains a "Pins U and X"
+  bullet. It names the offline twin and the two live legs, built and awaiting #1070, and records
+  that fork #368 collapsed the SDK re-send, so U-5 asserts one commit request and U-5r drills the
+  fork's own re-send.
+- Production status row K3 gains a dated line. Its rating is unchanged ("PROVEN offline; no live
+  drill").
+- The sketch's §4 and §5 each carry a dated "built" line.
+- The work-order map names the built pieces and the #1070 refresh proposal.
+- The 1.5.6 notes draft's integrity section gains one line, and the mid-term map's row for the
+  draft says so.
+- Not touched: `STATUS.md`, `.github/`, the fork, any product file, `Cargo.toml`,
+  `pyproject.toml`, `uv.lock`.
+- `make verify` ran once, on `bc8b670f`. Nextest passed 7,822 of 7,822 tests (26 slow, 97
+  skipped) in 559.6 s, and the doctests passed too. The load average was 27 to 47 throughout:
+  lane 1, the ZONE-SEAM-1 fix round, kept it above 10. Nothing failed, so no single test needed a
+  rerun.
+- PR #1157 is open: "Verifier: pending", owner merges.
