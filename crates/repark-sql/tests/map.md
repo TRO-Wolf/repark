@@ -314,6 +314,7 @@ holds behavior observed from outside the crate.
   evidence: a bare, extension-free session still returns the raw nanosecond tick
   (`-1800000000000`), which is correct for that profile.
 
+- `ansi_door_map_column.rs` — **MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21, commit 4):** the ANSI door answers `map(<key>, <column>)`: `SELECT map('a', id) AS m FROM range(1)` answers one row (`{a: 0}`; the collect runs on a spawned task, so a panic is a failure and not an abort), a two-pair `map('a', id, 'b', id + 1)` over three rows answers its three maps, and a constant map keeps DataFusion's constructor. Two of the three are red on the head without the rule push in `AnsiDialect` (the panic and the same-length error).
 - `ansi_door_values.rs` — ANSI-door-only value pins. Standard SQL
   is the oracle (ruling: correctness, not Spark parity). Rows on a native `AnsiDialect`
   session, Arrow path, value AND type: CAST overflow raises, integer `/` truncates, integer
