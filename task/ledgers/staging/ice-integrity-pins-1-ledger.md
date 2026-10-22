@@ -276,3 +276,151 @@ stands as written.
 |---|---|---|---|---|
 | C-028 | (Verifier round 3 S2-1, 2026-10-22; narrows C-027.) **Unpinned:** the parent-path exit code (an orphaned child's release). Nothing consumes an orphan's exit status: the reaper, the systemd user manager, discards it. C-027's "only the child's own parent can read its real exit status" is wrong: a `PR_SET_CHILD_SUBREAPER` process becomes the orphan's parent and reads it. **Pinned on the parent path:** no commit, the release reason (`released parent 75` in the release file), and the bounded hold. **Pinned on the deadline path:** the hold-limit pin, as the child's own parent, reads the real exit status. | The three tests of `kill_mid_write_release.rs`. | PROVEN | The verifier's subreaper probe found that at head the parent path exits 75 in 23 of 23 releases. Under F3c the subreaper reads exit 0, with `released parent 75` and no commit, while the 24 tests stay green. The verifier's other fix, a subreaper helper under the parent-gone pin, is not built in this round. |
 | C-029 | (Owner ruling 2026-10-22, morning read of the overnight watch; closes the decision C-015 left open.) Option 1 adopted: the path read walks past `version-hint.text` as Java's `HadoopTableOperations.refresh` does, in its own Opus unit after ZONE-SEAM-1; ruling 83 stands as written; registry row ICE-LOCAL-COMMIT-POINT-1 widens again when that unit lands. | Card [ICE-HADOOP-HINT-WINDOW-1](../../roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md), status paragraph. | OPEN | Ruled, not yet proven: nothing in this unit changes, and C-015 stays OPEN until the fix unit's ledger proves the path read. |
+
+## Pins U and X (2026-10-22): branch `feat/ice-integrity-pins-1-ux`, base `a2de82aa`
+
+Lane 2 of the owner's two-Opus-lane ruling of 2026-10-22, model claude-opus-5-5. This round
+builds pins U and X as tests, helpers and records only (H-6). The fork is `d80a2884`, and every
+fork line below is on that rev. The orchestrator's rulings on the step-0 questions (2026-10-22)
+are quoted where a row rests on them. Rows are appended one per built piece; C-012 and C-013
+stand as written above.
+
+**Premise moved (step 0, recorded at the orchestrator's order).** Fork #368 (`409ff330`) landed
+both halves of ruling 84's card. It refreshes and checks for the attempt's snapshot before every
+re-base (`crates/iceberg/src/transaction/mod.rs:498`, `commit_status.rs:273`). It also turns the
+SDK retry off on the two commit calls: Glue `crates/catalog/glue/src/commit_transport.rs:137`,
+S3 Tables `crates/catalog/s3tables/src/commit_transport.rs:168`, both `RetryConfig::disabled()`.
+The only re-send left is the fork's own after a throttling reply (`refused_before_processing`,
+Glue `:76`, S3 Tables `:77`; at most `THROTTLE_ATTEMPTS = 3`). The SDK re-send that sketch cell U-5
+drilled therefore cannot happen, and U-5 as written collapses into U-1. Orchestrator ruling Q-1:
+keep U-5, now pinning that fact (exactly one commit request at the gate, rows once), and add
+U-5r. In U-5r the gate forwards the commit, answers the client a throttle in place of the real
+reply, and forwards the fork's re-send, which AWS rejects as stale. The leg grows to 96
+statements, and a double append in U-5r is still H-U5.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-030 | The offline twin of pin U: on the memory catalog, through a test-only `GateCatalog`, the 24 cells U-1 to U-4 × the plain `INSERT … SELECT`, the session-write-key append and `MERGE` copy-on-write × v2 and v3 answer as sketch §4.4 says. U-1 is `Ok`. U-2, U-3 and U-4 raise `CommitStateUnknown` through `engine_err`, with `operation_id` `None` on the plain door and the attempted snapshot's `engine.operation-id` on the other two. There is one commit call and no re-apply. The cut cells fail exactly the 2 refreshes of the status-check budget (`num-retries=1`). A fresh session adopting the newest metadata file resolves U-1 and U-2 as committed (one snapshot by operation id and by snapshot id, rows once) and U-3 and U-4 as not committed (the pre-state's snapshots and rows). | `tests::commit_unknown_doors::u{1,2,3,4}_*_v{2,3}` (24 cells). | PROVEN | 24 of 24 green on `a2de82aa` + the step-1 tree (2.05 s, `--test-threads=4`, load about 18). Red through five mutants (§Pin U offline twin, red first). |
+| C-031 | Pin U, cell U-5 after fork #368: on Glue and S3 Tables the SDK no longer re-sends a commit whose reply was lost. The gate sees exactly one commit request, the statement succeeds by reconciliation, and the rows land once. | `test_aws_acceptance_commit_unknown.py`, U-5 cells (12 statements). | OPEN | Built; first live run pending #1070. The collapse and its fork lines are recorded in the paragraph above. |
+
+### Pin U offline twin, red first (step 1, 2026-10-22)
+
+`cargo test --locked -p repark-spark --lib commit_unknown -- --test-threads=4` under
+`systemd-run --user --scope -p MemoryMax=40G` and `taskset -c 0-25`, with the load average about
+18 (lane 1 building). Main has no twin, so the red proof is the mutants. Each was applied alone,
+run, and reverted, and the tree was byte-identical afterwards (`cmp`).
+
+| Mutant | Red cells (of 24) | First failing assertion |
+|---|---|---|
+| M-U1, the gate forwards in U-3 and U-4 | 12: U-3, U-4 | `U-3 Merge v2: commits that reached the catalog`, left 1, right 0 |
+| M-U2, reads never cut | 12: U-2, U-3 | `U-2 Merge v2: refreshes cut inside the status-check budget`, left 0, right 2 |
+| M-U3, the gate answers a plain failure in place of unknown | 24 | `U-1 Plain v3: reconciliation finds the landed snapshot, got Err(External(Unexpected => the gate lost the commit reply))` |
+| M-U4a, the status-check properties dropped | 24 | `the drill table carries commit.status-check.num-retries before the statement`, left `None` |
+| M-U4b, dropped with the presence check removed | 12: U-2, U-3 (run 34.5 s against 2 s) | `U-2 Plain v2: refreshes cut inside the status-check budget`, left 4, right 2 |
+| M-U5, the plain door expected to carry an id | 6: U-2, U-3, U-4 plain | `U-2 Plain v2: the error's operation id`, left `None`, right `Some("…")` |
+
+### The gate, the signer, the runner and the previous release (step 2, 2026-10-22)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-032 | The commit gate behaves as its cells need, with no AWS. It recognises the commit request on both catalogs (Glue `X-Amz-Target: AWSGlue.UpdateTable`; S3 Tables `PUT …/metadata-location`, never the `GET`). It refuses another database or namespace, another table bucket, and every delete, unforwarded. It forwards only to `{glue,s3tables}.<region>.amazonaws.com`. Each script answers its cell's sequence: forward; land then reset; land then cut; drop then reset; drop then cut; land then forward the re-send; land then answer a throttle and forward the re-send; hold unforwarded then reset. It signs every forwarded request again with its own credentials, never forwarding the client's signature or token, and logs no header or credential. A RePark session whose Glue `uri` names the gate lists the scratch namespace through it. | `python/repark/tests/parity/test_acceptance_commit_gate.py` (66 tests). | PROVEN | 66 passed in 17.3 s. Mutants, each applied alone and reverted (`cmp` clean): the gate forwards a dropped commit (4 red, U-3 and U-4 on both catalogs); the client's headers pass through unsigned (3 red: both re-sign tests and the RePark session); the scratch refusal off (2 red). |
+| C-033 | The gate's SigV4 signer equals AWS's on the published vectors and on botocore. It matches 26 vectors of the AWS suite: canonical request, string to sign and signature, and for `double-encode-path` the double-encoded canonical URI that the S3 Tables ARN path needs. It also equals botocore 1.43.109's `SigV4Auth` on one Glue `UpdateTable` and one S3 Tables `UpdateTableMetadataLocation` request at a fixed time with a session token (ruling 88's one cross-check). | `test_signer_matches_the_published_aws_vector[*]` (26); the cross-check below. | PROVEN | Mutant single encoding: 1 red (`double-encode-path`). **Cross-check, once (ruling 88):** no moto venv existed (step 0), so per orchestrator ruling Q-3 a throwaway venv was built in the lane's scratch directory with `uv pip install --offline moto boto3` from the uv cache (moto 5.2.3, boto3 and botocore 1.43.109, nothing fetched, nothing committed). Glue: canonical request equal, signature equal (`d3bcea1a…`). S3 Tables: canonical request equal, signature equal (`f01be59c…`). |
+| C-034 | `previous_release_requirements.txt` pins `repark==1.5.5` and its dependencies by hash (orchestrator ruling: the previous release at the 1.5.6 label is 1.5.5, moved by ruling 81's checklist line). Its five `repark` hashes equal PyPI's `repark/1.5.5` digests (five `cp312-abi3` wheels, none yanked, uploaded 2026-10-21). `uv pip install --only-binary :all: --require-hashes` into a fresh 3.12 venv imports `repark.__version__ == '1.5.5'`. | The file; the install check. | PROVEN | Step 0 read of PyPI JSON; install in 3.7 s; H-X2 clear. |
+
+### The legs and the local cross-release control (step 3, 2026-10-22)
+
+**C-012 and C-013, 2026-10-22: built; first live run pending #1070.** Leg U is
+`test_aws_acceptance_commit_unknown.py` (96 statements under orchestrator ruling Q-1) and leg X
+is `test_aws_acceptance_cross_release.py` (40 cells). Both rows stay OPEN as written above. C-013's
+"v1.5.4" reads 1.5.5 under the orchestrator's ruling of 2026-10-22.
+
+**Read differently from the sketch, stated.**
+- §5.3 item 3 ("the current snapshot's `total-records` equals the rows each side read") holds for
+  X-P, X-T and X-E only. On the merge-on-read X-D table, `total-records` counts the records in the
+  live data files: 1,050 against the 900 rows read, on both releases. So X-D asserts that the two
+  sides read one snapshot id, one `total-records` and one delete-file list, and that the writer
+  wrote at least one delete file.
+- The head still reports `1.5.5` until the 1.5.6 bump. So "the right releases ran" is version plus
+  install origin: `index-wheel` (no `direct_url.json`) or `local-build`.
+- The map column is `map(concat('k', …), CAST(id AS INT))`, because 1.5.5 answers `map('k', <a
+  column>)` with "map requires key and value lists to have the same length". MAP-COLUMN-PANIC-1
+  (#1131) fixed that after the tag.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-035 | X-L, the local control (orchestrator ruling Q-2): on a `type=hadoop` warehouse, the hash-pinned 1.5.5 wheel (`index-wheel`) and the head (`local-build`) each read the other's table equal for X-P, X-T, X-D and X-E on v2 and v3, in both directions (16 cells). Equal means the shared schema and row-set helpers, exact Arrow types, one current snapshot id, one `total-records` and one delete-file list. In the 4 mixed-writer cells the other release appends 3 rows and the writer reads them back equal. X-NS (v3, `timestamp_ns` and `timestamptz_ns`) is printed, not asserted. | `test_cross_release_local.py::test_x_l_*` with `REPARK_PREVIOUS_RELEASE_PYTHON` set. | PROVEN | 20 of 20 EQUAL in 42.6 s (load about 18 to 27), every row printing its two identities. X-NS, both directions: `tns timestamp[ns]` and `tzns timestamp[ns, tz=UTC]`, value `2026-01-01 00:00:00.123456789` on both sides. |
+| C-036 | X-C0 and X-C1 hold on every pull request. X-C0: the head writes and reads through the runner and reads 1,000 rows equal, so the runner adds nothing. X-C1: the runner refuses with exit 3 and writes nothing when its version and install origin are not its role's, and a cell whose two sides would run one identity fails before running. | `test_x_c0_*`, `test_x_c1_*` (3 tests). | PROVEN | Green in the same run. |
+| C-037 | Leg U is built as orchestrator ruling Q-1 states: 96 statements, U-1 to U-5, U-5r, U-C0 and U-C1 × the plain door, the session-key door and `MERGE` × v2 and v3 × Glue and S3 Tables. Each drill table carries and asserts the four `commit.status-check.*` properties. The gate's commit-request count is asserted (1, or 2 on U-5r). "Unresolved" is never guessed: two reads 2 s apart must agree within 60 s, or the cell fails. The attempted snapshot and its id are read from the held metadata file through `pyarrow.fs` (ruling Q-5). A duplicate is reported as H-U5. | First live run. | OPEN | Built; first live run pending #1070 (C-012). Collected and skipped here. |
+| C-038 | Leg X is built: 40 live cells (32 one-way, 8 mixed-writer) on Glue and S3 Tables, with S3 Tables v3 recorded through `classify_v3_create_outcome` if the service refuses format 3 at create. | First live run. | OPEN | Built; first live run pending #1070 (C-013). |
+| C-039 | The legs' gating. Without `REPARK_AWS_ACCEPTANCE=1` both live modules collect and skip, 136 of 136. With the gate on and `REPARK_PREVIOUS_RELEASE_PYTHON` unset, leg X fails at its fixture with the message naming the variable, before any AWS call. | The two collections. | PROVEN | 136 skipped in 0.52 s; `ERROR at setup … REPARK_PREVIOUS_RELEASE_PYTHON is unset with REPARK_AWS_ACCEPTANCE=1`. |
+
+### Proof (step 4, 2026-10-22)
+
+The live cells cannot run here (no AWS credentials on this box, and tier 2 runs merged code
+only). So the step-4 mutants of sketch §9 are aimed at the AWS-free cells that hold each rule on
+every pull request: the gate's unit test, the resolver's unit test, X's comparison, X-C1, X-L, and
+the offline twin. Each mutant was applied alone, run and reverted (`cmp` clean). Run over
+`test_acceptance_commit_gate.py`, `test_acceptance_commit_resolver.py` and
+`test_cross_release_local.py` with `REPARK_PREVIOUS_RELEASE_PYTHON` set: 99 tests green, load
+about 13 to 25.
+
+| Mutant (sketch §9 step 4) | Red cells | Note |
+|---|---|---|
+| The gate forwards in U-3 | 4: `test_each_script_answers_as_its_cell_says[U-3-*]`, `[U-4-*]` | The twin's M-U1 reds U-3 and U-4 (12 of 24, step 1). |
+| The resolver answers "not committed" on a failed read | 1: `test_a_failed_read_is_unresolved_never_not_committed` | |
+| The status-check properties dropped | 1: `test_a_missing_status_check_property_is_named` | The twin's M-U4a reds 24 and M-U4b 12 (4 cut refreshes against 2, 34.5 s against 2 s, step 1). |
+| The runner runs the head as the previous release (X-C1) | a) the runner never refuses: 1, `test_x_c1_the_runner_refuses_a_release_its_role_does_not_name`; b) `REPARK_PREVIOUS_RELEASE_PYTHON` names the head: 20, every X-L cell (`the previous runner failed`) | The head reports 1.5.5 as well, so the install origin carries the identity. |
+| The comparison ignores types | 1: `test_x_compare_sees_an_ntz_column_read_as_an_instant` | `test_x_compare_sees_a_decimal_scale` stays green: the row set already tells `1.00` from `1.000`. |
+
+**Local run times (load average beside each):**
+- the twin: 24 cells in 2.03 s (load about 18);
+- the gate's unit test: 66 in 17.3 s (about 31 falling to 20);
+- the resolver's unit test and the comparison tests: 11 in 3.1 s;
+- X-L, X-NS, X-C0 and X-C1: 25 in 42.6 s (18 to 27).
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-040 | Leg U's resolver never guesses. Two agreeing snapshot-id reads 2 s apart resolve, and a late landing is waited for. A failed read raises `UnresolvedError`, never "not committed". Reads that never agree are unresolved at the 60 s deadline. The held metadata file must name exactly one attempt. A missing status-check property is named. | `test_acceptance_commit_resolver.py` (6 tests); leg U calls these helpers. | PROVEN | Red under the "not committed on a failed read" and "presence check dropped" mutants (table above). |
+| C-041 | X's comparison sees types. An NTZ column read back as an instant, the same values with `timestamp[us]` against `timestamp[us, tz=UTC]`, is a difference, and so is a decimal scale. | `test_x_compare_*` (2 tests). | PROVEN | Red under "the comparison ignores types" (1 cell). |
+
+### Records (step 5, 2026-10-22)
+
+- Registry row ICE-COMMIT-UNKNOWN-1 (`docs/spark-sql-iceberg-parity.md`) gains a "Pins U and X"
+  bullet. It names the offline twin and the two live legs, built and awaiting #1070, and records
+  that fork #368 collapsed the SDK re-send, so U-5 asserts one commit request and U-5r drills the
+  fork's own re-send.
+- Production status row K3 gains a dated line. Its rating is unchanged ("PROVEN offline; no live
+  drill").
+- The sketch's §4 and §5 each carry a dated "built" line.
+- The work-order map names the built pieces and the #1070 refresh proposal.
+- The 1.5.6 notes draft's integrity section gains one line, and the mid-term map's row for the
+  draft says so.
+- Not touched: `STATUS.md`, `.github/`, the fork, any product file, `Cargo.toml`,
+  `pyproject.toml`, `uv.lock`.
+- `make verify` ran once, on `bc8b670f`. Nextest passed 7,822 of 7,822 tests (26 slow, 97
+  skipped) in 559.6 s, and the doctests passed too. The load average was 27 to 47 throughout:
+  lane 1, the ZONE-SEAM-1 fix round, kept it above 10. Nothing failed, so no single test needed a
+  rerun.
+- PR #1157 is open: "Verifier: pending", owner merges.
+
+## Verifier round 1 (2026-10-22): FAIL, and fix round 1
+
+A fresh Opus 5.5 verifier read PR #1157 at `c6d74054` and returned FAIL with four S1 findings,
+all in test code and records. No halt fired, and every measured cell was green. The orchestrator
+ordered fix round 1 the same day: one commit per finding, nothing amended, and the unit does not
+grow. The rows below are appended, and the earlier clauses stand as written.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-042 | (Verifier S1-1, 2026-10-22; corrects C-032's "refuses another database or namespace … and every delete".) The gate forwards only an allow list of the operations the drills send, and refuses everything else before signing. Glue: `GetDatabases`, and `GetDatabase` (`Name`), `GetTables`, `GetTable`, `CreateTable` and `UpdateTable` (`DatabaseName`) naming the scratch database, with no `CatalogId` and a body that is one JSON object with unique keys. S3 Tables, by method and path shape: `GET /get-table` (only `tableBucketARN`, `namespace`, `name`, each once, the configured bucket and the scratch namespace); `GET` and `PUT …/{bucket}/{scratch}/{name}/metadata-location`; `GET /tables/{bucket}?namespace={scratch}`; `PUT /tables/{bucket}/{scratch}`; `GET /namespaces/{bucket}` and `/{bucket}/{scratch}`; `PUT /namespaces/{bucket}` with the body `{"namespace": [scratch]}`. | `test_glue_refuses_every_request_the_drills_do_not_send` (10), `test_s3tables_refuses_every_request_the_drills_do_not_send` (7), and the two `forwards_the_operations_the_drills_send` tests (6 + 8). | PROVEN | **Red on `c6d74054`:** 14 of the 17 refusal cases were forwarded by the old gate. On Glue: `GetDatabase` on `prod`, `UpdateDatabase` naming `prod`, a foreign `CatalogId`, `DeleteColumnStatisticsForTable`, `DeleteTableOptimizer`, `DeleteConnection`, `SearchTables`, a repeated `DatabaseName` key, an unparsable body. On S3 Tables: `CreateNamespace` naming `prod` in its body, `RenameTable` to `prod`, `ListTables` with no namespace, the bucket-wide maintenance `PUT`, `get-table` by `tableArn`. The other three were already refused. **Green:** the gate suite gives 97 passed. Every allowed drill operation is forwarded, and the RePark session through the gate still lists the scratch namespace. |
+| C-043 | (Verifier S1-2, 2026-10-22; corrects C-033's "26 vectors" and the map's reason for the omissions.) The signer's payload hash is pinned. The vector set is 28: the 26 plus `post-x-www-form-urlencoded` and `-parameters`, the suite's only vectors with a body, with their `X-Amz-Content-Sha256` given as an input header as the suite's context signs it. Their canonical request, string to sign and signature equal the suite's. `get-space-normalized` stays out because it hides no gate path. | `test_signer_matches_the_published_aws_vector[post-x-www-form-urlencoded*]`; `test_the_vector_set_covers_the_gate_paths` (28). | PROVEN | **Red:** the empty-payload mutant (`hashlib.sha256(body)` → `hashlib.sha256(b"")`), which left 72 of 72 green on `c6d74054`, now reds 2 (the two body vectors; 103 others green). Reverted, `cmp` clean. **Green:** 29 vector tests pass. |
+| C-044 | (Verifier S1-3, 2026-10-22; narrows C-012's obligation, sketch §4.4 U-3 "orphans counted as in K".) Leg U counts U-3's orphans live as pin K does (data, deletes, manifests, lists, metadata) and asserts ruling 82's ceiling live. | Leg U's U-3 cells. | REJECTED (narrowed in the build; stated here) | The built U-3 checks only `metadata=1 lists=1`: through `pyarrow.fs`, the held metadata file and the attempt's manifest list exist on storage. The data files and manifests are not counted, and the ceiling is not asserted live. pyarrow cannot read the Avro manifest list, `register_table` is refused on S3 Tables (R126), and pin K counts and asserts the ceiling on the local catalog (C-003). C-012 stays OPEN for the live drill. Sketch §4.4, the registry bullet and K3 now say so. |
+| C-045 | (Verifier S1-4, 2026-10-22; pins the value half of C-040 and the "exact Arrow types" of C-035.) Leg U's status-check precondition compares the four values, not only the keys: a drill table with `commit.status-check.num-retries = 3` fails it. X's comparison reports a `string` column read back as `large_string`, a difference `compare_schemas` does not see, through the exact type check alone. | `test_a_missing_status_check_property_is_named` (now with a wrong value); `test_x_compare_sees_a_string_read_as_a_large_string`. | PROVEN | **Red:** V-P3 (a key-presence check) reds `test_a_missing_status_check_property_is_named`, 1 of 34. B-X3-narrow (`exact_type_differences` dropped from `compare_tables`) reds `test_x_compare_sees_a_string_read_as_a_large_string`, 1 of 34. Both had survived on `c6d74054`. Reverted, `cmp` clean. **Green:** 34 of 34 (resolver and `test_cross_release_local.py` with the 1.5.5 interpreter set, X-L 20 of 20 again EQUAL). |
+
+**S3 wording, fix round 1 (2026-10-22).** The leg X fixes are in test code; the other two are
+record wording:
+- Leg X masks account ids when it re-raises a runner failure. Leg U masks them when it re-raises
+  a create failure and in its gate-refusal message.
+- The registry's "U-5r … rows once" now reads as the expected answer, unmeasured until the first
+  live run.
+- The 1.5.6 notes line names the head (the pre-bump build that still reports 1.5.5), not 1.5.6.
