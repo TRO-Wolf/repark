@@ -49,6 +49,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-021 to C-025, the S3s: K-7 compares types, the K3 line narrowed, C-009 names M4, the replace
   doors unpinned (OPEN, for pin U/X or a later card), live orphan deletion out of scope (REJECTED).
   Verifier round 2 pending.
+  Verifier round 2 (2026-10-22): FAIL (S1-1, the deadline unpinned and the parent-check window;
+  S2-1, the release unobservable). Fix round 2 rows C-026 onward; C-026: the parent's pid passed
+  in the environment and the hold limit pinned (`kill_mid_write_release.rs`).
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

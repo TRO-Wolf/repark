@@ -22,6 +22,7 @@ pub(super) struct HoldCatalog {
     pub(super) mode: HoldMode,
     pub(super) marker: PathBuf,
     pub(super) parent: u32,
+    pub(super) limit: Duration,
 }
 
 pub(super) const HOLD_LIMIT: Duration = Duration::from_mins(2);
@@ -109,7 +110,7 @@ async fn attempted_files(
 
 impl HoldCatalog {
     async fn hold(&self) -> iceberg::Result<Table> {
-        let deadline = Instant::now() + HOLD_LIMIT;
+        let deadline = Instant::now() + self.limit;
         while std::os::unix::process::parent_id() == self.parent && Instant::now() < deadline {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }

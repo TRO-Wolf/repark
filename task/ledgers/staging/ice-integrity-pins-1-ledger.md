@@ -234,3 +234,26 @@ land one per commit, and the earlier clauses stand unedited.
 | C-024 | (Verifier S3, 2026-10-22.) `publish_replace_table` is forwarded unheld. None of the seven pinned doors calls it (the verifier's call trace), so RTAS and `CREATE OR REPLACE TABLE … AS SELECT` are unpinned kill doors. | A replace-door cell. | OPEN (carried to pin U/X or a later card) | Not this round. Closing question: which unit pins the replace doors (hold `publish_replace_table`), and on which catalogs? |
 | C-025 | Pin K runs the live `remove_orphan_files` (deletion), not only its dry run. | None in this unit. | REJECTED (out of scope, sketch §0: orphan deletion is out; only the count is in scope) | The verifier's probe ran the live call on all 18 cells. On K-1 to K-6 it removed exactly the marker set, leaving rows and metadata unchanged; on K-7 and the controls it removed nothing. |
 
+## Verifier round 2 (2026-10-22): FAIL, and fix round 2
+
+A fresh Opus 5.5 verifier re-read PR #1142 at `e1a163c5` and returned FAIL: one S1 and one S2, no
+new halt.
+
+- **What held.** Measured from outside with a subreaper, the bounded hold released with exit 75
+  and no commit in 12 of 12 cases. The fix-round-1 records check out. The original 18 cells keep
+  their meaning.
+- **What failed:**
+  - **S1-1.** The 120 s deadline is unpinned (mutant F2, deadline removed: 0 of 21 red). The child
+    recorded `getppid()` 100 to 300 ms after it started. A parent that died before then left the
+    child recording the reaper, so only the deadline could end the hold, and under F2 the hold was
+    for ever. The verifier's `prestart_orphan.py` reproduced this window.
+  - **S2-1.** The parent-gone pin could not see how the child ended. Mutants F3 (exit 0), F5 (the
+    intermediate kills and reaps the child) and F5b (kills without reaping) all survived.
+
+The orchestrator ordered fix round 2 on 2026-10-22. The rows below are appended; C-014 stands as
+written.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-026 | (Verifier round 2 S1-1, 2026-10-22; corrects C-014's proof.) The parent-check window is closed, and the hold limit is pinned. (a) The parent passes its own pid to the child in `REPARK_KILL_MID_WRITE_PARENT`, and the hold compares `getppid()` against that pid, so a parent gone before the child records anything is seen at once. (b) The hold limit can be overridden by the test-only key `REPARK_KILL_MID_WRITE_HOLD_LIMIT_MS` (default 120 s). A live parent that never kills its child sees the child leave the hold at the limit with exit 75 and no commit. | Three tests, now in `kill_mid_write_release.rs` (the parent-gone pin moved there from `kill_mid_write.rs`, its name unchanged): `a_child_whose_parent_is_gone_before_it_starts_releases_at_the_hold_without_committing`, `a_held_child_whose_live_parent_never_kills_it_is_released_at_the_hold_limit`, and `a_held_child_whose_parent_is_gone_exits_without_committing`. | PROVEN | Each mutant red under its pin: F2 (deadline removed) reds the hold-limit pin, 1 of 24, `still holding after 10 s`; F8 (the child records `getppid()` at its start, the round-1 code) reds the pre-start pin, 1 of 24, `outlived its parent by 10 s`. Green: 24 of 24 (`kill_mid_write`). **Why the pre-start shape cannot red F2:** with (a) a pre-start orphan is released by the parent check, not the deadline. The deadline is the backstop for a parent that is alive but never kills, which is what the hold-limit pin builds, with the test itself as that parent and a 1 s limit. |
+
