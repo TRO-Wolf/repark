@@ -11,6 +11,11 @@ not on typing, so a grade is reached by removing decisions, never by adding pros
 | **B · guided** | A + a design sketch naming types and signatures, one slice per round with one commit each, every ruling pre-made, a halt list, the oracle per slice (the Spark answer, the measured bar) | guided engines; ATTR-ID-1's order is the template |
 | **C · clerk** | B + the exact file list with ceilings, skeleton code for each new file with signatures that compile, the test that must go green named before its body exists, the expected output of every gate, a numbered step list in which the commit is its own step | clerk engines |
 
+**Write-path units (owner, 2026-10-22):** step 0 of the order is a door-by-shape census measured
+against Spark before the build opens (each door, each shape the rule touches, Spark's answer and
+main's), and the hand-back ends with "doors I did not touch, and why". See
+[task/lessons.md](../lessons.md) 2026-10-22.
+
 **The test of a grade-C order:** a fresh engine starts it without asking a question and halts on the
 first ambiguity. If the first run fails that test, the fix is in the order, not the engine.
 

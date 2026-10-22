@@ -351,3 +351,20 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   spends under 0.1 s in the refusal and the rest building the `Column` with `|` on the Python
   door, which grows quadratically ([docs/perf/column-or-build-cost-2026-10-19.md](../docs/perf/column-or-build-cost-2026-10-19.md)).
   A suite floor is a product finding only once the phase that owns it is named.
+
+## 2026-10-22 — product fix rounds come from missed doors; census first, spine next
+
+- **DO open every write-path unit with a step-0 door-by-shape census measured against Spark before
+  the build.** *Why:* the product fix rounds of October (U-8 four, U-5 two, the seam's two halts)
+  were each a verifier finding a door or a shape the builder's copy of a rule had missed; the units
+  whose questions were ruled ahead (pin K, EXPLAIN-DML-WRITE-1) had zero or one. The verifier's
+  matrix becomes the builder's input. U-11's order is the first to carry it; the work-order
+  template names it.
+- **DO end every hand-back with "doors I did not touch, and why".** *Why:* the omission is written
+  down before a verifier finds it, and the orchestrator can card it the same day.
+- **DO treat a rule that needs more than one site as an architecture finding, not a bigger unit.**
+  *Why:* ruling ZS-9 found the nested NTZ store at three sites in a crate that cannot call the
+  seam's helper; the seam landed with a refusal and the structural fix is carded as WRITE-SPINE-1
+  ([task/roadmap/mid-term/write-spine-1-card-2026-10-22.md](roadmap/mid-term/write-spine-1-card-2026-10-22.md)),
+  the architecture unit after GATE-RETIRE-1, on the owner's word of 2026-10-22.
+
