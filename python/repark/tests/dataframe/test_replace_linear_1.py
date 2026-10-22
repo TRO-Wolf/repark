@@ -61,6 +61,11 @@ def peak_rss_bytes():
 
 resource.setrlimit(resource.RLIMIT_AS, (vm_size_bytes() + headroom,) * 2)
 
+if mode == "flat":
+    frame.select(*[(F.col("x") + i).alias(f"c{i}") for i in range(1)]).collect()
+else:
+    frame.replace({i: i + 1000 for i in range(1)}, subset=["x"]).collect()
+
 before = peak_rss_bytes()
 if mode == "flat":
     frame.select(*[(F.col("x") + i).alias(f"c{i}") for i in range(entries)]).collect()
