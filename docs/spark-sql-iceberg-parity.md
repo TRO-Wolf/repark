@@ -1133,10 +1133,14 @@ perfectly good read.
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
-- **repark** — the local catalog (`type=memory`, and `type=hadoop`, which maps to it with
-  Hadoop file names) keeps its table pointer in process memory, so after a process dies the
-  table is what its newest metadata file under `<table>/metadata/` says, and a reopen adopts
-  that file (`CALL <catalog>.system.register_table`, or a path read). A writer killed inside the
+- **repark** — the local catalog keeps its table pointer in process memory. That is the
+  in-process memory catalog, which `type=hadoop` reaches with Hadoop file names; a bare
+  `type=memory` is refused without the extensions key. After a process dies, the reopen this
+  row covers is `CALL <catalog>.system.register_table` on the newest metadata file under
+  `<table>/metadata/`, which is then the table. A path read of a `type=hadoop` table follows
+  `version-hint.text` instead and can read an older version, so it is outside this row (card
+  [ICE-HADOOP-HINT-WINDOW-1](../task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md),
+  owner decision pending). A writer killed inside the
   catalog's commit call, before the metadata file is written (every data file, delete file,
   manifest and manifest list durable), leaves the table as it was: the same metadata file,
   snapshot set and rows. The files that writer wrote stay on disk as orphans, never more than the
