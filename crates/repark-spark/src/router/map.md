@@ -279,6 +279,8 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   the cast still stores Spark's instant; UTC is untouched. pins: zone-seam-1/C-024
   The file's four unit tests moved unchanged to [nested_ns/tests.rs](nested_ns/map.md) to keep
   the file under the 1000-line ceiling. pins: zone-seam-1/C-024
+  After both fix-round-3 items the corpus, the U-8 matrix and the partitioned census answer as
+  before them and the seven timed statements stay within 1.05x of main. pins: zone-seam-1/C-025
   *Fix round 1, cost:* the refusal's extra plan of a MERGE into a nested `TIMESTAMP` target in New
   York times at 0.922x main, the six U-8 statements within 1.05x. pins: zone-seam-1/C-020
   *Fix round 2 (2026-10-23), the records:* R-011 counts the partitioned over-refusal of

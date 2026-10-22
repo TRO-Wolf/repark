@@ -2548,4 +2548,4 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   + 18 (C-022).
   *Fix round 3 (2026-10-23):* the nanosecond leaf's refusal restored on partitioned inserts under
   the owner's ruling (C-023); the plain-`UPDATE` exemption narrowed to a struct whose every naive
-  leaf is the shifted cast (C-024).
+  leaf is the shifted cast (C-024); never worse and the cost re-timed after both (C-025).
