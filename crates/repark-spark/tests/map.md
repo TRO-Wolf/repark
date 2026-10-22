@@ -298,6 +298,17 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   path) and `a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant` (the plain
   `UPDATE` exemption: `CAST('<wall>' AS TIMESTAMP_NTZ)` in the struct stores Spark's New York
   instant; reds when the exemption is removed). pins: zone-seam-1/C-018
+  *Fix round 2 (2026-10-23, verifier round 2 S1-1):*
+  `a_partition_column_before_the_struct_still_refuses_outside_utc_and_writes_no_file` puts the
+  partition column FIRST (`(k, id, st)`) and in the MIDDLE (`(id, k, st)`) of the schema, for a
+  static `PARTITION (k = 0)` and a dynamic `PARTITION (k)` `INSERT OVERWRITE`, each with an
+  instant struct cast to `TIMESTAMP_NTZ` and with a `TIMESTAMP_NTZ` value, in New York and
+  Sydney: the whole refusal text, the data file count unchanged from the seed's, no value stored
+  (16 cells); `a_partition_column_before_the_struct_stores_the_utc_read_in_utc` is the UTC control
+  on the same eight writes. The earlier partitioned pins keep the column last, where the struct
+  column has one index with or without the partition skip. Red on the verifier's mutants Y2 (the
+  router hands the gate an empty clause) and Y3 (a dynamic name skipped as static). pins:
+  zone-seam-1/C-021
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`

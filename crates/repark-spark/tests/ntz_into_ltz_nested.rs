@@ -375,6 +375,116 @@ async fn a_partitioned_overwrite_in_utc_stores_the_utc_read() {
     assert_eq!(wrong, Vec::<String>::new());
 }
 
+const POSITION_SHAPES: [(&str, &str, &str, &str, &str); 2] = [
+    (
+        "partition column first",
+        "(k INT, id INT, st STRUCT<v: TIMESTAMP, n: INT>)",
+        "(0, 1, CAST(NULL AS STRUCT<v: TIMESTAMP, n: INT>))",
+        "SELECT 1, {L}",
+        "SELECT 0, 1, {L}",
+    ),
+    (
+        "partition column in the middle",
+        "(id INT, k INT, st STRUCT<v: TIMESTAMP, n: INT>)",
+        "(1, 0, CAST(NULL AS STRUCT<v: TIMESTAMP, n: INT>))",
+        "SELECT 1, {L}",
+        "SELECT 1, 0, {L}",
+    ),
+];
+
+const POSITION_CLAUSES: [(&str, &str); 2] = [
+    ("PARTITION (k = 0)", "static"),
+    ("PARTITION (k)", "dynamic"),
+];
+
+async fn positioned(session: &ReparkSession, columns: &str, seed: &str) -> TempDir {
+    let warehouse = catalog(session).await;
+    for setup in [
+        format!("CREATE TABLE ice.ns.p {columns} USING iceberg PARTITIONED BY (k)"),
+        format!("INSERT INTO ice.ns.p VALUES {seed}"),
+    ] {
+        run(session, &setup).await;
+    }
+    warehouse
+}
+
+fn positioned_write(clause: &str, select: &str, literal: &str) -> String {
+    let literal = literal
+        .replace("{NTZ}", NTZ)
+        .replace("{WALL}", WALL)
+        .replace("{INSTANT}", INSTANT);
+    format!(
+        "INSERT OVERWRITE ice.ns.p {clause} {}",
+        select.replace("{L}", &literal)
+    )
+}
+
+#[tokio::test]
+async fn a_partition_column_before_the_struct_still_refuses_outside_utc_and_writes_no_file() {
+    let mut wrong = Vec::new();
+    let refusal = REFUSAL.replace("`ice`.`ns`.`t`", "`ice`.`ns`.`p`");
+    for zone in ["America/New_York", "Australia/Sydney"] {
+        for (shape, columns, seed, static_select, dynamic_select) in POSITION_SHAPES {
+            for (clause, kind) in POSITION_CLAUSES {
+                let select = if kind == "static" {
+                    static_select
+                } else {
+                    dynamic_select
+                };
+                for (source, literal, _) in PARTITIONED_SOURCES {
+                    let session = session(zone);
+                    let warehouse = positioned(&session, columns, seed).await;
+                    let before = data_files(warehouse.path());
+                    let outcome =
+                        attempt(&session, &positioned_write(clause, select, literal)).await;
+                    let label = format!("{zone} {shape} {kind} / {source}");
+                    if !outcome
+                        .as_ref()
+                        .is_err_and(|error| error.contains(&refusal))
+                    {
+                        wrong.push(format!("{label}: {outcome:?}"));
+                    }
+                    if data_files(warehouse.path()) != before {
+                        wrong.push(format!("{label}: a data file was written"));
+                    }
+                    if stored_in_p(&session).await != Vec::<i64>::new() {
+                        wrong.push(format!("{label}: a value was written"));
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
+#[tokio::test]
+async fn a_partition_column_before_the_struct_stores_the_utc_read_in_utc() {
+    let mut wrong = Vec::new();
+    for (shape, columns, seed, static_select, dynamic_select) in POSITION_SHAPES {
+        for (clause, kind) in POSITION_CLAUSES {
+            let select = if kind == "static" {
+                static_select
+            } else {
+                dynamic_select
+            };
+            for (source, literal, _) in PARTITIONED_SOURCES {
+                let session = session("UTC");
+                let _warehouse = positioned(&session, columns, seed).await;
+                let write = positioned_write(clause, select, literal);
+                if let Err(error) = attempt(&session, &write).await {
+                    wrong.push(format!("{shape} {kind} / {source}: {error}"));
+                    continue;
+                }
+                let values = stored_in_p(&session).await;
+                if values != vec![UTC_READ] {
+                    wrong.push(format!("{shape} {kind} / {source}: {values:?}"));
+                }
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
 #[tokio::test]
 async fn an_update_of_an_inner_struct_with_a_wall_refuses_outside_utc() {
     let session = session("America/New_York");
