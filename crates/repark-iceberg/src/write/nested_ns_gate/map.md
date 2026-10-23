@@ -13,6 +13,10 @@ parent grew past the 1000-line ceiling; the parent's prose stays in [../map.md](
   the supply model (R-015), and for the microsecond walk, the zone test at every depth and
   layout, the field-path tests, and the feeds each statement form names (R-011).
   pins: ice-tsns-merge-wall-1/C-040, ice-ntz-nested-refuse-1/C-001
+  *ZONE-SEAM-1 fix round 1 (2026-10-22):* the INSERT cases take the resolved static columns of
+  a `PARTITION` clause: a static column is skipped in the positional read (matched without
+  case), a clause with none reads every column, and an unresolved clause stays a `Value` with
+  no position. pins: zone-seam-1/C-016
 
 ## Pointers
 

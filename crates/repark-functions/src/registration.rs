@@ -13,6 +13,7 @@ pub fn register_udf_families(ctx: &SessionContext) {
     crate::try_invert::register(ctx);
     crate::temporal_ctor::register(ctx);
     crate::higher_order::register(ctx);
+    crate::zone_seam::register(ctx);
 }
 
 #[must_use]

@@ -65,6 +65,14 @@ The counts per axis on main, the runtime, the fixture size, the generator hash, 
 you dropped and why. The orchestrator reviews the corpus against the cards before the PR is
 offered for merge; no Opus verifier.
 
+**Follow-up (2026-10-22, ruling ZS-3 of ZONE-SEAM-1), a mechanical Sonnet round:** record next,
+in the five zones, the container casts (`named_struct`, `array`, `map` with a literal key) of the
+instant literal and the instant column to `INT`, `SMALLINT`, `TINYINT`, `FLOAT`, `DOUBLE` and
+`DECIMAL(18, 6)` (`ccast_int` … `ccast_decimal`, and their `TRY_CAST` twins), a map whose key is
+the instant (`map(<instant>, 1)`) cast to `MAP<TIMESTAMP_NTZ, INT>` and `MAP<STRING, INT>`, and
+the existing container-cast rows under `spark.sql.timestampType=TIMESTAMP_NTZ`. ZONE-SEAM-1 keeps
+these native until the corpus holds them.
+
 Standing rules from [TEMPLATE.md](../TEMPLATE.md): no code comments from Anthropic models;
 `map.md` lockstep; the scratch clone, never the live worktree; the TRO-Wolf identity and
 exactly one trailer, `Authored-By: Claude (claude-sonnet-5-5) <noreply@anthropic.com>`.

@@ -46,7 +46,19 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **2026-10-21 (EXPLAIN-DML-WRITE-1,
+  single home for how repark differs from Apache Spark. **2026-10-22 (ZONE-SEAM-1, PR #1139):**
+  R-011's status line records the cells the seam moves from the refusal to Spark's stored value,
+  the cast arm named for GATE-RETIRE-1, and ZS-9's over-refusal of a nested `TIMESTAMP_NTZ` value
+  into a nested `TIMESTAMP` field outside UTC until WRITE-NTZ-TO-LTZ-NESTED-1; R-015's line says
+  it is unchanged; *fix round 1, the same day:* the over-refused cells per zone are counted as
+  37 Spark-equal, 79 DIFFERENT and 18 engine errors on main; *fix round 2, 2026-10-23:* the
+  partitioned doors' over-refusal is counted per census (21, 68 of 354, 24 of 231) and R-015's
+  "unchanged" becomes the measured change (13 cells per zone) awaiting the owner; *fix round 3,
+  2026-10-23:* R-015 records the owner's ruling (the nanosecond leaf keeps its refusal) and its
+  pin; *fold 4, 2026-10-23 (verifier round 3, owner ruling "count it"):* R-011 lists the
+  plain-`UPDATE` over-refusal (the Muse twelve and the Opus ten per zone, the two calibration
+  cells) and the London-winter `ltz_nested` split (134 refused: 116 Spark-equal on main, 18 engine
+  errors) as ZS-9 over-refusal until GATE-RETIRE-1. **2026-10-21 (EXPLAIN-DML-WRITE-1,
   merged #1137 at `b7a20167`):** the REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 row gains the wrapper refusal on
   every door (`EXPLAIN ANALYZE` and `PREPARE` of any write); on `repark.sql()` a wrapped write that
   does not plan keeps DataFusion's error. **2026-10-21 (ICE-NTZ-NESTED-REFUSE-1

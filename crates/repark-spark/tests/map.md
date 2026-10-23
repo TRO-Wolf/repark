@@ -245,6 +245,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control's nested `TIMESTAMP_NTZ` row stored the
   UTC wall of a New York instant; it now asserts R-011's refusal (not R-015's text), dated in
   the test's doc comment. pins: ice-ntz-nested-refuse-1/C-008
+  **ZONE-SEAM-1 fix round 3 (2026-10-23, owner ruling on verifier round 2 S1-3):**
+  `a_partitioned_insert_refuses_a_nested_nanosecond_leaf_even_for_a_bare_null`: a
+  format-version 3 table with `st STRUCT<v: timestamp_ns, n: INT>` partitioned by `k`, the
+  partition column last, first and in the middle; a static and a dynamic `INSERT OVERWRITE` and
+  `INSERT INTO`; a bare `NULL` and a value; UTC and New York: R-015's refusal and no new file in
+  all 48 cells. Red on fix round 2's head (`b74f17e0`): the 24 bare-`NULL` cells stored.
+  pins: zone-seam-1/C-023
 - [ntz_nested_refuse.rs](ntz_nested_refuse.rs) — **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20),
   parity row R-011:** outside UTC a nested microsecond `TIMESTAMP_NTZ` leaf refuses an instant.
   `every_door_refuses_an_instant_outside_utc_and_writes_nothing`: five shapes (struct, struct in
@@ -275,6 +282,55 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` holds C-001 and C-004;
   `a_frame_through_a_repartition_or_an_unmodelled_node_refuses` holds C-034, described with
   `ntz_nested_refuse_casts.rs` below.)
+- [ntz_into_ltz_nested.rs](ntz_into_ltz_nested.rs) — **ZONE-SEAM-1 step 3c (2026-10-22, ruling
+  ZS-9):** a nested `TIMESTAMP_NTZ` value (a container cast of an instant, a `TIMESTAMP_NTZ`
+  literal) into a `STRUCT<v: TIMESTAMP, n: INT>` column refuses outside UTC, with the whole text
+  and no value written, on the store doors (`INSERT … BY NAME`, `INSERT OVERWRITE` from a query and
+  from `VALUES`, MERGE `INSERT`, MERGE `UPDATE SET t.st =`, MERGE `UPDATE SET *`, plain `UPDATE`);
+  stores the wall read in UTC on the same doors in a UTC session; and stores the wall read in New
+  York on the doors that convert in the plan (positional `INSERT … SELECT` and `VALUES`, a MERGE
+  assignment to the leaf, `BY NAME` of a leaf cast to `TIMESTAMP`). pins: zone-seam-1/C-015
+  *Fix round 1 (2026-10-22, verifier S1-1):*
+  `a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file` holds six
+  spellings of `INSERT OVERWRITE … PARTITION` on a table partitioned by `k` (a `SELECT` of a
+  literal, a `SELECT` of a column of `ice.ns.src`, `VALUES`, a column list, the `TABLE` keyword, a
+  dynamic `PARTITION (k)`), each with an instant struct cast to `TIMESTAMP_NTZ` and with a
+  `TIMESTAMP_NTZ` value, in New York, Sydney and Kathmandu: the whole refusal text, the data file
+  count unchanged from the seed's, no value stored. Red on `58321e94` (all 36 cells stored);
+  `a_partitioned_overwrite_in_utc_stores_the_utc_read` is the UTC control on the same twelve
+  writes. pins: zone-seam-1/C-016, C-017
+  *Fix round 1 (2026-10-22, verifier S1-2):* `an_update_of_an_inner_struct_with_a_wall_refuses_outside_utc`
+  (`UPDATE … SET st.i = named_struct('v', TIMESTAMP_NTZ …)` on `STRUCT<i: STRUCT<v: TIMESTAMP>>`
+  refuses naming `st`.`i`.`v`, the seed kept; reds when `type_at` answers the column type for any
+  path) and `a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant` (the plain
+  `UPDATE` exemption: `CAST('<wall>' AS TIMESTAMP_NTZ)` in the struct stores Spark's New York
+  instant; reds when the exemption is removed). pins: zone-seam-1/C-018
+  *Fix round 2 (2026-10-23, verifier round 2 S1-1):*
+  `a_partition_column_before_the_struct_still_refuses_outside_utc_and_writes_no_file` puts the
+  partition column FIRST (`(k, id, st)`) and in the MIDDLE (`(id, k, st)`) of the schema, for a
+  static `PARTITION (k = 0)` and a dynamic `PARTITION (k)` `INSERT OVERWRITE`, each with an
+  instant struct cast to `TIMESTAMP_NTZ` and with a `TIMESTAMP_NTZ` value, in New York and
+  Sydney: the whole refusal text, the data file count unchanged from the seed's, no value stored
+  (16 cells); `a_partition_column_before_the_struct_stores_the_utc_read_in_utc` is the UTC control
+  on the same eight writes. The earlier partitioned pins keep the column last, where the struct
+  column has one index with or without the partition skip. Red on the verifier's mutants Y2 (the
+  router hands the gate an empty clause) and Y3 (a dynamic name skipped as static). pins:
+  zone-seam-1/C-021
+  *Fix round 3 (2026-10-23, item A):*
+  `a_plain_update_with_an_unshifted_wall_beside_the_shifted_cast_refuses_outside_utc`: three
+  values (an extract of a container cast beside the cast leaf; an extract leaf with the cast only
+  inside an `INT` field's `CASE`; a `TIMESTAMP_NTZ` literal beside the cast leaf) through the
+  plain `UPDATE` and the MERGE twin (the control), in New York and Sydney: the whole refusal, the
+  data file count unchanged, no value stored. Red on `b74f17e0`: the six plain-`UPDATE` cells
+  stored. `a_plain_update_with_two_walls_in_utc_stores_the_utc_read` is the UTC control;
+  `a_plain_update_whose_only_wall_is_the_shifted_cast_stores_spark_instant` holds the exemption
+  (the text cast stores the New York and Sydney read, the instant cast stores the instant).
+  pins: zone-seam-1/C-024
+  *Fold 4 (2026-10-23, verifier round 3 S1-2):*
+  `a_plain_update_whose_only_naive_leaf_is_a_try_cast_stores_spark_instant` holds the `TRY_CAST`
+  half of the exemption in New York: wall text stores the New York read, bad text stores `NULL`,
+  an instant stores the instant, and the two-leaf `(CAST(instant), TRY_CAST(wall))` stores both;
+  mutant Z6 (only the `CAST` name exempts) reds it. pins: zone-seam-1/C-028
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
@@ -400,6 +456,23 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   walls it stored before) and `timestamp_ns_nested_shapes.rs`'s re-pin of the same day (the
   nested `TIMESTAMP_NTZ` row takes R-011's refusal, not the gate's text) are described in the
   paragraphs headed ICE-NTZ-NESTED-REFUSE-1 (2026-10-20) in their rows.
+  **ZONE-SEAM-1 (2026-10-22, ruling ZS-4):** the seam rewrites a container cast of an instant
+  before the router's gate reads the plan, so R-011's cast arm (`casts_a_zoned_value_to_naive`)
+  no longer matches it and the write stores Spark's session wall. Five pins that held the
+  refusal now hold the stored value outside UTC, per statement: in `ntz_nested_refuse_casts.rs`,
+  `a_container_cast_of_an_instant_stores_the_session_wall_on_every_door_outside_utc` (the 14
+  doors of `CONTAINER_CASTS`, a fresh catalog each), `the_cast_walk_reads_only_what_reaches_the_column`
+  (each `ON_LINEAGE` statement into its own table: the session wall, beside `w`'s UTC wall for the
+  `UNION ALL` and the `VALUES` rows) and
+  `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped` (each
+  `IN_A_SUBQUERY` statement into its own table); in `ntz_nested_refuse.rs`,
+  `a_frame_through_a_repartition_or_an_unmodelled_node_stores_the_session_wall` and
+  `a_scalar_subquery_returning_the_container_cast_under_an_unnest_stores_the_session_wall`. Two
+  statements (`(SELECT q.s)` over a derived table, and a `LATERAL` inside a `LATERAL`) fail on
+  the head with the engine's own error; the pin holds that the same statement with the wall
+  `named_struct('v', w, 'n', 1)` in place of the cast fails with the same text, so the failure is
+  not the seam's. The plain `UPDATE` refusal (`shifts_in_an_update`) and every other refusal in
+  both files are unchanged. pins: zone-seam-1/C-009
   pins: ice-ntz-nested-refuse-1/C-047
   **Count (fix round 4, ledger C-048):** `docs/spark-sql-iceberg-parity.md` R-011 counts ruling 2's
   over-refused correct cells as 16 in 8 shapes: the verifier's scalar-subquery shape, `INSERT INTO

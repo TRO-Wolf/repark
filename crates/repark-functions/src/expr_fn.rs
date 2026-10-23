@@ -386,7 +386,7 @@ pub fn format_string(args: Vec<Expr>) -> Expr {
 #[must_use]
 pub fn from_utc_timestamp(timestamp: Expr, timezone: Expr) -> Expr {
     call(
-        datafusion_spark::function::datetime::from_utc_timestamp(),
+        crate::zone_seam::from_utc_timestamp_udf(),
         vec![timestamp, timezone],
     )
 }
@@ -395,7 +395,7 @@ pub fn from_utc_timestamp(timestamp: Expr, timezone: Expr) -> Expr {
 #[must_use]
 pub fn to_utc_timestamp(timestamp: Expr, timezone: Expr) -> Expr {
     call(
-        datafusion_spark::function::datetime::to_utc_timestamp(),
+        crate::zone_seam::to_utc_timestamp_udf(),
         vec![timestamp, timezone],
     )
 }

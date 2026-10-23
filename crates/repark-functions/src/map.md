@@ -891,6 +891,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
+  *ZONE-SEAM-1 fix round 3 (2026-10-23):* `decimal_cast::SPARK_NONNULL_NAME` is `pub`, so the
+  router's ZS-9 gate (`repark-spark/src/router/nested_ns.rs`) can look through the non-null
+  marker around a `named_struct` when it reads an UPDATE's assigned struct leaf by leaf.
+  pins: zone-seam-1/C-024
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -1565,6 +1569,32 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   pins: zone-horizon-render-1/C-006, C-007
   **Fold 1 Item A (2026-10-08):** `unix_seconds_from_string` is the shared
   `wall_to_unix_seconds`, whose tabulated branch is main's `from_local_datetime`.
+
+- `zone_seam.rs` — **ZONE-SEAM-1 (2026-10-22):** one session-zone seam for the conversions the
+  bare leaf cast already gets right. `rewrite_zone_seam` runs first in `rewrite_cast` of
+  `SparkLtzTimestampCast` (`instant_ts.rs`, not under `spark.sql.timestampType=TIMESTAMP_NTZ`).
+  A `CAST` or `TRY_CAST` of a struct, list or map whose type pairs a seam leaf (an instant to
+  `TIMESTAMP_NTZ`, `STRING`, `DATE` or `BIGINT`; a wall, a string or a date to `TIMESTAMP`; a
+  wall to `STRING`) becomes `__repark_zone_seam__` / `__repark_try_zone_seam__` to a partial
+  type (each seam leaf at its target, every other leaf as the source has it, the partial type
+  carried as a typed NULL), under the original outer cast; a map cast wraps the first argument
+  of `__repark_cast_map__`. The kernel walks struct children (masked by the parent's nulls),
+  list values and map values, and at each seam leaf invokes the UDF the bare leaf cast uses
+  (`__repark_cast_timestamp_ntz__` and its try twin, `spark_timestamp_to_string_udf`,
+  `spark_timestamp_to_date_udf`, `spark_epoch_seconds_floor_udf`, `to_timestamp_udf`,
+  `try_to_timestamp_udf`) with the call's own config. A wall to `BIGINT` and a `BIGINT` to
+  `TIMESTAMP_NTZ` refuse at planning with `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`. A bare
+  `TRY_CAST` of an instant to `STRING` / `DATE` / `BIGINT`, a wall to `TIMESTAMP` / `STRING` or a
+  date to `TIMESTAMP` calls the bare leaf UDF directly (no typed-NULL carrier, which a second
+  analysis would narrow from `BIGINT` to `INT`); a bare `TRY_CAST` of a `BIGINT` to `TIMESTAMP` reads
+  seconds (`TRY_CAST` to `Timestamp(Second)`, then to microseconds; an overflow is NULL).
+  `SparkUtcShift` wraps DataFusion-Spark's `to_utc_timestamp` / `from_utc_timestamp` (registered
+  over them in `registration.rs`, and named by `expr_fn.rs`): a wall, a date or an untyped NULL
+  first argument is cast to `TIMESTAMP` in the session zone, as Spark's implicit cast does, and
+  the function returns `TIMESTAMP`. Not converted (ZONE-ORACLE-1 holds no Spark answer): numeric
+  targets other than `BIGINT`, a timestamp map key, a container cast to a scalar `STRING`,
+  `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`.
+  pins: zone-seam-1/C-001, C-002, C-003, C-004, C-011, C-012
 
 ## Pointers
 

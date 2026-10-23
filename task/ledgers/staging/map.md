@@ -2574,3 +2574,30 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   count is unchanged (C-004). Replays (C-005) and the pin's second failure, its 10 s bound on
   a slow disk (C-006, open on the card). `risk_tier: standard`. Branch
   `fix/mb-fence-body-flake-1`.
+- [zone-seam-1-ledger.md](zone-seam-1-ledger.md) —
+  **ZONE-SEAM-1 (2026-10-22), card CONTAINER-CAST-ZONE-1, rows R-011 and R-015:** one
+  session-zone seam for every container cast, leaf `TRY_CAST`, `to_utc_timestamp` /
+  `from_utc_timestamp` argument and `to_json` rendering of a zoned or naive timestamp. The
+  orchestrator's rulings ZS-1 to ZS-5 on the sketch; the red pins on the base; the corpus cells
+  to close; every residue cell by cause with Spark's and main's values; the halts and rulings
+  ZS-6 to ZS-9 (step 3b `from_json`, the ZONE-HORIZON-RENDER-1 residue, step 3c's refusal of a
+  nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field outside UTC); the mutants, the U-8
+  matrix against live Spark, the cost table; clauses C-001 to C-015, all PROVEN, and the
+  attestation. `risk_tier: standard`. Branch `feat/zone-seam-1`.
+  *Fix round 1 (2026-10-22, after verifier round 1's FAIL):* the partitioned `INSERT OVERWRITE`
+  position (S1-1, C-016), the partitioned door census of sixteen named shapes (C-017), the four
+  pins that kill S1-2's surviving mutants (C-018), R-011's counts corrected to 37 + 79 + 18 per
+  zone (C-019), and the cost re-timed in ten alternating rounds under load 5 with the New York
+  `MERGE` into a nested `TIMESTAMP` target, every ratio within 1.05x (C-020).
+  *Fix round 2 (2026-10-23, after verifier round 2's FAIL):* the partition-position pins, the
+  partition column first and in the middle, red under the verifier's Y2 and Y3 (C-021); R-011's
+  partitioned over-refusal counts, R-015's measured change awaiting the owner, the card's 37 + 79
+  + 18 (C-022).
+  *Fix round 3 (2026-10-23):* the nanosecond leaf's refusal restored on partitioned inserts under
+  the owner's ruling (C-023); the plain-`UPDATE` exemption narrowed to a struct whose every naive
+  leaf is the shifted cast (C-024); never worse and the cost re-timed after both (C-025).
+  *Fold 4 (2026-10-23, verifier round 3, owner ruling "count it"):* R-011 counts the plain-`UPDATE`
+  over-refusal, the Muse twelve and the Opus ten per zone with the two calibration cells (C-026),
+  and the London-winter `ltz_nested` split (C-027); the `TRY_CAST` half of the exemption is pinned
+  (C-028); the offset-text `UPDATE` wall is carded and C-024's cast-leaf claim is scoped to text
+  without an offset (C-029).

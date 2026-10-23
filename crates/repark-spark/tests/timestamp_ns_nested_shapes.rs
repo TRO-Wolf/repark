@@ -583,3 +583,93 @@ async fn an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stor
         vec![Some(1_767_305_045_123_456_000); 2]
     );
 }
+
+const PARTITIONED_TABLES: [(&str, &str, &str); 3] = [
+    (
+        "k last",
+        "(id INT, st STRUCT<v: timestamp_ns, n: INT>, k INT)",
+        "INSERT INTO {t} (id, k) VALUES (1, 0)",
+    ),
+    (
+        "k first",
+        "(k INT, id INT, st STRUCT<v: timestamp_ns, n: INT>)",
+        "INSERT INTO {t} (k, id) VALUES (0, 1)",
+    ),
+    (
+        "k in the middle",
+        "(id INT, k INT, st STRUCT<v: timestamp_ns, n: INT>)",
+        "INSERT INTO {t} (id, k) VALUES (1, 0)",
+    ),
+];
+
+const PARTITIONED_WRITES: [(&str, &str, &str, &str); 4] = [
+    (
+        "static overwrite",
+        "INSERT OVERWRITE {t} PARTITION (k = 0) SELECT 1, {st}",
+        "INSERT OVERWRITE {t} PARTITION (k = 0) SELECT 1, {st}",
+        "INSERT OVERWRITE {t} PARTITION (k = 0) SELECT 1, {st}",
+    ),
+    (
+        "dynamic overwrite",
+        "INSERT OVERWRITE {t} PARTITION (k) SELECT 1, {st}, 0",
+        "INSERT OVERWRITE {t} PARTITION (k) SELECT 0, 1, {st}",
+        "INSERT OVERWRITE {t} PARTITION (k) SELECT 1, 0, {st}",
+    ),
+    (
+        "static append",
+        "INSERT INTO {t} PARTITION (k = 0) SELECT 2, {st}",
+        "INSERT INTO {t} PARTITION (k = 0) SELECT 2, {st}",
+        "INSERT INTO {t} PARTITION (k = 0) SELECT 2, {st}",
+    ),
+    (
+        "dynamic append",
+        "INSERT INTO {t} PARTITION (k) SELECT 2, {st}, 0",
+        "INSERT INTO {t} PARTITION (k) SELECT 0, 2, {st}",
+        "INSERT INTO {t} PARTITION (k) SELECT 2, 0, {st}",
+    ),
+];
+
+#[tokio::test]
+async fn a_partitioned_insert_refuses_a_nested_nanosecond_leaf_even_for_a_bare_null() {
+    let value = format!("named_struct('v', CAST('{NANOS}' AS timestamp_ns), 'n', 1)");
+    let mut wrong = Vec::new();
+    for zone in ["UTC", "America/New_York"] {
+        let session = session(zone);
+        let warehouse = catalog(&session).await;
+        let mut number = 0;
+        for (place, (table, columns, seed)) in PARTITIONED_TABLES.iter().enumerate() {
+            for (door, last, first, middle) in PARTITIONED_WRITES {
+                let write = [last, first, middle][place];
+                for supplied in ["NULL", value.as_str()] {
+                    number += 1;
+                    let name = format!("ice.ns.p{number}");
+                    run(
+                        &session,
+                        &format!(
+                            "CREATE TABLE {name} {columns} USING iceberg PARTITIONED BY (k) \
+                             TBLPROPERTIES ('format-version'='3')"
+                        ),
+                    )
+                    .await;
+                    run(&session, &seed.replace("{t}", &name)).await;
+                    let folder = warehouse.path().join("ns").join(format!("p{number}"));
+                    let before = files_under(&folder);
+                    let sql = write.replace("{t}", &name).replace("{st}", supplied);
+                    let outcome = attempt(&session, &sql).await;
+                    let refused = outcome
+                        .as_ref()
+                        .is_err_and(|error| error.contains(REFUSAL) && error.contains(NOT_YET));
+                    if !refused {
+                        wrong.push(format!("{zone} {table} {door} {supplied}: {outcome:?}"));
+                    }
+                    if files_under(&folder) != before {
+                        wrong.push(format!(
+                            "{zone} {table} {door} {supplied}: a file was written"
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}

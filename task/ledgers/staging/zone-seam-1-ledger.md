@@ -1,0 +1,695 @@
+# Unit ledger — ZONE-SEAM-1 · one session-zone conversion seam for every zoned-timestamp conversion
+
+**Date:** 2026-10-22 · **Branch:** `feat/zone-seam-1` · **Base:** `b7a20167` ·
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.** Target: release 1.5.6.
+
+**Order:** [../../wo/zone-seam-1/order.md](../../wo/zone-seam-1/order.md) (owner-adopted
+2026-10-20); step 0: [../../wo/zone-seam-1/sketch.md](../../wo/zone-seam-1/sketch.md); card
+[CONTAINER-CAST-ZONE-1](../../roadmap/mid-term/container-cast-zone-1-card-2026-10-20.md); pin
+corpus ZONE-ORACLE-1 (`python/repark/tests/timestamps/`). **This ledger closes when the unit's
+pull request merges.**
+
+## Orchestrator rulings on the sketch (2026-10-22, about 00:20 UTC)
+
+Each is recorded as given; the owner reads them in the morning report.
+
+- **ZS-1** — orchestrator ruling ZS-1, 2026-10-22, under the owner's grant: the §4 replay gate
+  reads as zero DIFFERENT among the cells the sketch assigns to this unit (sketch §8), with the
+  residue listed exactly by id. Condition: this ledger classifies every residue cell by cause
+  with Spark's value and main's value side by side (§ Residue below), and the card's `from_json`
+  row gets its own paragraph. The residue is carded as two follow-up lines on
+  CONTAINER-CAST-ZONE-1, not new cards.
+- **ZS-2** — orchestrator ruling ZS-2, 2026-10-22, under the owner's grant: the 20
+  `to_utc_timestamp` / `from_utc_timestamp` DATE and untyped-NULL cells are in scope.
+- **ZS-3** — orchestrator ruling ZS-3, 2026-10-22, under the owner's grant: numeric targets other
+  than `BIGINT` and timestamp map keys stay native; one follow-up line on the ZONE-ORACLE-1
+  order names the expressions to record next.
+- **ZS-4** — orchestrator ruling ZS-4, 2026-10-22, under the owner's grant: the U-8 matrix cells
+  that move from R-011's refusal to a stored value (`ts_struct_cast`, `ts_struct_cast_column`
+  outside UTC, up to 160) are listed refusal→EQUAL moves, EQUAL meaning the stored value equals
+  the matrix's Spark value cell for cell; any other value, and any EQUAL→other anywhere, is a
+  halt. R-011's status line records the move and names A2 as the GATE-RETIRE-1 candidate.
+- **ZS-5** — orchestrator ruling ZS-5, 2026-10-22, under the owner's grant: the native
+  `repark.sql()` door is pinned as an unchanged control (head equals main on the card's
+  tables); one line on CONTAINER-CAST-ZONE-1: "native-door zone semantics: owner decision,
+  unscheduled".
+
+## Red on the base (step 1, 2026-10-22)
+
+`cargo test -p repark-functions --lib tests::zone_seam_pairs` on `b7a20167` with the pins of
+`crates/repark-functions/src/tests/zone_seam_pairs.rs` added and nothing else:
+
+```
+test result: FAILED. 1 passed; 15 failed; 0 ignored; 0 measured; 948 filtered out
+a_container_cast_of_an_instant_to_timestamp_ntz_takes_the_session_wall  Struct try=false America/New_York: (Some(Ntz), "1767323045123456") want 1767305045123456
+a_container_cast_of_an_instant_to_string_renders_the_session_text      Struct try=false UTC: (Some(Text), "2026-01-02T03:04:05.123456Z") want 2026-01-02 03:04:05.123456
+a_container_cast_of_an_instant_to_date_takes_the_session_date          Struct try=false America/New_York: (Some(Day), "20455") want 20454
+a_container_cast_of_an_instant_to_bigint_answers_epoch_seconds         Struct try=false UTC: (Some(Seconds), "1767323045123456") want 1767323045
+a_container_cast_of_a_wall_to_timestamp_reads_it_in_the_session_zone   Struct try=false America/New_York: (Some(Ltz), "1767323045123456") want 1767341045123456
+a_container_cast_of_a_zoneless_string_to_timestamp_reads_it_in_the_session_zone  Struct try=false America/New_York: (Some(Ltz), "1767323045123456") want 1767341045123456
+a_container_cast_of_a_date_to_timestamp_starts_at_the_session_midnight Struct try=false America/New_York: (Some(Ltz), "1767312000000000") want 1767330000000000
+a_container_cast_of_a_wall_to_string_renders_spark_text                Struct try=false UTC: (Some(Text), "2026-01-02T03:04:05.123456") want 2026-01-02 03:04:05.123456
+a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does          Struct try=false: (Some(Seconds), "1767323045123456")
+a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does Struct try=false: (Some(Ntz), "1767323045")
+a_leaf_try_cast_answers_what_the_leaf_cast_answers                     instant to string UTC: (Some(Text), "2026-01-02T03:04:05.123456Z") want 2026-01-02 03:04:05.123456
+a_try_cast_answers_null_where_its_leaf_cannot_convert                  bigint overflow: (Some(Ltz), "9223372036854775807")
+to_and_from_utc_timestamp_cast_a_wall_date_or_null_to_an_instant_first to_utc_timestamp of a wall America/New_York: (Some(Ntz), "1767303245123456") want 1767321245123456
+to_json_renders_a_timestamp_ntz_leaf_as_its_wall_without_a_zone        America/New_York: (Some(Text), "{\"a\":\"2026-01-01T22:04:05.123-05:00\"}") want {"a":"2026-01-02T03:04:05.123"}
+a_container_cast_of_an_instant_column_takes_the_session_wall           left: 1767323045123456 right: 1767305045123456
+```
+
+The one test green on the base is the control `an_instant_kept_as_an_instant_and_a_naive_member_stay_native`.
+In `a_try_cast_answers_null_where_its_leaf_cannot_convert` only the `BIGINT` overflow is red on
+the base; the unplaceable wall (row 5) and the malformed string (row 6) already answer NULL under
+`TRY_CAST` on the base, and the pin holds that they still do.
+
+## Corpus cells this unit closes
+
+The replay of the base (sketch §1): 1,199 EQUAL / 411 DIFFERENT / 20 REFUSED / 10 ERROR. The
+cells to close are sketch §8's lists, cell id `<expression>.<zone tag>` for every zone whose
+letter there is not `E`: step 2, 63 container-cast expressions (219 cells), 8 chained casts
+(22), 7 leaf `TRY_CAST` expressions (27), 3 wall function-site expressions (15) and, by ZS-2,
+`bare.date.from_utc_timestamp`, `bare.date.to_utc_timestamp` (10 ERROR),
+`bare.null.from_utc_timestamp`, `bare.null.to_utc_timestamp` (10 REFUSED); step 3, the six
+`*.wall.to_json` expressions (30). 353 cells in all. Watched, not claimed:
+`through.json_wall_ltz` (3 DIFFERENT) and `through.json_wall_ntz` (must stay EQUAL).
+
+## Residue (ZS-1): every cell this unit does not close, by cause
+
+105 cells, 21 expressions. Spark's answer is the recorded fixture; main's is the replay of
+`b7a20167`. Reading the table: every residue expression is non-EQUAL in all five zones,
+`UTC` and `Etc/UTC` included, where a session-zone conversion is the identity, so none is a
+zone defect. None is a rendering of a timestamp as text: each is an error condition, a cast or
+function argument Spark refuses, a pattern letter, or a parse. Two notes for a reader:
+`bare.epoch.to_timestamp_ntz` is the one expression whose RePark answer varies by zone (it reads
+the seconds as an instant and takes the session wall), but Spark raises `CAST_INVALID_INPUT` in
+every zone, so the defect is that RePark answers at all; and `bare.{inst,wall}.date_format_micros`
+is Spark's session text, which RePark refuses for the `S` letter only (its `date_format` without
+`S` is EQUAL in every zone).
+
+**The card's `from_json` row (`through.json_inst_ntz`).** The statement is
+`from_json(to_json(named_struct('a', <instant>)), 'a TIMESTAMP_NTZ')`. Spark returns NULL in all
+five zones. Main returns `1767323045123000` (the UTC wall to the millisecond) in all five zones.
+The text `from_json` reads is the same on both engines in every zone, because `to_json` of an
+instant is EQUAL everywhere (`struct.inst.to_json`, `{"a":"2026-01-02T03:04:05.123Z"}` in UTC,
+`…-05:00` in New York). Spark's `TIMESTAMP_NTZ` parser rejects a text that carries a zone
+designator, so the field is NULL; RePark's accepts it and keeps the UTC wall. The difference
+holds in `UTC`, where no zone conversion takes place, and main's value is the same in every zone,
+so it is not the session zone: it is whether `from_json` into `TIMESTAMP_NTZ` accepts a zoned
+text. It stays a residue (follow-up line on the card).
+
+| cell | cause | status on main | Spark 4.1.2 | main `b7a20167` |
+|---|---|---|---|---|
+| `array.date.ccast_bigint.utc` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `array.date.ccast_bigint.new_york` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `array.date.ccast_bigint.kolkata` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `array.date.ccast_bigint.p0530` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `array.date.ccast_bigint.etc_utc` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `array.str.ccast_bigint.utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `array.str.ccast_bigint.new_york` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `array.str.ccast_bigint.kolkata` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `array.str.ccast_bigint.p0530` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `array.str.ccast_bigint.etc_utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `bare.col_str.cast_bigint.utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 …` |
+| `bare.col_str.cast_bigint.new_york` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 …` |
+| `bare.col_str.cast_bigint.kolkata` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 …` |
+| `bare.col_str.cast_bigint.p0530` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 …` |
+| `bare.col_str.cast_bigint.etc_utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 …` |
+| `bare.col_str.unix_micros.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.col_str.unix_micros.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.col_str.unix_micros.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.col_str.unix_micros.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.col_str.unix_micros.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.col_wall.unix_micros.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.col_wall.unix_micros.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.col_wall.unix_micros.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.col_wall.unix_micros.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.col_wall.unix_micros.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.date.unix_micros.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.date.unix_micros.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.date.unix_micros.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.date.unix_micros.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.date.unix_micros.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.epoch.date_format.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Execution error: Function 'date_format' user-defined …` |
+| `bare.epoch.date_format.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Execution error: Function 'date_format' user-defined …` |
+| `bare.epoch.date_format.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Execution error: Function 'date_format' user-defined …` |
+| `bare.epoch.date_format.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Execution error: Function 'date_format' user-defined …` |
+| `bare.epoch.date_format.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Execution error: Function 'date_format' user-defined …` |
+| `bare.epoch.from_utc_timestamp.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'from_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.from_utc_timestamp.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'from_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.from_utc_timestamp.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'from_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.from_utc_timestamp.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'from_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.from_utc_timestamp.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'from_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.to_date.utc` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | raises `OverflowError: days=1767323045; must have magnitude <= 999999999 …` |
+| `bare.epoch.to_date.new_york` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | raises `OverflowError: days=1767323045; must have magnitude <= 999999999 …` |
+| `bare.epoch.to_date.kolkata` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | raises `OverflowError: days=1767323045; must have magnitude <= 999999999 …` |
+| `bare.epoch.to_date.p0530` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | raises `OverflowError: days=1767323045; must have magnitude <= 999999999 …` |
+| `bare.epoch.to_date.etc_utc` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | raises `OverflowError: days=1767323045; must have magnitude <= 999999999 …` |
+| `bare.epoch.to_timestamp_ntz.utc` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | `timestamp_ntz` `1767323045000000` |
+| `bare.epoch.to_timestamp_ntz.new_york` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | `timestamp_ntz` `1767305045000000` |
+| `bare.epoch.to_timestamp_ntz.kolkata` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | `timestamp_ntz` `1767342845000000` |
+| `bare.epoch.to_timestamp_ntz.p0530` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | `timestamp_ntz` `1767342845000000` |
+| `bare.epoch.to_timestamp_ntz.etc_utc` | function legality | DIFFERENT | raises CAST_INVALID_INPUT | `timestamp_ntz` `1767323045000000` |
+| `bare.epoch.to_utc_timestamp.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'to_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.to_utc_timestamp.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'to_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.to_utc_timestamp.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'to_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.to_utc_timestamp.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'to_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.to_utc_timestamp.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'to_utc_timestamp' requires Timestamp, but …` |
+| `bare.epoch.unix_micros.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.epoch.unix_micros.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.epoch.unix_micros.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.epoch.unix_micros.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.epoch.unix_micros.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.inst.date_format_micros.utc` | other: pattern letter S | REFUSED | `string` `2026-01-02 03:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.inst.date_format_micros.new_york` | other: pattern letter S | REFUSED | `string` `2026-01-01 22:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.inst.date_format_micros.kolkata` | other: pattern letter S | REFUSED | `string` `2026-01-02 08:34:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.inst.date_format_micros.p0530` | other: pattern letter S | REFUSED | `string` `2026-01-02 08:34:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.inst.date_format_micros.etc_utc` | other: pattern letter S | REFUSED | `string` `2026-01-02 03:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.str.cast_bigint.utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `bare.str.cast_bigint.new_york` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `bare.str.cast_bigint.kolkata` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `bare.str.cast_bigint.p0530` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `bare.str.cast_bigint.etc_utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `bare.str.unix_micros.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.str.unix_micros.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.str.unix_micros.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.str.unix_micros.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.str.unix_micros.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | raises `AnalysisException: Error during planning: Function 'unix_micros' requires Timestamp, but …` |
+| `bare.wall.date_format_micros.utc` | other: pattern letter S | REFUSED | `string` `2026-01-02 03:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.wall.date_format_micros.new_york` | other: pattern letter S | REFUSED | `string` `2026-01-02 03:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.wall.date_format_micros.kolkata` | other: pattern letter S | REFUSED | `string` `2026-01-02 03:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.wall.date_format_micros.p0530` | other: pattern letter S | REFUSED | `string` `2026-01-02 03:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.wall.date_format_micros.etc_utc` | other: pattern letter S | REFUSED | `string` `2026-01-02 03:04:05.123456` | raises `PySparkException: Execution error: date_format: unsupported pattern letter 'S' …` |
+| `bare.wall.unix_micros.utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.wall.unix_micros.new_york` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.wall.unix_micros.kolkata` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.wall.unix_micros.p0530` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `bare.wall.unix_micros.etc_utc` | function legality | DIFFERENT | raises DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE | `bigint` `1767323045123456` |
+| `map.date.ccast_bigint.utc` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | raises DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION |
+| `map.date.ccast_bigint.new_york` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | raises DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION |
+| `map.date.ccast_bigint.kolkata` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | raises DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION |
+| `map.date.ccast_bigint.p0530` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | raises DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION |
+| `map.date.ccast_bigint.etc_utc` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | raises DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION |
+| `struct.date.ccast_bigint.utc` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `struct.date.ccast_bigint.new_york` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `struct.date.ccast_bigint.kolkata` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `struct.date.ccast_bigint.p0530` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `struct.date.ccast_bigint.etc_utc` | cast legality | DIFFERENT | raises DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION | `bigint` `20455` |
+| `struct.str.ccast_bigint.utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `struct.str.ccast_bigint.new_york` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `struct.str.ccast_bigint.kolkata` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `struct.str.ccast_bigint.p0530` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `struct.str.ccast_bigint.etc_utc` | error condition | DIFFERENT | raises CAST_INVALID_INPUT | raises `PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused …` |
+| `through.json_inst_ntz.utc` | from_json | DIFFERENT | `timestamp_ntz` `None` | `timestamp_ntz` `1767323045123000` |
+| `through.json_inst_ntz.new_york` | from_json | DIFFERENT | `timestamp_ntz` `None` | `timestamp_ntz` `1767323045123000` |
+| `through.json_inst_ntz.kolkata` | from_json | DIFFERENT | `timestamp_ntz` `None` | `timestamp_ntz` `1767323045123000` |
+| `through.json_inst_ntz.p0530` | from_json | DIFFERENT | `timestamp_ntz` `None` | `timestamp_ntz` `1767323045123000` |
+| `through.json_inst_ntz.etc_utc` | from_json | DIFFERENT | `timestamp_ntz` `None` | `timestamp_ntz` `1767323045123000` |
+
+## Halt after step 3 and ruling ZS-6 (2026-10-22)
+
+**The halt.** The corpus replay of the head after step 3 (`6286e40e`) moved three EQUAL cells to
+DIFFERENT: `through.json_wall_ntz` in New York, Kolkata and +05:30. Spark answers
+`1767323045123000` in every zone; the head answered `1767341045123000` (New York) and
+`1767303245123000` (Kolkata, +05:30). `from_json` into a `TIMESTAMP_NTZ` field read a text with
+no zone in the session zone and kept the UTC wall of that instant; on main the cell was EQUAL
+because `to_json` wrote the wall shifted into the session zone with its offset and `from_json`
+turned that text back into the wall. Step 3 fixed the first defect and exposed the second.
+
+- **ZS-6** — orchestrator ruling ZS-6, 2026-10-22, under the owner's grant (the owner may
+  reverse it): this unit takes the `from_json` `TIMESTAMP_NTZ` site in `json/decode.rs`, in its
+  own commit "step 3b, from_json reads a TIMESTAMP_NTZ field as a wall", so a revert of that one
+  commit restores today's `from_json`. Red first on main; the change is the zone handling only;
+  every other spelling keeps today's grammar and answer; the store path and the leaf cast are
+  untouched; after step 3b the corpus shows 0 EQUAL→other against main, and a second halt parks
+  the unit.
+
+**Step 3b, red on main.** `from_json` is unchanged from main at `6286e40e`, so the pins ran there:
+
+```
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 964 filtered out
+from_json_reads_a_timestamp_ntz_field_as_its_wall_and_a_zoned_text_as_null
+{"a":"2026-01-02T03:04:05.123"} America/New_York: (Some(Ntz), "1767341045123000") want 1767323045123000
+{"a":"2026-01-02T03:04:05.123"} Asia/Kolkata: (Some(Ntz), "1767303245123000") want 1767323045123000
+{"a":"2026-01-02T03:04:05.123Z"} America/New_York: (Some(Ntz), "1767323045123000") want NULL
+{"a":"2026-01-02T03:04:05.123Z"} Asia/Kolkata: (Some(Ntz), "1767323045123000") want NULL
+{"a":"2026-01-01T22:04:05.123-05:00"} America/New_York: (Some(Ntz), "1767323045123000") want NULL
+{"a":"2026-01-01T22:04:05.123-05:00"} Asia/Kolkata: (Some(Ntz), "1767323045123000") want NULL
+from_json_keeps_main_answer_for_a_space_separator_or_a_date_only_text ... ok   (the unchanged controls)
+```
+
+**Step 3b, the change.** In `build_timestamp`, a field whose type is `Timestamp(_, None)` reads a
+text through `wall_micros`: a text that the two zoned patterns parse (`Z` or an offset, `T` or a
+space) answers NULL; a text of the pattern `%Y-%m-%dT%H:%M:%S%.f` (Spark's `TIMESTAMP_NTZ` JSON
+form, any fraction width) is its wall with no zone; every other spelling (a space separator,
+minutes only, a date only) takes today's `timestamp_micros` path and keeps today's answer, which
+reads it in the session zone (the two controls pin a space separator and a date only in New York
+at main's values). Those spellings are not held by the corpus and stay as they are. A zoned
+field (`TIMESTAMP`) is unchanged. **Untouched:** the `TIMESTAMP_NTZ` store path
+(`crates/repark-iceberg/src/write/ntz_store.rs`, `update_cast.rs`) and the leaf
+`CAST(<text> AS TIMESTAMP_NTZ)` (`timestamp_ntz_cast.rs`).
+
+**Residue move (appended; the table above is as recorded at step 1).** `through.json_inst_ntz`
+leaves the residue: its five cells close by step 3b (Spark NULL; the head NULL). The residue is
+now 20 expressions, 90 DIFFERENT and 10 REFUSED cells. The three `through.json_wall_ntz` cells
+return to EQUAL by step 3b's own reading of the wall.
+
+**Why `SparkUtcShift` is a second registration, not a second seam.** The order's §2 names the
+`to_utc_timestamp` / `from_utc_timestamp` site. For a wall and an untyped NULL an analyzer
+rewrite of the argument would have been enough, but a `DATE` argument is rejected while the
+plan is built, before any analyzer rule runs: building the projection asks the expression for its
+field, which calls `verify_function_arguments` → `fields_with_udf`
+(`datafusion-expr` 54.1.0, `src/expr_schema.rs` line 724, raising from
+`src/type_coercion/functions.rs` line 868, "Function 'to_utc_timestamp' requires Timestamp, but
+received Date"), because DataFusion-Spark's signature is `Coercion::new_implicit(Timestamp,
+[String])`. So `SparkUtcShift` wraps the same two UDFs with a user-defined signature that admits
+a wall, a date or a NULL first argument and delegates every other type to the inner signature's
+own coercion; it converts that argument with the same `to_timestamp_udf` kernel the seam's row 5
+and row 7 use and then calls the inner function. It holds no conversion of its own.
+
+## Second halt, park and ruling ZS-7 (2026-10-22)
+
+**The second halt.** The facade suite on the head (`dc0da5a2`) moved three EQUAL cells of the
+ZONE-HORIZON-RENDER-1 oracle to DIFFERENT: `to_utc_timestamp` of a wall at the New York overlap
+`2099-11-01 01:30` and the gaps `2100-03-14 02:30` and `2104-03-09 02:30`. The unit parked. The
+measurement while parked (18 edge walls × 2 session zones × 5 expressions on Spark, head and
+main; the table is in the card ZONE-HORIZON-INSTANT-1) showed: the leaf cast equals Spark at every edge;
+Spark's wall argument is the leaf cast composed with the instant function (36 of 36); the seam's
+`SparkUtcShift` implements exactly that composition; every remaining edge miss is the shared
+DataFusion-Spark instant kernel, the same on main and head; main's three cells matched Spark by
+value only, as `timestamp_ntz`.
+
+- **ZS-7** — owner ruling ZS-7, 2026-10-22 (option C): the unit does not grow to the instant
+  kernel; no step 2c. The three cells are accidental EQUAL on main, wrong type; honest DIFFERENT
+  after the seam; they close with ZONE-HORIZON-INSTANT-1, carded
+  (`../../roadmap/mid-term/zone-horizon-instant-1-card-2026-10-22.md`), the next Opus unit after
+  GATE-RETIRE-1.
+
+**What ZS-7 does to the pins.** The suite's grammar is a residue list: each key in
+`zone_horizon_render_1_residue.json` must differ from the oracle's Spark value, and every other
+key must equal it. So the three cells are expected-divergence rows whose recorded expectation is
+Spark's value (`2099-11-01 05:30:00`, `2100-03-14 07:30:00`, `2104-03-09 07:30:00`), not
+red-by-design tests. The list was re-derived on the head with the recorder's `--engine repark
+--residue`: 15 cells leave (the wall edge cells the seam now answers as Spark does), 3 join.
+`test_zone_horizon_render_1.py` passes (12 passed, the live cell skipped). The 3 joining cells are
+explained by the suite's named class `_UPSTREAM_SHIFT`.
+
+## Step 4, the doors (2026-10-22, after merging main `0512470d`, no conflict)
+
+`python/repark/tests/timestamps/test_zone_seam_1.py` (38 tests, green on the head build):
+
+- **Spark SQL door:** the card's plain `SELECT` rows (array, struct, map; leaf control) answer the
+  session wall in New York (`1767305045123456`) and the UTC wall in UTC. The "through another type"
+  rows store Spark's value in New York: the session wall through `STRING` (`INSERT`, an array, the
+  leaf cast over a string the container made, a `MERGE` update), the New York midnight through
+  `DATE` (`1767225600000000`), NULL through `from_json(to_json(…))`.
+- **Through `BIGINT`:** the `SELECT` raises Spark's `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`.
+  The `INSERT` raises it in UTC; outside UTC R-011's gate plans the source first, the plan raises,
+  and the gate answers with its own text (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`, "the
+  router cannot plan it"). No row is written. Main stored the UTC wall there
+  (`1767323045123456`, measured 2026-10-22), where Spark refuses: a DIFFERENT cell that now
+  refuses, with R-011's condition instead of Spark's outside UTC.
+- **Six table-creating writers and a cached frame:** CTAS, `CREATE OR REPLACE TABLE … AS SELECT`,
+  `REPLACE TABLE … AS SELECT`, `saveAsTable` overwrite, `writeTo().create()`, `.replace()`,
+  `.createOrReplace()`, and a cached frame with `writeTo().append()` store the session wall in New
+  York and the UTC wall in UTC.
+- **DataFrame door:** `Column.cast(MapType(StringType(), TimestampNTZType()))` and `expr` casts of
+  a struct and an array answer the session wall. `Column.cast` to a `StructType` or `ArrayType`
+  raises `unknown cast type` on main and on the head alike (measured 2026-10-22): a facade grammar
+  gap outside this unit, pinned as unchanged.
+- **Native `repark.sql()` door (ZS-5):** measured on main and on the head with the same script: the
+  struct, `make_array` and leaf casts of `TIMESTAMP '…+00:00'` answer `1767323045123456` (the
+  native door reads that literal as a naive wall) and the struct cast to a `STRING` leaf answers
+  `2026-01-02T03:04:05.123456`, identical on both builds; pinned as unchanged controls.
+- **U-8 frame pins (ZS-4):** `test_ice_ntz_nested_refuse_1.py`'s frame holding a container cast of
+  an instant now stores the New York wall on the seven writers (was the refusal).
+- **R-NTZ-S2-9 retired:** `w_ref_from` in `ntz_9_verify_spark_oracle.json` loses its
+  `divergence` and `repark_error_contains` annotations; `from_utc_timestamp` of a string returns
+  `TIMESTAMP` through `SparkUtcShift`, so the `UPDATE` refusal names the source `"TIMESTAMP"` as
+  Spark does (the declared divergence of `task/ledgers/staging/ntz-1-ledger.md` row R-NTZ-S2-9 is
+  closed by this unit; that ledger is another unit's and is not edited).
+- **Controls unchanged:** the leaf casts, a UTC session, a wall source (Rust `ntz_nested_refuse*`
+  pins), and the `timestamp_ns` refusal of R-015 (`timestamp_ns_nested_shapes.rs`, green).
+
+## Step 5, mutants and the revert check (2026-10-22)
+
+Each mutant applied alone to the head, `cargo test -p repark-functions --lib
+tests::zone_seam_pairs`, then reverted. M01–M07 remove one `seam_leaf` arm (sketch §4 rows 1, 2
+and 8, 3, 4, 5–7, 9, 10); M08 the bare `TRY_CAST` rewrite; M09 the map-cast wrap; M10
+`SparkUtcShift`'s argument shift; M11 the parent-null mask; M12 step 3b's `wall_micros`; M13 step
+3's `wall_text` branch; M14 the `rewrite_cast` call of the seam.
+
+| mutant | pins red | which |
+|---|---|---|
+| M01-row1-wall | 2 failed | `a_container_cast_of_an_instant_column_takes_the_session_wall`, `a_container_cast_of_an_instant_to_timestamp_ntz_takes_the_session_wall` |
+| M02-row2-8-text | 3 failed | `a_container_cast_of_a_wall_to_string_renders_spark_text`, `a_container_cast_of_an_instant_to_string_renders_the_session_text`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers` |
+| M03-row3-day | 2 failed | `a_container_cast_of_an_instant_to_date_takes_the_session_date`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers` |
+| M04-row4-seconds | 2 failed | `a_container_cast_of_an_instant_to_bigint_answers_epoch_seconds`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers` |
+| M05-row5-7-instant | 5 failed | `a_container_cast_of_a_date_to_timestamp_starts_at_the_session_midnight`, `a_container_cast_of_a_wall_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_a_zoneless_string_to_timestamp_reads_it_in_the_session_zone`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers`, `to_and_from_utc_timestamp_cast_a_wall_date_or_null_to_an_instant_first` |
+| M06-row9-refused-seconds | 1 failed | `a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does` |
+| M07-row10-refused-wall | 1 failed | `a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does` |
+| M08-bare-try | 2 failed | `a_leaf_try_cast_answers_what_the_leaf_cast_answers`, `a_try_cast_answers_null_where_its_leaf_cannot_convert` |
+| M09-map-cast | 10 failed | `a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does`, `a_container_cast_of_a_date_to_timestamp_starts_at_the_session_midnight`, `a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does`, `a_container_cast_of_a_wall_to_string_renders_spark_text`, `a_container_cast_of_a_wall_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_a_zoneless_string_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_an_instant_to_bigint_answers_epoch_seconds`, `a_container_cast_of_an_instant_to_date_takes_the_session_date`, `a_container_cast_of_an_instant_to_string_renders_the_session_text`, `a_container_cast_of_an_instant_to_timestamp_ntz_takes_the_session_wall` |
+| M10-utc-shift | 1 failed | `to_and_from_utc_timestamp_cast_a_wall_date_or_null_to_an_instant_first` |
+| M11-masked | 0 failed | none (survived) |
+| M12-from-json | 1 failed | `from_json_reads_a_timestamp_ntz_field_as_its_wall_and_a_zoned_text_as_null` |
+| M13-to-json | 1 failed | `to_json_renders_a_timestamp_ntz_leaf_as_its_wall_without_a_zone` |
+| M14-seam-call | 13 failed | `a_container_cast_of_a_bigint_to_timestamp_ntz_refuses_as_the_leaf_does`, `a_container_cast_of_a_date_to_timestamp_starts_at_the_session_midnight`, `a_container_cast_of_a_wall_to_bigint_refuses_as_the_leaf_does`, `a_container_cast_of_a_wall_to_string_renders_spark_text`, `a_container_cast_of_a_wall_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_a_zoneless_string_to_timestamp_reads_it_in_the_session_zone`, `a_container_cast_of_an_instant_column_takes_the_session_wall`, `a_container_cast_of_an_instant_to_bigint_answers_epoch_seconds`, `a_container_cast_of_an_instant_to_date_takes_the_session_date`, `a_container_cast_of_an_instant_to_string_renders_the_session_text`, `a_container_cast_of_an_instant_to_timestamp_ntz_takes_the_session_wall`, `a_leaf_try_cast_answers_what_the_leaf_cast_answers`, `a_try_cast_answers_null_where_its_leaf_cannot_convert` |
+
+M11 survived the first run; the pin `a_value_under_a_null_struct_never_reaches_an_ansi_leaf` (a
+NULL struct row whose child is a malformed string, cast under ANSI) was added and fails under M11
+(`collect` raises) and passes on the head. **Revert check:** with M14 applied the ci-profile build
+replays the ZONE-ORACLE-1 corpus at 1,272 EQUAL / 358 DIFFERENT / 10 REFUSED (the head:
+1,540 / 90 / 10), so removing the seam reds the corpus.
+
+## Third halt, ZS-8 and ZS-9: the nested NTZ→TIMESTAMP store (2026-10-22)
+
+**The halt.** Step 6's U-8 door matrix, checked against live Spark 4.1.2 (`probe.py --engine
+spark --schemas ltz_nested`, New York and Kolkata, 706 cells), found 74 cells EQUAL on main and
+DIFFERENT on the head: a container cast of an instant to `STRUCT<v: TIMESTAMP_NTZ, …>` written
+into a `STRUCT<v: TIMESTAMP, …>` column outside UTC, on 19 doors (literal source) and 18 (column
+source) per zone. Spark stores `1767323045123456`, main stored the same by two cancelling
+defects, the head stored `1767305045123456`: the seam made the cast right and the write path's
+own nested NTZ→TIMESTAMP conversion still reads the wall as UTC.
+
+- **ZS-8** — owner ruling ZS-8, 2026-10-22: fix the store conversion inside this unit (step 3c),
+  §5 halt 3 lifted for that one site, with condition 3: stop with the shape if the site is more
+  than one conversion and its pair. **Condition 3 fired.** An instrumented build located three
+  sites: A, `write/conform.rs` `entry_store_cast` at the sink with no session zone in scope
+  (`INSERT … BY NAME`, `INSERT OVERWRITE` from a query and from `VALUES`, the DataFrame
+  `insertInto(overwrite=True)` and `overwritePartitions`); B, `write/update_cast.rs`
+  `nested_leaf_cast_sql`'s `arrow_cast` text (MERGE and plain `UPDATE` assignments of the whole
+  struct, MERGE `UPDATE SET *`); C, MERGE `INSERT` (`merge/insert.rs` →
+  `store_overflow::wrap_store_outputs`). `repark-iceberg` depends only on `repark-common`, so it
+  cannot call the seam's helper.
+- **ZS-9** — orchestrator ruling ZS-9, 2026-10-22, under the owner's standing word (reversible by
+  the owner): the unit lands with a write-time refusal for exactly the moved shape; the three
+  sites become WRITE-NTZ-TO-LTZ-NESTED-1 (carded,
+  `../../roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`). Step 3c is the refusal.
+
+**Step 3c, red on the head without the refusal.** `crates/repark-spark/tests/ntz_into_ltz_nested.rs`
+with the refusal stashed:
+
+```
+test result: FAILED. 2 passed; 1 failed
+a_nested_wall_into_a_nested_timestamp_refuses_outside_utc_on_every_store_door
+  "SQL INSERT BY NAME / a container cast of an instant: Ok(())", "… : a value was written",
+  (the same for a TIMESTAMP_NTZ literal, and for INSERT OVERWRITE, INSERT OVERWRITE VALUES,
+  MERGE INSERT, MERGE UPDATE, MERGE UPDATE SET * and UPDATE: 14 cases, each Ok(()) and written)
+a_utc_session_stores_the_wall_read_in_utc_on_every_store_door ... ok   (the UTC control)
+doors_that_read_the_wall_in_the_session_zone_store_spark_instant_outside_utc ... ok
+```
+
+With the refusal: 3 passed. The refusal sits in the router's U-8 gate only (`refuse_at` →
+`refuse_naive_into_instant`), decided per door family: no door reaches sites A, B or C without
+the gate, so no predicate is added at a store site. **Top-level** NTZ→TIMESTAMP is not in scope:
+a top-level `TIMESTAMP` target is converted by `CAST(… AS TIMESTAMP)` text
+(`ntz_store::ltz_instant_cast_sql`), not by the three sites (by reading; not measured).
+
+**The matrix after step 3c** (`probe.py` on the head build, 3,168 cells, against main and the
+Spark records): every one of the 74 cells refuses outside UTC (38 `ts_struct_cast`, 36
+`ts_struct_cast_column`); the `ntz_literal` → `ltz_nested` cells that stored a wrong value on the
+head refuse, 21 per zone (42), and 4 per zone that were engine errors now refuse too; the other
+NTZ sources into `ltz_nested` on the same doors refuse (`ntz_cast` 42, `ntz_text_cast` 42,
+`ntz_cast_column` 42, and 18 more struct-cast cells that were DIFFERENT on main), all DIFFERENT on
+main and head before. Nothing refuses in UTC; no cell that was EQUAL on the head refuses; no other
+cell changes against the first head run; no cell that matches Spark on main moves. **Over-refusal
+by design, ruled 2026-10-22 (ZS-9), until WRITE-NTZ-TO-LTZ-NESTED-1:** 134 refused cells in New
+York and 134 in Kolkata (`ltz_nested`, the store doors), of which 37 per zone stored Spark's
+instant on main.
+
+## Step 5 addendum (step 3c's mutants, 2026-10-22)
+
+`cargo test -p repark-spark --test ntz_into_ltz_nested`, each mutant alone then reverted:
+
+| mutant | pins red | which |
+|---|---|---|
+| M15 the refusal removed (`if false && micros && store`) | 1 failed | `a_nested_wall_into_a_nested_timestamp_refuses_outside_utc_on_every_store_door` |
+| M16 the zone check removed (`if store`, refuses in UTC too) | 1 failed | `a_utc_session_stores_the_wall_read_in_utc_on_every_store_door` |
+| M17 every `INSERT` a store door (`let store = true`) | 1 failed | `doors_that_read_the_wall_in_the_session_zone_store_spark_instant_outside_utc` |
+
+## Step 6, never worse (2026-10-22, the final code head `a6780177`)
+
+- **ZONE-ORACLE-1** on the head build: 1,540 EQUAL / 90 DIFFERENT / 10 REFUSED / 0 ERROR; against
+  the base replay 321 DIFFERENT→EQUAL, 10 ERROR→EQUAL, 10 REFUSED→EQUAL, 0 EQUAL→other; equal to
+  the committed difference list (0 left, 0 joined, 0 changed).
+- **U-8 door matrix** (`probe.py run --engine repark`, 3168 cells, main `b7a20167` against the
+  head): on `ntz_nested`, 50 cells per zone move from the refusal to the stored session wall, equal
+  to live Spark 4.1.2 cell for cell (`--engine spark --sources ts_struct_cast,ts_struct_cast_column`,
+  176 cells), and 6 per zone move from the refusal to the engine's own error (2 a scalar subquery
+  in `VALUES`, which Spark refuses with another condition; 4 a plain `UPDATE` with no `WHERE`,
+  which Spark stores and which errors for every source on main); on `ltz_nested`, the 134 per zone
+  of step 3c refuse, and the 54 NTZ-source cells the seam made right on the plan-converting doors
+  stay right. No cell that matches Spark on main moves to anything else (Spark measured for every
+  `ltz_nested` cell and the moved `ntz_nested` cells in New York and Kolkata); UTC cells do not
+  move.
+- **Cost** (`r1`-style script: the six U-8 statements and a container-cast `SELECT`, each process
+  one session with 3 warm-ups and the median of 10 runs; main `b7a20167` and the head alternating,
+  6 rounds per zone; the table gives the median of the six; load 2.8–4.9):
+
+| statement | UTC main | UTC head | ratio | New York main | New York head | ratio |
+|---|---:|---:|---:|---:|---:|---:|
+| plain INSERT | 25.52 ms | 26.19 ms | 1.026 | 24.68 ms | 25.01 ms | 1.013 |
+| plain UPDATE | 54.10 ms | 55.17 ms | 1.020 | 50.56 ms | 52.96 ms | 1.048 |
+| plain MERGE | 56.92 ms | 57.62 ms | 1.012 | 56.82 ms | 57.39 ms | 1.010 |
+| nested-NTZ INSERT | 30.59 ms | 30.56 ms | 0.999 | 28.37 ms | 29.72 ms | 1.047 |
+| nested-NTZ UPDATE | 55.69 ms | 57.18 ms | 1.027 | 57.87 ms | 58.27 ms | 1.007 |
+| nested-NTZ MERGE | 65.31 ms | 66.12 ms | 1.012 | 66.98 ms | 67.20 ms | 1.003 |
+| container-cast SELECT | 3.30 ms | 3.43 ms | 1.039 | 3.32 ms | 3.46 ms | 1.039 |
+
+  Every ratio is within the 1.05x gate.
+- **Gates on the head:** `cargo test -p repark-functions` 965 passed (1 ignored, pre-existing);
+  `cargo test -p repark-spark` every binary green, `ntz_into_ltz_nested` 3 passed;
+  `cargo test -p repark-iceberg --lib nested_ns_gate` 10 passed; the facade suite (`-n 8 --dist
+  loadgroup`) 20,326 passed, 485 skipped, 151 xfailed, 10 failed, all ten the `io/` live
+  PySpark-worker oracles (`ModuleNotFoundError: No module named 'pandas'` in the worker), which
+  pass alone on the head (22 passed) and on main (measured 2026-10-22); `make ci` and the
+  comment-gate grep before every push; `make check-comment-density` is not a target on this base.
+
+## Step 7, records (2026-10-22)
+
+The card CONTAINER-CAST-ZONE-1's status and its follow-up lines (TIMESTAMP-LEGALITY-PARITY-1,
+DATE-FORMAT-FRACTION-1, native-door zone semantics); the ZONE-ORACLE-1 order's follow-up line
+(ZS-3); R-011's and R-015's dated status lines; the v1.5.6 notes lines; sketch §10b; the cards
+ZONE-HORIZON-INSTANT-1 and WRITE-NTZ-TO-LTZ-NESTED-1; the `map.md` rows of every touched
+directory. Deviation from the sketch: the seam's tests live in `src/tests/zone_seam_pairs.rs`, not
+under a new `zone_seam/` directory, and the seam file is about 680 lines.
+
+## PROPOSITION LEDGER — ZONE-SEAM-1 — 2026-10-22
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-001 | A container `CAST` or `TRY_CAST` (struct, every list layout, map value) of a seam pair (sketch §4 rows 1–8) answers, at each seam leaf, what the bare leaf `CAST` answers in the session zone, on `CAST` and `TRY_CAST`, every other member keeping its native cast. | `zone_seam_pairs.rs` rows 1–8 in three zones, struct / array / map, `CAST` and `TRY_CAST`; the mixed-member control; the column source. | **PROVEN** | `zone_seam_pairs.rs` rows 1–8, the column source, the mixed-member control, the null-mask pin; step 5 M01–M05, M09, M11, M14. |
+| C-002 | A container cast of a wall to `BIGINT` and of a `BIGINT` to `TIMESTAMP_NTZ` refuses with `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`, as the leaf and Spark do. | rows 9–10 pins. | **PROVEN** | rows 9–10 pins; M06, M07. |
+| C-003 | A bare `TRY_CAST` of an instant to `STRING`, `DATE` or `BIGINT`, of a wall to `TIMESTAMP` or `STRING`, of a date or a `BIGINT` to `TIMESTAMP` answers what the bare `CAST` answers; `TRY_CAST` answers NULL where its leaf cannot convert (an unplaceable wall, a malformed string, a `BIGINT` overflow). | the leaf `TRY_CAST` pin and the NULL pin. | **PROVEN** | the leaf `TRY_CAST` and NULL pins; M08. |
+| C-004 | `to_utc_timestamp` and `from_utc_timestamp` of a wall, a date or an untyped NULL cast the argument to `TIMESTAMP` in the session zone first and return `TIMESTAMP` (ZS-2). | the function-site pin. | **PROVEN** | the function-site pin; M10; `w_ref_from` (R-NTZ-S2-9) retired. |
+| C-005 | `to_json` renders a `TIMESTAMP_NTZ` leaf as its wall with no zone, `yyyy-MM-ddTHH:mm:ss.SSS`, in every zone; an instant leaf is unchanged. | the `to_json` pin. | **PROVEN** | the `to_json` pin; M13. |
+| C-006 | The ZONE-ORACLE-1 corpus on the head: every cell of § Corpus cells EQUAL, the non-EQUAL set exactly the residue above (plus the watched cell if it stays), no EQUAL cell of the base moves. | replay on main and head; `zone_oracle_1_main_difference.json` re-recorded on the head. | **PROVEN** | Step 6: 1,540 / 90 / 10 / 0, 0 EQUAL→other; the residue table; M14 reds the corpus. |
+| C-007 | The card's tables on the Spark SQL door and the DataFrame door answer Spark's values; the native `repark.sql()` door answers on the head as on main (ZS-5). | step 4 pins. | **PROVEN** | `test_zone_seam_1.py`; the native door measured on main and the head. |
+| C-008 | The six table-creating writers and a cached frame store the session wall for a container cast of an instant outside UTC. | step 4 pins. | **PROVEN** | `test_zone_seam_1.py` writers in New York and UTC. |
+| C-009 | The U-8 door matrix on main and head, and the U-8 Rust pins that held a container-cast refusal (rewritten to the stored session wall, ZS-4; the two engine-error statements fail as their wall twin does): every changed cell is a listed refusal→EQUAL move of ZS-4 or DIFFERENT→EQUAL; no EQUAL cell moves. | `probe.py` on both builds. | **PROVEN** | Step 6 matrix; the rewritten U-8 Rust and Python pins. |
+| C-010 | Each seam arm removed alone reds a pin; the seam call removed reds the corpus. | mutants. | **PROVEN** | Step 5 and its addendum: 17 mutants, each reds a pin; M14 reds the corpus. |
+| C-011 | Cost: the U-8 verifier's six statements, 10-run medians, head ≤ 1.05x main, load under 5. | timing table. | **PROVEN** | Step 6 cost table, every ratio within 1.05x. |
+| C-013 | `from_json` reads a `TIMESTAMP_NTZ` field: a text with no zone in Spark's form is its wall in every session zone; a text with `Z` or an offset is NULL; a space separator and a date-only text keep main's answer (ZS-6). | the two `from_json` pins, red on main. | **PROVEN** | the two `from_json` pins, red on main; M12. |
+| C-014 | The ZONE-HORIZON-RENDER-1 residue on the head: 15 wall edge cells leave, 3 New York `to_utc_timestamp_wall` cells join as expected-divergence rows (ZS-7), every other cell unchanged. | `--engine repark --residue` on the head; the suite green. | **PROVEN** | the residue re-derived; the suite green. |
+| C-015 | Outside UTC, a nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field refuses on the store doors (sites A, B, C) with the whole text and no write; UTC stores the UTC read; the plan-converting doors store the session read (ZS-9). | `ntz_into_ltz_nested.rs` red without the refusal; the DataFrame pins; the matrix. | **PROVEN** | `ntz_into_ltz_nested.rs` red without the refusal; the DataFrame pins; the matrix; M15–M17. |
+| C-012 | Records: the card (follow-up lines of ZS-1 and ZS-5), R-011 and R-015 status lines, the v1.5.6 notes line, the ZONE-ORACLE-1 order follow-up (ZS-3), `map.md`s. | the diff. | **PROVEN** | Step 7. |
+
+## Coverage
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: zone-seam-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: The order's pairs, sites and card tables were walked against Spark 4.1.2's recorded ZONE-ORACLE-1 corpus, live Spark runs of the U-8 door matrix and the ZONE-HORIZON-RENDER-1 edges; every assigned corpus cell is EQUAL and the residue is listed by cause.
+      artifacts: [crates/repark-functions/src/tests/zone_seam_pairs.rs, python/repark/tests/timestamps/test_zone_seam_1.py, python/repark/tests/timestamps/zone_oracle_1_main_difference.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Struct, list and map shapes, a column source, NULL parents with a malformed child, an unplaceable wall, a malformed string and a BIGINT overflow under TRY_CAST, gap and overlap walls at the UTC-function site, five session zones.
+      artifacts: [crates/repark-functions/src/tests/zone_seam_pairs.rs, task/roadmap/mid-term/zone-horizon-instant-1-card-2026-10-22.md]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Depth-0 CAST, the inner level, natively EQUAL pairs and zoned to_json are untouched; the corpus shows 0 EQUAL→other; a second analysis pass is pinned.
+      artifacts: [crates/repark-functions/src/zone_seam.rs, crates/repark-functions/src/tests/zone_seam_pairs.rs]
+    - id: AT-4
+      status: N/A
+      justification: Stateless analyzer rewrite and scalar kernels; no shared or mutable state.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, credential, deserialization or path handling; the refusal names no data-deleting action.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every refusal pin asserts no value is written; the U-8 matrix compared stored values with main and live Spark on every door.
+      artifacts: [crates/repark-spark/tests/ntz_into_ltz_nested.rs, crates/repark-spark/tests/ntz_nested_refuse_casts.rs]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Seven statements in two zones, main and head alternating, every 10-run median ratio within 1.05x.
+      artifacts: [task/ledgers/staging/zone-seam-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No new crate edge; repark-iceberg still depends only on repark-common; the to_utc_timestamp wrapper delegates to DataFusion-Spark's own coercion and kernel; no ceiling rises.
+      artifacts: [crates/repark-functions/src/zone_seam.rs, crates/repark-iceberg/src/write/nested_ns_gate.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The refusals carry Spark's conditions (CAST_WITHOUT_SUGGESTION, CANNOT_SAFELY_CAST) and the new hint is pinned byte for byte per door family.
+      artifacts: [crates/repark-spark/tests/ntz_into_ltz_nested.rs, python/repark/tests/timestamps/test_zone_seam_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Seventeen mutants each red a pin; the seam call removed reds the corpus; M11 was a surviving mutant until its pin was added.
+      artifacts: [crates/repark-functions/src/tests/zone_seam_pairs.rs, crates/repark-spark/tests/ntz_into_ltz_nested.rs]
+  complete: true
+```
+
+## Fix round 1 (2026-10-22, after verifier round 1's FAIL on `58321e94`)
+
+Owner's word, 2026-10-22: one fix round, the unit does not grow, then a fresh verifier round 2.
+The scope is the verifier's five items (S1-1, the partitioned-door pin and census, S1-2's four
+pins, S3-1's counts, the cost re-timed on a quiet box) and one dated line on the
+WRITE-NTZ-TO-LTZ-NESTED-1 card.
+
+**Item 1, S1-1, the one product change.** A partitioned INSERT handed the gate
+`Feed::SourceColumn { position: None, name: None }` (`nested_ns_gate.rs`, the `partitioned`
+flag), the router's `column_type` picked no column, and `refuse_naive_into_instant` let every
+`INSERT OVERWRITE … PARTITION (…)` through to store site A. The fix resolves the clause's static
+columns with the partition-overwrite door's own three calls and reads the source column at its
+position among the table's columns less the static ones (or the column list); one mechanism, the
+feed's position. A clause the door refuses stays unresolved and the door's error stops the
+write. Red on `58321e94` and green on the fix: `ntz_into_ltz_nested.rs`
+`a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file` (item 2). The
+nested refusal binaries (`ntz_nested_refuse`, `ntz_nested_refuse_casts`,
+`timestamp_ns_wall_doors`, `timestamptz_ns_wall_doors`, `timestamp_ns_nested_shapes`,
+`ice_tsns_type_planner_1_update_forms`) and `nested_ns_gate`'s unit tests stay green.
+
+**Item 2, the partitioned-door pin and census.** The pin
+(`ntz_into_ltz_nested.rs`, two tests) is red on `58321e94`: all 36 non-UTC cells returned `Ok(())`,
+wrote a data file and stored a value; green on the fix. The census (a lane script, outside the
+tree) enumerates sixteen partitioned door shapes
+by name on a table `(id INT, st <S>, k INT) PARTITIONED BY (k)` seeded with one NULL row:
+`ow_static_select`, `ow_static_values`, `ow_static_column_list`,
+`ow_static_column_list_reordered`, `ow_static_table_keyword`, `ow_dynamic_clause`,
+`ow_no_clause_on_partitioned`, `ow_static_by_name`, `append_static_select`,
+`append_static_values`, `append_static_by_name`, `append_dynamic_clause`, and the DataFrame
+`df_insertInto_overwrite` (`insertInto(overwrite=True)`), `df_overwritePartitions`,
+`df_insertInto_append`, `df_writeTo_append`; seven sources (an instant struct cast to
+`TIMESTAMP_NTZ` of a literal and of a column, a `TIMESTAMP_NTZ` literal and column, a `TIMESTAMP`
+literal and column, a leaf cast to `TIMESTAMP_NTZ`); two schemas (`STRUCT<v: TIMESTAMP, n: INT>`,
+`STRUCT<v: TIMESTAMP_NTZ, n: INT>`); four zones (UTC, New York, Sydney, Kathmandu): 212 cells per
+zone, 848 in all, on live Spark 4.1.2 (`local[1]`, Iceberg 1.11.0), main `b7a20167`, the head
+`58321e94` and the fix. UTC: 212 of 212 EQUAL on all three builds. Outside UTC, per zone, every
+zone the same: main → fix EQUAL→EQUAL 85, DIFFERENT→EQUAL 14, refused→EQUAL 30, refused→refused 30,
+DIFFERENT→refused 32, EQUAL→refused 21 (the ZS-9 class: 10 that `58321e94` already refused, the
+two overwriting DataFrame writers and the `BY NAME` and no-clause overwrites, and 11 that
+`58321e94` stored wrong, the S1-1 cells); **zero DIFFERENT on the fix**, zero EQUAL→DIFFERENT.
+`58321e94` → fix: 28 cells per zone move, every one DIFFERENT→refused (11 EQUAL on main, 17
+DIFFERENT on main); no other cell moves, so no R-011 cell and no appending door changes. Every
+refused cell holds exactly the seed's one data file. Per door, the three non-UTC zones together
+(E EQUAL, D DIFFERENT, R refused, against Spark):
+
+| door | cells | main | head `58321e94` | fix head |
+|---|---:|---|---|---|
+| `ow_static_select` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_static_values` | 24 | D6 E12 R6 | D9 E12 R3 | E12 R12 |
+| `ow_static_column_list` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_static_column_list_reordered` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_static_table_keyword` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_dynamic_clause` | 42 | D9 E21 R12 | D15 E21 R6 | E21 R21 |
+| `ow_no_clause_on_partitioned` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `ow_static_by_name` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `append_static_select` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+| `append_static_values` | 24 | D6 E12 R6 | E21 R3 | E21 R3 |
+| `append_static_by_name` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `append_dynamic_clause` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+| `df_insertInto_overwrite` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `df_overwritePartitions` | 42 | D9 E21 R12 | E21 R21 | E21 R21 |
+| `df_insertInto_append` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+| `df_writeTo_append` | 42 | D9 E21 R12 | E36 R6 | E36 R6 |
+
+The verifier's S1-1 drivers re-run on the fix (its write driver, compared with its own Spark,
+main and head readings): `wx` (39 cells × New York and UTC) 15 EQUAL-on-main cells that
+`58321e94` stored wrong now refuse, nothing else moves; `wr` (192 cells × four zones) 42 cells move,
+every one to the refusal (24 wrong on main and head, 9 EQUAL on main and wrong on head, 9 engine
+errors on main and head at the 1969 wall), no WRONG cell is left on the fix, and every refused
+cell holds the seed's file only.
+
+**Item 3, S1-2, four pins and no product change.** One pin per surviving mutant, each green on
+the fix and red with its mutant applied (the verifier's mutant texts, applied by exact text and
+reverted):
+
+| mutant | pin | layer | result |
+|---|---|---|---|
+| `X-first-array-element-only` (the list arm converts only the first value) | `zone_seam_pairs.rs` `a_container_cast_converts_every_element_of_every_row_of_a_list` (two rows, seven elements, one NULL) | `repark-functions --lib` | killed, 1 failed of 967 |
+| `X-instant-tz-only-UTC` (`is_instant` matches only `"UTC"`) | `test_zone_seam_1.py` `test_a_pandas_instant_zoned_outside_utc_casts_in_a_struct_to_the_session_wall` | native build with the mutant, the three Python pin files | killed, 1 failed, 128 passed (survives the Rust layer, 967 passed) |
+| `X-type-at-wrong-leaf` (`type_at` answers the column type for any path) | `ntz_into_ltz_nested.rs` `an_update_of_an_inner_struct_with_a_wall_refuses_outside_utc` | the three `repark-spark` refusal binaries | killed, 1 failed |
+| `X-no-update-shift-exemption` | `ntz_into_ltz_nested.rs` `a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant` | the three `repark-spark` refusal binaries | killed, 1 failed |
+
+The builder's 17 (M01–M17) and the verifier's other five (`X-drop-map-leg`,
+`X-zone-utc-in-seam`, `X-skip-container-try-cast`, `X-refusal-skips-merge-insert`,
+`X-no-star-feed`) re-run on the fix: every one still killed (M15 now also reds the partitioned
+pin, M16 the partitioned UTC control). 26 of 26 killed.
+
+**Item 4, S3-1, the counts (dated 2026-10-22, appended; the earlier text stands as written).**
+The 134 `ltz_nested` cells per zone that the ZS-9 refusal holds (New York and Kolkata) were, on
+main, 37 Spark-equal, 79 DIFFERENT and 18 the engine's own error; the third-halt paragraph above
+counts the 97 non-equal cells as DIFFERENT ("all DIFFERENT on main and head before"), and so did
+R-011's status line, which now reads 37 + 79 + 18. Re-measured on the fix (the U-8 matrix, all
+3,168 cells, against the verifier's main, head and live Spark readings): per zone in New York and
+Kolkata EQUAL→refused 37, DIFFERENT→refused 79, error→refused 18, and every cell answers exactly
+as on `58321e94`.
+
+**Item 5, the cost re-timed (2026-10-22, after the other lane handed back).** The U-8 verifier's six
+statements and a New York `MERGE` into a `STRUCT<v: TIMESTAMP, n: INT>` target (`LTZ-nested
+MERGE`, the one place the refusal adds planning work outside UTC), each process one session with 3
+warm-ups and the median of 10 runs, main `b7a20167` and the fix alternating, ten rounds per zone;
+the table gives the median of the ten. Every process started at a one-minute load under 5
+(3.75–4.96); one process ended at 9.22 (round 8, UTC, the fix), every other at 5.00 or less.
+
+| statement | UTC main | UTC head | ratio | New York main | New York head | ratio |
+|---|---:|---:|---:|---:|---:|---:|
+| plain INSERT | 25.66 ms | 25.46 ms | 0.992 | 24.82 ms | 24.73 ms | 0.997 |
+| plain UPDATE | 52.82 ms | 51.72 ms | 0.979 | 50.99 ms | 52.65 ms | 1.033 |
+| plain MERGE | 55.24 ms | 55.72 ms | 1.009 | 55.08 ms | 56.69 ms | 1.029 |
+| nested-NTZ INSERT | 30.12 ms | 29.95 ms | 0.995 | 32.22 ms | 32.02 ms | 0.994 |
+| nested-NTZ UPDATE | 54.60 ms | 54.47 ms | 0.998 | 55.12 ms | 55.53 ms | 1.007 |
+| nested-NTZ MERGE | 62.05 ms | 62.62 ms | 1.009 | 63.60 ms | 64.18 ms | 1.009 |
+| LTZ-nested MERGE | 49.91 ms | 49.65 ms | 0.995 | 53.22 ms | 49.06 ms | 0.922 |
+
+Load at each process's start / end:
+
+| round | UTC main | UTC head | NY main | NY head |
+|---:|---|---|---|---|
+| 1 | 4.76 / 4.86 | 4.86 / 4.63 | 4.63 / 4.34 | 4.34 / 4.15 |
+| 2 | 4.15 / 4.15 | 4.15 / 3.98 | 3.98 / 3.98 | 3.98 / 3.90 |
+| 3 | 3.90 / 4.39 | 4.39 / 4.36 | 4.36 / 4.17 | 4.17 / 3.99 |
+| 4 | 3.99 / 3.75 | 3.75 / 3.85 | 3.85 / 4.59 | 4.59 / 4.46 |
+| 5 | 4.46 / 4.58 | 4.58 / 4.46 | 4.46 / 4.50 | 4.50 / 4.62 |
+| 6 | 4.62 / 4.49 | 4.49 / 4.29 | 4.29 / 4.35 | 4.35 / 4.40 |
+| 7 | 4.40 / 4.37 | 4.37 / 4.26 | 4.26 / 4.32 | 4.32 / 4.21 |
+| 8 | 4.21 / 4.27 | 4.27 / 9.22 | 4.96 / 4.88 | 4.88 / 4.89 |
+| 9 | 4.89 / 4.82 | 4.82 / 5.00 | 4.76 / 4.86 | 4.86 / 4.63 |
+| 10 | 4.63 / 4.90 | 4.90 / 4.75 | 4.75 / 4.85 | 4.85 / 4.62 |
+
+Every ratio is within the 1.05x gate (worst 1.033, New York plain `UPDATE`). An earlier six-round
+set taken while another lane held the box (starts 3.5–4.96) read New York nested-NTZ `INSERT` at
+1.056 with per-round medians spread 26–32 ms on both builds; that set was held, not used.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-016 | An INSERT with a `PARTITION` clause the door accepts names its source column by position (the table's columns less the static partition columns, or the column list; a dynamic clause reads every column), so outside UTC the ZS-9 refusal and R-011's type read see the column on every partitioned spelling; a clause the door refuses is read as before. | the gate's unit tests; the partitioned-door pin red on `58321e94`. | **PROVEN** | `nested_ns_gate/tests.rs` static-column cases; item 2's pin, 36 cells red on `58321e94`, green on the fix. |
+| C-017 | The partitioned door census (sixteen shapes by name, both DataFrame overwrites included, seven sources, two schemas, four zones, 848 cells) on main, `58321e94` and the fix against live Spark: no cell DIFFERENT on the fix, no EQUAL→DIFFERENT, UTC unchanged, the only `58321e94`→fix moves DIFFERENT→refused, no refused write leaves a file. | the census and the verifier's `wx`/`wr` drivers on the fix. | **PROVEN** | item 2's tables. |
+| C-018 | Each of the verifier's four surviving mutants (first list element only, `is_instant` only `"UTC"`, `type_at` at the wrong leaf, no plain-`UPDATE` exemption) reds one pin, and the other 22 mutants stay killed. | the mutant runs. | **PROVEN** | item 3's table: 26 of 26 killed. |
+| C-019 | R-011's status line counts the 134 over-refused `ltz_nested` cells per zone as 37 Spark-equal, 79 DIFFERENT and 18 engine errors on main, as the matrix measures them. | the matrix on the fix against main and Spark. | **PROVEN** | item 4. |
+| C-020 | Cost: the U-8 verifier's six statements and the New York `MERGE` into a nested `TIMESTAMP` target, ten alternating rounds of 10-run medians, every process started under load 5: the fix ≤ 1.05x main in UTC and New York. | timing table with the loads. | **PROVEN** | item 5's tables; worst 1.033. |
+| C-021 | (2026-10-23, fix round 2) With the partition column FIRST and in the MIDDLE of the schema, a static `PARTITION (k = 0)` and a dynamic `PARTITION (k)` `INSERT OVERWRITE` of an instant struct cast to `TIMESTAMP_NTZ` and of a `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` refuses outside UTC (New York, Sydney) with the whole text and no new data file, and stores the UTC read in UTC; the verifier's Y2 and Y3 mutants red the new cells and the other mutants stay killed. | the new pins green on the fix and red under Y2 and Y3; the mutant script re-run once. | **PROVEN** | fix round 2 item 1: `ntz_into_ltz_nested` 9 tests; Y2 and Y3 each fail the refusal pin (8 passed, 1 failed); 33 of 33 killed in Rust bar the one Python-killed mutant. |
+| C-022 | (2026-10-23, fix round 2) R-011 counts the partitioned over-refusal of Spark-equal-on-main cells per zone beside the matrix's 37 (21 in the builder's census, 68 of 354 in the verifier's, 24 of 231 in round 1's, each census named, the ZS-9 class until GATE-RETIRE-1); R-015's "unchanged" is replaced by one dated line stating the measured change (13 cells per zone) and that it awaits the owner's ruling; the card body reads 37 + 79 + 18. | the registry rows and the card read against the verifier's round 2 hand-back. | **PROVEN** | fix round 2 item 2; verifier S1-3 stays open for the owner. |
+| C-023 | (2026-10-23, fix round 3, owner ruling on verifier round 2 S1-3) The nested `timestamp_ns` leaf keeps R-015's refusal on a partitioned INSERT: static and dynamic, overwrite and append, the partition column first, in the middle and last, a bare `NULL` and a value, UTC and New York, the refusal and no new file; the microsecond and instant leaves keep fix round 1's resolved position. | `timestamp_ns_nested_shapes.rs` pin red on `b74f17e0`, green on the fix; the verifier's round-2 `ns` driver on the fix. | **PROVEN** | fix round 3 item B: 24 bare-`NULL` cells stored on `b74f17e0` (red), 48 of 48 refuse on the fix. |
+| C-024 | (2026-10-23, fix round 3 item A, the calibration verifier's finding) Outside UTC a plain `UPDATE` of a whole struct is exempt from the ZS-9 refusal only when every naive leaf of the assigned value is the shifted `TIMESTAMP_NTZ` cast call itself (through an alias, the non-null marker, `named_struct` and `struct`); an extract of a container cast, a `TIMESTAMP_NTZ` literal beside the cast leaf, or a cast that sits only in a non-timestamp field refuses with no write, as the MERGE twin does; the single cast leaf still stores Spark's instant; UTC is unchanged. | `ntz_into_ltz_nested.rs` pins red on `b74f17e0`, green on the fix; the calibration case set (23 cases) on main, `05e6b32a` and the fix in New York, Sydney and UTC with live Spark. | **PROVEN** | 6 plain-`UPDATE` cells red on `b74f17e0`; on the case set exactly three cells per zone move from `05e6b32a` to the fix, all to the refusal (`upd.multi.extract` and `upd.nfield.case`, EQUAL on main and wrong on `05e6b32a`; `upd.multi.lit`, wrong on both), UTC unchanged. |
+| C-025 | (2026-10-23, fix round 3) Never worse and cost after items A and B: ZONE-ORACLE-1 1,540 / 90 / 10 / 0 with 0 EQUAL→other and no cell different from fix round 1's head; the U-8 matrix (3,168 cells) identical to fix round 1's head; verifier round 2's partitioned census (354 cells × 4 zones) identical to `05e6b32a`, no WRONG cell; its `timestamp_ns` driver (38 × UTC, New York) equal to main on every cell; the seven statements (the U-8 six and the New York MERGE into a nested `TIMESTAMP` target), ten alternating rounds of 10-run medians, every process started at load 2.74–4.89, every ratio within 1.05x (worst 1.041, New York LTZ-nested MERGE). | the replays, the matrix, the census drivers and the timing table. | **PROVEN** | fix round 3's hand-back and the PR body. |
+| C-026 | (2026-10-23, fold 4, verifier round 3 S1-1 and S1-A, owner ruling "count it") R-011 lists the plain-`UPDATE` whole-container shapes that are Spark-equal on main and refuse on the head as over-refusal of the ZS-9 class until GATE-RETIRE-1: the Muse twelve per zone in New York, six re-proven in Sydney (`u.case`, `u.if`, `u.coalesce`, `u.nullif`, `u.case.null`, `u.coalesce.nullfirst`, `u.nested.case`, `u.trunc`, `u.greatest`, `u.least`, `u.arrfield`, `u.mapfield`), the Opus ten per zone in New York and Sydney (`u1.coalesce.cast.wall`, `u1.coalesce.wall.cast`, `u1.if.wall`, `u1.if.cast`, `u1.plus.interval`, `map.cast`, `structarr.cast`, `arr.cast`, `mapstruct.cast`, `u1.case.cast`), four shapes in both, no file on any refusal; and the two calibration cells per zone `upd.multi.extract` and `upd.nfield.case`, EQUAL on main and refused on the head. | the R-011 row read against the two round-3 tables. | **PROVEN** | fold 4 item 1; the Opus itemA table (10 EQ-EQ-refused per zone) and the Muse bypass4 NY results (12 stored-on-main, refused-on-head, Spark-equal cell for cell). |
+| C-027 | (2026-10-23, fold 4, verifier round 3 S1-B) In `Europe/London` in winter (offset zero, geographic id, refused by design under the 2026-10-21 ruling 3) the `ltz_nested` matrix, 352 cells at the January instant: the head refuses 134, of which 116 stored Spark's wall on main and 18 were the engine's own error on main, none DIFFERENT; the `INSERT OVERWRITE` × (container cast, `TIMESTAMP_NTZ` literal) subset is 6 cells, 5 Spark-equal on main and 1 erroring on main where Spark errors too. | the London probe on live Spark 4.1.2, main `b7a20167` and head `2c9cc214`. | **PROVEN** | banner spark=4.1.2 tz=Europe/London; main→head E→E 150, E→refused 116, error→refused 18, error→error 68. |
+| C-028 | (2026-10-23, fold 4 item 2, verifier round 3 S1-2) A plain `UPDATE` in New York whose only naive leaf is a `TRY_CAST` of wall text, of bad text, of an instant, or the two-leaf (`CAST` of an instant, `TRY_CAST` of wall text) stores Spark's value (`1767341045123456`, `NULL`, `1767323045123456`, both); mutant Z6 (only `TIMESTAMP_NTZ_CAST_NAME` exempts) reds the pin and nothing else. | the `ntz_into_ltz_nested.rs` pin green on the head, red with Z6 applied. | **PROVEN** | fold 4 item 2: 13 passed green; Z6 reds the new pin alone (all four shapes refuse), revert green. |
+| C-029 | (2026-10-23, fold 4 item 3, verifier round 3 S2-1) C-024's "the single cast leaf still stores Spark's instant" holds for text without an offset only: a plain `UPDATE` assigning a `TIMESTAMP_NTZ` cast of `+05:00` text stores `1767305045123456` (nested and top-level) and of `Z` text `1767323045123456`, on main, `05e6b32a` and the head, in UTC too, where Spark ignores the offset; `INSERT` and `SELECT` agree with Spark; not a seam regression; carded as NTZ-CAST-OFFSET-TEXT-UPDATE-1 with no fix proposed. | the card read against the verifier's driver cases and the fold-4 lane's live runs. | **PROVEN** | `u1.castarg.textoff` / `u1.castarg.textZ` on all builds and zones; lane runs on live Spark 4.1.2, main and head in New York and UTC. |
+
+Up: [map.md](map.md).

@@ -3,7 +3,18 @@
 **Date:** 2026-10-20. **Filed by:** Claude (claude-fable-5-1), orchestrator, from the second
 hostile verification of PR #1124 (ICE-NTZ-NESTED-REFUSE-1, U-8) on main `c516c54a`.
 
-**Status:** open, not scheduled. The owner rules whether U-8 grows to gate the write-side cells
+**Status 2026-10-22: fixed by ZONE-SEAM-1** (PR #1139, pending the verifier): the seam converts
+every container cast, `TRY_CAST` and `to_json` this card names; its tables are pinned in
+`python/repark/tests/timestamps/test_zone_seam_1.py` and the corpus cells in
+`zone_oracle_1_main_difference.json`. Follow-up lines (rulings ZS-1, ZS-5):
+- the ZONE-ORACLE-1 residue that is not a zone defect becomes two small units:
+  **TIMESTAMP-LEGALITY-PARITY-1** (error conditions and function legality: `STRING` and `DATE` to
+  `BIGINT` in and out of a container, `unix_micros` and the `BIGINT` arguments of
+  `to_timestamp_ntz`, `to_utc_timestamp`, `from_utc_timestamp`, `date_format`, `to_date`; 80
+  cells) and **DATE-FORMAT-FRACTION-1** (`date_format` with the `S` letter; 10 REFUSED cells);
+- native-door zone semantics: owner decision, unscheduled.
+
+**Status (2026-10-20, superseded above):** open, not scheduled. The owner rules whether U-8 grows to gate the write-side cells
 below, or whether this card is a unit of its own that fixes the cast. The orchestrator's lean is
 the second: the mechanism is a read-path defect that a write gate can only paper over, and the
 cells it loses on a plain `SELECT` and on the six table-creating writers are not U-8's.

@@ -16,6 +16,7 @@ const WALL: &str = "TIMESTAMP_NTZ '2026-01-02 03:04:05.123456'";
 const TEXT: &str = "'2026-01-02 03:04:05.123456'";
 const UTC_WALL: i64 = 1_767_323_045_123_456;
 const MIDNIGHT: i64 = 1_767_312_000_000_000;
+const FRACTION: i64 = 123_456;
 const ZONES: [(&str, i64); 2] = [
     ("America/New_York", 1_767_305_045_123_456),
     ("Asia/Kolkata", 1_767_342_845_123_456),
@@ -247,26 +248,30 @@ fn spelled(write: &str) -> String {
 }
 
 #[tokio::test]
-async fn a_container_cast_of_an_instant_refuses_on_every_door_outside_utc() {
+async fn a_container_cast_of_an_instant_stores_the_session_wall_on_every_door_outside_utc() {
     let mut wrong = Vec::new();
-    for (zone, _) in ZONES {
-        let session = session(zone);
-        let warehouse = catalog(&session).await;
-        container_tables(&session).await;
-        let before = files_under(warehouse.path());
-        for (door, _, write) in CONTAINER_CASTS {
+    for (zone, session_wall) in ZONES {
+        for (door, name, write) in CONTAINER_CASTS {
+            let session = session(zone);
+            let _warehouse = catalog(&session).await;
+            container_tables(&session).await;
             let write = spelled(write);
-            match attempt(&session, &write).await {
-                Err(error) if error.contains(HINT) => {}
-                outcome => wrong.push(format!("{zone} / {door}: {outcome:?}")),
+            if let Err(error) = attempt(&session, &write).await {
+                wrong.push(format!("{zone} / {door}: {error}"));
+                continue;
             }
-        }
-        if files_under(warehouse.path()) != before {
-            wrong.push(format!("{zone}: a file was written"));
-        }
-        for (name, count) in [("t", 1), ("p", 0), ("a", 0)] {
-            if snapshots(&session, name).await != vec![Some(count)] {
-                wrong.push(format!("{zone} / {name}: a snapshot was added"));
+            let source = if door == "insert into a branch" {
+                format!("SELECT st FROM ice.ns.{name}.branch_bx")
+            } else {
+                format!("SELECT st FROM ice.ns.{name}")
+            };
+            let values: Vec<i64> = stored(&session, &source)
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
+            if values.is_empty() || values.iter().any(|value| *value != session_wall) {
+                wrong.push(format!("{zone} / {door}: {values:?}"));
             }
         }
     }
@@ -657,7 +662,7 @@ const ON_LINEAGE: [&str; 16] = [
 async fn the_cast_walk_reads_only_what_reaches_the_column() {
     let cast = format!("CAST(named_struct('v', x, 'n', 1) AS {S})");
     let mut wrong = Vec::new();
-    for (zone, _) in ZONES {
+    for (zone, session_wall) in ZONES {
         let session = session(zone);
         let _warehouse = catalog(&session).await;
         run(
@@ -689,27 +694,63 @@ async fn the_cast_walk_reads_only_what_reaches_the_column() {
                 wrong.push(format!("{zone} / {write}: {values:?}"));
             }
         }
-        run(
-            &session,
-            &format!(
-                "CREATE TABLE ice.ns.t (id INT, st {S}, k INT, z ARRAY<STRING>) USING iceberg \
-                 TBLPROPERTIES ('format-version'='2')"
-            ),
-        )
-        .await;
-        run(&session, "INSERT INTO ice.ns.t (id, k) VALUES (1, 0)").await;
-        for write in ON_LINEAGE {
-            let write = write.replace("{C}", &cast);
-            match attempt(&session, &write).await {
-                Err(error) if error.contains(HINT) => {}
-                outcome => wrong.push(format!("{zone} / {write}: {outcome:?}")),
+        for (index, write) in ON_LINEAGE.iter().enumerate() {
+            let name = format!("l{index}");
+            run(
+                &session,
+                &format!(
+                    "CREATE TABLE ice.ns.{name} (id INT, st {S}, k INT, z ARRAY<STRING>) USING \
+                     iceberg TBLPROPERTIES ('format-version'='2')"
+                ),
+            )
+            .await;
+            run(
+                &session,
+                &format!("INSERT INTO ice.ns.{name} (id, k) VALUES (1, 0)"),
+            )
+            .await;
+            let write = write
+                .replace("{C}", &cast)
+                .replace("ice.ns.t ", &format!("ice.ns.{name} "));
+            if let Err(error) = attempt(&session, &write).await {
+                if !fails_as_a_wall_does(&session, &write, &cast, &error).await {
+                    wrong.push(format!("{zone} / {write}: {error}"));
+                }
+                continue;
             }
-        }
-        if snapshots(&session, "t").await != vec![Some(1)] {
-            wrong.push(format!("{zone}: a snapshot was added"));
+            let mut values: Vec<i64> = stored(&session, &format!("SELECT st FROM ice.ns.{name}"))
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
+            values.sort_unstable();
+            let mut expected = match index {
+                1 => vec![UTC_WALL, session_wall],
+                12 => vec![UTC_WALL - FRACTION, session_wall - FRACTION],
+                _ => vec![session_wall],
+            };
+            expected.sort_unstable();
+            if values != expected {
+                wrong.push(format!("{zone} / {write}: {values:?} want {expected:?}"));
+            }
         }
     }
     assert_eq!(wrong, Vec::<String>::new());
+}
+
+async fn fails_as_a_wall_does(
+    session: &ReparkSession,
+    write: &str,
+    cast: &str,
+    error: &str,
+) -> bool {
+    let wall = write.replace(cast, "named_struct('v', w, 'n', 1)");
+    match attempt(session, &wall).await {
+        Err(control) => {
+            control == error.replace(cast, "named_struct('v', w, 'n', 1)") || control == error
+        }
+        Ok(()) => false,
+    }
 }
 
 const IN_A_SUBQUERY: [&str; 6] = [
@@ -750,15 +791,31 @@ async fn a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipp
             ),
         )
         .await;
-        for write in IN_A_SUBQUERY {
-            let write = write.replace("{C}", &cast);
-            match attempt(&session, &write).await {
-                Err(error) if error.contains(HINT) => {}
-                outcome => wrong.push(format!("{zone} / {write}: {outcome:?}")),
+        for (index, write) in IN_A_SUBQUERY.iter().enumerate() {
+            let name = format!("s{index}");
+            table(&session, &name, S, "").await;
+            run(
+                &session,
+                &format!("INSERT INTO ice.ns.{name} (id, k) VALUES (1, 0)"),
+            )
+            .await;
+            let write = write
+                .replace("{C}", &cast)
+                .replace("ice.ns.t ", &format!("ice.ns.{name} "));
+            if let Err(error) = attempt(&session, &write).await {
+                if !fails_as_a_wall_does(&session, &write, &cast, &error).await {
+                    wrong.push(format!("{zone} / {write}: {error}"));
+                }
+                continue;
             }
-        }
-        if snapshots(&session, "t").await != vec![Some(1)] {
-            wrong.push(format!("{zone}: a snapshot was added"));
+            let values: Vec<i64> = stored(&session, &format!("SELECT st FROM ice.ns.{name}"))
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
+            if values != vec![session_wall] {
+                wrong.push(format!("{zone} / {write}: {values:?}"));
+            }
         }
         for (index, write) in BESIDE_A_SUBQUERY.iter().enumerate() {
             let name = format!("b{index}");

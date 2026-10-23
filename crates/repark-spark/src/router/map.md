@@ -242,6 +242,62 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   are in the paragraphs above (the fail-closed read of an unresolved column, the two fail-closed
   arms of the lateral walk, the alias set).
   pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023, C-024, C-033, C-042, C-047
+  **ZONE-SEAM-1 step 3c (2026-10-22, ruling ZS-9, an over-refusal by design until
+  WRITE-NTZ-TO-LTZ-NESTED-1):** outside UTC (the same zone flag as R-011, `PREPARE` included),
+  `refuse_naive_into_instant` refuses a write whose value carries a nested `TIMESTAMP_NTZ` leaf
+  into a nested `TIMESTAMP` leaf of the target column (`naive_into_instant`, struct fields by
+  name then position, list elements, map entries), on the doors whose store conversion reads the
+  wall as UTC: an `INSERT OVERWRITE` or `INSERT … BY NAME` (the sink's `conform` cast; the
+  DataFrame `insertInto(overwrite=True)` and `overwritePartitions` reach it as `INSERT
+  OVERWRITE`), a MERGE `INSERT`, and a MERGE or plain `UPDATE` assignment whose path stops above
+  the leaf (the `arrow_cast` text of `update_cast.rs`). A positional `INSERT`, `REPLACE WHERE`,
+  the appending DataFrame writers and an assignment to the leaf itself read the wall in the
+  session zone and store as before; a plain `UPDATE` value whose lineage holds a
+  `TIMESTAMP_NTZ` cast (`shifts_in_an_update`) stores as before too. The value's type is planned
+  as R-011 plans it (`column_type` for an `INSERT` source or a MERGE `*`, one projection for
+  assignments); a feed the router cannot type is not refused. pins: zone-seam-1/C-015
+  **ZONE-SEAM-1 fix round 1 (2026-10-22, verifier round 1, S1-1):** `refuse_insert` hands the
+  INSERT's `PARTITION` clause itself to the gate (`InsertSupply.partition`), not a flag, so the
+  gate resolves the static columns against the loaded table and names the source position; the
+  type read then picks that column on `INSERT OVERWRITE … PARTITION (…)` in every spelling (a
+  `SELECT`, `VALUES`, a column list, the `TABLE` keyword, a dynamic `PARTITION (k)`), and the
+  refusal fires there as on the unpartitioned doors. `REPLACE WHERE` passes no clause.
+  pins: zone-seam-1/C-016
+  *Fix round 1, S3-1:* on the U-8 matrix the refusal holds 134 `ltz_nested` cells per zone (New
+  York, Kolkata), on main 37 Spark-equal, 79 DIFFERENT and 18 engine errors, as R-011's line now
+  counts them. pins: zone-seam-1/C-019
+  **ZONE-SEAM-1 fix round 3 (2026-10-23, item A, found by the calibration verifier):** the plain
+  `UPDATE` exemption from the ZS-9 refusal was read from the whole value's lineage (any
+  `TIMESTAMP_NTZ` cast anywhere), while the plain-UPDATE door shifts only that cast's own leaf; a
+  second naive leaf beside it (an extract of a container cast, a `TIMESTAMP_NTZ` literal) or a
+  cast that sat only inside a non-timestamp field's expression let the struct store the session
+  wall read as UTC, unrefused. `only_shifted_walls` now reads the planned value leaf by leaf
+  (`shifted_leaves`): through an alias, the non-null marker, `named_struct` values and `struct`
+  arguments, every sub-value whose type holds a naive timestamp must be the `TIMESTAMP_NTZ` cast
+  call itself; anything else holding one (an extract, a literal, a column, a `CASE`, an array)
+  makes the statement refuse, as the MERGE twin already does. A struct whose only naive leaf is
+  the cast still stores Spark's instant; UTC is untouched. pins: zone-seam-1/C-024
+  The file's four unit tests moved unchanged to [nested_ns/tests.rs](nested_ns/map.md) to keep
+  the file under the 1000-line ceiling. pins: zone-seam-1/C-024
+  After both fix-round-3 items the corpus, the U-8 matrix and the partitioned census answer as
+  before them and the seven timed statements stay within 1.05x of main. pins: zone-seam-1/C-025
+  *Fix round 1, cost:* the refusal's extra plan of a MERGE into a nested `TIMESTAMP` target in New
+  York times at 0.922x main, the six U-8 statements within 1.05x. pins: zone-seam-1/C-020
+  *Fix round 2 (2026-10-23), the records:* R-011 counts the partitioned over-refusal of
+  Spark-equal-on-main cells beside the matrix's 37 (21, 68 of 354, 24 of 231 per zone, one per
+  named census, the ZS-9 class until GATE-RETIRE-1); R-015's line states the measured change on a
+  nanosecond leaf (13 bare-`NULL` cells per zone) and that it awaits the owner's ruling. The
+  partition-column-first pins are in `tests/ntz_into_ltz_nested.rs`. pins: zone-seam-1/C-022
+  *Fold 4 (2026-10-23, verifier round 3, owner ruling "count it"):* R-011 lists the plain-`UPDATE`
+  shapes Spark-equal on main that refuse on the head (the Muse twelve and the Opus ten per zone,
+  four in both, and the two calibration cells) and the London-winter `ltz_nested` split (134
+  refused, 116 Spark-equal on main, 18 engine errors) as ZS-9 over-refusal until GATE-RETIRE-1.
+  pins: zone-seam-1/C-026, C-027
+  *Fold 4 item 3 (2026-10-23, verifier round 3 S2-1):* the offset-text `UPDATE` wall is carded as
+  NTZ-CAST-OFFSET-TEXT-UPDATE-1 (a `TIMESTAMP_NTZ` cast of `+05:00` text stores `1767305045123456`
+  and of `Z` text `1767323045123456` on main, `05e6b32a` and the head, in UTC too; `INSERT` and
+  `SELECT` agree with Spark; not a seam regression; no fix proposed), and C-024's cast-leaf claim
+  holds for text without an offset only. pins: zone-seam-1/C-029
 
 ## Pointers
 

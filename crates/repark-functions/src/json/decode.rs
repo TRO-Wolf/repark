@@ -538,6 +538,7 @@ fn build_timestamp(
     let mut bad = Vec::with_capacity(rows.len());
     for row in rows {
         let decoded = row.and_then(|value| match value {
+            JsonValue::Text(text) if zone.is_none() => wall_micros(text.as_ref(), context.zone),
             JsonValue::Text(text) => timestamp_micros(text.as_ref(), context.zone),
             JsonValue::Number(raw) => raw
                 .parse::<i64>()
@@ -563,9 +564,25 @@ fn build_timestamp(
     }
 }
 
+const ZONED_PATTERNS: [&str; 2] = ["%Y-%m-%dT%H:%M:%S%.f%#z", "%Y-%m-%d %H:%M:%S%.f%#z"];
+
+fn wall_micros(text: &str, zone: Tz) -> Option<i64> {
+    let trimmed = text.trim();
+    if ZONED_PATTERNS
+        .iter()
+        .any(|pattern| chrono::DateTime::parse_from_str(trimmed, pattern).is_ok())
+    {
+        return None;
+    }
+    if let Ok(wall) = NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%dT%H:%M:%S%.f") {
+        return Some(wall.and_utc().timestamp_micros());
+    }
+    timestamp_micros(trimmed, zone)
+}
+
 fn timestamp_micros(text: &str, zone: Tz) -> Option<i64> {
     let trimmed = text.trim();
-    for pattern in ["%Y-%m-%dT%H:%M:%S%.f%#z", "%Y-%m-%d %H:%M:%S%.f%#z"] {
+    for pattern in ZONED_PATTERNS {
         if let Ok(found) = chrono::DateTime::parse_from_str(trimmed, pattern) {
             return Some(found.timestamp_micros());
         }
