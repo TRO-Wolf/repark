@@ -22,6 +22,7 @@ from _acceptance_cross_release import (
     mixed_cell,
     run_side,
 )
+from _acceptance_cross_release_runner import adopt, table_name
 
 import repark
 from repark import ReparkSession
@@ -122,7 +123,8 @@ def test_x_partitioned_table_writes_few_files_and_names_months_and_bucket(
         builder = builder.config(key, value)
     spark = builder.getOrCreate()
     try:
-        table = "loc.ns.xrel_part_files"
+        adopt(spark, {**spec, "op": "read"})
+        table = table_name(spec)
         files = spark.sql(f"SELECT count(*) FROM {table}.files").to_arrow()
         assert int(files.column(0)[0].as_py()) <= 160
         create = spark.sql(f"SHOW CREATE TABLE {table}").collect()[0][0]
