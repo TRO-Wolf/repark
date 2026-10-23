@@ -20,6 +20,7 @@ not this directory.
   (evaluated intakes awaiting a charter — the two 2026-08 intakes and the fork handoff) and
   `epic-term/` (north-star tracks). Short-term stays [../briefs/next-sequence.md](../briefs/next-sequence.md).
 
+- [handoff-frontier-2026-10-23.md](handoff-frontier-2026-10-23.md) — **hand-off to the next Frontier orchestrator (2026-10-23):** state of main after ZONE-SEAM-1 and the three live runs of ICE-INTEGRITY-PINS-1, what is in flight (PR #1170, the run-4 decision tree), the queue in order (WRITE-SPINE-1 steps 1 and 3, GATE-RETIRE-1, step 2, U-11, U-13 + v2 label 11-10, U-4 + v3 label 11-17), the standing rules verbatim, and the lane and merge mechanics the repo does not carry.
 - [lrs-z-retrospective.md](lrs-z-retrospective.md) — **LRS close-out (2026-08-20):** seven units,
   the invariant held, and the two findings that matter most were both found while doing something
   else — `RE-1` and `LOG-1`, silently wrong answers on common functions. Also: the live Spark

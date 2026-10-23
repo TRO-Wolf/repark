@@ -11,6 +11,7 @@ local control X-L, and the two live legs under `python/repark/tests/parity/`. Th
 run awaits #1070, and [the refresh proposal](aws-leg-wiring-2026-10-22.md) carries the diff.
 
 - [sketch.md](sketch.md) — the local measurements (kill points, orphan report, catalog endpoint gate, SDK retries, resolution by id, two interpreters), each pin's place on the commit path, the injection options and the one chosen, the cells, the three legs and the workflow change proposed to the owner, risks, questions Q1 to Q10, the order's outline, and the owner's rulings 79 to 88 of 2026-10-15; its fork lines are cited at `076d5f98` and are to be re-read at the current pin `d80a2884` before building. §3 carries the dated "built" line of pin K (2026-10-22) with the premises corrected on main `18626942`.
+- [live-runs-2026-10-23.md](live-runs-2026-10-23.md) — **the three dispatched runs of 2026-10-23** (39936752073, 39965367559, 39995251302): what each proved and its findings F1–F4, G1–G4, H1–H2, as the orchestrator recorded them; the ledger sections "First/Second/Third live run" carry the rows (leg X PROVEN at C-055).
 - [aws-leg-wiring-2026-10-22.md](aws-leg-wiring-2026-10-22.md) — the #1070 refresh for pins U and X, a proposal (the workflow file stays untouched, H-6): the exact diff on main `a2de82aa` with the legs and U-10's cross-read module at their `parity/` paths, the previous release at 1.5.5, the §6.3 step order and a 120-minute cap; pin K's live leg, never built, is left out.
 
 Up: [../map.md](../map.md).
