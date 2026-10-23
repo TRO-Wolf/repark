@@ -182,9 +182,12 @@ jobs:
           REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
           SPARK_LOCAL_IP: "127.0.0.1"
-        run: >
-          VIRTUAL_ENV="$PWD/.venv"
-          uv run --no-project python -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA
+        run: |
+          VIRTUAL_ENV="$PWD/.venv" uv pip install --python .venv/bin/python "py-spy>=0.4,<0.5"
+          VIRTUAL_ENV="$PWD/.venv" uv run --no-project python -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA &
+          pytest_pid=$!
+          ( sleep 420; if kill -0 "$pytest_pid" 2>/dev/null; then echo "::group::py-spy dump at 420 s (C-059)"; sudo .venv/bin/py-spy dump --pid "$pytest_pid" --subprocesses --native || true; echo "::endgroup::"; fi ) &
+          wait "$pytest_pid"
 
   ice-read-perf-bench:
     name: ICE-READ-PERF bench (S3 Tables + Glue, dispatch-only, scratch-only)

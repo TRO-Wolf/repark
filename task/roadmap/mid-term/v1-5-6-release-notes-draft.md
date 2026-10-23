@@ -99,7 +99,7 @@ Tables already written keep the values they hold; this release ships no migratio
 - **An unknown commit outcome and a cross-release read are pinned (ICE-INTEGRITY-PINS-1, pins U
   and X).** Pin U pins the unknown commit outcome locally on three write doors, with live legs on
   Glue and S3 Tables. Pin X shows that 1.5.5 and the head (the pre-bump build, which still reports 1.5.5) read each other's tables equal on the local
-  catalog, with a live leg to follow. Leg X holds live on Glue and S3 Tables (40 cells); leg U holds live on S3 Tables (48 cells) and its Glue cells await the next run.
+  catalog, with a live leg to follow. Both legs hold live (2026-10-23, run 40025222296): leg U 96 of 96 cells and leg X 40 of 40 on Glue and S3 Tables, v2 and v3. The cross-read module of U-10 is open (ledger C-059): its RePark reads of the acceptance tables hang on the runner, and the nightly carries a native stack dump.
 
 ## Known issues
 

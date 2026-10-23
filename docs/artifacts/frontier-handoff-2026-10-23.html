@@ -26,7 +26,7 @@ th{color:var(--muted);font-weight:600;font-size:.8em;letter-spacing:.04em;text-t
 <h1>Iceberg closeout: hand-off to the next Frontier orchestrator</h1>
 <p class="sub">Written 2026-10-23 at about 21:00 UTC at the owner's request, at 88 % weekly usage. The markdown of record is <code>task/handoff-frontier-2026-10-23.md</code> on <code>main</code>; this page is its reading copy, published at https://claude.ai/artifact/K2Dw8gMDEmWy5zXsRmG3eg.</p>
 
-<div class="box"><strong>First action.</strong> Read the Muse MAX verifier hand-back for PR #1170 (lane <code>icepins-fix4-v</code>). On PASS with CI green: merge, then dispatch the fourth <code>aws-acceptance</code> run on main with the purpose line in section 2, and walk the decision tree.</div>
+<div class="box"><strong>First action (updated after run 4).</strong> PR #1170 is merged and run 4 proved both legs. Read the nightly <code>aws-acceptance</code> run of 2026-10-24 (08:43 UTC) or dispatch one: its cross-read step prints a <code>py-spy dump --subprocesses --native</code> of the pytest process 420 s in. The native frames of the thread inside <code>to_arrow()</code> name where the RePark collect blocks in the one process that also starts the PySpark JVM. Then a fix round or a card, and a PROVEN row for C-059.</div>
 
 <h2>0. Rules in force</h2>
 <ul>
@@ -48,25 +48,20 @@ th{color:var(--muted);font-weight:600;font-size:.8em;letter-spacing:.04em;text-t
 <div class="tw"><table>
 <tr><th>Leg</th><th>State</th><th>Evidence</th></tr>
 <tr><td>X, cross-release 1.5.5 and head</td><td class="ok">PROVEN</td><td class="num">40 of 40 on Glue and S3 Tables, v2 and v3, run 39995251302, ledger C-055</td></tr>
-<tr><td>U on S3 Tables</td><td class="ok">green twice</td><td class="num">48 of 48 in runs 2 and 3; C-057 open until one run is whole</td></tr>
-<tr><td>U on Glue, gated</td><td class="warn">one named cause</td><td>42 cells land their commit; the fork's Glue catalog copied the gate URI into the file I/O endpoint, so the metadata read hit the gate. Fixed test-side in PR #1170.</td></tr>
-<tr><td>cross-read step</td><td class="bad">open</td><td>hung 1200 s in <code>metadata_log_entries</code> on both tables in run 3 on tokio 1.54.1; returned in seconds in run 2 on 1.53.2 and in local read-only probes. C-056. PR #1170 pins tokio 1.53.3 as the experiment.</td></tr>
+<tr><td>U, unknown commit outcome</td><td class="ok">PROVEN</td><td class="num">96 of 96 on Glue and S3 Tables, v2 and v3, three doors, run 40025222296, ledger C-058</td></tr>
+<tr><td>U on Glue, gated (history)</td><td class="ok">closed</td><td>runs 1 to 3 failed because the fork's Glue catalog copied the gate URI into the file I/O endpoint; the gated session names its S3 endpoint itself since #1170 (C-054).</td></tr>
+<tr><td>cross-read step (U-10)</td><td class="bad">open</td><td>hung at the cap in runs 3 and 4: in <code>metadata_log_entries</code> on tokio 1.54.1, then in <code>to_arrow()</code> of a table read on 1.53.3. Tokio is cleared and the lock is back at 1.54.1. The step now prints a py-spy native dump 420 s in (C-059).</td></tr>
 </table></div>
 
-<h2>2. In flight, and the run-4 decision tree</h2>
-<pre>gh workflow run -R TRO-Wolf/repark aws-acceptance.yml --ref main -f leg=acceptance \
-  -f purpose="ICE-INTEGRITY-PINS-1 legs U/X fourth run after fix round 4 (#1170, &lt;sha&gt;); owner word 2026-10-23"</pre>
+<h2>2. In flight after run 4</h2>
 <ul>
-<li><strong>Leg U all green</strong>: append the PROVEN row that closes C-037, cite it in <code>python/repark/tests/parity/map.md</code>, update the 1.5.6 notes line. U-9 is done.</li>
-<li><strong>Glue still refused</strong>: read the named refusal (method, path, header names). Test-side unless the request is a commit.</li>
-<li><strong>Cross-read passes on 1.53.3</strong>: tokio 1.54 stays out; card it (TOKIO-154-MLOG-HANG-1) with the two runs as evidence; dependabot #1169 must not re-bump tokio.</li>
-<li><strong>Cross-read hangs again</strong>: tokio is cleared; revert the pin lock-only; add a native stack dump on timeout and re-run once.</li>
+<li><strong>Legs done.</strong> Leg U 96 of 96 and leg X 40 of 40 in run 40025222296 on main <code>2d069e8b</code>; ledger C-058 and C-055; the 1.5.6 notes line says so.</li>
+<li><strong>Cross-read hang (C-059)</strong>: tokio exonerated by run 4; the lock is back at 1.54.1. If the dump shows the JVM side holding the thread, the test's shape is the fix: read with RePark before <code>adopt_into_spark</code> starts the JVM, or run the RePark reads in a subprocess as the cross-release runner does.</li>
+<li>Dependabot PRs #1169 and #1165 are the owner's. The nine open drafts were triaged on 2026-10-20 and stay as they are.</li>
 </ul>
-<p>Dependabot PRs #1169 and #1165 are the owner's. The nine open drafts were triaged on 2026-10-20 and stay as they are.</p>
-
 <h2>3. The queue, in order</h2>
 <ol>
-<li><strong>Finish U-9's live legs</strong> (above). Muse-only lanes until the reset.</li>
+<li><strong>Close the cross-read hang (C-059)</strong> from the nightly's native stack. U-9's legs are proven.</li>
 <li><strong>WRITE-SPINE-1 steps 1 and 3</strong>, open now that the seam is merged and before GATE-RETIRE-1. Opus 5.5, grade B, sketch first, hostile verifier plus Muse MAX. Step 1: shared UDF names in <code>repark-common</code> and a fail-closed kernel lookup. Step 3: the door matrix generated from the router arms. Card and evaluation under <code>task/roadmap/mid-term/write-spine-1-card-2026-10-22.md</code> and <code>task/wo/write-spine-1/</code>.</li>
 <li><strong>GATE-RETIRE-1</strong>: one small Opus round removing the gate arms the seam made unreachable; inputs are the seam's records and parity rows R-011 and R-015. Refuse only what Spark refuses.</li>
 <li><strong>WRITE-SPINE-1 step 2</strong>: the plan-time conform stage reached by the six self-projecting doors, carrying the zone rule, the ns floor, the ns-leaf refusal and the pairing rule; folds WRITE-NTZ-TO-LTZ-NESTED-1.</li>
@@ -92,7 +87,7 @@ th{color:var(--muted);font-weight:600;font-size:.8em;letter-spacing:.04em;text-t
 
 <h2>5. Questions for the owner</h2>
 <ul>
-<li>The run-4 outcome and the tokio pin.</li>
+<li>The cross-read hang's native stack and its fix round.</li>
 <li>The v2 slip-versus-label-on-time choice the pathway assumed as a slip.</li>
 <li>Whether the add_months neighbour is folded into spine step 2 or stands alone.</li>
 <li>The fork lock bump and the FORK-NS-UNIT-FAIL-CLOSED-1 timing.</li>
