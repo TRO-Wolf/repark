@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -137,6 +138,28 @@ def test_x_c1_a_cell_whose_sides_run_one_release_fails(tmp_path: Path) -> None:
     spec = local_spec(tmp_path / "warehouse", "plain", 2, "xrel_c1_same")
     with pytest.raises(AssertionError, match="both sides would run"):
         cross_cell(writer=impostor, reader=HEAD, spec=spec, workdir=tmp_path, label="X-C1b")
+
+
+def test_a_cut_off_runner_reports_its_stderr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    script = tmp_path / "slow_runner.py"
+    script.write_text(
+        "import sys\nimport time\n"
+        "sys.stderr.write('cut off mid-write\\n')\n"
+        "sys.stderr.flush()\n"
+        "time.sleep(30)\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("_acceptance_cross_release.RUNNER", script)
+    monkeypatch.setattr("_acceptance_cross_release.RUNNER_TIMEOUT_S", 1)
+    spec = local_spec(tmp_path / "warehouse", "plain", 2, "xrel_cutoff")
+    started = time.monotonic()
+    run = run_side(HEAD, spec, "create", tmp_path, "X-cutoff")
+    elapsed = time.monotonic() - started
+    assert run.returncode == 124
+    assert "cut off mid-write" in run.stderr
+    assert elapsed < 10
 
 
 def test_x_compare_sees_an_ntz_column_read_as_an_instant() -> None:

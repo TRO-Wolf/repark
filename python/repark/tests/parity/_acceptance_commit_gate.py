@@ -23,9 +23,9 @@ S3TABLES_COMMIT_SUFFIX = "/metadata-location"
 REGIONAL_HOST = re.compile(r"^(glue|s3tables)\.([a-z]{2}(?:-[a-z]+)+-\d)\.amazonaws\.com$")
 GLUE_ALLOWED: dict[str, str | None] = {
     "GetDatabases": None,
-    "GetDatabase": "Name",
-    "GetTables": "DatabaseName",
-    "GetTable": "DatabaseName",
+    "GetDatabase": None,
+    "GetTables": None,
+    "GetTable": None,
     "CreateTable": "DatabaseName",
     "UpdateTable": "DatabaseName",
 }

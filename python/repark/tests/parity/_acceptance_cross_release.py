@@ -16,7 +16,7 @@ PREVIOUS_PYTHON_ENV = "REPARK_PREVIOUS_RELEASE_PYTHON"
 REFUSED_EXIT = 3
 KINDS = ("plain", "partitioned", "deletes", "evolved")
 KINDS_WITH_DELETES = frozenset({"deletes"})
-RUNNER_TIMEOUT_S = 900
+RUNNER_TIMEOUT_S = 300
 
 
 INDEX_WHEEL = "index-wheel"
@@ -82,13 +82,19 @@ def run_side(side: Side, spec: dict[str, Any], op: str, workdir: Path, label: st
     }
     spec_path = workdir / f"{label}.json"
     spec_path.write_text(json.dumps(full), encoding="utf-8")
-    completed = subprocess.run(
-        [side.python, "-I", str(RUNNER), str(spec_path)],
-        capture_output=True,
-        text=True,
-        timeout=RUNNER_TIMEOUT_S,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            [side.python, "-I", str(RUNNER), str(spec_path)],
+            capture_output=True,
+            text=True,
+            timeout=RUNNER_TIMEOUT_S,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as expired:
+        tail = expired.stderr or ""
+        if isinstance(tail, bytes):
+            tail = tail.decode("utf-8", "replace")
+        return Run(label, 124, {}, None, tail[-4000:])
     lines = [line for line in completed.stdout.splitlines() if line.startswith("{")]
     report = json.loads(lines[-1]) if lines else {}
     table = None
