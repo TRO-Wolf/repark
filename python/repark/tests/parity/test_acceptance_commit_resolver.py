@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from _acceptance_commit_gate import GLUE, S3TABLES
 from _acceptance_commit_resolver import (
     UnresolvedError,
     attempted_snapshot,
@@ -13,6 +14,8 @@ from test_aws_acceptance_commit_unknown import (
     INSERT_ROWS,
     MERGE_ROWS,
     PRE_ROWS,
+    Target,
+    gate_session_extra,
     rows,
     statement,
 )
@@ -95,6 +98,21 @@ def test_a_missing_status_check_property_is_named() -> None:
     }
     wrong = {"commit.status-check.num-retries": "3", "commit.status-check.min-wait-ms": "100"}
     assert missing_properties(wrong, expected) == {"commit.status-check.num-retries": "1"}
+
+
+def test_the_gated_glue_session_names_its_s3_endpoint() -> None:
+    target = Target(GLUE, "glue_catalog", {}, "us-east-2", None)
+    assert gate_session_extra(target, "http://127.0.0.1:9") == {
+        "spark.sql.catalog.glue_catalog.uri": "http://127.0.0.1:9",
+        "spark.sql.catalog.glue_catalog.s3.endpoint": "https://s3.us-east-2.amazonaws.com",
+    }
+
+
+def test_the_gated_s3tables_session_sets_only_its_endpoint_key() -> None:
+    target = Target(S3TABLES, "s3tables_catalog", {}, "us-east-2", "arn:aws:s3tables:bucket")
+    assert gate_session_extra(target, "http://127.0.0.1:9") == {
+        "spark.sql.catalog.s3tables_catalog.endpoint_url": "http://127.0.0.1:9",
+    }
 
 
 def test_the_leg_source_resolves_on_the_local_catalog(tmp_path: Path) -> None:

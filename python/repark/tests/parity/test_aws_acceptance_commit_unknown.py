@@ -220,10 +220,18 @@ def count_operation(spark: ReparkSession, table: str, operation_id: str) -> int:
     return int(arrow.column(0)[0].as_py())
 
 
+def gate_session_extra(target: Target, gate_url: str) -> dict[str, str]:
+    extra = {target.endpoint_key(): gate_url}
+    if target.service == GLUE:
+        key = f"spark.sql.catalog.{target.catalog}.s3.endpoint"
+        extra[key] = f"https://s3.{target.region}.amazonaws.com"
+    return extra
+
+
 def run_statement(
     target: Target, gate: CommitGate | None, door: str, table: str
 ) -> BaseException | None:
-    extra = {} if gate is None else {target.endpoint_key(): gate.url}
+    extra = {} if gate is None else gate_session_extra(target, gate.url)
     with session(target, extra) as writer:
         if door == "session_key":
             writer.conf.set(SESSION_KEY, "v")
