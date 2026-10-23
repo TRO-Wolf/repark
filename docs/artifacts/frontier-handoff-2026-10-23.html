@@ -1,0 +1,100 @@
+<title>Iceberg Closeout Handoff</title>
+<style>
+:root{--bg:#f7f6f2;--fg:#1e2126;--muted:#5d6470;--accent:#0f6e8c;--line:#d9d6ce;--card:#ffffff;--ok:#1f7a3f;--warn:#9a5b00;--bad:#9f2a2a;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15181c;--fg:#e8e6e1;--muted:#a3a9b3;--accent:#5fb6d1;--line:#2d333b;--card:#1c2026;--ok:#6fcf8f;--warn:#e0a84a;--bad:#e07a7a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15181c;--fg:#e8e6e1;--muted:#a3a9b3;--accent:#5fb6d1;--line:#2d333b;--card:#1c2026;--ok:#6fcf8f;--warn:#e0a84a;--bad:#e07a7a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif;margin:0}
+main{max-width:860px;margin:0 auto;padding-block:32px 64px;padding-inline:16px}
+h1{font-size:1.7rem;line-height:1.2;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 28px}
+h2{font-size:1.15rem;margin:36px 0 10px;border-bottom:1px solid var(--line);padding-bottom:4px}
+h3{font-size:1rem;margin:20px 0 6px}
+p,li{max-width:70ch}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+code{font-family:var(--mono);font-size:.88em;background:color-mix(in srgb,var(--fg) 7%,transparent);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:.85em;background:var(--card);border:1px solid var(--line);padding:10px 12px;border-radius:6px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;margin:10px 0 16px;font-size:.93em}
+.tw{overflow-x:auto}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:.8em;letter-spacing:.04em;text-transform:uppercase}
+.ok{color:var(--ok);font-weight:600}.warn{color:var(--warn);font-weight:600}.bad{color:var(--bad);font-weight:600}
+.box{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:10px 14px;margin:14px 0}
+.num{font-variant-numeric:tabular-nums}
+</style>
+<main>
+<h1>Iceberg closeout: hand-off to the next Frontier orchestrator</h1>
+<p class="sub">Written 2026-10-23 at about 21:00 UTC at the owner's request, at 88 % weekly usage. The markdown of record is <code>task/handoff-frontier-2026-10-23.md</code> on <code>main</code>; this page is its reading copy, published at https://claude.ai/artifact/K2Dw8gMDEmWy5zXsRmG3eg.</p>
+
+<div class="box"><strong>First action.</strong> Read the Muse MAX verifier hand-back for PR #1170 (lane <code>icepins-fix4-v</code>). On PASS with CI green: merge, then dispatch the fourth <code>aws-acceptance</code> run on main with the purpose line in section 2, and walk the decision tree.</div>
+
+<h2>0. Rules in force</h2>
+<ul>
+<li><strong>No code comments</strong> from Anthropic models; Rust <code>///</code> and <code>//!</code> count. Citations live in a <code>map.md</code>. Existing comment lines are never edited; stale ones are deleted.</li>
+<li><strong>Trailer</strong>, exactly: <code>Authored-By: Claude (&lt;model-id&gt;) &lt;noreply@anthropic.com&gt;</code>; Muse lanes use the Muse Spark trailer. No <code>Co-Authored-By</code>, no session links, no PR footer.</li>
+<li><strong>Opus 5.0 is banned.</strong> Every Opus dispatch is <code>claude-opus-5-5</code>. Two Opus lanes at a time, re-evaluate by 2026-11-22. In doubt about logic, default to Opus 5.5.</li>
+<li><strong>Muse MAX is the standing second verifier</strong> on every product PR; merge gated on the union with Opus. Sol cannot run here.</li>
+<li><strong>Usage ruling:</strong> at 84 % the owner said no new Claude agents; only lanes that are entirely Muse or Grok continue until the reset at about 08:00 UTC on 2026-10-24.</li>
+<li>Fresh clone per lane, never the live worktree; workers ≤26 cores; verifier probes under a 40 G scope cap; no sleep chains, no self-matching <code>pgrep</code> loops.</li>
+<li>CI re-run rule: a job cancelled at its cap with tests green may be re-run once by the orchestrator; a failed test waits for the owner's dated word.</li>
+<li><code>map.md</code> in lockstep per commit; staging ledgers append-only; a PROVEN row needs a <code>pins:</code> citation. Status and roadmap reports go out as an artifact and a <code>docs/artifacts</code> copy.</li>
+<li>Nanosecond ruling (2026-10-23): ns floor and ns-leaf refusal are WRITE-SPINE-1 step 2 rules; no ns fix unit before the spine; U-2 and R-024 stay in 1.5.7.</li>
+</ul>
+
+<h2>1. Where main stands</h2>
+<p>Main is <code>1aeb1445</code> plus whatever merges after this page. Merged today: option D adopted (#1154), the release-notes reconciliation (#1155), two Opus lanes (#1156), pins U/X built (#1157), the CI re-run rule (#1159), the ns ruling (#1160), the Muse verifier rule (#1161), the spill pool at 80M with the FAIR-POOL-HANG-1 card (#1158), ledger C-006 (#1162), ctutils 0.4.5 (#1164), the acceptance legs wired (#1163, closing #1070), <strong>ZONE-SEAM-1 (#1139, <code>3bc2915a</code>)</strong>, pins fix rounds 2 and 3 (#1166, #1167) and tokio 1.54.1 (#1168).</p>
+<p><strong>Release state.</strong> v1.5.5 is on PyPI at the re-pointed tag. v1.5.6 is in flight: v2 label Tuesday 2026-11-10 (buffer 11-12), v3 label Tuesday 11-17 (buffer 11-19). 1.5.7 holds the nanosecond work.</p>
+<h3>ICE-INTEGRITY-PINS-1 live legs after three runs today</h3>
+<div class="tw"><table>
+<tr><th>Leg</th><th>State</th><th>Evidence</th></tr>
+<tr><td>X, cross-release 1.5.5 and head</td><td class="ok">PROVEN</td><td class="num">40 of 40 on Glue and S3 Tables, v2 and v3, run 39995251302, ledger C-055</td></tr>
+<tr><td>U on S3 Tables</td><td class="ok">green twice</td><td class="num">48 of 48 in runs 2 and 3; C-057 open until one run is whole</td></tr>
+<tr><td>U on Glue, gated</td><td class="warn">one named cause</td><td>42 cells land their commit; the fork's Glue catalog copied the gate URI into the file I/O endpoint, so the metadata read hit the gate. Fixed test-side in PR #1170.</td></tr>
+<tr><td>cross-read step</td><td class="bad">open</td><td>hung 1200 s in <code>metadata_log_entries</code> on both tables in run 3 on tokio 1.54.1; returned in seconds in run 2 on 1.53.2 and in local read-only probes. C-056. PR #1170 pins tokio 1.53.3 as the experiment.</td></tr>
+</table></div>
+
+<h2>2. In flight, and the run-4 decision tree</h2>
+<pre>gh workflow run -R TRO-Wolf/repark aws-acceptance.yml --ref main -f leg=acceptance \
+  -f purpose="ICE-INTEGRITY-PINS-1 legs U/X fourth run after fix round 4 (#1170, &lt;sha&gt;); owner word 2026-10-23"</pre>
+<ul>
+<li><strong>Leg U all green</strong>: append the PROVEN row that closes C-037, cite it in <code>python/repark/tests/parity/map.md</code>, update the 1.5.6 notes line. U-9 is done.</li>
+<li><strong>Glue still refused</strong>: read the named refusal (method, path, header names). Test-side unless the request is a commit.</li>
+<li><strong>Cross-read passes on 1.53.3</strong>: tokio 1.54 stays out; card it (TOKIO-154-MLOG-HANG-1) with the two runs as evidence; dependabot #1169 must not re-bump tokio.</li>
+<li><strong>Cross-read hangs again</strong>: tokio is cleared; revert the pin lock-only; add a native stack dump on timeout and re-run once.</li>
+</ul>
+<p>Dependabot PRs #1169 and #1165 are the owner's. The nine open drafts were triaged on 2026-10-20 and stay as they are.</p>
+
+<h2>3. The queue, in order</h2>
+<ol>
+<li><strong>Finish U-9's live legs</strong> (above). Muse-only lanes until the reset.</li>
+<li><strong>WRITE-SPINE-1 steps 1 and 3</strong>, open now that the seam is merged and before GATE-RETIRE-1. Opus 5.5, grade B, sketch first, hostile verifier plus Muse MAX. Step 1: shared UDF names in <code>repark-common</code> and a fail-closed kernel lookup. Step 3: the door matrix generated from the router arms. Card and evaluation under <code>task/roadmap/mid-term/write-spine-1-card-2026-10-22.md</code> and <code>task/wo/write-spine-1/</code>.</li>
+<li><strong>GATE-RETIRE-1</strong>: one small Opus round removing the gate arms the seam made unreachable; inputs are the seam's records and parity rows R-011 and R-015. Refuse only what Spark refuses.</li>
+<li><strong>WRITE-SPINE-1 step 2</strong>: the plan-time conform stage reached by the six self-projecting doors, carrying the zone rule, the ns floor, the ns-leaf refusal and the pairing rule; folds WRITE-NTZ-TO-LTZ-NESTED-1.</li>
+<li><strong>U-11 ICE-RESOURCE-BOUND-1</strong>: card and order first, then the unit.</li>
+<li><strong>U-13 and the v2 label PR</strong> (11-10), then <strong>U-4, the ns truth-up and the v3 label PR</strong> (11-17); v1.5.6 ships both.</li>
+<li><strong>WRITE-SPINE-1 step 4</strong> after the v2 label: retire the ZS-9 refusal and R-011's cast arm with dated rows.</li>
+</ol>
+<h3>Side lanes</h3>
+<ul>
+<li>FAIR-POOL-HANG-1 step 0; ICE-HADOOP-HINT-WINDOW-1; ZONE-HORIZON-INSTANT-1; VALUES-ALIAS-COLUMNS-1 (refusal text only); NTZ-CAST-OFFSET-TEXT-UPDATE-1.</li>
+<li><strong>Uncarded:</strong> a plain UPDATE from <code>add_months</code> into a <code>TIMESTAMP_NTZ</code> field stores UTC midnight where Spark stores session midnight, on main and head alike. Card it first.</li>
+<li>Owner items: the fork lock bump (ctutils, RUSTSEC-2026-0381, 0382, 0386), FORK-NS-UNIT-FAIL-CLOSED-1 at the next repin, the lane-count and Muse-verifier re-evaluation by 2026-11-22.</li>
+</ul>
+
+<h2>4. Mechanics the repo does not carry</h2>
+<ul>
+<li><strong>Muse lanes</strong> run through the user-level <code>muse-worker</code> skill (<code>--role worker</code> to build, <code>--role critic</code> to verify, <code>--effort max</code>, <code>--max-steps 400</code>). The launcher disables the clone's push URL; restore it before pushing. Hand-backs land under <code>/tmp/muse-worker/&lt;lane&gt;/&lt;utc&gt;/handback.json</code>. Muse may not touch <code>.github/</code>, <code>Cargo.toml</code>, <code>STATUS.md</code> or AWS.</li>
+<li><strong>Merging</strong>: wait until every check in the status rollup is COMPLETED and SUCCESS or SKIPPED, stop on any FAILURE, then squash-merge. Update the branch first when it is behind, and ignore a stale failed check from before the update. Never merge on GitHub's CLEAN state alone.</li>
+<li><strong>aws-acceptance</strong>: nightly 08:43 UTC and dispatch on main; four credential mints, one per long step; a fix round plus a new dispatch is what the owner approved today.</li>
+<li><strong>Oracle</strong>: PySpark 4.1.2 on the box with JDK 17; Iceberg MERGE needs the ivy-cached <code>iceberg-spark-runtime-4.1_2.13</code> 1.11.0 jar and the extensions. Measure the exact statement on the exact door before naming a gap.</li>
+<li><strong>Local AWS</strong>: the box's default profile is the owner's IAM user. Read-only probes only, disclosed.</li>
+</ul>
+
+<h2>5. Questions for the owner</h2>
+<ul>
+<li>The run-4 outcome and the tokio pin.</li>
+<li>The v2 slip-versus-label-on-time choice the pathway assumed as a slip.</li>
+<li>Whether the add_months neighbour is folded into spine step 2 or stands alone.</li>
+<li>The fork lock bump and the FORK-NS-UNIT-FAIL-CLOSED-1 timing.</li>
+</ul>
+</main>
