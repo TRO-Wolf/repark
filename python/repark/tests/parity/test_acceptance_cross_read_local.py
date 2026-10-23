@@ -203,7 +203,7 @@ class S3AsLocal:
         self.doc = doc
         self.seen: list[str] = []
 
-    def __call__(self, location: str) -> tuple[pafs.FileSystem, str]:
+    def from_uri(self, location: str) -> tuple[pafs.FileSystem, str]:
         self.seen.append(location)
         return pafs.LocalFileSystem(), self.doc
 
@@ -249,6 +249,6 @@ def test_metadata_ns_check_reads_an_s3_location_through_its_filesystem(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = S3AsLocal(str(write_metadata_doc(tmp_path)))
-    monkeypatch.setattr(pafs.FileSystem, "from_uri", fake)
+    monkeypatch.setattr(pafs, "FileSystem", fake)
     assert metadata_has_ns_types("s3://bucket/metadata/v1.metadata.json") is True
     assert fake.seen == ["s3://bucket/metadata/v1.metadata.json"]
