@@ -288,6 +288,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   named census, the ZS-9 class until GATE-RETIRE-1); R-015's line states the measured change on a
   nanosecond leaf (13 bare-`NULL` cells per zone) and that it awaits the owner's ruling. The
   partition-column-first pins are in `tests/ntz_into_ltz_nested.rs`. pins: zone-seam-1/C-022
+  *Fold 4 (2026-10-23, verifier round 3, owner ruling "count it"):* R-011 lists the plain-`UPDATE`
+  shapes Spark-equal on main that refuse on the head (the Muse twelve and the Opus ten per zone,
+  four in both, and the two calibration cells) and the London-winter `ltz_nested` split (134
+  refused, 116 Spark-equal on main, 18 engine errors) as ZS-9 over-refusal until GATE-RETIRE-1.
+  pins: zone-seam-1/C-026, C-027
 
 ## Pointers
 

@@ -3666,7 +3666,29 @@ still open is `isModifiable`.
   drivers (8 shapes at 3 walls). The three censuses use different shape sets and overlap, so the
   counts are not summed; each is the over-refusal of its own set, and all are the ZS-9 class
   listed until GATE-RETIRE-1: an instant struct cast to `STRUCT<…TIMESTAMP_NTZ…>` written into a
-  nested `TIMESTAMP`, outside UTC, on a partitioned table. Card
+  nested `TIMESTAMP`, outside UTC, on a partitioned table. **Fold 4, counted 2026-10-23
+  (verifier round 3, owner ruling "count it" the same day):** the plain-`UPDATE` shapes below are
+  Spark-equal on main `b7a20167` and refuse on the head with no file written, and are listed
+  over-refusal of the ZS-9 class until GATE-RETIRE-1. (a) Twelve whole-container shapes whose
+  naive leaves are only the shifted `TIMESTAMP_NTZ` cast (a `NULL` branch stores `NULL`): the cast
+  inside `array()`, `map()`, a `named_struct` nested in either, `IF`, `CASE` (three spellings: two
+  casts, cast-or-`NULL`, nested), `COALESCE` (two spellings), `NULLIF`, `GREATEST`, `LEAST`,
+  `date_trunc`, or `<cast> + INTERVAL`: twelve per zone in New York (six of them re-proven in
+  Sydney) in the Muse round-3 census (`u.case`, `u.if`, `u.coalesce`, `u.nullif`, `u.case.null`,
+  `u.coalesce.nullfirst`, `u.nested.case`, `u.trunc`, `u.greatest`, `u.least`, `u.arrfield`,
+  `u.mapfield`), ten per zone in New York and Sydney in the Opus round-3 census
+  (`u1.coalesce.cast.wall`, `u1.coalesce.wall.cast`, `u1.if.wall`, `u1.if.cast`, `u1.plus.interval`,
+  `map.cast`, `structarr.cast`, `arr.cast`, `mapstruct.cast`, `u1.case.cast`), four shapes in both;
+  two shapes in each census hold a `TIMESTAMP_NTZ` wall beside the cast (`u.coalesce`, `u.least`;
+  `u1.coalesce.wall.cast`, `u1.if.wall`). (b) Two calibration cells per zone in New York and Sydney,
+  `upd.multi.extract` and `upd.nfield.case`, EQUAL on main and refused on the head (ledger C-024
+  records them; the row did not count them). (c) In `Europe/London` in winter the zone's offset is
+  zero but its id is geographic, so it refuses by design under ruling 3 of 2026-10-21: on the
+  `ltz_nested` matrix (352 cells, the January instant) 134 refuse on the head, of which 116 stored
+  Spark's wall on main and 18 were the engine's own error on main, none DIFFERENT (measured
+  2026-10-23 on live Spark 4.1.2, main and head); the `INSERT OVERWRITE` × (container cast of an
+  instant, `TIMESTAMP_NTZ` literal) subset is 6 cells, 5 Spark-equal on main and 1 erroring on main
+  where Spark errors too. Card
   `task/roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`. Ledger
   `task/ledgers/staging/zone-seam-1-ledger.md`.
 
