@@ -129,9 +129,9 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
-          role-session-name: repark-tier2-integrity
+          role-session-name: repark-tier2-integrity-u
           mask-aws-account-id: true
-      - name: integrity legs (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
+      - name: integrity leg U (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
         if: ${{ !cancelled() }}
         env:
           REPARK_AWS_ACCEPTANCE: "1"
@@ -143,6 +143,25 @@ jobs:
           VIRTUAL_ENV="$PWD/.venv"
           uv run --no-project python -m pytest
           python/repark/tests/parity/test_aws_acceptance_commit_unknown.py
+          -q -rA
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ !cancelled() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity-x
+          mask-aws-account-id: true
+      - name: integrity leg X (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
+        if: ${{ !cancelled() }}
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+          REPARK_PREVIOUS_RELEASE_PYTHON: ${{ github.workspace }}/.venv-previous/bin/python
+        run: >
+          VIRTUAL_ENV="$PWD/.venv"
+          uv run --no-project python -m pytest
           python/repark/tests/parity/test_aws_acceptance_cross_release.py
           -q -rA
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
