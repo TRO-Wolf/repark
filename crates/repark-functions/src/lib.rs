@@ -86,6 +86,7 @@ pub mod timestamp_unit_widen;
 pub mod try_invert;
 pub mod url;
 pub mod validate;
+pub mod zone_seam;
 
 #[cfg(test)]
 mod tests;

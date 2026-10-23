@@ -21,7 +21,28 @@ stays here merged after `7fb5f6b2`.
 
 Tables already written keep the values they hold; this release ships no migration.
 
+- **Container casts, `TRY_CAST`, `to_json`, `from_json` and `to_utc_timestamp` read timestamps in
+  the session zone (ZONE-SEAM-1).** A `CAST` or `TRY_CAST` of a struct, array or map holding a
+  `TIMESTAMP` now answers what the leaf cast answers: the session wall for `TIMESTAMP_NTZ`,
+  Spark's session text for `STRING`, the session date for `DATE`, epoch seconds for `BIGINT`; a
+  wall, a zoneless string or a date cast to `TIMESTAMP` inside a container is read in the session
+  zone; a wall to `BIGINT` and a `BIGINT` to `TIMESTAMP_NTZ` inside a container refuse as Spark
+  does. A bare `TRY_CAST` of those pairs answers what `CAST` answers. `to_json` renders a
+  `TIMESTAMP_NTZ` field as its wall with no zone; `from_json` reads a `TIMESTAMP_NTZ` field as its
+  wall and answers NULL for a text with a zone; `to_utc_timestamp` and `from_utc_timestamp` of a
+  wall, a date or NULL return `TIMESTAMP`. Writes store what the `SELECT` yields, so the six
+  table-creating writers and every door holding such a cast store Spark's value; a container cast
+  of an instant into a nested `TIMESTAMP_NTZ` field now stores the session wall where it refused.
+  ZONE-ORACLE-1: 1,540 of 1,640 cells EQUAL (was 1,199).
+
 ## Behaviour changes
+
+- **A nested `TIMESTAMP_NTZ` value into a nested `TIMESTAMP` field refuses outside UTC on the
+  overwriting, by-name, MERGE and whole-struct `UPDATE` doors (ZONE-SEAM-1, ruling ZS-9).** Those
+  doors store the wall as if it were UTC; until WRITE-NTZ-TO-LTZ-NESTED-1 they refuse with a hint
+  (set the session zone to UTC, or cast the leaf to `TIMESTAMP` before nesting it). Positional
+  `INSERT`, `REPLACE WHERE`, the appending DataFrame writers and a field assignment store Spark's
+  value.
 
 - **An instant written into a nested microsecond `TIMESTAMP_NTZ` field refuses outside a UTC
   session (ICE-NTZ-NESTED-REFUSE-1, R-011).** Every door now refuses it with

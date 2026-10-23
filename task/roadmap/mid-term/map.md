@@ -1015,6 +1015,23 @@ declines it (a dated ruling in the intake, then the archive).
   `c516c54a`; the leaf cast is session-aware. Found by U-8's second verifier; U-8's gate does not
   see a value that passed through another type first. Owner rules: grow U-8, or fix the cast as
   its own unit (the orchestrator's lean).
+- [write-ntz-to-ltz-nested-1-card-2026-10-22.md](write-ntz-to-ltz-nested-1-card-2026-10-22.md) —
+  **card WRITE-NTZ-TO-LTZ-NESTED-1 (2026-10-22, open; the next write-path Opus unit after
+  GATE-RETIRE-1; rulings ZS-8, ZS-9):** the Iceberg write path stores a nested `TIMESTAMP_NTZ`
+  value into a nested `TIMESTAMP` field as if the wall were UTC, at three sites (the sink's
+  `conform` cast with no session zone in scope, `update_cast.rs`'s `arrow_cast` text, the MERGE
+  `INSERT` store wrap); `repark-iceberg` depends only on `repark-common`. Fix shape: one
+  zone-aware store conversion threaded through the write path; ZONE-SEAM-1's refusal retires.
+  WRITE-SPINE-1 would make it a one-site fix; the owner picks the order. *2026-10-22:* folded
+  into WRITE-SPINE-1 step 2 (owner, on the crate-boundary evaluation's recommendation).
+  *2026-10-23:* the cells line reads 37 Spark-equal + 79 DIFFERENT + 18 engine error per zone.
+- [zone-horizon-instant-1-card-2026-10-22.md](zone-horizon-instant-1-card-2026-10-22.md) — **card
+  ZONE-HORIZON-INSTANT-1 (2026-10-22, open; the next Opus unit after GATE-RETIRE-1; owner ruling
+  ZS-7):** DataFusion-Spark's `to_utc_timestamp` / `from_utc_timestamp` of an instant, shared by
+  main and ZONE-SEAM-1's head, misses Spark 4.1.2 at DST gaps and overlaps and after 2099 (19 and
+  10 of 36 measured edge cells). The 180-cell edge table on Spark, head and main; the 102
+  instant-argument residue cells of ZONE-HORIZON-RENDER-1 and the three ZS-7 cells it would
+  close; the fallback ZS-7 did not take, with its cost. Names the kernel only, no fix.
 - [map-column-panic-1-card-2026-10-20.md](map-column-panic-1-card-2026-10-20.md) — **card
   MAP-COLUMN-PANIC-1 (2026-10-20, merged as PR #1131 `d6ee0411` on 2026-10-21; the native-door follow-up awaits the owner; `REPARK_PANIC_FATAL` settled by PANIC-FATAL-SUITE-1, PR #1134):**
   `map('a', <column>)` over any non-literal value panicked `list array` in DataFusion's `MapFunc`
@@ -1046,3 +1063,4 @@ declines it (a dated ruling in the intake, then the archive).
   (test) or a real slope change (product). Unmeasured until N quiet runs.
 - [update-where-binary-flake-1-card-2026-10-20.md](update-where-binary-flake-1-card-2026-10-20.md) — **card UPDATE-WHERE-BINARY-FLAKE-1** (2026-10-20, open, not scheduled): `UPDATE … WHERE` after a mixed set of insert doors including a `BINARY` literal fails about one time in four on main `c516c54a` with `Mismatch between schema and batches`; found by the U-8 verifier, outside U-8; lead is a per-door Arrow field difference on the `BINARY` column.
 - [values-alias-columns-1-card-2026-10-23.md](values-alias-columns-1-card-2026-10-23.md) — **card VALUES-ALIAS-COLUMNS-1 (2026-10-23, open, not scheduled):** `MERGE … USING (VALUES …) AS s(id, name)` fails `UNRESOLVED_COLUMN` on `s.id` (offering `column1`/`column2`) where Spark 4.1.2 refuses the same text at parse with `[COLUMN_ALIASES_NOT_ALLOWED]`; both engines write nothing, the error differs; the plain `INSERT … SELECT` over the same source and the bare `SELECT` resolve on both. Found as F2 of the legs U/X first live run (18 merge cells); the legs carry the `(SELECT * FROM VALUES … AS v(id, name)) AS s` workaround. Retires when RePark refuses that text at parse with Spark's message and a pin holds it.
+- [ntz-cast-offset-text-update-1-card-2026-10-23.md](ntz-cast-offset-text-update-1-card-2026-10-23.md) — **card NTZ-CAST-OFFSET-TEXT-UPDATE-1 (2026-10-23, open, not scheduled; from ZONE-SEAM-1 verifier round 3 S2-1):** a plain `UPDATE` assigning a `TIMESTAMP_NTZ` cast of offset-bearing text honors the offset where Spark 4.1.2 ignores it (nested and top-level, `+05:00` stores `1767305045123456`, `Z` text stores `1767323045123456`), on main, `05e6b32a` and the head, in UTC too; `INSERT` and `SELECT` agree with Spark. Not a seam regression; names the measured cells, proposes no fix.

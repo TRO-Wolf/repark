@@ -789,6 +789,35 @@ repark-core's error map.
   The unit tests moved to [nested_ns_gate/tests.rs](nested_ns_gate/map.md) when the file passed
   the 1000-line ceiling.
   pins: ice-ntz-nested-refuse-1/C-001, C-015, C-029
+  **ZONE-SEAM-1 step 3c (2026-10-22, ruling ZS-9):** `NaiveLeaf::Instant` names a nested
+  microsecond `TIMESTAMP` leaf for the same walk; `naive_into_instant(source, target)` says
+  whether a value type carries a naive microsecond leaf to a position where the target holds
+  one; `type_at` reads a struct path; `nested_naive_refusal(…, NaiveLeaf::Instant)` writes the
+  refusal (`Cannot safely cast `<column>`.`<leaf>` to "TIMESTAMP". The session time zone is not
+  UTC, and a nested TIMESTAMP_NTZ value cannot yet be stored into a nested TIMESTAMP field
+  outside UTC: …`, two ways through, no data-deleting action). pins: zone-seam-1/C-015
+  **ZONE-SEAM-1 fix round 1 (2026-10-22, verifier round 1, S1-1):** a `PARTITION` clause no
+  longer blinds the positional read of an INSERT. `InsertSupply.partition` carries the clause
+  (empty when there is none); `nested_supplies` resolves its static columns once
+  (`static_columns`: `partition_overwrite_request_from_exprs`, `validated_static_equalities` and
+  `static_partition_source_columns`, the three calls the partition-overwrite door makes before it
+  stages a file), and `insert_supply` reads the source column at the column's position among the
+  table's columns less the static ones, or among the column list when there is one, so the feed
+  names that position and a bare `NULL` there is `Null`, as for an unpartitioned INSERT. A
+  dynamic `PARTITION (k)` has no static column, so the source is read against every column. A
+  clause the door itself refuses (a name that is not an identity partition column, a refused
+  value) is read as before, a `Value` with no position, and the door's own error stops the write.
+  **Why:** with no position and no name, the router's type read (`column_type`) picked no
+  column, so the ZS-9 refusal let `INSERT OVERWRITE … PARTITION (…)` through to store site A,
+  and a container cast of an instant stored main's Spark-equal value five hours off. The same
+  position now reaches R-011's read (one column in place of every column) and R-015's
+  supply (a bare `NULL` at the position is no longer refused). pins: zone-seam-1/C-016
+  **ZONE-SEAM-1 fix round 3 (2026-10-23, owner ruling on verifier round 2 S1-3):** the nanosecond
+  leaf keeps its refusal on every door until WRITE-SPINE-1, so `nested_supplies` resolves no
+  static columns for `NaiveLeaf::Nanos` when the INSERT carries a `PARTITION` clause: the feed
+  stays a `Value` with no position, as on main, and a bare `NULL` there is refused by R-015 as
+  before fix round 1. The microsecond and instant leaves keep the resolved position.
+  pins: zone-seam-1/C-023
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

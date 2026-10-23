@@ -52,6 +52,30 @@ Only tests; `mod.rs` is the module manifest.
   `unix_timestamp_of_an_overlap_answers_the_earlier_offset` pins a New York
   overlap wall and its post-2099 twin to the earlier offset.
 
+- `zone_seam_pairs.rs` — **ZONE-SEAM-1 (2026-10-22):** the seam's (source, target) pairs
+  through the analyzer in UTC, New York and Kolkata, against Spark 4.1.2's ZONE-ORACLE-1 values:
+  a container `CAST` and `TRY_CAST` (struct, list, map) of an instant to `TIMESTAMP_NTZ`,
+  `STRING`, `DATE` and `BIGINT`, of a wall, a zoneless string and a date to `TIMESTAMP`, of a
+  wall to `STRING` (rows 1–8); the refusals of a wall to `BIGINT` and a `BIGINT` to
+  `TIMESTAMP_NTZ` (rows 9–10); the bare `TRY_CAST` twins; NULL where a `TRY_CAST` leaf cannot
+  convert; `to_utc_timestamp` / `from_utc_timestamp` of a wall, a date and NULL; `to_json` of a
+  `TIMESTAMP_NTZ` leaf; an instant column; and the mixed-member control.
+  The `BIGINT` source is `CAST(1767323045 AS BIGINT)`, as in the corpus: the bare literal
+  fits an `INT` and `SparkIntegerLiteral` types it so.
+  Each pin is analysed eagerly and then executed, so the analyzer runs twice, as on the
+  Spark door.
+  **Step 3b (ZS-6):** `from_json` into a `TIMESTAMP_NTZ` field — Spark's text form is the
+  wall in New York and Kolkata, a `Z` or offset text is NULL; a space separator and a date-only
+  text keep main's New York answers. pins: zone-seam-1/C-013
+  **Step 5:** `a_value_under_a_null_struct_never_reaches_an_ansi_leaf` holds the parent-null mask
+  (a malformed string under a NULL struct row does not raise under ANSI). pins: zone-seam-1/C-010
+  **Fix round 1 (2026-10-22, verifier S1-2):**
+  `a_container_cast_converts_every_element_of_every_row_of_a_list` casts a column of two list
+  rows (three and four elements, one NULL) of instants to `ARRAY<TIMESTAMP_NTZ>` in New York and
+  holds every element's wall and the offsets; it reds when the list arm converts only the first
+  value. pins: zone-seam-1/C-018
+  pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

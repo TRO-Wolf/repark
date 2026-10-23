@@ -584,6 +584,9 @@ fn rewrite_cast(
     if timestamp_type.is_ntz() {
         return rewrite_cast_as_ntz(expr, schema);
     }
+    if let Some(seamed) = crate::zone_seam::rewrite_zone_seam(&expr, schema) {
+        return Transformed::yes(seamed);
+    }
     if let Some(rewritten) = rewrite_string_try_cast(&expr, schema, zone) {
         return Transformed::yes(rewritten);
     }

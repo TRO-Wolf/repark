@@ -3675,6 +3675,70 @@ still open is `isModifiable`.
   set, the over-refusal list with its counts and the cost ruling are the ones stated above; the
   ledger runs C-001..C-051. Residues: CONTAINER-CAST-ZONE-1, LATERAL-CORRELATED-MEMORY-1,
   GATE-RETIRE-1 after ZONE-SEAM-1.
+- **Status 2026-10-22 (ZONE-SEAM-1, PR #1139, verifier pending; rulings ZS-4 and ZS-9):** the
+  zone seam converts a container cast of an instant to the session wall before the router's gate
+  reads the plan, so the cast arm (`casts_a_zoned_value_to_naive`, "its plan holds a `CAST` or
+  `TRY_CAST` from a type holding a zoned timestamp to one holding a naive one") no longer matches
+  a cast that turns a zoned microsecond leaf into a naive one; it stays reachable only for casts
+  that make no UTC wall, and it is the GATE-RETIRE-1 candidate. The refusal hint's sentence "a
+  CAST of the whole struct, array or map is refused" is stale where the arm no longer matches; it
+  waits for GATE-RETIRE-1. **Moved cells (U-8 door matrix, 3168 cells, against main
+  `b7a20167`):** the `ts_struct_cast` and `ts_struct_cast_column` sources on `ntz_nested`, 50 per
+  zone in New York and Kolkata, move from the refusal to the stored session wall, equal to live
+  Spark 4.1.2 cell for cell (measured 2026-10-22); 6 per zone move from the refusal to the
+  engine's own error (a scalar subquery in `VALUES`, which Spark refuses with
+  `SCALAR_SUBQUERY_IN_VALUES`; a plain `UPDATE` with no `WHERE`, which Spark stores). **Over-refusal
+  by design, ruled 2026-10-22 (ZS-9), until WRITE-NTZ-TO-LTZ-NESTED-1:** outside UTC a nested
+  `TIMESTAMP_NTZ` value written into a nested `TIMESTAMP` field refuses on the doors whose store
+  reads the wall as UTC (`INSERT OVERWRITE`, `INSERT … BY NAME`, the DataFrame
+  `insertInto(overwrite=True)` and `overwritePartitions`, MERGE `INSERT`, MERGE and plain `UPDATE`
+  of the whole struct), with ``[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write
+  incompatible data for the table <table>: Cannot safely cast `<column>`.`<leaf>` to "TIMESTAMP".
+  The session time zone is not UTC, and a nested TIMESTAMP_NTZ value cannot yet be stored into a
+  nested TIMESTAMP field outside UTC: set spark.sql.session.timeZone to UTC for the statement, or
+  cast the leaf to TIMESTAMP before nesting it, as in named_struct('<field>', CAST(<value> AS
+  TIMESTAMP), ...). SQLSTATE: KD000``: 134 matrix cells per zone (`ltz_nested`, New York and
+  Kolkata), of which 37 per zone stored Spark's instant on main by two cancelling defects (the
+  container cast's UTC wall read back as UTC), 79 were DIFFERENT on main and 18 were the engine's
+  own error on main (counts corrected 2026-10-22 in fix round 1 from the verifier's measurement;
+  the line read "97 DIFFERENT" for the last two). **The partitioned doors, counted 2026-10-23
+  (fix round 2, verifier round 2 S1-2):** the refusal also covers `INSERT OVERWRITE … PARTITION`
+  (static `PARTITION (k = 0)` and dynamic `PARTITION (k)`, the partition column first, in the
+  middle or last), the DataFrame `insertInto(overwrite=True)` and `overwritePartitions()` on a
+  partitioned table. Beside the matrix's 37, the partitioned cells that were Spark-equal on main
+  and now refuse, per zone outside UTC, by census: 21 in the builder's partitioned census (212
+  cells per zone; 10 already refused on `58321e94` and 11 the S1-1 cells), 68 of 354 in the
+  verifier's round-2 census (34 partitioned door shapes at 2 walls: the partition column first,
+  middle or last; two identity columns; `days`, `bucket` and `truncate` tables; the DataFrame
+  overwrites; `PARTITION (k = NULL)` and `PARTITION (k = '0')`), and 24 of 231 in round 1's write
+  drivers (8 shapes at 3 walls). The three censuses use different shape sets and overlap, so the
+  counts are not summed; each is the over-refusal of its own set, and all are the ZS-9 class
+  listed until GATE-RETIRE-1: an instant struct cast to `STRUCT<…TIMESTAMP_NTZ…>` written into a
+  nested `TIMESTAMP`, outside UTC, on a partitioned table. **Fold 4, counted 2026-10-23
+  (verifier round 3, owner ruling "count it" the same day):** the plain-`UPDATE` shapes below are
+  Spark-equal on main `b7a20167` and refuse on the head with no file written, and are listed
+  over-refusal of the ZS-9 class until GATE-RETIRE-1. (a) Twelve whole-container shapes whose
+  naive leaves are only the shifted `TIMESTAMP_NTZ` cast (a `NULL` branch stores `NULL`): the cast
+  inside `array()`, `map()`, a `named_struct` nested in either, `IF`, `CASE` (three spellings: two
+  casts, cast-or-`NULL`, nested), `COALESCE` (two spellings), `NULLIF`, `GREATEST`, `LEAST`,
+  `date_trunc`, or `<cast> + INTERVAL`: twelve per zone in New York (six of them re-proven in
+  Sydney) in the Muse round-3 census (`u.case`, `u.if`, `u.coalesce`, `u.nullif`, `u.case.null`,
+  `u.coalesce.nullfirst`, `u.nested.case`, `u.trunc`, `u.greatest`, `u.least`, `u.arrfield`,
+  `u.mapfield`), ten per zone in New York and Sydney in the Opus round-3 census
+  (`u1.coalesce.cast.wall`, `u1.coalesce.wall.cast`, `u1.if.wall`, `u1.if.cast`, `u1.plus.interval`,
+  `map.cast`, `structarr.cast`, `arr.cast`, `mapstruct.cast`, `u1.case.cast`), four shapes in both;
+  two shapes in each census hold a `TIMESTAMP_NTZ` wall beside the cast (`u.coalesce`, `u.least`;
+  `u1.coalesce.wall.cast`, `u1.if.wall`). (b) Two calibration cells per zone in New York and Sydney,
+  `upd.multi.extract` and `upd.nfield.case`, EQUAL on main and refused on the head (ledger C-024
+  records them; the row did not count them). (c) In `Europe/London` in winter the zone's offset is
+  zero but its id is geographic, so it refuses by design under ruling 3 of 2026-10-21: on the
+  `ltz_nested` matrix (352 cells, the January instant) 134 refuse on the head, of which 116 stored
+  Spark's wall on main and 18 were the engine's own error on main, none DIFFERENT (measured
+  2026-10-23 on live Spark 4.1.2, main and head); the `INSERT OVERWRITE` × (container cast of an
+  instant, `TIMESTAMP_NTZ` literal) subset is 6 cells, 5 Spark-equal on main and 1 erroring on main
+  where Spark errors too. Card
+  `task/roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`. Ledger
+  `task/ledgers/staging/zone-seam-1-ledger.md`.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 
@@ -3791,6 +3855,18 @@ still open is `isModifiable`.
   until it is designed as its own unit, card ICE-TSNS-NESTED-1
   (`task/roadmap/mid-term/ice-tsns-nested-1-card-2026-10-09.md`). Ledger clauses C-040 to
   C-042.
+- **Status 2026-10-23 (ZONE-SEAM-1, PR #1139, owner ruling 2026-10-23 on verifier round 2
+  S1-3):** unchanged from main. Verifier round 2 measured 13 cells per zone (UTC and New York) of
+  a bare `NULL` into a `STRUCT<v: timestamp_ns, n: INT>` column through a partitioned `INSERT` on
+  a format-version 3 table storing `NULL` on fix round 1's head where main refused; the owner
+  ruled that the nanosecond leaf keeps its refusal on every door until WRITE-SPINE-1, and fix
+  round 3 restores it (the partitioned position is not resolved for this leaf). Pin
+  `timestamp_ns_nested_shapes.rs`
+  `a_partitioned_insert_refuses_a_nested_nanosecond_leaf_even_for_a_bare_null` (static and
+  dynamic, overwrite and append, the partition column first, in the middle and last, a bare
+  `NULL` and a value, UTC and New York: the refusal and no file). The seam converts microsecond
+  leaves only and the gate reads the target column's type alone, so no arm of this row becomes
+  unreachable.
 
 ### ICE-TSNS-SQL-1-R-016 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): one rule pairs struct fields on every write door, Spark's
 

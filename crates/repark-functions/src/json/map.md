@@ -105,6 +105,20 @@ through a `SessionContext`.
   printed it) and the helper only past the table end; `local_micros` is the
   shared `wall_to_micros_earlier`, whose tabulated branch is main's
   `from_local_datetime`.
+- **ZONE-SEAM-1 step 3 (2026-10-22):** `to_json.rs::write_scalar` renders a naive timestamp
+  leaf (`Timestamp(_, None)`, `TIMESTAMP_NTZ`) through `wall_text`: its wall with no zone,
+  `2026-01-02T03:04:05.123`, in every session zone, as Spark 4.1.2 does (ZONE-ORACLE-1
+  `*.wall.to_json`). Before, it rendered the wall as a UTC instant in the session zone
+  (`2026-01-01T22:04:05.123-05:00` in New York). A zoned leaf keeps `timestamp_text`. Pinned in
+  `../tests/zone_seam_pairs.rs`. pins: zone-seam-1/C-005
+- **ZONE-SEAM-1 step 3b (2026-10-22, ruling ZS-6, reversible by reverting that one commit):**
+  `decode.rs::build_timestamp` reads a `TIMESTAMP_NTZ` field (`Timestamp(_, None)`) through
+  `wall_micros`: a text with `Z` or an offset (the two zoned patterns) is NULL; a text of the form
+  `yyyy-MM-ddTHH:mm:ss[.fraction]` is its wall with no zone; every other spelling (a space
+  separator, minutes only, a date only) keeps `timestamp_micros` and main's answer. A
+  `TIMESTAMP` field is unchanged. Before, every zoneless text was read in the session zone and a
+  zoned text answered its UTC wall. Pinned in `../tests/zone_seam_pairs.rs`.
+  pins: zone-seam-1/C-013
 
 ## Pointers
 

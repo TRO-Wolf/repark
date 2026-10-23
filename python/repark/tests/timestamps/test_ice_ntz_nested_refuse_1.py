@@ -38,6 +38,7 @@ SPARK_CELLS: dict[str, Any] = json.loads(
 )["cells"]
 LIVE_CATALOG = "ntzr_live"
 INSTANT_MICROS = 1_767_323_045_123_456
+NEW_YORK_WALL = 1_767_305_045_123_456
 NEW_YORK = "America/New_York"
 ZONED = pa.timestamp("us", tz="UTC")
 NAIVE = pa.timestamp("us")
@@ -195,24 +196,14 @@ CONTAINER_CAST = (
 
 
 @pytest.mark.parametrize("door", CAST_DOORS)
-def test_a_frame_holding_a_container_cast_of_an_instant_refuses_outside_utc(
+def test_a_frame_holding_a_container_cast_of_an_instant_stores_the_session_wall(
     tmp_path: Path, door: str
 ) -> None:
-    """A frame whose struct is a ``CAST`` of a zoned struct refuses at every writer, no file.
-
-    The planner's cast of a whole struct keeps the UTC wall, so the frame's naive type alone
-    would pass; the router reads the cast in the frame's plan. A cached frame holds the cast's
-    result, not the cast, and is not in this set.
-
-    pins: ice-ntz-nested-refuse-1/C-015
-    """
+    """A frame whose struct is a ``CAST`` of a zoned struct stores the New York wall."""
     spark = open_session(NEW_YORK, tmp_path, "STRUCT<v: TIMESTAMP_NTZ, n: INT>")
     try:
-        frame = spark.sql(CONTAINER_CAST)
-        before = files_under(tmp_path)
-        with pytest.raises(Exception, match=REFUSED.format(path=re.escape("`st`.`v`"))):
-            DOORS[door](spark, frame)
-        assert files_under(tmp_path) == before
+        DOORS[door](spark, spark.sql(CONTAINER_CAST))
+        assert stored_leaf(spark) == [NEW_YORK_WALL]
     finally:
         spark.stop()
 
