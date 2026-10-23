@@ -87,6 +87,8 @@ Fix round 3 (2026-10-23, second live run G2): the partitioned cross-release tabl
 
 Fix round 3 (2026-10-23, second live run G3): the cross-read step reads a metadata location through the filesystem its URI names, so `s3://` locations no longer collapse to `s3:/`. pins: ice-integrity-pins-1/C-052
 
+Fix round 4 (2026-10-23, third live run H1): the gated Glue session names its S3 endpoint, so the fork's Glue catalog file I/O no longer reaches the gate; the two `gate_session_extra` cells in `test_acceptance_commit_resolver.py` pin the Glue pair and the S3 Tables single key. Leg X holds live at 40 of 40. pins: ice-integrity-pins-1/C-054, C-055
+
 ## Path expressions
 
 The move put every file here one level below the old flat directory. These files had a
