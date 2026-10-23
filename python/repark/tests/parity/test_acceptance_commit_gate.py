@@ -329,7 +329,9 @@ def test_glue_refuses_another_database_and_every_delete(upstream: FakeUpstream) 
     with gate_for(GLUE, upstream) as gate:
         refused = [
             glue_call(gate, "UpdateTable", glue_commit_body("example_silver")),
-            glue_call(gate, "GetTable", {"DatabaseName": "other", "Name": "t"}),
+            glue_call(
+                gate, "CreateTable", {"DatabaseName": "other", "TableInput": {"Name": "t"}}
+            ),
             glue_call(gate, "CreateDatabase", {"DatabaseInput": {"Name": "other"}}),
             glue_call(gate, "DeleteTable", {"DatabaseName": NAMESPACE, "Name": "t"}),
         ]
@@ -354,7 +356,6 @@ def test_s3tables_refuses_another_namespace_bucket_and_every_delete(upstream: Fa
 
 
 GLUE_REFUSED: list[tuple[str, str, bytes]] = [
-    ("get-another-database", "GetDatabase", json.dumps({"Name": "prod"}).encode()),
     (
         "update-another-database",
         "UpdateDatabase",
@@ -384,8 +385,12 @@ GLUE_REFUSED: list[tuple[str, str, bytes]] = [
         "GetTable",
         f'{{"DatabaseName":"prod","DatabaseName":"{NAMESPACE}","Name":"t"}}'.encode(),
     ),
-    ("get-table-in-another-database", "GetTable", b'{"DatabaseName": "other", "Name": "t"}'),
     ("unparsable-body", "GetTable", b"not json"),
+    (
+        "create-table-in-another-database",
+        "CreateTable",
+        json.dumps({"DatabaseName": "other", "TableInput": {"Name": "t"}}).encode(),
+    ),
 ]
 GLUE_ALLOWED_CALLS: list[tuple[str, dict[str, Any]]] = [
     ("GetDatabases", {}),
@@ -394,6 +399,9 @@ GLUE_ALLOWED_CALLS: list[tuple[str, dict[str, Any]]] = [
     ("GetTable", {"DatabaseName": NAMESPACE, "Name": "testing_t"}),
     ("CreateTable", {"DatabaseName": NAMESPACE, "TableInput": {"Name": "testing_t"}}),
     ("UpdateTable", glue_commit_body()),
+    ("GetDatabase", {"Name": "prod"}),
+    ("GetTable", {"DatabaseName": "other", "Name": "t"}),
+    ("GetTables", {"DatabaseName": "default"}),
 ]
 QUOTED_ARN = quote(ARN, safe="")
 S3TABLES_REFUSED: list[tuple[str, str, str, bytes]] = [
