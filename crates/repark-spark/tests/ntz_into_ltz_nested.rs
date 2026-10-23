@@ -696,3 +696,66 @@ async fn a_plain_update_whose_only_wall_is_the_shifted_cast_stores_spark_instant
     }
     assert_eq!(wrong, Vec::<String>::new());
 }
+
+const TRY_CAST_UPDATES: [(&str, &str, &str, &str, &str); 4] = [
+    (
+        "TRY_CAST of wall text",
+        LTZ,
+        "named_struct('v', TRY_CAST('2026-01-02 03:04:05.123456' AS TIMESTAMP_NTZ), 'n', 1)",
+        "id = 1",
+        "SELECT unix_micros(st.v) FROM ice.ns.m",
+    ),
+    (
+        "TRY_CAST of bad text",
+        LTZ,
+        "named_struct('v', TRY_CAST('not a time' AS TIMESTAMP_NTZ), 'n', 1)",
+        "id >= 0",
+        "SELECT unix_micros(st.v) FROM ice.ns.m",
+    ),
+    (
+        "TRY_CAST of an instant",
+        LTZ,
+        "named_struct('v', TRY_CAST({INSTANT} AS TIMESTAMP_NTZ), 'n', 1)",
+        "id >= 0",
+        "SELECT unix_micros(st.v) FROM ice.ns.m",
+    ),
+    (
+        "CAST of an instant beside TRY_CAST of wall text",
+        MIXED,
+        "named_struct('v', CAST({INSTANT} AS TIMESTAMP_NTZ), 'u', TRY_CAST('2026-01-02 \
+         03:04:05.123456' AS TIMESTAMP_NTZ), 'n', 1)",
+        "id >= 0",
+        "SELECT unix_micros(st.v), unix_micros(st.u) FROM ice.ns.m",
+    ),
+];
+
+#[tokio::test]
+async fn a_plain_update_whose_only_naive_leaf_is_a_try_cast_stores_spark_instant() {
+    let mut wrong = Vec::new();
+    for (case, struct_type, value, predicate, read) in TRY_CAST_UPDATES {
+        let session = session("America/New_York");
+        let _warehouse = mixed(&session, struct_type).await;
+        let write = format!(
+            "UPDATE ice.ns.m SET st = {} WHERE {predicate}",
+            resolved(value)
+        );
+        if let Err(error) = attempt(&session, &write).await {
+            wrong.push(format!("{case}: {error}"));
+            continue;
+        }
+        let values = micros(&session, read).await;
+        let expected: Vec<Option<i64>> = match case {
+            "TRY_CAST of wall text" => vec![Some(NEW_YORK_READ)],
+            "TRY_CAST of bad text" => vec![None],
+            "TRY_CAST of an instant" => vec![Some(UTC_READ)],
+            "CAST of an instant beside TRY_CAST of wall text" => {
+                vec![Some(UTC_READ), Some(NEW_YORK_READ)]
+            }
+            _ => vec![],
+        };
+        if values != expected {
+            wrong.push(format!("{case}: {values:?}"));
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}

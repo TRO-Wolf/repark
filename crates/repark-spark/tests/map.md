@@ -326,6 +326,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_plain_update_whose_only_wall_is_the_shifted_cast_stores_spark_instant` holds the exemption
   (the text cast stores the New York and Sydney read, the instant cast stores the instant).
   pins: zone-seam-1/C-024
+  *Fold 4 (2026-10-23, verifier round 3 S1-2):*
+  `a_plain_update_whose_only_naive_leaf_is_a_try_cast_stores_spark_instant` holds the `TRY_CAST`
+  half of the exemption in New York: wall text stores the New York read, bad text stores `NULL`,
+  an instant stores the instant, and the two-leaf `(CAST(instant), TRY_CAST(wall))` stores both;
+  mutant Z6 (only the `CAST` name exempts) reds it. pins: zone-seam-1/C-028
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
