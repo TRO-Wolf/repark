@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 import pyarrow as pa
+import pyarrow.fs as pafs
 from _acceptance_v3 import current_metadata_location
 
 EQUAL = "EQUAL"
@@ -229,7 +230,10 @@ def iceberg_type_has_ns(node: Any) -> bool:
 
 def metadata_has_ns_types(metadata_path: str) -> bool:
     """True when the metadata JSON current schema holds a nanosecond timestamp."""
-    doc = json.loads(Path(metadata_path).read_text(encoding="utf-8"))
+    location = metadata_path if "://" in metadata_path else str(Path(metadata_path).absolute())
+    filesystem, path = pafs.FileSystem.from_uri(location)
+    with filesystem.open_input_file(path) as handle:
+        doc = json.loads(handle.read())
     current = doc["current-schema-id"]
     schema = next(item for item in doc["schemas"] if item["schema-id"] == current)
     return iceberg_type_has_ns(schema["fields"])

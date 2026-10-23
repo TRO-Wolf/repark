@@ -272,7 +272,10 @@ def drill(service: str, door: str, spec: CellSpec, format_version: int) -> None:
             gate.stop_cutting()
             commits = gate.commits()
             refusals = gate.refusals()
-        assert not refusals, mask_account_ids(f"{label}: the gate refused {refusals}")
+            seen = [(entry.method, entry.path, entry.operation) for entry in gate.exchanges()]
+        assert not refusals, mask_account_ids(
+            f"{label}: the gate refused {refusals}; exchanges {seen}"
+        )
         assert len(commits) == spec.commit_requests, (
             f"{label}: commit requests at the gate {[c.answer for c in commits]}"
         )

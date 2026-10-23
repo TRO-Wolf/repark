@@ -508,6 +508,53 @@ def test_s3tables_forwards_the_operations_the_drills_send(
     assert [seen.method for seen in upstream.seen] == [method]
 
 
+def test_a_glue_refusal_without_a_target_names_method_path_and_headers(
+    upstream: FakeUpstream,
+) -> None:
+    with gate_for(GLUE, upstream) as gate:
+        assert call(gate, "GET", "/", {}, b"") == "reply 403"
+        refusals = gate.refusals()
+        assert len(refusals) == 1
+        prefix = "refused Glue <no target> GET /: not an operation the drills send; headers "
+        assert refusals[0].startswith(prefix)
+        names = refusals[0].removeprefix(prefix).split(", ")
+        assert names
+        assert names == sorted(names)
+        assert all(name == name.lower() for name in names)
+        assert "authorization" in names
+        for secret in (SECRET, TOKEN, CLIENT_SIGNATURE):
+            assert secret not in refusals[0]
+    assert upstream.seen == []
+
+
+def test_every_refusal_is_recorded_as_an_exchange(upstream: FakeUpstream) -> None:
+    with gate_for(GLUE, upstream) as gate:
+        assert call(gate, "GET", "/", {}, b"") == "reply 403"
+        assert (
+            glue_call(gate, "DeleteTable", {"DatabaseName": NAMESPACE, "Name": "t"}) == "reply 403"
+        )
+        refusals = gate.refusals()
+        assert len(refusals) == 2
+        assert refusals[0].startswith("refused Glue <no target> GET /: ")
+        assert refusals[1] == "refused Glue DeleteTable: not an operation the drills send"
+        exchanges = gate.exchanges()
+        assert [(entry.method, entry.path, entry.operation) for entry in exchanges] == [
+            ("GET", "/", "<no target>"),
+            ("POST", "/", "DeleteTable"),
+        ]
+        assert [entry.commit for entry in exchanges] == [False, False]
+        assert [entry.refused for entry in exchanges] == [True, True]
+        assert gate.commits() == []
+    with gate_for(S3TABLES, upstream) as gate:
+        assert call(gate, "DELETE", s3tables_path(), {}, b"") == "reply 403"
+        exchanges = gate.exchanges()
+        assert len(exchanges) == 1
+        assert exchanges[0].operation == "DELETE tables"
+        assert exchanges[0].commit is False
+        assert exchanges[0].refused is True
+    assert upstream.seen == []
+
+
 @pytest.mark.parametrize("service", [GLUE, S3TABLES])
 @pytest.mark.parametrize("script", list(SCRIPT_TABLE), ids=lambda script: script.value)
 def test_each_script_answers_as_its_cell_says(
