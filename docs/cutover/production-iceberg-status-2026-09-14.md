@@ -1,3 +1,9 @@
+**Update 2026-10-23.** This superseded assessment is a dated snapshot, not the live capability
+register. For later U and X evidence, see
+[ICE-COMMIT-UNKNOWN-1 in the live registry](../spark-sql-iceberg-parity.md#ice-commit-unknown-1--an-ambiguous-commit-raises-commitstateunknownexception)
+and the [ICE-INTEGRITY-PINS-1 ledger, C-058](../../task/ledgers/staging/ice-integrity-pins-1-ledger.md).
+The live U-3 orphan limit remains C-044; cross-read completion remains OPEN under C-060.
+
 # Production Iceberg status: assessment at 2026-09-14
 
 **Superseded 2026-09-16.** This assessment is superseded by the 2026-09-16

@@ -457,3 +457,41 @@ Run 39995251302 on main `1aeb1445` was dispatched by the orchestrator. Leg U gav
 | C-055 | (Closes C-038's obligation.) Leg X holds live: 40 of 40 cells on Glue and S3 Tables, v2 and v3, plain, partitioned, deletes and evolved, one-way and mixed-writer, in 529 s. | run 39995251302, step "integrity leg X" | PROVEN | `40 passed in 528.91s`; the partitioned cells took seconds at 8 files. |
 | C-056 | (H2.) The cross-read step's `metadata_log_entries` read returns on the runner. | the next dispatched run, on tokio 1.53.3 | OPEN | Hung 1200 s on both acceptance tables in run 39995251302 (tokio 1.54.1); returned in seconds in run 39965367559 (1.53.2) and in the orchestrator's local probes on 1.54.1. The lock pins 1.53.3 for the next run as the experiment. |
 | C-057 | (The run.) Leg U on S3 Tables held again (48 of 48); the 42 gated Glue cells landed and failed only on H1. | the next dispatched run | OPEN | run 39995251302 |
+
+## Fourth live run (2026-10-23): legs U and X proven, the cross-read hang stays open
+
+Run 40025222296 on main `2d069e8b` (fix round 4, #1170, with tokio pinned to 1.53.3 as the C-056 experiment) was dispatched by the orchestrator under the owner's word of 2026-10-23. Leg U gave 96 passed in 1,933 s and leg X 40 passed in 513 s; the acceptance module and the dbt gold step passed; no token expired. The cross-read module failed its two tests at the new 600 s cap, this time inside `DataFrame.to_arrow()` of a table read (`_acceptance_cross_read.py` `cross_read_table_pair`), not in `metadata_log_entries` as in run 3, so the hang is a RePark collect over an S3-backed table inside the cross-read process, and tokio 1.54 is exonerated. The rows below close the legs and carry the hang.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-058 | (Closes C-037's and C-012's live obligation; supersedes the OPEN state of C-049, C-053 and C-057.) Leg U holds live: 96 of 96 cells, U-1 to U-5, U-5r, U-C0 and U-C1 × the plain door, the session-key door and `MERGE` × v2 and v3 × Glue (48) and S3 Tables (48), with the gate armed, the four status-check properties asserted, the commit-request count asserted (1, or 2 on U-5r) and every unknown outcome resolved by snapshot id on reopen. | run 40025222296, step "integrity leg U" | PROVEN | `96 passed in 1933.42s (0:32:13)`; Glue 48 PASSED, S3 Tables 48 PASSED in the step log; the gated Glue session names `s3.endpoint` itself (C-054), so no request reached the gate without a target. |
+| C-059 | (H2, continued; narrows C-056.) The cross-read step's RePark reads of the acceptance tables return on the runner. | the first run whose cross-read step carries the native stack dump (the nightly of 2026-10-24 or a dispatch) | OPEN | Run 3 (tokio 1.54.1) hung in `metadata_log_entries`; run 4 (tokio 1.53.3) hung in `to_arrow()` of a table read; run 2 (1.53.2, before #1167) returned in seconds and failed later on the `s3:/` path. Tokio is exonerated and the lock returns to 1.54.1. Leg U and leg X read the same catalogs in the same job without a hang; the cross-read process is the one that also starts the PySpark JVM. The workflow step now runs `py-spy dump --subprocesses --native` on the pytest process 420 s in, before the 600 s cap, so the next run names the blocked native frame. |
+
+## Run-4 review correction and diagnostic plan (2026-10-23)
+
+The paragraph and C-059 above misclassified the S3 Tables timeout. Glue stopped in RePark row collection at `_acceptance_cross_read.py:294`. S3 Tables completed that collection and stopped in PyArrow `open_input_file` at line 235. Run 4 establishes failures on 1.53.3; it does not establish a cause or exonerate 1.54.1. The lock restoration follows the handoff's experimental sequence, not a causal finding. C-044's live orphan limit is unchanged. C-058 proves the checked outcomes, not an independently captured gate-request transcript; its last inference is not separate network evidence.
+
+Diagnostic correction plan:
+1. Install one pinned binary profiler before the first credential mint.
+2. Target the Python test process directly and sample throughout both catalog tests.
+3. Bound each dump, report capture failures, and reap the watchdog without changing pytest's status.
+4. Exercise the real workflow shell locally with harmless success, failure, delayed and failed-profiler processes; require independent review and exact-head CI before any main-only dispatch.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-060 | (Corrects C-059's diagnosis.) Both cross-read catalog tests complete on the runner; native samples distinguish RePark collection from PyArrow metadata I/O if either stalls. | A merged diagnostic run with both test outcomes and native captures. | OPEN | Run 40025222296: Glue row collection timeout; S3 Tables metadata file-open timeout. Neither cause is established. |
+| C-061 | The diagnostic shell targets the Python process, samples both test phases, preserves pytest status and reaps its delay process; binary profiler installation precedes credentials. | Execute the workflow shell with controlled child processes and revert/mutation probes. | PROVEN | `test_cross_read_diagnostics.py`: 8/8 passed. The original workflow fails 8/8; wrong-wrapper PID, single sample, masked test exit and omitted watchdog stop mutants each fail. Existing bench workflow tests also pass (22 combined). A real py-spy 0.4.1 direct-Python probe captures libc sleep frames locally; hosted sudo/ptrace behavior remains a live-run check. |
+
+Validation on 2026-10-23: `make py-lint py-format-check workflows-lint` exits 0. The local native probe grants tracing only on its harmless target process; no host ptrace policy changes. No AWS run was dispatched for this unmerged change.
+
+## Active-dump shutdown review correction (2026-10-23)
+
+C-061's original process tests did not cover pytest finishing during a dump. That shutdown
+could suppress the failure warning and leave its output group open. A delay killed without
+`wait` also made the fast-completion pin intermittently fail. The watchdog now requests a stop,
+reaps an active delay synchronously, clears a reaped delay PID and finishes reporting an active
+bounded dump. This corrects C-061's cleanup claim without changing the live C-060 obligation.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-062 | Diagnostic shutdown preserves native output, capture-failure warnings and group closure when pytest exits during a dump; the delay is reaped synchronously and its stale PID is not signalled. The timeout command executes. | Execute the workflow shell with delayed and timed-out profilers; discard-output, old-trap, stale-delay and removed-timeout mutants. | PROVEN | 11 diagnostic tests and 14 existing bench workflow tests pass. The delayed-failure pin fails on the prior workflow. Discard-output fails 9 tests; old-trap fails 4; stale-delay fails 1; removed timeout plus a decoy string fails 2. The timeout fixture validates the actual 30 s / 5 s arguments and scales them to 0.5 s / 0.1 s for execution. Fast completion passes 21 independent invocations after synchronous reap. Hosted ptrace and cross-read completion remain unmeasured. |

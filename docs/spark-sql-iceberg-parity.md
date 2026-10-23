@@ -1137,10 +1137,17 @@ perfectly good read.
   resolves each one by id, once or not at all. The live legs on Glue and S3 Tables are
   `python/repark/tests/parity/test_aws_acceptance_commit_unknown.py`, 96 statements through a
   catalog endpoint gate (`_acceptance_commit_gate.py`, whose AWS-free test runs on every pull
-  request). They are built, with U-3's orphan check narrowed live to the held metadata file and manifest list (ruling 82's ceiling is pinned locally by pin K only), and their first run is after the owner wires #1070. Fork #368 turned
-  the SDK retry off on both commit calls, so the SDK re-send the sketch's cell U-5 drilled no longer
-  happens. U-5 now asserts one commit request, and U-5r drills the fork's own re-send after a
-  throttle reply against a stale rejection, where rows once is the expected answer, unmeasured until the first live run.
+  request). **Live proof (2026-10-23):** run `40025222296` on main `2d069e8b` passed U's 96 of
+  96 cells: U-1 to U-5, U-5r, U-C0 and U-C1 (8 cells) × these 3 doors × v2 and v3 × Glue
+  (48) and S3 Tables (48). Every unknown outcome resolves by snapshot id on reopen. U-3 checks
+  only that the held metadata file and manifest list exist; ruling 82's full orphan ceiling is
+  pinned locally by pin K only (ledger C-044). Fork #368 turned the SDK retry off on both commit
+  calls, so U-5 asserts one commit request. U-5r asserts two requests for the fork's own re-send
+  after a throttle reply against a stale rejection, with rows once. X passed 40 of 40 cells
+  against the previous 1.5.5 wheel in the same run. See the
+  [unit ledger](../task/ledgers/staging/ice-integrity-pins-1-ledger.md), C-058 and its run-4
+  review correction. These results cover the measured doors and cells; cross-read completion
+  remains OPEN under C-060.
 - **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-14). The assessment's retry contract
   needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
   makes the unconfirmed commit nameable in an alert.
@@ -1163,9 +1170,8 @@ perfectly good read.
   committed. A `CREATE TABLE … AS SELECT` writes its staged metadata file before the catalog's
   publish call (fork `d80a2884`, `crates/iceberg/src/transaction/staged_table.rs:271-306`), so a
   CTAS killed at the publish reads back as the created table with every row and no orphan.
-  **This is the local catalog's rule only:** Glue and S3 Tables follow the catalog pointer, and
-  a kill there is drilled by the live leg of ICE-INTEGRITY-PINS-1 (pin U, awaiting #1070,
-  unmeasured).
+  **This is the local catalog's rule only:** Glue and S3 Tables follow the catalog pointer.
+  Pin U's measured live scope is recorded under ICE-COMMIT-UNKNOWN-1 above.
 - **Apache Spark** — Iceberg's `HadoopCatalog` has no pointer outside the file system either: a
   table is its highest-versioned metadata file (`version-hint.text` is a hint), so a metadata
   file once written is the commit. *(oracle: documented.)*

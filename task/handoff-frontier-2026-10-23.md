@@ -69,40 +69,36 @@ flight (v2 label Tue 2026-11-10, buffer 11-12; v3 label Tue 11-17, buffer 11-19;
 1.5.6); 1.5.7 holds U-2, the create door (#1048), the R-011 µs lift (#1037/#1038), R-024, ENC-1
 items 1 and 5 (#1071).
 
-**ICE-INTEGRITY-PINS-1 (U-9) live legs, after three dispatched runs today** (records:
+**ICE-INTEGRITY-PINS-1 (U-9) live legs, after four dispatched runs today** (records:
 [wo/ice-integrity-pins-1/live-runs-2026-10-23.md](wo/ice-integrity-pins-1/live-runs-2026-10-23.md);
-ledger sections "First/Second/Third live run"):
+ledger sections "First/Second/Third/Fourth live run"):
 
 | Leg | Live state |
 |---|---|
 | X (cross-release 1.5.5 ↔ head) | **PROVEN**, 40/40 on Glue and S3 Tables, v2 and v3 (run 39995251302, ledger C-055) |
-| U on S3 Tables | 48/48 twice (runs 2 and 3); ledger C-057 OPEN until the whole leg is green in one run |
-| U on Glue, gated | 42 cells land their commit, failed only because the fork's Glue catalog copied the gate `uri` into the FileIO `s3.endpoint` (metadata GET hit the gate); fixed in PR #1170 |
-| cross-read step (U-10) | hung 1200 s in `metadata_log_entries` on both acceptance tables in run 3 (tokio 1.54.1), returned in seconds in run 2 (1.53.2) and in local read-only probes; ledger C-056 OPEN; PR #1170 pins tokio 1.53.3 as the experiment |
+| U (unknown commit outcome) | **PROVEN**, 96/96 on Glue and S3 Tables, v2 and v3, three doors (run 40025222296, ledger C-058) |
+| U on Glue, gated (history) | runs 1 to 3 failed on the fork's Glue catalog copying the gate `uri` into the FileIO `s3.endpoint`; the gated session names `s3.endpoint` itself since #1170 (C-054) |
+| cross-read step (U-10) | **OPEN**: run 4 timed out in Glue RePark row collection and S3 Tables PyArrow metadata-file I/O on tokio 1.53.3; run 3 timed out in `metadata_log_entries` on 1.54.1. No cause is established. The lock restoration follows the experimental sequence; ledger C-060 corrects C-059. |
 
-## 2. In flight at hand-off time
+## 2. In flight at hand-off time (updated after run 4, ~23:00 UTC)
 
-- **PR #1170** (fix round 4, zero product lines + the tokio 1.53.3 lock pin): Muse MAX
-  verifier lane `icepins-fix4-v` was running; CI had a watch. **Do this first:** read the
-  verifier hand-back (`/tmp/muse-worker/icepins-fix4-v/<utc>/handback.json` on the box, status +
-  summary); on PASS and CI green, merge (`mergeone` below, or `gh pr merge --squash` after every
-  check is COMPLETED and SUCCESS), then dispatch:
-  `gh workflow run -R TRO-Wolf/repark aws-acceptance.yml --ref main -f leg=acceptance -f purpose="ICE-INTEGRITY-PINS-1 legs U/X fourth run after fix round 4 (#1170, <sha>); owner word 2026-10-23"`
-  and read the run with `gh run view <id> --json conclusion,jobs` and `--log-failed`.
-- **Run-4 decision tree:**
-  - Leg U all green → append a PROVEN row closing C-037's obligation (both catalogs, both
-    formats, three doors), cite it in `python/repark/tests/parity/map.md`, update the 1.5.6 notes
-    line; U-9 is done.
-  - Leg U Glue still refused → read the named refusal (method, path, header names); the fix is
-    test-side unless the request is a commit.
-  - Cross-read passes on tokio 1.53.3 → tokio 1.54 stays out; write a card (TOKIO-154-MLOG-HANG-1,
-    clerk grade) with the two runs as evidence; dependabot's #1169 must not re-bump tokio.
-  - Cross-read hangs again → tokio exonerated; revert the pin to 1.54.1 (lock-only) in the next
-    PR; add a native stack dump on timeout to the cross-read tests (pytest-timeout `thread`
-    method plus `faulthandler` is Python-only; run the step under `py-spy dump` if the runner can
-    install it) and re-run once.
-- **Dependabot:** #1169 (cargo group, 15 updates) and #1165 (actions group) are the owner's;
-  if #1169 lands tokio 1.54.x while C-056 is open, say so before merging.
+- **PR #1170 merged (2d069e8b); run 4 (40025222296) proved leg U 96/96 and leg X 40/40.** The
+  records and diagnostic PR after it carries ledger C-058 through C-060, the notes line, the
+  restored 1.54.1 lock and the corrected cross-read watchdog.
+- **Do this first:** after the diagnostic PR merges with its review and exact-head CI gates,
+  inspect existing runs before dispatching one `aws-acceptance` run on main. Never duplicate a
+  watcher or the nightly. The cross-read step samples the Python test process every 120 seconds
+  using `py-spy dump --native`, with each dump limited to 30 seconds. Dependency installation
+  finishes before credentials are minted. The watchdog is stopped when pytest exits, and the
+  step preserves pytest's exit status.
+- Compare native samples with both Python traces: Glue row collection and S3 Tables PyArrow
+  metadata-file I/O. Capture failure is an explicit warning, not evidence of an unblocked thread.
+  These samples cover Python threads with native frames, not every JVM or Tokio worker. Keep
+  C-060 OPEN until the actual cross-read outcomes establish closure.
+- A JVM interaction is a hypothesis. `_spark_session_for_catalog` starts Spark before
+  `_cross_read_namespace`; `adopt_into_spark` is not called by this harness. Any isolation change
+  needs a measured reproduction and its own reviewed fix round.
+- **Dependabot:** #1169 (cargo group, 15 updates) and #1165 (actions group) are the owner's.
 - **Open drafts** (#1048, #1038, #1037, #1014, #1011, #1000, #888, #884, #1071): triaged
   2026-10-20 (artifact 8Y92JiwGkP2EbmZ79eKpqk, PR #1117); leave them.
 
@@ -113,7 +109,7 @@ The order of record is the 2026-10-20 pathway (artifact Ehx5L4QoQ6nxjCaNj1fvKY,
 (`task/wo/write-spine-1/`) and the 2026-10-23 ns ruling. ZONE-SEAM-1 merged today, so the gate
 is open for the next Opus unit the moment the usage ruling lifts.
 
-1. **Finish U-9's live legs** (section 2). Muse-only lanes; one dispatch per fix round.
+1. **Close the cross-read hang (C-060)** from the nightly's native stack (section 2). U-9's legs are proven.
 2. **WRITE-SPINE-1 steps 1 and 3** (open now, before GATE-RETIRE-1; Opus 5.5, grade B, sketch to
    the orchestrator before step 1, hostile verifier + Muse MAX):
    - step 1: shared UDF names in `repark-common` and a **fail-closed kernel lookup** (today the
@@ -193,7 +189,7 @@ is open for the next Opus unit the moment the usage ruling lifts.
 
 ## 5. Open questions for the owner (ask in plain text; do not block on them)
 
-- Run-4 outcome and the tokio pin (section 2).
+- The cross-read hang's native stack and its fix round (section 2).
 - The v2-slip-versus-label-on-time choice the pathway assumed as a slip.
 - Whether the add_months UTC-midnight neighbour is carded into the spine's step 2 or stands alone.
 - The fork lock bump and FORK-NS-UNIT-FAIL-CLOSED-1 timing.
