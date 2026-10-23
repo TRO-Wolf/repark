@@ -10,10 +10,12 @@ pins: ice-spark-cross-read-1/C-002, C-003
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 import _live_parity as lp
+import pyarrow.fs as pafs
 import pytest
 from _acceptance import assert_mor_maintenance_outcome, run_mor_merge_compact_expire
 from _acceptance_cross_read import (
@@ -21,6 +23,7 @@ from _acceptance_cross_read import (
     assert_outcomes_expected,
     cross_read_local_tables,
     format_outcome_table,
+    metadata_has_ns_types,
 )
 from _acceptance_replace import assert_replace_twice_outcome, run_create_or_replace_twice
 from _acceptance_v3 import (
@@ -193,3 +196,59 @@ def test_ns_table_is_expected_spark_cannot_read(tmp_path: Path) -> None:
         )
     finally:
         repark.stop()
+
+
+class S3AsLocal:
+    def __init__(self, doc: str) -> None:
+        self.doc = doc
+        self.seen: list[str] = []
+
+    def __call__(self, location: str) -> tuple[pafs.FileSystem, str]:
+        self.seen.append(location)
+        return pafs.LocalFileSystem(), self.doc
+
+
+def ns_metadata_doc() -> dict[str, Any]:
+    return {
+        "current-schema-id": 0,
+        "schemas": [
+            {
+                "schema-id": 0,
+                "fields": [
+                    {"id": 1, "name": "id", "required": False, "type": "long"},
+                    {"id": 2, "name": "ts", "required": False, "type": "timestamp_ns"},
+                ],
+            }
+        ],
+    }
+
+
+def write_metadata_doc(tmp_path: Path) -> Path:
+    doc = tmp_path / "v1.metadata.json"
+    doc.write_text(json.dumps(ns_metadata_doc()), encoding="utf-8")
+    return doc
+
+
+def test_metadata_ns_check_reads_a_bare_local_path(tmp_path: Path) -> None:
+    assert metadata_has_ns_types(str(write_metadata_doc(tmp_path))) is True
+
+
+def test_metadata_ns_check_reads_a_relative_local_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    doc = write_metadata_doc(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert metadata_has_ns_types(doc.name) is True
+
+
+def test_metadata_ns_check_reads_a_file_uri(tmp_path: Path) -> None:
+    assert metadata_has_ns_types(write_metadata_doc(tmp_path).as_uri()) is True
+
+
+def test_metadata_ns_check_reads_an_s3_location_through_its_filesystem(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = S3AsLocal(str(write_metadata_doc(tmp_path)))
+    monkeypatch.setattr(pafs.FileSystem, "from_uri", fake)
+    assert metadata_has_ns_types("s3://bucket/metadata/v1.metadata.json") is True
+    assert fake.seen == ["s3://bucket/metadata/v1.metadata.json"]
