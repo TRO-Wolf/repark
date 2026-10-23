@@ -424,3 +424,14 @@ record wording:
 - The registry's "U-5r … rows once" now reads as the expected answer, unmeasured until the first
   live run.
 - The 1.5.6 notes line names the head (the pre-bump build that still reports 1.5.5), not 1.5.6.
+
+## First live run (2026-10-23): FAIL, and fix round 2
+
+Run 39936752073 on main `75b9e43b` was dispatched by the orchestrator with purpose "ICE-INTEGRITY-PINS-1 legs U/X first run". The integrity legs gave 98 failed and 38 passed. The run's four findings were the gate's refusal of read-only Glue calls outside the scratch namespace (F1), the MERGE USING column-alias gap (F2), the silent 900 s runner cut-off (F3) and the expired token (F4). Legs U and X stay OPEN until a dispatched run is green.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-046 | (F1; narrows C-042's Glue list.) Read-only Glue operations forward for any database; `CreateTable` and `UpdateTable` still name the scratch namespace. | the twin cells of item 1 | PROVEN | Revert check: the old gate file reds 3 (the `default` cell and the two moved cells), 6 passed on the forwards selection; restored: 9 passed. Full suite 101 passed. |
+| C-047 | (F2.) The legs' MERGE and INSERT source is `(SELECT * FROM VALUES … AS v(id, name)) AS s`; the `(VALUES …) AS s(id, name)` form is carded as VALUES-ALIAS-COLUMNS-1. | the local pin of item 2 | PROVEN | Red on the old text (`UNRESOLVED_COLUMN` on `id`, suggesting `column1`/`column2`), green on the new (7 of 7 resolver suite). |
+| C-048 | (F3.) A runner cut off at 300 s fails its cell with exit 124 and its stderr tail. | the pin of item 3 | PROVEN | Red on the old driver (the timeout escapes `run_side`), green on the new (the pin passes in about 1 s with exit 124 and the tail); 29 collected. |
+| C-049 | (F4, and the run.) The first dispatched run did not prove legs U or X: 36 U cells and the plain Glue v2 X pair passed; every other cell fell to F1, F2, F3 or the expired token. | the next dispatched run | OPEN | run 39936752073; credentials re-minted before the legs by the orchestrator in the workflow |
