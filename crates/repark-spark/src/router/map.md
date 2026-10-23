@@ -293,6 +293,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   four in both, and the two calibration cells) and the London-winter `ltz_nested` split (134
   refused, 116 Spark-equal on main, 18 engine errors) as ZS-9 over-refusal until GATE-RETIRE-1.
   pins: zone-seam-1/C-026, C-027
+  *Fold 4 item 3 (2026-10-23, verifier round 3 S2-1):* the offset-text `UPDATE` wall is carded as
+  NTZ-CAST-OFFSET-TEXT-UPDATE-1 (a `TIMESTAMP_NTZ` cast of `+05:00` text stores `1767305045123456`
+  and of `Z` text `1767323045123456` on main, `05e6b32a` and the head, in UTC too; `INSERT` and
+  `SELECT` agree with Spark; not a seam regression; no fix proposed), and C-024's cast-leaf claim
+  holds for text without an offset only. pins: zone-seam-1/C-029
 
 ## Pointers
 
