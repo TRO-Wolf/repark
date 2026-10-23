@@ -6211,6 +6211,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the join probe still spilling 12 to 14 times, the distinct probe 6 to 8. The `spill_count > 0` assertions are unchanged;
   the runner half was still not measured, so the first CI run of the shard that holds this file is the only runner sample.
   pins: spill-reach-fair-pool-flake-1/C-008
+  **Runner samples read 2026-10-23:** facade shard 0, which holds this file, passed on the 72 MiB head's first run
+  (2026-10-22) and on main's run 39876158818 at 80 MiB after the merge; no refusal and no hang on the runner at either pool.
+  pins: spill-reach-fair-pool-flake-1/C-006
 - `test_h3_spill_matrix.py` — **H3-SPILL-1** the Never-OOM pins behind Round 3 (2026-09-05): the boundary-digest pin also compares two equal-cardinality frames with different content (`offset=1`), so a row-count digest cannot pass it.
   [docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md). Three
   families: a spilling operator spills (`spill_count > 0`) **and** its digest equals the
