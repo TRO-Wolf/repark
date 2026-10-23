@@ -107,6 +107,7 @@ def _cross_read_namespace(repark: ReparkSession, spark: Any, catalog: str, names
     assert_outcomes_expected(outcomes)
 
 
+@pytest.mark.timeout(600)
 def test_cross_read_glue_acceptance_tables() -> None:
     """Live Spark reads every Glue scratch acceptance table row-equal."""
     pytest.importorskip("pyspark")
@@ -125,6 +126,7 @@ def test_cross_read_glue_acceptance_tables() -> None:
         repark.stop()
 
 
+@pytest.mark.timeout(600)
 def test_cross_read_s3tables_acceptance_tables() -> None:
     """Live Spark reads every S3 Tables scratch acceptance table row-equal."""
     pytest.importorskip("pyspark")
