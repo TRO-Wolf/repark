@@ -1,0 +1,119 @@
+<title>Iceberg Status 2026-10-22</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f3f6f7;--fg:#16211f;--muted:#5b6b67;--line:#cfd9d6;--card:#fbfdfd;--accent:#0f6b7a;--ok:#2d6a3e;--warn:#9a6b00;--bad:#9c2a2a;--hold:#6b5b95;--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101817;--fg:#e4ecea;--muted:#9fb0ac;--line:#2e3d3a;--card:#17211f;--accent:#5fc3d2;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;--hold:#b3a4e0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101817;--fg:#e4ecea;--muted:#9fb0ac;--line:#2e3d3a;--card:#17211f;--accent:#5fc3d2;--ok:#7fc48f;--warn:#e0b84f;--bad:#e27f7f;--hold:#b3a4e0;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0;padding-block:24px 48px;padding-inline:16px}
+main{max-width:900px;margin:0 auto}
+h1{font-size:1.6rem;font-weight:600;margin:0 0 4px;text-wrap:balance}
+h2{font-size:1.05rem;font-weight:600;margin:28px 0 8px;letter-spacing:.01em}
+.sub{color:var(--muted);margin:0 0 20px}
+.lede{border-left:3px solid var(--accent);padding:4px 14px;margin:0 0 18px;background:var(--card)}
+code{font-family:var(--mono);font-size:.88em}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+td.n{font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+.wrap{overflow-x:auto;min-width:0}
+.tag{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.hold{color:var(--hold)}.acc{color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0 6px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 12px;min-width:0}
+.tile .k{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+.tile .v{font-size:1.15rem;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.tile .d{color:var(--muted);font-size:.82rem}
+ol,ul{padding-left:20px;margin:6px 0}
+li{margin:4px 0}
+footer{color:var(--muted);font-size:.85rem;margin-top:36px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+<main>
+<h1>Iceberg Status, 2026-10-22</h1>
+<p class="sub">Written 10:30 UTC on main <code>0512470d</code>, refreshed 15:10 UTC on main <code>dc462ccb</code>. This page replaces every earlier Iceberg status and plan page; the artifacts older than three days were closed out this morning and their copies stay under <code>docs/artifacts/</code>.</p>
+
+<p class="lede">Both Iceberg labels still read HARDENING, and the dates of record hold: v2 PRODUCTION on Tuesday 11-10, v3 core on Tuesday 11-17, both shipped by v1.5.6. Eleven of the thirteen closeout units are on main, pin K of U-9 among them since this afternoon, and the parity-live nightly has its two green mornings. Between main and the v2 label sit the zone seam at its verifier, two units not yet dispatched (GATE-RETIRE-1, U-11), the pins U and X wiring in #1070, and the label PR itself.</p>
+
+<div class="tiles">
+<div class="tile"><div class="k">v2 label PR</div><div class="v">Tue 11-10</div><div class="d">buffer 11-12</div></div>
+<div class="tile"><div class="k">v3 core label</div><div class="v">Tue 11-17</div><div class="d">buffer 11-19</div></div>
+<div class="tile"><div class="k">Closeout units on main</div><div class="v">11 of 13</div><div class="d">U-2 moved to 1.5.7 by ruling; U-9 pins U and X wait on #1070</div></div>
+<div class="tile"><div class="k">Parity-live mornings</div><div class="v">2 of 2</div><div class="d">10-21 and 10-22 green; P5 met</div></div>
+<div class="tile"><div class="k">Latest release</div><div class="v">v1.5.5</div><div class="d">PyPI 10-21, tag <code>7fb5f6b2</code></div></div>
+</div>
+
+<h2>The thirteen closeout units</h2>
+<div class="wrap"><table>
+<tr><th>Unit</th><th>What it closes</th><th>State</th><th>Landed as</th></tr>
+<tr><td class="n">U-1</td><td>ICE-TSNS-TYPE-PLANNER-1, one type planner keeps nanosecond digits (R-017)</td><td><span class="tag ok">merged</span></td><td class="n">#1082, 10-16</td></tr>
+<tr><td class="n">U-2</td><td>NS-ARRAY-FLOOR-1 and NS-NESTED-PANDAS-1 (R-020)</td><td><span class="tag hold">1.5.7</span> dated row under P6; #1047's corpus filed by #1119</td><td class="n">—</td></tr>
+<tr><td class="n">U-3</td><td>ICE-TSNS-FLOOR-DOORS-1, every staged door floors a nanosecond timestamp (R-009)</td><td><span class="tag ok">merged</span></td><td class="n">#1059, 10-14</td></tr>
+<tr><td class="n">U-4</td><td>R-012 on the U-1 head, with the ns truth-up</td><td><span class="tag warn">pending</span> gates the v3 label, not v2</td><td class="n">—</td></tr>
+<tr><td class="n">U-5</td><td>PA-LOCAL-FS-POLICY-1, one local-file policy for both SQL doors and <code>repark.sql()</code> (PA-01..04)</td><td><span class="tag ok">merged</span> after two fix rounds and a re-verifier</td><td class="n">#1075, 10-16</td></tr>
+<tr><td class="n">U-6</td><td>ICE-STRUCT-PAIRING-1, one rule pairs struct fields on every write door (R-016); the ruling-110 SET walk followed</td><td><span class="tag ok">merged</span></td><td class="n">#1062 10-15, #1083 10-16</td></tr>
+<tr><td class="n">U-7</td><td>WRITE-BODY-CARRIERS-1, a write body inside CTAS refuses at parse</td><td><span class="tag ok">merged</span></td><td class="n">#1057, 10-14</td></tr>
+<tr><td class="n">U-8</td><td>ICE-NTZ-NESTED-REFUSE-1, outside UTC every door refuses an instant for a nested microsecond NTZ leaf (R-011)</td><td><span class="tag ok">merged</span> after four fix rounds; 3168 cells, 360 move to refusal, listed over-refusal until GATE-RETIRE-1</td><td class="n">#1124, 10-21</td></tr>
+<tr><td class="n">U-9</td><td>ICE-INTEGRITY-PINS-1: pin K kill mid-write, pin U unknown-outcome drill, pin X cross-release</td><td><span class="tag ok">K merged</span> three Opus verifier rounds, last one PASS; U and X wait on #1070, which you wire</td><td class="n">#1142, 10-22</td></tr>
+<tr><td class="n">U-10</td><td>ICE-SPARK-CROSS-READ-1, Spark 4.1.2 reads what the acceptance scenarios write (12th leg)</td><td><span class="tag ok">merged</span></td><td class="n">#1056, 10-14</td></tr>
+<tr><td class="n">U-11</td><td>ICE-RESOURCE-BOUND-1 (PP-01, PP-02, PA-10, PA-11)</td><td><span class="tag warn">not dispatched</span> card and order on main since #1121</td><td class="n">—</td></tr>
+<tr><td class="n">U-12</td><td>ENC-1 residue rulings</td><td><span class="tag ok">items 2, 3, 4, 6 accepted</span> on main by #1120; items 1 and 5 are a dated carve-out under 121(b) on the v2 label, rebuilt in 1.5.7; #1071 stays parked</td><td class="n">#1120, 10-20</td></tr>
+<tr><td class="n">U-13</td><td>Truth-up and the two label PRs</td><td><span class="tag warn">not started</span> opens after U-11</td><td class="n">—</td></tr>
+</table></div>
+
+<h2>The zone pathway added on 10-20</h2>
+<p>On 10-20 you adopted the pathway that fixes the zone conversion at its root instead of gating symptoms at each write door. Its units sit on the v2 critical path ahead of U-9 and U-11.</p>
+<div class="wrap"><table>
+<tr><th>Unit</th><th>State</th><th>Notes</th></tr>
+<tr><td>PARITY-LIVE-RERECORD-1</td><td><span class="tag ok">merged</span> #1122</td><td>Recorder ran in a borrowed <code>local[2]</code> session; now a subprocess on <code>local[1]</code>. Nightly green 10-21, the first of the two P5 needs; the 10-22 run was still in progress at writing.</td></tr>
+<tr><td>EXPLAIN-DML-WRITE-1</td><td><span class="tag ok">merged</span> #1137</td><td>EXPLAIN ANALYZE text adopted, INSERT and MERGE refuse under both wrappers; P2 report #1138.</td></tr>
+<tr><td>ZONE-ORACLE-1</td><td><span class="tag ok">merged</span> #1128</td><td>Expression-level Spark oracle, 1,640 cells; the seam's red-first pin.</td></tr>
+<tr><td>ZONE-SEAM-1</td><td><span class="tag acc">at the verifier</span> PR #1139, head 58321e94</td><td>Steps 1 to 5 built; corpus on the head 1540 EQUAL, 90 DIFFERENT, 10 REFUSED, 0 ERROR, no cell leaves EQUAL. Two halts, both ruled: ZS-7 (three DST-edge cells belong to the shared instant kernel, carded as ZONE-HORIZON-INSTANT-1) and ZS-9 (the nested NTZ-to-TIMESTAMP store is three sites, so the seam lands with a plan-time refusal of that shape and 74 + 29 cells are listed over-refusal until WRITE-NTZ-TO-LTZ-NESTED-1). The build is complete and CI green; a fresh Opus verifier is on it; it merges only on a clean PASS and a never-worse census.</td></tr>
+<tr><td>GATE-RETIRE-1</td><td><span class="tag warn">next Opus unit</span></td><td>Retires the U-8 gate arms the seam makes redundant; the listed over-refusal counts come down here.</td></tr>
+<tr><td>MAP-COLUMN-PANIC-NATIVE-DOOR-1</td><td><span class="tag ok">merged</span> #1140</td><td>Landed after REPLACE-LINEAR-PIN-1 (#1148) re-pinned the runner's memory test on the replace operation's own growth with a same-mode warm-up; the bound, floor and depth are unchanged.</td></tr>
+</table></div>
+
+<h2>Path to the v2 label, in order</h2>
+<ol>
+<li><b>ZONE-SEAM-1</b> verifier PASS and merge, this week.</li>
+<li><b>GATE-RETIRE-1</b>, the single Opus lane, about 11-03.</li>
+<li><b>U-9</b>: pin K is on main; you wire #1070 so pins U and X run on the acceptance workflow.</li>
+<li><b>U-11</b> ICE-RESOURCE-BOUND-1, about 11-07 to 11-09.</li>
+<li><b>Parity-live</b>: both green mornings P5 needs are in hand (10-21, 10-22).</li>
+<li><b>U-13</b> truth-up and the v2 label PR on 11-10. Then U-4 with the ns truth-up, and the v3 core label on 11-17.</li>
+</ol>
+
+<h2>Three write-path units queued behind GATE-RETIRE-1</h2>
+<p>Each is a real product defect on main, carded this week, and each needs either its fix or a dated carve-out row before the v2 label. None has a date yet; the order is your pick. The crate-boundary evaluation of this afternoon (artifact VZ3s9CWz29UXKDMoDWpPJY) recommends option D for WRITE-SPINE-1, no new crate and no new edge, with its value-moving steps after the v2 label, and folds the third card below into it.</p>
+<ul>
+<li><b>ICE-HADOOP-HINT-WINDOW-1</b>, ruled 10-22 as a product fix: the path read walks past <code>version-hint.text</code> like Java's <code>HadoopTableOperations.refresh</code>. Until then ruling 83 stands and the registry row claims <code>register_table</code> only.</li>
+<li><b>ZONE-HORIZON-INSTANT-1</b>, ruled 10-22 under ZS-7: the shared DataFusion-Spark instant kernel is wrong at a DST edge, on main and head; three facade cells read honest DIFFERENT after the seam.</li>
+<li><b>WRITE-NTZ-TO-LTZ-NESTED-1</b>, carded in the seam under ZS-9: three store sites read a nested NTZ wall as UTC; 74 + 29 cells refuse by design until it lands.</li>
+</ul>
+
+<h2>Gate evidence this morning</h2>
+<div class="wrap"><table>
+<tr><th>Signal</th><th>Reading</th><th>Note</th></tr>
+<tr><td>CI on main</td><td class="ok">green</td><td>last four commits, <code>95628605</code> to <code>0512470d</code></td></tr>
+<tr><td>aws-acceptance</td><td class="ok">green</td><td>10-20, 10-21, 10-22 mornings</td></tr>
+<tr><td>parity-live nightly</td><td class="ok">2 of 2</td><td>red 10-17 to 10-20 on the recorder drift, green 10-21 and 10-22</td></tr>
+<tr><td>Fork nightly interop</td><td class="ok">65 of 65</td><td>10-18 on the pinned fork head <code>d80a2884</code>; the fork is off the critical path</td></tr>
+<tr><td>Fork security audit</td><td class="bad">red since 10-21</td><td>RUSTSEC-2026-0381 and 0382, the same two advisories RePark cleared with #1127; the fork needs the same lock bump, a clerk-grade PR</td></tr>
+<tr><td>Open RePark PRs</td><td class="n">13</td><td>one live (#1139), #1070 draft awaiting your wiring, dependabot #1129 untouched, the rest parked by the 10-20 triage</td></tr>
+</table></div>
+
+<h2>Running now</h2>
+<ul>
+<li><b>Opus lane:</b> the ZONE-SEAM-1 verifier on PR #1139.</li>
+<li><b>Sonnet lane:</b> SPILL-REACH-FAIR-POOL-FLAKE-1 step A, thirty runs alone and under shard load on the runner and locally; it stops at the measurement.</li>
+</ul>
+
+<h2>Your items</h2>
+<ol>
+<li>Wire #1070 now that K is on main, so pins U and X can be built.</li>
+<li>Rule on the crate-boundary evaluation: adopt option D with its sequencing, and whether WRITE-NTZ-TO-LTZ-NESTED-1 folds into its step 2.</li>
+<li>Pick the order of the three queued write-path units, or name the carve-out rows that let the v2 label go without them.</li>
+<li>Say whether the fork's audit lock bump may go to a clerk lane now or wait.</li>
+</ol>
+
+<footer>RePark Iceberg closeout. Sources of record: STATUS.md, the parity registry, the closeout plan and priorities pages under docs/artifacts, and the owner rulings of 2026-10-13 to 2026-10-22. Filed as <code>docs/artifacts/iceberg-status-2026-10-22.html</code>.</footer>
+</main>

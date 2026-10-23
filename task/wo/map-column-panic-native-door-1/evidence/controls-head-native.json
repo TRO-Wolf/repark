@@ -1,0 +1,37 @@
+{
+ "array_ctor": {
+  "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `array` on search path [`system`.`builtin`, `system`.`session`, `s"
+ },
+ "date_format_pattern": {
+  "rows": "[{'v': 'yyyy-MM-dd HH:mm:ss'}]",
+  "type": "string"
+ },
+ "decimal_literal": {
+  "rows": "[{'v': 2.5}]",
+  "type": "double"
+ },
+ "empty_map": {
+  "error": "AnalysisException: Error during planning: Function 'map' expected at least one argument but received 0"
+ },
+ "instant_literal": {
+  "rows": "[{'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)}]",
+  "type": "timestamp[us]"
+ },
+ "map_equality": {
+  "rows": "[{'v': False}]",
+  "type": "bool"
+ },
+ "size": {
+  "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `size` on search path [`system`.`builtin`, `system`.`session`, `sp"
+ },
+ "string_cast_of_instant": {
+  "rows": "[{'v': '2026-01-02T03:04:05.123456'}]",
+  "type": "string"
+ },
+ "to_json": {
+  "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `to_json` on search path [`system`.`builtin`, `system`.`session`, "
+ },
+ "year": {
+  "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `year` on search path [`system`.`builtin`, `system`.`session`, `sp"
+ }
+}

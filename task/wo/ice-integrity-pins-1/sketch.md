@@ -146,6 +146,19 @@ equality). It proves nothing about the real v1.5.4 wheel or about delete files; 
 
 ## 3. Pin K: kill between the data files and the commit
 
+**Built 2026-10-22 (pin K, local).** `crates/repark-spark/src/tests/kill_mid_write.rs` and
+`kill_mid_write_hold.rs`: the 18 cells of §3.3 green, 20 of 20 runs, four mutations red
+([the unit ledger](../../ledgers/staging/ice-integrity-pins-1-ledger.md)). Premises corrected on
+main `18626942` and fork `d80a2884`: the fork lines moved (`Transaction::commit` `:373`,
+`do_commit` `:495`, `update_table` call `:574`, reconcile `:424`); the `Catalog` trait gained
+`publish_create_table` and `publish_replace_table`, so the decorator forwards every method and
+follows `EncryptionGuardCatalog`; K-7 holds `publish_create_table`, the second hook point §7
+anticipated, and reads back as the created table, because the staged metadata file is the local
+commit (orchestrator ruling K-1, the local catalog only); `type=hadoop` is the memory catalog
+with Hadoop file names. Flagged for pin U, not acted on: the fork's `do_commit` already checks
+`rejected_attempt_landed` before re-basing (`mod.rs:497`), the first half of ruling 84's card.
+The live leg (§3.3, 12 cells) and pins U and X await #1070.
+
 ### 3.1 Where it sits today
 
 Every write door ends in one fork call, `Transaction::commit`
@@ -259,6 +272,20 @@ S3 Tables maintenance may commit in between (§7).
 
 ## 4. Pin U: the unknown commit outcome, live
 
+**Built 2026-10-22 (pin U, legs pending #1070).**
+- The offline twin is `crates/repark-spark/src/tests/commit_unknown_doors.rs` with
+  `commit_unknown_gate.rs`: the 24 cells of §4.5, green, and red under five mutants.
+- The live leg is `python/repark/tests/parity/test_aws_acceptance_commit_unknown.py`, with its
+  gate in `_acceptance_commit_gate.py`, its signer in `_acceptance_sigv4.py` and its resolver in
+  `_acceptance_commit_resolver.py`. The gate's and the resolver's AWS-free tests run on every pull
+  request.
+- One premise moved. Fork #368, carried by the pin `d80a2884`, turned the SDK retry off on both
+  commit calls, so the SDK re-send that §4.4's U-5 drilled no longer happens. Under the
+  orchestrator's ruling of 2026-10-22, U-5 asserts one commit request, and U-5r drills the fork's
+  own re-send after a throttle reply. That makes 96 statements.
+- Paths follow #1113 to `python/repark/tests/parity/`.
+- The [unit ledger](../../ledgers/staging/ice-integrity-pins-1-ledger.md) holds C-030 to C-041.
+
 ### 4.1 Where it sits today
 
 - **The fork decides the kind.** Glue: `map_glue_commit_sdk_error`
@@ -341,6 +368,14 @@ Each cell runs on Glue and S3 Tables, v2 and v3, for three doors: `INSERT … SE
 | U-4 absent, reads open | read it, do not forward, reset; forward reads | `CommitStateUnknownException`: the refresh shows the snapshot absent and the fork surfaces the original error | not committed; rows equal the pre-state |
 | U-5 landed, the SDK's resend forwarded | forward; reset its response; forward the SDK's resends and every read | succeeds or raises the class; either way rows exactly once | rows exactly once; at most one snapshot with the id |
 
+**2026-10-22, U-3's orphan check narrowed live (fix round 1, verifier S1-3).** The built leg U
+does not count U-3's orphans as pin K does. Its live check is `metadata=1 lists=1`: the held
+metadata file and the attempt's manifest list exist on storage. The data files and manifests
+are not counted, and ruling 82's ceiling (at most the files the crashed commit wrote) is not
+asserted live. The reasons: pyarrow cannot read the Avro manifest list, `register_table` is
+refused on S3 Tables (R126), and pin K counts the files and asserts the ceiling on the local
+catalog. Ledger C-044.
+
 **U-5's prediction, unmeasured.** The SDK resends the commit (M3). The resend carries the base
 version (Glue `VersionId`, the S3 Tables version token), so the service answers a conflict, which
 the fork maps to a retryable `CatalogCommitConflicts`. `Transaction::commit` then re-applies the
@@ -364,6 +399,17 @@ pins (PR-5A) cover it, named here and not run. Count: (5 + 2) × 3 doors × 2 fo
   or `None`) and the same resolution. U-5 has no offline twin: it is the SDK's behaviour.
 
 ## 5. Pin X: the previous release and the head read each other's tables
+
+**Built 2026-10-22 (pin X, live leg pending #1070).**
+- The previous release is **1.5.5** (the orchestrator's ruling, by ruling 81's checklist line),
+  hash-pinned in `python/repark/tests/parity/previous_release_requirements.txt`.
+- The runner is `_acceptance_cross_release_runner.py` and the driver is `_acceptance_cross_release.py`.
+- The live leg is `test_aws_acceptance_cross_release.py`, 40 cells.
+- The local control is `test_cross_release_local.py`: X-L reads 20 of 20 cells equal in both
+  directions, X-NS prints equal, and X-C0 and X-C1 run on every pull request.
+- The head still reports 1.5.5, so a side's identity is its version plus its install origin.
+- X-D's `total-records` counts data-file records under merge-on-read (1,050 against 900 rows
+  read), so §5.3 item 3 is asserted as the two sides agreeing.
 
 ### 5.1 Where it sits today
 

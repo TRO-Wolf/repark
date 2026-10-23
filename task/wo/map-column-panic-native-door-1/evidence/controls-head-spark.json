@@ -1,0 +1,41 @@
+{
+ "array_ctor": {
+  "rows": "[{'v': [1, 2]}]",
+  "type": "list<element: int32>"
+ },
+ "date_format_pattern": {
+  "rows": "[{'v': '2026-01-02 03:04:05'}]",
+  "type": "string"
+ },
+ "decimal_literal": {
+  "rows": "[{'v': Decimal('2.5')}]",
+  "type": "decimal128(2, 1)"
+ },
+ "empty_map": {
+  "rows": "[{'v': []}]",
+  "type": "map<null, null>"
+ },
+ "instant_literal": {
+  "rows": "[{'v': datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))}]",
+  "type": "timestamp[us, tz=UTC]"
+ },
+ "map_equality": {
+  "error": "AnalysisException: Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(map(a, 1) = map(b, 1))\" due "
+ },
+ "size": {
+  "rows": "[{'v': 2}]",
+  "type": "int32"
+ },
+ "string_cast_of_instant": {
+  "rows": "[{'v': '2026-01-02 03:04:05.123456'}]",
+  "type": "string"
+ },
+ "to_json": {
+  "rows": "[{'v': '{\"k\":1}'}]",
+  "type": "string"
+ },
+ "year": {
+  "rows": "[{'v': 2026}]",
+  "type": "int32"
+ }
+}

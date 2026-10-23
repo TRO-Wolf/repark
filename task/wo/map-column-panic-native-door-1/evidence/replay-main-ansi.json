@@ -1,0 +1,494 @@
+{
+ "door": "ansi",
+ "results": {
+  "corpus:map.col_inst.cast_ntz.inner": {
+   "error": "PANIC task 1 panicked with message \"list array\"",
+   "status": "error"
+  },
+  "corpus:map.col_inst.cast_string.inner": {
+   "error": "PANIC task 30 panicked with message \"list array\"",
+   "status": "error"
+  },
+  "corpus:map.col_inst.ccast_ntz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "timestamp[us]"
+   ]
+  },
+  "corpus:map.col_inst.ccast_string": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "2026-01-02T03:04:05.123456"
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "string"
+   ]
+  },
+  "corpus:map.col_inst.to_json": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `to_json` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "status": "error"
+  },
+  "corpus:map.col_wall.cast_ltz.inner": {
+   "error": "PANIC task 61 panicked with message \"list array\"",
+   "status": "error"
+  },
+  "corpus:map.col_wall.ccast_ltz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "timestamp[us, tz=UTC]"
+   ]
+  },
+  "corpus:map.inst.cast_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.inst.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02T03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, string_view>"
+   ]
+  },
+  "corpus:map.inst.date_format.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "yyyy-MM-dd HH:mm:ss"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "corpus:map.inst.to_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.wall.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02T03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, string_view>"
+   ]
+  },
+  "pin:array_value": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `array` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 20",
+   "status": "error"
+  },
+  "pin:cast_value": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:column_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "k0",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "k1",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "k2",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:column_value": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:column_value_one_row": {
+   "error": "PANIC task 105 panicked with message \"list array\"",
+   "status": "error"
+  },
+  "pin:create_map_unresolved": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `create_map` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "status": "error"
+  },
+  "pin:duplicate_key": {
+   "error": "exec: Execution error: map key must be unique, duplicate key found: a",
+   "status": "error"
+  },
+  "pin:duplicate_literal": {
+   "error": "exec: Execution error: map key must be unique, duplicate key found: a",
+   "status": "error"
+  },
+  "pin:empty_control": {
+   "error": "plan: Error during planning: Function 'map' expected at least one argument but received 0",
+   "status": "error"
+  },
+  "pin:function_value": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `year` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 20",
+   "status": "error"
+  },
+  "pin:int_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       0,
+       "k0"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       1,
+       "k1"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       2,
+       "k2"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<int32, string>"
+   ]
+  },
+  "pin:literal_control": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int64>"
+   ]
+  },
+  "pin:lookup": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:map_keys": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      "k0",
+      "b"
+     ]
+    ],
+    [
+     1,
+     [
+      "k1",
+      "b"
+     ]
+    ],
+    [
+     2,
+     [
+      "k2",
+      "b"
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "list<item: string>"
+   ]
+  },
+  "pin:map_value": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:map_values": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:ntz_cast_value": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:null_key_cast": {
+   "error": "exec: Execution error: map key cannot be null",
+   "status": "error"
+  },
+  "pin:null_key_column": {
+   "error": "exec: Execution error: map key cannot be null",
+   "status": "error"
+  },
+  "pin:null_key_literal": {
+   "error": "exec: Execution error: map key cannot be null",
+   "status": "error"
+  },
+  "pin:null_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:odd_arity_literal": {
+   "error": "plan: Error during planning: make_map requires an even number of arguments",
+   "status": "error"
+  },
+  "pin:odd_arity_one": {
+   "error": "plan: Error during planning: make_map requires an even number of arguments",
+   "status": "error"
+  },
+  "pin:odd_arity_three": {
+   "error": "plan: Error during planning: make_map requires an even number of arguments",
+   "status": "error"
+  },
+  "pin:ordering_refusal": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:partial_null_value": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:predicate": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:size": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `size` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "status": "error"
+  },
+  "pin:struct_value": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:timestamp_value": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:two_pairs": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:widen_bigint": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "pin:widen_decimal": {
+   "error": "exec: Execution error: map requires key and value lists to have the same length",
+   "status": "error"
+  },
+  "target:range_map": {
+   "error": "PANIC task 245 panicked with message \"list array\"",
+   "status": "error"
+  },
+  "target:select_1": {
+   "names": [
+    "one"
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int64"
+   ]
+  }
+ }
+}

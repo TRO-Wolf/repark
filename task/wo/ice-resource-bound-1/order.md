@@ -58,7 +58,10 @@ the bound is read from the session.
 
 ## 4. Steps
 
-0. **Measure first** (docs and a probe only, one commit). The sizes: PP-01 at 100k and 1M rows ×
+0. **Measure first** (docs and a probe only, one commit). The census row first (owner,
+   2026-10-22): for each path this order bounds, the doors that reach it and the doors that do
+   not, with Spark's behaviour at the bound on each; the hand-back ends with "doors I did not
+   touch, and why". Then the sizes: PP-01 at 100k and 1M rows ×
    8 columns, ordered and unordered tables, unpartitioned and 32 identity partitions, writers 1
    and 4, pool 32 and 128 MiB; PP-02 at 200k and 1M rows over 32 data files, match fractions 1,
    10 and 100 %, a NOT MATCHED BY SOURCE leg, the same pools and writers; PA-11 a large changelog

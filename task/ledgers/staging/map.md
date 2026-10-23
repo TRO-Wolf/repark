@@ -26,6 +26,53 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   trailing-semicolon mutant (C-014), the prepared name as written (C-015) and a dated correction
   of §4.1's dated-row split (225 rows cite 136, 125 cite 138), and the plan-first class on
   `repark.sql()` ruled as built (C-016).
+- [ice-integrity-pins-1-ledger.md](ice-integrity-pins-1-ledger.md) — **ICE-INTEGRITY-PINS-1
+  (U-9), pin K (2026-10-22, orchestrator rulings K-1 to K-4 under the owner's grant):** a
+  writer killed between its data files and its commit, local Rust pin, 18 cells (seven doors
+  on v2 and v3 plus two controls). Step 1 red first on main `18626942`: the decorator taken
+  away reds all 18, the hook forwarding before it holds reds the 12 K-1 to K-6 cells. Pins U
+  and X await #1070. `risk_tier: standard`. Branch `feat/ice-integrity-pins-1-k`.
+  Step 2 (2026-10-22): the decorator `HoldCatalog` and the child arm, 18 of 18 cells green;
+  C-001 to C-008 PROVEN.
+  Step 3 (2026-10-22): four mutations each red their cells (the decorator disabled 18 of 18);
+  20 of 20 runs in a row; C-009 and C-010 PROVEN.
+  Step 4 (2026-10-22): records (registry row ICE-LOCAL-COMMIT-POINT-1, production row K3's
+  dated line, the sketch's "built" line, the 1.5.6 notes); C-001 to C-011 PROVEN, C-012 and
+  C-013 (pins U and X) OPEN, awaiting #1070. Verifier pending.
+  Verifier round 1 (2026-10-22): FAIL (S1-1, four S2, six S3, a §7 halt on the `type=hadoop`
+  path read). Fix round 1 rows C-014 onward; C-014: the hold ends when the parent is gone.
+  C-015: the halt recorded, owner decision pending (card ICE-HADOOP-HINT-WINDOW-1); C-016 and
+  C-017: the registry row narrowed to `register_table`, without `type=memory`.
+  C-018: the 1.5.6 notes line says "before the metadata file is written".
+  C-019: K-5 pins the delete file's format per version.
+  C-020: C-001's SIGKILL wording made honest; `try_wait()` before the kill.
+  C-021 to C-025, the S3s: K-7 compares types, the K3 line narrowed, C-009 names M4, the replace
+  doors unpinned (OPEN, for pin U/X or a later card), live orphan deletion out of scope (REJECTED).
+  Verifier round 2 pending.
+  Verifier round 2 (2026-10-22): FAIL (S1-1, the deadline unpinned and the parent-check window;
+  S2-1, the release unobservable). Fix round 2 rows C-026 onward; C-026: the parent's pid passed
+  in the environment and the hold limit pinned (`kill_mid_write_release.rs`).
+  C-027: the hold writes a `released` file and the release pins assert it (F3, F5, F5b red).
+  Verifier round 3 pending.
+  Verifier round 3 (2026-10-22): PASS with one records S2. C-028 narrows C-027: the
+  parent-path exit code is unpinned, because nothing consumes an orphan's status.
+- [replace-linear-pin-1-ledger.md](replace-linear-pin-1-ledger.md) — **REPLACE-LINEAR-PIN-1
+  (2026-10-22, owner ruling "go with recommendations"):** the depth-40 `replace` memory pin
+  counted first-touch code pages of the native module, so it failed on #1140 and moved with the
+  runner. C-001 (PROVEN): on the runner the shift is `RssFile` inside the `_native` mapping, `RssAnon`
+  74 to 106 KB, two builds of one `.so` read 8.26 MB and 9.90 MB. C-002 (PROVEN): the child runs
+  the same mode at depth 1 before it reads the peak; local deltas 0.79 MB flat and 0.95 MB replace
+  against 4.85 MB and 7.78 MB without it. C-003 (PROVEN): bound, floor, depth and headroom unchanged.
+  `risk_tier: standard`. Branch `fix/replace-linear-pin-1`.
+- [spill-reach-fair-pool-flake-1-ledger.md](spill-reach-fair-pool-flake-1-ledger.md) — **SPILL-REACH-FAIR-POOL-FLAKE-1
+  (2026-10-22, owner rulings "Re run" and "go with your recommendations"):** the small-fair-pool join probe refused
+  `ExternalSorterMerge` on CI three times; the default pool of `test_t2_spill_reach.py` moves from 64M to 72M. C-001
+  (PROVEN): at 64M the probe refuses 0 of 30 alone and 4 of 67 loaded. C-002 (PROVEN): every refusal exceeds the bytes
+  the pool quoted; alone 48M refuses 20 of 20 and 56M 9 of 20. C-003 (PROVEN): the ordered sweep is clean at 72M, 80M
+  and 96M. C-004 (PROVEN): pooled 7 of 280 at 64M against 0 of 221 at 72M. C-005 (PROVEN): one knob, assertions
+  unchanged. C-006 (OPEN): the runner half was not measured, push denied. C-007 (PROVEN): the hangs, carded apart as
+  FAIR-POOL-HANG-1. C-008 (PROVEN, orchestrator ruling 2026-10-22): the default is 80M, not 72M, on the stress table's hang counts.
+  `risk_tier: standard`. Branch `fix/spill-reach-fair-pool-flake-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6

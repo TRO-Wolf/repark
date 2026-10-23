@@ -351,3 +351,78 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   spends under 0.1 s in the refusal and the rest building the `Column` with `|` on the Python
   door, which grows quadratically ([docs/perf/column-or-build-cost-2026-10-19.md](../docs/perf/column-or-build-cost-2026-10-19.md)).
   A suite floor is a product finding only once the phase that owns it is named.
+
+## 2026-10-22 — product fix rounds come from missed doors; census first, spine next
+
+- **DO open every write-path unit with a step-0 door-by-shape census measured against Spark before
+  the build.** *Why:* the product fix rounds of October (U-8 four, U-5 two, the seam's two halts)
+  were each a verifier finding a door or a shape the builder's copy of a rule had missed; the units
+  whose questions were ruled ahead (pin K, EXPLAIN-DML-WRITE-1) had zero or one. The verifier's
+  matrix becomes the builder's input. U-11's order is the first to carry it; the work-order
+  template names it.
+- **DO end every hand-back with "doors I did not touch, and why".** *Why:* the omission is written
+  down before a verifier finds it, and the orchestrator can card it the same day.
+- **DO treat a rule that needs more than one site as an architecture finding, not a bigger unit.**
+  *Why:* ruling ZS-9 found the nested NTZ store at three sites in a crate that cannot call the
+  seam's helper; the seam landed with a refusal and the structural fix is carded as WRITE-SPINE-1
+  ([task/roadmap/mid-term/write-spine-1-card-2026-10-22.md](roadmap/mid-term/write-spine-1-card-2026-10-22.md)),
+  the architecture unit after GATE-RETIRE-1, on the owner's word of 2026-10-22.
+
+
+## 2026-10-22 — two Opus 5.5 lanes at a time; re-evaluate by 2026-11-22
+
+- **DO run at most two Opus 5.5 builds concurrently, not one.** *Why:* the one-lane rule of
+  2026-09-26 came from the September usage spikes (eight Opus executors live at once), and the
+  10-20 plan kept one lane only because the 10-17 halt was lifted for one; the closeout dates then
+  slipped a day for every day that lane ran long. The owner relaxed it on 2026-10-22 ("allow for
+  2 lanes at a time for sure"). Both lanes keep the standing limits: `claude-opus-5-5` only, one
+  Rust suite per clone, inside the 26-core cap, timed measurements on a quiet box only, verifiers
+  and read-only evaluations count toward the two unless the owner says otherwise. Lane 2 opened
+  the same day with ICE-INTEGRITY-PINS-1 pins U and X beside the ZONE-SEAM-1 fix round.
+- **DO re-evaluate the lane count by 2026-11-22.** *Why:* the owner asked for a re-evaluation
+  within a month. Inputs: usage against the owner's ceiling, box contention (cost-gate failures or
+  load-induced test timeouts, as the seam verifier saw on 10-22), and whether the v2 and v3 label
+  dates moved. The CLAUDE.md capability-tier section is unchanged: Opus still only on the owner's
+  explicit word, which this ruling is.
+
+## 2026-10-22 — CI re-runs: a stall may be re-run once, a failed test waits for the owner
+
+- **DO re-run once, yourself, a CI job that was cancelled at its time cap with every test step
+  green up to the stall.** *Why:* a re-run is one `gh run rerun --failed` and needs no agent; the
+  stall is the hang class the FAIR-POOL-HANG-1 card tracks, so the stalled log is kept under the
+  unit's scratch and the card gains one dated line. Owner, 2026-10-22 ("adopt"), after a builder
+  re-ran a hung facade shard on its own.
+- **DO NOT re-run a job with a failed test without the owner's dated word, and never from an
+  agent.** *Why:* a re-run can hide a real flake behind a green check; the orchestrator reads the
+  failed job's log first and reports the test and the assertion, as it did for #1158's wall-clock
+  pin the same evening.
+
+## 2026-10-23 — nanosecond rules live in the plan-time conform stage, not in another door gate
+
+- **DO treat every nanosecond write defect as a missed feed of one rule, not as a new unit.** *Why:*
+  R-009, R-017, R-019, R-020, R-024 and the ZONE-SEAM-1 round-2 S1-3 are the same shape: Spark's
+  nanosecond floor or the nanosecond-leaf refusal copied per door, and a feed shape one copy missed
+  (the partitioned insert, the encoded source, the pandas frame). The owner ruled on 2026-10-23
+  ("rule it"): the floor and the refusal are rules of the WRITE-SPINE-1 conform stage beside the zone
+  rule; no nanosecond fix unit opens before the spine; U-2 and R-024 stay in 1.5.7; the nanosecond
+  leaf keeps its refusal on every door until then (S1-3: keep refusing).
+- **DO keep Spark semantics out of the fork, and put one fail-closed invariant in it.** *Why:* the
+  format crate receives plans already in table types (the Sail reading, crate-boundary evaluation of
+  2026-10-22); the one thing the fork can own is refusing an Arrow unit that is not the column's unit
+  at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CLOSED-1.
+
+## 2026-10-23 — two verifiers on every product PR: Opus and Muse MAX, merge on the union
+
+- **DO run a Muse 1.3 MAX verifier beside the Opus verifier on every product PR, from the same
+  brief and the same head, and merge only when both PASS with no S1.** *Why:* the calibration of
+  2026-10-22 ran Muse MAX against the ZONE-SEAM-1 round-1 brief at the head where Opus had found two
+  S1 classes. Muse found half of one class and missed the other, then found two silent wrong values
+  in the plain-UPDATE exemption that two Opus rounds had walked past; the orchestrator reproduced
+  both against live Spark. Neither verifier alone was sufficient; together they cost nothing extra
+  on the Claude meter. Owner, 2026-10-23 ("Standing").
+- **DO verify a verifier's finding before it becomes a fix round.** *Why:* cheaper critics have
+  fabricated paths before (the 2026-09-27 cases); the orchestrator checks every cited path and
+  reproduces at least one value with the finder's own driver, as it did for the exemption hole.
+- **DO NOT route this repository through the Codex CLI's Sol models.** *Why:* two 2026-10-22 runs
+  of GPT-6.1 Sol at xhigh ended in OpenAI's safety filter on the repository's own content, once on
+  a rephrased brief; no hand-back either time.

@@ -1,0 +1,43 @@
+# Mutation check, not committed (2026-10-22, head of fix/map-column-panic-native-door-1): the conftest.py line set to
+#   os.environ.setdefault("REPARK_PANIC_FATAL", "0")
+# The pin file probes the test-only method-only _native.__panic_probe__('method') (MAP-COLUMN-PANIC-NATIVE-DOOR-1). The order pin and the
+# inheriting child leg go red: 2 failed, 1 passed. The cleared-flag leg stays green, as it must.
+# command: pytest python/repark/tests/session/test_panic_fatal_suite_1.py -v --tb=short
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- .venv/bin/python3
+rootdir: python/repark
+configfile: pyproject.toml
+plugins: timeout-2.4.0, xdist-3.8.0
+timeout: 1200.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 3 items
+
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed FAILED [ 33%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_keeps_its_message_when_the_flag_is_cleared[method] PASSED [ 66%]
+python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[method] FAILED [100%]
+
+=================================== FAILURES ===================================
+_________ test_the_native_module_initialised_with_the_suite_flag_armed _________
+python/repark/tests/session/test_panic_fatal_suite_1.py:72: in test_the_native_module_initialised_with_the_suite_flag_armed
+    assert os.environ.get(_VARIABLE) == "1"
+E   AssertionError: assert '0' == '1'
+E     
+E     - 1
+E     + 0
+_ test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[method] _
+python/repark/tests/session/test_panic_fatal_suite_1.py:93: in test_the_known_panic_ends_a_child_that_inherits_the_suite_environment
+    assert completed.returncode != 0, text
+E   AssertionError: child-caught repark internal error in PanicProbe.method: repark panic probe (a Rust panic was caught at the Python boundary; this is a bug — please report it)
+E     
+E     thread '<unnamed>' (378082) panicked at crates/repark-python/src/panic_probe.rs:13:5:
+E     repark panic probe
+E     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+E     
+E   assert 0 != 0
+E    +  where 0 = CompletedProcess(args=['.venv/bin/python3', '-c', "\nfrom repark import _native\n\ntry:\n    _native.__panic_probe__('method')\nexcept Exception as error:\n    print('child-caught', error)\nelse:\n    print('child-survived')\n"], returncode=0, stdout='child-caught repark internal error in PanicProbe.method: repark panic probe (a Rust panic was caught at the Python boundary; this is a bug — please report it)\n', stderr="\nthread '<unnamed>' (378082) panicked at crates/repark-python/src/panic_probe.rs:13:5:\nrepark panic probe\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n").returncode
+=========================== short test summary info ============================
+FAILED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_native_module_initialised_with_the_suite_flag_armed
+FAILED python/repark/tests/session/test_panic_fatal_suite_1.py::test_the_known_panic_ends_a_child_that_inherits_the_suite_environment[method]
+========================= 2 failed, 1 passed in 0.70s ==========================

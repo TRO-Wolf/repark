@@ -1,0 +1,1071 @@
+{
+ "door": "ansi",
+ "results": {
+  "corpus:map.col_inst.cast_ntz.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, timestamp[us]>"
+   ]
+  },
+  "corpus:map.col_inst.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02T03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, string_view>"
+   ]
+  },
+  "corpus:map.col_inst.ccast_ntz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "timestamp[us]"
+   ]
+  },
+  "corpus:map.col_inst.ccast_string": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "2026-01-02T03:04:05.123456"
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "string"
+   ]
+  },
+  "corpus:map.col_inst.to_json": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `to_json` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "status": "error"
+  },
+  "corpus:map.col_wall.cast_ltz.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, timestamp[us]>"
+   ]
+  },
+  "corpus:map.col_wall.ccast_ltz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "timestamp[us, tz=UTC]"
+   ]
+  },
+  "corpus:map.inst.cast_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.inst.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02T03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, string_view>"
+   ]
+  },
+  "corpus:map.inst.date_format.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "yyyy-MM-dd HH:mm:ss"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "corpus:map.inst.to_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.wall.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02T03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, string_view>"
+   ]
+  },
+  "pin:array_value": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `array` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 20",
+   "status": "error"
+  },
+  "pin:cast_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int64>"
+   ]
+  },
+  "pin:column_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "k0",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "k1",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "k2",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:column_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:column_value_one_row": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:create_map_unresolved": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `create_map` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "status": "error"
+  },
+  "pin:duplicate_key": {
+   "error": "exec: Execution error: [DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505",
+   "status": "error"
+  },
+  "pin:duplicate_literal": {
+   "error": "exec: Execution error: [DUPLICATED_MAP_KEY] Duplicate map key a was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505",
+   "status": "error"
+  },
+  "pin:empty_control": {
+   "error": "plan: Error during planning: Function 'map' expected at least one argument but received 0",
+   "status": "error"
+  },
+  "pin:function_value": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `year` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 20",
+   "status": "error"
+  },
+  "pin:int_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       0,
+       "k0"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       1,
+       "k1"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       2,
+       "k2"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<int32, string>"
+   ]
+  },
+  "pin:literal_control": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int64>"
+   ]
+  },
+  "pin:lookup": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "int32"
+   ]
+  },
+  "pin:map_keys": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      "k0",
+      "b"
+     ]
+    ],
+    [
+     1,
+     [
+      "k1",
+      "b"
+     ]
+    ],
+    [
+     2,
+     [
+      "k2",
+      "b"
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "list<item: string>"
+   ]
+  },
+  "pin:map_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       [
+        [
+         "b",
+         0
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       [
+        [
+         "b",
+         1
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       [
+        [
+         "b",
+         2
+        ]
+       ]
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, map<string, int32>>"
+   ]
+  },
+  "pin:map_values": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      0,
+      1
+     ]
+    ],
+    [
+     1,
+     [
+      1,
+      2
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      3
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "list<item: int32>"
+   ]
+  },
+  "pin:ntz_cast_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 3, 3, 4, 5, 123456)"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 4, 3, 4, 5, 123456)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, timestamp[us]>"
+   ]
+  },
+  "pin:null_key_cast": {
+   "error": "exec: Execution error: [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "status": "error"
+  },
+  "pin:null_key_column": {
+   "error": "exec: Execution error: [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "status": "error"
+  },
+  "pin:null_key_literal": {
+   "error": "exec: Execution error: [NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E",
+   "status": "error"
+  },
+  "pin:null_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:odd_arity_literal": {
+   "error": "plan: Error during planning: make_map requires an even number of arguments",
+   "status": "error"
+  },
+  "pin:odd_arity_one": {
+   "error": "plan: Error during planning: make_map requires an even number of arguments",
+   "status": "error"
+  },
+  "pin:odd_arity_three": {
+   "error": "plan: Error during planning: make_map requires an even number of arguments",
+   "status": "error"
+  },
+  "pin:ordering_refusal": {
+   "names": [
+    "id"
+   ],
+   "rows": [],
+   "status": "ok",
+   "types": [
+    "int32"
+   ]
+  },
+  "pin:partial_null_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ],
+      [
+       "b",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       null
+      ],
+      [
+       "b",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:predicate": {
+   "names": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32"
+   ]
+  },
+  "pin:size": {
+   "error": "plan: [UNRESOLVED_ROUTINE] Cannot resolve routine `size` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "status": "error"
+  },
+  "pin:struct_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       {
+        "x": 0,
+        "y": "k0"
+       }
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       {
+        "x": 1,
+        "y": "k1"
+       }
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       {
+        "x": 2,
+        "y": "k2"
+       }
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, struct<x: int32, y: string>>"
+   ]
+  },
+  "pin:timestamp_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 3, 3, 4, 5, 123456)"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       "datetime.datetime(2026, 1, 4, 3, 4, 5, 123456)"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, timestamp[us]>"
+   ]
+  },
+  "pin:two_pairs": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ],
+      [
+       "b",
+       1
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       3
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:widen_bigint": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       0
+      ],
+      [
+       "b",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int64>"
+   ]
+  },
+  "pin:widen_decimal": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       "0.0"
+      ],
+      [
+       "b",
+       "2.5"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       "1.0"
+      ],
+      [
+       "b",
+       "2.5"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       "2.0"
+      ],
+      [
+       "b",
+       "2.5"
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, double>"
+   ]
+  },
+  "target:range_map": {
+   "names": [
+    "m"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "a",
+       0
+      ]
+     ]
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "map<string, int64>"
+   ]
+  },
+  "target:select_1": {
+   "names": [
+    "one"
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "status": "ok",
+   "types": [
+    "int64"
+   ]
+  }
+ }
+}

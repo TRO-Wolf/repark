@@ -1,0 +1,169 @@
+diff --git a/.github/workflows/smoke.yml b/.github/workflows/smoke.yml
+index 603ab84e7..2dc5576fd 100644
+--- a/.github/workflows/smoke.yml
++++ b/.github/workflows/smoke.yml
+@@ -102,6 +102,7 @@ jobs:
+         env:
+           SHARD: ${{ matrix.shard }}
+         run: |
++          if [ "$SHARD" != "0" ]; then echo "diagnostic branch: shard $SHARD skipped"; exit 0; fi
+           python3 -m venv /tmp/wheeltest
+           /tmp/wheeltest/bin/pip install --upgrade pip
+           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
+@@ -111,7 +112,36 @@ jobs:
+             /\/test_deep_filter_chain_crash_1\.py$/ { if (s == 5) print; next }
+             /\/test_ice_tsns_type_planner_1\.py$/ { if (s == 6) print; next }
+             { n++; if (n % 4 == s) print }')
+-          /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --dist loadgroup --maxschedchunk=8 --durations=25
++          PY=/tmp/wheeltest/bin/python
++          T=python/repark/tests/perf/test_t2_spill_reach.py
++          STEP_START=$(date +%s)
++          export SPILLDIAG_FILE="$RUNNER_TEMP/spilldiag.jsonl"
++          : > "$SPILLDIAG_FILE"
++          echo "wheel sha256: $(sha256sum "$WHEEL" | cut -c1-16)"
++          echo "native sha256: $(sha256sum /tmp/wheeltest/lib/python3.12/site-packages/repark/_native*.so | cut -c1-16)"
++          echo "nproc: $(nproc)"; free -m; cat /proc/loadavg
++          for i in $(seq 1 30); do
++            for t in test_sort_merge_join_spills_under_small_fair_pool test_distinct_spills_under_small_fair_pool; do
++              rc=0
++              SPILLDIAG_LABEL="alone-$i" $PY -m pytest "$T::$t" -q --timeout=300 > "$RUNNER_TEMP/alone.out" 2>&1 || rc=$?
++              echo "alone $i $t rc=$rc loadavg=$(cut -d' ' -f1-3 /proc/loadavg)"
++              if [ "$rc" != "0" ]; then tail -40 "$RUNNER_TEMP/alone.out"; fi
++            done
++          done
++          echo "alone phase done at +$(( $(date +%s) - STEP_START ))s"
++          i=0
++          while [ "$i" -lt 30 ] && [ $(( $(date +%s) - STEP_START )) -lt 1900 ]; do
++            i=$((i + 1))
++            rc=0
++            SPILLDIAG_LABEL="loaded-$i" $PY -m pytest $FILES -q -n 4 --dist loadgroup --maxschedchunk=8 --durations=25 --timeout=300 > "$RUNNER_TEMP/loaded.out" 2>&1 || rc=$?
++            echo "loaded $i rc=$rc at +$(( $(date +%s) - STEP_START ))s loadavg=$(cut -d' ' -f1-3 /proc/loadavg) $(tail -1 "$RUNNER_TEMP/loaded.out")"
++            if [ "$rc" != "0" ]; then grep -E "^(FAILED|ERROR)" "$RUNNER_TEMP/loaded.out" | head -20; fi
++          done
++          echo "loaded phase done: $i repeats at +$(( $(date +%s) - STEP_START ))s"
++          echo "==== SPILLDIAG RECORDS ===="
++          cat "$SPILLDIAG_FILE"
++          echo "==== END SPILLDIAG RECORDS ===="
++          exit 0
+ 
+   dbt:
+     name: dbt-adapter tests
+diff --git a/python/repark/tests/perf/test_t2_spill_reach.py b/python/repark/tests/perf/test_t2_spill_reach.py
+index 4f993798c..05734aa37 100644
+--- a/python/repark/tests/perf/test_t2_spill_reach.py
++++ b/python/repark/tests/perf/test_t2_spill_reach.py
+@@ -7,7 +7,11 @@ is the assertion that has teeth; hash-join and ``array_agg`` are pinned AS failu
+ 
+ from __future__ import annotations
+ 
++import json
++import os
+ import re
++import time
++import warnings
+ 
+ import pytest
+ 
+@@ -54,6 +58,84 @@ def _explain_analyze(spark: ReparkSession, sql: str) -> str:
+     return "\n".join(str(row) for row in rows)
+ 
+ 
++_OPERATOR_METRICS = re.compile(r"(\w+Exec): .*?metrics=\[([^\]]*)\]")
++
++
++def _operator_rows(plan_text: str) -> list[list[object]]:
++    rows: list[list[object]] = []
++    for match in _OPERATOR_METRICS.finditer(plan_text):
++        metrics = match.group(2)
++        spill = re.search(r"spill_count=(\d+)", metrics)
++        if spill is None:
++            continue
++        spilled = re.search(r"spilled_bytes=([\d.]+ \w+)", metrics)
++        peak = re.search(r"peak_mem_used=([\d.]+ ?\w*)", metrics)
++        rows.append(
++            [
++                match.group(1),
++                int(spill.group(1)),
++                spilled.group(1) if spilled else None,
++                peak.group(1) if peak else None,
++            ]
++        )
++    return rows
++
++
++def _status_kb(field: str) -> int:
++    with open("/proc/self/status") as handle:
++        for line in handle:
++            if line.startswith(field + ":"):
++                return int(line.split()[1])
++    return -1
++
++
++def _emit_diag(record: dict[str, object]) -> None:
++    line = "SPILLDIAG " + json.dumps(record, sort_keys=True)
++    warnings.warn(line, stacklevel=2)
++    target = os.environ.get("SPILLDIAG_FILE")
++    if target:
++        with open(target, "a") as handle:
++            handle.write(line + "\n")
++
++
++def _diag_explain(spark: ReparkSession, sql: str) -> str:
++    test = os.environ.get("PYTEST_CURRENT_TEST", "").split("::")[-1].split(" ")[0]
++    started = time.monotonic()
++    base = {
++        "test": test,
++        "worker": os.environ.get("PYTEST_XDIST_WORKER", "main"),
++        "label": os.environ.get("SPILLDIAG_LABEL", ""),
++        "pid": os.getpid(),
++        "loadavg": open("/proc/loadavg").read().split()[:3],
++        "hwm_before_kb": _status_kb("VmHWM"),
++    }
++    try:
++        text = _explain_analyze(spark, sql)
++    except Exception as error:
++        _emit_diag(
++            {
++                **base,
++                "outcome": "refused",
++                "seconds": round(time.monotonic() - started, 3),
++                "hwm_after_kb": _status_kb("VmHWM"),
++                "error": str(error)[:3000],
++            }
++        )
++        raise
++    rows = _operator_rows(text)
++    _emit_diag(
++        {
++            **base,
++            "outcome": "pass" if _max_spill_count(text) > 0 else "no_spill",
++            "seconds": round(time.monotonic() - started, 3),
++            "hwm_after_kb": _status_kb("VmHWM"),
++            "max_spill": _max_spill_count(text),
++            "operators": rows,
++        }
++    )
++    return text
++
++
+ _SPILL_COUNT = re.compile(r"spill_count=(\d+)")
+ 
+ 
+@@ -131,7 +213,7 @@ def test_grouping_sets_spills_under_small_fair_pool() -> None:
+ def test_distinct_spills_under_small_fair_pool() -> None:
+     spark = _small_fair_session()
+     _register_series(spark, "series", 400_000)
+-    text = _explain_analyze(
++    text = _diag_explain(
+         spark,
+         "SELECT DISTINCT md5(cast(id AS string)) FROM series",
+     )
+@@ -144,7 +226,7 @@ def test_sort_merge_join_spills_under_small_fair_pool() -> None:
+     _register_series(spark, "left_s", 400_000)
+     _register_series(spark, "right_s", 400_000)
+     # Join on md5 so inputs are not pre-sorted (range is already ordered by id).
+-    text = _explain_analyze(
++    text = _diag_explain(
+         spark,
+         "SELECT l.h FROM "
+         "(SELECT md5(cast(id AS string)) AS h FROM left_s) l "

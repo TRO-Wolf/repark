@@ -1,0 +1,9 @@
+pool	test	records	pass	refused	no_spill	spill_count_of_passes(min/med/max)
+64M	test_sort_merge_join_spills_under_small_fair_pool	184	181	3	0	14/20/50
+64M	test_distinct_spills_under_small_fair_pool	184	184	0	0	8/10.0/11
+72M	test_sort_merge_join_spills_under_small_fair_pool	191	191	0	0	13/15/17
+72M	test_distinct_spills_under_small_fair_pool	191	191	0	0	7/8/10
+80M	test_sort_merge_join_spills_under_small_fair_pool	199	199	0	0	12/13/14
+80M	test_distinct_spills_under_small_fair_pool	199	199	0	0	6/8/8
+96M	test_sort_merge_join_spills_under_small_fair_pool	200	200	0	0	10/10.0/11
+96M	test_distinct_spills_under_small_fair_pool	200	200	0	0	6/8.0/8

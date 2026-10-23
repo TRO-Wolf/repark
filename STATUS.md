@@ -11,9 +11,9 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.6 (in flight):** ICE-STRUCT-PAIRING-1 closes R-016, R-021, R-022 on its branch: Spark's struct pairing on every write door. [Notes draft](task/roadmap/mid-term/v1-5-6-release-notes-draft.md).
+**v1.5.6 (in flight):** after the tag: U-8 (R-011 refuses outside UTC), EXPLAIN-DML-WRITE-1, the map-panic fixes, pin K; the v2 and v3 labels. [Notes draft](task/roadmap/mid-term/v1-5-6-release-notes-draft.md).
 
-**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (pandas and polars nanosecond frames enter as floored microseconds, R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (fresh 2026-10-13 run on release build `293896ce`). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md).
+**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (2026-10-13 run on `293896ce`). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md). The re-tag also ships U-1, U-3, U-5, U-6, U-7 (reconciled 2026-10-22).
 
 **v1.5.4 (2026-10-10):** R-007, ENC-1, CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
 

@@ -1,0 +1,545 @@
+{
+ "door": "native",
+ "results": {
+  "corpus:map.col_inst.cast_ntz.inner": {
+   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+   "sql": "SELECT map('k', CAST(c_inst AS TIMESTAMP_NTZ)) AS v FROM zone_oracle_1_one_row",
+   "status": "error"
+  },
+  "corpus:map.col_inst.cast_string.inner": {
+   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+   "sql": "SELECT map('k', CAST(c_inst AS STRING)) AS v FROM zone_oracle_1_one_row",
+   "status": "error"
+  },
+  "corpus:map.col_inst.ccast_ntz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456)"
+    ]
+   ],
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, TIMESTAMP_NTZ>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "status": "ok",
+   "types": [
+    "timestamp[us]"
+   ]
+  },
+  "corpus:map.col_inst.ccast_string": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "2026-01-02T03:04:05.123456"
+    ]
+   ],
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_inst) AS MAP<STRING, STRING>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "status": "ok",
+   "types": [
+    "string"
+   ]
+  },
+  "corpus:map.col_inst.to_json": {
+   "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `to_json` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "sql": "SELECT to_json(map('k', c_inst)) AS v FROM zone_oracle_1_one_row",
+   "status": "error"
+  },
+  "corpus:map.col_wall.cast_ltz.inner": {
+   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+   "sql": "SELECT map('k', CAST(c_wall AS TIMESTAMP)) AS v FROM zone_oracle_1_one_row",
+   "status": "error"
+  },
+  "corpus:map.col_wall.ccast_ltz": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     "datetime.datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=zoneinfo.ZoneInfo(key='UTC'))"
+    ]
+   ],
+   "sql": "SELECT c0['k'] AS v FROM (SELECT CAST(map('k', c_wall) AS MAP<STRING, TIMESTAMP>) AS c0 FROM zone_oracle_1_one_row) q0",
+   "status": "ok",
+   "types": [
+    "timestamp[us, tz=UTC]"
+   ]
+  },
+  "corpus:map.inst.cast_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS DATE)) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.inst.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02T03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(TIMESTAMP '2026-01-02 03:04:05.123456+00:00' AS STRING)) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "corpus:map.inst.date_format.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "yyyy-MM-dd HH:mm:ss"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', date_format(TIMESTAMP '2026-01-02 03:04:05.123456+00:00', 'yyyy-MM-dd HH:mm:ss')) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "corpus:map.inst.to_date.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "datetime.date(2026, 1, 2)"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', to_date(TIMESTAMP '2026-01-02 03:04:05.123456+00:00')) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, date32[day]>"
+   ]
+  },
+  "corpus:map.wall.cast_string.inner": {
+   "names": [
+    "v"
+   ],
+   "rows": [
+    [
+     [
+      [
+       "k",
+       "2026-01-02T03:04:05.123456"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT map('k', CAST(TIMESTAMP_NTZ '2026-01-02 03:04:05.123456' AS STRING)) AS v",
+   "status": "ok",
+   "types": [
+    "map<string, string>"
+   ]
+  },
+  "pin:array_value": {
+   "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `array` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 20",
+   "sql": "SELECT id, map('a', array(id, id + 1)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:cast_value": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', CAST(id AS BIGINT)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:column_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "k0",
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "k1",
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "k2",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map(k, id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:column_value": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:column_value_one_row": {
+   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+   "sql": "SELECT id, map('a', id) AS m FROM map_column_panic_1_src WHERE id = 1",
+   "status": "error"
+  },
+  "pin:create_map_unresolved": {
+   "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `create_map` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "sql": "SELECT id, create_map('a', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:duplicate_key": {
+   "error": "PySparkException: Execution error: map key must be unique, duplicate key found: a",
+   "sql": "SELECT id, map('a', id, 'a', id + 1) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:duplicate_literal": {
+   "error": "PySparkException: Execution error: map key must be unique, duplicate key found: a",
+   "sql": "SELECT map('a', 1, 'a', 2) AS m",
+   "status": "error"
+  },
+  "pin:empty_control": {
+   "error": "AnalysisException: Error during planning: Function 'map' expected at least one argument but received 0",
+   "sql": "SELECT id, map() AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:function_value": {
+   "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `year` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 20",
+   "sql": "SELECT id, map('a', year(ts)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:int_key": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       0,
+       "k0"
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       1,
+       "k1"
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       2,
+       "k2"
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map(id, k) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<int32, string>"
+   ]
+  },
+  "pin:literal_control": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       1
+      ],
+      [
+       "b",
+       2
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', 1, 'b', 2) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int64>"
+   ]
+  },
+  "pin:lookup": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', id)['a'] AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:map_keys": {
+   "names": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      "k0",
+      "b"
+     ]
+    ],
+    [
+     1,
+     [
+      "k1",
+      "b"
+     ]
+    ],
+    [
+     2,
+     [
+      "k2",
+      "b"
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map_keys(map(k, id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "list<item: string>"
+   ]
+  },
+  "pin:map_value": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', map('b', id)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:map_values": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map_values(map('a', id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:ntz_cast_value": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', CAST(ts AS TIMESTAMP_NTZ)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:null_key_cast": {
+   "error": "PySparkException: Execution error: map key cannot be null",
+   "sql": "SELECT id, map(CAST(NULL AS STRING), id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:null_key_column": {
+   "error": "PySparkException: Execution error: map key cannot be null",
+   "sql": "SELECT id, map(nk, id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:null_key_literal": {
+   "error": "PySparkException: Execution error: map key cannot be null",
+   "sql": "SELECT map(NULL, 1) AS m",
+   "status": "error"
+  },
+  "pin:null_value": {
+   "names": [
+    "id",
+    "m"
+   ],
+   "rows": [
+    [
+     0,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       "a",
+       null
+      ]
+     ]
+    ]
+   ],
+   "sql": "SELECT id, map('a', nv) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "ok",
+   "types": [
+    "int32",
+    "map<string, int32>"
+   ]
+  },
+  "pin:odd_arity_literal": {
+   "error": "AnalysisException: Error during planning: make_map requires an even number of arguments",
+   "sql": "SELECT map('a', 1, 'b') AS m",
+   "status": "error"
+  },
+  "pin:odd_arity_one": {
+   "error": "AnalysisException: Error during planning: make_map requires an even number of arguments",
+   "sql": "SELECT id, map('a') AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:odd_arity_three": {
+   "error": "AnalysisException: Error during planning: make_map requires an even number of arguments",
+   "sql": "SELECT id, map('a', id, 'b') AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:ordering_refusal": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id FROM map_column_panic_1_src WHERE map('a', id) = map('b', id)",
+   "status": "error"
+  },
+  "pin:partial_null_value": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', mid, 'b', id) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:predicate": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id FROM map_column_panic_1_src WHERE map('a', id)['a'] = 1",
+   "status": "error"
+  },
+  "pin:size": {
+   "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `size` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11",
+   "sql": "SELECT id, size(map('a', id, 'b', id + 1)) AS v FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:struct_value": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', named_struct('x', id, 'y', k)) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:timestamp_value": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', ts) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:two_pairs": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', id, 'b', id + 1) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:widen_bigint": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', id, 'b', big) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "pin:widen_decimal": {
+   "error": "PySparkException: Execution error: map requires key and value lists to have the same length",
+   "sql": "SELECT id, map('a', id, 'b', 2.5) AS m FROM map_column_panic_1_src ORDER BY id",
+   "status": "error"
+  },
+  "target:range_map": {
+   "error": "PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: list array (a Rust panic was caught at the Python boundary; this is a bug \u2014 please report it)",
+   "sql": "SELECT map('a', id) AS m FROM range(1)",
+   "status": "error"
+  },
+  "target:select_1": {
+   "names": [
+    "one"
+   ],
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "sql": "SELECT 1 AS one",
+   "status": "ok",
+   "types": [
+    "int64"
+   ]
+  }
+ },
+ "views": {
+  "pin": "inlined",
+  "zone": "inlined"
+ }
+}

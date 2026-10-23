@@ -44,6 +44,8 @@ mod catalog_ops;
 mod collation;
 mod column_comment_ddl;
 mod column_move;
+mod commit_unknown_doors;
+mod commit_unknown_gate;
 mod count_fold;
 mod create_format_version_one;
 mod create_table;
@@ -74,6 +76,12 @@ mod insert_arity;
 mod insert_overwrite;
 mod join_condition_refusals;
 mod join_null_keys;
+#[cfg(unix)]
+mod kill_mid_write;
+#[cfg(unix)]
+mod kill_mid_write_hold;
+#[cfg(unix)]
+mod kill_mid_write_release;
 mod lambda_door;
 mod list_null_compound;
 mod local_fs_ddl;
