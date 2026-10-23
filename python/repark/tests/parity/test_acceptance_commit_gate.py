@@ -329,9 +329,7 @@ def test_glue_refuses_another_database_and_every_delete(upstream: FakeUpstream) 
     with gate_for(GLUE, upstream) as gate:
         refused = [
             glue_call(gate, "UpdateTable", glue_commit_body("example_silver")),
-            glue_call(
-                gate, "CreateTable", {"DatabaseName": "other", "TableInput": {"Name": "t"}}
-            ),
+            glue_call(gate, "CreateTable", {"DatabaseName": "other", "TableInput": {"Name": "t"}}),
             glue_call(gate, "CreateDatabase", {"DatabaseInput": {"Name": "other"}}),
             glue_call(gate, "DeleteTable", {"DatabaseName": NAMESPACE, "Name": "t"}),
         ]
