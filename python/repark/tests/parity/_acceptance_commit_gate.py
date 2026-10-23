@@ -99,6 +99,7 @@ class Exchange:
     answer: str
     status: int | None = None
     metadata_location: str | None = None
+    refused: bool = False
 
 
 @dataclass
@@ -180,7 +181,13 @@ def strict_json(body: bytes) -> dict[str, Any] | None:
 def glue_refusal(request: Request, namespace: str) -> str | None:
     operation = glue_operation(request)
     if operation not in GLUE_ALLOWED:
-        return f"refused Glue {operation or '<no target>'}: not an operation the drills send"
+        if not operation:
+            names = ", ".join(sorted(name.lower() for name, _ in request.headers))
+            return (
+                f"refused Glue <no target> {request.method} {request.path}: "
+                f"not an operation the drills send; headers {names}"
+            )
+        return f"refused Glue {operation}: not an operation the drills send"
     body = strict_json(request.body)
     if body is None:
         return f"refused Glue {operation}: the body is not one JSON object with unique keys"
@@ -444,6 +451,17 @@ class CommitGate:
         if refused is not None:
             with self.lock:
                 self.state.refusals.append(refused)
+                self.state.exchanges.append(
+                    Exchange(
+                        method=request.method,
+                        path=request.path,
+                        operation=operation or "<no target>",
+                        commit=False,
+                        forwarded=False,
+                        answer="refused",
+                        refused=True,
+                    )
+                )
             handler.reply(
                 Reply(
                     403,
