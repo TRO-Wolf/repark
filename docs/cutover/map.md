@@ -20,15 +20,13 @@ named only as "the cutover pipeline" here.
   Airflow task → pipeline-side `SHADOW-1`). C6 (gold on RePark) measured green on Glue on
   2026-09-05 through DBT-1's acceptance leg.
 - [production-iceberg-status-2026-09-14.md](production-iceberg-status-2026-09-14.md) — **the
-  production Iceberg assessment at `c9b03c67` / fork `3ebf7d36` (2026-09-14):** 36 capability
+  superseded production Iceberg assessment at `c9b03c67` / fork `3ebf7d36` (2026-09-14):** 36 capability
   rows, what moved since the 2026-09-06 assessment, the C0–C6 state, eleven ranked gaps, and §10
-  the owner's rulings Q-ICE-1..7 with the nightly-run correction. Row C2 / gap G-1 (Glue had no
-  replace-publish path, so a second gold `dbt run` failed) is **FIXED at pin `edc38c6a`, live
-  pending** (F-GLUE-REPLACE-1 + RP-20); the twice legs and gold twice in `aws-acceptance.yml`
-  (ICE-GOLD-TWICE-1) await their first run — the post-merge dispatch.
+  the owner's rulings Q-ICE-1..7 with the nightly-run correction. Its 2026-10-23 top note points
+  to the live registry and U9 ledger; the assessment body preserves its historical evidence.
   Inventory §8 carries the rulings. §12 (2026-10-09) is a readiness note: the qualified scope, the
   v3 declared subset with links to each row or card, and the two qualification gaps. The
-  assessment is superseded on its own header (2026-09-16); §12 points and adds no rows.
+  2026-09-16 supersession remains in the header; §12 points and adds no rows.
 - [p2-report-ice-struct-pairing-1-2026-10-15.md](p2-report-ice-struct-pairing-1-2026-10-15.md) —
   **the P2 report for #1062, ICE-STRUCT-PAIRING-1 (2026-10-15):** verifier verdicts by time
   (FAIL at 19:00:31 EDT on 2026-10-14, FAIL at 02:14:43 EDT on 2026-10-15, PASS at 18:29:18

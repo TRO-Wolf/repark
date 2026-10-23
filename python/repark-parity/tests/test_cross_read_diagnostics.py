@@ -60,6 +60,8 @@ def _prepare_processes(directory: Path) -> dict[str, str]:
         "record = [target, int(Path('target_pid').read_text()), Path('phase').read_text()]\n"
         "with Path('captures').open('a') as output:\n"
         "    output.write(json.dumps(record) + '\\n')\n"
+        "print('DIAGNOSTIC_NATIVE_FRAME', flush=True)\n"
+        "time.sleep(float(os.environ['TEST_PROFILER_DURATION']))\n"
         "sys.exit(int(os.environ['TEST_PROFILER_EXIT']))\n",
     )
     _write_executable(
@@ -75,6 +77,7 @@ def _prepare_processes(directory: Path) -> dict[str, str]:
         "TEST_DELAY": "0.04",
         "TEST_EXIT": "0",
         "TEST_PROFILER_EXIT": "0",
+        "TEST_PROFILER_DURATION": "0",
     }
 
 
@@ -117,7 +120,62 @@ def test_sampling_preserves_test_status_and_targets_both_phases(
     captures = [json.loads(line) for line in (tmp_path / "captures").read_text().splitlines()]
     assert {capture[2] for capture in captures} == {"first", "second"}
     assert all(capture[0] == capture[1] for capture in captures)
+    assert "DIAGNOSTIC_NATIVE_FRAME" in result.stdout
     assert ("Native stack capture failed" in result.stdout) == bool(profiler_exit)
+    _assert_children_reaped(tmp_path)
+
+
+def test_active_dump_finishes_reporting_before_watchdog_stops(tmp_path: Path) -> None:
+    """Stopping during a dump preserves its output, failure warning and group closure."""
+    environment = _prepare_processes(tmp_path)
+    environment.update(TEST_EXIT="17", TEST_PROFILER_EXIT="3", TEST_PROFILER_DURATION="0.8")
+    result = subprocess.run(
+        ["bash", "-x", "-e", "-o", "pipefail", "-c", _cross_read_script(_text())],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=3,
+        check=False,
+    )
+    assert result.returncode == 17, result.stderr
+    assert "DIAGNOSTIC_NATIVE_FRAME" in result.stdout
+    assert "Native stack capture failed" in result.stdout
+    assert result.stdout.rstrip().endswith("::endgroup::")
+    for process_id in (tmp_path / "delay_pids").read_text().splitlines():
+        assert f"++ kill {process_id}\n" not in result.stderr
+    _assert_children_reaped(tmp_path)
+
+
+@pytest.mark.parametrize("profiler_exit", [0, 3])
+def test_timeout_executes_and_reports_an_unfinished_dump(
+    tmp_path: Path, profiler_exit: int
+) -> None:
+    """The actual timeout command bounds a dump still running after pytest exits."""
+    environment = _prepare_processes(tmp_path)
+    environment.update(
+        TEST_EXIT="17", TEST_PROFILER_EXIT=str(profiler_exit), TEST_PROFILER_DURATION="2"
+    )
+    _write_executable(
+        tmp_path / ".venv" / "bin" / "timeout",
+        "assert sys.argv[1:3] == ['--kill-after=5s', '30s']\n"
+        "Path('timeout_called').touch()\n"
+        "os.execv('/usr/bin/timeout', ['timeout', '--kill-after=0.1s', '0.5s', *sys.argv[3:]])\n",
+    )
+    result = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text())],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=3,
+        check=False,
+    )
+    assert result.returncode == 17, result.stderr
+    assert (tmp_path / "timeout_called").exists()
+    assert "DIAGNOSTIC_NATIVE_FRAME" in result.stdout
+    assert "Native stack capture failed" in result.stdout
+    assert result.stdout.rstrip().endswith("::endgroup::")
     _assert_children_reaped(tmp_path)
 
 

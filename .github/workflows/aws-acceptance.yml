@@ -188,11 +188,19 @@ jobs:
           pytest_pid=$!
           (
             delay_pid=""
-            trap 'kill "$delay_pid" 2>/dev/null || true; exit 0' TERM INT
-            while kill -0 "$pytest_pid" 2>/dev/null; do
+            stop_requested=0
+            trap '
+              stop_requested=1
+              if [ -n "$delay_pid" ]; then
+                kill "$delay_pid" 2>/dev/null || true
+                wait "$delay_pid" 2>/dev/null || true
+              fi
+            ' TERM INT
+            while [ "$stop_requested" = 0 ] && kill -0 "$pytest_pid" 2>/dev/null; do
               sleep 120 &
               delay_pid=$!
-              wait "$delay_pid" || exit 0
+              wait "$delay_pid" || break
+              delay_pid=""
               if kill -0 "$pytest_pid" 2>/dev/null; then
                 echo "::group::cross-read native stacks (C-060)"
                 timeout --kill-after=5s 30s sudo -n .venv/bin/py-spy dump --pid "$pytest_pid" --native || echo "::warning::Native stack capture failed"

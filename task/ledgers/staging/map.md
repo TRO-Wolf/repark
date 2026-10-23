@@ -27,35 +27,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   of §4.1's dated-row split (225 rows cite 136, 125 cite 138), and the plan-first class on
   `repark.sql()` ruled as built (C-016).
 - [ice-integrity-pins-1-ledger.md](ice-integrity-pins-1-ledger.md) — **ICE-INTEGRITY-PINS-1
-  (U-9), pin K (2026-10-22, orchestrator rulings K-1 to K-4 under the owner's grant):** a
-  writer killed between its data files and its commit, local Rust pin, 18 cells (seven doors
-  on v2 and v3 plus two controls). Step 1 red first on main `18626942`: the decorator taken
-  away reds all 18, the hook forwarding before it holds reds the 12 K-1 to K-6 cells. Pins U
-  and X await #1070. `risk_tier: standard`. Branch `feat/ice-integrity-pins-1-k`.
-  Step 2 (2026-10-22): the decorator `HoldCatalog` and the child arm, 18 of 18 cells green;
-  C-001 to C-008 PROVEN.
-  Step 3 (2026-10-22): four mutations each red their cells (the decorator disabled 18 of 18);
-  20 of 20 runs in a row; C-009 and C-010 PROVEN.
-  Step 4 (2026-10-22): records (registry row ICE-LOCAL-COMMIT-POINT-1, production row K3's
-  dated line, the sketch's "built" line, the 1.5.6 notes); C-001 to C-011 PROVEN, C-012 and
-  C-013 (pins U and X) OPEN, awaiting #1070. Verifier pending.
-  Verifier round 1 (2026-10-22): FAIL (S1-1, four S2, six S3, a §7 halt on the `type=hadoop`
-  path read). Fix round 1 rows C-014 onward; C-014: the hold ends when the parent is gone.
-  C-015: the halt recorded, owner decision pending (card ICE-HADOOP-HINT-WINDOW-1); C-016 and
-  C-017: the registry row narrowed to `register_table`, without `type=memory`.
-  C-018: the 1.5.6 notes line says "before the metadata file is written".
-  C-019: K-5 pins the delete file's format per version.
-  C-020: C-001's SIGKILL wording made honest; `try_wait()` before the kill.
-  C-021 to C-025, the S3s: K-7 compares types, the K3 line narrowed, C-009 names M4, the replace
-  doors unpinned (OPEN, for pin U/X or a later card), live orphan deletion out of scope (REJECTED).
-  Verifier round 2 pending.
-  Verifier round 2 (2026-10-22): FAIL (S1-1, the deadline unpinned and the parent-check window;
-  S2-1, the release unobservable). Fix round 2 rows C-026 onward; C-026: the parent's pid passed
-  in the environment and the hold limit pinned (`kill_mid_write_release.rs`).
-  C-027: the hold writes a `released` file and the release pins assert it (F3, F5, F5b red).
-  Verifier round 3 pending.
-  Verifier round 3 (2026-10-22): PASS with one records S2. C-028 narrows C-027: the
-  parent-path exit code is unpinned, because nothing consumes an orphan's status.
+  (U-9), updated 2026-10-23:** local kill pin K and live integrity legs U/X, with dated
+  review corrections. Run 40025222296 proves U96/X40; C-044 retains the live orphan limit.
+  C-060 keeps cross-read completion OPEN. C-061/C-062 record the diagnostic process tests
+  and active-dump shutdown correction. Earlier runs and review rounds remain in the ledger.
 - [replace-linear-pin-1-ledger.md](replace-linear-pin-1-ledger.md) — **REPLACE-LINEAR-PIN-1
   (2026-10-22, owner ruling "go with recommendations"):** the depth-40 `replace` memory pin
   counted first-touch code pages of the native module, so it failed on #1140 and moved with the

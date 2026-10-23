@@ -483,3 +483,15 @@ Diagnostic correction plan:
 | C-061 | The diagnostic shell targets the Python process, samples both test phases, preserves pytest status and reaps its delay process; binary profiler installation precedes credentials. | Execute the workflow shell with controlled child processes and revert/mutation probes. | PROVEN | `test_cross_read_diagnostics.py`: 8/8 passed. The original workflow fails 8/8; wrong-wrapper PID, single sample, masked test exit and omitted watchdog stop mutants each fail. Existing bench workflow tests also pass (22 combined). A real py-spy 0.4.1 direct-Python probe captures libc sleep frames locally; hosted sudo/ptrace behavior remains a live-run check. |
 
 Validation on 2026-10-23: `make py-lint py-format-check workflows-lint` exits 0. The local native probe grants tracing only on its harmless target process; no host ptrace policy changes. No AWS run was dispatched for this unmerged change.
+
+## Active-dump shutdown review correction (2026-10-23)
+
+C-061's original process tests did not cover pytest finishing during a dump. That shutdown
+could suppress the failure warning and leave its output group open. A delay killed without
+`wait` also made the fast-completion pin intermittently fail. The watchdog now requests a stop,
+reaps an active delay synchronously, clears a reaped delay PID and finishes reporting an active
+bounded dump. This corrects C-061's cleanup claim without changing the live C-060 obligation.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-062 | Diagnostic shutdown preserves native output, capture-failure warnings and group closure when pytest exits during a dump; the delay is reaped synchronously and its stale PID is not signalled. The timeout command executes. | Execute the workflow shell with delayed and timed-out profilers; discard-output, old-trap, stale-delay and removed-timeout mutants. | PROVEN | 11 diagnostic tests and 14 existing bench workflow tests pass. The delayed-failure pin fails on the prior workflow. Discard-output fails 9 tests; old-trap fails 4; stale-delay fails 1; removed timeout plus a decoy string fails 2. The timeout fixture validates the actual 30 s / 5 s arguments and scales them to 0.5 s / 0.1 s for execution. Fast completion passes 21 independent invocations after synchronous reap. Hosted ptrace and cross-read completion remain unmeasured. |
