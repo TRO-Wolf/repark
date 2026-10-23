@@ -1,0 +1,17 @@
+pool	condition	test	records	pass	refused	no_spill	spill_count_of_passes(min/med/max)	join_or_agg_peak_mem_used_MiB(min/med/max)
+64M	alone	test_distinct_spills_under_small_fair_pool	19	19	0	0	9/10/10	18.26/22.37/27.89
+64M	alone	test_sort_merge_join_spills_under_small_fair_pool	19	19	0	0	23/46/50	33.5/42.83/48.85
+64M	loaded	test_distinct_spills_under_small_fair_pool	28	28	0	0	8/9/10	18.37/26.98/31.49
+64M	loaded	test_sort_merge_join_spills_under_small_fair_pool	29	29	0	0	21/47/50	25.62/43.61/50.32
+72M	alone	test_distinct_spills_under_small_fair_pool	20	20	0	0	8/8/10	17.95/24.22/30.35
+72M	alone	test_sort_merge_join_spills_under_small_fair_pool	20	20	0	0	14/15/23	28.19/34.9/42.85
+72M	loaded	test_distinct_spills_under_small_fair_pool	30	30	0	0	7/8/10	17.95/26.1/31.48
+72M	loaded	test_sort_merge_join_spills_under_small_fair_pool	30	30	0	0	14/15/18	25.92/33.46/42.76
+80M	alone	test_distinct_spills_under_small_fair_pool	20	20	0	0	6/8/8	18.76/26.08/39.22
+80M	alone	test_sort_merge_join_spills_under_small_fair_pool	20	20	0	0	12/13/14	24.56/26.44/30.57
+80M	loaded	test_distinct_spills_under_small_fair_pool	30	30	0	0	6/8/8	18.64/26.25/43.49
+80M	loaded	test_sort_merge_join_spills_under_small_fair_pool	30	30	0	0	12/13/14	23.81/26.82/30.44
+96M	alone	test_distinct_spills_under_small_fair_pool	20	20	0	0	6/8/8	18.64/26.03/43.5
+96M	alone	test_sort_merge_join_spills_under_small_fair_pool	20	20	0	0	10/10/12	21.55/22.31/23.06
+96M	loaded	test_distinct_spills_under_small_fair_pool	30	30	0	0	6/8/8	18.53/26.13/43.74
+96M	loaded	test_sort_merge_join_spills_under_small_fair_pool	30	30	0	0	10/10/11	20.05/22.31/23.06

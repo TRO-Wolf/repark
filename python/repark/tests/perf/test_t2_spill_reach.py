@@ -1,7 +1,7 @@
 """S-1 spill-reach battery — recon §3 operator classes under a small FairSpillPool.
 
 Needles and classes come from planning/hardening/SPILL-RECON-2026-08.md §3. Recipes stay
-small (64 MiB pool, 2 partitions, generate_series-scale ``range``). ``spill_count > 0``
+small (2 partitions, generate_series-scale ``range``). ``spill_count > 0``
 is the assertion that has teeth; hash-join and ``array_agg`` are pinned AS failures.
 """
 
@@ -28,12 +28,12 @@ def _isolate_session() -> None:
     _clear_active()
 
 
-def _small_fair_session(memory: str = "64M") -> ReparkSession:
+def _small_fair_session(memory: str = "80M") -> ReparkSession:
     """FairSpillPool via runtime SET; 2 partitions; 1 MiB sort reservation.
 
     batch_size is pinned to 8192 (the session default is 65536): these spill-reach
     recipes were calibrated at 8192-row batches, and the larger default lets the sort
-    class finish in-memory under the same 64 MiB pool — the probe would lose its teeth.
+    class finish in-memory under the same pool — the probe would lose its teeth.
     """
     spark = (
         ReparkSession.builder.config("datafusion.execution.target_partitions", "2")
