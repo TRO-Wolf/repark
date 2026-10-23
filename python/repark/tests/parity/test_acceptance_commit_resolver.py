@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from _acceptance_commit_resolver import (
     UnresolvedError,
@@ -7,6 +9,15 @@ from _acceptance_commit_resolver import (
     missing_properties,
     stable_snapshot_ids,
 )
+from test_aws_acceptance_commit_unknown import (
+    INSERT_ROWS,
+    MERGE_ROWS,
+    PRE_ROWS,
+    rows,
+    statement,
+)
+
+from repark import ReparkSession
 
 
 class FakeClock:
@@ -84,3 +95,27 @@ def test_a_missing_status_check_property_is_named() -> None:
     }
     wrong = {"commit.status-check.num-retries": "3", "commit.status-check.min-wait-ms": "100"}
     assert missing_properties(wrong, expected) == {"commit.status-check.num-retries": "1"}
+
+
+def test_the_leg_source_resolves_on_the_local_catalog(tmp_path: Path) -> None:
+    prefix = "spark.sql.catalog.loc"
+    spark = (
+        ReparkSession.builder.appName("leg-source-resolves")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config(prefix, "org.apache.iceberg.spark.SparkCatalog")
+        .config(f"{prefix}.type", "hadoop")
+        .config(f"{prefix}.warehouse", str(tmp_path / "warehouse"))
+        .getOrCreate()
+    )
+    try:
+        spark.sql("CREATE NAMESPACE IF NOT EXISTS loc.ns")
+        for door in ("merge", "plain"):
+            table = f"loc.ns.leg_source_{door}"
+            spark.sql(f"CREATE TABLE {table} (id INT, name STRING) USING iceberg").collect()
+            seed = ", ".join(f"({row_id}, '{name}')" for row_id, name in PRE_ROWS)
+            spark.sql(f"INSERT INTO {table} VALUES {seed}").collect()
+            spark.sql(statement(door, table)).collect()
+            expected = INSERT_ROWS if door != "merge" else MERGE_ROWS
+            assert rows(spark, table) == expected
+    finally:
+        spark.stop()

@@ -52,7 +52,7 @@ STATUS_CHECK = {
     "commit.status-check.max-wait-ms": "200",
     "commit.status-check.total-timeout-ms": "5000",
 }
-SOURCE = "(VALUES (1, 'a'), (2, 'b'), (3, 'c')) AS s(id, name)"
+SOURCE = "(SELECT * FROM VALUES (1, 'a'), (2, 'b'), (3, 'c') AS v(id, name)) AS s"
 PRE_ROWS = [(1, "a"), (2, "b"), (3, "c")]
 INSERT_ROWS = [*PRE_ROWS, (11, "a"), (12, "b"), (13, "c")]
 MERGE_ROWS = [(1, "a"), (2, "m"), (3, "c")]
