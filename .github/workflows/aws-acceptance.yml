@@ -124,6 +124,13 @@ jobs:
         run: >
           VIRTUAL_ENV="$PWD/.venv"
           uv run --no-project python -m pytest python/dbt-repark/tests/test_aws_acceptance_gold.py -q -rA
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ !cancelled() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity
+          mask-aws-account-id: true
       - name: integrity legs (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
         if: ${{ !cancelled() }}
         env:
@@ -138,6 +145,13 @@ jobs:
           python/repark/tests/parity/test_aws_acceptance_commit_unknown.py
           python/repark/tests/parity/test_aws_acceptance_cross_release.py
           -q -rA
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ !cancelled() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-cross-read
+          mask-aws-account-id: true
       - name: cross-read module (REPARK_AWS_ACCEPTANCE=1)
         if: ${{ !cancelled() }}
         env:
