@@ -110,7 +110,7 @@ def create(spark: ReparkSession, spec: dict[str, Any]) -> None:
             "CAST('2026-01-01 00:00:00.123456789' AS timestamptz_ns))"
         )
         return
-    partitioned = " PARTITIONED BY (days(ts), bucket(4, id))" if kind == "partitioned" else ""
+    partitioned = " PARTITIONED BY (months(ts), bucket(4, id))" if kind == "partitioned" else ""
     spark.sql(
         f"CREATE OR REPLACE TABLE {table} USING iceberg{partitioned} "
         f"TBLPROPERTIES ({properties}) AS {selected(0, 1000)}"

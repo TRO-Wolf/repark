@@ -24,6 +24,7 @@ from _acceptance_cross_release import (
 )
 
 import repark
+from repark import ReparkSession
 
 PREVIOUS_PYTHON = os.environ.get(PREVIOUS_PYTHON_ENV)
 needs_previous = pytest.mark.skipif(
@@ -107,6 +108,28 @@ def test_x_ns_is_printed_not_asserted(direction: str, tmp_path: Path) -> None:
             print(f"  {run.label}: {run.table.schema} {run.table.to_pylist()}")
         else:
             print(f"  {run.label}: {run.stderr.strip().splitlines()[-1:]}")
+
+
+def test_x_partitioned_table_writes_few_files_and_names_months_and_bucket(
+    tmp_path: Path,
+) -> None:
+    spec = local_spec(tmp_path / "warehouse", "partitioned", 2, "xrel_part_files")
+    cell = cross_cell(writer=HEAD, reader=HEAD, spec=spec, workdir=tmp_path, label="X-PF")
+    print(format_cells([cell]))
+    assert not cell.differences
+    builder = ReparkSession.builder.appName("x-part-files")
+    for key, value in spec["catalog_config"].items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+    try:
+        table = "loc.ns.xrel_part_files"
+        files = spark.sql(f"SELECT count(*) FROM {table}.files").to_arrow()
+        assert int(files.column(0)[0].as_py()) <= 160
+        create = spark.sql(f"SHOW CREATE TABLE {table}").collect()[0][0]
+        assert "months(ts)" in create
+        assert "bucket(4, id)" in create
+    finally:
+        spark.stop()
 
 
 def test_x_c0_the_runner_adds_nothing_head_writes_and_head_reads(tmp_path: Path) -> None:
