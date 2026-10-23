@@ -531,8 +531,7 @@ def test_every_refusal_is_recorded_as_an_exchange(upstream: FakeUpstream) -> Non
     with gate_for(GLUE, upstream) as gate:
         assert call(gate, "GET", "/", {}, b"") == "reply 403"
         assert (
-            glue_call(gate, "DeleteTable", {"DatabaseName": NAMESPACE, "Name": "t"})
-            == "reply 403"
+            glue_call(gate, "DeleteTable", {"DatabaseName": NAMESPACE, "Name": "t"}) == "reply 403"
         )
         refusals = gate.refusals()
         assert len(refusals) == 2
