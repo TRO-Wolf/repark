@@ -77,7 +77,7 @@ Fix round 1 (2026-10-22, verifier round 1 S1-4): the status-check test now gives
 
 Fix round 2 (2026-10-23, first live run F1): the gate forwards read-only Glue operations for any database while `CreateTable` and `UpdateTable` still name the scratch namespace; the twin's moved and added cells hold both sides. pins: ice-integrity-pins-1/C-046
 
-Fix round 2 (2026-10-23, first live run F2): the legs' MERGE and INSERT source is the `(SELECT * FROM VALUES … AS v(id, name)) AS s` form, and `test_the_leg_source_resolves_on_the_local_catalog` runs both doors against the local catalog; the short form is carded as VALUES-ALIAS-COLUMNS-1. pins: ice-integrity-pins-1/C-047
+Fix round 2 (2026-10-23, first live run F2): the legs' MERGE and INSERT source is the `(SELECT * FROM VALUES … AS v(id, name)) AS s` form, and `test_the_leg_source_resolves_on_the_local_catalog` runs both doors against the local catalog; the short form, which Spark refuses at parse and RePark fails at resolution, is carded as VALUES-ALIAS-COLUMNS-1. pins: ice-integrity-pins-1/C-047
 
 Fix round 2 (2026-10-23, first live run F3): the cross-release runner is cut off at 300 s, and `test_a_cut_off_runner_reports_its_stderr` pins the exit-124 report with the stderr tail. pins: ice-integrity-pins-1/C-048
 
