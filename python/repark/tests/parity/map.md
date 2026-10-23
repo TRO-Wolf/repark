@@ -81,6 +81,12 @@ Fix round 2 (2026-10-23, first live run F2): the legs' MERGE and INSERT source i
 
 Fix round 2 (2026-10-23, first live run F3): the cross-release runner is cut off at 300 s, and `test_a_cut_off_runner_reports_its_stderr` pins the exit-124 report with the stderr tail. pins: ice-integrity-pins-1/C-048
 
+Fix round 3 (2026-10-23, second live run G1): a gate refusal of a request with no X-Amz-Target names the method, path and lower-cased sorted header names, and every refusal is recorded as an exchange; the live leg's refusal message lists the exchanges too. pins: ice-integrity-pins-1/C-050
+
+Fix round 3 (2026-10-23, second live run G2): the partitioned cross-release table is `months(ts), bucket(4, id)`, and the pin reads the head-written table's file count (at most 160) and its spec back. pins: ice-integrity-pins-1/C-051
+
+Fix round 3 (2026-10-23, second live run G3): the cross-read step reads a metadata location through the filesystem its URI names, so `s3://` locations no longer collapse to `s3:/`. pins: ice-integrity-pins-1/C-052
+
 ## Path expressions
 
 The move put every file here one level below the old flat directory. These files had a

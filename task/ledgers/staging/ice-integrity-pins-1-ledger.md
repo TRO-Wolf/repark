@@ -435,3 +435,14 @@ Run 39936752073 on main `75b9e43b` was dispatched by the orchestrator with purpo
 | C-047 | (F2.) The legs' MERGE and INSERT source is `(SELECT * FROM VALUES … AS v(id, name)) AS s`; the `(VALUES …) AS s(id, name)` form, which Spark 4.1.2 refuses at parse (`[COLUMN_ALIASES_NOT_ALLOWED]`, measured on the oracle with the Iceberg runtime) and RePark fails at resolution, is carded as VALUES-ALIAS-COLUMNS-1 for the refusal text. | the local pin of item 2 | PROVEN | Red on the old text (`UNRESOLVED_COLUMN` on `id`, suggesting `column1`/`column2`), green on the new (7 of 7 resolver suite). |
 | C-048 | (F3.) A runner cut off at 300 s fails its cell with exit 124 and its stderr tail. | the pin of item 3 | PROVEN | Red on the old driver (the timeout escapes `run_side`), green on the new (the pin passes in about 1 s with exit 124 and the tail); 29 collected. |
 | C-049 | (F4, and the run.) The first dispatched run did not prove legs U or X: 36 U cells and the plain Glue v2 X pair passed; every other cell fell to F1, F2, F3 or the expired token. | the next dispatched run | OPEN | run 39936752073; credentials re-minted before the legs by the orchestrator in the workflow |
+
+## Second live run (2026-10-23): FAIL, and fix round 3
+
+Run 39965367559 on main `80e60ebb` was dispatched by the orchestrator with purpose "ICE-INTEGRITY-PINS-1 legs U/X second run". The integrity legs gave 68 failed and 68 passed. The run proved leg U 48/48 on S3 Tables, the Glue control U-C1 6/6, and 14 leg X cells. Its four findings were the gate's unnamed no-target refusal (G1), the partitioned table's 168 files under `days(ts)` (G2, measured 8 under `months(ts)`), the cross-read step's local-only metadata read (G3) and the expired token (G4); legs U and X stay OPEN until a dispatched run is green.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-050 | (G1.) A gate refusal of a request with no X-Amz-Target names the method, path and header names, and every refusal is an exchange. | the twin cells of item 1 | PROVEN | red/green |
+| C-051 | (G2.) The partitioned cross-release table is `months(ts), bucket(4, id)`: about 132 files, not 1000. | the pin of item 2 | PROVEN | counts |
+| C-052 | (G3.) The cross-read step reads a metadata location through the filesystem its URI names. | the pin of item 3 | PROVEN | red on `s3:/`, green |
+| C-053 | (G4, and the run.) The second dispatched run proved leg U on S3 Tables (48/48) and 14 leg X cells; the 42 gated Glue cells landed and failed only on an unnamed refusal; the legs step ran 65 min and the trailing 22 cross-release cells and the cross-read step fell to an expired token or G3. | the next dispatched run | OPEN | the orchestrator splits the legs into two steps with a credential mint each in the workflow |
