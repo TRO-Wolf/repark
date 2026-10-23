@@ -2601,3 +2601,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   and the London-winter `ltz_nested` split (C-027); the `TRY_CAST` half of the exemption is pinned
   (C-028); the offset-text `UPDATE` wall is carded and C-024's cast-leaf claim is scoped to text
   without an offset (C-029).
+
+ICE-INTEGRITY-PINS-1 run-4 review adds C-060: distinct Glue and S3 Tables timeout sites supersede the earlier combined diagnosis; native measurement remains open (2026-10-23).

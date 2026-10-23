@@ -83,6 +83,7 @@ jobs:
           # --locked: uv.lock is an INPUT, never an output — a bare sync may rewrite the
           # checked-in lockfile as a side effect of a CI run (same rule as parity-live.yml).
           uv sync --locked --extra record
+          uv pip install --python .venv/bin/python --only-binary :all: py-spy==0.4.1
           (cd python/repark && uvx maturin@1.14.1 develop)
           VIRTUAL_ENV="$PWD/.venv" uv pip install --quiet dbt-core==1.9.11 dbt-spark==1.9.3
           uv venv --python 3.12 .venv-previous
@@ -183,11 +184,28 @@ jobs:
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
           SPARK_LOCAL_IP: "127.0.0.1"
         run: |
-          VIRTUAL_ENV="$PWD/.venv" uv pip install --python .venv/bin/python "py-spy>=0.4,<0.5"
-          VIRTUAL_ENV="$PWD/.venv" uv run --no-project python -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA &
+          .venv/bin/python -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA &
           pytest_pid=$!
-          ( sleep 420; if kill -0 "$pytest_pid" 2>/dev/null; then echo "::group::py-spy dump at 420 s (C-059)"; sudo .venv/bin/py-spy dump --pid "$pytest_pid" --subprocesses --native || true; echo "::endgroup::"; fi ) &
-          wait "$pytest_pid"
+          (
+            delay_pid=""
+            trap 'kill "$delay_pid" 2>/dev/null || true; exit 0' TERM INT
+            while kill -0 "$pytest_pid" 2>/dev/null; do
+              sleep 120 &
+              delay_pid=$!
+              wait "$delay_pid" || exit 0
+              if kill -0 "$pytest_pid" 2>/dev/null; then
+                echo "::group::cross-read native stacks (C-060)"
+                timeout --kill-after=5s 30s sudo -n .venv/bin/py-spy dump --pid "$pytest_pid" --native || echo "::warning::Native stack capture failed"
+                echo "::endgroup::"
+              fi
+            done
+          ) &
+          watchdog_pid=$!
+          pytest_status=0
+          wait "$pytest_pid" || pytest_status=$?
+          kill "$watchdog_pid" 2>/dev/null || true
+          wait "$watchdog_pid" || true
+          exit "$pytest_status"
 
   ice-read-perf-bench:
     name: ICE-READ-PERF bench (S3 Tables + Glue, dispatch-only, scratch-only)
