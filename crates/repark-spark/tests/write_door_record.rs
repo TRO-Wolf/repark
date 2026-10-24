@@ -179,3 +179,48 @@ async fn an_update_the_fork_provider_runs_records_the_update_door() {
         .collect();
     assert_eq!(stored, [5]);
 }
+
+#[tokio::test]
+async fn a_merge_records_each_door_once_however_many_arms_take_it() {
+    let session = session();
+    let _warehouse = warehouse(&session).await;
+    run(
+        &session,
+        &format!(
+            "{MERGE_HEAD} WHEN MATCHED THEN UPDATE SET t.st.v = s.k, t.st.w = s.k \
+             WHEN NOT MATCHED AND s.k = 0 THEN INSERT * WHEN NOT MATCHED THEN INSERT *"
+        ),
+    )
+    .await;
+    assert_eq!(recorded(&session), ["D9", "D7"]);
+}
+
+#[tokio::test]
+async fn a_merge_whole_column_update_records_the_cast_path_it_takes() {
+    let session = session();
+    let _warehouse = warehouse(&session).await;
+    let columns = "(id INT, arr ARRAY<INT>, m MAP<STRING, INT>, sa ARRAY<STRUCT<v: INT, w: INT>>, \
+                   ts TIMESTAMP, ntz TIMESTAMP_NTZ) USING iceberg";
+    run(&session, &format!("CREATE TABLE ice.ns.ct {columns}")).await;
+    run(&session, &format!("CREATE TABLE ice.ns.cs {columns}")).await;
+    run(
+        &session,
+        "INSERT INTO ice.ns.cs SELECT 1, array(1), map('a', 1), array(named_struct('v', 1, 'w', 2)), \
+         TIMESTAMP '2026-01-02 03:04:05', TIMESTAMP_NTZ '2026-01-02 03:04:05'",
+    )
+    .await;
+    for (column, expected) in [
+        ("arr", "D8"),
+        ("m", "D8"),
+        ("sa", "D8"),
+        ("ts", "D9"),
+        ("ntz", "D9"),
+    ] {
+        let sql = format!(
+            "MERGE INTO ice.ns.ct t USING ice.ns.cs s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.{column} = s.{column}"
+        );
+        run(&session, &sql).await;
+        assert_eq!(recorded(&session), [expected], "{sql}");
+    }
+}

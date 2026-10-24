@@ -134,7 +134,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   a second session with a session write conf records D2 for a plain `INSERT` and nothing for
   the next `SELECT`. **Round 3 (2026-10-24, ruling Q9):**
   `an_update_the_fork_provider_runs_records_the_update_door` runs an `UPDATE` with no `WHERE`,
-  which the fork provider runs, and asserts D10 and the stored `k = 5`. Risk: a branch that
+  which the fork provider runs, and asserts D10 and the stored `k = 5`. **Round 4 (2026-10-24,
+  verifier S1-1 and S2):** `a_merge_records_each_door_once_however_many_arms_take_it` (two field
+  assignments and two insert arms record `[D9, D7]`; the dedupe mutant reds it) and
+  `a_merge_whole_column_update_records_the_cast_path_it_takes` (whole `ARRAY<INT>`,
+  `MAP<STRING, INT>` and `ARRAY<STRUCT<…>>` columns record D8, leaf `TIMESTAMP` and
+  `TIMESTAMP_NTZ` columns D9). Risk: a branch that
   writes without recording, or a record that survives into the next statement.
   pins: write-spine-1/C-011
 - [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2

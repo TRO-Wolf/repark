@@ -17,6 +17,11 @@ and the star-sentinel rewrite live here instead of in it.
   `store_assignment_cast_sql` through `store_kernel_sql`). The door is decided by the fold's
   own predicates (`resolve_target`, `folds`), not by counting name parts; without a loaded
   schema an explicit assignment records D9. Pins: `../../tests/write_door_record.rs`.
+  **Round 4 (2026-10-24, orchestrator ruling on the verifier's S2):** the split is the
+  paired-cast path versus the kernel path. `takes_paired_cast` makes a whole array, large or
+  fixed-size list, map or struct column record D8, because the executor's
+  `paired_assignment_cast_sql` casts it with no kernel; a non-container leaf column records
+  D9.
   pins: write-spine-1/C-011
 
 - `schema_evolution.rs` — the `MERGE WITH SCHEMA EVOLUTION` pre-parse strip: a

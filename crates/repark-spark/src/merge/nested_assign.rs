@@ -777,9 +777,22 @@ fn update_door(
         return WriteDoor::D9MergeUpdateField;
     };
     match resolve_target(schema, scope, name) {
-        Ok(Some(key)) if key.steps.is_empty() && folds(schema, &key) => {
+        Ok(Some(key)) if key.steps.is_empty() && takes_paired_cast(schema, &key) => {
             WriteDoor::D8MergeUpdateStruct
         }
         _ => WriteDoor::D9MergeUpdateField,
     }
+}
+
+fn takes_paired_cast(schema: &ArrowSchema, key: &ResolvedKey) -> bool {
+    matches!(
+        find_field(schema.fields(), &key.column).map(|field| field.data_type()),
+        Some(
+            DataType::Struct(_)
+                | DataType::List(_)
+                | DataType::LargeList(_)
+                | DataType::FixedSizeList(..)
+                | DataType::Map(..)
+        )
+    )
 }

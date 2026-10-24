@@ -162,7 +162,9 @@ commits of round 1.
   D10 before `execute_predicate_dml` runs an `UPDATE`; and in `merge/nested_assign.rs` one entry
   per arm (D7 insert; D8 for `SET *` and a whole struct column on the `paired_assignment_cast_sql`
   path; D9 for a field on the `paired_nested_cast_sql` path and for a top-level column the
-  executor casts through `store_kernel_sql`). `router.rs` is 979 lines.
+  executor casts through `store_kernel_sql`). `router.rs` is 979 lines. *(Wording corrected in
+  round 4: the split is the paired-cast path versus the kernel path, not struct versus field;
+  a container column takes the paired cast and records D8.)*
 - `crates/repark-sql/tests/write_door_native.rs`: one test per Rust-library door (D15 to D20),
   each reading the rows back; `_write_spine_1_doors.py` marks the seven `native_*` spellings of
   D15 to D20 `rust_api` and names the test functions; the enumeration test checks that each
@@ -215,19 +217,63 @@ PASS a_session_write_conf_append_records_the_options_door
 |---|---|---|---|
 | (g) | the `record_planned_update` call in `spark_ast.rs` deleted (the fork-provider D10 record) | `an_update_the_fork_provider_runs_records_the_update_door` (`left: [] right: ["D10"]`) | red; restored |
 
+## Round 4: verifier findings at `8d961b9` and the rulings (2026-10-24)
+
+The Opus 5.5 verifier on PR #1182 returned FAIL on two surviving mutants (test gaps; no value
+changed) and two S2 findings the orchestrator ruled.
+
+- **S1-1 (dedupe):** deleting the `contains` check in `door_tag::record` kept every test green.
+  `a_merge_records_each_door_once_however_many_arms_take_it` now runs a MERGE with two field
+  assignments and two insert arms and asserts `["D9", "D7"]`.
+- **S1-2 (spelling table):** deleting one of a door's several spellings kept the tests green.
+  `test_the_spelling_table_is_exactly_the_forty_one_ruled_names` compares `DOOR_SPELLINGS` with
+  a frozen copy of the 41 names on their doors. When #1181 merges, step 3b replaces the frozen
+  copy with lane B's `SPELLINGS`.
+- **S2, ruled (D8 versus D9 by path):** the record follows the cast path the assignment takes:
+  the **paired-cast path** (`paired_assignment_cast_sql` with no kernel: `SET *`, a whole struct,
+  array, map or struct-in-array column) records D8, and the **kernel path** (a field through
+  `paired_nested_cast_sql`, or a leaf column the executor casts through `store_kernel_sql`)
+  records D9. Before this round a whole array, map or struct-in-array column recorded D9;
+  `takes_paired_cast` in `merge/nested_assign.rs` now names the container types. A
+  non-container leaf column records D9 whether or not its type has a store kernel (an `INT`
+  leaf casts through `arrow_cast`); the rule separates containers from leaves.
+  `a_merge_whole_column_update_records_the_cast_path_it_takes` pins `arr`, `m` and `sa` as D8
+  and `ts` and `ntz` as D9.
+- **S2, recorded (static versus runtime):** on a MERGE whole-column update, the static classifier
+  cannot see the column type and answers D8 for every shape; the runtime record answers D9 for a
+  leaf column. This is a documented divergence class (C-010):
+  `test_a_merge_whole_column_update_diverges_statically_only_on_a_leaf_column` runs the six
+  target shapes and asserts static D8 with runtime D9 on `leaf_timestamp` and
+  `leaf_timestamp_ntz`, and D8 on both for `struct`, `array`, `map` and `struct_in_array`.
+- **S3:** C-008 cites both width early returns; C-002 says the error class is step (2)'s to
+  change.
+
+| mutant | change | red test | answer |
+|---|---|---|---|
+| (h) | the dedupe in `door_tag::record` deleted | `a_merge_records_each_door_once_however_many_arms_take_it` (`left: ["D9", "D9", "D7", "D7"]`) | red; restored |
+| (i) | a container column recorded D9 again (`takes_paired_cast` replaced by `folds`) | `a_merge_whole_column_update_records_the_cast_path_it_takes` (`left: ["D9"] right: ["D8"]`) | red; restored |
+| (j) | `df_overwrite_condition` deleted from D5 | `test_the_spelling_table_is_exactly_the_forty_one_ruled_names` (`1 failed, 4 passed, 1 skipped`; no other test reds) | red; restored |
+
+```
+cargo nextest run -p repark-spark --test write_door_record --test store_kernel_registry
+7 tests run: 7 passed
+.venv/bin/python -m pytest test_write_spine_1_enumeration.py test_write_spine_1_door_carrier.py -q
+20 passed, 1 skipped
+```
+
 ## PROPOSITION LEDGER — WRITE-SPINE-1 steps (1) and (3) — 2026-10-24
 
 | id | claim | evidence | status | proof |
 |---|---|---|---|---|
 | C-001 | Every UDF name both `repark-functions` and `repark-iceberg` name is one constant in `repark_common::udf_names`, and no call site changed. | `grep -rn '"__repark_' crates/` shows each of the seven strings once, in `udf_names.rs`. | **PROVEN** | the grep above; the step 1a diff changes only the seven definitions into re-exports; `cargo build --workspace`, `make rust-clippy` green. |
-| C-002 | A session whose NTZ wall kernel is not registered refuses an `INSERT … BY NAME` of an instant into a `TIMESTAMP_NTZ` column, where main stores the UTC wall (corrected 2026-10-24 from the order's "a wall into a `TIMESTAMP` column", measured above). | `store_kernel_registry.rs`, red on main, green on head. | **PROVEN** | `missing_wall_kernel_refuses_instead_of_storing_utc`: red with the base lookup, green on head; the same test's registered control stores `1767305045123456`. |
+| C-002 | A session whose NTZ wall kernel is not registered refuses an `INSERT … BY NAME` of an instant into a `TIMESTAMP_NTZ` column, where main stores the UTC wall (corrected 2026-10-24 from the order's "a wall into a `TIMESTAMP` column", measured above). | `store_kernel_registry.rs`, red on main, green on head. | **PROVEN** | `missing_wall_kernel_refuses_instead_of_storing_utc`: red with the base lookup, green on head; the same test's registered control stores `1767305045123456`. The refusal is `DataFusionError::Internal`, whose display asks the user to report a DataFusion bug; the class is step (2)'s to change, not this step's. |
 | C-003 | `WriteDoor::ALL` holds exactly the eighteen value-writing doors of the evaluation's table, and `door_of` is an exhaustive match over the dispatched statement shapes. | `write_door.rs`; the enumeration tests; a removed variant reds them. | **PROVEN** | `write_door_ids_are_the_evaluation_table_ids_and_the_first_ten_are_spark_doors`; `door_of` lists every `Statement` variant with no wildcard (compiles under `make rust-clippy`); the two `door_of` unit pins; mutant (b). The four choices of step 3a above await the orchestrator. |
 | C-004 | Every door has at least one spelling and every spelling names a door. | `every_write_door_has_a_spelling`, `every_spelling_names_a_door`. | **PROVEN** | `test_every_write_door_has_a_spelling`, `test_every_spelling_names_a_door` green; mutants (b) and (d) red them. The spelling-corpus test skips until lane B's `_write_spine_1_spellings.py` lands. |
 | C-005 | The door matrix on this head equals main's recorded answers on every cell, and classifies against the Spark fixture as the step-0 census table says. | `test_write_spine_1_doors.py` against the two fixtures. | OPEN | step 3b. |
 | C-006 | The four mutants of step 5 each red a named test. | the ledger's mutant table. | OPEN | (b), (c) and (d) red their tests (table above); (a) waits for the matrix. |
 | C-007 | `zone_store_frame` returns the frame unconverted when the session analyzer fails on the planned write (`analyzed_types` answers `None`). | Reading of `ntz_store.rs` (`let Some(planned) = analyzed_types(…) else { return Ok(frame) }`). | OPEN | fail-open; closed by step (2)'s conform stage. |
-| C-008 | `zone_store_frame` returns the frame unconverted when the planned width differs from the target width. | Reading of `ntz_store.rs` (`if planned.len() != targets.len() { return Ok(frame) }`). | OPEN | fail-open; closed by step (2)'s conform stage. |
+| C-008 | `zone_store_frame` returns the frame unconverted when a width does not match: the frame width differs from the target width, or the planned width differs from the target width. | Reading of `ntz_store.rs`: the frame-width early return at `:203` (`targets.len() != frame.schema().fields().len()`) and the planned-width early return at `:209` (`if planned.len() != targets.len() { return Ok(frame) }`); both are fail-open sites for step (2). | OPEN | fail-open; closed by step (2)'s conform stage. |
 | C-009 | The eighteen-door table is corrected (orchestrator ruling, 2026-10-24): D14 is bare-session SQL through `repark.sql()` in `repark-core`; D15 to D20 are `repark-sql` Rust-library doors with reach `rust_api`; D18 and D21 are unchanged. | `_write_spine_1_doors.py` marks D15 to D20's spellings `rust_api`; `test_every_rust_api_only_door_names_a_rust_test_that_exists`. | **PROVEN** | the enumeration test green; `rust_api_only_doors()` is exactly D15 to D20. |
-| C-010 | `write_door_of(sql, options)` names the door of each Spark spelling without running it, through the router's intercepts and `door_of` (the parsed-shape reading). | `test_write_door_of_names_the_door_of_each_spark_spelling_without_running_it`. | **PROVEN** | 12 parametrized cases green: D1 to D10 and `None` for DELETE and SELECT. |
+| C-010 | `write_door_of(sql, options)` names the door of each Spark spelling without running it, through the router's intercepts and `door_of` (the parsed-shape reading). | `test_write_door_of_names_the_door_of_each_spark_spelling_without_running_it`. | **PROVEN** | 12 parametrized cases green: D1 to D10 and `None` for DELETE and SELECT. Documented divergence class (round 4): on a MERGE whole-column update (`SET t.c = s.c`) the static reading answers D8 for every column type; the runtime record answers D9 for a leaf `TIMESTAMP` or `TIMESTAMP_NTZ` column (the kernel path) and D8 for a struct, array, map or struct-in-array column. Pinned by `test_a_merge_whole_column_update_diverges_statically_only_on_a_leaf_column`. |
 | C-011 | A Spark session records the set of doors its last statement took, at the branch points, cleared per statement; a Postgres target and `repark.sql()` record nothing. | `write_door_record.rs`; `test_last_write_doors_records_the_doors_each_statement_took`; `test_the_bare_sql_session_records_no_door`. | **PROVEN** | the three Rust pins and both Python pins green; mutants (e), (f) and (g) red them. The Postgres route is by reading (it returns before any record); no Postgres pin. An `UPDATE` the fork provider runs records D10 (round 3, `an_update_the_fork_provider_runs_records_the_update_door`). A `CALL` writes no new values, so the statements it runs through `router::execute` own the record (ruling Q8). |
 | C-012 | Every door no Python spelling executes (D15 to D20) is written through by a named Rust test that reads the rows back. | `crates/repark-sql/tests/write_door_native.rs`; the enumeration test's name check. | **PROVEN** | six tests green; `RUST_TESTS` names each and the enumeration test finds each `async fn`. |

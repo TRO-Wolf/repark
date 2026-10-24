@@ -38,6 +38,19 @@ RUNTIME_CASES: tuple[tuple[str, list[str]], ...] = (
     ("SELECT * FROM mem.ns.t", []),
 )
 
+WHOLE_COLUMN_SHAPES: tuple[tuple[str, str, str], ...] = (
+    ("leaf_timestamp", "TIMESTAMP", "TIMESTAMP '2026-01-02 03:04:05'"),
+    ("leaf_timestamp_ntz", "TIMESTAMP_NTZ", "TIMESTAMP_NTZ '2026-01-02 03:04:05'"),
+    ("struct", "STRUCT<v: INT, w: INT>", "named_struct('v', 1, 'w', 2)"),
+    ("array", "ARRAY<INT>", "array(1)"),
+    ("map", "MAP<STRING, INT>", "map('a', 1)"),
+    ("struct_in_array", "ARRAY<STRUCT<v: INT, w: INT>>", "array(named_struct('v', 1, 'w', 2))"),
+)
+STATIC_RUNTIME_DIVERGENCE: dict[str, tuple[str, str]] = {
+    "leaf_timestamp": ("D8", "D9"),
+    "leaf_timestamp_ntz": ("D8", "D9"),
+}
+
 
 @pytest.mark.parametrize(("sql", "options", "door"), STATIC_CASES)
 def test_write_door_of_names_the_door_of_each_spark_spelling_without_running_it(
@@ -67,3 +80,31 @@ def test_the_bare_sql_session_records_no_door() -> None:
     """``repark.sql()`` runs outside the Spark router, so its session records nothing."""
     repark.sql("SELECT 1").collect()
     assert _native.last_write_doors(repark._ANSI_NATIVE) == []
+
+
+def test_a_merge_whole_column_update_diverges_statically_only_on_a_leaf_column(
+    spark_with_warehouse: ReparkSession,
+) -> None:
+    """Static D8 and runtime D9 differ on a leaf column only, a documented divergence class.
+
+    The static reading cannot see the column type, so a whole-column ``SET t.c = s.c`` answers
+    D8. The runtime record follows the cast path: a struct, array, map or struct-in-array column
+    takes the paired cast (D8), and a leaf ``TIMESTAMP`` or ``TIMESTAMP_NTZ`` column takes the
+    kernel path (D9).
+    """
+    native = spark_with_warehouse._ensure_alive()
+    for shape, column_type, value in WHOLE_COLUMN_SHAPES:
+        for table in ("t", "s"):
+            spark_with_warehouse.sql(
+                f"CREATE TABLE mem.ns.{shape}_{table} (id INT, c {column_type}) USING iceberg"
+            ).collect()
+        spark_with_warehouse.sql(f"INSERT INTO mem.ns.{shape}_s SELECT 1, {value}").collect()
+        sql = (
+            f"MERGE INTO mem.ns.{shape}_t t USING mem.ns.{shape}_s s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET t.c = s.c"
+        )
+        static = _native.write_door_of(sql, None)
+        spark_with_warehouse.sql(sql).collect()
+        runtime = _native.last_write_doors(native)
+        expected = STATIC_RUNTIME_DIVERGENCE.get(shape, ("D8", "D8"))
+        assert (static, runtime) == (expected[0], [expected[1]]), shape

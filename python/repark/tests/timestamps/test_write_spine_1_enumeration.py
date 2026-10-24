@@ -12,6 +12,41 @@ from repark import _native
 
 TEMPLATE_FREE_REACH = frozenset({"rust_api", "none"})
 ROOT = Path(__file__).resolve().parents[4]
+SPELLING_COUNT = 41
+EXPECTED_DOOR_SPELLINGS: dict[str, tuple[str, ...]] = {
+    "D1": ("insert_values", "insert_select", "df_insert_into", "df_append", "df_save_as_table"),
+    "D2": ("insert_options",),
+    "D3": ("insert_by_name",),
+    "D4": (
+        "insert_overwrite",
+        "insert_overwrite_values",
+        "df_insert_into_overwrite",
+        "df_overwrite_partitions",
+    ),
+    "D5": ("insert_replace_where", "df_overwrite_condition"),
+    "D6": ("ctas", "rtas", "create_or_replace_as"),
+    "D7": ("merge_insert", "merge_insert_star", "merge_insert_literal"),
+    "D8": ("merge_update_whole", "merge_update_whole_literal", "merge_update_star"),
+    "D9": ("merge_update_field", "merge_update_field_literal"),
+    "D10": (
+        "update_whole_where",
+        "update_whole_nowhere",
+        "update_col_where",
+        "update_col_nowhere",
+        "update_field_where",
+        "update_field_nowhere",
+        "update_field_col_where",
+        "update_field_col_nowhere",
+    ),
+    "D14": ("native_insert",),
+    "D15": ("native_insert_conf",),
+    "D16": ("native_insert_overwrite_partition",),
+    "D17": ("native_ctas",),
+    "D18": ("native_append_api",),
+    "D19": ("native_merge",),
+    "D20": ("native_update", "native_delete"),
+    "D21": ("microbatch_sink",),
+}
 
 
 def _engine_door_ids() -> list[str]:
@@ -33,6 +68,12 @@ def test_every_rust_api_only_door_names_a_rust_test_that_exists() -> None:
     source = (ROOT / doors.RUST_TEST_FILE).read_text(encoding="utf-8")
     missing = [door for door in rust_only if f"async fn {doors.RUST_TESTS[door]}()" not in source]
     assert missing == []
+
+
+def test_the_spelling_table_is_exactly_the_forty_one_ruled_names() -> None:
+    """The table holds the 41 ruled spelling names on their doors, no more and no fewer."""
+    assert doors.DOOR_SPELLINGS == EXPECTED_DOOR_SPELLINGS
+    assert sum(len(names) for names in doors.DOOR_SPELLINGS.values()) == SPELLING_COUNT
 
 
 def test_every_spelling_names_a_door() -> None:
