@@ -1,6 +1,6 @@
 """Stubbed-client pins for scripts/aws_acceptance_cleanup.py: nothing here touches AWS.
 
-pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011
+pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021
 """
 
 from __future__ import annotations
@@ -92,13 +92,13 @@ def _deleted(client: _Client, operation: str) -> list[dict[str, Any]]:
 @pytest.mark.parametrize(
     "prefix",
     [
-        "testing_r1_",
-        "testing_r40079497082_",
-        "testing_r0_",
+        "testing_r1_acc_",
+        "testing_r40079497082_u_",
+        "testing_r0_x_",
     ],
 )
-def test_a_well_formed_run_prefix_is_accepted(prefix: str) -> None:
-    """The three prefix shapes the workflow and the local default produce validate."""
+def test_a_well_formed_run_and_leg_prefix_is_accepted(prefix: str) -> None:
+    """The three leg shapes the workflow and the local default produce validate."""
     assert cleanup.validate_run_prefix(prefix) == prefix
 
 
@@ -108,41 +108,45 @@ def test_a_well_formed_run_prefix_is_accepted(prefix: str) -> None:
         "",
         "testing_",
         "testing_r_",
-        "testing_rabc_",
-        "testing_r12",
-        "xtesting_r12_",
-        "testing_r12_x",
-        "testing_r12_ ",
-        "testing_R12_",
+        "testing_r12_",
+        "testing_rabc_acc_",
+        "testing_r12_acc",
+        "xtesting_r12_acc_",
+        "testing_r12_acc_x",
+        "testing_r12_acc_ ",
+        "testing_R12_acc_",
+        "testing_r12_dbt_",
+        "testing_r12_a_",
+        "testing_r12_uu_",
         "*",
-        "testing_r12_*",
-        "testing_r१२_",
+        "testing_r12_acc_*",
+        "testing_r१२_acc_",
     ],
 )
-def test_a_prefix_that_is_not_exactly_testing_r_digits_is_refused(prefix: str) -> None:
+def test_a_prefix_that_is_not_exactly_testing_r_digits_leg_is_refused(prefix: str) -> None:
     """Any other shape, including the bare legacy prefix, raises before a client exists."""
-    with pytest.raises(ValueError, match="testing_r<digits>_"):
+    with pytest.raises(ValueError, match="testing_r<digits>_<acc"):
         cleanup.validate_run_prefix(prefix)
 
 
 def test_a_prefix_selects_only_its_own_tables_and_not_a_longer_run_id() -> None:
     """Run 12 does not take run 123's tables, the legacy tables or the bench table."""
     tables = [
-        _table("testing_r12_a"),
-        _table("testing_r12_b"),
-        _table("testing_r123_a"),
+        _table("testing_r12_acc_a"),
+        _table("testing_r12_acc_b"),
+        _table("testing_r123_acc_a"),
         _table("testing_old_entity"),
         _table("ice_read_perf_bench"),
         _table("other"),
     ]
-    chosen = cleanup.select_by_prefix(tables, "testing_r12_")
-    assert [table.name for table in chosen] == ["testing_r12_a", "testing_r12_b"]
+    chosen = cleanup.select_by_prefix(tables, "testing_r12_acc_")
+    assert [table.name for table in chosen] == ["testing_r12_acc_a", "testing_r12_acc_b"]
 
 
 def test_the_bench_table_is_never_selected_by_any_mode() -> None:
     """The bench name is excluded by prefix selection, age selection and the deletion guard."""
     bench = _table("ice_read_perf_bench", age_hours=999)
-    assert cleanup.select_by_prefix([bench], "testing_r1_") == []
+    assert cleanup.select_by_prefix([bench], "testing_r1_acc_") == []
     assert cleanup.select_older_than([bench], 1, _NOW) == []
     with pytest.raises(ValueError, match="not a testing_r<digits>_"):
         cleanup.assert_deletable("ice_read_perf_bench")
@@ -157,20 +161,24 @@ def test_the_bench_table_is_never_selected_by_any_mode() -> None:
 def test_the_age_filter_removes_a_prefix_only_when_its_newest_table_is_old() -> None:
     """A run with one fresh table stays whole; a wholly old run goes; legacy names stay."""
     tables = [
-        _table("testing_r1_a", age_hours=30),
-        _table("testing_r1_b", age_hours=25),
-        _table("testing_r2_a", age_hours=48),
-        _table("testing_r2_b", age_hours=2),
-        _table("testing_r3_a", age_hours=24.5),
+        _table("testing_r1_acc_a", age_hours=30),
+        _table("testing_r1_acc_b", age_hours=25),
+        _table("testing_r2_acc_a", age_hours=48),
+        _table("testing_r2_acc_b", age_hours=2),
+        _table("testing_r3_acc_a", age_hours=24.5),
         _table("testing_legacy", age_hours=900),
     ]
     chosen = cleanup.select_older_than(tables, 24, _NOW)
-    assert [table.name for table in chosen] == ["testing_r1_a", "testing_r1_b", "testing_r3_a"]
+    assert [table.name for table in chosen] == [
+        "testing_r1_acc_a",
+        "testing_r1_acc_b",
+        "testing_r3_acc_a",
+    ]
 
 
 def test_the_age_filter_keeps_a_table_exactly_at_the_cutoff() -> None:
     """The comparison is strict: a table of exactly N hours is not older than N hours."""
-    assert cleanup.select_older_than([_table("testing_r1_a", age_hours=24)], 24, _NOW) == []
+    assert cleanup.select_older_than([_table("testing_r1_acc_a", age_hours=24)], 24, _NOW) == []
 
 
 def test_the_selection_mode_needs_a_positive_age() -> None:
@@ -185,16 +193,16 @@ def test_the_selection_mode_needs_a_positive_age() -> None:
 @pytest.mark.parametrize(
     ("location", "allowed"),
     [
-        (f"{_SCRATCH}/testing_r1_a", True),
-        (f"{_SCRATCH}/testing_r1_a/", True),
-        (f"{_SCRATCH}/testing_r1_a/data/part-0", True),
+        (f"{_SCRATCH}/testing_r1_acc_a", True),
+        (f"{_SCRATCH}/testing_r1_acc_a/", True),
+        (f"{_SCRATCH}/testing_r1_acc_a/data/part-0", True),
         (_SCRATCH, False),
         (f"{_SCRATCH}/", False),
         ("s3://example-warehouse/", False),
-        ("s3://example-warehouse/other/testing_r1_a", False),
-        ("s3://example-warehouse/testing_repark_acceptance_x/testing_r1_a", False),
-        ("s3://another-bucket/testing_repark_acceptance/testing_r1_a", False),
-        (f"{_SCRATCH}/../prod/testing_r1_a", False),
+        ("s3://example-warehouse/other/testing_r1_acc_a", False),
+        ("s3://example-warehouse/testing_repark_acceptance_x/testing_r1_acc_a", False),
+        ("s3://another-bucket/testing_repark_acceptance/testing_r1_acc_a", False),
+        (f"{_SCRATCH}/../prod/testing_r1_acc_a", False),
         ("", False),
         (None, False),
     ],
@@ -222,17 +230,17 @@ def test_an_outside_location_lists_and_deletes_no_objects() -> None:
 
 def test_an_inside_location_lists_with_a_trailing_slash_prefix() -> None:
     """The listing prefix ends in a slash so a sibling table with a longer name is not swept."""
-    s3 = _Client([{"Contents": [{"Key": "testing_repark_acceptance/testing_r1_a/m.json"}]}, {}])
-    keys = cleanup.scratch_object_keys(s3, f"{_SCRATCH}/testing_r1_a", _WAREHOUSE)
-    assert keys == [("example-warehouse", "testing_repark_acceptance/testing_r1_a/m.json")]
+    s3 = _Client([{"Contents": [{"Key": "testing_repark_acceptance/testing_r1_acc_a/m.json"}]}, {}])
+    keys = cleanup.scratch_object_keys(s3, f"{_SCRATCH}/testing_r1_acc_a", _WAREHOUSE)
+    assert keys == [("example-warehouse", "testing_repark_acceptance/testing_r1_acc_a/m.json")]
     assert _deleted(s3, "paginate") == [
-        {"Bucket": "example-warehouse", "Prefix": "testing_repark_acceptance/testing_r1_a/"}
+        {"Bucket": "example-warehouse", "Prefix": "testing_repark_acceptance/testing_r1_acc_a/"}
     ]
 
 
 def test_glue_deletes_go_out_in_batches_of_one_hundred() -> None:
     """250 tables become three batch calls of 100, 100 and 50, each carrying only names."""
-    tables = [_table(f"testing_r9_{index:03d}") for index in range(250)]
+    tables = [_table(f"testing_r9_acc_{index:03d}") for index in range(250)]
     glue = _Client()
     assert cleanup.delete_glue_tables(glue, "testing_repark_acceptance", tables) == 250
     calls = _deleted(glue, "batch_delete_table")
@@ -244,9 +252,9 @@ def test_glue_deletes_go_out_in_batches_of_one_hundred() -> None:
 def test_a_glue_batch_error_raises_with_the_table_names() -> None:
     """Glue reporting an error for a table makes the run fail instead of passing silently."""
     glue = _Client()
-    glue.errors = [{"TableName": "testing_r9_000", "ErrorDetail": {"ErrorCode": "Denied"}}]
-    with pytest.raises(RuntimeError, match="testing_r9_000"):
-        cleanup.delete_glue_tables(glue, "db", [_table("testing_r9_000")])
+    glue.errors = [{"TableName": "testing_r9_acc_000", "ErrorDetail": {"ErrorCode": "Denied"}}]
+    with pytest.raises(RuntimeError, match="testing_r9_acc_000"):
+        cleanup.delete_glue_tables(glue, "db", [_table("testing_r9_acc_000")])
 
 
 def test_object_deletes_go_out_in_batches_of_one_thousand_per_bucket() -> None:
@@ -270,11 +278,11 @@ def test_an_object_delete_error_raises() -> None:
 def test_s3_tables_deletes_one_table_at_a_time_in_the_scratch_namespace() -> None:
     """Each S3 Tables table is deleted by bucket ARN, namespace and name."""
     client = _Client()
-    tables = [_table("testing_r5_a"), _table("testing_r5_b")]
+    tables = [_table("testing_r5_acc_a"), _table("testing_r5_acc_b")]
     assert cleanup.delete_s3tables(client, "arn:x", "testing_repark_acceptance", tables) == 2
     assert _deleted(client, "delete_table") == [
         {"tableBucketARN": "arn:x", "namespace": "testing_repark_acceptance", "name": name}
-        for name in ("testing_r5_a", "testing_r5_b")
+        for name in ("testing_r5_acc_a", "testing_r5_acc_b")
     ]
 
 
@@ -320,12 +328,12 @@ class _Ordered(_Client):
         return super().delete_objects(**kwargs)
 
 
-_LISTING = [{"Contents": [{"Key": "testing_repark_acceptance/testing_r4_a/f"}]}]
+_LISTING = [{"Contents": [{"Key": "testing_repark_acceptance/testing_r4_acc_a/f"}]}]
 
 
 def test_a_dry_run_issues_no_delete_call(capsys: pytest.CaptureFixture[str]) -> None:
     """Without the execute switch the Glue and S3 Tables paths only report counts."""
-    tables = [_table("testing_r4_a", location=f"{_SCRATCH}/testing_r4_a")]
+    tables = [_table("testing_r4_acc_a", location=f"{_SCRATCH}/testing_r4_acc_a")]
     glue, s3, s3t = _Client(), _Client(_LISTING), _Client()
     cleanup.clean_glue(glue, s3, _WAREHOUSE, tables, execute=False)
     cleanup.clean_s3tables(s3t, "arn", tables, execute=False)
@@ -337,7 +345,7 @@ def test_a_dry_run_issues_no_delete_call(capsys: pytest.CaptureFixture[str]) -> 
 
 def test_an_executed_glue_cleanup_deletes_the_tables_then_the_objects() -> None:
     """The order is the table entries first, then the objects below each table's location."""
-    tables = [_table("testing_r4_a", location=f"{_SCRATCH}/testing_r4_a")]
+    tables = [_table("testing_r4_acc_a", location=f"{_SCRATCH}/testing_r4_acc_a")]
     order: list[str] = []
     glue, s3 = _Ordered(order), _Ordered(order, _LISTING)
     cleanup.clean_glue(glue, s3, _WAREHOUSE, tables, execute=True)
@@ -350,10 +358,10 @@ def test_the_command_line_needs_exactly_one_mode() -> None:
     with pytest.raises(SystemExit):
         parser.parse_args([])
     with pytest.raises(SystemExit):
-        parser.parse_args(["--prefix", "testing_r1_", "--older-than-hours", "24"])
+        parser.parse_args(["--run-prefix", "testing_r1_acc_", "--older-than-hours", "24"])
     parsed = parser.parse_args(["--older-than-hours", "24", "--execute"])
-    assert parsed.execute is True and parsed.prefix is None
-    assert parser.parse_args(["--prefix", "testing_r1_"]).execute is False
+    assert parsed.execute is True and parsed.run_prefix is None
+    assert parser.parse_args(["--run-prefix", "testing_r1_acc_"]).execute is False
 
 
 def test_main_refuses_a_bad_prefix_before_any_client_or_environment_read(
@@ -362,5 +370,123 @@ def test_main_refuses_a_bad_prefix_before_any_client_or_environment_read(
     """A malformed prefix exits 2 before boto3 is imported or the warehouse is read."""
     monkeypatch.delenv("REPARK_ACCEPT_WAREHOUSE", raising=False)
     monkeypatch.setitem(sys.modules, "boto3", None)
-    assert cleanup.main(["--prefix", "testing_"]) == 2
-    assert "testing_r<digits>_" in capsys.readouterr().err
+    assert cleanup.main(["--run-prefix", "testing_"]) == 2
+    assert "testing_r<digits>_<acc" in capsys.readouterr().err
+
+
+def test_a_run_and_leg_prefix_selects_only_its_own_leg_of_its_own_run() -> None:
+    """Leg acc of run 12 takes neither leg u or x of run 12 nor the same leg of run 123."""
+    tables = [
+        _table("testing_r12_acc_a"),
+        _table("testing_r12_u_a"),
+        _table("testing_r12_x_a"),
+        _table("testing_r123_acc_a"),
+        _table("testing_r12_acc"),
+        _table("testing_r12_accounts"),
+    ]
+    chosen = cleanup.select_by_prefix(tables, "testing_r12_acc_")
+    assert [table.name for table in chosen] == ["testing_r12_acc_a"]
+
+
+def test_the_age_filter_matches_any_leg_and_groups_by_the_full_run_and_leg_prefix() -> None:
+    """Old leg u goes while the fresh leg acc of the same run stays; a bare name groups alone."""
+    tables = [
+        _table("testing_r5_u_a", age_hours=30),
+        _table("testing_r5_u_b", age_hours=29),
+        _table("testing_r5_acc_a", age_hours=2),
+        _table("testing_r6_x_a", age_hours=50),
+        _table("testing_r7_orphan", age_hours=60),
+        _table("testing_r8_acc_a", age_hours=1),
+    ]
+    chosen = cleanup.select_older_than(tables, 24, _NOW)
+    assert [table.name for table in chosen] == [
+        "testing_r5_u_a",
+        "testing_r5_u_b",
+        "testing_r6_x_a",
+        "testing_r7_orphan",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("prefix", "stem"),
+    [
+        ("testing_r12_acc_", "u12s3path_r12_acc_"),
+        ("testing_r40079497082_u_", "u12s3path_r40079497082_u_"),
+        ("testing_r0_x_", "u12s3path_r0_x_"),
+    ],
+)
+def test_the_object_stem_follows_the_run_and_leg_prefix(prefix: str, stem: str) -> None:
+    """The path-write stem is derived from the same validated prefix."""
+    assert cleanup.path_object_stem(prefix) == stem
+
+
+def test_the_object_stem_refuses_an_unvalidated_prefix() -> None:
+    """A prefix without a leg yields no stem."""
+    with pytest.raises(ValueError, match="testing_r<digits>_<acc"):
+        cleanup.path_object_stem("testing_r12_")
+
+
+def test_path_objects_are_listed_by_the_leg_stem_below_the_scratch_prefix() -> None:
+    """The listing prefix is the warehouse scratch prefix plus the leg stem; strays are dropped."""
+    base = "testing_repark_acceptance/u12s3path_r12_acc_"
+    s3 = _Client(
+        [
+            {"Contents": [{"Key": f"{base}aa/parquet/part-0"}, {"Key": f"{base}bb/x"}]},
+            {"Contents": [{"Key": "testing_repark_acceptance/u12s3path_r12_acc"}]},
+        ]
+    )
+    keys = cleanup.path_object_keys(s3, _WAREHOUSE, "testing_r12_acc_")
+    assert keys == [
+        ("example-warehouse", f"{base}aa/parquet/part-0"),
+        ("example-warehouse", f"{base}bb/x"),
+    ]
+    assert _deleted(s3, "paginate") == [{"Bucket": "example-warehouse", "Prefix": base}]
+
+
+@pytest.mark.parametrize("warehouse", ["", "example-warehouse/", "gs://example-warehouse/"])
+def test_path_objects_need_an_s3_warehouse(warehouse: str) -> None:
+    """A warehouse that is not an s3 location lists nothing and calls nothing."""
+    s3 = _Client([{"Contents": [{"Key": "k"}]}])
+    assert cleanup.path_object_keys(s3, warehouse, "testing_r12_acc_") == []
+    assert s3.calls == []
+
+
+def test_a_dry_run_lists_path_objects_but_deletes_none(capsys: pytest.CaptureFixture[str]) -> None:
+    """Without the execute switch only the count is reported."""
+    key = "testing_repark_acceptance/u12s3path_r4_u_aa/f"
+    s3 = _Client([{"Contents": [{"Key": key}]}])
+    cleanup.clean_path_objects(s3, _WAREHOUSE, "testing_r4_u_", execute=False)
+    assert _deleted(s3, "delete_objects") == []
+    assert "s3 path objects: 1 selected" in capsys.readouterr().out
+
+
+def test_an_executed_cleanup_deletes_the_path_objects_in_batches() -> None:
+    """2500 path objects go in three batches."""
+    page = {
+        "Contents": [
+            {"Key": f"testing_repark_acceptance/u12s3path_r4_u_a/{n}"} for n in range(2500)
+        ]
+    }
+    s3 = _Client([page])
+    cleanup.clean_path_objects(s3, _WAREHOUSE, "testing_r4_u_", execute=True)
+    sizes = [len(call["Delete"]["Objects"]) for call in _deleted(s3, "delete_objects")]
+    assert sizes == [1000, 1000, 500]
+
+
+def test_the_age_mode_never_touches_path_objects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only the run-and-leg mode calls the object purge; main wires nothing for --older-than."""
+    source = _SCRIPT.read_text(encoding="utf-8")
+    assert "if arguments.run_prefix is not None:\n        clean_path_objects" in source
+
+
+@pytest.mark.parametrize("warehouse", ["", "gs://bucket/", "bucket/", "s3://example-warehouse/"])
+def test_main_refuses_an_unset_or_placeholder_warehouse_before_boto3(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], warehouse: str
+) -> None:
+    """The placeholder bucket is squattable, so no client is built against it."""
+    monkeypatch.setenv("REPARK_ACCEPT_WAREHOUSE", warehouse)
+    monkeypatch.setitem(sys.modules, "boto3", None)
+    assert cleanup.main(["--older-than-hours", "24", "--execute"]) == 2
+    assert "REPARK_ACCEPT_WAREHOUSE" in capsys.readouterr().err

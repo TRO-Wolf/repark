@@ -50,6 +50,7 @@ from _acceptance import (
     is_storage_delete_denial,
     merge_sql,
     run_mor_merge_compact_expire,
+    run_object_stem,
     run_table_prefix,
     s3tables_catalog_config,
 )
@@ -562,8 +563,8 @@ def test_u12_s3_path_write_against_scratch_prefix() -> None:
 
     pins: s3-path-write-1/C-011, C-016
 
-    One prefix per (format, scenario) under a per-run uuid stem; nothing is
-    deleted afterwards (harness rule: cleanup is the user's manual call).
+    One prefix per (format, scenario) under a per-run uuid stem that carries the run and leg;
+    the leg's cleanup step removes those objects afterwards.
     Layout (parts, ``_SUCCESS``) is pinned on moto; this leg proves real-AWS
     reachability: save modes, partitionBy, and empty frames per format, with
     read-back rows through trailing-slash reads.
@@ -574,7 +575,8 @@ def test_u12_s3_path_write_against_scratch_prefix() -> None:
         .config("repark.aws.enable", "true")
         .getOrCreate()
     )
-    stem = f"{GLUE_WAREHOUSE.rstrip('/')}/{ACCEPTANCE_NAMESPACE}/u12s3path_{uuid.uuid4().hex[:12]}"
+    root = f"{GLUE_WAREHOUSE.rstrip('/')}/{ACCEPTANCE_NAMESPACE}"
+    stem = f"{root}/{run_object_stem()}{uuid.uuid4().hex[:12]}"
     rows = [(1, "a"), (2, "b"), (3, "a")]
     columns = ["id", "grp"]
     for format_name in ("parquet", "csv", "json"):

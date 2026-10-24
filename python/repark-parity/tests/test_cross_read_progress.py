@@ -97,24 +97,26 @@ def _fail_after_snapshot(stream: _ProgressStream, snapshots: list[str], *args: A
     raise RuntimeError("controlled external-call failure")
 
 
-def test_discovery_keeps_only_the_run_prefix_and_never_the_bench_table() -> None:
-    """Another run's tables, unprefixed names and the bench table are not discovered."""
-    namespace = _load_namespace("testing_r77_")
+def test_discovery_keeps_only_the_run_and_leg_prefix_and_never_the_bench_table() -> None:
+    """Another run's or leg's tables, unprefixed names and the bench table are not discovered."""
+    namespace = _load_namespace("testing_r77_acc_")
     session = _listing_session(
         [
-            "testing_r77_b",
-            "testing_r770_x",
-            "testing_r78_a",
-            "testing_r77_a",
+            "testing_r77_acc_b",
+            "testing_r77_u_a",
+            "testing_r77_x_a",
+            "testing_r770_acc_x",
+            "testing_r78_acc_a",
+            "testing_r77_acc_a",
             "testing_old_a",
             "ice_read_perf_bench",
-            "testing_r77_tmp",
+            "testing_r77_acc_tmp",
         ],
-        [False, False, False, False, False, False, True],
+        [False, False, False, False, False, False, False, False, True],
     )
     assert namespace["_discover_tables"](session, "catalog", "scratch") == [
-        "testing_r77_a",
-        "testing_r77_b",
+        "testing_r77_acc_a",
+        "testing_r77_acc_b",
     ]
 
 

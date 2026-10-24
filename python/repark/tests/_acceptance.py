@@ -108,6 +108,9 @@ COMMIT_CONFLICT_RETRY_ATTEMPTS = 3
 MAINTENANCE_RETRY_PROCEDURES = 3
 RUN_ID_ENV = "REPARK_ACCEPT_RUN_ID"
 LOCAL_RUN_ID = "0"
+LEG_ENV = "REPARK_ACCEPT_LEG"
+LOCAL_LEG = "acc"
+LEGS = ("acc", "u", "x")
 _RUN_ID = re.compile(r"[0-9]+")
 _TABLE_BUCKET_ARN = re.compile(
     r"arn:aws[a-z-]*:s3tables:(?P<region>[a-z0-9-]+):[0-9]{12}:bucket/[^/]+"
@@ -128,13 +131,26 @@ def fq_table(catalog: str, namespace: str, entity: str) -> str:
     return f"{catalog}.{namespace}.{entity}"
 
 
-def run_table_prefix(environ: Mapping[str, str] | None = None) -> str:
-    """The run-owned table prefix ``testing_r<run_id>_``; the id is digits only, default local."""
+def _run_and_leg(environ: Mapping[str, str] | None) -> str:
+    """The validated ``r<run_id>_<leg>`` pair read from the run id and leg variables."""
     source = os.environ if environ is None else environ
     run_id = source.get(RUN_ID_ENV) or LOCAL_RUN_ID
+    leg = source.get(LEG_ENV) or LOCAL_LEG
     if _RUN_ID.fullmatch(run_id) is None:
         raise ValueError(f"{RUN_ID_ENV} must be digits only, got {run_id!r}")
-    return f"{ACCEPTANCE_TABLE_PREFIX}r{run_id}_"
+    if leg not in LEGS:
+        raise ValueError(f"{LEG_ENV} must be one of {LEGS}, got {leg!r}")
+    return f"r{run_id}_{leg}"
+
+
+def run_table_prefix(environ: Mapping[str, str] | None = None) -> str:
+    """The run-and-leg-owned table prefix ``testing_r<run_id>_<leg>_``; defaults are local."""
+    return f"{ACCEPTANCE_TABLE_PREFIX}{_run_and_leg(environ)}_"
+
+
+def run_object_stem(environ: Mapping[str, str] | None = None) -> str:
+    """The run-and-leg-owned object stem ``u12s3path_r<run_id>_<leg>_`` of the S3 path write."""
+    return f"u12s3path_{_run_and_leg(environ)}_"
 
 
 def acceptance_namespace_location(warehouse: str) -> str:

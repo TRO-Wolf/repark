@@ -7729,8 +7729,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   17-TA chain ≤1 `WindowAggExec` + Arrow to_bits parity vs fused `withColumns`.
 - `_acceptance.py` — WG4 shared helpers for the real-AWS acceptance harness (NOT a `test_` module,
   so pytest never collects it). **AWS-EPHEMERAL-RUNS-1 step 1 (2026-10-24):** `run_table_prefix()` reads
-  `REPARK_ACCEPT_RUN_ID` (digits only, default `0`) and returns `testing_r<run_id>_`; every leg names
-  its tables through it, `ACCEPTANCE_TABLE_PREFIX` stays `testing_`. pins: aws-ephemeral-runs-1/C-001, C-002, C-003.
+  `REPARK_ACCEPT_RUN_ID` (digits only, default `0`) and `REPARK_ACCEPT_LEG` (`acc`, `u` or `x`, default `acc`) and
+  returns `testing_r<run_id>_<leg>_`; `run_object_stem()` returns `u12s3path_r<run_id>_<leg>_` for the S3 path write; every leg names
+  its tables through them, `ACCEPTANCE_TABLE_PREFIX` stays `testing_`. pins: aws-ephemeral-runs-1/C-001, C-002, C-003.
   **Step 4:** `s3tables_spark_catalog_config(name, arn)` is the Spark-side S3 Tables block on Iceberg's REST
   catalog (`type=rest`, SigV4, signing name `s3tables`, region parsed from the ARN), separate from
   `s3tables_catalog_config`, which RePark consumes. pins: aws-ephemeral-runs-1/C-010.
@@ -7833,11 +7834,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `create_namespace` takes no `location`, and the denial path is
   `pytest.fail(format_denial_failure(...))`. pins: live-v3-aws-legs/C-003
 - `test_acceptance_ephemeral_runs.py` — **AWS-EPHEMERAL-RUNS-1 step 1 (2026-10-24):** AWS-free pins for the
-  run-owned table prefix `testing_r<run_id>_` (id folded in, local default, digits-only refusal, longer ids never
+  run-and-leg-owned table prefix `testing_r<run_id>_<leg>_` (id folded in, local default, digits-only refusal, longer ids never
   collide) and a source guard that every leg and the dbt gold leg name tables through `run_table_prefix()` with no
   literal `testing_cu_` or `testing_xrel_` left. **Step 4:** the Spark REST catalog block of
   `s3tables_spark_catalog_config` (eight keys, region from the ARN, no literal region, RePark's block untouched,
-  a non-ARN refused). pins: aws-ephemeral-runs-1/C-001, C-002, C-003, C-010
+  a non-ARN refused). pins: aws-ephemeral-runs-1/C-001, C-002, C-003, C-010, C-019
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`

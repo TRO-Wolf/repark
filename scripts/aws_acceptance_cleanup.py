@@ -13,13 +13,17 @@ from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 SCRATCH_NAMESPACE = "testing_repark_acceptance"
-RUN_PREFIX = re.compile(r"testing_r[0-9]+_")
+RUN_PREFIX = re.compile(r"testing_r[0-9]+_(?:acc|u|x)_")
+RUN_GROUP = re.compile(r"testing_r[0-9]+_(?:(?:acc|u|x)_)?")
+STEM_OF_PREFIX = re.compile(r"testing_(r[0-9]+_(?:acc|u|x)_)")
+PLACEHOLDER_WAREHOUSE = "s3://example-warehouse/"
 GLUE_DELETE_BATCH = 100
 S3_DELETE_BATCH = 1000
 DESCRIPTION = (
-    "Delete the tables of one run prefix (testing_r<digits>_), or of every run prefix whose"
-    " newest table is older than N hours, from the Glue scratch database and the S3 Tables"
-    " scratch namespace. Dry run unless --execute."
+    "Delete the tables and S3 path-write objects of one run-and-leg prefix"
+    " (testing_r<digits>_<acc|u|x>_), or the tables of every run prefix whose newest table is"
+    " older than N hours, from the Glue scratch database and the S3 Tables scratch namespace."
+    " Dry run unless --execute."
 )
 
 
@@ -32,15 +36,15 @@ class ScratchTable(NamedTuple):
 
 
 def validate_run_prefix(prefix: str) -> str:
-    """Return ``prefix`` when it is exactly ``testing_r<digits>_``, else raise ValueError."""
+    """Return ``prefix`` when it is exactly ``testing_r<digits>_<acc|u|x>_``, else raise."""
     if RUN_PREFIX.fullmatch(prefix) is None:
-        raise ValueError(f"run prefix must match testing_r<digits>_, got {prefix!r}")
+        raise ValueError(f"run prefix must match testing_r<digits>_<acc|u|x>_, got {prefix!r}")
     return prefix
 
 
 def run_prefix_of(name: str) -> str | None:
-    """The run prefix a table name carries, or None for any other name, the bench table included."""
-    matched = RUN_PREFIX.match(name)
+    """The run-and-leg prefix (or bare run prefix) a name carries; None for any other name."""
+    matched = RUN_GROUP.match(name)
     return None if matched is None else matched.group(0)
 
 
@@ -177,7 +181,7 @@ def build_parser() -> argparse.ArgumentParser:
     """The command line: a run prefix or an age, and the execute switch."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--prefix", help="the run prefix testing_r<digits>_ to remove")
+    mode.add_argument("--run-prefix", help="the run-and-leg prefix testing_r<digits>_<leg>_")
     mode.add_argument("--older-than-hours", type=float, help="remove every run prefix older")
     parser.add_argument("--execute", action="store_true", help="delete; without it, only report")
     return parser
@@ -209,6 +213,43 @@ def clean_glue(
     print(f"glue: deleted {len(chosen)} tables and {len(objects)} objects", flush=True)
 
 
+def path_object_stem(prefix: str) -> str:
+    """The S3 path-write object stem ``u12s3path_r<digits>_<leg>_`` of a run-and-leg prefix."""
+    matched = STEM_OF_PREFIX.fullmatch(validate_run_prefix(prefix))
+    if matched is None:
+        raise ValueError(f"no object stem for {prefix!r}")
+    return f"u12s3path_{matched.group(1)}"
+
+
+def path_object_keys(s3: Any, warehouse: str, prefix: str) -> list[tuple[str, str]]:
+    """The (bucket, key) pairs of the leg's path-write objects below the scratch prefix."""
+    stem = path_object_stem(prefix)
+    root = scratch_prefix(warehouse)
+    parsed = urlparse(root)
+    if parsed.scheme != "s3":
+        return []
+    key_prefix = f"{parsed.path.lstrip('/')}{stem}"
+    keys = []
+    for page in s3.get_paginator("list_objects_v2").paginate(
+        Bucket=parsed.netloc, Prefix=key_prefix
+    ):
+        keys.extend(
+            (parsed.netloc, entry["Key"])
+            for entry in page.get("Contents", [])
+            if entry["Key"].startswith(key_prefix)
+        )
+    return keys
+
+
+def clean_path_objects(s3: Any, warehouse: str, prefix: str, execute: bool) -> None:
+    """Report or perform the delete of the leg's S3 path-write objects."""
+    objects = path_object_keys(s3, warehouse, prefix)
+    print(f"s3 path objects: {len(objects)} selected", flush=True)
+    if execute:
+        delete_scratch_objects(s3, objects)
+        print(f"s3 path objects: deleted {len(objects)}", flush=True)
+
+
 def clean_s3tables(
     client: Any, table_bucket_arn: str, chosen: Sequence[ScratchTable], execute: bool
 ) -> None:
@@ -222,15 +263,15 @@ def clean_s3tables(
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the cleanup against the environment's AWS account; return the exit status."""
     arguments = build_parser().parse_args(argv)
-    if arguments.prefix is not None:
+    if arguments.run_prefix is not None:
         try:
-            validate_run_prefix(arguments.prefix)
+            validate_run_prefix(arguments.run_prefix)
         except ValueError as error:
             print(str(error), file=sys.stderr)
             return 2
     warehouse = os.environ.get("REPARK_ACCEPT_WAREHOUSE", "")
-    if not warehouse.startswith("s3://"):
-        print("REPARK_ACCEPT_WAREHOUSE must be an s3:// location", file=sys.stderr)
+    if not warehouse.startswith("s3://") or warehouse == PLACEHOLDER_WAREHOUSE:
+        print("REPARK_ACCEPT_WAREHOUSE must be a real s3:// location", file=sys.stderr)
         return 2
     import boto3
 
@@ -238,13 +279,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     glue = boto3.client("glue")
     s3 = boto3.client("s3")
     glue_tables = list_glue_tables(glue, SCRATCH_NAMESPACE)
-    chosen = select_tables(glue_tables, arguments.prefix, arguments.older_than_hours, now)
+    chosen = select_tables(glue_tables, arguments.run_prefix, arguments.older_than_hours, now)
     clean_glue(glue, s3, warehouse, chosen, arguments.execute)
+    if arguments.run_prefix is not None:
+        clean_path_objects(s3, warehouse, arguments.run_prefix, arguments.execute)
     table_bucket_arn = os.environ.get("TABLE_BUCKET_ARN", "")
     if table_bucket_arn:
         client = boto3.client("s3tables")
         listed = list_s3tables(client, table_bucket_arn, SCRATCH_NAMESPACE)
-        selected = select_tables(listed, arguments.prefix, arguments.older_than_hours, now)
+        selected = select_tables(listed, arguments.run_prefix, arguments.older_than_hours, now)
         clean_s3tables(client, table_bucket_arn, selected, arguments.execute)
     return 0
 

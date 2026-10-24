@@ -1274,11 +1274,11 @@ The cross-read diagnostic shell tests also run real pytest with a blocked harmle
 
 The live progress-delivery subprocess pin holds the output contract. pins: ice-integrity-pins-1/C-063
 
-[test_aws_acceptance_cleanup.py](test_aws_acceptance_cleanup.py) pins `scripts/aws_acceptance_cleanup.py` against stubbed Glue, S3 and S3 Tables clients, with no AWS and no `boto3` (2026-10-24): the prefix shape, the bench and legacy-name exclusion, the strict location guard, the batch sizes and the delete order, the age filter and the dry-run default. pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011
+[test_aws_acceptance_cleanup.py](test_aws_acceptance_cleanup.py) pins `scripts/aws_acceptance_cleanup.py` against stubbed Glue, S3 and S3 Tables clients, with no AWS and no `boto3` (2026-10-24): the run-and-leg prefix shape, one leg never taking another's tables, the bench and legacy-name exclusion, the strict location guard, the batch sizes and the delete order, the age filter across legs, the path-write object purge, the placeholder-warehouse refusal and the dry-run default. pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021
 
 [test_cross_read_progress.py](test_cross_read_progress.py) executes the exact discovery and namespace function ASTs without native-engine or AWS imports (2026-10-24). It pins sorted permanent testing_ selection, flushed table identity before metadata and engine calls, elapsed status output, no false completion, exhaustive outcomes after a first mismatch, the final assertion and empty discovery failure. pins: ice-integrity-pins-1/C-064
 
-[test_cross_read_progress.py](test_cross_read_progress.py) also pins the run-prefix discovery filter (2026-10-24): another run's tables, a longer run id, unprefixed names, temporary views and the bench table are not discovered. pins: aws-ephemeral-runs-1/C-009
+[test_cross_read_progress.py](test_cross_read_progress.py) also pins the run-and-leg discovery filter (2026-10-24): another run's or leg's tables, a longer run id, unprefixed names, temporary views and the bench table are not discovered. pins: aws-ephemeral-runs-1/C-009
 
 [test_cross_read_progress.py](test_cross_read_progress.py) also loads the exact outcome types,
 formatter, assertion and error-first-line helper ASTs (2026-10-24). Eighteen cells pin immediate
