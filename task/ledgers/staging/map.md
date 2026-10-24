@@ -2588,3 +2588,5 @@ C-060 remains OPEN; the live-run record holds the measurements.
 The [ICE-INTEGRITY-PINS-1 ledger](ice-integrity-pins-1-ledger.md) appends run 6's final
 attempt-2 result (2026-10-24): hosted progress is measured, but cross-read completion and
 Spark refusal classification remain open. Exact measurements stay in the live-run record.
+
+ICE-INTEGRITY-PINS-1 immediate-detail follow-up records its scoped plan and local validation in the existing ledger (2026-10-24). C-060 remains OPEN.

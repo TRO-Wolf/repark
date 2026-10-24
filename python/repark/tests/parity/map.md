@@ -106,3 +106,8 @@ path expression repointed in the same unit and no other line changed:
 - Up: [../map.md](../map.md)
 
 The AWS namespace progress loop preserves every discovered comparison and its final assertion. pins: ice-integrity-pins-1/C-064
+
+ICE-INTEGRITY-PINS-1 immediate details (2026-10-24): the AWS cross-read leg flushes the existing
+one-outcome table after each completed status line, including EQUAL. The complete final report
+and assertion remain. Local pins live in the parity harness tests; hosted Spark error causes
+and C-060 completion remain unmeasured. pins: ice-integrity-pins-1/C-065

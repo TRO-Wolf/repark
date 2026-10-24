@@ -8,7 +8,7 @@ import sys
 from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, NamedTuple, NoReturn
 from unittest.mock import Mock, call
 
 import pytest
@@ -134,7 +134,10 @@ def test_progress_preserves_sorted_selection_and_asserts_every_outcome(
     assert pair.call_args_list == [
         call(repark, table, spark, table, _PRIVATE_METADATA) for table in tables
     ]
-    formatter.assert_called_once_with(outcomes)
+    assert formatter.call_args_list == [
+        *[call([outcome]) for outcome in outcomes],
+        call(outcomes),
+    ]
     assertion.assert_called_once_with(outcomes)
 
     visible = "Cross-read catalog.scratch: discovered 3 tables\n"
@@ -146,7 +149,7 @@ def test_progress_preserves_sorted_selection_and_asserts_every_outcome(
         expected_checkpoints.append((f"metadata:{table}", visible))
         visible += f"Cross-read {table}: engine pair\n"
         expected_checkpoints.append((f"pair:{table}", visible))
-        visible += f"Cross-read {table}: {status} ({elapsed:.3f}s)\n"
+        visible += f"Cross-read {table}: {status} ({elapsed:.3f}s)\nFINAL_OUTCOMES\n"
     assert checkpoints == expected_checkpoints
     assert stream.flushed == visible
     assert stream.getvalue() == visible + "FINAL_OUTCOMES\n"
@@ -215,3 +218,140 @@ def test_empty_discovery_reports_zero_and_retains_the_failure(
         namespace["_cross_read_namespace"](repark, Mock(), "catalog", "scratch")
     assert stream.flushed == "Cross-read catalog.scratch: discovered 0 tables\n"
     assert external.mock_calls == []
+
+
+def _load_reporting_namespace() -> dict[str, Any]:
+    """Load the exact outcome types, formatter and assertion without live imports."""
+    source = _SOURCE.with_name("_acceptance_cross_read.py")
+    tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+    names = {
+        "CrossReadColumn",
+        "CrossReadOutcome",
+        "format_outcome_table",
+        "assert_outcomes_expected",
+        "spark_error_first_line",
+    }
+    constants = {"EQUAL", "DIFFERENT", "SPARK_CANNOT_READ", "_MAX_ERROR_LINE_CHARS"}
+    nodes = [
+        node
+        for node in tree.body
+        if (isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name in names)
+        or (
+            isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id in constants for target in node.targets
+            )
+        )
+        or (isinstance(node, ast.ImportFrom) and node.module == "__future__")
+    ]
+    loaded = {node.name for node in nodes if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
+    assert loaded == names
+    namespace: dict[str, Any] = {"NamedTuple": NamedTuple, "__name__": __name__}
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), "exec"), namespace)
+    return namespace
+
+
+@pytest.mark.parametrize("phase", ["complete", "metadata", "pair"])
+@pytest.mark.parametrize(
+    ("status", "has_ns_columns", "condition"),
+    [
+        ("EQUAL", False, None),
+        ("DIFFERENT", False, None),
+        ("SPARK-CANNOT-READ", True, "UNSUPPORTED_TYPE"),
+        ("SPARK-CANNOT-READ", False, "UNSUPPORTED_TYPE"),
+        ("SPARK-CANNOT-READ", True, None),
+        ("SPARK-CANNOT-READ", False, None),
+    ],
+)
+def test_completed_details_flush_before_next_call_and_preserve_final_report(
+    monkeypatch: pytest.MonkeyPatch,
+    phase: str,
+    status: str,
+    has_ns_columns: bool,
+    condition: str | None,
+) -> None:
+    """Stored details stay visible through later failure and the real final assertion."""
+    reporting = _load_reporting_namespace()
+    error_line = "Spark read failed: " + "x" * 320
+    error = RuntimeError(error_line + "\nprivate second line")
+    first_line = reporting["spark_error_first_line"](error)
+    assert first_line == error_line[:300]
+    table = "catalog.scratch.testing_a"
+    spark_counts = {"EQUAL": 2, "DIFFERENT": 3, "SPARK-CANNOT-READ": None}
+    outcome = reporting["CrossReadOutcome"](
+        table=table,
+        status=status,
+        repark_columns=[],
+        spark_columns=[],
+        schema_equal=status == "EQUAL",
+        rows_equal=status == "EQUAL" if status != "SPARK-CANNOT-READ" else None,
+        repark_row_count=2,
+        spark_row_count=spark_counts[status],
+        first_differences=["schema differs", "row differs", "third difference"],
+        spark_error_class="RuntimeError" if status == "SPARK-CANNOT-READ" else None,
+        spark_error_condition=condition,
+        spark_error_first_line=first_line if status == "SPARK-CANNOT-READ" else None,
+        has_ns_columns=has_ns_columns,
+    )
+    if status == "EQUAL":
+        detail, spark_rows = "row-equal", "2"
+    elif status == "DIFFERENT":
+        detail, spark_rows = "schema differs; row differs", "3"
+    else:
+        label = "RuntimeError UNSUPPORTED_TYPE" if condition else "RuntimeError"
+        detail, spark_rows = f"{label}: {first_line}", "-"
+    if has_ns_columns:
+        detail = f"ns-columns; {detail}"
+    rendered = (
+        "table | status | repark_rows | spark_rows | detail\n"
+        f"{table} | {status} | 2 | {spark_rows} | {detail}"
+    )
+    assert reporting["format_outcome_table"]([outcome]) == rendered
+    namespace = _load_namespace()
+    names = ["testing_a"] if phase == "complete" else ["testing_a", "testing_z"]
+    repark = _listing_session(names, [False] * len(names))
+    stream = _ProgressStream()
+    monkeypatch.setattr(sys, "stdout", stream)
+    metadata = Mock(return_value=_PRIVATE_METADATA)
+    pair = Mock(side_effect=[outcome, RuntimeError("controlled next-call failure")])
+    if phase == "metadata":
+        metadata.side_effect = [_PRIVATE_METADATA, RuntimeError("controlled next-call failure")]
+    formatter = Mock(wraps=reporting["format_outcome_table"])
+    assertion = Mock(wraps=reporting["assert_outcomes_expected"])
+    namespace.update(
+        _metadata_file_or_none=metadata,
+        cross_read_table_pair=pair,
+        format_outcome_table=formatter,
+        assert_outcomes_expected=assertion,
+        time=Mock(monotonic=Mock(side_effect=[100.0, 101.25, 200.0])),
+    )
+    is_unexpected = status == "DIFFERENT" or (status == "SPARK-CANNOT-READ" and not has_ns_columns)
+    if phase != "complete":
+        with pytest.raises(RuntimeError, match="controlled next-call failure"):
+            namespace["_cross_read_namespace"](repark, Mock(), "catalog", "scratch")
+    elif is_unexpected:
+        with pytest.raises(AssertionError, match="cross-read found 1 unexpected outcome"):
+            namespace["_cross_read_namespace"](repark, Mock(), "catalog", "scratch")
+    else:
+        namespace["_cross_read_namespace"](repark, Mock(), "catalog", "scratch")
+    visible = (
+        f"Cross-read catalog.scratch: discovered {len(names)} tables\n"
+        f"Cross-read [1/{len(names)}] {table}: metadata lookup\n"
+        f"Cross-read {table}: engine pair\n"
+        f"Cross-read {table}: {status} (1.250s)\n{rendered}\n"
+    )
+    if phase == "complete":
+        assert stream.flushed == visible
+        assert stream.getvalue() == visible + rendered + "\n"
+        assert formatter.call_args_list == [call([outcome]), call([outcome])]
+        assertion.assert_called_once_with([outcome])
+    else:
+        visible += "Cross-read [2/2] catalog.scratch.testing_z: metadata lookup\n"
+        if phase == "pair":
+            visible += "Cross-read catalog.scratch.testing_z: engine pair\n"
+        assert stream.flushed == visible
+        assert stream.getvalue() == visible
+        formatter.assert_called_once_with([outcome])
+        assertion.assert_not_called()
+    assert "private second line" not in stream.getvalue()
+    assert "third difference" not in stream.getvalue()
