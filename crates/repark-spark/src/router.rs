@@ -296,10 +296,12 @@ async fn execute_inner(
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(replace) = insert_positional::replace_where::parse_replace_where(sql)? {
+        crate::write_door::tag(Some(crate::write_door::WriteDoor::D5ReplaceWhere));
         let execute = insert_positional::replace_where::execute_replace_where;
         return Box::pin(execute(ctx, catalogs, replace, write_options)).await;
     }
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
+        crate::write_door::tag(Some(crate::write_door::WriteDoor::D3InsertByName));
         return Box::pin(crate::insert_by_name::execute_insert_by_name(
             ctx,
             catalogs,
@@ -317,6 +319,7 @@ async fn execute_inner(
         write_options.refuse_if_non_empty("this INSERT form")?;
         return execute_unparsable_fallthrough(ctx, catalogs, sql).await;
     };
+    crate::write_door::tag(crate::write_door::door_of(&statement, write_options));
     // G15.
     crate::refuse_collation_in_statement(&statement)?;
     crate::refuse_declared_function_in_statement(&statement)?;

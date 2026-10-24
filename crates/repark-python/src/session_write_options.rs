@@ -129,8 +129,17 @@ pub fn session_text_write_copy_parts(
     })
 }
 
+#[pyfunction]
+fn write_doors() -> Vec<(String, bool)> {
+    repark_spark::write_door::WriteDoor::ALL
+        .iter()
+        .map(|door| (door.id().to_string(), door.is_spark_door()))
+        .collect()
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sql_with_write_options, module)?)?;
+    module.add_function(wrap_pyfunction!(write_doors, module)?)?;
     module.add_function(wrap_pyfunction!(session_write_path, module)?)?;
     module.add_function(wrap_pyfunction!(built_sql_user_fragment, module)?)?;
     module.add_function(wrap_pyfunction!(session_text_write_copy_parts, module)?)?;

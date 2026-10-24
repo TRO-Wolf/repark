@@ -207,8 +207,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [write-spine-1-ledger.md](write-spine-1-ledger.md) — **WRITE-SPINE-1 steps (1) and (3)
   (2026-10-24):** shared kernel names in `repark_common::udf_names` (C-001 PROVEN) and the
   fail-closed store-kernel lookup in `ntz_store.rs` (C-002 PROVEN, with a measured correction of
-  the order's test shape); the door enum, spellings, matrix and mutants (C-003 to C-006) are
-  OPEN. `risk_tier: standard`. Branch `feat/write-spine-1-steps-1-3a`.
+  the order's test shape). Step 3a (2026-10-24): `WriteDoor` and `door_of` (C-003 PROVEN),
+  the spelling table and the enumeration tests (C-004 PROVEN), four choices where the order is
+  silent listed for the orchestrator, mutants (b) to (d) red; the matrix and mutant (a) (C-005,
+  C-006) are OPEN. `risk_tier: standard`. Branch `feat/write-spine-1-steps-1-3a`.
 - [zone-horizon-render-1-ledger.md](zone-horizon-render-1-ledger.md) +
   [zone-horizon-render-1-main-answers.json](zone-horizon-render-1-main-answers.json) —
   **ZONE-HORIZON-RENDER-1 (2026-10-08), from the C-2d fold 1 re-verify's S2 finding:** an

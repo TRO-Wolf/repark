@@ -73,13 +73,64 @@ a missing wall kernel refuses the write: ()
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
 ```
 
+## Step 3a, the enum (2026-10-24)
+
+`crates/repark-spark/src/write_door.rs` holds `WriteDoor` (eighteen variants, one per row of the
+evaluation's table), `ALL`, `id`, `is_spark_door` and `door_of`, whose `match` lists all 135
+`sqlparser` 0.62 `Statement` variants with no wildcard arm. `router.rs` (968 → 971 lines) tags
+the door in `execute_inner`: D5 on the `REPLACE WHERE` intercept, D3 on the `BY NAME` intercept,
+and `door_of` once on the parsed statement; the tag is one `tracing` debug event and changes no
+value. `repark-python` exposes `write_doors()`; `python/repark/tests/timestamps/` gains
+`_write_spine_1_doors.py` (41 spelling names on 18 doors) and
+`test_write_spine_1_enumeration.py`.
+
+Door count: the enum holds 18; the evaluation's table holds 18.
+
+```
+cargo test -p repark-spark --lib tests::write_door
+test tests::write_door::write_door_ids_are_the_evaluation_table_ids_and_the_first_ten_are_spark_doors ... ok
+test tests::write_door::door_of_answers_none_for_statements_that_write_no_new_values ... ok
+test tests::write_door::door_of_names_the_door_each_parsed_spark_write_takes ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2832 filtered out
+
+.venv/bin/python -m pytest python/repark/tests/timestamps/test_write_spine_1_enumeration.py -q
+SKIPPED [1] test_write_spine_1_enumeration.py:51: could not import '_write_spine_1_spellings'
+3 passed, 1 skipped
+```
+
+**Choices this step made where the order is silent (for the orchestrator to confirm):**
+
+1. The order says the tag goes into "the existing trace/statement record". The Spark router has
+   no statement record on main, so the tag is a `tracing` debug event (target
+   `repark_spark::write_door`, field `door`), the crate's existing trace. Step 3b needs a way to
+   read it; that is open.
+2. `INSERT … BY NAME` (D3) and `INSERT … REPLACE WHERE` (D5) are pre-parse intercepts: the
+   statement `door_of` receives never carries them. The router tags them at their intercepts.
+3. `door_of` sees the statement and the options only. A positional `INSERT` that
+   `execute_insert_routed` sends to the owned append or the session-write-conf append (D2), or to
+   the schema-evolution `BY NAME` route (D3), is tagged D1; an `INSERT` into a Postgres table is
+   tagged D1 although it is not an Iceberg door.
+4. A `MERGE` returns one door: the door of its first value-writing clause. An update whose target,
+   after the target alias or table name, has more than one part is D9 (a field); otherwise D8
+   (whole column, and `SET *`). The rule reads names only, so a top-level non-struct column update
+   is D8.
+
+## Mutants and revert checks (2026-10-24)
+
+| mutant | change | red test | answer |
+|---|---|---|---|
+| (b) | `WriteDoor::D9MergeUpdateField` removed from `ALL` (length 17), native module rebuilt | `test_every_spelling_names_a_door` (`assert ['D9'] == []`), `test_the_spark_flag_separates_the_spark_doors_from_the_native_and_streaming_doors` | red; restored |
+| (c) | the step 1b `ntz_store.rs` change reverted (the base lookup) | `missing_wall_kernel_refuses_instead_of_storing_utc` (`a missing wall kernel refuses the write: ()`) | red; restored |
+| (d) | `insert_by_name` deleted from D3 in `_write_spine_1_doors.py` | `test_every_write_door_has_a_spelling` (`assert ['D3'] == []`) | red; restored |
+| (a) | `door_of` returning `None` for one writing arm | waits for the matrix (step 3b) | not run |
+
 ## PROPOSITION LEDGER — WRITE-SPINE-1 steps (1) and (3) — 2026-10-24
 
 | id | claim | evidence | status | proof |
 |---|---|---|---|---|
 | C-001 | Every UDF name both `repark-functions` and `repark-iceberg` name is one constant in `repark_common::udf_names`, and no call site changed. | `grep -rn '"__repark_' crates/` shows each of the seven strings once, in `udf_names.rs`. | **PROVEN** | the grep above; the step 1a diff changes only the seven definitions into re-exports; `cargo build --workspace`, `make rust-clippy` green. |
 | C-002 | A session whose NTZ wall kernel is not registered refuses an `INSERT … BY NAME` of an instant into a `TIMESTAMP_NTZ` column, where main stores the UTC wall (corrected 2026-10-24 from the order's "a wall into a `TIMESTAMP` column", measured above). | `store_kernel_registry.rs`, red on main, green on head. | **PROVEN** | `missing_wall_kernel_refuses_instead_of_storing_utc`: red with the base lookup, green on head; the same test's registered control stores `1767305045123456`. |
-| C-003 | `WriteDoor::ALL` holds exactly the eighteen value-writing doors of the evaluation's table, and `door_of` is an exhaustive match over the dispatched statement shapes. | `write_door.rs`; the enumeration tests; a removed variant reds them. | OPEN | step 3a. |
-| C-004 | Every door has at least one spelling and every spelling names a door. | `every_write_door_has_a_spelling`, `every_spelling_names_a_door`. | OPEN | step 3a. |
+| C-003 | `WriteDoor::ALL` holds exactly the eighteen value-writing doors of the evaluation's table, and `door_of` is an exhaustive match over the dispatched statement shapes. | `write_door.rs`; the enumeration tests; a removed variant reds them. | **PROVEN** | `write_door_ids_are_the_evaluation_table_ids_and_the_first_ten_are_spark_doors`; `door_of` lists every `Statement` variant with no wildcard (compiles under `make rust-clippy`); the two `door_of` unit pins; mutant (b). The four choices of step 3a above await the orchestrator. |
+| C-004 | Every door has at least one spelling and every spelling names a door. | `every_write_door_has_a_spelling`, `every_spelling_names_a_door`. | **PROVEN** | `test_every_write_door_has_a_spelling`, `test_every_spelling_names_a_door` green; mutants (b) and (d) red them. The spelling-corpus test skips until lane B's `_write_spine_1_spellings.py` lands. |
 | C-005 | The door matrix on this head equals main's recorded answers on every cell, and classifies against the Spark fixture as the step-0 census table says. | `test_write_spine_1_doors.py` against the two fixtures. | OPEN | step 3b. |
-| C-006 | The four mutants of step 5 each red a named test. | the ledger's mutant table. | OPEN | step 5. |
+| C-006 | The four mutants of step 5 each red a named test. | the ledger's mutant table. | OPEN | (b), (c) and (d) red their tests (table above); (a) waits for the matrix. |
