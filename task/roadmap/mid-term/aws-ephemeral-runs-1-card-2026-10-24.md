@@ -3,9 +3,9 @@
 **Date:** 2026-10-24. **Filed by:** Claude Fable 5.1 (`claude-fable-5-1`), orchestrator, from the owner's rulings of
 the same morning (walkthrough artifact `FmUcKaesjdAtvPBPK6mqhK`).
 
-**Status:** ruled, not scheduled. Two owner actions stand in front of step 1 (§ The owner's actions). Closes the
-cross-read question of ledger C-060 once step 2 has one green dispatched run; C-060 itself is closed or re-rowed by
-the orchestrator with the owner's word, not by this card.
+**Status:** ruled, not scheduled. Two owner actions stand in front of step 1 (§ The owner's actions). Ledger C-060 is
+superseded by C-066 and C-067 (REJECTED, measured 2026-10-24, owner's word the same day); C-068 and C-069 hold this
+card's obligations OPEN and C-070 carries run 3's pre-streaming stall.
 
 **Retires:** when one dispatched `aws-acceptance` run on `main` proves all of: every leg job green inside its own cap,
 each leg's cross-read of its own tables EQUAL (or a named Spark error that is not the catalog-init failure), the

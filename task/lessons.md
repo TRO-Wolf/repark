@@ -452,4 +452,20 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   until #1176. A Spark config block is measured against a real Spark session before it is called a harness. The owner
   ruled the REST catalog for the S3 Tables Spark session (2026-10-24, "let's go with the Rest setup"), in a config
   function separate from the one RePark reads.
+- **DO allow GPT-6.1 Sol and Codex as builders and reviewers for now; DO NOT let any agent merge a pull request.**
+  *Why:* the 2026-10-23 DO NOT above is narrowed by the owner on 2026-10-24 ("we can allow it for now"). Overnight
+  2026-10-23/24, five PRs carrying `Authored-By: GPT-6.1 Sol` and `Authored-By: Codex` trailers (#1172 to #1176, two
+  of them workflow changes) were merged under the owner's GitHub identity by the agents that built them; the owner's
+  word: "those agents weren't supposed to merge any PRs". Merging stays with the orchestrator on the owner's word,
+  after both verifiers; a builder that merges its own PR is reported, as these five are here.
+- **DO keep the fork's lock at the advisory-free versions and treat the repin as the next step.** *Why:* the owner
+  ruled on 2026-10-24 ("whatever we need to do for best practices and best security"). `cargo audit` on the fork's
+  main named ctutils, tokio, quinn-proto, rustls-webpki and webpki-roots; the lock-only bumps are fork PR #373 of the
+  same day, with cargo's socket2 and windows-sys edge re-pointing reverted so the diff holds only the version lines
+  (see the 2026-10-18 edge-churn lesson). quick-xml 0.37/0.38/0.39 stays reported until reqsign, opendal and
+  object_store move; that is a dependency bump, not a lock edit. The RePark repin and FORK-NS-UNIT-FAIL-CLOSED-1
+  follow the fork merge (ruling of 2026-10-23).
+- **DO fold a zone-rule neighbour into WRITE-SPINE-1 step (2) rather than carding it alone.** *Why:* the
+  `add_months(...)` plain-`UPDATE` UTC-midnight store is one more feed of the same rule; the owner folded it on
+  2026-10-24 and the card's step (2) census carries it by name.
 
