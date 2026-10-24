@@ -971,8 +971,8 @@ repark-parity slice.
   warehouse is refused before a client exists. Glue tables go in batches of 100, then the
   objects below each table's location, only when the location is strictly under
   `<warehouse>/testing_repark_acceptance/`; S3 Tables tables go one by one in the scratch namespace. Dry run
-  unless `--execute`. `boto3` is imported inside `main` only, because `uv.lock` carries no `boto3` (ledger
-  C-014). Not wired into any workflow yet. Tests: `python/repark-parity/tests/test_aws_acceptance_cleanup.py`.
+  unless `--execute`. `boto3` is imported inside `boto3_client` only, because `uv.lock` carries no `boto3`; each job
+  installs it at an exact version (ledger C-014), and `main(argv, clients)` takes a client factory for tests. Wired into `aws-acceptance.yml`: each leg job runs it last with `--run-prefix`, and the `backstop` job runs it with `--older-than-hours 24`. Tests: `python/repark-parity/tests/test_aws_acceptance_cleanup.py`.
   pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021, C-022
 - `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
   assembler. `build --unit --role --base --brief` writes Markdown (stable prefix

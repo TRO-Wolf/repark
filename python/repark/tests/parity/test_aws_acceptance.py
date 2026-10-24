@@ -300,8 +300,8 @@ def test_mor_merge_compact_expire_against_s3tables() -> None:
 def test_v3_dv_dml_maintenance_against_glue() -> None:
     """LIVE-v3 Glue leg: v3 MoR CTAS → DV DELETE → MERGE → rewrite → expire → register_table.
 
-    Twin of the MW-4 leg: same scratch namespace, same never-teardown naming, a fresh
-    `testing_v3_dv_<uuid>` table each run. Glue implements `register_table`, so the adopt step
+    Twin of the MW-4 leg: same scratch namespace, same run-and-leg naming, a fresh
+    `testing_r<run_id>_<leg>_v3_dv_<uuid>` table each run. Glue implements `register_table`, so the adopt step
     runs on a second session here and is skipped on S3 Tables (registry `S3T-1` / fork R126).
 
     pins: live-v3-aws-legs/C-001, C-003

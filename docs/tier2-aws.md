@@ -115,9 +115,9 @@ table's files:
 **The teardown property after 2026-10-24.** The role can delete Glue tables named `testing_*` in
 the scratch database, S3 Tables tables in the scratch namespace, and objects under the warehouse
 scratch prefix, and nothing else: not the database, not the namespace, not the table bucket, not
-bronze. The harness still has no DROP TABLE path today; AWS-EPHEMERAL-RUNS-1 step 1 adds the
-per-run cleanup (a run deletes only its own `testing_<run-id>_…` prefix) and an age-bounded
-backstop. A compromised job could drop scratch tables under the prefix and could not touch anything
+bronze. The test harness has no DROP TABLE path; the cleanup script wired into `aws-acceptance.yml` by
+AWS-EPHEMERAL-RUNS-1 (each leg job deletes only its own `testing_r<run_id>_<leg>_…` prefix, and an
+age-bounded backstop deletes older run prefixes) is the only delete. A compromised job could drop scratch tables under the prefix and could not touch anything
 production reads.
 
 ## 3. Scratch expiry
@@ -133,14 +133,14 @@ removes prefixes older than 24 h at the start of the next run. An S3 lifecycle r
 warehouse scratch prefix, if one is set, is kept consistent with that 24 h window so no catalog
 entry outlives its files. The ICE-READ-PERF bench table is excluded from every sweep.
 
-**Run-owned cleanup (AWS-EPHEMERAL-RUNS-1, 2026-10-24, built locally, not yet wired into the workflow).**
+**Run-owned cleanup (AWS-EPHEMERAL-RUNS-1, 2026-10-24, wired into `aws-acceptance.yml`).**
 Each job owns one run-and-leg pair, `REPARK_ACCEPT_RUN_ID` (the run id) and `REPARK_ACCEPT_LEG` (`acc` for
 `acceptance-dbt`, `u`, `x`), and names its tables `testing_r<run_id>_<leg>_…`; the job's cross-read lists only that
 prefix. `scripts/aws_acceptance_cleanup.py` is the cleanup step: each leg job runs it last, with `if: always()`, as
 `--run-prefix testing_r<run_id>_<leg>_ --execute` (its tables, plus its `u12s3path_r<run_id>_<leg>_` S3 path-write
 objects), and the `backstop` job runs `--older-than-hours 24 --execute` after all three. It takes only names of that
 shape (never the ICE-READ-PERF bench table or a legacy `testing_*` table), removes objects only strictly below the
-warehouse scratch prefix, and needs the scoped delete grant of the card's ruling 5, which the owner applies. Each
+warehouse scratch prefix, and relies on the scoped delete grant of §2, which the owner has applied. Each
 job installs `boto3` at one exact version before it mints credentials; no lock file carries it.
 
 ## 4. Variables + secrets — prefer the environment scope
