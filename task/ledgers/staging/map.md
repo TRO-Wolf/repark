@@ -6,10 +6,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 ## Contents
 - [aws-ephemeral-runs-1-ledger.md](aws-ephemeral-runs-1-ledger.md) — **AWS-EPHEMERAL-RUNS-1
   (2026-10-24):** every `aws-acceptance` run creates, cross-reads and removes its own tables under
-  `testing_r<run_id>_`. The local half is built (the run prefix at every creating site, the cleanup
-  script, the Spark REST catalog block; the ledger marks each clause as its pin lands); the job
-  split, the `if: always()` cleanup and the `boto3` supply are OPEN questions (C-012 to C-014)
-  and the live-run clauses C-015 to C-018 wait for one dispatched run. `risk_tier: standard`. Branch `feat/aws-ephemeral-runs-1`.
+  `testing_r<run_id>_<leg>_`. Built: the run-and-leg prefix at every creating site, the cleanup script (with the
+  leg's S3 path-write objects), the Spark REST catalog block, and the job split with per-leg cleanup and a
+  backstop (C-001 to C-014, C-019 to C-021 PROVEN); the live-run clauses C-015 to C-018 wait for one
+  dispatched run. `risk_tier: standard`. Branch `feat/aws-ephemeral-runs-1`.
 - [current-date-session-zone-1-ledger.md](current-date-session-zone-1-ledger.md) —
   **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** `current_date()` answers the session-zone
   date. Step 0 measured on main: 352 compared cells, 104 same-cause diffs in the zones whose

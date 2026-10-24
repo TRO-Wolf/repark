@@ -74,3 +74,16 @@ refused by name as a second guard. The bench job is dispatch-only and has no `RE
   interpreter passes, so the run prefix reaches both sides with no change to the old wheel.
 - **F-5.** The dbt statement of the card is inexact (above); the split into `acceptance-dbt` together with the
   acceptance module is therefore a scheduling choice of the card, not a data dependency.
+
+## Resolutions (orchestrator rulings, 2026-10-24)
+
+- **F-1 resolved.** Two variables: `REPARK_ACCEPT_RUN_ID` (the run id, digits) and `REPARK_ACCEPT_LEG` (`acc` for the
+  acceptance and dbt jobs, `u`, `x`). Every table above is named `testing_r<run_id>_<leg>_<name>`; a job cleans and
+  cross-reads only its own run-and-leg prefix, so no job can reach another job's tables. The backstop matches
+  `testing_r<digits>_` of any leg and groups by the full run-and-leg prefix. Local defaults: run id `0`, leg `acc`.
+- **F-3 resolved.** The U12 S3 path write names its objects `u12s3path_r<run_id>_<leg>_<uuid12>`; the leg's cleanup
+  deletes the objects under `<warehouse>/testing_repark_acceptance/` whose key starts with that stem, behind the same
+  warehouse guard. Legacy objects and legacy tables stay untouched.
+- **Q5.** `REPARK_ACCEPT_ENTITY` is `appointment` in the environment, so the card's `testing_appointment` is the
+  resolved silver name; it now carries the run-and-leg prefix like every other table.
+

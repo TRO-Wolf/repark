@@ -4,8 +4,6 @@
 # in-file ref guard and IAM subject do not establish that branch boundary.
 # Mint credentials only after checkout, tool setup, dependency sync, and the native build. Mask the
 # account ID so tracebacks cannot expose ARNs in the public log.
-# The role cannot delete Glue tables or databases. It can delete objects only under the warehouse
-# scratch prefix for maintenance; lifecycle policy cleans accumulated scratch tables.
 # Run only the acceptance module. Refuse placeholder buckets before signing requests. A missing
 # TABLE_BUCKET_ARN skips the S3 Tables leg.
 # docs/tier2-aws.md owns operator inputs and setup. Local checks cannot prove environment approval,
@@ -42,14 +40,12 @@ concurrency:
   cancel-in-progress: false  # never cancel a live-AWS run mid-commit; runs serialize instead
 
 jobs:
-  live-aws:
-    name: tier-2 live AWS acceptance (Glue + S3 Tables, scratch-only)
+  build:
+    name: build the native wheel (no credentials)
     if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-    environment: aws-acceptance
+    timeout-minutes: 60
     permissions:
-      id-token: write   # OIDC exchange — scoped to this job only
       contents: read
     steps:
       - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
@@ -57,49 +53,83 @@ jobs:
         run: |
           echo "tier-2 runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
           exit 1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      # Python 3.12 WITH libpython so the PyO3 cdylib links during `maturin develop`.
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8  # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
           toolchain: "1.96.0"
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.0.1 (node24)
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
         with:
-          version: "0.9.5"  # Makefile UV_VERSION
+          version: "0.9.5"
           python-version: "3.12"
           enable-cache: true
-      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c  # v6.0.0
+      - name: sync + build the wheel
+        run: |
+          uv sync --locked --extra record --no-install-package repark
+          (cd python/repark && uvx maturin@1.14.1 build --release --out ../../wheel)
+          cp uv.lock wheel/uv.lock
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: acceptance-wheel
+          path: wheel/
+          if-no-files-found: error
+          retention-days: 1
+
+  acceptance-dbt:
+    name: tier-2 live AWS acceptance + dbt gold (Glue + S3 Tables, scratch-only)
+    needs: build
+    if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: aws-acceptance
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      REPARK_ACCEPT_RUN_ID: ${{ github.run_id }}
+      REPARK_ACCEPT_LEG: acc
+    steps:
+      - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "tier-2 runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with:
+          version: "0.9.5"
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c
         with:
           distribution: temurin
           java-version: "17"
-      # Build BEFORE credentials exist — a supply-chain payload in this step has no AWS session.
-      - name: sync + build native module
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: acceptance-wheel
+          path: wheel
+      - name: sync, install the wheel, profiler and boto3
         run: |
-          # --locked: uv.lock is an INPUT, never an output — a bare sync may rewrite the
-          # checked-in lockfile as a side effect of a CI run (same rule as parity-live.yml).
-          uv sync --locked --extra record
-          uv pip install --python .venv/bin/python --only-binary :all: py-spy==0.4.1
-          (cd python/repark && uvx maturin@1.14.1 develop)
+          uv sync --locked --extra record --no-install-package repark
+          uv pip install --python .venv/bin/python --no-deps wheel/repark-*.whl
+          uv pip install --python .venv/bin/python --only-binary :all: py-spy==0.4.1 boto3==1.43.111
           VIRTUAL_ENV="$PWD/.venv" uv pip install --quiet dbt-core==1.9.11 dbt-spark==1.9.3
-          uv venv --python 3.12 .venv-previous
-          VIRTUAL_ENV="$PWD/.venv-previous" uv pip install --only-binary :all: --require-hashes \
-            -r python/repark/tests/parity/previous_release_requirements.txt
-          .venv-previous/bin/python -c \
-            "import repark; assert repark.__version__ == '1.5.5', repark.__version__"
-      # Credentials mint HERE, last, immediately before the only step that needs them.
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-acceptance
           mask-aws-account-id: true
-      # Run only the scratch-scoped module; Glue deletion stays denied and placeholder buckets
-      # fail loud. `VIRTUAL_ENV` keeps the maturin build authoritative.
       - name: acceptance module (REPARK_AWS_ACCEPTANCE=1)
         env:
           REPARK_AWS_ACCEPTANCE: "1"
@@ -130,47 +160,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
-          role-session-name: repark-tier2-integrity-u
-          mask-aws-account-id: true
-      - name: integrity leg U (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
-        if: ${{ !cancelled() }}
-        env:
-          REPARK_AWS_ACCEPTANCE: "1"
-          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
-          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
-          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
-          REPARK_PREVIOUS_RELEASE_PYTHON: ${{ github.workspace }}/.venv-previous/bin/python
-        run: >
-          VIRTUAL_ENV="$PWD/.venv"
-          uv run --no-project python -m pytest
-          python/repark/tests/parity/test_aws_acceptance_commit_unknown.py
-          -q -rA
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ !cancelled() }}
-        with:
-          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
-          role-session-name: repark-tier2-integrity-x
-          mask-aws-account-id: true
-      - name: integrity leg X (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
-        if: ${{ !cancelled() }}
-        env:
-          REPARK_AWS_ACCEPTANCE: "1"
-          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
-          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
-          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
-          REPARK_PREVIOUS_RELEASE_PYTHON: ${{ github.workspace }}/.venv-previous/bin/python
-        run: >
-          VIRTUAL_ENV="$PWD/.venv"
-          uv run --no-project python -m pytest
-          python/repark/tests/parity/test_aws_acceptance_cross_release.py
-          -q -rA
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ !cancelled() }}
-        with:
-          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
-          role-session-name: repark-tier2-cross-read
+          role-session-name: repark-tier2-acceptance-cross-read
           mask-aws-account-id: true
       - name: cross-read module (REPARK_AWS_ACCEPTANCE=1)
         if: ${{ !cancelled() }}
@@ -214,6 +204,317 @@ jobs:
           kill "$watchdog_pid" 2>/dev/null || true
           wait "$watchdog_pid" || true
           exit "$pytest_status"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ always() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-acceptance-cleanup
+          mask-aws-account-id: true
+      - name: remove this leg's scratch tables
+        if: ${{ always() }}
+        env:
+          RUN_PREFIX: testing_r${{ github.run_id }}_acc_
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute
+
+  integrity-u:
+    name: tier-2 integrity leg U (commit-unknown drills, scratch-only)
+    needs: build
+    if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: aws-acceptance
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      REPARK_ACCEPT_RUN_ID: ${{ github.run_id }}
+      REPARK_ACCEPT_LEG: u
+    steps:
+      - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "tier-2 runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with:
+          version: "0.9.5"
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: acceptance-wheel
+          path: wheel
+      - name: sync, install the wheel, profiler and boto3
+        run: |
+          uv sync --locked --extra record --no-install-package repark
+          uv pip install --python .venv/bin/python --no-deps wheel/repark-*.whl
+          uv pip install --python .venv/bin/python --only-binary :all: py-spy==0.4.1 boto3==1.43.111
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity-u
+          mask-aws-account-id: true
+      - name: integrity leg U (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: >
+          VIRTUAL_ENV="$PWD/.venv"
+          uv run --no-project python -m pytest
+          python/repark/tests/parity/test_aws_acceptance_commit_unknown.py
+          -q -rA
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ !cancelled() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity-u-cross-read
+          mask-aws-account-id: true
+      - name: cross-read module (REPARK_AWS_ACCEPTANCE=1)
+        if: ${{ !cancelled() }}
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          REPARK_ACCEPT_DS: ${{ vars.REPARK_ACCEPT_DS }}
+          REPARK_ACCEPT_ENTITY: ${{ vars.REPARK_ACCEPT_ENTITY }}
+          REPARK_ACCEPT_ID_COL: ${{ vars.REPARK_ACCEPT_ID_COL }}
+          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+          SPARK_LOCAL_IP: "127.0.0.1"
+        run: |
+          .venv/bin/python -u -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA --capture=tee-sys &
+          pytest_pid=$!
+          (
+            delay_pid=""
+            stop_requested=0
+            trap '
+              stop_requested=1
+              if [ -n "$delay_pid" ]; then
+                kill "$delay_pid" 2>/dev/null || true
+                wait "$delay_pid" 2>/dev/null || true
+              fi
+            ' TERM INT
+            while [ "$stop_requested" = 0 ] && kill -0 "$pytest_pid" 2>/dev/null; do
+              sleep 120 &
+              delay_pid=$!
+              wait "$delay_pid" || break
+              delay_pid=""
+              if kill -0 "$pytest_pid" 2>/dev/null; then
+                echo "::group::cross-read native stacks (C-060)"
+                timeout --kill-after=5s 30s sudo -n .venv/bin/py-spy dump --pid "$pytest_pid" --native || echo "::warning::Native stack capture failed"
+                echo "::endgroup::"
+              fi
+            done
+          ) &
+          watchdog_pid=$!
+          pytest_status=0
+          wait "$pytest_pid" || pytest_status=$?
+          kill "$watchdog_pid" 2>/dev/null || true
+          wait "$watchdog_pid" || true
+          exit "$pytest_status"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ always() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity-u-cleanup
+          mask-aws-account-id: true
+      - name: remove this leg's scratch tables
+        if: ${{ always() }}
+        env:
+          RUN_PREFIX: testing_r${{ github.run_id }}_u_
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute
+
+  integrity-x:
+    name: tier-2 integrity leg X (cross-release, scratch-only)
+    needs: build
+    if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: aws-acceptance
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      REPARK_ACCEPT_RUN_ID: ${{ github.run_id }}
+      REPARK_ACCEPT_LEG: x
+    steps:
+      - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "tier-2 runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with:
+          version: "0.9.5"
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: acceptance-wheel
+          path: wheel
+      - name: sync, install the wheel, profiler and boto3
+        run: |
+          uv sync --locked --extra record --no-install-package repark
+          uv pip install --python .venv/bin/python --no-deps wheel/repark-*.whl
+          uv pip install --python .venv/bin/python --only-binary :all: py-spy==0.4.1 boto3==1.43.111
+          uv venv --python 3.12 .venv-previous
+          VIRTUAL_ENV="$PWD/.venv-previous" uv pip install --only-binary :all: --require-hashes \
+            -r python/repark/tests/parity/previous_release_requirements.txt
+          .venv-previous/bin/python -c \
+            "import repark; assert repark.__version__ == '1.5.5', repark.__version__"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity-x
+          mask-aws-account-id: true
+      - name: integrity leg X (REPARK_AWS_ACCEPTANCE=1, ICE-INTEGRITY-PINS-1)
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+          REPARK_PREVIOUS_RELEASE_PYTHON: ${{ github.workspace }}/.venv-previous/bin/python
+        run: >
+          VIRTUAL_ENV="$PWD/.venv"
+          uv run --no-project python -m pytest
+          python/repark/tests/parity/test_aws_acceptance_cross_release.py
+          -q -rA
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ !cancelled() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity-x-cross-read
+          mask-aws-account-id: true
+      - name: cross-read module (REPARK_AWS_ACCEPTANCE=1)
+        if: ${{ !cancelled() }}
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          REPARK_ACCEPT_DS: ${{ vars.REPARK_ACCEPT_DS }}
+          REPARK_ACCEPT_ENTITY: ${{ vars.REPARK_ACCEPT_ENTITY }}
+          REPARK_ACCEPT_ID_COL: ${{ vars.REPARK_ACCEPT_ID_COL }}
+          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+          SPARK_LOCAL_IP: "127.0.0.1"
+        run: |
+          .venv/bin/python -u -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA --capture=tee-sys &
+          pytest_pid=$!
+          (
+            delay_pid=""
+            stop_requested=0
+            trap '
+              stop_requested=1
+              if [ -n "$delay_pid" ]; then
+                kill "$delay_pid" 2>/dev/null || true
+                wait "$delay_pid" 2>/dev/null || true
+              fi
+            ' TERM INT
+            while [ "$stop_requested" = 0 ] && kill -0 "$pytest_pid" 2>/dev/null; do
+              sleep 120 &
+              delay_pid=$!
+              wait "$delay_pid" || break
+              delay_pid=""
+              if kill -0 "$pytest_pid" 2>/dev/null; then
+                echo "::group::cross-read native stacks (C-060)"
+                timeout --kill-after=5s 30s sudo -n .venv/bin/py-spy dump --pid "$pytest_pid" --native || echo "::warning::Native stack capture failed"
+                echo "::endgroup::"
+              fi
+            done
+          ) &
+          watchdog_pid=$!
+          pytest_status=0
+          wait "$pytest_pid" || pytest_status=$?
+          kill "$watchdog_pid" 2>/dev/null || true
+          wait "$watchdog_pid" || true
+          exit "$pytest_status"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ always() }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-integrity-x-cleanup
+          mask-aws-account-id: true
+      - name: remove this leg's scratch tables
+        if: ${{ always() }}
+        env:
+          RUN_PREFIX: testing_r${{ github.run_id }}_x_
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute
+
+  backstop:
+    name: backstop (run prefixes older than 24 hours, scratch-only)
+    needs: [acceptance-dbt, integrity-u, integrity-x]
+    if: ${{ always() && (github.event_name == 'schedule' || inputs.leg == 'acceptance') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: aws-acceptance
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "tier-2 runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with:
+          version: "0.9.5"
+          python-version: "3.12"
+          enable-cache: true
+      - name: install boto3
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python --only-binary :all: boto3==1.43.111
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-backstop
+          mask-aws-account-id: true
+      - name: remove run prefixes older than 24 hours
+        env:
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: .venv/bin/python scripts/aws_acceptance_cleanup.py --older-than-hours 24 --execute
 
   ice-read-perf-bench:
     name: ICE-READ-PERF bench (S3 Tables + Glue, dispatch-only, scratch-only)

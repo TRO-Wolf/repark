@@ -9,10 +9,10 @@
 **Retires:** this ledger moves to `../completed/` when one dispatched `aws-acceptance` run on `main` proves
 C-015 to C-018, or when the owner closes the unit.
 
-**This round builds** the local half only: the run prefix at every table-creating site, the cleanup script, and
-the separate Spark REST catalog block. The workflow job split is not built; it waits on census finding F-1 (one
-shared run prefix lets a leg's cleanup and cross-read reach other legs' tables) and on the question whether the
-CI venv can resolve `boto3` (it is absent from `uv.lock`). Everything a live run alone can prove stays OPEN.
+**This round builds** the local half and the workflow: the run-and-leg prefix at every table-creating site, the cleanup script,
+the separate Spark REST catalog block, and the job split with per-leg cross-read, cleanup and a backstop. Everything a live
+run alone can prove stays OPEN (C-015 to C-018). The rulings of 2026-10-24 that shaped this round: Q1 (two variables), Q2
+(boto3 pinned in the job, no lock change), Q3 (the sampler stays in each leg), the path-write objects ruled in.
 
 ## PROPOSITION LEDGER — AWS-EPHEMERAL-RUNS-1 — 2026-10-24
 
@@ -29,9 +29,9 @@ CI venv can resolve `boto3` (it is absent from `uv.lock`). Everything a live run
 | C-009 | Cross-read discovery keeps only names that start with the run-and-leg prefix, non-temporary: another run's or leg's tables, a longer run id, unprefixed names and the bench table are not discovered. | `test_cross_read_progress.py::test_discovery_keeps_only_the_run_and_leg_prefix_and_never_the_bench_table` | PROVEN | |
 | C-010 | `s3tables_spark_catalog_config(name, arn)` returns the eight-key REST block (`type=rest`, the regional `/iceberg` URI, the ARN as `warehouse`, SigV4 on, signing name `s3tables`, signing region, `S3FileIO`) with the region parsed from the ARN, no literal region in the function, no `catalog-impl`, and `s3tables_catalog_config` unchanged. | `test_acceptance_ephemeral_runs.py` REST cells | PROVEN | A value that is not a table bucket ARN raises. |
 | C-011 | The cleanup script's default is a dry run: no delete call is issued without `--execute`. | `test_aws_acceptance_cleanup.py` dry-run and parser cells | PROVEN | |
-| C-012 | The workflow runs one credential-free `build` job and parallel `acceptance-dbt`, `integrity-u`, `integrity-x` jobs that each mint their own credential. | `make workflows-lint`, the workflow pin tests | OPEN | Not built. Waits on F-1: with one shared run prefix, a finished leg's cleanup removes the tables other legs still use and a leg's cross-read lists them. Options are in the census. |
-| C-013 | Each leg job removes its own tables with `if: always()`, and a `backstop` job removes run prefixes older than 24 h. | the same | OPEN | Not built; same wait. |
-| C-014 | The CI venv resolves `boto3` for the cleanup script from the existing lock. | `uv sync --locked --extra record` then `import boto3` | OPEN | `uv.lock` holds no `boto3` or `botocore`; the card halts on this. The script imports it lazily and nothing in a dependency file changed. |
+| C-012 | The workflow runs one credential-free `build` job and parallel `acceptance-dbt`, `integrity-u`, `integrity-x` jobs that each need only `build`, install the wheel, mint their own credential and own one run-and-leg pair; the backstop needs all three. | `test_aws_acceptance_job_split.py`, `make workflows-lint` (zizmor clean) | PROVEN | The structure only; that the jobs run is C-015. |
+| C-013 | Each leg job removes its own run-and-leg prefix with an `if: always()` step behind a fresh mint, and a `backstop` job removes run prefixes older than 24 h. | the same module | PROVEN | The step shape only; that the namespaces end empty is C-016. |
+| C-014 | Every job that runs the cleanup installs boto3 at one exact version (1.43.111, released 2026-10-09, older than two weeks on 2026-10-24) with `uv pip install --only-binary :all:` before its first mint, and no lock file changes. | `test_aws_acceptance_job_split.py`; a local `uv pip install --dry-run` resolves it | PROVEN | Ruling Q2 of 2026-10-24. Transitive packages (botocore, s3transfer, jmespath, urllib3) float; the runner's install is proven by C-015. |
 | C-015 | One dispatched `aws-acceptance` run on `main` finishes every leg job green inside its own cap. | the dispatched run | OPEN | Behind the owner's scoped IAM grant and the one-time prune (card, "The owner's actions"). Carries ICE-INTEGRITY-PINS-1 C-068. |
 | C-016 | After that run exits, the scratch namespaces hold no table of that run. | the dispatched run, a listing of both namespaces | OPEN | |
 | C-017 | Each leg's cross-read of its own tables answers EQUAL or a named Spark error that is not the catalog-init failure, and the S3 Tables cross-read reads through Spark's REST catalog. | the dispatched run, the per-table lines | OPEN | Carries ICE-INTEGRITY-PINS-1 C-069. |

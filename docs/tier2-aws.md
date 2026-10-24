@@ -110,12 +110,14 @@ Review the scratch Glue database at a documented cadence (monthly is fine). This
 neither a delete path in CI nor a human remembering to reap.
 
 **Run-owned cleanup (AWS-EPHEMERAL-RUNS-1, 2026-10-24, built locally, not yet wired into the workflow).**
-Every leg names its tables `testing_r<run_id>_…` from `REPARK_ACCEPT_RUN_ID`, and the cross-read lists only
-that prefix. `scripts/aws_acceptance_cleanup.py` is the cleanup step: `--prefix testing_r<digits>_` for one run,
-`--older-than-hours N` for the backstop, dry run unless `--execute`; it takes only names of that shape (never the
-ICE-READ-PERF bench table) and removes objects only strictly below the warehouse scratch prefix. It needs the
-scoped delete grant of the card's ruling 5, which the owner applies; until then the never-teardown fact above
-stands, and the workflow does not call the script.
+Each job owns one run-and-leg pair, `REPARK_ACCEPT_RUN_ID` (the run id) and `REPARK_ACCEPT_LEG` (`acc` for
+`acceptance-dbt`, `u`, `x`), and names its tables `testing_r<run_id>_<leg>_…`; the job's cross-read lists only that
+prefix. `scripts/aws_acceptance_cleanup.py` is the cleanup step: each leg job runs it last, with `if: always()`, as
+`--run-prefix testing_r<run_id>_<leg>_ --execute` (its tables, plus its `u12s3path_r<run_id>_<leg>_` S3 path-write
+objects), and the `backstop` job runs `--older-than-hours 24 --execute` after all three. It takes only names of that
+shape (never the ICE-READ-PERF bench table or a legacy `testing_*` table), removes objects only strictly below the
+warehouse scratch prefix, and needs the scoped delete grant of the card's ruling 5, which the owner applies. Each
+job installs `boto3` at one exact version before it mints credentials; no lock file carries it.
 
 ## 4. Variables + secrets — prefer the environment scope
 
@@ -220,7 +222,7 @@ drops nothing.
 The read-performance slate's AWS bed (task/roadmap/mid-term/ice-read-perf-slate-2026-09-18.md,
 unit 0 and ruling R-3) runs as a second job of the same workflow, `ice-read-perf-bench`. It runs
 **only** on a manual dispatch that asks for it, never on the nightly schedule. The nightly (and a
-plain dispatch, whose `leg` defaults to `acceptance`) runs only `live-aws`, exactly as before.
+plain dispatch, whose `leg` defaults to `acceptance`) runs only the `build`, `acceptance-dbt`, `integrity-u`, `integrity-x` and `backstop` jobs (AWS-EPHEMERAL-RUNS-1, 2026-10-24; formerly one `live-aws` job).
 
 ```bash
 gh workflow run aws-acceptance.yml -f leg=ice-read-perf-bench -f purpose=<unit, e.g. ice-read-perf-0-baseline>
@@ -230,7 +232,7 @@ gh workflow run aws-acceptance.yml -f leg=ice-read-perf-bench -f purpose=<unit, 
 declares the same environment, so no credential mints before that approval. Check the ref and
 the commit, then approve.
 
-What the job does, in order (the same pinned actions as `live-aws`, the same ref guard,
+What the job does, in order (the same pinned actions as the build and leg jobs, the same ref guard,
 `persist-credentials: false`, `id-token: write` scoped to the job):
 
 1. Checkout, the Rust toolchain and the cache, then `cargo bench -p repark-spark --bench
