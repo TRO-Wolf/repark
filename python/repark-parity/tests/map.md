@@ -1275,3 +1275,10 @@ The cross-read diagnostic shell tests also run real pytest with a blocked harmle
 The live progress-delivery subprocess pin holds the output contract. pins: ice-integrity-pins-1/C-063
 
 [test_cross_read_progress.py](test_cross_read_progress.py) executes the exact discovery and namespace function ASTs without native-engine or AWS imports (2026-10-24). It pins sorted permanent testing_ selection, flushed table identity before metadata and engine calls, elapsed status output, no false completion, exhaustive outcomes after a first mismatch, the final assertion and empty discovery failure. pins: ice-integrity-pins-1/C-064
+
+[test_cross_read_progress.py](test_cross_read_progress.py) also loads the exact outcome types,
+formatter, assertion and error-first-line helper ASTs (2026-10-24). Eighteen cells pin immediate
+details for EQUAL, DIFFERENT and SPARK-CANNOT-READ, nanosecond flags, absent conditions, 300-character
+first-line truncation, later metadata/pair failure and the full final report. Single-table
+completion observes flushed output before any later flush. These are local function-body pins;
+module imports and live engine/AWS behavior are outside their scope. pins: ice-integrity-pins-1/C-065

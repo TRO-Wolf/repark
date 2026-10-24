@@ -545,3 +545,40 @@ The [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md) hol
 timings and limits. S3 Tables' reported status lacks the error details needed to classify its
 refusals. The full outcome table and assertion were not reached. C-060 remains OPEN;
 no clause closes, no retry remains under the cap exception, and no gate changes here.
+
+
+## Immediate outcome details: scoped follow-up (2026-10-24)
+
+Run 6 reached neither final report nor assertion before the whole-test deadlines.
+This follow-up reuses the existing one-outcome formatter immediately after each completed
+status line and flushes that detail. It changes no selection, timeout, engine call or metadata
+fallback. C-060 stays OPEN; local fixtures cannot classify the hosted Spark errors.
+
+Plan, recorded before implementation:
+
+- Pin existing formatter output for EQUAL, DIFFERENT and SPARK-CANNOT-READ, including
+  nanosecond flags, absent conditions and stored first-line truncation.
+- Add the immediate flushed print and retain the complete final report and assertion.
+- Prove baseline and remove, delayed-detail and omitted-flush mutants fail; restore the
+  candidate, run the three unit files and scoped pinned Makefile checks, then hand back.
+
+The function-AST tests omit module imports and real AWS, Spark and native-engine execution.
+They preserve the existing helper bodies and test only local output and call contracts.
+
+Local proof (2026-10-24): the three named unit files pass 50 cases. With the new pins and
+baseline harness, 20 cases fail and 3 pass. Independent mutants fail: removed immediate detail
+20, detail delayed until loop completion 14, omitted immediate flush 8, omitted EQUAL detail 5,
+dropped final report 8 and dropped final assertion 8. Each mutant exits 1 and is restored.
+The single-table completion cases prevent a later progress flush from hiding an omitted flush.
+
+| Clause | Proposition | Pin / evidence | Status | Result |
+|---|---|---|---|---|
+| C-065 | Each completed cross-read outcome immediately prints and flushes its existing detailed one-outcome table after the status line; the final complete report and assertion remain. | `test_cross_read_progress.py` executes exact source function bodies and the existing formatter, outcome types, assertion and first-line helper. | PROVEN | Eighteen new cells cover EQUAL, DIFFERENT, SPARK-CANNOT-READ with nanosecond flags and absent conditions, stored first-line truncation, next metadata/pair failure and final assertion behavior. Baseline and all six independent mutants fail. This proves local delivery only; C-060 remains OPEN and hosted Spark error classification is unmeasured. |
+
+Scoped validation (2026-10-24): pinned `make py-lint py-format-check`, Python size,
+conventions, docstring-presence, ledger lifecycle/grammar, map links, documentation links/
+compaction, owner-ruling and model-ban checks pass. The working diff adds no code comments,
+preserves existing docstrings and both append-only prefixes, and passes `git diff --check`.
+The final restored candidate passes all 50 unit cases. Whole-suite verification remains a
+required CI duty under the owner's September 18 CI-offload ruling; no local native build,
+Spark session or AWS operation runs in this follow-up.

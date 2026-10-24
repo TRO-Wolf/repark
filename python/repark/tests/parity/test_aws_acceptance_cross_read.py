@@ -112,6 +112,7 @@ def _cross_read_namespace(repark: ReparkSession, spark: Any, catalog: str, names
         outcomes.append(outcome)
         elapsed = time.monotonic() - started
         print(f"Cross-read {table}: {outcome.status} ({elapsed:.3f}s)", flush=True)
+        print(format_outcome_table([outcome]), flush=True)
     print(format_outcome_table(outcomes))
     assert_outcomes_expected(outcomes)
 
