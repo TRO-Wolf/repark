@@ -33,7 +33,6 @@ from pathlib import Path
 import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
-    ACCEPTANCE_TABLE_PREFIX,
     GLUE_WAREHOUSE,
     S3TABLES_CATALOG,
     SILVER_CATALOG,
@@ -51,6 +50,8 @@ from _acceptance import (
     is_storage_delete_denial,
     merge_sql,
     run_mor_merge_compact_expire,
+    run_object_stem,
+    run_table_prefix,
     s3tables_catalog_config,
 )
 from _acceptance_replace import (
@@ -182,7 +183,7 @@ def test_process_silver_acceptance_against_glue() -> None:
         if "exist" not in str(error).lower():
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
-    table = fq_table(SILVER_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
+    table = fq_table(SILVER_CATALOG, ACCEPTANCE_NAMESPACE, f"{run_table_prefix()}{entity}")
     _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)
 
 
@@ -223,14 +224,14 @@ def test_process_silver_acceptance_against_s3tables() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
-    table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
+    table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, f"{run_table_prefix()}{entity}")
     _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)
 
 
 def test_mor_merge_compact_expire_against_glue() -> None:
     """MW-4: merge-on-read CTAS → MERGE → compact + expire on real Glue + S3.
 
-    A new scratch MOR table each run (never-teardown: tables accumulate). OD-3 scoped
+    A new scratch MOR table each run (the leg cleanup removes it). OD-3 scoped
     object-delete on the warehouse scratch prefix is what lets expire remove snapshot files.
     S3 Tables MOR is ``test_mor_merge_compact_expire_against_s3tables`` (MW-10 / OD-3b).
     """
@@ -252,7 +253,7 @@ def test_mor_merge_compact_expire_against_glue() -> None:
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}mw4_mor_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}mw4_mor_{uuid.uuid4().hex[:12]}"
     outcome = run_mor_merge_compact_expire(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_mor_maintenance_outcome(spark, outcome)
 
@@ -284,7 +285,7 @@ def test_mor_merge_compact_expire_against_s3tables() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}mw10_mor_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}mw10_mor_{uuid.uuid4().hex[:12]}"
     try:
         outcome = run_mor_merge_compact_expire(
             spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name
@@ -299,9 +300,10 @@ def test_mor_merge_compact_expire_against_s3tables() -> None:
 def test_v3_dv_dml_maintenance_against_glue() -> None:
     """LIVE-v3 Glue leg: v3 MoR CTAS → DV DELETE → MERGE → rewrite → expire → register_table.
 
-    Twin of the MW-4 leg: same scratch namespace, same never-teardown naming, a fresh
-    `testing_v3_dv_<uuid>` table each run. Glue implements `register_table`, so the adopt step
-    runs on a second session here and is skipped on S3 Tables (registry `S3T-1` / fork R126).
+    Twin of the MW-4 leg: same scratch namespace, same run-and-leg naming, a fresh
+    `testing_r<run_id>a<attempt>_<leg>_v3_dv_<uuid>` table each run. Glue implements
+    `register_table`, so the adopt step runs on a second session here and is skipped on
+    S3 Tables (registry `S3T-1` / fork R126).
 
     pins: live-v3-aws-legs/C-001, C-003
     """
@@ -323,7 +325,7 @@ def test_v3_dv_dml_maintenance_against_glue() -> None:
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}v3_dv_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}v3_dv_{uuid.uuid4().hex[:12]}"
     outcome = run_v3_acceptance(
         spark,
         SILVER_CATALOG,
@@ -363,7 +365,7 @@ def test_v3_dv_dml_maintenance_against_s3tables() -> None:
         if "exist" not in str(error).lower():
             raise
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}v3_dv_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}v3_dv_{uuid.uuid4().hex[:12]}"
     table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     try:
         outcome = run_v3_acceptance(spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
@@ -395,7 +397,7 @@ def _run_sql_harden_on_catalog(
         write_bronze_parquet(parquet)
         for program in _PROGRAMS:
             short = program.name.replace("-", "")[:12]
-            stem = f"{ACCEPTANCE_TABLE_PREFIX}h1{short}{uuid.uuid4().hex[:6]}"
+            stem = f"{run_table_prefix()}h1{short}{uuid.uuid4().hex[:6]}"
             stems[program.name] = stem
             results[program.name] = without_meta(
                 as_golden(
@@ -527,7 +529,7 @@ def test_create_or_replace_twice_against_glue() -> None:
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}replace2_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}replace2_{uuid.uuid4().hex[:12]}"
     outcome = run_create_or_replace_twice(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_replace_twice_outcome(outcome)
 
@@ -552,7 +554,7 @@ def test_create_or_replace_twice_against_s3tables() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}replace2_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}replace2_{uuid.uuid4().hex[:12]}"
     outcome = run_create_or_replace_twice(spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_replace_twice_outcome(outcome, exact_counts=False)
 
@@ -562,8 +564,8 @@ def test_u12_s3_path_write_against_scratch_prefix() -> None:
 
     pins: s3-path-write-1/C-011, C-016
 
-    One prefix per (format, scenario) under a per-run uuid stem; nothing is
-    deleted afterwards (harness rule: cleanup is the user's manual call).
+    One prefix per (format, scenario) under a per-run uuid stem that carries the run and leg;
+    the leg's cleanup step removes those objects afterwards.
     Layout (parts, ``_SUCCESS``) is pinned on moto; this leg proves real-AWS
     reachability: save modes, partitionBy, and empty frames per format, with
     read-back rows through trailing-slash reads.
@@ -574,7 +576,8 @@ def test_u12_s3_path_write_against_scratch_prefix() -> None:
         .config("repark.aws.enable", "true")
         .getOrCreate()
     )
-    stem = f"{GLUE_WAREHOUSE.rstrip('/')}/{ACCEPTANCE_NAMESPACE}/u12s3path_{uuid.uuid4().hex[:12]}"
+    root = f"{GLUE_WAREHOUSE.rstrip('/')}/{ACCEPTANCE_NAMESPACE}"
+    stem = f"{root}/{run_object_stem()}{uuid.uuid4().hex[:12]}"
     rows = [(1, "a"), (2, "b"), (3, "a")]
     columns = ["id", "grp"]
     for format_name in ("parquet", "csv", "json"):
@@ -587,16 +590,16 @@ def test_u12_s3_path_write_against_scratch_prefix() -> None:
         getattr(frame.write.mode("ignore"), format_name)(probe)
         getattr(frame.write.mode("append"), format_name)(probe)
         read_options = {"header": True} if format_name == "csv" else {}
-        got = getattr(spark.read, format_name)(probe + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{probe}/", **read_options).collect()
         assert len(got) == 6, f"{format_name} append must add a fresh part"
         getattr(frame.write.mode("overwrite"), format_name)(probe)
-        got = getattr(spark.read, format_name)(probe + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{probe}/", **read_options).collect()
         assert len(got) == 3, f"{format_name} overwrite must replace"
         partitioned = f"{base}/part"
         getattr(frame.write.mode("overwrite").partitionBy("grp"), format_name)(partitioned)
-        got = getattr(spark.read, format_name)(partitioned + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{partitioned}/", **read_options).collect()
         assert len(got) == 3
         empty = f"{base}/empty"
         getattr(frame.limit(0).write.mode("overwrite"), format_name)(empty)
-        got = getattr(spark.read, format_name)(empty + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{empty}/", **read_options).collect()
         assert len(got) == 0

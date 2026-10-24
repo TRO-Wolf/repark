@@ -136,10 +136,11 @@ def _uses_pins(block: str) -> dict[str, str]:
     return dict(re.findall(r"uses:\s*([\w./-]+)@([0-9a-f]{40})", block))
 
 
-def test_the_nightly_job_runs_only_on_the_schedule_or_the_acceptance_leg() -> None:
-    """The existing job keeps its nightly and gains only the leg filter."""
+def test_the_nightly_jobs_run_only_on_the_schedule_or_the_acceptance_leg() -> None:
+    """The build and the three leg jobs keep the nightly and take only the leg filter."""
     text = _text()
-    assert _job_if(_job_block(text, "live-aws")) == LIVE_AWS_CONDITION
+    for job in ("build", "acceptance-dbt", "integrity-u", "integrity-x"):
+        assert _job_if(_job_block(text, job)) == LIVE_AWS_CONDITION, job
     assert 'cron: "43 8 * * *"' in text
 
 
@@ -167,9 +168,12 @@ def test_the_bench_job_runs_only_on_its_dispatch_behind_the_same_gate() -> None:
 
 
 def test_the_bench_job_uses_the_same_pinned_actions_as_the_acceptance_job() -> None:
-    """Every action the bench shares with live-aws sits at the same SHA."""
+    """Every action the bench shares with the build and leg jobs sits at the same SHA."""
     text = _text()
-    live = _uses_pins(_job_block(text, "live-aws"))
+    live = {
+        **_uses_pins(_job_block(text, "build")),
+        **_uses_pins(_job_block(text, "acceptance-dbt")),
+    }
     bench = _uses_pins(_job_block(text, "ice-read-perf-bench"))
     for action in (
         "actions/checkout",

@@ -18,6 +18,7 @@ from _acceptance import (
     glue_catalog_config,
     is_commit_conflict_error,
     mask_account_ids,
+    run_table_prefix,
     s3tables_catalog_config,
 )
 from _acceptance_commit_gate import GLUE, S3TABLES, CommitGate, Script, regional_upstream
@@ -146,7 +147,8 @@ def session(target: Target, extra: dict[str, str]) -> Iterator[ReparkSession]:
 
 def table_of(target: Target, door: str, spec: CellSpec, format_version: int) -> str:
     cell = spec.cell.lower().replace("-", "")
-    return f"{target.catalog}.{ACCEPTANCE_NAMESPACE}.testing_cu_{door}_{cell}_v{format_version}"
+    stem = f"{run_table_prefix()}cu_{door}_{cell}_v{format_version}"
+    return f"{target.catalog}.{ACCEPTANCE_NAMESPACE}.{stem}"
 
 
 def statement(door: str, table: str) -> str:

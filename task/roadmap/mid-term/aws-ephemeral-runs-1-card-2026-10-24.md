@@ -7,6 +7,14 @@ the same morning (walkthrough artifact `FmUcKaesjdAtvPBPK6mqhK`).
 superseded by C-066 and C-067 (REJECTED, measured 2026-10-24, owner's word the same day); C-068 and C-069 hold this
 card's obligations OPEN and C-070 carries run 3's pre-streaming stall.
 
+**Built, awaiting the first dispatched run (2026-10-24, Claude Sonnet 5.5):** all of it is on branch
+`feat/aws-ephemeral-runs-1`: the run-and-leg prefix `testing_r<run_id>a<attempt>_<leg>_` at every table-creating site and on the
+S3 path-write objects, the cleanup script `scripts/aws_acceptance_cleanup.py`, the Spark REST catalog block, and the
+workflow split into `build`, `acceptance-dbt`, `integrity-u`, `integrity-x` and `backstop` (the leg variable is the
+orchestrator's ruling Q1 of the same day; `boto3` is pinned in each job, ruling Q2). Local proof only: the
+[ledger](../../ledgers/staging/aws-ephemeral-runs-1-ledger.md) holds C-001 to C-014 and C-019 to C-021 PROVEN and C-015
+to C-018 OPEN until one dispatched run. Census: [step0-census.md](../../wo/aws-ephemeral-runs-1/step0-census.md).
+
 **Retires:** when one dispatched `aws-acceptance` run on `main` proves all of: every leg job green inside its own cap,
 each leg's cross-read of its own tables EQUAL (or a named Spark error that is not the catalog-init failure), the
 scratch namespaces holding no table of that run after it exits, and the S3 Tables cross-read reading through Spark's
