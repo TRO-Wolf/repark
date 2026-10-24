@@ -109,7 +109,7 @@ def test_north_star_matrix_carries_the_three_engine_rulings() -> None:
 
 
 def test_od_3b_is_ruled_in_and_the_runbook_carries_the_scoped_statement() -> None:
-    """C-011: OD-3b in; the tier-2 runbook names the s3tables actions, scope, and the unknown."""
+    """C-011: OD-3b in; the runbook names the s3tables actions, the scope, the unknown, and the 2026-10-24 delete grant."""
     north_star = _north_star()
     od_3b = north_star[north_star.index("- **OD-3b**") : north_star.index("- **Sequencing vs")]
     assert f"ruled {_RULING_DATE}" in od_3b and "docs/tier2-aws.md" in od_3b
@@ -118,7 +118,8 @@ def test_od_3b_is_ruled_in_and_the_runbook_carries_the_scoped_statement() -> Non
         "s3tables:PutTableData",
         "s3tables:namespace",
         "testing_repark_acceptance",
-        "Still no `s3tables:DeleteTable`",
+        "`s3tables:DeleteTable` joins the table-ARN statement under",
+        "Still no `s3tables:DeleteNamespace` /",
         "a denial is a stop, not a design",
     ):
         assert needle in runbook, needle
