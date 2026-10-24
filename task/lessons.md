@@ -426,3 +426,30 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO NOT route this repository through the Codex CLI's Sol models.** *Why:* two 2026-10-22 runs
   of GPT-6.1 Sol at xhigh ended in OpenAI's safety filter on the repository's own content, once on
   a rephrased brief; no hand-back either time.
+
+## 2026-10-24 — a streamed loop is not a hang; a run owns its tables; Spark's catalog class is Spark's
+
+- **DO stream per-item progress and per-item error text before reading a timeout as a hang.** *Why:* three days of
+  native stack samples on the cross-read step were read as stalls in RePark collection and PyArrow metadata I/O. The
+  first nightly with per-table lines (run 40079497082) showed a loop advancing at a 2.2 s median through 2288 Glue
+  tables under a 600 s deadline, and 53 identical S3 Tables errors that the end-of-loop summary had never printed. The
+  samples were snapshots of a working loop. Run 3's pre-streaming stall keeps its own row because it has no such lines.
+- **DO make every aws-acceptance run self-contained: its own table prefix, cross-read of exactly its own tables,
+  cleanup with `if: always()`, an age-bounded backstop.** *Why:* the scratch namespaces grew to 2288 and 1748 tables
+  because the role had no delete by design and the dbt leg writes a UUID family per run; a namespace walk can never fit
+  a fixed budget that way, and leg U grew 31 → 51 min over three runs while the namespace grew. Owner, 2026-10-24
+  ("make it as if we were starting from scratch each time and then removing our work when done"). The scoped delete
+  grant (`testing_*` tables in the one scratch namespace, never a database, namespace or bucket) reverses OD-3's
+  never-teardown for exactly that surface; the IAM edit and the one-time prune of today's tables are the owner's
+  actions and no agent-built step performs the first sweep on its own (ruling 76(a) holds).
+- **DO build once and share the wheel; give each leg its own job, cap and credential.** *Why:* the compile is 77 % of a
+  32-minute setup; the environment has no per-job approval; the repository is public, so parallel minutes cost
+  nothing; a leg that starts late in a sequential job inherits the tail of everyone else's time. Owner, 2026-10-24
+  ("let's adopt that"). Card: [AWS-EPHEMERAL-RUNS-1](roadmap/mid-term/aws-ephemeral-runs-1-card-2026-10-24.md).
+- **DO NOT hand Spark a catalog class name because RePark accepts it.** *Why:* RePark maps any `*S3TablesCatalog` to
+  its S3 Tables builder, so `org.apache.iceberg.aws.s3tables.S3TablesCatalog` worked on the RePark side of every test
+  and does not exist in any Iceberg 1.11.0 jar; Spark rejected it on every S3 Tables cross-read and nobody saw the text
+  until #1176. A Spark config block is measured against a real Spark session before it is called a harness. The owner
+  ruled the REST catalog for the S3 Tables Spark session (2026-10-24, "let's go with the Rest setup"), in a config
+  function separate from the one RePark reads.
+
