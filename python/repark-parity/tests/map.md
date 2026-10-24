@@ -1290,3 +1290,5 @@ details for EQUAL, DIFFERENT and SPARK-CANNOT-READ, nanosecond flags, absent con
 first-line truncation, later metadata/pair failure and the full final report. Single-table
 completion observes flushed output before any later flush. These are local function-body pins;
 module imports and live engine/AWS behavior are outside their scope. pins: ice-integrity-pins-1/C-065
+
+`test_v3r_1_rulings.py` re-pins the OD-3b runbook needles on 2026-10-24: the owner's policy revision adds `s3tables:DeleteTable` under the namespace condition, so the test now asserts that sentence and the remaining `DeleteNamespace` / `DeleteTableBucket` refusal instead of the superseded "Still no `s3tables:DeleteTable`".
