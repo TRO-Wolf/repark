@@ -963,6 +963,15 @@ repark-parity slice.
   for one bounded tick at a time, one lane per systemd unit; engines for Grok, Muse, GLM and Codex;
   `gate.sh`, `review.sh`, `pr.sh`, `verdict.sh` helpers; the handbook every tick starts with; the lessons ledger.
   Operator tooling, not a CI gate. See [coordinator/map.md](coordinator/map.md).
+- `aws_acceptance_cleanup.py` — **AWS-EPHEMERAL-RUNS-1 step 2 (2026-10-24):** removes the scratch tables of
+  finished `aws-acceptance` runs. `--prefix testing_r<digits>_` takes one run, `--older-than-hours N` takes every
+  run prefix whose newest table is older than N hours; any other prefix, the bench table `ice_read_perf_bench`
+  (it has no run shape) and every name without the `testing_r<digits>_` shape are refused. Glue tables go in batches of 100, then the
+  objects below each table's location, only when the location is strictly under
+  `<warehouse>/testing_repark_acceptance/`; S3 Tables tables go one by one in the scratch namespace. Dry run
+  unless `--execute`. `boto3` is imported inside `main` only, because `uv.lock` carries no `boto3` (ledger
+  C-014). Not wired into any workflow yet. Tests: `python/repark-parity/tests/test_aws_acceptance_cleanup.py`.
+  pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011
 - `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
   assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
   first) and a JSON sidecar; `check` validates the schema, every stable-prefix

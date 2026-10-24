@@ -1274,6 +1274,8 @@ The cross-read diagnostic shell tests also run real pytest with a blocked harmle
 
 The live progress-delivery subprocess pin holds the output contract. pins: ice-integrity-pins-1/C-063
 
+[test_aws_acceptance_cleanup.py](test_aws_acceptance_cleanup.py) pins `scripts/aws_acceptance_cleanup.py` against stubbed Glue, S3 and S3 Tables clients, with no AWS and no `boto3` (2026-10-24): the prefix shape, the bench and legacy-name exclusion, the strict location guard, the batch sizes and the delete order, the age filter and the dry-run default. pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011
+
 [test_cross_read_progress.py](test_cross_read_progress.py) executes the exact discovery and namespace function ASTs without native-engine or AWS imports (2026-10-24). It pins sorted permanent testing_ selection, flushed table identity before metadata and engine calls, elapsed status output, no false completion, exhaustive outcomes after a first mismatch, the final assertion and empty discovery failure. pins: ice-integrity-pins-1/C-064
 
 [test_cross_read_progress.py](test_cross_read_progress.py) also pins the run-prefix discovery filter (2026-10-24): another run's tables, a longer run id, unprefixed names, temporary views and the bench table are not discovered. pins: aws-ephemeral-runs-1/C-009
