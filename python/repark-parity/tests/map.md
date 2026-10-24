@@ -154,12 +154,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   **CI-1 (2026-10-03, owner ruling on H-2, widening authorized by it):** the smoke jobs moved to `smoke.yml`, so the `smoke` assertions read `smoke.yml` (the two-form `if:` rule and `runs-on` stay) while the release and nightly assertions keep reading `wheels.yml`. C-002 also asserts `smoke.yml` triggers only on `push: branches: [main]` and `pull_request` (no `tags`, `schedule` or `workflow_dispatch`) and carries no publishing step (`pypa/gh-action-pypi-publish`, `maturin publish`/`upload`, a maturin-action `command: publish`/`upload`, `twine`, `softprops/action-gh-release`, `ncipollo/release-action`, `actions/create-release`, `gh release create`/`upload`); `test_doctored_smoke_workflow_fails` injects each forbidden trigger, a widened push branch list, a dropped `pull_request` and each publishing step, and every one fails.
   pins: platform-1/C-001, C-002, C-003, C-004, C-005
 - `test_ice_read_perf_bench_workflow.py` — **ICE-READ-PERF-0 (2026-09-19):** pins over the
-  dispatch-only `ice-read-perf-bench` job of `aws-acceptance.yml`. `live-aws` keeps the nightly
-  and runs only on the schedule or `leg == acceptance`. The dispatch offers `leg` (choice,
+  dispatch-only `ice-read-perf-bench` job of `aws-acceptance.yml`. The `build` job and the three leg jobs keep the nightly
+  and run only on the schedule or `leg == acceptance` (AWS-EPHEMERAL-RUNS-1 split the former `live-aws` job). The dispatch offers `leg` (choice,
   `acceptance` default) and `purpose`. The bench job runs only on its dispatch, behind
   `environment: aws-acceptance`, the ref guard, job-scoped `id-token: write`,
   `persist-credentials: false` and no `continue-on-error`. It uses the same action SHAs as
-  `live-aws` plus the repo's `upload-artifact` SHA (`cf430e03`, v7.0.2, since #1072). Step order: build, then credentials, then
+  the build and acceptance jobs plus the repo's `upload-artifact` SHA (`cf430e03`, v7.0.2, since #1072). Step order: build, then credentials, then
   S3 Tables create, compaction `disabled` and read back, S3 Tables write, Glue create and write,
   both run loops, the bytes summary, the upload. It runs four modes on both catalogs at
   `BENCH_REPEAT: "1"` (Q-24a-1) under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
@@ -1274,7 +1274,17 @@ The cross-read diagnostic shell tests also run real pytest with a blocked harmle
 
 The live progress-delivery subprocess pin holds the output contract. pins: ice-integrity-pins-1/C-063
 
+[test_aws_acceptance_job_split.py](test_aws_acceptance_job_split.py) pins the AWS-EPHEMERAL-RUNS-1 job split of `aws-acceptance.yml` (2026-10-24): the build job holds no credential and uploads the wheel by pinned SHA, the three leg jobs need only `build`, install the wheel and an exact `boto3` before their first mint, own one run-and-leg pair, cross-read and then clean up with `if: always()` behind fresh mints, the previous-release venv and dbt stay in their legs, the backstop needs all three and works by age only, the timeouts are 60 / 90 / 15, and every action is pinned by a full SHA; the upload and every download agree on the artifact name and path, the install step reads that path and no other upload shares the name; the cross-read and cleanup mints and steps run only on `refs/heads/main`. pins: aws-ephemeral-runs-1/C-012, C-013, C-014, C-027
+
+[test_cross_read_diagnostics.py](test_cross_read_diagnostics.py) now runs every shell pin once per leg job (`acceptance-dbt`, `integrity-u`, `integrity-x`), because each carries the sampled cross-read step (2026-10-24).
+
+[test_aws_acceptance_cleanup.py](test_aws_acceptance_cleanup.py) pins `scripts/aws_acceptance_cleanup.py` against stubbed Glue, S3 and S3 Tables clients, with no AWS and no `boto3` (2026-10-24): the run, attempt and leg prefix shape (the old shape is refused), one leg never taking another's tables, the bench and legacy-name exclusion by shape, the strict location guard, the batch sizes and the delete order, the age filter across legs (letters in the digits, the attempt-less shape and a name that merely contains the shape are never grouped), the path-write object purge, the placeholder and non-`s3://` warehouse refusals and the dry-run default. pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021
+
+[test_aws_acceptance_cleanup_wiring.py](test_aws_acceptance_cleanup_wiring.py) pins the wiring of the same script through the stubs of [cleanup_stubs.py](cleanup_stubs.py): `main()` end to end through an injected client factory (dry run, execute, no S3 Tables client without a table bucket, age mode without path objects, exit 2), a Glue entry with an anomalous or nested location kept whole and counted as a failure (exit 1), an `_adopted` alias twin and a twin of a twin deleted without a second object delete, a sibling-named leaf in a nested or outside location treated as an anomaly, never a twin, an exact and case-sensitive location leaf, S3 Tables, raising and refused object-delete failures each counted, and item failures that continue and exit 1. pins: aws-ephemeral-runs-1/C-022, C-023, C-024, C-025, C-026
+
 [test_cross_read_progress.py](test_cross_read_progress.py) executes the exact discovery and namespace function ASTs without native-engine or AWS imports (2026-10-24). It pins sorted permanent testing_ selection, flushed table identity before metadata and engine calls, elapsed status output, no false completion, exhaustive outcomes after a first mismatch, the final assertion and empty discovery failure. pins: ice-integrity-pins-1/C-064
+
+[test_cross_read_progress.py](test_cross_read_progress.py) also pins the run-and-leg discovery filter (2026-10-24): another run's or leg's tables, a longer run id, unprefixed names, temporary views and the bench table are not discovered. pins: aws-ephemeral-runs-1/C-009
 
 [test_cross_read_progress.py](test_cross_read_progress.py) also loads the exact outcome types,
 formatter, assertion and error-first-line helper ASTs (2026-10-24). Eighteen cells pin immediate

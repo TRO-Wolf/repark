@@ -14,6 +14,7 @@ from _acceptance import (
     assert_real_buckets_configured,
     glue_catalog_config,
     mask_account_ids,
+    run_table_prefix,
     s3tables_catalog_config,
 )
 from _acceptance_cross_release import (
@@ -110,7 +111,7 @@ def test_each_release_reads_the_other_releases_table(
     spec = {
         **catalog_spec(catalog),
         "namespace": ACCEPTANCE_NAMESPACE,
-        "table": f"testing_xrel_{kind}_v{format_version}_{writer.role}",
+        "table": f"{run_table_prefix()}xrel_{kind}_v{format_version}_{writer.role}",
         "kind": kind,
         "format": format_version,
     }
@@ -133,7 +134,7 @@ def test_the_other_release_appends_and_the_writer_reads_it_back(
     spec = {
         **catalog_spec(catalog),
         "namespace": ACCEPTANCE_NAMESPACE,
-        "table": f"testing_xrel_mixed_v{format_version}_{writer.role}",
+        "table": f"{run_table_prefix()}xrel_mixed_v{format_version}_{writer.role}",
         "kind": "plain",
         "format": format_version,
     }

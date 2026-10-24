@@ -107,7 +107,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   the same env variables as `python/repark/tests/parity/test_aws_acceptance.py`. It writes to
   `testing_repark_acceptance` and nowhere else. **The orchestrator runs it; a unit agent never
   does.** **ICE-GOLD-TWICE-1 (2026-09-14):** the stem is unique per run
-  (`testing_dbt1_<uuid8>`, minted in the `glue_project` fixture and passed to
+  (`testing_r<run_id>a<attempt>_<leg>_dbt1_<uuid8>` since AWS-EPHEMERAL-RUNS-1 step 1, 2026-10-24; pins: aws-ephemeral-runs-1/C-003; minted in the `glue_project` fixture and passed to
   `_repoint_profile`, no module constant), the test runs `dbt run`, checks the S6
   `FCT_ROWS`/`AGG_ROWS` and records both gold models' snapshot counts, runs `dbt run` a
   second time — success, the same rows, and each model's history grown by exactly one
