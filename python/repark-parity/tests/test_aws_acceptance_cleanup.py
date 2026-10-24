@@ -111,6 +111,7 @@ def test_a_well_formed_run_and_leg_prefix_is_accepted(prefix: str) -> None:
         "testing_r_",
         "testing_r12a1_",
         "testing_rabc_acc_",
+        "testing_r12_",
         "testing_r12_acc_",
         "testing_r12a_acc_",
         "testing_r12a1b_acc_",
@@ -488,6 +489,8 @@ def test_an_executed_cleanup_deletes_the_path_objects_in_batches() -> None:
         "s3://example-warehouse",
         "s3://example-warehouse/sub/dir/",
         "s3://example-warehouse-2/",
+        "s3a://real-bucket/wh/",
+        "s3n://real-bucket/wh/",
     ],
 )
 def test_main_refuses_an_unset_or_placeholder_warehouse_before_boto3(
@@ -925,3 +928,26 @@ def test_main_exits_one_when_only_the_object_deletes_fail(monkeypatch: pytest.Mo
     factory = _world()
     factory.clients["s3"].errors = [{"Key": "k", "Code": "AccessDenied"}]
     assert cleanup.main(["--run-prefix", "testing_r12a1_acc_", "--execute"], factory) == 1
+
+
+@pytest.mark.parametrize(
+    "name", ["testing_rab1a1_acc_x", "testing_r12ax_acc_x", "testing_r1a1b_acc_x"]
+)
+def test_names_with_letters_in_the_run_or_attempt_digits_are_never_grouped_or_selected(
+    name: str,
+) -> None:
+    """Only ASCII digits form a run id or attempt, in prefix mode and in age mode."""
+    old = _table(name, age_hours=999)
+    assert cleanup.run_prefix_of(name) is None
+    assert cleanup.select_older_than([old], 24, _NOW) == []
+    assert cleanup.select_by_prefix([old], "testing_r12a1_acc_") == []
+
+
+def test_a_name_that_only_contains_the_run_shape_is_never_selected() -> None:
+    """The shape is anchored at the start of the name, in prefix mode and in age mode."""
+    evil = _table("xtesting_r12a1_acc_evil", age_hours=999)
+    assert cleanup.run_prefix_of(evil.name) is None
+    assert cleanup.select_by_prefix([evil], "testing_r12a1_acc_") == []
+    assert cleanup.select_older_than([evil], 24, _NOW) == []
+    with pytest.raises(ValueError, match="not a testing_r<digits>a<digits>_"):
+        cleanup.assert_deletable(evil.name)
