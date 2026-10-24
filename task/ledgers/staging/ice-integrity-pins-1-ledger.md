@@ -520,3 +520,16 @@ pin; unbuffered Python plus tee-sys passes while preserving success and failure 
 |---|---|---|---|---|
 | C-063 | Cross-read Python progress reaches the job output before a blocked pytest test returns, while pytest success and failure remain the step's exit status. | `test_cross_read_diagnostics.py::test_progress_is_visible_before_pytest_finishes` executes the workflow shell with real pytest and both final outcomes. | PROVEN | Both cells fail before releasing the blocked test on default capture and on tee-sys alone. Both pass with Python `-u` and tee-sys; 27 workflow tests pass. This is local process evidence, not live C-060 completion. |
 | C-064 | Cross-read reports the discovered count and each table before metadata lookup and engine reads, then reports completion status and elapsed time. Selection, call order, all outcomes and the final assertion remain intact. | `test_cross_read_progress.py` executes exact source function ASTs with controlled external calls and flushed-output observations. | PROVEN | Five cases fail on baseline and pass on the candidate. Delayed metadata/pair progress, skipped later tables, suppressed final assertion, unflushed output and unsorted discovery mutants each fail. Live table count and C-060 completion remain unmeasured. |
+
+## Run-5 retry result and run-6 observation (2026-10-24, 05:33 UTC)
+
+The pending run-5 attempt-2 line above is historical. Attempt 2 failed both cross-read tests
+at their 600 s whole-test deadlines after acceptance, dbt, U and X passed. Its nine native
+samples moved between stages and establish neither a cause nor one operation's duration.
+Run 6 attempt 1 reached the job cap without any acceptance pytest output or outcome; the
+later legs were not reached. It supplies no cross-read diagnostic measurement.
+
+The [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md) holds the measured
+counts, timings and frames. It also records the orchestrator's single run-6 cap retry on
+unchanged `e765f897`, observed in progress at 05:33 UTC. That retry's outcome is unmeasured.
+Run 5 and run 6 each consumed their own one retry. C-060 stays OPEN; no clause closes here.
