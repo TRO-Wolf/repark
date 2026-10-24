@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -54,6 +55,7 @@ RECORDER = "python/repark/tests/timestamps/_record_write_spine_1.py"
 SESSION_ZONE_KEY = "spark.sql.session.timeZone"
 CATALOG = "ice"
 NAMESPACE = "ns"
+TABLE_DIGITS = 12
 READ_SQL = "SELECT v FROM {table} ORDER BY id"
 MOR_KEYS: tuple[str, ...] = ("write.delete.mode", "write.update.mode", "write.merge.mode")
 MOR_PROPERTIES = ", ".join(f"'{key}'='merge-on-read'" for key in MOR_KEYS)
@@ -101,6 +103,15 @@ def first_line(error: BaseException) -> str:
 def error_record(step: str, error: BaseException) -> dict[str, Any]:
     """Return the recorded shape of a failed step: the step, the class and the first line."""
     return {"step": step, "error_class": error_class(error), "error": first_line(error)}
+
+
+def table_name(cell: shapes.Cell) -> str:
+    """Return the cell's target table; the name depends only on the cell id, so texts repeat.
+
+    The name is decimal digits, so no hexadecimal fragment of it reads as a misspelled word.
+    """
+    digest = int(hashlib.sha256(cell.cell_id.encode("utf-8")).hexdigest(), 16)
+    return f"{CATALOG}.{NAMESPACE}.t_{digest % 10**TABLE_DIGITS:0{TABLE_DIGITS}d}"
 
 
 def create_sql(cell: shapes.Cell, table: str) -> str:
@@ -438,7 +449,7 @@ def child(engine: str, zone: str, part: Path, only: str) -> int:
             version = ""
         with part.open("a", encoding="utf-8") as handle:
             for index, cell in enumerate(todo):
-                table = f"{CATALOG}.{NAMESPACE}.t{len(done) + index}"
+                table = table_name(cell)
                 answer = measure(repark_door_of(doors, cell), cell, table)
                 handle.write(json.dumps({"cell_id": cell.cell_id, **answer}) + "\n")
                 handle.flush()
@@ -588,7 +599,7 @@ DOOR_ORDER: tuple[str, ...] = (
     "D21",
 )
 LINE_LIMIT = 96
-TABLE_NAME = re.compile(r"`?ice`?\.`?ns`?\.`?t\d+`?")
+TABLE_NAME = re.compile(r"`?ice`?\.`?ns`?\.`?t_[0-9]+`?")
 AXES: dict[str, shapes.Cell] = {cell.cell_id: cell for cell in shapes.cells()}
 
 
