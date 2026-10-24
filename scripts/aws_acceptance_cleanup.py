@@ -229,22 +229,29 @@ def location_matches_table(table: ScratchTable) -> bool:
 def clean_glue(
     glue: Any, s3: Any, warehouse: str, chosen: Sequence[ScratchTable], execute: bool
 ) -> int:
-    """Report or perform the Glue deletes, then the objects of each deleted table; failures."""
-    objects: dict[str, list[tuple[str, str]]] = {}
-    for table in chosen:
-        if not location_matches_table(table):
-            print(f"glue: {table.name} has another directory as location; objects left", flush=True)
-            continue
-        objects[table.name] = scratch_object_keys(s3, table.location or "", warehouse)
+    """Report or perform the Glue deletes, then the objects of each deleted table; failures.
+
+    A table whose location is not its own directory under the scratch prefix is kept, with its
+    objects, and counted as a failure.
+    """
+    sound = [
+        t
+        for t in chosen
+        if location_matches_table(t) and location_under_scratch(t.location, warehouse)
+    ]
+    anomalies = [t for t in chosen if t not in sound]
+    for table in anomalies:
+        print(f"glue: kept {table.name}: unexpected location {table.location!r}", file=sys.stderr)
+    objects = {t.name: scratch_object_keys(s3, t.location or "", warehouse) for t in sound}
     selected = sum(len(keys) for keys in objects.values())
-    print(f"glue: {len(chosen)} tables, {selected} objects selected", flush=True)
+    print(f"glue: {len(sound)} tables, {selected} objects selected", flush=True)
     if not execute:
-        return 0
-    failed = delete_glue_tables(glue, SCRATCH_NAMESPACE, chosen)
+        return len(anomalies)
+    failed = delete_glue_tables(glue, SCRATCH_NAMESPACE, sound)
     removable = [key for name, keys in objects.items() if name not in failed for key in keys]
     refused = delete_scratch_objects(s3, removable)
-    print(f"glue: deleted {len(chosen) - len(failed)} tables, {len(removable)} objects", flush=True)
-    return len(failed) + refused
+    print(f"glue: deleted {len(sound) - len(failed)} tables, {len(removable)} objects", flush=True)
+    return len(anomalies) + len(failed) + refused
 
 
 def path_object_stem(prefix: str) -> str:

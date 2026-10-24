@@ -762,28 +762,61 @@ def test_main_continues_past_item_failures_and_exits_one(
     assert "deletes failed" in capsys.readouterr().err
 
 
-def test_a_table_whose_location_is_another_tables_directory_keeps_its_objects(
+def test_a_table_with_an_anomalous_location_is_kept_with_its_objects_and_counted_as_a_failure(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The last location segment must be the table's own name; otherwise objects are left."""
-    stray = _table("testing_r9a1_acc_a", location=f"{_SCRATCH}/testing_r9a1_acc_b")
-    own = _table("testing_r9a1_acc_c", location=f"{_SCRATCH}/testing_r9a1_acc_c/")
+    """One good and three bad locations: only the good table and its objects go; failures = 3."""
+    good = _table("testing_r9a1_acc_g", location=f"{_SCRATCH}/testing_r9a1_acc_g/")
+    other = _table("testing_r9a1_acc_a", location=f"{_SCRATCH}/testing_r9a1_acc_b")
+    outside = _table("testing_r9a1_acc_o", location="s3://real-bucket/prod/testing_r9a1_acc_o")
+    missing = _table("testing_r9a1_acc_m")
     keys = [
+        "testing_repark_acceptance/testing_r9a1_acc_g/f",
         "testing_repark_acceptance/testing_r9a1_acc_b/f",
-        "testing_repark_acceptance/testing_r9a1_acc_c/f",
+        "prod/testing_r9a1_acc_o/f",
     ]
     s3 = _World({}, keys)
     glue = _Client()
-    assert cleanup.clean_glue(glue, s3, _WAREHOUSE, [stray, own], execute=True) == 0
+    tables = [good, other, outside, missing]
+    assert cleanup.clean_glue(glue, s3, _WAREHOUSE, tables, execute=True) == 3
     removed = {e["Key"] for c in _deleted(s3, "delete_objects") for e in c["Delete"]["Objects"]}
-    assert removed == {"testing_repark_acceptance/testing_r9a1_acc_c/f"}
-    assert _deleted(glue, "batch_delete_table")[0]["TablesToDelete"] == [stray.name, own.name]
-    assert "another directory as location" in capsys.readouterr().out
+    assert removed == {"testing_repark_acceptance/testing_r9a1_acc_g/f"}
+    assert [c["TablesToDelete"] for c in _deleted(glue, "batch_delete_table")] == [[good.name]]
+    err = capsys.readouterr().err
+    for table in (other, outside, missing):
+        assert table.name in err
+    assert "testing_r9a1_acc_b" in err and "prod/testing_r9a1_acc_o" in err
 
 
-def test_a_table_without_a_location_has_no_objects_listed() -> None:
-    """A Glue entry with no storage descriptor costs no S3 call."""
-    s3 = _World({}, ["testing_repark_acceptance/testing_r9a1_acc_a/f"])
-    cleanup.clean_glue(_Client(), s3, _WAREHOUSE, [_table("testing_r9a1_acc_a")], execute=True)
-    assert _deleted(s3, "paginate") == []
-    assert _deleted(s3, "delete_objects") == []
+def test_a_dry_run_also_counts_an_anomalous_location(capsys: pytest.CaptureFixture[str]) -> None:
+    """The anomaly is reported and counted without --execute, and nothing is deleted."""
+    bad = _table("testing_r9a1_acc_a", location=f"{_SCRATCH}/testing_r9a1_acc_b")
+    glue, s3 = _Client(), _World({}, [])
+    assert cleanup.clean_glue(glue, s3, _WAREHOUSE, [bad], execute=False) == 1
+    assert _deleted(glue, "batch_delete_table") == []
+
+
+def test_main_exits_one_and_keeps_a_bad_location_table_everywhere(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """End to end: the good table goes with its objects, the bad one is untouched, exit 1."""
+    _env(monkeypatch, None)
+    factory = _world()
+    glue = factory.clients["glue"]
+    glue.world["get_tables"][0]["TableList"][0]["StorageDescriptor"]["Location"] = (
+        f"{_WH}testing_repark_acceptance/testing_r12a1_acc_other"
+    )
+    names = ["testing_r12a1_acc_a", "testing_r12a1_acc_good"]
+    glue.world["get_tables"][0]["TableList"][0]["Name"] = names[0]
+    good = _glue_entry(names[1])
+    glue.world["get_tables"][0]["TableList"].append(good)
+    factory.clients["s3"].keys.append(f"{_WH_ROOT}/{names[1]}/f9")
+    assert cleanup.main(["--run-prefix", "testing_r12a1_acc_", "--execute"], factory) == 1
+    assert [c["TablesToDelete"] for c in _deleted(glue, "batch_delete_table")] == [[names[1]]]
+    removed = {
+        e["Key"]
+        for c in _deleted(factory.clients["s3"], "delete_objects")
+        for e in c["Delete"]["Objects"]
+    }
+    assert f"{_WH_ROOT}/{names[1]}/f9" in removed
+    assert not any("other" in key or names[0] in key for key in removed)
