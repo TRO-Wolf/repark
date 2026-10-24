@@ -188,6 +188,33 @@ Round 2 mutants:
 | (e) | the D1 record in `execute_insert_routed` deleted | `every_spark_door_records_the_door_the_statement_took` (`left: [] right: ["D1"]`) | red; restored |
 | (f) | the `clear` at the top of `execute_in_session` deleted | both `write_door_record.rs` tests (`left: ["D1", "D3"] right: ["D3"]`) | red; restored |
 
+## Round 3: rulings Q7 to Q10 and the fork-provider UPDATE (2026-10-24)
+
+- **Q7:** `_native.last_write_doors(session)` takes the native session; kept.
+- **Q8:** a `CALL` writes no new values, so the statements it runs through `router::execute`
+  may own the record (C-011 says so).
+- **Q9, ruled:** an `UPDATE` the fork-provider delegation runs writes values, so it records D10
+  as well. `router/door_tag.rs`'s `record_planned_update`, called by `spark_ast.rs` after
+  planning, records D10 when the plan is a `LogicalPlan::Dml` with `WriteOp::Update`. That plan is the delegation, because the predicate-DML route has returned
+  before the plan is built. On main the Spark door reaches the delegation with an `UPDATE`
+  that has no `WHERE`: `allowed_update_with` answers `None` without a selection, so
+  `try_execute_identity_dml` answers `None`. A `WHERE st.v = 7` over a struct column was tried
+  first and still took the predicate-DML route.
+- **Q10:** the DataFrame writers were not run through `last_write_doors`; step 3b's order
+  carries the check (a writer that issues a router statement after its write would clear the
+  record).
+
+```
+cargo nextest run -p repark-spark --test write_door_record
+PASS an_update_the_fork_provider_runs_records_the_update_door
+PASS every_spark_door_records_the_door_the_statement_took
+PASS a_session_write_conf_append_records_the_options_door
+```
+
+| mutant | change | red test | answer |
+|---|---|---|---|
+| (g) | the `record_planned_update` call in `spark_ast.rs` deleted (the fork-provider D10 record) | `an_update_the_fork_provider_runs_records_the_update_door` (`left: [] right: ["D10"]`) | red; restored |
+
 ## PROPOSITION LEDGER — WRITE-SPINE-1 steps (1) and (3) — 2026-10-24
 
 | id | claim | evidence | status | proof |
@@ -202,5 +229,5 @@ Round 2 mutants:
 | C-008 | `zone_store_frame` returns the frame unconverted when the planned width differs from the target width. | Reading of `ntz_store.rs` (`if planned.len() != targets.len() { return Ok(frame) }`). | OPEN | fail-open; closed by step (2)'s conform stage. |
 | C-009 | The eighteen-door table is corrected (orchestrator ruling, 2026-10-24): D14 is bare-session SQL through `repark.sql()` in `repark-core`; D15 to D20 are `repark-sql` Rust-library doors with reach `rust_api`; D18 and D21 are unchanged. | `_write_spine_1_doors.py` marks D15 to D20's spellings `rust_api`; `test_every_rust_api_only_door_names_a_rust_test_that_exists`. | **PROVEN** | the enumeration test green; `rust_api_only_doors()` is exactly D15 to D20. |
 | C-010 | `write_door_of(sql, options)` names the door of each Spark spelling without running it, through the router's intercepts and `door_of` (the parsed-shape reading). | `test_write_door_of_names_the_door_of_each_spark_spelling_without_running_it`. | **PROVEN** | 12 parametrized cases green: D1 to D10 and `None` for DELETE and SELECT. |
-| C-011 | A Spark session records the set of doors its last statement took, at the branch points, cleared per statement; a Postgres target and `repark.sql()` record nothing. | `write_door_record.rs`; `test_last_write_doors_records_the_doors_each_statement_took`; `test_the_bare_sql_session_records_no_door`. | **PROVEN** | both Rust pins and both Python pins green; mutants (e) and (f) red them. The Postgres route is by reading (it returns before any record); no Postgres pin. |
+| C-011 | A Spark session records the set of doors its last statement took, at the branch points, cleared per statement; a Postgres target and `repark.sql()` record nothing. | `write_door_record.rs`; `test_last_write_doors_records_the_doors_each_statement_took`; `test_the_bare_sql_session_records_no_door`. | **PROVEN** | the three Rust pins and both Python pins green; mutants (e), (f) and (g) red them. The Postgres route is by reading (it returns before any record); no Postgres pin. An `UPDATE` the fork provider runs records D10 (round 3, `an_update_the_fork_provider_runs_records_the_update_door`). A `CALL` writes no new values, so the statements it runs through `router::execute` own the record (ruling Q8). |
 | C-012 | Every door no Python spelling executes (D15 to D20) is written through by a named Rust test that reads the rows back. | `crates/repark-sql/tests/write_door_native.rs`; the enumeration test's name check. | **PROVEN** | six tests green; `RUST_TESTS` names each and the enumeration test finds each `async fn`. |

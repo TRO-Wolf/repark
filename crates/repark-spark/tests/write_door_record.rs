@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::arrow::array::AsArray;
+use datafusion::arrow::datatypes::Int32Type;
 use repark_core::{OverwriteIntent, ReparkSession};
 use repark_spark::write_door::{WriteDoor, last_write_doors};
 use repark_spark::{SparkDialect, SparkExtension};
@@ -149,4 +151,31 @@ async fn a_session_write_conf_append_records_the_options_door() {
     assert_eq!(recorded(&session), ["D2"]);
     run(&session, "SELECT 1").await;
     assert_eq!(recorded(&session), Vec::<&str>::new());
+}
+
+#[tokio::test]
+async fn an_update_the_fork_provider_runs_records_the_update_door() {
+    let session = session();
+    let _warehouse = warehouse(&session).await;
+    run(&session, &format!("INSERT INTO ice.ns.t {SOURCE_ROW}")).await;
+    run(&session, "UPDATE ice.ns.t SET k = 5").await;
+    assert_eq!(recorded(&session), ["D10"]);
+    let batches = session
+        .sql("SELECT k FROM ice.ns.t")
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    let stored: Vec<i32> = batches
+        .iter()
+        .flat_map(|batch| {
+            batch
+                .column(0)
+                .as_primitive::<Int32Type>()
+                .values()
+                .to_vec()
+        })
+        .collect();
+    assert_eq!(stored, [5]);
 }

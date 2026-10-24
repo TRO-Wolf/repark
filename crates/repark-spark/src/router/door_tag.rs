@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
+use datafusion::logical_expr::{LogicalPlan, WriteOp};
 use datafusion::prelude::{SessionConfig, SessionContext};
 
 use crate::write_door::{WriteDoor, tag};
@@ -36,6 +37,14 @@ pub(crate) fn record(ctx: &SessionContext, door: WriteDoor) {
         if !doors.contains(&door) {
             doors.push(door);
         }
+    }
+}
+
+pub(crate) fn record_planned_update(ctx: &SessionContext, plan: &LogicalPlan) {
+    if let LogicalPlan::Dml(dml) = plan
+        && matches!(dml.op, WriteOp::Update)
+    {
+        record(ctx, WriteDoor::D10Update);
     }
 }
 

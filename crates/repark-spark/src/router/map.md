@@ -27,7 +27,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `BY NAME` route, D4 before `execute_insert_overwrite`, D2 on the owned append, on a statement
   with write options and on the session-write-conf append, D1 on the plain route; a Postgres
   target returns before any record. D10 is recorded in `spark_ast.rs` just before
-  `execute_predicate_dml` runs an `UPDATE`; D7, D8 and D9 in `../merge/nested_assign.rs`. A
+  `execute_predicate_dml` runs an `UPDATE`, and (round 3, ruling Q9) when the planned
+  statement is a `Dml` `Update` the fork provider runs (`record_planned_update`, called by
+  `spark_ast.rs` after planning; an `UPDATE` with no `WHERE` takes it); D7, D8 and D9 in `../merge/nested_assign.rs`. A
   `CALL` procedure that runs SQL through `router::execute` clears and records as its own
   statement. Pins: `../../tests/write_door_record.rs`. pins: write-spine-1/C-011
 

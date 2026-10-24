@@ -252,6 +252,7 @@ async fn execute_passthrough_inner(
         crate::spark_door_case_insensitive(state.config().options()),
     )
     .await?;
+    crate::router::door_tag::record_planned_update(ctx, &plan);
     // G5b: a unit-less RANGE offset over datetime is Spark refusal or DAYS, never silent MONTHS.
     let plan = if may_have_bare_range_bound {
         conform_temporal_range_frames(&state, sql, &dialect, plan).await?
