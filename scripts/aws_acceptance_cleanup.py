@@ -13,17 +13,18 @@ from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 SCRATCH_NAMESPACE = "testing_repark_acceptance"
-RUN_PREFIX = re.compile(r"testing_r[0-9]+_(?:acc|u|x)_")
-RUN_GROUP = re.compile(r"testing_r[0-9]+_(?:(?:acc|u|x)_)?")
-STEM_OF_PREFIX = re.compile(r"testing_(r[0-9]+_(?:acc|u|x)_)")
+RUN_PREFIX = re.compile(r"testing_r[0-9]+a[0-9]+_(?:acc|u|x)_")
+RUN_GROUP = re.compile(r"testing_r[0-9]+a[0-9]+_(?:(?:acc|u|x)_)?")
+STEM_OF_PREFIX = re.compile(r"testing_(r[0-9]+a[0-9]+_(?:acc|u|x)_)")
 PLACEHOLDER_WAREHOUSE = "s3://example-warehouse/"
 GLUE_DELETE_BATCH = 100
 S3_DELETE_BATCH = 1000
 ClientFactory = Callable[[str], Any]
 DESCRIPTION = (
     "Delete the tables and S3 path-write objects of one run-and-leg prefix"
-    " (testing_r<digits>_<acc|u|x>_), or the tables of every run prefix whose newest table is"
-    " older than N hours, from the Glue scratch database and the S3 Tables scratch namespace."
+    " (testing_r<digits>a<digits>_<acc|u|x>_), or the tables of every run prefix whose newest"
+    " table is older than N hours, from the Glue scratch database and the S3 Tables scratch"
+    " namespace."
     " Dry run unless --execute."
 )
 
@@ -37,9 +38,11 @@ class ScratchTable(NamedTuple):
 
 
 def validate_run_prefix(prefix: str) -> str:
-    """Return ``prefix`` when it is exactly ``testing_r<digits>_<acc|u|x>_``, else raise."""
+    """Return ``prefix`` when it is ``testing_r<digits>a<digits>_<acc|u|x>_``, else raise."""
     if RUN_PREFIX.fullmatch(prefix) is None:
-        raise ValueError(f"run prefix must match testing_r<digits>_<acc|u|x>_, got {prefix!r}")
+        raise ValueError(
+            f"run prefix must match testing_r<digits>a<digits>_<acc|u|x>_, got {prefix!r}"
+        )
     return prefix
 
 
@@ -52,7 +55,7 @@ def run_prefix_of(name: str) -> str | None:
 def assert_deletable(name: str) -> None:
     """Raise ValueError unless ``name`` is a run-prefixed scratch table and not the bench."""
     if run_prefix_of(name) is None:
-        raise ValueError(f"refusing {name!r}: not a testing_r<digits>_ scratch table")
+        raise ValueError(f"refusing {name!r}: not a testing_r<digits>a<digits>_ scratch table")
 
 
 def select_by_prefix(tables: Iterable[ScratchTable], prefix: str) -> list[ScratchTable]:
@@ -121,29 +124,39 @@ def list_s3tables(client: Any, table_bucket_arn: str, namespace: str) -> list[Sc
     return tables
 
 
-def delete_glue_tables(glue: Any, database: str, tables: Sequence[ScratchTable]) -> int:
-    """Batch-delete the tables from Glue; raise RuntimeError naming any table Glue refused."""
+def delete_glue_tables(glue: Any, database: str, tables: Sequence[ScratchTable]) -> list[str]:
+    """Batch-delete the tables from Glue; return the names of every table not deleted."""
     for table in tables:
         assert_deletable(table.name)
     names = [table.name for table in tables]
     failed: list[str] = []
     for batch in chunked(names, GLUE_DELETE_BATCH):
-        response = glue.batch_delete_table(DatabaseName=database, TablesToDelete=list(batch))
+        try:
+            response = glue.batch_delete_table(DatabaseName=database, TablesToDelete=list(batch))
+        except Exception as error:
+            print(f"glue: a batch of {len(batch)} failed: {type(error).__name__}", file=sys.stderr)
+            failed.extend(batch)
+            continue
         failed.extend(error["TableName"] for error in response.get("Errors", []))
-    if failed:
-        raise RuntimeError(f"Glue refused {len(failed)} table deletes: {sorted(failed)}")
-    return len(names)
+    return failed
 
 
 def delete_s3tables(
     client: Any, table_bucket_arn: str, namespace: str, tables: Sequence[ScratchTable]
-) -> int:
-    """Delete the tables from the S3 Tables namespace one by one."""
+) -> list[str]:
+    """Delete the tables from the S3 Tables namespace one by one; return the names that failed."""
     for table in tables:
         assert_deletable(table.name)
+    failed = []
     for table in tables:
-        client.delete_table(tableBucketARN=table_bucket_arn, namespace=namespace, name=table.name)
-    return len(tables)
+        try:
+            client.delete_table(
+                tableBucketARN=table_bucket_arn, namespace=namespace, name=table.name
+            )
+        except Exception as error:
+            print(f"s3tables: {table.name} failed: {type(error).__name__}", file=sys.stderr)
+            failed.append(table.name)
+    return failed
 
 
 def scratch_object_keys(s3: Any, location: str, warehouse: str) -> list[tuple[str, str]]:
@@ -161,28 +174,35 @@ def scratch_object_keys(s3: Any, location: str, warehouse: str) -> list[tuple[st
 
 
 def delete_scratch_objects(s3: Any, objects: Sequence[tuple[str, str]]) -> int:
-    """Delete the (bucket, key) pairs in batches; raise RuntimeError on any refused key."""
+    """Delete the (bucket, key) pairs in batches; return how many objects were not deleted."""
     by_bucket: dict[str, list[str]] = defaultdict(list)
     for bucket, key in objects:
         by_bucket[bucket].append(key)
     refused = 0
     for bucket, keys in by_bucket.items():
         for batch in chunked(keys, S3_DELETE_BATCH):
-            response = s3.delete_objects(
-                Bucket=bucket,
-                Delete={"Objects": [{"Key": key} for key in batch], "Quiet": True},
-            )
+            try:
+                response = s3.delete_objects(
+                    Bucket=bucket,
+                    Delete={"Objects": [{"Key": key} for key in batch], "Quiet": True},
+                )
+            except Exception as error:
+                print(
+                    f"s3: a batch of {len(batch)} failed: {type(error).__name__}", file=sys.stderr
+                )
+                refused += len(batch)
+                continue
             refused += len(response.get("Errors", []))
-    if refused:
-        raise RuntimeError(f"S3 refused {refused} object deletes")
-    return len(objects)
+    return refused
 
 
 def build_parser() -> argparse.ArgumentParser:
     """The command line: a run prefix or an age, and the execute switch."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--run-prefix", help="the run-and-leg prefix testing_r<digits>_<leg>_")
+    mode.add_argument(
+        "--run-prefix", help="the run-and-leg prefix testing_r<digits>a<digits>_<leg>_"
+    )
     mode.add_argument("--older-than-hours", type=float, help="remove every run prefix older")
     parser.add_argument("--execute", action="store_true", help="delete; without it, only report")
     return parser
@@ -199,23 +219,36 @@ def select_tables(
     return select_older_than(tables, hours, now)
 
 
+def location_matches_table(table: ScratchTable) -> bool:
+    """True when the last path segment of the table's location is the table's own name."""
+    if not table.location:
+        return False
+    return table.location.rstrip("/").rsplit("/", 1)[-1] == table.name
+
+
 def clean_glue(
     glue: Any, s3: Any, warehouse: str, chosen: Sequence[ScratchTable], execute: bool
-) -> None:
-    """Report or perform the Glue table deletes, then the objects under their locations."""
-    objects = []
+) -> int:
+    """Report or perform the Glue deletes, then the objects of each deleted table; failures."""
+    objects: dict[str, list[tuple[str, str]]] = {}
     for table in chosen:
-        objects.extend(scratch_object_keys(s3, table.location or "", warehouse))
-    print(f"glue: {len(chosen)} tables, {len(objects)} objects selected", flush=True)
+        if not location_matches_table(table):
+            print(f"glue: {table.name} has another directory as location; objects left", flush=True)
+            continue
+        objects[table.name] = scratch_object_keys(s3, table.location or "", warehouse)
+    selected = sum(len(keys) for keys in objects.values())
+    print(f"glue: {len(chosen)} tables, {selected} objects selected", flush=True)
     if not execute:
-        return
-    delete_glue_tables(glue, SCRATCH_NAMESPACE, chosen)
-    delete_scratch_objects(s3, objects)
-    print(f"glue: deleted {len(chosen)} tables and {len(objects)} objects", flush=True)
+        return 0
+    failed = delete_glue_tables(glue, SCRATCH_NAMESPACE, chosen)
+    removable = [key for name, keys in objects.items() if name not in failed for key in keys]
+    refused = delete_scratch_objects(s3, removable)
+    print(f"glue: deleted {len(chosen) - len(failed)} tables, {len(removable)} objects", flush=True)
+    return len(failed) + refused
 
 
 def path_object_stem(prefix: str) -> str:
-    """The S3 path-write object stem ``u12s3path_r<digits>_<leg>_`` of a run-and-leg prefix."""
+    """The path-write object stem ``u12s3path_r<digits>a<digits>_<leg>_`` of a prefix."""
     matched = STEM_OF_PREFIX.fullmatch(validate_run_prefix(prefix))
     if matched is None:
         raise ValueError(f"no object stem for {prefix!r}")
@@ -242,23 +275,27 @@ def path_object_keys(s3: Any, warehouse: str, prefix: str) -> list[tuple[str, st
     return keys
 
 
-def clean_path_objects(s3: Any, warehouse: str, prefix: str, execute: bool) -> None:
-    """Report or perform the delete of the leg's S3 path-write objects."""
+def clean_path_objects(s3: Any, warehouse: str, prefix: str, execute: bool) -> int:
+    """Report or perform the delete of the leg's S3 path-write objects; return failures."""
     objects = path_object_keys(s3, warehouse, prefix)
     print(f"s3 path objects: {len(objects)} selected", flush=True)
-    if execute:
-        delete_scratch_objects(s3, objects)
-        print(f"s3 path objects: deleted {len(objects)}", flush=True)
+    if not execute:
+        return 0
+    refused = delete_scratch_objects(s3, objects)
+    print(f"s3 path objects: deleted {len(objects) - refused}", flush=True)
+    return refused
 
 
 def clean_s3tables(
     client: Any, table_bucket_arn: str, chosen: Sequence[ScratchTable], execute: bool
-) -> None:
-    """Report or perform the S3 Tables deletes."""
+) -> int:
+    """Report or perform the S3 Tables deletes; return how many failed."""
     print(f"s3tables: {len(chosen)} tables selected", flush=True)
-    if execute:
-        delete_s3tables(client, table_bucket_arn, SCRATCH_NAMESPACE, chosen)
-        print(f"s3tables: deleted {len(chosen)} tables", flush=True)
+    if not execute:
+        return 0
+    failed = delete_s3tables(client, table_bucket_arn, SCRATCH_NAMESPACE, chosen)
+    print(f"s3tables: deleted {len(chosen) - len(failed)} tables", flush=True)
+    return len(failed)
 
 
 def boto3_client(service: str) -> Any:
@@ -278,7 +315,8 @@ def main(argv: Sequence[str] | None = None, clients: ClientFactory | None = None
             print(str(error), file=sys.stderr)
             return 2
     warehouse = os.environ.get("REPARK_ACCEPT_WAREHOUSE", "")
-    if not warehouse.startswith("s3://") or warehouse == PLACEHOLDER_WAREHOUSE:
+    placeholder = PLACEHOLDER_WAREHOUSE.rstrip("/")
+    if not warehouse.startswith("s3://") or warehouse.rstrip("/").startswith(placeholder):
         print("REPARK_ACCEPT_WAREHOUSE must be a real s3:// location", file=sys.stderr)
         return 2
     factory = boto3_client if clients is None else clients
@@ -287,15 +325,18 @@ def main(argv: Sequence[str] | None = None, clients: ClientFactory | None = None
     s3 = factory("s3")
     glue_tables = list_glue_tables(glue, SCRATCH_NAMESPACE)
     chosen = select_tables(glue_tables, arguments.run_prefix, arguments.older_than_hours, now)
-    clean_glue(glue, s3, warehouse, chosen, arguments.execute)
+    failures = clean_glue(glue, s3, warehouse, chosen, arguments.execute)
     if arguments.run_prefix is not None:
-        clean_path_objects(s3, warehouse, arguments.run_prefix, arguments.execute)
+        failures += clean_path_objects(s3, warehouse, arguments.run_prefix, arguments.execute)
     table_bucket_arn = os.environ.get("TABLE_BUCKET_ARN", "")
     if table_bucket_arn:
         client = factory("s3tables")
         listed = list_s3tables(client, table_bucket_arn, SCRATCH_NAMESPACE)
         selected = select_tables(listed, arguments.run_prefix, arguments.older_than_hours, now)
-        clean_s3tables(client, table_bucket_arn, selected, arguments.execute)
+        failures += clean_s3tables(client, table_bucket_arn, selected, arguments.execute)
+    if failures:
+        print(f"{failures} deletes failed", file=sys.stderr)
+        return 1
     return 0
 
 

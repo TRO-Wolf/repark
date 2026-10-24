@@ -42,7 +42,7 @@ value, not a literal in the tree). `testing_xrel_*` is a third fixed family the 
 and `BENCH_TABLE`). The name does not begin with `testing_`, so the discovery prefix `testing_` never listed it
 and the IAM resource `table/testing_repark_acceptance/testing_*` does not cover it. Exclusion pattern for the
 cleanup script: only names matching `^testing_r<digits>_` are candidates; `ice_read_perf_bench` is also
-refused by name as a second guard. The bench job is dispatch-only and has no `REPARK_ACCEPT_RUN_ID`.
+excluded by that shape alone (there is no by-name check). The bench job is dispatch-only and has no `REPARK_ACCEPT_RUN_ID`.
 
 ## Where `testing_` is assumed
 
@@ -78,12 +78,15 @@ refused by name as a second guard. The bench job is dispatch-only and has no `RE
 ## Resolutions (orchestrator rulings, 2026-10-24)
 
 - **F-1 resolved.** Two variables: `REPARK_ACCEPT_RUN_ID` (the run id, digits) and `REPARK_ACCEPT_LEG` (`acc` for the
-  acceptance and dbt jobs, `u`, `x`). Every table above is named `testing_r<run_id>_<leg>_<name>`; a job cleans and
+  acceptance and dbt jobs, `u`, `x`). Every table above is named `testing_r<run_id>a<attempt>_<leg>_<name>`; a job cleans and
   cross-reads only its own run-and-leg prefix, so no job can reach another job's tables. The backstop matches
   `testing_r<digits>_` of any leg and groups by the full run-and-leg prefix. Local defaults: run id `0`, leg `acc`.
-- **F-3 resolved.** The U12 S3 path write names its objects `u12s3path_r<run_id>_<leg>_<uuid12>`; the leg's cleanup
+- **F-3 resolved.** The U12 S3 path write names its objects `u12s3path_r<run_id>a<attempt>_<leg>_<uuid12>`; the leg's cleanup
   deletes the objects under `<warehouse>/testing_repark_acceptance/` whose key starts with that stem, behind the same
   warehouse guard. Legacy objects and legacy tables stay untouched.
 - **Q5.** `REPARK_ACCEPT_ENTITY` is `appointment` in the environment, so the card's `testing_appointment` is the
   resolved silver name; it now carries the run-and-leg prefix like every other table.
-
+- **Re-run attempts (fix round 2).** A re-run reuses `github.run_id`, so attempt 2 would meet attempt 1's leftovers under
+  one prefix. `github.run_attempt` joins the name through `REPARK_ACCEPT_RUN_ATTEMPT` (digits, local default `0`): tables
+  are `testing_r<run_id>a<attempt>_<leg>_…`, the per-job validator is `^testing_r[0-9]+a[0-9]+_(acc|u|x)_$`, and age mode
+  groups by run, attempt and leg.

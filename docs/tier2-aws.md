@@ -116,7 +116,7 @@ table's files:
 the scratch database, S3 Tables tables in the scratch namespace, and objects under the warehouse
 scratch prefix, and nothing else: not the database, not the namespace, not the table bucket, not
 bronze. The test harness has no DROP TABLE path; the cleanup script wired into `aws-acceptance.yml` by
-AWS-EPHEMERAL-RUNS-1 (each leg job deletes only its own `testing_r<run_id>_<leg>_…` prefix, and an
+AWS-EPHEMERAL-RUNS-1 (each leg job deletes only its own `testing_r<run_id>a<attempt>_<leg>_…` prefix, and an
 age-bounded backstop deletes older run prefixes) is the only delete. A compromised job could drop scratch tables under the prefix and could not touch anything
 production reads.
 
@@ -134,10 +134,10 @@ warehouse scratch prefix, if one is set, is kept consistent with that 24 h windo
 entry outlives its files. The ICE-READ-PERF bench table is excluded from every sweep.
 
 **Run-owned cleanup (AWS-EPHEMERAL-RUNS-1, 2026-10-24, wired into `aws-acceptance.yml`).**
-Each job owns one run-and-leg pair, `REPARK_ACCEPT_RUN_ID` (the run id) and `REPARK_ACCEPT_LEG` (`acc` for
-`acceptance-dbt`, `u`, `x`), and names its tables `testing_r<run_id>_<leg>_…`; the job's cross-read lists only that
+Each job owns one run, attempt and leg, `REPARK_ACCEPT_RUN_ID` (the run id), `REPARK_ACCEPT_RUN_ATTEMPT` (a re-run's attempt number) and `REPARK_ACCEPT_LEG` (`acc` for
+`acceptance-dbt`, `u`, `x`), and names its tables `testing_r<run_id>a<attempt>_<leg>_…`; the job's cross-read lists only that
 prefix. `scripts/aws_acceptance_cleanup.py` is the cleanup step: each leg job runs it last, with `if: always()`, as
-`--run-prefix testing_r<run_id>_<leg>_ --execute` (its tables, plus its `u12s3path_r<run_id>_<leg>_` S3 path-write
+`--run-prefix testing_r<run_id>a<attempt>_<leg>_ --execute` (its tables, plus its `u12s3path_r<run_id>a<attempt>_<leg>_` S3 path-write
 objects), and the `backstop` job runs `--older-than-hours 24 --execute` after all three. It takes only names of that
 shape (never the ICE-READ-PERF bench table or a legacy `testing_*` table), removes objects only strictly below the
 warehouse scratch prefix, and relies on the scoped delete grant of §2, which the owner has applied. Each

@@ -99,24 +99,24 @@ def _fail_after_snapshot(stream: _ProgressStream, snapshots: list[str], *args: A
 
 def test_discovery_keeps_only_the_run_and_leg_prefix_and_never_the_bench_table() -> None:
     """Another run's or leg's tables, unprefixed names and the bench table are not discovered."""
-    namespace = _load_namespace("testing_r77_acc_")
+    namespace = _load_namespace("testing_r77a1_acc_")
     session = _listing_session(
         [
-            "testing_r77_acc_b",
-            "testing_r77_u_a",
-            "testing_r77_x_a",
-            "testing_r770_acc_x",
-            "testing_r78_acc_a",
-            "testing_r77_acc_a",
+            "testing_r77a1_acc_b",
+            "testing_r77a1_u_a",
+            "testing_r77a1_x_a",
+            "testing_r770a1_acc_x",
+            "testing_r78a1_acc_a",
+            "testing_r77a1_acc_a",
             "testing_old_a",
             "ice_read_perf_bench",
-            "testing_r77_acc_tmp",
+            "testing_r77a1_acc_tmp",
         ],
         [False, False, False, False, False, False, False, False, True],
     )
     assert namespace["_discover_tables"](session, "catalog", "scratch") == [
-        "testing_r77_acc_a",
-        "testing_r77_acc_b",
+        "testing_r77a1_acc_a",
+        "testing_r77a1_acc_b",
     ]
 
 

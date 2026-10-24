@@ -92,6 +92,7 @@ jobs:
       contents: read
     env:
       REPARK_ACCEPT_RUN_ID: ${{ github.run_id }}
+      REPARK_ACCEPT_RUN_ATTEMPT: ${{ github.run_attempt }}
       REPARK_ACCEPT_LEG: acc
     steps:
       - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
@@ -156,14 +157,14 @@ jobs:
           VIRTUAL_ENV="$PWD/.venv"
           uv run --no-project python -m pytest python/dbt-repark/tests/test_aws_acceptance_gold.py -q -rA
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-acceptance-cross-read
           mask-aws-account-id: true
       - name: cross-read module (REPARK_AWS_ACCEPTANCE=1)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
         env:
           REPARK_AWS_ACCEPTANCE: "1"
           REPARK_ACCEPT_DS: ${{ vars.REPARK_ACCEPT_DS }}
@@ -205,16 +206,16 @@ jobs:
           wait "$watchdog_pid" || true
           exit "$pytest_status"
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ always() }}
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-acceptance-cleanup
           mask-aws-account-id: true
       - name: remove this leg's scratch tables
-        if: ${{ always() }}
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
         env:
-          RUN_PREFIX: testing_r${{ github.run_id }}_acc_
+          RUN_PREFIX: testing_r${{ github.run_id }}a${{ github.run_attempt }}_acc_
           REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
         run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute
@@ -231,6 +232,7 @@ jobs:
       contents: read
     env:
       REPARK_ACCEPT_RUN_ID: ${{ github.run_id }}
+      REPARK_ACCEPT_RUN_ATTEMPT: ${{ github.run_attempt }}
       REPARK_ACCEPT_LEG: u
     steps:
       - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
@@ -280,14 +282,14 @@ jobs:
           python/repark/tests/parity/test_aws_acceptance_commit_unknown.py
           -q -rA
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-integrity-u-cross-read
           mask-aws-account-id: true
       - name: cross-read module (REPARK_AWS_ACCEPTANCE=1)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
         env:
           REPARK_AWS_ACCEPTANCE: "1"
           REPARK_ACCEPT_DS: ${{ vars.REPARK_ACCEPT_DS }}
@@ -329,16 +331,16 @@ jobs:
           wait "$watchdog_pid" || true
           exit "$pytest_status"
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ always() }}
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-integrity-u-cleanup
           mask-aws-account-id: true
       - name: remove this leg's scratch tables
-        if: ${{ always() }}
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
         env:
-          RUN_PREFIX: testing_r${{ github.run_id }}_u_
+          RUN_PREFIX: testing_r${{ github.run_id }}a${{ github.run_attempt }}_u_
           REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
         run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute
@@ -355,6 +357,7 @@ jobs:
       contents: read
     env:
       REPARK_ACCEPT_RUN_ID: ${{ github.run_id }}
+      REPARK_ACCEPT_RUN_ATTEMPT: ${{ github.run_attempt }}
       REPARK_ACCEPT_LEG: x
     steps:
       - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
@@ -410,14 +413,14 @@ jobs:
           python/repark/tests/parity/test_aws_acceptance_cross_release.py
           -q -rA
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-integrity-x-cross-read
           mask-aws-account-id: true
       - name: cross-read module (REPARK_AWS_ACCEPTANCE=1)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
         env:
           REPARK_AWS_ACCEPTANCE: "1"
           REPARK_ACCEPT_DS: ${{ vars.REPARK_ACCEPT_DS }}
@@ -459,16 +462,16 @@ jobs:
           wait "$watchdog_pid" || true
           exit "$pytest_status"
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
-        if: ${{ always() }}
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
         with:
           role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-integrity-x-cleanup
           mask-aws-account-id: true
       - name: remove this leg's scratch tables
-        if: ${{ always() }}
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
         env:
-          RUN_PREFIX: testing_r${{ github.run_id }}_x_
+          RUN_PREFIX: testing_r${{ github.run_id }}a${{ github.run_attempt }}_x_
           REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
         run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute

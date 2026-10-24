@@ -8,7 +8,7 @@ superseded by C-066 and C-067 (REJECTED, measured 2026-10-24, owner's word the s
 card's obligations OPEN and C-070 carries run 3's pre-streaming stall.
 
 **Built, awaiting the first dispatched run (2026-10-24, Claude Sonnet 5.5):** all of it is on branch
-`feat/aws-ephemeral-runs-1`: the run-and-leg prefix `testing_r<run_id>_<leg>_` at every table-creating site and on the
+`feat/aws-ephemeral-runs-1`: the run-and-leg prefix `testing_r<run_id>a<attempt>_<leg>_` at every table-creating site and on the
 S3 path-write objects, the cleanup script `scripts/aws_acceptance_cleanup.py`, the Spark REST catalog block, and the
 workflow split into `build`, `acceptance-dbt`, `integrity-u`, `integrity-x` and `backstop` (the leg variable is the
 orchestrator's ruling Q1 of the same day; `boto3` is pinned in each job, ruling Q2). Local proof only: the

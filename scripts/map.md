@@ -964,10 +964,10 @@ repark-parity slice.
   `gate.sh`, `review.sh`, `pr.sh`, `verdict.sh` helpers; the handbook every tick starts with; the lessons ledger.
   Operator tooling, not a CI gate. See [coordinator/map.md](coordinator/map.md).
 - `aws_acceptance_cleanup.py` — **AWS-EPHEMERAL-RUNS-1 step 2 (2026-10-24):** removes the scratch tables of
-  finished `aws-acceptance` runs. `--run-prefix testing_r<digits>_<acc|u|x>_` takes one run's one leg (tables and the leg's
-  `u12s3path_r<digits>_<leg>_` S3 path-write objects), `--older-than-hours N` takes every run-and-leg prefix whose
+  finished `aws-acceptance` runs. `--run-prefix testing_r<digits>a<digits>_<acc|u|x>_` takes one run's one leg (tables and the leg's
+  `u12s3path_r<digits>a<digits>_<leg>_` S3 path-write objects), `--older-than-hours N` takes every run-and-leg prefix whose
   newest table is older than N hours (tables only); any other prefix, the bench table `ice_read_perf_bench`
-  (it has no run shape) and every name without the `testing_r<digits>_` shape are refused; a placeholder or unset
+  (it has no run shape) and every name without the `testing_r<digits>a<digits>_` shape are refused; a placeholder or unset
   warehouse is refused before a client exists. Glue tables go in batches of 100, then the
   objects below each table's location, only when the location is strictly under
   `<warehouse>/testing_repark_acceptance/`; S3 Tables tables go one by one in the scratch namespace. Dry run
