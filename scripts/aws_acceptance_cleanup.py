@@ -7,7 +7,7 @@ import os
 import re
 import sys
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any, NamedTuple
 from urllib.parse import urlparse
@@ -19,6 +19,7 @@ STEM_OF_PREFIX = re.compile(r"testing_(r[0-9]+_(?:acc|u|x)_)")
 PLACEHOLDER_WAREHOUSE = "s3://example-warehouse/"
 GLUE_DELETE_BATCH = 100
 S3_DELETE_BATCH = 1000
+ClientFactory = Callable[[str], Any]
 DESCRIPTION = (
     "Delete the tables and S3 path-write objects of one run-and-leg prefix"
     " (testing_r<digits>_<acc|u|x>_), or the tables of every run prefix whose newest table is"
@@ -260,7 +261,14 @@ def clean_s3tables(
         print(f"s3tables: deleted {len(chosen)} tables", flush=True)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def boto3_client(service: str) -> Any:
+    """Build a boto3 client for ``service``; boto3 is imported here and nowhere earlier."""
+    import boto3
+
+    return boto3.client(service)
+
+
+def main(argv: Sequence[str] | None = None, clients: ClientFactory | None = None) -> int:
     """Run the cleanup against the environment's AWS account; return the exit status."""
     arguments = build_parser().parse_args(argv)
     if arguments.run_prefix is not None:
@@ -273,11 +281,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not warehouse.startswith("s3://") or warehouse == PLACEHOLDER_WAREHOUSE:
         print("REPARK_ACCEPT_WAREHOUSE must be a real s3:// location", file=sys.stderr)
         return 2
-    import boto3
-
+    factory = boto3_client if clients is None else clients
     now = datetime.now(UTC)
-    glue = boto3.client("glue")
-    s3 = boto3.client("s3")
+    glue = factory("glue")
+    s3 = factory("s3")
     glue_tables = list_glue_tables(glue, SCRATCH_NAMESPACE)
     chosen = select_tables(glue_tables, arguments.run_prefix, arguments.older_than_hours, now)
     clean_glue(glue, s3, warehouse, chosen, arguments.execute)
@@ -285,7 +292,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         clean_path_objects(s3, warehouse, arguments.run_prefix, arguments.execute)
     table_bucket_arn = os.environ.get("TABLE_BUCKET_ARN", "")
     if table_bucket_arn:
-        client = boto3.client("s3tables")
+        client = factory("s3tables")
         listed = list_s3tables(client, table_bucket_arn, SCRATCH_NAMESPACE)
         selected = select_tables(listed, arguments.run_prefix, arguments.older_than_hours, now)
         clean_s3tables(client, table_bucket_arn, selected, arguments.execute)

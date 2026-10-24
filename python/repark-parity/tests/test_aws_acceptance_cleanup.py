@@ -1,6 +1,6 @@
 """Stubbed-client pins for scripts/aws_acceptance_cleanup.py: nothing here touches AWS.
 
-pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021
+pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021, C-022
 """
 
 from __future__ import annotations
@@ -490,3 +490,190 @@ def test_main_refuses_an_unset_or_placeholder_warehouse_before_boto3(
     monkeypatch.setitem(sys.modules, "boto3", None)
     assert cleanup.main(["--older-than-hours", "24", "--execute"]) == 2
     assert "REPARK_ACCEPT_WAREHOUSE" in capsys.readouterr().err
+
+
+_WH = "s3://real-bucket/wh/"
+_WH_ROOT = "wh/testing_repark_acceptance"
+_OLD = datetime(2020, 1, 1, tzinfo=UTC)
+
+
+class _KeyPages:
+    """A list_objects_v2 paginator stub that filters stored keys by the requested prefix."""
+
+    def __init__(self, keys: list[str], calls: list[tuple[str, dict[str, Any]]]) -> None:
+        """Keep the stored keys and the shared call log."""
+        self.keys = keys
+        self.calls = calls
+
+    def paginate(self, **kwargs: Any) -> list[dict[str, Any]]:
+        """Record the call and return one page of the matching keys."""
+        self.calls.append(("paginate", kwargs))
+        hits = [{"Key": key} for key in self.keys if key.startswith(kwargs["Prefix"])]
+        return [{"Contents": hits}]
+
+
+class _World(_Client):
+    """A client stub whose paginators answer by operation name."""
+
+    def __init__(
+        self, pages: dict[str, list[dict[str, Any]]], keys: list[str] | None = None
+    ) -> None:
+        """Keep the pages per operation and the stored object keys."""
+        super().__init__()
+        self.world = pages
+        self.keys = keys or []
+
+    def get_paginator(self, name: str) -> Any:
+        """Return the stub paginator of one list operation."""
+        self.calls.append(("get_paginator", {"name": name}))
+        if name == "list_objects_v2":
+            return _KeyPages(self.keys, self.calls)
+        return _Pages(self.world[name], self.calls)
+
+
+class _Factory:
+    """A client factory that records which services were built."""
+
+    def __init__(self, clients: dict[str, _World]) -> None:
+        """Keep the stub per service."""
+        self.clients = clients
+        self.built: list[str] = []
+
+    def __call__(self, service: str) -> _World:
+        """Return the stub of ``service`` and note the build."""
+        self.built.append(service)
+        return self.clients[service]
+
+
+def _glue_entry(name: str, age_hours_ago: bool = False) -> dict[str, Any]:
+    """A Glue table entry located under the scratch prefix."""
+    created = _OLD if age_hours_ago else datetime.now(UTC)
+    return {
+        "Name": name,
+        "CreateTime": created,
+        "StorageDescriptor": {"Location": f"{_WH}testing_repark_acceptance/{name}"},
+    }
+
+
+def _world(old: bool = False) -> _Factory:
+    """Two legs of run 12 in Glue and S3 Tables, their objects, and one legacy table."""
+    names = ["testing_r12_acc_a", "testing_r12_u_a", "testing_legacy"]
+    glue = _World({"get_tables": [{"TableList": [_glue_entry(n, old) for n in names]}]})
+    keys = [
+        f"{_WH_ROOT}/testing_r12_acc_a/f1",
+        f"{_WH_ROOT}/testing_r12_u_a/f2",
+        f"{_WH_ROOT}/u12s3path_r12_acc_zz/p1",
+        f"{_WH_ROOT}/u12s3path_r12_u_zz/p2",
+        f"{_WH_ROOT}/testing_legacy/f3",
+    ]
+    s3 = _World({}, keys)
+    created = _OLD if old else datetime.now(UTC)
+    tables = [{"name": n, "createdAt": created} for n in ("testing_r12_acc_t", "testing_r12_u_t")]
+    s3t = _World({"list_tables": [{"tables": tables}]})
+    return _Factory({"glue": glue, "s3": s3, "s3tables": s3t})
+
+
+def _env(
+    monkeypatch: pytest.MonkeyPatch, arn: str | None = "arn:aws:s3tables:r:1:bucket/b"
+) -> None:
+    """Point the script at the stub warehouse and, optionally, a table bucket."""
+    monkeypatch.setenv("REPARK_ACCEPT_WAREHOUSE", _WH)
+    if arn is None:
+        monkeypatch.delenv("TABLE_BUCKET_ARN", raising=False)
+    else:
+        monkeypatch.setenv("TABLE_BUCKET_ARN", arn)
+
+
+def _all_deletes(factory: _Factory) -> list[tuple[str, str]]:
+    """Every delete call recorded on any stub, as (service, operation)."""
+    found = []
+    for service, client in factory.clients.items():
+        for name, _ in client.calls:
+            if name in {"batch_delete_table", "delete_table", "delete_objects"}:
+                found.append((service, name))
+    return found
+
+
+def test_main_dry_run_lists_everything_and_deletes_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without --execute all three services are listed and no delete call is issued."""
+    _env(monkeypatch)
+    factory = _world()
+    assert cleanup.main(["--run-prefix", "testing_r12_acc_"], factory) == 0
+    assert _all_deletes(factory) == []
+    assert factory.built == ["glue", "s3", "s3tables"]
+    for service, operation in (("glue", "get_tables"), ("s3tables", "list_tables")):
+        assert ("get_paginator", {"name": operation}) in factory.clients[service].calls
+    assert ("get_paginator", {"name": "list_objects_v2"}) in factory.clients["s3"].calls
+
+
+def test_main_execute_deletes_exactly_the_selected_leg_everywhere(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Glue tables, their guarded objects, the leg's path objects and its S3 Tables tables go."""
+    _env(monkeypatch)
+    factory = _world()
+    assert cleanup.main(["--run-prefix", "testing_r12_acc_", "--execute"], factory) == 0
+    glue = factory.clients["glue"]
+    assert _deleted(glue, "batch_delete_table") == [
+        {"DatabaseName": "testing_repark_acceptance", "TablesToDelete": ["testing_r12_acc_a"]}
+    ]
+    removed = {
+        entry["Key"]
+        for call in _deleted(factory.clients["s3"], "delete_objects")
+        for entry in call["Delete"]["Objects"]
+    }
+    assert removed == {f"{_WH_ROOT}/testing_r12_acc_a/f1", f"{_WH_ROOT}/u12s3path_r12_acc_zz/p1"}
+    assert _deleted(factory.clients["s3tables"], "delete_table") == [
+        {
+            "tableBucketARN": "arn:aws:s3tables:r:1:bucket/b",
+            "namespace": "testing_repark_acceptance",
+            "name": "testing_r12_acc_t",
+        }
+    ]
+
+
+def test_main_builds_no_s3_tables_client_without_a_table_bucket(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unset TABLE_BUCKET_ARN skips S3 Tables entirely, even with --execute."""
+    _env(monkeypatch, None)
+    factory = _world()
+    assert cleanup.main(["--run-prefix", "testing_r12_acc_", "--execute"], factory) == 0
+    assert "s3tables" not in factory.built
+    assert factory.clients["s3tables"].calls == []
+    assert _deleted(factory.clients["glue"], "batch_delete_table")
+
+
+def test_main_age_mode_deletes_old_tables_of_every_leg_and_never_path_objects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--older-than-hours removes old tables of both legs; the path-write stems are not listed."""
+    _env(monkeypatch)
+    factory = _world(old=True)
+    assert cleanup.main(["--older-than-hours", "24", "--execute"], factory) == 0
+    glue_call = _deleted(factory.clients["glue"], "batch_delete_table")
+    assert [call["TablesToDelete"] for call in glue_call] == [
+        ["testing_r12_acc_a", "testing_r12_u_a"]
+    ]
+    prefixes = [call["Prefix"] for call in _deleted(factory.clients["s3"], "paginate")]
+    assert all("u12s3path" not in prefix for prefix in prefixes)
+    removed = {
+        entry["Key"]
+        for call in _deleted(factory.clients["s3"], "delete_objects")
+        for entry in call["Delete"]["Objects"]
+    }
+    assert removed == {f"{_WH_ROOT}/testing_r12_acc_a/f1", f"{_WH_ROOT}/testing_r12_u_a/f2"}
+    names = [call["name"] for call in _deleted(factory.clients["s3tables"], "delete_table")]
+    assert names == ["testing_r12_acc_t", "testing_r12_u_t"]
+
+
+def test_main_exits_two_on_a_bad_prefix_or_a_placeholder_warehouse_without_a_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both refusals return 2 before the factory is called once."""
+    _env(monkeypatch)
+    factory = _world()
+    assert cleanup.main(["--run-prefix", "testing_r12_", "--execute"], factory) == 2
+    monkeypatch.setenv("REPARK_ACCEPT_WAREHOUSE", "s3://example-warehouse/")
+    assert cleanup.main(["--run-prefix", "testing_r12_acc_", "--execute"], factory) == 2
+    assert factory.built == []

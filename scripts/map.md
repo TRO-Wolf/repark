@@ -973,7 +973,7 @@ repark-parity slice.
   `<warehouse>/testing_repark_acceptance/`; S3 Tables tables go one by one in the scratch namespace. Dry run
   unless `--execute`. `boto3` is imported inside `main` only, because `uv.lock` carries no `boto3` (ledger
   C-014). Not wired into any workflow yet. Tests: `python/repark-parity/tests/test_aws_acceptance_cleanup.py`.
-  pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021
+  pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021, C-022
 - `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
   assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
   first) and a JSON sidecar; `check` validates the schema, every stable-prefix
