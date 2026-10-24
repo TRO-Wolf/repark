@@ -25,6 +25,7 @@ from _acceptance import (
     glue_catalog_config,
     run_table_prefix,
     s3tables_catalog_config,
+    s3tables_spark_catalog_config,
 )
 from _acceptance_cross_read import (
     assert_outcomes_expected,
@@ -154,7 +155,7 @@ def test_cross_read_s3tables_acceptance_tables() -> None:
     repark = builder.getOrCreate()
     try:
         spark = _spark_session_for_catalog(
-            s3tables_catalog_config(S3TABLES_CATALOG, arn), "xread-aws-s3tables-spark"
+            s3tables_spark_catalog_config(S3TABLES_CATALOG, arn), "xread-aws-s3tables-spark"
         )
         _cross_read_namespace(repark, spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
     finally:

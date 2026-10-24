@@ -7731,6 +7731,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   so pytest never collects it). **AWS-EPHEMERAL-RUNS-1 step 1 (2026-10-24):** `run_table_prefix()` reads
   `REPARK_ACCEPT_RUN_ID` (digits only, default `0`) and returns `testing_r<run_id>_`; every leg names
   its tables through it, `ACCEPTANCE_TABLE_PREFIX` stays `testing_`. pins: aws-ephemeral-runs-1/C-001, C-002, C-003.
+  **Step 4:** `s3tables_spark_catalog_config(name, arn)` is the Spark-side S3 Tables block on Iceberg's REST
+  catalog (`type=rest`, SigV4, signing name `s3tables`, region parsed from the ARN), separate from
+  `s3tables_catalog_config`, which RePark consumes. pins: aws-ephemeral-runs-1/C-010.
   Helpers: the source-publish-job-shaped constants (bronze bucket/prefix,
   `glue_catalog`, `s3://` warehouse, scratch namespace `testing_repark_acceptance`, the real
   `format-version 2` + copy-on-write + target-file-size `TBLPROPERTIES`) and pure builders
@@ -7832,7 +7835,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_acceptance_ephemeral_runs.py` — **AWS-EPHEMERAL-RUNS-1 step 1 (2026-10-24):** AWS-free pins for the
   run-owned table prefix `testing_r<run_id>_` (id folded in, local default, digits-only refusal, longer ids never
   collide) and a source guard that every leg and the dbt gold leg name tables through `run_table_prefix()` with no
-  literal `testing_cu_` or `testing_xrel_` left. pins: aws-ephemeral-runs-1/C-001, C-002, C-003
+  literal `testing_cu_` or `testing_xrel_` left. **Step 4:** the Spark REST catalog block of
+  `s3tables_spark_catalog_config` (eight keys, region from the ARN, no literal region, RePark's block untouched,
+  a non-ARN refused). pins: aws-ephemeral-runs-1/C-001, C-002, C-003, C-010
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`

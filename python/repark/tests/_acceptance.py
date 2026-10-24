@@ -109,6 +109,9 @@ MAINTENANCE_RETRY_PROCEDURES = 3
 RUN_ID_ENV = "REPARK_ACCEPT_RUN_ID"
 LOCAL_RUN_ID = "0"
 _RUN_ID = re.compile(r"[0-9]+")
+_TABLE_BUCKET_ARN = re.compile(
+    r"arn:aws[a-z-]*:s3tables:(?P<region>[a-z0-9-]+):[0-9]{12}:bucket/[^/]+"
+)
 _ACCOUNT_ID = re.compile(r"\b\d{12}\b")
 _DENIAL_ACTION = re.compile(r"perform:\s*(\S+)", re.IGNORECASE)
 _DENIAL_RESOURCE = re.compile(r"resource:\s*(\S+)", re.IGNORECASE)
@@ -248,6 +251,29 @@ def s3tables_catalog_config(catalog_name: str, table_bucket_arn: str) -> dict[st
         prefix: "org.apache.iceberg.spark.SparkCatalog",
         f"{prefix}.catalog-impl": "org.apache.iceberg.aws.s3tables.S3TablesCatalog",
         f"{prefix}.warehouse": table_bucket_arn,
+        f"{prefix}.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    }
+
+
+def s3tables_spark_catalog_config(catalog_name: str, table_bucket_arn: str) -> dict[str, str]:
+    """The Spark ``spark.sql.catalog.<name>.*`` block for S3 Tables through Iceberg's REST catalog.
+
+    Separate from ``s3tables_catalog_config``, which RePark consumes by the ``catalog-impl`` suffix.
+    The region comes from the table bucket ARN, never a literal.
+    """
+    matched = _TABLE_BUCKET_ARN.fullmatch(table_bucket_arn)
+    if matched is None:
+        raise ValueError("TABLE_BUCKET_ARN is not an S3 Tables table bucket ARN")
+    region = matched.group("region")
+    prefix = f"spark.sql.catalog.{catalog_name}"
+    return {
+        prefix: "org.apache.iceberg.spark.SparkCatalog",
+        f"{prefix}.type": "rest",
+        f"{prefix}.uri": f"https://s3tables.{region}.amazonaws.com/iceberg",
+        f"{prefix}.warehouse": table_bucket_arn,
+        f"{prefix}.rest.sigv4-enabled": "true",
+        f"{prefix}.rest.signing-name": "s3tables",
+        f"{prefix}.rest.signing-region": region,
         f"{prefix}.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
     }
 
