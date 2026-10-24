@@ -78,6 +78,7 @@ pins.
 - [_time_ice_tsns_coercion_1.py](_time_ice_tsns_coercion_1.py) — Time the ICE-TSNS-COERCION-1 cost baseline on the installed module.
 - [_time_ice_tsns_frame_door_1.py](_time_ice_tsns_frame_door_1.py) — ICE-TSNS-FRAME-DOOR-1: time ``createDataFrame`` + ``count()`` of a pandas timestamp frame.
 - [_zone_oracle_1_corpus.py](_zone_oracle_1_corpus.py) — ZONE-ORACLE-1: the deterministic generator of the 1,640 timestamp-and-zone `SELECT` cells (328 expressions × 5 zones), their stable ids, the corpus hash and the hash-chosen live sample.
+- [_write_spine_1_spellings.py](_write_spine_1_spellings.py) — WRITE-SPINE-1 step 0: the 41 write spellings keyed by name to their door (D1–D10, D14–D21): the U-8 probe's 28 with its statements, `insert_options` (D2), `ctas`, `rtas`, `create_or_replace_as` (D6), the seven `native_*` spellings sent through `repark.sql()` (D14–D17, D19, D20), `native_append_api` (D18, `reach = "rust_api"`) and `microbatch_sink` (D21, `reach = "none"`: main has no streaming facade). Each entry: name, door, template, reach, row-level mode, seed.
 - [cast_ts_string_1_spark_oracle.json](cast_ts_string_1_spark_oracle.json) — Recorded Spark oracle (604 cells) read by `test_cast_ts_string_1.py`; re-derived by `_record_cast_ts_string_1.py`.
 - [ice_tsns_coercion_1_spark_lattice.json](ice_tsns_coercion_1_spark_lattice.json) — Recorded data (1540 cells) read by `test_ice_tsns_coercion_1.py`.
 - [ice_tsns_coercion_1_twins.json](ice_tsns_coercion_1_twins.json) — Recorded data read by `_ice_tsns_type_planner_1_cells.py`, `test_ice_tsns_coercion_1.py`.
