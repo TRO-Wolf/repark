@@ -2584,3 +2584,7 @@ ICE-INTEGRITY-PINS-1 run 5 records hosted native captures and the job-cap cancel
 The [ICE-INTEGRITY-PINS-1 ledger](ice-integrity-pins-1-ledger.md) appends run 5's failed retry
 and run 6's cap cancellation, with its retry observed in progress at 05:33 UTC on 2026-10-24.
 C-060 remains OPEN; the live-run record holds the measurements.
+
+The [ICE-INTEGRITY-PINS-1 ledger](ice-integrity-pins-1-ledger.md) appends run 6's final
+attempt-2 result (2026-10-24): hosted progress is measured, but cross-read completion and
+Spark refusal classification remain open. Exact measurements stay in the live-run record.
