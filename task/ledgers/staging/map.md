@@ -2590,3 +2590,5 @@ attempt-2 result (2026-10-24): hosted progress is measured, but cross-read compl
 Spark refusal classification remain open. Exact measurements stay in the live-run record.
 
 ICE-INTEGRITY-PINS-1 immediate-detail follow-up records its scoped plan and local validation in the existing ledger (2026-10-24). C-060 remains OPEN.
+
+The ICE-INTEGRITY-PINS-1 ledger gains C-066 to C-070 (2026-10-24): C-060's two halves measured and REJECTED from the first streamed nightly (the Glue walk is a budget finding, the S3 Tables catalog class is absent from both Iceberg 1.11.0 jars), the two AWS-EPHEMERAL-RUNS-1 obligations OPEN, and run 3's pre-streaming stall carried as its own OPEN row.
