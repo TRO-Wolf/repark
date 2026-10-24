@@ -109,6 +109,14 @@ Configure an S3 lifecycle expiry rule on the warehouse scratch prefix (e.g. 14 d
 Review the scratch Glue database at a documented cadence (monthly is fine). This is deliberately
 neither a delete path in CI nor a human remembering to reap.
 
+**Run-owned cleanup (AWS-EPHEMERAL-RUNS-1, 2026-10-24, built locally, not yet wired into the workflow).**
+Every leg names its tables `testing_r<run_id>_…` from `REPARK_ACCEPT_RUN_ID`, and the cross-read lists only
+that prefix. `scripts/aws_acceptance_cleanup.py` is the cleanup step: `--prefix testing_r<digits>_` for one run,
+`--older-than-hours N` for the backstop, dry run unless `--execute`; it takes only names of that shape (never the
+ICE-READ-PERF bench table) and removes objects only strictly below the warehouse scratch prefix. It needs the
+scoped delete grant of the card's ruling 5, which the owner applies; until then the never-teardown fact above
+stands, and the workflow does not call the script.
+
 ## 4. Variables + secrets — prefer the environment scope
 
 Both scopes work and **the names are identical either way**, so nothing in the workflow changes
