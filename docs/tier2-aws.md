@@ -112,6 +112,8 @@ table's files:
   guard). Until the owner grants them, the bench job stops at that step, before any write, and
   its summary names the two actions. The acceptance module does not need them.
 
+**Measured 2026-10-24, awaiting the owner's edit.** Every S3 Tables write cell of the first dispatched run (run 40130862019) failed with `s3tables:GetTable` denied on the table wildcard of the table bucket: the existence check before a create evaluates against that resource, and the namespace condition above does not hold for a table that does not exist yet. The proposed remedy is `s3tables:GetTable` on `bucket/<name>/table/*` without the namespace condition, every mutating action keeping it (ledger C-032).
+
 **The teardown property after 2026-10-24.** The role can delete Glue tables named `testing_*` in
 the scratch database, S3 Tables tables in the scratch namespace, and objects under the warehouse
 scratch prefix, and nothing else: not the database, not the namespace, not the table bucket, not
