@@ -50,5 +50,6 @@ them.
 - [ns-array-floor-1/](ns-array-floor-1/map.md) — **NS-ARRAY-FLOOR-1 (2026-10-14):** the pandas and Arrow doors input and output measurement for parity row R-020. No product code. The input cells, the output cells and the refusal sites sit in the directory.
 - [repark-sql-update-subquery-where-1/](repark-sql-update-subquery-where-1/map.md) — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (ruling 106, 2026-10-16):** the routing sketch, documents only: `repark.sql()` against the ANSI door and Spark 4.1.2 on the subquery-predicate `UPDATE`/`DELETE` cells, the divergence census and its never-worse list, the options, and the stopgap recommendation that moves the ANSI refusal to one shared home; halts for seven owner questions.
 - [ice-ntz-nested-refuse-1/](ice-ntz-nested-refuse-1/map.md) — **ICE-NTZ-NESTED-REFUSE-1 (U-8, R-011, ruling T-3, 2026-10-20):** the order and the step-0 sketch: outside a UTC session every door refuses a value that is not provably naive for a nested microsecond `TIMESTAMP_NTZ` leaf, with one hint; the measured cells on main and the plain `UPDATE` correction.
+- [aws-ephemeral-runs-1/](aws-ephemeral-runs-1/map.md) — **AWS-EPHEMERAL-RUNS-1 (2026-10-24):** step 0 census of every table-creating and table-reading site in the aws-acceptance legs, the bench table exclusion and the shared-run-prefix question.
 
 Up: [../map.md](../map.md).

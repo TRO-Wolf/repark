@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 from test_ice_read_perf_bench_workflow import _job_block, _run_script, _steps, _text
 
+LEG_JOBS = ("acceptance-dbt", "integrity-u", "integrity-x")
 _PRELUDE = "import json, os, subprocess, sys, time\nfrom pathlib import Path\n"
 
 
@@ -23,9 +24,15 @@ def _write_executable(path: Path, body: str) -> None:
     path.chmod(0o755)
 
 
-def _cross_read_script(text: str) -> str:
+@pytest.fixture(params=LEG_JOBS)
+def job(request: pytest.FixtureRequest) -> str:
+    """Each leg job that carries the cross-read step."""
+    return str(request.param)
+
+
+def _cross_read_script(text: str, job: str) -> str:
     """Extract the workflow shell without replacing its process control."""
-    steps = _steps(_job_block(text, "live-aws"))
+    steps = _steps(_job_block(text, job))
     step = next(step for step in steps if step.startswith("name: cross-read module"))
     script = _run_script(step)
     assert script is not None
@@ -95,7 +102,7 @@ def _assert_children_reaped(directory: Path) -> None:
 @pytest.mark.parametrize("test_exit", [0, 1, 17])
 @pytest.mark.parametrize("profiler_exit", [0, 3])
 def test_sampling_preserves_test_status_and_targets_both_phases(
-    tmp_path: Path, test_exit: int, profiler_exit: int
+    tmp_path: Path, test_exit: int, profiler_exit: int, job: str
 ) -> None:
     """Samples target Python in both phases; capture errors cannot hide test failures."""
     environment = _prepare_processes(tmp_path)
@@ -109,7 +116,7 @@ def test_sampling_preserves_test_status_and_targets_both_phases(
             "-o",
             "pipefail",
             "-c",
-            _cross_read_script(_text()),
+            _cross_read_script(_text(), job),
         ],
         cwd=tmp_path,
         env=environment,
@@ -127,12 +134,12 @@ def test_sampling_preserves_test_status_and_targets_both_phases(
     _assert_children_reaped(tmp_path)
 
 
-def test_active_dump_finishes_reporting_before_watchdog_stops(tmp_path: Path) -> None:
+def test_active_dump_finishes_reporting_before_watchdog_stops(tmp_path: Path, job: str) -> None:
     """Stopping during a dump preserves its output, failure warning and group closure."""
     environment = _prepare_processes(tmp_path)
     environment.update(TEST_EXIT="17", TEST_PROFILER_EXIT="3", TEST_PROFILER_DURATION="0.8")
     result = subprocess.run(
-        ["bash", "-x", "-e", "-o", "pipefail", "-c", _cross_read_script(_text())],
+        ["bash", "-x", "-e", "-o", "pipefail", "-c", _cross_read_script(_text(), job)],
         cwd=tmp_path,
         env=environment,
         text=True,
@@ -151,7 +158,7 @@ def test_active_dump_finishes_reporting_before_watchdog_stops(tmp_path: Path) ->
 
 @pytest.mark.parametrize("profiler_exit", [0, 3])
 def test_timeout_executes_and_reports_an_unfinished_dump(
-    tmp_path: Path, profiler_exit: int
+    tmp_path: Path, profiler_exit: int, job: str
 ) -> None:
     """The actual timeout command bounds a dump still running after pytest exits."""
     environment = _prepare_processes(tmp_path)
@@ -165,7 +172,7 @@ def test_timeout_executes_and_reports_an_unfinished_dump(
         "os.execv('/usr/bin/timeout', ['timeout', '--kill-after=0.1s', '0.5s', *sys.argv[3:]])\n",
     )
     result = subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text())],
+        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text(), job)],
         cwd=tmp_path,
         env=environment,
         text=True,
@@ -181,14 +188,14 @@ def test_timeout_executes_and_reports_an_unfinished_dump(
     _assert_children_reaped(tmp_path)
 
 
-def test_fast_completion_reaps_the_waiting_watchdog(tmp_path: Path) -> None:
+def test_fast_completion_reaps_the_waiting_watchdog(tmp_path: Path, job: str) -> None:
     """A quick test does not leave its delayed sampler alive or hold output pipes open."""
     environment = _prepare_processes(tmp_path)
     environment["TEST_DURATION"] = "0.001"
     environment["TEST_DELAY"] = "1.5"
     started = time.monotonic()
     result = subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text())],
+        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text(), job)],
         cwd=tmp_path,
         env=environment,
         capture_output=True,
@@ -200,12 +207,12 @@ def test_fast_completion_reaps_the_waiting_watchdog(tmp_path: Path) -> None:
     _assert_children_reaped(tmp_path)
 
 
-def test_profiler_install_precedes_credentials_and_dumps_are_bounded() -> None:
+def test_profiler_install_precedes_credentials_and_dumps_are_bounded(job: str) -> None:
     """The pinned binary installs before credentials; samples cannot wait without a bound."""
-    job = _job_block(_text(), "live-aws")
-    install = "uv pip install --python .venv/bin/python --only-binary :all: py-spy==0.4.1"
-    assert job.index(install) < job.index("aws-actions/configure-aws-credentials@")
-    script = _cross_read_script(_text())
+    block = _job_block(_text(), job)
+    install = "py-spy==0.4.1"
+    assert block.index(install) < block.index("aws-actions/configure-aws-credentials@")
+    script = _cross_read_script(_text(), job)
     assert "sleep 120 &" in script
     assert "timeout --kill-after=5s 30s sudo -n" in script
     assert "--locals" not in script
@@ -213,7 +220,7 @@ def test_profiler_install_precedes_credentials_and_dumps_are_bounded() -> None:
 
 
 @pytest.mark.parametrize("fails", [False, True])
-def test_progress_is_visible_before_pytest_finishes(tmp_path: Path, fails: bool) -> None:
+def test_progress_is_visible_before_pytest_finishes(tmp_path: Path, fails: bool, job: str) -> None:
     """Real pytest streams progress from the workflow and retains the final test status."""
     executables = tmp_path / ".venv" / "bin"
     executables.mkdir(parents=True)
@@ -234,7 +241,7 @@ def test_progress_is_visible_before_pytest_finishes(tmp_path: Path, fails: bool)
     )
     environment = {**os.environ, "PYTEST_ADDOPTS": "", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
     with subprocess.Popen(
-        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text())],
+        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text(), job)],
         cwd=tmp_path,
         env=environment,
         stdout=subprocess.PIPE,

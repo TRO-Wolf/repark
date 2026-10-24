@@ -12,13 +12,13 @@ from typing import Any
 import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
-    ACCEPTANCE_TABLE_PREFIX,
     GLUE_WAREHOUSE,
     SILVER_CATALOG,
     acceptance_namespace_location,
     assert_glue_scratch_namespace_location,
     assert_real_buckets_configured,
     glue_catalog_config,
+    run_table_prefix,
 )
 from _sql_harden_cutover_run import _seed_gold_sql, make_names
 from test_gold_models import (
@@ -75,7 +75,7 @@ def glue_project(tmp_path: Path) -> Iterator[tuple[Path, str]]:
     assert_real_buckets_configured()
     session = _glue_session()
     _ensure_scratch_namespace(session)
-    stem = f"{ACCEPTANCE_TABLE_PREFIX}dbt1_{uuid.uuid4().hex[:8]}"
+    stem = f"{run_table_prefix()}dbt1_{uuid.uuid4().hex[:8]}"
     names = make_names(SILVER_CATALOG, stem, True, namespace=ACCEPTANCE_NAMESPACE)
     for statement in _seed_gold_sql(names, PROPERTIES):
         session.sql(statement)
