@@ -231,7 +231,7 @@ def test_process_silver_acceptance_against_s3tables() -> None:
 def test_mor_merge_compact_expire_against_glue() -> None:
     """MW-4: merge-on-read CTAS → MERGE → compact + expire on real Glue + S3.
 
-    A new scratch MOR table each run (never-teardown: tables accumulate). OD-3 scoped
+    A new scratch MOR table each run (the leg cleanup removes it). OD-3 scoped
     object-delete on the warehouse scratch prefix is what lets expire remove snapshot files.
     S3 Tables MOR is ``test_mor_merge_compact_expire_against_s3tables`` (MW-10 / OD-3b).
     """
