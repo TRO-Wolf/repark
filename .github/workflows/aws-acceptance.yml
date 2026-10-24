@@ -184,7 +184,7 @@ jobs:
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
           SPARK_LOCAL_IP: "127.0.0.1"
         run: |
-          .venv/bin/python -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA &
+          .venv/bin/python -u -m pytest python/repark/tests/parity/test_aws_acceptance_cross_read.py -q -rA --capture=tee-sys &
           pytest_pid=$!
           (
             delay_pid=""

@@ -1066,3 +1066,5 @@ declines it (a dated ruling in the intake, then the archive).
 - [ntz-cast-offset-text-update-1-card-2026-10-23.md](ntz-cast-offset-text-update-1-card-2026-10-23.md) — **card NTZ-CAST-OFFSET-TEXT-UPDATE-1 (2026-10-23, open, not scheduled; from ZONE-SEAM-1 verifier round 3 S2-1):** a plain `UPDATE` assigning a `TIMESTAMP_NTZ` cast of offset-bearing text honors the offset where Spark 4.1.2 ignores it (nested and top-level, `+05:00` stores `1767305045123456`, `Z` text stores `1767323045123456`), on main, `05e6b32a` and the head, in UTC too; `INSERT` and `SELECT` agree with Spark. Not a seam regression; names the measured cells, proposes no fix.
 
 The 1.5.6 notes record run-4 U/X success and distinguish the two unresolved cross-read operations (2026-10-23, C-060).
+
+The FAIR-POOL-HANG-1 card links the October 24 AWS job-cap rerun record; it establishes no shared cause.

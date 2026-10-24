@@ -1,0 +1,217 @@
+"""Execute the live cross-read function bodies without AWS or the native engine."""
+
+from __future__ import annotations
+
+import ast
+import io
+import sys
+from collections.abc import Iterator
+from functools import partial
+from pathlib import Path
+from typing import Any, NoReturn
+from unittest.mock import Mock, call
+
+import pytest
+
+_SOURCE = (
+    Path(__file__).resolve().parents[2] / "repark/tests/parity/test_aws_acceptance_cross_read.py"
+)
+_PRIVATE_METADATA = "s3://private-metadata-must-not-be-printed"
+
+
+class _ProgressStream(io.StringIO):
+    """Keep flushed output separate so callbacks can inspect visible progress."""
+
+    def __init__(self) -> None:
+        """Initialize an empty output stream and its flushed view."""
+        super().__init__()
+        self.flushed: str = ""
+
+    def flush(self) -> None:
+        """Expose the output written before the caller flushes the stream."""
+        self.flushed = self.getvalue()
+
+
+def _load_namespace() -> dict[str, Any]:
+    """Compile the exact source functions while excluding live module imports."""
+    tree = ast.parse(_SOURCE.read_text(encoding="utf-8"), filename=str(_SOURCE))
+    names = {"_discover_tables", "_cross_read_namespace"}
+    functions = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
+    assert {node.name for node in functions} == names
+    imports = [
+        node
+        for node in tree.body
+        if (isinstance(node, ast.ImportFrom) and node.module == "__future__")
+        or (isinstance(node, ast.Import) and any(alias.name == "time" for alias in node.names))
+    ]
+    namespace: dict[str, Any] = {"ACCEPTANCE_TABLE_PREFIX": "testing_"}
+    module = ast.Module(body=[*imports, *functions], type_ignores=[])
+    exec(compile(module, str(_SOURCE), "exec"), namespace)
+    return namespace
+
+
+def _listing_session(names: list[str], temporary: list[bool]) -> Mock:
+    """Return a session whose SHOW TABLES result contains the supplied rows."""
+    columns = {
+        "tableName": Mock(to_pylist=Mock(return_value=names)),
+        "isTemporary": Mock(to_pylist=Mock(return_value=temporary)),
+    }
+    arrow = Mock(column=Mock(side_effect=columns.__getitem__))
+    return Mock(sql=Mock(return_value=Mock(to_arrow=Mock(return_value=arrow))))
+
+
+def _record_metadata(
+    stream: _ProgressStream,
+    checkpoints: list[tuple[str, str]],
+    repark: Mock,
+    table: str,
+) -> str:
+    """Record visible progress at metadata lookup and return a private sentinel."""
+    checkpoints.append((f"metadata:{table}", stream.flushed))
+    return _PRIVATE_METADATA
+
+
+def _record_pair(
+    stream: _ProgressStream,
+    checkpoints: list[tuple[str, str]],
+    outcomes: Iterator[Mock],
+    repark: Mock,
+    repark_table: str,
+    spark: Mock,
+    spark_table: str,
+    metadata_file: str,
+) -> Mock:
+    """Record visible progress at engine-pair entry and return the next outcome."""
+    checkpoints.append((f"pair:{repark_table}", stream.flushed))
+    return next(outcomes)
+
+
+def _fail_after_snapshot(stream: _ProgressStream, snapshots: list[str], *args: Any) -> NoReturn:
+    """Record visible progress before a controlled external-call failure."""
+    snapshots.append(stream.flushed)
+    raise RuntimeError("controlled external-call failure")
+
+
+@pytest.mark.parametrize("first_status", ["EQUAL", "DIFFERENT"])
+def test_progress_preserves_sorted_selection_and_asserts_every_outcome(
+    monkeypatch: pytest.MonkeyPatch, first_status: str
+) -> None:
+    """A first mismatch cannot hide later tables or bypass the final assertion."""
+    namespace = _load_namespace()
+    repark = _listing_session(
+        ["testing_z", "unrelated", "testing_temporary", "testing_a", "testing_middle"],
+        [False, False, True, False, False],
+    )
+    spark = Mock()
+    stream = _ProgressStream()
+    monkeypatch.setattr(sys, "stdout", stream)
+    checkpoints: list[tuple[str, str]] = []
+    outcomes = [Mock(status=first_status), Mock(status="EQUAL"), Mock(status="EQUAL")]
+    metadata = Mock(side_effect=partial(_record_metadata, stream, checkpoints))
+    pair = Mock(side_effect=partial(_record_pair, stream, checkpoints, iter(outcomes)))
+    formatter = Mock(return_value="FINAL_OUTCOMES")
+    assertion = Mock()
+    if first_status == "DIFFERENT":
+        assertion.side_effect = AssertionError("cross-read mismatch")
+    namespace.update(
+        _metadata_file_or_none=metadata,
+        cross_read_table_pair=pair,
+        format_outcome_table=formatter,
+        assert_outcomes_expected=assertion,
+        time=Mock(monotonic=Mock(side_effect=[100.0, 101.25, 200.0, 202.5, 300.0, 305.0])),
+    )
+    if first_status == "DIFFERENT":
+        with pytest.raises(AssertionError, match="cross-read mismatch"):
+            namespace["_cross_read_namespace"](repark, spark, "catalog", "scratch")
+    else:
+        namespace["_cross_read_namespace"](repark, spark, "catalog", "scratch")
+
+    tables = [f"catalog.scratch.{name}" for name in ("testing_a", "testing_middle", "testing_z")]
+    repark.sql.assert_called_once_with("SHOW TABLES IN catalog.scratch")
+    assert metadata.call_args_list == [call(repark, table) for table in tables]
+    assert pair.call_args_list == [
+        call(repark, table, spark, table, _PRIVATE_METADATA) for table in tables
+    ]
+    formatter.assert_called_once_with(outcomes)
+    assertion.assert_called_once_with(outcomes)
+
+    visible = "Cross-read catalog.scratch: discovered 3 tables\n"
+    expected_checkpoints: list[tuple[str, str]] = []
+    for number, (table, status, elapsed) in enumerate(
+        zip(tables, [first_status, "EQUAL", "EQUAL"], [1.25, 2.5, 5.0], strict=True), start=1
+    ):
+        visible += f"Cross-read [{number}/3] {table}: metadata lookup\n"
+        expected_checkpoints.append((f"metadata:{table}", visible))
+        visible += f"Cross-read {table}: engine pair\n"
+        expected_checkpoints.append((f"pair:{table}", visible))
+        visible += f"Cross-read {table}: {status} ({elapsed:.3f}s)\n"
+    assert checkpoints == expected_checkpoints
+    assert stream.flushed == visible
+    assert stream.getvalue() == visible + "FINAL_OUTCOMES\n"
+    assert _PRIVATE_METADATA not in stream.getvalue()
+    assert namespace["time"].monotonic.call_count == 6
+
+
+@pytest.mark.parametrize("phase", ["metadata", "pair"])
+def test_progress_is_flushed_before_failure_without_false_completion(
+    monkeypatch: pytest.MonkeyPatch, phase: str
+) -> None:
+    """A failing call leaves its table and current phase visible without a result."""
+    namespace = _load_namespace()
+    repark = _listing_session(["testing_a"], [False])
+    stream = _ProgressStream()
+    monkeypatch.setattr(sys, "stdout", stream)
+    snapshots: list[str] = []
+    metadata = Mock(return_value=_PRIVATE_METADATA)
+    pair = Mock(return_value=Mock(status="EQUAL"))
+    failing_call = metadata if phase == "metadata" else pair
+    failing_call.side_effect = partial(_fail_after_snapshot, stream, snapshots)
+    formatter = Mock()
+    assertion = Mock()
+    namespace.update(
+        _metadata_file_or_none=metadata,
+        cross_read_table_pair=pair,
+        format_outcome_table=formatter,
+        assert_outcomes_expected=assertion,
+        time=Mock(monotonic=Mock(return_value=100.0)),
+    )
+    with pytest.raises(RuntimeError, match="controlled external-call failure"):
+        namespace["_cross_read_namespace"](repark, Mock(), "catalog", "scratch")
+    visible = (
+        "Cross-read catalog.scratch: discovered 1 tables\n"
+        "Cross-read [1/1] catalog.scratch.testing_a: metadata lookup\n"
+    )
+    if phase == "pair":
+        visible += "Cross-read catalog.scratch.testing_a: engine pair\n"
+        pair.assert_called_once()
+    else:
+        pair.assert_not_called()
+    assert snapshots == [visible]
+    assert stream.getvalue() == visible
+    formatter.assert_not_called()
+    assertion.assert_not_called()
+
+
+def test_empty_discovery_reports_zero_and_retains_the_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty scratch selection still fails before metadata or pair calls."""
+    namespace = _load_namespace()
+    repark = _listing_session(["unrelated", "testing_temporary"], [False, True])
+    stream = _ProgressStream()
+    monkeypatch.setattr(sys, "stdout", stream)
+    external = Mock()
+    namespace.update(
+        _metadata_file_or_none=external.metadata,
+        cross_read_table_pair=external.pair,
+        format_outcome_table=external.formatter,
+        assert_outcomes_expected=external.check_outcomes,
+    )
+    with pytest.raises(
+        AssertionError, match=r"no testing_ tables under catalog\.scratch to cross-read"
+    ):
+        namespace["_cross_read_namespace"](repark, Mock(), "catalog", "scratch")
+    assert stream.flushed == "Cross-read catalog.scratch: discovered 0 tables\n"
+    assert external.mock_calls == []

@@ -495,3 +495,28 @@ bounded dump. This corrects C-061's cleanup claim without changing the live C-06
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-062 | Diagnostic shutdown preserves native output, capture-failure warnings and group closure when pytest exits during a dump; the delay is reaped synchronously and its stale PID is not signalled. The timeout command executes. | Execute the workflow shell with delayed and timed-out profilers; discard-output, old-trap, stale-delay and removed-timeout mutants. | PROVEN | 11 diagnostic tests and 14 existing bench workflow tests pass. The delayed-failure pin fails on the prior workflow. Discard-output fails 9 tests; old-trap fails 4; stale-delay fails 1; removed timeout plus a decoy string fails 2. The timeout fixture validates the actual 30 s / 5 s arguments and scales them to 0.5 s / 0.1 s for execution. Fast completion passes 21 independent invocations after synchronous reap. Hosted ptrace and cross-read completion remain unmeasured. |
+
+
+## Fifth live run, attempt 1 (2026-10-24): job cap, native capture proven
+
+Run 40040855187 on merged main `bc30f341` ended CANCELLED at its two-hour job cap.
+Acceptance 11, dbt 1, U 96 and X 40 passed. Cross-read started nine minutes before cancellation
+and produced no final pytest outcome. Four native samples succeeded: PyArrow S3 HeadObject,
+Spark Arrow socket receive twice, then RePark collection, all within the Glue test. The harness
+iterates tables without intermediate identity reporting; a permanent stall or a cause is not
+established. This supplies C-061/C-062's hosted capture evidence while C-060 stays OPEN.
+The [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md) carries exact timings
+and the single cap-cancellation rerun under the October 22 owner ruling. Attempt 2 is pending.
+
+
+## Cross-read progress delivery (2026-10-24)
+
+The run-5 snapshots cannot identify the current table. The first diagnostic change streams
+Python progress before pytest finishes. A blocked harmless test executes through the actual
+workflow shell. Default capture and tee-sys without unbuffered Python both fail the visibility
+pin; unbuffered Python plus tee-sys passes while preserving success and failure exits.
+
+| Clause | Proposition | Pin / evidence | Status | Result |
+|---|---|---|---|---|
+| C-063 | Cross-read Python progress reaches the job output before a blocked pytest test returns, while pytest success and failure remain the step's exit status. | `test_cross_read_diagnostics.py::test_progress_is_visible_before_pytest_finishes` executes the workflow shell with real pytest and both final outcomes. | PROVEN | Both cells fail before releasing the blocked test on default capture and on tee-sys alone. Both pass with Python `-u` and tee-sys; 27 workflow tests pass. This is local process evidence, not live C-060 completion. |
+| C-064 | Cross-read reports the discovered count and each table before metadata lookup and engine reads, then reports completion status and elapsed time. Selection, call order, all outcomes and the final assertion remain intact. | `test_cross_read_progress.py` executes exact source function ASTs with controlled external calls and flushed-output observations. | PROVEN | Five cases fail on baseline and pass on the candidate. Delayed metadata/pair progress, skipped later tables, suppressed final assertion, unflushed output and unsorted discovery mutants each fail. Live table count and C-060 completion remain unmeasured. |

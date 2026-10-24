@@ -11,6 +11,7 @@ pins: ice-spark-cross-read-1/C-004
 from __future__ import annotations
 
 import os
+import time
 from typing import Any
 
 import pytest
@@ -92,17 +93,25 @@ def _metadata_file_or_none(repark: ReparkSession, table: str) -> str | None:
 def _cross_read_namespace(repark: ReparkSession, spark: Any, catalog: str, namespace: str) -> None:
     """Read every discovered scratch table on both engines and assert row-equal."""
     tables = _discover_tables(repark, catalog, namespace)
+    print(f"Cross-read {catalog}.{namespace}: discovered {len(tables)} tables", flush=True)
     assert tables, f"no {ACCEPTANCE_TABLE_PREFIX} tables under {catalog}.{namespace} to cross-read"
-    outcomes = [
-        cross_read_table_pair(
+    outcomes = []
+    for number, name in enumerate(tables, start=1):
+        table = f"{catalog}.{namespace}.{name}"
+        print(f"Cross-read [{number}/{len(tables)}] {table}: metadata lookup", flush=True)
+        started = time.monotonic()
+        metadata_file = _metadata_file_or_none(repark, table)
+        print(f"Cross-read {table}: engine pair", flush=True)
+        outcome = cross_read_table_pair(
             repark,
-            f"{catalog}.{namespace}.{name}",
+            table,
             spark,
-            f"{catalog}.{namespace}.{name}",
-            _metadata_file_or_none(repark, f"{catalog}.{namespace}.{name}"),
+            table,
+            metadata_file,
         )
-        for name in tables
-    ]
+        outcomes.append(outcome)
+        elapsed = time.monotonic() - started
+        print(f"Cross-read {table}: {outcome.status} ({elapsed:.3f}s)", flush=True)
     print(format_outcome_table(outcomes))
     assert_outcomes_expected(outcomes)
 

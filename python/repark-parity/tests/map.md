@@ -1269,3 +1269,9 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
 `test_cross_read_diagnostics.py` executes the AWS cross-read shell with harmless child processes. It pins actual target PID, repeated samples, pytest exit preservation on profiler failure, synchronous watchdog cleanup, native-frame output, active-dump failure reporting, executed timeout, and installation before credentials (2026-10-23).
 
 The cross-read diagnostic shell pins the C-061 process contract. pins: ice-integrity-pins-1/C-061, C-062
+
+The cross-read diagnostic shell tests also run real pytest with a blocked harmless test, proving progress reaches the pipe before release and preserving success/failure (2026-10-24).
+
+The live progress-delivery subprocess pin holds the output contract. pins: ice-integrity-pins-1/C-063
+
+[test_cross_read_progress.py](test_cross_read_progress.py) executes the exact discovery and namespace function ASTs without native-engine or AWS imports (2026-10-24). It pins sorted permanent testing_ selection, flushed table identity before metadata and engine calls, elapsed status output, no false completion, exhaustive outcomes after a first mismatch, the final assertion and empty discovery failure. pins: ice-integrity-pins-1/C-064

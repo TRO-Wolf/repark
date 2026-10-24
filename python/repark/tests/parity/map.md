@@ -16,7 +16,7 @@ pins.
 - [test_acceptance_replace_offline.py](test_acceptance_replace_offline.py) — Offline pin for the CREATE OR REPLACE twice acceptance helper on a memory catalog.
 - [test_acceptance_v3_helpers.py](test_acceptance_v3_helpers.py) — AWS-free structural pins for the LIVE-v3 leg body and its two live legs.
 - [test_aws_acceptance.py](test_aws_acceptance.py) — Env-gated real-AWS acceptance harness — the source publish job's path against Glue.
-- [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) — AWS cross-read leg: live Spark reads the AWS acceptance tables.
+- [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) — AWS cross-read leg: live Spark reads the AWS acceptance tables. Flushed progress names the discovered count, each table's metadata and engine-pair phases, and its returned status with monotonic elapsed seconds (2026-10-23).
 - [test_acceptance_commit_gate.py](test_acceptance_commit_gate.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): the commit gate and its SigV4 signer, AWS-free on every pull request: the 26 published AWS vectors, the regional allow list, commit recognition on both catalogs, the scratch-namespace refusal, every script against a loopback fake endpoint, the second signature, no header logged, and one RePark session reaching Glue through the gate.
 - [test_aws_acceptance_commit_unknown.py](test_aws_acceptance_commit_unknown.py) — ICE-INTEGRITY-PINS-1 leg U (2026-10-22): 96 live statements, U-1 to U-5, U-5r, U-C0 and U-C1 × three doors × v2 and v3 × Glue and S3 Tables, through the commit gate. Skipped without `REPARK_AWS_ACCEPTANCE=1`; the S3 Tables cells skip without `TABLE_BUCKET_ARN`.
 - [test_aws_acceptance_cross_release.py](test_aws_acceptance_cross_release.py) — ICE-INTEGRITY-PINS-1 leg X (2026-10-22): 40 live cells, the hash-pinned 1.5.5 and the head reading each other's tables on Glue and S3 Tables. Skipped without `REPARK_AWS_ACCEPTANCE=1`; it fails, never skips, when `REPARK_PREVIOUS_RELEASE_PYTHON` is unset with the gate on.
@@ -104,3 +104,5 @@ path expression repointed in the same unit and no other line changed:
 ## Pointers
 
 - Up: [../map.md](../map.md)
+
+The AWS namespace progress loop preserves every discovered comparison and its final assertion. pins: ice-integrity-pins-1/C-064
