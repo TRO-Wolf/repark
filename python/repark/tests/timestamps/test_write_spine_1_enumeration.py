@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from pathlib import Path
 
 import _write_spine_1_doors as doors
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from repark import _native
 
 TEMPLATE_FREE_REACH = frozenset({"rust_api", "none"})
+ROOT = Path(__file__).resolve().parents[4]
 
 
 def _engine_door_ids() -> list[str]:
@@ -20,6 +22,16 @@ def _engine_door_ids() -> list[str]:
 def test_every_write_door_has_a_spelling() -> None:
     """Every door the engine enumerates has at least one spelling name."""
     missing = [door for door in _engine_door_ids() if not doors.DOOR_SPELLINGS.get(door)]
+    assert missing == []
+
+
+def test_every_rust_api_only_door_names_a_rust_test_that_exists() -> None:
+    """A door no Python spelling executes names the Rust test that writes through it."""
+    rust_only = doors.rust_api_only_doors()
+    assert rust_only == ["D15", "D16", "D17", "D18", "D19", "D20"]
+    assert sorted(doors.RUST_TESTS) == sorted(rust_only)
+    source = (ROOT / doors.RUST_TEST_FILE).read_text(encoding="utf-8")
+    missing = [door for door in rust_only if f"async fn {doors.RUST_TESTS[door]}()" not in source]
     assert missing == []
 
 
@@ -54,5 +66,5 @@ def test_every_spelling_name_has_its_template_in_the_spelling_corpus() -> None:
         assert name in entries, name
         entry = entries[name]
         assert entry.door == door, name
-        if entry.reach not in TEMPLATE_FREE_REACH:
+        if entry.reach not in TEMPLATE_FREE_REACH and doors.spelling_reach(name) != doors.RUST_API:
             assert entry.template, name

@@ -3,6 +3,9 @@ use datafusion::sql::sqlparser::ast::{
     TableFactor,
 };
 
+use datafusion::error::Result;
+
+pub use crate::router::door_tag::last_write_doors;
 use crate::write_options::StatementWriteOptions;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -238,6 +241,27 @@ pub fn door_of(statement: &Statement, options: &StatementWriteOptions) -> Option
         | Statement::Vacuum { .. }
         | Statement::Reset { .. } => None,
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn write_door_of_sql(
+    sql: &str,
+    mut options: Vec<(String, String)>,
+) -> Result<Option<WriteDoor>> {
+    options.sort();
+    let options = StatementWriteOptions::validate(options)?;
+    let mapped = repark_functions::cast_map::rewrite_map_casts(sql);
+    let sql = mapped.as_deref().unwrap_or(sql);
+    let evolving = crate::merge::schema_evolution::strip_schema_evolution(sql);
+    let sql = evolving.as_deref().unwrap_or(sql);
+    if crate::router::insert_positional::replace_where::parse_replace_where(sql)?.is_some() {
+        return Ok(Some(WriteDoor::D5ReplaceWhere));
+    }
+    if crate::insert_by_name::strip_insert_by_name(sql)?.is_some() {
+        return Ok(Some(WriteDoor::D3InsertByName));
+    }
+    Ok(crate::normalize::parse_single_normalized(sql)?
+        .and_then(|(statement, _, _)| door_of(&statement, &options)))
 }
 
 pub(crate) fn tag(door: Option<WriteDoor>) {

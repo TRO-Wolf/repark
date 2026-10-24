@@ -428,6 +428,9 @@ async fn try_execute_identity_dml(
     }
     crate::refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, kind).await?;
     let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
+    if matches!(kind, crate::MorDmlKind::Update) {
+        crate::router::door_tag::record(ctx, crate::write_door::WriteDoor::D10Update);
+    }
     repark_iceberg::write::predicate_dml::execute_predicate_dml(ctx, handle, &allowed.spec).await?;
     Ok(Some(ctx.read_empty()?))
 }

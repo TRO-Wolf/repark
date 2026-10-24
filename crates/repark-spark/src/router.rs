@@ -23,6 +23,7 @@ use crate::{
 
 mod comment_on_table;
 mod delete_update;
+pub(crate) mod door_tag;
 mod hive_change_column;
 pub(crate) mod insert_positional;
 mod nested_ns;
@@ -93,6 +94,7 @@ pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
     write_options: &crate::write_options::StatementWriteOptions,
     temp_views: Option<&dyn TempViewSession>,
 ) -> Result<DataFrame> {
+    door_tag::clear(ctx);
     crate::normalize::refuse_unclosed_bracketed_comment(sql)?;
     if crate::show_create::starts_with_show_create_table(sql)
         && let Some(Err(error)) = crate::show_create::try_parse_show_create(sql)
@@ -296,12 +298,12 @@ async fn execute_inner(
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(replace) = insert_positional::replace_where::parse_replace_where(sql)? {
-        crate::write_door::tag(Some(crate::write_door::WriteDoor::D5ReplaceWhere));
+        door_tag::enter(ctx, crate::write_door::WriteDoor::D5ReplaceWhere);
         let execute = insert_positional::replace_where::execute_replace_where;
         return Box::pin(execute(ctx, catalogs, replace, write_options)).await;
     }
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
-        crate::write_door::tag(Some(crate::write_door::WriteDoor::D3InsertByName));
+        door_tag::enter(ctx, crate::write_door::WriteDoor::D3InsertByName);
         return Box::pin(crate::insert_by_name::execute_insert_by_name(
             ctx,
             catalogs,
@@ -334,6 +336,7 @@ async fn execute_inner(
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
             refuse_ctas_write_body(create)?;
+            door_tag::record(ctx, crate::write_door::WriteDoor::D6Ctas);
             execute_ctas(
                 ctx,
                 catalogs,
@@ -434,6 +437,7 @@ async fn execute_insert_routed(
     )
     .await?
     {
+        door_tag::record(ctx, crate::write_door::WriteDoor::D3InsertByName);
         return Box::pin(crate::insert_by_name::execute_insert_by_name(
             ctx,
             catalogs,
@@ -447,10 +451,12 @@ async fn execute_insert_routed(
         .as_ref()
         .map_or((sql, insert), |p| (p.sql.as_str(), &p.insert));
     if insert.overwrite {
+        door_tag::record(ctx, crate::write_door::WriteDoor::D4InsertOverwrite);
         return execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await;
     }
     insert_arity::refuse_if_short_values(ctx, catalogs, insert).await?;
     if !write_options.is_empty() || prepared.as_ref().is_some_and(|p| p.owned_append) {
+        door_tag::record(ctx, crate::write_door::WriteDoor::D2InsertOptions);
         return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
     }
     if repark_iceberg::write::session_write_conf_is_set(ctx)
@@ -459,6 +465,7 @@ async fn execute_insert_routed(
             .await?
             .is_some()
     {
+        door_tag::record(ctx, crate::write_door::WriteDoor::D2InsertOptions);
         return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
     }
     let refusal = match &insert.table {
@@ -470,6 +477,7 @@ async fn execute_insert_routed(
         TableObject::TableFunction(_) | TableObject::TableQuery(_) => None,
     };
     crate::catalog_ops::refuse_encrypted_write_target(ctx, catalogs, target).await?;
+    door_tag::record(ctx, crate::write_door::WriteDoor::D1Insert);
     if !write_options.source_by_name {
         return passthrough_after_p11(ctx, catalogs, sql, refusal).await;
     }

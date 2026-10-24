@@ -124,6 +124,70 @@ SKIPPED [1] test_write_spine_1_enumeration.py:51: could not import '_write_spine
 | (d) | `insert_by_name` deleted from D3 in `_write_spine_1_doors.py` | `test_every_write_door_has_a_spelling` (`assert ['D3'] == []`) | red; restored |
 | (a) | `door_of` returning `None` for one writing arm | waits for the matrix (step 3b) | not run |
 
+## Round 2: the orchestrator's rulings on Q1 to Q6 (2026-10-24)
+
+Recorded as given by the orchestrator (Claude, claude-fable-5-1) after it reproduced the three
+commits of round 1.
+
+- **Q1:** the C-002 shape is accepted as measured; the order's §2 wording was wrong. The two
+  further fall-throughs of `zone_store_frame` are C-007 and C-008 below, OPEN, not fixed here.
+- **Q2, Q4, Q5:** a `tracing` event is not a readable carrier. Build (a) a static classifier
+  for Python, `write_door_of(sql, options)`, which runs the router's pre-parse intercepts and
+  then `door_of` (the parsed-shape reading), and (b) a runtime record per Spark session,
+  `last_write_doors(session)`, cleared at the start of each statement and written at the real
+  branch points. The `tracing` event stays.
+- **Q3:** D3 and D5 tagged at their intercepts, for both readings.
+- **Q6:** lane B's `SPELLINGS` is a tuple of 41 frozen pydantic entries (`name`, `door`,
+  `template`, `reach`, `row_level_mode`). The corpus test keeps its skip until that branch
+  merges. Run here against lane B's file at `d859b91` (copied to a scratch directory on
+  `PYTHONPATH`, not merged): `5 passed`.
+- **Door-table correction (C-009):** `repark.sql()` runs a bare DataFusion session in
+  `repark-core` and never enters `repark-sql` (`repark-python` has no edge to `repark-sql`;
+  ARCHITECTURE.md line 65). D14 is re-described as "bare-session SQL via `repark.sql()`
+  (repark-core, DataFusion default dialect, fork provider `insert_into`; ruling ZS-5 native
+  semantics)": reachable from Python, invisible to the runtime record, classified statically.
+  D15, D16, D17, D19 and D20 are `repark-sql` Rust-library doors (reach `rust_api`), measured by
+  Rust tests only; D18 and D21 are unchanged. The enum is not renamed.
+
+## Round 2 build (2026-10-24)
+
+- `write_door_of_sql` (`write_door.rs`) and the pyfunction `write_door_of`: map-cast rewrite,
+  schema-evolution strip, D5 for `REPLACE WHERE`, D3 for `BY NAME`, else `door_of`. A Postgres
+  `INSERT` answers D1, because no catalog is known statically.
+- `router/door_tag.rs`: the per-session record (a `SessionConfig` extension that
+  `SparkExtension` installs), `clear` at the top of `execute_in_session`, `record` at the branch
+  points: D5 and D3 at the intercepts; D6 at the CTAS arm; in `execute_insert_routed`, D3 on the
+  schema-evolution route, D4 before the overwrite, D2 on the owned append, on write options and
+  on the session-write-conf append, D1 on the plain route, and no record on the Postgres route;
+  D10 before `execute_predicate_dml` runs an `UPDATE`; and in `merge/nested_assign.rs` one entry
+  per arm (D7 insert; D8 for `SET *` and a whole struct column on the `paired_assignment_cast_sql`
+  path; D9 for a field on the `paired_nested_cast_sql` path and for a top-level column the
+  executor casts through `store_kernel_sql`). `router.rs` is 979 lines.
+- `crates/repark-sql/tests/write_door_native.rs`: one test per Rust-library door (D15 to D20),
+  each reading the rows back; `_write_spine_1_doors.py` marks the seven `native_*` spellings of
+  D15 to D20 `rust_api` and names the test functions; the enumeration test checks that each
+  name exists.
+
+```
+cargo test -p repark-spark --test write_door_record
+test every_spark_door_records_the_door_the_statement_took ... ok
+test a_session_write_conf_append_records_the_options_door ... ok
+test result: ok. 2 passed; 0 failed
+
+cargo test -p repark-sql --test write_door_native
+test result: ok. 6 passed; 0 failed
+
+.venv/bin/python -m pytest test_write_spine_1_enumeration.py test_write_spine_1_door_carrier.py -q
+18 passed, 1 skipped
+```
+
+Round 2 mutants:
+
+| mutant | change | red test | answer |
+|---|---|---|---|
+| (e) | the D1 record in `execute_insert_routed` deleted | `every_spark_door_records_the_door_the_statement_took` (`left: [] right: ["D1"]`) | red; restored |
+| (f) | the `clear` at the top of `execute_in_session` deleted | both `write_door_record.rs` tests (`left: ["D1", "D3"] right: ["D3"]`) | red; restored |
+
 ## PROPOSITION LEDGER — WRITE-SPINE-1 steps (1) and (3) — 2026-10-24
 
 | id | claim | evidence | status | proof |
@@ -134,3 +198,9 @@ SKIPPED [1] test_write_spine_1_enumeration.py:51: could not import '_write_spine
 | C-004 | Every door has at least one spelling and every spelling names a door. | `every_write_door_has_a_spelling`, `every_spelling_names_a_door`. | **PROVEN** | `test_every_write_door_has_a_spelling`, `test_every_spelling_names_a_door` green; mutants (b) and (d) red them. The spelling-corpus test skips until lane B's `_write_spine_1_spellings.py` lands. |
 | C-005 | The door matrix on this head equals main's recorded answers on every cell, and classifies against the Spark fixture as the step-0 census table says. | `test_write_spine_1_doors.py` against the two fixtures. | OPEN | step 3b. |
 | C-006 | The four mutants of step 5 each red a named test. | the ledger's mutant table. | OPEN | (b), (c) and (d) red their tests (table above); (a) waits for the matrix. |
+| C-007 | `zone_store_frame` returns the frame unconverted when the session analyzer fails on the planned write (`analyzed_types` answers `None`). | Reading of `ntz_store.rs` (`let Some(planned) = analyzed_types(…) else { return Ok(frame) }`). | OPEN | fail-open; closed by step (2)'s conform stage. |
+| C-008 | `zone_store_frame` returns the frame unconverted when the planned width differs from the target width. | Reading of `ntz_store.rs` (`if planned.len() != targets.len() { return Ok(frame) }`). | OPEN | fail-open; closed by step (2)'s conform stage. |
+| C-009 | The eighteen-door table is corrected (orchestrator ruling, 2026-10-24): D14 is bare-session SQL through `repark.sql()` in `repark-core`; D15 to D20 are `repark-sql` Rust-library doors with reach `rust_api`; D18 and D21 are unchanged. | `_write_spine_1_doors.py` marks D15 to D20's spellings `rust_api`; `test_every_rust_api_only_door_names_a_rust_test_that_exists`. | **PROVEN** | the enumeration test green; `rust_api_only_doors()` is exactly D15 to D20. |
+| C-010 | `write_door_of(sql, options)` names the door of each Spark spelling without running it, through the router's intercepts and `door_of` (the parsed-shape reading). | `test_write_door_of_names_the_door_of_each_spark_spelling_without_running_it`. | **PROVEN** | 12 parametrized cases green: D1 to D10 and `None` for DELETE and SELECT. |
+| C-011 | A Spark session records the set of doors its last statement took, at the branch points, cleared per statement; a Postgres target and `repark.sql()` record nothing. | `write_door_record.rs`; `test_last_write_doors_records_the_doors_each_statement_took`; `test_the_bare_sql_session_records_no_door`. | **PROVEN** | both Rust pins and both Python pins green; mutants (e) and (f) red them. The Postgres route is by reading (it returns before any record); no Postgres pin. |
+| C-012 | Every door no Python spelling executes (D15 to D20) is written through by a named Rust test that reads the rows back. | `crates/repark-sql/tests/write_door_native.rs`; the enumeration test's name check. | **PROVEN** | six tests green; `RUST_TESTS` names each and the enumeration test finds each `async fn`. |

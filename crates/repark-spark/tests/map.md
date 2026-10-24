@@ -124,6 +124,16 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`: in New York and Kolkata the
   six doors refuse the instant with R-011's text and the three seeded rows keep a NULL leaf; in
   UTC they store `1767323045123456`, the wall main stored. pins: ice-ntz-nested-refuse-1/C-002, C-003
+- [write_door_record.rs](write_door_record.rs) — **WRITE-SPINE-1 step 3a round 2 (2026-10-24):**
+  the runtime door record on a production-built Spark session over a memory catalog. One
+  statement per Spark door, each followed by `last_write_doors`: `INSERT … SELECT` D1,
+  `INSERT … BY NAME` D3, a positional `INSERT` into an `accept-any-schema` table D3, `INSERT
+  OVERWRITE` D4, `REPLACE WHERE` D5, CTAS D6, MERGE insert and `INSERT *` D7, MERGE whole-struct
+  update and `SET *` D8, MERGE field update and top-level leaf update D9, a two-arm MERGE
+  `[D8, D7]`, `UPDATE` D10, `DELETE` and `SELECT` nothing, an `INSERT` with a write option D2;
+  a second session with a session write conf records D2 for a plain `INSERT` and nothing for
+  the next `SELECT`. Risk: a branch that writes without recording, or a record that survives
+  into the next statement. pins: write-spine-1/C-011
 - [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2
   (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table

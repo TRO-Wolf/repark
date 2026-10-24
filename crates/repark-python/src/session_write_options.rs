@@ -137,9 +137,28 @@ fn write_doors() -> Vec<(String, bool)> {
         .collect()
 }
 
+#[pyfunction]
+#[pyo3(signature = (sql, options = None))]
+fn write_door_of(sql: &str, options: Option<HashMap<String, String>>) -> PyResult<Option<String>> {
+    let pairs = options.unwrap_or_default().into_iter().collect();
+    repark_spark::write_door::write_door_of_sql(sql, pairs)
+        .map(|door| door.map(|door| door.id().to_string()))
+        .map_err(crate::datafusion_to_py_err)
+}
+
+#[pyfunction]
+fn last_write_doors(session: &PyReparkSession) -> Vec<String> {
+    repark_spark::write_door::last_write_doors(session.session.context())
+        .into_iter()
+        .map(|door| door.id().to_string())
+        .collect()
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sql_with_write_options, module)?)?;
     module.add_function(wrap_pyfunction!(write_doors, module)?)?;
+    module.add_function(wrap_pyfunction!(write_door_of, module)?)?;
+    module.add_function(wrap_pyfunction!(last_write_doors, module)?)?;
     module.add_function(wrap_pyfunction!(session_write_path, module)?)?;
     module.add_function(wrap_pyfunction!(built_sql_user_fragment, module)?)?;
     module.add_function(wrap_pyfunction!(session_text_write_copy_parts, module)?)?;

@@ -210,7 +210,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the order's test shape). Step 3a (2026-10-24): `WriteDoor` and `door_of` (C-003 PROVEN),
   the spelling table and the enumeration tests (C-004 PROVEN), four choices where the order is
   silent listed for the orchestrator, mutants (b) to (d) red; the matrix and mutant (a) (C-005,
-  C-006) are OPEN. `risk_tier: standard`. Branch `feat/write-spine-1-steps-1-3a`.
+  C-006) are OPEN. Round 2 (2026-10-24): the orchestrator's rulings on Q1 to Q6, the
+  door-table correction (C-009 PROVEN), the static classifier and the runtime door record
+  (C-010, C-011 PROVEN), Rust tests for the Rust-library doors (C-012 PROVEN), two fail-open
+  rows of `zone_store_frame` (C-007, C-008 OPEN). `risk_tier: standard`. Branch
+  `feat/write-spine-1-steps-1-3a`.
 - [zone-horizon-render-1-ledger.md](zone-horizon-render-1-ledger.md) +
   [zone-horizon-render-1-main-answers.json](zone-horizon-render-1-main-answers.json) —
   **ZONE-HORIZON-RENDER-1 (2026-10-08), from the C-2d fold 1 re-verify's S2 finding:** an
