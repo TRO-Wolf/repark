@@ -74,6 +74,7 @@ fn install_spark_session_conf(
     config = repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
     config = apply_spark_float_as_decimal(config);
     config = apply_spark_parser_dialect(config);
+    config = crate::router::door_tag::with_write_door_record(config);
     let verbatim = crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
     config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
     config = session_catalog::with_configured_defaults(config, session.conf);

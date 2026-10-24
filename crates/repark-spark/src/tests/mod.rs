@@ -185,4 +185,5 @@ mod window_temporal_range;
 mod wrapped_subquery_dml;
 mod write_body_carriers;
 mod write_defaults;
+mod write_door;
 mod write_to_branch;

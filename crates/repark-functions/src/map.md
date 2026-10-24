@@ -1,5 +1,7 @@
 # map — repark-functions/src
 
+**WRITE-SPINE-1 step 1a (2026-10-24):** `timestamp_ntz_cast.rs` (`TIMESTAMP_NTZ_CAST_NAME`), `timestamp_ns_cast.rs` (`TIMESTAMP_NS_CAST_NAME`, `TIMESTAMPTZ_NS_CAST_NAME`), `cast_map.rs` (`CAST_MAP_NAME`) and `zone_seam.rs` (`ZONE_SEAM_NAME`) re-export their UDF names from `repark_common::udf_names` under the same identifiers instead of defining the strings, so `repark-iceberg` and this crate compile against one constant. No call site changed. Details in [../../repark-common/src/map.md](../../repark-common/src/map.md).
+
 **MAP-COLUMN-PANIC-1 (2026-10-20):** `collection.rs` registers `create_map::sql_map_udf()` (the internal name `__repark_create_map__`, so `create_map` stays unregistered on the SQL door, as Spark leaves it) and re-exports `SQL_MAP_NAME` and `SparkMapRewrite`; `registration.rs` appends the rule to `analyzer_rules()` after the second `LambdaRebind`. Details in [collection/map.md](collection/map.md).
 
 **SOURCE-URL-REDACT-1-FN (2026-10-06):** the `case_sensitive.rs`, `ansi.rs` and `merge_schema.rs` boolean-knob refusals return `BooleanConfRefusal` (`key`, `raw`). `Debug` prints `key` and `raw_len`. `repark-python` and `repark-spark` format the Spark sentence with `mask_value_credentials`. The builder door masks every `Configuration` message. No `repark-functions` → `repark-common` edge. pins: source-url-redact-1/C-035, C-055

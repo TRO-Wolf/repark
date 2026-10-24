@@ -16,7 +16,7 @@ use datafusion::scalar::ScalarValue;
 use super::store_assign::without_field_metadata;
 use super::update_cast::refuse_unassignable_leaves;
 
-pub const STORE_PAIR_KERNEL_NAME: &str = "__repark_store_pair__";
+pub use repark_common::udf_names::STORE_PAIR_KERNEL_NAME;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum StructPairing {

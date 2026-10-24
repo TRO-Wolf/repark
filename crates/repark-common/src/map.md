@@ -61,6 +61,15 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   (22003), measured byte-exact on live Spark 4.1.2 for DOUBLE and DECIMAL(38,0)
   sources, with catalogue + template pins (44 conditions).
 
+- `udf_names.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):** the one home of the seven UDF
+  names that `repark-functions` and `repark-iceberg` both name: `TIMESTAMP_NTZ_CAST_NAME`,
+  `TIMESTAMP_NS_CAST_NAME`, `TIMESTAMPTZ_NS_CAST_NAME`, `CAST_MAP_NAME`, `ZONE_SEAM_NAME`,
+  `STORE_INT_GUARD_NAME` and `STORE_PAIR_KERNEL_NAME`. One `pub const` each, no logic. Each crate
+  re-exports them under its existing identifier, so no call site changed. Why: the iceberg write
+  path reaches the function kernels by name through the session's function registry, and the
+  names were two copies of the same string on each side of the crate line.
+  pins: write-spine-1/C-001
+
 - `zone_horizon.rs` — **C-2d fold 1 (2026-10-07):** the zone horizon, moved here from
   `repark-functions`' `spark_string_timestamp/instant.rs` so the engine can read it too.
   chrono-tz tabulates transitions up to `LAST_TABULATED_YEAR` (2099) and Java applies the final
