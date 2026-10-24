@@ -533,3 +533,15 @@ The [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md) hol
 counts, timings and frames. It also records the orchestrator's single run-6 cap retry on
 unchanged `e765f897`, observed in progress at 05:33 UTC. That retry's outcome is unmeasured.
 Run 5 and run 6 each consumed their own one retry. C-060 stays OPEN; no clause closes here.
+
+## Sixth run, attempt 2 (2026-10-24): progress measured, closure still open
+
+The earlier 05:33 retry observation is superseded by the completed attempt's failure.
+Acceptance, dbt, U and X passed; both cross-read tests hit their whole-test deadlines.
+Hosted progress shows hundreds of completed table intervals before interruption. It does
+not show a single operation stalled for the whole deadline in this run.
+
+The [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md) holds the counts,
+timings and limits. S3 Tables' reported status lacks the error details needed to classify its
+refusals. The full outcome table and assertion were not reached. C-060 remains OPEN;
+no clause closes, no retry remains under the cap exception, and no gate changes here.
