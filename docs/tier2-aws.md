@@ -112,6 +112,8 @@ table's files:
   guard). Until the owner grants them, the bench job stops at that step, before any write, and
   its summary names the two actions. The acceptance module does not need them.
 
+**Measured 2026-10-24, awaiting the owner's edit.** Metadata-table reads (`.history`, `.metadata_log_entries`, `.snapshots`, `.data_files`, and the `.delete_files` probe whose error line the log cuts off) of existing S3 Tables tables in the first dispatched run (run 40130862019) failed in 72 cells with `s3tables:GetTable` denied on the table wildcard ARN of the table bucket; writes, the cleanup deletes and Spark's reads were not denied. The request RePark's metadata-table path issues does not satisfy the namespace condition above (its exact shape is unmeasured and is the subject of the candidate card S3T-METADATA-TABLE-GETTABLE-1). The interim remedy is `s3tables:GetTable` on `bucket/<name>/table/*` without the namespace condition, every mutating action keeping it (ledger C-032).
+
 **The teardown property after 2026-10-24.** The role can delete Glue tables named `testing_*` in
 the scratch database, S3 Tables tables in the scratch namespace, and objects under the warehouse
 scratch prefix, and nothing else: not the database, not the namespace, not the table bucket, not
