@@ -12,9 +12,11 @@ use iceberg::table::Table;
 
 use super::update_cast::incompatible_update_message;
 
-pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
-pub const NS_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ns__";
-pub const NS_INSTANT_CAST_UDF_NAME: &str = "__repark_cast_timestamptz_ns__";
+pub use repark_common::udf_names::{
+    TIMESTAMP_NS_CAST_NAME as NS_WALL_CAST_UDF_NAME,
+    TIMESTAMP_NTZ_CAST_NAME as NTZ_WALL_CAST_UDF_NAME,
+    TIMESTAMPTZ_NS_CAST_NAME as NS_INSTANT_CAST_UDF_NAME,
+};
 
 #[must_use]
 pub fn is_ntz_wall_target(data_type: &DataType) -> bool {

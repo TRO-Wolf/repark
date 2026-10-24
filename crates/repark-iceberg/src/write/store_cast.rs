@@ -23,7 +23,7 @@ pub const STORE_INT8_NAME: &str = "__repark_store_int8__";
 pub const STORE_INT16_NAME: &str = "__repark_store_int16__";
 pub const STORE_INT32_NAME: &str = "__repark_store_int32__";
 pub const STORE_INT64_NAME: &str = "__repark_store_int64__";
-pub const STORE_INT_GUARD_NAME: &str = "__repark_store_int_guard__";
+pub use repark_common::udf_names::STORE_INT_GUARD_NAME;
 
 pub(crate) fn spark_store_type_name(data_type: &DataType) -> Option<String> {
     match normalize_for_assignment(data_type) {

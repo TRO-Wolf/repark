@@ -642,6 +642,14 @@ repark-core's error map.
   stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
   fold); the ANSI door and bare sessions read it as UTC as before.
   pins: ntz-store-doors-1/C-002, C-003, C-004
+- `ntz_store.rs`, `store_cast.rs`, `struct_pairing.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):**
+  the kernel names these files carried as their own strings are re-exports from
+  `repark_common::udf_names` under the existing identifiers: `NTZ_WALL_CAST_UDF_NAME`,
+  `NS_WALL_CAST_UDF_NAME` and `NS_INSTANT_CAST_UDF_NAME` (`ntz_store.rs`),
+  `STORE_INT_GUARD_NAME` (`store_cast.rs`) and `STORE_PAIR_KERNEL_NAME` (`struct_pairing.rs`).
+  No call site changed. Why: `repark-functions` registers the wall kernels under the same
+  strings, and two copies across the crate line could drift without a compile error. Details in
+  [../../../repark-common/src/map.md](../../../repark-common/src/map.md).
 - `ntz_store.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the two router predicates
   gain one arm each, so every staged door reaches `repark-functions`'
   `timestamp_ns_cast::store_micros` by type, as INSERT does. `needs_ltz_instant_cast` accepts
