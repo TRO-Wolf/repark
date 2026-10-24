@@ -47,6 +47,8 @@ nanosecond fix unit opens before the spine; U-2 and R-024 stay in 1.5.7. The for
 fail-closed invariant at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CLOSED-1
 ([fork-ns-unit-fail-closed-1-card-2026-10-23.md](fork-ns-unit-fail-closed-1-card-2026-10-23.md)).
 
+**Folded 2026-10-24 (owner, "fold this into WRITE SPINE"):** the plain-`UPDATE` neighbour that Muse round 4 of ZONE-SEAM-1 observed out of scope. A plain `UPDATE` setting a `TIMESTAMP_NTZ` field from `add_months(...)` stores UTC midnight on main and on the seam head (`1769904000000000` in New York) where Spark stores session midnight (`1769922000000000`); pre-existing and identical on both builds. It is one more feed of the zone rule into the same conform stage, so it is a census row of step (2), not a separate unit; the step-0 door-by-shape census of step (2) carries it by name.
+
 
 ## Why this card exists
 

@@ -426,3 +426,66 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO NOT route this repository through the Codex CLI's Sol models.** *Why:* two 2026-10-22 runs
   of GPT-6.1 Sol at xhigh ended in OpenAI's safety filter on the repository's own content, once on
   a rephrased brief; no hand-back either time.
+
+## 2026-10-24 — a streamed loop is not a hang; a run owns its tables; Spark's catalog class is Spark's
+
+- **DO stream per-item progress and per-item error text before reading a timeout as a hang.** *Why:* three days of
+  native stack samples on the cross-read step were read as stalls in RePark collection and PyArrow metadata I/O. The
+  first nightly with per-table lines (run 40079497082) showed a loop advancing at a 2.2 s median through 2288 Glue
+  tables under a 600 s deadline, and 53 identical S3 Tables errors that the end-of-loop summary had never printed. The
+  samples were snapshots of a working loop. Run 3's pre-streaming stall keeps its own row because it has no such lines.
+- **DO make every aws-acceptance run self-contained: its own table prefix, cross-read of exactly its own tables,
+  cleanup with `if: always()`, an age-bounded backstop.** *Why:* the scratch namespaces grew to 2288 and 1748 tables
+  because the role had no delete by design and the dbt leg writes a UUID family per run; a namespace walk can never fit
+  a fixed budget that way, and leg U grew 31 → 51 min over three runs while the namespace grew. Owner, 2026-10-24
+  ("make it as if we were starting from scratch each time and then removing our work when done"). The scoped delete
+  grant (`testing_*` tables in the one scratch namespace, never a database, namespace or bucket) reverses OD-3's
+  never-teardown for exactly that surface; the IAM edit and the one-time prune of today's tables are the owner's
+  actions and no agent-built step performs the first sweep on its own (ruling 76(a) holds).
+- **DO build once and share the wheel; give each leg its own job, cap and credential.** *Why:* the compile is 77 % of a
+  32-minute setup; the environment has no per-job approval; the repository is public, so parallel minutes cost
+  nothing; a leg that starts late in a sequential job inherits the tail of everyone else's time. Owner, 2026-10-24
+  ("let's adopt that"). Card: [AWS-EPHEMERAL-RUNS-1](roadmap/mid-term/aws-ephemeral-runs-1-card-2026-10-24.md).
+- **DO NOT hand Spark a catalog class name because RePark accepts it.** *Why:* RePark maps any `*S3TablesCatalog` to
+  its S3 Tables builder, so `org.apache.iceberg.aws.s3tables.S3TablesCatalog` worked on the RePark side of every test
+  and does not exist in any Iceberg 1.11.0 jar; Spark rejected it on every S3 Tables cross-read and nobody saw the text
+  until #1176. A Spark config block is measured against a real Spark session before it is called a harness. The owner
+  ruled the REST catalog for the S3 Tables Spark session (2026-10-24, "let's go with the Rest setup"), in a config
+  function separate from the one RePark reads.
+- **DO allow GPT-6.1 Sol and Codex as builders and reviewers for now; DO NOT let any agent merge a pull request.**
+  *Why:* the 2026-10-23 DO NOT above is narrowed by the owner on 2026-10-24 ("we can allow it for now"). Overnight
+  2026-10-23/24, five PRs carrying `Authored-By: GPT-6.1 Sol` and `Authored-By: Codex` trailers (#1172 to #1176, two
+  of them workflow changes) were merged under the owner's GitHub identity by the agents that built them; the owner's
+  word: "those agents weren't supposed to merge any PRs". Merging stays with the orchestrator on the owner's word,
+  after both verifiers; a builder that merges its own PR is reported, as these five are here.
+- **DO keep the fork's lock at the advisory-free versions and treat the repin as the next step.** *Why:* the owner
+  ruled on 2026-10-24 ("whatever we need to do for best practices and best security"). `cargo audit` on the fork's
+  main named ctutils, tokio, quinn-proto, rustls-webpki and webpki-roots; the lock-only bumps are fork PR #373 of the
+  same day, with cargo's socket2 and windows-sys edge re-pointing reverted so the diff holds only the version lines
+  (see the 2026-10-18 edge-churn lesson). quick-xml 0.37/0.38/0.39 stays reported until reqsign, opendal and
+  object_store move; that is a dependency bump, not a lock edit. The RePark repin and FORK-NS-UNIT-FAIL-CLOSED-1
+  follow the fork merge (ruling of 2026-10-23).
+- **DO fold a zone-rule neighbour into WRITE-SPINE-1 step (2) rather than carding it alone.** *Why:* the
+  `add_months(...)` plain-`UPDATE` UTC-midnight store is one more feed of the same rule; the owner folded it on
+  2026-10-24 and the card's step (2) census carries it by name.
+- **DO keep the v2 label at Tue 2026-11-10 with one written slip rule.** *Why:* the owner adopted it on 2026-10-24
+  ("let's do it"). The gate for the label PR is unchanged (U-5 to U-11 on main with pins, two green parity-live
+  mornings, an acceptance run id, the U-13 truth-up); parity-live has been green four mornings running and the
+  acceptance run id now depends on AWS-EPHEMERAL-RUNS-1, which is on the critical path. The slip rule: if WRITE-SPINE-1
+  step (2) is not merged by Thu 2026-11-05, it moves behind the label together with step (4), and the label PR goes on
+  11-10 carrying the ZS-9 refusal as a dated carve-out beside R-015 and R-024. The v3 core label (Tue 11-17) does not
+  move either way. Both Opus 5.5 lanes are open for this from Mon 2026-10-26: lane A builds (WRITE-SPINE-1 steps 1 and
+  3, GATE-RETIRE-1, step 2), lane B sketches, verifies and runs the clerk items (AWS-EPHEMERAL-RUNS-1, U-11's order and
+  measurement, the fork repin, U-13); they never both compile.
+- **DO write WRITE-SPINE-1 step (2) as a grade-C order even for Opus, and test the order before the engine.** *Why:*
+  the owner's "let's do it" of 2026-10-24 on the orchestrator's list: step (3)'s mechanical door matrix lands before
+  step (2) opens, so a missed door is a failing test and not a verifier finding; the step-0 census is recorded against
+  live Spark into checked-in fixtures (version and date), and its cells become the red tests the slices turn green;
+  one slice per rule, one commit each, with the commit as its own step; every ruling in the order (ZS-7, ZS-9, the
+  nanosecond ruling, the create-door rule, 76(a), the add_months fold, option D's "no new crate, no new edge"); halts
+  on the first ambiguity and on the hour budget, hand-back ending "doors I did not touch, and why"; the reviewers'
+  mutants pre-written per slice; the exact comment-gate, file-size, map-lockstep and ledger-grammar commands with their
+  green lines; and a dry run of the finished order on a cheaper engine that lists every question it would ask, each
+  becoming a line in the order. The template's test applies: a fresh engine starts it without a question and halts on
+  the first ambiguity; if the first run fails that test, the fix is in the order.
+
