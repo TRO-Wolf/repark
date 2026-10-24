@@ -598,7 +598,7 @@ DOOR_ORDER: tuple[str, ...] = (
     "D20",
     "D21",
 )
-LINE_LIMIT = 96
+LINE_LIMIT = 160
 TABLE_NAME = re.compile(r"`?ice`?\.`?ns`?\.`?t_[0-9]+`?")
 AXES: dict[str, shapes.Cell] = {cell.cell_id: cell for cell in shapes.cells()}
 
@@ -646,6 +646,13 @@ def census_rows(spark: dict[str, Any], main: dict[str, Any]) -> list[str]:
     return rows
 
 
+def cut_at_word(text: str, limit: int) -> str:
+    """Return ``text``, or its first ``limit`` characters cut back to a word boundary."""
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0] + " …"
+
+
 def different_rows(spark: dict[str, Any], main: dict[str, Any]) -> list[str]:
     """Return, per door, the three kinds of ``DIFFERENT`` cell."""
     rows = [
@@ -679,7 +686,7 @@ def error_rows(main: dict[str, Any]) -> list[str]:
             continue
         if "error" in cell:
             error = TABLE_NAME.sub("<table>", cell["error"])
-            text = f"{cell['step']}: {error[:LINE_LIMIT]}"
+            text = f"{cell['step']}: {cut_at_word(error, LINE_LIMIT)}"
         else:
             text = "answers another value or type"
         text = text.replace("|", "\\|")
