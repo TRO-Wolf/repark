@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import select
+import signal
 import subprocess
 import sys
 import time
@@ -208,3 +210,54 @@ def test_profiler_install_precedes_credentials_and_dumps_are_bounded() -> None:
     assert "timeout --kill-after=5s 30s sudo -n" in script
     assert "--locals" not in script
     assert "--subprocesses" not in script
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_progress_is_visible_before_pytest_finishes(tmp_path: Path, fails: bool) -> None:
+    """Real pytest streams progress from the workflow and retains the final test status."""
+    executables = tmp_path / ".venv" / "bin"
+    executables.mkdir(parents=True)
+    _write_executable(
+        executables / "python",
+        f"os.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])\n",
+    )
+    fixture = tmp_path / "python/repark/tests/parity/test_aws_acceptance_cross_read.py"
+    fixture.parent.mkdir(parents=True)
+    fixture.write_text(
+        "import time\nfrom pathlib import Path\n"
+        "def test_progress():\n"
+        "    print('CROSS_READ_PROGRESS_VISIBLE', flush=True)\n"
+        "    while not Path('release').exists():\n"
+        "        time.sleep(0.01)\n"
+        f"    assert {not fails}\n",
+        encoding="utf-8",
+    )
+    environment = {**os.environ, "PYTEST_ADDOPTS": "", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    with subprocess.Popen(
+        ["bash", "-e", "-o", "pipefail", "-c", _cross_read_script(_text())],
+        cwd=tmp_path,
+        env=environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    ) as process:
+        try:
+            assert process.stdout is not None
+            output = b""
+            deadline = time.monotonic() + 5
+            while b"CROSS_READ_PROGRESS_VISIBLE" not in output:
+                remaining = deadline - time.monotonic()
+                assert remaining > 0, output
+                readable, _, _ = select.select([process.stdout], [], [], remaining)
+                assert readable, output
+                chunk = os.read(process.stdout.fileno(), 65536)
+                assert chunk, output
+                output += chunk
+            assert process.poll() is None
+            (tmp_path / "release").touch()
+            remaining_output, _ = process.communicate(timeout=5)
+            assert process.returncode == int(fails), output + remaining_output
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=5)

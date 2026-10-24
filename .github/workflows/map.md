@@ -103,3 +103,5 @@ First checks: reproduce with `make preflight` (the full CI surface; `make ci` fo
 Note `ci.yml`'s Rust job calls the individual Makefile targets (never `make ci` wholesale); the
 guards-job steps are raw commands — a new gate still needs **dual** Makefile + ci.yml wiring.
 Escalate to: [../map.md#debug](../map.md).
+
+Cross-read diagnostics stream Python progress with unbuffered Python and pytest tee-sys capture (2026-10-24). Both are needed for messages to reach the job log before a blocked test returns; real-pytest subprocess pins hold live visibility and final exit status.

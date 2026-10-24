@@ -79,3 +79,11 @@ Step 0, for an Opus 5.5 agent (`claude-opus-5-5`), on a branch and never on `mai
   it is spinning (CPU ticks advancing over ten seconds) or blocked (state `S`, ticks flat), and what the others are doing.
 - Hand back the stacks, the state and the pool state at that moment (`FairSpillPool` reserved and the refusal count, if
   readable). The card does not propose a fix; the fix, or a dated mark on the named tests, retires it.
+
+
+## Related timeout record — 2026-10-24
+
+AWS acceptance run 40040855187 reached its two-hour job cap after all preceding test steps
+passed. The orchestrator requested the single permitted rerun at 01:43 UTC and preserved
+attempt 1. Its native samples moved through different cross-read stages; a link to this fair-pool
+hang is not established. See the [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md).

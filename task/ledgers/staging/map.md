@@ -2578,3 +2578,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   without an offset (C-029).
 
 ICE-INTEGRITY-PINS-1 run-4 review adds C-060: distinct Glue and S3 Tables timeout sites supersede the earlier combined diagnosis; native measurement remains open (2026-10-23).
+
+ICE-INTEGRITY-PINS-1 run 5 records hosted native captures and the job-cap cancellation; C-060 remains open pending actual cross-read outcomes (2026-10-24).
