@@ -17,7 +17,7 @@ use crate::ansi::spark_ansi_enabled_from_options;
 use crate::timestamp_cast::format_spark_timestamp_string;
 use crate::timestamp_ltz_ntz::wall_without_zone;
 
-pub const TIMESTAMP_NTZ_CAST_NAME: &str = "__repark_cast_timestamp_ntz__";
+pub use repark_common::udf_names::TIMESTAMP_NTZ_CAST_NAME;
 pub const TRY_TIMESTAMP_NTZ_CAST_NAME: &str = "__repark_try_cast_timestamp_ntz__";
 pub const TIMESTAMP_NTZ_LITERAL_NAME: &str = "__repark_timestamp_ntz__";
 

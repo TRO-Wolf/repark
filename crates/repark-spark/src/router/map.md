@@ -15,6 +15,24 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
 
 ## Contents
 
+- `door_tag.rs` — **WRITE-SPINE-1 step 3a round 2 (2026-10-24, orchestrator ruling on Q2, Q4 and
+  Q5):** the runtime door record. `WriteDoorRecord` (a `Mutex<Vec<WriteDoor>>`, a poisoned lock
+  is read through) is a `SessionConfig` extension `SparkExtension` installs per session
+  (`with_write_door_record`). `clear` runs at the start of `execute_in_session`, the one entry
+  of every Spark statement; `record` adds a door once, in the order the statement takes it;
+  `enter` also emits the `tracing` tag; `last_write_doors` (re-exported as
+  `repark_spark::write_door::last_write_doors`) reads the set. A session without the
+  extension records nothing. The branch points: D5 and D3 at the `REPLACE WHERE` and `BY NAME`
+  intercepts, D6 at the CTAS arm, and in `execute_insert_routed` D3 on the schema-evolution
+  `BY NAME` route, D4 before `execute_insert_overwrite`, D2 on the owned append, on a statement
+  with write options and on the session-write-conf append, D1 on the plain route; a Postgres
+  target returns before any record. D10 is recorded in `spark_ast.rs` just before
+  `execute_predicate_dml` runs an `UPDATE`, and (round 3, ruling Q9) when the planned
+  statement is a `Dml` `Update` the fork provider runs (`record_planned_update`, called by
+  `spark_ast.rs` after planning; an `UPDATE` with no `WHERE` takes it); D7, D8 and D9 in `../merge/nested_assign.rs`. A
+  `CALL` procedure that runs SQL through `router::execute` clears and records as its own
+  statement. Pins: `../../tests/write_door_record.rs`. pins: write-spine-1/C-011
+
 - `delete_update.rs` — **ENC-1 round 2 (2026-10-09):** the DELETE/UPDATE doors moved out
   of `../router.rs` (pure move; it sat at its 1000-line ceiling) so the encrypted-write
   refusal fits: each door runs the house valves first, then refuses a target carrying

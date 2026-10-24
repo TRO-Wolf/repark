@@ -18,6 +18,8 @@ use repark_iceberg::write::update_cast::{
     paired_nested_cast_sql,
 };
 
+use crate::write_door::WriteDoor;
+
 mod expand;
 mod render;
 #[cfg(test)]
@@ -680,12 +682,15 @@ pub(crate) async fn fold_merge_clauses(
     schema_evolution: bool,
 ) -> Result<Option<Vec<MergeClause>>> {
     if !merge_needs_fold(clauses) {
+        record_merge_doors(ctx, clauses, None);
         return Ok(None);
     }
     let Some(schema) = merge_target_schema(catalogs, table).await else {
+        record_merge_doors(ctx, clauses, None);
         return Ok(None);
     };
     let Some((target_alias, target_rendered)) = factor_alias(table) else {
+        record_merge_doors(ctx, clauses, None);
         return Ok(None);
     };
     let qualifiers = match table {
@@ -716,6 +721,7 @@ pub(crate) async fn fold_merge_clauses(
         probe_from: format!("{source} CROSS JOIN {table}"),
         case_sensitive,
     };
+    record_merge_doors(ctx, clauses, Some((&schema, &scope)));
     let mut folded = clauses.to_vec();
     let mut changed = false;
     for clause in &mut folded {
@@ -735,4 +741,45 @@ pub(crate) async fn fold_merge_clauses(
         }
     }
     Ok(changed.then_some(folded))
+}
+
+fn record_merge_doors(
+    ctx: &SessionContext,
+    clauses: &[MergeClause],
+    resolved: Option<(&ArrowSchema, &AssignmentScope)>,
+) {
+    for clause in clauses {
+        match &clause.action {
+            MergeAction::Insert(_) => {
+                crate::router::door_tag::record(ctx, WriteDoor::D7MergeInsert);
+            }
+            MergeAction::Update(update) => {
+                if matches!(super::star_update(&update.assignments), Ok(Some(_))) {
+                    crate::router::door_tag::record(ctx, WriteDoor::D8MergeUpdateStruct);
+                    continue;
+                }
+                for assignment in &update.assignments {
+                    crate::router::door_tag::record(ctx, update_door(assignment, resolved));
+                }
+            }
+            MergeAction::Delete { .. } => {}
+        }
+    }
+}
+
+fn update_door(
+    assignment: &Assignment,
+    resolved: Option<(&ArrowSchema, &AssignmentScope)>,
+) -> WriteDoor {
+    let (Some((schema, scope)), AssignmentTarget::ColumnName(name)) =
+        (resolved, &assignment.target)
+    else {
+        return WriteDoor::D9MergeUpdateField;
+    };
+    match resolve_target(schema, scope, name) {
+        Ok(Some(key)) if key.steps.is_empty() && folds(schema, &key) => {
+            WriteDoor::D8MergeUpdateStruct
+        }
+        _ => WriteDoor::D9MergeUpdateField,
+    }
 }
