@@ -2580,3 +2580,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 ICE-INTEGRITY-PINS-1 run-4 review adds C-060: distinct Glue and S3 Tables timeout sites supersede the earlier combined diagnosis; native measurement remains open (2026-10-23).
 
 ICE-INTEGRITY-PINS-1 run 5 records hosted native captures and the job-cap cancellation; C-060 remains open pending actual cross-read outcomes (2026-10-24).
+
+The [ICE-INTEGRITY-PINS-1 ledger](ice-integrity-pins-1-ledger.md) appends run 5's failed retry
+and run 6's cap cancellation, with its retry observed in progress at 05:33 UTC on 2026-10-24.
+C-060 remains OPEN; the live-run record holds the measurements.

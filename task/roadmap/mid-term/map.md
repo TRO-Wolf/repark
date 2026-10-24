@@ -1067,4 +1067,5 @@ declines it (a dated ruling in the intake, then the archive).
 
 The 1.5.6 notes record run-4 U/X success and distinguish the two unresolved cross-read operations (2026-10-23, C-060).
 
-The FAIR-POOL-HANG-1 card links the October 24 AWS job-cap rerun record; it establishes no shared cause.
+The FAIR-POOL-HANG-1 card links the run-5 retry result and run-6 cap-retry observation
+(2026-10-24, 05:33 UTC); it establishes no shared cause.

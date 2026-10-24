@@ -87,3 +87,7 @@ AWS acceptance run 40040855187 reached its two-hour job cap after all preceding 
 passed. The orchestrator requested the single permitted rerun at 01:43 UTC and preserved
 attempt 1. Its native samples moved through different cross-read stages; a link to this fair-pool
 hang is not established. See the [live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md).
+
+**2026-10-24, 05:33 UTC:** run 5's retry failed both cross-read deadlines; run 6 reached the
+job cap without an acceptance result and received its own single retry. See the
+[live-run record](../../wo/ice-integrity-pins-1/live-runs-2026-10-23.md). No shared cause is established.
