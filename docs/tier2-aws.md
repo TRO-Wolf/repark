@@ -139,7 +139,7 @@ Each job owns one run, attempt and leg, `REPARK_ACCEPT_RUN_ID` (the run id), `RE
 prefix. `scripts/aws_acceptance_cleanup.py` is the cleanup step: each leg job runs it last, with `if: always()`, as
 `--run-prefix testing_r<run_id>a<attempt>_<leg>_ --execute` (its tables, plus its `u12s3path_r<run_id>a<attempt>_<leg>_` S3 path-write
 objects), and the `backstop` job runs `--older-than-hours 24 --execute` after all three. It takes only names of that
-shape (never the ICE-READ-PERF bench table or a legacy `testing_*` table), removes objects only strictly below the
+shape (the ICE-READ-PERF bench table and legacy `testing_*` tables are excluded by shape), removes objects only strictly below the
 warehouse scratch prefix, and relies on the scoped delete grant of §2, which the owner has applied. Each
 job installs `boto3` at one exact version before it mints credentials; no lock file carries it.
 
@@ -234,7 +234,7 @@ A second pytest step runs `python/dbt-repark/tests/test_aws_acceptance_gold.py`
 `REPARK_AWS_ACCEPTANCE=1` gate and the same env block. The step installs nothing at run time —
 the `sync + build native module` step already installs the Makefile `DBT_PINS`
 (`dbt-core==1.9.11`, `dbt-spark==1.9.3`) before credentials are minted. The test builds a dbt
-project on a per-run `testing_dbt1_<uuid8>` stem in the scratch namespace, runs `dbt run`, checks
+project on a per-run `testing_r<run_id>a<attempt>_acc_dbt1_<uuid8>` stem in the scratch namespace, runs `dbt run`, checks
 the S6 fact and aggregate rows, records each gold model's snapshot count, runs `dbt run` a second
 time — the in-place `create or replace` publish must leave the same rows and grow each model's
 history by exactly one snapshot — then `dbt test` (ten blocks). It needs no new IAM action and no

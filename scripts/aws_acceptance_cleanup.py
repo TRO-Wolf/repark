@@ -53,7 +53,7 @@ def run_prefix_of(name: str) -> str | None:
 
 
 def assert_deletable(name: str) -> None:
-    """Raise ValueError unless ``name`` is a run-prefixed scratch table and not the bench."""
+    """Raise ValueError unless ``name`` has the run shape; the bench is excluded by shape."""
     if run_prefix_of(name) is None:
         raise ValueError(f"refusing {name!r}: not a testing_r<digits>a<digits>_ scratch table")
 
@@ -219,11 +219,11 @@ def select_tables(
     return select_older_than(tables, hours, now)
 
 
-def location_matches_table(table: ScratchTable) -> bool:
-    """True when the last path segment of the table's location is the table's own name."""
+def location_leaf(table: ScratchTable) -> str | None:
+    """The last path segment of the table's location, or None without a location."""
     if not table.location:
-        return False
-    return table.location.rstrip("/").rsplit("/", 1)[-1] == table.name
+        return None
+    return table.location.rstrip("/").rsplit("/", 1)[-1]
 
 
 def clean_glue(
@@ -231,26 +231,36 @@ def clean_glue(
 ) -> int:
     """Report or perform the Glue deletes, then the objects of each deleted table; failures.
 
-    A table whose location is not its own directory under the scratch prefix is kept, with its
-    objects, and counted as a failure.
+    A twin entry points at the directory of another selected table: its entry goes, its objects
+    do not. A table whose location is neither its own directory nor a selected sibling's, or lies
+    outside the scratch prefix, is kept with its objects and counted as a failure.
     """
-    sound = [
-        t
-        for t in chosen
-        if location_matches_table(t) and location_under_scratch(t.location, warehouse)
-    ]
-    anomalies = [t for t in chosen if t not in sound]
+    names = {t.name for t in chosen}
+    sound, twins, anomalies = [], [], []
+    for table in chosen:
+        leaf = location_leaf(table)
+        if not location_under_scratch(table.location, warehouse):
+            anomalies.append(table)
+        elif leaf == table.name:
+            sound.append(table)
+        elif leaf in names:
+            twins.append(table)
+        else:
+            anomalies.append(table)
     for table in anomalies:
         print(f"glue: kept {table.name}: unexpected location {table.location!r}", file=sys.stderr)
     objects = {t.name: scratch_object_keys(s3, t.location or "", warehouse) for t in sound}
     selected = sum(len(keys) for keys in objects.values())
-    print(f"glue: {len(sound)} tables, {selected} objects selected", flush=True)
+    deletable = sound + twins
+    print(f"glue: {len(deletable)} tables, {selected} objects selected", flush=True)
     if not execute:
         return len(anomalies)
-    failed = delete_glue_tables(glue, SCRATCH_NAMESPACE, sound)
+    failed = delete_glue_tables(glue, SCRATCH_NAMESPACE, deletable)
     removable = [key for name, keys in objects.items() if name not in failed for key in keys]
     refused = delete_scratch_objects(s3, removable)
-    print(f"glue: deleted {len(sound) - len(failed)} tables, {len(removable)} objects", flush=True)
+    print(
+        f"glue: deleted {len(deletable) - len(failed)} tables, {len(removable)} objects", flush=True
+    )
     return len(anomalies) + len(failed) + refused
 
 

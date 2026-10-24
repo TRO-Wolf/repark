@@ -820,3 +820,108 @@ def test_main_exits_one_and_keeps_a_bad_location_table_everywhere(
     }
     assert f"{_WH_ROOT}/{names[1]}/f9" in removed
     assert not any("other" in key or names[0] in key for key in removed)
+
+
+def test_an_alias_twin_goes_without_a_second_object_delete(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An _adopted twin points at the original's directory: both entries go, the files once."""
+    original = _table("testing_r9a1_acc_v3", location=f"{_SCRATCH}/testing_r9a1_acc_v3")
+    twin = _table("testing_r9a1_acc_v3_adopted", location=f"{_SCRATCH}/testing_r9a1_acc_v3/")
+    key = "testing_repark_acceptance/testing_r9a1_acc_v3/f"
+    s3 = _World({}, [key])
+    glue = _Client()
+    assert cleanup.clean_glue(glue, s3, _WAREHOUSE, [twin, original], execute=True) == 0
+    assert sorted(_deleted(glue, "batch_delete_table")[0]["TablesToDelete"]) == [
+        original.name,
+        twin.name,
+    ]
+    keys = [e["Key"] for c in _deleted(s3, "delete_objects") for e in c["Delete"]["Objects"]]
+    assert keys == [key]
+    assert capsys.readouterr().err == ""
+
+
+def test_a_twin_of_a_table_outside_the_selected_set_is_an_anomaly(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A location naming a table that is not selected keeps the entry, reports it, counts it."""
+    twin = _table("testing_r9a1_acc_v3_adopted", location=f"{_SCRATCH}/testing_r9a1_acc_v3")
+    s3 = _World({}, ["testing_repark_acceptance/testing_r9a1_acc_v3/f"])
+    glue = _Client()
+    assert cleanup.clean_glue(glue, s3, _WAREHOUSE, [twin], execute=True) == 1
+    assert _deleted(glue, "batch_delete_table") == []
+    assert _deleted(s3, "delete_objects") == []
+    assert twin.name in capsys.readouterr().err
+
+
+def test_main_deletes_an_original_and_its_twin_with_exit_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """End to end: the leg's v3 original and its _adopted twin both go, exit 0."""
+    _env(monkeypatch, None)
+    factory = _world()
+    entries = factory.clients["glue"].world["get_tables"][0]["TableList"]
+    twin = _glue_entry("testing_r12a1_acc_a_adopted")
+    twin["StorageDescriptor"]["Location"] = f"{_WH}testing_repark_acceptance/testing_r12a1_acc_a"
+    entries.append(twin)
+    assert cleanup.main(["--run-prefix", "testing_r12a1_acc_", "--execute"], factory) == 0
+    batch = _deleted(factory.clients["glue"], "batch_delete_table")
+    assert sorted(batch[0]["TablesToDelete"]) == [
+        "testing_r12a1_acc_a",
+        "testing_r12a1_acc_a_adopted",
+    ]
+    keys = [
+        e["Key"]
+        for c in _deleted(factory.clients["s3"], "delete_objects")
+        for e in c["Delete"]["Objects"]
+    ]
+    assert keys.count(f"{_WH_ROOT}/testing_r12a1_acc_a/f1") == 1
+
+
+@pytest.mark.parametrize(
+    "leaf", ["xtesting_r9a1_acc_a", "testing_r9a1_acc_ab", "TESTING_R9A1_ACC_B"]
+)
+def test_a_location_leaf_that_only_contains_or_extends_the_name_is_an_anomaly(leaf: str) -> None:
+    """Exact equality: neither a longer nor a shorter segment counts as the table's own."""
+    table = _table("testing_r9a1_acc_a", location=f"{_SCRATCH}/{leaf}")
+    glue, s3 = _Client(), _World({}, [f"testing_repark_acceptance/{leaf}/f"])
+    assert cleanup.clean_glue(glue, s3, _WAREHOUSE, [table], execute=True) == 1
+    assert _deleted(glue, "batch_delete_table") == []
+    assert _deleted(s3, "delete_objects") == []
+
+
+def test_a_location_leaf_that_ends_with_the_name_is_an_anomaly() -> None:
+    """The mutant form `endswith(name)` would accept `x<name>`; this pins the exact compare."""
+    table = _table("a_b", location=f"{_SCRATCH}/xa_b")
+    assert cleanup.clean_glue(_Client(), _World({}, []), _WAREHOUSE, [table], True) == 1
+
+
+def test_an_s3_tables_delete_exception_alone_makes_main_exit_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With Glue and S3 healthy, one raising S3 Tables delete still yields exit 1."""
+    _env(monkeypatch)
+    factory = _world()
+    factory.clients["s3tables"] = _FailingS3Tables(factory.clients["s3tables"].world)
+    assert cleanup.main(["--run-prefix", "testing_r12a1_acc_", "--execute"], factory) == 1
+
+
+def test_a_failed_s3_object_delete_is_a_failure_in_the_table_and_path_object_cleanups() -> None:
+    """An Errors list from delete_objects counts, for table objects and for path objects."""
+    table = _table("testing_r9a1_acc_a", location=f"{_SCRATCH}/testing_r9a1_acc_a")
+    keys = [
+        "testing_repark_acceptance/testing_r9a1_acc_a/f",
+        "testing_repark_acceptance/u12s3path_r9a1_acc_zz/p",
+    ]
+    s3 = _World({}, keys)
+    s3.errors = [{"Key": "k", "Code": "AccessDenied"}]
+    assert cleanup.clean_glue(_Client(), s3, _WAREHOUSE, [table], execute=True) == 1
+    assert cleanup.clean_path_objects(s3, _WAREHOUSE, "testing_r9a1_acc_", execute=True) == 1
+
+
+def test_main_exits_one_when_only_the_object_deletes_fail(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tables delete fine; refused object batches alone make the run exit 1."""
+    _env(monkeypatch, None)
+    factory = _world()
+    factory.clients["s3"].errors = [{"Key": "k", "Code": "AccessDenied"}]
+    assert cleanup.main(["--run-prefix", "testing_r12a1_acc_", "--execute"], factory) == 1

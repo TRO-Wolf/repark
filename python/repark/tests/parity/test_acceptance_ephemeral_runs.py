@@ -84,7 +84,7 @@ def test_prefixes_of_different_runs_attempts_and_legs_are_never_a_prefix_of_one_
 
 
 def _scratch_literals(source: str) -> list[tuple[int, str]]:
-    """Every non-docstring string constant, f-string parts included, that begins ``testing_``."""
+    """Non-docstring strings beginning ``testing`` and ``+`` joins with a ``test`` operand."""
     tree = ast.parse(source)
     docstrings = set()
     for node in ast.walk(tree):
@@ -98,9 +98,17 @@ def _scratch_literals(source: str) -> list[tuple[int, str]]:
             isinstance(node, ast.Constant)
             and isinstance(node.value, str)
             and id(node) not in docstrings
-            and node.value.startswith("testing_")
+            and node.value.startswith("testing")
         ):
             found.append((node.lineno, node.value))
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            for operand in (node.left, node.right):
+                if (
+                    isinstance(operand, ast.Constant)
+                    and isinstance(operand.value, str)
+                    and operand.value.startswith("test")
+                ):
+                    found.append((node.lineno, operand.value))
     return found
 
 
@@ -136,6 +144,10 @@ def test_every_leg_file_names_scratch_tables_through_the_run_prefix(filename: st
         'stem = "testing_" + token\n',
         'name = "testing_cu_" + door\n',
         'name = f"{prefix}x" if flag else "testing_literal"\n',
+        'name = "testing" + f"_mw4_mor_{token}"\n',
+        'name = "test" + "ing_" + token\n',
+        'name = token + "test" + "ing_"\n',
+        'name = "testing"\n',
     ],
 )
 def test_the_literal_scan_catches_every_spelling_of_a_hard_coded_scratch_name(
