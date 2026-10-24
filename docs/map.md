@@ -368,3 +368,5 @@ FNP-8-REVIEW (2026-09-07): the F-Y10-1 note cites the lambda-body overflow wrap 
 the idx-25/idx-51 dispositions (F7); FNP8-WIDTH narrows as the zip_empty/zip_null
 cells converge to Spark Int32 (F1); FNP8-NULLABILITY names the Column-view
 nullable-element instance (F4 slice).
+
+`tier2-aws.md` §2 and §3 record the owner's 2026-10-24 policy revision (scratch-table delete in separate prefix- and namespace-scoped statements, bronze read-only again, the S3 Tables grant narrowed) and the prune-then-ephemeral-runs expiry model of AWS-EPHEMERAL-RUNS-1.

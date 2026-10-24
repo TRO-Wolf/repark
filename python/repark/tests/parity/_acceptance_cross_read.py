@@ -220,7 +220,8 @@ def iceberg_type_has_ns(node: Any) -> bool:
     if isinstance(node, str):
         return node in _NS_TYPE_NAMES
     if isinstance(node, dict):
-        if node.get("type") in _NS_TYPE_NAMES:
+        type_name = node.get("type")
+        if isinstance(type_name, str) and type_name in _NS_TYPE_NAMES:
             return True
         return any(iceberg_type_has_ns(value) for value in node.values())
     if isinstance(node, list):

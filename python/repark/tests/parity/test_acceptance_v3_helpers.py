@@ -59,8 +59,7 @@ def _table_name_is_scratch_uuid(fn: ast.FunctionDef) -> bool:
             for child in children
         )
         has_prefix = any(
-            isinstance(child, ast.Name) and child.id == "ACCEPTANCE_TABLE_PREFIX"
-            for child in children
+            isinstance(child, ast.Name) and child.id == "run_table_prefix" for child in children
         )
         has_stem = any(
             isinstance(child, ast.Constant)

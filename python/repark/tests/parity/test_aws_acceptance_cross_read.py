@@ -1,7 +1,7 @@
 """AWS cross-read leg: live Spark reads the AWS acceptance tables.
 
 Discovery over the scratch namespace on Glue and on S3 Tables: every
-testing_ table the AWS legs wrote is read on both engines and compared
+table of this run's prefix is read on both engines and compared
 row-equal through the shared helper. Same module gate as the AWS legs plus
 a PySpark skip. Never drops anything. Not run until the owner wires it.
 
@@ -17,14 +17,15 @@ from typing import Any
 import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
-    ACCEPTANCE_TABLE_PREFIX,
     GLUE_WAREHOUSE,
     S3TABLES_CATALOG,
     SILVER_CATALOG,
     assert_glue_scratch_namespace_location,
     assert_real_buckets_configured,
     glue_catalog_config,
+    run_table_prefix,
     s3tables_catalog_config,
+    s3tables_spark_catalog_config,
 )
 from _acceptance_cross_read import (
     assert_outcomes_expected,
@@ -46,14 +47,15 @@ pytestmark = pytest.mark.skipif(
 
 
 def _discover_tables(spark: ReparkSession, catalog: str, namespace: str) -> list[str]:
-    """Scratch testing_ table names under one namespace, non-temporary only."""
+    """Run-prefixed scratch table names under one namespace, non-temporary only."""
+    prefix = run_table_prefix()
     arrow = spark.sql(f"SHOW TABLES IN {catalog}.{namespace}").to_arrow()
     names = arrow.column("tableName").to_pylist()
     temporary = arrow.column("isTemporary").to_pylist()
     return sorted(
         str(name)
         for name, temp in zip(names, temporary, strict=True)
-        if str(name).startswith(ACCEPTANCE_TABLE_PREFIX) and not temp
+        if str(name).startswith(prefix) and not temp
     )
 
 
@@ -94,7 +96,7 @@ def _cross_read_namespace(repark: ReparkSession, spark: Any, catalog: str, names
     """Read every discovered scratch table on both engines and assert row-equal."""
     tables = _discover_tables(repark, catalog, namespace)
     print(f"Cross-read {catalog}.{namespace}: discovered {len(tables)} tables", flush=True)
-    assert tables, f"no {ACCEPTANCE_TABLE_PREFIX} tables under {catalog}.{namespace} to cross-read"
+    assert tables, f"no {run_table_prefix()} tables under {catalog}.{namespace} to cross-read"
     outcomes = []
     for number, name in enumerate(tables, start=1):
         table = f"{catalog}.{namespace}.{name}"
@@ -153,7 +155,7 @@ def test_cross_read_s3tables_acceptance_tables() -> None:
     repark = builder.getOrCreate()
     try:
         spark = _spark_session_for_catalog(
-            s3tables_catalog_config(S3TABLES_CATALOG, arn), "xread-aws-s3tables-spark"
+            s3tables_spark_catalog_config(S3TABLES_CATALOG, arn), "xread-aws-s3tables-spark"
         )
         _cross_read_namespace(repark, spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
     finally:

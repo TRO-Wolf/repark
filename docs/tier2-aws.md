@@ -47,8 +47,12 @@ from §1's deployment-branch policy, not from the sub. Confirm the exact sub wit
 `AssumeRoleWithWebIdentity` CloudTrail event of a first (failing) dispatch.
 
 **Permission policy** — least-privilege over the scratch surface only, scoped by explicit
-**resource ARN** (never `Resource: "*"`). Glue tables still cannot be deleted. Object-delete is
-the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
+**resource ARN** (never `Resource: "*"`). **Revised by the owner on 2026-10-24** for
+[AWS-EPHEMERAL-RUNS-1](../task/roadmap/mid-term/aws-ephemeral-runs-1-card-2026-10-24.md): scratch
+**tables** under the `testing_` prefix may now be deleted by the role, in their own statements and
+nothing wider; bronze lost a stray `s3:DeleteObject` the same day. Object-delete on the warehouse
+scratch prefix is the OD-3 exception (MW-4 compact + expire) and now also the cleanup of a deleted
+table's files:
 
 - `s3:GetObject` / `s3:ListBucket` on the **bronze** bucket + prefix the harness reads
   (`REPARK_ACCEPT_BRONZE_BUCKET`) — read-only.
@@ -59,7 +63,11 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   read-only. Never `Resource: "*"`.
 - `glue:CreateDatabase` / `glue:GetDatabase` / `glue:CreateTable` / `glue:GetTable` /
   `glue:UpdateTable` on the scratch database resource ARN only — never the production database.
-  **No `glue:DeleteTable` / `glue:DeleteDatabase`.**
+- `glue:DeleteTable` / `glue:BatchDeleteTable` in a **separate statement** (2026-10-24) on the
+  catalog ARN, the scratch database ARN and `…:table/testing_repark_acceptance/testing_*` only:
+  Glue needs the catalog and database ARNs beside the table ARN for any table action, and the
+  wildcard on the table name is what confines the grant to the harness's prefix. A table created
+  without the prefix can never be deleted by the role. **Still no `glue:DeleteDatabase`.**
 - `glue:GetDatabases` / `glue:GetTables` — a **separate, catalog-wide, read-only** statement over
   the three ARN forms `arn:aws:glue:<REGION>:<ACCOUNT>:catalog`, `…:database/*` and
   `…:table/*/*`. These two are the plural LIST actions, and unlike everything above them they
@@ -78,7 +86,13 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   `arn:aws:s3tables:<REGION>:<ACCOUNT>:bucket/<TABLE-BUCKET>/table/*` with
   `"Condition": {"StringEquals": {"s3tables:namespace": "testing_repark_acceptance"}}`, plus
   `s3tables:GetTableBucket`, `s3tables:CreateNamespace`, `s3tables:GetNamespace`,
-  `s3tables:CreateTable`, `s3tables:ListTables` on the bucket ARN. **Still no `s3tables:DeleteTable` / `DeleteNamespace` / `DeleteTableBucket`.**
+  `s3tables:ListNamespaces` on the bucket ARN without a condition, and `s3tables:CreateTable`,
+  `s3tables:ListTables` on the bucket ARN **with** the same namespace condition (both take a
+  namespace). **Revised 2026-10-24:** `s3tables:DeleteTable` joins the table-ARN statement under
+  the namespace condition, and the earlier over-broad grant of every table action on
+  `bucket/<TABLE-BUCKET>/*` without a condition is removed; the maintenance-configuration pair
+  (below) sits in the same conditioned table statement. **Still no `s3tables:DeleteNamespace` /
+  `DeleteTableBucket`.**
   AWS's published object-API mapping lists `PutObject` + the multipart operations under
   `PutTableData` and names no action for `DeleteObject` on table storage: whether
   `expire_snapshots` can remove files there is measured by the first S3 Tables maintenance
@@ -98,16 +112,38 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   guard). Until the owner grants them, the bench job stops at that step, before any write, and
   its summary names the two actions. The acceptance module does not need them.
 
-Never-teardown of **tables** is still a PERMISSIONS FACT: the harness creates into the scratch
-namespace with a scratch table prefix, has no DROP TABLE path, and the role still has no
-`glue:DeleteTable` / `glue:DeleteDatabase`. A compromised job can remove objects under the
-warehouse scratch prefix (OD-3) and cannot drop Glue tables or touch bronze.
+**Measured 2026-10-24, awaiting the owner's edit.** Metadata-table reads (`.history`, `.metadata_log_entries`, `.snapshots`, `.data_files`, and the `.delete_files` probe whose error line the log cuts off) of existing S3 Tables tables in the first dispatched run (run 40130862019) failed in 72 cells with `s3tables:GetTable` denied on the table wildcard ARN of the table bucket; writes, the cleanup deletes and Spark's reads were not denied. The request RePark's metadata-table path issues does not satisfy the namespace condition above (its exact shape is unmeasured and is the subject of the candidate card S3T-METADATA-TABLE-GETTABLE-1). The interim remedy is `s3tables:GetTable` on `bucket/<name>/table/*` without the namespace condition, every mutating action keeping it (ledger C-032).
 
-## 3. Scratch expiry (outside the workflow)
+**The teardown property after 2026-10-24.** The role can delete Glue tables named `testing_*` in
+the scratch database, S3 Tables tables in the scratch namespace, and objects under the warehouse
+scratch prefix, and nothing else: not the database, not the namespace, not the table bucket, not
+bronze. The test harness has no DROP TABLE path; the cleanup script wired into `aws-acceptance.yml` by
+AWS-EPHEMERAL-RUNS-1 (each leg job deletes only its own `testing_r<run_id>a<attempt>_<leg>_…` prefix, and an
+age-bounded backstop deletes older run prefixes) is the only delete. A compromised job could drop scratch tables under the prefix and could not touch anything
+production reads.
 
-Configure an S3 lifecycle expiry rule on the warehouse scratch prefix (e.g. 14 days) once, by hand.
-Review the scratch Glue database at a documented cadence (monthly is fine). This is deliberately
-neither a delete path in CI nor a human remembering to reap.
+## 3. Scratch expiry
+
+**Until AWS-EPHEMERAL-RUNS-1 lands:** the by-hand prune. The scratch namespaces reached 2288 Glue
+and 1748 S3 Tables tables by 2026-10-24 because every leg left its tables behind and the dbt gold
+leg creates a UUID-named family per run; the first streamed cross-read nightly made the cost
+visible (ledger C-066). The owner prunes through their own IAM user with a dry-run-first script
+kept outside this repository; no CI step and no agent performs that first sweep.
+
+**After it lands:** each run deletes its own prefix at exit with `if: always()`, and a backstop
+removes prefixes older than 24 h at the start of the next run. An S3 lifecycle rule on the
+warehouse scratch prefix, if one is set, is kept consistent with that 24 h window so no catalog
+entry outlives its files. The ICE-READ-PERF bench table is excluded from every sweep.
+
+**Run-owned cleanup (AWS-EPHEMERAL-RUNS-1, 2026-10-24, wired into `aws-acceptance.yml`).**
+Each job owns one run, attempt and leg, `REPARK_ACCEPT_RUN_ID` (the run id), `REPARK_ACCEPT_RUN_ATTEMPT` (a re-run's attempt number) and `REPARK_ACCEPT_LEG` (`acc` for
+`acceptance-dbt`, `u`, `x`), and names its tables `testing_r<run_id>a<attempt>_<leg>_…`; the job's cross-read lists only that
+prefix. `scripts/aws_acceptance_cleanup.py` is the cleanup step: each leg job runs it last, with `if: always()`, as
+`--run-prefix testing_r<run_id>a<attempt>_<leg>_ --execute` (its tables, plus its `u12s3path_r<run_id>a<attempt>_<leg>_` S3 path-write
+objects), and the `backstop` job runs `--older-than-hours 24 --execute` after all three. It takes only names of that
+shape (the ICE-READ-PERF bench table and legacy `testing_*` tables are excluded by shape), removes objects only strictly below the
+warehouse scratch prefix, and relies on the scoped delete grant of §2, which the owner has applied. Each
+job installs `boto3` at one exact version before it mints credentials; no lock file carries it.
 
 ## 4. Variables + secrets — prefer the environment scope
 
@@ -200,7 +236,7 @@ A second pytest step runs `python/dbt-repark/tests/test_aws_acceptance_gold.py`
 `REPARK_AWS_ACCEPTANCE=1` gate and the same env block. The step installs nothing at run time —
 the `sync + build native module` step already installs the Makefile `DBT_PINS`
 (`dbt-core==1.9.11`, `dbt-spark==1.9.3`) before credentials are minted. The test builds a dbt
-project on a per-run `testing_dbt1_<uuid8>` stem in the scratch namespace, runs `dbt run`, checks
+project on a per-run `testing_r<run_id>a<attempt>_acc_dbt1_<uuid8>` stem in the scratch namespace, runs `dbt run`, checks
 the S6 fact and aggregate rows, records each gold model's snapshot count, runs `dbt run` a second
 time — the in-place `create or replace` publish must leave the same rows and grow each model's
 history by exactly one snapshot — then `dbt test` (ten blocks). It needs no new IAM action and no
@@ -212,7 +248,7 @@ drops nothing.
 The read-performance slate's AWS bed (task/roadmap/mid-term/ice-read-perf-slate-2026-09-18.md,
 unit 0 and ruling R-3) runs as a second job of the same workflow, `ice-read-perf-bench`. It runs
 **only** on a manual dispatch that asks for it, never on the nightly schedule. The nightly (and a
-plain dispatch, whose `leg` defaults to `acceptance`) runs only `live-aws`, exactly as before.
+plain dispatch, whose `leg` defaults to `acceptance`) runs only the `build`, `acceptance-dbt`, `integrity-u`, `integrity-x` and `backstop` jobs (AWS-EPHEMERAL-RUNS-1, 2026-10-24; formerly one `live-aws` job).
 
 ```bash
 gh workflow run aws-acceptance.yml -f leg=ice-read-perf-bench -f purpose=<unit, e.g. ice-read-perf-0-baseline>
@@ -222,7 +258,7 @@ gh workflow run aws-acceptance.yml -f leg=ice-read-perf-bench -f purpose=<unit, 
 declares the same environment, so no credential mints before that approval. Check the ref and
 the commit, then approve.
 
-What the job does, in order (the same pinned actions as `live-aws`, the same ref guard,
+What the job does, in order (the same pinned actions as the build and leg jobs, the same ref guard,
 `persist-credentials: false`, `id-token: write` scoped to the job):
 
 1. Checkout, the Rust toolchain and the cache, then `cargo bench -p repark-spark --bench

@@ -1,4 +1,7 @@
-"""Execute the live cross-read function bodies without AWS or the native engine."""
+"""Execute the live cross-read function bodies without AWS or the native engine.
+
+pins: aws-ephemeral-runs-1/C-009
+"""
 
 from __future__ import annotations
 
@@ -32,7 +35,7 @@ class _ProgressStream(io.StringIO):
         self.flushed = self.getvalue()
 
 
-def _load_namespace() -> dict[str, Any]:
+def _load_namespace(prefix: str = "testing_") -> dict[str, Any]:
     """Compile the exact source functions while excluding live module imports."""
     tree = ast.parse(_SOURCE.read_text(encoding="utf-8"), filename=str(_SOURCE))
     names = {"_discover_tables", "_cross_read_namespace"}
@@ -46,7 +49,7 @@ def _load_namespace() -> dict[str, Any]:
         if (isinstance(node, ast.ImportFrom) and node.module == "__future__")
         or (isinstance(node, ast.Import) and any(alias.name == "time" for alias in node.names))
     ]
-    namespace: dict[str, Any] = {"ACCEPTANCE_TABLE_PREFIX": "testing_"}
+    namespace: dict[str, Any] = {"run_table_prefix": lambda: prefix}
     module = ast.Module(body=[*imports, *functions], type_ignores=[])
     exec(compile(module, str(_SOURCE), "exec"), namespace)
     return namespace
@@ -92,6 +95,29 @@ def _fail_after_snapshot(stream: _ProgressStream, snapshots: list[str], *args: A
     """Record visible progress before a controlled external-call failure."""
     snapshots.append(stream.flushed)
     raise RuntimeError("controlled external-call failure")
+
+
+def test_discovery_keeps_only_the_run_and_leg_prefix_and_never_the_bench_table() -> None:
+    """Another run's or leg's tables, unprefixed names and the bench table are not discovered."""
+    namespace = _load_namespace("testing_r77a1_acc_")
+    session = _listing_session(
+        [
+            "testing_r77a1_acc_b",
+            "testing_r77a1_u_a",
+            "testing_r77a1_x_a",
+            "testing_r770a1_acc_x",
+            "testing_r78a1_acc_a",
+            "testing_r77a1_acc_a",
+            "testing_old_a",
+            "ice_read_perf_bench",
+            "testing_r77a1_acc_tmp",
+        ],
+        [False, False, False, False, False, False, False, False, True],
+    )
+    assert namespace["_discover_tables"](session, "catalog", "scratch") == [
+        "testing_r77a1_acc_a",
+        "testing_r77a1_acc_b",
+    ]
 
 
 @pytest.mark.parametrize("first_status", ["EQUAL", "DIFFERENT"])

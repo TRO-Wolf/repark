@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from functools import partial
 from typing import NamedTuple
 
@@ -106,6 +106,17 @@ MOR_MIN_POSITION_DELETE_FILES = 5
 EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
 COMMIT_CONFLICT_RETRY_ATTEMPTS = 3
 MAINTENANCE_RETRY_PROCEDURES = 3
+RUN_ID_ENV = "REPARK_ACCEPT_RUN_ID"
+LOCAL_RUN_ID = "0"
+RUN_ATTEMPT_ENV = "REPARK_ACCEPT_RUN_ATTEMPT"
+LOCAL_RUN_ATTEMPT = "0"
+LEG_ENV = "REPARK_ACCEPT_LEG"
+LOCAL_LEG = "acc"
+LEGS = ("acc", "u", "x")
+_RUN_ID = re.compile(r"[0-9]+")
+_TABLE_BUCKET_ARN = re.compile(
+    r"arn:(?P<partition>[a-z-]+):s3tables:(?P<region>[a-z0-9-]+):[0-9]{12}:bucket/[^/]+"
+)
 _ACCOUNT_ID = re.compile(r"\b\d{12}\b")
 _DENIAL_ACTION = re.compile(r"perform:\s*(\S+)", re.IGNORECASE)
 _DENIAL_RESOURCE = re.compile(r"resource:\s*(\S+)", re.IGNORECASE)
@@ -120,6 +131,31 @@ def bronze_path(entity: str, ds: str) -> str:
 def fq_table(catalog: str, namespace: str, entity: str) -> str:
     """The three-part fully-qualified table name."""
     return f"{catalog}.{namespace}.{entity}"
+
+
+def _run_and_leg(environ: Mapping[str, str] | None) -> str:
+    """The validated ``r<run_id>a<attempt>_<leg>`` triple read from the run variables."""
+    source = os.environ if environ is None else environ
+    run_id = source.get(RUN_ID_ENV) or LOCAL_RUN_ID
+    attempt = source.get(RUN_ATTEMPT_ENV) or LOCAL_RUN_ATTEMPT
+    leg = source.get(LEG_ENV) or LOCAL_LEG
+    if _RUN_ID.fullmatch(run_id) is None:
+        raise ValueError(f"{RUN_ID_ENV} must be digits only, got {run_id!r}")
+    if _RUN_ID.fullmatch(attempt) is None:
+        raise ValueError(f"{RUN_ATTEMPT_ENV} must be digits only, got {attempt!r}")
+    if leg not in LEGS:
+        raise ValueError(f"{LEG_ENV} must be one of {LEGS}, got {leg!r}")
+    return f"r{run_id}a{attempt}_{leg}"
+
+
+def run_table_prefix(environ: Mapping[str, str] | None = None) -> str:
+    """The table prefix ``testing_r<run_id>a<attempt>_<leg>_``; defaults are local."""
+    return f"{ACCEPTANCE_TABLE_PREFIX}{_run_and_leg(environ)}_"
+
+
+def run_object_stem(environ: Mapping[str, str] | None = None) -> str:
+    """The S3 path-write object stem ``u12s3path_r<run_id>a<attempt>_<leg>_``."""
+    return f"u12s3path_{_run_and_leg(environ)}_"
 
 
 def acceptance_namespace_location(warehouse: str) -> str:
@@ -236,6 +272,31 @@ def s3tables_catalog_config(catalog_name: str, table_bucket_arn: str) -> dict[st
         prefix: "org.apache.iceberg.spark.SparkCatalog",
         f"{prefix}.catalog-impl": "org.apache.iceberg.aws.s3tables.S3TablesCatalog",
         f"{prefix}.warehouse": table_bucket_arn,
+        f"{prefix}.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+    }
+
+
+def s3tables_spark_catalog_config(catalog_name: str, table_bucket_arn: str) -> dict[str, str]:
+    """The Spark ``spark.sql.catalog.<name>.*`` block for S3 Tables through Iceberg's REST catalog.
+
+    Separate from ``s3tables_catalog_config``, which RePark consumes by the ``catalog-impl`` suffix.
+    The region comes from the table bucket ARN, never a literal.
+    """
+    matched = _TABLE_BUCKET_ARN.fullmatch(table_bucket_arn)
+    if matched is None:
+        raise ValueError("TABLE_BUCKET_ARN is not an S3 Tables table bucket ARN")
+    if matched.group("partition") != "aws":
+        raise ValueError("TABLE_BUCKET_ARN partition must be aws; other partitions use other hosts")
+    region = matched.group("region")
+    prefix = f"spark.sql.catalog.{catalog_name}"
+    return {
+        prefix: "org.apache.iceberg.spark.SparkCatalog",
+        f"{prefix}.type": "rest",
+        f"{prefix}.uri": f"https://s3tables.{region}.amazonaws.com/iceberg",
+        f"{prefix}.warehouse": table_bucket_arn,
+        f"{prefix}.rest.sigv4-enabled": "true",
+        f"{prefix}.rest.signing-name": "s3tables",
+        f"{prefix}.rest.signing-region": region,
         f"{prefix}.io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
     }
 
