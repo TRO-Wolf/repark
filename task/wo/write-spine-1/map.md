@@ -18,3 +18,4 @@ The owner adopted the evaluation's shape (option D) on 2026-10-22 and its §3 do
   over the router's statement shapes, and the door-by-shape matrix test driven from that enum
   against Spark and main fixtures recorded in step 0. Six ledger rows, four mutants, hour budgets
   per step, halts on a nineteenth door or any value change.
+- [census-2026-10-24.md](census-2026-10-24.md) — **WRITE-SPINE-1 step (0), the door-by-shape census (2026-10-24, lane B, Opus 5.5):** 12,192 cells (39 spellings × 8 sources × 10 targets × 3 zones, CoW and MoR) recorded on Spark 4.1.2 + Iceberg 1.11.0 and on main `7a789fc5`: 7,135 EQUAL, 1,731 DIFFERENT, 2,380 REFUSED, 946 ERROR; the families F1–F8 (Spark doors) and N1–N8 (`repark.sql()`), the census table by door × family × zone, and the red set by door, which is step (2)'s red-test list. D18 and D21 are not reached; `repark.sql()` does not reach the `repark-sql` paths of D14–D17, D19 and D20 (open question 1).
