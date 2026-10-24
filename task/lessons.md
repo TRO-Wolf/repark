@@ -468,4 +468,24 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO fold a zone-rule neighbour into WRITE-SPINE-1 step (2) rather than carding it alone.** *Why:* the
   `add_months(...)` plain-`UPDATE` UTC-midnight store is one more feed of the same rule; the owner folded it on
   2026-10-24 and the card's step (2) census carries it by name.
+- **DO keep the v2 label at Tue 2026-11-10 with one written slip rule.** *Why:* the owner adopted it on 2026-10-24
+  ("let's do it"). The gate for the label PR is unchanged (U-5 to U-11 on main with pins, two green parity-live
+  mornings, an acceptance run id, the U-13 truth-up); parity-live has been green four mornings running and the
+  acceptance run id now depends on AWS-EPHEMERAL-RUNS-1, which is on the critical path. The slip rule: if WRITE-SPINE-1
+  step (2) is not merged by Thu 2026-11-05, it moves behind the label together with step (4), and the label PR goes on
+  11-10 carrying the ZS-9 refusal as a dated carve-out beside R-015 and R-024. The v3 core label (Tue 11-17) does not
+  move either way. Both Opus 5.5 lanes are open for this from Mon 2026-10-26: lane A builds (WRITE-SPINE-1 steps 1 and
+  3, GATE-RETIRE-1, step 2), lane B sketches, verifies and runs the clerk items (AWS-EPHEMERAL-RUNS-1, U-11's order and
+  measurement, the fork repin, U-13); they never both compile.
+- **DO write WRITE-SPINE-1 step (2) as a grade-C order even for Opus, and test the order before the engine.** *Why:*
+  the owner's "let's do it" of 2026-10-24 on the orchestrator's list: step (3)'s mechanical door matrix lands before
+  step (2) opens, so a missed door is a failing test and not a verifier finding; the step-0 census is recorded against
+  live Spark into checked-in fixtures (version and date), and its cells become the red tests the slices turn green;
+  one slice per rule, one commit each, with the commit as its own step; every ruling in the order (ZS-7, ZS-9, the
+  nanosecond ruling, the create-door rule, 76(a), the add_months fold, option D's "no new crate, no new edge"); halts
+  on the first ambiguity and on the hour budget, hand-back ending "doors I did not touch, and why"; the reviewers'
+  mutants pre-written per slice; the exact comment-gate, file-size, map-lockstep and ledger-grammar commands with their
+  green lines; and a dry run of the finished order on a cheaper engine that lists every question it would ask, each
+  becoming a line in the order. The template's test applies: a fresh engine starts it without a question and halts on
+  the first ambiguity; if the first run fails that test, the fix is in the order.
 
