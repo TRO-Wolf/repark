@@ -650,6 +650,15 @@ repark-core's error map.
   No call site changed. Why: `repark-functions` registers the wall kernels under the same
   strings, and two copies across the crate line could drift without a compile error. Details in
   [../../../repark-common/src/map.md](../../../repark-common/src/map.md).
+- `ntz_store.rs` — **WRITE-SPINE-1 step 1b (2026-10-24):** the store-kernel lookup of
+  `zone_store_frame` fails closed. `registered_store_kernel` answers `Ok(None)` when the target
+  needs no kernel (`wall_kernel_reads` false, or `store_kernel_udf_name` names none), and a
+  `DataFusionError::Internal` naming the kernel when the session does not hold the kernel it
+  names. The expression map collects into `Result<Vec<Expr>>` and `zone_stores` returns the
+  error. Why: the lookup called `.ok()`, so a session without the kernel took the plain-cast arm
+  and the sink stored an instant into a `TIMESTAMP_NTZ` column as its UTC wall. The internal
+  class is the one the sink's `refuse_coarser_timestamp` (`conform.rs`) uses; Spark has no such
+  statement. Ledger: [write-spine-1](../../../../task/ledgers/staging/write-spine-1-ledger.md).
 - `ntz_store.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the two router predicates
   gain one arm each, so every staged door reaches `repark-functions`'
   `timestamp_ns_cast::store_micros` by type, as INSERT does. `needs_ltz_instant_cast` accepts

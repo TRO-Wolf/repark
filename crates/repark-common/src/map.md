@@ -68,6 +68,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   re-exports them under its existing identifier, so no call site changed. Why: the iceberg write
   path reaches the function kernels by name through the session's function registry, and the
   names were two copies of the same string on each side of the crate line.
+  pins: write-spine-1/C-001
 
 - `zone_horizon.rs` — **C-2d fold 1 (2026-10-07):** the zone horizon, moved here from
   `repark-functions`' `spark_string_timestamp/instant.rs` so the engine can read it too.

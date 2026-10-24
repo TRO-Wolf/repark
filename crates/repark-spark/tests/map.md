@@ -129,6 +129,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
   entry names its own kernel, and the wall names equal `repark-functions`' constants. The ANSI
   door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`. pins: ice-struct-pairing-1/C-014
+  **WRITE-SPINE-1 step 1b (2026-10-24):** `missing_wall_kernel_refuses_instead_of_storing_utc`.
+  In New York, a session that holds `__repark_cast_timestamp_ntz__` stores the instant
+  `2026-01-02 03:04:05.123456+00:00` written `BY NAME` into a `TIMESTAMP_NTZ` column as the
+  session wall `1767305045123456`. The same session with that kernel deregistered refuses the
+  write with the internal error that names the kernel, and the table stays empty. Main stored
+  the UTC wall. Risk: a session built without the kernel stores a wall shifted by the zone
+  offset with no error. pins: write-spine-1/C-002
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
