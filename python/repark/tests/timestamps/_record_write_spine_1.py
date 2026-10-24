@@ -72,7 +72,9 @@ REFUSAL_MARKERS: tuple[str, ...] = (
     "not supported",
     "is not written",
     "cannot be written",
+    "cannot store-assign",
 )
+SPARK_CONDITION = re.compile(r"\[[A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)*\]")
 ICEBERG_GAV = "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 ICEBERG_VERSION = "1.11.0"
 
@@ -480,28 +482,35 @@ def run_children(engine: str, parts: Path, only: str) -> dict[str, dict[str, Any
 
 
 def ordered(answers: dict[str, dict[str, Any]], only: str) -> dict[str, dict[str, Any]]:
-    """Return the answers in corpus order, with every cell's axes."""
-    out: dict[str, dict[str, Any]] = {}
-    for cell in shapes.cells():
-        if only and only not in cell.cell_id:
-            continue
-        spelling = cell.spelling
-        axes = {
-            "spelling": spelling.name,
-            "door": spelling.door,
-            "reach": spelling.reach,
-            "mode": cell.mode,
-            "target": cell.target.tag,
-            "source": cell.source,
-            "zone": cell.zone,
-        }
-        out[cell.cell_id] = {**axes, **answers.get(cell.cell_id, {"step": "unrecorded"})}
-    return out
+    """Return the answers in corpus order; a cell with no answer is marked ``unrecorded``."""
+    return {
+        cell.cell_id: answers.get(cell.cell_id, {"step": "unrecorded"})
+        for cell in shapes.cells()
+        if not only or only in cell.cell_id
+    }
+
+
+def dump_document(document: dict[str, Any]) -> str:
+    """Return the fixture text: the provenance indented, then one line per cell."""
+    lines = json.dumps(document["provenance"], indent=1).splitlines()
+    head = "\n ".join(lines)
+    rows = [
+        f"  {json.dumps(key)}: {json.dumps(answer, separators=(',', ':'))}"
+        for key, answer in document["cells"].items()
+    ]
+    return '{\n "provenance": ' + head + ',\n "cells": {\n' + ",\n".join(rows) + "\n }\n}\n"
 
 
 def is_refusal(answer: dict[str, Any]) -> bool:
-    """Return whether a RePark error reads as a deliberate refusal."""
-    lowered = f"{answer.get('error_class', '')} {answer.get('error', '')}".lower()
+    """Return whether a RePark error reads as a deliberate refusal.
+
+    A refusal names a Spark error condition in brackets, or says it refuses, does not support
+    or cannot store-assign the write. Anything else, an engine or Arrow error included, is not.
+    """
+    text = f"{answer.get('error_class', '')} {answer.get('error', '')}"
+    if SPARK_CONDITION.search(text):
+        return True
+    lowered = text.lower()
     return any(marker in lowered for marker in REFUSAL_MARKERS)
 
 
@@ -552,7 +561,7 @@ def spark_mode(arguments: argparse.Namespace) -> int:
         },
         "cells": cells,
     }
-    arguments.out.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")
+    arguments.out.write_text(dump_document(document), encoding="utf-8")
     print(f"write-spine-1 spark cells={len(cells)} -> {arguments.out}")
     return 0
 
@@ -578,7 +587,9 @@ DOOR_ORDER: tuple[str, ...] = (
     "D20",
     "D21",
 )
-LINE_LIMIT = 140
+LINE_LIMIT = 96
+TABLE_NAME = re.compile(r"`?ice`?\.`?ns`?\.`?t\d+`?")
+AXES: dict[str, shapes.Cell] = {cell.cell_id: cell for cell in shapes.cells()}
 
 
 def answer_text(answer: dict[str, Any]) -> str:
@@ -606,10 +617,10 @@ def census_rows(spark: dict[str, Any], main: dict[str, Any]) -> list[str]:
             for zone in shapes.ZONES:
                 keys = [
                     key
-                    for key, cell in main.items()
-                    if cell["door"] == door
-                    and cell["target"].rsplit("_", 1)[0] == family
-                    and cell["zone"] == zone
+                    for key in main
+                    if AXES[key].spelling.door == door
+                    and AXES[key].target.container == family
+                    and AXES[key].zone == zone
                 ]
                 if not keys:
                     continue
@@ -624,19 +635,45 @@ def census_rows(spark: dict[str, Any], main: dict[str, Any]) -> list[str]:
     return rows
 
 
+def different_rows(spark: dict[str, Any], main: dict[str, Any]) -> list[str]:
+    """Return, per door, the three kinds of ``DIFFERENT`` cell."""
+    rows = [
+        "| door | both answer, another value or type | both raise, another class | "
+        "Spark raises, main answers |",
+        "|---|---|---|---|",
+    ]
+    for door in DOOR_ORDER:
+        kinds = [0, 0, 0]
+        for key, cell in main.items():
+            if AXES[key].spelling.door != door or cell["status"] != DIFFERENT:
+                continue
+            spark_raises = "error" in spark[key]
+            main_raises = "error" in cell
+            if spark_raises and main_raises:
+                kinds[1] += 1
+            elif spark_raises:
+                kinds[2] += 1
+            else:
+                kinds[0] += 1
+        if any(kinds):
+            rows.append(f"| {door} | " + " | ".join(str(kind) for kind in kinds) + " |")
+    return rows
+
+
 def error_rows(main: dict[str, Any]) -> list[str]:
     """Return main's non-EQUAL answers grouped by door, status and first error line."""
     groups: dict[tuple[str, str, str], int] = {}
-    for cell in main.values():
+    for key, cell in main.items():
         if cell["status"] not in RED_STATUSES:
             continue
         if "error" in cell:
-            text = f"{cell['step']}: {cell['error'][:LINE_LIMIT]}"
+            error = TABLE_NAME.sub("<table>", cell["error"])
+            text = f"{cell['step']}: {error[:LINE_LIMIT]}"
         else:
             text = "answers another value or type"
         text = text.replace("|", "\\|")
-        key = (cell["door"], cell["status"], text)
-        groups[key] = groups.get(key, 0) + 1
+        group = (AXES[key].spelling.door, cell["status"], text)
+        groups[group] = groups.get(group, 0) + 1
     rows = ["| door | status | main's answer | cells |", "|---|---|---|---|"]
     for door in DOOR_ORDER:
         for (group_door, status, text), count in sorted(groups.items()):
@@ -646,18 +683,29 @@ def error_rows(main: dict[str, Any]) -> list[str]:
 
 
 def red_set(main: dict[str, Any]) -> list[str]:
-    """Return every cell id main answers differently from Spark, grouped by door."""
+    """Return every cell id main answers differently from Spark, grouped by door.
+
+    One line per ``<spelling>.<mode>.<target>`` prefix lists its ``<source>.<zone>`` suffixes,
+    so each id is the prefix, a dot and one suffix.
+    """
     lines: list[str] = []
     for door in DOOR_ORDER:
-        keys = [key for key, cell in main.items() if cell["door"] == door]
-        red = [key for key in keys if main[key]["status"] in RED_STATUSES]
+        keys = [key for key in main if AXES[key].spelling.door == door]
         if not keys:
             continue
+        red = [key for key in keys if main[key]["status"] in RED_STATUSES]
         lines.extend(["", f"### {door} ({len(red)} of {len(keys)} cells)", ""])
-        if red:
-            lines.extend(["```", *red, "```"])
-        else:
+        if not red:
             lines.append("None.")
+            continue
+        prefixes: dict[str, list[str]] = {}
+        for key in red:
+            cell = AXES[key]
+            prefix = f"{cell.spelling.name}.{cell.mode}.{cell.target.tag}"
+            prefixes.setdefault(prefix, []).append(key.removeprefix(prefix + "."))
+        lines.append("```")
+        lines.extend(f"{prefix}: {' '.join(suffixes)}" for prefix, suffixes in prefixes.items())
+        lines.append("```")
     return lines
 
 
@@ -673,6 +721,10 @@ def census_mode(arguments: argparse.Namespace) -> int:
         "## Census table",
         "",
         *census_rows(spark, main),
+        "",
+        "## The DIFFERENT cells by kind",
+        "",
+        *different_rows(spark, main),
         "",
         "## Main's answers that are not EQUAL, by first line",
         "",
@@ -721,7 +773,7 @@ def main_mode(arguments: argparse.Namespace) -> int:
         "cells": cells,
     }
     out = arguments.out or HERE / f"write_spine_1_main_{arguments.base}.json"
-    out.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")
+    out.write_text(dump_document(document), encoding="utf-8")
     print(f"write-spine-1 main counts={counts} -> {out}")
     return 0
 
