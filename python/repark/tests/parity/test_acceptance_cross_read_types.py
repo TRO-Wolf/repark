@@ -39,3 +39,20 @@ def test_a_flat_nanosecond_field_and_a_bare_string_are_found() -> None:
     assert iceberg_type_has_ns([{"id": 1, "name": "t", "type": "timestamp_ns"}]) is True
     assert iceberg_type_has_ns("timestamptz_ns") is True
     assert iceberg_type_has_ns("timestamp") is False
+
+
+def test_a_map_whose_value_is_a_nanosecond_timestamp_is_found() -> None:
+    assert iceberg_type_has_ns({"type": "map", "key": "string", "value": "timestamp_ns"}) is True
+    assert iceberg_type_has_ns({"type": "map", "key": "timestamp_ns", "value": "string"}) is True
+    assert iceberg_type_has_ns({"type": "map", "key": "string", "value": "timestamp"}) is False
+
+
+def test_the_first_element_of_a_list_is_read_not_only_the_last() -> None:
+    fields = [
+        {"id": 1, "name": "a", "type": "timestamp_ns"},
+        {"id": 2, "name": "b", "type": "long"},
+        {"id": 3, "name": "c", "type": "string"},
+    ]
+    assert iceberg_type_has_ns(fields) is True
+    assert iceberg_type_has_ns(fields[::-1]) is True
+    assert iceberg_type_has_ns(fields[1:]) is False
