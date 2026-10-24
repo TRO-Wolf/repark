@@ -590,16 +590,16 @@ def test_u12_s3_path_write_against_scratch_prefix() -> None:
         getattr(frame.write.mode("ignore"), format_name)(probe)
         getattr(frame.write.mode("append"), format_name)(probe)
         read_options = {"header": True} if format_name == "csv" else {}
-        got = getattr(spark.read, format_name)(probe + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{probe}/", **read_options).collect()
         assert len(got) == 6, f"{format_name} append must add a fresh part"
         getattr(frame.write.mode("overwrite"), format_name)(probe)
-        got = getattr(spark.read, format_name)(probe + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{probe}/", **read_options).collect()
         assert len(got) == 3, f"{format_name} overwrite must replace"
         partitioned = f"{base}/part"
         getattr(frame.write.mode("overwrite").partitionBy("grp"), format_name)(partitioned)
-        got = getattr(spark.read, format_name)(partitioned + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{partitioned}/", **read_options).collect()
         assert len(got) == 3
         empty = f"{base}/empty"
         getattr(frame.limit(0).write.mode("overwrite"), format_name)(empty)
-        got = getattr(spark.read, format_name)(empty + "/", **read_options).collect()
+        got = getattr(spark.read, format_name)(f"{empty}/", **read_options).collect()
         assert len(got) == 0

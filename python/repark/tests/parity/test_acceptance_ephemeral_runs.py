@@ -84,30 +84,33 @@ def test_prefixes_of_different_runs_attempts_and_legs_are_never_a_prefix_of_one_
 
 
 def _scratch_literals(source: str) -> list[tuple[int, str]]:
-    """Non-docstring strings beginning ``testing`` and ``+`` joins with a ``test`` operand."""
+    """Non-docstring strings beginning ``test`` and every ``+`` with a string-constant operand."""
     tree = ast.parse(source)
     docstrings = set()
+    argv_verbs = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
             first = node.body[0] if node.body else None
             if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant):
                 docstrings.add(id(first.value))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.List):
+            argv_verbs.update(
+                id(e) for e in node.elts if isinstance(e, ast.Constant) and e.value == "test"
+            )
     found = []
     for node in ast.walk(tree):
         if (
             isinstance(node, ast.Constant)
             and isinstance(node.value, str)
             and id(node) not in docstrings
-            and node.value.startswith("testing")
+            and id(node) not in argv_verbs
+            and node.value.startswith("test")
         ):
             found.append((node.lineno, node.value))
         if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
             for operand in (node.left, node.right):
-                if (
-                    isinstance(operand, ast.Constant)
-                    and isinstance(operand.value, str)
-                    and operand.value.startswith("test")
-                ):
+                if isinstance(operand, ast.Constant) and isinstance(operand.value, str):
                     found.append((node.lineno, operand.value))
     return found
 
@@ -147,6 +150,12 @@ def test_every_leg_file_names_scratch_tables_through_the_run_prefix(filename: st
         'name = "testing" + f"_mw4_mor_{token}"\n',
         'name = "test" + "ing_" + token\n',
         'name = token + "test" + "ing_"\n',
+        'name = "tes" + "ting_" + f"mw4_mor_{token}"\n',
+        'name = "t" + token\n',
+        'name = token + "x"\n',
+        'name = "testx"\n',
+        'name = f"test{token}"\n',
+        'name = "test"\n',
         'name = "testing"\n',
     ],
 )
@@ -154,6 +163,10 @@ def test_the_literal_scan_catches_every_spelling_of_a_hard_coded_scratch_name(
     source: str,
 ) -> None:
     assert _scratch_literals(source)
+
+
+def test_the_literal_scan_allows_a_dbt_verb_in_an_argument_list() -> None:
+    assert _scratch_literals('_invoke(["test"], root)\n') == []
 
 
 def test_the_literal_scan_allows_the_prefix_function_and_docstrings() -> None:

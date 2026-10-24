@@ -219,6 +219,14 @@ def select_tables(
     return select_older_than(tables, hours, now)
 
 
+def location_is_direct_child(location: str | None, warehouse: str) -> bool:
+    """True when ``location`` is exactly ``<warehouse scratch prefix>/<one segment>``."""
+    if not location:
+        return False
+    parent = location.rstrip("/").rsplit("/", 1)[0] + "/"
+    return parent == scratch_prefix(warehouse)
+
+
 def location_leaf(table: ScratchTable) -> str | None:
     """The last path segment of the table's location, or None without a location."""
     if not table.location:
@@ -239,7 +247,7 @@ def clean_glue(
     sound, twins, anomalies = [], [], []
     for table in chosen:
         leaf = location_leaf(table)
-        if not location_under_scratch(table.location, warehouse):
+        if not location_is_direct_child(table.location, warehouse):
             anomalies.append(table)
         elif leaf == table.name:
             sound.append(table)
