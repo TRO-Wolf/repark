@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from functools import partial
 from typing import NamedTuple
 
@@ -106,6 +106,9 @@ MOR_MIN_POSITION_DELETE_FILES = 5
 EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
 COMMIT_CONFLICT_RETRY_ATTEMPTS = 3
 MAINTENANCE_RETRY_PROCEDURES = 3
+RUN_ID_ENV = "REPARK_ACCEPT_RUN_ID"
+LOCAL_RUN_ID = "0"
+_RUN_ID = re.compile(r"[0-9]+")
 _ACCOUNT_ID = re.compile(r"\b\d{12}\b")
 _DENIAL_ACTION = re.compile(r"perform:\s*(\S+)", re.IGNORECASE)
 _DENIAL_RESOURCE = re.compile(r"resource:\s*(\S+)", re.IGNORECASE)
@@ -120,6 +123,15 @@ def bronze_path(entity: str, ds: str) -> str:
 def fq_table(catalog: str, namespace: str, entity: str) -> str:
     """The three-part fully-qualified table name."""
     return f"{catalog}.{namespace}.{entity}"
+
+
+def run_table_prefix(environ: Mapping[str, str] | None = None) -> str:
+    """The run-owned table prefix ``testing_r<run_id>_``; the id is digits only, default local."""
+    source = os.environ if environ is None else environ
+    run_id = source.get(RUN_ID_ENV) or LOCAL_RUN_ID
+    if _RUN_ID.fullmatch(run_id) is None:
+        raise ValueError(f"{RUN_ID_ENV} must be digits only, got {run_id!r}")
+    return f"{ACCEPTANCE_TABLE_PREFIX}r{run_id}_"
 
 
 def acceptance_namespace_location(warehouse: str) -> str:

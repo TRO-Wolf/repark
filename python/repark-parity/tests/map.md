@@ -1276,6 +1276,8 @@ The live progress-delivery subprocess pin holds the output contract. pins: ice-i
 
 [test_cross_read_progress.py](test_cross_read_progress.py) executes the exact discovery and namespace function ASTs without native-engine or AWS imports (2026-10-24). It pins sorted permanent testing_ selection, flushed table identity before metadata and engine calls, elapsed status output, no false completion, exhaustive outcomes after a first mismatch, the final assertion and empty discovery failure. pins: ice-integrity-pins-1/C-064
 
+[test_cross_read_progress.py](test_cross_read_progress.py) also pins the run-prefix discovery filter (2026-10-24): another run's tables, a longer run id, unprefixed names, temporary views and the bench table are not discovered. pins: aws-ephemeral-runs-1/C-009
+
 [test_cross_read_progress.py](test_cross_read_progress.py) also loads the exact outcome types,
 formatter, assertion and error-first-line helper ASTs (2026-10-24). Eighteen cells pin immediate
 details for EQUAL, DIFFERENT and SPARK-CANNOT-READ, nanosecond flags, absent conditions, 300-character

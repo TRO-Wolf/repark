@@ -33,7 +33,6 @@ from pathlib import Path
 import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
-    ACCEPTANCE_TABLE_PREFIX,
     GLUE_WAREHOUSE,
     S3TABLES_CATALOG,
     SILVER_CATALOG,
@@ -51,6 +50,7 @@ from _acceptance import (
     is_storage_delete_denial,
     merge_sql,
     run_mor_merge_compact_expire,
+    run_table_prefix,
     s3tables_catalog_config,
 )
 from _acceptance_replace import (
@@ -182,7 +182,7 @@ def test_process_silver_acceptance_against_glue() -> None:
         if "exist" not in str(error).lower():
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
-    table = fq_table(SILVER_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
+    table = fq_table(SILVER_CATALOG, ACCEPTANCE_NAMESPACE, f"{run_table_prefix()}{entity}")
     _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)
 
 
@@ -223,7 +223,7 @@ def test_process_silver_acceptance_against_s3tables() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
-    table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
+    table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, f"{run_table_prefix()}{entity}")
     _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)
 
 
@@ -252,7 +252,7 @@ def test_mor_merge_compact_expire_against_glue() -> None:
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}mw4_mor_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}mw4_mor_{uuid.uuid4().hex[:12]}"
     outcome = run_mor_merge_compact_expire(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_mor_maintenance_outcome(spark, outcome)
 
@@ -284,7 +284,7 @@ def test_mor_merge_compact_expire_against_s3tables() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}mw10_mor_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}mw10_mor_{uuid.uuid4().hex[:12]}"
     try:
         outcome = run_mor_merge_compact_expire(
             spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name
@@ -323,7 +323,7 @@ def test_v3_dv_dml_maintenance_against_glue() -> None:
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}v3_dv_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}v3_dv_{uuid.uuid4().hex[:12]}"
     outcome = run_v3_acceptance(
         spark,
         SILVER_CATALOG,
@@ -363,7 +363,7 @@ def test_v3_dv_dml_maintenance_against_s3tables() -> None:
         if "exist" not in str(error).lower():
             raise
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}v3_dv_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}v3_dv_{uuid.uuid4().hex[:12]}"
     table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     try:
         outcome = run_v3_acceptance(spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
@@ -395,7 +395,7 @@ def _run_sql_harden_on_catalog(
         write_bronze_parquet(parquet)
         for program in _PROGRAMS:
             short = program.name.replace("-", "")[:12]
-            stem = f"{ACCEPTANCE_TABLE_PREFIX}h1{short}{uuid.uuid4().hex[:6]}"
+            stem = f"{run_table_prefix()}h1{short}{uuid.uuid4().hex[:6]}"
             stems[program.name] = stem
             results[program.name] = without_meta(
                 as_golden(
@@ -527,7 +527,7 @@ def test_create_or_replace_twice_against_glue() -> None:
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
 
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}replace2_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}replace2_{uuid.uuid4().hex[:12]}"
     outcome = run_create_or_replace_twice(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_replace_twice_outcome(outcome)
 
@@ -552,7 +552,7 @@ def test_create_or_replace_twice_against_s3tables() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
-    table_name = f"{ACCEPTANCE_TABLE_PREFIX}replace2_{uuid.uuid4().hex[:12]}"
+    table_name = f"{run_table_prefix()}replace2_{uuid.uuid4().hex[:12]}"
     outcome = run_create_or_replace_twice(spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_replace_twice_outcome(outcome, exact_counts=False)
 
