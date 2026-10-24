@@ -179,6 +179,31 @@ def test_the_literal_scan_allows_the_prefix_function_and_docstrings() -> None:
     assert _scratch_literals(clean) == []
 
 
+def _call_name(node: ast.AST) -> str | None:
+    """The plain name of a called function, or None."""
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return node.func.id
+    return None
+
+
+def test_the_s3_tables_cross_read_gives_spark_the_rest_block_and_repark_its_own() -> None:
+    source = (_TESTS_DIR / "test_aws_acceptance_cross_read.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    (function,) = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "test_cross_read_s3tables_acceptance_tables"
+    ]
+    calls = [node for node in ast.walk(function) if isinstance(node, ast.Call)]
+    spark_sessions = [c for c in calls if _call_name(c) == "_spark_session_for_catalog"]
+    assert len(spark_sessions) == 1
+    assert _call_name(spark_sessions[0].args[0]) == "s3tables_spark_catalog_config"
+    repark_blocks = [c for c in calls if _call_name(c) == "s3tables_catalog_config"]
+    assert len(repark_blocks) == 1
+    assert repark_blocks[0] not in list(ast.walk(spark_sessions[0]))
+
+
 def test_the_s3_path_write_names_its_objects_through_the_run_object_stem() -> None:
     source = (_TESTS_DIR / "test_aws_acceptance.py").read_text(encoding="utf-8")
     assert "run_object_stem()" in source
