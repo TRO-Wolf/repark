@@ -32,6 +32,7 @@ def test_main_dry_run_lists_everything_and_deletes_nothing(monkeypatch: pytest.M
     factory = _world()
     assert cleanup.main(["--run-prefix", "testing_r12a1_acc_"], factory) == 0
     assert _all_deletes(factory) == []
+    assert all(client.calls for client in factory.clients.values())
     assert factory.built == ["glue", "s3", "s3tables"]
     for service, operation in (("glue", "get_tables"), ("s3tables", "list_tables")):
         assert ("get_paginator", {"name": operation}) in factory.clients[service].calls
@@ -454,3 +455,24 @@ def test_a_nested_location_is_an_anomaly_and_a_direct_child_is_not() -> None:
     assert _deleted(glue, "batch_delete_table")[0]["TablesToDelete"] == [direct.name]
     removed = {e["Key"] for c in _deleted(s3, "delete_objects") for e in c["Delete"]["Objects"]}
     assert removed == {keys[1]}
+
+
+def test_a_sibling_named_leaf_in_a_nested_or_outside_location_is_an_anomaly_not_a_twin(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The anomaly test comes before the twin test: only a direct child can be a twin."""
+    original = _table("testing_r9a1_acc_v3", location=f"{_SCRATCH}/testing_r9a1_acc_v3")
+    nested = _table("testing_r9a1_acc_n", location=f"{_SCRATCH}/other/testing_r9a1_acc_v3")
+    outside = _table("testing_r9a1_acc_o", location="s3://real-bucket/prod/testing_r9a1_acc_v3")
+    keys = [
+        "testing_repark_acceptance/testing_r9a1_acc_v3/f",
+        "testing_repark_acceptance/other/testing_r9a1_acc_v3/f",
+    ]
+    glue, s3 = _Client(), _World({}, keys)
+    chosen = [nested, outside, original]
+    assert cleanup.clean_glue(glue, s3, _WAREHOUSE, chosen, execute=True) == 2
+    assert _deleted(glue, "batch_delete_table")[0]["TablesToDelete"] == [original.name]
+    removed = {e["Key"] for c in _deleted(s3, "delete_objects") for e in c["Delete"]["Objects"]}
+    assert removed == {keys[0]}
+    err = capsys.readouterr().err
+    assert nested.name in err and outside.name in err

@@ -84,7 +84,11 @@ def test_prefixes_of_different_runs_attempts_and_legs_are_never_a_prefix_of_one_
 
 
 def _scratch_literals(source: str) -> list[tuple[int, str]]:
-    """Non-docstring strings beginning ``test`` and every ``+`` with a string-constant operand."""
+    """Non-docstring strings beginning ``test`` and every ``+`` with a string-constant operand.
+
+    Not caught: ``join``, ``%`` formatting, nested f-string expressions, slicing or any run-time
+    composition. The hold for those is the ``run_table_prefix()`` presence check and review.
+    """
     tree = ast.parse(source)
     docstrings = set()
     argv_verbs = set()
