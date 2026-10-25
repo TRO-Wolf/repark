@@ -46,7 +46,7 @@ Single process, one core, local NVMe, this box; `write_files(rows=1_000_000, see
 | **suite** | **171.6 s** | **2 525 MB** | |
 
 Two consequences, and they set §4's decisions. The suite is **minutes, not seconds** — so it
-cannot join `make ci` or the `ci.yml` PR gate, both of which run the parity harness on every push.
+cannot join `make ci` (which runs no Python suite) or the `ci.yml` PR gate. The parity harness runs under `make py-test` and under the `ci.yml` PR gate, which runs it on every push.
 And one full generation is **2.5 GB**, so a cache root that is never cleaned is a
 disk-consumption surface the generators do not currently own.
 
@@ -125,7 +125,7 @@ breaks past 64 rows, and make the cost a recorded fact rather than a surprise.
   asserted present, and `leading_zero_id` keeps a leading zero at the largest emitted index.
 - C — the cache root has a stated eviction door; §1.1's gigabytes are not left to accumulate
   silently. `check-disk-headroom`'s consumer list gains the row.
-- C — `make ci`, `make py-test` and `ci.yml` still run at `small(64, 42)` only. The 1M tier never
+- C — `make py-test` and `ci.yml` still run at `small(64, 42)` only. The 1M tier never
   enters the PR gate.
 
 ### TT-2 — the suite manifest
