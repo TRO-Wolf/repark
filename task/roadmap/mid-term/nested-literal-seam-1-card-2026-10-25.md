@@ -11,3 +11,5 @@
 **Retires:** when the 40 literal cells move to EQUAL under the seam, and the census recount holds at 328 moves with no other cell moving.
 
 **Relation:** WRITE-SPINE-1 step (2), findings F-2 and F-3 in the [step (2) ledger section](../../ledgers/staging/write-spine-1-ledger.md); the census figures are in the [evidence file](../../wo/write-spine-1/evidence/step-2-census-2026-10-25.md).
+
+**Verification round 1, 2026-10-25 (Muse MAX, probe P25):** the same mechanism appears on a partitioned UPDATE target. `UPDATE t SET st = named_struct('a', DATE '2026-01-02') WHERE k = 0` on a partitioned `(id INT, st STRUCT<a: TIMESTAMP>, k INT)` stores `1767312000000000` (UTC, base and head in both zones) where Spark stores the session midnight (New York `1767330000000000`, Kolkata `1767292200000000`). Outside the census; the same fix scope as F-3.

@@ -11,3 +11,5 @@
 **Retires:** a written ruling for D14 to D16 (the Spark zone rule through the stage, or the UTC reading as a documented divergence in parity row R-015 or its successor), with the native-door pins updated to match.
 
 **Relation:** WRITE-SPINE-1 step (2) in the [step (2) ledger section](../../ledgers/staging/write-spine-1-ledger.md).
+
+**Verification round 1, 2026-10-25 (C-027):** the D19 and D20 missing-kernel refusal is an Analysis `UNRESOLVED_ROUTINE` naming the kernel, not the stage's Plan text (pin 2's class on the other routed doors). The outcome matches: the statement refuses before writing and the rows are unchanged. The class is to unify in this unit.

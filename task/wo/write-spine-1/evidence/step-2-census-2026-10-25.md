@@ -2181,3 +2181,56 @@ The 106 cells of `test_the_partition_carve_out_refuses_with_the_workaround` (the
 - `r3_part|v3|cs|part_static|C_case_reordered`
 - `r3_part|v3|cs|part_static|C_case_two_deep`
 - `r3_part|v3|cs|part_static|C_twins`
+
+## Verification round 1: Muse MAX probe table (2026-10-25)
+
+Copied from the Muse MAX critic's round 1 verdict on PR #1189 (head `5ce6524c`, base `cf6641a4`). The critic's scratch paths and per-zone JSON files are not reproduced here. Claims, findings and the ruling (WS2-30) are in the [step (2) ledger](../../../ledgers/staging/write-spine-1-ledger.md), section "Step (2), verification round 1".
+
+### Probe table (28 statements; claim 2; micros or first error class; NY / Kol)
+
+| probe | door | base | head | Spark 4.1.2 | class |
+|---|---|---|---|---|---|
+| P01 BY NAME reorder, date→struct/array LTZ + map NTZ | D3 | UTC ×2 | NY/Kol mid ×2 | NY/Kol mid ×2 | EQUAL (fixed) |
+| P02 non-ASCII target, wall col→nested LTZ | D3 | refuse F4 | refuse F4 | stores | named (F4) |
+| P03 date literal→MAP<TIMESTAMP,STRING> keys | D3 | UTC | UTC | NY/Kol mid | **S1** |
+| P04 overwrite, date col→struct, wall col→array NTZ | D4 | UTC | NY/Kol mid | NY/Kol mid | EQUAL (fixed) |
+| P05 overwrite, date→deep struct2 | D4 | UTC | NY/Kol mid | NY/Kol mid | EQUAL (fixed) |
+| P06 overwrite static PARTITION, date→struct | D4 | UTC | NY/Kol mid | NY/Kol mid | EQUAL (fixed) |
+| P07 overwrite PARTITION, instant col→struct NTZ | D4 | refuse F3 | refuse F3 | stores | named (F3) |
+| P08 MERGE insert, date→array + map LTZ | D7 | UTC ×2 | NY/Kol mid ×2 | NY/Kol mid ×2 | EQUAL (fixed) |
+| P09 two-arm MERGE, date in field + insert arms | D7+D9 | mid+UTC | mid ×2 | mid ×2 | EQUAL (fixed) |
+| P10 MERGE whole-struct date literal | D8 | UTC | UTC | NY/Kol mid | named (F-2) |
+| P11 MERGE SET * with date leaves | D8 | UTC ×2 | NY/Kol mid ×2 | NY/Kol mid ×2 | EQUAL (fixed) |
+| P12 MERGE field, date→nested NTZ | D9 | wall mid | wall mid | wall mid | EQUAL |
+| P13 UPDATE WHERE, wall→map LTZ | D10 | refuse F4 | refuse F4 | stores | named (F4) |
+| P14 UPDATE WHERE multi-assign date→array+map | D10 | UTC ×2 | NY/Kol mid ×2 | NY/Kol mid ×2 | EQUAL (fixed) |
+| P15 UPDATE no WHERE, date→struct | D10 | Arrow err | Arrow err | stores | named (F8/C-024) |
+| P16 UPDATE no WHERE, instant→map NTZ | D10 | refuse F3 | refuse F3 | stores | named (F3) |
+| P17 CONTROL positional date→struct | D1 | NY/Kol mid | NY/Kol mid | NY/Kol mid | EQUAL |
+| P18 CONTROL CTAS date leaf | D6 | date | date | date | EQUAL |
+| P19 subquery date col→array (BY NAME) | D3 | UTC | NY/Kol mid | NY/Kol mid | EQUAL (fixed) |
+| P20 UPDATE add_months WHERE form | D10 | 1769922000000000 | same | same (NY) | EQUAL (WS2-4) |
+| P21 wall literal→map keys | D3 | refuse | refuse | stores | F4-class refuse |
+| P22 instant literal→map NTZ keys | D3 | refuse | refuse | stores | F3-class refuse |
+| P23 NULL leaves beside date | D3 | UTC+Nones | mid+Nones | mid+Nones | EQUAL (fixed) |
+| P24 dynamic PARTITION, date→struct | D4 | UTC | NY/Kol mid | NY/Kol mid | EQUAL (fixed) |
+| P25 UPDATE WHERE on partitioned table, date literal | D10 | UTC | UTC | NY/Kol mid | **S2** (F-3 shape) |
+| P26 MERGE insert, wall literal→array | D7 | refuse F4 | refuse F4 | stores | named (F4) |
+| P27 mixed struct date+text leaves | D3 | refuse | refuse | refuse (same class) | EQUAL |
+| P28 date COLUMN→map keys | D3 | UTC | UTC | NY/Kol mid | **S1** (P03 mech) |
+
+UTC = `1767312000000000`; NY mid = `1767330000000000`; Kol mid = `1767292200000000`; wall mid = `2026-01-02T00:00:00`.
+
+### Recount table (claim 1)
+
+| check | result |
+|---|---|
+| cells compared (whole record) | 12,192, id sets equal |
+| moves | 288, all DIFFERENT→EQUAL |
+| D3 / D4 / D7 / D8 / D10 | 16 / 56 / 96 / 64 / 56 |
+| EQUAL→other | 0 |
+| REFUSED set | 2,380 = 2,380, identical ids |
+| same-status record changes | 0 |
+| move families | all F5 (date/col_date → nested LTZ, NY/Kol only) |
+| D8 stayers | 32, all `merge_update_whole` date literals (F-2) |
+| D10 stayers | 8, all `update_whole_where` struct date/col_date (F-3) |
