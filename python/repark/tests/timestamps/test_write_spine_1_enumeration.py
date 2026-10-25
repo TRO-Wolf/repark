@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 import _write_spine_1_doors as doors
-import pytest
+import _write_spine_1_spellings as corpus
 
 from repark import _native
 
@@ -72,7 +72,9 @@ def test_every_rust_api_only_door_names_a_rust_test_that_exists() -> None:
 
 def test_the_spelling_table_is_exactly_the_forty_one_ruled_names() -> None:
     """The table holds the 41 ruled spelling names on their doors, no more and no fewer."""
-    assert doors.DOOR_SPELLINGS == EXPECTED_DOOR_SPELLINGS
+    assert {door: sorted(names) for door, names in doors.DOOR_SPELLINGS.items()} == {
+        door: sorted(names) for door, names in EXPECTED_DOOR_SPELLINGS.items()
+    }
     assert sum(len(names) for names in doors.DOOR_SPELLINGS.values()) == SPELLING_COUNT
 
 
@@ -101,7 +103,6 @@ def test_the_spark_flag_separates_the_spark_doors_from_the_native_and_streaming_
 
 def test_every_spelling_name_has_its_template_in_the_spelling_corpus() -> None:
     """Each spelling name has an entry, on the same door, with SQL text where it is reachable."""
-    corpus = pytest.importorskip("_write_spine_1_spellings")
     entries = {entry.name: entry for entry in corpus.SPELLINGS}
     for name, door in doors.spelling_doors().items():
         assert name in entries, name
