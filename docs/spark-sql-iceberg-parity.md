@@ -3787,7 +3787,7 @@ still open is `isModifiable`.
   `crates/repark-spark/tests/store_kernel_registry.rs` and
   `crates/repark-sql/tests/ansi_store_kernel_registry.rs` resolve every name of both constants
   on each door (owner, question 47).
-- **Status 2026-10-25 (WRITE-SPINE-1 step 2, PR #NNNN pending):** the conform stage now converts a date into a nested TIMESTAMP outside UTC on D3, D4, D7, D8 and D10 (288 census cells EQUAL); the arm and ZS-9 refusal stay for step 4.
+- **Status 2026-10-25 (WRITE-SPINE-1 step 2, PR #1189):** the conform stage now converts a date into a nested TIMESTAMP outside UTC on D3, D4, D7, D8 and D10 (288 census cells EQUAL); the arm and ZS-9 refusal stay for step 4.
 
 ### ICE-TSNS-SQL-1-R-014 — CLOSED 2026-10-09 for a `timestamp_ns` leaf (refused by R-015); the `VALUES` spelling is row R-018
 
