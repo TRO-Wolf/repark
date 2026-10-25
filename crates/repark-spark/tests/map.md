@@ -307,6 +307,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` holds C-001 and C-004;
   `a_frame_through_a_repartition_or_an_unmodelled_node_refuses` holds C-034, described with
   `ntz_nested_refuse_casts.rs` below.)
+- `ntz_into_ltz_nested.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pin 6, `a_nested_zone_pair_in_an_assignment_names_the_seam`, named by the order (WS2-23). pins: write-spine-1/C-019
 - [ntz_into_ltz_nested.rs](ntz_into_ltz_nested.rs) — **ZONE-SEAM-1 step 3c (2026-10-22, ruling
   ZS-9):** a nested `TIMESTAMP_NTZ` value (a container cast of an instant, a `TIMESTAMP_NTZ`
   literal) into a `STRUCT<v: TIMESTAMP, n: INT>` column refuses outside UTC, with the whole text

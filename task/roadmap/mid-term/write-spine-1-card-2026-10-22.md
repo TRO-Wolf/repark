@@ -53,6 +53,8 @@ fail-closed invariant at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CL
 
 **2026-10-24: step (3b) built (PR #1185), awaiting verification.**
 
+**Step (2), 2026-10-25:** built in three slices (288 census cells move DIFFERENT to EQUAL, all family F5; verification pending). Step (4), the ZS-9 retirement, is next. The figures are in the [step (2) ledger section](../../ledgers/staging/write-spine-1-ledger.md) and the [order's Outcome](../../wo/write-spine-1/order-step-2.md). Cards filed by the step: [NESTED-TEXT-LEAF-STORE-1](nested-text-leaf-store-1-card-2026-10-25.md), [NESTED-LITERAL-SEAM-1](nested-literal-seam-1-card-2026-10-25.md), [NATIVE-DOOR-ZONE-RULING-1](native-door-zone-ruling-1-card-2026-10-25.md).
+
 ## Why this card exists
 
 Four closeout units in October were the same unit in different clothes: U-3 "every staged door

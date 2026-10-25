@@ -381,7 +381,7 @@ repark-core's error map.
   reached the fork's provider `update`, which re-resolved the subquery's output column against
   the target and wrote the row back unchanged with no error. Any other subquery in a SET value
   still leaves this path, unchanged. pins: ice-struct-pairing-1/C-030
-- `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the identity UPDATE hands `wrap_store_outputs` the by-name mode
+- `predicate_dml.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the identity UPDATE hands the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) the by-name mode
   under the statement's case rule (`spec.case_insensitive`) and Spark's empty table label.
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
   scratch refs quote through the split-aware scratch quoter (982 → 983, under the default ceiling).
@@ -642,6 +642,7 @@ repark-core's error map.
   stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
   fold); the ANSI door and bare sessions read it as UTC as before.
   pins: ntz-store-doors-1/C-002, C-003, C-004
+- `ntz_store.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `zone_stores`, `zone_stores_by_name`, `zone_store_frame`, `registered_store_kernel` and `analyzed_types` are deleted from this file; the zone store rule now lives once in `conform_stage.rs`. The entries below name those functions as they stood on their dates. The type helpers and `refuse_ntz_writes` stay here. pins: write-spine-1/C-017
 - `ntz_store.rs`, `store_cast.rs`, `struct_pairing.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):**
   the kernel names these files carried as their own strings are re-exports from
   `repark_common::udf_names` under the existing identifiers: `NTZ_WALL_CAST_UDF_NAME`,
@@ -1299,7 +1300,7 @@ repark-core's error map.
   statement's mode from its state snapshot (`statement_pairing`: by position for an INSERT
   unless the DataFrame door carried `source_by_name`, by name for an UPDATE) and labels the
   table (`table_label`; Spark's empty label for an UPDATE); `conform_values_rows` pairs a
-  `VALUES` row the same way. `wrap_store_outputs` takes the mode and the label from its
+  `VALUES` row the same way. The conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) takes the mode and the label from its
   caller. The test module moved to `store_overflow/tests.rs` (file-size ceiling).
   **Exception round (2026-10-15, verifier 2's V2-02):** `conform_values_rows` first runs
   `refuse_disagreeing_values_rows`. When two rows of a multi-row `VALUES` give a column struct
@@ -1316,12 +1317,12 @@ repark-core's error map.
   source type, target type and column. Constants refuse at plan through `store_fold.rs`
   evaluation; column expressions are wrapped in the checked-cast UDF from `store_cast.rs`,
   and zero-divisor guards are swapped for the store guard so `0/0` and `1/0.0` name the
-  division type, not `DIVIDE_BY_ZERO`. `wrap_store_outputs` is the same conformance for
+  division type, not `DIVIDE_BY_ZERO`. The conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) is the same conformance for
   non-Dml plans (MERGE arms, the UPDATE rewrite, OVERWRITE/BY NAME sources); callers apply
   it between eager analysis and optimization so the optimizer folds the swapped guard.
   `analyzed_store_source` is the shared parse-plus-analyze entry for the raw-SQL internal
   plans. pins: cast-overflow-insert-1 (python/repark/tests/writes/test_cast_overflow_insert_1.py).
-  Re-verify VO3-1 (2026-09-29): `wrap_store_outputs` takes a `gate_op` label and judges
+  Re-verify VO3-1 (2026-09-29): `wrap_store_outputs` (now the conform stage, `conform_stage.rs`) takes a `gate_op` label and judges
   every (source, target) pair with `refuse_unless_write_store_assignable` before building
   the wrap, so a row with both a type refusal and an overflow reports the store refusal
   like Spark; BY NAME passes `Some("append")` and OVERWRITE passes
@@ -1329,7 +1330,7 @@ repark-core's error map.
   UPDATE pass `None` because their ANSI gates already judge before the wrap. OVERWRITE
   targets come from the presented schema and BY NAME targets stay stored, matching each
   door's per-batch write schema (UUID text stores through OVERWRITE, refuses on append).
-  Re-verify VO4-1 (2026-09-30): `wrap_store_outputs` returns a positional source whose
+  Re-verify VO4-1 (2026-09-30): `wrap_store_outputs` (now the conform stage, `conform_stage.rs`) returns a positional source whose
   column count differs from the target count unwrapped and unjudged, so the per-batch
   arity refusal fires exactly as on base; Spark likewise orders arity first
   (`INSERT_COLUMN_ARITY_MISMATCH`).
@@ -1364,7 +1365,7 @@ repark-core's error map.
   Verifier fold VO-1: the bound check judges `value.trunc()`, so a DOUBLE a fraction
   past an integer bound stores the truncated bound, as Spark's ANSI cast does.
 - `predicate_dml.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the UPDATE scratch rewrite
-  plans through `analyzed_store_source` and `wrap_store_outputs`, so per-row fractional
+  plans through `analyzed_store_source` and the conform stage (formerly `wrap_store_outputs`), so per-row fractional
   overflow refuses with the column named. Re-verify VO3-1 (2026-09-29): passes `None`
   for the wrap's gate label — the UPDATE SET gates judge before the rewrite is built.
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
@@ -2020,6 +2021,7 @@ repark-core's error map.
   the engine half (R-21c-1).
   pins: ice-write-options-1/C-008
   pins: ice-write-options-1/C-001, C-002, C-003
+- [conform_stage.rs](conform_stage.rs) — **WRITE-SPINE-1 step 2 (2026-10-25):** the one plan-time conform stage (`conform_stage`, `conform_frame`, `conform_table_frame`, `table_targets`, the stage record). Every routed Iceberg write door passes it, and it applies the leaf zone rule, the floor, pairing, overflow and the nested zone seam, refusing when a kernel is missing. The seam rewrites only an `arrow_cast` whose argument reads a column (findings F-2, F-3). pins: write-spine-1/C-017, C-018, C-019
 
 ## I want to...
 

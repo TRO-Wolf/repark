@@ -144,3 +144,7 @@ guard unreachable (pin 3); C-019 site B names the seam (pin 6); C-020 the fold (
 pairs on every branch (pin 5); C-022 never worse: the census recount; C-023 step-4 evidence: the WS2-9 table,
 OPEN until step 4; C-007 and C-008 close (fail-open paths gone); C-016 closes (the stage sits after the record
 points; the two rows stand as measured, unchanged by design).
+
+## Outcome (2026-10-25)
+
+Built in three slices on `feat/write-spine-1-step-2`: `0db0c3af` (slice 1, the stage and the zone seam), `18baab29` (slice 2, the nanosecond floor through the stage) and `d45eb72d` (slice 3, the staging sink pairs on every branch). The census recount on `d45eb72d` moves 288 cells, every one DIFFERENT to EQUAL and all in family F5, not the sketch's 328: findings F-2 and F-3 keep the 40 nested-literal cells DIFFERENT, as on main. Rulings WS2-25 (the seam rewrites only a column-reading `arrow_cast`; NESTED-LITERAL-SEAM-1 folds before step 4) and WS2-26 (step 4 takes the mutant A+B table, 726 of 976 EQUAL, as its input) are recorded in the step (2) section of the [write-spine-1 ledger](../../ledgers/staging/write-spine-1-ledger.md), with rows C-017 to C-024. Status: pending verification.

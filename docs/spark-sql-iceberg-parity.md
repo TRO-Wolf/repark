@@ -3404,7 +3404,7 @@ still open is `isModifiable`.
 - **Rationale** — FIXED 2026-10-10 by the owner's ruling of that day (Frontier D9). The
   shared store sites named the two wall types and let the zoned nanosecond type fall to a
   plain Arrow cast. One function now names the store kernel of all three
-  (`ntz_store::store_kernel_udf_name`), `zone_stores` maps the Iceberg type, the `UPDATE`
+  (`ntz_store::store_kernel_udf_name`), the conform stage (`conform_stage.rs`; formerly `zone_stores`) maps the Iceberg type, the `UPDATE`
   conform no longer skips zoned targets, and the zoned kernel may answer NULL where the naive
   one may. Ledger `task/ledgers/staging/ice-tstzns-wall-1-ledger.md`.
 
@@ -3787,6 +3787,8 @@ still open is `isModifiable`.
   `crates/repark-spark/tests/store_kernel_registry.rs` and
   `crates/repark-sql/tests/ansi_store_kernel_registry.rs` resolve every name of both constants
   on each door (owner, question 47).
+- **Status 2026-10-25 (WRITE-SPINE-1 step 2, PR #NNNN pending):** the conform stage now converts a date into a nested TIMESTAMP outside UTC on D3, D4, D7, D8 and D10 (288 census cells EQUAL); the arm and ZS-9 refusal stay for step 4.
+
 ### ICE-TSNS-SQL-1-R-014 — CLOSED 2026-10-09 for a `timestamp_ns` leaf (refused by R-015); the `VALUES` spelling is row R-018
 
 - **repark** — on main `40fc916f` none of these stored a value: (1) `UPDATE t SET st = …` or
@@ -3875,6 +3877,8 @@ still open is `isModifiable`.
   leaves only and the gate reads the target column's type alone, so no arm of this row becomes
   unreachable.
 - **Status 2026-10-25 (GATE-RETIRE-1, PR #1187):** unchanged by GATE-RETIRE-1.
+
+- **Status 2026-10-25 (WRITE-SPINE-1 step 2):** unchanged by step 2; D21 and the native doors never reach it (router only).
 
 ### ICE-TSNS-SQL-1-R-016 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): one rule pairs struct fields on every write door, Spark's
 
@@ -3987,7 +3991,7 @@ still open is `isModifiable`.
   `test_the_partition_carve_out_refuses_with_the_workaround` (104 cells) and, for the shapes
   Spark refuses, `test_the_engine_answers_as_spark`.
 - **Rationale** — DATED CARVE-OUT 2026-10-14, owner ruling 58(a) on question 34: the static
-  route (`insert_overwrite.rs` `execute_partition_overwrite`) stages through `zone_stores` with
+  route (`insert_overwrite.rs` `execute_partition_overwrite`) stages through the conform stage (formerly `zone_stores`) with
   no conform, and the dynamic spelling reaches S2 the same way, so both get one guard and the
   H-1 refusal, not a second pairing site. The guard is one check in `conform::entry_store_cast`
   in front of S1, S2 and S3 (owner, question 48); the Rust `append` API and the streaming sink

@@ -285,3 +285,5 @@ tables is their current table UUID, so a future drop-and-recreate cannot collide
 
 The packet exists under `task/wo/microbatch/` with §7 ruled, and the cards MB-0…MB-5 are filed; then
 this file is the dated record and the orders carry the contracts.
+
+**Streaming note (WRITE-SPINE-1 step (2), 2026-10-25, WS2-17):** the micro-batch session must install the dialect kernels before D21 writes a timestamp value that needs a conversion. D21's `append` conforms its frame through the conform stage (site MicroBatchAppend) before the staging write; on a bare `repark-core` session the stage refuses fail-closed with a Plan error that names the missing kernel and the dialects that register it. A session built without the Spark or ANSI dialect refuses that write. Ledger: [write-spine-1](../../../task/ledgers/staging/write-spine-1-ledger.md).
