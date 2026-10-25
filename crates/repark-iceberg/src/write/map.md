@@ -2021,7 +2021,7 @@ repark-core's error map.
   the engine half (R-21c-1).
   pins: ice-write-options-1/C-008
   pins: ice-write-options-1/C-001, C-002, C-003
-- [conform_stage.rs](conform_stage.rs) — **WRITE-SPINE-1 step 2 (2026-10-25):** the one plan-time conform stage (`conform_stage`, `conform_frame`, `conform_table_frame`, `table_targets`, the stage record). Every routed Iceberg write door passes it, and it applies the leaf zone rule, the floor, pairing, overflow and the nested zone seam, refusing when a kernel is missing. The seam rewrites only an `arrow_cast` whose argument reads a column (findings F-2, F-3). pins: write-spine-1/C-017, C-018, C-019
+- [conform_stage.rs](conform_stage.rs) — **WRITE-SPINE-1 step 2 (2026-10-25):** the one plan-time conform stage (`conform_stage`, `conform_frame`, `conform_table_frame`, `table_targets`, the stage record). Every routed Iceberg write door passes it, and it applies the leaf zone rule, the floor, pairing, overflow and the nested zone seam, refusing when a kernel is missing. The seam rewrites only an `arrow_cast` whose argument reads a column (findings F-2, F-3). Fix round 1 (2026-10-25, WS2-27 to WS2-29): the PartitionOverwrite site does not pair a struct at plan time, so the C-031 carve-out stands; a positional width mismatch passes unchanged so the door's arity check answers first. pins: write-spine-1/C-017, C-018, C-019
 
 ## I want to...
 
