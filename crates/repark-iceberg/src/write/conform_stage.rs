@@ -183,6 +183,10 @@ pub fn conform_stage(
     plan: LogicalPlan,
     request: &StageRequest<'_>,
 ) -> Result<LogicalPlan> {
+    if !request.by_name && request.targets.len() != plan.schema().fields().len() {
+        record_site(ctx, request.site);
+        return Ok(plan);
+    }
     let planned = planned_types(ctx, &plan)?;
     let plan = store_leaves(ctx, plan, &planned, request)?;
     let plan = conform_outputs(ctx, plan, &planned, request)?;
@@ -364,20 +368,25 @@ fn conform_outputs(
                 table: request.table,
             },
         };
-        let conformed = conform_one_store_expr(
-            inner,
-            schema.as_ref(),
-            &mut input,
-            column,
-            target_type,
-            flags,
-        )?;
+        let pairs =
+            !(request.site == StageSite::PartitionOverwrite && holds_struct_type(target_type));
+        let conformed = if pairs {
+            conform_one_store_expr(
+                inner,
+                schema.as_ref(),
+                &mut input,
+                column,
+                target_type,
+                flags,
+            )?
+        } else {
+            None
+        };
         let mut touched = conformed.is_some();
         let mut current = conformed.unwrap_or_else(|| inner.clone());
-        if let Some(partial) = planned
-            .get(position)
-            .and_then(|source| nested_partial(request, column, &current, source, target_type))
-        {
+        if let Some(partial) = planned.get(position).and_then(|source| {
+            nested_partial(request, column, &current, source, target_type, pairs)
+        }) {
             current = seam_call(ctx, current, &partial, target_type)?;
             touched = true;
         }
@@ -428,11 +437,12 @@ fn nested_partial(
     current: &Expr,
     source: &DataType,
     target: &DataType,
+    pairs: bool,
 ) -> Option<DataType> {
     if !is_container(target) || matches!(current, Expr::Cast(_) | Expr::TryCast(_)) {
         return None;
     }
-    let value = if holds_struct_type(target) {
+    let value = if pairs && holds_struct_type(target) {
         pair_store_value(request.pairing, request.table, column, source, target)
             .ok()?
             .paired_type()

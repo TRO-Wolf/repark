@@ -24,7 +24,7 @@ pub(crate) async fn conform_types(
         targets: &targets,
         by_name: false,
         fold: true,
-        gate_op: Some("INSERT OVERWRITE"),
+        gate_op: (door.2 == StageSite::InsertOverwrite).then_some("INSERT OVERWRITE"),
         pairing: door.0,
         table: door.1,
     };
