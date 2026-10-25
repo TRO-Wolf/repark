@@ -5,16 +5,18 @@ use datafusion::common::Column;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::FunctionRegistry;
 use datafusion::logical_expr::expr::ScalarFunction;
-use datafusion::logical_expr::{Cast, Expr, LogicalPlan};
+use datafusion::logical_expr::{Cast, Expr, LogicalPlan, ScalarUDF};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::table::Table;
 
 use super::update_cast::incompatible_update_message;
 
-pub const NTZ_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ntz__";
-pub const NS_WALL_CAST_UDF_NAME: &str = "__repark_cast_timestamp_ns__";
-pub const NS_INSTANT_CAST_UDF_NAME: &str = "__repark_cast_timestamptz_ns__";
+pub use repark_common::udf_names::{
+    TIMESTAMP_NS_CAST_NAME as NS_WALL_CAST_UDF_NAME,
+    TIMESTAMP_NTZ_CAST_NAME as NTZ_WALL_CAST_UDF_NAME,
+    TIMESTAMPTZ_NS_CAST_NAME as NS_INSTANT_CAST_UDF_NAME,
+};
 
 #[must_use]
 pub fn is_ntz_wall_target(data_type: &DataType) -> bool {
@@ -214,11 +216,7 @@ fn zone_store_frame(
         .zip(planned.iter().zip(targets))
         .map(|((qualifier, field), (source, target))| {
             let column = Expr::Column(Column::from((qualifier, field.as_ref())));
-            let wall = target
-                .as_ref()
-                .filter(|target| wall_kernel_reads(source, target))
-                .and_then(store_kernel_udf_name)
-                .and_then(|name| ctx.udf(name).ok());
+            let wall = registered_store_kernel(ctx, source, target.as_ref())?;
             let store = match (target, wall) {
                 (_, Some(udf)) => {
                     let value = match wall_kernel_input(source) {
@@ -237,16 +235,36 @@ fn zone_store_frame(
                     let instant = Field::new(field.name(), target.clone(), field.is_nullable());
                     Expr::Cast(Cast::new_from_field(Box::new(column), Arc::new(instant)))
                 }
-                _ => return column,
+                _ => return Ok(column),
             };
             converted = true;
-            store.alias(field.name())
+            Ok(store.alias(field.name()))
         })
-        .collect();
+        .collect::<Result<_>>()?;
     if !converted {
         return Ok(frame);
     }
     frame.select(exprs)
+}
+
+fn registered_store_kernel(
+    ctx: &SessionContext,
+    source: &DataType,
+    target: Option<&DataType>,
+) -> Result<Option<Arc<ScalarUDF>>> {
+    let Some(target) = target.filter(|target| wall_kernel_reads(source, target)) else {
+        return Ok(None);
+    };
+    let Some(name) = store_kernel_udf_name(target) else {
+        return Ok(None);
+    };
+    ctx.udf(name).map(Some).map_err(|_| {
+        DataFusionError::Internal(format!(
+            "the store kernel `{name}` is not registered in this session, so a {source} value \
+             cannot be stored into a {target} column in the session time zone; RePark refuses \
+             the write instead of storing the value as UTC"
+        ))
+    })
 }
 
 #[allow(clippy::missing_errors_doc)]

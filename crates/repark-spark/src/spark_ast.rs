@@ -252,6 +252,7 @@ async fn execute_passthrough_inner(
         crate::spark_door_case_insensitive(state.config().options()),
     )
     .await?;
+    crate::router::door_tag::record_planned_update(ctx, &plan);
     // G5b: a unit-less RANGE offset over datetime is Spark refusal or DAYS, never silent MONTHS.
     let plan = if may_have_bare_range_bound {
         conform_temporal_range_frames(&state, sql, &dialect, plan).await?
@@ -428,6 +429,9 @@ async fn try_execute_identity_dml(
     }
     crate::refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, kind).await?;
     let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
+    if matches!(kind, crate::MorDmlKind::Update) {
+        crate::router::door_tag::record(ctx, crate::write_door::WriteDoor::D10Update);
+    }
     repark_iceberg::write::predicate_dml::execute_predicate_dml(ctx, handle, &allowed.spec).await?;
     Ok(Some(ctx.read_empty()?))
 }

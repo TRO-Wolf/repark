@@ -8,6 +8,22 @@ and the star-sentinel rewrite live here instead of in it.
 
 ## Contents
 
+- `nested_assign.rs` — **WRITE-SPINE-1 step 3a round 2 (2026-10-24):** `fold_merge_clauses`
+  records the doors of the MERGE's arms (`record_merge_doors`) on each path: D7 for every
+  insert arm (`INSERT *` included); D8 for `UPDATE SET *` and for an assignment the fold
+  resolves to a whole struct column (`folds` true, no steps: `paired_assignment_cast_sql`);
+  D9 for an assignment to a field (steps: `paired_nested_cast_sql`) and for an assignment the
+  fold leaves to the executor (a top-level non-struct column, cast by
+  `store_assignment_cast_sql` through `store_kernel_sql`). The door is decided by the fold's
+  own predicates (`resolve_target`, `folds`), not by counting name parts; without a loaded
+  schema an explicit assignment records D9. Pins: `../../tests/write_door_record.rs`.
+  **Round 4 (2026-10-24, orchestrator ruling on the verifier's S2):** the split is the
+  paired-cast path versus the kernel path. `takes_paired_cast` makes a whole array, large or
+  fixed-size list, map or struct column record D8, because the executor's
+  `paired_assignment_cast_sql` casts it with no kernel; a non-container leaf column records
+  D9.
+  pins: write-spine-1/C-011
+
 - `schema_evolution.rs` — the `MERGE WITH SCHEMA EVOLUTION` pre-parse strip: a
   significant-token match on `MERGE` + `WITH` + `SCHEMA` + `EVOLUTION`
   (case-insensitive, comments and whitespace ignored), the four tokens removed

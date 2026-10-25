@@ -124,11 +124,36 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`: in New York and Kolkata the
   six doors refuse the instant with R-011's text and the three seeded rows keep a NULL leaf; in
   UTC they store `1767323045123456`, the wall main stored. pins: ice-ntz-nested-refuse-1/C-002, C-003
+- [write_door_record.rs](write_door_record.rs) — **WRITE-SPINE-1 step 3a round 2 (2026-10-24):**
+  the runtime door record on a production-built Spark session over a memory catalog. One
+  statement per Spark door, each followed by `last_write_doors`: `INSERT … SELECT` D1,
+  `INSERT … BY NAME` D3, a positional `INSERT` into an `accept-any-schema` table D3, `INSERT
+  OVERWRITE` D4, `REPLACE WHERE` D5, CTAS D6, MERGE insert and `INSERT *` D7, MERGE whole-struct
+  update and `SET *` D8, MERGE field update and top-level leaf update D9, a two-arm MERGE
+  `[D8, D7]`, `UPDATE` D10, `DELETE` and `SELECT` nothing, an `INSERT` with a write option D2;
+  a second session with a session write conf records D2 for a plain `INSERT` and nothing for
+  the next `SELECT`. **Round 3 (2026-10-24, ruling Q9):**
+  `an_update_the_fork_provider_runs_records_the_update_door` runs an `UPDATE` with no `WHERE`,
+  which the fork provider runs, and asserts D10 and the stored `k = 5`. **Round 4 (2026-10-24,
+  verifier S1-1 and S2):** `a_merge_records_each_door_once_however_many_arms_take_it` (two field
+  assignments and two insert arms record `[D9, D7]`; the dedupe mutant reds it) and
+  `a_merge_whole_column_update_records_the_cast_path_it_takes` (whole `ARRAY<INT>`,
+  `MAP<STRING, INT>` and `ARRAY<STRUCT<…>>` columns record D8, leaf `TIMESTAMP` and
+  `TIMESTAMP_NTZ` columns D9). Risk: a branch that
+  writes without recording, or a record that survives into the next statement.
+  pins: write-spine-1/C-011
 - [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2
   (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
   entry names its own kernel, and the wall names equal `repark-functions`' constants. The ANSI
   door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`. pins: ice-struct-pairing-1/C-014
+  **WRITE-SPINE-1 step 1b (2026-10-24):** `missing_wall_kernel_refuses_instead_of_storing_utc`.
+  In New York, a session that holds `__repark_cast_timestamp_ntz__` stores the instant
+  `2026-01-02 03:04:05.123456+00:00` written `BY NAME` into a `TIMESTAMP_NTZ` column as the
+  session wall `1767305045123456`. The same session with that kernel deregistered refuses the
+  write with the internal error that names the kernel, and the table stays empty. Main stored
+  the UTC wall. Risk: a session built without the kernel stores a wall shifted by the zone
+  offset with no error. pins: write-spine-1/C-002
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame

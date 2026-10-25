@@ -62,6 +62,7 @@ pub mod view_ddl;
 mod void_type;
 pub mod wap;
 mod window_range;
+pub mod write_door;
 pub(crate) mod write_options;
 mod write_to_branch;
 pub use router::{
@@ -139,9 +140,7 @@ pub use extension::{SparkExtension, session_catalog};
 
 // Test-only imports provide the crate-root scope shared by the leaf modules.
 #[cfg(test)]
-use datafusion::sql::sqlparser::ast::Statement;
-#[cfg(test)]
-use datafusion::{error::DataFusionError, prelude::SessionContext};
+use datafusion::{error::DataFusionError, prelude::SessionContext, sql::sqlparser::ast::Statement};
 #[cfg(test)]
 use iceberg::Catalog;
 #[cfg(test)]

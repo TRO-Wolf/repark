@@ -18,7 +18,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::prelude::SessionContext;
 
-pub const ZONE_SEAM_NAME: &str = "__repark_zone_seam__";
+pub use repark_common::udf_names::ZONE_SEAM_NAME;
 pub const TRY_ZONE_SEAM_NAME: &str = "__repark_try_zone_seam__";
 
 static TO_UTC: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
