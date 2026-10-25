@@ -12,7 +12,12 @@ parent past the 1000-line ceiling; the parent's prose stays in [../map.md](../ma
 - `tests.rs` — the fail-closed read of a column that resolves in no input, the two fail-closed
   arms of the lateral walk (an outer reference no enclosing join resolves, an unmodelled node
   that refers out), and the pure UTC alias set (`only_a_pure_utc_alias_counts_as_utc`), moved
-  unchanged. pins: ice-ntz-nested-refuse-1/C-001, C-042, zone-seam-1/C-024
+  from the parent file. Since GATE-RETIRE-1 (2026-10-25) the three lineage-walker tests take a
+  predicate local to this file that restates the retired R-011 container-cast arm (a `CAST` or
+  `TRY_CAST` whose target holds a naive timestamp and whose input holds a zoned one, or does not
+  resolve). No assertion or expected value changed. pins: ice-ntz-nested-refuse-1/C-001, C-042,
+  zone-seam-1/C-024
+  pins: gate-retire-1/C-003
 
 ## Pointers
 

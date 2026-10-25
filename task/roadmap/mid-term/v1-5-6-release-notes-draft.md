@@ -119,3 +119,5 @@ Tables already written keep the values they hold; this release ships no migratio
   these forms included, refuses with the wrapper's text instead of the G3-E8 text. On
   `repark.sql()` a wrapped write that DataFusion cannot plan keeps DataFusion's own error instead,
   and writes nothing either way.)*
+
+GATE-RETIRE-1 (2026-10-25, PR #1187): R-011's container-cast gate arm, unreachable since ZONE-SEAM-1, is removed with its hint sentence. No cell moved (the step-0 census replayed on the head differs from main in 0 of 12192 cells); a whole-struct `CAST` INSERT of an instant outside UTC stores the session wall, as it did before this unit.

@@ -10,6 +10,8 @@ the architecture unit that makes this a one-site fix; the owner picks the order.
 **2026-10-22:** Folded into WRITE-SPINE-1 step 2 (owner, 2026-10-22, on the crate-boundary
 evaluation's recommendation).
 
+**2026-10-25:** GATE-RETIRE-1 landed (PR #1187).
+
 **Retires:** when the three sites read a nested `TIMESTAMP_NTZ` wall in the session zone, the
 U-8 door matrix's `ltz_nested` cells match Spark 4.1.2 on every store door in New York and
 Kolkata, and ZONE-SEAM-1's refusal (`refuse_naive_into_instant` in

@@ -2609,3 +2609,8 @@ Spark refusal classification remain open. Exact measurements stay in the live-ru
 ICE-INTEGRITY-PINS-1 immediate-detail follow-up records its scoped plan and local validation in the existing ledger (2026-10-24). C-060 remains OPEN.
 
 The ICE-INTEGRITY-PINS-1 ledger gains C-066 to C-070 (2026-10-24): C-060's two halves measured and REJECTED from the first streamed nightly (the Glue walk is a budget finding, the S3 Tables catalog class is absent from both Iceberg 1.11.0 jars), the two AWS-EPHEMERAL-RUNS-1 obligations OPEN, and run 3's pre-streaming stall carried as its own OPEN row.
+- [gate-retire-1-ledger.md](gate-retire-1-ledger.md) —
+  **GATE-RETIRE-1 (2026-10-25), R-011's container-cast arm:** three clauses: the arm and its helper
+  retired with a census recount that moves no cell (C-001), the micros hint sentence removed (C-002),
+  and the step-3 finding that the arm had no refusal pin (C-003). `risk_tier: standard`. Branch
+  `feat/gate-retire-1`.

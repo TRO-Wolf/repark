@@ -5,6 +5,8 @@ measurement it made while parked on its second halt; owner ruling ZS-7 of the sa
 
 **Status:** open. Scheduled as the next Opus unit after GATE-RETIRE-1.
 
+**2026-10-25:** GATE-RETIRE-1 landed (PR #1187).
+
 **Retires:** when `to_utc_timestamp(<instant>, <zone>)` and `from_utc_timestamp(<instant>,
 <zone>)` answer Spark 4.1.2 at every gap and overlap of the measured zones and years, and the
 ZONE-HORIZON-RENDER-1 residue cells of these two functions (below) leave the residue list.

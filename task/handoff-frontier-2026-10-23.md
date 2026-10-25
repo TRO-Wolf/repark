@@ -123,6 +123,7 @@ is open for the next Opus unit the moment the usage ruling lifts.
    `task/ledgers/staging/zone-seam-1-ledger.md` C-001..C-029), parity rows R-011 and R-015 (their
    dated status lines name the arms), and the seam PR body. Refuse only what Spark refuses; every
    removed arm must red the ZONE-ORACLE-1 corpus (1,540/90/10/0 on head) if it were needed.
+   Status 2026-10-25: done, PR #1187.
 4. **WRITE-SPINE-1 step 2**: one plan-time conform function reached by the six self-projecting
    doors, naming the seam kernel; carries the zone rule, the ns floor, the ns-leaf refusal and
    the pairing rule as one stage; folds WRITE-NTZ-TO-LTZ-NESTED-1.
