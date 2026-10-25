@@ -368,6 +368,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `an_update_assigning_a_cross_position_whole_struct_cast_is_refused_outside_utc` and
   `a_merge_updating_a_cross_position_whole_struct_cast_is_refused_outside_utc` (helper `refused_and_seed_only`:
   the same refusal, and the table keeps its seed snapshot only). pins: gate-retire-1/C-002, C-005
+  **Coverage attestation (2026-10-25, ledger C-004):** the GATE-RETIRE-1 attestation is filed from the Muse MAX round-2 verdict on `5b46c6b0` (PASS); its refusal pins are the four new pins above. pins: gate-retire-1/C-004
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
