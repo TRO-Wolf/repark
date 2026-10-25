@@ -356,8 +356,10 @@ async fn the_refusal_names_the_table_the_column_and_the_leaf() {
                     CAST(<value> AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS \
                     TIMESTAMP_NTZ)) in SQL, or col.cast(\"timestamp_ntz\") on the leaf column \
                     of a DataFrame (a CAST written inside expr() is refused), to store the \
-                    session wall time (in an UPDATE assign the field itself), or set \
-                    spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000";
+                    session wall time (a CAST of the whole struct, array or map is refused \
+                    unless its fields line up with the target's, so cast the leaf instead, and \
+                    in an UPDATE assign the field itself), or set spark.sql.session.timeZone to \
+                    UTC for the statement. SQLSTATE: KD000";
     assert!(refused.ends_with(expected), "{refused}");
     let lowered = expected.to_lowercase();
     for word in [
@@ -373,8 +375,7 @@ async fn the_refusal_names_the_table_the_column_and_the_leaf() {
 }
 
 #[tokio::test]
-async fn a_whole_container_cast_of_an_instant_stores_the_session_wall_and_the_hint_no_longer_names_it()
- {
+async fn a_whole_struct_cast_whose_fields_line_up_stores_the_session_wall_and_the_hint_says_so() {
     let (zone, session_wall) = ZONES[0];
     assert_eq!(zone, "America/New_York");
     let session = session(zone);
@@ -402,9 +403,47 @@ async fn a_whole_container_cast_of_an_instant_stores_the_session_wall_and_the_hi
     .await
     .expect_err("refused");
     assert!(refused.contains(HINT), "{refused}");
-    assert!(!refused.contains("whole struct"), "{refused}");
+    assert!(refused.contains("unless its fields line up"), "{refused}");
     let snapshots = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
     assert_eq!(snapshots, vec![Some(1)]);
+}
+
+async fn refused_and_unwritten(column_type: &str, write: &str) {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        &format!(
+            "CREATE TABLE ice.ns.t (id INT, st {column_type}, k INT) USING iceberg \
+             TBLPROPERTIES ('format-version'='2')"
+        ),
+    )
+    .await;
+    let refused = attempt(&session, write).await.expect_err("refused");
+    assert!(refused.contains(HEAD), "{refused}");
+    assert!(refused.contains(HINT), "{refused}");
+    let snapshots = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
+    assert_eq!(snapshots, vec![Some(0)]);
+}
+
+#[tokio::test]
+async fn an_arity_mismatch_whole_struct_cast_is_refused_outside_utc_and_writes_nothing() {
+    refused_and_unwritten(
+        "STRUCT<a: TIMESTAMP_NTZ>",
+        "INSERT INTO ice.ns.t SELECT id, CAST(named_struct('a', x, 'b', 1) AS STRUCT<a: \
+         TIMESTAMP_NTZ>), 0 FROM ice.ns.src",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_cross_position_try_cast_of_a_whole_struct_is_refused_outside_utc_and_writes_nothing() {
+    refused_and_unwritten(
+        "STRUCT<a: INT, b: TIMESTAMP_NTZ>",
+        "INSERT INTO ice.ns.t SELECT id, TRY_CAST(named_struct('a', x, 'b', 1) AS STRUCT<a: INT, \
+         b: TIMESTAMP_NTZ>), 0 FROM ice.ns.src",
+    )
+    .await;
 }
 
 async fn stored_by(

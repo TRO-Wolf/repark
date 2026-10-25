@@ -17,7 +17,9 @@ const MICROS_HINT: &str = "A value that is not provably a TIMESTAMP_NTZ wall tim
                            AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS TIMESTAMP_NTZ)) in \
                            SQL, or col.cast(\"timestamp_ntz\") on the leaf column of a \
                            DataFrame (a CAST written inside expr() is refused), to store the \
-                           session wall time (in an UPDATE assign the field itself), or set \
+                           session wall time (a CAST of the whole struct, array or map is \
+                           refused unless its fields line up with the target's, so cast the \
+                           leaf instead, and in an UPDATE assign the field itself), or set \
                            spark.sql.session.timeZone to UTC for the statement.";
 
 const INSTANT_HINT: &str = "The session time zone is not UTC, and a nested TIMESTAMP_NTZ value \
@@ -204,6 +206,11 @@ pub fn holds_zoned_timestamp(data_type: &DataType) -> bool {
 #[must_use]
 pub fn holds_naive_timestamp(data_type: &DataType) -> bool {
     holds_timestamp(data_type, false)
+}
+
+#[must_use]
+pub fn casts_zoned_to_naive(source: &DataType, target: &DataType) -> bool {
+    holds_zoned_timestamp(source) && holds_naive_timestamp(target)
 }
 
 fn holds_timestamp(data_type: &DataType, zoned: bool) -> bool {

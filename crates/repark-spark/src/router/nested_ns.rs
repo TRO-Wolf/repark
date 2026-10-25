@@ -21,9 +21,9 @@ use repark_functions::decimal_cast::SPARK_NONNULL_NAME;
 use repark_functions::session_time_zone::session_time_zone_from_options;
 use repark_functions::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
 use repark_iceberg::write::nested_ns_gate::{
-    Feed, InsertSupply, NaiveLeaf, NestedSupply, NestedWrite, holds_naive_timestamp,
-    holds_zoned_timestamp, lands_on_naive_leaf, naive_into_instant, nested_naive_refusal,
-    nested_supplies, refuse_nested_ns_supply, type_at,
+    Feed, InsertSupply, NaiveLeaf, NestedSupply, NestedWrite, casts_zoned_to_naive,
+    holds_naive_timestamp, holds_zoned_timestamp, lands_on_naive_leaf, naive_into_instant,
+    nested_naive_refusal, nested_supplies, refuse_nested_ns_supply, type_at,
 };
 use repark_iceberg::write::statement_writes::executed_writes;
 
@@ -510,6 +510,7 @@ async fn proven_naive(
         || fields
             .iter()
             .any(|field| holds_zoned_timestamp(field.data_type()))
+        || lineage_has(&plan, &columns, casts_a_zoned_value_to_naive)
     {
         return false;
     }
@@ -550,6 +551,7 @@ async fn naive_columns(
         .iter()
         .filter_map(|index| fields.get(*index))
         .any(|field| holds_zoned_timestamp(field.data_type()))
+        && !lineage_has(&plan, &picked, casts_a_zoned_value_to_naive)
 }
 
 async fn planned(
@@ -834,6 +836,18 @@ fn plan_has(plan: &LogicalPlan, test: Test) -> bool {
         }
     }
     false
+}
+
+fn casts_a_zoned_value_to_naive(expr: &Expr, schema: &DFSchema) -> bool {
+    let (input, target) = match expr {
+        Expr::Cast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        Expr::TryCast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        _ => return false,
+    };
+    holds_naive_timestamp(target)
+        && input
+            .get_type(schema)
+            .map_or(true, |source| casts_zoned_to_naive(&source, target))
 }
 
 fn refers_out(expr: &Expr, _: &DFSchema) -> bool {
