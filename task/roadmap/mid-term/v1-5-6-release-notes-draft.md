@@ -11,6 +11,8 @@ WRITE-BODY-CARRIERS-1, the fork repins RP-58 and RP-59). Their lines moved to
 [the v1.5.5 notes](v1-5-5-release-notes-2026-10-13.md) under "Added by the re-pointed tag". What
 stays here merged after `7fb5f6b2`.
 
+WRITE-SPINE-1 step (3b) (PR #1185, awaiting verification) is test-only: it changes no stored value, so it adds no bullet below.
+
 ## Stored values that change
 
 - **`map(<key>, <non-literal value>)` stores and answers (MAP-COLUMN-PANIC-1).** `SELECT map('a', id)` and `INSERT INTO t SELECT id, map('a', id)` over a column, a function or a cast value panicked `list array` (one source row) or raised `map requires key and value lists to have the same length` (several rows); they now answer Spark's rows and type on every door (`spark.sql`, `selectExpr`, `expr`, a string `filter`, INSERT, UPDATE, MERGE). A repeated key raises Spark's `[DUPLICATED_MAP_KEY]` message and a NULL key `[NULL_MAP_KEY]`, where DataFusion's `map key must be unique` and `map key cannot be null` came out; an odd argument count raises `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` with the count on `spark.sql`. A map whose keys and values are all literals is unchanged.
