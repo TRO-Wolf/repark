@@ -1,9 +1,18 @@
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, AsArray, Int32Array, RecordBatch};
-use datafusion::arrow::datatypes::{DataType, Field, Int32Type, Schema};
-use iceberg::{NamespaceIdent, TableIdent};
+use datafusion::arrow::compute::cast;
+use datafusion::arrow::datatypes::{DataType, Field, Int32Type, Int64Type, Schema};
+use iceberg::spec::{NestedField, PrimitiveType, Schema as IcebergSchema, Type};
+use iceberg::{NamespaceIdent, TableCreation, TableIdent};
 use repark_core::{ReparkSession, SqlDialect};
+use repark_iceberg::write::conform_stage::{
+    clear_stage_record, install_stage_record, last_stage_sites,
+};
+use repark_iceberg::write::ntz_store::NTZ_WALL_CAST_UDF_NAME;
+use repark_iceberg::write::{StageSite, conform_table_frame};
+use repark_spark::write_door::{WriteDoor, last_write_doors};
+use repark_spark::{SparkDialect, SparkExtension};
 use repark_sql::AnsiDialect;
 use tempfile::TempDir;
 
@@ -128,4 +137,324 @@ async fn d20_native_update_and_delete_change_the_rows() {
     run(&session, "UPDATE ice.ns.t SET k = 3 WHERE id = 1").await;
     run(&session, "DELETE FROM ice.ns.t WHERE id = 8").await;
     assert_eq!(rows(&session, "ice.ns.t").await, [(1, 3)]);
+}
+
+const INSTANT_LITERAL: &str = "TIMESTAMP '2026-01-02 03:04:05.123456+00:00'";
+const MISSING_WALL_KERNEL: &str = "the store kernel `__repark_cast_timestamp_ntz__` is not \
+                                   registered in this session";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Route {
+    Stage(&'static [StageSite]),
+    PlanConformed,
+    TypesCopied,
+    ForkProvider,
+    NativeStager,
+    Control,
+}
+
+fn route_of(door: WriteDoor) -> Route {
+    match door {
+        WriteDoor::D1Insert | WriteDoor::D2InsertOptions | WriteDoor::D5ReplaceWhere => {
+            Route::PlanConformed
+        }
+        WriteDoor::D6Ctas | WriteDoor::D17NativeCtas => Route::TypesCopied,
+        WriteDoor::D14NativeInsert => Route::ForkProvider,
+        WriteDoor::D15NativeInsertConf | WriteDoor::D16NativeOverwritePartition => {
+            Route::NativeStager
+        }
+        WriteDoor::D18NativeAppendApi => Route::Control,
+        WriteDoor::D3InsertByName => Route::Stage(&[StageSite::InsertByName]),
+        WriteDoor::D4InsertOverwrite => {
+            Route::Stage(&[StageSite::InsertOverwrite, StageSite::PartitionOverwrite])
+        }
+        WriteDoor::D7MergeInsert => Route::Stage(&[StageSite::MergeInsert]),
+        WriteDoor::D8MergeUpdateStruct | WriteDoor::D9MergeUpdateField => {
+            Route::Stage(&[StageSite::MergeUpdate])
+        }
+        WriteDoor::D10Update | WriteDoor::D20NativePredicateDml => {
+            Route::Stage(&[StageSite::PredicateUpdate])
+        }
+        WriteDoor::D19NativeMerge => {
+            Route::Stage(&[StageSite::MergeInsert, StageSite::MergeUpdate])
+        }
+        WriteDoor::D21MicroBatchSink => Route::Stage(&[StageSite::MicroBatchAppend]),
+    }
+}
+
+fn spark_door(zone: &str) -> ReparkSession {
+    let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
+    ReparkSession::builder()
+        .with_extension(Arc::new(SparkExtension))
+        .with_sql_dialect(dialect)
+        .config("spark.sql.session.timeZone", zone)
+        .build()
+        .expect("spark session")
+}
+
+async fn attempt(session: &ReparkSession, sql: &str) -> Result<(), String> {
+    match session.sql(sql).await {
+        Ok(frame) => frame
+            .collect()
+            .await
+            .map(|_| ())
+            .map_err(|error| error.to_string()),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+async fn spark_tables(session: &ReparkSession) -> TempDir {
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    for setup in [
+        "CREATE NAMESPACE ice.ns".to_string(),
+        "CREATE TABLE ice.ns.src (id INT, x TIMESTAMP) USING iceberg".to_string(),
+        format!("INSERT INTO ice.ns.src VALUES (1, {INSTANT_LITERAL})"),
+        "CREATE TABLE ice.ns.t (id INT, ts TIMESTAMP_NTZ) USING iceberg".to_string(),
+        "INSERT INTO ice.ns.t VALUES (1, TIMESTAMP_NTZ '2020-01-01 00:00:00')".to_string(),
+        "CREATE TABLE ice.ns.st (id INT, st STRUCT<a: TIMESTAMP>) USING iceberg".to_string(),
+        "INSERT INTO ice.ns.st VALUES (1, named_struct('a', TIMESTAMP '2020-01-01 00:00:00'))"
+            .to_string(),
+        "CREATE TABLE ice.ns.p (id INT, ts TIMESTAMP_NTZ, k INT) USING iceberg PARTITIONED BY (k)"
+            .to_string(),
+    ] {
+        assert_eq!(attempt(session, &setup).await, Ok(()), "{setup}");
+    }
+    warehouse
+}
+
+fn spark_spellings(door: WriteDoor) -> &'static [&'static str] {
+    match door {
+        WriteDoor::D3InsertByName => {
+            &["INSERT INTO ice.ns.t BY NAME SELECT id, x AS ts FROM ice.ns.src"]
+        }
+        WriteDoor::D4InsertOverwrite => &[
+            "INSERT OVERWRITE ice.ns.t SELECT id, x FROM ice.ns.src",
+            "INSERT OVERWRITE ice.ns.p PARTITION (k = 0) SELECT id, x FROM ice.ns.src",
+        ],
+        WriteDoor::D7MergeInsert => &[
+            "MERGE INTO ice.ns.t AS t USING ice.ns.src AS s ON t.id = s.id + 100 \
+             WHEN NOT MATCHED THEN INSERT (id, ts) VALUES (s.id, s.x)",
+        ],
+        WriteDoor::D8MergeUpdateStruct => &[
+            "MERGE INTO ice.ns.st AS t USING ice.ns.src AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET st = named_struct('a', s.x)",
+        ],
+        WriteDoor::D9MergeUpdateField => &[
+            "MERGE INTO ice.ns.t AS t USING ice.ns.src AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET ts = s.x",
+        ],
+        WriteDoor::D10Update => {
+            &["UPDATE ice.ns.t SET ts = TIMESTAMP '2026-01-02 03:04:05.123456+00:00' WHERE id >= 0"]
+        }
+        _ => &[],
+    }
+}
+
+async fn spark_stage_sites(session: &ReparkSession, sql: &str) -> (Vec<WriteDoor>, Vec<StageSite>) {
+    let ctx = session.context();
+    clear_stage_record(ctx);
+    assert_eq!(attempt(session, sql).await, Ok(()), "{sql}");
+    (last_write_doors(ctx), last_stage_sites(ctx))
+}
+
+async fn native_stage_sites(sql: &str) -> Vec<StageSite> {
+    let (session, _warehouse) = ansi_door().await;
+    install_stage_record(session.context());
+    clear_stage_record(session.context());
+    run(&session, sql).await;
+    last_stage_sites(session.context())
+}
+
+async fn micro_batch_stage_sites() -> Vec<StageSite> {
+    let (session, _warehouse) = ansi_door().await;
+    let ctx = session.context();
+    install_stage_record(ctx);
+    let sink = load(&session, "t").await;
+    let frame = session.sql("SELECT 2 AS id, 0 AS k").await.expect("frame");
+    conform_table_frame(ctx, &sink, frame, StageSite::MicroBatchAppend)
+        .await
+        .expect("the micro-batch frame conforms");
+    last_stage_sites(ctx)
+}
+
+async fn micro_sink(session: &ReparkSession, warehouse: &TempDir) -> iceberg::table::Table {
+    let catalog = session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("catalog");
+    let namespace = NamespaceIdent::new("ns".to_string());
+    catalog
+        .create_namespace(&namespace, std::collections::HashMap::new())
+        .await
+        .expect("namespace");
+    let schema = IcebergSchema::builder()
+        .with_fields(vec![
+            NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            NestedField::optional(2, "ts", Type::Primitive(PrimitiveType::Timestamp)).into(),
+        ])
+        .build()
+        .expect("schema");
+    let location = format!("{}/ns/t", warehouse.path().display());
+    let creation = TableCreation::builder()
+        .name("t".to_string())
+        .location(location)
+        .schema(schema)
+        .properties(std::collections::HashMap::new())
+        .build();
+    catalog
+        .create_table(&namespace, creation)
+        .await
+        .expect("table")
+}
+
+async fn load(session: &ReparkSession, table: &str) -> iceberg::table::Table {
+    let catalog = session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("catalog");
+    catalog
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("ns".to_string()),
+            table.to_string(),
+        ))
+        .await
+        .expect("table")
+}
+
+#[tokio::test]
+async fn every_value_writing_door_passes_the_stage() {
+    let spark = spark_door("America/New_York");
+    let _warehouse = spark_tables(&spark).await;
+    install_stage_record(spark.context());
+    for door in WriteDoor::ALL {
+        let Route::Stage(expected) = route_of(door) else {
+            continue;
+        };
+        let recorded = match door {
+            WriteDoor::D19NativeMerge => {
+                native_stage_sites(
+                    "MERGE INTO ice.ns.t t USING (SELECT 1 AS id, 9 AS k UNION ALL SELECT 7 AS \
+                     id, 0 AS k) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET k = s.k \
+                     WHEN NOT MATCHED THEN INSERT (id, k) VALUES (s.id, s.k)",
+                )
+                .await
+            }
+            WriteDoor::D20NativePredicateDml => {
+                native_stage_sites("UPDATE ice.ns.t SET k = 3 WHERE id = 1").await
+            }
+            WriteDoor::D21MicroBatchSink => micro_batch_stage_sites().await,
+            spark_door_id => {
+                let mut sites = Vec::new();
+                for sql in spark_spellings(spark_door_id) {
+                    let (doors, staged) = spark_stage_sites(&spark, sql).await;
+                    assert!(doors.contains(&spark_door_id), "{sql}: {doors:?}");
+                    sites.extend(staged);
+                }
+                sites
+            }
+        };
+        let mut recorded = recorded;
+        recorded.sort_by_key(|site| format!("{site:?}"));
+        recorded.dedup();
+        let mut wanted = expected.to_vec();
+        wanted.sort_by_key(|site| format!("{site:?}"));
+        assert_eq!(recorded, wanted, "{door:?} skipped the stage");
+    }
+    let unrouted: Vec<WriteDoor> = WriteDoor::ALL
+        .into_iter()
+        .filter(|door| !matches!(route_of(*door), Route::Stage(_)))
+        .collect();
+    assert_eq!(
+        unrouted,
+        [
+            WriteDoor::D1Insert,
+            WriteDoor::D2InsertOptions,
+            WriteDoor::D5ReplaceWhere,
+            WriteDoor::D6Ctas,
+            WriteDoor::D14NativeInsert,
+            WriteDoor::D15NativeInsertConf,
+            WriteDoor::D16NativeOverwritePartition,
+            WriteDoor::D17NativeCtas,
+            WriteDoor::D18NativeAppendApi,
+        ]
+    );
+}
+
+async fn stored_ts(session: &ReparkSession, table: &str) -> Vec<i64> {
+    let batches = session
+        .sql(&format!("SELECT ts FROM {table} ORDER BY id"))
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    let mut values = Vec::new();
+    for batch in &batches {
+        let ticks = cast(batch.column(0), &DataType::Int64).expect("ticks");
+        let ticks = ticks.as_primitive::<Int64Type>();
+        values.extend(
+            (0..ticks.len())
+                .filter(|row| !ticks.is_null(*row))
+                .map(|row| ticks.value(row)),
+        );
+    }
+    values
+}
+
+#[tokio::test]
+async fn a_missing_kernel_refuses_on_every_routed_door() {
+    let session = spark_door("America/New_York");
+    let _warehouse = spark_tables(&session).await;
+    let before = stored_ts(&session, "ice.ns.t").await;
+    session.context().deregister_udf(NTZ_WALL_CAST_UDF_NAME);
+    for door in [
+        WriteDoor::D3InsertByName,
+        WriteDoor::D4InsertOverwrite,
+        WriteDoor::D7MergeInsert,
+        WriteDoor::D9MergeUpdateField,
+        WriteDoor::D10Update,
+    ] {
+        let sql = spark_spellings(door)[0];
+        let refusal = attempt(&session, sql)
+            .await
+            .expect_err("a write that needs a missing kernel refuses");
+        assert!(
+            refusal.contains(MISSING_WALL_KERNEL) || refusal.contains(NTZ_WALL_CAST_UDF_NAME),
+            "{door:?}: {refusal}"
+        );
+        assert_eq!(
+            stored_ts(&session, "ice.ns.t").await,
+            before,
+            "{door:?} stored a value"
+        );
+    }
+    let bare = ReparkSession::builder().build().expect("bare session");
+    let warehouse = TempDir::new().expect("warehouse");
+    bare.register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    let sink = micro_sink(&bare, &warehouse).await;
+    let frame = bare
+        .sql("SELECT 1 AS id, arrow_cast(0, 'Timestamp(µs, \"UTC\")') AS ts")
+        .await
+        .expect("frame");
+    let refusal = conform_table_frame(bare.context(), &sink, frame, StageSite::MicroBatchAppend)
+        .await
+        .expect_err("the micro-batch sink refuses without the wall kernel");
+    assert!(
+        refusal.to_string().contains(MISSING_WALL_KERNEL),
+        "{refusal}"
+    );
+    assert!(
+        refusal
+            .to_string()
+            .contains("the Spark dialect or the ANSI dialect"),
+        "{refusal}"
+    );
 }

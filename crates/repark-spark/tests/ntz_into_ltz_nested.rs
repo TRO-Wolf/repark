@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef, AsArray};
 use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::{DataType, Int64Type};
+use datafusion::arrow::datatypes::{DataType, Field, Fields, Int64Type, TimeUnit};
 use repark_core::ReparkSession;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
@@ -758,4 +758,83 @@ async fn a_plain_update_whose_only_naive_leaf_is_a_try_cast_stores_spark_instant
         }
     }
     assert_eq!(wrong, Vec::<String>::new());
+}
+
+const NEW_YORK_MIDNIGHT: i64 = 1_767_330_000_000_000;
+
+async fn staged_assignment(
+    session: &ReparkSession,
+    source_sql: &str,
+    target: &DataType,
+) -> datafusion::logical_expr::LogicalPlan {
+    let text = repark_iceberg::write::update_cast::nested_leaf_cast_sql("s.v", target);
+    assert!(text.starts_with("arrow_cast(("), "site B text: {text}");
+    let sql = format!("SELECT {text} AS v FROM ({source_sql}) AS s");
+    let state = session.context().state();
+    let plan = state.create_logical_plan(&sql).await.expect("plan");
+    let plan = state
+        .analyzer()
+        .execute_and_check(plan, state.config_options(), |_, _| {})
+        .expect("analyzed");
+    let targets = vec![("v".to_string(), target.clone())];
+    let request = repark_iceberg::write::StageRequest {
+        site: repark_iceberg::write::StageSite::MergeUpdate,
+        targets: &targets,
+        by_name: true,
+        fold: false,
+        gate_op: None,
+        pairing: repark_iceberg::write::struct_pairing::StructPairing::by_name(false),
+        table: "``",
+    };
+    repark_iceberg::write::conform_stage(session.context(), plan, &request).expect("stage")
+}
+
+fn instant_type() -> DataType {
+    DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("+00:00")))
+}
+
+#[tokio::test]
+async fn a_nested_zone_pair_in_an_assignment_names_the_seam() {
+    let session = session("America/New_York");
+    let target = DataType::Struct(Fields::from(vec![Field::new("a", instant_type(), true)]));
+    let staged = staged_assignment(
+        &session,
+        "SELECT named_struct('a', DATE '2026-01-02') AS v",
+        &target,
+    )
+    .await;
+    let shown = staged.display_indent().to_string();
+    assert!(
+        shown.contains("arrow_cast(__repark_zone_seam__("),
+        "{shown}"
+    );
+    let batches = session
+        .context()
+        .execute_logical_plan(staged)
+        .await
+        .expect("frame")
+        .collect()
+        .await
+        .expect("collect");
+    assert_eq!(leaf(batches[0].column(0)), vec![Some(NEW_YORK_MIDNIGHT)]);
+
+    let text_target = DataType::List(Arc::new(Field::new("element", instant_type(), true)));
+    let text_staged = staged_assignment(
+        &session,
+        "SELECT array('2026-01-02 03:04:05.123456') AS v",
+        &text_target,
+    )
+    .await;
+    let text_shown = text_staged.display_indent().to_string();
+    assert!(!text_shown.contains("__repark_zone_seam__"), "{text_shown}");
+    let leaf_target = instant_type();
+    let leaf_staged =
+        staged_assignment(&session, "SELECT DATE '2026-01-02' AS v", &leaf_target).await;
+    assert!(
+        !leaf_staged
+            .display_indent()
+            .to_string()
+            .contains("__repark_zone_seam__"),
+        "a top-level pair keeps its text"
+    );
 }

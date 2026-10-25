@@ -14,6 +14,7 @@ pub fn register_udf_families(ctx: &SessionContext) {
     crate::temporal_ctor::register(ctx);
     crate::higher_order::register(ctx);
     crate::zone_seam::register(ctx);
+    ctx.register_udf(crate::zone_seam::zone_seam_udf(false).as_ref().clone());
 }
 
 #[must_use]

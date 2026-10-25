@@ -38,6 +38,11 @@ impl SqlDialect for AnsiDialect {
                 .as_ref()
                 .clone(),
         );
+        ctx.register_udf(
+            repark_functions::zone_seam::zone_seam_udf(false)
+                .as_ref()
+                .clone(),
+        );
         for zoned in [false, true] {
             ctx.register_udf(
                 repark_functions::timestamp_ns_cast::timestamp_ns_cast_udf(zoned)
