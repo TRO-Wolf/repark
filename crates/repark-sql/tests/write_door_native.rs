@@ -10,7 +10,10 @@ use repark_iceberg::write::conform_stage::{
     clear_stage_record, install_stage_record, last_stage_sites,
 };
 use repark_iceberg::write::ntz_store::NTZ_WALL_CAST_UDF_NAME;
-use repark_iceberg::write::{StageSite, conform_table_frame};
+use repark_iceberg::write::{
+    StageSite, concurrency_from_ctx, conform_table_frame, resolve_empty_session_write,
+    stage_overwrite_files_with,
+};
 use repark_spark::write_door::{WriteDoor, last_write_doors};
 use repark_spark::{SparkDialect, SparkExtension};
 use repark_sql::AnsiDialect;
@@ -457,4 +460,153 @@ async fn a_missing_kernel_refuses_on_every_routed_door() {
             .contains("the Spark dialect or the ANSI dialect"),
         "{refusal}"
     );
+}
+
+const FLOORED_MICROS: i64 = -1;
+
+fn ns_door() -> ReparkSession {
+    let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
+    ReparkSession::builder()
+        .with_extension(Arc::new(SparkExtension))
+        .with_sql_dialect(dialect)
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .build()
+        .expect("spark session")
+}
+
+async fn ns_tables(session: &ReparkSession) -> TempDir {
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    for setup in [
+        "CREATE NAMESPACE ice.ns",
+        "CREATE TABLE ice.ns.src (id INT, ns timestamp_ns) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO ice.ns.src SELECT 1, arrow_cast(-1, 'Timestamp(ns)')",
+        "CREATE TABLE ice.ns.t (id INT, ts TIMESTAMP_NTZ) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+        "CREATE TABLE ice.ns.u (id INT, ns timestamp_ns, ts TIMESTAMP_NTZ) USING iceberg \
+         TBLPROPERTIES ('format-version'='3')",
+        "INSERT INTO ice.ns.u SELECT 1, arrow_cast(-1, 'Timestamp(ns)'), CAST(NULL AS TIMESTAMP_NTZ)",
+    ] {
+        assert_eq!(attempt(session, setup).await, Ok(()), "{setup}");
+    }
+    warehouse
+}
+
+#[tokio::test]
+async fn the_sink_guard_never_fires_on_a_routed_door() {
+    let spark = ns_door();
+    let _warehouse = ns_tables(&spark).await;
+    for (door, sql) in [
+        (
+            "D3",
+            "INSERT INTO ice.ns.t BY NAME SELECT id, ns AS ts FROM ice.ns.src",
+        ),
+        (
+            "D4",
+            "INSERT OVERWRITE ice.ns.t SELECT id, ns FROM ice.ns.src",
+        ),
+        (
+            "D7",
+            "MERGE INTO ice.ns.t AS t USING ice.ns.src AS s ON t.id = s.id + 100 \
+             WHEN NOT MATCHED THEN INSERT (id, ts) VALUES (s.id + 1, s.ns)",
+        ),
+        (
+            "D9",
+            "MERGE INTO ice.ns.t AS t USING ice.ns.src AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET ts = s.ns",
+        ),
+    ] {
+        assert_eq!(attempt(&spark, sql).await, Ok(()), "{door}: {sql}");
+        let stored = stored_ts(&spark, "ice.ns.t").await;
+        assert!(
+            stored.iter().all(|value| *value == FLOORED_MICROS),
+            "{door}: {stored:?}"
+        );
+    }
+    assert_eq!(
+        attempt(&spark, "UPDATE ice.ns.u SET ts = ns WHERE id >= 0").await,
+        Ok(()),
+        "D10"
+    );
+    assert_eq!(stored_ts(&spark, "ice.ns.u").await, [FLOORED_MICROS], "D10");
+
+    let (ansi, warehouse) = ansi_door().await;
+    let bare_sink = instant_sink(&ansi, &warehouse).await;
+    let frame = || async {
+        ansi.sql(
+            "SELECT 1 AS id, arrow_cast(-1, 'Timestamp(ns)') AS ts, \
+             arrow_cast(-1, 'Timestamp(ns, \"UTC\")') AS tz",
+        )
+        .await
+        .expect("frame")
+    };
+    let conformed = conform_table_frame(
+        ansi.context(),
+        &bare_sink,
+        frame().await,
+        StageSite::MicroBatchAppend,
+    )
+    .await
+    .expect("the micro-batch frame floors");
+    let batches = conformed.collect().await.expect("collect");
+    for column in [1, 2] {
+        let ticks = cast(batches[0].column(column), &DataType::Int64).expect("ticks");
+        assert_eq!(
+            ticks.as_primitive::<Int64Type>().value(0),
+            FLOORED_MICROS,
+            "D21 column {column}"
+        );
+    }
+    let (_, staging) = resolve_empty_session_write(ansi.context()).expect("staging");
+    let stream = conform_table_frame(
+        ansi.context(),
+        &bare_sink,
+        frame().await,
+        StageSite::MicroBatchAppend,
+    )
+    .await
+    .expect("conform")
+    .execute_stream()
+    .await
+    .expect("stream");
+    stage_overwrite_files_with(
+        &bare_sink,
+        stream,
+        Vec::new(),
+        concurrency_from_ctx(ansi.context()),
+        &staging,
+    )
+    .await
+    .expect("the D21 stager stores a nanosecond value without the coarser guard");
+}
+
+async fn instant_sink(session: &ReparkSession, warehouse: &TempDir) -> iceberg::table::Table {
+    let catalog = session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("catalog");
+    let schema = IcebergSchema::builder()
+        .with_fields(vec![
+            NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            NestedField::optional(2, "ts", Type::Primitive(PrimitiveType::Timestamp)).into(),
+            NestedField::optional(3, "tz", Type::Primitive(PrimitiveType::Timestamptz)).into(),
+        ])
+        .build()
+        .expect("schema");
+    let creation = TableCreation::builder()
+        .name("micro".to_string())
+        .location(format!("{}/ns/micro", warehouse.path().display()))
+        .schema(schema)
+        .properties(std::collections::HashMap::new())
+        .build();
+    catalog
+        .create_table(&NamespaceIdent::new("ns".to_string()), creation)
+        .await
+        .expect("table")
 }

@@ -15,6 +15,11 @@ pub fn register_udf_families(ctx: &SessionContext) {
     crate::higher_order::register(ctx);
     crate::zone_seam::register(ctx);
     ctx.register_udf(crate::zone_seam::zone_seam_udf(false).as_ref().clone());
+    ctx.register_udf(
+        crate::timestamp_ns_cast::narrow_timestamp_ns_udf()
+            .as_ref()
+            .clone(),
+    );
 }
 
 #[must_use]

@@ -11,7 +11,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::table::Table;
-use repark_common::udf_names::ZONE_SEAM_NAME;
+use repark_common::udf_names::{NARROW_TIMESTAMP_NS_NAME, ZONE_SEAM_NAME};
 
 use super::ntz_store::{
     is_ltz_instant_target, needs_ltz_instant_cast, store_kernel_udf_name, wall_kernel_input,
@@ -285,6 +285,10 @@ fn leaf_store(
     }
     if !(is_ltz_instant_target(target) && needs_ltz_instant_cast(source)) {
         return Ok(None);
+    }
+    if matches!(source, DataType::Timestamp(TimeUnit::Nanosecond, _)) {
+        let udf = registered_kernel(ctx, NARROW_TIMESTAMP_NS_NAME, source, target)?;
+        return Ok(Some(call(udf, vec![column])));
     }
     let instant = Field::new(field.name(), target.clone(), field.is_nullable());
     Ok(Some(Expr::Cast(Cast::new_from_field(
