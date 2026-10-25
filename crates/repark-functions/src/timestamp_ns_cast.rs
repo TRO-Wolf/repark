@@ -30,8 +30,7 @@ use crate::timestamp_cast::parse_session_zone;
 use repark_common::zone_horizon::wall_at_instant;
 use values_evidence::Evidence;
 
-pub const TIMESTAMP_NS_CAST_NAME: &str = "__repark_cast_timestamp_ns__";
-pub const TIMESTAMPTZ_NS_CAST_NAME: &str = "__repark_cast_timestamptz_ns__";
+pub use repark_common::udf_names::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
 pub const NARROW_TIMESTAMP_NS_NAME: &str = "__repark_narrow_timestamp_ns__";
 
 const NANOS_PER_MICRO: i64 = 1_000;

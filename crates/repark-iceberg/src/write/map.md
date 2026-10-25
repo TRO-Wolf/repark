@@ -642,6 +642,23 @@ repark-core's error map.
   stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
   fold); the ANSI door and bare sessions read it as UTC as before.
   pins: ntz-store-doors-1/C-002, C-003, C-004
+- `ntz_store.rs`, `store_cast.rs`, `struct_pairing.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):**
+  the kernel names these files carried as their own strings are re-exports from
+  `repark_common::udf_names` under the existing identifiers: `NTZ_WALL_CAST_UDF_NAME`,
+  `NS_WALL_CAST_UDF_NAME` and `NS_INSTANT_CAST_UDF_NAME` (`ntz_store.rs`),
+  `STORE_INT_GUARD_NAME` (`store_cast.rs`) and `STORE_PAIR_KERNEL_NAME` (`struct_pairing.rs`).
+  No call site changed. Why: `repark-functions` registers the wall kernels under the same
+  strings, and two copies across the crate line could drift without a compile error. Details in
+  [../../../repark-common/src/map.md](../../../repark-common/src/map.md).
+- `ntz_store.rs` — **WRITE-SPINE-1 step 1b (2026-10-24):** the store-kernel lookup of
+  `zone_store_frame` fails closed. `registered_store_kernel` answers `Ok(None)` when the target
+  needs no kernel (`wall_kernel_reads` false, or `store_kernel_udf_name` names none), and a
+  `DataFusionError::Internal` naming the kernel when the session does not hold the kernel it
+  names. The expression map collects into `Result<Vec<Expr>>` and `zone_stores` returns the
+  error. Why: the lookup called `.ok()`, so a session without the kernel took the plain-cast arm
+  and the sink stored an instant into a `TIMESTAMP_NTZ` column as its UTC wall. The internal
+  class is the one the sink's `refuse_coarser_timestamp` (`conform.rs`) uses; Spark has no such
+  statement. Ledger: [write-spine-1](../../../../task/ledgers/staging/write-spine-1-ledger.md).
 - `ntz_store.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the two router predicates
   gain one arm each, so every staged door reaches `repark-functions`'
   `timestamp_ns_cast::store_micros` by type, as INSERT does. `needs_ltz_instant_cast` accepts
@@ -779,7 +796,8 @@ repark-core's error map.
   fix round 1, 2026-10-20). `lands_on_naive_leaf` says whether a field path ends on the leaf
   itself. The hint names the leaf cast (`named_struct('<field>', CAST(<value> AS
   TIMESTAMP_NTZ), ...)`, `array(CAST(<value> AS TIMESTAMP_NTZ))`), says a cast of the whole
-  struct, array or map is refused, and names no source type; since fix round 2 (2026-10-20,
+  struct, array or map is refused unless its fields line up with the target's, so cast the leaf instead
+  (corrected 2026-10-25, GATE-RETIRE-1), and names no source type; since fix round 2 (2026-10-20,
   ledger C-029) it also names `col.cast("timestamp_ntz")` on the leaf column for a DataFrame,
   because a `CAST` written inside `expr()` is not lowered to the session-aware cast function
   and is refused. **Why the
@@ -818,6 +836,11 @@ repark-core's error map.
   stays a `Value` with no position, as on main, and a bare `NULL` there is refused by R-015 as
   before fix round 1. The microsecond and instant leaves keep the resolved position.
   pins: zone-seam-1/C-023
+  **GATE-RETIRE-1 (2026-10-25, GR-9, ledger C-002):** the micros hint says a whole-container cast is
+  refused unless its fields line up with the target's, so the leaf is cast instead. The whole text is
+  pinned by `ntz_nested_refuse::the_refusal_names_the_table_the_column_and_the_leaf`, and the clause by
+  `ntz_nested_refuse::a_whole_struct_cast_whose_fields_line_up_stores_the_session_wall_and_the_hint_says_so`.
+  pins: gate-retire-1/C-002
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

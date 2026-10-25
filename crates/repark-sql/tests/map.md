@@ -14,6 +14,14 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- [write_door_native.rs](write_door_native.rs) — **WRITE-SPINE-1 step 3a round 2 (2026-10-24,
+  ruling C-009):** the doors no Python spelling executes, one test each, on an ANSI session
+  over a memory catalog with a table partitioned by `k`: D15 `INSERT` under a session write
+  conf, D16 `INSERT OVERWRITE … PARTITION (k = 0)`, D17 `CREATE TABLE … AS`, D18
+  `repark_iceberg::append`, D19 a two-arm `MERGE`, D20 `UPDATE` and `DELETE`, each reading the
+  rows back. `_write_spine_1_doors.RUST_TESTS` names these functions and the Python
+  enumeration test checks each name exists here. pins: write-spine-1/C-012
+
 - `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
   the ANSI door's twin of the Spark pins, through `AnsiDialect` on a `ReparkSession` with
   `SparkExtension` (the opt-in session sets `repark.sql.allowLocalFilesystemDDL=true` at

@@ -23,7 +23,7 @@ mod rewrite;
 
 pub use rewrite::{map_cast_target, map_cast_token, rewrite_map_casts};
 
-pub const CAST_MAP_NAME: &str = "__repark_cast_map__";
+pub use repark_common::udf_names::CAST_MAP_NAME;
 pub const EMPTY_MAP_CAST_NAME: &str = "__repark_empty_map_cast__";
 
 static CAST_MAP: LazyLock<Arc<ScalarUDF>> =

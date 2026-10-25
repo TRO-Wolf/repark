@@ -10,6 +10,8 @@ the three write-path cards of this week: ICE-HADOOP-HINT-WINDOW-1, ZONE-HORIZON-
 WRITE-NTZ-TO-LTZ-NESTED-1. The orchestrator's lean: the spine first, because it turns the third
 card from a three-site fix into a one-site fix.
 
+**2026-10-25:** GATE-RETIRE-1 concluded (PR #1187) with the R-011 arm retained and the micros hint corrected (GR-9); the arm's retirement folds into step 4.
+
 **Retires:** when (1) every write door reaches the sink through one conform stage that owns the
 session-zone rule, the nanosecond floor and struct pairing, so a rule written once applies on
 every door by construction; (2) the zone and unit conversion helpers live in a crate that both
@@ -49,6 +51,7 @@ fail-closed invariant at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CL
 
 **Folded 2026-10-24 (owner, "fold this into WRITE SPINE"):** the plain-`UPDATE` neighbour that Muse round 4 of ZONE-SEAM-1 observed out of scope. A plain `UPDATE` setting a `TIMESTAMP_NTZ` field from `add_months(...)` stores UTC midnight on main and on the seam head (`1769904000000000` in New York) where Spark stores session midnight (`1769922000000000`); pre-existing and identical on both builds. It is one more feed of the zone rule into the same conform stage, so it is a census row of step (2), not a separate unit; the step-0 door-by-shape census of step (2) carries it by name.
 
+**2026-10-24: step (3b) built (PR #1185), awaiting verification.**
 
 ## Why this card exists
 

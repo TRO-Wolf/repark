@@ -11,6 +11,8 @@ WRITE-BODY-CARRIERS-1, the fork repins RP-58 and RP-59). Their lines moved to
 [the v1.5.5 notes](v1-5-5-release-notes-2026-10-13.md) under "Added by the re-pointed tag". What
 stays here merged after `7fb5f6b2`.
 
+WRITE-SPINE-1 step (3b) (PR #1185, awaiting verification) is test-only: it changes no stored value, so it adds no bullet below.
+
 ## Stored values that change
 
 - **`map(<key>, <non-literal value>)` stores and answers (MAP-COLUMN-PANIC-1).** `SELECT map('a', id)` and `INSERT INTO t SELECT id, map('a', id)` over a column, a function or a cast value panicked `list array` (one source row) or raised `map requires key and value lists to have the same length` (several rows); they now answer Spark's rows and type on every door (`spark.sql`, `selectExpr`, `expr`, a string `filter`, INSERT, UPDATE, MERGE). A repeated key raises Spark's `[DUPLICATED_MAP_KEY]` message and a NULL key `[NULL_MAP_KEY]`, where DataFusion's `map key must be unique` and `map key cannot be null` came out; an odd argument count raises `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` with the count on `spark.sql`. A map whose keys and values are all literals is unchanged.
@@ -117,3 +119,5 @@ Tables already written keep the values they hold; this release ships no migratio
   these forms included, refuses with the wrapper's text instead of the G3-E8 text. On
   `repark.sql()` a wrapped write that DataFusion cannot plan keeps DataFusion's own error instead,
   and writes nothing either way.)*
+
+GATE-RETIRE-1 (2026-10-25, PR #1187): R-011's container-cast gate arm is retained, not retired. A verifier round found it load-bearing for whole-container casts whose fields do not line up with the target (an arity mismatch, or fields at different positions), which the zone seam does not rewrite and the arm refuses in New York. The micros hint now says such a cast is refused unless its fields line up with the target's. No cell moved in the step-0 census (0 of 12192 cells).

@@ -18,7 +18,8 @@ const MICROS_HINT: &str = "A value that is not provably a TIMESTAMP_NTZ wall tim
                            SQL, or col.cast(\"timestamp_ntz\") on the leaf column of a \
                            DataFrame (a CAST written inside expr() is refused), to store the \
                            session wall time (a CAST of the whole struct, array or map is \
-                           refused, and in an UPDATE assign the field itself), or set \
+                           refused unless its fields line up with the target's, so cast the \
+                           leaf instead, and in an UPDATE assign the field itself), or set \
                            spark.sql.session.timeZone to UTC for the statement.";
 
 const INSTANT_HINT: &str = "The session time zone is not UTC, and a nested TIMESTAMP_NTZ value \

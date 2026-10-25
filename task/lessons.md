@@ -4,6 +4,14 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-10-25 — GATE-RETIRE-1 arm census
+
+- **DO probe beyond the census fixture before calling a gate arm unreachable.** The census carries
+  whole-container casts only in table-creating spellings (`ctas`, `rtas`, `create_or_replace_as`,
+  `native_ctas`), so a zero-cell replay said nothing about INSERT, UPDATE and MERGE shapes. Probes of an
+  arity-mismatch and a cross-position whole-struct cast found the two shapes the arm still refuses in New
+  York; with the arm removed they store the UTC wall or NULL.
+
 ## 2026-08-31 — rewrite_data_files where-scope pin
 
 - **DO bind a filtered rewrite's surviving files to the excluded partition's pre-image paths.**
@@ -488,4 +496,6 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   green lines; and a dry run of the finished order on a cheaper engine that lists every question it would ask, each
   becoming a line in the order. The template's test applies: a fresh engine starts it without a question and halts on
   the first ambiguity; if the first run fails that test, the fix is in the order.
+- **DO run clerk work, and as much documentation as possible, on Haiku 5.5 at effort xhigh or on Muse at effort xhigh; DO NOT let a frontier model (Fable or Opus) write map.md rows, ledger rows, census records or docs prose.** *Why:* the owner ruled on 2026-10-24, with weekly usage already at 15 % on the first day: "We can't waste frontier tokens on map files." The 2026-09-19 clerk ruling had drifted. On 2026-10-24 three Opus 5.5 builder lanes wrote their own map.md rows, the orchestrator wrote the docs-PR rows itself, and no clerk round was launched. The pre-commit hook's staged mode only warns about lockstep and CI enforces it per pull request, so "whoever commits the file writes its row" became the path of least friction. The mechanic: a builder commits code and tests under its own trailer and writes `handback-notes.md` in the clone root, one line per touched file (purpose, the claim it proves, and the test a `pins:` citation should cite). A clerk round then runs `python3 scripts/sync_map_md.py --fix --strict`, replaces every placeholder row it appends with the sentence the notes support, writes the ledger rows and docs, and commits on the same branch under its own trailer. No commit mixes authors, and clerks change no code and no expected value.
 
+- **DO list what the cleanup cannot see (objects without a catalog entry) before declaring a one-time prune finished.** *Why:* after the scripted 2026-10-25 prune, 843 objects in 41 `u12s3path_<12 hex chars>` directories still sat under the scratch warehouse prefix. They had no catalog entry and no run prefix, so no table-keyed or run-keyed delete could select them; they were removed by hand the same day on the owner's word.

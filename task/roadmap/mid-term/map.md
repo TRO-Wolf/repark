@@ -1070,3 +1070,5 @@ The 1.5.6 notes record run-4 U/X success and distinguish the two unresolved cros
 
 The FAIR-POOL-HANG-1 card links the run-5 retry result and run-6 cap-retry observation
 (2026-10-24, 05:33 UTC); it establishes no shared cause.
+
+- [container-cast-shape-1-card-2026-10-25.md](container-cast-shape-1-card-2026-10-25.md) — **card CONTAINER-CAST-SHAPE-1 (filed 2026-10-25, grade C):** a whole-container cast whose fields do not line up with the target stores in UTC and errors in Spark, outside the R-011 gate (pre-existing on main); R-011's arm stays for these shapes until the card retires. Leaves when the owner charters it or declines it.

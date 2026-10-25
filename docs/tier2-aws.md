@@ -112,6 +112,8 @@ table's files:
   guard). Until the owner grants them, the bench job stops at that step, before any write, and
   its summary names the two actions. The acceptance module does not need them.
 
+**Measured 2026-10-24, resolved the same day.** Metadata-table reads (`.history`, `.metadata_log_entries`, `.snapshots`, `.data_files`, and the `.delete_files` probe whose error line the log cuts off) of existing S3 Tables tables in the first dispatched run (run 40130862019) failed in 72 cells with `s3tables:GetTable` denied on the table wildcard ARN of the table bucket; writes, the cleanup deletes and Spark's reads were not denied. The request RePark's metadata-table path issues does not satisfy the namespace condition above (its exact shape is unmeasured and is the subject of the candidate card S3T-METADATA-TABLE-GETTABLE-1). The interim remedy is `s3tables:GetTable` on `bucket/<name>/table/*` without the namespace condition, every mutating action keeping it (ledger C-032). The owner then added that separate statement, granting `s3tables:GetTable` on the table resources of the table bucket with no namespace condition, while every mutating S3 Tables action keeps the namespace condition. Run 40143628929 (main `0b09276f`, 2026-10-24) then ran under it with no access denial in any leg, every cross-read EQUAL and no failed test. The self-contained shape held: each leg's cleanup exited 0 after deleting its own prefix, and the backstop selected 0 tables.
+
 **The teardown property after 2026-10-24.** The role can delete Glue tables named `testing_*` in
 the scratch database, S3 Tables tables in the scratch namespace, and objects under the warehouse
 scratch prefix, and nothing else: not the database, not the namespace, not the table bucket, not
@@ -122,11 +124,13 @@ production reads.
 
 ## 3. Scratch expiry
 
-**Until AWS-EPHEMERAL-RUNS-1 lands:** the by-hand prune. The scratch namespaces reached 2288 Glue
+**Before AWS-EPHEMERAL-RUNS-1 landed (PR #1180, 2026-10-24):** the by-hand prune. The scratch namespaces reached 2288 Glue
 and 1748 S3 Tables tables by 2026-10-24 because every leg left its tables behind and the dbt gold
 leg creates a UUID-named family per run; the first streamed cross-read nightly made the cost
 visible (ledger C-066). The owner prunes through their own IAM user with a dry-run-first script
 kept outside this repository; no CI step and no agent performs that first sweep.
+
+**Pruned 2026-10-25.** The owner ran the one-time prune as their own IAM user, with the dry-run-first script, between about 11:15 and 11:40 UTC. Before it, the scratch namespace held 2,288 Glue tables and 1,748 S3 Tables tables, and the scratch warehouse prefix held 20,755 objects at the first count during the run. After it, one Glue table and one S3 Tables table in the table bucket remained, both `ice_read_perf_bench`, the ICE-READ-PERF bench table: its name does not start with `testing_`, so the script's prefix guard kept it by design. The script also left 843 objects in 41 directories named `u12s3path_<12 hex chars>` under the scratch warehouse prefix. These were the U-12 S3 path-write objects of the nightlies that ran before AWS-EPHEMERAL-RUNS-1 (PR #1180, merged 2026-10-24). The path write then named each directory `u12s3path_<uuid>`, with no run, attempt or leg in the name, so no per-run prefix could select those objects, and they carried no catalog entry. The orchestrator removed the legacy `u12s3path_<uuid>` prefixes by hand the same day on the owner's word. Since #1180 the path write names its objects `u12s3path_r<run_id>a<attempt>_<leg>_<uuid>`, and each leg's cleanup removes them; no such object remained after the prune, which confirms that the leg cleanup covers the new naming. 801 objects remain under the scratch warehouse prefix, all of them the bench table's. The cross-read walk's listing cost over the namespace stays open (ledger C-018) until the next nightly measures the walk over the pruned namespace.
 
 **After it lands:** each run deletes its own prefix at exit with `if: always()`, and a backstop
 removes prefixes older than 24 h at the start of the next run. An S3 lifecycle rule on the
