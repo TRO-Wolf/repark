@@ -610,3 +610,99 @@ async fn instant_sink(session: &ReparkSession, warehouse: &TempDir) -> iceberg::
         .await
         .expect("table")
 }
+
+const NEW_YORK_SESSION_MIDNIGHT: i64 = 1_769_922_000_000_000;
+
+async fn instant_micros(session: &ReparkSession, sql: &str) -> Vec<i64> {
+    let batches = session
+        .sql(sql)
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    let mut values = Vec::new();
+    for batch in &batches {
+        let ticks = batch.column(0).as_primitive::<Int64Type>();
+        values.extend(
+            (0..ticks.len())
+                .filter(|row| !ticks.is_null(*row))
+                .map(|row| ticks.value(row)),
+        );
+    }
+    values
+}
+
+#[tokio::test]
+async fn a_plain_update_from_add_months_stores_session_midnight() {
+    let session = spark_door("America/New_York");
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    assert_eq!(attempt(&session, "CREATE NAMESPACE ice.ns").await, Ok(()));
+    for (name, update, read) in [
+        (
+            "leaf",
+            "UPDATE ice.ns.am SET ts = add_months(ntz, 1) WHERE id >= 0",
+            "SELECT unix_micros(ts) FROM ice.ns.am",
+        ),
+        (
+            "field",
+            "UPDATE ice.ns.am SET st.a = add_months(ntz, 1) WHERE id >= 0",
+            "SELECT unix_micros(st.a) FROM ice.ns.am",
+        ),
+        (
+            "whole",
+            "UPDATE ice.ns.am SET st = named_struct('a', add_months(ntz, 1)) WHERE id >= 0",
+            "SELECT unix_micros(st.a) FROM ice.ns.am",
+        ),
+    ] {
+        for setup in [
+            "DROP TABLE IF EXISTS ice.ns.am",
+            "CREATE TABLE ice.ns.am (id INT, ntz TIMESTAMP_NTZ, ts TIMESTAMP, st STRUCT<a: TIMESTAMP>) \
+             USING iceberg",
+            "INSERT INTO ice.ns.am VALUES (1, TIMESTAMP_NTZ '2026-01-01 00:00:00', NULL, \
+             named_struct('a', CAST(NULL AS TIMESTAMP)))",
+        ] {
+            assert_eq!(attempt(&session, setup).await, Ok(()), "{setup}");
+        }
+        assert_eq!(attempt(&session, update).await, Ok(()), "{name}: {update}");
+        assert_eq!(
+            instant_micros(&session, read).await,
+            [NEW_YORK_SESSION_MIDNIGHT],
+            "{name}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_partition_overwrite_guards_an_integer_overflow_at_plan_time() {
+    let session = spark_door("UTC");
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    for setup in [
+        "CREATE NAMESPACE ice.ns",
+        "CREATE TABLE ice.ns.p (id INT, v INT, k INT) USING iceberg PARTITIONED BY (k)",
+        "CREATE TABLE ice.ns.wide (id INT, d DOUBLE) USING iceberg",
+        "INSERT INTO ice.ns.wide VALUES (1, 3000000000.0)",
+    ] {
+        assert_eq!(attempt(&session, setup).await, Ok(()), "{setup}");
+    }
+    for sql in [
+        "INSERT OVERWRITE ice.ns.p PARTITION (k = 0) SELECT id, d AS v FROM ice.ns.wide",
+        "INSERT OVERWRITE ice.ns.p SELECT id, d AS v, 0 AS k FROM ice.ns.wide",
+    ] {
+        let refusal = attempt(&session, sql)
+            .await
+            .expect_err("an overflowing value refuses");
+        assert!(
+            refusal.contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            "{sql}: {refusal}"
+        );
+    }
+}

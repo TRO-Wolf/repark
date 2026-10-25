@@ -1,13 +1,27 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::arrow::array::{ArrayRef, Int32Array, RecordBatch, StructArray};
 use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema, TimeUnit};
 use datafusion::prelude::SessionContext;
+use iceberg::io::LocalFsStorageFactory;
+use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
+use iceberg::spec::{
+    FormatVersion, NestedField, PrimitiveType, Schema, StructType, Transform, Type,
+    UnboundPartitionSpec,
+};
+use iceberg::table::Table;
+use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
+use tempfile::TempDir;
 
 use super::{
     StageRequest, StageSite, clear_stage_record, conform_stage, install_stage_record,
     last_stage_sites, table_targets, zone_partial,
 };
+use crate::write::concurrency::WriteConcurrency;
+use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
 use crate::write::struct_pairing::StructPairing;
+use crate::write::write_options::WriterStagingOverrides;
 
 fn instant() -> DataType {
     DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("+00:00")))
@@ -192,4 +206,124 @@ async fn the_stage_record_holds_each_site_once_until_cleared() {
     assert_eq!(last_stage_sites(&ctx), vec![StageSite::MicroBatchAppend]);
     clear_stage_record(&ctx);
     assert!(last_stage_sites(&ctx).is_empty());
+}
+
+async fn staging_table(
+    warehouse: &TempDir,
+    name: &str,
+    partitioned: bool,
+    version: FormatVersion,
+) -> Table {
+    let path = warehouse
+        .path()
+        .to_str()
+        .expect("utf-8 warehouse")
+        .to_string();
+    let catalog = MemoryCatalogBuilder::default()
+        .with_storage_factory(Arc::new(LocalFsStorageFactory))
+        .load(
+            "mem",
+            HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), path)]),
+        )
+        .await
+        .expect("memory catalog");
+    let namespace = NamespaceIdent::new("ns".into());
+    catalog
+        .create_namespace(&namespace, HashMap::new())
+        .await
+        .expect("namespace");
+    let pair = StructType::new(vec![
+        NestedField::optional(4, "a", Type::Primitive(PrimitiveType::Int)).into(),
+        NestedField::optional(5, "b", Type::Primitive(PrimitiveType::Int)).into(),
+    ]);
+    let schema = Schema::builder()
+        .with_fields(vec![
+            NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            NestedField::required(2, "part", Type::Primitive(PrimitiveType::Int)).into(),
+            NestedField::optional(3, "st", Type::Struct(pair)).into(),
+        ])
+        .build()
+        .expect("schema");
+    let creation = TableCreation::builder()
+        .name(name.to_string())
+        .schema(schema)
+        .format_version(version);
+    let creation = if partitioned {
+        let spec = UnboundPartitionSpec::builder()
+            .add_partition_field(2, "part", Transform::Identity)
+            .expect("identity partition field")
+            .build();
+        creation.partition_spec(spec).build()
+    } else {
+        creation.build()
+    };
+    catalog
+        .create_table(&namespace, creation)
+        .await
+        .expect("create table");
+    catalog
+        .load_table(&TableIdent::new(namespace, name.into()))
+        .await
+        .expect("load")
+}
+
+fn swapped_batch() -> RecordBatch {
+    let fields = Fields::from(vec![
+        Field::new("b", DataType::Int32, true),
+        Field::new("a", DataType::Int32, true),
+    ]);
+    let st = StructArray::new(
+        fields.clone(),
+        vec![
+            Arc::new(Int32Array::from(vec![2])) as ArrayRef,
+            Arc::new(Int32Array::from(vec![1])) as ArrayRef,
+        ],
+        None,
+    );
+    let schema = Arc::new(ArrowSchema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("part", DataType::Int32, false),
+        Field::new("st", DataType::Struct(fields), true),
+    ]));
+    RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![1])) as ArrayRef,
+            Arc::new(Int32Array::from(vec![0])) as ArrayRef,
+            Arc::new(st) as ArrayRef,
+        ],
+    )
+    .expect("batch")
+}
+
+#[tokio::test]
+async fn the_staging_sink_pairs_on_every_branch() {
+    for (name, partitioned, version) in [
+        ("flat", false, FormatVersion::V2),
+        ("parted", true, FormatVersion::V2),
+        ("lineage", true, FormatVersion::V3),
+    ] {
+        let warehouse = TempDir::new().expect("warehouse");
+        let table = staging_table(&warehouse, name, partitioned, version).await;
+        let write_schema = Arc::new(
+            iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+                .expect("arrow schema"),
+        );
+        let stream = futures::stream::iter(vec![Ok(swapped_batch())]);
+        let refusal = write_new_data_files_from_stream_with(
+            &table,
+            &write_schema,
+            stream,
+            WriteConcurrency::default(),
+            &WriterStagingOverrides::none(),
+        )
+        .await
+        .expect_err("an unpaired struct refuses on every branch");
+        assert!(
+            refusal
+                .to_string()
+                .contains("[INCOMPATIBLE_DATA_FOR_TABLE."),
+            "{name}: {refusal}"
+        );
+    }
 }
