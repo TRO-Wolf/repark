@@ -71,6 +71,7 @@ class Divergence(BaseModel):
     doors: frozenset[str]
     markers: tuple[str, ...]
     measured: tuple[str, ...]
+    cells: int
     reason: str
 
 
@@ -82,6 +83,7 @@ DIVERGENCES: tuple[Divergence, ...] = (
         doors=frozenset({"D1", "D2", "D3", "D4", "D5", "D7", "D8", "D9", "D10"}),
         markers=ZS9_MARKERS,
         measured=(),
+        cells=976,
         reason=(
             "the ZS-9 nested-zone refusal raises at planning, before the router reaches the "
             "branch point of any door, so the record stays empty (976 of 9,792 cells)"
@@ -94,6 +96,7 @@ DIVERGENCES: tuple[Divergence, ...] = (
         doors=frozenset({"D10"}),
         markers=(STORE_CAST_MARKER,),
         measured=(),
+        cells=576,
         reason=(
             "an UPDATE whose string value the store-assignment check refuses raises before "
             "D10 is recorded; an INSERT or a MERGE with the same refusal records its door "
@@ -175,18 +178,20 @@ def _is_c010(cell: shapes.Cell) -> bool:
     return cell.spelling.name in C010_SPELLINGS and cell.target.container == "leaf"
 
 
-def _divergence_of(cell: shapes.Cell, answer: dict[str, Any], reading: str) -> Divergence | None:
-    """Return the recorded divergence row a cell falls in for ``reading``, if any."""
+def _marker_row(answer: dict[str, Any], reading: str) -> Divergence | None:
+    """Return the first divergence row for ``reading`` whose markers the answer holds."""
     return next(
-        (
-            row
-            for row in DIVERGENCES
-            if row.reading == reading
-            and cell.spelling.door in row.doors
-            and _holds(answer, row.markers)
-        ),
+        (row for row in DIVERGENCES if row.reading == reading and _holds(answer, row.markers)),
         None,
     )
+
+
+def _divergence_of(cell: shapes.Cell, answer: dict[str, Any], reading: str) -> Divergence | None:
+    """Return the marker row of the cell's answer when the cell's door is one of its doors."""
+    row = _marker_row(answer, reading)
+    if row is None or cell.spelling.door not in row.doors:
+        return None
+    return row
 
 
 def _live_cells() -> list[shapes.Cell]:
@@ -327,13 +332,20 @@ def test_dataframe_writers_record_their_doors(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("row", DIVERGENCES, ids=[row.row for row in DIVERGENCES])
 def test_a_recorded_divergence_holds_as_measured(row: Divergence, tmp_path: Path) -> None:
-    """Each divergence row holds on the first census cell of each spelling it covers."""
+    """Each row's markers select its cells over the whole census, and its doors are measured.
+
+    Inside the row's doors a cell records the row's measured record; outside them a cell with
+    the same markers records its own corpus door. Both run live on the first cell per spelling.
+    """
     main = matrix.load_cells(matrix.MAIN_FIXTURE)
+    assigned = [
+        cell for cell in _live_cells() if _marker_row(main[cell.cell_id], row.reading) == row
+    ]
+    assert sum(1 for cell in assigned if cell.spelling.door in row.doors) == row.cells
+    assert {cell.spelling.door for cell in assigned} >= row.doors
     firsts: dict[str, shapes.Cell] = {}
-    for cell in _live_cells():
-        if _divergence_of(cell, main[cell.cell_id], row.reading) == row:
-            firsts.setdefault(cell.spelling.name, cell)
-    assert {cell.spelling.door for cell in firsts.values()} == row.doors
+    for cell in assigned:
+        firsts.setdefault(cell.spelling.name, cell)
     assert _find_runtime_disagreements(list(firsts.values()), tmp_path) == []
 
 
