@@ -317,6 +317,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `SELECT` agree with Spark; not a seam regression; no fix proposed), and C-024's cast-leaf claim
   holds for text without an offset only. pins: zone-seam-1/C-029
 
+  **GATE-RETIRE-1 (2026-10-25, GR-9, ledger C-005):** the container-cast arm is retained. The seam
+  rewrites only same-position container casts, so an arity mismatch or a cross-position whole-struct
+  cast reaches this file as a native cast, and the arm refuses it in New York. The arm is read twice:
+  `proven_naive` (the supply walk, the UPDATE and MERGE value path) and `naive_columns` (the two INSERT
+  pins fail without it). The arm's retirement folds into WRITE-SPINE-1 step 4. pins: gate-retire-1/C-005
 ## Pointers
 
 - Up: [../map.md](../map.md)

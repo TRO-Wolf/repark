@@ -2609,3 +2609,8 @@ Spark refusal classification remain open. Exact measurements stay in the live-ru
 ICE-INTEGRITY-PINS-1 immediate-detail follow-up records its scoped plan and local validation in the existing ledger (2026-10-24). C-060 remains OPEN.
 
 The ICE-INTEGRITY-PINS-1 ledger gains C-066 to C-070 (2026-10-24): C-060's two halves measured and REJECTED from the first streamed nightly (the Glue walk is a budget finding, the S3 Tables catalog class is absent from both Iceberg 1.11.0 jars), the two AWS-EPHEMERAL-RUNS-1 obligations OPEN, and run 3's pre-streaming stall carried as its own OPEN row.
+- [gate-retire-1-ledger.md](gate-retire-1-ledger.md) —
+  **GATE-RETIRE-1 (2026-10-25), R-011's container-cast arm:** the arm is retained after the Muse MAX round-1 FAIL
+  (GR-9): C-001 (retire the arm, never worse) REJECTED by measurement; C-002 (the hint, corrected) and C-003 (the
+  discriminating walker tests) PROVEN; C-005 (the arm's refusals of four whole-container cast shapes pinned)
+  PROVEN; C-004 (the Critic's coverage attestation, filed 2026-10-25 from the round-2 verdict) PROVEN. `risk_tier: standard`. Branch `feat/gate-retire-1`.

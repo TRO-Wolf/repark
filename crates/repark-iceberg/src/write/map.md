@@ -796,7 +796,8 @@ repark-core's error map.
   fix round 1, 2026-10-20). `lands_on_naive_leaf` says whether a field path ends on the leaf
   itself. The hint names the leaf cast (`named_struct('<field>', CAST(<value> AS
   TIMESTAMP_NTZ), ...)`, `array(CAST(<value> AS TIMESTAMP_NTZ))`), says a cast of the whole
-  struct, array or map is refused, and names no source type; since fix round 2 (2026-10-20,
+  struct, array or map is refused unless its fields line up with the target's, so cast the leaf instead
+  (corrected 2026-10-25, GATE-RETIRE-1), and names no source type; since fix round 2 (2026-10-20,
   ledger C-029) it also names `col.cast("timestamp_ntz")` on the leaf column for a DataFrame,
   because a `CAST` written inside `expr()` is not lowered to the session-aware cast function
   and is refused. **Why the
@@ -835,6 +836,11 @@ repark-core's error map.
   stays a `Value` with no position, as on main, and a bare `NULL` there is refused by R-015 as
   before fix round 1. The microsecond and instant leaves keep the resolved position.
   pins: zone-seam-1/C-023
+  **GATE-RETIRE-1 (2026-10-25, GR-9, ledger C-002):** the micros hint says a whole-container cast is
+  refused unless its fields line up with the target's, so the leaf is cast instead. The whole text is
+  pinned by `ntz_nested_refuse::the_refusal_names_the_table_the_column_and_the_leaf`, and the clause by
+  `ntz_nested_refuse::a_whole_struct_cast_whose_fields_line_up_stores_the_session_wall_and_the_hint_says_so`.
+  pins: gate-retire-1/C-002
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

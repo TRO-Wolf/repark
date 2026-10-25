@@ -356,6 +356,19 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   half of the exemption in New York: wall text stores the New York read, bad text stores `NULL`,
   an instant stores the instant, and the two-leaf `(CAST(instant), TRY_CAST(wall))` stores both;
   mutant Z6 (only the `CAST` name exempts) reds it. pins: zone-seam-1/C-028
+  **GATE-RETIRE-1 (2026-10-25, GR-9):** the expected hint of `the_refusal_names_the_table_the_column_and_the_leaf`
+  says a whole-struct cast is refused unless its fields line up with the target's (ledger C-002). The round-1
+  pin `a_whole_container_cast_of_an_instant_stores_the_session_wall_and_the_hint_no_longer_names_it` is renamed
+  `a_whole_struct_cast_whose_fields_line_up_stores_the_session_wall_and_the_hint_says_so`: a same-position
+  whole-struct `CAST` INSERT of an instant in New York stores 1767305045123456, Spark's value for census cell
+  `ctas.append.struct_ntz.inst.new_york`, in one snapshot, and its refusal half asserts the clause. The four
+  new pins hold the arm's refusals (ledger C-005): `an_arity_mismatch_whole_struct_cast_is_refused_outside_utc_and_writes_nothing`
+  and `a_cross_position_try_cast_of_a_whole_struct_is_refused_outside_utc_and_writes_nothing` (helper
+  `refused_and_unwritten`: CANNOT_SAFELY_CAST with the hint, no snapshot), and
+  `an_update_assigning_a_cross_position_whole_struct_cast_is_refused_outside_utc` and
+  `a_merge_updating_a_cross_position_whole_struct_cast_is_refused_outside_utc` (helper `refused_and_seed_only`:
+  the same refusal, and the table keeps its seed snapshot only). pins: gate-retire-1/C-002, C-005
+  **Coverage attestation (2026-10-25, ledger C-004):** the GATE-RETIRE-1 attestation is filed from the Muse MAX round-2 verdict on `5b46c6b0` (PASS); its refusal pins are the four new pins above. pins: gate-retire-1/C-004
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`

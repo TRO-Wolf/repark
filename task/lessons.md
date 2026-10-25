@@ -4,6 +4,14 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-10-25 — GATE-RETIRE-1 arm census
+
+- **DO probe beyond the census fixture before calling a gate arm unreachable.** The census carries
+  whole-container casts only in table-creating spellings (`ctas`, `rtas`, `create_or_replace_as`,
+  `native_ctas`), so a zero-cell replay said nothing about INSERT, UPDATE and MERGE shapes. Probes of an
+  arity-mismatch and a cross-position whole-struct cast found the two shapes the arm still refuses in New
+  York; with the arm removed they store the UTC wall or NULL.
+
 ## 2026-08-31 — rewrite_data_files where-scope pin
 
 - **DO bind a filtered rewrite's surviving files to the excluded partition's pre-image paths.**
