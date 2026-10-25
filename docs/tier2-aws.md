@@ -124,7 +124,7 @@ production reads.
 
 ## 3. Scratch expiry
 
-**Until AWS-EPHEMERAL-RUNS-1 lands:** the by-hand prune. The scratch namespaces reached 2288 Glue
+**Before AWS-EPHEMERAL-RUNS-1 landed (PR #1180, 2026-10-24):** the by-hand prune. The scratch namespaces reached 2288 Glue
 and 1748 S3 Tables tables by 2026-10-24 because every leg left its tables behind and the dbt gold
 leg creates a UUID-named family per run; the first streamed cross-read nightly made the cost
 visible (ledger C-066). The owner prunes through their own IAM user with a dry-run-first script
