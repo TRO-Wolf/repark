@@ -356,14 +356,18 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   half of the exemption in New York: wall text stores the New York read, bad text stores `NULL`,
   an instant stores the instant, and the two-leaf `(CAST(instant), TRY_CAST(wall))` stores both;
   mutant Z6 (only the `CAST` name exempts) reds it. pins: zone-seam-1/C-028
-  **GATE-RETIRE-1 (2026-10-25, PR #1187):** the expected hint of
-  `the_refusal_names_the_table_the_column_and_the_leaf` no longer says a whole-container `CAST` is
-  refused. `a_whole_container_cast_of_an_instant_stores_the_session_wall_and_the_hint_no_longer_names_it`
-  pins the stored value: a whole-struct `CAST` INSERT of an instant in New York stores the session
-  wall, 1767305045123456, Spark's value for census cell `ctas.append.struct_ntz.inst.new_york`, in
-  one snapshot; the uncast `named_struct` refusal carries the hint and no "whole struct" text.
-  pins: gate-retire-1/C-001
-  pins: gate-retire-1/C-002
+  **GATE-RETIRE-1 (2026-10-25, GR-9):** the expected hint of `the_refusal_names_the_table_the_column_and_the_leaf`
+  says a whole-struct cast is refused unless its fields line up with the target's (ledger C-002). The round-1
+  pin `a_whole_container_cast_of_an_instant_stores_the_session_wall_and_the_hint_no_longer_names_it` is renamed
+  `a_whole_struct_cast_whose_fields_line_up_stores_the_session_wall_and_the_hint_says_so`: a same-position
+  whole-struct `CAST` INSERT of an instant in New York stores 1767305045123456, Spark's value for census cell
+  `ctas.append.struct_ntz.inst.new_york`, in one snapshot, and its refusal half asserts the clause. The four
+  new pins hold the arm's refusals (ledger C-005): `an_arity_mismatch_whole_struct_cast_is_refused_outside_utc_and_writes_nothing`
+  and `a_cross_position_try_cast_of_a_whole_struct_is_refused_outside_utc_and_writes_nothing` (helper
+  `refused_and_unwritten`: CANNOT_SAFELY_CAST with the hint, no snapshot), and
+  `an_update_assigning_a_cross_position_whole_struct_cast_is_refused_outside_utc` and
+  `a_merge_updating_a_cross_position_whole_struct_cast_is_refused_outside_utc` (helper `refused_and_seed_only`:
+  the same refusal, and the table keeps its seed snapshot only). pins: gate-retire-1/C-002, C-005
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
@@ -490,7 +494,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   nested `TIMESTAMP_NTZ` row takes R-011's refusal, not the gate's text) are described in the
   paragraphs headed ICE-NTZ-NESTED-REFUSE-1 (2026-10-20) in their rows.
   **ZONE-SEAM-1 (2026-10-22, ruling ZS-4):** the seam rewrites a container cast of an instant
-  before the router's gate reads the plan, so R-011's container-cast arm (retired by GATE-RETIRE-1 on 2026-10-25)
+  before the router's gate reads the plan, so R-011's cast arm (`casts_a_zoned_value_to_naive`)
   no longer matches it and the write stores Spark's session wall. Five pins that held the
   refusal now hold the stored value outside UTC, per statement: in `ntz_nested_refuse_casts.rs`,
   `a_container_cast_of_an_instant_stores_the_session_wall_on_every_door_outside_utc` (the 14

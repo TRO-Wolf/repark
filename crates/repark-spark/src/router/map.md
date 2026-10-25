@@ -187,11 +187,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   name, or every column when neither resolves; `SELECT <values> FROM <table> [AS <alias>]` for
   UPDATE and `… FROM <table> [AS <alias>], <source>` for MERGE, the table being the loaded
   table's name, so `t.branch_x` reads as `t`; `SELECT * FROM <source>` for a MERGE star. It
-  refuses when a type holds a zoned timestamp, when the plan fails (fail closed), and, on a plain
-  `UPDATE` whose path stops above the leaf, when any planned sub-expression calls the
-  `TIMESTAMP_NTZ` cast (`shifts_in_an_update`). GATE-RETIRE-1 (2026-10-25, PR #1187) retired the arm
-  that refused a `CAST` or `TRY_CAST` from a zoned type to a naive one: the zone seam had made it
-  unreachable. *(Fix round 2, 2026-10-20: that door no longer refuses a zoned
+  refuses when a type holds a zoned timestamp, when the plan fails (fail closed), when the plan
+  holds a `CAST` or `TRY_CAST` from a type holding a zoned timestamp to one holding a naive one
+  (`casts_a_zoned_value_to_naive`), and, on a plain `UPDATE` whose path stops
+  above the leaf, when any planned sub-expression calls the `TIMESTAMP_NTZ` cast
+  (`shifts_in_an_update`). *(Fix round 2, 2026-10-20: that door no longer refuses a zoned
   sub-expression as such. `to_timestamp_ntz(<instant>)`, a zoned column feeding only an `INT`
   field or a condition, store Spark's value there; the cast arm and the planned type cover every
   wrong wall measured on that door; ledger C-022.)* **Where the walk reads (fix round 2,
@@ -295,13 +295,8 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   call itself; anything else holding one (an extract, a literal, a column, a `CASE`, an array)
   makes the statement refuse, as the MERGE twin already does. A struct whose only naive leaf is
   the cast still stores Spark's instant; UTC is untouched. pins: zone-seam-1/C-024
-  The file's four unit tests moved to [nested_ns/tests.rs](nested_ns/map.md) to keep
+  The file's four unit tests moved unchanged to [nested_ns/tests.rs](nested_ns/map.md) to keep
   the file under the 1000-line ceiling. pins: zone-seam-1/C-024
-  **GATE-RETIRE-1 (2026-10-25, PR #1187):** the container-cast arm is removed from `proven_naive`
-  and from `naive_columns`, with its two `lineage_has` uses; the other arms are unchanged. A
-  whole-struct `CAST` of an instant outside UTC stores the session wall (pinned by
-  `ntz_nested_refuse`), and the census replay on the head moves no cell (0 of 12192).
-  pins: gate-retire-1/C-001
   After both fix-round-3 items the corpus, the U-8 matrix and the partitioned census answer as
   before them and the seven timed statements stay within 1.05x of main. pins: zone-seam-1/C-025
   *Fix round 1, cost:* the refusal's extra plan of a MERGE into a nested `TIMESTAMP` target in New
@@ -322,6 +317,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `SELECT` agree with Spark; not a seam regression; no fix proposed), and C-024's cast-leaf claim
   holds for text without an offset only. pins: zone-seam-1/C-029
 
+  **GATE-RETIRE-1 (2026-10-25, GR-9, ledger C-005):** the container-cast arm is retained. The seam
+  rewrites only same-position container casts, so an arity mismatch or a cross-position whole-struct
+  cast reaches this file as a native cast, and the arm refuses it in New York. The arm is read twice:
+  `proven_naive` (the supply walk, the UPDATE and MERGE value path) and `naive_columns` (the two INSERT
+  pins fail without it). The arm's retirement folds into WRITE-SPINE-1 step 4. pins: gate-retire-1/C-005
 ## Pointers
 
 - Up: [../map.md](../map.md)

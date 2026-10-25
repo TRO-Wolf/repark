@@ -791,13 +791,13 @@ repark-core's error map.
   (`reaches_leaf`; an unknown step keeps it). `refuse_nested_ns_supply` is R-015 over it and
   reads only the supply, so R-015 decides as before. `holds_zoned_timestamp` finds a zoned
   timestamp at any depth and in any layout (struct, every list, map, dictionary, run-end,
-  union), and `holds_naive_timestamp` a naive one; the router's container-cast test (a zoned timestamp in the
-  source, a naive one in the target; fix round 1, 2026-10-20) was removed by GATE-RETIRE-1 on
-  2026-10-25 with its only caller. `lands_on_naive_leaf` says whether a field path ends on the leaf
+  union), and `holds_naive_timestamp` a naive one; `casts_zoned_to_naive(source, target)` is
+  the router's container-cast test (a zoned timestamp in the source, a naive one in the target;
+  fix round 1, 2026-10-20). `lands_on_naive_leaf` says whether a field path ends on the leaf
   itself. The hint names the leaf cast (`named_struct('<field>', CAST(<value> AS
-  TIMESTAMP_NTZ), ...)`, `array(CAST(<value> AS TIMESTAMP_NTZ))`), says in its parenthesis only that an
-  UPDATE assigns the field itself (GATE-RETIRE-1, 2026-10-25, removed its claim that a
-  whole-container cast is refused), and names no source type; since fix round 2 (2026-10-20,
+  TIMESTAMP_NTZ), ...)`, `array(CAST(<value> AS TIMESTAMP_NTZ))`), says a cast of the whole
+  struct, array or map is refused unless its fields line up with the target's, so cast the leaf instead
+  (corrected 2026-10-25, GATE-RETIRE-1), and names no source type; since fix round 2 (2026-10-20,
   ledger C-029) it also names `col.cast("timestamp_ntz")` on the leaf column for a DataFrame,
   because a `CAST` written inside `expr()` is not lowered to the session-aware cast function
   and is refused. **Why the
@@ -807,9 +807,6 @@ repark-core's error map.
   The unit tests moved to [nested_ns_gate/tests.rs](nested_ns_gate/map.md) when the file passed
   the 1000-line ceiling.
   pins: ice-ntz-nested-refuse-1/C-001, C-015, C-029
-  **GATE-RETIRE-1 (2026-10-25):** the hint no longer says a whole-container cast is refused (ledger
-  C-002), and the whole text of the refusal is pinned by `ntz_nested_refuse`.
-  pins: gate-retire-1/C-002
   **ZONE-SEAM-1 step 3c (2026-10-22, ruling ZS-9):** `NaiveLeaf::Instant` names a nested
   microsecond `TIMESTAMP` leaf for the same walk; `naive_into_instant(source, target)` says
   whether a value type carries a naive microsecond leaf to a position where the target holds
@@ -839,6 +836,11 @@ repark-core's error map.
   stays a `Value` with no position, as on main, and a bare `NULL` there is refused by R-015 as
   before fix round 1. The microsecond and instant leaves keep the resolved position.
   pins: zone-seam-1/C-023
+  **GATE-RETIRE-1 (2026-10-25, GR-9, ledger C-002):** the micros hint says a whole-container cast is
+  refused unless its fields line up with the target's, so the leaf is cast instead. The whole text is
+  pinned by `ntz_nested_refuse::the_refusal_names_the_table_the_column_and_the_leaf`, and the clause by
+  `ntz_nested_refuse::a_whole_struct_cast_whose_fields_line_up_stores_the_session_wall_and_the_hint_says_so`.
+  pins: gate-retire-1/C-002
 - `statement_writes.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a)
   (2026-10-17):** `executed_writes(statement)` is the one walk that answers the writes a parsed
   statement executes: through `PREPARE` to the prepared statement, through `EXPLAIN ANALYZE` to

@@ -131,3 +131,7 @@ not reach, and D21). `handback-notes.md`: one line per touched file (purpose, th
 test a `pins:` citation cites), the measurement sentences for ledger rows C-001 (arm retired, never
 worse), C-002 (hint sentence, 76(a) word loop) and C-003 (the step-3 finding: which pins the arm still
 had, or none), and the exact sentence for R-011's dated status line.
+
+## Outcome (2026-10-25)
+
+Measurement: the step-0 census replayed on the head differs from main in 0 of 12192 cells, but the census carries whole-container casts only in table-creating spellings, and beyond it an arity-mismatch CAST and a cross-position TRY_CAST of a whole struct store the UTC wall or NULL with the arm removed, where the arm refuses both in New York. Ruling: the Muse MAX verifier's round-1 FAIL on f7b78fed (S1-1 and S1-2, reproduced by the orchestrator on the head build and on Spark 4.1.2) made the arm load-bearing, and GR-9 retains it, so the removal in §0 and the removal steps are withdrawn. Shipped: the micros hint now says a whole-container CAST is refused unless its fields line up with the target's, with a renamed pin and four new pins holding the arm's refusals of INSERT, UPDATE and MERGE shapes (ledger C-002 and C-005), and ledger C-001 is REJECTED. Folds into WRITE-SPINE-1 step 4: retiring the arm, once such whole-container casts refuse as Spark refuses them (card CONTAINER-CAST-SHAPE-1).

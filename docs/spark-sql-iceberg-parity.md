@@ -3745,7 +3745,7 @@ still open is `isModifiable`.
   where Spark errors too. Card
   `task/roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`. Ledger
   `task/ledgers/staging/zone-seam-1-ledger.md`.
-- **Status 2026-10-25 (GATE-RETIRE-1, PR #1187):** the container-cast arm (`casts_a_zoned_value_to_naive`, sketch arm A2), which the zone seam made unreachable, is retired with its helper (`casts_zoned_to_naive`), and the micros hint no longer says a `CAST` of the whole struct, array or map is refused. The step-0 census replayed on the head differs from main in 0 of 12192 cells (no cell moved), and a whole-struct `CAST` INSERT outside UTC stores the session wall. Arms A1, A3 and A4 and the zone arm are unchanged; A1 and ZS-9 stay for WRITE-SPINE-1 step 4.
+- **Status 2026-10-25 (GATE-RETIRE-1, PR #1187, fix round GR-9):** the container-cast arm (`casts_a_zoned_value_to_naive`, sketch arm A2) is measured load-bearing for container casts the zone seam does not rewrite (an arity mismatch or fields at different positions), so it is retained. The micros hint now says a CAST of the whole struct, array or map is refused unless its fields line up with the target's. The arm's retirement folds into WRITE-SPINE-1 step 4, and only once such casts are refused as Spark refuses them. The pins are ledger C-005 and the clause pin of C-002.
 
 ### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
 

@@ -10,7 +10,7 @@ the three write-path cards of this week: ICE-HADOOP-HINT-WINDOW-1, ZONE-HORIZON-
 WRITE-NTZ-TO-LTZ-NESTED-1. The orchestrator's lean: the spine first, because it turns the third
 card from a three-site fix into a one-site fix.
 
-**2026-10-25:** GATE-RETIRE-1 built (PR #1187); step 2 is next.
+**2026-10-25:** GATE-RETIRE-1 concluded (PR #1187) with the R-011 arm retained and the micros hint corrected (GR-9); the arm's retirement folds into step 4.
 
 **Retires:** when (1) every write door reaches the sink through one conform stage that owns the
 session-zone rule, the nanosecond floor and struct pairing, so a rule written once applies on

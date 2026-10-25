@@ -120,4 +120,4 @@ Tables already written keep the values they hold; this release ships no migratio
   `repark.sql()` a wrapped write that DataFusion cannot plan keeps DataFusion's own error instead,
   and writes nothing either way.)*
 
-GATE-RETIRE-1 (2026-10-25, PR #1187): R-011's container-cast gate arm, unreachable since ZONE-SEAM-1, is removed with its hint sentence. No cell moved (the step-0 census replayed on the head differs from main in 0 of 12192 cells); a whole-struct `CAST` INSERT of an instant outside UTC stores the session wall, as it did before this unit.
+GATE-RETIRE-1 (2026-10-25, PR #1187): R-011's container-cast gate arm is retained, not retired. A verifier round found it load-bearing for whole-container casts whose fields do not line up with the target (an arity mismatch, or fields at different positions), which the zone seam does not rewrite and the arm refuses in New York. The micros hint now says such a cast is refused unless its fields line up with the target's. No cell moved in the step-0 census (0 of 12192 cells).
