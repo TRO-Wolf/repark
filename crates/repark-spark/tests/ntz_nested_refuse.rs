@@ -446,6 +446,35 @@ async fn a_cross_position_try_cast_of_a_whole_struct_is_refused_outside_utc_and_
     .await;
 }
 
+async fn refused_and_seed_only(write: &str) {
+    let session = session("America/New_York");
+    let _warehouse = catalog(&session).await;
+    seeded(&session, "ice.ns.t", "STRUCT<a: INT, b: TIMESTAMP_NTZ>").await;
+    let refused = attempt(&session, write).await.expect_err("refused");
+    assert!(refused.contains(HEAD), "{refused}");
+    assert!(refused.contains(HINT), "{refused}");
+    let snapshots = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
+    assert_eq!(snapshots, vec![Some(1)]);
+}
+
+#[tokio::test]
+async fn an_update_assigning_a_cross_position_whole_struct_cast_is_refused_outside_utc() {
+    refused_and_seed_only(&format!(
+        "UPDATE ice.ns.t SET st = CAST(named_struct('a', {INSTANT}, 'b', 1) AS STRUCT<a: INT, b: \
+         TIMESTAMP_NTZ>) WHERE id >= 0"
+    ))
+    .await;
+}
+
+#[tokio::test]
+async fn a_merge_updating_a_cross_position_whole_struct_cast_is_refused_outside_utc() {
+    refused_and_seed_only(
+        "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET \
+         st = CAST(named_struct('a', s.x, 'b', 1) AS STRUCT<a: INT, b: TIMESTAMP_NTZ>)",
+    )
+    .await;
+}
+
 async fn stored_by(
     session: &ReparkSession,
     table: &str,
