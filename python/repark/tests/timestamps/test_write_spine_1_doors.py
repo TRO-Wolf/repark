@@ -11,6 +11,7 @@ import _write_spine_1_doors as doors
 import _write_spine_1_matrix as matrix
 import _write_spine_1_shapes as shapes
 import _write_spine_1_spellings as corpus
+import pytest
 import test_write_spine_1_enumeration as enumeration
 from pydantic import BaseModel, ConfigDict
 
@@ -28,7 +29,9 @@ C010_SPELLINGS = frozenset(
     }
 )
 C010_STATIC = "D8"
+C010_RUNTIME = "D9"
 STATIC = "static"
+RUNTIME = "runtime"
 NATIVE_TEXT_SPARK_READING: dict[str, str | None] = {
     "native_insert": "D1",
     "native_insert_conf": "D1",
@@ -42,6 +45,7 @@ ZS9_MARKERS: tuple[str, ...] = (
     "A value that is not provably a TIMESTAMP_NTZ wall time",
     "The session time zone is not UTC, and a nested TIMESTAMP_NTZ",
 )
+STORE_CAST_MARKER = "Cannot write incompatible data for the table"
 SCALAR_SUBQUERY_MARKER = "SCALAR_SUBQUERY_IN_VALUES"
 UPDATE_SUBQUERY_MARKER = "UPDATE with SET column = (SELECT ...) is not supported"
 SAFE_CAST_MARKER = "CANNOT_SAFELY_CAST"
@@ -51,6 +55,9 @@ ARROW_MARKERS: tuple[str, ...] = (
 )
 VALUES_SPELLINGS = frozenset({"insert_values", "insert_overwrite_values"})
 FAMILY_ROW = re.compile(r"^\| (F\d) \| .+ \| ([\d,]+) \| (?:D\d+ \d+(?:, )?)+ \|$", re.MULTILINE)
+SAMPLE_PER_CLASS = 1
+ZS9_ROW = "ZS9-AHEAD-OF-DOOR"
+D10_STORE_ROW = "D10-STORE-CAST-AHEAD-OF-DOOR"
 
 
 class Divergence(BaseModel):
@@ -67,7 +74,33 @@ class Divergence(BaseModel):
     reason: str
 
 
-DIVERGENCES: tuple[Divergence, ...] = ()
+DIVERGENCES: tuple[Divergence, ...] = (
+    Divergence(
+        row=ZS9_ROW,
+        recorded="2026-10-24",
+        reading=RUNTIME,
+        doors=frozenset({"D1", "D2", "D3", "D4", "D5", "D7", "D8", "D9", "D10"}),
+        markers=ZS9_MARKERS,
+        measured=(),
+        reason=(
+            "the ZS-9 nested-zone refusal raises at planning, before the router reaches the "
+            "branch point of any door, so the record stays empty (976 of 9,792 cells)"
+        ),
+    ),
+    Divergence(
+        row=D10_STORE_ROW,
+        recorded="2026-10-24",
+        reading=RUNTIME,
+        doors=frozenset({"D10"}),
+        markers=(STORE_CAST_MARKER,),
+        measured=(),
+        reason=(
+            "an UPDATE whose string value the store-assignment check refuses raises before "
+            "D10 is recorded; an INSERT or a MERGE with the same refusal records its door "
+            "(576 of 9,792 cells)"
+        ),
+    ),
+)
 
 
 def _number(text: str) -> int:
@@ -156,6 +189,44 @@ def _divergence_of(cell: shapes.Cell, answer: dict[str, Any], reading: str) -> D
     )
 
 
+def _live_cells() -> list[shapes.Cell]:
+    """Return the census cells the facade session runs: ``spark_sql`` and ``dataframe``."""
+    return [
+        cell
+        for cell in shapes.cells()
+        if cell.spelling.reach in (corpus.SPARK_SQL, corpus.DATAFRAME)
+    ]
+
+
+def _find_runtime_disagreements(cells: list[shapes.Cell], tmp_path: Path) -> list[str]:
+    """Run each cell on a facade session of its zone and return every disagreement found."""
+    main = matrix.load_cells(matrix.MAIN_FIXTURE)
+    failures: list[str] = []
+    for zone in shapes.ZONES:
+        zone_cells = [cell for cell in cells if cell.zone == zone]
+        if not zone_cells:
+            continue
+        session = matrix.build_facade_session(zone, tmp_path / shapes.ZONE_TAGS[zone])
+        try:
+            for cell in zone_cells:
+                recorded = matrix.runtime_doors(session, cell)
+                row = _divergence_of(cell, main[cell.cell_id], RUNTIME)
+                if _is_c010(cell):
+                    expected_ok = recorded == [C010_RUNTIME]
+                elif row is not None:
+                    expected_ok = tuple(recorded) == row.measured
+                else:
+                    expected_ok = cell.spelling.door in recorded
+                if not expected_ok:
+                    failures.append(f"{cell.cell_id}: {recorded}")
+                after = matrix.doors_after_select(session)
+                if after:
+                    failures.append(f"{cell.cell_id}: a SELECT recorded {after}")
+        finally:
+            session.stop()
+    return failures
+
+
 def test_fixture_cells_are_the_census() -> None:
     """Both fixtures hold the census's cells, status counts, Spark-door red set and families."""
     text = CENSUS.read_text(encoding="utf-8")
@@ -235,6 +306,37 @@ def test_static_door_classifies_native_sql_cells() -> None:
     assert failures == []
 
 
+@pytest.mark.timeout(900)
+def test_runtime_record_agrees_with_the_corpus_on_the_sample(tmp_path: Path) -> None:
+    """The facade records the corpus door on each sampled Spark SQL cell; a SELECT records none."""
+    cells = matrix.sample(matrix.cells_of_reach(corpus.SPARK_SQL), SAMPLE_PER_CLASS)
+    assert len({(cell.spelling.name, cell.mode, cell.target.tag) for cell in cells}) == len(cells)
+    assert {cell.zone for cell in cells} == set(shapes.ZONES)
+    assert _find_runtime_disagreements(cells, tmp_path) == []
+
+
+@pytest.mark.timeout(900)
+def test_dataframe_writers_record_their_doors(tmp_path: Path) -> None:
+    """Each DataFrame writer records its corpus door after the call, once per target."""
+    cells = matrix.sample(matrix.cells_of_reach(corpus.DATAFRAME), SAMPLE_PER_CLASS)
+    writers = {spelling.name for spelling in corpus.SPELLINGS if spelling.reach == corpus.DATAFRAME}
+    assert {cell.spelling.name for cell in cells} == writers
+    assert len(cells) == len(writers) * len(shapes.targets())
+    assert _find_runtime_disagreements(cells, tmp_path) == []
+
+
+@pytest.mark.parametrize("row", DIVERGENCES, ids=[row.row for row in DIVERGENCES])
+def test_a_recorded_divergence_holds_as_measured(row: Divergence, tmp_path: Path) -> None:
+    """Each divergence row holds on the first census cell of each spelling it covers."""
+    main = matrix.load_cells(matrix.MAIN_FIXTURE)
+    firsts: dict[str, shapes.Cell] = {}
+    for cell in _live_cells():
+        if _divergence_of(cell, main[cell.cell_id], row.reading) == row:
+            firsts.setdefault(cell.spelling.name, cell)
+    assert {cell.spelling.door for cell in firsts.values()} == row.doors
+    assert _find_runtime_disagreements(list(firsts.values()), tmp_path) == []
+
+
 def test_excluded_reaches_are_exactly_the_corpus_says() -> None:
     """The doors no live test runs are D14 to D21, in three groups with their reasons."""
     live = {
@@ -258,3 +360,16 @@ def test_excluded_reaches_are_exactly_the_corpus_says() -> None:
     assert bare_session | rust_api | no_reach == absent
     assert len(bare_session) + len(rust_api) + len(no_reach) == len(absent)
     enumeration.test_every_rust_api_only_door_names_a_rust_test_that_exists()
+
+
+def test_head_replay_equals_main_fixture() -> None:
+    """A head replay of the recorder answers every cell exactly as the main fixture recorded."""
+    replays = sorted(matrix.HERE.glob(matrix.HEAD_FIXTURE_GLOB))
+    if not replays:
+        pytest.skip("replay document not present")
+    main = matrix.load_cells(matrix.MAIN_FIXTURE)
+    for replay in replays:
+        head = matrix.load_cells(replay)
+        assert set(head) == set(main), replay.name
+        differing = [key for key, answer in main.items() if head[key] != answer]
+        assert differing == [], replay.name
