@@ -356,9 +356,8 @@ async fn the_refusal_names_the_table_the_column_and_the_leaf() {
                     CAST(<value> AS TIMESTAMP_NTZ), ...) or array(CAST(<value> AS \
                     TIMESTAMP_NTZ)) in SQL, or col.cast(\"timestamp_ntz\") on the leaf column \
                     of a DataFrame (a CAST written inside expr() is refused), to store the \
-                    session wall time (a CAST of the whole struct, array or map is refused, and \
-                    in an UPDATE assign the field itself), or set spark.sql.session.timeZone to \
-                    UTC for the statement. SQLSTATE: KD000";
+                    session wall time (in an UPDATE assign the field itself), or set \
+                    spark.sql.session.timeZone to UTC for the statement. SQLSTATE: KD000";
     assert!(refused.ends_with(expected), "{refused}");
     let lowered = expected.to_lowercase();
     for word in [
@@ -371,6 +370,41 @@ async fn the_refusal_names_the_table_the_column_and_the_leaf() {
     ] {
         assert!(!lowered.contains(word), "{word}");
     }
+}
+
+#[tokio::test]
+async fn a_whole_container_cast_of_an_instant_stores_the_session_wall_and_the_hint_no_longer_names_it()
+ {
+    let (zone, session_wall) = ZONES[0];
+    assert_eq!(zone, "America/New_York");
+    let session = session(zone);
+    let _warehouse = catalog(&session).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.t (id INT, st STRUCT<a: INT, b: TIMESTAMP_NTZ>, k INT) USING \
+         iceberg TBLPROPERTIES ('format-version'='2')",
+    )
+    .await;
+    run(
+        &session,
+        "INSERT INTO ice.ns.t SELECT id, CAST(named_struct('a', 1, 'b', x) AS STRUCT<a: INT, b: \
+         TIMESTAMP_NTZ>), 0 FROM ice.ns.src",
+    )
+    .await;
+    assert_eq!(
+        stored(&session, "SELECT st.b FROM ice.ns.t").await,
+        vec![Some(session_wall)]
+    );
+    let refused = attempt(
+        &session,
+        "INSERT INTO ice.ns.t SELECT id, named_struct('a', 1, 'b', x), 0 FROM ice.ns.src",
+    )
+    .await
+    .expect_err("refused");
+    assert!(refused.contains(HINT), "{refused}");
+    assert!(!refused.contains("whole struct"), "{refused}");
+    let snapshots = stored(&session, "SELECT count(*) FROM ice.ns.`t$snapshots`").await;
+    assert_eq!(snapshots, vec![Some(1)]);
 }
 
 async fn stored_by(

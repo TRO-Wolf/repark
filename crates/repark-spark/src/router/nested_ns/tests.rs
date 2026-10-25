@@ -3,11 +3,26 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::{Column, DFSchema, ScalarValue};
-use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, Projection, cast, lit};
+use datafusion::logical_expr::{
+    Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection, cast, lit,
+};
 
 use repark_functions::session_time_zone::SessionTimeZoneConfig;
+use repark_iceberg::write::nested_ns_gate::{holds_naive_timestamp, holds_zoned_timestamp};
 
-use super::{casts_a_zoned_value_to_naive, lineage_has, names_utc};
+use super::{lineage_has, names_utc};
+
+fn casts_a_zoned_value_to_naive(expr: &Expr, schema: &DFSchema) -> bool {
+    let (input, target) = match expr {
+        Expr::Cast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        Expr::TryCast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        _ => return false,
+    };
+    holds_naive_timestamp(target)
+        && input
+            .get_type(schema)
+            .map_or(true, |source| holds_zoned_timestamp(&source))
+}
 
 fn instant_cast() -> LogicalPlan {
     let instant = lit(ScalarValue::TimestampMicrosecond(
