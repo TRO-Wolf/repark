@@ -37,3 +37,51 @@ A DIFFERENT cell on the matrix; a cited pin that does not exist; a parity-live o
 ## 5. Hand-back
 
 One JSON object: `status`, `head`, `commits`, `matrix` (sha, tallies), `runs` (parity-live ids, acceptance id), `rows` (re-dated, carve-outs, new), `gates`, `questions`.
+
+## Outcome (2026-10-26)
+
+**Label:** format-v2 Iceberg reads and writes: **PRODUCTION**, on main `59d104d9bc9e54da0659c2295277c98b56a2a699` (ICE-V2-LABEL-1, 2026-10-26). The label moves on the owner's signature of the three carve-out lines below, given on the PR (section 1).
+
+**Step-0 facts (orchestrator, measured; copied, never re-measured):**
+
+- Matrix main sha: `59d104d9bc9e54da0659c2295277c98b56a2a699` (the main that carries #1191).
+- 842 cells: 705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT (families: PROPS 50/5/0, DDL 166/38/1, PUSHDOWN 9/0/0, WRITE 152/25/1, READ 122/22/2, PROC 109/30/0, EDGE 19/2/0, V3-LINEAGE 14/0/0, FUNCTIONS 15/0/0, VIEWS 9/1/0, TYPES 26/5/1, CATALOG 14/4/0 as EQUAL/SPARK-CANNOT/REFUSED-REGISTERED). Zero DIFFERENT. Identical family tallies to the 2026-09-27, 2026-10-13 and 2026-10-26 (d114a2cf) runs.
+- Merged v2 PRs today: #1189, #1190 (WRITE-SPINE-1 step 3 records), #1193 (DEPS-1), #1194 (U-4), #1192 (NS-TRUTHUP-1), #1191 (U-11).
+- parity-live run ids: 40287530976 (2026-10-26), 40172850047 (2026-10-25), 40074142767 (2026-10-24), all success. aws-acceptance run id: 40295982749 (2026-10-26, success; 40178125415 on 10-25 and 40143628929 on 10-24 also success).
+
+**Clerk check of the merged list (from `git log` on main):** #1190 is commit `d114a2cf`, whose subject is "docs: the v3 core label plan adopted 2026-10-26, with the NS-TRUTHUP-1 and ICE-TSNS-UPDATE-RANGE-CLASS-1 orders". No merged subject carries "WRITE-SPINE-1 step 3 records"; the step-3 work is #1182 (steps 1 and 3a) and #1185 (step 3b).
+
+**Merged PR list (every v2 unit, by main commit):**
+
+| Unit | PR | Merge commit |
+|---|---|---|
+| PA-LOCAL-FS-POLICY-1 (audit PA-02, PA-03, PA-04) | #1075 | `14ad3c6d` |
+| PA-DBT-MISMATCH-REDACT-1 (audit PA-01) | not in the subject | `444dacfe` |
+| ICE-TSNS-TYPE-PLANNER-1 (R-010, R-012, R-017) | #1082 | `c7121437` |
+| ICE-NTZ-NESTED-REFUSE-1 (U-8) | #1124 (record #1136) | `c91f69c5` |
+| ZONE-SEAM-1 | #1139 | `3bc2915a` |
+| EXPLAIN-DML-WRITE-1 | #1137 (P2 report #1138) | `b7a20167` |
+| GATE-RETIRE-1 | #1187 | `cf6641a4` |
+| WRITE-SPINE-1 step (0) | #1181 | `d50e694a` |
+| WRITE-SPINE-1 steps (1) and (3a) | #1182 | `6bd98bc8` |
+| WRITE-SPINE-1 step (3b) | #1185 | `e91dd8fa` |
+| WRITE-SPINE-1 step (2) | #1189 | `9fd60149` |
+| ICE-INTEGRITY-PINS-1, pin K | #1142 | `dc462ccb` |
+| ICE-INTEGRITY-PINS-1, pins U and X | #1157 | `c874ab09` |
+| ICE-INTEGRITY-PINS-1, legs U and X and the cross-read step wired | #1163 | `75b9e43b` |
+| ICE-INTEGRITY-PINS-1, live fix rounds 2 to 4 | #1166, #1167, #1170 | `80e60ebb`, `1aeb1445`, `2d069e8b` |
+| Cross-read diagnostics and records | #1172 to #1176 | `bc30f341`, `e765f897`, `ad0018b6`, `0b780f3a`, `e4f8d36b` |
+| AWS-EPHEMERAL-RUNS-1 (self-contained runs; S3 Tables through the REST catalog) | #1180 (with #1183, #1184; card #1177) | `c2b90513` |
+| ICE-SPARK-CROSS-READ-1 (U-10), test commit | not in the subject | `d96028ee` |
+| ICE-RESOURCE-BOUND-1 (U-11) | #1191 | `59d104d9` |
+| NS-TRUTHUP-1 | #1192 | `69b7375f` |
+| ICE-TSNS-UPDATE-RANGE-CLASS-1 (U-4) | #1194 | `a8c51551` |
+| DEPS-1 | #1193 | `42e43214` |
+
+**Open at the label (named, not closed by this outcome):** the carve-outs below; NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7); NESTED-MAP-KEY-ZONE-1 (a date into a MAP TIMESTAMP key, ruling WS2-30, card only, no registry row); the PA-LOCAL-FS-POLICY-1 closeout verifier, ledger clause C-018 (OPEN); the ICE-INTEGRITY-PINS-1 ledger clauses still read OPEN where the registry records live proof (C-012, C-013, C-059, C-060, C-068 to C-070).
+
+**Owner signature (carve-outs; the owner fills each line on the PR, one per carve-out):**
+
+- ENC-1 item 1 (ruling 121 (b)) signed by owner:
+- ENC-1 item 5 (ruling 121 (b)) signed by owner:
+- ENC-CTAS-REPLACE-1 (ruling 98 (a)) signed by owner:
