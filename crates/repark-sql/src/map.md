@@ -174,6 +174,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   before any routing, so `EXPLAIN ANALYZE` (which went straight to `delegate`) and `PREPARE`
   (the `_` arm) of a write refuse on the ANSI door with the ruled texts.
   pins: explain-dml-write-1/C-003, C-007
+- `dialect.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `on_session_built` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name, so an ANSI session carries both kernels the conform stage names. pins: write-spine-1/C-017
 - `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13; ruling 94, 2026-10-15):**
   `AnsiDialect::type_planner` hands the session builder the ANSI variant
   (`spark_type_planner::ansi_type_planner`), so the ANSI door types `TIMESTAMP` as the naive

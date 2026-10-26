@@ -10,6 +10,7 @@ pub use commit_target::{FilterValidation, commit_append_to};
 pub mod concurrency;
 pub(crate) mod conflict_filter;
 pub(crate) mod conform;
+pub mod conform_stage;
 pub mod data_format;
 pub(crate) mod distribution;
 pub mod encryption;
@@ -122,12 +123,14 @@ pub use concurrency::{
     DEFAULT_MAX_CONCURRENT_FILES, MAX_CONCURRENT_FILES_KEY, WriteConcurrency,
     concurrency_from_config_map, concurrency_from_ctx, with_write_concurrency,
 };
+pub use conform_stage::{
+    StageRequest, StageSite, conform_frame, conform_stage, conform_table_frame, table_targets,
+};
 pub use insert_gate::InsertStoreAssignment;
 pub use merge::{
     write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
     write_data_files_with_concurrency,
 };
-pub use ntz_store::{zone_stores, zone_stores_by_name};
 pub use output_spec::{
     parse_output_spec_id, staged_spec_is_partitioned, staging_table, validate_output_spec_id,
 };

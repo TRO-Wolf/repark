@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 from pathlib import Path
@@ -41,6 +42,8 @@ NATIVE_TEXT_SPARK_READING: dict[str, str | None] = {
     "native_update": "D10",
     "native_delete": None,
 }
+STEP_2_MOVES = matrix.HERE / "write_spine_1_step2_moves.json"
+STEP_2_MOVE_COUNT = 288
 ZS9_MARKERS: tuple[str, ...] = (
     "A value that is not provably a TIMESTAMP_NTZ wall time",
     "The session time zone is not UTC, and a nested TIMESTAMP_NTZ",
@@ -374,14 +377,17 @@ def test_excluded_reaches_are_exactly_the_corpus_says() -> None:
     enumeration.test_every_rust_api_only_door_names_a_rust_test_that_exists()
 
 
-def test_head_replay_equals_main_fixture() -> None:
-    """A head replay of the recorder answers every cell exactly as the main fixture recorded."""
+def test_head_replay_moves_exactly_the_step_2_cells() -> None:
+    """A head replay differs from main exactly on the frozen step-2 moves, each EQUAL."""
     replays = sorted(matrix.HERE.glob(matrix.HEAD_FIXTURE_GLOB))
     if not replays:
         pytest.skip("replay document not present")
     main = matrix.load_cells(matrix.MAIN_FIXTURE)
+    frozen = set(json.loads(STEP_2_MOVES.read_text(encoding="utf-8"))["moves"])
+    assert len(frozen) == STEP_2_MOVE_COUNT
     for replay in replays:
         head = matrix.load_cells(replay)
         assert set(head) == set(main), replay.name
-        differing = [key for key, answer in main.items() if head[key] != answer]
-        assert differing == [], replay.name
+        differing = {key for key, answer in main.items() if head[key] != answer}
+        assert differing == frozen, replay.name
+        assert all(head[key]["status"] == "EQUAL" for key in differing), replay.name

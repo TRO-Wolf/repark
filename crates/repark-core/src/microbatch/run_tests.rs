@@ -1,9 +1,16 @@
+use std::collections::HashMap;
 use std::time::{Duration, UNIX_EPOCH};
 
+use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
+use iceberg::{NamespaceIdent, TableCreation};
 use repark_iceberg::microbatch::error::MicroBatchError;
 use repark_iceberg::microbatch::offset::{SPARK_EPOCH_ID_KEY, SinkRecord};
+use repark_iceberg::write::StageSite;
+use repark_iceberg::write::conform_stage::{install_stage_record, last_stage_sites};
 
-use crate::microbatch::driver::{QueryState, ShutdownOutcome, StreamingQueryManager, Trigger};
+use crate::microbatch::driver::{
+    QueryState, ShutdownOutcome, SinkSpec, StreamSpec, StreamingQueryManager, Trigger,
+};
 use crate::microbatch::testing::{
     Fixture, SINK, SOURCE, options, stamped_epochs, started, table_spec, wait_for_epoch,
 };
@@ -607,5 +614,87 @@ async fn a_keyed_sink_refuses_the_batch_and_stages_no_file() {
     assert_eq!(
         fixture.table("silver").await.metadata().snapshots().count(),
         0
+    );
+}
+
+#[tokio::test]
+async fn the_micro_batch_sink_passes_the_stage() {
+    let fixture = Fixture::new().await;
+    bronze(&fixture).await;
+    install_stage_record(fixture.session.context());
+    let handle = started(&fixture, table_spec(Trigger::AvailableNow, &options(&[]))).await;
+    assert_eq!(handle.await_termination(None).await, Ok(true));
+    assert_eq!(
+        last_stage_sites(fixture.session.context()),
+        [StageSite::MicroBatchAppend]
+    );
+    assert_eq!(fixture.ids(SINK).await, [1, 2, 3, 4, 5]);
+}
+
+#[tokio::test]
+async fn a_bare_session_micro_batch_refuses_a_conversion_without_its_kernel() {
+    let fixture = Fixture::new().await;
+    let catalog = fixture
+        .session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("the catalog is visible");
+    let sales = NamespaceIdent::new("sales".to_string());
+    for (name, kind) in [
+        ("zoned", PrimitiveType::Timestamptz),
+        ("walls", PrimitiveType::Timestamp),
+    ] {
+        let schema = Schema::builder()
+            .with_fields(vec![
+                NestedField::required(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
+                NestedField::optional(2, "ts", Type::Primitive(kind)).into(),
+            ])
+            .build()
+            .expect("the schema builds");
+        let creation = TableCreation::builder()
+            .name(name.to_string())
+            .location(format!("{}/sales/{name}", fixture.root()))
+            .schema(schema)
+            .properties(HashMap::new())
+            .build();
+        catalog
+            .create_table(&sales, creation)
+            .await
+            .expect("the table creates");
+    }
+    fixture
+        .session
+        .refresh_catalog_provider("ice")
+        .await
+        .expect("the provider refreshes");
+    fixture
+        .insert(
+            "ice.sales.zoned",
+            "(1, arrow_cast(0, 'Timestamp(µs, \"UTC\")'))",
+        )
+        .await;
+    let spec = StreamSpec::new(
+        "ice.sales.zoned",
+        options(&[]),
+        SinkSpec::Table {
+            sink: "ice.sales.walls".to_string(),
+        },
+    );
+    let mut spec = spec;
+    spec.trigger = Trigger::AvailableNow;
+    let handle = started(&fixture, spec).await;
+    let refusal = handle
+        .await_termination(None)
+        .await
+        .expect_err("the batch refuses without the wall kernel");
+    let text = refusal.to_string();
+    assert!(
+        text.contains("the store kernel `__repark_cast_timestamp_ntz__` is not registered"),
+        "{text}"
+    );
+    assert!(
+        text.contains("the Spark dialect or the ANSI dialect"),
+        "{text}"
     );
 }

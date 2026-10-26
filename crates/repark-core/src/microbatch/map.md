@@ -123,6 +123,7 @@ pins: mb-fence-body-flake-1/C-007
   The table sink staged Parquet before the commit refused; the catalog guard now refuses the
   first file, so no orphan is left under the sink.
   pins: enc-1/C-007, C-008
+- `run.rs`, `run_tests.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** D21's `append` conforms its frame through `conform_table_frame` (site MicroBatchAppend) before `stage_overwrite_files_with`. `run_tests.rs` holds the two D21 driver pins: the public `start` refuses a local catalog (`driver.rs:760`), so only a crate test runs the driver on a memory catalog. Pins: `the_micro_batch_sink_passes_the_stage`, `a_bare_session_micro_batch_refuses_a_conversion_without_its_kernel`, `the_sink_guard_never_fires_on_a_routed_door`. pins: write-spine-1/C-017, C-018
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and

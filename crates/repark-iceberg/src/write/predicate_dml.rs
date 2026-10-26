@@ -399,15 +399,16 @@ async fn collect_identity_update_rows(
         .iter()
         .map(|field| (field.name().clone(), field.data_type().clone()))
         .collect();
-    let plan = crate::write::store_overflow::wrap_store_outputs(
-        raw,
-        &targets,
-        true,
-        false,
-        None,
-        crate::write::struct_pairing::StructPairing::by_name(!spec.case_insensitive),
-        "``",
-    )?;
+    let request = crate::write::conform_stage::StageRequest {
+        site: crate::write::conform_stage::StageSite::PredicateUpdate,
+        targets: &targets,
+        by_name: true,
+        fold: false,
+        gate_op: None,
+        pairing: crate::write::struct_pairing::StructPairing::by_name(!spec.case_insensitive),
+        table: "``",
+    };
+    let plan = crate::write::conform_stage::conform_stage(ctx, raw, &request)?;
     let mut stream = ctx
         .execute_logical_plan(plan)
         .await?
