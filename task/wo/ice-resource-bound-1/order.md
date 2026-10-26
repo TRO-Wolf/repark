@@ -34,6 +34,14 @@ largest process peak 14.1 GiB, and no cell reached the cap. The probe is
 - **Q4, sizes multiple.** Premise: the closeout says 1x, 4x and 16x; the replan says the audit grids. Lean: 1x, 4x and 16x of the audit grids, as measured; no series reached the 40 GiB cap.
 - **Q5, pool peak reader for step 1 pins.** Premise: no session surface exposes `MemoryPool` reserved bytes or a high-water mark. Lean: the step 1 sketch names a test-visible reader, or the pins use refusal or commit at a chosen pool instead.
 
+**Owner rulings (2026-10-26, "adopt all of it, go ahead with the U-11 sketch").** Step 1 opens on Claude Opus 5.5.
+
+- **Q1 RULED:** the same class as today's pool refusal (DataFusion `ResourcesExhausted`, surfacing as `PySparkException`). The text names the statement kind, the estimate, the fraction times the pool and the key. It names no data-deleting action (ruling 76(a)).
+- **Q2 RULED:** one fraction key per path with the measured defaults: `repark.write.ordered.max-input-fraction` = 0.10, `repark.merge.mor.max-updated-fraction` = 0.05, `repark.changelog.max-source-fraction` = 0.0625; 0 means no bound. The input is not charged to the pool: that changes write-path accounting, a wider change than a stated bound.
+- **Q3 RULED:** close PA-10 for cgroup v2 by walking the leaf and its ancestors and taking the minimum `memory.max`. cgroup v1, macOS and Windows are declared as dated rows that require an explicit pool budget.
+- **Q4 RULED:** 1x of the audit grids is pinned in the pull-request tests; 4x and 16x run in the acceptance nightly only.
+- **Q5 RULED:** no pool-peak reader. The pins assert refusal or commit at a chosen pool size.
+
 **Out of scope, observed (from the hand-back):**
 
 - The static door classifier answers D8 for `MERGE ... UPDATE SET t.a = s.a`, and the runtime record answers D9. Carded as [WRITE-DOOR-CLASSIFIER-D8-D9-1](../../roadmap/mid-term/write-door-classifier-d8-d9-1-card-2026-10-26.md).
