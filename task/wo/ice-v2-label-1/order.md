@@ -80,6 +80,8 @@ One JSON object: `status`, `head`, `commits`, `matrix` (sha, tallies), `runs` (p
 
 **Open at the label (named, not closed by this outcome):** the carve-outs below; NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7); NESTED-MAP-KEY-ZONE-1 (a date into a MAP TIMESTAMP key, ruling WS2-30, card only, no registry row); the PA-LOCAL-FS-POLICY-1 closeout verifier, ledger clause C-018 (OPEN); the ICE-INTEGRITY-PINS-1 ledger clauses still read OPEN where the registry records live proof (C-012, C-013, C-059, C-060, C-068 to C-070).
 
+**STATUS Last-updated line:** it keeps its 2026-09-12 text, because `python/repark-parity/tests/test_v1_gate_docs.py` pins it; the Iceberg maturity section carries its own date (2026-10-26).
+
 **Owner signature (carve-outs; the owner fills each line on the PR, one per carve-out):**
 
 - ENC-1 item 1 (ruling 121 (b)) signed by owner:

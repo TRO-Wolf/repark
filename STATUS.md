@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-10-26._
+_Last updated: 2026-09-12._
 
 ## Release state
 
@@ -48,7 +48,7 @@ The level names are the [2026-10-13 re-rating](docs/artifacts/iceberg-rerating-2
 
 ## Delivered capabilities
 
-**Milestone one (the private-v1 → public-v2 port) is COMPLETE**, merged to `main` 2026-08-08 (PRs #16, #18–#23); record: [docs/history/port-v2/](docs/history/port-v2/README.md). **Nine crates are delivered** (`repark-common`, `-core`, `-iceberg`, `-functions`, `-spark`, `-sql`, `-ta`, `-ml`, `-python`; map: [crates/map.md](crates/map.md)); the Python tree ships `python/repark` and `python/repark-parity`. **Acceptance:** the v2 test census is byte-flat against the port-source pin `fc3f48102` (procedure and counts: [docs/port/census.md](docs/port/census.md) §7); the facade cohort stays for the deferred-ledger tests ([baseline](task/census/baseline-fc3f48102/facade/map.md)).
+**Milestone one (the private-v1 → public-v2 port) is COMPLETE**, merged to `main` 2026-08-08 (PRs #16, #18–#23); record: [docs/history/port-v2/](docs/history/port-v2/README.md). **Nine crates are delivered** (`repark-common`, `-core`, `-iceberg`, `-functions`, `-spark`, `-sql`, `-ta`, `-ml`, `-python`; map: [crates/map.md](crates/map.md)); the Python tree ships `python/repark` and `python/repark-parity`. **Acceptance:** the v2 test census is byte-flat against the port-source pin `fc3f48102` (counts in [docs/history/port-v2/](docs/history/port-v2/README.md) "Result at acceptance"; procedure in [docs/port/census.md](docs/port/census.md) §7); the facade cohort stays for the deferred-ledger tests ([baseline](task/census/baseline-fc3f48102/facade/map.md)).
 
 ## Current milestone
 
@@ -64,7 +64,7 @@ What happens next, in order:
 1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10):** [docs/history/frontdoor/](docs/history/frontdoor/README.md), [task/metrics.md](task/metrics.md).
 2. **V2 Engine Hardening** — the active engine campaign; its state is the H-2 entry in [Active workstreams](#active-workstreams). The Y/Z/W/V/S wave records are indexed in [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
 3. **Production-pipeline cutover inventory** — **Filed 2026-09-04:** [docs/cutover/inventory.md](docs/cutover/inventory.md), under **single-writer-per-table**, with each rollback story; its §7 carries the four owner rulings of the same day.
-4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is pinned at 888 names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy: [docs/release.md](docs/release.md) "Versioning policy").
+4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is pinned at 888 names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy: [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut on the north-star gate line V1-GATE wrote the same day.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
