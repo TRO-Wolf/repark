@@ -706,3 +706,49 @@ async fn a_partition_overwrite_guards_an_integer_overflow_at_plan_time() {
         );
     }
 }
+
+const NEW_YORK_EPOCH_WALL: i64 = -18_000_000_000;
+
+async fn conformed_wall(sql: &str, wall_column: usize) -> i64 {
+    let session = spark_door("America/New_York");
+    let warehouse = TempDir::new().expect("warehouse");
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    for setup in [
+        "CREATE NAMESPACE ice.ns",
+        "CREATE TABLE ice.ns.ct (id INT, ts TIMESTAMP_NTZ) USING iceberg",
+    ] {
+        assert_eq!(attempt(&session, setup).await, Ok(()), "{setup}");
+    }
+    let sink = load(&session, "ct").await;
+    let frame = session.sql(sql).await.expect("frame");
+    let conformed =
+        conform_table_frame(session.context(), &sink, frame, StageSite::MicroBatchAppend)
+            .await
+            .expect("the frame conforms without a refusal");
+    let batches = conformed.collect().await.expect("collect");
+    let ticks = cast(batches[0].column(wall_column), &DataType::Int64).expect("ticks");
+    ticks.as_primitive::<Int64Type>().value(0)
+}
+
+#[tokio::test]
+async fn a_by_name_column_that_differs_only_in_case_resolves_to_its_target() {
+    let wall = conformed_wall(
+        "SELECT 1 AS ID, arrow_cast(0, 'Timestamp(µs, \"UTC\")') AS TS",
+        1,
+    )
+    .await;
+    assert_eq!(wall, NEW_YORK_EPOCH_WALL);
+}
+
+#[tokio::test]
+async fn a_by_name_frame_in_another_order_resolves_by_name_not_position() {
+    let wall = conformed_wall(
+        "SELECT arrow_cast(0, 'Timestamp(µs, \"UTC\")') AS ts, 1 AS id",
+        0,
+    )
+    .await;
+    assert_eq!(wall, NEW_YORK_EPOCH_WALL);
+}

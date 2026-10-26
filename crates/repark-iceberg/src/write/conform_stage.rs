@@ -187,11 +187,26 @@ pub fn conform_stage(
         record_site(ctx, request.site);
         return Ok(plan);
     }
-    let planned = planned_types(ctx, &plan)?;
+    let planned = if analyzed_by_the_door(request.site) {
+        plan.schema()
+            .fields()
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect()
+    } else {
+        planned_types(ctx, &plan)?
+    };
     let plan = store_leaves(ctx, plan, &planned, request)?;
     let plan = conform_outputs(ctx, plan, &planned, request)?;
     record_site(ctx, request.site);
     Ok(plan)
+}
+
+fn analyzed_by_the_door(site: StageSite) -> bool {
+    matches!(
+        site,
+        StageSite::MergeInsert | StageSite::MergeUpdate | StageSite::PredicateUpdate
+    )
 }
 
 fn planned_types(ctx: &SessionContext, plan: &LogicalPlan) -> Result<Vec<DataType>> {
