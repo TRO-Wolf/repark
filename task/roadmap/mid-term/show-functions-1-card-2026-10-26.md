@@ -18,7 +18,17 @@ Row R-013 also claims that the reserved name sits in the routine listing beside 
 |---|---|
 | `SELECT routine_name FROM information_schema.routines ORDER BY 1` | `table 'spark_catalog.information_schema.routines' not found` |
 | `SHOW FUNCTIONS` | `table 'datafusion.information_schema.parameters' not found` (door-wide) |
-| `SHOW FUNCTIONS IN ice.system` | answers (the NS-TRUTHUP-1 builder's note; not in the cells file) |
+| `SHOW FUNCTIONS IN ice.system` | answers, 7 rows (Spark door; see the measured block below) |
+
+## Measured (orchestrator, 2026-10-26)
+
+Measured by the orchestrator on the head's module, 2026-10-26, verbatim:
+
+- **Spark door, `spark.sql.ansi.enabled=true`:** `SHOW FUNCTIONS` raises `Error during planning: table 'datafusion.information_schema.parameters' not found`; `SHOW FUNCTIONS IN ice.system` answers 7 rows; `SELECT routine_name FROM information_schema.routines` raises `table 'spark_catalog.information_schema.routines' not found`.
+- **Spark door, `spark.sql.ansi.enabled=false`:** the same three outcomes, with the same texts.
+- **Native door `repark.sql()`:** `SHOW FUNCTIONS` raises `table 'datafusion.information_schema.parameters' not found`; `information_schema.routines` raises `table 'datafusion.information_schema.routines' not found`.
+
+**Claim:** bare `SHOW FUNCTIONS` fails on both Python doors and under both ANSI settings; the namespaced form, `SHOW FUNCTIONS IN ice.system`, works on the Spark door.
 
 ## What the card asks
 

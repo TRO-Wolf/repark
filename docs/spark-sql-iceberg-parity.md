@@ -3800,6 +3800,9 @@ still open is `isModifiable`.
   found`, and bare `SHOW FUNCTIONS` fails door-wide with `table
   'datafusion.information_schema.parameters' not found` (`SHOW FUNCTIONS IN ice.system` works).
   The routine list cannot be read, so the row cannot be declared against the other reserved names.
+  Bare `SHOW FUNCTIONS` fails on both Python doors and under both ANSI settings; the namespaced
+  `SHOW FUNCTIONS IN ice.system` works on the Spark door (orchestrator measurement, 2026-10-26,
+  recorded verbatim in the card's measured block).
   Card [SHOW-FUNCTIONS-1](../task/roadmap/mid-term/show-functions-1-card-2026-10-26.md) blocks it.
 
 ### ICE-TSNS-SQL-1-R-014 — CLOSED 2026-10-09 for a `timestamp_ns` leaf (refused by R-015); the `VALUES` spelling is row R-018
@@ -4249,8 +4252,7 @@ still open is `isModifiable`.
   Every `INSERT INTO … VALUES` and `INSERT OVERWRITE … VALUES` of them into a v3 table with a
   nanosecond leaf refuses with R-015's named `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` (12
   cells), and no cell shows raw Arrow text. The orchestrator's ruling of 2026-10-26 closes part 1
-  under R-015 with no fold into NESTED-LITERAL-SEAM-1 (plan decision D4 not triggered). **Part 2 was
-  not re-measured** and stays as the 2026-10-09 reading.
+  under R-015 with no fold into NESTED-LITERAL-SEAM-1 (plan decision D4 not triggered). Part 2 was not measured by NS-TRUTHUP-1 (scope: part 1 only); it keeps its 2026-10-09 reading.
 - **ICE-STRUCT-PAIRING-1 (2026-10-14), list L1.** 28 cells per format version refuse before
   any store on both engines and write no file, and the unit holds them unchanged: an array or
   map holding a struct with a surplus or a missing field through the DataFusion-planned
