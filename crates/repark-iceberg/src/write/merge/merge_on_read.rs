@@ -18,6 +18,7 @@ use super::{
     not_matched_by_source, require_non_null_i64, session_staging, skip_cardinality, strict_cast,
 };
 use crate::write::concurrency::concurrency_from_ctx;
+use crate::write::resource_bound::UpdatedRowsBudget;
 use crate::write::session_write_conf::resolve_empty_session_write;
 
 pub(super) async fn plan_and_commit_mor(
@@ -36,6 +37,8 @@ pub(super) async fn plan_and_commit_mor(
     } = target;
     let (table, write_schema, snapshot_id) = (*table, *write_schema, *snapshot_id);
     let (pairs, data_files, snapshot_extra, staging) = async {
+        let concurrency = concurrency_from_ctx(ctx);
+        let mut budget = UpdatedRowsBudget::new(&concurrency.resource_bounds);
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
         let mut pairs = if spec.matched.is_empty() {
@@ -47,6 +50,7 @@ pub(super) async fn plan_and_commit_mor(
                 write_schema,
                 skip_cardinality(spec),
                 &sql.matched_work_sql(write_schema),
+                &mut budget,
             )
             .await?;
             if !update_batches.is_empty() {
@@ -63,6 +67,7 @@ pub(super) async fn plan_and_commit_mor(
                 write_schema,
                 true,
                 &not_matched_by_source::mor_work_sql(sql, write_schema),
+                &mut budget,
             )
             .await?;
             pairs.extend(nmbs_pairs);
@@ -78,7 +83,6 @@ pub(super) async fn plan_and_commit_mor(
                 insert_stream_checked(ctx, &insert_sql, write_schema).await?,
             ));
         }
-        let concurrency = concurrency_from_ctx(ctx);
         let (snapshot_extra, staging) = resolve_empty_session_write(ctx)?;
         let chained = futures::stream::iter(streams).flatten();
         let data_files = session_staging::write_new_data_files_from_stream_with(
@@ -119,6 +123,7 @@ async fn matched_work_mor(
     write_schema: &SchemaRef,
     skip_cardinality: bool,
     work_sql: &str,
+    budget: &mut UpdatedRowsBudget,
 ) -> Result<(
     Vec<crate::write::position_delete::PositionDeletePair>,
     Vec<RecordBatch>,
@@ -133,6 +138,7 @@ async fn matched_work_mor(
 
     while let Some(batch_result) = stream.next().await {
         let batch = batch_result?;
+        let held = update_batches.len();
         consume_matched_work_batch(
             &batch,
             write_schema,
@@ -144,6 +150,7 @@ async fn matched_work_mor(
             &mut update_batches,
             skip_cardinality,
         )?;
+        budget.charge(&update_batches[held..])?;
     }
     let pairs = pair_indices
         .into_iter()

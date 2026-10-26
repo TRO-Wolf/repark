@@ -1,9 +1,14 @@
 //! Write-path concurrency knobs (session conf only — never table properties).
 
+use std::sync::Arc;
+
 use datafusion::common::config::ConfigExtension;
 use datafusion::common::extensions_options;
 use datafusion::error::{DataFusionError, Result};
+use datafusion::execution::TaskContext;
 use datafusion::prelude::{SessionConfig, SessionContext};
+
+use crate::write::resource_bound::ResourceBounds;
 
 /// Session conf key (hyphen form — the user-facing spelling).
 pub const MAX_CONCURRENT_FILES_KEY: &str = "repark.write.max-concurrent-files";
@@ -19,12 +24,14 @@ pub const DEFAULT_MAX_CONCURRENT_FILES: usize = 4;
 pub struct WriteConcurrency {
     /// Maximum number of concurrent file-writer tasks (≥ 1).
     pub max_concurrent_files: usize,
+    pub resource_bounds: ResourceBounds,
 }
 
 impl Default for WriteConcurrency {
     fn default() -> Self {
         Self {
             max_concurrent_files: DEFAULT_MAX_CONCURRENT_FILES,
+            resource_bounds: ResourceBounds::default(),
         }
     }
 }
@@ -41,6 +48,15 @@ impl WriteConcurrency {
         }
         Ok(Self {
             max_concurrent_files,
+            resource_bounds: ResourceBounds::default(),
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn with_max_concurrent_files(self, max_concurrent_files: usize) -> Result<Self> {
+        Ok(Self {
+            resource_bounds: self.resource_bounds,
+            ..Self::new(max_concurrent_files)?
         })
     }
 
@@ -76,22 +92,42 @@ pub fn with_write_concurrency(
     config: SessionConfig,
     concurrency: WriteConcurrency,
 ) -> SessionConfig {
-    config.with_option_extension(ReparkWriteConfig {
-        max_concurrent_files: concurrency.max_concurrent_files,
-    })
+    config
+        .with_option_extension(ReparkWriteConfig {
+            max_concurrent_files: concurrency.max_concurrent_files,
+        })
+        .with_extension(Arc::new(concurrency.resource_bounds))
 }
 
 /// Resolve write concurrency from a live [`SessionContext`] (extension or default).
 #[must_use]
 pub fn concurrency_from_ctx(ctx: &SessionContext) -> WriteConcurrency {
-    ctx.copied_config()
+    resolve(
+        &ctx.copied_config(),
+        &ctx.runtime_env().memory_pool.memory_limit(),
+    )
+}
+
+#[must_use]
+pub fn concurrency_from_task(ctx: &TaskContext) -> WriteConcurrency {
+    resolve(ctx.session_config(), &ctx.memory_pool().memory_limit())
+}
+
+fn resolve(
+    config: &SessionConfig,
+    pool: &datafusion::execution::memory_pool::MemoryLimit,
+) -> WriteConcurrency {
+    let max_concurrent_files = config
         .options()
         .extensions
         .get::<ReparkWriteConfig>()
-        .map(|extension| WriteConcurrency {
-            max_concurrent_files: extension.max_concurrent_files.max(1),
-        })
-        .unwrap_or_default()
+        .map_or(DEFAULT_MAX_CONCURRENT_FILES, |extension| {
+            extension.max_concurrent_files.max(1)
+        });
+    WriteConcurrency {
+        max_concurrent_files,
+        resource_bounds: ResourceBounds::from_session_config(config).at_pool(pool),
+    }
 }
 
 /// Pull `repark.write.max-concurrent-files` (or underscore alt) from a builder conf map.
@@ -106,10 +142,14 @@ where
     let raw = config
         .get(MAX_CONCURRENT_FILES_KEY)
         .or_else(|| config.get(MAX_CONCURRENT_FILES_KEY_ALT));
-    match raw {
-        None => Ok(WriteConcurrency::default()),
-        Some(value) => WriteConcurrency::parse(value),
-    }
+    let concurrency = match raw {
+        None => WriteConcurrency::default(),
+        Some(value) => WriteConcurrency::parse(value)?,
+    };
+    Ok(WriteConcurrency {
+        resource_bounds: ResourceBounds::from_config_map(config)?,
+        ..concurrency
+    })
 }
 
 #[cfg(test)]

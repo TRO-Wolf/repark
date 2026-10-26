@@ -1,7 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use datafusion::arrow::array::{Array, BooleanArray, RecordBatch, StructArray};
 use datafusion::arrow::compute::cast;
@@ -28,7 +27,9 @@ use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
 use iceberg::writer::file_writer::FileWriterBuilder;
 use iceberg::writer::file_writer::location_generator::{FileNameGenerator, LocationGenerator};
 
+use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::iceberg_err;
+use crate::write::resource_bound::{OrderedInputBudget, drain_ordered_input};
 use crate::write::sort_order::DISTRIBUTION_MODE_PROPERTY;
 
 mod canonical_float;
@@ -418,6 +419,7 @@ pub(crate) async fn fanout_sorted_serial<S>(
     table: &Table,
     conformed: &mut S,
     staging: &super::write_options::WriterStagingOverrides,
+    concurrency: WriteConcurrency,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -425,10 +427,8 @@ where
     if !default_sort_is_declared(table) {
         return super::append::fanout_conformed_stream_serial(table, conformed, staging).await;
     }
-    let mut collected = Vec::new();
-    while let Some(batch) = conformed.try_next().await? {
-        collected.push(batch);
-    }
+    let budget = OrderedInputBudget::serial(&concurrency.resource_bounds);
+    let collected = drain_ordered_input(conformed, &budget).await?;
     let sorted = sort_batches_by_default_order(table, collected).await?;
     let mut ordered = futures::stream::iter(sorted.into_iter().map(Ok::<_, DataFusionError>));
     super::append::fanout_conformed_stream_serial(table, &mut ordered, staging).await
@@ -437,13 +437,14 @@ where
 pub(crate) async fn fanout_sorted_stream<S>(
     table: &Table,
     stream: S,
-    aborted: Arc<AtomicBool>,
+    budget: Arc<OrderedInputBudget>,
     staging: &super::write_options::WriterStagingOverrides,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     let mut stream = stream;
+    let aborted = budget.aborted();
     if !default_sort_is_declared(table) {
         return super::append::fanout_conformed_stream_serial_with_abort(
             table,
@@ -453,9 +454,12 @@ where
         )
         .await;
     }
-    let mut collected = Vec::new();
-    while let Some(batch) = stream.try_next().await? {
-        collected.push(batch);
+    let drained = drain_ordered_input(&mut stream, &budget).await;
+    drop(stream);
+    budget.arrive().await;
+    let collected = drained?;
+    if budget.is_aborted() {
+        return Ok(Vec::new());
     }
     let sorted = sort_batches_by_default_order(table, collected).await?;
     let mut ordered = futures::stream::iter(sorted.into_iter().map(Ok::<_, DataFusionError>));
@@ -466,7 +470,7 @@ where
 pub(crate) async fn drive_unpartitioned<S, F, Fut, W>(
     table: &Table,
     stream: S,
-    max_concurrent: usize,
+    concurrency: WriteConcurrency,
     mut make_writer: F,
 ) -> Result<Vec<DataFile>>
 where
@@ -475,6 +479,7 @@ where
     Fut: std::future::Future<Output = Result<W>>,
     W: IcebergWriter + Send + 'static,
 {
+    let max_concurrent = concurrency.max_concurrent_files;
     if !default_sort_is_declared(table) {
         if max_concurrent == 1 {
             let writer = make_writer().await?;
@@ -483,11 +488,9 @@ where
         }
         return super::merge::write_stream_into_parallel(max_concurrent, stream, make_writer).await;
     }
-    let mut collected = Vec::new();
     let mut stream = stream;
-    while let Some(batch) = stream.try_next().await? {
-        collected.push(batch);
-    }
+    let budget = OrderedInputBudget::serial(&concurrency.resource_bounds);
+    let collected = drain_ordered_input(&mut stream, &budget).await?;
     let sorted = sort_batches_by_default_order(table, collected).await?;
     if sorted.is_empty() {
         return Ok(Vec::new());

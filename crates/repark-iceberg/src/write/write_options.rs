@@ -221,13 +221,8 @@ where
         )
     });
     let build_writer = || async { build_unpartitioned_writer_with(table, staging).await };
-    crate::write::distribution::drive_unpartitioned(
-        table,
-        conformed,
-        concurrency.max_concurrent_files,
-        build_writer,
-    )
-    .await
+    crate::write::distribution::drive_unpartitioned(table, conformed, concurrency, build_writer)
+        .await
 }
 
 #[allow(clippy::missing_errors_doc)]

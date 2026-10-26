@@ -158,8 +158,13 @@ async fn write_probed(table: &Table, root: PathBuf) -> (Vec<DataFile>, usize) {
         }
         Ok::<_, datafusion::error::DataFusionError>(batch)
     });
-    let files: Result<Vec<DataFile>> =
-        write_partitioned_lineage_files_with(table, stream, &WriterStagingOverrides::none()).await;
+    let files: Result<Vec<DataFile>> = write_partitioned_lineage_files_with(
+        table,
+        stream,
+        &WriterStagingOverrides::none(),
+        &crate::write::resource_bound::ResourceBounds::default(),
+    )
+    .await;
     (
         files.expect("lineage write"),
         seen_before_last.load(Ordering::SeqCst),

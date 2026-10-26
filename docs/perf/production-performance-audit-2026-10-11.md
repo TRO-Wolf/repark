@@ -139,6 +139,10 @@ small pool, ordered data exceeding it must spill or refuse by name while preserv
 snapshot. Values/types, per-file sort, signed zero/NaN/null ordering, sort-order IDs, lineage
 and unknown-commit cleanup remain required. A faster result with unsorted stamped files fails.
 
+Measured 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0): on the ci profile with debug assertions on, under a 40 GiB scope, statement RSS growth reaches 4.68 times the ordered input bytes at the worst cell (4M rows, v2, 32 partitions, one writer) and 3.22 to 4.08 times at 16M rows; the pool size does not change it. Table: [step-0 bound table](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md). Status unchanged; the owner rules the bound.
+
+**Amendment (2026-10-26, ICE-RESOURCE-BOUND-1):** bounded; the ordered write refuses above the bound. Every batch the four drain loops hold before `sort_batches_by_default_order` is counted at one seam, `drain_ordered_input` in [resource_bound.rs](../../crates/repark-iceberg/src/write/resource_bound.rs). An ordered write whose input exceeds `repark.write.ordered.max-input-fraction` (default 0.10) times the live pool refuses before any file is staged: 819 MiB at the 8 GiB default pool. The value 0 means no bound. The input is **not charged to the session pool** (owner ruling Q2): the bound is a separate limit, so the sort still runs under `TaskContext::default()` and does not spill. The refusal keeps the pool's class, `ResourcesExhausted`, which surfaces as `PySparkException`; its text names the ordered write, the estimate, the fraction times the pool and the key. Pins: `resource_bound.rs` (format v2 and v3, cells PP-01-R1, R2, C1, C2, K0, D and U) and the ordered cells of `python/repark/tests/writes/test_ice_resource_bound_1.py`. Ledger C-001, C-006 and C-007.
+
 ## PP-02 — merge-on-read MERGE retains all matched work
 
 **S, OPEN.** The current [MoR path](../../crates/repark-iceberg/src/write/merge/mod.rs) uses one
@@ -160,6 +164,10 @@ budgeted retained state or a typed refusal before process exhaustion. A streamin
 stage updates before cardinality validation completes, but it must publish nothing on multi-match
 failure and must preserve CommitStateUnknown semantics. Verify final values, types, delete counts,
 row IDs and snapshot contents after failure. Do not remove multi-match validation to save memory.
+
+Measured 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0): on the ci profile with debug assertions on, under a 40 GiB scope, every merge-on-read MERGE measured at the 32 and 128 MiB pools refuses in the in-pool sort with the snapshot unchanged. The two rows that set the proposed bound are 4M rows, v3, 10 percent matched plus NOT MATCHED BY SOURCE at the 2 GiB pool (growth minus pool 8.90 times the target bytes), and 16M rows, v3, 100 percent matched at the 8 GiB pool (6.14 times). Table: [step-0 bound table](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md). Status unchanged; the owner rules the bound.
+
+**Amendment (2026-10-26, ICE-RESOURCE-BOUND-1):** bounded; the merge-on-read MERGE refuses above the bound. The updated rows, matched and NOT MATCHED BY SOURCE together, are charged to one budget in `matched_work_mor` ([merge_on_read.rs](../../crates/repark-iceberg/src/write/merge/merge_on_read.rs)). Above `repark.merge.mor.max-updated-fraction` (default 0.05) times the live pool, the MERGE refuses before any data or delete file is staged: 410 MiB at the 8 GiB default pool. The value 0 means no bound. The updated rows are **not charged to the session pool** (Q2). The delete state (`seen_pair`, `pair_indices`, path interning) is not charged: the ruled bound covers updated rows. Multi-match validation is unchanged. A MERGE into an ordered table can cross the PP-01 bound too; the refusal names the key crossed first (O-8). Below 512 MiB the in-pool sort refuses first, so the pull-request refusal cells lower the key to 0.01, and the default-fraction refusal is pinned at 4x in the scale file, run once locally on head. Pins: `resource_bound.rs` (PP-02 cells, format v2 and v3), `resource_bound_kill.rs` (KR-2) and `python/repark/tests/writes/test_ice_resource_bound_1.py`. Ledger C-002 and C-008.
 
 ## PP-03 — parallel full-series windows trade CPU time for retained RAM
 

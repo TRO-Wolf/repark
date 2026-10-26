@@ -20,7 +20,7 @@ use iceberg::spec::DataFile;
 use iceberg::table::Table;
 
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
-use crate::write::concurrency::WriteConcurrency;
+use crate::write::concurrency::{WriteConcurrency, concurrency_from_task};
 use crate::write::distribution::hash_distribution;
 use crate::write::file_order::stable_commit_order;
 use crate::write::merge::write_data_files_from_stream_with_concurrency;
@@ -148,7 +148,7 @@ impl ExecutionPlan for IcebergPartitionWriteExec {
         let collected = Arc::clone(&self.collected);
         let result_schema = Arc::clone(&self.result_schema);
         let unpartitioned = table.metadata().default_partition_spec().is_unpartitioned();
-        let one_writer = WriteConcurrency::new(1)?;
+        let one_writer = concurrency_from_task(&context).with_max_concurrent_files(1)?;
         let raise_abort = Arc::clone(&self.aborted);
         let observe_abort = Arc::clone(&self.aborted);
         let case_insensitive = self.case_insensitive;

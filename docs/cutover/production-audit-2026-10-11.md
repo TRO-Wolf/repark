@@ -151,6 +151,8 @@ In a nested cgroup restricted below the host-derived budget, pool admission can 
 
 **Required result:** derive the effective memory constraint for supported deployment platforms, or require an explicit budget when detection cannot be trusted. Test process membership and ancestor limits using fixtures, plus a disposable constrained process integration test. Document the remaining headroom for decoded batches, Arrow results, caches, writer buffers and multiple sessions. The performance review can quantify these costs separately.
 
+**Amendment (2026-10-26, ICE-RESOURCE-BOUND-1):** closed for cgroup v2. The default pool detector (`detect_memory_bytes` in [spill.rs](../../crates/repark-core/src/session/spill.rs)) reads the unified `0::` line of `/proc/self/cgroup`, walks `memory.max` from the process's cgroup to the root, takes the minimum finite value and caps it by the host `MemTotal`. With no finite cgroup value it uses `MemTotal`, as before. Owner ruling Q3 closes it this way. Pins: the seven fixture cells in `spill_unit_tests`, each asserting the clamped pool. cgroup v1, macOS and Windows are **declared**, not closed: the detector keeps its declared path there, the deployment must set an explicit pool budget (`repark.memory.limit.gb` or `datafusion.runtime.memory_limit`), and the build does not refuse (O-11). Not in this unit: the disposable constrained-process integration test that this row names (acceptance only, O-13), and the headroom document for decoded batches, caches, writer buffers and several sessions. Both are carded: [PA-10-CONSTRAINED-PROCESS-TEST-1](../../task/roadmap/mid-term/pa-10-constrained-process-test-1-card-2026-10-26.md) and [PA-10-HEADROOM-DOC-1](../../task/roadmap/mid-term/pa-10-headroom-doc-1-card-2026-10-26.md). Ledger: [ice-resource-bound-1](../../task/ledgers/staging/ice-resource-bound-1-ledger.md), C-009. Bound: [resource-bound-2026-10-26](../perf/resource-bound-2026-10-26.md).
+
 ## PA-11 — changelog query materialization bypasses pool budgeting
 
 [`ChangelogViewProvider`](../../crates/repark-iceberg/src/catalog/changelog_view.rs), lines 53–57 and 110–118, asks its source for every column with no filter or limit, collects all source batches, concatenates them, transforms the full result, and projects only afterwards. There is no reservation around the retained and concatenated batches. The outer execution limit does not make the source stream incremental.
@@ -158,6 +160,8 @@ In a nested cgroup restricted below the host-derived budget, pool admission can 
 This can allocate the entire changelog plus its concatenated copy even for a small result limit. It is source-confirmed; this audit did not intentionally exhaust host memory. Stateful changelog transformations can require cross-batch context, so simply forwarding LIMIT would be incorrect for some transforms.
 
 **Required result:** provide a budgeted transformation strategy with bounded state or a spill path, and a clear refusal for unsupported sizes. Measure large histories with narrow projection, LIMIT and full materialization under a small pool budget. Preserve cross-batch changelog ordering and correctness. The memory limit must either account for these buffers or explicitly state the exclusion.
+
+**Amendment (2026-10-26, ICE-RESOURCE-BOUND-1):** bounded; the statement refuses above the bound. `ChangelogViewPartition::execute` drains its source window through `drain_changelog_source` and refuses when the window's Arrow bytes exceed `repark.changelog.max-source-fraction` (default 0.0625) times the live pool: 512 MiB at the 8 GiB default pool. The refusal keeps the pool's class and names the changelog read and the key; it names no data-deleting action. Nothing is staged, because the read writes no file. The bound covers the source window, not the result: a `LIMIT` and a narrow projection do not reduce the charge. This bounds the statement; it does not reduce the memory it uses. Below the bound the window is still held whole, and the step-0 measurement put the outside-pool growth at 7.4 to 7.8 times the source bytes. Pins: the PA-11 cells of `crates/repark-spark/src/tests/resource_bound.rs` (format v2 and v3) and the changelog cells of `python/repark/tests/writes/test_ice_resource_bound_1.py`. Ledger C-003.
 
 ## PA-12 — live-parity failure needs classification before release qualification
 
@@ -217,6 +221,14 @@ A Spark-door `CREATE TABLE … USING parquet LOCATION '<outside>'` writes Iceber
 ### LOCAL-FS-WRITE-ROOT-1 — DATED ROW 2026-10-15 (owner ruling 105 (a))
 
 One DataFrame write to a path makes later SQL writes to that path allowed: `ReparkSession::note_local_write_root` registers every DataFrame write path as a local warehouse root. Read in the code on main, not run against Spark. Card: [LOCAL-FS-WRITE-ROOT-1](../../task/roadmap/mid-term/local-fs-write-root-1-card-2026-10-15.md) (open, not scheduled).
+
+### PA-10 — DATED ROW 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0)
+
+Measured 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0): in a nested cgroup v2 scope the root `memory.max` is absent and the leaf scope holds the cap (40 GiB). The detector reads the machine total from `/proc/meminfo` (125 GiB), so it sets the 8 GiB pool and does not read the leaf cap. By reading, not run, a nested 4 GiB cap would also give 8 GiB. Status unchanged; the owner rules the close-or-declare question ([order](../../task/wo/ice-resource-bound-1/order.md), step 0, question 3).
+
+### PA-11 — DATED ROW 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0)
+
+Measured 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0): on the ci profile with debug assertions on, under a 40 GiB scope, the changelog view's statement RSS growth is 7.38 to 7.83 times the source bytes on all 12 cells (1M, 4M and 16M rows; v2 and v3; `SELECT id ... LIMIT 10` and `SELECT count(id)`). A `LIMIT 10` does not reduce it (16M rows: up to 6,732 MiB), and a 32 MiB pool never refused. Table: [step-0 bound table](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md). Status unchanged; the owner rules the bound.
 
 ## Conditional candidates requiring a focused follow-up
 

@@ -547,3 +547,12 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
 - `mod.rs` — `union_source_schema` calls `evolve_merge_schema`, which adds the
   type changes. The edit is line-neutral on the 1630 baseline.
   pins: u6-write-refusals/C-007, C-008
+
+**ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** the merge-on-read bound (PP-02) and the lineage drain (PP-01).
+
+- `merge_on_read.rs` — `plan_and_commit_mor` reads `concurrency_from_ctx` before the matched leg (it read it after the matched work before) and creates one `UpdatedRowsBudget` from the merge fraction times the live pool. `matched_work_mor` charges each update batch it pushes to that budget, across the matched leg and the NOT MATCHED BY SOURCE leg together. The refusal names `repark.merge.mor.max-updated-fraction`. `consume_matched_work_batch` keeps its signature, so its two unit tests stay unchanged. The MoR delete state (`seen_pair`, `pair_indices`, path interning) is not charged: the bound covers updated rows.
+- A MERGE into a table with a declared sort order also passes the ordered drain (PP-01) when `session_staging` sorts the updates. The statement refuses at whichever bound it crosses first; the pin for that order is `PP-02-O8`.
+- `row_lineage.rs` — the lineage writer's `drain` calls `drain_ordered_input` with the bounds its caller passes. The v3 partitioned MERGE, UPDATE and copy-on-write writer uses it.
+- `session_staging.rs`, `file_sink.rs` — pass the bounds to the drains (call sites of the changed signatures).
+
+pins: ice-resource-bound-1/C-002

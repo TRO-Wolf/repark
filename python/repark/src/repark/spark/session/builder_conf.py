@@ -245,6 +245,7 @@ class RuntimeConfig:
             )
         # Build-time FairSpillPool size is not runtime-mutable via conf (one truth).
         _refuse_runtime_memory_limit_gb(key)
+        _refuse_runtime_resource_bound_key(key)
         if key in (
             SESSION_TIME_ZONE_KEY,
             SPARK_SQL_ANSI_ENABLED_KEY,

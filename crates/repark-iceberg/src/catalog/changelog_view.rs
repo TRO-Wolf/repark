@@ -12,7 +12,9 @@ use datafusion::execution::TaskContext;
 use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
-use datafusion::physical_plan::{ExecutionPlan, SendableRecordBatchStream, collect};
+use datafusion::physical_plan::{ExecutionPlan, SendableRecordBatchStream, execute_stream};
+
+use crate::write::resource_bound::drain_changelog_source;
 
 pub type ChangelogRowTransform = Arc<dyn Fn(&RecordBatch) -> Result<RecordBatch> + Send + Sync>;
 
@@ -108,7 +110,8 @@ impl PartitionStream for ChangelogViewPartition {
         let projection = self.projection.clone();
         let schema = Arc::clone(&self.schema);
         let stream = futures::stream::once(async move {
-            let batches = collect(source_plan, ctx).await?;
+            let source = execute_stream(source_plan, Arc::clone(&ctx))?;
+            let batches = drain_changelog_source(source, &ctx).await?;
             let raw = concat_batches(&full_schema, &batches)?;
             let transformed = transform(&raw)?;
             match projection {

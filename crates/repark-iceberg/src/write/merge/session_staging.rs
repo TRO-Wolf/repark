@@ -59,12 +59,18 @@ where
         crate::write::distribution::drive_unpartitioned(
             table,
             cast_stream,
-            concurrency.max_concurrent_files,
+            concurrency,
             build_writer,
         )
         .await
     } else if super::row_lineage::table_carries_merge_lineage(table) {
-        super::row_lineage::write_partitioned_lineage_files_with(table, cast_stream, staging).await
+        super::row_lineage::write_partitioned_lineage_files_with(
+            table,
+            cast_stream,
+            staging,
+            &concurrency.resource_bounds,
+        )
+        .await
     } else {
         let current_schema = table.metadata().current_schema();
         let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);

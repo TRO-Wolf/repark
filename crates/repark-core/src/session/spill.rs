@@ -63,15 +63,47 @@ pub(crate) fn parse_meminfo_mem_total(text: &str) -> Option<usize> {
 }
 
 fn detect_host_memory_bytes() -> Option<usize> {
-    if let Ok(text) = std::fs::read_to_string("/sys/fs/cgroup/memory.max")
-        && let Some(bytes) = parse_cgroup_memory_max(&text)
-    {
-        return Some(bytes);
+    detect_memory_bytes(|path| std::fs::read_to_string(path).ok())
+}
+
+pub(crate) fn detect_memory_bytes<F>(read: F) -> Option<usize>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    let cgroup = read("/proc/self/cgroup").and_then(|text| cgroup_v2_memory_limit(&text, &read));
+    let total = read("/proc/meminfo").and_then(|text| parse_meminfo_mem_total(&text));
+    match (cgroup, total) {
+        (Some(cgroup), Some(total)) => Some(cgroup.min(total)),
+        (cgroup, total) => cgroup.or(total),
     }
-    if let Ok(text) = std::fs::read_to_string("/proc/meminfo") {
-        return parse_meminfo_mem_total(&text);
+}
+
+pub(crate) fn cgroup_v2_memory_limit<F>(proc_self_cgroup: &str, read: &F) -> Option<usize>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    let path = proc_self_cgroup
+        .lines()
+        .find_map(|line| line.strip_prefix("0::"))?
+        .trim();
+    if !path.starts_with('/') {
+        return None;
     }
-    None
+    let mut directory = path.trim_end_matches('/').to_string();
+    let mut minimum: Option<usize> = None;
+    loop {
+        let limit = read(&format!("/sys/fs/cgroup{directory}/memory.max"))
+            .as_deref()
+            .and_then(parse_cgroup_memory_max);
+        if let Some(bytes) = limit {
+            minimum = Some(minimum.map_or(bytes, |known| known.min(bytes)));
+        }
+        let Some(parent) = directory.rfind('/') else {
+            break;
+        };
+        directory.truncate(parent);
+    }
+    minimum
 }
 
 /// Canonical runtime / builder pseudo-key for the live `FairSpillPool` size.
@@ -437,6 +469,117 @@ mod spill_unit_tests {
             clamp_default_memory_limit_bytes(Some(MIN_MEMORY_LIMIT_BYTES)),
             MIN_MEMORY_LIMIT_BYTES
         );
+    }
+
+    fn fixture(files: &[(&str, &str)]) -> impl Fn(&str) -> Option<String> {
+        let files: HashMap<String, String> = files
+            .iter()
+            .map(|(path, text)| ((*path).to_string(), (*text).to_string()))
+            .collect();
+        move |path| files.get(path).cloned()
+    }
+
+    const MEMINFO_16_GIB: &str = "MemTotal:       16777216 kB\n";
+
+    #[test]
+    fn cgroup_walk_reads_a_leaf_only_limit() {
+        let read = fixture(&[
+            ("/proc/self/cgroup", "0::/user.slice/lane.scope\n"),
+            (
+                "/sys/fs/cgroup/user.slice/lane.scope/memory.max",
+                "4294967296\n",
+            ),
+            ("/sys/fs/cgroup/user.slice/memory.max", "max\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&read), Some(4 * BYTES_PER_GB));
+        assert_eq!(
+            clamp_default_memory_limit_bytes(detect_memory_bytes(&read)),
+            4 * BYTES_PER_GB * 3 / 5
+        );
+    }
+
+    #[test]
+    fn cgroup_walk_takes_a_smaller_ancestor() {
+        let read = fixture(&[
+            ("/proc/self/cgroup", "0::/a/b/c\n"),
+            ("/sys/fs/cgroup/a/b/c/memory.max", "max\n"),
+            ("/sys/fs/cgroup/a/b/memory.max", "8589934592\n"),
+            ("/sys/fs/cgroup/a/memory.max", "4294967296\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&read), Some(4 * BYTES_PER_GB));
+        assert_eq!(
+            clamp_default_memory_limit_bytes(detect_memory_bytes(&read)),
+            2_576_980_377
+        );
+    }
+
+    #[test]
+    fn cgroup_walk_with_every_level_unlimited_falls_back_to_meminfo() {
+        let read = fixture(&[
+            ("/proc/self/cgroup", "0::/a/b\n"),
+            ("/sys/fs/cgroup/a/b/memory.max", "max\n"),
+            ("/sys/fs/cgroup/a/memory.max", "max\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&read), Some(16 * BYTES_PER_GB));
+        assert_eq!(
+            clamp_default_memory_limit_bytes(detect_memory_bytes(&read)),
+            DEFAULT_MEMORY_LIMIT_BYTES
+        );
+    }
+
+    #[test]
+    fn cgroup_namespace_root_reads_the_root_file() {
+        let read = fixture(&[
+            ("/proc/self/cgroup", "0::/\n"),
+            ("/sys/fs/cgroup/memory.max", "2147483648\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&read), Some(2 * BYTES_PER_GB));
+    }
+
+    #[test]
+    fn cgroup_limit_above_mem_total_is_capped_by_mem_total() {
+        let read = fixture(&[
+            ("/proc/self/cgroup", "0::/big\n"),
+            ("/sys/fs/cgroup/big/memory.max", "68719476736\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&read), Some(16 * BYTES_PER_GB));
+    }
+
+    #[test]
+    fn cgroup_v1_only_takes_the_declared_mem_total_path() {
+        let read = fixture(&[
+            ("/proc/self/cgroup", "4:memory:/x\n2:cpu:/x\n"),
+            ("/sys/fs/cgroup/memory.max", "1073741824\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&read), Some(16 * BYTES_PER_GB));
+    }
+
+    #[test]
+    fn malformed_cgroup_text_falls_back() {
+        let read = fixture(&[
+            ("/proc/self/cgroup", "0::relative\ngarbage\n"),
+            ("/sys/fs/cgroup/memory.max", "1073741824\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&read), Some(16 * BYTES_PER_GB));
+        let unreadable = fixture(&[("/proc/self/cgroup", "0::/a\n")]);
+        assert_eq!(detect_memory_bytes(&unreadable), None);
+        assert_eq!(
+            clamp_default_memory_limit_bytes(detect_memory_bytes(&unreadable)),
+            DEFAULT_MEMORY_LIMIT_BYTES
+        );
+        let garbage = fixture(&[
+            ("/proc/self/cgroup", "0::/a\n"),
+            ("/sys/fs/cgroup/a/memory.max", "lots\n"),
+            ("/proc/meminfo", MEMINFO_16_GIB),
+        ]);
+        assert_eq!(detect_memory_bytes(&garbage), Some(16 * BYTES_PER_GB));
     }
 
     #[test]

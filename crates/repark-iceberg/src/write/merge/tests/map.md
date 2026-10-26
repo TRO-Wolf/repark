@@ -207,6 +207,8 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `schema_evolution: false` field, so the plain-MERGE batteries keep their shape.
   pins: ipi-19-56-37-schema-evolution-write/C-007
 
+**ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `lineage_stream.rs` and `writer_metrics.rs` pass the new lineage-writer bounds parameter as call sites of the changed signature. They hold no refusal pin; the refusal pins are in `crates/repark-spark/src/tests/resource_bound.rs`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
