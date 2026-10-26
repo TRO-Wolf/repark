@@ -18,7 +18,7 @@ pins.
 - [test_ice_tsns_coercion_1.py](test_ice_tsns_coercion_1.py) — The ICE-TSNS-COERCION-1 slice 0 fixture is complete and matches its summary.
 - [test_ice_tsns_floor_doors_1.py](test_ice_tsns_floor_doors_1.py) — ICE-TSNS-FLOOR-DOORS-1: every write door stores the nanosecond floor in the session zone.
 - [test_ice_tsns_frame_door_1.py](test_ice_tsns_frame_door_1.py) — ICE-TSNS-FRAME-DOOR-1: a pandas or polars nanosecond timestamp column enters as microseconds.
-- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — ICE-TSNS-MERGE-WALL-1: every write door stores the same nanosecond wall.
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — ICE-TSNS-MERGE-WALL-1: every write door stores the same nanosecond wall. **ICE-TSNS-UPDATE-RANGE-CLASS-1 (2026-10-26, U-4, R-012):** the 16 out-of-range cells of an unfiltered `UPDATE` report INSERT's `[CAST_OVERFLOW]` text (`test_unfiltered_update_reports_inserts_overflow_class`); the filtered `UPDATE` and the strict-off NULL cells are controls; `test_range_cases_are_the_sixteen_row_cells` fixes the count. Green on the unmodified tree, no product change. pins: ice-tsns-update-range-class-1/C-001, C-002, C-004 pins: ice-tsns-merge-wall-1/C-055
 - [test_ice_tsns_sql_1.py](test_ice_tsns_sql_1.py) — ICE-TSNS-SQL-1: ``timestamp_ns`` / ``timestamptz_ns`` on the SQL door answer the Iceberg spec.
 - [test_ice_tsns_type_planner_1.py](test_ice_tsns_type_planner_1.py) — ICE-TSNS-TYPE-PLANNER-1: the SQL type name decides the unit, on every door.
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — ICE-TSTZNS-WALL-1: every write door stores the same instant into ``timestamptz_ns``.

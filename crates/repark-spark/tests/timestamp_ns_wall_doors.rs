@@ -379,6 +379,54 @@ async fn an_overflowing_literal_stores_null_without_ansi_as_insert_does() {
     }
 }
 
+#[tokio::test]
+async fn an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update() {
+    for zone in ["UTC", "America/New_York", "Asia/Kolkata"] {
+        let edges = EDGE_LITERALS
+            .iter()
+            .filter(|(edge_zone, _)| *edge_zone == zone)
+            .map(|(_, literal)| *literal);
+        let literals = OVERFLOW_LITERALS.into_iter().take(2).chain(edges);
+        for literal in literals {
+            for (mode, properties) in [("cow", ""), ("mor", MERGE_ON_READ)] {
+                let session = session_with(zone, true);
+                let _warehouse = catalog(&session).await;
+                run(
+                    &session,
+                    &format!(
+                        "CREATE TABLE ice.ns.t (id INT, v timestamp_ns) USING iceberg \
+                         TBLPROPERTIES ('format-version'='3'{properties})"
+                    ),
+                )
+                .await;
+                let label = format!("{zone} {mode} {literal}");
+                let insert = attempt(
+                    &session,
+                    &format!("INSERT INTO ice.ns.t VALUES (2, {literal})"),
+                )
+                .await;
+                let Err(insert_error) = insert else {
+                    panic!("{label}: INSERT stored an out-of-range literal");
+                };
+                assert!(
+                    insert_error.contains("[CAST_OVERFLOW]"),
+                    "{label}: {insert_error}"
+                );
+                run(
+                    &session,
+                    "INSERT INTO ice.ns.t VALUES (1, TIMESTAMP '2020-01-01 00:00:00')",
+                )
+                .await;
+                let update = attempt(&session, &format!("UPDATE ice.ns.t SET v = {literal}")).await;
+                let Err(update_error) = update else {
+                    panic!("{label}: UPDATE stored an out-of-range literal");
+                };
+                assert_eq!(update_error, insert_error, "{label}");
+            }
+        }
+    }
+}
+
 const WALL_SOURCE_DOORS: [(&str, &str); 4] = [
     (
         "insert select",

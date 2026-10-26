@@ -105,6 +105,8 @@ Tables already written keep the values they hold; this release ships no migratio
   Glue and S3 Tables. Pin X shows that 1.5.5 and the head (the pre-bump build, which still reports 1.5.5) read each other's tables equal on the local
   catalog. Both legs hold live (2026-10-23, run 40025222296): leg U 96 of 96 cells and leg X 40 of 40 on Glue and S3 Tables, v2 and v3. The cross-read module of U-10 remains open (ledger C-060): run 4 timed out in Glue RePark row collection and S3 Tables PyArrow metadata-file I/O. Native diagnostics are the next measurement.
 
+- **An unfiltered `UPDATE` of an out-of-range `TIMESTAMP` literal reports INSERT's overflow (ICE-TSNS-UPDATE-RANGE-CLASS-1, R-012).** Under ANSI the statement refuses with `[CAST_OVERFLOW]` and INSERT's text, as ICE-TSNS-TYPE-PLANNER-1 left it in v1.5.5; this release pins the 16 cells and changes no stored value or refusal.
+
 ## Known issues
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-17):** `repark.sql()` refuses
