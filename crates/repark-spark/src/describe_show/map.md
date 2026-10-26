@@ -40,7 +40,7 @@ with the four-part parser for names the metadata rewrite leaves untouched.
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../describe_show.rs`. **NS-TRUTHUP-1 (2026-10-26):**
   `describe_shows_timestamp_ns_and_timestamptz_ns` pins the spec names `timestamp_ns` and
   `timestamptz_ns` that `describe_ddl_type_name` gives nanosecond columns, and the names it keeps for
-  the microsecond ones (`timestamp_ntz`, `timestamp`). pins: ns-truthup-1/C-004
+  the microsecond ones (`timestamp_ntz`, `timestamp`). pins: ns-truthup-1/C-004, C-005
 
 ## Pointers
 

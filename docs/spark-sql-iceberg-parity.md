@@ -4539,9 +4539,13 @@ still open is `isModifiable`.
   value exists.)*
 - **Status 2026-10-26 (NS-TRUTHUP-1, owner decision D3):** FIXED for `DESCRIBE TABLE` and
   `DESCRIBE TABLE EXTENDED`, through `describe_ddl_type_name` in
-  `crates/repark-spark/src/describe_show.rs` (one seam). **Dated residue, not a new unit:**
-  `DESCRIBE <table> <column>` and the DESCRIBE partition section keep the microsecond names;
-  `SHOW CREATE TABLE`, `df.schema`, `dtypes` and `printSchema` are unchanged by design.
+  `crates/repark-spark/src/describe_show.rs` (one seam). **Dated residue (card
+  [DESCRIBE-NS-NAMES-2](../task/roadmap/mid-term/describe-ns-names-2-card-2026-10-26.md), not
+  scheduled):** these surfaces keep the microsecond names: `DESCRIBE <table> <column>`; the DESCRIBE
+  partition section; nested struct, array and map leaves inside `DESCRIBE TABLE` (`st struct<v:timestamp_ntz>`
+  and `arr array<timestamp_ntz>` for a `STRUCT<v: timestamp_ns>` and an `ARRAY<timestamp_ns>`); and
+  `DESCRIBE TABLE` on a view (a temporary view over the table shows `timestamp_ntz` for all three
+  columns). `SHOW CREATE TABLE`, `df.schema`, `dtypes` and `printSchema` are unchanged by design.
 - **Pin** — `python/repark/tests/timestamps/test_ns_truthup_1.py::test_describe_shows_the_spec_names_for_nanosecond_columns`
   (both spellings, with the microsecond v2 control) and
   `crates/repark-spark/src/describe_show/tests.rs::describe_shows_timestamp_ns_and_timestamptz_ns`.
