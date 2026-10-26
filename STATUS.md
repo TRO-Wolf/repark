@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-12._
+_Last updated: 2026-10-26._
 
 ## Release state
 
@@ -23,13 +23,7 @@ _Last updated: 2026-09-12._
 
 **v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, the store-assignment fixes, INTDIV-1. Matrix 705/132/5/0. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
 
-**v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The v1.5.0 gate is met: zero non-EQUAL cells that Spark
-4.1.2 answers on the 842-cell Spark + Iceberg matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`).
-Carved out: C-1 structured streaming (now 1.7) and C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5
-count EQUAL under dated harness rules (commit order, `_row_id` order). It covers inspection and nested DDL,
-metadata-table and time-travel reads, DataFrame and SQL writes, MERGE/UPDATE/DELETE, procedures and table
-properties, `TIMESTAMP_NTZ` literals and casts; the UUID refusal no longer panics on non-ASCII SQL. Notes:
-[v1-5-0-release-notes-draft-2026-09-27.md](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
+**v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The gate is met: zero non-EQUAL cells that Spark 4.1.2 answers on the 842-cell matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`). Carved out: C-1 structured streaming (now 1.7), C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5 count EQUAL under dated harness rules. Notes: [v1-5-0-release-notes-draft-2026-09-27.md](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
 
 **v1.4.2 (2026-09-15):** DECIMAL-CACHE-1 (#632): decimal overflow past 38 digits types like
 PySpark 4.1.2 (`decimal(38,10) * 5` → `decimal(38,8)`) and materializes through `.eager()` /
@@ -38,45 +32,23 @@ PySpark 4.1.2 (`decimal(38,10) * 5` → `decimal(38,8)`) and materializes throug
 **v1.4.1 (2026-09-14):** the five-leg wheel set on PyPI (Windows, macOS arm64/x86_64, Linux
 aarch64/x86_64), each an import smoke and one collect; PLATFORM-2..4 stay slated for 1.6.
 
-**v1.4.0 (2026-09-12) — the maintenance minor on 1.3**, additive under the API freeze (no frozen
-name or required parameter changed). Roadmap 1.4 closes: the maintenance policy shipped in 1.2 and
-its adaptive-partitioning half lands here.
+**v1.4.0 (2026-09-12) — the maintenance minor on 1.3**, additive under the API freeze: adaptive partitioning closed (`plan_partitioning` / `apply_partitioning`, [maintenance-policy.md](docs/guide/maintenance-policy.md)); compaction a net-size win on zstd tables (fork RP-16/17/18); measured `read`/`write` profiles ([repark-toml.md](docs/guide/repark-toml.md)); `describe`/`summary`/`colRegex` answer Spark 4.1.2; the example campaign closed ([briefs/example-backfill.md](briefs/example-backfill.md)).
 
-Adaptive partitioning closed (`plan_partitioning` / `apply_partitioning`, [maintenance-policy.md](docs/guide/maintenance-policy.md)); compaction became a net-size win on zstd tables (fork RP-16/17/18); measured `read`/`write` configuration profiles ([repark-toml.md](docs/guide/repark-toml.md)); `describe`/`summary`/`colRegex` answer Spark 4.1.2; the example campaign closed ([briefs/example-backfill.md](briefs/example-backfill.md)).
+**v1.3.0 (2026-09-11) — the Never-OOM minor:** the spill-coverage matrix, nine operators at 2/4/8× a 1 GB limit, 24 of 27 cells stable ([spill-coverage-matrix-2026-09-11.md](docs/perf/spill-coverage-matrix-2026-09-11.md)); CI tier `make py-test-spill-matrix` ([testing.md](docs/testing.md)).
 
-**v1.3.0 (2026-09-11) — the Never-OOM minor:** the spill-coverage matrix — nine operators at
-2/4/8× a 1 GB limit, 24 of 27 cells stable, `hash_join` at 4× and two 2× cells named with their
-upstream DataFusion issues ([docs/perf/spill-coverage-matrix-2026-09-11.md](docs/perf/spill-coverage-matrix-2026-09-11.md));
-CI tier `make py-test-spill-matrix` against a golden ([docs/testing.md](docs/testing.md)).
+**History:** v1.1.1 (2026-09-06, RDF-SCHEMA-EVO-1, WRITE-DISTRIBUTION-2, CSV-INFER-PERF-1); v1.1.0 (2026-09-06, the first minor); v1.0.1 (09-04); **v1.0.0 (2026-09-03, the first stable tag)**, the format-v3 north star at its gate ([all twenty §3 rows](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED); the API freeze binds from there, additive within the major ([v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json)); v0.1.0–v0.6.0 (2026-08-15 → 08-31). Tag-triggered `release.yml`, PyPI trusted publishing, one `cp312-abi3` manylinux wheel; version SSOT: the Cargo workspace. Release mechanics: [docs/release.md](docs/release.md).
 
-**History:** v1.1.1 (2026-09-06, RDF-SCHEMA-EVO-1, WRITE-DISTRIBUTION-2, CSV-INFER-PERF-1);
-v1.1.0 (2026-09-06, the first minor); v1.0.1 (09-04); **v1.0.0 (2026-09-03, the first stable
-tag)** — the format-v3 north star at its gate, all twenty §3 rows of
-[the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED as audited that day, from
-which the API freeze binds: additive-only within the major for every frozen row of
-[v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json); v0.1.0–v0.6.0 (2026-08-15 → 08-31).
-Tag-triggered `release.yml`, PyPI trusted publishing, one `cp312-abi3` manylinux wheel; version
-SSOT: the Cargo workspace. Release mechanics: [docs/release.md](docs/release.md).
+## Iceberg maturity (2026-10-26)
+
+The level names are the [2026-10-13 re-rating](docs/artifacts/iceberg-rerating-2026-10-13.html)'s. Each capability is judged against the [production-grade definition](docs/production-grade.md); evidence is cited by pointer, on main `59d104d9`.
+
+- **Format-v2 reads and writes: PRODUCTION** (label order: [ICE-V2-LABEL-1](task/wo/ice-v2-label-1/order.md); the owner signs three carve-outs on its PR). Evidence: the registry rows in [the parity registry](docs/spark-sql-iceberg-parity.md) (R-011, the U-11 rows of §2.7, ICE-COMMIT-UNKNOWN-1, ICE-LOCAL-COMMIT-POINT-1); the integrity ledger [ice-integrity-pins-1](task/ledgers/staging/ice-integrity-pins-1-ledger.md); the [bound record](docs/perf/resource-bound-2026-10-26.md); the cross-read leg of [aws-acceptance](.github/workflows/aws-acceptance.yml) (run 40295982749); carve-outs ENC-1 items 1 and 5 and ENC-CTAS-REPLACE-1, and the text-leaf row NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7). Open residual with no registry row yet: NESTED-MAP-KEY-ZONE-1 (a date into a MAP TIMESTAMP key stores UTC midnight outside UTC; ruling WS2-30; [card](task/roadmap/mid-term/nested-map-key-zone-1-card-2026-10-25.md)).
+- **Format-v3 core: HARDENED-NARROW** until V3-LABEL-1.
+- **Nanosecond columns and struct writes: EXPERIMENTAL** (rated 2026-10-13).
 
 ## Delivered capabilities
 
-**Milestone one — the private-v1 → public-v2 port — is COMPLETE and merged to `main`
-(2026-08-08)** (PRs #16, #18–#23); the full record is archived at
-[docs/history/port-v2/](docs/history/port-v2/README.md).
-
-**Nine crates are delivered** (workspace SSOT: root `Cargo.toml`; navigation:
-[crates/map.md](crates/map.md)): `repark-common`, `-core`, `-iceberg`, `-functions`, `-spark`,
-`-sql`, `-ta`, `-ml`, `-python`. The
-Python tree ships `python/repark` (the PySpark facade wheel) and `python/repark-parity` (the
-differential harness). The published wheel is in [Release state](#release-state) above.
-
-**Acceptance:** the v2 test census is byte-flat against the port-source pin baseline
-`fc3f48102`, exit 0 on all four cohorts — counts in
-[docs/history/port-v2/](docs/history/port-v2/README.md) "Result at acceptance", procedure and the
-DL-1 eviction of the evidence trees (at `main` `b13b22c`) in
-[docs/port/census.md](docs/port/census.md) §7. The baseline's
-[facade cohort](task/census/baseline-fc3f48102/facade/map.md) stays because the deferred-ledger
-tests read it; acceptance inputs are [task/port/](task/port/).
+**Milestone one (the private-v1 → public-v2 port) is COMPLETE**, merged to `main` 2026-08-08 (PRs #16, #18–#23); record: [docs/history/port-v2/](docs/history/port-v2/README.md). **Nine crates are delivered** (`repark-common`, `-core`, `-iceberg`, `-functions`, `-spark`, `-sql`, `-ta`, `-ml`, `-python`; map: [crates/map.md](crates/map.md)); the Python tree ships `python/repark` and `python/repark-parity`. **Acceptance:** the v2 test census is byte-flat against the port-source pin `fc3f48102` (procedure and counts: [docs/port/census.md](docs/port/census.md) §7); the facade cohort stays for the deferred-ledger tests ([baseline](task/census/baseline-fc3f48102/facade/map.md)).
 
 ## Current milestone
 
@@ -89,21 +61,10 @@ re-ported rather than patched only here.
 
 What happens next, in order:
 
-1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10):**
-   [docs/history/frontdoor/](docs/history/frontdoor/README.md), [task/metrics.md](task/metrics.md).
-2. **V2 Engine Hardening** — the active engine campaign; its state is the H-2 entry in
-   [Active workstreams](#active-workstreams). The Y/Z/W/V/S wave records (2026-08-13/14) are the
-   increment ledgers indexed in
-   [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
-3. **Production-pipeline cutover inventory** — **Filed 2026-09-04:**
-   [docs/cutover/inventory.md](docs/cutover/inventory.md) — which workloads move, in what order,
-   under **single-writer-per-table**, with each rollback story; its §7 carries the four owner
-   rulings of the same day.
-4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is
-   pinned at 888 names in
-   [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy:
-   [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut on the
-   north-star gate line V1-GATE wrote the same day.
+1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10):** [docs/history/frontdoor/](docs/history/frontdoor/README.md), [task/metrics.md](task/metrics.md).
+2. **V2 Engine Hardening** — the active engine campaign; its state is the H-2 entry in [Active workstreams](#active-workstreams). The Y/Z/W/V/S wave records are indexed in [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
+3. **Production-pipeline cutover inventory** — **Filed 2026-09-04:** [docs/cutover/inventory.md](docs/cutover/inventory.md), under **single-writer-per-table**, with each rollback story; its §7 carries the four owner rulings of the same day.
+4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is pinned at 888 names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy: [docs/release.md](docs/release.md) "Versioning policy").
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
@@ -201,11 +162,7 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->
-- **Example campaign** (chartered 2026-08-31, the 1.1 slate) — **closed 2026-09-12 (EX-31):**
-  920 public names, 806 covered, 112 backlog names each with a measured stay row, 2 exceptions,
-  214 examples; the packaged-wheel execution gate (`scripts/check_example_coverage.py --require-execute`)
-  is authoritative. Slate: [briefs/example-backfill.md](briefs/example-backfill.md). A backlog name
-  leaves only when the engine grows its Spark answer.
+- **Example campaign** (chartered 2026-08-31) — **closed 2026-09-12 (EX-31):** 920 public names, 806 covered, 112 backlog names each with a measured stay row, 214 examples; the packaged-wheel gate (`scripts/check_example_coverage.py --require-execute`) is authoritative; slate [briefs/example-backfill.md](briefs/example-backfill.md). A backlog name leaves only when the engine grows its Spark answer.
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
@@ -315,14 +272,7 @@ Recorded, not built. Each names the trigger that would start it.
   [docs/adr/0005-defer-session-decomposition.md](docs/adr/0005-defer-session-decomposition.md)
   (status **Deferred**, 2026-08-09) — the intended internal services, the precise trigger
   conditions, and the rule that the unit appends a discharge note naming the driver that fired.
-- **`repark-postgres` + `repark-excel` read connectors** — the v1 `read_postgres` / `read_excel`
-  surfaces. Scheduled post-milestone-one by explicit decision (2026-08-07). The Python binding
-  answers all three entry points (`read_excel`, `excel_sheet_names`, `read_postgres`) with a loud
-  refusal naming the surface and this schedule; the withheld tests are the 4 Rust rows + 12 facade
-  node ids in [task/port/deferred-tests.md](task/port/deferred-tests.md). The `postgres_p11`
-  connectivity count (6 names, same bucket) is tracked in
-  [crates/repark-spark/src/map.md](crates/repark-spark/src/map.md); the names themselves live in
-  the archived [p2d ledger](docs/history/port-v2/p2d-spark-dml-ledger.md).
+- **`repark-postgres` + `repark-excel` read connectors** — scheduled post-milestone-one by explicit decision (2026-08-07). The Python binding refuses `read_excel`, `excel_sheet_names` and `read_postgres` loudly, naming this schedule; the withheld tests are listed in [task/port/deferred-tests.md](task/port/deferred-tests.md), and the `postgres_p11` count in [crates/repark-spark/src/map.md](crates/repark-spark/src/map.md); the names are in the archived [p2d ledger](docs/history/port-v2/p2d-spark-dml-ledger.md).
 - **Never-OOM (spill coverage)** — closed as measured at v1.3 (NEVEROOM-1, 27 cells; H3-SPILL-1's
   180-cell baseline before it); three cells wait on upstream datafusion#24768 / #22758, and the
   honest scope in [PROJECT.md](PROJECT.md) holds — spills where the engine can, documented where it cannot.
