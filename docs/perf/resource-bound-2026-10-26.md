@@ -2,7 +2,7 @@
 
 Unit ICE-RESOURCE-BOUND-1 (U-11, release 1.5.6). Order: [order](../../task/wo/ice-resource-bound-1/order.md). Ledger: [ice-resource-bound-1-ledger](../../task/ledgers/staging/ice-resource-bound-1-ledger.md). Step-0 measurement: [step-0-bound-table-2026-10-26.md](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md), 261 cells on format v2 and v3 (the JSON sits beside it).
 
-**Status, 2026-10-26.** Step 0 measured; the owner ruled Q1 to Q5 the same day; the sketch and the orchestrator rulings O-1 to O-13 and Q-B1 and Q-B2 are in the order. Steps 1 to 5 built the bound, the refusals, the detector walk and the pins on format v2 and v3. This file records the outcome. The scoped verifier rounds are open (ledger C-012).
+**Status, 2026-10-26.** Step 0 measured; the owner ruled Q1 to Q5 the same day; the sketch and the orchestrator rulings O-1 to O-13 and Q-B1 and Q-B2 are in the order. Steps 1 to 5 built the bound, the refusals, the detector walk and the pins on format v2 and v3. This file records the outcome. The scoped verifier rounds passed on head `76bd5891` (ledger C-013 closes C-012); the findings and their dispositions are in the verification section below.
 
 ## What is bounded
 
@@ -19,6 +19,7 @@ Rules, as ruled (order Q1, Q2 and O-5):
 - The bound is the fraction times the live pool. The pool is read at each statement, so `SET datafusion.runtime.memory_limit` moves it.
 - A fraction of 0 means no bound on that path. A pool with no finite limit means no bound on any path.
 - The input is not charged to the pool. The bound is a separate limit beside the pool (Q2).
+- Dated 2026-10-26 (verification V-3, owner ruling Q-V1): fractions above 1 are accepted by design. `1.5` is accepted; `-0.1`, `abc`, `inf`, `nan` and `''` refuse at build, naming the key.
 - The three keys are build-time only. A runtime `conf.set` of one refuses with an `IllegalArgumentException` that names the builder door. A value that is not a number, is negative or is not finite refuses at build, as `IllegalArgumentException`, and names the key. Fractions above 1 are accepted.
 - The refusal has the pool's own class: DataFusion `ResourcesExhausted`, which surfaces as `PySparkException` (Q1). It names the statement kind, the estimate, the fraction times the pool and the key. It names no data-deleting action (ruling 76(a)). Its remedies are raising the key or the pool.
 
@@ -26,7 +27,7 @@ The ruled text, with `{...}` filled at the crossing:
 
 > REPARK: the {statement kind} holds {what} in memory outside the memory pool; {what} reached at least {estimate} bytes, above the bound {fraction} x pool {pool} bytes = {limit} bytes. Raise `{key}` (0 = no bound) or raise the memory pool.
 
-A measured refusal, the ordered write at a 32 MiB pool: `Resources exhausted: REPARK: the ordered write holds its input before the sort in memory outside the memory pool; its input before the sort reached at least 3743744 bytes, above the bound 0.1 x pool 33554432 bytes = 3355443 bytes. Raise repark.write.ordered.max-input-fraction (0 = no bound) or raise the memory pool.` The facade reads it with DataFusion's `datafusion engine error: ` prefix. The Arrow export of a changelog read adds the pool hint of the export path.
+A measured refusal, the ordered write at a 32 MiB pool: `Resources exhausted: REPARK: the ordered write holds its input before the sort in memory outside the memory pool; its input before the sort reached at least 3743744 bytes, above the bound 0.1 x pool 33554432 bytes = 3355443 bytes. Raise `repark.write.ordered.max-input-fraction` (0 = no bound) or raise the memory pool.` The facade reads it with DataFusion's `datafusion engine error: ` prefix. The Arrow export of a changelog read adds the pool hint of the export path.
 
 The refusal leaves no staged file. The PP-01 drain precedes every writer, so no data file exists at the refusal. The PP-02 matched work runs before the staging starts. The PA-11 read stages nothing. On the parallel ordered arm one shared counter and a drain-end barrier stop the sibling workers from writing after a refusal (O-6).
 
@@ -124,6 +125,17 @@ The table is the probe's output, copied from the run (`probe_cost.py`, [order](.
 
 Start loads 2.99 to 8.18.
 
+**Dated note, 2026-10-26 (verification V-1, S2).** The two ordered INSERT rows of the table above append with `writeTo(...).append()` and no option. That is door D1, the fork's insert path, which never reaches the PP-01 seam, so those two rows measured a path this unit did not change. They stay as history. The rows of record for the ordered cells are the D2 rows below. The probe now appends through D2 (`.option("snapshot-property.rbound", "1")`, commit `8bf742be`). The unordered and update rows above were not re-measured in this round.
+
+**Ordered cells on the D2 door (rows of record, 2026-10-26).** Base: main `42e43214`. Head: `76bd5891`. Both are ci-profile builds, not the release wheels of the protocol above. Twelve rounds, base and head alternated per round, thirty runs per cell per round, start loads 3.55 to 4.96. Measured by the orchestrator under the full protocol.
+
+| cell | base ms | head ms | ratio of medians | median per-round ratio | per-round range |
+|---|---:|---:|---:|---:|---:|
+| ordered INSERT unpartitioned w1 | 113.68 | 113.63 | 1.000 | 0.998 | 0.975 to 1.019 |
+| ordered INSERT 32 partitions w4 | 295.43 | 294.14 | 0.996 | 0.998 | 0.884 to 1.021 |
+
+The Opus 5.5 verifier's own six-round rerun of the D2 cells gave 0.981. Every ratio is within 1.05.
+
 Every ratio is within 1.05. The two MoR MERGE cells are noise-dominated on both sides, so their ratios below 1 measure noise and not a speed-up. Per-round medians (the lowest and highest of the twelve rounds):
 
 | cell | side | lowest per-round median ms | highest |
@@ -163,6 +175,24 @@ The change on the MoR path is one slice-size sum per pushed batch. The changelog
 - A bare `UPDATE t SET ...` with no `WHERE` on a copy-on-write table takes the fork's plain path, whose sort is charged to the pool. It does not reach the PP-01 seam. `UPDATE ... WHERE` does.
 - The CTAS plan writer resolves the bound per writer partition, so N writer partitions admit N times the bound. No door reaches it today: a CTAS table carries no write order.
 - The bounds ride a plain SessionConfig extension, not a SET-able option. A context built from a fresh SessionConfig falls back to the ruled defaults. None was observed.
+
+## Verification round (2026-10-26)
+
+PR #1191 at head `76bd5891` was checked by two verifiers. The Muse MAX verifier found no findings. The Opus 5.5 verifier found one S2 and four S3, all records. The probe fix is `8bf742be`. Dispositions:
+
+- **V-1 (S2), the cost probe's door.** Fixed in the probe (D2) and re-measured; the D2 rows above are the rows of record. The original table's two ordered rows are history.
+- **V-2 (S3), the drain-end barrier.** The drain-end barrier and the `is_aborted` early return in `fanout_sorted_stream` are defense in depth. With both removed every pin stays green (61 of 61). An edge sweep (D2, v3, 32 partitions, 4 writers, 32 MiB, 57,000 to 60,500 rows) shows 24 refusals and no leaks on the head and on the mutant, because the abort flag that `budget.charge` also sets already stops the sibling workers. No pin is owed.
+- **V-3 (S3), fractions above 1.** Accepted by design (owner ruling Q-V1). The verifier brief was wrong, not the code. The bullet in the rules section above carries the measured accept and refuse cases.
+- **V-4 (S3), the quoted text.** The example refusal in this record quotes the emitted text, with the key in backticks.
+- **V-5 (S3), the wording of the never-worse clauses.** Ledger C-001 and C-003 now say what the pins assert: the controls compare against an expected query, and the changelog control compares row counts. Both verifiers measured base against head. The Opus 5.5 verifier found 18 of 20 never-worse cells equal in values, types and per-file order; the other two were equal in values and types, with a file order that varies on the base itself. The Muse MAX verifier found 16 of 16 diff-probe cells equal.
+- **Verifier evidence.** The ledger's open verifier row C-012 is closed by the new dated row C-013; C-012 itself is not rewritten.
+  - Opus 5.5 (`claude-opus-5-5`), PASS: the PP-01 charge no-op reds 10 PP-01 pins; the PP-02 charge no-op reds 8; the PA-11 check removed reds 2; the detector mutants red their fixture cells; 22 of 22 facade refusal cells stage nothing on v2 and v3; the bound follows a live pool change; `pytest python/repark/tests/writes` re-run: 5543 passed, 57 skipped, 3 xfailed.
+  - Muse MAX (`muse-spark-1.3-contributor`), PASS: 37 Rust and 24 facade cells; 16 of 16 diff-probe cells equal; refusals hold on v2 and v3; keys at 0 commit; invalid keys refuse at build.
+  - The evidence is relayed by the orchestrator; the clerk did not re-run the verifiers.
+- **The scheduled workflow ships in this PR.** Owner ruling 2026-10-26, "keep the workflow in #1191": `.github/workflows/resource-bound-scale.yml` is dispatch-only, and the owner enables the schedule later.
+- **PA-10 residue.** The constrained-process integration test and the headroom document are carded: [PA-10-CONSTRAINED-PROCESS-TEST-1](../../task/roadmap/mid-term/pa-10-constrained-process-test-1-card-2026-10-26.md) and [PA-10-HEADROOM-DOC-1](../../task/roadmap/mid-term/pa-10-headroom-doc-1-card-2026-10-26.md).
+
+Rulings: Q-V1 (accept fractions above 1); Q-V2 (the probe re-spelled through D2; the two D2 rows are the rows of record).
 
 ## Pointers
 
