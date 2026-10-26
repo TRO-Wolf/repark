@@ -89,6 +89,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   AS TIMESTAMP) WHERE id >= 0` store one value (a pre-1970 value with digits below the
   microsecond among them). Red with the identity UPDATE seam reverted alone.
   pins: ice-tsns-type-planner-1/C-019
+- `timestamp_ns_wall_doors.rs`, `an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update` — **ICE-TSNS-UPDATE-RANGE-CLASS-1 (2026-10-26, U-4, R-012):** the same 16 cells as the facade pin, one unfiltered `UPDATE` per literal on COW and MOR tables in UTC, New York and Kolkata, each equal to INSERT's error text. pins: ice-tsns-update-range-class-1/C-001, C-002
 - [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
   (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
   an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`
