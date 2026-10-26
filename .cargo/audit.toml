@@ -18,4 +18,17 @@ ignore = [
   # See deny.toml for the full rationale. Revisit at the next DataFusion-family bump.
   "RUSTSEC-2026-0194",
   "RUSTSEC-2026-0195",
+  # zstd advisories, 2026-10-26: RUSTSEC-2026-0391 (`zstd` 0.13.3, patched >=0.14.3) and
+  # RUSTSEC-2026-0398 / RUSTSEC-2026-0403 (`zstd-safe` 7.2.4, patched >=8.2.0). The 0.14 line is
+  # semver-unreachable: nine dependents pin zstd 0.13 (`parquet` 58.4.0, `arrow-ipc` 58.4.0,
+  # `datafusion` 54.1.0, `datafusion-datasource` 54.1.0, `apache-avro` 0.21.0, `orc-rust` 0.8.0,
+  # `compression-codecs` 0.4.38, the owned fork `iceberg` 0.9.1 rev d80a2884, `repark-core`);
+  # parquet/arrow 60 are on 0.14 but datafusion 55.2.0 still requires `^0.13` and the fork follows
+  # datafusion. Measured 2026-10-26: seekable use (0398) is absent from all six zstd-using
+  # dependents' sources; reachability is NOT established for 0391 and 0403. See deny.toml for the
+  # full rationale. Revisit at the datafusion release on arrow 60, then the fork repin, then the
+  # zstd bump; tracked by card DEPS-1. Mirrored in deny.toml.
+  "RUSTSEC-2026-0391",
+  "RUSTSEC-2026-0398",
+  "RUSTSEC-2026-0403",
 ]

@@ -32,6 +32,28 @@ ignore = [
   # Mirrored in .cargo/audit.toml.
   "RUSTSEC-2026-0194",
   "RUSTSEC-2026-0195",
+  # zstd advisories, 2026-10-26 — the bump is semver-unreachable, so the gate ignores them
+  # until datafusion moves to zstd 0.14. RUSTSEC-2026-0391 (`zstd` 0.13.3, patched >=0.14.3,
+  # unaffected <0.13.2): data from an abandoned stream leaks into the next stream on a reused
+  # context (an encoder dropped before `finish()` after an error). RUSTSEC-2026-0398
+  # (`zstd-safe` 7.2.4, patched >=8.2.0): `Seekable::decompress` sets a `Vec` length beyond its
+  # capacity for offsets past the end. RUSTSEC-2026-0403 (`zstd-safe` 7.2.4, patched >=8.2.0):
+  # uninitialized memory exposed when streaming decompression of a legacy frame fails. This tree
+  # ships `zstd` 0.13.3 / `zstd-safe` 7.2.4, and `cargo tree -i zstd@0.13.3` shows nine dependents
+  # pinning the 0.13 line: `parquet` 58.4.0, `arrow-ipc` 58.4.0, `datafusion` 54.1.0,
+  # `datafusion-datasource` 54.1.0, `apache-avro` 0.21.0, `orc-rust` 0.8.0, `compression-codecs`
+  # 0.4.38, the owned fork `iceberg` 0.9.1 (rev d80a2884), and `repark-core`. Upstream today:
+  # parquet and arrow 60.0.0 are on zstd 0.14, but datafusion 55.2.0 (latest) still requires
+  # `^0.13`, apache-avro 0.22.0 and orc-rust 0.9.0 still `^0.13`, and the fork follows datafusion,
+  # so the patched line becomes reachable only when datafusion releases against arrow 60. Measured
+  # 2026-10-26: the seekable API (RUSTSEC-2026-0398) is referenced by none of the six zstd-using
+  # dependents' sources (grep of parquet, arrow-ipc, apache-avro, orc-rust, compression-codecs,
+  # datafusion-datasource: zero files); reachability from this tree is NOT established for
+  # RUSTSEC-2026-0391 and RUSTSEC-2026-0403. Revisit at the datafusion release on arrow 60, then
+  # the fork repin, then the zstd bump; tracked by card DEPS-1. Mirrored in .cargo/audit.toml.
+  "RUSTSEC-2026-0391",
+  "RUSTSEC-2026-0398",
+  "RUSTSEC-2026-0403",
 ]
 
 [licenses]
