@@ -3,7 +3,9 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use datafusion::arrow::array::{Array, RecordBatch};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::execution::TaskContext;
 use datafusion::execution::memory_pool::MemoryLimit;
+use datafusion::physical_plan::SendableRecordBatchStream;
 use datafusion::prelude::SessionConfig;
 use futures::channel::oneshot;
 use futures::future::{FutureExt, Shared};
@@ -344,6 +346,25 @@ impl UpdatedRowsBudget {
         self.held += batches.iter().map(counted_bytes).sum::<usize>();
         bound.check(self.held)
     }
+}
+
+pub(crate) async fn drain_changelog_source(
+    mut stream: SendableRecordBatchStream,
+    ctx: &TaskContext,
+) -> Result<Vec<RecordBatch>> {
+    let bound = ResourceBounds::from_session_config(ctx.session_config())
+        .at_pool(&ctx.memory_pool().memory_limit())
+        .changelog_source();
+    let mut held = 0;
+    let mut collected = Vec::new();
+    while let Some(batch) = stream.try_next().await? {
+        if let Some(bound) = &bound {
+            held += counted_bytes(&batch);
+            bound.check(held)?;
+        }
+        collected.push(batch);
+    }
+    Ok(collected)
 }
 
 #[cfg(test)]
