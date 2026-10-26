@@ -152,6 +152,8 @@ works, so the attribute is gone rather than documented.
   and commit through `cow_commit`, so session snapshot properties and the session
   codec reach the identity path.
 
+**ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `cow_commit.rs` line 64 builds its `WriteConcurrency` from the session (`concurrency_from_ctx(ctx).with_max_concurrent_files(1)`), so the copy-on-write UPDATE and MERGE writers keep the ordered-input bound (PP-01). The bare `UPDATE t SET ...` with no `WHERE` takes the fork's plain path (`plain_identity_needs_fork`), whose sort is charged to the pool and never reaches the PP-01 seam; `UPDATE ... WHERE` takes the RePark-owned identity path and does reach it.
+
 ## Pointers
 
 - Up: [`../map.md`](../map.md)

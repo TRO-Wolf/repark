@@ -105,3 +105,5 @@ guards-job steps are raw commands — a new gate still needs **dual** Makefile +
 Escalate to: [../map.md#debug](../map.md).
 
 Cross-read diagnostics stream Python progress with unbuffered Python and pytest tee-sys capture (2026-10-24). Both are needed for messages to reach the job log before a blocked test returns; real-pytest subprocess pins hold live visibility and final exit status.
+
+**ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `resource-bound-scale.yml` (new) — the scheduled-job file for the 4x and 16x cells. It runs on `workflow_dispatch` only: the job `scale` builds the ci native module and runs `python/repark/tests/writes/test_ice_resource_bound_1.py -k scale` with `REPARK_RESOURCE_BOUND_SCALE=1`. The owner wires the schedule (ruling O-12), as #1070 was wired.
