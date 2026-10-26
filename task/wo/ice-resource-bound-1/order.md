@@ -42,6 +42,32 @@ largest process peak 14.1 GiB, and no cell reached the cap. The probe is
 - **Q4 RULED:** 1x of the audit grids is pinned in the pull-request tests; 4x and 16x run in the acceptance nightly only.
 - **Q5 RULED:** no pool-peak reader. The pins assert refusal or commit at a chosen pool size.
 
+**Step 1 outcome and orchestrator rulings on the sketch (2026-10-26).** The sketch is
+[sketch-step-1.md](sketch-step-1.md) (Claude Opus 5.5, commit ccef38a6; model id verified from the transcript; every
+file it cites exists on the head except the four it proposes). Its thirteen questions are ruled as follows; the
+sketch's lean is adopted on each unless stated. Steps 2 to 5 open on Claude Opus 5.5.
+
+- **O-1 RULED:** the PP-01 shared drain is one seam. One function counts and refuses; the four drain loops become
+  calls to it. `sort_batches_by_default_order` is not a candidate site.
+- **O-2 RULED:** `WriteConcurrency` carries the computed PP-01 limit; the two reached ctx-less sites take it; the
+  ctx-less public Rust APIs are a declared row (dated, written in step 6 and named in the P2 report for the owner).
+- **O-3 RULED:** the refusal names the path label, not the SQL verb.
+- **O-4 RULED:** count the slice-aware size of what the seam holds; step 2 prints the counted-to-table ratio per
+  path; a ratio above 1.4 halts and the owner hears before the pools move.
+- **O-5 RULED:** the three keys are build-time only; a runtime `conf.set` of one of them refuses with a hint that
+  names the build-time door. The live pool still moves the bound.
+- **O-6 RULED:** the budget sets the existing aborted flag and a drain-end barrier precedes the sort, so a refusal
+  stages no file; the pin asserts zero staged files and an unchanged snapshot.
+- **O-7 RULED:** the pull-request PP-02 refusal pin lowers the key to 0.01 beside a default-fraction control; the
+  default-fraction refusal is pinned at 4x in the nightly.
+- **O-8 RULED:** a merge-on-read MERGE into an ordered table keeps both bounds; the refusal names the key crossed first.
+- **O-9 RULED:** ride the existing concurrency parse and attach calls; `session.rs` does not grow.
+- **O-10 RULED:** the detector takes `min(cgroup minimum, MemTotal)`.
+- **O-11 RULED:** declared platforms are declared only; no build refusal (ruling 70).
+- **O-12 RULED:** the 4x and 16x cells run in a scheduled job on head; the builder writes the job file in the pull
+  request and the owner wires it, as #1070 was wired. The red-on-main run is made once, locally, and recorded.
+- **O-13 RULED:** PA-10's constrained-process test runs under acceptance only; pull-request coverage is the fixture cells.
+
 **Out of scope, observed (from the hand-back):**
 
 - The static door classifier answers D8 for `MERGE ... UPDATE SET t.a = s.a`, and the runtime record answers D9. Carded as [WRITE-DOOR-CLASSIFIER-D8-D9-1](../../roadmap/mid-term/write-door-classifier-d8-d9-1-card-2026-10-26.md).
