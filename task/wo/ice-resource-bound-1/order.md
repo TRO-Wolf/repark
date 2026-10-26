@@ -68,6 +68,23 @@ sketch's lean is adopted on each unless stated. Steps 2 to 5 open on Claude Opus
   request and the owner wires it, as #1070 was wired. The red-on-main run is made once, locally, and recorded.
 - **O-13 RULED:** PA-10's constrained-process test runs under acceptance only; pull-request coverage is the fixture cells.
 
+**Steps 2 to 5 outcome and orchestrator rulings (2026-10-26).** Built by Claude Opus 5.5 (model id verified from the
+transcript) in six commits, 5068ec9a to b41aa85e: the red cells (20 Rust refusal cells red on the base product code,
+16 controls green; 18 facade red, 6 controls green; the 4x and 16x cells red on the base release wheel), the three
+refusals, the cgroup v2 minimum walk, the pins green on v2 and v3 (61 Rust cells in `resource_bound` and
+`kill_mid_write`, 24 facade cells, 18 scale cells), the kill-against-refusal pairs, and the cost gate (12 alternated
+rounds, 30-run medians, every ratio within 1.05; the two merge-on-read cells are noise-dominated on both sides).
+Counted-to-table ratios: PP-01 1.000 and 1.000, PP-02 1.000 and 1.282, PA-11 1.385 and 1.385, all under O-4's 1.4.
+The orchestrator reproduced one PP-01 cell by hand on the head module through D2 (400k rows, 32 MiB pool): the ruled
+text, zero snapshots, zero rows; with the key at 0 the same write commits 400,000 rows in one snapshot.
+
+- **Q-B1 RULED:** the CTAS plan writer resolves the bound per writer partition; declared in the O-2 row (no door
+  reaches it today: CTAS tables carry no write order); no change.
+- **Q-B2 RULED:** the step-6 census text records both D10 spellings: the bare `UPDATE … SET` takes the fork's plain
+  path with a pool-charged sort and never reaches PP-01 (the step-0 census measured that spelling); `UPDATE … WHERE`
+  takes the RePark-owned path and is the pinned spelling.
+- Step 6 (records) opens on a Haiku 5.5 clerk; then CI, then one scoped Opus 5.5 verifier and the Muse MAX verifier.
+
 **Out of scope, observed (from the hand-back):**
 
 - The static door classifier answers D8 for `MERGE ... UPDATE SET t.a = s.a`, and the runtime record answers D9. Carded as [WRITE-DOOR-CLASSIFIER-D8-D9-1](../../roadmap/mid-term/write-door-classifier-d8-d9-1-card-2026-10-26.md).
