@@ -2111,6 +2111,52 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   `AS SERDE` keeps main d4caca39's answer until Spark's answer for a view is measured. A version with no SQL
   representation has no body to render, so it refuses.
 
+### 2.7 Resource bounds (DECLARED)
+
+Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of that day. The bounds, their keys and the measurements are in [the bound table](../docs/perf/resource-bound-2026-10-26.md), which the rows below cite. Spark sorts and joins in execution memory and spills; RePark refuses above a stated fraction of the pool, as ruled. Each row below is that difference.
+
+#### ICE-RESOURCE-BOUND-1-ORDERED — DATED ROW 2026-10-26: an ordered write above its input bound refuses where Spark spills
+
+- **repark** — an `INSERT` (and each other write door that reaches the ordered drain) into a table with a declared write order refuses when its input before the sort exceeds `repark.write.ordered.max-input-fraction` (default 0.10) times the live memory pool. The refusal is `ResourcesExhausted`, surfacing as `PySparkException`, and names the ordered write, the estimate, the bound and the key. It stages no file. Key 0 means no bound.
+- **Apache Spark** — measured 2026-10-26 on Spark 4.1.2 with Iceberg 1.11.0, `local[2]`, a 1 GiB driver, 4M rows, ordered: the write commits, with 304 MiB of memory spill and 151 MiB of disk spill, in 7.7 s.
+- **Pin** — `crates/repark-spark/src/tests/resource_bound.rs` (PP-01 cells, format v2 and v3) and `python/repark/tests/writes/test_ice_resource_bound_1.py`. pins: ice-resource-bound-1/C-001, C-006, C-007
+- **Rationale** — DATED ROW 2026-10-26, owner ruling Q1 and Q2: the bound is stated and measured, and the refusal is the pool's own class. The input is not charged to the pool, so the in-pool sort still does not spill; spilling the ordered input is out of scope of this unit.
+
+#### ICE-RESOURCE-BOUND-1-MOR — DATED ROW 2026-10-26: a merge-on-read MERGE above its updated-rows bound refuses where Spark spills
+
+- **repark** — a merge-on-read MERGE refuses when its updated rows (matched and NOT MATCHED BY SOURCE together) exceed `repark.merge.mor.max-updated-fraction` (default 0.05) times the live pool. It refuses before any data or delete file is staged. Key 0 means no bound.
+- **Apache Spark** — measured 2026-10-26 on the same Spark build, 4M rows, 100 % match, a 1 GiB driver: the MERGE commits, with 736 MiB of memory spill and 109 MiB of disk spill, in 13.4 s.
+- **Pin** — `crates/repark-spark/src/tests/resource_bound.rs` (PP-02 cells) and `resource_bound_kill.rs` (KR-2); the facade cells. pins: ice-resource-bound-1/C-002, C-008
+- **Rationale** — DATED ROW 2026-10-26, owner ruling Q2. The delete state of the MoR path (`seen_pair`, `pair_indices`, path interning) is not charged; the ruled bound covers updated rows.
+
+#### ICE-RESOURCE-BOUND-1-CHANGELOG — DATED ROW 2026-10-26: a changelog read above its source-window bound refuses where Spark answers
+
+- **repark** — `t.changes` (the changelog view) refuses when its source window exceeds `repark.changelog.max-source-fraction` (default 0.0625) times the live pool. The bound covers the window, not the result: a `LIMIT` does not lower the charge.
+- **Apache Spark** — measured 2026-10-26, 4M rows, `SELECT id FROM t_changes LIMIT 10`, the same Spark build and driver: answered in 4.7 s with no spill.
+- **Pin** — `crates/repark-spark/src/tests/resource_bound.rs` (PA-11 cells, format v2 and v3) and the facade changelog cells. pins: ice-resource-bound-1/C-003
+- **Rationale** — DATED ROW 2026-10-26, owner ruling Q2 and Q4. The read still holds its window in memory below the bound; the bound states the limit, it does not remove the materialization (audit PA-11).
+
+#### ICE-RESOURCE-BOUND-1-CTX-LESS — DATED ROW 2026-10-26: the ctx-less public Rust APIs carry no pool and so no bound
+
+- **repark** — the public Rust functions `append`, `write_data_files`, `write_data_files_from_stream`, `write_partitioned_data_files` and `write_partitioned_data_files_from_stream` build `WriteConcurrency::default()`, which has no pool, so the ordered-input bound never fires through them. The `_with_concurrency` variants carry whatever bound the caller resolved.
+- **Apache Spark** — not applicable: a Rust API has no Spark counterpart.
+- **Pin** — none. The declaration rests on the reading of the call sites in `crates/repark-iceberg/src/write/append.rs` and `partitioned_files.rs`, and on the sites in `merge/file_sink.rs`. This row has no test that reaches it, so it does not meet the rule that a row lands with its pin; the owner rules whether it stays. ([ledger](../task/ledgers/staging/ice-resource-bound-1-ledger.md) C-006 cites the bound keys only.)
+- **Rationale** — DATED ROW 2026-10-26, orchestrator ruling O-2: the session carries the bound; a session-less API has no pool to bound against.
+
+#### ICE-RESOURCE-BOUND-1-CTAS — DATED ROW 2026-10-26: the CTAS plan writer resolves the bound per writer partition, and no door reaches it today
+
+- **repark** — `write_data_files_from_plan` (`crates/repark-iceberg/src/write/partition_write.rs`) resolves the ordered-input bound from the `TaskContext` for each writer partition, so N writer partitions admit N times the bound. No SQL door reaches it: a CTAS table is created with no write order and takes the unsorted path.
+- **Apache Spark** — not applicable to this measurement; the CTAS table has no sort order in either engine.
+- **Pin** — none. No door reaches the arm, so no pin can, and this row does not meet the rule that a row lands with its pin; the owner rules whether it stays (orchestrator ruling Q-B1).
+- **Rationale** — DATED ROW 2026-10-26, Q-B1: the arm is unreached today; a future CTAS with a write order would need the per-partition resolution revisited.
+
+#### ICE-RESOURCE-BOUND-1-PLATFORMS — DATED ROW 2026-10-26: the default pool on cgroup v1, macOS and Windows needs an explicit budget
+
+- **repark** — on cgroup v1, macOS and Windows the default pool detector keeps its declared path: it ignores the v1 `memory.limit_in_bytes` and reads `MemTotal`, or falls back to the 8 GiB cap where there is no `/proc/meminfo`. A deployment there must set `repark.memory.limit.gb` or `datafusion.runtime.memory_limit`. The build does not refuse.
+- **Apache Spark** — not applicable: a deployment-memory declaration.
+- **Pin** — the v1-only fixture cell of `spill_unit_tests` (`crates/repark-core/src/session/spill.rs`) asserts the declared path. pins: ice-resource-bound-1/C-009
+- **Rationale** — DATED ROW 2026-10-26, owner ruling Q3 and orchestrator ruling O-11: the detector cannot be trusted on those platforms, so the row names the budget the deployment must set; a build refusal would stop every session that sets none, which main answers (ruling 70).
+
 ## 3. Identifier resolution (DECLARED)
 
 ### ID-1 — quoted identifiers stay exact on the ANSI door, fold on the Spark door
