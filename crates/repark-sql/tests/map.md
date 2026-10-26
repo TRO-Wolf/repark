@@ -14,6 +14,8 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `write_door_native.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pins 1 to 4 and the WS2-20 pin: `every_value_writing_door_passes_the_stage`, `a_missing_kernel_refuses_on_every_routed_door`, `the_sink_guard_never_fires_on_a_routed_door`, `a_plain_update_from_add_months_stores_session_midnight` and `a_partition_overwrite_guards_an_integer_overflow_at_plan_time`. pins: write-spine-1/C-017, C-018, C-020
+- `write_door_native.rs` — **WRITE-SPINE-1 step 2 fix round 2 (2026-10-25):** the two by-name resolution pins: `a_by_name_column_that_differs_only_in_case_resolves_to_its_target` (the case-insensitive fallback of `resolve_target`, mutant C2) and `a_by_name_frame_in_another_order_resolves_by_name_not_position` (by-name order, mutant C7); both drive `conform_table_frame` on a New York Spark session. pins: write-spine-1/C-017
 - [write_door_native.rs](write_door_native.rs) — **WRITE-SPINE-1 step 3a round 2 (2026-10-24,
   ruling C-009):** the doors no Python spelling executes, one test each, on an ANSI session
   over a memory catalog with a table partitioned by `k`: D15 `INSERT` under a session write
