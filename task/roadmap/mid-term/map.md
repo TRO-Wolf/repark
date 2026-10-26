@@ -1047,13 +1047,14 @@ declines it (a dated ruling in the intake, then the archive).
   the OOM killer at a 40 G scope cap after 166 s in fix round 3). It predates U-8 and is not its
   gate. Probes of this shape run under a memory cap.
 - [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
-  ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, open, not scheduled, awaits the owner's adopt of the
-  2026-10-20 plan):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE
+  ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, built on the branch 2026-10-26, verifiers passed on head 76bd5891, PR #1191 open for the merge):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE
   (PP-02), measured on the acceptance sizes and written in docs; above it the statement refuses
   with one text and the old snapshot stands, under #1044's "refuses cleanly where it cannot
   spill"; PA-10 and PA-11 declared or closed. Follows U-9, whose kill pin keeps a crash and a
   refusal two pinned outcomes. Order under `task/wo/ice-resource-bound-1/`.
 - [write-door-classifier-d8-d9-1-card-2026-10-26.md](write-door-classifier-d8-d9-1-card-2026-10-26.md) — **card WRITE-DOOR-CLASSIFIER-D8-D9-1 (2026-10-26, open, clerk grade):** the static door classifier answers D8 for a MERGE `UPDATE SET t.a = s.a` where the per-session runtime record answers D9, found by the ICE-RESOURCE-BOUND-1 step 0 probe; retires when the two agree under a pin; linked to WRITE-SPINE-1.
+- [pa-10-constrained-process-test-1-card-2026-10-26.md](pa-10-constrained-process-test-1-card-2026-10-26.md) — **card PA-10-CONSTRAINED-PROCESS-TEST-1 (2026-10-26, open, not scheduled, clerk grade):** a disposable constrained process under a nested memory cap proves the default pool follows the cap; the O-13 acceptance-only residue of PA-10 (ICE-RESOURCE-BOUND-1 Q-C7). The fixture cells are in `repark-core` `spill.rs`.
+- [pa-10-headroom-doc-1-card-2026-10-26.md](pa-10-headroom-doc-1-card-2026-10-26.md) — **card PA-10-HEADROOM-DOC-1 (2026-10-26, open, not scheduled, clerk grade):** a dated, measured document of the memory outside the pool for decoded batches, Arrow results, caches, writer buffers and several sessions, which the PA-10 row requires.
 - [stack-linear-flake-1-card-2026-10-15.md](stack-linear-flake-1-card-2026-10-15.md) — **card
   STACK-LINEAR-FLAKE-1 (2026-10-15, open, not scheduled):**
   `test_stack_is_linear_in_columns` failed on CI (2026-10-15, facade shard 1,
