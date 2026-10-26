@@ -19,8 +19,8 @@ use repark_iceberg::write::sink_offsets::{
     read_resume_point, resolve_unknown_outcome,
 };
 use repark_iceberg::write::{
-    CommitStateUnknownError, SESSION_SNAPSHOT_PREFIX, apply_session_write_key,
-    commit_append_with_summary, concurrency_from_ctx, is_commit_state_unknown,
+    CommitStateUnknownError, SESSION_SNAPSHOT_PREFIX, StageSite, apply_session_write_key,
+    commit_append_with_summary, concurrency_from_ctx, conform_table_frame, is_commit_state_unknown,
     resolve_empty_session_write, stage_overwrite_files_with,
 };
 use tokio::time::Instant;
@@ -472,6 +472,9 @@ impl Run {
         let (extra, mut staging) =
             resolve_empty_session_write(batch).map_err(|error| engine_error(&error))?;
         staging.fork_insert_dictionary_rule = true;
+        let frame = conform_table_frame(batch, sink, frame, StageSite::MicroBatchAppend)
+            .await
+            .map_err(|error| engine_error(&error))?;
         let stream = frame
             .execute_stream()
             .await

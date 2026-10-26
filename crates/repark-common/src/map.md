@@ -61,6 +61,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   (22003), measured byte-exact on live Spark 4.1.2 for DOUBLE and DECIMAL(38,0)
   sources, with catalogue + template pins (44 conditions).
 
+- `udf_names.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `NARROW_TIMESTAMP_NS_NAME` joins the names here, the narrowing kernel the conform stage names fail-closed (WS2-13). pins: write-spine-1/C-017
 - `udf_names.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):** the one home of the seven UDF
   names that `repark-functions` and `repark-iceberg` both name: `TIMESTAMP_NTZ_CAST_NAME`,
   `TIMESTAMP_NS_CAST_NAME`, `TIMESTAMPTZ_NS_CAST_NAME`, `CAST_MAP_NAME`, `ZONE_SEAM_NAME`,

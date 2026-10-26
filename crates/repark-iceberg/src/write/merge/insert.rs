@@ -9,6 +9,7 @@ use datafusion::prelude::SessionContext;
 use futures::Stream;
 
 use super::{InsertAction, InsertClause, MatchedAction, quote_ident};
+use crate::write::conform_stage::{StageRequest, StageSite, conform_stage};
 use crate::write::insert_defaults::{ColumnDefaults, column_defaults, schema_has_primitive_fill};
 use crate::write::name_resolution::{dedup_key, resolve_arrow_field, resolve_write_column};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
@@ -111,61 +112,6 @@ pub(super) fn insert_projection_with_defaults(
     Ok(projection.join(", "))
 }
 
-fn zone_wrapping_stream_sql(
-    ctx: &SessionContext,
-    sql: &str,
-    plan: &datafusion::logical_expr::LogicalPlan,
-    write_schema: &ArrowSchema,
-) -> Option<String> {
-    use crate::write::ntz_store::{
-        is_ltz_instant_target, store_kernel_sql as wall_cast_sql,
-        store_kernel_udf_name as wall_cast_udf_name,
-    };
-    let fields = write_schema.fields();
-    let planned = if fields
-        .iter()
-        .any(|field| is_ltz_instant_target(field.data_type()))
-    {
-        crate::write::ntz_store::analyzed_types(ctx, plan)
-            .filter(|types| types.len() == fields.len())
-    } else {
-        None
-    };
-    let instant = |index: usize| {
-        planned.as_ref().is_some_and(|types| {
-            is_ltz_instant_target(fields[index].data_type())
-                && crate::write::ntz_store::needs_ltz_instant_cast(&types[index])
-        })
-    };
-    if !(0..fields.len())
-        .any(|index| wall_cast_udf_name(fields[index].data_type()).is_some() || instant(index))
-    {
-        return None;
-    }
-    let inner = "__repark_merge_insert_rows";
-    let projection = fields
-        .iter()
-        .enumerate()
-        .map(|(index, field)| {
-            let quoted = quote_ident(field.name());
-            let column = format!("{inner}.{quoted}");
-            if let Some(wall) = wall_cast_sql(&column, field.data_type()) {
-                format!("({wall}) AS {quoted}")
-            } else if instant(index) {
-                let cast = crate::write::update_cast::store_assignment_cast_sql(
-                    &column,
-                    field.data_type(),
-                );
-                format!("({cast}) AS {quoted}")
-            } else {
-                format!("{column} AS {quoted}")
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    Some(format!("SELECT {projection} FROM ({sql}) AS {inner}"))
-}
-
 /// Plan one insert-clause query, gate its schema through ANSI store assignment, then stream.
 pub(super) async fn insert_stream_checked(
     ctx: &SessionContext,
@@ -189,33 +135,21 @@ pub(super) async fn insert_stream_checked(
     )?;
     crate::write::ntz_store::refuse_ntz_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     validate_insert_store_assignment(dataframe.schema().fields(), write_schema)?;
-    let stream_sql = zone_wrapping_stream_sql(ctx, sql, dataframe.logical_plan(), write_schema);
-    let wrapped = crate::write::store_overflow::wrap_store_outputs(
-        raw,
-        &write_targets(write_schema),
-        true,
-        true,
-        None,
-        StructPairing::by_name(false),
-        "``",
-    )?;
-    let dataframe = ctx.execute_logical_plan(wrapped).await?;
-    let dataframe = if let Some(stream_sql) = stream_sql {
-        let raw = crate::write::store_overflow::analyzed_store_source(ctx, &stream_sql).await?;
-        let wrapped = crate::write::store_overflow::wrap_store_outputs(
-            raw,
-            &write_targets(write_schema),
-            true,
-            true,
-            None,
-            StructPairing::by_name(false),
-            "``",
-        )?;
-        ctx.execute_logical_plan(wrapped).await?
-    } else {
-        dataframe
+    let targets = write_targets(write_schema);
+    let request = StageRequest {
+        site: StageSite::MergeInsert,
+        targets: &targets,
+        by_name: true,
+        fold: true,
+        gate_op: None,
+        pairing: StructPairing::by_name(false),
+        table: "``",
     };
-    dataframe.execute_stream().await
+    let wrapped = conform_stage(ctx, raw, &request)?;
+    ctx.execute_logical_plan(wrapped)
+        .await?
+        .execute_stream()
+        .await
 }
 
 fn write_targets(write_schema: &ArrowSchema) -> Vec<(String, DataType)> {
@@ -267,15 +201,17 @@ pub(super) async fn update_stream_checked(
     validate_update_store_assignment(ctx, sql, write_schema).await?;
     super::note_logical_target_sql_pass();
     let raw = crate::write::store_overflow::analyzed_store_source(ctx, rewrite_sql).await?;
-    let wrapped = crate::write::store_overflow::wrap_store_outputs(
-        raw,
-        &write_targets(write_schema),
-        true,
-        false,
-        None,
-        StructPairing::by_name(!sql.spec.case_insensitive),
-        "``",
-    )?;
+    let targets = write_targets(write_schema);
+    let request = StageRequest {
+        site: StageSite::MergeUpdate,
+        targets: &targets,
+        by_name: true,
+        fold: false,
+        gate_op: None,
+        pairing: StructPairing::by_name(!sql.spec.case_insensitive),
+        table: "``",
+    };
+    let wrapped = conform_stage(ctx, raw, &request)?;
     ctx.execute_logical_plan(wrapped)
         .await?
         .execute_stream()

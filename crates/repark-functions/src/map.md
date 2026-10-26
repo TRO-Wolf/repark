@@ -410,6 +410,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
   pins: fnp-win-1/C-003
+- `timestamp_ns_cast.rs`, `registration.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** the narrowing kernel name re-exports from `repark_common::udf_names`, and `narrow_timestamp_ns_udf()` is added beside the wall kernel (WS2-13). `registration.rs` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name on the Spark session builder. pins: write-spine-1/C-017
 - `timestamp_ns_cast.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   `wall_kernel_by_target` applies the nanosecond wall kernel from the **type** of a cast
   target: an `Expr::Cast` whose target is `Timestamp(ns, _)` and whose source is another

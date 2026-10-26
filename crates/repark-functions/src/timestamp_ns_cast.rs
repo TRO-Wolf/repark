@@ -30,8 +30,9 @@ use crate::timestamp_cast::parse_session_zone;
 use repark_common::zone_horizon::wall_at_instant;
 use values_evidence::Evidence;
 
-pub use repark_common::udf_names::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
-pub const NARROW_TIMESTAMP_NS_NAME: &str = "__repark_narrow_timestamp_ns__";
+pub use repark_common::udf_names::{
+    NARROW_TIMESTAMP_NS_NAME, TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME,
+};
 
 const NANOS_PER_MICRO: i64 = 1_000;
 const NANOS_PER_DAY: i64 = 86_400 * 1_000_000_000;
@@ -450,6 +451,11 @@ fn malformed(value: &str, target: &str) -> String {
 
 static NARROW_TIMESTAMP_NS: LazyLock<Arc<ScalarUDF>> =
     LazyLock::new(|| Arc::new(ScalarUDF::from(NarrowTimestampNs::new())));
+
+#[must_use]
+pub fn narrow_timestamp_ns_udf() -> Arc<ScalarUDF> {
+    Arc::clone(&NARROW_TIMESTAMP_NS)
+}
 
 #[must_use]
 pub fn narrow_timestamp_ns_expr(expr: Expr) -> Expr {
