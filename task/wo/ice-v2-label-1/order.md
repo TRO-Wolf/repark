@@ -14,7 +14,7 @@ Out of scope: v3 (V3-LABEL-1 follows as its own PR, decision D5); WRITE-SPINE-1 
 - Carve-out rows the label carries, each signed by the owner: ENC-1 items 1 and 5 (parked under ruling 121(b); item 1's harm on main is an unreferenced orphan file never served; rebuild in 1.5.7) and ENC-CTAS-REPLACE-1 (dated row 2026-10-15 under ruling 98(a)).
 - Two green parity mornings before the label PR (10-17 decision D5): met and exceeded.
 - The acceptance run id the label cites: the most recent green aws-acceptance run on the day the PR opens.
-- The text-leaf leniency (381 census cells where a string into a nested timestamp stores where Spark refuses) is a dated row on the v2 label, fix in 1.5.7 (owner, 2026-10-26).
+- The text-leaf leniency (102 census cells, the card's 2026-10-25 census at `d45eb72d`, where a string into a nested timestamp stores where Spark refuses) is a dated row on the v2 label, fix in 1.5.7 (owner, 2026-10-26).
 - STATUS.md sits at 24,991 bytes of its 25,000-byte compaction ceiling: the maturity section lands only with a compaction of older prose of at least its own size; the gate `make check-docs-compaction` decides.
 
 ## 2. Steps (each its own commit; comment gate before each; docs only)

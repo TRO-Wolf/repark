@@ -1528,8 +1528,8 @@ perfectly good read.
 - **repark** — a text leaf, a `STRING` value or a string literal, written into a nested
   `TIMESTAMP` or `TIMESTAMP_NTZ` leaf stores the UTC reading of the text on main, where Spark
   refuses. The zone conform stage excludes text leaves (WRITE-SPINE-1 step (2)), so they stay as
-  they were. The count is 381 census cells on the 2026-10-26 figure of the label order; the card's
-  2026-10-25 census at `d45eb72d` recorded 102 cells.
+  they were. The count is 102 cells: the card's 2026-10-25 census at `d45eb72d` (D3 12, D4 42, D10 48;
+  the F-1 table in [the step-2 census evidence](../task/wo/write-spine-1/evidence/step-2-census-2026-10-25.md)).
 - **Apache Spark** — refuses each of these cells with
   `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` (the WRITE-SPINE-1 step (2) census, F-1 table,
   Spark 4.1.2).
