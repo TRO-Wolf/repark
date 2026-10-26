@@ -65,3 +65,63 @@ taxonomy or the fork; a cost median above 1.05; a refusal text naming a data-del
 
 One JSON: `model_id`, `status`, `head`, `commits`, `seam` (file, function), `pins` (red on main, green on head, per
 zone and mode), `controls`, `cost`, `gates`, `halts`, `questions`, `out_of_scope_observed`, `hours_used`.
+
+## 7. Outcome (2026-10-26): closed as already fixed, with pins
+
+**Ruling (orchestrator, 2026-10-26):** U-4 closes as already-fixed with the committed pins. No
+product change, no seam, no verifier round on a seam; a Muse verifier checks the pins only.
+
+**Measured premise.** The red premise of §3 step 1 is false on this head. The builder (Muse MAX,
+2026-10-26) found that on the unmodified head all 16 R-012 cells (the two far literals in three
+zones plus each zone's edge instant, both row-level modes) already report INSERT's byte-identical
+`[CAST_OVERFLOW]` text at the Rust door and at the facade door. The orchestrator reproduced it on
+2026-10-26 on code equal to main `9fd60149`: INSERT, unfiltered UPDATE and filtered UPDATE of
+`TIMESTAMP '3000-01-01 00:00:00.000001+00:00'` into a v3 `timestamp_ns` column under ANSI in
+America/New_York all raise `[CAST_OVERFLOW] The value 32503680000000001 of the type "TIMESTAMP"
+cannot be cast to "TIMESTAMP_NS" due to an overflow`, and the table keeps its one row.
+
+**Cause.** The row's mechanism (C-020: the planner-cast peel strips the typed literal's cast and
+hands the kernel text) no longer holds. ICE-TSNS-TYPE-PLANNER-1 (commit `c7121437`, merged
+2026-10-16, PR #1082) plans `TIMESTAMP '…'` as `CAST(text AS Timestamp(us, UTC))`. The peel
+(`peel_ns_casts`) strips only nanosecond-targeted casts, so it stops at that inner cast; the
+microsecond analyzer rule folds it to a microsecond literal, and the kernel sees integer ticks and
+reports the range failure. Row R-012 was closed as a side effect of that unit and was never
+re-measured until this one. The seam named in §2 is therefore not on the path.
+
+**Change (test-only).** No product line, so no cost table and no seam was taken.
+
+- `46184319` — 133 facade lines in `python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py`:
+  the 16 cells, `test_unfiltered_update_reports_inserts_overflow_class`, and their controls
+  `test_filtered_update_reports_inserts_overflow_class` and
+  `test_out_of_range_literal_stores_null_without_ansi`, plus `test_range_cases_are_the_sixteen_row_cells`.
+- `d0d60540` — 48 Rust lines in `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`:
+  `an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update`, the 16 cells as one pin.
+- Clerk commits on this branch: the removal of the builder's `handback-notes.md` (committed at the
+  clone root by mistake in `9e7356a6`), this outcome block, registry row R-012 to FIXED, the ledger
+  `task/ledgers/staging/ice-tsns-update-range-class-1-ledger.md`, the 1.5.6 release-note line and the
+  map rows.
+
+**Builder gates (on the unmodified tree).** Comment gate clean. `cargo test -p repark-spark --release
+--test timestamp_ns_wall_doors` 16 of 16. `pytest` over `test_ice_tsns_merge_wall_1.py`,
+`test_ice_tstzns_wall_1.py` and `test_write_spine_1_doors.py`: 546 passed, one pre-existing skip (the
+replay test of `test_write_spine_1_doors.py`, which skips without a replay document). `make
+rust-clippy rust-panic-ban` clean. File sizes clean. `make py-lint py-format-check` clean.
+
+**Pins.** Red on main: none; the cells are green on the unmodified tree, so they pin a correct
+behaviour that the planner already gives (the pins guard a future regression of the planner's
+typing, not a fix). Facade pin names: `test_unfiltered_update_reports_inserts_overflow_class`,
+`test_filtered_update_reports_inserts_overflow_class`, `test_out_of_range_literal_stores_null_without_ansi`,
+`test_range_cases_are_the_sixteen_row_cells`. Rust pin name:
+`an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update`.
+
+**Out of scope, observed (dated notes in R-012, no new unit).**
+
+- A bare far STRING past the range: the unfiltered UPDATE refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`
+  at plan time where INSERT reports `[CAST_INVALID_INPUT]`. Pre-existing, unchanged.
+- An in-range 9-digit `TIMESTAMP` literal stores the microsecond-truncated wall identically on INSERT
+  and on the unfiltered UPDATE. This is R-024's territory.
+- The R-008 zoned mirror (`timestamptz_ns`) keeps its own unit; its head behaviour is unmeasured here.
+
+**Halt rules (§5).** None tripped: no second seam, no stored value changed in either mode, no change
+in `conform_stage.rs`, the error taxonomy or the fork, no cost median, no refusal text naming a
+data-deleting action.
