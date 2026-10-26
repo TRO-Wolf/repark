@@ -26,7 +26,7 @@ const D4: &str = "INSERT OVERWRITE ice.sales.t SELECT * FROM bsrc";
 const D5: &str = "INSERT INTO ice.sales.t REPLACE WHERE id >= 0 SELECT * FROM bsrc";
 const D8: &str = "MERGE INTO ice.sales.t t USING bsrc s ON t.id = s.id \
                   WHEN MATCHED THEN UPDATE SET t.a = s.a + 1.0";
-const D10: &str = "UPDATE ice.sales.t SET a = a + 1.0";
+const D10: &str = "UPDATE ice.sales.t SET a = a + 1.0 WHERE id >= 0";
 pub(super) const MOR_MERGE: &str =
     "MERGE INTO ice.sales.t t USING msrc s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.a = s.a";
 const NOT_MATCHED_BY_SOURCE: &str = " WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.c = -1";
@@ -103,11 +103,13 @@ fn source_batch(start: i64, stop: i64, rows: i64) -> RecordBatch {
                 .collect::<Vec<_>>(),
         )),
         Arc::new(Float64Array::from(
-            ids.iter().map(|id| *id as f64 * 0.5).collect::<Vec<_>>(),
+            ids.iter()
+                .map(|id| f64::from(i32::try_from(*id).unwrap()) * 0.5)
+                .collect::<Vec<_>>(),
         )),
         Arc::new(Float64Array::from(
             ids.iter()
-                .map(|id| ((id * 13) % 1000) as f64)
+                .map(|id| f64::from(i32::try_from((id * 13) % 1000).unwrap()))
                 .collect::<Vec<_>>(),
         )),
         Arc::new(StringArray::from(
@@ -221,13 +223,13 @@ pub(super) async fn order_target(lane: &Lane) {
 }
 
 pub(super) async fn seed(lane: &Lane, rows: usize, files: usize) {
-    let step = rows / files;
+    let per_file = rows / files;
     for index in 0..files {
-        let start = index * step;
+        let start = index * per_file;
         let stop = if index == files - 1 {
             rows
         } else {
-            start + step
+            start + per_file
         };
         run(
             &lane.ctx,
