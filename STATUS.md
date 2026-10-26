@@ -42,7 +42,7 @@ aarch64/x86_64), each an import smoke and one collect; PLATFORM-2..4 stay slated
 
 The level names are the [2026-10-13 re-rating](docs/artifacts/iceberg-rerating-2026-10-13.html)'s. Each capability is judged against the [production-grade definition](docs/production-grade.md); evidence is cited by pointer, on main `59d104d9`.
 
-- **Format-v2 reads and writes: PRODUCTION** (label order: [ICE-V2-LABEL-1](task/wo/ice-v2-label-1/order.md); the owner signs three carve-outs on its PR). Evidence: the registry rows in [the parity registry](docs/spark-sql-iceberg-parity.md) (R-011, the U-11 rows of §2.7, ICE-COMMIT-UNKNOWN-1, ICE-LOCAL-COMMIT-POINT-1); the integrity ledger [ice-integrity-pins-1](task/ledgers/staging/ice-integrity-pins-1-ledger.md); the [bound record](docs/perf/resource-bound-2026-10-26.md); the cross-read leg of [aws-acceptance](.github/workflows/aws-acceptance.yml) (run 40295982749); carve-outs ENC-1 items 1 and 5 and ENC-CTAS-REPLACE-1, and the text-leaf row NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7). Open residual with no registry row yet: NESTED-MAP-KEY-ZONE-1 (a date into a MAP TIMESTAMP key stores UTC midnight outside UTC; ruling WS2-30; [card](task/roadmap/mid-term/nested-map-key-zone-1-card-2026-10-25.md)).
+- **Format-v2 reads and writes: PRODUCTION** (label order: [ICE-V2-LABEL-1](task/wo/ice-v2-label-1/order.md); the owner signs three carve-outs on its PR). Evidence: the registry rows in [the parity registry](docs/spark-sql-iceberg-parity.md) (R-011, the U-11 rows of §2.7, ICE-COMMIT-UNKNOWN-1, ICE-LOCAL-COMMIT-POINT-1); the integrity ledger [ice-integrity-pins-1](task/ledgers/staging/ice-integrity-pins-1-ledger.md); the [bound record](docs/perf/resource-bound-2026-10-26.md); the cross-read leg of [aws-acceptance](.github/workflows/aws-acceptance.yml) (run 40295982749); carve-outs ENC-1 items 1 and 5 and ENC-CTAS-REPLACE-1, and the text-leaf row NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7). Open residual with no registry row yet: NESTED-MAP-KEY-ZONE-1 (a date into a MAP TIMESTAMP key stores UTC midnight outside UTC; ruling WS2-30; [card](task/roadmap/mid-term/nested-map-key-zone-1-card-2026-10-25.md)); and the replace doors (RTAS, `CREATE OR REPLACE TABLE … AS SELECT`) are unpinned kill doors (ice-integrity-pins-1 C-024; ice-v2-label-1 C-024).
 - **Format-v3 core: HARDENED-NARROW** until V3-LABEL-1.
 - **Nanosecond columns and struct writes: EXPERIMENTAL** (rated 2026-10-13).
 
@@ -249,13 +249,7 @@ view leak, H-1b ([ledger](docs/history/hardening-h1/h1b-ledger.md)).
 
 Design-honesty items — accurate today; each says where the honest description now lives.
 
-- **`ExecutionBackend` exposes a concrete DataFusion `SessionContext`.** The risk is unchanged —
-  callers reach single-node DataFusion facilities through the seam, so a distributed backend would
-  require widening the surface, not merely a second `impl`. **The docs now say so** (2026-08-09):
-  the trait, module, and crate doc-comments in `crates/repark-core` match
-  [ARCHITECTURE.md](ARCHITECTURE.md) "`ExecutionBackend` — what the seam is, honestly". No
-  correction is outstanding; distribution stays deferred by decision
-  ([docs/adr/0004-server-prep-disciplines.md](docs/adr/0004-server-prep-disciplines.md)).
+- **`ExecutionBackend` exposes a concrete DataFusion `SessionContext`.** Callers reach single-node DataFusion through the seam, so a distributed backend would widen the surface, not add a second `impl`. The docs say so (2026-08-09): the trait, module and crate doc-comments in `crates/repark-core` match [ARCHITECTURE.md](ARCHITECTURE.md) "`ExecutionBackend` — what the seam is, honestly". Distribution stays deferred ([ADR 0004](docs/adr/0004-server-prep-disciplines.md)).
 - **`ReparkSession` is a growing internal policy object.** It accretes session policy; a principled
   internal decomposition is deferred and driver-gated —
   [docs/adr/0005-defer-session-decomposition.md](docs/adr/0005-defer-session-decomposition.md)

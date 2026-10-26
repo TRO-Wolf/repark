@@ -55,9 +55,9 @@ One JSON object: `status`, `head`, `commits`, `matrix` (sha, tallies), `runs` (p
 
 | Unit | PR | Merge commit |
 |---|---|---|
-| PA-LOCAL-FS-POLICY-1 (audit PA-02, PA-03, PA-04) | #1075 | `14ad3c6d` |
+| PA-LOCAL-FS-POLICY-1 (audit PA-02, PA-03, PA-04) | #1075 (not in the subject) | `14ad3c6d` |
 | PA-DBT-MISMATCH-REDACT-1 (audit PA-01) | not in the subject | `444dacfe` |
-| ICE-TSNS-TYPE-PLANNER-1 (R-010, R-012, R-017) | #1082 | `c7121437` |
+| ICE-TSNS-TYPE-PLANNER-1 (R-010, R-012, R-017) | #1082 (not in the subject) | `c7121437` |
 | ICE-NTZ-NESTED-REFUSE-1 (U-8) | #1124 (record #1136) | `c91f69c5` |
 | ZONE-SEAM-1 | #1139 | `3bc2915a` |
 | EXPLAIN-DML-WRITE-1 | #1137 (P2 report #1138) | `b7a20167` |
@@ -78,7 +78,7 @@ One JSON object: `status`, `head`, `commits`, `matrix` (sha, tallies), `runs` (p
 | ICE-TSNS-UPDATE-RANGE-CLASS-1 (U-4) | #1194 | `a8c51551` |
 | DEPS-1 | #1193 | `42e43214` |
 
-**Open at the label (named, not closed by this outcome):** the carve-outs below; NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7); NESTED-MAP-KEY-ZONE-1 (a date into a MAP TIMESTAMP key, ruling WS2-30, card only, no registry row); the PA-LOCAL-FS-POLICY-1 closeout verifier, ledger clause C-018 (OPEN); the ICE-INTEGRITY-PINS-1 ledger clauses still read OPEN where the registry records live proof (C-012, C-013, C-059, C-060, C-068 to C-070).
+**Open at the label (named, not closed by this outcome):** the carve-outs below; NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7); two holds the owner rules on first: NESTED-MAP-KEY-ZONE-1 (a date into a MAP TIMESTAMP key, ruling WS2-30, card only, no registry row; ledger C-020) and the hadoop hint window (decided 2026-10-22 as option 1; the fix unit is pending; ledger C-021 and C-026); a third hold on the label: the replace doors (RTAS and `CREATE OR REPLACE TABLE … AS SELECT`) are unpinned kill doors (ledger C-024; disposition is the owner's: a card with a dated row, a scope ruling that replace doors sit outside the v2 integrity envelope, or a fix unit; recorded, not decided here); the PA-LOCAL-FS-POLICY-1 closeout verifier, ledger clause C-018 (OPEN); the ICE-INTEGRITY-PINS-1 ledger clauses still read OPEN where the registry records live proof (C-012, C-013, C-059, C-060, C-068 to C-070).
 
 **STATUS Last-updated line:** it keeps its 2026-09-12 text, because `python/repark-parity/tests/test_v1_gate_docs.py` pins it; the Iceberg maturity section carries its own date (2026-10-26).
 
