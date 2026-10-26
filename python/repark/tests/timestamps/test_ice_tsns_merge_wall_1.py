@@ -275,6 +275,139 @@ def test_update_with_no_where_stores_a_literal(
         spark.stop()
 
 
+RANGE_FAR_LITERALS = (
+    ("far_future", "TIMESTAMP '3000-01-01 00:00:00.000001+00:00'"),
+    ("far_past", "TIMESTAMP '1600-01-01 00:00:00.000001+00:00'"),
+)
+RANGE_EDGE_LITERALS = {
+    "Asia/Kolkata": ("edge", "TIMESTAMP '2262-04-11 23:47:16.854775+00:00'"),
+    "America/New_York": ("edge", "TIMESTAMP '1677-09-21 00:12:43.145225+00:00'"),
+}
+RANGE_ZONES = ("UTC", "Asia/Kolkata", "America/New_York")
+RANGE_SEED = "TIMESTAMP '2020-01-01 00:00:00'"
+
+
+def range_literals(zone: str) -> list[tuple[str, str]]:
+    """Return the out-of-range literals of ``zone``: the far pair and its edge instant."""
+    literals = list(RANGE_FAR_LITERALS)
+    if zone in RANGE_EDGE_LITERALS:
+        literals.append(RANGE_EDGE_LITERALS[zone])
+    return literals
+
+
+RANGE_CASES: list[tuple[str, str, str, str]] = [
+    (mode, zone, name, literal)
+    for mode in doors.MODES
+    for zone in RANGE_ZONES
+    for name, literal in range_literals(zone)
+]
+
+
+def range_case_id(case: tuple[str, str, str, str]) -> str:
+    """Render a range case as a test id."""
+    mode, zone, name, _ = case
+    return f"{mode}-{zone}-{name}"
+
+
+RANGE_IDS = [range_case_id(case) for case in RANGE_CASES]
+RANGE_PARAMETERS = ("mode", "zone", "name", "literal")
+
+
+def test_range_cases_are_the_sixteen_row_cells() -> None:
+    """R-012 counts the far pair in three zones plus the two edge instants, in both modes."""
+    assert len(RANGE_CASES) == 16
+
+
+def open_range_session(tmp_path: Path, zone: str, ansi: str) -> Any:
+    """Open a session in ``zone`` with the ANSI flag set, over a fresh memory catalog."""
+    spark = (
+        ReparkSession.builder.appName("ice-tsns-update-range-class-1")
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .config("spark.sql.session.timeZone", zone)
+        .config("spark.sql.ansi.enabled", ansi)
+        .getOrCreate()
+    )
+    spark.register_memory_catalog("ice", str(tmp_path))
+    spark.sql("CREATE NAMESPACE ice.ns")
+    return spark
+
+
+def create_range_table(spark: Any, table: str, mode: str) -> None:
+    """Create ``table`` holding a ``timestamp_ns`` column under the row-level ``mode``."""
+    v3 = "USING iceberg TBLPROPERTIES ('format-version' = '3'" + doors.MODES[mode] + ")"
+    spark.sql(f"CREATE TABLE {table} (id INT, v timestamp_ns) {v3}")
+
+
+def error_text_of(spark: Any, statement: str) -> str:
+    """Run ``statement``, which must raise, and return its error text."""
+    with pytest.raises(Exception) as raised:
+        spark.sql(statement)
+    return str(raised.value)
+
+
+def range_ticks(spark: Any, table: str) -> list[int | None]:
+    """Return the int64 ticks of ``table.v`` ordered by ``id``."""
+    frame = spark.sql(f"SELECT v FROM {table} ORDER BY id").to_arrow()
+    assert str(frame.column("v").type) == NS_WALL
+    return frame.column("v").cast("int64").to_pylist()
+
+
+@pytest.mark.parametrize(RANGE_PARAMETERS, RANGE_CASES, ids=RANGE_IDS)
+def test_unfiltered_update_reports_inserts_overflow_class(
+    tmp_path: Path, mode: str, zone: str, name: str, literal: str
+) -> None:
+    """R-012: an out-of-range literal with no ``WHERE`` raises INSERT's overflow text."""
+    spark = open_range_session(tmp_path, zone, "true")
+    try:
+        create_range_table(spark, "ice.ns.t", mode)
+        insert_error = error_text_of(spark, f"INSERT INTO ice.ns.t VALUES (1, {literal})")
+        assert "[CAST_OVERFLOW]" in insert_error
+        spark.sql(f"INSERT INTO ice.ns.t VALUES (1, {RANGE_SEED})")
+        update_error = error_text_of(spark, f"UPDATE ice.ns.t SET v = {literal}")
+        assert update_error == insert_error
+    finally:
+        spark.stop()
+
+
+@pytest.mark.parametrize(RANGE_PARAMETERS, RANGE_CASES, ids=RANGE_IDS)
+def test_filtered_update_reports_inserts_overflow_class(
+    tmp_path: Path, mode: str, zone: str, name: str, literal: str
+) -> None:
+    """Control: ``UPDATE … WHERE`` of the same literal keeps INSERT's overflow text."""
+    spark = open_range_session(tmp_path, zone, "true")
+    try:
+        create_range_table(spark, "ice.ns.t", mode)
+        spark.sql(f"INSERT INTO ice.ns.t VALUES (1, {RANGE_SEED})")
+        insert_error = error_text_of(spark, f"INSERT INTO ice.ns.t VALUES (2, {literal})")
+        assert "[CAST_OVERFLOW]" in insert_error
+        update_error = error_text_of(spark, f"UPDATE ice.ns.t SET v = {literal} WHERE id = 1")
+        assert update_error == insert_error
+    finally:
+        spark.stop()
+
+
+@pytest.mark.parametrize(RANGE_PARAMETERS, RANGE_CASES, ids=RANGE_IDS)
+def test_out_of_range_literal_stores_null_without_ansi(
+    tmp_path: Path, mode: str, zone: str, name: str, literal: str
+) -> None:
+    """Control: with ANSI off INSERT, filtered and unfiltered UPDATE all store NULL."""
+    spark = open_range_session(tmp_path, zone, "false")
+    try:
+        create_range_table(spark, "ice.ns.i", mode)
+        spark.sql(f"INSERT INTO ice.ns.i VALUES (1, {literal})")
+        assert range_ticks(spark, "ice.ns.i") == [None]
+        create_range_table(spark, "ice.ns.w", mode)
+        spark.sql(f"INSERT INTO ice.ns.w VALUES (1, {RANGE_SEED})")
+        spark.sql(f"UPDATE ice.ns.w SET v = {literal} WHERE id = 1")
+        assert range_ticks(spark, "ice.ns.w") == [None]
+        create_range_table(spark, "ice.ns.u", mode)
+        spark.sql(f"INSERT INTO ice.ns.u VALUES (1, {RANGE_SEED})")
+        spark.sql(f"UPDATE ice.ns.u SET v = {literal}")
+        assert range_ticks(spark, "ice.ns.u") == [None]
+    finally:
+        spark.stop()
+
+
 WALL_SOURCES = {
     "n": (pa.timestamp("us"), 32_503_680_000_000_001, 1_767_323_045_123_456),
     "d": (pa.date32(), 376_200, 20_455),
