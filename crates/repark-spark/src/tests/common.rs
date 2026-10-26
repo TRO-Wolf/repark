@@ -110,12 +110,57 @@ pub(super) async fn setup_v3_at(warehouse: &std::path::Path) -> (SessionContext,
     .await
 }
 
+pub(super) async fn setup_v3_bounded(
+    warehouse: &std::path::Path,
+    pool_bytes: usize,
+    keys: &[(&str, &str)],
+) -> (SessionContext, CatalogRegistry) {
+    let map: HashMap<String, String> = keys
+        .iter()
+        .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+        .collect();
+    let concurrency =
+        repark_iceberg::write::concurrency_from_config_map(&map).expect("the bound keys parse");
+    let runtime = datafusion::execution::runtime_env::RuntimeEnvBuilder::new()
+        .with_memory_pool(Arc::new(
+            datafusion::execution::memory_pool::FairSpillPool::new(pool_bytes),
+        ))
+        .build_arc()
+        .expect("a bounded runtime");
+    setup_with_runtime(
+        warehouse,
+        true,
+        repark_functions::cardinality::ReparkSqlSettings {
+            allow_create_format_version_3: true,
+            ..repark_functions::cardinality::ReparkSqlSettings::default()
+        },
+        repark_core::session_owner_snapshot(),
+        "UTC",
+        Some((runtime, concurrency)),
+    )
+    .await
+}
+
 async fn setup_with_owner_and_settings(
     warehouse: &std::path::Path,
     ansi_enabled: bool,
     settings: repark_functions::cardinality::ReparkSqlSettings,
     owner: String,
     zone: &str,
+) -> (SessionContext, CatalogRegistry) {
+    setup_with_runtime(warehouse, ansi_enabled, settings, owner, zone, None).await
+}
+
+async fn setup_with_runtime(
+    warehouse: &std::path::Path,
+    ansi_enabled: bool,
+    settings: repark_functions::cardinality::ReparkSqlSettings,
+    owner: String,
+    zone: &str,
+    bounded: Option<(
+        Arc<datafusion::execution::runtime_env::RuntimeEnv>,
+        repark_iceberg::write::WriteConcurrency,
+    )>,
 ) -> (SessionContext, CatalogRegistry) {
     let warehouse = warehouse.to_str().unwrap().to_string();
     let catalog = repark_iceberg::catalog::EncryptionGuardCatalog::install(Arc::new(
@@ -145,7 +190,15 @@ async fn setup_with_owner_and_settings(
         datafusion::optimizer::Analyzer::new().rules,
     )
     .unwrap();
-    let state = datafusion::execution::SessionStateBuilder::new()
+    let mut builder = datafusion::execution::SessionStateBuilder::new();
+    let config = match bounded {
+        Some((runtime, concurrency)) => {
+            builder = builder.with_runtime_env(runtime);
+            repark_iceberg::write::with_write_concurrency(config, concurrency)
+        }
+        None => config,
+    };
+    let state = builder
         .with_config(config)
         .with_default_features()
         .with_analyzer_rules(rules)

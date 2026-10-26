@@ -129,6 +129,10 @@ mod replace_table;
 mod replace_where;
 mod replace_where_oracle;
 mod replace_where_sources;
+#[cfg(unix)]
+mod resource_bound;
+#[cfg(unix)]
+mod resource_bound_kill;
 mod router;
 mod run_maintenance;
 mod service_managed_ctas;
