@@ -90,6 +90,12 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **Ordered writes, merge-on-read MERGE and changelog reads refuse above a stated memory bound (ICE-RESOURCE-BOUND-1, U-11).** Each path has a key, read at build: `repark.write.ordered.max-input-fraction` (0.10), `repark.merge.mor.max-updated-fraction` (0.05) and `repark.changelog.max-source-fraction` (0.0625), times the live memory pool. Above it the statement refuses with the pool's `ResourcesExhausted` class (`PySparkException`) before any file is staged. The value 0 means no bound. Default pool detection is closed for cgroup v2 (the leaf-and-ancestors minimum of `memory.max`, capped by `MemTotal`); cgroup v1, macOS and Windows need an explicit pool budget.
 
+- **Format-v2 Iceberg reads and writes carry the PRODUCTION label as of this release
+  (ICE-V2-LABEL-1).** Three carve-outs stay named on the label: ENC-1 items 1 and 5 (ruling 121 (b))
+  and ENC-CTAS-REPLACE-1 (ruling 98 (a)); the text-leaf row NESTED-TEXT-LEAF-STORE-1 is carried by
+  owner ruling 2026-10-26 and fixed in 1.5.7. The label itself changes no stored value; the stored-
+  value changes of this release are the bullets above.
+
 ## Integrity under failure (no stored value or behaviour changes)
 
 - **A writer killed between its data files and its commit is pinned (ICE-INTEGRITY-PINS-1, pin
