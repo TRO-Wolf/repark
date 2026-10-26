@@ -159,13 +159,18 @@ def table_properties(cell: Cell, merge_on_read: bool) -> str:
     return "TBLPROPERTIES (" + ", ".join(pairs) + ")"
 
 
-def create_target(session: Any, cell: Cell, merge_on_read: bool) -> None:
-    """Create the target table, partitioned and ordered as the cell says."""
+def create_target(session: Any, cell: Cell, merge_on_read: bool, order: bool = True) -> None:
+    """Create the target table, partitioned and, when ``order`` holds, ordered as the cell says."""
     partition = " PARTITIONED BY (p)" if cell.partitioned else ""
     properties = table_properties(cell, merge_on_read)
     session.sql(f"CREATE TABLE {TABLE} ({COLUMNS_DDL}) USING iceberg{partition} {properties}")
-    if cell.ordered:
-        session.sql(f"ALTER TABLE {TABLE} WRITE ORDERED BY k")
+    if cell.ordered and order:
+        order_target(session)
+
+
+def order_target(session: Any) -> None:
+    """Declare ``k`` as the target's write order."""
+    session.sql(f"ALTER TABLE {TABLE} WRITE ORDERED BY k")
 
 
 def seed_target(session: Any, rows: int, files: int) -> None:
@@ -187,7 +192,7 @@ def ordered_statement(session: Any, cell: Cell) -> None:
         ).append()
     elif cell.door == "D3":
         session.sql(f"INSERT INTO {TABLE} BY NAME SELECT * FROM src").collect()
-    elif cell.door == "D4":
+    elif cell.door in {"D4", "spark"}:
         session.sql(f"INSERT OVERWRITE {TABLE} SELECT * FROM src").collect()
     elif cell.door == "D5":
         session.sql(f"INSERT INTO {TABLE} REPLACE WHERE id >= 0 SELECT * FROM src").collect()
@@ -220,9 +225,12 @@ def prepare(session: Any, cell: Cell) -> str:
     if cell.path == "PP-01":
         if cell.door == "D6":
             return "ordered"
-        create_target(session, cell, merge_on_read=False)
-        if cell.door in {"D8", "D10"}:
+        seeded = cell.door in {"D8", "D10"}
+        create_target(session, cell, merge_on_read=False, order=not seeded)
+        if seeded:
             seed_target(session, cell.rows, 1)
+            if cell.ordered:
+                order_target(session)
         return "ordered"
     if cell.path == "PP-02":
         create_target(session, cell, merge_on_read=True)
@@ -683,6 +691,8 @@ def grids_for(name: str) -> list[Cell]:
     """Return the cells of a named grid."""
     table = {
         "census": census_grid,
+        "census-seeded": lambda: [cell for cell in census_grid() if cell.door in {"D8", "D10"}],
+        "spark-ordered": lambda: [cell for cell in spark_grid() if cell.path == "PP-01"],
         "spark": spark_grid,
         "ordered": ordered_grid,
         "merge": merge_grid,
@@ -695,7 +705,10 @@ def grids_for(name: str) -> list[Cell]:
 
 def calibrate(workdir: Path) -> dict[str, Any]:
     """Return the Arrow bytes per source row, measured on 100k rows."""
-    cell = Cell(path="calibrate", door="none", rows=100_000, format_version=2)
+    cell = Cell(path="calibrate", door="none", rows=100_000, format_version=2, pool_mib=2048)
+    workdir = workdir.resolve()
+    (workdir / "warehouse").mkdir(parents=True, exist_ok=True)
+    (workdir / "spill").mkdir(parents=True, exist_ok=True)
     session = build_session(cell, workdir / "warehouse", workdir / "spill")
     register_source(session, cell.rows)
     table = session.sql("SELECT * FROM src").to_arrow()
@@ -708,49 +721,69 @@ def calibrate(workdir: Path) -> dict[str, Any]:
     }
 
 
+def shape_of(row: dict[str, Any]) -> str:
+    """Return the short shape label of a result row."""
+    if row["path"] == "PP-01":
+        order = "ordered" if row["ordered"] else "unordered"
+        return f"{order} {PARTITIONS} parts" if row["partitioned"] else f"{order} unpart"
+    if row["path"] == "PP-02":
+        suffix = " +NMBS" if row["not_matched_by_source"] else ""
+        return f"{row['match_percent']}% match{suffix}"
+    return row["query"]
+
+
+def matched_bytes(row: dict[str, Any], input_bytes: int) -> int | None:
+    """Return the bytes of the rows a PP-02 MERGE updates, or ``None`` on other paths."""
+    if row["path"] != "PP-02":
+        return None
+    if row["not_matched_by_source"]:
+        return input_bytes
+    return round(input_bytes * row["match_percent"] / 100)
+
+
+def spill_bytes(row: dict[str, Any]) -> int:
+    """Return the spill peak of a RePark row or the disk spill of a Spark row."""
+    if row.get("engine") == "spark":
+        return int(row.get("spark_disk_bytes_spilled") or 0)
+    return int(row.get("spill_peak_bytes") or 0)
+
+
+def mebibytes(value: float | None) -> str:
+    """Return ``value`` bytes as MiB text, or a dash."""
+    return "-" if value is None else f"{value / 2**20:.1f}"
+
+
 def markdown_row(row: dict[str, Any], bytes_per_row: float) -> str:
     """Return one markdown table line for a result row."""
-    rows = row["rows"]
-    input_bytes = round(rows * bytes_per_row)
-    if row["path"] == "PP-02":
-        input_bytes = round(rows * bytes_per_row * row["match_percent"] / 100)
-        if row["not_matched_by_source"]:
-            input_bytes = round(rows * bytes_per_row)
-    pool = row["pool_mib"] * 1024 * 1024
+    input_bytes = round(row["rows"] * bytes_per_row)
+    matched = matched_bytes(row, input_bytes)
     peak = row.get("process_peak_rss_kib")
     statement = row.get("statement_peak_rss_kib")
     before = row.get("rss_before_statement_kib")
-    delta = (statement - before) * 1024 if statement and before else None
-    shape = []
-    if row["path"] == "PP-01":
-        shape.append("ordered" if row["ordered"] else "unordered")
-        shape.append(f"{PARTITIONS} parts" if row["partitioned"] else "unpart")
-    elif row["path"] == "PP-02":
-        shape.append(f"{row['match_percent']}%")
-        if row["not_matched_by_source"]:
-            shape.append("+NMBS")
-    else:
-        shape.append(row["query"])
+    growth = (statement - before) * 1024 if statement and before else None
     order = row.get("per_file_order_held")
+    doors = ",".join(row.get("doors_recorded") or []) or row["door"]
     cells = [
         row["grid"],
         row["path"],
-        row["door"],
+        f"{row['door']} ({doors})",
         f"v{row['format_version']}",
-        f"{rows:,}",
-        " ".join(shape),
+        f"{row['rows']:,}",
+        shape_of(row),
         str(row["writers"]),
-        f"{input_bytes / 2**20:.1f} MiB",
-        f"{row['pool_mib']} MiB",
-        f"{input_bytes / pool:.2f}",
+        mebibytes(input_bytes),
+        mebibytes(matched),
+        "driver 1g" if row.get("engine") == "spark" else str(row["pool_mib"]),
+        "-" if row.get("engine") == "spark" else f"{input_bytes / (row['pool_mib'] * 2**20):.2f}",
         "n/a",
-        f"{(row.get('spill_peak_bytes') or 0) / 2**20:.1f} MiB",
-        f"{peak / 1024:.0f} MiB" if peak else "-",
-        f"{delta / 2**20:.0f} MiB" if delta is not None else "-",
-        f"{delta / input_bytes:.2f}" if delta is not None and input_bytes else "-",
-        f"{row.get('statement_wall_s', '-')}",
-        str(row.get("files_written", "-")),
+        mebibytes(spill_bytes(row)),
+        mebibytes(peak * 1024 if peak else None),
+        mebibytes(growth),
+        f"{growth / input_bytes:.2f}" if growth is not None else "-",
+        str(row.get("statement_wall_s", "-")),
+        f"{row.get('files_written', '-')}/{row.get('added_delete_files', '-')}",
         "-" if order is None else ("yes" if order else "no"),
+        f"{row.get('snapshots_before', '-')}->{row.get('snapshots_after', '-')}",
         f"{row['start_load']:.2f}",
         row.get("outcome", "-"),
     ]
@@ -758,9 +791,10 @@ def markdown_row(row: dict[str, Any], bytes_per_row: float) -> str:
 
 
 HEADER = (
-    "| grid | path | door | format | rows | shape | writers | input bytes | pool | input/pool "
-    "| pool peak | spill peak | process peak RSS | statement RSS growth | growth/input "
-    "| wall s | files | per-file order | start load | outcome |"
+    "| grid | path | door (recorded) | format | rows | shape | writers | input MiB | matched MiB "
+    "| pool MiB | input/pool | pool peak | spill peak MiB | process peak RSS MiB "
+    "| statement RSS growth MiB | growth/input | wall s | data/delete files | per-file order "
+    "| snapshots | start load | outcome |"
 )
 
 
