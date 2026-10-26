@@ -84,3 +84,42 @@ def test_update_and_delete_lower_the_nanosecond_cast_spellings(
             assert stored_ids(session, "ice.ns.t") == [2]
     finally:
         session.stop()
+
+
+def described_types(session: Any, statement: str) -> dict[str, str]:
+    """Return the col_name to data_type rows of a DESCRIBE statement for ts and tz."""
+    rows = session.sql(statement).to_arrow().to_pylist()
+    return {
+        str(row["col_name"]): str(row["data_type"])
+        for row in rows
+        if row["col_name"] in ("ts", "tz")
+    }
+
+
+@pytest.mark.parametrize(
+    "spelling", ["DESCRIBE TABLE ice.ns.t", "DESCRIBE TABLE EXTENDED ice.ns.t"]
+)
+def test_describe_shows_the_spec_names_for_nanosecond_columns(
+    tmp_path: Path, spelling: str
+) -> None:
+    """R-001 shows timestamp_ns and timestamptz_ns; the v2 control keeps its names."""
+    session = open_session(tmp_path, "UTC")
+    try:
+        session.sql(
+            f"CREATE TABLE ice.ns.t (ts timestamp_ns, tz timestamptz_ns) USING iceberg {V3}"
+        ).collect()
+        assert described_types(session, spelling) == {
+            "ts": "timestamp_ns",
+            "tz": "timestamptz_ns",
+        }
+        session.sql(
+            "CREATE TABLE ice.ns.c (ts timestamp_ntz, tz timestamp) USING iceberg "
+            "TBLPROPERTIES ('format-version' = '2')"
+        ).collect()
+        control = spelling.replace("ice.ns.t", "ice.ns.c")
+        assert described_types(session, control) == {
+            "ts": "timestamp_ntz",
+            "tz": "timestamp",
+        }
+    finally:
+        session.stop()

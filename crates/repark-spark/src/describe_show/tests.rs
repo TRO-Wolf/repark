@@ -170,3 +170,31 @@ fn show_batch_carries_function_column() {
     );
     assert_eq!(batch.num_rows(), 1);
 }
+
+#[test]
+fn describe_shows_timestamp_ns_and_timestamptz_ns() {
+    use datafusion::arrow::datatypes::{DataType, TimeUnit};
+
+    assert_eq!(
+        describe_ddl_type_name(&DataType::Timestamp(TimeUnit::Nanosecond, None)),
+        "timestamp_ns"
+    );
+    assert_eq!(
+        describe_ddl_type_name(&DataType::Timestamp(
+            TimeUnit::Nanosecond,
+            Some("UTC".into())
+        )),
+        "timestamptz_ns"
+    );
+    assert_eq!(
+        describe_ddl_type_name(&DataType::Timestamp(TimeUnit::Microsecond, None)),
+        "timestamp_ntz"
+    );
+    assert_eq!(
+        describe_ddl_type_name(&DataType::Timestamp(
+            TimeUnit::Microsecond,
+            Some("UTC".into())
+        )),
+        "timestamp"
+    );
+}
