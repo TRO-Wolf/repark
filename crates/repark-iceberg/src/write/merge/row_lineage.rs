@@ -26,6 +26,7 @@ use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 use uuid::Uuid;
 
 use crate::write::distribution::{default_sort_is_declared, sort_batches_by_default_order, stamp};
+use crate::write::resource_bound::{OrderedInputBudget, ResourceBounds, drain_ordered_input};
 
 use super::not_matched_by_source;
 use super::{FILE_PATH_COL, MergeSql, POS_COL, iceberg_err, quote_ident};
@@ -146,6 +147,7 @@ pub(super) async fn write_partitioned_lineage_files_with<S>(
     table: &Table,
     mut stream: S,
     staging: &crate::write::write_options::WriterStagingOverrides,
+    bounds: &ResourceBounds,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -192,7 +194,10 @@ where
         file_name_generator,
     );
     let mut ordered = if default_sort_is_declared(table) {
-        let sorted = sort_batches_by_default_order(table, drain(&mut stream).await?).await?;
+        let budget = OrderedInputBudget::serial(bounds);
+        let mut held = drain_ordered_input(&mut stream, &budget).await?;
+        held.retain(|batch| batch.num_rows() > 0);
+        let sorted = sort_batches_by_default_order(table, held).await?;
         futures::stream::iter(sorted.into_iter().map(Ok)).left_stream()
     } else {
         stream.right_stream()
@@ -217,19 +222,6 @@ where
     }
     let files = fanout.close().await.map_err(iceberg_err)?;
     Ok(crate::write::file_order::ascending_partition_order(files))
-}
-
-async fn drain<S>(stream: &mut S) -> Result<Vec<RecordBatch>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    let mut collected = Vec::new();
-    while let Some(batch) = stream.try_next().await? {
-        if batch.num_rows() > 0 {
-            collected.push(batch);
-        }
-    }
-    Ok(collected)
 }
 
 fn split_lineage_batch(

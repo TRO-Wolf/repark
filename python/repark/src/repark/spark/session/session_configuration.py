@@ -266,6 +266,27 @@ def _refuse_runtime_memory_limit_gb(key: str) -> None:
     )
 
 
+_RESOURCE_BOUND_KEYS_LOWER: frozenset[str] = frozenset(
+    (
+        "repark.write.ordered.max-input-fraction",
+        "repark.merge.mor.max-updated-fraction",
+        "repark.changelog.max-source-fraction",
+    )
+)
+
+
+def _refuse_runtime_resource_bound_key(key: str) -> None:
+    """Refuse a runtime ``conf.set`` of a resource-bound fraction key; it is build-time only."""
+    if key.lower() not in _RESOURCE_BOUND_KEYS_LOWER:
+        return
+    raise IllegalArgumentException(
+        f"[INVALID_CONF_VALUE.REQUIREMENT] config {key!r} is build-time only. Set it at "
+        f"ReparkSession.builder.config({key!r}, '<fraction>') before getOrCreate "
+        f"(0 = no bound). The bound is that fraction times the live memory pool, so "
+        f"spark.conf.set({_DATAFUSION_RUNTIME_MEMORY_LIMIT_KEY!r}, 'NG') still moves it."
+    )
+
+
 def _apply_builder_datafusion_conf(session: ReparkSession, config: dict[str, str | None]) -> None:
     """Apply ``datafusion.*`` keys from the builder map onto a freshly built session.
 

@@ -549,6 +549,7 @@ async fn merge_lineage_path_applies_table_metrics_config() {
         &table,
         futures::stream::iter(batches),
         &WriterStagingOverrides::none(),
+        &crate::write::resource_bound::ResourceBounds::default(),
     )
     .await
     .expect("rewrite lineage rows");

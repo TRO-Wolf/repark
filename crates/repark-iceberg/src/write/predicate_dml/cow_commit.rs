@@ -9,7 +9,7 @@ use iceberg::table::Table;
 
 use super::lineage::{rewrite_column_names, survivor_sql};
 use super::{register_affected_rewrite_target, register_identity_table};
-use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
+use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::merge::cow_scratch::quote_scratch_name;
 use crate::write::merge::row_lineage::table_carries_merge_lineage;
 use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
@@ -61,7 +61,7 @@ pub(super) async fn commit_identity_update_cow(
             table,
             write_schema,
             stream,
-            WriteConcurrency::new(1)?,
+            concurrency_from_ctx(ctx).with_max_concurrent_files(1)?,
             &staging,
         )
         .await

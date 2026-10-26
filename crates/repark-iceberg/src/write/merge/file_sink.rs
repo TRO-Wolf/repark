@@ -72,5 +72,5 @@ where
         )
     });
     let build_writer = || async { build_unpartitioned_data_file_writer(table).await };
-    drive_unpartitioned(table, conformed, max_concurrent, build_writer).await
+    drive_unpartitioned(table, conformed, concurrency, build_writer).await
 }

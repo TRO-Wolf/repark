@@ -1,4 +1,4 @@
-use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
+use std::sync::{Arc, atomic::Ordering};
 
 use datafusion::arrow::array::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
@@ -12,11 +12,11 @@ use iceberg::{Catalog, TableIdent};
 
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::conform::{conform_batches, write_default_column_names};
-use crate::write::distribution::{route_partitioned_stream, send_routed};
+use crate::write::distribution::{fanout_sorted_serial, route_partitioned_stream, send_routed};
 use crate::write::merge::write_data_files_with_concurrency;
 use crate::write::{
     concurrency::WriteConcurrency, file_order::ascending_partition_order,
-    write_options::WriterStagingOverrides,
+    resource_bound::OrderedInputBudget, write_options::WriterStagingOverrides,
 };
 
 pub(crate) use super::append_fanout_serial::{
@@ -81,25 +81,24 @@ where
 {
     let max_concurrent = concurrency.max_concurrent_files.max(1);
     if max_concurrent == 1 {
-        return crate::write::distribution::fanout_sorted_serial(table, &mut conformed, staging)
-            .await;
+        return fanout_sorted_serial(table, &mut conformed, staging, concurrency).await;
     }
 
     // P1-R1: abort flag so workers do not close fanouts after a source/sibling failure.
-    let aborted = Arc::new(AtomicBool::new(false));
+    let budget = OrderedInputBudget::parallel(&concurrency.resource_bounds, max_concurrent);
     let mut senders = Vec::with_capacity(max_concurrent);
     let mut worker_futures = Vec::with_capacity(max_concurrent);
     for _ in 0..max_concurrent {
         let (tx, rx) = mpsc::channel::<RecordBatch>(1);
-        let aborted = Arc::clone(&aborted);
+        let budget = Arc::clone(&budget);
         worker_futures.push(async move {
             let stream = rx.map(Ok::<RecordBatch, DataFusionError>);
-            crate::write::distribution::fanout_sorted_stream(table, stream, aborted, staging).await
+            crate::write::distribution::fanout_sorted_stream(table, stream, budget, staging).await
         });
         senders.push(tx);
     }
 
-    let aborted_for_dispatch = Arc::clone(&aborted);
+    let aborted_for_dispatch = budget.aborted();
     let mut routed = route_partitioned_stream(table, max_concurrent, conformed)?;
     let dispatcher = async move {
         loop {
