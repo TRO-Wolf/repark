@@ -156,7 +156,9 @@ def run_once(session: Any, cell: Cell, snapshot: int | None) -> float:
     """Run the timed statement once and roll the table back; return the wall time in ms."""
     started = time.perf_counter()
     if cell.statement == "append":
-        session.sql("SELECT * FROM src").writeTo(TABLE).append()
+        session.sql("SELECT * FROM src").writeTo(TABLE).option(
+            "snapshot-property.rbound", "1"
+        ).append()
     else:
         session.sql(cell.statement).collect()
     elapsed = (time.perf_counter() - started) * 1000.0
