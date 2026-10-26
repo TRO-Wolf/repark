@@ -72,3 +72,14 @@ hot path.
 
 One JSON: `model_id`, `status`, `head`, `commits`, `cells` (path, counts per row and outcome), `rows` (id → outcome
 proposed), `describe` (file, seam, pins), `gates`, `halts`, `questions`, `out_of_scope_observed`, `hours_used`.
+
+## 8. Steps 1 to 3 outcome (2026-10-26)
+
+- **Builder commits** (`muse-spark-1.3-contributor`): `a9c990cc` (the probe and its record), `312757ca` (the R-010 pin: the twelve cells of `test_ns_truthup_1.py`), `543c9cbc` (the DESCRIBE names).
+- **Re-run tally** (orchestrator, on code equal to main `9fd60149`): 39 cells, identical to the builder's run on head `056b9058`: 12 `stores` (R-010), 13 `answers` (R-013: 1; R-018: 6; R-001: 6), 12 `refuses` (R-018, each the named R-015 class), 2 `error` (R-013).
+- **Step 1, scrub** (clerk `7a2661de`): the recorder reads the repo-relative probe path, the warehouse prefix reads `<warehouse>`, the owner reads `<owner>`. The probe needed no change: its recorder was already repo-relative and it carries no local path or owner text.
+- **Step 2, rows** (clerk `09bcd81f`, with the card `ee99ae54`): R-001 FIXED and R-010 FIXED, both re-dated 2026-10-26; R-013 OPEN, re-dated, blocked by card SHOW-FUNCTIONS-1; R-018 part 1 CLOSED under R-015, part 2 not re-measured. The builder's notes lean (R-018 stays OPEN) is superseded by the orchestrator's ruling of the same day.
+- **Step 3, ledger** (clerk `f9ed1afb`): C-001 (R-010) PROVEN; C-002 (R-013) OPEN; C-003 (R-018 part 1) PROVEN; C-004 (R-001) PROVEN. Pins sit in the map of each pin's directory: `python/repark/tests/timestamps` (C-001, C-004), `crates/repark-spark/src/describe_show` (C-004), `crates/repark-spark/tests` (C-003, R-015's refusal test).
+- **DESCRIBE renderer** (`543c9cbc`): one file, `crates/repark-spark/src/describe_show.rs`, one wrapper `describe_ddl_type_name` over the shared `spark_ddl_type_name`. The two DESCRIBE TABLE and DESCRIBE EXTENDED call sites route through it. The shared helper stays for its other callers (the nested-column and INVALID_EXTRACT texts, the partition append cast, `SHOW CREATE TABLE`, the view DDL, the void-type refusals), so `df.schema`, `dtypes`, `printSchema`, `SHOW CREATE TABLE` and every error text are unchanged.
+- **Residue** (dated, in the R-001 row; filed as card DESCRIBE-NS-NAMES-2, not scheduled): these surfaces keep the microsecond names: `DESCRIBE <table> <column>`; the DESCRIBE partition section; nested struct, array and map leaves inside `DESCRIBE TABLE`; and `DESCRIBE TABLE` on a view. `SHOW CREATE TABLE`, `df.schema`, `dtypes` and `printSchema` are unchanged by design. Card: [describe-ns-names-2-card-2026-10-26.md](../../roadmap/mid-term/describe-ns-names-2-card-2026-10-26.md).
+- **Unpinned:** the six bare `VALUES` answers of R-018 part 1 have no test in the tree; C-003 cites R-015's refusal test only.

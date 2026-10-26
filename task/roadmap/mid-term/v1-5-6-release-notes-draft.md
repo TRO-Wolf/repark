@@ -20,6 +20,8 @@ WRITE-SPINE-1 step (3b) (PR #1185, awaiting verification) is test-only: it chang
 - **A caught Rust panic fails the facade test suite (PANIC-FATAL-SUITE-1).** `REPARK_PANIC_FATAL=1` is now read once when the Python module initialises, not when a panic is caught, and the facade suite sets it; nothing a user stores or reads changes, and without the variable a caught panic still raises `repark internal error` with the same message.
 - **The `DataFrame.replace` memory pin measures the operation, not the wheel (REPLACE-LINEAR-PIN-1).** The depth-40 pin's child now runs one depth-1 call of the mode it measures before it reads the peak, so first-touch code pages of the native module no longer count toward the delta; the bound, the 8 MiB floor and the depth are unchanged, and nothing a user stores or reads changes.
 - **The small-fair-pool spill probes run in an 80 MiB pool, not 64 MiB (SPILL-REACH-FAIR-POOL-FLAKE-1).** `test_sort_merge_join_spills_under_small_fair_pool` refused `ExternalSorterMerge` intermittently on CI; the session helper of `test_t2_spill_reach.py` now defaults to 80M, every assertion and the two 16M pins are unchanged, and nothing a user stores or reads changes.
+- **`DESCRIBE TABLE` and `DESCRIBE TABLE EXTENDED` name nanosecond columns by the Iceberg spec (R-001, NS-TRUTHUP-1).** A `timestamp_ns` column shows `timestamp_ns` and a `timestamptz_ns` column shows `timestamptz_ns`; they showed `timestamp_ntz` and `timestamp`. The microsecond columns keep their names, and `DESCRIBE <table> <column>`, `SHOW CREATE TABLE`, `df.schema`, `dtypes` and `printSchema` are unchanged. No stored value changes.
+- **`UPDATE` and `DELETE` on the nanosecond cast spellings are pinned (R-010, NS-TRUTHUP-1).** `CAST(… AS timestamp_ns)` and `CAST(… AS timestamptz_ns)` in `SET`, `WHERE` and `DELETE … WHERE` store and match on UTC and America/New_York. The store landed with ICE-TSNS-TYPE-PLANNER-1, which the reconciliation above moves to the v1.5.5 notes; this release adds the pins and no new value change.
 
 Tables already written keep the values they hold; this release ships no migration.
 
@@ -104,6 +106,8 @@ Tables already written keep the values they hold; this release ships no migratio
   and X).** Pin U pins the unknown commit outcome locally on three write doors, with live legs on
   Glue and S3 Tables. Pin X shows that 1.5.5 and the head (the pre-bump build, which still reports 1.5.5) read each other's tables equal on the local
   catalog. Both legs hold live (2026-10-23, run 40025222296): leg U 96 of 96 cells and leg X 40 of 40 on Glue and S3 Tables, v2 and v3. The cross-read module of U-10 remains open (ledger C-060): run 4 timed out in Glue RePark row collection and S3 Tables PyArrow metadata-file I/O. Native diagnostics are the next measurement.
+
+- **An unfiltered `UPDATE` of an out-of-range `TIMESTAMP` literal reports INSERT's overflow (ICE-TSNS-UPDATE-RANGE-CLASS-1, R-012).** Under ANSI the statement refuses with `[CAST_OVERFLOW]` and INSERT's text, as ICE-TSNS-TYPE-PLANNER-1 left it in v1.5.5; this release pins the 16 cells and changes no stored value or refusal.
 
 ## Known issues
 

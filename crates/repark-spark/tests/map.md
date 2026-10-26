@@ -89,6 +89,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   AS TIMESTAMP) WHERE id >= 0` store one value (a pre-1970 value with digits below the
   microsecond among them). Red with the identity UPDATE seam reverted alone.
   pins: ice-tsns-type-planner-1/C-019
+- `timestamp_ns_wall_doors.rs`, `an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update` — **ICE-TSNS-UPDATE-RANGE-CLASS-1 (2026-10-26, U-4, R-012):** the same 16 cells as the facade pin, one unfiltered `UPDATE` per literal on COW and MOR tables in UTC, New York and Kolkata, each equal to INSERT's error text. pins: ice-tsns-update-range-class-1/C-001, C-002, C-004 pins: ice-tsns-merge-wall-1/C-055
 - [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
   (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
   an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`
@@ -278,6 +279,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `INSERT INTO`; a bare `NULL` and a value; UTC and New York: R-015's refusal and no new file in
   all 48 cells. Red on fix round 2's head (`b74f17e0`): the 24 bare-`NULL` cells stored.
   pins: zone-seam-1/C-023
+  **NS-TRUTHUP-1 (2026-10-26):** the `insert values` and `insert overwrite values` doors of
+  `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` pin the refusal of
+  `CAST('…' AS timestamp_ns)` literals inside `array(…)`, `named_struct(…)` and `map(…)` with the
+  named refusal and no file written. The `TIMESTAMP`-literal refusals of registry row R-018 part 1
+  are recorded in the evidence file (cells `r018.*`), not pinned here. pins: ns-truthup-1/C-003
 - [ntz_nested_refuse.rs](ntz_nested_refuse.rs) — **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20),
   parity row R-011:** outside UTC a nested microsecond `TIMESTAMP_NTZ` leaf refuses an instant.
   `every_door_refuses_an_instant_outside_utc_and_writes_nothing`: five shapes (struct, struct in

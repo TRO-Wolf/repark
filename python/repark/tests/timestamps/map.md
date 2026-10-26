@@ -18,12 +18,13 @@ pins.
 - [test_ice_tsns_coercion_1.py](test_ice_tsns_coercion_1.py) — The ICE-TSNS-COERCION-1 slice 0 fixture is complete and matches its summary.
 - [test_ice_tsns_floor_doors_1.py](test_ice_tsns_floor_doors_1.py) — ICE-TSNS-FLOOR-DOORS-1: every write door stores the nanosecond floor in the session zone.
 - [test_ice_tsns_frame_door_1.py](test_ice_tsns_frame_door_1.py) — ICE-TSNS-FRAME-DOOR-1: a pandas or polars nanosecond timestamp column enters as microseconds.
-- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — ICE-TSNS-MERGE-WALL-1: every write door stores the same nanosecond wall.
+- [test_ice_tsns_merge_wall_1.py](test_ice_tsns_merge_wall_1.py) — ICE-TSNS-MERGE-WALL-1: every write door stores the same nanosecond wall. **ICE-TSNS-UPDATE-RANGE-CLASS-1 (2026-10-26, U-4, R-012):** the 16 out-of-range cells of an unfiltered `UPDATE` report INSERT's `[CAST_OVERFLOW]` text (`test_unfiltered_update_reports_inserts_overflow_class`); the filtered `UPDATE` and the strict-off NULL cells are controls; `test_range_cases_are_the_sixteen_row_cells` fixes the count. Green on the unmodified tree, no product change. pins: ice-tsns-update-range-class-1/C-001, C-002, C-004 pins: ice-tsns-merge-wall-1/C-055
 - [test_ice_tsns_sql_1.py](test_ice_tsns_sql_1.py) — ICE-TSNS-SQL-1: ``timestamp_ns`` / ``timestamptz_ns`` on the SQL door answer the Iceberg spec.
 - [test_ice_tsns_type_planner_1.py](test_ice_tsns_type_planner_1.py) — ICE-TSNS-TYPE-PLANNER-1: the SQL type name decides the unit, on every door.
 - [test_ice_tstzns_wall_1.py](test_ice_tstzns_wall_1.py) — ICE-TSTZNS-WALL-1: every write door stores the same instant into ``timestamptz_ns``.
 - [test_ltz_stacked_sign_1.py](test_ltz_stacked_sign_1.py) — WO LTZ-STACKED-SIGN-1 re-verify fold (RN3-1): probe strings round-trip.
 - [test_ltz_store_int_1.py](test_ltz_store_int_1.py) — WO LTZ-STORE-INT-1: an INT stored into a TIMESTAMP column refuses like Spark.
+- [test_ns_truthup_1.py](test_ns_truthup_1.py) — **NS-TRUTHUP-1 (2026-10-26):** the twelve `UPDATE` and `DELETE` nanosecond-cast spellings store or match on UTC and America/New_York (R-010, `test_update_and_delete_lower_the_nanosecond_cast_spellings`); `DESCRIBE TABLE` and `DESCRIBE TABLE EXTENDED` name a nanosecond column `timestamp_ns` or `timestamptz_ns`, with a microsecond v2 control (R-001, `test_describe_shows_the_spec_names_for_nanosecond_columns`). pins: ns-truthup-1/C-001, C-004, C-005
 - [test_ntz_1.py](test_ntz_1.py) — WO NTZ-1 slices 1 to 3: TIMESTAMP_NTZ literals, casts, store and storage.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) — WO NTZ-1 verifier fold: from_utc_timestamp and to_utc_timestamp keep Spark's TIMESTAMP.
 - [test_ntz_8_verify.py](test_ntz_8_verify.py) — WO NTZ-1 verifier fold part 2: zone-shift calls inside DML keep Spark's instant.
