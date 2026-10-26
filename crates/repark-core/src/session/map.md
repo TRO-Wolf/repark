@@ -683,3 +683,5 @@ the context with `EngineContext::new_with_time_zone`. pins: ice-tt-resolve-1/C-0
 context so reader strings cast through the engine. pins: ice-tt-resolve-1/C-002
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26) — the PA-10 detector on cgroup v2.** `spill.rs` — `detect_memory_bytes` reads the unified `0::` line of `/proc/self/cgroup`, walks `memory.max` from the leaf to the root through `cgroup_v2_memory_limit` (a pure function over the cgroup text and a reader closure), takes the minimum finite value and caps it by `MemTotal`. With no finite cgroup value it uses `MemTotal`, as before. The seven fixture cells in `spill_unit_tests` cover a leaf-only limit, a smaller ancestor, every level `max`, a namespace root `0::/`, a cgroup above `MemTotal`, a v1-only host and malformed text; each asserts the clamped pool. cgroup v1, macOS and Windows keep the declared path and need an explicit pool budget; the build does not refuse (declared in the parity registry). `session.rs` is unchanged: the three bound keys ride `concurrency_from_config_map` in the iceberg crate.
+
+pins: ice-resource-bound-1/C-009

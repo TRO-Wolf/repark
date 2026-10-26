@@ -148,3 +148,5 @@ masked text, so a CTE in the query keeps its scope. `_funcs.py` re-exports it as
 direct expansion (same line count, exact baseline kept). pins: u8-write-sql/C-014
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `session_configuration.py` (with the `_funcs.py` re-export and the `builder_conf.py` call) — `_refuse_runtime_resource_bound_key`. A runtime `conf.set` of `repark.write.ordered.max-input-fraction`, `repark.merge.mor.max-updated-fraction` or `repark.changelog.max-source-fraction` raises `IllegalArgumentException` naming the builder door. The three keys are build-time only, like their siblings; the live pool still moves the bound at runtime. Pins: `python/repark/tests/writes/test_ice_resource_bound_1.py`.
+
+pins: ice-resource-bound-1/C-006

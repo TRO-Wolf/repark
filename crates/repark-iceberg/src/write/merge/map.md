@@ -554,3 +554,5 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
 - A MERGE into a table with a declared sort order also passes the ordered drain (PP-01) when `session_staging` sorts the updates. The statement refuses at whichever bound it crosses first; the pin for that order is `PP-02-O8`.
 - `row_lineage.rs` — the lineage writer's `drain` calls `drain_ordered_input` with the bounds its caller passes. The v3 partitioned MERGE, UPDATE and copy-on-write writer uses it.
 - `session_staging.rs`, `file_sink.rs` — pass the bounds to the drains (call sites of the changed signatures).
+
+pins: ice-resource-bound-1/C-002

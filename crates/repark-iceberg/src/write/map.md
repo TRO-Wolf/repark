@@ -2179,3 +2179,5 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
 - `predicate_dml/cow_commit.rs` and `partition_write.rs` — the two sites that built `WriteConcurrency::new(1)` keep the resolved bound: `cow_commit.rs` from the session, `partition_write.rs` from the `TaskContext`. The CTAS plan writer (`write_data_files_from_plan`) therefore resolves the bound per writer partition; no door reaches it today, because a CTAS table carries no write order (declared in the parity registry).
 - The ctx-less public Rust APIs (`append`, `write_data_files*`, `write_partitioned_data_files*`) build `WriteConcurrency::default()`, which has no pool and so no bound. The declaration is in the parity registry, ICE-RESOURCE-BOUND-1 dated rows.
 - `mod.rs` — declares `pub mod resource_bound;`. No `lib.rs` re-export.
+
+pins: ice-resource-bound-1/C-001, C-004, C-006, C-007

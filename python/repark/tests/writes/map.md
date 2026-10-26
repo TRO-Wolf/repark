@@ -204,6 +204,8 @@ no Spark behaviour changed.
 - `test_ice_resource_bound_1.py` (new) — the facade cells, on format v2 and v3. An ordered `writeTo(...).option(...).append()` refuses at a 32 MiB pool and commits at 128 MiB. A MoR MERGE at 100 % (the key lowered to 0.002 at a 2048 MiB pool) refuses, and the default commits. The changelog `LIMIT 10` collect and `count(id)` to_arrow refuse at 32 MiB, with the export hint appended, and answer at 2048 MiB. Invalid values (`-0.1`, `abc`, `inf`) refuse at build naming the key. A runtime `conf.set` of each key refuses naming the builder door. The 4x and 16x cells (ordered append at 4M and 16M rows, the MoR MERGE and the changelog read) run only with `REPARK_RESOURCE_BOUND_SCALE=1`; the workflow `resource-bound-scale.yml` runs them on manual dispatch.
 - The cost gate's probe is `task/wo/ice-resource-bound-1/probe_cost.py`; its table and the protocol are in `docs/perf/resource-bound-2026-10-26.md`. It runs the write set below the bound against the branch base and the head.
 
+pins: ice-resource-bound-1/C-001, C-002, C-003, C-006, C-010, C-011
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

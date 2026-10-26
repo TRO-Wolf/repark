@@ -659,3 +659,5 @@ First checks: `cargo test -p repark-iceberg catalog::`. Escalate to: [../../map.
   (fixtures and their oracles changed together); enumerated in docs/history/port-v2/p3e-facade-ledger.md.
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `changelog_view.rs` — `ChangelogViewPartition::execute` drains `execute_stream` of the source plan through `drain_changelog_source` in place of `collect`. Each source batch is charged to the budget as it arrives, so the read refuses above `repark.changelog.max-source-fraction` times the live pool (`ctx.memory_pool()`), before the whole window is held. The key comes from `ReparkWriteConfig` on the session config. Nothing is staged: the changelog read writes no file. A `LIMIT` and a narrow projection do not reduce the charge, because the bound covers the source window, not the result.
+
+pins: ice-resource-bound-1/C-003
