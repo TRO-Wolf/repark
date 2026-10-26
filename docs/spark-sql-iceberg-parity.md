@@ -3219,7 +3219,7 @@ still open is `isModifiable`.
   [ICE-TSNS-SQL-1-R-003](#ice-tsns-sql-1-r-003--fixed-2026-09-18-rp-28-fork-296-f-tsns-hour-1-hours-on-a-nanosecond-column-writes)
   below, FIXED 2026-09-18). Not in this row:
   `DESCRIBE` type names
-  ([R-001](#ice-tsns-sql-1-r-001--open-measured-2026-09-17-describe-shows-no-nanosecond-type-name)),
+  ([R-001](#ice-tsns-sql-1-r-001--fixed-2026-10-26-ns-truthup-1-owner-decision-d3-describe-table-and-describe-table-extended-show-the-iceberg-spec-names-for-nanosecond-columns)),
   the write-direction oracle
   ([R-002](#ice-tsns-sql-1-r-002--open-2026-09-17-no-second-engine-writes-format-v3-yet)),
   and `TRY_CAST(… AS timestamp_ns)`, which still refuses `Unsupported SQL type`.
@@ -3435,19 +3435,25 @@ still open is `isModifiable`.
   (`task/roadmap/mid-term/v1-5-6-release-notes-draft.md`). Ledger
   `task/ledgers/staging/ice-tsns-floor-doors-1-ledger.md`.
 
-### ICE-TSNS-SQL-1-R-010 — OPEN (measured 2026-10-09): `UPDATE` and `DELETE` do not lower the nanosecond cast spellings
+### ICE-TSNS-SQL-1-R-010 — FIXED 2026-10-26 by the type planner (U-1, #1082): `UPDATE` and `DELETE` lower the nanosecond cast spellings
 
 - **repark** — `CAST(… AS timestamp_ns)` / `CAST(… AS timestamptz_ns)` inside an `UPDATE`
   (`SET` or `WHERE`) or a `DELETE … WHERE` refuses `Unsupported SQL type timestamp_ns`;
   `SELECT`, INSERT and MERGE lower them. A nanosecond column as the `SET` source works.
 - **Apache Spark** — has no such type name. *(oracle: none.)*
-- **Pin** — the `update_literal` cells of `ice_tsns_merge_wall_1_main.json` for the `ns` and
-  `tzns` sources, held as refusals by `test_ice_tsns_merge_wall_1.py`.
+- **Pin** — `python/repark/tests/timestamps/test_ns_truthup_1.py::test_update_and_delete_lower_the_nanosecond_cast_spellings`
+  (12 cells, commit `312757ca`). The 2026-10-09 refusal pins (the `update_literal` cells of
+  `ice_tsns_merge_wall_1_main.json`) are superseded; `test_ice_tsns_merge_wall_1.py` was
+  re-pinned to the stored value on 2026-10-15 (the status line above).
 - **Status 2026-10-15 (ICE-TSNS-TYPE-PLANNER-1, branch `fix/ice-tsns-type-planner-1-fresh`,
   not merged):** the planner types both names in `UPDATE` and `DELETE`, so the cells store;
   `test_ice_tsns_merge_wall_1.py` (`r010_answers`) and `test_ice_tstzns_wall_1.py` (the
   `update_literal` door) are re-pinned to the instant `INSERT` stores, nine digits exact.
-- **Rationale** — OPEN, dated 2026-10-09. A lowering gap in the Spark door's `UPDATE` and
+- **Status 2026-10-26 (NS-TRUTHUP-1, measured on main `9fd60149`):** FIXED. All 12 `UPDATE` and
+  `DELETE` nanosecond-cast spellings store or match on UTC and America/New_York (format v3); the
+  example stored value is `1767323045123456789`. The type planner that types the names is
+  ICE-TSNS-TYPE-PLANNER-1 (U-1, PR #1082).
+- **Rationale** — dated 2026-10-09, when the row was OPEN. A lowering gap in the Spark door's `UPDATE` and
   `DELETE` statements, not a stored-value defect; out of ICE-TSNS-MERGE-WALL-1's scope.
   Ledger question Q3.
 
@@ -3765,7 +3771,7 @@ still open is `isModifiable`.
   kernel parses text; `INSERT … VALUES` skips typed cells. Not the site of the two overflow
   fixes of fold 1. Ledger clause C-020, question Q5.
 
-### ICE-TSNS-SQL-1-R-013 — OPEN (measured 2026-10-09): the ANSI door resolves the nanosecond wall kernel by name
+### ICE-TSNS-SQL-1-R-013 — OPEN (measured 2026-10-09, re-dated 2026-10-26): the ANSI door resolves the nanosecond wall kernel by name
 
 - **repark** — after the ANSI door's `on_session_built`,
   `SELECT __repark_cast_timestamp_ns__('…')` resolves and `information_schema.routines` lists
@@ -3788,6 +3794,13 @@ still open is `isModifiable`.
   `crates/repark-sql/tests/ansi_store_kernel_registry.rs` resolve every name of both constants
   on each door (owner, question 47).
 - **Status 2026-10-25 (WRITE-SPINE-1 step 2, PR #1189):** the conform stage now converts a date into a nested TIMESTAMP outside UTC on D3, D4, D7, D8 and D10 (288 census cells EQUAL); the arm and ZS-9 refusal stay for step 4.
+- **Status 2026-10-26 (NS-TRUTHUP-1, main `9fd60149`):** still OPEN. The `SELECT` of the kernel
+  answers `timestamp[ns]`, but neither Python door exposes `information_schema`:
+  `information_schema.routines` fails with `table 'spark_catalog.information_schema.routines' not
+  found`, and bare `SHOW FUNCTIONS` fails door-wide with `table
+  'datafusion.information_schema.parameters' not found` (`SHOW FUNCTIONS IN ice.system` works).
+  The routine list cannot be read, so the row cannot be declared against the other reserved names.
+  Card [SHOW-FUNCTIONS-1](../task/roadmap/mid-term/show-functions-1-card-2026-10-26.md) blocks it.
 
 ### ICE-TSNS-SQL-1-R-014 — CLOSED 2026-10-09 for a `timestamp_ns` leaf (refused by R-015); the `VALUES` spelling is row R-018
 
@@ -4207,7 +4220,7 @@ still open is `isModifiable`.
   `bedd799b`. The open items named above keep their own rows and cards: R-024,
   ICE-TSNS-UPDATE-NTZ-CAST-1, and R-025 (ruling 120).
 
-### ICE-TSNS-SQL-1-R-018 — OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
+### ICE-TSNS-SQL-1-R-018 — part 1 CLOSED 2026-10-26 under R-015; part 2 OPEN (measured 2026-10-09): two `VALUES` spellings fail before any store
 
 - **repark** — on main and at head, with no table involved: (1) a `TIMESTAMP '…'` literal
   inside `array(…)`, `named_struct(…)` or `map(…)` in a `VALUES` list fails
@@ -4222,10 +4235,22 @@ still open is `isModifiable`.
   (`type mismatch and can't cast to got Struct(…)`).
 - **Apache Spark** — evaluates all three; the last is refused by store assignment.
   *(oracle: documented.)*
-- **Pin** — none.
-- **Rationale** — OPEN, dated 2026-10-09. The statement's own source does not evaluate, so
+- **Pin** — part 1: `crates/repark-spark/tests/timestamp_ns_nested_shapes.rs`
+  `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` (the `insert values` and
+  `insert overwrite values` doors refuse with R-015's text, no file written); the six bare `VALUES`
+  answers are recorded in `task/wo/ns-truthup-1/evidence/cells-2026-10-26.json` and pinned by no
+  test. Part 2: none.
+- **Rationale** — dated 2026-10-09. Part 1 is superseded (the status line below): the bare `VALUES`
+  evaluates and the writes refuse by name. For part 2, the statement's own source does not evaluate, so
   no write door is reached and nothing is stored; measured by the nested matrices of
   ICE-TSNS-MERGE-WALL-1 and out of its scope. Ledger clause C-039, question Q10.
+- **Status 2026-10-26 (NS-TRUTHUP-1, main `9fd60149`): part 1 CLOSED under R-015.** The bare
+  `VALUES` of `array(…)`, `named_struct(…)` and `map(…)` with a `TIMESTAMP` literal answers (6 cells).
+  Every `INSERT INTO … VALUES` and `INSERT OVERWRITE … VALUES` of them into a v3 table with a
+  nanosecond leaf refuses with R-015's named `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` (12
+  cells), and no cell shows raw Arrow text. The orchestrator's ruling of 2026-10-26 closes part 1
+  under R-015 with no fold into NESTED-LITERAL-SEAM-1 (plan decision D4 not triggered). **Part 2 was
+  not re-measured** and stays as the 2026-10-09 reading.
 - **ICE-STRUCT-PAIRING-1 (2026-10-14), list L1.** 28 cells per format version refuse before
   any store on both engines and write no file, and the unit holds them unchanged: an array or
   map holding a struct with a surplus or a missing field through the DataFusion-planned
@@ -4501,18 +4526,26 @@ still open is `isModifiable`.
   microseconds per T-3), not alone. Branch ledger
   `task/ledgers/staging/ntz-struct-coerce-1-ledger.md` §3 and §4 (the seat) on `pr-1038`.
 
-### ICE-TSNS-SQL-1-R-001 — OPEN (measured 2026-09-17): `DESCRIBE` shows no nanosecond type name
+### ICE-TSNS-SQL-1-R-001 — FIXED 2026-10-26 (NS-TRUTHUP-1, owner decision D3): `DESCRIBE TABLE` and `DESCRIBE TABLE EXTENDED` show the Iceberg spec names for nanosecond columns
 
-- **repark** — `DESCRIBE TABLE` on `(ts timestamp_ns, tz timestamptz_ns)` answers
-  `timestamp_ntz` / `timestamp`, the microsecond Spark names; the ns-ness is not shown. Reads
-  and writes carry nanoseconds (row ICE-TSNS-SQL-1).
+- **repark** — `DESCRIBE TABLE` and `DESCRIBE TABLE EXTENDED` on `(ts timestamp_ns, tz timestamptz_ns)`
+  answered `timestamp_ntz` / `timestamp` (measured 2026-10-26 by the step-0 probe, before the fix).
+  After commit `543c9cbc` they answer `timestamp_ns` / `timestamptz_ns`; a v2 control keeps
+  `timestamp_ntz` / `timestamp`. Reads and writes carry nanoseconds (row ICE-TSNS-SQL-1).
 - **Apache Spark** — cannot describe the table at all (the types do not convert). *(oracle:
   documented — the Iceberg v3 spec names the types `timestamp_ns` / `timestamptz_ns`; no Spark
   value exists.)*
-- **Pin** — none yet; out of scope by ruling Q-21c-6 clause 6, recorded in
-  `task/ledgers/staging/ice-tsns-sql-1-ledger.md` (C-006).
-- **Rationale** — OPEN, dated 2026-09-17. Choosing a `DESCRIBE` spelling for a type Spark has no
-  name for is a separate decision; the unit that takes it pins the spelling.
+- **Status 2026-10-26 (NS-TRUTHUP-1, owner decision D3):** FIXED for `DESCRIBE TABLE` and
+  `DESCRIBE TABLE EXTENDED`, through `describe_ddl_type_name` in
+  `crates/repark-spark/src/describe_show.rs` (one seam). **Dated residue, not a new unit:**
+  `DESCRIBE <table> <column>` and the DESCRIBE partition section keep the microsecond names;
+  `SHOW CREATE TABLE`, `df.schema`, `dtypes` and `printSchema` are unchanged by design.
+- **Pin** — `python/repark/tests/timestamps/test_ns_truthup_1.py::test_describe_shows_the_spec_names_for_nanosecond_columns`
+  (both spellings, with the microsecond v2 control) and
+  `crates/repark-spark/src/describe_show/tests.rs::describe_shows_timestamp_ns_and_timestamptz_ns`.
+- **Rationale** — dated 2026-09-17, when the row was OPEN. Choosing a `DESCRIBE` spelling for a type
+  Spark has no name for was a separate decision; owner decision D3 (2026-10-26) chose the Iceberg
+  spec names, and the pins above hold them.
 
 ### ICE-TSNS-SQL-1-R-002 — OPEN (2026-09-17): no second engine writes format v3 yet
 
