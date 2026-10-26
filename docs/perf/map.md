@@ -464,6 +464,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   every level) and the acceptance experiment. Measurement only; no product change. Found
   as the facade suite's floor by DEEP-BATTERY-SPLIT-1 (#1115).
 
+- [resource-bound-2026-10-26.md](resource-bound-2026-10-26.md) — **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):**
+  the measured and ruled resource bound: three path keys and defaults (ordered write 0.10, MoR MERGE
+  0.05, changelog read 0.0625 of the live pool; 0 means no bound), the ruled refusal text, the step-0
+  proposal lines, the O-4 counted ratios, the pins by cell on format v2 and v3, the kill-against-refusal
+  outcomes, the local 4x and 16x red-on-main run, the scheduled job's name and the cost gate table
+  (twelve alternated rounds, every ratio within 1.05). Step-0 evidence:
+  [step-0-bound-table-2026-10-26.md](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
