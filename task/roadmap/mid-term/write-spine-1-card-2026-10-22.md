@@ -59,6 +59,8 @@ fail-closed invariant at the record-batch writer, carded as FORK-NS-UNIT-FAIL-CL
 
 **Verification round 1, 2026-10-25:** the Muse MAX critic returned FAIL on PR #1189's head `5ce6524c`: one S1, a pre-existing map-key gap (a date into a MAP TIMESTAMP key stores UTC midnight; carded NESTED-MAP-KEY-ZONE-1), and two S2 (the P25 partitioned UPDATE under F-3, and the D19/D20 refusal class, C-027). Ruling WS2-30: the step is not changed; the gaps are recorded and carded. The Opus verifier round is pending.
 
+**Verification round 1 (Opus 5.5), 2026-10-25:** FAIL on a nested MERGE cost (1.06 to 1.09 in the verifier's and the orchestrator's runs), two mutants that survived (C2, C7), and C-022's pin. Fix round 2 (`78a56428`) landed (WS2-31 to WS2-35); re-verification pending.
+
 ## Why this card exists
 
 Four closeout units in October were the same unit in different clothes: U-3 "every staged door

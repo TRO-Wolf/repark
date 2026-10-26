@@ -152,3 +152,5 @@ Built in three slices on `feat/write-spine-1-step-2`: `0db0c3af` (slice 1, the s
 Fix round 1 (2026-10-25, commit `c3f22afb`): PR #1189's CI red on the D4 PARTITION path (113 facade cells and one Rust pin, outside the census) is closed by restoring the ice-struct-pairing-1 C-031 carve-out on that site, the partition path's own refusal text and the arity-first order (WS2-27 to WS2-29); the 106 carve-out cells stored Spark's rows before the fix and are carded as PARTITION-PAIRING-CARVE-OUT-CLOSE-1.
 
 Verification round 1 (2026-10-25, Muse MAX critic on head `5ce6524c`): FAIL with one S1 (a date into a MAP TIMESTAMP key, C-026, carded NESTED-MAP-KEY-ZONE-1) and two S2 (the P25 partitioned UPDATE under F-3, and the D19/D20 refusal class, C-027), all pre-existing; ruling WS2-30 leaves the step unchanged and records and cards the gaps.
+
+Verification round 1 (Opus 5.5) returned FAIL on a 6 to 9 % nested MERGE cost, two surviving mutants (C2, C7) and C-022's pin; fix round 2 (`78a56428`) removes the repeated analysis from the three planned-plan sites (WS2-31), pins the two mutants (WS2-32) and replaces C-022's pin (WS2-33), with re-verification pending.
