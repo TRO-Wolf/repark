@@ -1526,6 +1526,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Pointers
 - Up: [../map.md](../map.md)
+- [ice-v2-label-1-ledger.md](ice-v2-label-1-ledger.md) — **ICE-V2-LABEL-1 (U-13), 2026-10-26, the format-v2 PRODUCTION label:** the registry rows re-dated as of `59d104d9`, the three carve-outs and the text-leaf row filed, the STATUS maturity section and the 1.5.6 line. PROVEN: PA-01 to PA-04, U-8, EXPLAIN-DML-WRITE-1, ZONE-SEAM-1, GATE-RETIRE-1, WRITE-SPINE-1 steps (0) to (3b), U-9 K, U and X, the cross-read nightly, U-11, the matrix. OPEN (C-016 to C-022): the three carve-outs, NESTED-TEXT-LEAF-STORE-1, the silent NESTED-MAP-KEY-ZONE-1, the hadoop hint window, and the label. `risk_tier: standard`. Path READING (docs only). Branch `docs/ice-v2-label-1`.
 - [perf-scan-1-plan-once-ledger.md](../completed/perf-scan-1-plan-once-ledger.md) —
   **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04), in flight:** `TargetScanStream` caches
   `FileScanTask`s across concurrent `StreamingTable` re-executes (hardening). Registry
