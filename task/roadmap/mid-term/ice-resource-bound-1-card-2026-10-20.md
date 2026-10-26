@@ -3,9 +3,7 @@
 **Date:** 2026-10-20. **Filed by:** Claude (claude-opus-5-5), clerk, step 0 of the 2026-10-20
 Iceberg re-prioritisation.
 
-**Status:** open, not scheduled. **Awaits the owner's adopt of the 2026-10-20 plan**, which puts
-the unit sixth on the one Opus 5.5 lane, after U-9 (Fri 10-30 to Mon 11-02). Order:
-[task/wo/ice-resource-bound-1/order.md](../../wo/ice-resource-bound-1/order.md).
+**Status:** built on `feat/ice-resource-bound-1` on 2026-10-26 (steps 0 to 6). The owner ruled Q1 to Q5 that day and adopted the sketch; the three bounds, their refusals, the cgroup v2 detector and the pins are on the branch, not on main. The bound record is [resource-bound-2026-10-26](../../../docs/perf/resource-bound-2026-10-26.md) and the ledger is [ice-resource-bound-1](../../ledgers/staging/ice-resource-bound-1-ledger.md). Open: the verifier rounds (ledger C-012), the owner's wiring of the scheduled 4x and 16x job, and the merge. The run ids of the 4x and 16x cells are local runs with no CI id. Order: [task/wo/ice-resource-bound-1/order.md](../../wo/ice-resource-bound-1/order.md).
 
 **Retires:** when the bound is measured and written in docs with its run ids, a write above it
 refuses with one text and leaves the old snapshot intact on format v2 and v3, PP-01 and PP-02

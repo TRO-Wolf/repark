@@ -212,3 +212,5 @@ Standing rules from [TEMPLATE.md](../TEMPLATE.md): no code comments from Anthrop
 relocated code sheds its comments; `map.md` lockstep; the scratch clone, never the live worktree;
 never push, never open a pull request; the TRO-Wolf identity and exactly one trailer,
 `Authored-By: Claude (claude-opus-5-5) <noreply@anthropic.com>`.
+
+**Step 6 outcome (clerk, 2026-10-26).** The records are on `feat/ice-resource-bound-1`: the map rows (lockstep), the bound record under `docs/perf/` with the cost gate table and the local 4x and 16x run, the audit amendments (PA-10, PA-11, PP-01, PP-02), the declared rows in the parity registry (section 2.7), the ledger with ten PROVEN clauses, C-005 REJECTED and C-012 OPEN for the verifier rounds, the release line, the census text above, and the card's status. Nothing was pushed and no pull request was opened. The hand-back questions for the owner and the orchestrator are in the clerk's hand-back message.
