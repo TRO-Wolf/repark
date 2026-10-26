@@ -5,6 +5,8 @@ registry rows R-010, R-013, R-018 part 1 and R-001 are measured again on today's
 with the result, and `DESCRIBE` shows the Iceberg spec names for nanosecond columns. No stored value
 changes.
 
+- [probe_ns_truthup_1.py](probe_ns_truthup_1.py) — the step-0 probe: runs the 39 cells of the four rows (R-010, R-013, R-018 part 1, R-001) on the head and writes the JSON record and a cell table.
+- [evidence/cells-2026-10-26.json](evidence/cells-2026-10-26.json) — the 39-cell step-0 record, one object per cell (row, cell, statement, zone, format, outcome, class, text, value); the warehouse prefix reads `<warehouse>` and the owner `<owner>`.
 - [order.md](order.md) — the grade C order (2026-10-26, adopted by the owner with the v3 label plan): engine band Muse MAX measures and builds, Haiku 5.5 writes the rows; the outcome mapping per row, the DESCRIBE steps with their control cells, the gates, the halt rules and the hand-back.
 
 Up: [../map.md](../map.md).

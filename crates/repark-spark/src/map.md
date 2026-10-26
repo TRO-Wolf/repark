@@ -2259,6 +2259,12 @@ pins: rp-4-fork-repin/C-005, C-006
   the bare form lists the session's current catalog (NS-1 FIXED).
   pins: ice-catalog-session-1/C-018
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **NS-TRUTHUP-1 (2026-10-26):** the private `describe_ddl_type_name` maps a nanosecond Arrow
+  timestamp to `timestamp_ns` (no zone) or `timestamptz_ns` (zoned) and delegates every other type
+  to `spark_ddl_type_name`. It renders the column rows of DESCRIBE TABLE and the partition struct
+  type (a struct, so it delegates), while the DESCRIBE column path in `describe_column.rs` keeps the
+  microsecond names. `describe_shows_timestamp_ns_and_timestamptz_ns` (`describe_show/tests.rs`) pins
+  it. pins: ns-truthup-1/C-004
   **REVIEW-FIX-5 (2026-09-10):** the table parser takes one-, two-, and three-part names and
   never filters the table segment of a three-part name, so `cat.ns.files` describes while a
   four-or-more-part metadata path still stays out; the router completes missing parts from

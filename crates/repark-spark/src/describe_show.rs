@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{RecordBatch, StringArray};
-use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::TableReference;
@@ -418,6 +418,14 @@ pub(crate) fn describe_table_batch(
     )?)
 }
 
+fn describe_ddl_type_name(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Timestamp(TimeUnit::Nanosecond, None) => "timestamp_ns".to_string(),
+        DataType::Timestamp(TimeUnit::Nanosecond, Some(_)) => "timestamptz_ns".to_string(),
+        _ => spark_ddl_type_name(data_type),
+    }
+}
+
 fn describe_table_rows(
     describe: &DescribeTable,
     table: &Table,
@@ -438,7 +446,7 @@ fn describe_table_rows(
     {
         rows.push((
             arrow_field.name().clone(),
-            spark_ddl_type_name(arrow_field.data_type()),
+            describe_ddl_type_name(arrow_field.data_type()),
             iceberg_field.doc.clone(),
         ));
     }
@@ -509,7 +517,7 @@ fn describe_partition_struct_type(
     let partition_type = spec.partition_type(schema).map_err(iceberg_err)?;
     let arrow_type = iceberg::arrow::type_to_arrow_type(&IcebergType::Struct(partition_type))
         .map_err(iceberg_err)?;
-    Ok(spark_ddl_type_name(&arrow_type))
+    Ok(describe_ddl_type_name(&arrow_type))
 }
 
 pub(crate) fn describe_table_owner(ctx: &SessionContext) -> String {
