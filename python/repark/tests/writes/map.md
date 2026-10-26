@@ -11,6 +11,7 @@ pins.
 ## Contents
 
 - [test_a13_ctas_fallback.py](test_a13_ctas_fallback.py) — Location-less CTAS under ``register_memory_catalog`` writes under the catalog warehouse.
+- `test_cast_overflow_insert_1.py` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `test_vo4_1_insert_into_overwrite_reports_arity_first` pins the arity-first order on INSERT OVERWRITE (WS2-29). pins: write-spine-1/C-025
 - [test_cast_overflow_insert_1.py](test_cast_overflow_insert_1.py) — CAST-OVERFLOW-INSERT-1: storing an overflowing value replays the recorded Spark cells on the SQL and DataFrame doors.
 - [test_ctas_division_writeback.py](test_ctas_division_writeback.py) — Facade write-path pins for CTAS integer-division type derivation.
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — Unpartitioned CTAS from a parquet-read temp view (Utf8View batches).
@@ -40,6 +41,7 @@ pins.
 - [test_ice_spark_table_1.py](test_ice_spark_table_1.py) — ICE-SPARK-TABLE-1 — RePark writes into a Spark-created Iceberg v2 CoW table.
 - [test_ice_struct_pairing_1.py](test_ice_struct_pairing_1.py) — ICE-STRUCT-PAIRING-1: struct values pair with the target struct the way Spark does on UPDATE / MERGE / INSERT.
 - [test_ice_struct_pairing_1_exception.py](test_ice_struct_pairing_1_exception.py) — ICE-STRUCT-PAIRING-1 exception round: every recorded update-from-subquery cell answers or refuses like Spark.
+- `test_ice_struct_pairing_1_round3.py` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `test_the_partition_carve_out_refuses_with_the_workaround` holds the 106 carve-out cells (ids in the step (2) evidence file). pins: write-spine-1/C-025
 - [test_ice_struct_pairing_1_round3.py](test_ice_struct_pairing_1_round3.py) — ICE-STRUCT-PAIRING-1 round 3: the recorded groups hold every cell of the round-3 recorder and answer like Spark.
 - [test_ice_v3_write_default_1.py](test_ice_v3_write_default_1.py) — ICE-V3-WRITE-DEFAULT-1 — omitted columns fill from ``write_default`` on every write path.
 - [test_ice_wap_branch_1.py](test_ice_wap_branch_1.py) — ICE-WAP-BRANCH-1 — ``spark.wap.branch`` redirects writes and reads to an audit branch.

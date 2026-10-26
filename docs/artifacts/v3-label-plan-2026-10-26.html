@@ -1,0 +1,178 @@
+<title>V3 Label Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f7f5f0; --surface:#ffffff; --fg:#1c1b18; --muted:#5f5b52; --line:#d9d4c8;
+  --accent:#1f5f8b; --note-bg:#e6eaf6;
+  --display:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --surface:#1e2126; --fg:#e8e6e1; --muted:#a39f95; --line:#343941; --accent:#6fb0dd; --note-bg:#222a44;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --surface:#1e2126; --fg:#e8e6e1; --muted:#a39f95; --line:#343941; --accent:#6fb0dd; --note-bg:#222a44;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;margin:0;padding-inline:16px;padding-block:32px 56px}
+.page{max-width:44rem;margin-inline:auto;min-width:0}
+header{border-bottom:1px solid var(--line);padding-bottom:20px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,7vw,38px);line-height:1.15;margin:10px 0 12px;text-wrap:balance}
+.lede{font-size:18px;line-height:1.5;color:var(--muted);margin:0;max-width:66ch}
+.strip{margin-top:24px}
+.cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:10px 0 0}
+.cell{border-top:3px solid var(--accent);padding-top:8px;min-width:0}
+.cell span{display:block}
+.cell .k{font-size:14px;color:var(--muted)}
+.cell .v{font-family:var(--display);font-size:24px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.cell .b{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.strip-note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.intro{margin:24px 0 0;max-width:66ch}
+section.sec{margin-top:40px;min-width:0}
+h2{font-family:var(--display);font-weight:600;font-size:24px;line-height:1.25;margin:0 0 12px;padding-top:20px;border-top:1px solid var(--line);text-wrap:balance}
+h3{font-family:var(--body);font-size:17px;font-weight:600;line-height:1.35;margin:28px 0 8px;text-wrap:balance}
+p{margin:12px 0;max-width:66ch}
+ul{margin:12px 0;padding-left:22px;max-width:66ch}
+li{margin:6px 0}
+strong{font-weight:600}
+code{font-family:var(--mono);font-size:.875em;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px;overflow-wrap:anywhere}
+.tbl{overflow-x:auto;max-width:100%;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+th{font-weight:600;color:var(--muted);font-size:13px;border-bottom-width:2px}
+.tbl.decide{background:var(--note-bg);border-left:4px solid var(--accent);border-radius:6px;padding:4px 12px}
+.tbl.decide td:first-child{font-family:var(--mono);font-weight:600}
+.tbl.decide td:last-child{font-weight:600}
+</style>
+<div class="page">
+<header>
+<p class="eyebrow">Plan draft &middot; 2026-10-26 &middot; main at ab1b9bc8 &middot; adopted by the owner 2026-10-26</p>
+<h1>The v3 core label: U-4, the nanosecond truth-up and the label PR</h1>
+<p class="lede">The 10-20 priorities put U-4 and the nanosecond truth-up in a single week, Fri 11-06 to Tue 11-10, serial after the v2 label work, on the same Opus lane.</p>
+</header>
+
+<div class="strip">
+<p class="eyebrow">Dates of record</p>
+<div class="cells">
+<div class="cell"><span class="k">v2 label</span><span class="v">Tue 11-10</span><span class="b">buffer 11-12</span></div>
+<div class="cell"><span class="k">v3 core label</span><span class="v">Tue 11-17</span><span class="b">buffer 11-19</span></div>
+</div>
+<p class="strip-note">Both in v1.5.6.</p>
+</div>
+
+<p class="intro">Drafted by the orchestrator (Claude Fable 5.1) at the owner's ask, from main at ab1b9bc8, the 2026-10-13 closeout plan, the 2026-10-20 priorities (row 8), the parity registry rows and the 1.5.6 release-note draft. Adopted by the owner on 2026-10-26 with decisions D1 to D5 at the leans in section 5; the NS-TRUTHUP-1 measurement and the docs PR were dispatched the same hour. Dates of record do not move: v2 label Tue 11-10 (buffer 11-12), v3 core label Tue 11-17 (buffer 11-19), both in v1.5.6.</p>
+
+<section class="sec">
+<h2>1. What the plan changes, in one paragraph</h2>
+<p>The 10-20 priorities put U-4 and the nanosecond truth-up in a single week, Fri 11-06 to Tue 11-10, serial after the v2 label work, on the same Opus lane. Both depend only on main as it is today (the type planner, U-1, merged 10-16; the floor, U-3, merged), not on U-11 and not on the v2 label. This draft pulls them forward to this week and runs them beside U-11 on non-Opus lanes. The week between the two labels then becomes buffer instead of build time, and the v3 date keeps its full margin without moving.</p>
+</section>
+
+<section class="sec">
+<h2>2. The three pieces</h2>
+
+<h3>2a. NS-TRUTHUP-1 &mdash; re-measure four registry rows on today's main (measurement + docs, no product code)</h3>
+<p>The four rows were last measured 2026-10-09, before the type planner landed. Each is re-measured on the current head on format v3, in both strict-mode settings where the row names one, and the registry row is re-dated with the result. Spark has no value for any of them (it cannot read or write nanosecond columns), so the oracle column stays "none" or "documented" and the question is only whether RePark's own behaviour matches the row's claim.</p>
+<div class="tbl">
+<table>
+<thead><tr><th>Row</th><th>What it says today</th><th>Expected outcome on today's main</th><th>If not</th></tr></thead>
+<tbody>
+<tr><td>R-010</td><td>UPDATE and DELETE refuse a cast spelled to a nanosecond type</td><td>FIXED by the planner; the 1.5.6 draft already says so; pin the <code>r010_answers</code> cells and close the row</td><td>reopen as a planner gap, own card</td></tr>
+<tr><td>R-013</td><td>the strict-mode session registers the nanosecond wall cast under an internal name that shows in the function list</td><td>DECLARED with a dated row: harmless, the name carries the reserved prefix; or hidden if the function list already filters that prefix (measure)</td><td>&mdash;</td></tr>
+<tr><td>R-018 part 1</td><td>a timestamp literal inside array, struct or map in a VALUES list fails with a raw engine type error before any table is touched</td><td>measure; if green, FIXED with a pin</td><td>fold into NESTED-LITERAL-SEAM-1, which is already queued for the same literal-typing seam; no new unit</td></tr>
+<tr><td>R-001</td><td>DESCRIBE TABLE shows the microsecond names for nanosecond columns</td><td>owner decision (D3): show the Iceberg spec names <code>timestamp_ns</code> / <code>timestamptz_ns</code>, a small renderer fix; or DECLARED as a dated row</td><td>&mdash;</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Mechanics:</strong> one Muse MAX measurement round on a scratch clone of main (a probe script beside the unit's order, each cell recorded with its statement, mode, format version and answer); the orchestrator re-runs one cell per row before any row changes (measure-before-ruling); a Haiku 5.5 clerk writes the re-dated rows, the pins' map rows and the release-note lines; one docs PR. Owner reads the table before the rows change. Target: measurement Tue 10-27, rows and PR Wed 10-28.</p>
+
+<h3>2b. U-4 &mdash; ICE-TSNS-UPDATE-RANGE-CLASS-1 (row R-012): the unfiltered UPDATE reports the truthful refusal class</h3>
+<p>Under strict mode, <code>UPDATE t SET v = TIMESTAMP '3000-01-01 ...'</code> with no WHERE into a nanosecond column refuses as "malformed" (CAST_INVALID_INPUT), where INSERT and UPDATE ... WHERE refuse the same value as "out of range" (CAST_OVERFLOW). 16 measured cells: two far literals in three zones and each zone's edge instant, in both row-level modes. With strict mode off all three store NULL, which stays. No value is ever mis-stored; the unit changes the class and text of one refusal so the three paths agree. The cause is known from the row: the unfiltered UPDATE runs INSERT's conform path, whose literal check fires before the range check.</p>
+<p>Order: grade C, written by the orchestrator from the row and the conform-stage map (one seam: the range check runs before the literal check on that path, or the unfiltered UPDATE takes the filtered path's check). Red-first: the 16 cells as facade pins plus one Rust pin beside the existing R-012 pin in <code>crates/repark-sql/src/v3/create.rs</code>; the INSERT and filtered-UPDATE cells stay as controls (their class must not change). Gates as every product PR: comment grep, clippy, panic ban, file sizes, ledger grammar, map lockstep by the clerk, cost on the write set within 1.05. Builder and verifier tiers are decision D2. Target: order Mon 10-27, build Tue 10-28, verify Wed 10-29, merged by Fri 10-30.</p>
+
+<h3>2c. The v3 core label PR &mdash; V3-LABEL-1 (clerk day, after the v2 label PR)</h3>
+<p>Opened after the v2 label PR merges on 11-10, as its own PR (decision D5). It carries:</p>
+<ul>
+<li>the STATUS maturity line for format-v3 core moving to PRODUCTION, citing the #1044 definition;</li>
+<li>one dated carve-out row each, signed by the owner: R-002 (no second engine writes v3), R-015 (nested nanosecond leaves refused by name), R-024 (encoded or nested nanosecond source truncates; 1.5.7), U-2 (the array floor; 1.5.7), the nanosecond create door (#1048's intent; rebuilt as ICE-TSNS-CREATE-DOOR-2 in 1.5.7), and ENC-1 items 1 and 5 under ruling 121(b) if they are not on main by then;</li>
+<li>the re-dated nanosecond rows from NS-TRUTHUP-1 and U-4's closed row;</li>
+<li>the release-note lines in the 1.5.6 draft;</li>
+<li>the evidence the gate asks for (section 3).</li>
+</ul>
+<p>Haiku 5.5 clerk writes it, Muse MAX checks it, the orchestrator opens it, the owner merges it. With the pull-forward the PR can be ready by Thu 11-12; the date of record stays Tue 11-17 and the early readiness is buffer.</p>
+</section>
+
+<section class="sec">
+<h2>3. The v3 label gate, state today</h2>
+<div class="tbl">
+<table>
+<thead><tr><th>Gate</th><th>State on 2026-10-26</th></tr></thead>
+<tbody>
+<tr><td>Nanosecond rows leave EXPERIMENTAL: U-1 planner, U-3 floor, U-4 class, the four truth-up rows</td><td>U-1 and U-3 merged; U-4 and the four rows are this plan</td></tr>
+<tr><td>U-2 array floor</td><td>1.5.7, dated row (ruled 10-17 lean D6, carried by the 10-20 plan)</td></tr>
+<tr><td>Create door (#1048)</td><td>draft held; dated row; 1.5.7 rebuild</td></tr>
+<tr><td>R-002, R-015, R-024</td><td>dated rows, owner-signed in the label PR</td></tr>
+<tr><td>ENC-1 items 1 and 5 (#1071)</td><td>parked under 121(b); dated row unless merged</td></tr>
+<tr><td>The 842-cell matrix on the release build</td><td>run once in U-13 for both labels</td></tr>
+<tr><td>v3 live-oracle nightly leg</td><td>green on the current nightlies; must be green the morning of the PR</td></tr>
+<tr><td>Two green parity-live mornings</td><td>five in a row 10-21 to 10-25</td></tr>
+<tr><td>An acceptance run id (legs U and X cover v3)</td><td>40143628929 and 40295982749, both green</td></tr>
+<tr><td>v2 label merged first</td><td>11-10</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="sec">
+<h2>4. Lanes, spend and the calendar</h2>
+<div class="tbl">
+<table>
+<thead><tr><th>When</th><th>Lane</th><th>Work</th></tr></thead>
+<tbody>
+<tr><td>Mon 10-26</td><td>orchestrator</td><td>this plan to the owner; the NS-TRUTHUP-1 and U-4 orders drafted on adopt</td></tr>
+<tr><td>Tue 10-27</td><td>Muse MAX</td><td>NS-TRUTHUP-1 measurement round; orchestrator reproduces one cell per row</td></tr>
+<tr><td>Tue 10-27</td><td>Muse MAX (D2)</td><td>U-4 build, red-first</td></tr>
+<tr><td>Wed 10-28</td><td>Haiku 5.5</td><td>NS-TRUTHUP-1 rows and PR; U-4 clerk round</td></tr>
+<tr><td>Wed 10-29 to Fri 10-30</td><td>Muse MAX, Opus 5.5 only per D2</td><td>U-4 verification, fix round if any, merge on the owner's word</td></tr>
+<tr><td>10-26 to ~11-05</td><td>Opus 5.5 lane B</td><td>U-11 (unchanged)</td></tr>
+<tr><td>after #1189</td><td>Opus 5.5 lane A</td><td>PARTITION-PAIRING-CARVE-OUT-CLOSE-1, NESTED-LITERAL-SEAM-1 with the map-key fold and R-018(1) if it folds</td></tr>
+<tr><td>~11-05 to 11-10</td><td>Haiku 5.5 + Muse MAX</td><td>U-13 and the v2 label PR</td></tr>
+<tr><td>11-10 to 11-12</td><td>Haiku 5.5 + Muse MAX</td><td>V3-LABEL-1 ready; opened on the date of record or when the owner says</td></tr>
+<tr><td>Tue 11-17</td><td>owner</td><td>v3 core label merge</td></tr>
+</tbody>
+</table>
+</div>
+<p>Opus 5.5 spend added by this plan: none, unless D2 upgrades U-4's verifier. Muse MAX: about four rounds. Haiku 5.5: about four clerk rounds. The Opus lanes stay on U-11 and the step-2 follow-ups.</p>
+</section>
+
+<section class="sec">
+<h2>5. Decisions for the owner</h2>
+<div class="tbl decide">
+<table>
+<thead><tr><th>Id</th><th>Question</th><th>Lean</th></tr></thead>
+<tbody>
+<tr><td>D1</td><td>Pull U-4 and the truth-up forward to this week, in parallel with U-11, instead of the 11-06 to 11-10 slot</td><td>yes; they depend only on main</td></tr>
+<tr><td>D2</td><td>U-4 tiers: Muse MAX builder and Muse MAX verifier, with an Opus 5.5 verifier only if a verifier finds a value moving</td><td>yes; the unit changes an error class, not a value; the 10-20 plan's "one medium Opus agent" is spend the week does not need</td></tr>
+<tr><td>D3</td><td>R-001: DESCRIBE shows the Iceberg spec names for nanosecond columns (small Rust renderer change inside NS-TRUTHUP-1's docs PR becomes a product PR) or a DECLARED dated row</td><td>show the spec names; a reader of DESCRIBE should see the type the table has</td></tr>
+<tr><td>D4</td><td>R-018 part 1, if still red: fold into NESTED-LITERAL-SEAM-1 or its own unit</td><td>fold; same literal-typing seam</td></tr>
+<tr><td>D5</td><td>The v3 label as its own PR after the v2 label PR, not folded into U-13</td><td>own PR; two labels, two signatures, two dated-row sets</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="sec">
+<h2>6. Risks and the slip rule</h2>
+<ul>
+<li>The truth-up finds a row the planner did not fix (R-010 or R-018). A new product unit then sits behind U-4 on the same Muse lane; it fits before 11-12 if it is small, and a dated carve-out row carries it otherwise. The label date does not move.</li>
+<li>Owner latency on D3 and the label-PR signatures is the only calendar risk the plan cannot absorb; the plan asks for D1 to D5 now and the signatures with the v2 label on 11-10.</li>
+<li>The v3 live-oracle nightly leg goes red in the window: a re-record unit as in PARITY-LIVE-RERECORD-1, two green mornings before the PR; the 11-19 buffer covers one such round.</li>
+</ul>
+</section>
+</div>

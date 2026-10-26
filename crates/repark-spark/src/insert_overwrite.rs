@@ -199,7 +199,6 @@ pub(crate) async fn execute_partition_overwrite(
     use repark_iceberg::write::{
         OverwritePlan, insert_defaults::overwrite_source_with_defaults,
         partition_overwrite_request_from_exprs, plan_overwrite, static_partition_source_columns,
-        zone_stores,
     };
 
     let Some((catalog_name, catalog, table, branch)) =
@@ -223,7 +222,31 @@ pub(crate) async fn execute_partition_overwrite(
     refuse_partition_overwrite_sources(ctx, &table, table_name, &filled, &reserved).await?;
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
-    let source_df = zone_stores(ctx, source_df, &table, &column_names, &reserved)?;
+    let pairing = StructPairing::from_source_by_name(
+        options.source_by_name,
+        !crate::spark_door_case_insensitive(ctx.state().config().options()),
+    );
+    let label = format!(
+        "`{catalog_name}`.`{}`.`{}`",
+        namespace_schema_name(table.identifier().namespace()),
+        table.identifier().name()
+    );
+    let columns = store::OverwriteColumns {
+        listed: &column_names,
+        reserved: &reserved,
+    };
+    let source_df = store::conform_types(
+        ctx,
+        &table,
+        columns,
+        source_df,
+        (
+            pairing,
+            &label,
+            repark_iceberg::write::StageSite::PartitionOverwrite,
+        ),
+    )
+    .await?;
     let (snapshot_extra, _) = options.resolve_with_session(ctx)?;
     let staged_files =
         stage_partition_overwrite_files(ctx, &table, &plan, source_df, column_names, options)
@@ -430,7 +453,6 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     let (column_names, materialize_sql) =
         overwrite_source_with_default_fills(table, &column_names, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
-    let source_df = repark_iceberg::write::zone_stores(ctx, source_df, table, &column_names, &[])?;
     let pairing = StructPairing::from_source_by_name(
         options.source_by_name,
         !crate::spark_door_case_insensitive(ctx.state().config().options()),
@@ -440,8 +462,22 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
         namespace_schema_name(table.identifier().namespace()),
         table.identifier().name()
     );
-    let source_df =
-        store::conform_types(ctx, table, &column_names, source_df, (pairing, &label)).await?;
+    let columns = store::OverwriteColumns {
+        listed: &column_names,
+        reserved: &[],
+    };
+    let source_df = store::conform_types(
+        ctx,
+        table,
+        columns,
+        source_df,
+        (
+            pairing,
+            &label,
+            repark_iceberg::write::StageSite::InsertOverwrite,
+        ),
+    )
+    .await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);

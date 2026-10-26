@@ -339,19 +339,20 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
-- `insert.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `zone_wrapping_stream_sql` asks
+- `insert.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `zone_wrapping_stream_sql` and its second plan are deleted; the MERGE insert arm (D7, D19) and the MERGE update arm (D8, D9, D19) hand their plans to the conform stage in [conform_stage.rs](../conform_stage.rs) (sites MergeInsert and MergeUpdate). pins: write-spine-1/C-017
+- `insert.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the conform stage (`conform_stage.rs`; formerly `zone_wrapping_stream_sql`) asks
   `ntz_store::store_kernel_sql`, so a `timestamptz_ns` column of a MERGE INSERT goes through
   the zoned kernel and a wall is localised in the session zone, as INSERT localises it.
   Reason and scope: the `ntz_store.rs` row of the parent directory map.
   pins: ice-tstzns-wall-1/C-003
-- `insert.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `zone_wrapping_stream_sql` wraps
+- `insert.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the conform stage (formerly `zone_wrapping_stream_sql`) wraps
   every wall-clock target through `ntz_store::wall_cast_sql`, so a `timestamp_ns` column of a
   MERGE INSERT takes the nanosecond wall kernel; MERGE UPDATE SET reaches the same kernel
   through `store_assignment_cast_sql`. Before, both arms stored an instant's UTC wall in a
   `timestamp_ns` column. Reason and scope: the `ntz_store.rs` row of the parent directory map.
   pins: ice-tsns-merge-wall-1/C-004
 - `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
-  stream builders plan through `analyzed_store_source` and `wrap_store_outputs`, so a
+  stream builders plan through `analyzed_store_source` and the conform stage (formerly `wrap_store_outputs`), so a
   fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the
   update probe reads types from the unoptimized plan so a const division reaches the
   rewrite instead of folding to `DIVIDE_BY_ZERO` first.
@@ -370,7 +371,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   SQL untouched. MERGE UPDATE arms convert through `store_assignment_cast_sql`'s
   wall-cast UDF. pins: ntz-1/C-006, C-007
   **WO NTZ-STORE-DOORS-1 (2026-09-28):** the converting subquery
-  (`zone_wrapping_stream_sql`) also wraps a `TIMESTAMP` column whose analyzed source
+  (formerly `zone_wrapping_stream_sql`, now the conform stage) also wraps a `TIMESTAMP` column whose analyzed source
   is naive or `DATE` through `store_assignment_cast_sql`, so `INSERT (cols)` and
   `INSERT *` store the session-zone instant; the gates still run first on the raw
   plan, and a table whose instant columns take instants streams its SQL untouched.

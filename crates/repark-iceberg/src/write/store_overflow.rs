@@ -12,7 +12,6 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::scalar::ScalarValue;
 
-use super::store_assign::refuse_unless_write_store_assignable;
 use super::store_fold::{
     check_folded_store_input, expr_references_column, store_guard_expr, wrap_store_expr,
 };
@@ -187,7 +186,10 @@ pub(crate) fn split_aliases(mut expr: &Expr) -> (&Expr, Vec<(Option<TableReferen
     (expr, frames)
 }
 
-fn store_output_name(inner: &Expr, frames: &[(Option<TableReference>, String)]) -> String {
+pub(crate) fn store_output_name(
+    inner: &Expr,
+    frames: &[(Option<TableReference>, String)],
+) -> String {
     if let Some((_, name)) = frames.first() {
         return name.clone();
     }
@@ -197,7 +199,7 @@ fn store_output_name(inner: &Expr, frames: &[(Option<TableReference>, String)]) 
     inner.schema_name().to_string()
 }
 
-fn rewrap_aliases(mut inner: Expr, frames: &[(Option<TableReference>, String)]) -> Expr {
+pub(crate) fn rewrap_aliases(mut inner: Expr, frames: &[(Option<TableReference>, String)]) -> Expr {
     for (relation, name) in frames.iter().rev() {
         inner = Expr::Alias(Alias::new(inner, relation.clone(), name.clone()));
     }
@@ -446,17 +448,17 @@ fn conform_store_exprs(
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PairSite<'a> {
-    pairing: StructPairing,
-    table: &'a str,
+pub(crate) struct PairSite<'a> {
+    pub(crate) pairing: StructPairing,
+    pub(crate) table: &'a str,
 }
 
 #[derive(Debug, Clone, Copy)]
-struct ConformStoreFlags<'a> {
-    fold: bool,
-    in_values: bool,
-    unwrap_cast: bool,
-    site: PairSite<'a>,
+pub(crate) struct ConformStoreFlags<'a> {
+    pub(crate) fold: bool,
+    pub(crate) in_values: bool,
+    pub(crate) unwrap_cast: bool,
+    pub(crate) site: PairSite<'a>,
 }
 
 fn pair_store_output(
@@ -503,7 +505,7 @@ fn pair_store_output(
     }))
 }
 
-fn conform_one_store_expr(
+pub(crate) fn conform_one_store_expr(
     inner: &Expr,
     schema: &DFSchema,
     input: &mut Arc<LogicalPlan>,
@@ -827,112 +829,6 @@ fn swap_guards_in_plan(plan: LogicalPlan, issue: &StoreIssue) -> (LogicalPlan, b
         Ok(plan) => (plan, changed),
         Err(_) => (fallback, false),
     }
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn wrap_store_outputs(
-    plan: LogicalPlan,
-    targets: &[(String, DataType)],
-    by_name: bool,
-    fold: bool,
-    gate_op: Option<&str>,
-    pairing: StructPairing,
-    table: &str,
-) -> Result<LogicalPlan> {
-    let LogicalPlan::Projection(projection) = plan else {
-        return Ok(plan);
-    };
-    if !by_name && projection.expr.len() != targets.len() {
-        return Ok(LogicalPlan::Projection(projection));
-    }
-    if let Some(op) = gate_op {
-        judge_wrap_store_assignable(&projection, targets, by_name, op)?;
-    }
-    let mut input = Arc::clone(&projection.input);
-    let schema = input.schema().clone();
-    let mut changed = false;
-    let mut out = Vec::with_capacity(projection.expr.len());
-    for (position, expr) in projection.expr.iter().enumerate() {
-        let (inner, frames) = split_aliases(expr);
-        let name = store_output_name(inner, &frames);
-        let target = if by_name {
-            targets
-                .iter()
-                .find(|(candidate, _)| candidate == &name)
-                .or_else(|| {
-                    targets
-                        .iter()
-                        .find(|(candidate, _)| candidate.eq_ignore_ascii_case(&name))
-                })
-        } else {
-            targets.get(position)
-        };
-        let Some((column, target_type)) = target else {
-            out.push(expr.clone());
-            continue;
-        };
-        let flags = ConformStoreFlags {
-            fold,
-            in_values: false,
-            unwrap_cast: false,
-            site: PairSite { pairing, table },
-        };
-        let conformed = conform_one_store_expr(
-            inner,
-            schema.as_ref(),
-            &mut input,
-            column,
-            target_type,
-            flags,
-        )?;
-        let Some(rewritten) = conformed else {
-            out.push(expr.clone());
-            continue;
-        };
-        if frames.is_empty() {
-            out.push(rewritten.alias(column));
-        } else {
-            out.push(rewrap_aliases(rewritten, &frames));
-        }
-        changed = true;
-    }
-    if !changed {
-        return Ok(LogicalPlan::Projection(projection));
-    }
-    Ok(LogicalPlan::Projection(Projection::try_new(out, input)?))
-}
-
-fn judge_wrap_store_assignable(
-    projection: &Projection,
-    targets: &[(String, DataType)],
-    by_name: bool,
-    op: &str,
-) -> Result<()> {
-    let schema = projection.input.schema();
-    for (position, expr) in projection.expr.iter().enumerate() {
-        let (inner, frames) = split_aliases(expr);
-        let name = store_output_name(inner, &frames);
-        let target = if by_name {
-            targets
-                .iter()
-                .find(|(candidate, _)| candidate == &name)
-                .or_else(|| {
-                    targets
-                        .iter()
-                        .find(|(candidate, _)| candidate.eq_ignore_ascii_case(&name))
-                })
-        } else {
-            targets.get(position)
-        };
-        let Some((column, target_type)) = target else {
-            continue;
-        };
-        let Ok(source) = inner.get_type(schema.as_ref()) else {
-            continue;
-        };
-        refuse_unless_write_store_assignable(op, column, &source, target_type)?;
-    }
-    Ok(())
 }
 
 #[cfg(test)]

@@ -42,7 +42,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
   binding's native join door. pins: stamp-2-r5p6-2/C-002
 - `insert_by_name.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_by_name/nested.rs` (`refuse_nested_mismatch`) is
-  deleted: the BY NAME append hands `wrap_store_outputs` the by-name mode under the session's
+  deleted: the BY NAME append hands the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) the by-name mode under the session's
   case rule and the table label, and the by-name source of `REPLACE WHERE` pairs at the planned
   INSERT.
 - `router.rs`, `catalog_ops.rs`, `merge.rs`, `insert_overwrite.rs`, `insert_by_name.rs`,
@@ -292,7 +292,7 @@ pins: rp-4-fork-repin/C-005, C-006
 - `insert_overwrite/store.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from
   `insert_overwrite.rs` (file-size gate; a child module so `lib.rs` keeps its exact
   baseline): `conform_types` resolves the positional targets and runs
-  `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
+  the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) over the analyzed source plan; the stage-then-swap source passes
   through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
 - `keyword_lower.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the AST lowering of
   `CAST(… AS timestamp_ns)` / `timestamptz_ns` to a kernel call is deleted
@@ -310,17 +310,17 @@ pins: rp-4-fork-repin/C-005, C-006
   extension registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules
   (it consumes `SparkExprSemantics`' guarded division shape, so it must run after it —
   unlike `InsertStoreAssignment`, which needs the pre-cast types) plus the `store_cast`
-  UDF family; the BY NAME projection runs `wrap_store_outputs`.
+  UDF family; the BY NAME projection runs the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`).
   **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the BY NAME and the
-  stage-then-swap OVERWRITE sources pass through `zone_stores(_by_name)` first, then
-  the overflow wrap (`wrap_store_outputs` / `conform_types`).
+  stage-then-swap OVERWRITE sources pass through the conform stage (formerly `zone_stores(_by_name)`) first, then
+  the overflow wrap (`conform_types`, which calls the conform stage; formerly `wrap_store_outputs`).
   Re-verify VO3-1 (2026-09-29): both doors pass their per-batch op label into the wrap
   (`append` / `INSERT OVERWRITE`), so the store gate judges before the overflow check
   with byte-identical text.
 - `insert_overwrite.rs` — **WO NTZ-STORE-DOORS-1 (2026-09-28):** the stage-then-swap path
   (static, dynamic, `BY NAME`, column list, so `writeTo().overwritePartitions()` too) and
   the `PARTITION (…)` path pass the planned source through
-  `repark_iceberg::write::zone_stores` with the listed columns (or the table columns
+  the conform stage (`repark_iceberg::write::conform_stage`; formerly `repark_iceberg::write::zone_stores`) with the listed columns (or the table columns
   minus the static partition columns), so both directions store through the session zone.
   pins: ntz-store-doors-1/C-001, C-002, C-005
   **WO STORE-TS-DOORS-2 (2026-09-29):** `execute_partition_overwrite` refuses a
@@ -460,7 +460,7 @@ pins: rp-4-fork-repin/C-005, C-006
   targets count as owned write heads (`write_to_branch.rs`), so no temp-view rewrite fires.
   In-module tests (file-backed in [insert_by_name/map.md](insert_by_name/map.md)).
   **WO NTZ-STORE-DOORS-1 (2026-09-28):** the staged append passes the planned projection
-  through `repark_iceberg::write::zone_stores_by_name`, so an LTZ value stores its
+  through the conform stage (`repark_iceberg::write::conform_stage`; formerly `repark_iceberg::write::zone_stores_by_name`), so an LTZ value stores its
   session-zone wall in a `TIMESTAMP_NTZ` column and a naive or `DATE` value its
   session-zone instant in a `TIMESTAMP` column. pins: ntz-store-doors-1/C-001, C-002
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `by_name_source_query` is the by-name

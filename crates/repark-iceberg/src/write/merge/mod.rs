@@ -83,6 +83,7 @@ pub(crate) use crate::write::name_resolution::{
 };
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::file_scoped_rewrite_from_ctx;
+use crate::write::struct_pairing::{StoreEntry, refuse_unpaired_struct};
 
 /// The reserved `_file` metadata column the core scan projects.
 pub(super) const FILE_PATH_COL: &str = "_file";
@@ -561,6 +562,13 @@ pub(super) fn cast_one_batch_to_write_schema(
         .iter()
         .map(|field| {
             let column = named_column(batch, field.name())?;
+            refuse_unpaired_struct(
+                "``",
+                StoreEntry::Batch,
+                field.name(),
+                column.data_type(),
+                field.data_type(),
+            )?;
             refuse_coarser_timestamp(field.name(), column.data_type(), field.data_type())?;
             convert_uuid_column(column, field.data_type())
         })
