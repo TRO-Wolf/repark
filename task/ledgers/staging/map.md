@@ -2614,3 +2614,4 @@ The ICE-INTEGRITY-PINS-1 ledger gains C-066 to C-070 (2026-10-24): C-060's two h
   (GR-9): C-001 (retire the arm, never worse) REJECTED by measurement; C-002 (the hint, corrected) and C-003 (the
   discriminating walker tests) PROVEN; C-005 (the arm's refusals of four whole-container cast shapes pinned)
   PROVEN; C-004 (the Critic's coverage attestation, filed 2026-10-25 from the round-2 verdict) PROVEN. `risk_tier: standard`. Branch `feat/gate-retire-1`.
+- [ns-truthup-1-ledger.md](ns-truthup-1-ledger.md) — **NS-TRUTHUP-1 (2026-10-26), registry rows R-010, R-013, R-018 part 1 and R-001:** the four rows re-measured on main `9fd60149` (39 cells: 12 store, 13 answer, 12 refuse, 2 error), re-dated, and `DESCRIBE TABLE` shows `timestamp_ns` and `timestamptz_ns`; C-001, C-003 and C-004 PROVEN, C-002 OPEN on card SHOW-FUNCTIONS-1. Branch `feat/ns-truthup-1`.

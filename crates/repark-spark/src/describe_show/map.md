@@ -37,7 +37,10 @@ with the four-part parser for names the metadata rewrite leaves untouched.
   the statement, so the router leaves #806's four-part DESCRIBE unrewritten.
   pins: wo-b10-describe-sweep/C-007
   pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-007, C-009, C-012, C-013, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
-- `tests.rs` — `#[cfg(test)] mod tests;` in `../describe_show.rs`.
+- `tests.rs` — `#[cfg(test)] mod tests;` in `../describe_show.rs`. **NS-TRUTHUP-1 (2026-10-26):**
+  `describe_shows_timestamp_ns_and_timestamptz_ns` pins the spec names `timestamp_ns` and
+  `timestamptz_ns` that `describe_ddl_type_name` gives nanosecond columns, and the names it keeps for
+  the microsecond ones (`timestamp_ntz`, `timestamp`). pins: ns-truthup-1/C-004
 
 ## Pointers
 
