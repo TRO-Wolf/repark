@@ -324,6 +324,28 @@ where
     Ok(collected)
 }
 
+pub(crate) struct UpdatedRowsBudget {
+    bound: Option<ByteBound>,
+    held: usize,
+}
+
+impl UpdatedRowsBudget {
+    pub(crate) fn new(bounds: &ResourceBounds) -> Self {
+        Self {
+            bound: bounds.mor_updated(),
+            held: 0,
+        }
+    }
+
+    pub(crate) fn charge(&mut self, batches: &[RecordBatch]) -> Result<()> {
+        let Some(bound) = &self.bound else {
+            return Ok(());
+        };
+        self.held += batches.iter().map(counted_bytes).sum::<usize>();
+        bound.check(self.held)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
