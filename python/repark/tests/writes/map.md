@@ -206,6 +206,8 @@ no Spark behaviour changed.
 
 pins: ice-resource-bound-1/C-001, C-002, C-003, C-006, C-010, C-011
 
+pins: ice-resource-bound-1/C-013
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

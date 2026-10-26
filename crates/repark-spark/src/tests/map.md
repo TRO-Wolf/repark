@@ -2987,3 +2987,6 @@ pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 - `common.rs` — one `pub(super)` setup, `setup_v3_bounded`, which takes a runtime with the cell's pool. `mod.rs` — two `#[cfg(unix)]` module lines.
 
 pins: ice-resource-bound-1/C-001, C-002, C-003, C-004, C-007, C-008
+
+
+pins: ice-resource-bound-1/C-013
