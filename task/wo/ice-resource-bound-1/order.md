@@ -8,6 +8,39 @@ closeout plan's U-11 row, the 10-17 replan's U-11 text (unmerged branch, not ado
 rows PP-01, PP-02, PA-10 and PA-11, and the U-9 sketch §0. Paths read on main `08b65ff1`; nothing
 was run.
 
+**Step 0 outcome (2026-10-26).** The measurement is done and halts for the owner's rulings. No
+product code changed. The bound table is [evidence/step-0-bound-table-2026-10-26.md](evidence/step-0-bound-table-2026-10-26.md),
+with its JSON beside it: 261 cells on format v2 and v3, every cell under the 40 GiB scope, the
+largest process peak 14.1 GiB, and no cell reached the cap. The probe is
+[probe_bound.py](probe_bound.py).
+
+**Proposed bounds**, as the table's proposal lines state them (allowance = pool / 0.6; margins 1.14 / 1.15 / 1.12):
+
+- PP-01: ordered input Arrow bytes <= 0.10 x pool. Basis: growth/input <= 4.68 (4M rows, v2, 32 partitions, writers 1). At the 8 GiB default pool, 819 MiB.
+- PP-02: updated-row bytes (matched plus NOT MATCHED BY SOURCE) <= 0.05 x pool. Basis: growth minus pool >= 8.90 x target bytes (4M rows, v3, 10 % plus NOT MATCHED BY SOURCE, pool 2048 MiB). At the 8 GiB default pool, 410 MiB.
+- PA-11: changelog source Arrow bytes <= 0.0625 x pool. Basis: growth/source 7.38 to 7.83 on every cell. At the 8 GiB default pool, 512 MiB.
+
+**Orchestrator reproduction (2026-10-26).** One 4M-row cell per path: PP-01 statement growth 1,008 MiB against the lane's 1,006; PP-02 3,983 against 3,986; PA-11 1,700 against 1,707. All three are within 1 percent.
+
+**Census row (owner ruling 2026-10-22).** PP-01 is reached by D2, D3, D4, D5, D10 and D8 (copy-on-write). It is not reached by D1, whose fork sort is charged to the pool and refuses, nor by D6. PP-02 cells record D9 at runtime. Doors D14 to D21 are not reached from Python, per the notes. The WRITE-SPINE-1 ledger (C-009) names D14 as the bare-session `repark.sql()` door, so the owner should confirm that reading.
+
+**Spark 4.1.2 control (1 GiB driver, 4M rows).** The ordered write spills (304 MiB memory, 151 MiB disk) and the MERGE spills (736 MiB memory, 109 MiB disk). The changelog `LIMIT 10` needed no spill.
+
+**Questions for the owner (await the owner's ruling before step 2).** Premises and leans are the hand-back's.
+
+- **Q1, refusal error class and text.** Premise: order section 1, "not ruled". Lean: the same class as today's pool refusal (DataFusion `ResourcesExhausted`, which surfaces as `PySparkException`); the text names the statement kind, the estimate, F x pool and the key; no data-deleting action.
+- **Q2, session key and default.** Premise: not ruled. Lean: one fraction key per path, `repark.write.ordered.max-input-fraction` = 0.10, `repark.merge.mor.max-updated-fraction` = 0.05, `repark.changelog.max-source-fraction` = 0.0625; 0 means no bound. The alternative charges the drained input to the pool (PP-01 input <= ~0.24 x pool) with no new key.
+- **Q3, PA-10 close or declare.** Premise: measured in this nested scope, the root `memory.max` is absent, the leaf scope has 40 GiB, and the detector reads `/proc/meminfo` (125 GiB) and sets the 8 GiB pool. Lean: close for cgroup v2 (walk the leaf and its ancestors, take the minimum); declare for v1, macOS and Windows, with an explicit budget required.
+- **Q4, sizes multiple.** Premise: the closeout says 1x, 4x and 16x; the replan says the audit grids. Lean: 1x, 4x and 16x of the audit grids, as measured; no series reached the 40 GiB cap.
+- **Q5, pool peak reader for step 1 pins.** Premise: no session surface exposes `MemoryPool` reserved bytes or a high-water mark. Lean: the step 1 sketch names a test-visible reader, or the pins use refusal or commit at a chosen pool instead.
+
+**Out of scope, observed (from the hand-back):**
+
+- The static door classifier answers D8 for `MERGE ... UPDATE SET t.a = s.a`, and the runtime record answers D9. Carded as [WRITE-DOOR-CLASSIFIER-D8-D9-1](../../roadmap/mid-term/write-door-classifier-d8-d9-1-card-2026-10-26.md).
+- In-pool sorts refuse rather than spill under 32 to 512 MiB pools on this host. A 1M-row `ORDER BY` at 32 MiB refuses; the MoR MERGE target sort needs about 10 to 40 times the target bytes of pool.
+- The unordered 32-partition write grows 407 to 448 MiB at 1M rows (the PP-06 fan-out buffers).
+- The brief names `crates/repark-sql` for the door enum; the enum lives in `crates/repark-spark/src/write_door.rs`.
+
 ## 0. Why, and what is out of scope
 
 The v2 list asks for a stated resource bound (closeout plan, U-11): the ordered write (PP-01)

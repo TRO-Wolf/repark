@@ -218,6 +218,14 @@ A Spark-door `CREATE TABLE … USING parquet LOCATION '<outside>'` writes Iceber
 
 One DataFrame write to a path makes later SQL writes to that path allowed: `ReparkSession::note_local_write_root` registers every DataFrame write path as a local warehouse root. Read in the code on main, not run against Spark. Card: [LOCAL-FS-WRITE-ROOT-1](../../task/roadmap/mid-term/local-fs-write-root-1-card-2026-10-15.md) (open, not scheduled).
 
+### PA-10 — DATED ROW 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0)
+
+Measured 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0): in a nested cgroup v2 scope the root `memory.max` is absent and the leaf scope holds the cap (40 GiB). The detector reads the machine total from `/proc/meminfo` (125 GiB), so it sets the 8 GiB pool and does not read the leaf cap. By reading, not run, a nested 4 GiB cap would also give 8 GiB. Status unchanged; the owner rules the close-or-declare question ([order](../../task/wo/ice-resource-bound-1/order.md), step 0, question 3).
+
+### PA-11 — DATED ROW 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0)
+
+Measured 2026-10-26 (ICE-RESOURCE-BOUND-1 step 0): on the ci profile with debug assertions on, under a 40 GiB scope, the changelog view's statement RSS growth is 7.38 to 7.83 times the source bytes on all 12 cells (1M, 4M and 16M rows; v2 and v3; `SELECT id ... LIMIT 10` and `SELECT count(id)`). A `LIMIT 10` does not reduce it (16M rows: up to 6,732 MiB), and a 32 MiB pool never refused. Table: [step-0 bound table](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md). Status unchanged; the owner rules the bound.
+
 ## Conditional candidates requiring a focused follow-up
 
 ### PC-01 — optional cluster scheduler exposure

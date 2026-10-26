@@ -1053,6 +1053,7 @@ declines it (a dated ruling in the intake, then the archive).
   with one text and the old snapshot stands, under #1044's "refuses cleanly where it cannot
   spill"; PA-10 and PA-11 declared or closed. Follows U-9, whose kill pin keeps a crash and a
   refusal two pinned outcomes. Order under `task/wo/ice-resource-bound-1/`.
+- [write-door-classifier-d8-d9-1-card-2026-10-26.md](write-door-classifier-d8-d9-1-card-2026-10-26.md) — **card WRITE-DOOR-CLASSIFIER-D8-D9-1 (2026-10-26, open, clerk grade):** the static door classifier answers D8 for a MERGE `UPDATE SET t.a = s.a` where the per-session runtime record answers D9, found by the ICE-RESOURCE-BOUND-1 step 0 probe; retires when the two agree under a pin; linked to WRITE-SPINE-1.
 - [stack-linear-flake-1-card-2026-10-15.md](stack-linear-flake-1-card-2026-10-15.md) — **card
   STACK-LINEAR-FLAKE-1 (2026-10-15, open, not scheduled):**
   `test_stack_is_linear_in_columns` failed on CI (2026-10-15, facade shard 1,

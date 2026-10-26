@@ -1522,6 +1522,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   keep later live modules green (C-003); test-side only (C-004). `risk_tier: standard`.
   Branch `fix/parity-live-stop-1`.
   pins: parity-live-stop-1/C-001, C-002, C-003, C-004
+- [ice-resource-bound-1-ledger.md](ice-resource-bound-1-ledger.md) — **ICE-RESOURCE-BOUND-1 (U-11) step 0, 2026-10-26:** the measured bound table (261 cells on v2 and v3; largest process peak 14.1 GiB; no cell reached the 40 GiB cap) and three proposed bounds, each OPEN for the owner's ruling; the D8/D9 door mismatch is carded (C-005). Branch `feat/ice-resource-bound-1`.
 
 ## Pointers
 - Up: [../map.md](../map.md)
