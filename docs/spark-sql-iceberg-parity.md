@@ -3747,23 +3747,39 @@ still open is `isModifiable`.
   `task/ledgers/staging/zone-seam-1-ledger.md`.
 - **Status 2026-10-25 (GATE-RETIRE-1, PR #1187, fix round GR-9):** the container-cast arm (`casts_a_zoned_value_to_naive`, sketch arm A2) is measured load-bearing for container casts the zone seam does not rewrite (an arity mismatch or fields at different positions), so it is retained. The micros hint now says a CAST of the whole struct, array or map is refused unless its fields line up with the target's. The arm's retirement folds into WRITE-SPINE-1 step 4, and only once such casts are refused as Spark refuses them. The pins are ledger C-005 and the clause pin of C-002.
 
-### ICE-TSNS-SQL-1-R-012 — OPEN (measured 2026-10-09): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as malformed
+### ICE-TSNS-SQL-1-R-012 — FIXED 2026-10-16 (ICE-TSNS-TYPE-PLANNER-1, `c7121437`, PR #1082), measured and pinned 2026-10-26 (ICE-TSNS-UPDATE-RANGE-CLASS-1): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as INSERT does
 
-- **repark** — under ANSI, `UPDATE t SET v = TIMESTAMP '3000-01-01 00:00:00.000001+00:00'`
-  with no `WHERE` into a `timestamp_ns` column raises `[CAST_INVALID_INPUT] The value
+- **Status 2026-10-26 (ICE-TSNS-UPDATE-RANGE-CLASS-1, U-4):** FIXED, with no product change. The
+  planner fixed the path on 2026-10-16: `TIMESTAMP '…'` is planned as `CAST(text AS Timestamp(us, UTC))`,
+  so the peel stops at a cast the microsecond rule folds, and the kernel reports the range failure.
+  On main `9fd60149` and at head, all 16 cells report INSERT's `[CAST_OVERFLOW] The value 32503680000000001
+  of the type "TIMESTAMP" …` text byte for byte on the facade door and the Rust door, and the table keeps
+  its one row. The filtered `UPDATE` and the strict-off NULL cells are controls. Ledger
+  `task/ledgers/staging/ice-tsns-update-range-class-1-ledger.md`, clauses C-001 and C-002; the order's
+  outcome block is `task/wo/ice-tsns-update-range-class-1/order.md` §7.
+- **repark (measured 2026-10-09, before the fix)** — under ANSI, `UPDATE t SET v = TIMESTAMP '3000-01-01 00:00:00.000001+00:00'`
+  with no `WHERE` into a `timestamp_ns` column raised `[CAST_INVALID_INPUT] The value
   '3000-01-01 00:00:00.000001+00:00' of the type "STRING" cannot be cast to "TIMESTAMP_NS"
-  because it is malformed`, where `INSERT … VALUES` and `UPDATE … WHERE` raise
-  `[CAST_OVERFLOW] The value 32503680000000001 of the type "TIMESTAMP" …`: 16 measured cells
-  (two far literals in three zones and each zone's edge instant, both row-level modes). With
-  ANSI off all three store NULL. No value is mis-stored; main raised the raw Arrow
-  `arguments need to have the same data type`.
+  because it is malformed`, where `INSERT … VALUES` and `UPDATE … WHERE` raised
+  `[CAST_OVERFLOW]`: 16 measured cells (two far literals in three zones and each zone's edge
+  instant, both row-level modes). With ANSI off all three store NULL. No value is mis-stored;
+  main raised the raw Arrow `arguments need to have the same data type`.
 - **Apache Spark** — cannot write the type. *(oracle: documented — INSERT's class, as R-007.)*
-- **Pin** — none; the in-range value of the same statement is pinned by
-  `test_ice_tsns_merge_wall_1.py::test_update_with_no_where_stores_a_literal`.
-- **Rationale** — OPEN, dated 2026-10-09. The unfiltered `UPDATE` runs INSERT's conform, whose
-  planner-cast peel reaches the typed literal's string before the analyzer has typed it, so the
-  kernel parses text; `INSERT … VALUES` skips typed cells. Not the site of the two overflow
-  fixes of fold 1. Ledger clause C-020, question Q5.
+- **Pin** — `python/repark/tests/timestamps/test_ice_tsns_merge_wall_1.py`
+  `test_unfiltered_update_reports_inserts_overflow_class` (the 16 cells: mode × zone × literal, equal
+  to the INSERT cell's text). Controls: `test_filtered_update_reports_inserts_overflow_class` (the
+  same 16 inputs through `UPDATE … WHERE`), `test_out_of_range_literal_stores_null_without_ansi`,
+  `test_range_cases_are_the_sixteen_row_cells`, and `test_update_with_no_where_stores_a_literal` for
+  the in-range value. Rust door: `crates/repark-spark/tests/timestamp_ns_wall_doors.rs`
+  `an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update` (the same 16 cells).
+- **Rationale** — OPEN, dated 2026-10-09, now superseded by the status line above. The row's mechanism
+  (ledger C-020: the planner-cast peel reaches the typed literal's string before the analyzer types it)
+  held before ICE-TSNS-TYPE-PLANNER-1 and no longer holds. Ledger clause C-020, question Q5.
+- **Out of scope, observed 2026-10-26 (dated notes, no unit):** a bare far STRING past the range is
+  refused `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` by the unfiltered `UPDATE` at plan time,
+  where `INSERT` reports `[CAST_INVALID_INPUT]`; pre-existing and unchanged. An in-range 9-digit
+  `TIMESTAMP` literal stores the microsecond-truncated wall identically on `INSERT` and on the
+  unfiltered `UPDATE` (R-024's territory). The R-008 zoned mirror keeps its own unit and is unmeasured here.
 
 ### ICE-TSNS-SQL-1-R-013 — OPEN (measured 2026-10-09): the ANSI door resolves the nanosecond wall kernel by name
 
