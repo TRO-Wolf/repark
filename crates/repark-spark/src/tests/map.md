@@ -1,5 +1,18 @@
 # map — repark-spark/src/tests
 
+**ICE-REPLACE-KILL-DOORS-1 K-10 (2026-10-27, build `34b5e921`):** `kill_mid_write.rs` gains K-10,
+`CREATE OR REPLACE TABLE fault.sales.t USING iceberg AS SELECT …` with the session snapshot property
+`spark.sql.iceberg.snapshot-property.k` set (the K-2 key), on format v2 and v3:
+`k10_create_or_replace_with_a_session_write_key_killed_at_publish_v2` and `_v3`. The statement takes
+the CTAS options and session-key branch (`ctas.rs`, `finish_ctas_staged_commit`), which applies the
+overwrite locally and calls `publish_replace_table` directly. Its newest metadata file is `00003`,
+where K-8 and K-9 read `00002`. The cell asserts the K-8 reading (RKD-1 (a)), the parent's wait for
+`holding` with `returned` absent at the kill, and that the marker's attempted snapshot carries the key
+`k`, as K-2 does. The forward-instead-of-hold mutant reds 10 of 10 (5 runs by 2 cells) with
+`the child exited (exit status: 0) before the hold`. K-1 to K-9 and the controls are unchanged by this
+commit: its only removed line in `kill_mid_write.rs` is the `CELLS` length, 11 to 12. Pins for K-10 and
+its mutant sit in the ledger clauses named below. pins: ice-replace-kill-doors-1/C-009, C-010, C-011
+
 **ICE-REPLACE-KILL-DOORS-1 (2026-10-27, build `6585e4ac`, ruling RKD-1):** `kill_mid_write.rs`
 gains two cells on format v2 and v3: K-8 (`CREATE OR REPLACE TABLE fault.sales.t USING iceberg AS
 SELECT …` over the seeded table) and K-9 (`REPLACE TABLE … AS SELECT`, which the parser rewrites to
@@ -69,8 +82,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `commit_unknown_gate.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** `GateCatalog`, the test-only
   decorator that forwards or drops the commit, answers `CommitStateUnknown`, cuts reads and records the attempt.
 - `kill_mid_write.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22), ICE-REPLACE-KILL-DOORS-1
-  (2026-10-27):** the 22 kill cells (K-1 to K-9 on format v2 and v3, controls K-C0 and K-C1;
-  K-8 and K-9 are the replace doors), the child entry `kill_mid_write_child`, the reopen and the
+  (2026-10-27):** the 24 kill cells (K-1 to K-10 on format v2 and v3, controls K-C0 and K-C1;
+  K-8, K-9 and K-10 are the replace doors), the child entry `kill_mid_write_child`, the reopen and the
   orphan, dry-run and write checks; `#[cfg(unix)]`.
 - `kill_mid_write_release.rs` — **ICE-INTEGRITY-PINS-1 fix round 2 (2026-10-22):** how a held
   child ends without its parent's kill: the parent-gone pin and its intermediate, the pre-start
