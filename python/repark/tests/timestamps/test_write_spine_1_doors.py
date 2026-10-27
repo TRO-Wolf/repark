@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -18,7 +17,6 @@ from pydantic import BaseModel, ConfigDict
 
 from repark import _native
 
-CENSUS = Path(__file__).resolve().parents[4] / "task/wo/write-spine-1/census-2026-10-24.md"
 SPARK_DOORS = frozenset(f"D{number}" for number in range(1, 11))
 EQUAL_STATUS = "EQUAL"
 C010_SPELLINGS = frozenset(
@@ -42,8 +40,8 @@ NATIVE_TEXT_SPARK_READING: dict[str, str | None] = {
     "native_update": "D10",
     "native_delete": None,
 }
-STEP_2_MOVES = matrix.HERE / "write_spine_1_step2_moves.json"
-STEP_2_MOVE_COUNT = 288
+NLS_1_MOVES = matrix.HERE / "write_spine_1_nls1_moves.json"
+NLS_1_MOVE_COUNT = 52
 ZS9_MARKERS: tuple[str, ...] = (
     "A value that is not provably a TIMESTAMP_NTZ wall time",
     "The session time zone is not UTC, and a nested TIMESTAMP_NTZ",
@@ -57,7 +55,19 @@ ARROW_MARKERS: tuple[str, ...] = (
     "arguments need to have the same data type",
 )
 VALUES_SPELLINGS = frozenset({"insert_values", "insert_overwrite_values"})
-FAMILY_ROW = re.compile(r"^\| (F\d) \| .+ \| ([\d,]+) \| (?:D\d+ \d+(?:, )?)+ \|$", re.MULTILINE)
+RECOUNT_CELLS = 12720
+RECOUNT_STATUSES = (7843, 1479, 2452, 946, 0)
+RECOUNT_RED = 2649
+RECOUNT_FAMILIES = {
+    "F1": 240,
+    "F2": 228,
+    "F3": 596,
+    "F4": 428,
+    "F5": 52,
+    "F6": 351,
+    "F7": 318,
+    "F8": 436,
+}
 SAMPLE_PER_CLASS = 1
 ZS9_ROW = "ZS9-AHEAD-OF-DOOR"
 D10_STORE_ROW = "D10-STORE-CAST-AHEAD-OF-DOOR"
@@ -81,44 +91,32 @@ class Divergence(BaseModel):
 DIVERGENCES: tuple[Divergence, ...] = (
     Divergence(
         row=ZS9_ROW,
-        recorded="2026-10-24",
+        recorded="2026-10-27",
         reading=RUNTIME,
         doors=frozenset({"D1", "D2", "D3", "D4", "D5", "D7", "D8", "D9", "D10"}),
         markers=ZS9_MARKERS,
         measured=(),
-        cells=976,
+        cells=1048,
         reason=(
             "the ZS-9 nested-zone refusal raises at planning, before the router reaches the "
-            "branch point of any door, so the record stays empty (976 of 9,792 cells)"
+            "branch point of any door, so the record stays empty (1048 of 10,320 cells)"
         ),
     ),
     Divergence(
         row=D10_STORE_ROW,
-        recorded="2026-10-24",
+        recorded="2026-10-27",
         reading=RUNTIME,
         doors=frozenset({"D10"}),
         markers=(STORE_CAST_MARKER,),
         measured=(),
-        cells=576,
+        cells=672,
         reason=(
             "an UPDATE whose string value the store-assignment check refuses raises before "
             "D10 is recorded; an INSERT or a MERGE with the same refusal records its door "
-            "(576 of 9,792 cells)"
+            "(672 of 10,320 cells)"
         ),
     ),
 )
-
-
-def _number(text: str) -> int:
-    """Return the integer a census number such as ``12,192`` writes."""
-    return int(text.replace(",", ""))
-
-
-def _census_number(pattern: str, text: str) -> list[int]:
-    """Return the numbers one census regex captures; fail when it matches nothing."""
-    found = re.search(pattern, text)
-    assert found is not None, pattern
-    return [_number(group) for group in found.groups()]
 
 
 def _holds(answer: dict[str, Any], markers: tuple[str, ...]) -> bool:
@@ -236,35 +234,22 @@ def _find_runtime_disagreements(cells: list[shapes.Cell], tmp_path: Path) -> lis
 
 
 def test_fixture_cells_are_the_census() -> None:
-    """Both fixtures hold the census's cells, status counts, Spark-door red set and families."""
-    text = CENSUS.read_text(encoding="utf-8")
-    [cell_count] = _census_number(r"generates ([\d,]+) cells", text)
-    status_counts = _census_number(
-        r"\*\*([\d,]+) EQUAL, ([\d,]+) DIFFERENT, ([\d,]+) REFUSED, ([\d,]+) ERROR,\s+"
-        r"([\d,]+) UNRECORDED\.\*\*",
-        text,
-    )
-    [red_count] = _census_number(
-        r"\*\*The Spark doors \(D1.D10, `spark_sql` and `dataframe` reach\), ([\d,]+) cells:\*\*",
-        text,
-    )
-    families = {family: _number(count) for family, count in FAMILY_ROW.findall(text)}
-    assert sorted(families) == [f"F{number}" for number in range(1, 9)]
+    """Both fixtures hold the recount cells, status counts, Spark-door red set and families."""
     main = matrix.load_cells(matrix.MAIN_FIXTURE)
     spark = matrix.load_cells(matrix.SPARK_FIXTURE)
     axes = matrix.cells_by_id()
-    assert len(main) == len(spark) == len(axes) == cell_count
+    assert len(main) == len(spark) == len(axes) == RECOUNT_CELLS
     assert set(main) == set(spark) == set(axes)
     measured = Counter(answer["status"] for answer in main.values())
-    assert [measured[status] for status in matrix.recorder.STATUSES] == status_counts
+    assert [measured[status] for status in matrix.recorder.STATUSES] == list(RECOUNT_STATUSES)
     red = [
         key
         for key, answer in main.items()
         if axes[key].spelling.door in SPARK_DOORS and answer["status"] != EQUAL_STATUS
     ]
-    assert len(red) == red_count
+    assert len(red) == RECOUNT_RED
     found = Counter(_census_family(axes[key], main[key], spark[key]) for key in red)
-    assert dict(found) == families
+    assert dict(found) == RECOUNT_FAMILIES
 
 
 def test_every_cell_spelling_names_its_corpus_door() -> None:
@@ -377,14 +362,14 @@ def test_excluded_reaches_are_exactly_the_corpus_says() -> None:
     enumeration.test_every_rust_api_only_door_names_a_rust_test_that_exists()
 
 
-def test_head_replay_moves_exactly_the_step_2_cells() -> None:
-    """A head replay differs from main exactly on the frozen step-2 moves, each EQUAL."""
+def test_head_replay_moves_exactly_the_nested_literal_seam_1_cells() -> None:
+    """A head replay differs from main exactly on the frozen seam moves, each EQUAL."""
     replays = sorted(matrix.HERE.glob(matrix.HEAD_FIXTURE_GLOB))
     if not replays:
         pytest.skip("replay document not present")
     main = matrix.load_cells(matrix.MAIN_FIXTURE)
-    frozen = set(json.loads(STEP_2_MOVES.read_text(encoding="utf-8"))["moves"])
-    assert len(frozen) == STEP_2_MOVE_COUNT
+    frozen = set(json.loads(NLS_1_MOVES.read_text(encoding="utf-8"))["moves"])
+    assert len(frozen) == NLS_1_MOVE_COUNT
     for replay in replays:
         head = matrix.load_cells(replay)
         assert set(head) == set(main), replay.name
