@@ -26,7 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from _write_spine_1_spellings import FIELD_TARGETS, Spelling, measured_spellings
+from _write_spine_1_spellings import FIELD_TARGETS, KEY_TARGETS, Spelling, measured_spellings
 from _zone_oracle_1_corpus import COLUMNS, LITERALS, SHAPES, TARGETS, ZONE_TAGS
 from pydantic import BaseModel, ConfigDict
 
@@ -60,22 +60,29 @@ class Target(BaseModel):
 
     container: str
     leaf: str
+    key_packed: bool = False
 
     @property
     def tag(self) -> str:
         """Return the target's id part, such as ``struct_ntz``."""
+        if self.key_packed:
+            return f"map_{self.leaf}_key"
         return f"{self.container}_{self.leaf}"
 
     @property
     def sql_type(self) -> str:
         """Return the column type of the target table."""
         leaf_type = TARGETS[self.leaf]
+        if self.key_packed:
+            return f"MAP<{leaf_type}, STRING>"
         if self.container == "leaf":
             return leaf_type
         return SHAPES[self.container].cast_type.replace("{t}", leaf_type)
 
     def pack(self, value: str) -> str:
         """Return ``value`` wrapped in this target's container."""
+        if self.key_packed:
+            return f"map({value}, 'x')"
         if self.container == "leaf":
             return value
         return SHAPES[self.container].wrap.replace("{x}", value)
@@ -112,6 +119,11 @@ def targets() -> list[Target]:
     return [
         Target(container=container, leaf=leaf) for container in CONTAINERS for leaf in LEAF_TAGS
     ]
+
+
+def key_targets() -> list[Target]:
+    """Return the key-packed map targets, whose timestamp is the key."""
+    return [Target(container="map", leaf=leaf, key_packed=True) for leaf in LEAF_TAGS]
 
 
 def is_column(source: str) -> bool:
@@ -186,6 +198,8 @@ def modes_of(spelling: Spelling) -> tuple[str, ...]:
 
 def targets_of(spelling: Spelling) -> list[Target]:
     """Return the targets a spelling writes."""
+    if spelling.targets == KEY_TARGETS:
+        return key_targets()
     every = targets()
     if spelling.targets == FIELD_TARGETS:
         return [target for target in every if target.container in FIELD_CONTAINERS]

@@ -2,7 +2,9 @@
 
 **Date:** 2026-10-25. **Filed by:** the WRITE-SPINE-1 step (2) clerk round (`claude-haiku-5-5`), from findings F-2 and F-3 and ruling WS2-25 (orchestrator, 2026-10-25).
 
-**Status:** open. Fold before step (4), by WS2-25. Grade C (clerk): no build order is written.
+**Status:** closed 2026-10-27 by NESTED-LITERAL-SEAM-1 (folded before step (4), by WS2-25, as filed).
+
+**Closed 2026-10-27** by NESTED-LITERAL-SEAM-1, ledger [nested-literal-seam-1-ledger.md](../../ledgers/staging/nested-literal-seam-1-ledger.md): rows C-001 to C-011 and C-013 to C-016 PROVEN at fix-round head `5076bdfb`; C-012 OPEN (the D8 CAST and TRY_CAST forms stay ZS-9-refused, a step (4) question). The measured move set is 52 cells, not the 328 projected by the Retires line below; ledger C-013 records the count correction.
 
 **Why:** step (2)'s site-B rewrite seams only an `arrow_cast` whose argument reads a column. Two measured failures set that limit. (F-2) On D8, a nested literal under the row-merge CASE failed with `column types must match schema types`, because the projected list loses its `PARQUET:field_id` metadata under the volatile UDF; 24 of those 40 cells were EQUAL on main. (F-3) A constant nested value seamed outside a CASE stored `TRY_CAST(instant AS TIMESTAMP_NTZ)` as the UTC wall, and the seam then read it in New York, so the existing pin `a_plain_update_whose_only_naive_leaf_is_a_try_cast_stores_spark_instant` failed. The cause of F-2 was not found inside the step's budget.
 

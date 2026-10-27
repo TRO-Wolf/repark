@@ -174,9 +174,10 @@ fn partial_type(source: &DataType, target: &DataType) -> Option<DataType> {
             if sources.len() != 2 || targets.len() != 2 {
                 return None;
             }
+            let (key, keyed) = converted_field(&sources[0], &targets[0]);
             let (value, converted) = converted_field(&sources[1], &targets[1]);
-            let entries = DataType::Struct(Fields::from(vec![sources[0].as_ref().clone(), value]));
-            converted.then(|| {
+            let entries = DataType::Struct(Fields::from(vec![key, value]));
+            (keyed || converted).then(|| {
                 DataType::Map(
                     Arc::new(Field::new(source.name(), entries, source.is_nullable())),
                     *sorted,
@@ -436,9 +437,9 @@ fn convert(
                     "'{ZONE_SEAM_NAME}' needs map entries, got {entries}"
                 )));
             };
+            let keys = convert(map.keys(), fields[0].data_type(), try_cast, config)?;
             let values = convert(map.values(), fields[1].data_type(), try_cast, config)?;
-            let pairs =
-                StructArray::try_new(fields.clone(), vec![Arc::clone(map.keys()), values], None)?;
+            let pairs = StructArray::try_new(fields.clone(), vec![keys, values], None)?;
             Ok(Arc::new(MapArray::try_new(
                 Arc::clone(entries),
                 map.offsets().clone(),

@@ -72,6 +72,15 @@ def micros(value: datetime.datetime) -> int:
     return (value - EPOCH_AWARE) // ONE_MICROSECOND
 
 
+def render_key(key: Any) -> Any:
+    """Render a map key as JSON: timestamps in microseconds, anything else as text."""
+    if isinstance(key, datetime.datetime):
+        return micros(key)
+    if isinstance(key, datetime.date):
+        return key.isoformat()
+    return str(key)
+
+
 def render_value(value: Any) -> Any:
     """Render a collected value as JSON: timestamps in microseconds, dates in ISO text."""
     if isinstance(value, datetime.datetime):
@@ -79,7 +88,7 @@ def render_value(value: Any) -> Any:
     if isinstance(value, datetime.date):
         return value.isoformat()
     if isinstance(value, dict):
-        return {str(key): render_value(item) for key, item in value.items()}
+        return {render_key(key): render_value(item) for key, item in value.items()}
     if hasattr(value, "asDict"):
         return {key: render_value(item) for key, item in value.asDict(recursive=False).items()}
     if isinstance(value, (list, tuple)):
@@ -101,7 +110,7 @@ def render_arrow(value: Any, arrow_type: Any) -> Any:
     if value is None:
         return None
     if pa.types.is_map(arrow_type):
-        return {str(key): render_arrow(item, arrow_type.item_type) for key, item in value}
+        return {render_key(key): render_arrow(item, arrow_type.item_type) for key, item in value}
     if pa.types.is_struct(arrow_type):
         return {field.name: render_arrow(value[field.name], field.type) for field in arrow_type}
     if pa.types.is_list(arrow_type) or pa.types.is_large_list(arrow_type):

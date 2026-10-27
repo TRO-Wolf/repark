@@ -4,6 +4,13 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
+  (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
+  (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of
+  such a map and the D10 `TRY_CAST` date and wall leaves reach the session-zone seam. 16 of 17
+  clauses PROVEN (C-012 OPEN: the D8 CAST forms stay ZS-9-refused).
+  The census grows to 43 spellings and 12,720 cells: 52 moves, all DIFFERENT to EQUAL, zero
+  regressions; the worst cost ratio is 1.034. `risk_tier: standard`. Branch `feat/nested-literal-seam-1`.
 - [ice-replace-kill-doors-1-ledger.md](ice-replace-kill-doors-1-ledger.md) —
   **ICE-REPLACE-KILL-DOORS-1 (2026-10-27), grade B:** kill-mid-write pins K-8 and K-9 for the two
   replace spellings on the local catalog, format v2 and v3; the forward-instead-of-hold mutant red
@@ -227,7 +234,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   door-table correction (C-009 PROVEN), the static classifier and the runtime door record
   (C-010, C-011 PROVEN), Rust tests for the Rust-library doors (C-012 PROVEN), two fail-open
   rows of `zone_store_frame` (C-007, C-008 OPEN). `risk_tier: standard`. Branch
-  `feat/write-spine-1-steps-1-3a`.
+  `feat/write-spine-1-steps-1-3a`. Step (2) closures (2026-10-27): C-026 and the P25 gap close by
+  citation to NESTED-LITERAL-SEAM-1; dated lines at the end of the ledger.
 - [zone-horizon-render-1-ledger.md](zone-horizon-render-1-ledger.md) +
   [zone-horizon-render-1-main-answers.json](zone-horizon-render-1-main-answers.json) —
   **ZONE-HORIZON-RENDER-1 (2026-10-08), from the C-2d fold 1 re-verify's S2 finding:** an
