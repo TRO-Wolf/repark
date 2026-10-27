@@ -37,7 +37,7 @@ pub(super) struct Cell {
     orphans: [usize; 5],
 }
 
-const CELLS: [Cell; 11] = [
+const CELLS: [Cell; 12] = [
     Cell {
         id: "K-1",
         props: "",
@@ -118,6 +118,16 @@ const CELLS: [Cell; 11] = [
         statement: "REPLACE TABLE fault.sales.t USING iceberg \
                     AS SELECT id + 30 AS id, name FROM src",
         session_key: false,
+        mode: HoldMode::Hold,
+        creates: false,
+        orphans: [0, 0, 0, 0, 0],
+    },
+    Cell {
+        id: "K-10",
+        props: "",
+        statement: "CREATE OR REPLACE TABLE fault.sales.t USING iceberg \
+                    AS SELECT id + 30 AS id, name FROM src",
+        session_key: true,
         mode: HoldMode::Hold,
         creates: false,
         orphans: [0, 0, 0, 0, 0],
@@ -911,6 +921,16 @@ async fn k9_replace_as_select_killed_at_publish_reads_replaced_on_the_local_cata
 #[tokio::test(flavor = "multi_thread")]
 async fn k9_replace_as_select_killed_at_publish_reads_replaced_on_the_local_catalog_v3() {
     kill_cell("K-9", 3).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k10_create_or_replace_with_a_session_write_key_killed_at_publish_v2() {
+    kill_cell("K-10", 2).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k10_create_or_replace_with_a_session_write_key_killed_at_publish_v3() {
+    kill_cell("K-10", 3).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
