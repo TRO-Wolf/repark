@@ -35,6 +35,7 @@ NONE = "none"
 REACHES: tuple[str, ...] = (SPARK_SQL, DATAFRAME, NATIVE_SQL, RUST_API, NONE)
 ALL_TARGETS = "all"
 FIELD_TARGETS = "field"
+KEY_TARGETS = "key"
 SEED_NULL = "INSERT INTO {table} (id, v, k) VALUES (1, {null}, 0)"
 SEED_SIBLING = "INSERT INTO {table} SELECT 1, {null}, 0, {src}{from}"
 SEED_TWO_ROWS = "INSERT INTO {table} SELECT 1, {value_src}, 0{from} UNION ALL SELECT 2, {null}, 0"
@@ -352,6 +353,21 @@ ADDED_SPELLINGS: tuple[Spelling, ...] = (
         seed=SEED_TWO_ROWS,
     ),
     Spelling(name="microbatch_sink", door="D21", template="", reach=NONE, row_level_mode=False),
+    _sql(
+        "update_whole_where_part",
+        "D10",
+        "UPDATE {table} SET v = {value_bare} WHERE k = 0",
+        row_level_mode=True,
+        seed=SEED_NULL,
+        partitioned=True,
+    ),
+    _sql(
+        "insert_map_key",
+        "D3",
+        "INSERT INTO {table} BY NAME SELECT 0 AS k, {value_src} AS v, 1 AS id{from}",
+        row_level_mode=False,
+        targets=KEY_TARGETS,
+    ),
 )
 
 SPELLINGS: tuple[Spelling, ...] = (*PROBE_SPELLINGS, *ADDED_SPELLINGS)
