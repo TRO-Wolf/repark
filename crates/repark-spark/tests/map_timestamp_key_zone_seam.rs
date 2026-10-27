@@ -173,6 +173,49 @@ async fn map_date_keys_store_the_session_midnight_through_insert_by_name() {
     assert_eq!(wrong, Vec::<String>::new());
 }
 
+const KEY_STORES: [(&str, &str); 3] = [
+    (
+        "update literal",
+        "UPDATE ice.ns.t SET v = map(DATE '2026-01-02', 'x') WHERE id >= 0",
+    ),
+    (
+        "merge literal",
+        "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET \
+         t.v = map(DATE '2026-01-03', 'y')",
+    ),
+    (
+        "merge column",
+        "MERGE INTO ice.ns.t t USING ice.ns.src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET \
+         t.v = map(s.c_date, 'z')",
+    ),
+];
+
+#[tokio::test]
+async fn map_date_keys_store_the_session_midnight_through_update_and_merge() {
+    let mut wrong = Vec::new();
+    for (zone, expected, next) in TWO_DATE_KEYS {
+        let session = session(zone);
+        let _warehouse = catalog(&session).await;
+        run(&session, "INSERT INTO ice.ns.t VALUES (1, NULL, 0)").await;
+        for ((source, write), want) in KEY_STORES.into_iter().zip([expected, next, expected]) {
+            if let Err(error) = attempt(&session, write).await {
+                wrong.push(format!("{zone} / {source}: {error}"));
+                continue;
+            }
+            let keys = tick_lists(
+                &session,
+                "SELECT transform(map_keys(v), x -> unix_micros(x)) AS k FROM ice.ns.t ORDER BY \
+                 id",
+            )
+            .await;
+            if keys != vec![vec![Some(want)]] {
+                wrong.push(format!("{zone} / {source}: {keys:?}"));
+            }
+        }
+    }
+    assert_eq!(wrong, Vec::<String>::new());
+}
+
 #[tokio::test]
 async fn map_key_casts_on_the_read_path_answer_spark_values() {
     let mut wrong = Vec::new();
