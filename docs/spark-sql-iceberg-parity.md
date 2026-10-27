@@ -100,7 +100,7 @@ exists to prevent, and every refusal message names the section it is recorded in
   `partitions` and `position_deletes` answer the snapshot the `AS OF` value resolves to on the
   base table (unknown numeric ids answer empty); the five `all_*` tables refuse with Spark's
   `Cannot select snapshot in table: <TYPE>` text. A query that joins a metadata table to a
-  time-travelled *base* table never touched this path.
+  time-travelled *base* table never touched this path. **2026-10-27 (RP-60 verification):** on the in-crate `ReparkSession` Spark door, the unquoted current-snapshot read `cat.ns.t.<meta>` (no `VERSION AS OF`) fails to parse, while the quoted and `VERSION AS OF` spellings answer; the failure is the same at both RP-60 pins, so it is not a regression. It is carded as META-TABLE-UNQUOTED-READ-1 (P3, not dispatched).
 - **Apache Spark** — accepts the dotted metadata-table reference as a queryable relation and
   answers per the same per-type rules; the `all_*` tables refuse with
   `UnsupportedOperationException: Cannot select snapshot in table: <TYPE>`.
