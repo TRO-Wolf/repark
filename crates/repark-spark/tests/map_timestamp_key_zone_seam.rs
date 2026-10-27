@@ -18,7 +18,11 @@ const WALL_KEYS: [(&str, i64); 2] = [
     (KOLKATA, 1_767_303_245_123_456),
 ];
 const NTZ_KEYS: [(&str, &str, i64); 2] = [
-    (NEW_YORK, "2026-01-01 22:04:05.123456", 1_767_305_045_123_456),
+    (
+        NEW_YORK,
+        "2026-01-01 22:04:05.123456",
+        1_767_305_045_123_456,
+    ),
     (KOLKATA, "2026-01-02 08:34:05.123456", 1_767_342_845_123_456),
 ];
 const TWO_DATE_KEYS: [(&str, i64, i64); 2] = [
@@ -149,9 +153,8 @@ async fn map_date_keys_store_the_session_midnight_through_insert_by_name() {
         for (source, value, from) in KEY_WRITES {
             let session = session(zone);
             let _warehouse = catalog(&session).await;
-            let write = format!(
-                "INSERT INTO ice.ns.t BY NAME SELECT 0 AS k, {value} AS v, 1 AS id{from}"
-            );
+            let write =
+                format!("INSERT INTO ice.ns.t BY NAME SELECT 0 AS k, {value} AS v, 1 AS id{from}");
             if let Err(error) = attempt(&session, &write).await {
                 wrong.push(format!("{zone} / {source}: {error}"));
                 continue;
