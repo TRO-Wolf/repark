@@ -23,6 +23,8 @@ const INSERT: &str = "INSERT INTO fault.sales.t SELECT id + 10, name FROM src";
 const MERGE_ON_READ: &str = ", 'write.merge.mode' = 'merge-on-read', \
                              'write.delete.mode' = 'merge-on-read', \
                              'write.update.mode' = 'merge-on-read'";
+const HOLDING: &str = "holding";
+const RETURNED: &str = "returned";
 const KINDS: [&str; 5] = ["data", "deletes", "manifests", "lists", "metadata"];
 
 pub(super) struct Cell {
@@ -35,7 +37,7 @@ pub(super) struct Cell {
     orphans: [usize; 5],
 }
 
-const CELLS: [Cell; 9] = [
+const CELLS: [Cell; 12] = [
     Cell {
         id: "K-1",
         props: "",
@@ -101,6 +103,36 @@ const CELLS: [Cell; 9] = [
         orphans: [0, 0, 0, 0, 0],
     },
     Cell {
+        id: "K-8",
+        props: "",
+        statement: "CREATE OR REPLACE TABLE fault.sales.t USING iceberg \
+                    AS SELECT id + 30 AS id, name FROM src",
+        session_key: false,
+        mode: HoldMode::Hold,
+        creates: false,
+        orphans: [0, 0, 0, 0, 0],
+    },
+    Cell {
+        id: "K-9",
+        props: "",
+        statement: "REPLACE TABLE fault.sales.t USING iceberg \
+                    AS SELECT id + 30 AS id, name FROM src",
+        session_key: false,
+        mode: HoldMode::Hold,
+        creates: false,
+        orphans: [0, 0, 0, 0, 0],
+    },
+    Cell {
+        id: "K-10",
+        props: "",
+        statement: "CREATE OR REPLACE TABLE fault.sales.t USING iceberg \
+                    AS SELECT id + 30 AS id, name FROM src",
+        session_key: true,
+        mode: HoldMode::Hold,
+        creates: false,
+        orphans: [0, 0, 0, 0, 0],
+    },
+    Cell {
         id: "K-C0",
         props: "",
         statement: INSERT,
@@ -147,6 +179,10 @@ pub(super) fn cell(id: &str) -> &'static Cell {
         .iter()
         .find(|cell| cell.id == id)
         .unwrap_or_else(|| panic!("no cell {id}"))
+}
+
+fn replaces(cell: &Cell) -> bool {
+    cell.statement.contains("REPLACE TABLE")
 }
 
 fn table_name(cell: &Cell) -> &'static str {
@@ -438,7 +474,10 @@ async fn run_child_to_the_hold(cell: &Cell, format: u8, root: &Path) -> Marker {
     let id = cell.id;
     let marker_path = root.join("marker");
     let mut child = spawn_child(cell, format, root);
-    let early_exit = await_marker_or_exit(&mut child, &marker_path, root).await;
+    let mut early_exit = await_marker_or_exit(&mut child, &marker_path, root).await;
+    if replaces(cell) && early_exit.is_none() {
+        early_exit = await_marker_or_exit(&mut child, &root.join(HOLDING), root).await;
+    }
     let status = match (cell.mode, early_exit) {
         (HoldMode::Forward, None) => await_exit(&mut child, root).await,
         (HoldMode::Forward, Some(status)) => status,
@@ -469,6 +508,13 @@ async fn run_child_to_the_hold(cell: &Cell, format: u8, root: &Path) -> Marker {
             "{id} v{format}: the child must die of SIGKILL at the hold, got {status}"
         );
     }
+    if replaces(cell) {
+        assert!(
+            !root.join(RETURNED).exists(),
+            "{id} v{format}: the statement must not return before the kill\n{}",
+            child_output(root)
+        );
+    }
     let marker = read_marker(&marker_path);
     assert_eq!(
         marker.snapshots.len(),
@@ -481,6 +527,38 @@ async fn run_child_to_the_hold(cell: &Cell, format: u8, root: &Path) -> Marker {
         "{id} v{format}: the session snapshot property marks the routed append"
     );
     marker
+}
+
+async fn assert_replaced(
+    id: &str,
+    format: u8,
+    pre: &State,
+    reopened: &State,
+    marker: &Marker,
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+) {
+    let attempted = *marker.snapshots.iter().next().expect("one attempted id");
+    assert_eq!(
+        reopened.metadata,
+        local_path(&newest_metadata(&marker.location)),
+        "{id} v{format}: the staged replace metadata file is the newest"
+    );
+    assert_eq!(
+        reopened.current,
+        Some(attempted),
+        "{id} v{format}: replaced"
+    );
+    let mut expected = pre.snapshots.clone();
+    expected.insert(attempted);
+    assert_eq!(reopened.snapshots, expected, "{id} v{format}: snapshot set");
+    let source = rows_of(
+        ctx,
+        catalogs,
+        "SELECT id + 30 AS id, name FROM src ORDER BY id",
+    )
+    .await;
+    assert_eq!(reopened.rows, source, "{id} v{format}: every replace row");
 }
 
 async fn assert_reopened(
@@ -496,6 +574,9 @@ async fn assert_reopened(
     let newest = newest_metadata(&marker.location);
     let id = cell.id;
     match (pre, cell.mode) {
+        (Some(pre), HoldMode::Hold) if replaces(cell) => {
+            assert_replaced(id, format, pre, reopened, marker, ctx, catalogs).await;
+        }
         (Some(pre), HoldMode::Hold) => {
             assert_eq!(
                 reopened.metadata, pre.metadata,
@@ -609,7 +690,7 @@ async fn assert_orphans(
             );
         }
     }
-    if cell.mode == HoldMode::Hold && !cell.creates {
+    if cell.mode == HoldMode::Hold && !cell.creates && !replaces(cell) {
         let written: BTreeSet<String> = marker.files.keys().cloned().collect();
         assert_eq!(
             orphans, written,
@@ -747,6 +828,9 @@ async fn kill_mid_write_child() {
         set_session_conf(&ctx, SESSION_KEY, "v");
     }
     run(&ctx, &catalogs, &cell.statement.replace("{format}", format)).await;
+    if replaces(cell) {
+        std::fs::write(root.join(RETURNED), "returned").expect("write the returned file");
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -817,6 +901,36 @@ async fn k7_ctas_killed_at_publish_reads_created_on_the_local_catalog_v2() {
 #[tokio::test(flavor = "multi_thread")]
 async fn k7_ctas_killed_at_publish_reads_created_on_the_local_catalog_v3() {
     kill_cell("K-7", 3).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k8_create_or_replace_as_select_killed_at_publish_reads_replaced_on_the_local_catalog_v2() {
+    kill_cell("K-8", 2).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k8_create_or_replace_as_select_killed_at_publish_reads_replaced_on_the_local_catalog_v3() {
+    kill_cell("K-8", 3).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k9_replace_as_select_killed_at_publish_reads_replaced_on_the_local_catalog_v2() {
+    kill_cell("K-9", 2).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k9_replace_as_select_killed_at_publish_reads_replaced_on_the_local_catalog_v3() {
+    kill_cell("K-9", 3).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k10_create_or_replace_with_a_session_write_key_killed_at_publish_v2() {
+    kill_cell("K-10", 2).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn k10_create_or_replace_with_a_session_write_key_killed_at_publish_v3() {
+    kill_cell("K-10", 3).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]

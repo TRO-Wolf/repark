@@ -40,6 +40,9 @@ them.
 - [write-body-carriers-1/](write-body-carriers-1/map.md) — **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** the CTAS-with-write-body measurements (Spark cells, main cells, the seam note); measurement only, no product code.
 - [ice-spark-cross-read-1/](ice-spark-cross-read-1/map.md) — **ICE-SPARK-CROSS-READ-1 (U-10, 2026-10-14):** Spark reads what RePark writes (tests only): the shared cross-read helper, the local leg green on live Spark, the AWS leg written but not run, and the order carrying the workflow step the owner wires.
 - [ice-integrity-pins-1/](ice-integrity-pins-1/map.md) — **ICE-INTEGRITY-PINS-1 (U-9, 2026-10-14):** the Opus sketch of the three integrity pins (kill mid-write, the unknown commit outcome live on Glue and S3 Tables, v1.5.4 against the head), with the local measurements and the workflow change proposed to the owner; docs only.
+- [ice-replace-kill-doors-1/](ice-replace-kill-doors-1/map.md) — **ICE-REPLACE-KILL-DOORS-1, grade B (release 1.5.6, 2026-10-27):**
+  kill-mid-write pins K-8 and K-9 for the two replace spellings on the local catalog, format v2 and v3; the order, the step-0 outcome and
+  ruling RKD-1, and the builder's measured record in the unit ledger.
 - [explain-dml-write-1/](explain-dml-write-1/map.md) — **EXPLAIN-DML-WRITE-1, grade B (2026-10-20, awaits the owner's adopt of the 2026-10-20 plan, P3):** `EXPLAIN ANALYZE` of DML and `PREPARE` of a write refuse on every door (rulings 136, 138, 139); one shared refusal beside 106's walk, one call per door, the step-0 sketch first; Opus 5.5 build, one scoped Opus 5.5 verifier. Documents only.
 - [write-spine-1/](write-spine-1/map.md) — **WRITE-SPINE-1 records (card 2026-10-22):** the
   read-only CRATE-BOUNDARY-EVAL-1 of 2026-10-22 (crate ownership, straddling rules, the 18 write

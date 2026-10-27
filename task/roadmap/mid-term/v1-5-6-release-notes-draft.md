@@ -109,6 +109,12 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **An unfiltered `UPDATE` of an out-of-range `TIMESTAMP` literal reports INSERT's overflow (ICE-TSNS-UPDATE-RANGE-CLASS-1, R-012).** Under ANSI the statement refuses with `[CAST_OVERFLOW]` and INSERT's text, as ICE-TSNS-TYPE-PLANNER-1 left it in v1.5.5; this release pins the 16 cells and changes no stored value or refusal.
 
+- **The Spark SQL door's replace statements are pinned for a writer killed at the publish
+  (ICE-REPLACE-KILL-DOORS-1, test only).** `CREATE OR REPLACE TABLE … AS SELECT`, with or without a
+  session write key, and `REPLACE TABLE … AS SELECT` are pinned on format v2 and v3 on the local
+  catalog: the table reads back as replaced, with no orphan. The native door's replace is not yet
+  pinned. No stored value changes.
+
 ## Known issues
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-17):** `repark.sql()` refuses

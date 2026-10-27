@@ -1175,7 +1175,7 @@ perfectly good read.
 - **Apache Spark** — Iceberg's `HadoopCatalog` has no pointer outside the file system either: a
   table is its highest-versioned metadata file (`version-hint.text` is a hint), so a metadata
   file once written is the commit. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests/kill_mid_write.rs` (18 cells: `INSERT … SELECT`,
+- **Pin** — `crates/repark-spark/src/tests/kill_mid_write.rs` (18 cells as of 2026-10-22, 24 as of 2026-10-27 with the replace doors, see the dated line below: `INSERT … SELECT`,
   the same with a session write key, `INSERT OVERWRITE`, `MERGE` copy-on-write and
   merge-on-read, `DELETE`, CTAS, each on format v2 and v3, and the controls K-C0 and K-C1, all
   in a killed child process), with the test-only hold decorator in `kill_mid_write_hold.rs`.
@@ -1184,6 +1184,15 @@ perfectly good read.
   follow the catalog pointer, and the AWS drill pins that." Ruling 82 sets the orphan ceiling;
   the CTAS answer is orchestrator ruling K-1 (2026-10-22, under the owner's grant). A durable
   pointer for the local catalog is out of scope (the U-9 sketch §0).
+- **Replace doors (2026-10-27, ICE-REPLACE-KILL-DOORS-1)** — `CREATE OR REPLACE TABLE … AS SELECT`
+  and `REPLACE TABLE … AS SELECT` on the Spark door are pinned on the local catalog by K-8, K-9 and
+  K-10 in `kill_mid_write.rs` (format v2 and v3; the file holds 24 cells). K-10 is the session-key
+  branch of the same replace. Under the local rule, a writer killed at the replace's publish reads
+  back as the replaced table, with the replace's rows, the attempted snapshot current and no orphan.
+  On Glue and S3 Tables the catalog pointer governs, and no replace cell exists yet. The native
+  door's replace has no cell either; it is the remaining replace entry, carded in
+  [NATIVE-DOOR-REPLACE-KILL-1](../task/roadmap/mid-term/native-door-replace-kill-1-card-2026-10-27.md).
+  Ledger: [ICE-REPLACE-KILL-DOORS-1](../task/ledgers/staging/ice-replace-kill-doors-1-ledger.md).
 
 #### DML-6 — `INSERT … BY NAME`
 
