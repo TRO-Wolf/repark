@@ -39,33 +39,40 @@ Build: `6585e4ac`, two test files, 28 kill-mid-write tests green, walls 339 to 3
 
 ## Clerk hand-back (2026-10-27, claude-haiku-5-5)
 
-Steps 1 to 5 are done on `fix/ice-replace-kill-doors-1`, one commit each, on top of the builder's
-`6585e4ac`. No code file and no `.github/` file is touched. The branch is not pushed, no PR is open
-and nothing is merged.
+Two clerk rounds, one commit each, on `fix/ice-replace-kill-doors-1` on top of the builder's
+`6585e4ac` (K-8, K-9) and `34b5e921` (K-10). Round 1 was steps 1 to 5 of the order; round 2 is the
+coordinator's follow-up for K-10 and the native door. No code file and no `.github/` file is
+touched by the clerk. The branch is not pushed, no PR is open and nothing is merged.
 
-Commits (oldest first): `9e415fef` the map rows (the tests map, the `task/wo` index and this
-order's map); `1292157d` the unit ledger `task/ledgers/staging/ice-replace-kill-doors-1-ledger.md`
-and its link in the staging map; `9864fcbf` the dated line on ICE-LOCAL-COMMIT-POINT-1 in
-`docs/spark-sql-iceberg-parity.md`; `92d84897` the one-line release-notes entry under "Behaviour
-changes"; the last commit on the branch is this section.
+Head: the commit of this section, the last on the branch.
 
-Ledger: eight clauses. Six PROVEN, each cited by `pins:` from the tests map: C-001 the parser door,
-C-002 the reading (a) assertions of the four replace functions, C-003 the hold and the SIGKILL, C-004
-the mutant (20 of 20 red with the discriminator, 16 of 20 without), C-005 the K-1 to K-7 diff, C-006
-the local-catalog closure of ICE-INTEGRITY-PINS-1 C-024. Two OPEN: C-007 the Glue and S3 Tables replace
-kill (catalog pointer, no cell, pin U) and C-008 the verifier round (one Muse MAX verifier, and the
-question of a cell for the options path and the native door).
+Commits, oldest first:
+- `9e415fef` round 1: map rows (the tests map, the `task/wo` index, this order's map).
+- `1292157d` round 1: the unit ledger `task/ledgers/staging/ice-replace-kill-doors-1-ledger.md`, linked from the staging map.
+- `9864fcbf` round 1: the dated replace-door line on ICE-LOCAL-COMMIT-POINT-1.
+- `92d84897` round 1: the release-notes line (amended for bullet spacing).
+- `eb6c5213` round 1: this section, first version.
+- `34b5e921` builder, K-10 (`test(spark): pin the session-key replace door (K-10)`), not a clerk commit.
+- `db0df752` round 2: the K-10 map paragraph; the kill-cell count reads 24.
+- `0d121930` round 2: ledger rows C-009 (K-10 cells, PROVEN), C-010 (K-10 mutant, PROVEN), C-011 (supersedes C-005 for the head, PROVEN), C-012 (native-door gap, OPEN, citing the card); C-006 re-worded to the Spark door; C-008 re-worded to the six replace test functions.
+- `37632bb0` round 2: card `task/roadmap/mid-term/native-door-replace-kill-1-card-2026-10-27.md` (grade C, open) and its row in the mid-term map.
+- `a7eadcec` round 2: the registry line on ICE-LOCAL-COMMIT-POINT-1 names K-8, K-9, K-10 and 24 cells, and names the native-door card; the Pin bullet's 2026-10-22 count gains a dated parenthesis.
+- `13817603` round 2: the release-notes line moved from Behaviour changes to the Integrity section (the draft has one), naming the Spark SQL door and stating that the native door is not yet pinned.
+- the head: this section.
 
-Gates (clerk run, exit codes): `bash scripts/check_map_md.sh --base origin/main` 0;
-`python3 scripts/sync_map_md.py --check` 0; `make check-ledger-grammar` 0 (357 live ledgers);
-`make check-ledgers` 0; `make check-docs-links` 0; `make check-docs-compaction` 0; `make check-model-ban`
-0; `make check-owner-ruling` 0. The commit hook ran on each commit and passed; `--no-verify` was not used.
-The builder's Rust gates stand as recorded in the unit ledger (C-002): `cargo test -p repark-spark
-kill_mid_write` 28 passed, and the fmt, clippy, panic-ban and file-size gates. The clerk ran no cargo
-command, since no code changed.
+Ledger: eight clauses in round 1 and four more in round 2. PROVEN: C-001 (parser door), C-002 (reading (a), the four K-8 and K-9 functions), C-003 (hold and SIGKILL), C-004 (mutant 20 of 20 with the discriminator; 16 of 20 without), C-005 (K-1 to K-7 diff, for `6585e4ac`), C-006 (C-024, Spark door, local catalog), C-009 (K-10 cells), C-010 (K-10 mutant, 10 of 10), C-011 (K-1 to K-9 unchanged by the K-10 commit). OPEN: C-007 (Glue and S3 Tables replace kill, no cell, pin U), C-008 (verifier round over the six replace test functions and the mutants), C-012 (native-door replace, carded).
 
-Deviations from the order's text, recorded for the orchestrator: the order says K-1 to K-7 and the
-controls are "byte-for-byte unchanged"; the build removes three lines from the shared helpers (C-005
-states the exact change). The holding file is written by `hold()` for every held cell; only the replace
-cells wait on it, and `returned` is written only by them. C-024 stays OPEN in its own staging ledger,
-which is append-only; its closure is recorded here as C-006.
+Gates (clerk, exit codes, on the head before this section): `bash scripts/check_map_md.sh --base origin/main`
+0; `python3 scripts/sync_map_md.py --check` 0; `make check-ledger-grammar` 0; `make check-ledgers` 0;
+`make check-docs-links` 0; `make check-docs-compaction` 0; `make check-model-ban` 0; `make check-owner-ruling` 0.
+The commit hook ran on every commit and passed; `--no-verify` was not used. The clerk ran no cargo
+command, since no code changed. The builder's Rust gates for `34b5e921` (30 kill-mid-write tests
+passed; fmt, clippy, panic-ban, file-size, model-ban) and the orchestrator's 2-of-2 reproduction are
+cited in the ledger (C-009), not re-run.
+
+Deviations and points for the orchestrator:
+- The order says K-1 to K-7 and the controls are "byte-for-byte unchanged"; the build removes three lines from the shared helpers (C-005 states the exact change, and C-011 carries it to the head).
+- The holding file is written by `hold()` for every held cell; only the replace cells wait on it, and `returned` is written only by them.
+- C-006 and C-008 were re-worded in place, as the coordinator directed; the ledger is unit-local and unmerged. C-024 itself stays OPEN in its own append-only ledger.
+- The registry's Pin bullet (2026-10-22 text, untouched except the dated parenthesis) still lists the K-6 statement by its keyword. Ruling 76 (a) says no text names a data-deleting action, and the K-6 cell may be described by its id only. Left for the owner or the label unit to decide.
+- The native door's replace has no cell (C-012, card NATIVE-DOOR-REPLACE-KILL-1); the Spark door's replace (K-8, K-9, K-10) is pinned.
