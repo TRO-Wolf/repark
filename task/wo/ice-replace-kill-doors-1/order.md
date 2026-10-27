@@ -26,3 +26,13 @@ Opened by the orchestrator (Claude Fable 5.1) on 2026-10-27 under the owner ruli
 ## 4. Halts
 
 A wrong post-kill state on the replace path (owner first); a cell that cannot reach the hold within the harness's 60 s; any product file change.
+
+## Step 0 outcome and ruling RKD-1 (orchestrator, 2026-10-27)
+
+Both doors reach `publish_replace_table` through one path: `CREATE OR REPLACE TABLE … AS SELECT` over an existing table (`execute_ctas`, `CtasMode::Replace`, `StagedTableTransaction::begin_replace`, commit). `REPLACE TABLE … AS SELECT` is accepted by the parser (`rewrite_replace_table` prepends `CREATE OR`; a missing target is refused).
+
+The builder halted on step 1 as section 4 requires: on the local catalog the replace writes its staged metadata file before it calls `publish_replace_table`, so a child killed at the hold leaves that file as the newest. Section 2's expected post-kill state (the seeded rows, the seeded snapshot set, the seeded metadata newest) was the orchestrator's error: by owner ruling 83 and orchestrator ruling K-1 (ICE-INTEGRITY-PINS-1) the local commit point is the newest metadata file, so the reopen reads the replaced table, consistent and writable, with no orphan, the same shape K-7 pins for `CREATE TABLE … AS SELECT`. Nothing is lost, no orphan is served, no pointer is stale.
+
+**Ruling RKD-1.** Reading (a): K-8 and K-9 pin the K-1 reading on format v2 and v3 (the staged replace file newest; current is the attempted snapshot; the snapshot set is the seeded set plus the attempted one; the replace's rows and types; orphans 0/0/0/0/0 equal to the dry run; a follow-up INSERT reads back). The mutant discriminator is test-only: the hold writes a "holding" marker and the child writes a "returned" marker after its statement; the replace cells kill only once "holding" exists and assert "returned" is absent, so forward-instead-of-hold reds on state 20 of 20 (without it, 16 of 20 through the exit race). K-1 to K-7 and the controls are unchanged. A replace kill on Glue and S3 Tables is governed by the catalog pointer and has no cell (pin U's territory); the registry carries that as a dated line until a cell exists.
+
+Build: `6585e4ac`, two test files, 28 kill-mid-write tests green, walls 339 to 357 ms per cell; reproduced by the orchestrator (4 of 4 green).
