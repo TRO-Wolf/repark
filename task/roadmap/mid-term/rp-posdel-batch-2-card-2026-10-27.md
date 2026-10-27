@@ -8,16 +8,22 @@
 
 **Grade:** product unit, Opus 5.5 builder with the standing verifiers.
 
-**Severity:** P2, for the same reasons as the fork card ([F-POSDEL-BATCH-1](f-posdel-batch-1-card-2026-10-27.md)): the failure is a loud panic, and a workaround exists (copy-on-write mode for the bulk statement).
+**Severity:** P2, for the same reasons as the fork card ([F-POSDEL-BATCH-1](f-posdel-batch-1-card-2026-10-27.md)): the failure is a loud panic, and a workaround exists (copy-on-write mode for the bulk statement). The `>= AND <` spelling is the common one, so this card is the next charter after RP-60.
 
 ## Why
 
-RP-60 repins the fork to the batched writer, so the owner's reported statement, a plain `DELETE ... WHERE` on a merge-on-read table, completes: it passes through to the fork's plan. RePark has its own position-delete writers for other statement forms, and both still build one array over a whole partition or a whole identity set:
+RP-60 repins the fork to the batched writer, so the owner's reported statement, a `DELETE` whose WHERE is a `BETWEEN` range on a merge-on-read table, completes: it passes through to the fork's plan. RePark has its own position-delete writers for other statement forms, and both still build one array over a whole partition or a whole identity set:
 
 - `write_position_deletes_for_partition` in `crates/repark-iceberg/src/write/position_delete.rs` (line 326 on main `d1304a46`) builds one `StringArray::from(paths)` over all of a partition's pairs and writes a single RecordBatch.
 - `register_identity_table` in `crates/repark-iceberg/src/write/predicate_dml.rs` (line 464) builds one `StringArray` MemTable over every identity pair.
 
-RePark's writers serve two routes: the merge-on-read MERGE path, the format-v2 arm in `crates/repark-iceberg/src/write/merge/dv_close.rs`, and the identity DELETE and UPDATE forms (`WHERE id IN (subquery)`), which route through `predicate_dml`. They do not serve plain `DELETE ... WHERE`. So after RP-60, a merge-on-read MERGE, or an identity-IN DELETE or UPDATE, that touches more than about 2 GiB of data-file path text in one partition still panics in RePark's own writer.
+RePark's writers serve three routes:
+
+- The merge-on-read MERGE path, the format-v2 arm in `crates/repark-iceberg/src/write/merge/dv_close.rs`.
+- The identity DELETE and UPDATE forms (`WHERE id IN (subquery)`), which route through `predicate_dml`.
+- A plain `DELETE` whose top-level WHERE is a `BinaryOp` (`AND`, `OR`, or a comparison such as `d >= DATE '...' AND d < DATE '...'`) on primitive non-uuid columns. Measured on the Spark door at main plus the repin, `spark_ast::execute_passthrough` claims it, then `try_execute_identity_dml`, then `predicate_dml::plain::try_allowed_plain_identity` (the RP-9 r2 route), which writes its position deletes through `write_position_deletes_for_partition`.
+
+The fork's batched writer serves the other plain spellings: a top-level `BETWEEN` or a literal `IN (...)` list, non-primitive or uuid columns, and branch selectors. So RP-60 covers the owner's `BETWEEN` statement, while the same range spelled `>= AND <` still panics past 2 GiB of path text at the RePark site. After RP-60, then, a merge-on-read MERGE, an identity-IN DELETE or UPDATE, or a plain `DELETE` spelled `>= AND <`, that touches more than about 2 GiB of data-file path text in one partition still panics in RePark's own writer.
 
 ## The fix
 
@@ -33,6 +39,7 @@ The same chunked write as F-POSDEL-BATCH-1, at both sites:
 - Unit pins on the cut, covering the row bound and the byte bound.
 - A Spark-door merge-on-read MERGE pin with `write.delete.position-delete-batch-rows` set to a tiny value: the surviving rows read back correct, at least one position-delete file is live for the partition, and the property set to `0` is refused through the door (the wiring proof).
 - An identity-IN DELETE pin with the same property set tiny: the surviving rows read back correct, at least one position-delete file is live, and the property set to `0` is refused through the door (the wiring proof).
+- A Spark-door plain `DELETE` spelled `d >= DATE '...' AND d < DATE '...'` on a merge-on-read table, with `write.delete.position-delete-batch-rows` set to `0`: refused through the door (the wiring proof). Today this form succeeds. RP-60's control pin `binary_op_range_delete_takes_the_repark_writer_not_the_fork` in `crates/repark-spark/tests/posdel_batch_door.rs` records that current route, and this unit flips it.
 - An ignored stress pin per site that reproduces the panic on the pre-fix shape.
 
 No pin asserts a delete-file count. The delete writer rolls files at 1,000-row multiples and ignores `write.delete.target-file-size-bytes`, and the [F-POSDEL-BATCH-1 card](f-posdel-batch-1-card-2026-10-27.md) records that a tiny batch cannot be shown to produce several files, so a count would not be reachable at this pin.
@@ -43,7 +50,7 @@ Until this card lands, run the bulk statement in copy-on-write mode: set the tab
 
 ## Out of scope
 
-- The plain `DELETE ... WHERE` path. RP-60 covers it through the fork.
+- The `BETWEEN` and literal `IN` spellings of plain `DELETE`. RP-60 covers them through the fork.
 - The fork units: F-POSDEL-BATCH-1 (landed) and F-EQDEL-CONVERT-BATCH-1 (not dispatched).
 - The memory side named on the fork card: a streaming producer that takes the pairs from the scan as they arrive.
 - The Python facade.
