@@ -31,9 +31,11 @@ The same chunked write as F-POSDEL-BATCH-1, at both sites:
 ## Pins
 
 - Unit pins on the cut, covering the row bound and the byte bound.
-- A Spark-door merge-on-read MERGE pin with `write.delete.position-delete-batch-rows` set to a tiny value: several delete files for the partition, and the surviving rows read back correct.
-- An identity-IN DELETE pin with the same property set tiny, asserting the delete-file count and the surviving rows.
+- A Spark-door merge-on-read MERGE pin with `write.delete.position-delete-batch-rows` set to a tiny value: the surviving rows read back correct, at least one position-delete file is live for the partition, and the property set to `0` is refused through the door (the wiring proof).
+- An identity-IN DELETE pin with the same property set tiny: the surviving rows read back correct, at least one position-delete file is live, and the property set to `0` is refused through the door (the wiring proof).
 - An ignored stress pin per site that reproduces the panic on the pre-fix shape.
+
+No pin asserts a delete-file count. The delete writer rolls files at 1,000-row multiples and ignores `write.delete.target-file-size-bytes`, and the [F-POSDEL-BATCH-1 card](f-posdel-batch-1-card-2026-10-27.md) records that a tiny batch cannot be shown to produce several files, so a count would not be reachable at this pin.
 
 ## Workaround
 
