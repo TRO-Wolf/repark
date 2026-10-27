@@ -34,3 +34,18 @@ Silent values all four; the v2 label cannot carry them.
 ## 4. Halts
 
 Any census cell moving that the sketch did not list; any EQUAL cell regressing; the cost gate; a need to touch a door's routing or a refusal; the file-size ratchet with no honest split.
+
+## Step 0 outcome and ruling NLS-1 (orchestrator, 2026-10-27)
+
+The sketch (`sketch-step-0.md`, Muse MAX, commit `f9453e25`) reproduced the four shapes on this head and on Spark 4.1.2 in both zones (head stores `1767312000000000` for every shape; Spark stores `1767330000000000` in New York and `1767292200000000` in Kolkata), found both causes (F-2: the analyzer's type coercion wraps the CASE branch in a cast carrying the field-id metadata, the optimizer folds the seamed literal to a scalar list that carries none, and the projection's schema check fails; F-3: `TRY_CAST(instant AS TIMESTAMP_NTZ)` folds to the UTC wall only in the optimizer, after the stage, so an unguarded seam converts it twice), and drew the seam rule R1 to R12, the map-key arm, the exact 40 census moves and the new cells.
+
+**Ruling NLS-1 (Q1 to Q6, every lean adopted).**
+- Q1: step 1 may touch `crates/repark-functions/src/zone_seam.rs` for the Map arms of `converted_type` and `convert`, mirroring the value arms; nothing else outside `conform_stage.rs`, `conform_stage/`, the fixture and the recorder.
+- Q2: TD1 (`TRY_CAST(date …)`) and TW (`TRY_CAST(wall …)`) are seamed; each gets a Rust pin against Spark's recorded value in both zones; no census cell.
+- Q3: the CAST and TRY_CAST forms under the D8 CASE stay ZS-9-refused; the D8/D10 asymmetry is recorded as measured; step (4) scope.
+- Q4: F1 adopted (strip the outer cast's metadata on a scalar-foldable seamed argument), with one added pin: for one F-2 cell the written Parquet file's schema carries the `PARQUET:field_id` on the nested leaf (read the file back), so the sink's re-attachment is proven, not assumed.
+- Q5: the new census shapes are approved as drawn (`update_whole_where_part` with `WHERE k = 0`, 480 cells; `insert_map_key` on the key-packed targets, 48 cells); the census grows to 12,720 cells and the recount pins move with it; the expected moves are exactly the 40 listed, the 32 partitioned F5 cells and the 4 `map_ltz_key` cells, and nothing else.
+- Q6: the TRY_CAST-instant exclusion is per leaf.
+- Budget: no split; if `conform_stage.rs` passes 900 lines the zone half moves pure into `conform_stage/seam.rs` with a map row.
+
+Step 1 starts on this ruling. Verification: Opus 5.5 verifier (value-moving) and Muse MAX second verifier after CI.
