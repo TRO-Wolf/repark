@@ -84,8 +84,11 @@ One JSON object: `status`, `head`, `commits`, `matrix` (sha, tallies), `runs` (p
 
 **STATUS Last-updated line:** it keeps its 2026-09-12 text, because `python/repark-parity/tests/test_v1_gate_docs.py` pins it; the Iceberg maturity section carries its own date (2026-10-26).
 
-**Owner signature (carve-outs; the owner fills each line on the PR, one per carve-out):**
+**Owner signature (carve-outs), given 2026-10-27 on PR #1195:**
 
-- ENC-1 item 1 (ruling 121 (b)) signed by owner:
-- ENC-1 item 5 (ruling 121 (b)) signed by owner:
-- ENC-CTAS-REPLACE-1 (ruling 98 (a)) signed by owner:
+- Signed by the owner 2026-10-27 (ICE-V2-LABEL-1 PR #1195): ENC-1 item 1, ruling 121 (b).
+- Signed by the owner 2026-10-27 (ICE-V2-LABEL-1 PR #1195): ENC-1 item 5, ruling 121 (b).
+- Signed by the owner 2026-10-27 (ICE-V2-LABEL-1 PR #1195): ENC-CTAS-REPLACE-1, ruling 98 (a).
+- Signed by the owner 2026-10-27 (ICE-V2-LABEL-1 PR #1195): NESTED-TEXT-LEAF-STORE-1, owner ruling 2026-10-26.
+
+The label closes on the merge of PR #1195. The owner's words on 2026-10-27: "I sign all four, merge #1195 and #1198."
