@@ -74,6 +74,12 @@ Only tests; `mod.rs` is the module manifest.
   rows (three and four elements, one NULL) of instants to `ARRAY<TIMESTAMP_NTZ>` in New York and
   holds every element's wall and the offsets; it reds when the list arm converts only the first
   value. pins: zone-seam-1/C-018
+  **NESTED-LITERAL-SEAM-1 (2026-10-27, fix round 1):** three key pins through the product seam,
+  `a_container_cast_of_a_date_key_to_timestamp_starts_at_the_session_midnight`,
+  `a_container_cast_of_a_wall_key_to_timestamp_reads_it_in_the_session_zone` and
+  `a_container_cast_of_an_instant_key_to_timestamp_ntz_takes_the_session_wall`, assert a date key, a
+  wall key and an instant key of a `MAP<TIMESTAMP, …>` in New York and Kolkata against Spark's
+  values; the key pass-through mutant is red on all three. pins: nested-literal-seam-1/C-004, C-016
   pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers
