@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ from pydantic import BaseModel, ConfigDict
 
 from repark import _native
 
+CENSUS = Path(__file__).resolve().parents[4] / "task/wo/write-spine-1/census-2026-10-24.md"
+RECOUNT_HEADING = "## Recount 2026-10-27"
 SPARK_DOORS = frozenset(f"D{number}" for number in range(1, 11))
 EQUAL_STATUS = "EQUAL"
 C010_SPELLINGS = frozenset(
@@ -55,19 +58,7 @@ ARROW_MARKERS: tuple[str, ...] = (
     "arguments need to have the same data type",
 )
 VALUES_SPELLINGS = frozenset({"insert_values", "insert_overwrite_values"})
-RECOUNT_CELLS = 12720
-RECOUNT_STATUSES = (7843, 1479, 2452, 946, 0)
-RECOUNT_RED = 2649
-RECOUNT_FAMILIES = {
-    "F1": 240,
-    "F2": 228,
-    "F3": 596,
-    "F4": 428,
-    "F5": 52,
-    "F6": 351,
-    "F7": 318,
-    "F8": 436,
-}
+RECOUNT_FAMILY_ROW = re.compile(r"^\| (F\d) \| ([\d,]+) \| (F\d) \| ([\d,]+) \|$", re.MULTILINE)
 SAMPLE_PER_CLASS = 1
 ZS9_ROW = "ZS9-AHEAD-OF-DOOR"
 D10_STORE_ROW = "D10-STORE-CAST-AHEAD-OF-DOOR"
@@ -117,6 +108,26 @@ DIVERGENCES: tuple[Divergence, ...] = (
         ),
     ),
 )
+
+
+def _number(text: str) -> int:
+    """Return the integer a census number such as ``12,720`` writes."""
+    return int(text.replace(",", ""))
+
+
+def _recount_text() -> str:
+    """Return the census document from the 2026-10-27 recount heading on."""
+    text = CENSUS.read_text(encoding="utf-8")
+    _, _, recount = text.partition(RECOUNT_HEADING)
+    assert recount, RECOUNT_HEADING
+    return recount
+
+
+def _recount_numbers(pattern: str, text: str) -> list[int]:
+    """Return the numbers one recount regex captures; fail when it matches nothing."""
+    found = re.search(pattern, text)
+    assert found is not None, pattern
+    return [_number(group) for group in found.groups()]
 
 
 def _holds(answer: dict[str, Any], markers: tuple[str, ...]) -> bool:
@@ -235,21 +246,40 @@ def _find_runtime_disagreements(cells: list[shapes.Cell], tmp_path: Path) -> lis
 
 def test_fixture_cells_are_the_census() -> None:
     """Both fixtures hold the recount cells, status counts, Spark-door red set and families."""
+    recount = _recount_text()
+    [cell_count] = _recount_numbers(r"and ([\d,]+) cells after", recount)
+    base_counts = _recount_numbers(
+        r"\| base `59d104d9` \| ([\d,]+) \| ([\d,]+) \| ([\d,]+) \| "
+        r"([\d,]+) \| ([\d,]+) \| ([\d,]+) \|",
+        recount,
+    )
+    status_counts, base_total = base_counts[:5], base_counts[5]
+    [red_count] = _recount_numbers(r"Total RED ([\d,]+) on the base", recount)
+    families = {
+        family: _number(count)
+        for match in RECOUNT_FAMILY_ROW.finditer(recount)
+        for family, count in (
+            (match.group(1), match.group(2)),
+            (match.group(3), match.group(4)),
+        )
+    }
+    assert sorted(families) == [f"F{number}" for number in range(1, 9)]
+    assert base_total == cell_count
     main = matrix.load_cells(matrix.MAIN_FIXTURE)
     spark = matrix.load_cells(matrix.SPARK_FIXTURE)
     axes = matrix.cells_by_id()
-    assert len(main) == len(spark) == len(axes) == RECOUNT_CELLS
+    assert len(main) == len(spark) == len(axes) == cell_count
     assert set(main) == set(spark) == set(axes)
     measured = Counter(answer["status"] for answer in main.values())
-    assert [measured[status] for status in matrix.recorder.STATUSES] == list(RECOUNT_STATUSES)
+    assert [measured[status] for status in matrix.recorder.STATUSES] == status_counts
     red = [
         key
         for key, answer in main.items()
         if axes[key].spelling.door in SPARK_DOORS and answer["status"] != EQUAL_STATUS
     ]
-    assert len(red) == RECOUNT_RED
+    assert len(red) == red_count
     found = Counter(_census_family(axes[key], main[key], spark[key]) for key in red)
-    assert dict(found) == RECOUNT_FAMILIES
+    assert dict(found) == families
 
 
 def test_every_cell_spelling_names_its_corpus_door() -> None:
