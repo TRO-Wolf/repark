@@ -36,3 +36,36 @@ The builder halted on step 1 as section 4 requires: on the local catalog the rep
 **Ruling RKD-1.** Reading (a): K-8 and K-9 pin the K-1 reading on format v2 and v3 (the staged replace file newest; current is the attempted snapshot; the snapshot set is the seeded set plus the attempted one; the replace's rows and types; orphans 0/0/0/0/0 equal to the dry run; a follow-up INSERT reads back). The mutant discriminator is test-only: the hold writes a "holding" marker and the child writes a "returned" marker after its statement; the replace cells kill only once "holding" exists and assert "returned" is absent, so forward-instead-of-hold reds on state 20 of 20 (without it, 16 of 20 through the exit race). K-1 to K-7 and the controls are unchanged. A replace kill on Glue and S3 Tables is governed by the catalog pointer and has no cell (pin U's territory); the registry carries that as a dated line until a cell exists.
 
 Build: `6585e4ac`, two test files, 28 kill-mid-write tests green, walls 339 to 357 ms per cell; reproduced by the orchestrator (4 of 4 green).
+
+## Clerk hand-back (2026-10-27, claude-haiku-5-5)
+
+Steps 1 to 5 are done on `fix/ice-replace-kill-doors-1`, one commit each, on top of the builder's
+`6585e4ac`. No code file and no `.github/` file is touched. The branch is not pushed, no PR is open
+and nothing is merged.
+
+Commits (oldest first): `9e415fef` the map rows (the tests map, the `task/wo` index and this
+order's map); `1292157d` the unit ledger `task/ledgers/staging/ice-replace-kill-doors-1-ledger.md`
+and its link in the staging map; `9864fcbf` the dated line on ICE-LOCAL-COMMIT-POINT-1 in
+`docs/spark-sql-iceberg-parity.md`; `92d84897` the one-line release-notes entry under "Behaviour
+changes"; the last commit on the branch is this section.
+
+Ledger: eight clauses. Six PROVEN, each cited by `pins:` from the tests map: C-001 the parser door,
+C-002 the reading (a) assertions of the four replace functions, C-003 the hold and the SIGKILL, C-004
+the mutant (20 of 20 red with the discriminator, 16 of 20 without), C-005 the K-1 to K-7 diff, C-006
+the local-catalog closure of ICE-INTEGRITY-PINS-1 C-024. Two OPEN: C-007 the Glue and S3 Tables replace
+kill (catalog pointer, no cell, pin U) and C-008 the verifier round (one Muse MAX verifier, and the
+question of a cell for the options path and the native door).
+
+Gates (clerk run, exit codes): `bash scripts/check_map_md.sh --base origin/main` 0;
+`python3 scripts/sync_map_md.py --check` 0; `make check-ledger-grammar` 0 (357 live ledgers);
+`make check-ledgers` 0; `make check-docs-links` 0; `make check-docs-compaction` 0; `make check-model-ban`
+0; `make check-owner-ruling` 0. The commit hook ran on each commit and passed; `--no-verify` was not used.
+The builder's Rust gates stand as recorded in the unit ledger (C-002): `cargo test -p repark-spark
+kill_mid_write` 28 passed, and the fmt, clippy, panic-ban and file-size gates. The clerk ran no cargo
+command, since no code changed.
+
+Deviations from the order's text, recorded for the orchestrator: the order says K-1 to K-7 and the
+controls are "byte-for-byte unchanged"; the build removes three lines from the shared helpers (C-005
+states the exact change). The holding file is written by `hold()` for every held cell; only the replace
+cells wait on it, and `returned` is written only by them. C-024 stays OPEN in its own staging ledger,
+which is append-only; its closure is recorded here as C-006.
