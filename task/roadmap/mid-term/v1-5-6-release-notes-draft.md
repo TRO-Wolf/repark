@@ -90,6 +90,10 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **Ordered writes, merge-on-read MERGE and changelog reads refuse above a stated memory bound (ICE-RESOURCE-BOUND-1, U-11).** Each path has a key, read at build: `repark.write.ordered.max-input-fraction` (0.10), `repark.merge.mor.max-updated-fraction` (0.05) and `repark.changelog.max-source-fraction` (0.0625), times the live memory pool. Above it the statement refuses with the pool's `ResourcesExhausted` class (`PySparkException`) before any file is staged. The value 0 means no bound. Default pool detection is closed for cgroup v2 (the leaf-and-ancestors minimum of `memory.max`, capped by `MemTotal`); cgroup v1, macOS and Windows need an explicit pool budget.
 
+- **Replace doors gain kill-mid-write pins (ICE-REPLACE-KILL-DOORS-1, test only).** `CREATE OR
+  REPLACE TABLE … AS SELECT` and `REPLACE TABLE … AS SELECT` are pinned for a writer killed at the
+  publish, on format v2 and v3 on the local catalog; no stored value changes.
+
 ## Integrity under failure (no stored value or behaviour changes)
 
 - **A writer killed between its data files and its commit is pinned (ICE-INTEGRITY-PINS-1, pin
