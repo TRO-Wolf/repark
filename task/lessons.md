@@ -4,6 +4,11 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-10-27 — the encryption residue: lane split decided before 1.5.7
+
+- **DO decide the lane split for the encryption residue before 1.5.7 is scheduled, and keep the organisation an open owner question.** *Why (2026-10-27, owner):* encryption work on these projects (the ENC-1 keyed tables, Iceberg and Parquet encryption) has tended to trip the safety classifiers of Fable, Sol and Astra sessions. The encryption carve-outs owner-signed on PR #1195 are ENC-1 items 1 and 5 (rebuild in 1.5.7) and ENC-CTAS-REPLACE-1 (open, not scheduled). The split of that work onto other lanes, Opus 5.5 or Muse, with plainly worded briefs is decided first. The best organisation is an open owner question, not a settled plan.
+- **DO NOT schedule the 1.5.7 encryption residue on a Fable, Sol or Astra lane before that split is decided.** *Why (2026-10-27, owner):* that work has tended to trip the same classifiers, so the split is decided before the work is placed.
+
 ## 2026-10-25 — GATE-RETIRE-1 arm census
 
 - **DO probe beyond the census fixture before calling a gate arm unreachable.** The census carries

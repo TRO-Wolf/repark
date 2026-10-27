@@ -1151,6 +1151,12 @@ perfectly good read.
 - **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-14). The assessment's retry contract
   needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
   makes the unconfirmed commit nameable in an alert.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** pins U and X are on
+  main (ICE-INTEGRITY-PINS-1, #1157 at `c874ab09`), and acceptance run 40295982749 (2026-10-26,
+  success) carries legs U and X. The cross-read leg is green on that run: 768 rows EQUAL on
+  2026-10-26 (the label order's step-0 record). The cross-read clause above is ledger C-060; the
+  ice-integrity-pins-1 ledger carries its successors C-066 to C-070, and the S3 Tables REST-catalog
+  read is aws-ephemeral-runs-1 C-017 and C-030.
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
@@ -1161,7 +1167,7 @@ perfectly good read.
   `<table>/metadata/`, which is then the table. A path read of a `type=hadoop` table follows
   `version-hint.text` instead and can read an older version, so it is outside this row (card
   [ICE-HADOOP-HINT-WINDOW-1](../task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md),
-  owner decision pending). A writer killed inside the
+  owner ruled option 1 on 2026-10-22; see the dated lines below). A writer killed inside the
   catalog's commit call, before the metadata file is written (every data file, delete file,
   manifest and manifest list durable), leaves the table as it was: the same metadata file,
   snapshot set and rows. The files that writer wrote stay on disk as orphans, never more than the
@@ -1184,6 +1190,19 @@ perfectly good read.
   follow the catalog pointer, and the AWS drill pins that." Ruling 82 sets the orphan ceiling;
   the CTAS answer is orchestrator ruling K-1 (2026-10-22, under the owner's grant). A durable
   pointer for the local catalog is out of scope (the U-9 sketch §0).
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** pin K is on main (ICE-
+  INTEGRITY-PINS-1, #1142 at `dc462ccb`); the DECLARED rule is unchanged. The `type=hadoop` path-
+  read window stays under card ICE-HADOOP-HINT-WINDOW-1 (ledger C-015).
+- **Dated 2026-10-27, declared on the format-v2 label by owner ruling 2026-10-27:** the owner ruled option 1 on
+  2026-10-22: the path read walks past `version-hint.text` as Java's `HadoopTableOperations.refresh` does, in its
+  own unit (card [ICE-HADOOP-HINT-WINDOW-1](../task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md)).
+  Until that unit lands, a `type=hadoop` path read after a crash, or a failed hint write, between
+  `v(N+1).metadata.json` and the hint can answer the last hinted version with no error. `register_table` and the
+  catalog doors are unaffected.
+- **Dated 2026-10-27, declared on the format-v2 label by owner ruling 2026-10-27:** the replace doors are unpinned
+  until ICE-REPLACE-KILL-DOORS-1 lands. `publish_replace_table` is forwarded unheld by the kill decorator, so RTAS and
+  `CREATE OR REPLACE TABLE … AS SELECT` have no kill cell (card [ICE-REPLACE-KILL-DOORS-1](../task/roadmap/mid-term/ice-replace-kill-doors-1-card-2026-10-27.md)).
+- **Superseded 2026-10-27 by the replace-door status line below:** ICE-REPLACE-KILL-DOORS-1 landed in #1196 (`c3e634a2`), so the unpinned statement above no longer holds on the local catalog. The line below is the record.
 - **Replace doors (2026-10-27, ICE-REPLACE-KILL-DOORS-1)** — `CREATE OR REPLACE TABLE … AS SELECT`
   and `REPLACE TABLE … AS SELECT` on the Spark door are pinned on the local catalog by K-8, K-9 and
   K-10 in `kill_mid_write.rs` (format v2 and v3; the file holds 24 cells). K-10 is the session-key
@@ -1523,6 +1542,21 @@ perfectly good read.
   `md.refs` `[]` with only the pre-existing `append` for the column-def form, `[append, overwrite]`
   for the `AS SELECT` form, and the pre-replace snapshot still readable by `VERSION AS OF`.
 
+#### NESTED-TEXT-LEAF-STORE-1 — DATED ROW 2026-10-26 (owner ruling 2026-10-26, carried on the v2 label): a string literal into a nested timestamp leaf stores where Spark refuses
+
+- **repark** — a text leaf, a `STRING` value or a string literal, written into a nested
+  `TIMESTAMP` or `TIMESTAMP_NTZ` leaf stores the UTC reading of the text on main, where Spark
+  refuses. The zone conform stage excludes text leaves (WRITE-SPINE-1 step (2)), so they stay as
+  they were. The count is 102 cells: the card's 2026-10-25 census at `d45eb72d` (D3 12, D4 42, D10 48;
+  the F-1 table in [the step-2 census evidence](../task/wo/write-spine-1/evidence/step-2-census-2026-10-25.md)).
+- **Apache Spark** — refuses each of these cells with
+  `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` (the WRITE-SPINE-1 step (2) census, F-1 table,
+  Spark 4.1.2).
+- **Carried** — carried on the v2 label by owner ruling 2026-10-26; owner signature given 2026-10-27 on PR #1195; fix in 1.5.7.
+- **Card** — [NESTED-TEXT-LEAF-STORE-1](../task/roadmap/mid-term/nested-text-leaf-
+  store-1-card-2026-10-25.md) (2026-10-25, open, grade C). Retires when each cell is REFUSED as
+  Spark refuses it, or EQUAL to Spark's value, and the census recount moves no other cell.
+
 ### 2.4 Namespace and table listing statements
 
 #### NS-1 — `SHOW NAMESPACES` without `IN` / `FROM` requires an explicit catalog — **FIXED 2026-09-20**
@@ -1809,6 +1843,10 @@ perfectly good read.
   RePark refuses the first write regardless and keeps `CREATE` succeeding on every format
   version, per the owner's ES-3 words and the never-write-plaintext rule: writing plaintext
   into a table that asked for encryption is the outcome the ruling forbids.
+- **Item 1 (ruling 121 (b)), as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:**
+  Carried on the format-v2 PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: given 2026-10-27 on PR #1195.
+- **Item 5 (ruling 121 (b)), as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:**
+  Carried on the format-v2 PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: given 2026-10-27 on PR #1195.
 
 #### ENC-CTAS-REPLACE-1 — DATED ROW 2026-10-15 (owner ruling 98 (a)): a key landing mid-statement leaves an orphan unencrypted file
 
@@ -1823,6 +1861,8 @@ perfectly good read.
 - **Card** — [ENC-CTAS-REPLACE-1](../task/roadmap/mid-term/enc-ctas-replace-1-card-2026-10-15.md)
   (2026-10-15, open, not scheduled). Retires when the staged files are removed on that failure, or the
   publish refuses before staging, with a pin that a key landing mid-statement leaves no unencrypted file.
+- **As of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** Carried on the format-v2
+  PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: given 2026-10-27 on PR #1195.
 
 ### MB-ENC-UNDELETED-FIELD-1 — DATED ROW 2026-10-15 (owner ruling 109 (c)): the keyed micro-batch refusal names the sink but not the staged file it could not delete
 
@@ -2130,6 +2170,9 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Apache Spark** — measured 2026-10-26 on Spark 4.1.2 with Iceberg 1.11.0, `local[2]`, a 1 GiB driver, 4M rows, ordered: the write commits, with 304 MiB of memory spill and 151 MiB of disk spill, in 7.7 s.
 - **Pin** — `crates/repark-spark/src/tests/resource_bound.rs` (PP-01 cells, format v2 and v3) and `python/repark/tests/writes/test_ice_resource_bound_1.py`. pins: ice-resource-bound-1/C-001, C-006, C-007
 - **Rationale** — DATED ROW 2026-10-26, owner ruling Q1 and Q2: the bound is stated and measured, and the refusal is the pool's own class. The input is not charged to the pool, so the in-pool sort still does not spill; spilling the ordered input is out of scope of this unit.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** on main from #1191
+  (`59d104d9`). The key `repark.write.ordered.max-input-fraction` (0.10) is read at build; bound-
+  ledger clause C-001 holds it. Carried on the format-v2 label (ICE-V2-LABEL-1).
 
 #### ICE-RESOURCE-BOUND-1-MOR — DATED ROW 2026-10-26: a merge-on-read MERGE above its updated-rows bound refuses where Spark spills
 
@@ -2137,6 +2180,9 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Apache Spark** — measured 2026-10-26 on the same Spark build, 4M rows, 100 % match, a 1 GiB driver: the MERGE commits, with 736 MiB of memory spill and 109 MiB of disk spill, in 13.4 s.
 - **Pin** — `crates/repark-spark/src/tests/resource_bound.rs` (PP-02 cells) and `resource_bound_kill.rs` (KR-2); the facade cells. pins: ice-resource-bound-1/C-002, C-008
 - **Rationale** — DATED ROW 2026-10-26, owner ruling Q2. The delete state of the MoR path (`seen_pair`, `pair_indices`, path interning) is not charged; the ruled bound covers updated rows.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** on main from #1191
+  (`59d104d9`). The key `repark.merge.mor.max-updated-fraction` (0.05) is read at build; bound-
+  ledger clause C-002 holds it. Carried on the format-v2 label (ICE-V2-LABEL-1).
 
 #### ICE-RESOURCE-BOUND-1-CHANGELOG — DATED ROW 2026-10-26: a changelog read above its source-window bound refuses where Spark answers
 
@@ -2144,6 +2190,9 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Apache Spark** — measured 2026-10-26, 4M rows, `SELECT id FROM t_changes LIMIT 10`, the same Spark build and driver: answered in 4.7 s with no spill.
 - **Pin** — `crates/repark-spark/src/tests/resource_bound.rs` (PA-11 cells, format v2 and v3) and the facade changelog cells. pins: ice-resource-bound-1/C-003
 - **Rationale** — DATED ROW 2026-10-26, owner ruling Q2 and Q4. The read still holds its window in memory below the bound; the bound states the limit, it does not remove the materialization (audit PA-11).
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** on main from #1191
+  (`59d104d9`). The key `repark.changelog.max-source-fraction` (0.0625) is read at build; bound-
+  ledger clause C-003 holds it. Carried on the format-v2 label (ICE-V2-LABEL-1).
 
 #### ICE-RESOURCE-BOUND-1-CTX-LESS — DATED ROW 2026-10-26: the ctx-less public Rust APIs carry no pool and so no bound
 
@@ -2151,6 +2200,8 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Apache Spark** — not applicable: a Rust API has no Spark counterpart.
 - **Pin** — none. The declaration rests on the reading of the call sites in `crates/repark-iceberg/src/write/append.rs` and `partitioned_files.rs`, and on the sites in `merge/file_sink.rs`. This row has no test that reaches it, so it does not meet the rule that a row lands with its pin; the owner rules whether it stays. ([ledger](../task/ledgers/staging/ice-resource-bound-1-ledger.md) C-006 cites the bound keys only.)
 - **Rationale** — DATED ROW 2026-10-26, orchestrator ruling O-2: the session carries the bound; a session-less API has no pool to bound against.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** unchanged: the ctx-less
+  public Rust APIs carry no pool and so no bound. Carried on the format-v2 label (ICE-V2-LABEL-1).
 
 #### ICE-RESOURCE-BOUND-1-CTAS — DATED ROW 2026-10-26: the CTAS plan writer resolves the bound per writer partition, and no door reaches it today
 
@@ -2158,6 +2209,9 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Apache Spark** — not applicable to this measurement; the CTAS table has no sort order in either engine.
 - **Pin** — none. No door reaches the arm, so no pin can, and this row does not meet the rule that a row lands with its pin; the owner rules whether it stays (orchestrator ruling Q-B1).
 - **Rationale** — DATED ROW 2026-10-26, Q-B1: the arm is unreached today; a future CTAS with a write order would need the per-partition resolution revisited.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** unchanged: no door
+  reaches the CTAS plan writer's per-partition bound today. Carried on the format-v2 label
+  (ICE-V2-LABEL-1).
 
 #### ICE-RESOURCE-BOUND-1-PLATFORMS — DATED ROW 2026-10-26: the default pool on cgroup v1, macOS and Windows needs an explicit budget
 
@@ -2165,6 +2219,9 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Apache Spark** — not applicable: a deployment-memory declaration.
 - **Pin** — the v1-only fixture cell of `spill_unit_tests` (`crates/repark-core/src/session/spill.rs`) asserts the declared path. pins: ice-resource-bound-1/C-009
 - **Rationale** — DATED ROW 2026-10-26, owner ruling Q3 and orchestrator ruling O-11: the detector cannot be trusted on those platforms, so the row names the budget the deployment must set; a build refusal would stop every session that sets none, which main answers (ruling 70).
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** unchanged: the default
+  pool on cgroup v1, macOS and Windows still needs an explicit budget. Carried on the format-v2
+  label (ICE-V2-LABEL-1).
 
 ## 3. Identifier resolution (DECLARED)
 
@@ -3807,6 +3864,10 @@ still open is `isModifiable`.
   `task/roadmap/mid-term/write-ntz-to-ltz-nested-1-card-2026-10-22.md`. Ledger
   `task/ledgers/staging/zone-seam-1-ledger.md`.
 - **Status 2026-10-25 (GATE-RETIRE-1, PR #1187, fix round GR-9):** the container-cast arm (`casts_a_zoned_value_to_naive`, sketch arm A2) is measured load-bearing for container casts the zone seam does not rewrite (an arity mismatch or fields at different positions), so it is retained. The micros hint now says a CAST of the whole struct, array or map is refused unless its fields line up with the target's. The arm's retirement folds into WRITE-SPINE-1 step 4, and only once such casts are refused as Spark refuses them. The pins are ledger C-005 and the clause pin of C-002.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** REFUSED on main, from
+  #1124 (`c91f69c5`). The zone-seam and GATE-RETIRE-1 status lines above record their changes to
+  this row (#1139 at `3bc2915a`, #1187 at `cf6641a4`). Carried on the format-v2 label
+  (ICE-V2-LABEL-1).
 
 ### ICE-TSNS-SQL-1-R-012 — FIXED 2026-10-16 (ICE-TSNS-TYPE-PLANNER-1, `c7121437`, PR #1082), measured and pinned 2026-10-26 (ICE-TSNS-UPDATE-RANGE-CLASS-1): `UPDATE` with no `WHERE` reports an out-of-range `TIMESTAMP` literal as INSERT does
 
@@ -3865,6 +3926,7 @@ still open is `isModifiable`.
   `crates/repark-sql/tests/ansi_store_kernel_registry.rs` resolve every name of both constants
   on each door (owner, question 47).
 - **Status 2026-10-25 (WRITE-SPINE-1 step 2, PR #1189):** the conform stage now converts a date into a nested TIMESTAMP outside UTC on D3, D4, D7, D8 and D10 (288 census cells EQUAL); the arm and ZS-9 refusal stay for step 4.
+- **Dated 2026-10-27 (NESTED-LITERAL-SEAM-1, PR #1197, `105d4625`):** the map-key gap that step (2)'s review carded as NESTED-MAP-KEY-ZONE-1 is fixed: a date written into a `MAP<TIMESTAMP, …>` key on D3, D8 and D10 stores the session midnight in New York and Kolkata. Pins: nested-literal-seam-1 C-004 and C-017 (ledger [nested-literal-seam-1-ledger.md](../task/ledgers/staging/nested-literal-seam-1-ledger.md)).
 - **Status 2026-10-27 (NESTED-LITERAL-SEAM-1):** the conform stage now also converts, outside UTC: a date literal under the D8 row-merge CASE (MERGE whole-struct and `SET *`, struct, array, map and array-of-struct targets); a constant struct with date leaves on a D10 `UPDATE`, partitioned or not (a date literal, or a scalar-subquery date, inside it; the array and map constants already stored Spark's value on main); a date literal or column into a `MAP<TIMESTAMP, …>` key on D3, D8 and D10 (pins: `map_date_keys_store_the_session_midnight_through_insert_by_name` and `map_date_keys_store_the_session_midnight_through_update_and_merge`); and, on D10, the `TRY_CAST` date and wall leaves inside a nested TIMESTAMP. Still refused: a wall literal under the D8 row-merge CASE or in a D10 constant (R3); the D8 `CAST` and `TRY_CAST` forms under the row-merge CASE stay ZS-9-refused (a step (4) question); `TRY_CAST` leaves on D3 and D8 are refused; an instant `TRY_CAST` to a wall leaf keeps its UTC wall, the value Spark stores for it, by a per-leaf exclusion. The read-path `CAST` of a map with a timestamp key now answers the session-zone value where main answered the UTC reading (pins: `map_key_casts_on_the_read_path_answer_spark_values` and the three `zone_seam_pairs.rs` key pins). The recount moves 52 census cells, all DIFFERENT to EQUAL, with zero regressions.
 - **Status 2026-10-26 (NS-TRUTHUP-1, main `9fd60149`):** still OPEN. The `SELECT` of the kernel
   answers `timestamp[ns]`, but neither Python door exposes `information_schema`:
@@ -3876,6 +3938,9 @@ still open is `isModifiable`.
   `SHOW FUNCTIONS IN ice.system` works on the Spark door (orchestrator measurement, 2026-10-26,
   recorded verbatim in the card's measured block).
   Card [SHOW-FUNCTIONS-1](../task/roadmap/mid-term/show-functions-1-card-2026-10-26.md) blocks it.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** still OPEN. The routine
+  list is unreadable on both Python doors (card SHOW-FUNCTIONS-1). WRITE-SPINE-1 steps (0) to (3b)
+  (#1181, #1182, #1185) and step (2) (#1189, `9fd60149`) are recorded above; none closes this row.
 
 ### ICE-TSNS-SQL-1-R-014 — CLOSED 2026-10-09 for a `timestamp_ns` leaf (refused by R-015); the `VALUES` spelling is row R-018
 
@@ -3967,6 +4032,10 @@ still open is `isModifiable`.
 - **Status 2026-10-25 (GATE-RETIRE-1, PR #1187):** unchanged by GATE-RETIRE-1.
 
 - **Status 2026-10-25 (WRITE-SPINE-1 step 2):** unchanged by step 2; D21 and the native doors never reach it (router only).
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** DECLARED, unchanged. A
+  nested `timestamp_ns` leaf keeps its refusal on every door (ZONE-SEAM-1, #1139 at `3bc2915a`,
+  owner ruling 2026-10-23). WRITE-SPINE-1 step (2) (#1189) and GATE-RETIRE-1 (#1187) leave it as
+  they found it; step (3b) (#1185) is test-only.
 
 ### ICE-TSNS-SQL-1-R-016 — CLOSED 2026-10-14 (ICE-STRUCT-PAIRING-1): one rule pairs struct fields on every write door, Spark's
 
@@ -10163,6 +10232,9 @@ the pin rather than obeying it.
   names it until it lands. **2026-10-16:** routing is more than one unit carries (it needs the
   ruling-113 edge and makes eleven measured statements worse), so the stopgap landed; routing
   stays the card, and the 1.5.6 note names the refusal and `DELETE`.
+- **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** the EXPLAIN-DML-WRITE-1
+  wrapper refusal (#1137, `b7a20167`, 2026-10-21) is on main and the rulings above hold. Carried on
+  the format-v2 label (ICE-V2-LABEL-1).
 
 ### ICE-STRUCT-INLINE-TABLE-FROM-1 — DATED ROW 2026-10-15 (owner ruling 107 (a)): an inline table in `FROM` stores a reordered struct by name, where Spark pairs by position
 
