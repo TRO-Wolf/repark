@@ -4,6 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
+  (2026-10-27):** a nested date or wall literal under the row-merge CASE, a constant nested value
+  (partitioned or not), a date into a MAP timestamp key and the `TRY_CAST` date and wall leaves reach
+  the session-zone seam. 13 of 14 clauses PROVEN (C-012 OPEN: the D8 CAST forms stay ZS-9-refused).
+  The census grows to 43 spellings and 12,720 cells: 52 moves, all DIFFERENT to EQUAL, zero
+  regressions; the worst cost ratio is 1.034. `risk_tier: standard`. Branch `feat/nested-literal-seam-1`.
 - [aws-ephemeral-runs-1-ledger.md](aws-ephemeral-runs-1-ledger.md) — **AWS-EPHEMERAL-RUNS-1
   (2026-10-24):** every `aws-acceptance` run creates, cross-reads and removes its own tables under
   `testing_r<run_id>a<attempt>_<leg>_`. Built: the run-and-leg prefix at every creating site, the cleanup script (with the
