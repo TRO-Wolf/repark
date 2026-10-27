@@ -25,6 +25,7 @@ use super::store_overflow::{
 use super::struct_pairing::{StructPairing, holds_struct_type, pair_store_value};
 
 const ARROW_CAST_NAME: &str = "arrow_cast";
+const SPARK_NONNULL_NAME: &str = "__repark_spark_nonnull__";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum StageSite {
@@ -656,7 +657,7 @@ fn unwrap_seam_position(expr: &Expr) -> &Expr {
             Expr::ScalarFunction(function)
                 if matches!(
                     function.func.name(),
-                    ARROW_CAST_NAME | STORE_PAIR_KERNEL_NAME | ZONE_SEAM_NAME
+                    ARROW_CAST_NAME | STORE_PAIR_KERNEL_NAME | ZONE_SEAM_NAME | SPARK_NONNULL_NAME
                 ) && !function.args.is_empty() =>
             {
                 Some(&function.args[0])
