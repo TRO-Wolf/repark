@@ -909,6 +909,14 @@ perfectly good read.
   unit of its own with a far wider blast radius (every merge-on-read summary in the suite), and
   is named for the orchestrator as the open question of this unit.
 
+#### POSDEL-BATCH-1 — a bulk merge-on-read `DELETE` past one position-delete batch panicked with `offset overflow` — **FIXED 2026-10-27 (RP-60, fork F-POSDEL-BATCH-1 `#374`)**
+
+- **repark** — **FIXED 2026-10-27.** Before this row, a merge-on-read `DELETE` whose matched rows held more path text than a 32-bit `Utf8` array addresses (about 2 GiB) in one partition panicked with `offset overflow` in the fork's position-delete writer, which surfaced as an internal error. Now the fork writes the partition's sorted position deletes in bounded batches: a batch closes at the table property `write.delete.position-delete-batch-rows` (default 1,048,576; below one, the DELETE refuses and names the property) or at 256 MiB of path text, and the statement completes with the survivors exact. A `BETWEEN` range on a `months()` partition routes through the fork writer; the `>= AND <` spelling of the same range stays on RePark's own writer, unbatched, until RP-POSDEL-BATCH-2. A literal `IN` list is routed the same way; no pin in this row covers it.
+- **Apache Spark** — Spark's merge-on-read `DELETE` feeds `(file, position)` pairs to the delete writer as rows arrive and rolls files at the target size; it never builds one array per partition. *(oracle: documented, not live. The streaming behaviour is the one the fork card describes for Spark's writer, and the survivor ids follow from the predicate on the 40-row fixture. No live Spark run at the past-2-GiB size exists in this repository.)*
+- **Pin** — `crates/repark-spark/tests/posdel_batch_door.rs::bulk_mor_delete_past_one_batch_completes_and_survivors_match`, `crates/repark-spark/tests/posdel_batch_door.rs::batch_rows_property_below_one_is_refused_through_the_door` (red on the old pin `d80a2884`), and `crates/repark-spark/tests/posdel_batch_door.rs::binary_op_range_delete_takes_the_repark_writer_not_the_fork` (the route control).
+  pins: rp-60-posdel-repin-1/C-003, C-004
+- **Rationale** — FIXED 2026-10-27. The fix is the fork's (F-POSDEL-BATCH-1); RePark's part is the repin and the Spark-door pins. The `>= AND <` residue is carded as RP-POSDEL-BATCH-2 and is not a row here: the control pin records today's route, and that unit flips it. The metadata door's DATE-literal gap is carded separately (META-DELETE-DATE-LITERAL-1) and changes no result.
+
 #### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
 
 - **repark** — **FIXED 2026-09-17 (ICE-DYN-OVERWRITE-1).** The session conf
