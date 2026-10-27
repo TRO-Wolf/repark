@@ -1552,7 +1552,7 @@ perfectly good read.
 - **Apache Spark** — refuses each of these cells with
   `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` (the WRITE-SPINE-1 step (2) census, F-1 table,
   Spark 4.1.2).
-- **Carried** — carried on the v2 label by owner ruling 2026-10-26; fix in 1.5.7.
+- **Carried** — carried on the v2 label by owner ruling 2026-10-26; owner signature given 2026-10-27 on PR #1195; fix in 1.5.7.
 - **Card** — [NESTED-TEXT-LEAF-STORE-1](../task/roadmap/mid-term/nested-text-leaf-
   store-1-card-2026-10-25.md) (2026-10-25, open, grade C). Retires when each cell is REFUSED as
   Spark refuses it, or EQUAL to Spark's value, and the census recount moves no other cell.
@@ -1844,11 +1844,9 @@ perfectly good read.
   version, per the owner's ES-3 words and the never-write-plaintext rule: writing plaintext
   into a table that asked for encryption is the outcome the ruling forbids.
 - **Item 1 (ruling 121 (b)), as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:**
-  Carried on the format-v2 PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: pending
-  on the PR.
+  Carried on the format-v2 PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: given 2026-10-27 on PR #1195.
 - **Item 5 (ruling 121 (b)), as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:**
-  Carried on the format-v2 PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: pending
-  on the PR.
+  Carried on the format-v2 PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: given 2026-10-27 on PR #1195.
 
 #### ENC-CTAS-REPLACE-1 — DATED ROW 2026-10-15 (owner ruling 98 (a)): a key landing mid-statement leaves an orphan unencrypted file
 
@@ -1864,7 +1862,7 @@ perfectly good read.
   (2026-10-15, open, not scheduled). Retires when the staged files are removed on that failure, or the
   publish refuses before staging, with a pin that a key landing mid-statement leaves no unencrypted file.
 - **As of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** Carried on the format-v2
-  PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: pending on the PR.
+  PRODUCTION label (ICE-V2-LABEL-1, 2026-10-26); owner signature: given 2026-10-27 on PR #1195.
 
 ### MB-ENC-UNDELETED-FIELD-1 — DATED ROW 2026-10-15 (owner ruling 109 (c)): the keyed micro-batch refusal names the sink but not the staged file it could not delete
 
