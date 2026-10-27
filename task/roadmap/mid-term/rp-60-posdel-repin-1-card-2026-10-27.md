@@ -2,9 +2,9 @@
 
 **Filed:** 2026-10-27. **Filed by:** the POSDEL docs clerk round (`claude-haiku-5-5`), from the orchestrator's measured facts of 2026-10-27.
 
-**Status:** filed, not scheduled. The owner charters it.
+**Status:** dispatched 2026-10-27 on an Opus 5.5 builder lane, repin target `ea0b7741`.
 
-**Depends on:** F-POSDEL-BATCH-1 landed on the fork ([the fork card](f-posdel-batch-1-card-2026-10-27.md)). No RePark step starts before the fix is on fork main and fork main is green (fork-sync rule 2).
+**Depends on:** F-POSDEL-BATCH-1 landed on the fork (landed 2026-10-27, fork PR #374) ([the fork card](f-posdel-batch-1-card-2026-10-27.md)). No RePark step starts before the fix is on fork main and fork main is green (fork-sync rule 2).
 
 **Grade:** clerk-grade repin, plus one Spark-door pin. Nothing changes in the Python facade.
 
