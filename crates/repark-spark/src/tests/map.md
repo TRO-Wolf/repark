@@ -1,5 +1,40 @@
 # map — repark-spark/src/tests
 
+**ICE-REPLACE-KILL-DOORS-1 K-10 (2026-10-27, build `34b5e921`):** `kill_mid_write.rs` gains K-10,
+`CREATE OR REPLACE TABLE fault.sales.t USING iceberg AS SELECT …` with the session snapshot property
+`spark.sql.iceberg.snapshot-property.k` set (the K-2 key), on format v2 and v3:
+`k10_create_or_replace_with_a_session_write_key_killed_at_publish_v2` and `_v3`. The statement takes
+the CTAS options and session-key branch (`ctas.rs`, `finish_ctas_staged_commit`), which applies the
+overwrite locally and calls `publish_replace_table` directly. Its newest metadata file is `00003`,
+where K-8 and K-9 read `00002`. The cell asserts the K-8 reading (RKD-1 (a)), the parent's wait for
+`holding` with `returned` absent at the kill, and that the marker's attempted snapshot carries the key
+`k`, as K-2 does. The forward-instead-of-hold mutant reds 10 of 10 (5 runs by 2 cells) with
+`the child exited (exit status: 0) before the hold`. K-1 to K-9 and the controls are unchanged by this
+commit: its only removed line in `kill_mid_write.rs` is the `CELLS` length, 11 to 12. Pins for K-10 and
+its mutant sit in the ledger clauses named below. pins: ice-replace-kill-doors-1/C-009, C-010, C-011
+
+**ICE-REPLACE-KILL-DOORS-1 (2026-10-27, build `6585e4ac`, ruling RKD-1):** `kill_mid_write.rs`
+gains two cells on format v2 and v3: K-8 (`CREATE OR REPLACE TABLE fault.sales.t USING iceberg AS
+SELECT …` over the seeded table) and K-9 (`REPLACE TABLE … AS SELECT`, which the parser rewrites to
+the same path). Their test functions are `k8_create_or_replace_as_select_killed_at_publish_reads_replaced_on_the_local_catalog_v2`
+and `_v3`, and `k9_replace_as_select_killed_at_publish_reads_replaced_on_the_local_catalog_v2` and
+`_v3`. The parent kills the child at the publish hold and reopens at the newest metadata file, which
+the local catalog treats as the commit (ICE-INTEGRITY-PINS-1 orchestrator ruling K-1). The reopen reads
+the staged replace: the newest metadata file is the staged one, the current snapshot is the attempted
+one, the snapshot set is the seeded set plus that snapshot, the rows and Arrow types equal the
+replace's `SELECT`, the orphan counts are 0 and equal the dry run, and a following `INSERT` reads
+back. `kill_mid_write_hold.rs` holds `publish_replace_table` under `HoldMode::Hold` and forwards it
+otherwise. `hold()` writes a `holding` file in the cell root on entry, for every held cell. The child
+writes a `returned` file after the replace statement, and the replace cells kill only once `holding`
+exists and assert that `returned` is absent. The forward-instead-of-hold mutant reds 20 of 20 with
+`the child exited (exit status: 0) before the hold`; without the `returned` discriminator it reds 16 of
+20 through the exit race. K-1 to K-7 and the controls K-C0 and K-C1 keep their `Cell` rows and test
+functions; the three changed lines in `kill_mid_write.rs` are the `CELLS` length, the `let mut
+early_exit` binding and the orphan condition's `&& !replaces(cell)`. A replace kill on Glue and S3
+Tables has no cell: the catalog pointer governs there (pin U). The local-catalog half of
+ICE-INTEGRITY-PINS-1 C-024 closes here. pins: ice-replace-kill-doors-1/C-001, C-002, C-003, C-004,
+C-005, C-006
+
 WRITE-SPINE-1 step 3a (2026-10-24): `write_door.rs` pins `WriteDoor::ALL` against the evaluation's eighteen ids in order with the first ten as Spark doors, `door_of` on parsed Spark statements (VALUES and SELECT inserts D1, an insert with a write option D2, `INSERT OVERWRITE` with or without options D4, CTAS and `CREATE OR REPLACE … AS` D6, MERGE insert D7, MERGE whole-column update and `SET *` D8, MERGE field update D9, UPDATE D10), and `None` for DELETE, CALL, TRUNCATE, SELECT, a column-list CREATE, DROP and a delete-only MERGE. Risk: a door renamed or dropped from `ALL`, or a writing statement tagged as no door. pins: write-spine-1/C-003
 
 ICE-INTEGRITY-PINS-1 pin U, offline twin (U-9, 2026-10-22): `commit_unknown_doors.rs` drives the 24 cells U-1 to U-4 (landed or absent, catalog reads open or cut) through three doors, plain `INSERT … SELECT` (the fork's `IcebergCommitExec`), the session-write-key append (`commit_append_with_summary`) and `MERGE` copy-on-write, on format v2 and v3. `commit_unknown_gate.rs` holds `GateCatalog`, a test-only decorator over the memory catalog that forwards every `Catalog` method, forwards or drops the commit and then answers `CommitStateUnknown`, and fails `load_table` from the commit until the statement returns. Each cell asserts the drill table's four `commit.status-check.*` properties, one commit call (never re-applied), the cut refresh count of the status-check budget (2), the statement's answer through `engine_err` (`Ok` on U-1, else `CommitStateUnknown` with `operation_id` `None` on the plain door and the attempted snapshot's `engine.operation-id` on the other two), and the resolution in a fresh session that adopts the newest metadata file through `register_table`: the snapshot count by operation id and by snapshot id (1 or 0), the snapshot set, and the rows once or not at all. Red through five mutants (forward in U-3/U-4, reads never cut, a plain failure in place of unknown, the status-check properties dropped, the plain door expected to carry an id). pins: ice-integrity-pins-1/C-030
@@ -46,15 +81,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   doors × v2 and v3, the seed with the status-check properties, and the fresh-session resolution.
 - `commit_unknown_gate.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** `GateCatalog`, the test-only
   decorator that forwards or drops the commit, answers `CommitStateUnknown`, cuts reads and records the attempt.
-- `kill_mid_write.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22):** the 18 kill cells
-  (K-1 to K-7 on format v2 and v3, controls K-C0 and K-C1), the child entry
-  `kill_mid_write_child`, the reopen and the orphan, dry-run and write checks; `#[cfg(unix)]`.
+- `kill_mid_write.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22), ICE-REPLACE-KILL-DOORS-1
+  (2026-10-27):** the 24 kill cells (K-1 to K-10 on format v2 and v3, controls K-C0 and K-C1;
+  K-8, K-9 and K-10 are the replace doors), the child entry `kill_mid_write_child`, the reopen and the
+  orphan, dry-run and write checks; `#[cfg(unix)]`.
 - `kill_mid_write_release.rs` — **ICE-INTEGRITY-PINS-1 fix round 2 (2026-10-22):** how a held
   child ends without its parent's kill: the parent-gone pin and its intermediate, the pre-start
   orphan pin and its intermediate, and the hold-limit pin; `#[cfg(unix)]`.
 - `kill_mid_write_hold.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22):** `HoldCatalog`, the
   test-only catalog decorator (hold, forward-then-hold, forward), its marker, and the reachable
-  and attempted file sets; `#[cfg(unix)]`.
+  and attempted file sets; `#[cfg(unix)]`. **ICE-REPLACE-KILL-DOORS-1 (2026-10-27):** the
+  `publish_replace_table` hold and the `holding` file written on entry to the hold.
 - `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
   the Spark door's local-file write policy at default conf: `EXPLAIN ANALYZE COPY` outside
   refuses naming `repark.sql.allowLocalFilesystemDDL` with no file written; plain `EXPLAIN`

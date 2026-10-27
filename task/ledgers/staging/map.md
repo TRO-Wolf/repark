@@ -11,6 +11,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   clauses PROVEN (C-012 OPEN: the D8 CAST forms stay ZS-9-refused).
   The census grows to 43 spellings and 12,720 cells: 52 moves, all DIFFERENT to EQUAL, zero
   regressions; the worst cost ratio is 1.034. `risk_tier: standard`. Branch `feat/nested-literal-seam-1`.
+- [ice-replace-kill-doors-1-ledger.md](ice-replace-kill-doors-1-ledger.md) —
+  **ICE-REPLACE-KILL-DOORS-1 (2026-10-27), grade B:** kill-mid-write pins K-8 and K-9 for the two
+  replace spellings on the local catalog, format v2 and v3; the forward-instead-of-hold mutant red
+  20 of 20 with the discriminator; ICE-INTEGRITY-PINS-1 C-024 closed for the local catalog. The Glue
+  and S3 Tables replace kill (C-007) and the verifier round (C-008) are OPEN. `risk_tier: standard`.
+  Branch `fix/ice-replace-kill-doors-1`.
+  pins: ice-replace-kill-doors-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [aws-ephemeral-runs-1-ledger.md](aws-ephemeral-runs-1-ledger.md) — **AWS-EPHEMERAL-RUNS-1
   (2026-10-24):** every `aws-acceptance` run creates, cross-reads and removes its own tables under
   `testing_r<run_id>a<attempt>_<leg>_`. Built: the run-and-leg prefix at every creating site, the cleanup script (with the
