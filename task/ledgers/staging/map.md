@@ -4,6 +4,7 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [rp-60-posdel-repin-1-ledger.md](rp-60-posdel-repin-1-ledger.md) — **RP-60-POSDEL-REPIN-1 (2026-10-27):** the fork repinned to `ea0b7741` (F-POSDEL-BATCH-1, fork `#374`), with Spark-door pins that are red at `d80a2884` and green at `ea0b7741`. C-001 to C-004 and C-007 PROVEN. Finding (a), the metadata-table parse through the SQL door (C-005), finding (b), the DATE literal in the metadata door (C-006), and the format-v2 label window (C-008) are OPEN. `risk_tier: standard`. Branch `chore/rp-60-posdel-repin-1`.
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of
