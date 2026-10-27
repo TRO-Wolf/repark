@@ -98,6 +98,12 @@ Tables already written keep the values they hold; this release ships no migratio
   owner ruling 2026-10-26 and fixed in 1.5.7. The label itself changes no stored value; the stored-
   value changes of this release are the bullets above.
 
+- **A bulk merge-on-read `DELETE` that panicked past one position-delete batch now completes (RP-60, fork F-POSDEL-BATCH-1 `#374`).**
+  A `DELETE` on a format-v2 merge-on-read table whose matched rows held more than 2 GiB of data-file path text in one partition
+  panicked with `offset overflow`, which surfaced as an internal error; the fork now writes the partition's position deletes in
+  bounded batches and the statement completes. The new table property `write.delete.position-delete-batch-rows` sets the row bound:
+  default 1,048,576, and a value below one refuses the `DELETE` and names the property.
+
 ## Integrity under failure (no stored value or behaviour changes)
 
 - **A writer killed between its data files and its commit is pinned (ICE-INTEGRITY-PINS-1, pin
@@ -139,5 +145,10 @@ Tables already written keep the values they hold; this release ships no migratio
   these forms included, refuses with the wrapper's text instead of the G3-E8 text. On
   `repark.sql()` a wrapped write that DataFusion cannot plan keeps DataFusion's own error instead,
   and writes nothing either way.)*
+
+- **A `>= AND <` range `DELETE` is not batched (RP-POSDEL-BATCH-2, known issue, 2026-10-27).** A bulk merge-on-read `DELETE` whose
+  range is spelled `>= AND <` takes RePark's own position-delete writer, which writes one unbounded batch per partition and ignores
+  `write.delete.position-delete-batch-rows`; it still panics past 2 GiB of path text in one partition. The `BETWEEN` spelling of the
+  same range goes through the fork writer, which batches it.
 
 GATE-RETIRE-1 (2026-10-25, PR #1187): R-011's container-cast gate arm is retained, not retired. A verifier round found it load-bearing for whole-container casts whose fields do not line up with the target (an arity mismatch, or fields at different positions), which the zone seam does not rewrite and the arm refuses in New York. The micros hint now says such a cast is refused unless its fields line up with the target's. No cell moved in the step-0 census (0 of 12192 cells).
