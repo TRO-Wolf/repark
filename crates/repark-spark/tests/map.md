@@ -579,6 +579,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `create_physical_plan`); an intervening filter between two live windows stacks two
   (`sql_intervening_filter_between_windows_stacks_window_agg_exec`). Ledger:
   [../../../task/ta1-sql-fusion-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-ta1-sql-fusion-ledger.md).
+- [posdel_batch_door.rs](posdel_batch_door.rs) — **RP-60-POSDEL-REPIN-1 (2026-10-27):** the Spark-door pins of the fork repin to `ea0b7741` (F-POSDEL-BATCH-1, fork `#374`), on a format-v2 merge-on-read table partitioned by `(m, months(d))`. `bulk_mor_delete_past_one_batch_completes_and_survivors_match` (`write.delete.position-delete-batch-rows` at `7`): a `DELETE … WHERE d BETWEEN` deletes 40 rows across more than five batches, and the survivor ids match exactly. `batch_rows_property_below_one_is_refused_through_the_door` (at `0`): the same DELETE refuses naming the property, with the rows and the current snapshot unchanged; red on the old pin `d80a2884`, where the DELETE succeeded and deleted 40 rows (exit 101), green on `ea0b7741`. `whole_partition_delete_still_takes_the_metadata_door` (`WHERE m = 4`, a whole identity partition value, since the metadata door translates no DATE literal): deleted-data-files 1, total-delete-files 0. `binary_op_range_delete_takes_the_repark_writer_not_the_fork` (the control, at `0`): `>= AND <` on `d` takes RePark's own writer, which the RP-POSDEL-BATCH-2 unit flips. pins: rp-60-posdel-repin-1/C-001, C-002, C-003, C-004, C-007
 
 ## I want to...
 
