@@ -265,7 +265,7 @@ async fn analyzed(ctx: &SessionContext, sql: &str) -> LogicalPlan {
         .expect("analyzed")
 }
 
-async fn analyzed_expr(ctx: &SessionContext, expr: Expr) -> LogicalPlan {
+fn analyzed_expr(ctx: &SessionContext, expr: Expr) -> LogicalPlan {
     let state = ctx.state();
     let empty = LogicalPlan::EmptyRelation(EmptyRelation {
         produce_one_row: true,
@@ -399,7 +399,7 @@ fn case_sql(value: &str, target: &DataType) -> String {
     )
 }
 
-async fn case_scan(ctx: &SessionContext, target: &DataType) {
+fn case_scan(ctx: &SessionContext, target: &DataType) {
     let ids = Arc::new(Int32Array::from(vec![1])) as ArrayRef;
     let column: ArrayRef = match target {
         DataType::Struct(fields) => Arc::new(
@@ -551,7 +551,7 @@ async fn case_literals_under_the_row_merge_case_store_the_session_midnight() {
     for (shift, expected, _) in ZONES {
         for (shape, value, target) in case_shapes() {
             let ctx = seam_ctx(shift);
-            case_scan(&ctx, &scan_target(shape)).await;
+            case_scan(&ctx, &scan_target(shape));
             let plan = analyzed(&ctx, &case_sql(&value, &target)).await;
             let targets = vec![
                 ("id".to_string(), DataType::Int32),
@@ -731,7 +731,7 @@ async fn try_cast_leaves_store_spark_values_and_an_instant_leaf_keeps_utc() {
             ),
         ];
         for (value, target, expected) in shapes {
-            let plan = analyzed_expr(&ctx, arrow_cast_to(&ctx, value, &target)).await;
+            let plan = analyzed_expr(&ctx, arrow_cast_to(&ctx, value, &target));
             let targets = vec![("v".to_string(), target.clone())];
             let staged = staged(&ctx, plan, &targets, StageSite::PredicateUpdate);
             let batches = staged_batches(&ctx, staged).await;
@@ -765,7 +765,7 @@ async fn a_try_cast_instant_leaf_keeps_its_source_type_in_the_seam_carrier() {
         ],
     );
     let target = structure(vec![("d", utc()), ("v", utc()), ("n", DataType::Int32)]);
-    let plan = analyzed_expr(&ctx, arrow_cast_to(&ctx, value, &target)).await;
+    let plan = analyzed_expr(&ctx, arrow_cast_to(&ctx, value, &target));
     let targets = vec![("v".to_string(), target)];
     let staged = staged(&ctx, plan, &targets, StageSite::PredicateUpdate);
     let LogicalPlan::Projection(projection) = &staged else {
@@ -928,7 +928,7 @@ fn value_column(batch: &RecordBatch) -> RecordBatch {
 async fn a_stripped_array_case_writes_field_ids_through_the_sink() {
     for (shift, expected, _) in ZONES {
         let ctx = seam_ctx(shift);
-        case_scan(&ctx, &scan_target("array")).await;
+        case_scan(&ctx, &scan_target("array"));
         let target = array_target();
         let plan = analyzed(&ctx, &case_sql("make_array(DATE '2026-01-02')", &target)).await;
         let targets = vec![
@@ -951,7 +951,7 @@ async fn a_stripped_array_case_writes_field_ids_through_the_sink() {
         let reader = SerializedFileReader::new(file).expect("reader");
         let schema = reader.metadata().file_metadata().schema();
         let element = child_named(
-            child_named(child_named(&schema, "v").expect("v"), "list").expect("list"),
+            child_named(child_named(schema, "v").expect("v"), "list").expect("list"),
             "element",
         )
         .expect("element");
