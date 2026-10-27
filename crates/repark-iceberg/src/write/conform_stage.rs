@@ -624,11 +624,8 @@ fn partial_field(source: &Field, target: &Field) -> (Field, bool) {
     }
 }
 
-fn is_micro_instant(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Timestamp(TimeUnit::Microsecond, Some(_))
-    )
+fn is_instant(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(_, Some(_)))
 }
 
 fn is_micro_wall(data_type: &DataType) -> bool {
@@ -647,7 +644,7 @@ fn try_cast_marks_excluded(expr: &Expr, schema: &DFSchema) -> bool {
         && cast
             .expr
             .get_type(schema)
-            .is_ok_and(|source| is_micro_instant(&source))
+            .is_ok_and(|source| is_instant(&source))
 }
 
 fn unwrap_seam_position(expr: &Expr) -> &Expr {

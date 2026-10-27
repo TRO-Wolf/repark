@@ -680,7 +680,7 @@ async fn try_cast_leaves_store_spark_values_and_an_instant_leaf_keeps_utc() {
             None,
         );
         let instant_lit = Expr::Literal(
-            ScalarValue::TimestampMicrosecond(Some(UTC_WALL), Some(Arc::from("UTC"))),
+            ScalarValue::TimestampNanosecond(Some(UTC_WALL * 1000), Some(Arc::from("UTC"))),
             None,
         );
         let one = Expr::Literal(ScalarValue::Int32(Some(1)), None);
