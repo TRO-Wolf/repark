@@ -40,7 +40,7 @@ One JSON object: `status`, `head`, `commits`, `matrix` (sha, tallies), `runs` (p
 
 ## Outcome (2026-10-26)
 
-**Label:** format-v2 Iceberg reads and writes: **PRODUCTION**, on main `59d104d9bc9e54da0659c2295277c98b56a2a699` (ICE-V2-LABEL-1, 2026-10-26). The label moves on the owner's signature of the three carve-out lines below, given on the PR (section 1).
+**Label:** format-v2 Iceberg reads and writes: **PRODUCTION**, on main `59d104d9bc9e54da0659c2295277c98b56a2a699` (ICE-V2-LABEL-1, 2026-10-26). The label moves on the owner's signature of the four carve-out lines below, given 2026-10-27 on PR #1195 (section 1).
 
 **Step-0 facts (orchestrator, measured; copied, never re-measured):**
 

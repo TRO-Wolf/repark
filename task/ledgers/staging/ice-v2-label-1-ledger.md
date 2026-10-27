@@ -11,7 +11,7 @@
 **Commits (this unit), continued:** `27f0515e` the ledger filing; `933fce41` the order, filed by the orchestrator; `e1599a81` the 102-cell correction; `457eeedf` the STATUS restoration; the fix commit for the verifier round 1 findings, to be appended at merge.
 **Commits (this unit), continued again:** `589b91c6` the round-1 verifier fixes; `2c40261a` the 2026-10-27 rulings and round-2 corrections; `1fecc49f` the registry re-date of this round. The ledger, order and STATUS commits of this round are appended at merge.
 
-**This ledger closes when the label PR merges on the owner's signature of the three carve-outs.** It moves to `completed/` in that PR's last commit. The OPEN rows below name what the owner must rule first.
+**This ledger closes when the label PR merges on the owner's signature of the four carve-outs.** It moves to `completed/` in that PR's last commit. The OPEN rows below name what the owner must rule first.
 
 ## PROPOSITION LEDGER — ICE-V2-LABEL-1 — 2026-10-26
 
