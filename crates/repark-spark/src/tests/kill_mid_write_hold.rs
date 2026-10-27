@@ -110,6 +110,8 @@ async fn attempted_files(
 
 impl HoldCatalog {
     async fn hold(&self) -> iceberg::Result<Table> {
+        std::fs::write(self.marker.with_file_name("holding"), "holding")
+            .expect("write the hold signal");
         let deadline = Instant::now() + self.limit;
         let reason = loop {
             if std::os::unix::process::parent_id() != self.parent {
@@ -327,6 +329,23 @@ impl Catalog for HoldCatalog {
         table: Table,
         expected_base_metadata_location: Option<String>,
     ) -> iceberg::Result<Table> {
+        let base = self.inner.load_table(table.identifier()).await?;
+        let before = snapshot_ids(base.metadata());
+        let attempted: Vec<Snapshot> = table
+            .metadata()
+            .snapshots()
+            .filter(|snapshot| !before.contains(&snapshot.snapshot_id()))
+            .map(|snapshot| snapshot.as_ref().clone())
+            .collect();
+        let mut files =
+            attempted_files(table.file_io(), table.metadata(), &attempted, Some(&base)).await;
+        if let Some(location) = table.metadata_location() {
+            files.insert(local_path(location), ("metadata", None));
+        }
+        self.write_marker(&attempted, table.metadata().location(), &files);
+        if self.mode == HoldMode::Hold {
+            return self.hold().await;
+        }
         self.inner
             .publish_replace_table(table, expected_base_metadata_location)
             .await
