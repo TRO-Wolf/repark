@@ -1167,7 +1167,7 @@ perfectly good read.
   `<table>/metadata/`, which is then the table. A path read of a `type=hadoop` table follows
   `version-hint.text` instead and can read an older version, so it is outside this row (card
   [ICE-HADOOP-HINT-WINDOW-1](../task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md),
-  owner decision pending). A writer killed inside the
+  owner ruled option 1 on 2026-10-22; see the dated lines below). A writer killed inside the
   catalog's commit call, before the metadata file is written (every data file, delete file,
   manifest and manifest list durable), leaves the table as it was: the same metadata file,
   snapshot set and rows. The files that writer wrote stay on disk as orphans, never more than the
@@ -1193,6 +1193,15 @@ perfectly good read.
 - **Status as of 2026-10-26 on `59d104d9bc9e54da0659c2295277c98b56a2a699`:** pin K is on main (ICE-
   INTEGRITY-PINS-1, #1142 at `dc462ccb`); the DECLARED rule is unchanged. The `type=hadoop` path-
   read window stays under card ICE-HADOOP-HINT-WINDOW-1 (ledger C-015).
+- **Dated 2026-10-27, declared on the format-v2 label by owner ruling 2026-10-27:** the owner ruled option 1 on
+  2026-10-22: the path read walks past `version-hint.text` as Java's `HadoopTableOperations.refresh` does, in its
+  own unit (card [ICE-HADOOP-HINT-WINDOW-1](../task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md)).
+  Until that unit lands, a `type=hadoop` path read after a crash, or a failed hint write, between
+  `v(N+1).metadata.json` and the hint can answer the last hinted version with no error. `register_table` and the
+  catalog doors are unaffected.
+- **Dated 2026-10-27, declared on the format-v2 label by owner ruling 2026-10-27:** the replace doors are unpinned
+  until ICE-REPLACE-KILL-DOORS-1 lands. `publish_replace_table` is forwarded unheld by the kill decorator, so RTAS and
+  `CREATE OR REPLACE TABLE … AS SELECT` have no kill cell (card [ICE-REPLACE-KILL-DOORS-1](../task/roadmap/mid-term/ice-replace-kill-doors-1-card-2026-10-27.md)).
 
 #### DML-6 — `INSERT … BY NAME`
 
