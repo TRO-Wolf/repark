@@ -1596,7 +1596,7 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   first argument is cast to `TIMESTAMP` in the session zone, as Spark's implicit cast does, and
   the function returns `TIMESTAMP`. Not converted (ZONE-ORACLE-1 holds no Spark answer): numeric
   targets other than `BIGINT`, a timestamp map key, a container cast to a scalar `STRING`,
-  `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`.
+  `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`. **NESTED-LITERAL-SEAM-1 (2026-10-27):** the Map arms of `partial_type` and `convert` convert the key as well as the value (ruling NLS-1 Q1), so a `MAP<TIMESTAMP, …>` key reaches the seam; the file is 677 lines. pins: nested-literal-seam-1/C-004
   pins: zone-seam-1/C-001, C-002, C-003, C-004, C-011, C-012
 
 ## Pointers

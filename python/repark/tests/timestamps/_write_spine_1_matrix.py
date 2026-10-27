@@ -19,7 +19,7 @@ import _write_spine_1_spellings as corpus
 from repark import ReparkSession, _native
 
 HERE = Path(__file__).resolve().parent
-MAIN_FIXTURE = HERE / "write_spine_1_main_7a789fc5.json"
+MAIN_FIXTURE = HERE / "write_spine_1_main_59d104d9.json"
 SPARK_FIXTURE = recorder.ORACLE_FILE
 HEAD_FIXTURE_GLOB = "write_spine_1_head_*.json"
 SELECT_SQL = f"SELECT id FROM {shapes.VIEW_NAME}"

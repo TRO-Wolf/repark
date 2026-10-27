@@ -12,11 +12,11 @@ from repark import _native
 
 TEMPLATE_FREE_REACH = frozenset({"rust_api", "none"})
 ROOT = Path(__file__).resolve().parents[4]
-SPELLING_COUNT = 41
+SPELLING_COUNT = 43
 EXPECTED_DOOR_SPELLINGS: dict[str, tuple[str, ...]] = {
     "D1": ("insert_values", "insert_select", "df_insert_into", "df_append", "df_save_as_table"),
     "D2": ("insert_options",),
-    "D3": ("insert_by_name",),
+    "D3": ("insert_by_name", "insert_map_key"),
     "D4": (
         "insert_overwrite",
         "insert_overwrite_values",
@@ -30,6 +30,7 @@ EXPECTED_DOOR_SPELLINGS: dict[str, tuple[str, ...]] = {
     "D9": ("merge_update_field", "merge_update_field_literal"),
     "D10": (
         "update_whole_where",
+        "update_whole_where_part",
         "update_whole_nowhere",
         "update_col_where",
         "update_col_nowhere",
@@ -70,8 +71,8 @@ def test_every_rust_api_only_door_names_a_rust_test_that_exists() -> None:
     assert missing == []
 
 
-def test_the_spelling_table_is_exactly_the_forty_one_ruled_names() -> None:
-    """The table holds the 41 ruled spelling names on their doors, no more and no fewer."""
+def test_the_spelling_table_is_exactly_the_forty_three_ruled_names() -> None:
+    """The table holds the 43 ruled spelling names on their doors, no more and no fewer."""
     assert {door: sorted(names) for door, names in doors.DOOR_SPELLINGS.items()} == {
         door: sorted(names) for door, names in EXPECTED_DOOR_SPELLINGS.items()
     }

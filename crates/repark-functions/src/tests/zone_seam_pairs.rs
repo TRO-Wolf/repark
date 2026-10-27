@@ -540,6 +540,105 @@ async fn a_value_under_a_null_struct_never_reaches_an_ansi_leaf() {
     );
 }
 
+const KEY_ZONES: [&str; 2] = ["America/New_York", "Asia/Kolkata"];
+const DATE_KEY_INSTANTS: [&str; 2] = ["1767330000000000", "1767292200000000"];
+const WALL_KEY_INSTANTS: [&str; 2] = ["1767341045123456", "1767303245123456"];
+const NTZ_KEY_MICROS: [&str; 2] = ["1767305045123456", "1767342845123456"];
+const NTZ_KEY_WALLS: [&str; 2] = ["2026-01-01 22:04:05.123456", "2026-01-02 08:34:05.123456"];
+
+fn keyed_map(key: Expr) -> Expr {
+    crate::expr_fn::map_from_arrays(make_array(vec![key]), make_array(vec![lit("x")]))
+}
+
+fn keyed_map_type(key: DataType) -> DataType {
+    DataType::Map(
+        Arc::new(Field::new(
+            "entries",
+            DataType::Struct(Fields::from(vec![
+                Field::new("key", key, false),
+                Field::new("value", DataType::Utf8, true),
+            ])),
+            false,
+        )),
+        false,
+    )
+}
+
+fn key_cast(key: Expr, target: DataType, try_cast: bool) -> Expr {
+    crate::cast_map::cast_map_expr(keyed_map(key), &keyed_map_type(target), try_cast)
+}
+
+fn first_key(array: &ArrayRef) -> ArrayRef {
+    Arc::clone(array.as_map().keys())
+}
+
+async fn key_answer(zone: &str, expr: Expr) -> (Option<Kind>, String) {
+    match selected(zone, expr).await {
+        Ok(batch) => rendered(&first_key(batch.column(0))),
+        Err(error) => (None, format!("error: {error}")),
+    }
+}
+
+fn wall_text(micros: i64) -> String {
+    arrow::array::temporal_conversions::timestamp_us_to_datetime(micros)
+        .expect("a session wall is in range")
+        .format("%Y-%m-%d %H:%M:%S%.6f")
+        .to_string()
+}
+
+async fn assert_key_pair(source: fn() -> Expr, kind: Kind, expected: [&str; 2], label: &str) {
+    let mut wrong = Vec::new();
+    for try_cast in [false, true] {
+        for (zone, want) in KEY_ZONES.iter().zip(expected) {
+            let cast = key_cast(source(), leaf_type(kind), try_cast);
+            let got = key_answer(zone, cast.clone()).await;
+            if got != (Some(kind), want.to_string()) {
+                wrong.push(format!("try={try_cast} {zone}: {got:?} want {want}"));
+            }
+            let value = answer(zone, cast).await;
+            if value != (Some(Kind::Text), "x".to_string()) {
+                wrong.push(format!("try={try_cast} {zone}: value {value:?} want x"));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{label}:\n{}", wrong.join("\n"));
+}
+
+#[tokio::test]
+async fn a_container_cast_of_a_date_key_to_timestamp_starts_at_the_session_midnight() {
+    assert_key_pair(day, Kind::Ltz, DATE_KEY_INSTANTS, "date key").await;
+}
+
+#[tokio::test]
+async fn a_container_cast_of_a_wall_key_to_timestamp_reads_it_in_the_session_zone() {
+    assert_key_pair(wall_source, Kind::Ltz, WALL_KEY_INSTANTS, "wall key").await;
+}
+
+#[tokio::test]
+async fn a_container_cast_of_an_instant_key_to_timestamp_ntz_takes_the_session_wall() {
+    let mut wrong = Vec::new();
+    for try_cast in [false, true] {
+        for ((zone, want), wall) in KEY_ZONES.iter().zip(NTZ_KEY_MICROS).zip(NTZ_KEY_WALLS) {
+            let cast = key_cast(instant(), leaf_type(Kind::Ntz), try_cast);
+            let got = key_answer(zone, cast.clone()).await;
+            if got != (Some(Kind::Ntz), want.to_string()) {
+                wrong.push(format!("try={try_cast} {zone}: {got:?} want {want}"));
+            }
+            if let Ok(micros) = got.1.parse::<i64>() {
+                let text = wall_text(micros);
+                if text != wall {
+                    wrong.push(format!("try={try_cast} {zone}: wall {text} want {wall}"));
+                }
+            }
+            let value = answer(zone, cast).await;
+            if value != (Some(Kind::Text), "x".to_string()) {
+                wrong.push(format!("try={try_cast} {zone}: value {value:?} want x"));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "instant key:\n{}", wrong.join("\n"));
+}
+
 #[tokio::test]
 async fn a_container_cast_converts_every_element_of_every_row_of_a_list() {
     let hour = 3_600_000_000_i64;

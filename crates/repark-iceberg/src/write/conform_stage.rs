@@ -11,13 +11,13 @@ use datafusion::logical_expr::{
 };
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::table::Table;
-use repark_common::udf_names::{NARROW_TIMESTAMP_NS_NAME, ZONE_SEAM_NAME};
+use repark_common::udf_names::{NARROW_TIMESTAMP_NS_NAME, STORE_PAIR_KERNEL_NAME, ZONE_SEAM_NAME};
 
 use super::ntz_store::{
     is_ltz_instant_target, needs_ltz_instant_cast, store_kernel_udf_name, wall_kernel_input,
     wall_kernel_reads,
 };
-use super::store_assign::refuse_unless_write_store_assignable;
+use super::store_assign::{refuse_unless_write_store_assignable, without_field_metadata};
 use super::store_overflow::{
     ConformStoreFlags, PairSite, conform_one_store_expr, rewrap_aliases, split_aliases,
     store_output_name,
@@ -25,6 +25,7 @@ use super::store_overflow::{
 use super::struct_pairing::{StructPairing, holds_struct_type, pair_store_value};
 
 const ARROW_CAST_NAME: &str = "arrow_cast";
+const SPARK_NONNULL_NAME: &str = "__repark_spark_nonnull__";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum StageSite {
@@ -400,7 +401,15 @@ fn conform_outputs(
         let mut touched = conformed.is_some();
         let mut current = conformed.unwrap_or_else(|| inner.clone());
         if let Some(partial) = planned.get(position).and_then(|source| {
-            nested_partial(request, column, &current, source, target_type, pairs)
+            nested_partial(
+                request,
+                column,
+                &current,
+                source,
+                target_type,
+                pairs,
+                schema.as_ref(),
+            )
         }) {
             current = seam_call(ctx, current, &partial, target_type)?;
             touched = true;
@@ -453,6 +462,7 @@ fn nested_partial(
     source: &DataType,
     target: &DataType,
     pairs: bool,
+    schema: &DFSchema,
 ) -> Option<DataType> {
     if !is_container(target) || matches!(current, Expr::Cast(_) | Expr::TryCast(_)) {
         return None;
@@ -464,7 +474,7 @@ fn nested_partial(
     } else {
         source.clone()
     };
-    zone_partial(&value, target)
+    zone_partial_for(Some(current), &value, target, schema)
 }
 
 fn seam_nested_arrow_casts(
@@ -475,39 +485,100 @@ fn seam_nested_arrow_casts(
     let mut rewritten = false;
     let expr = expr
         .transform_up(|node| {
-            let Expr::ScalarFunction(function) = &node else {
-                return Ok(Transformed::no(node));
-            };
-            if function.func.name() != ARROW_CAST_NAME
-                || function.args.len() != 2
-                || function.args[0].column_refs().is_empty()
-            {
+            if let Expr::ScalarFunction(function) = &node {
+                if function.func.name() == ARROW_CAST_NAME && function.args.len() == 2 {
+                    return seam_one_arrow_cast(ctx, node, schema, &mut rewritten);
+                }
                 return Ok(Transformed::no(node));
             }
-            let (Ok(target), Ok(source)) =
-                (node.get_type(schema), function.args[0].get_type(schema))
-            else {
-                return Ok(Transformed::no(node));
-            };
-            let Some(partial) = is_container(&target)
-                .then(|| zone_partial(&source, &target))
-                .flatten()
-            else {
-                return Ok(Transformed::no(node));
-            };
-            let Expr::ScalarFunction(mut function) = node else {
-                return Ok(Transformed::no(node));
-            };
-            let value = std::mem::replace(
-                &mut function.args[0],
-                Expr::Literal(ScalarValue::Null, None),
-            );
-            function.args[0] = seam_call(ctx, value, &partial, &target)?;
-            rewritten = true;
-            Ok(Transformed::yes(Expr::ScalarFunction(function)))
+            if matches!(node, Expr::Case(_)) {
+                return wrap_scalar_seam_case(node, schema, &mut rewritten);
+            }
+            Ok(Transformed::no(node))
         })
         .data()?;
     Ok((expr, rewritten))
+}
+
+fn seam_one_arrow_cast(
+    ctx: &SessionContext,
+    node: Expr,
+    schema: &DFSchema,
+    rewritten: &mut bool,
+) -> Result<Transformed<Expr>> {
+    let Expr::ScalarFunction(function) = &node else {
+        return Ok(Transformed::no(node));
+    };
+    let (Ok(target), Ok(source)) = (node.get_type(schema), function.args[0].get_type(schema))
+    else {
+        return Ok(Transformed::no(node));
+    };
+    let Some(partial) = is_container(&target)
+        .then(|| zone_partial_for(Some(&function.args[0]), &source, &target, schema))
+        .flatten()
+    else {
+        return Ok(Transformed::no(node));
+    };
+    let Expr::ScalarFunction(mut function) = node else {
+        return Ok(Transformed::no(node));
+    };
+    let value = std::mem::replace(
+        &mut function.args[0],
+        Expr::Literal(ScalarValue::Null, None),
+    );
+    function.args[0] = seam_call(ctx, value, &partial, &target)?;
+    *rewritten = true;
+    Ok(Transformed::yes(Expr::ScalarFunction(function)))
+}
+
+fn wrap_scalar_seam_case(
+    node: Expr,
+    schema: &DFSchema,
+    rewritten: &mut bool,
+) -> Result<Transformed<Expr>> {
+    if !scalar_seam_inside(&node)? {
+        return Ok(Transformed::no(node));
+    }
+    let Ok(case_type) = node.get_type(schema) else {
+        return Ok(Transformed::no(node));
+    };
+    if !is_container(&case_type) || !has_field_metadata(&case_type) {
+        return Ok(Transformed::no(node));
+    }
+    *rewritten = true;
+    Ok(Transformed::yes(Expr::Cast(Cast::new(
+        Box::new(node),
+        without_field_metadata(&case_type),
+    ))))
+}
+
+fn scalar_seam_inside(expr: &Expr) -> Result<bool> {
+    expr.exists(|node| {
+        Ok(matches!(
+            node,
+            Expr::ScalarFunction(function)
+                if function.func.name() == ZONE_SEAM_NAME
+                    && function
+                        .args
+                        .first()
+                        .is_some_and(|arg| arg.column_refs().is_empty())
+        ))
+    })
+}
+
+fn has_field_metadata(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| !field.metadata().is_empty() || has_field_metadata(field.data_type())),
+        DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::FixedSizeList(field, _)
+        | DataType::Map(field, _) => {
+            !field.metadata().is_empty() || has_field_metadata(field.data_type())
+        }
+        _ => false,
+    }
 }
 
 fn seam_call(
@@ -554,36 +625,162 @@ fn partial_field(source: &Field, target: &Field) -> (Field, bool) {
     }
 }
 
-#[must_use]
-pub(crate) fn zone_partial(source: &DataType, target: &DataType) -> Option<DataType> {
+fn is_instant(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(_, Some(_)))
+}
+
+fn is_micro_wall(data_type: &DataType) -> bool {
+    matches!(data_type, DataType::Timestamp(TimeUnit::Microsecond, None))
+}
+
+fn try_cast_marks_excluded(expr: &Expr, schema: &DFSchema) -> bool {
+    let mut current = expr;
+    while let Expr::Alias(alias) = current {
+        current = alias.expr.as_ref();
+    }
+    let Expr::TryCast(cast) = current else {
+        return false;
+    };
+    is_micro_wall(cast.field.data_type())
+        && cast
+            .expr
+            .get_type(schema)
+            .is_ok_and(|source| is_instant(&source))
+}
+
+fn unwrap_seam_position(expr: &Expr) -> &Expr {
+    let mut current = expr;
+    loop {
+        let inner = match current {
+            Expr::Alias(alias) => Some(alias.expr.as_ref()),
+            Expr::Cast(cast) => Some(cast.expr.as_ref()),
+            Expr::ScalarFunction(function)
+                if matches!(
+                    function.func.name(),
+                    ARROW_CAST_NAME | STORE_PAIR_KERNEL_NAME | ZONE_SEAM_NAME | SPARK_NONNULL_NAME
+                ) && !function.args.is_empty() =>
+            {
+                Some(&function.args[0])
+            }
+            _ => None,
+        };
+        let Some(inner) = inner else {
+            return current;
+        };
+        current = inner;
+    }
+}
+
+fn struct_value_args(expr: &Expr) -> Option<Vec<&Expr>> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    if function.func.name() == "named_struct" {
+        if function.args.len() % 2 != 0 {
+            return None;
+        }
+        Some(function.args.iter().skip(1).step_by(2).collect())
+    } else if function.func.name() == "struct" {
+        Some(function.args.iter().collect())
+    } else {
+        None
+    }
+}
+
+fn array_element_args(expr: &Expr) -> Option<Vec<&Expr>> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    if !matches!(function.func.name(), "array" | "make_array") || function.args.is_empty() {
+        return None;
+    }
+    Some(function.args.iter().collect())
+}
+
+fn map_key_value_args(expr: &Expr) -> Option<(Vec<&Expr>, Vec<&Expr>)> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    if function.func.name() != "map" || function.args.is_empty() || function.args.len() % 2 != 0 {
+        return None;
+    }
+    Some((
+        function.args.iter().step_by(2).collect(),
+        function.args.iter().skip(1).step_by(2).collect(),
+    ))
+}
+
+fn shaped_field(
+    args: Option<Vec<&Expr>>,
+    source: &Field,
+    target: &Field,
+    schema: &DFSchema,
+) -> (Field, bool) {
+    let Some(args) = args else {
+        return partial_field(source, target);
+    };
+    let mut partials = args
+        .iter()
+        .map(|arg| zone_partial_for(Some(arg), source.data_type(), target.data_type(), schema));
+    let Some(first) = partials.next() else {
+        return partial_field(source, target);
+    };
+    if !partials.all(|partial| partial == first) {
+        return partial_field(source, target);
+    }
+    match first {
+        Some(partial) => (Field::new(source.name(), partial, true), true),
+        None => (source.clone(), false),
+    }
+}
+
+fn zone_partial_for(
+    expr: Option<&Expr>,
+    source: &DataType,
+    target: &DataType,
+    schema: &DFSchema,
+) -> Option<DataType> {
+    let shaped = expr.map(unwrap_seam_position);
     match (source, target) {
         (DataType::Struct(sources), DataType::Struct(targets))
             if sources.len() == targets.len() =>
         {
+            let values = shaped
+                .and_then(struct_value_args)
+                .filter(|values| values.len() == sources.len());
             let mut found = false;
             let fields: Vec<Field> = sources
                 .iter()
                 .zip(targets.iter())
-                .map(|(source, target)| {
-                    let (field, converted) = partial_field(source, target);
-                    found |= converted;
-                    field
+                .enumerate()
+                .map(|(index, (source, target))| {
+                    let child = values.as_ref().map(|values| values[index]);
+                    match zone_partial_for(child, source.data_type(), target.data_type(), schema) {
+                        Some(partial) => {
+                            found = true;
+                            Field::new(source.name(), partial, true)
+                        }
+                        None => source.as_ref().clone(),
+                    }
                 })
                 .collect();
             found.then(|| DataType::Struct(Fields::from(fields)))
         }
         (DataType::List(source), DataType::List(target)) => {
-            let (field, converted) = partial_field(source, target);
+            let (field, converted) =
+                shaped_field(shaped.and_then(array_element_args), source, target, schema);
             converted.then(|| DataType::List(Arc::new(field)))
         }
         (DataType::LargeList(source), DataType::LargeList(target)) => {
-            let (field, converted) = partial_field(source, target);
+            let (field, converted) =
+                shaped_field(shaped.and_then(array_element_args), source, target, schema);
             converted.then(|| DataType::LargeList(Arc::new(field)))
         }
         (DataType::FixedSizeList(source, size), DataType::FixedSizeList(target, other))
             if size == other =>
         {
-            let (field, converted) = partial_field(source, target);
+            let (field, converted) =
+                shaped_field(shaped.and_then(array_element_args), source, target, schema);
             converted.then(|| DataType::FixedSizeList(Arc::new(field), *size))
         }
         (DataType::Map(source, sorted), DataType::Map(target, _)) => {
@@ -595,9 +792,13 @@ pub(crate) fn zone_partial(source: &DataType, target: &DataType) -> Option<DataT
             if sources.len() != 2 || targets.len() != 2 {
                 return None;
             }
-            let (value, converted) = partial_field(&sources[1], &targets[1]);
-            let entries = DataType::Struct(Fields::from(vec![sources[0].as_ref().clone(), value]));
-            converted.then(|| {
+            let (keys, values) = shaped
+                .and_then(map_key_value_args)
+                .map_or((None, None), |(keys, values)| (Some(keys), Some(values)));
+            let (key, keyed) = shaped_field(keys, &sources[0], &targets[0], schema);
+            let (value, converted) = shaped_field(values, &sources[1], &targets[1], schema);
+            let entries = DataType::Struct(Fields::from(vec![key, value]));
+            (keyed || converted).then(|| {
                 DataType::Map(
                     Arc::new(Field::new(source.name(), entries, source.is_nullable())),
                     *sorted,
@@ -605,11 +806,22 @@ pub(crate) fn zone_partial(source: &DataType, target: &DataType) -> Option<DataT
             })
         }
         (source, target) if !is_container(source) && !is_container(target) => {
-            is_zone_leaf(source, target).then(|| target.clone())
+            if !is_zone_leaf(source, target) {
+                return None;
+            }
+            let excluded = shaped.is_some_and(|shaped| try_cast_marks_excluded(shaped, schema));
+            (!excluded).then(|| target.clone())
         }
         _ => None,
     }
 }
 
+#[must_use]
+pub(crate) fn zone_partial(source: &DataType, target: &DataType) -> Option<DataType> {
+    zone_partial_for(None, source, target, &DFSchema::empty())
+}
+
+#[cfg(test)]
+mod seam_pins;
 #[cfg(test)]
 mod tests;

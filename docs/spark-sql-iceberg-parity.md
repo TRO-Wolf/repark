@@ -1181,7 +1181,7 @@ perfectly good read.
 - **Apache Spark** — Iceberg's `HadoopCatalog` has no pointer outside the file system either: a
   table is its highest-versioned metadata file (`version-hint.text` is a hint), so a metadata
   file once written is the commit. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests/kill_mid_write.rs` (18 cells: `INSERT … SELECT`,
+- **Pin** — `crates/repark-spark/src/tests/kill_mid_write.rs` (18 cells as of 2026-10-22, 24 as of 2026-10-27 with the replace doors, see the dated line below: `INSERT … SELECT`,
   the same with a session write key, `INSERT OVERWRITE`, `MERGE` copy-on-write and
   merge-on-read, `DELETE`, CTAS, each on format v2 and v3, and the controls K-C0 and K-C1, all
   in a killed child process), with the test-only hold decorator in `kill_mid_write_hold.rs`.
@@ -1202,6 +1202,15 @@ perfectly good read.
 - **Dated 2026-10-27, declared on the format-v2 label by owner ruling 2026-10-27:** the replace doors are unpinned
   until ICE-REPLACE-KILL-DOORS-1 lands. `publish_replace_table` is forwarded unheld by the kill decorator, so RTAS and
   `CREATE OR REPLACE TABLE … AS SELECT` have no kill cell (card [ICE-REPLACE-KILL-DOORS-1](../task/roadmap/mid-term/ice-replace-kill-doors-1-card-2026-10-27.md)).
+- **Replace doors (2026-10-27, ICE-REPLACE-KILL-DOORS-1)** — `CREATE OR REPLACE TABLE … AS SELECT`
+  and `REPLACE TABLE … AS SELECT` on the Spark door are pinned on the local catalog by K-8, K-9 and
+  K-10 in `kill_mid_write.rs` (format v2 and v3; the file holds 24 cells). K-10 is the session-key
+  branch of the same replace. Under the local rule, a writer killed at the replace's publish reads
+  back as the replaced table, with the replace's rows, the attempted snapshot current and no orphan.
+  On Glue and S3 Tables the catalog pointer governs, and no replace cell exists yet. The native
+  door's replace has no cell either; it is the remaining replace entry, carded in
+  [NATIVE-DOOR-REPLACE-KILL-1](../task/roadmap/mid-term/native-door-replace-kill-1-card-2026-10-27.md).
+  Ledger: [ICE-REPLACE-KILL-DOORS-1](../task/ledgers/staging/ice-replace-kill-doors-1-ledger.md).
 
 #### DML-6 — `INSERT … BY NAME`
 
@@ -3918,6 +3927,7 @@ still open is `isModifiable`.
   `crates/repark-sql/tests/ansi_store_kernel_registry.rs` resolve every name of both constants
   on each door (owner, question 47).
 - **Status 2026-10-25 (WRITE-SPINE-1 step 2, PR #1189):** the conform stage now converts a date into a nested TIMESTAMP outside UTC on D3, D4, D7, D8 and D10 (288 census cells EQUAL); the arm and ZS-9 refusal stay for step 4.
+- **Status 2026-10-27 (NESTED-LITERAL-SEAM-1):** the conform stage now also converts, outside UTC: a date literal under the D8 row-merge CASE (MERGE whole-struct and `SET *`, struct, array, map and array-of-struct targets); a constant struct with date leaves on a D10 `UPDATE`, partitioned or not (a date literal, or a scalar-subquery date, inside it; the array and map constants already stored Spark's value on main); a date literal or column into a `MAP<TIMESTAMP, …>` key on D3, D8 and D10 (pins: `map_date_keys_store_the_session_midnight_through_insert_by_name` and `map_date_keys_store_the_session_midnight_through_update_and_merge`); and, on D10, the `TRY_CAST` date and wall leaves inside a nested TIMESTAMP. Still refused: a wall literal under the D8 row-merge CASE or in a D10 constant (R3); the D8 `CAST` and `TRY_CAST` forms under the row-merge CASE stay ZS-9-refused (a step (4) question); `TRY_CAST` leaves on D3 and D8 are refused; an instant `TRY_CAST` to a wall leaf keeps its UTC wall, the value Spark stores for it, by a per-leaf exclusion. The read-path `CAST` of a map with a timestamp key now answers the session-zone value where main answered the UTC reading (pins: `map_key_casts_on_the_read_path_answer_spark_values` and the three `zone_seam_pairs.rs` key pins). The recount moves 52 census cells, all DIFFERENT to EQUAL, with zero regressions.
 - **Status 2026-10-26 (NS-TRUTHUP-1, main `9fd60149`):** still OPEN. The `SELECT` of the kernel
   answers `timestamp[ns]`, but neither Python door exposes `information_schema`:
   `information_schema.routines` fails with `table 'spark_catalog.information_schema.routines' not

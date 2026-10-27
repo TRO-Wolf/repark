@@ -38,6 +38,8 @@ Tables already written keep the values they hold; this release ships no migratio
   table-creating writers and every door holding such a cast store Spark's value; a container cast
   of an instant into a nested `TIMESTAMP_NTZ` field now stores the session wall where it refused.
   ZONE-ORACLE-1: 1,540 of 1,640 cells EQUAL (was 1,199).
+- **Nested literal and constant timestamps store Spark's session-zone value outside UTC (NESTED-LITERAL-SEAM-1).** A date literal under the row-merge CASE of a `MERGE` whole-struct or `SET *` update, a constant struct holding a date literal on an `UPDATE` (partitioned or not), a date literal or column used as a `MAP<TIMESTAMP, …>` key on an `INSERT`, a `MERGE` update or an `UPDATE`, and a `TRY_CAST` of a date or wall into a nested `TIMESTAMP` on an `UPDATE` now store the session-zone reading (the session midnight for a date) where they stored the UTC reading. `DATE '2026-01-02'` into a nested `TIMESTAMP` stores 1767330000000000 microseconds in New York and 1767292200000000 in Kolkata, where it stored 1767312000000000 in both. The change moves 52 census cells of the write matrix, all on the merge, update and insert doors, and no other cell; a constant array or map holding a date already stored Spark's value on main and does not move; a value Spark refuses stays refused. The `CAST` and `TRY_CAST` forms under the `MERGE` CASE still refuse, as do a wall literal under that CASE and a wall literal in a constant on an `UPDATE` (ZS-9), as before.
+- **A `CAST` of a map with a timestamp key reads the key in the session zone (NESTED-LITERAL-SEAM-1).** This is a read value, not a stored one: `CAST(<map> AS MAP<TIMESTAMP, STRING>)` and `CAST(<map> AS MAP<TIMESTAMP_NTZ, STRING>)` of a map whose key is a date, a wall or an instant now answer Spark's session-zone key (a date key the session midnight) where they answered the UTC reading. No stored value changes; a table already written keeps the values it holds, and the change shows only in the read.
 
 ## Behaviour changes
 
@@ -114,6 +116,12 @@ Tables already written keep the values they hold; this release ships no migratio
   catalog. Both legs hold live (2026-10-23, run 40025222296): leg U 96 of 96 cells and leg X 40 of 40 on Glue and S3 Tables, v2 and v3. The cross-read module of U-10 remains open (ledger C-060): run 4 timed out in Glue RePark row collection and S3 Tables PyArrow metadata-file I/O. Native diagnostics are the next measurement.
 
 - **An unfiltered `UPDATE` of an out-of-range `TIMESTAMP` literal reports INSERT's overflow (ICE-TSNS-UPDATE-RANGE-CLASS-1, R-012).** Under ANSI the statement refuses with `[CAST_OVERFLOW]` and INSERT's text, as ICE-TSNS-TYPE-PLANNER-1 left it in v1.5.5; this release pins the 16 cells and changes no stored value or refusal.
+
+- **The Spark SQL door's replace statements are pinned for a writer killed at the publish
+  (ICE-REPLACE-KILL-DOORS-1, test only).** `CREATE OR REPLACE TABLE … AS SELECT`, with or without a
+  session write key, and `REPLACE TABLE … AS SELECT` are pinned on format v2 and v3 on the local
+  catalog: the table reads back as replaced, with no orphan. The native door's replace is not yet
+  pinned. No stored value changes.
 
 ## Known issues
 
