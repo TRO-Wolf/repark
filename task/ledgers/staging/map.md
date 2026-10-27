@@ -226,7 +226,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   door-table correction (C-009 PROVEN), the static classifier and the runtime door record
   (C-010, C-011 PROVEN), Rust tests for the Rust-library doors (C-012 PROVEN), two fail-open
   rows of `zone_store_frame` (C-007, C-008 OPEN). `risk_tier: standard`. Branch
-  `feat/write-spine-1-steps-1-3a`.
+  `feat/write-spine-1-steps-1-3a`. Step (2) closures (2026-10-27): C-026 and the P25 gap close by
+  citation to NESTED-LITERAL-SEAM-1; dated lines at the end of the ledger.
 - [zone-horizon-render-1-ledger.md](zone-horizon-render-1-ledger.md) +
   [zone-horizon-render-1-main-answers.json](zone-horizon-render-1-main-answers.json) —
   **ZONE-HORIZON-RENDER-1 (2026-10-08), from the C-2d fold 1 re-verify's S2 finding:** an
