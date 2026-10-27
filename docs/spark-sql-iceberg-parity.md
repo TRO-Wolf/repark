@@ -1184,6 +1184,13 @@ perfectly good read.
   follow the catalog pointer, and the AWS drill pins that." Ruling 82 sets the orphan ceiling;
   the CTAS answer is orchestrator ruling K-1 (2026-10-22, under the owner's grant). A durable
   pointer for the local catalog is out of scope (the U-9 sketch §0).
+- **Replace doors (2026-10-27, ICE-REPLACE-KILL-DOORS-1)** — `CREATE OR REPLACE TABLE … AS SELECT`
+  and `REPLACE TABLE … AS SELECT` are pinned on the local catalog by K-8 and K-9 in
+  `kill_mid_write.rs` (format v2 and v3). The Pin line above counts the 18 cells of 2026-10-22;
+  the file now holds 22. Under the local rule, a writer killed at the replace's publish reads back
+  as the replaced table, with the replace's rows, the attempted snapshot current and no orphan.
+  On Glue and S3 Tables the catalog pointer governs, and no replace cell exists yet. Ledger:
+  [ICE-REPLACE-KILL-DOORS-1](../task/ledgers/staging/ice-replace-kill-doors-1-ledger.md).
 
 #### DML-6 — `INSERT … BY NAME`
 
