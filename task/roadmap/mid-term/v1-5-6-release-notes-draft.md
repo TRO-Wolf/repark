@@ -38,6 +38,7 @@ Tables already written keep the values they hold; this release ships no migratio
   table-creating writers and every door holding such a cast store Spark's value; a container cast
   of an instant into a nested `TIMESTAMP_NTZ` field now stores the session wall where it refused.
   ZONE-ORACLE-1: 1,540 of 1,640 cells EQUAL (was 1,199).
+- **Nested literal and constant timestamps store Spark's session-zone value outside UTC (NESTED-LITERAL-SEAM-1).** A date or wall literal under the row-merge CASE of a `MERGE` whole-struct or `SET *` update, a constant struct, array or map holding a date literal on an `UPDATE` (partitioned or not), a date literal or column used as a `MAP<TIMESTAMP, …>` key on an `INSERT`, and a `TRY_CAST` of a date or wall into a nested `TIMESTAMP` now store the session-zone reading (the session midnight for a date) where they stored the UTC reading. `DATE '2026-01-02'` into a nested `TIMESTAMP` stores 1767330000000000 microseconds in New York and 1767292200000000 in Kolkata, where it stored 1767312000000000 in both. The change moves 52 census cells of the write matrix, all on the merge, update and insert doors, and no other cell; a value Spark refuses stays refused. The `CAST` and `TRY_CAST` forms under the `MERGE` CASE still refuse, as before.
 
 ## Behaviour changes
 
