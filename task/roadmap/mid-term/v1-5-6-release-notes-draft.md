@@ -90,10 +90,6 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **Ordered writes, merge-on-read MERGE and changelog reads refuse above a stated memory bound (ICE-RESOURCE-BOUND-1, U-11).** Each path has a key, read at build: `repark.write.ordered.max-input-fraction` (0.10), `repark.merge.mor.max-updated-fraction` (0.05) and `repark.changelog.max-source-fraction` (0.0625), times the live memory pool. Above it the statement refuses with the pool's `ResourcesExhausted` class (`PySparkException`) before any file is staged. The value 0 means no bound. Default pool detection is closed for cgroup v2 (the leaf-and-ancestors minimum of `memory.max`, capped by `MemTotal`); cgroup v1, macOS and Windows need an explicit pool budget.
 
-- **Replace doors gain kill-mid-write pins (ICE-REPLACE-KILL-DOORS-1, test only).** `CREATE OR
-  REPLACE TABLE … AS SELECT` and `REPLACE TABLE … AS SELECT` are pinned for a writer killed at the
-  publish, on format v2 and v3 on the local catalog; no stored value changes.
-
 ## Integrity under failure (no stored value or behaviour changes)
 
 - **A writer killed between its data files and its commit is pinned (ICE-INTEGRITY-PINS-1, pin
@@ -112,6 +108,12 @@ Tables already written keep the values they hold; this release ships no migratio
   catalog. Both legs hold live (2026-10-23, run 40025222296): leg U 96 of 96 cells and leg X 40 of 40 on Glue and S3 Tables, v2 and v3. The cross-read module of U-10 remains open (ledger C-060): run 4 timed out in Glue RePark row collection and S3 Tables PyArrow metadata-file I/O. Native diagnostics are the next measurement.
 
 - **An unfiltered `UPDATE` of an out-of-range `TIMESTAMP` literal reports INSERT's overflow (ICE-TSNS-UPDATE-RANGE-CLASS-1, R-012).** Under ANSI the statement refuses with `[CAST_OVERFLOW]` and INSERT's text, as ICE-TSNS-TYPE-PLANNER-1 left it in v1.5.5; this release pins the 16 cells and changes no stored value or refusal.
+
+- **The Spark SQL door's replace statements are pinned for a writer killed at the publish
+  (ICE-REPLACE-KILL-DOORS-1, test only).** `CREATE OR REPLACE TABLE … AS SELECT`, with or without a
+  session write key, and `REPLACE TABLE … AS SELECT` are pinned on format v2 and v3 on the local
+  catalog: the table reads back as replaced, with no orphan. The native door's replace is not yet
+  pinned. No stored value changes.
 
 ## Known issues
 
