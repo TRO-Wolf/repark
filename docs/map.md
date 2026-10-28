@@ -44,10 +44,10 @@ repo.
 - [fork-sync.md](fork-sync.md) — the iceberg-rust fork **sync contract**: pin-bump procedure
   (`make bump-fork-pin`), green-before-pinnable, upstream-flows-through-the-fork, the
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
-  table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
+  table (one row per dedicated bump PR; started 2026-08-15; live pin RP-60 `ea0b7741` on 2026-10-27).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
   single home for how repark differs from Apache Spark. ICE-COMMIT-UNKNOWN-1 carries U9's dated
-  live proof and measurement limits (updated 2026-10-23). **2026-10-27 (NESTED-LITERAL-SEAM-1):** the conform stage seams the nested literal and constant shapes, the D3 map-key literals and columns, the D10 `TRY_CAST` date and wall leaves, and the read-path `CAST` of a map with a timestamp key; the status line under the conform-stage row near R-013 records the cells. **2026-10-22 (ZONE-SEAM-1, PR #1139):**
+  live proof and measurement limits (updated 2026-10-23). **2026-10-27 (RP-60):** the bulk merge-on-read `DELETE` past one position-delete batch is registry row POSDEL-BATCH-1 in §2.3, beside ICE-META-DELETE-1. **2026-10-27 (NESTED-LITERAL-SEAM-1):** the conform stage seams the nested literal and constant shapes, the D3 map-key literals and columns, the D10 `TRY_CAST` date and wall leaves, and the read-path `CAST` of a map with a timestamp key; the status line under the conform-stage row near R-013 records the cells. **2026-10-22 (ZONE-SEAM-1, PR #1139):**
   R-011's status line records the cells the seam moves from the refusal to Spark's stored value,
   the cast arm named for GATE-RETIRE-1, and ZS-9's over-refusal of a nested `TIMESTAMP_NTZ` value
   into a nested `TIMESTAMP` field outside UTC until WRITE-NTZ-TO-LTZ-NESTED-1; R-015's line says
