@@ -2,7 +2,7 @@
 
 **Filed:** 2026-10-28. **Filed by:** the audit clerk round (`claude-haiku-5-5`), from the independent audit ([iceberg-v2-label-independent-audit-2026-10-28.md](../../../docs/audits/iceberg-v2-label-independent-audit-2026-10-28.md)) and the orchestrator's reproduction of 2026-10-28.
 
-**Status:** dispatched 2026-10-28 on a Muse MAX lane. Open until the fork merge and the RePark repin.
+**Status:** dispatched 2026-10-28 on a Muse MAX lane. Landed on the fork as PR `#375` (squash `56aa8913`, 2026-10-28) and pinned by RP-61 (PR #1209).
 
 **Target:** the owned `iceberg-rust` fork, at the pin `ea0b7741a57eb81ff25ee9dc18487d641b435a1b` (the five `rev` lines of RePark's root `Cargo.toml`). This is the owner's fork work; no RePark lane implements it.
 
