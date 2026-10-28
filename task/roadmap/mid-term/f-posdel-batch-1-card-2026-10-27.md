@@ -43,6 +43,7 @@ Spark's merge-on-read DELETE feeds `(file, position)` pairs to the delete writer
 
 - The memory side. Before a batch is cut, the writer still holds one owned path string per deleted row, so peak memory on a 10 to 15 million row partition is not bounded by this unit. The follow-up, noted here and not charted, is a streaming producer: the position-delete writer takes `(file, position)` pairs from the scan as they arrive, as Spark does, instead of collecting them first.
 - The copy-on-write delete path, the RePark metadata door and the Python facade. None changes in this unit.
+- The inert size key. `write.delete.target-file-size-bytes` does nothing on the position-delete write path. The writer is built with `new_with_default_file_size`, and only the rewrite planner reads that key, so the delete writer rolls files at 1,000-row multiples, and the integration pin could prove one delete file, not several. Noted here; not charted.
 
 ## Workarounds
 
@@ -54,5 +55,7 @@ Recorded on the card until the fix lands and RP-60 repins:
 ## Dispatch
 
 Fork unit F-POSDEL-BATCH-1, dispatched 2026-10-27 on a Muse MAX lane, with an Opus 5.5 verifier after it. The card leaves the roadmap when RP-60 repins RePark to the merged fix.
+
+**Landed:** 2026-10-27, fork PR #374, squash commit `ea0b7741` on fork main, after an Opus 5.5 verifier PASS at the PR head `437093e6`. The card leaves when RP-60 merges.
 
 Up: [map.md](map.md).
