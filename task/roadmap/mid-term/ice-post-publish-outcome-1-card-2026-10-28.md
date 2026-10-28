@@ -6,6 +6,8 @@
 
 **Status update, 2026-10-28:** built as PR #1206, awaiting verification.
 
+**Status update, 2026-10-28:** verification round 4 PASS; merges on the owner's word. The round-4 Opus 5.5 verifier and the Muse MAX critic both passed `78827c24`; the one S3 finding (R4-V1, the WAP branch sentence in the shared records) is fixed in the round-4 records. The gate row C-008 closes on the round-4 runs in the ledger.
+
 **Grade:** product unit, Opus 5.5 builder lane.
 
 **Severity:** Medium, the audit's rating (AUD-002). A fail-loud outcome-reporting gap: the table is fully published before the error. No partial snapshot, library panic, resurrected row or data loss was demonstrated.
