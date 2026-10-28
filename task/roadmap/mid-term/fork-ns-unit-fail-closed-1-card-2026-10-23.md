@@ -26,7 +26,7 @@ format-layer invariant there makes the silent class impossible whatever the plan
   column's unit (microsecond for `timestamp`/`timestamptz`, nanosecond for `timestamp_ns`/
   `timestamptz_ns`) is refused before any file is written, with one error text that names the column,
   the Arrow unit and the column unit. No cast, no floor: conversion is the engine's job.
-- A fork pin per unit pair; the fork's nightly-interop suite carries it.
+- A fork pin per unit pair; the fork's nightly-interop suite (`nightly_interop.yml`, weekly on Saturdays at 06:43 UTC) carries it.
 - RePark: one pin through the Rust append API (the only RePark door that reaches the writer without
   the plan-time stage), citing R-024, and a dated line on R-024.
 
