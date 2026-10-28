@@ -917,6 +917,15 @@ perfectly good read.
   pins: rp-60-posdel-repin-1/C-003, C-004
 - **Rationale** — FIXED 2026-10-27. The fix is the fork's (F-POSDEL-BATCH-1); RePark's part is the repin and the Spark-door pins. The `BinaryOp` residue is carded as RP-POSDEL-BATCH-2 and is not a row here: the control pin records today's route, and that unit flips it. The metadata door's DATE-literal gap is carded separately (META-DELETE-DATE-LITERAL-1) and changes no result.
 
+#### DELETE-FORMAT-GUARD-1 — a merge-on-read `DELETE`, `UPDATE` or `MERGE` on a format-v2 Avro or ORC table could write position-delete files the fork cannot read — DATED ROW 2026-10-28 (AUD-003; an interim refusal until RP-61)
+
+- **repark** — **interim, dated 2026-10-28.** On a format-version 2 merge-on-read table, a position-delete file is Parquet unless the delete format is set explicitly. RePark's own writers (the RePark route of `DELETE` and `UPDATE`, and the `MERGE` internals) write Parquet position-delete files on an Avro or ORC table whose delete format is only inherited from `write.format.default`, and the table reads back. An explicit `write.delete.format.default` (or the `delete-format` write option) of `avro` or `orc` refuses before any file is written, on every route, with a hint to set `write.delete.format.default` to `parquet`. On the Spark door, a `DELETE` or `UPDATE` that would reach the fork writer on an inherited Avro or ORC table refuses before passthrough, with the same hint, and a `MERGE` on a merge-on-read Avro or ORC table refuses before any file is written. Before this row the statements reported success and left the table unreadable (`Corrupt footer` on the next read). The native door (`repark.sql()`) has no such guard yet; its fork-route statements are carded as NATIVE-DOOR-DELETE-FORMAT-1.
+- **Apache Spark** — writes position-delete files in the table's delete format: the delete-format property when set, otherwise the data format. *(oracle: the ICE-ORC-AVRO-1 packet replay on Spark 4.1.2 with Iceberg 1.11.0, M-1 and M-2; the Avro and ORC delete-file cells were not re-recorded for this row.)*
+- **Pin** — `crates/repark-spark/tests/delete_format_guard.rs` (seven tests, looped over Avro and ORC), the `resolve_delete_format` unit tests in `crates/repark-iceberg/src/write/data_format.rs`, and the facade test `python/repark/tests/writes/test_ice_orc_avro_1.py::test_mor_delete_on_orc_writes_parquet_delete_file` (not run by the builder; CI runs it).
+  pins: ice-delete-format-guard-1/C-001, C-002, C-003, C-004, C-005, C-006
+- **Rationale** — the fork's position-delete reader (pin `ea0b7741`) reads every non-Puffin delete file as Parquet, and RePark cannot change the fork writer on the Spark route. The guard keeps every RePark-written delete file readable and refuses the rest, so no statement leaves an unreadable table. The divergence from Spark and Java, which write delete files in the data format, is intentional and dated until RP-61. The fork fix is F-POSDEL-FORMAT-READ-1 (fork PR `#375`). RP-61 repins to it and restores the inherited format, which retires this row.
+- **Card** — [RP-61-DELETE-FORMAT-REVERT](../task/roadmap/mid-term/rp-61-delete-format-revert-card-2026-10-28.md) (filed, not dispatched). The unit's own card, `ice-delete-format-guard-1-card-2026-10-28.md`, is filed by PR #1204; its status line is updated after #1204 merges.
+
 #### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
 
 - **repark** — **FIXED 2026-09-17 (ICE-DYN-OVERWRITE-1).** The session conf
@@ -1549,6 +1558,15 @@ perfectly good read.
   cells `D-REPLACE`, `D-RTAS` and `D-RTAS-TIME-TRAVEL` land exactly on the stamps above —
   `md.refs` `[]` with only the pre-existing `append` for the column-def form, `[append, overwrite]`
   for the `AS SELECT` form, and the pre-replace snapshot still readable by `VERSION AS OF`.
+
+#### ICE-POST-PUBLISH-OUTCOME-1 — a Spark-door statement whose change committed reported failure when the session's name refresh failed — **FIXED 2026-10-28 (AUD-002)**
+
+- **repark** — **FIXED 2026-10-28.** After a catalog commit succeeds, a failed session name refresh no longer fails the statement on the Spark door. The namespace is given a deferred provider that lists on its next reference, and a warning is logged. The statement's error is returned only when no deferred provider can be installed (the catalog name is not registered, or the registered provider is a foreign type whose rebuild failed), and that error begins `committed: the statement's change is committed in catalog`. Every Spark-door post-commit refresh takes this path: CTAS and RTAS, CREATE TABLE, namespace DDL, DROP TABLE, the ALTER family, ref DDL, TRUNCATE, the INSERT family and the CALL procedures. A catalog failure before the publish still fails and leaves no table. The native door (`repark.sql()`) is not covered yet; its refresh sites are carded as NATIVE-DOOR-POST-PUBLISH-1.
+- **Apache Spark** — no oracle. The fault is injected into RePark's session name refresh, so there is no Spark run to compare, and the Spark outcome of a committed change the session cannot list is not measured here.
+- **Pin** — `crates/repark-spark/tests/post_publish_outcome.rs` (`ctas_with_a_refresh_failure_after_publish_reports_the_committed_outcome`, `rtas_with_a_refresh_failure_after_publish_reports_the_committed_outcome`, and the control `ctas_with_a_catalog_failure_before_publish_reports_failure_and_leaves_no_table`), and `crates/repark-iceberg/src/catalog/tests/namespace_drop.rs::refresh_after_commit_without_a_registered_provider_states_the_change_is_committed`.
+  pins: ice-post-publish-outcome-1/C-001, C-002, C-003, C-004
+- **Rationale** — AUD-002. The refresh runs after the catalog commit, so a failure there cannot undo the change. The old code still reported the failure as the statement's error, and the frozen name directory hid the committed table from the next statement. The after-commit variant keeps the commit's outcome and lets the next reference list again. The deferred provider does no catalog I/O at install, so it cannot fail on a catalog outage.
+- **Card** — the unit's own card, `ice-post-publish-outcome-1-card-2026-10-28.md`, is filed by PR #1204; its status line is updated after #1204 merges. The native door: [NATIVE-DOOR-POST-PUBLISH-1](../task/roadmap/mid-term/native-door-post-publish-1-card-2026-10-28.md).
 
 #### NESTED-TEXT-LEAF-STORE-1 — DATED ROW 2026-10-26 (owner ruling 2026-10-26, carried on the v2 label): a string literal into a nested timestamp leaf stores where Spark refuses
 
@@ -7543,6 +7561,7 @@ the pin rather than obeying it.
   `write-format` option door, not a fork nested-read limit.
   pins: ice-write-options-1/C-002
   pins: ice-orc-avro-1/C-005, C-006
+- **DATED LINE 2026-10-28 (DELETE-FORMAT-GUARD-1, AUD-003).** The data files stay served. Position-delete files stay Parquet on RePark's own writers while the delete format is only inherited from `write.format.default` (Avro or ORC data), and an explicit `write.delete.format.default` of `avro` or `orc` refuses before any file is written, until RP-61 repins the fork reader. The divergence from Spark and Java, which write delete files in the data format, is recorded in DELETE-FORMAT-GUARD-1. The ORC delete-file pin `ice-orc-avro-1/C-013` is re-pinned to Parquet.
 
 ### IO-JDBC-FORMAT-1 — `format("jdbc").load()` sends every URL to the PostgreSQL connector; `spark.read.jdbc` dispatches by URL — **BACKLOG 2026-09-15**
 

@@ -104,6 +104,10 @@ Tables already written keep the values they hold; this release ships no migratio
   bounded batches and the statement completes. The new table property `write.delete.position-delete-batch-rows` sets the row bound:
   default 1,048,576, and a value below one refuses the `DELETE` and names the property.
 
+- **A statement whose change committed no longer fails when the session's name refresh fails afterwards (ICE-POST-PUBLISH-OUTCOME-1, AUD-002).** On the Spark SQL door, `CREATE TABLE … AS SELECT`, `CREATE OR REPLACE TABLE … AS SELECT` and the other DDL and writes return success when the change is committed and only the session's table-name refresh fails; the next statement that names the namespace refreshes it. Only when the session cannot record the name at all does the statement fail, and its error begins `committed:` so the caller knows the change is in the catalog. The native door (`repark.sql()`) is unchanged in this release.
+
+- **Merge-on-read DELETE and UPDATE on a format-v2 Avro or ORC table write Parquet position-delete files, and the statements that would write unreadable ones are refused (DELETE-FORMAT-GUARD-1, AUD-003).** Before this release a merge-on-read `DELETE` or `UPDATE` on such a table could write Avro or ORC position-delete files that RePark cannot read, and the statement reported success while the table became unreadable. Now RePark's own writer writes Parquet position-delete files when the delete format is only inherited from `write.format.default`, so the table reads back. These refuse before any file is written, with a hint to set `write.delete.format.default` to `parquet`: a `MERGE` on a merge-on-read Avro or ORC table, a Spark-door `DELETE` or `UPDATE` on such a table that would reach the fork writer, and any statement on a table whose `write.delete.format.default` is `avro` or `orc`. Spark and Java write delete files in the table's data format, so this is a dated divergence; it lifts when RePark reads Avro and ORC delete files (RP-61).
+
 ## Integrity under failure (no stored value or behaviour changes)
 
 - **A writer killed between its data files and its commit is pinned (ICE-INTEGRITY-PINS-1, pin
