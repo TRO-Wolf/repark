@@ -591,6 +591,7 @@ Source comments retain only API and safety contracts; implementation narration i
   `INSERT INTO` and the fork-path identity DELETE / UPDATE; the `UuidTextSchemaProvider` shim
   (`uuid_text_schema.rs`) is deleted, its F-UUID-CATALOG-OPTION-1 removal condition met.
   pins: u9-types-1/C-010
+- `provider.rs` — **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** `invalidate_catalog_namespaces_after_commit` runs the normal invalidation after a catalog commit. A failed refresh installs an unlisted namespace provider for each named namespace (`unlisted_namespace_schema`, built through `NamespaceScopedCatalog`, so no catalog call) and logs a warning. It returns an error that begins `committed:` only when no deferred provider can be installed. `catalog_ops.rs` is the only caller. pins: ice-post-publish-outcome-1/C-004
 - **PERF-ICE-SCAN-1 (2026-09-05):** `count(*)` folds and small tables scan in parallel,
   both fork-side (F-27) and consumed here through the unchanged `IcebergTableScan` path — no
   code in this directory changed. The fork reads row counts through an empty projection mask,
@@ -621,6 +622,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Live list table/namespace names (no DF snapshot) | `list_table_names` / `list_namespace_names` in `mod.rs` |
 | Rebuild the DF provider snapshot from the live catalog | `build_iceberg_catalog_provider` / `rebuild_catalog_provider` |
 | Invalidate one namespace after product DDL (O(1)) | `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` in `provider.rs` |
+| Refresh names after a committed change without failing the statement | `invalidate_catalog_namespaces_after_commit` in `provider.rs` |
 | AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `builders.rs` |
 | Turn the metadata-location cache off, or change its retained-entry bound | `repark.iceberg.metadataCache` / `repark.iceberg.metadataCacheEntries` (`caches.rs`) |
 | Turn the shared manifest cache off, or resize its byte budget | `repark.iceberg.manifestCacheBytes` (default `33554432` = on; `0` disables) (`caches.rs`) |

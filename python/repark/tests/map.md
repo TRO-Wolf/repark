@@ -1649,6 +1649,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: ice-orc-avro-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
   pins: ice-orc-avro-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  **DELETE-FORMAT-GUARD-1 (2026-10-28):** the C-013 test is re-pinned: `test_mor_delete_on_orc_writes_parquet_delete_file` expects `[[0, "ORC", 3], [1, "PARQUET", 1]]` for `DELETE … WHERE id = 1` on an ORC merge-on-read table, a dated divergence until RP-61. The builder did not run it.
 - [test_ice_write_options_1_rebase.py](writes/test_ice_write_options_1_rebase.py) —
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the write options across the paths main
   added under them. WO-DYN-01..06: dynamic `insertInto` overwrite and `INSERT OVERWRITE …

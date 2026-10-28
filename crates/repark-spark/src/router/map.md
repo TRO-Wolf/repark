@@ -33,6 +33,7 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `CALL` procedure that runs SQL through `router::execute` clears and records as its own
   statement. Pins: `../../tests/write_door_record.rs`. pins: write-spine-1/C-011
 
+- `delete_update.rs` — **DELETE-FORMAT-GUARD-1 (2026-10-28):** `refuse_unreadable_delete_format` runs before passthrough in `execute_delete` (after the metadata-delete door) and in `execute_update`. An explicit Avro or ORC delete format refuses on every route. An inherited one refuses only when `reaches_fork_writer` is true, which mirrors the claim chain of `spark_ast::try_execute_identity_dml`: the IN-list and BETWEEN DELETE claims, the UPDATE claim, then the plain identity claim with `plain_identity_needs_fork`. pins: ice-delete-format-guard-1/C-002, C-004
 - `delete_update.rs` — **ENC-1 round 2 (2026-10-09):** the DELETE/UPDATE doors moved out
   of `../router.rs` (pure move; it sat at its 1000-line ceiling) so the encrypted-write
   refusal fits: each door runs the house valves first, then refuses a target carrying

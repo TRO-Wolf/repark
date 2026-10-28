@@ -18,6 +18,8 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   **ICE-VIEWS-1 (2026-09-20):** a view-only namespace refuses the same way
   (`Contains 1 view(s).`).
   pins: ice-views-1/C-013
+  **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** `refresh_after_commit_without_a_registered_provider_states_the_change_is_committed` pins the `committed:` error text when no deferred provider can be installed (the catalog name is not registered).
+  pins: ice-post-publish-outcome-1/C-004
 - `catalog.rs` — AWS-free unit battery: CTAS reality, builder validation, live-list staleness,
   O(1) invalidation, scheme selection, span secret-hygiene, fork-patch proof, T6 residual pins.
   pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
