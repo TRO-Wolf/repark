@@ -341,7 +341,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   trailing `/`, prefers `<loc>/metadata/version-hint.text` (`v<N>.metadata.json`), else
   lists the direct children of `<loc>/metadata/` for the highest leading-integer metadata
   file in either the `NNNNN-<uuid>` or `v<N>` form, with `v<N>` and hint versions bounded
-  to the Java `int` range. Lower-case `file://<authority>` and `file:<relative>` arguments
+  to the Java `int` range. From 2026-10-28 (ICE-HADOOP-HINT-WINDOW-1, PR #1205) the hinted file
+  is not the last word: `newest_from_hint` probes `v<N+1>`, `v<N+2>`, ... and answers the last
+  existing one, stopping at the first gap and at the Java `int` bound, and refuses past
+  `HINT_WALK_LIMIT` (10,000) files; the missing-hinted-file error and the listing fallbacks are
+  unchanged, and compressed-codec names are not probed. Lower-case `file://<authority>` and
+  `file:<relative>` arguments
   refuse Spark's texts before any I/O, and `file:/abs`-style spellings read as
   `file:///abs`. A location with no resolvable metadata raises `Error::Analysis` naming the
   supplied path. The `FileIO` comes from

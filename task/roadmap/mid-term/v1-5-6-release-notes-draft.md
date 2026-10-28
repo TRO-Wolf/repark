@@ -104,6 +104,10 @@ Tables already written keep the values they hold; this release ships no migratio
   bounded batches and the statement completes. The new table property `write.delete.position-delete-batch-rows` sets the row bound:
   default 1,048,576, and a value below one refuses the `DELETE` and names the property.
 
+- **The hadoop path read answers the newest committed metadata file past a stale
+  `version-hint.text` (ICE-HADOOP-HINT-WINDOW-1, PR #1205).** It answered the hinted version, so a
+  row a committed `DELETE` had removed could read back; a walk past 10,000 metadata files refuses
+  with an error that names the limit.
 - **A merge-on-read `DELETE`, `UPDATE`, `MERGE` or identity-IN statement that RePark writes itself now honours the position-delete batch bound (RP-POSDEL-BATCH-2, PR #1203).** The plain `DELETE` with a comparison, `AND` or `OR` predicate (`>= AND <`, `d = DATE ...`), the merge-on-read `MERGE`, and the `IN (subquery)` forms of `DELETE` and `UPDATE` now write their position deletes in bounded batches, as the fork's `DELETE` does: a batch closes at `write.delete.position-delete-batch-rows` (default 1,048,576) or at 256 MiB of path text. A statement past about 2 GiB of data-file path text in one partition completes instead of panicking with `offset overflow`; for the plain range-`WHERE` `UPDATE` below, that panic is inferred, not measured. A value below one now refuses on these routes too; before, the property was ignored there. That includes copy-on-write identity `DELETE` and `UPDATE`. The plain merge-on-read `UPDATE` with a range `WHERE` (a top-level `BinaryOp`) now honours the property and shares the batched writer: measured refused at `0` on the head and succeeding on main; its pre-fix overflow is inferred from that shared writer, not measured. On a merge-on-read `UPDATE` or a `MERGE` with an `UPDATE` or `INSERT` arm, a statement refused at `0` has already written its data files, which stay uncommitted; rows and snapshot are unchanged.
 
 ## Integrity under failure (no stored value or behaviour changes)
