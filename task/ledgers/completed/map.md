@@ -964,6 +964,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   and root `map.md` sentence); the cutover rows naming the Glue replace refusal are
   stamped FIXED at `edc38c6a`. `risk_tier: standard`. Branch `chore/repin-rp-20`.
   pins: rp-20/C-001, C-002, C-003
+- [rp-60-posdel-repin-1-ledger.md](rp-60-posdel-repin-1-ledger.md) — **RP-60-POSDEL-REPIN-1 (2026-10-27, merged 2026-10-28 as PR #1200 at `57e37a72`), completed:** the fork repinned to `ea0b7741` (F-POSDEL-BATCH-1, fork `#374`), with Spark-door pins red at `d80a2884` and green at `ea0b7741`. 6 of 9 clauses PROVEN; C-005 (measured, carded) and C-006 (carded) OPEN; C-008 closed by C-009.
 - [session-surface-1-ledger.md](session-surface-1-ledger.md) —
   **SESSION-SURFACE-1 step 1 (2026-09-14), in flight:** the 19-name SparkSession
   surface card — job tags, the interrupt trio, the five Connect-only names,
