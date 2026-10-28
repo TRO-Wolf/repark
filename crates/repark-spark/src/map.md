@@ -991,6 +991,7 @@ pins: rp-4-fork-repin/C-005, C-006
   use branch (does not exist): x` (Spark's text). WO RP50-A keeps the check with the v1 kernel
   removed.
   pins: ice-nested-evo-1/C-053, C-060
+- `write_to_branch.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1; round 2 2026-10-28; round 3 2026-10-28):** `commit_write_on_branch` runs the delete-format check on the table it has already loaded, next to its BUG-001 and encryption checks: for a branch `DELETE` or `UPDATE`, `refuse_any_unreadable_delete_format` on an owned head and `refuse_any_unreadable_fork_delete_format` otherwise; for a branch `MERGE` (round 3), `refuse_any_unreadable_delete_format` with `write.merge.mode`. Round 2: `branch_write_dml_kind` (round 3: `branch_write_kind`, returning `BranchWriteKind::{Dml, Merge}`) classifies the statement from its tokenised head (`statement_head`), so a leading comment does not hide its kind; UPDATE, DELETE and MERGE run the checks, INSERT and TRUNCATE pass, and any other head refuses before any file is written (fail closed). The BUG-001 valve and the delete-format check run before `create_wap_branch_from_main` (round 3: the MERGE check too), so a refused statement creates no branch and writes no file; `tag_write_error` reads the same tokenised head. A branch statement reaches the fork writer through a temp view, so the router guard never sees its table; every statement this path redirects reaches the fork writer, so the fork's own mode parse decides there (round 3). The path still resolves the name as written, so a case-varied branch DML fails closed (follow-up card SPARK-DOOR-TARGET-NORMALISATION-1); under a session WAP branch the same name is not refused and writes to main silently (WAP-BRANCH-TARGET-SILENT-1). pins: ice-delete-format-guard-1/C-014, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-024, C-025, C-026, C-028
 - `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
   skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
@@ -1996,6 +1997,8 @@ pins: rp-4-fork-repin/C-005, C-006
   outer query carrying Spark's display names (**WO TZ-ASOF-1**, 2026-09-26, cell
   `E-TZ-TIMESTAMP-AS-OF`).
   pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
+- `dml_target.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1; round 2 2026-10-28):** `resolve_dml_target(ctx, catalogs, name)` resolves a DML target the way the planner does: the parts as written with their quote style, a write-ref selector stripped (a branch sets `on_branch`, a tag returns None), unquoted parts folded to lower case when `sql_parser.enable_ident_normalization` is on, and session defaults completed. A name part that is not a plain identifier, or a catalog missing from the registry, returns None. A table that fails to load returns None when its namespace is absent (round 2: the planner then reports its own not-found error) or when the planner and the catalog both report the table absent; otherwise the resolver returns a Plan error that names the target (fail closed). Users: `router/delete_update.rs`, `merge.rs`, `catalog_ops.rs` (`refuse_encrypted_write_target`) and the BUG-001 valve in `normalize.rs`. pins: ice-delete-format-guard-1/C-012, C-013, C-014, C-015, C-023
+- `normalize.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1):** `dml_target_ident` and `session_defaults` are removed. The BUG-001 valve's lookup (`refuse_mor_unpartitioned_multi_spec_dml`) resolves its target through `dml_target.rs`, so it folds case and fails closed. pins: ice-delete-format-guard-1/C-012
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   the `normalize/statement_guard.rs` re-exports for multi-statement refusal (BUG-010), the MoR
@@ -2007,8 +2010,7 @@ pins: rp-4-fork-repin/C-005, C-006
   opens uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ±
   correlation, correlated IN, and identity `UPDATE … IN` onto `execute_predicate_dml`;
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
-  star rewrite call, partition-spec builders. `dml_target_ident` (shared with the BUG-001
-  valve) completes short names from the session defaults (SEC-001). V3-7 MERGE keeps
+  star rewrite call, partition-spec builders. The BUG-001 valve's target (ICE-DELETE-FORMAT-GUARD-1: `dml_target.rs`) completes short names from the session defaults (SEC-001). V3-7 MERGE keeps
   `_row_id`; subquery-WHERE DML still refuses `V3-COW-1`.
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002
   **FNP-8 (2026-09-06):** `dialect_for_executing_parse` — `Databricks` when the SQL
@@ -2470,6 +2472,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `source_read_only_message` as `NotImplemented` (the Unsupported class), and
   `refuse_read_only_dml_table_sql` prefers that text. A legacy read-only catalog keeps the P11
   note. pins: c-2/C-115
+- `catalog_ops.rs` — **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** `reregister_namespaces` (and so `reregister`) refreshes the session's name directory through `invalidate_catalog_namespaces_after_commit`, so each Spark-door post-commit refresh keeps the committed outcome when the refresh fails. `reregister_drop_namespace` lists nothing and is unchanged. pins: ice-post-publish-outcome-1/C-001, C-002, C-003
+- `catalog_ops.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1):** `refuse_encrypted_write_target` resolves its target through `dml_target.rs`; its lookup alone changed, so it now folds case, strips a branch selector and fails closed. pins: ice-delete-format-guard-1/C-015
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation. **CATALOG-1 (2026-09-26):** `catalog_handle` raises a
   refused catalog's refusal before the unknown-catalog error. It is also the home of the v2-command intercepts
@@ -2658,6 +2662,7 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   without the property — that asymmetry is Spark's, and it is the single thing
   most easily got wrong here.
   pins: ipi-19-56-37-schema-evolution-write/C-002, C-004, C-011
+- `merge.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1):** `execute_merge` resolves the MERGE target through `dml_target.rs` for its encryption check and its delete-format check (`refuse_any_unreadable_delete_format` with `write.merge.mode`), both before the fragment rewrite and before execution. A merge-on-read MERGE with an explicit or inherited Avro or ORC delete format refuses before any data or delete file is written, for the lowercase, case-varied and branch-qualified spellings. pins: ice-delete-format-guard-1/C-003, C-004, C-013, C-014
 - `merge.rs` + [`merge/`](merge/map.md) — the `MERGE WITH SCHEMA EVOLUTION`
   pre-parse strip and the `schema_evolution` flag it carries into the lowered
   plan. The star-sentinel rewrite moved to `merge/stars.rs` untouched to keep

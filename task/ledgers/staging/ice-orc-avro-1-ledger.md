@@ -145,3 +145,11 @@ COVERAGE_ATTESTATION:
 ```
 
 VERDICT: 26 clauses, 24 PROVEN, 2 OPEN, 0 REJECTED.
+
+## Amendment 2026-10-28 (ICE-DELETE-FORMAT-GUARD-1): C-013 re-pinned
+
+The clause table above is kept as written. Its C-013 evidence cell (`[[0, ORC, 3], [1, ORC, 1]]`) and its test name are superseded by this amendment, append-only.
+
+| Amendment | Statement | Evidence |
+|---|---|---|
+| AMD-1 (2026-10-28) | C-013 is re-pinned. A v2 merge-on-read DELETE on an ORC table writes a Parquet position-delete file, not an ORC one, until RP-61 reverts the divergence. The pin is `test_mor_delete_on_orc_writes_parquet_delete_file`, which expects `[[0, "ORC", 3], [1, "PARQUET", 1]]` for `DELETE … WHERE id = 1`. The packet's M-1 reading (Spark writes an ORC delete file) stands as Spark's behaviour. RePark's route is the dated divergence recorded in ICE-DELETE-FORMAT-GUARD-1 C-008. | `ice-delete-format-guard-1` C-001, C-007 and C-008; the facade test is not run by the builder, so its verdict is OPEN there. |

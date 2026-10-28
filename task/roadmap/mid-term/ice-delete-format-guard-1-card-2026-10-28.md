@@ -4,6 +4,14 @@
 
 **Status:** dispatched 2026-10-28 on an Opus 5.5 builder lane, the same lane as ICE-POST-PUBLISH-OUTCOME-1. Open until the merge. Registry row: [ICE-DELETE-FORMAT-GUARD-1](../../../docs/spark-sql-iceberg-parity.md).
 
+**Status update, 2026-10-28:** built as PR #1206, awaiting verification. Fix round 1 at `a8ab9364` (the pre-passthrough guards resolve the DML target as the planner does and fail closed); the verifier's findings and the pins are in the ledger.
+
+**Status update, 2026-10-28:** fix round 2 at `1c6e730b` (the branch path classifies the statement from its tokenised head and fails closed; the checks run before a session WAP branch is created; the tag path reads the tokenised head; a missing namespace keeps the planner's not-found text; 21 pins in the guard file). The round-2 verifier's findings and the pins are in the ledger; the card awaits the next verification.
+
+**Status update, 2026-10-28:** fix round 3 at `f23e70c3` (a `MERGE` under a session WAP branch is classified and checked before the branch is created; the fork-route arm and the redirected branch DML use the fork's exact mode parse; 25 tests in the guard file). The round-3 verifier's findings and the pins are in the ledger; the card awaits the next verification.
+
+**Status update, 2026-10-28:** verification round 4 PASS; merges on the owner's word. The round-4 Opus 5.5 verifier passed `78827c24` with one S3 (R4-V1, the WAP branch sentence in the registry row, C-020 and the release notes), fixed in the round-4 records; the late refusal under a WAP branch is carded as WAP-LATE-REFUSAL-BRANCH-1.
+
 **Grade:** product unit, Opus 5.5 builder lane.
 
 **Severity:** Medium, the audit's rating (AUD-003). A fail-loud gap on a documented surface: the DELETE commits, and the next read fails. No silent corruption or physical data loss was observed.

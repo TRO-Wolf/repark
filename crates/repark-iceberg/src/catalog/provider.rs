@@ -76,6 +76,22 @@ impl ReparkCatalogProvider {
     pub fn catalog_handle(&self) -> Arc<dyn Catalog> {
         self.catalog.clone()
     }
+
+    async fn defer_namespace_listings(&self, namespaces: &[&str]) -> Result<()> {
+        let mut deferred = Vec::with_capacity(namespaces.len());
+        for namespace in namespaces {
+            let schema = unlisted_namespace_schema(self.catalog.clone(), namespace).await?;
+            deferred.push(((*namespace).to_string(), schema));
+        }
+        let mut guard = self
+            .schemas
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        for (namespace, schema) in deferred {
+            guard.insert(namespace, schema);
+        }
+        Ok(())
+    }
 }
 
 impl CatalogProvider for ReparkCatalogProvider {
@@ -198,6 +214,39 @@ pub async fn invalidate_catalog_namespaces(
     rebuild_catalog_provider(ctx, catalog, catalog_name).await
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub async fn invalidate_catalog_namespaces_after_commit(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    namespaces: &[&str],
+) -> Result<()> {
+    let Err(refresh) = invalidate_catalog_namespaces(ctx, catalog, catalog_name, namespaces).await
+    else {
+        return Ok(());
+    };
+    let registered = ctx.catalog(catalog_name);
+    let deferred = match registered
+        .as_ref()
+        .and_then(|existing| existing.as_ref().downcast_ref::<ReparkCatalogProvider>())
+    {
+        Some(repark) => repark.defer_namespace_listings(namespaces).await.is_ok(),
+        None => false,
+    };
+    if deferred {
+        tracing::warn!(
+            catalog = catalog_name,
+            error = %refresh,
+            "the change is committed; the name refresh failed and the next reference lists again"
+        );
+        return Ok(());
+    }
+    Err(DataFusionError::Execution(format!(
+        "committed: the statement's change is committed in catalog `{catalog_name}`, but the \
+         session name refresh failed afterwards: {refresh}"
+    )))
+}
+
 /// Remove a dropped namespace from the DF name directory without listing.
 /// # Errors
 /// Unregistered catalog name, or full-rebuild fallback failures (foreign provider type).
@@ -299,6 +348,26 @@ async fn build_namespace_schema(
         ))
     })?;
     present_fork_schema(schema).await
+}
+
+async fn unlisted_namespace_schema(
+    catalog: Arc<dyn Catalog>,
+    namespace: &str,
+) -> Result<Arc<dyn SchemaProvider>> {
+    let namespace_ident = NamespaceIdent::new(namespace.to_string());
+    let scoped: Arc<dyn Catalog> = Arc::new(NamespaceScopedCatalog::new(
+        catalog,
+        namespace_ident.clone(),
+    ));
+    let iceberg = IcebergCatalogProvider::try_new_with_namespace_scope(scoped, [namespace_ident])
+        .await
+        .map_err(super::iceberg_to_datafusion)?
+        .with_uuid_as_string(true);
+    iceberg.schema(namespace).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "namespace `{namespace}` produced no DF schema provider for a deferred listing"
+        ))
+    })
 }
 
 async fn present_fork_schema(schema: Arc<dyn SchemaProvider>) -> Result<Arc<dyn SchemaProvider>> {

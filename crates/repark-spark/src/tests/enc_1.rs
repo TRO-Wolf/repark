@@ -438,6 +438,17 @@ async fn encrypted_table_case_folded_update_refuses() {
 }
 
 #[tokio::test]
+async fn encrypted_table_case_variant_namespace_delete_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_enc(&warehouse).await;
+    seed_keyed(&ctx, &catalogs, "enc").await;
+    let before = capture(&warehouse, &catalogs, "enc").await;
+    let error = attempt(&ctx, &catalogs, "DELETE FROM ice.SALES.enc WHERE id = 1").await;
+    assert_refusal(error, "sales.enc");
+    assert_unchanged(&warehouse, &catalogs, "enc", &before).await;
+}
+
+#[tokio::test]
 async fn encrypted_table_truncate_refuses() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_enc(&warehouse).await;

@@ -29,7 +29,8 @@ pins.
 - [test_ice_merge_schema_1.py](test_ice_merge_schema_1.py) — IPI-19 + IPI-56 + IPI-37 — schema evolution on write.
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) — ICE-META-DELETE-1 — a DELETE that covers whole data files deletes the files, on both modes. Its live leg runs the recorder's `--check` in its own interpreter (a subprocess), never in-process; see "PARITY-LIVE-RERECORD-1 (2026-10-20)".
 - [test_ice_occ_scoped_1.py](test_ice_occ_scoped_1.py) — ICE-OCC-SCOPED-1 — concurrent Iceberg DML storms commit and refuse exactly where Spark does.
-- [test_ice_orc_avro_1.py](test_ice_orc_avro_1.py) — IPI-41 — ORC and Avro data files: write, read, DELETE / UPDATE / MERGE.
+- [test_ice_orc_avro_1.py](test_ice_orc_avro_1.py) — IPI-41 — ORC and Avro data files: write, read, DELETE / UPDATE / MERGE. **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** C-013 is re-pinned to a Parquet position-delete file on an ORC merge-on-read table, a dated divergence until RP-61; the builder did not run it, and the round-3 verifier's facade run of this file passed 24 on a fresh dev build.
+  pins: ice-delete-format-guard-1/C-007
 - [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) — ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every facade overwrite door.
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) — ICE-OVERWRITE-MODE-1 — ``writeTo(t).overwritePartitions()`` on specs that hold a transform.
 - [test_ice_rowid_order_1.py](test_ice_rowid_order_1.py) — ICE-ROWID-ORDER-1: one statement's v3 row ids are deterministic.

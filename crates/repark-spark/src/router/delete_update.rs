@@ -1,7 +1,17 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::sqlparser::ast::{ObjectName, Statement};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::data_format::{
+    MorDeleteFormat, mor_delete_format, refuse_any_unreadable_delete_format,
+    refuse_any_unreadable_fork_delete_format,
+};
+use repark_iceberg::write::predicate_dml::plain::{
+    plain_identity_needs_fork, try_allowed_plain_identity_or_update,
+};
+use repark_iceberg::write::predicate_dml::{try_allowed_delete_in, try_allowed_update_in};
 
+use crate::dml_target::{DmlTarget, resolve_dml_target};
 use crate::{
     DmlSubqueryVerb, MorDmlKind, delete_target_object_name, object_name_from_table_with_joins,
     refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
@@ -36,6 +46,9 @@ pub(crate) async fn execute_delete(
     if try_metadata_delete_door(ctx, catalogs, delete).await? {
         return ctx.read_empty();
     }
+    let statement = Statement::Delete(delete.clone());
+    refuse_unreadable_delete_format(ctx, catalogs, &statement, object_name, MorDmlKind::Delete)
+        .await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
@@ -86,6 +99,55 @@ pub(crate) async fn execute_update(
     }
     refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, MorDmlKind::Update).await?;
     crate::catalog_ops::refuse_encrypted_write_target(ctx, catalogs, object_name).await?;
+    let statement = Statement::Update(update.clone());
+    refuse_unreadable_delete_format(ctx, catalogs, &statement, object_name, MorDmlKind::Update)
+        .await?;
     let folded = crate::update_cast::refuse_cast_then_fold_nested(ctx, catalogs, update).await?;
     spark_ast::execute_passthrough(ctx, catalogs, folded.as_deref().unwrap_or(sql)).await
+}
+
+async fn repark_writer_takes(
+    catalogs: &CatalogRegistry,
+    statement: &Statement,
+    target: &DmlTarget,
+) -> Result<bool> {
+    if try_allowed_delete_in(statement)?.is_some() || try_allowed_update_in(statement)?.is_some() {
+        return Ok(true);
+    }
+    let Some(allowed) = try_allowed_plain_identity_or_update(statement)? else {
+        return Ok(false);
+    };
+    if allowed.catalog_name != target.catalog_name || allowed.spec.target != target.ident {
+        return Ok(false);
+    }
+    let Some(catalog) = catalogs.get(&allowed.catalog_name) else {
+        return Ok(false);
+    };
+    Ok(!plain_identity_needs_fork(catalog, &allowed.spec).await)
+}
+
+async fn refuse_unreadable_delete_format(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: &Statement,
+    table_name: Option<&ObjectName>,
+    kind: MorDmlKind,
+) -> Result<()> {
+    let Some(table_name) = table_name else {
+        return Ok(());
+    };
+    let Some(target) = resolve_dml_target(ctx, catalogs, table_name).await? else {
+        return Ok(());
+    };
+    if target.on_branch {
+        return refuse_any_unreadable_delete_format(&target.table, kind.mode_property());
+    }
+    let repark_route = mor_delete_format(&target.table, kind.mode_property());
+    if matches!(repark_route, Ok(MorDeleteFormat::Readable)) {
+        return Ok(());
+    }
+    if repark_writer_takes(catalogs, statement, &target).await? {
+        return repark_route.map(drop);
+    }
+    refuse_any_unreadable_fork_delete_format(&target.table, kind.mode_property())
 }
