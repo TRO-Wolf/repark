@@ -11,3 +11,5 @@
 **Retires:** the card when the case-varied DELETE under a session WAP branch has a red run on the current head and a green run after the fix.
 
 **Relation:** [ICE-DELETE-FORMAT-GUARD-1 ledger](../../ledgers/staging/ice-delete-format-guard-1-ledger.md) (the resolver it reuses, C-012); [SPARK-DOOR-TARGET-NORMALISATION-1 card](spark-door-target-normalisation-1-card-2026-10-28.md) (the same as-written name class on the other Spark-door paths); [registry row ICE-DELETE-FORMAT-GUARD-1](../../../docs/spark-sql-iceberg-parity.md).
+
+**Sibling:** [WAP-LATE-REFUSAL-BRANCH-1 card](wap-late-refusal-branch-1-card-2026-10-28.md) (round-4 finding R4-V1): a refusal raised after the WAP branch redirect still creates the branch and writes metadata files, on main too. A separate gap on the same route; not a dependency of this card.
