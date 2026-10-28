@@ -4,6 +4,8 @@
 
 **Status:** dispatched 2026-10-28 on an Opus 5.5 builder lane, the same lane as ICE-DELETE-FORMAT-GUARD-1. Open until the merge. Registry row: [ICE-POST-PUBLISH-OUTCOME-1](../../../docs/spark-sql-iceberg-parity.md).
 
+**Status update, 2026-10-28:** built as PR #1206, awaiting verification.
+
 **Grade:** product unit, Opus 5.5 builder lane.
 
 **Severity:** Medium, the audit's rating (AUD-002). A fail-loud outcome-reporting gap: the table is fully published before the error. No partial snapshot, library panic, resurrected row or data loss was demonstrated.
