@@ -1,6 +1,6 @@
 # Card SPARK-DOOR-TARGET-NORMALISATION-1: the Spark door's name-based DML and MERGE paths take the target name as written
 
-**Date:** 2026-10-28 (the file name carries the coordinator's 2026-10-29 date). **Filed by:** the ICE-DELETE-FORMAT-GUARD-1 clerk round (`claude-haiku-5-5`), from the verifier's round 1 findings and the builder's round-3 notes. Filed on the ICE-DELETE-FORMAT-GUARD-1 branch.
+**Date:** 2026-10-29. **Filed by:** the ICE-DELETE-FORMAT-GUARD-1 clerk round (`claude-haiku-5-5`), from the verifier's round 1 findings and the builder's round-3 notes. Filed on the ICE-DELETE-FORMAT-GUARD-1 branch.
 
 **Status:** open. Priority P3. Not dispatched. Measured only by the builder's round-3 probes (copied, not re-run by the clerk).
 
