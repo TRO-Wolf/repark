@@ -206,3 +206,19 @@ async fn refuse_non_empty_namespace_drop_refuses_a_view_only_namespace() {
         "pins: ice-views-1/C-013, got: {error}"
     );
 }
+
+#[tokio::test]
+async fn refresh_after_commit_without_a_registered_provider_states_the_change_is_committed() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let catalog = catalog_with_one_table(&warehouse, "sales", "orders").await;
+    let ctx = datafusion::prelude::SessionContext::new();
+    let error = invalidate_catalog_namespaces_after_commit(&ctx, catalog, "ice", &["sales"])
+        .await
+        .expect_err("no provider can take a deferred listing");
+    let message = error.to_string();
+    assert!(
+        message.starts_with("Execution error: committed: the statement's change is committed"),
+        "{message}"
+    );
+    assert!(message.contains("not registered"), "{message}");
+}

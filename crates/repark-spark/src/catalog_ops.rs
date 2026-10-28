@@ -296,8 +296,13 @@ pub(crate) async fn reregister_namespaces(
     catalog_name: &str,
     namespaces: &[&str],
 ) -> Result<()> {
-    repark_iceberg::catalog::invalidate_catalog_namespaces(ctx, catalog, catalog_name, namespaces)
-        .await
+    repark_iceberg::catalog::invalidate_catalog_namespaces_after_commit(
+        ctx,
+        catalog,
+        catalog_name,
+        namespaces,
+    )
+    .await
 }
 
 /// Drop a namespace entry from the DF provider after product `DROP NAMESPACE` (no listing).

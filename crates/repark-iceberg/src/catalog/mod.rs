@@ -31,7 +31,7 @@ pub mod uuid_presentation;
 // Public product surface (order: provider → builders → location).
 pub use provider::{
     ReparkCatalogProvider, drop_catalog_namespace_from_provider, invalidate_catalog_namespaces,
-    rebuild_catalog_provider,
+    invalidate_catalog_namespaces_after_commit, rebuild_catalog_provider,
 };
 // Engine-side adapter for session `refresh_catalog_provider`, hoisted from v1 catalog_ops.
 pub use builders::{
