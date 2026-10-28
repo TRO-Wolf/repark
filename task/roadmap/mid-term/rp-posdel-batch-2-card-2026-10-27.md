@@ -4,6 +4,8 @@
 
 **Status:** filed, not scheduled. The owner charters it.
 
+**Status (2026-10-28):** chartered and dispatched on an Opus 5.5 builder lane; built as PR #1203 (four commits on base `321c6095`: `fc3afd8a`, `c0336a62`, `105e49bb` and the stress-pin commit); awaiting verification. The unit's clauses and open questions are in the [unit ledger](../../ledgers/staging/rp-posdel-batch-2-ledger.md).
+
 **Depends on:** nothing on the fork. RePark may copy the fork's `chunk_position_delete_pairs` into its own code until the fork helper is shared; [F-EQDEL-CONVERT-BATCH-1](f-eqdel-convert-batch-1-card-2026-10-27.md) asks for that lift.
 
 **Grade:** product unit, Opus 5.5 builder with the standing verifiers.
