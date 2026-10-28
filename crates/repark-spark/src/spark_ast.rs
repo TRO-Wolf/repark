@@ -405,6 +405,10 @@ async fn try_execute_identity_dml(
         )
         .await
         {
+            crate::router::delete_update::refuse_fork_bound_unreadable_delete_format(
+                ctx, catalogs, inner,
+            )
+            .await?;
             return Ok(None);
         }
         let object_name = match inner {
@@ -418,7 +422,20 @@ async fn try_execute_identity_dml(
             crate::MorDmlKind::Delete
         };
         (allowed, kind, object_name)
+    } else if let Some((allowed, kind)) =
+        crate::router::delete_update::parquet_delete_claim(catalogs, inner).await?
+    {
+        let object_name = match inner {
+            Statement::Delete(delete) => crate::delete_target_object_name(delete),
+            Statement::Update(update) => crate::object_name_from_table_with_joins(&update.table),
+            _ => None,
+        };
+        (allowed, kind, object_name)
     } else {
+        crate::router::delete_update::refuse_fork_bound_unreadable_delete_format(
+            ctx, catalogs, inner,
+        )
+        .await?;
         return Ok(None);
     };
     allowed.spec.case_insensitive = case_insensitive;

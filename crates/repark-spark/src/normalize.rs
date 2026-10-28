@@ -291,7 +291,10 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
 }
 
 /// Resolve a DML target as DataFusion will: short names complete from the session defaults.
-fn dml_target_ident(ctx: &SessionContext, table_name: &ObjectName) -> Option<(String, TableIdent)> {
+pub(crate) fn dml_target_ident(
+    ctx: &SessionContext,
+    table_name: &ObjectName,
+) -> Option<(String, TableIdent)> {
     let mut parts = name_parts(table_name);
     if parts.is_empty() {
         return None;

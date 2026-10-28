@@ -376,8 +376,8 @@ def test_partitioned_v3_cow_delete_rewrites_orc(spark: ReparkSession) -> None:
     _cow_files_are(spark, table, "ORC", [[2, "b", "y"], [3, "c", "x"]])
 
 
-def test_mor_delete_on_orc_writes_orc_delete_file(spark: ReparkSession) -> None:
-    """M-1: a v2 merge-on-read ORC table writes ORC position deletes.
+def test_mor_delete_on_orc_writes_parquet_delete_file(spark: ReparkSession) -> None:
+    """M-1: a v2 merge-on-read ORC table writes Parquet position deletes.
 
     pins: ice-orc-avro-1/C-013.
     """
@@ -392,7 +392,7 @@ def test_mor_delete_on_orc_writes_orc_delete_file(spark: ReparkSession) -> None:
         spark,
         f"SELECT content, file_format, record_count FROM {table}.files "
         "ORDER BY content, file_format",
-    ) == [[0, "ORC", 3], [1, "ORC", 1]]
+    ) == [[0, "ORC", 3], [1, "PARQUET", 1]]
 
 
 def test_delete_format_default_overrides(spark: ReparkSession) -> None:
