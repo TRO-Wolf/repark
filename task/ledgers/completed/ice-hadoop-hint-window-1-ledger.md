@@ -1,3 +1,7 @@
+**Errata (2026-10-28, clerk).** The merge of PR #1205 (squash `9ab67d7d`, merged at 13:58 UTC) and the format-v2 label re-date on the merge of PR #1207 (squash `36f9c732`, merged at 14:30 UTC) happened on 2026-10-28; the verifier rounds under Verification round 1 are already dated 2026-10-28. Every date of 2026-10-29 below this errata records one of those events and reads 2026-10-28: the Retires line, the Status line, the Merge bullet under Records, the C-008 evidence cell and the VERDICT line dated 2026-10-29. This frozen file takes no appended row, so this errata is the correction of C-008 and of that VERDICT line. C-008 keeps its text and its PROVEN verdict.
+
+VERDICT (2026-10-28, errata): the counts of the line it corrects stand: 8 clauses, 7 PROVEN (C-001 to C-006 and C-008), 1 OPEN (C-007, the compressed-codec names, the owner's question outside the label's gate). No row is added to this frozen table; this errata is the correction.
+
 # Unit ledger — ICE-HADOOP-HINT-WINDOW-1 · the hadoop path read walks past `version-hint.text` to the newest metadata file
 
 **Date:** 2026-10-28 · **Branch:** `fix/ice-hadoop-hint-window-1` · **Base:** `321c6095` (`main`, the branch point) · **Product head:** `749f11a4` (PR #1205) · **Model:** builder `claude-opus-5-5` (commits `1139c665` and `749f11a4`); clerk `claude-haiku-5-5` (the records commits) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
