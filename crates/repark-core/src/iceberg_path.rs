@@ -12,6 +12,8 @@ use repark_common::{Error, Result};
 
 use crate::{ReparkSession, engine_err, iceberg_err};
 
+const HINT_WALK_LIMIT: u64 = 10_000;
+
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
     pub async fn read_iceberg_path(&self, path: &str) -> Result<DataFrame> {
@@ -103,7 +105,7 @@ async fn resolve_metadata_location(file_io: &FileIO, location: &str, path: &str)
         let file_name = format!("v{version}.metadata.json");
         let hinted = format!("{location}/metadata/{file_name}");
         if file_io.exists(&hinted).await.map_err(iceberg_err)? {
-            return Ok(hinted);
+            return newest_from_hint(file_io, location, version, hinted, path).await;
         }
         return Err(hinted_metadata_missing_error(path, &file_name));
     }
@@ -118,6 +120,36 @@ async fn resolve_metadata_location(file_io: &FileIO, location: &str, path: &str)
     latest_metadata_location(&files)
         .map(str::to_string)
         .ok_or_else(|| no_metadata_error(path))
+}
+
+async fn newest_from_hint(
+    file_io: &FileIO,
+    location: &str,
+    hinted_version: u64,
+    hinted: String,
+    path: &str,
+) -> Result<String> {
+    let mut version = hinted_version;
+    let mut newest = hinted;
+    for _ in 0..=HINT_WALK_LIMIT {
+        let Some(next_version) = next_java_int_version(version) else {
+            return Ok(newest);
+        };
+        let next = format!("{location}/metadata/v{next_version}.metadata.json");
+        if !file_io.exists(&next).await.map_err(iceberg_err)? {
+            return Ok(newest);
+        }
+        version = next_version;
+        newest = next;
+    }
+    Err(hint_walk_limit_error(path, hinted_version))
+}
+
+fn next_java_int_version(version: u64) -> Option<u64> {
+    i32::try_from(version)
+        .ok()
+        .and_then(|version| version.checked_add(1))
+        .and_then(|next| u64::try_from(next).ok())
 }
 
 async fn read_version_hint(file_io: &FileIO, hint_location: &str) -> Result<Option<u64>> {
@@ -144,6 +176,14 @@ fn hinted_metadata_missing_error(path: &str, file_name: &str) -> Error {
     Error::Analysis(format!(
         "no Iceberg table found at '{path}': version-hint.text names \
          '{file_name}', which does not exist"
+    ))
+}
+
+fn hint_walk_limit_error(path: &str, hinted_version: u64) -> Error {
+    Error::Analysis(format!(
+        "cannot resolve the Iceberg table at '{path}': more than {HINT_WALK_LIMIT} \
+         metadata files follow 'v{hinted_version}.metadata.json', the version \
+         version-hint.text names"
     ))
 }
 
@@ -212,3 +252,6 @@ fn is_uuid(candidate: &str) -> bool {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod hint_walk_tests;
