@@ -94,6 +94,11 @@ pub(crate) async fn execute_merge(
     spec.schema_evolution = schema_evolution;
     if let Some(catalog) = catalogs.get(&catalog_name) {
         repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &spec.target).await?;
+        repark_iceberg::write::data_format::refuse_unreadable_merge_delete_format(
+            catalog.as_ref(),
+            &spec.target,
+        )
+        .await?;
     }
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;

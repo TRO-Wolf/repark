@@ -16,25 +16,6 @@ use crate::write::conflict_filter::top_level_field;
 
 #[allow(clippy::missing_errors_doc)]
 pub fn try_allowed_plain_identity(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
-    allowed_delete_with(statement, is_scalar_comparison)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn try_allowed_subquery_free_dml(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
-    if matches!(statement, Statement::Update(_)) {
-        return allowed_update_with(statement, is_subquery_free);
-    }
-    allowed_delete_with(statement, is_subquery_free)
-}
-
-fn is_subquery_free(expr: &Expr) -> bool {
-    !expression_contains_subquery(expr)
-}
-
-fn allowed_delete_with(
-    statement: &Statement,
-    accepts_selection: fn(&Expr) -> bool,
-) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Delete(delete) = statement else {
         return Ok(None);
     };
@@ -50,7 +31,7 @@ fn allowed_delete_with(
     let Some(selection) = delete.selection.as_ref() else {
         return Ok(None);
     };
-    if !accepts_selection(selection) {
+    if !is_scalar_comparison(selection) {
         return Ok(None);
     }
     let Some((object_name, alias)) = delete_target_and_alias(delete) else {

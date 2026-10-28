@@ -22,7 +22,7 @@ use crate::{
 };
 
 mod comment_on_table;
-pub(crate) mod delete_update;
+mod delete_update;
 pub(crate) mod door_tag;
 mod hive_change_column;
 pub(crate) mod insert_positional;

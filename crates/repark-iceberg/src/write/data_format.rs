@@ -1,15 +1,15 @@
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::{DataFileFormat, FormatVersion};
 use iceberg::table::Table;
-
-use crate::write::MorDmlKind;
+use iceberg::{Catalog, TableIdent};
 
 pub const DELETE_FORMAT_PROPERTY: &str = "write.delete.format.default";
 const DELETE_FORMAT_OPTION: &str = "delete-format";
 const DATA_FORMAT_PROPERTY: &str = "write.format.default";
+const MERGE_MODE_PROPERTY: &str = "write.merge.mode";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ForkDeleteFormat {
+pub enum MorDeleteFormat {
     Readable,
     Inherited(DataFileFormat),
 }
@@ -47,29 +47,45 @@ pub fn resolve_delete_format(
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn fork_mor_delete_format(table: &Table, kind: MorDmlKind) -> Result<ForkDeleteFormat> {
+pub fn mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDeleteFormat> {
     let metadata = table.metadata();
     if metadata.format_version() != FormatVersion::V2 {
-        return Ok(ForkDeleteFormat::Readable);
+        return Ok(MorDeleteFormat::Readable);
     }
     let properties = metadata.properties();
     let merge_on_read = properties
-        .get(kind.mode_property())
+        .get(mode_property)
         .is_some_and(|mode| mode.trim().eq_ignore_ascii_case("merge-on-read"));
     if !merge_on_read {
-        return Ok(ForkDeleteFormat::Readable);
+        return Ok(MorDeleteFormat::Readable);
     }
     if let Some(raw) = properties.get(DELETE_FORMAT_PROPERTY) {
         readable_delete_format(raw, DELETE_FORMAT_PROPERTY)?;
-        return Ok(ForkDeleteFormat::Readable);
+        return Ok(MorDeleteFormat::Readable);
     }
     match resolve_data_format(
         None,
         properties.get(DATA_FORMAT_PROPERTY).map(String::as_str),
     )? {
-        DataFileFormat::Avro => Ok(ForkDeleteFormat::Inherited(DataFileFormat::Avro)),
-        DataFileFormat::Orc => Ok(ForkDeleteFormat::Inherited(DataFileFormat::Orc)),
-        _ => Ok(ForkDeleteFormat::Readable),
+        DataFileFormat::Avro => Ok(MorDeleteFormat::Inherited(DataFileFormat::Avro)),
+        DataFileFormat::Orc => Ok(MorDeleteFormat::Inherited(DataFileFormat::Orc)),
+        _ => Ok(MorDeleteFormat::Readable),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn refuse_unreadable_merge_delete_format(
+    catalog: &dyn Catalog,
+    ident: &TableIdent,
+) -> Result<()> {
+    let Ok(table) = catalog.load_table(ident).await else {
+        return Ok(());
+    };
+    match mor_delete_format(&table, MERGE_MODE_PROPERTY)? {
+        MorDeleteFormat::Readable => Ok(()),
+        MorDeleteFormat::Inherited(format) => {
+            Err(inherited_delete_format_refusal(&ident.to_string(), format))
+        }
     }
 }
 
@@ -77,10 +93,10 @@ pub fn fork_mor_delete_format(table: &Table, kind: MorDmlKind) -> Result<ForkDel
 pub fn inherited_delete_format_refusal(table_sql: &str, format: DataFileFormat) -> DataFusionError {
     DataFusionError::Plan(format!(
         "table `{table_sql}` inherits the position-delete format '{format}' from \
-         `{DATA_FORMAT_PROPERTY}`, and this statement shape runs on a writer that writes \
-         {format} position-delete files, which RePark cannot read yet; the merge-on-read write \
-         is refused before any file is written. Hint: set `{DELETE_FORMAT_PROPERTY}` to \
-         'parquet' (Spark reads Parquet position-delete files on {format} tables)"
+         `{DATA_FORMAT_PROPERTY}`, and RePark cannot read {format} position-delete files yet; \
+         this merge-on-read statement is refused before any file is written. Hint: set \
+         `{DELETE_FORMAT_PROPERTY}` to 'parquet' (Spark reads Parquet position-delete files on \
+         {format} tables)"
     ))
 }
 

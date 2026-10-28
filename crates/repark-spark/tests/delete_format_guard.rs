@@ -13,6 +13,12 @@ use tempfile::TempDir;
 
 const FORK_ROUTE_DELETE: &str = "DELETE FROM ice.ns.t WHERE id BETWEEN 1 AND 3";
 const REPARK_ROUTE_DELETE: &str = "DELETE FROM ice.ns.t WHERE id >= 1 AND id < 4";
+const FORK_ROUTE_UPDATE: &str = "UPDATE ice.ns.t SET id = id + 10 WHERE id BETWEEN 1 AND 3";
+const REPARK_ROUTE_UPDATE: &str = "UPDATE ice.ns.t SET id = id + 10 WHERE id >= 1 AND id < 4";
+const IN_LIST_DELETE: &str = "DELETE FROM ice.ns.t WHERE id IN (1, 2, 3)";
+const MERGE_DELETE_AND_INSERT: &str = "MERGE INTO ice.ns.t t \
+     USING (SELECT 2 AS id UNION ALL SELECT 9 AS id) s ON t.id = s.id \
+     WHEN MATCHED THEN DELETE WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id)";
 const DELETE_FORMAT_PROPERTY: &str = "write.delete.format.default";
 
 struct Snapshot {
@@ -166,124 +172,57 @@ async fn assert_parquet_rewrite(
 }
 
 async fn assert_refused_unchanged(session: &ReparkSession, warehouse: &TempDir, sql: &str) {
+    let files_before = files_under(warehouse.path()).len();
+    let rows_before = ids(session).await;
     let error = attempt(session, sql)
         .await
         .expect_err("an unreadable delete format must refuse");
     assert!(error.contains(DELETE_FORMAT_PROPERTY), "{error}");
     assert!(error.contains("'parquet'"), "{error}");
     assert!(error.contains("before any file is written"), "{error}");
-    assert_eq!(ids(session).await, Ok(vec![0, 1, 2, 3, 4]));
+    assert_eq!(ids(session).await, rows_before);
     let snapshot = current_snapshot(session).await;
     assert_eq!(snapshot.operation, Operation::Append);
     assert_eq!(snapshot.total("total-delete-files"), 0);
-    assert!(position_delete_extensions(warehouse).is_empty());
+    assert_eq!(
+        files_under(warehouse.path()).len(),
+        files_before,
+        "`{sql}` wrote a file"
+    );
+}
+
+fn explicit_delete_format(data: &str, delete: &str) -> String {
+    format!(
+        "{}, '{DELETE_FORMAT_PROPERTY}'='{delete}'",
+        data_format(data)
+    )
 }
 
 #[tokio::test]
-async fn avro_data_fork_route_delete_writes_a_parquet_position_delete() {
-    let (session, warehouse) = seeded_table(&data_format("avro")).await;
-    assert_parquet_position_delete(&session, &warehouse, FORK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn avro_data_repark_route_delete_writes_a_parquet_position_delete() {
-    let (session, warehouse) = seeded_table(&data_format("avro")).await;
-    assert_parquet_position_delete(&session, &warehouse, REPARK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn orc_data_fork_route_delete_writes_a_parquet_position_delete() {
-    let (session, warehouse) = seeded_table(&data_format("orc")).await;
-    assert_parquet_position_delete(&session, &warehouse, FORK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn orc_data_repark_route_delete_writes_a_parquet_position_delete() {
-    let (session, warehouse) = seeded_table(&data_format("orc")).await;
-    assert_parquet_position_delete(&session, &warehouse, REPARK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn explicit_avro_delete_format_refuses_the_fork_route() {
-    let (session, warehouse) = seeded_table(&format!(", '{DELETE_FORMAT_PROPERTY}'='avro'")).await;
-    assert_refused_unchanged(&session, &warehouse, FORK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn explicit_avro_delete_format_refuses_the_repark_route() {
-    let (session, warehouse) = seeded_table(&format!(", '{DELETE_FORMAT_PROPERTY}'='avro'")).await;
-    assert_refused_unchanged(&session, &warehouse, REPARK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn parquet_control_fork_route_is_unchanged() {
-    let (session, warehouse) = seeded_table(&data_format("parquet")).await;
-    assert_parquet_position_delete(&session, &warehouse, FORK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn parquet_control_repark_route_is_unchanged() {
-    let (session, warehouse) = seeded_table(&data_format("parquet")).await;
-    assert_parquet_position_delete(&session, &warehouse, REPARK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn explicit_orc_delete_format_refuses_both_routes() {
-    for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE] {
-        let (session, warehouse) = seeded_table(&format!(
-            "{}, '{DELETE_FORMAT_PROPERTY}'='orc'",
-            data_format("orc")
-        ))
-        .await;
-        assert_refused_unchanged(&session, &warehouse, sql).await;
+async fn inherited_avro_or_orc_repark_route_delete_writes_a_parquet_position_delete() {
+    for format in ["avro", "orc"] {
+        let (session, warehouse) = seeded_table(&data_format(format)).await;
+        assert_parquet_position_delete(&session, &warehouse, REPARK_ROUTE_DELETE).await;
     }
 }
 
 #[tokio::test]
-async fn explicit_parquet_delete_format_on_avro_data_is_readable() {
-    let (session, warehouse) = seeded_table(&format!(
-        "{}, '{DELETE_FORMAT_PROPERTY}'='parquet'",
-        data_format("avro")
-    ))
-    .await;
-    assert_parquet_position_delete(&session, &warehouse, FORK_ROUTE_DELETE).await;
-}
-
-#[tokio::test]
-async fn avro_data_in_list_delete_writes_a_parquet_position_delete() {
-    let (session, warehouse) = seeded_table(&data_format("avro")).await;
-    let sql = "DELETE FROM ice.ns.t WHERE id IN (1, 2, 3)";
-    assert_parquet_position_delete(&session, &warehouse, sql).await;
-}
-
-#[tokio::test]
-async fn avro_data_update_on_either_route_writes_a_parquet_position_delete() {
-    for sql in [
-        "UPDATE ice.ns.t SET id = id + 10 WHERE id BETWEEN 1 AND 3",
-        "UPDATE ice.ns.t SET id = id + 10 WHERE id >= 1 AND id < 4",
-    ] {
-        let (session, warehouse) = seeded_table(&data_format("avro")).await;
-        assert_parquet_rewrite(&session, &warehouse, sql, &[0, 4, 11, 12, 13], 3).await;
+async fn inherited_avro_or_orc_repark_route_update_writes_a_parquet_position_delete() {
+    for format in ["avro", "orc"] {
+        let (session, warehouse) = seeded_table(&data_format(format)).await;
+        let survivors = [0, 4, 11, 12, 13];
+        assert_parquet_rewrite(&session, &warehouse, REPARK_ROUTE_UPDATE, &survivors, 3).await;
     }
 }
 
 #[tokio::test]
-async fn explicit_avro_delete_format_refuses_update() {
-    let (session, warehouse) = seeded_table(&format!(", '{DELETE_FORMAT_PROPERTY}'='avro'")).await;
-    let sql = "UPDATE ice.ns.t SET id = id + 10 WHERE id BETWEEN 1 AND 3";
-    assert_refused_unchanged(&session, &warehouse, sql).await;
-}
-
-#[tokio::test]
-async fn avro_data_merge_writes_a_parquet_position_delete() {
-    let (session, warehouse) = seeded_table(&data_format("avro")).await;
-    let sql = "MERGE INTO ice.ns.t t USING (SELECT 2 AS id) s ON t.id = s.id \
-               WHEN MATCHED THEN DELETE";
-    assert_parquet_rewrite(&session, &warehouse, sql, &[0, 1, 3, 4], 1).await;
-}
-
-#[tokio::test]
-async fn avro_data_delete_the_repark_writer_cannot_take_is_refused() {
+async fn inherited_avro_or_orc_fork_route_dml_refuses_unchanged() {
+    for format in ["avro", "orc"] {
+        for sql in [FORK_ROUTE_DELETE, IN_LIST_DELETE, FORK_ROUTE_UPDATE] {
+            let (session, warehouse) = seeded_table(&data_format(format)).await;
+            assert_refused_unchanged(&session, &warehouse, sql).await;
+        }
+    }
     for sql in [
         "DELETE FROM ice.ns.t WHERE s IS NULL",
         "DELETE FROM ice.ns.t WHERE s IS NULL OR id = 2",
@@ -295,15 +234,55 @@ async fn avro_data_delete_the_repark_writer_cannot_take_is_refused() {
              (3, named_struct('a', 3)), (4, named_struct('a', 4))",
         )
         .await;
-        let error = attempt(&session, sql)
-            .await
-            .expect_err("the fork writer would write Avro deletes");
-        assert!(
-            error.contains("inherits the position-delete format 'avro'"),
-            "{error}"
-        );
-        assert!(error.contains(DELETE_FORMAT_PROPERTY), "{error}");
-        assert_eq!(ids(&session).await, Ok(vec![0, 1, 2, 3, 4]));
-        assert!(position_delete_extensions(&warehouse).is_empty());
+        assert_refused_unchanged(&session, &warehouse, sql).await;
     }
+}
+
+#[tokio::test]
+async fn inherited_avro_or_orc_merge_refuses_before_any_data_file() {
+    for format in ["avro", "orc"] {
+        let (session, warehouse) = seeded_table(&data_format(format)).await;
+        assert_refused_unchanged(&session, &warehouse, MERGE_DELETE_AND_INSERT).await;
+    }
+}
+
+#[tokio::test]
+async fn explicit_avro_or_orc_delete_format_refuses_every_route() {
+    for (data, delete) in [("parquet", "avro"), ("orc", "orc")] {
+        for sql in [
+            FORK_ROUTE_DELETE,
+            REPARK_ROUTE_DELETE,
+            FORK_ROUTE_UPDATE,
+            REPARK_ROUTE_UPDATE,
+            MERGE_DELETE_AND_INSERT,
+        ] {
+            let (session, warehouse) = seeded_table(&explicit_delete_format(data, delete)).await;
+            assert_refused_unchanged(&session, &warehouse, sql).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn explicit_parquet_delete_format_on_avro_data_is_readable() {
+    for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE] {
+        let (session, warehouse) = seeded_table(&explicit_delete_format("avro", "parquet")).await;
+        assert_parquet_position_delete(&session, &warehouse, sql).await;
+    }
+}
+
+#[tokio::test]
+async fn parquet_control_is_unchanged() {
+    for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE, IN_LIST_DELETE] {
+        let (session, warehouse) = seeded_table(&data_format("parquet")).await;
+        assert_parquet_position_delete(&session, &warehouse, sql).await;
+    }
+    let (session, warehouse) = seeded_table(&data_format("parquet")).await;
+    assert_parquet_rewrite(
+        &session,
+        &warehouse,
+        MERGE_DELETE_AND_INSERT,
+        &[0, 1, 3, 4, 9],
+        1,
+    )
+    .await;
 }
