@@ -610,3 +610,26 @@ def test_compaction_keeps_table_format(spark: ReparkSession) -> None:
     ).to_arrow()
     assert _live_data_formats(spark, table) == ["ORC"]
     assert _ordered_rows(spark, f"SELECT id FROM {table} ORDER BY id") == [[1], [2]]
+
+
+@pytest.mark.parametrize("file_format", ["avro", "orc"])
+def test_mor_delete_on_avro_or_orc_reads_back(spark: ReparkSession, file_format: str) -> None:
+    """The audit's AUD-003 probe: a merge-on-read DELETE on Avro or ORC data reads back.
+
+    The DELETE writes its position-delete file in the data format, and the next read
+    applies it.
+    """
+    table = f"{CATALOG}.{NS}.aud_003_{file_format}"
+    spark.sql(
+        f"CREATE TABLE {table} (id INT) USING iceberg TBLPROPERTIES ('format-version' = '2', "
+        f"'write.format.default' = '{file_format}', 'write.delete.mode' = 'merge-on-read')"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (0), (1), (2), (3), (4)")
+    assert _ordered_rows(spark, f"SELECT id FROM {table} ORDER BY id") == [[0], [1], [2], [3], [4]]
+    spark.sql(f"DELETE FROM {table} WHERE id BETWEEN 1 AND 3")
+    assert _ordered_rows(spark, f"SELECT id FROM {table} ORDER BY id") == [[0], [4]]
+    assert _ordered_rows(
+        spark,
+        f"SELECT content, file_format, record_count FROM {table}.files "
+        "ORDER BY content, file_format",
+    ) == [[0, file_format.upper(), 5], [1, file_format.upper(), 3]]
