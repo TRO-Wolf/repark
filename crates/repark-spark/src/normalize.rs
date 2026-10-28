@@ -13,14 +13,13 @@ use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::{Transform, UnboundPartitionSpec};
-use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::write::nested_type_sql::rewrite_create_column_types;
 
 use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
 use crate::alter;
-use crate::catalog_ops::{iceberg_err, name_parts};
+use crate::catalog_ops::iceberg_err;
 use crate::merge;
 
 pub(crate) mod clustered_by;
@@ -274,41 +273,17 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
     let Some(table_name) = table_name else {
         return Ok(());
     };
-    let Some((catalog_name, ident)) = dml_target_ident(ctx, table_name) else {
-        return Ok(());
-    };
-    let Some(catalog) = catalogs.get(&catalog_name) else {
-        // Unknown catalog handled elsewhere; cannot inspect hazard without a handle.
+    let Some(target) = crate::dml_target::resolve_dml_target(ctx, catalogs, table_name).await?
+    else {
         return Ok(());
     };
     repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
-        catalog.as_ref(),
-        &ident,
+        target.catalog.as_ref(),
+        &target.ident,
         &table_name.to_string(),
         kind,
     )
     .await
-}
-
-/// Resolve a DML target as DataFusion will: short names complete from the session defaults.
-pub(crate) fn dml_target_ident(
-    ctx: &SessionContext,
-    table_name: &ObjectName,
-) -> Option<(String, TableIdent)> {
-    let mut parts = name_parts(table_name);
-    if parts.is_empty() {
-        return None;
-    }
-    if parts.len() < 3 {
-        let (default_catalog, default_schema) = session_defaults(ctx);
-        if parts.len() == 1 {
-            parts.insert(0, default_schema);
-        }
-        parts.insert(0, default_catalog);
-    }
-    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
-    let table_leaf = parts[parts.len() - 1].clone();
-    Some((parts[0].clone(), TableIdent::new(namespace, table_leaf)))
 }
 
 /// The DML verb a G3-E8 subquery-predicate refusal names.
@@ -890,16 +865,6 @@ pub(crate) fn build_partition_spec(
             .map_err(iceberg_err)?;
     }
     Ok(Some(builder.build()))
-}
-
-/// The session's default catalog / schema, cloned out of the (temporary) state snapshot.
-fn session_defaults(ctx: &SessionContext) -> (String, String) {
-    let state = ctx.state();
-    let catalog = &state.config().options().catalog;
-    (
-        catalog.default_catalog.clone(),
-        catalog.default_schema.clone(),
-    )
 }
 
 #[cfg(test)]

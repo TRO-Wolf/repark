@@ -1,12 +1,11 @@
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::{DataFileFormat, FormatVersion};
 use iceberg::table::Table;
-use iceberg::{Catalog, TableIdent};
 
 pub const DELETE_FORMAT_PROPERTY: &str = "write.delete.format.default";
 const DELETE_FORMAT_OPTION: &str = "delete-format";
 const DATA_FORMAT_PROPERTY: &str = "write.format.default";
-const MERGE_MODE_PROPERTY: &str = "write.merge.mode";
+pub const MERGE_MODE_PROPERTY: &str = "write.merge.mode";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MorDeleteFormat {
@@ -74,18 +73,13 @@ pub fn mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDelete
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub async fn refuse_unreadable_merge_delete_format(
-    catalog: &dyn Catalog,
-    ident: &TableIdent,
-) -> Result<()> {
-    let Ok(table) = catalog.load_table(ident).await else {
-        return Ok(());
-    };
-    match mor_delete_format(&table, MERGE_MODE_PROPERTY)? {
+pub fn refuse_any_unreadable_delete_format(table: &Table, mode_property: &str) -> Result<()> {
+    match mor_delete_format(table, mode_property)? {
         MorDeleteFormat::Readable => Ok(()),
-        MorDeleteFormat::Inherited(format) => {
-            Err(inherited_delete_format_refusal(&ident.to_string(), format))
-        }
+        MorDeleteFormat::Inherited(format) => Err(inherited_delete_format_refusal(
+            &table.identifier().to_string(),
+            format,
+        )),
     }
 }
 

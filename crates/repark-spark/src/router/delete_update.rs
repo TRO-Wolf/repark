@@ -1,16 +1,17 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{ObjectName, Statement};
-use iceberg::table::Table;
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::data_format::{
     MorDeleteFormat, inherited_delete_format_refusal, mor_delete_format,
+    refuse_any_unreadable_delete_format,
 };
 use repark_iceberg::write::predicate_dml::plain::{
     plain_identity_needs_fork, try_allowed_plain_identity_or_update,
 };
 use repark_iceberg::write::predicate_dml::{try_allowed_delete_in, try_allowed_update_in};
 
+use crate::dml_target::{DmlTarget, resolve_dml_target};
 use crate::{
     DmlSubqueryVerb, MorDmlKind, delete_target_object_name, object_name_from_table_with_joins,
     refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
@@ -105,27 +106,24 @@ pub(crate) async fn execute_update(
     spark_ast::execute_passthrough(ctx, catalogs, folded.as_deref().unwrap_or(sql)).await
 }
 
-async fn load_dml_target(
-    ctx: &SessionContext,
+async fn repark_writer_takes(
     catalogs: &CatalogRegistry,
-    table_name: Option<&ObjectName>,
-) -> Option<Table> {
-    let (catalog_name, ident) = crate::normalize::dml_target_ident(ctx, table_name?)?;
-    let catalog = catalogs.get(&catalog_name)?;
-    catalog.load_table(&ident).await.ok()
-}
-
-async fn reaches_fork_writer(catalogs: &CatalogRegistry, statement: &Statement) -> Result<bool> {
+    statement: &Statement,
+    target: &DmlTarget,
+) -> Result<bool> {
     if try_allowed_delete_in(statement)?.is_some() || try_allowed_update_in(statement)?.is_some() {
-        return Ok(false);
+        return Ok(true);
     }
     let Some(allowed) = try_allowed_plain_identity_or_update(statement)? else {
-        return Ok(true);
+        return Ok(false);
     };
+    if allowed.catalog_name != target.catalog_name || allowed.spec.target != target.ident {
+        return Ok(false);
+    }
     let Some(catalog) = catalogs.get(&allowed.catalog_name) else {
-        return Ok(true);
+        return Ok(false);
     };
-    Ok(plain_identity_needs_fork(catalog, &allowed.spec).await)
+    Ok(!plain_identity_needs_fork(catalog, &allowed.spec).await)
 }
 
 async fn refuse_unreadable_delete_format(
@@ -135,14 +133,24 @@ async fn refuse_unreadable_delete_format(
     table_name: Option<&ObjectName>,
     kind: MorDmlKind,
 ) -> Result<()> {
-    let Some(table) = load_dml_target(ctx, catalogs, table_name).await else {
+    let Some(table_name) = table_name else {
         return Ok(());
     };
-    match mor_delete_format(&table, kind.mode_property())? {
+    let Some(target) = resolve_dml_target(ctx, catalogs, table_name).await? else {
+        return Ok(());
+    };
+    if target.on_branch {
+        return refuse_any_unreadable_delete_format(&target.table, kind.mode_property());
+    }
+    match mor_delete_format(&target.table, kind.mode_property())? {
         MorDeleteFormat::Readable => Ok(()),
-        MorDeleteFormat::Inherited(_) if !reaches_fork_writer(catalogs, statement).await? => Ok(()),
+        MorDeleteFormat::Inherited(_)
+            if repark_writer_takes(catalogs, statement, &target).await? =>
+        {
+            Ok(())
+        }
         MorDeleteFormat::Inherited(format) => Err(inherited_delete_format_refusal(
-            &table.identifier().to_string(),
+            &target.table.identifier().to_string(),
             format,
         )),
     }

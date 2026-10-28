@@ -591,6 +591,8 @@ async fn commit_write_on_branch<'a>(
             kind,
         )
         .await?;
+        let mode = kind.mode_property();
+        repark_iceberg::write::data_format::refuse_any_unreadable_delete_format(&table, mode)?;
     }
     if is_owned_write_head(ctx, sql) {
         if target.keep_existing_selector {

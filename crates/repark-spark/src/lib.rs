@@ -17,6 +17,7 @@ mod ctas;
 mod describe_column;
 pub mod describe_show;
 mod dialect;
+mod dml_target;
 mod format_version;
 mod insert_arity;
 mod insert_by_name;

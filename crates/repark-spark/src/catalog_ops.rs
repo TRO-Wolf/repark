@@ -6,7 +6,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{FromTable, ObjectName};
 use datafusion::sql::sqlparser::parser::ParserError;
-use iceberg::{Catalog, NamespaceIdent, TableIdent};
+use iceberg::{Catalog, NamespaceIdent};
 
 use repark_core::CatalogRegistry;
 
@@ -256,25 +256,10 @@ pub(crate) async fn refuse_encrypted_write_target(
     let Some(table_name) = table_name else {
         return Ok(());
     };
-    let mut parts = name_parts(table_name);
-    if let Some((stripped, selector)) = crate::write_to_branch::split_write_ref_parts(&parts) {
-        match selector {
-            crate::write_to_branch::RefSelectorKind::Branch(_) => parts = stripped,
-            crate::write_to_branch::RefSelectorKind::Tag => return Ok(()),
-        }
+    match crate::dml_target::resolve_dml_target(ctx, catalogs, table_name).await? {
+        Some(target) => repark_iceberg::write::refuse_encrypted_table(&target.table),
+        None => Ok(()),
     }
-    parts = crate::write_to_branch::qualify_table_parts(ctx, parts);
-    if parts.len() < 3 {
-        return Ok(());
-    }
-    let Some(catalog) = catalogs.get(&parts[0]) else {
-        return Ok(());
-    };
-    let Ok(namespace) = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()) else {
-        return Ok(());
-    };
-    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
-    repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &ident).await
 }
 
 // === Catalog-provider refresh path Product DDL invalidates the touched namespace in O.

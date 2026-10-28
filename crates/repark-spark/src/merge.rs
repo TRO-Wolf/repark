@@ -92,13 +92,15 @@ pub(crate) async fn execute_merge(
             .await?;
     let (catalog_name, mut spec) = lower(table, source, on, folded.as_deref().unwrap_or(clauses))?;
     spec.schema_evolution = schema_evolution;
-    if let Some(catalog) = catalogs.get(&catalog_name) {
-        repark_iceberg::write::refuse_encrypted_write(catalog.as_ref(), &spec.target).await?;
-        repark_iceberg::write::data_format::refuse_unreadable_merge_delete_format(
-            catalog.as_ref(),
-            &spec.target,
-        )
-        .await?;
+    if let TableFactor::Table { name, .. } = table
+        && let Some(target) = crate::dml_target::resolve_dml_target(ctx, catalogs, name).await?
+    {
+        repark_iceberg::write::refuse_encrypted_table(&target.table)?;
+        let mode = repark_iceberg::write::data_format::MERGE_MODE_PROPERTY;
+        repark_iceberg::write::data_format::refuse_any_unreadable_delete_format(
+            &target.table,
+            mode,
+        )?;
     }
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;

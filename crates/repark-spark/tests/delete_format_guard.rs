@@ -172,14 +172,18 @@ async fn assert_parquet_rewrite(
 }
 
 async fn assert_refused_unchanged(session: &ReparkSession, warehouse: &TempDir, sql: &str) {
+    let error = assert_fails_unchanged(session, warehouse, sql).await;
+    assert!(error.contains(DELETE_FORMAT_PROPERTY), "{error}");
+    assert!(error.contains("'parquet'"), "{error}");
+    assert!(error.contains("before any file is written"), "{error}");
+}
+
+async fn assert_fails_unchanged(session: &ReparkSession, warehouse: &TempDir, sql: &str) -> String {
     let files_before = files_under(warehouse.path()).len();
     let rows_before = ids(session).await;
     let error = attempt(session, sql)
         .await
         .expect_err("an unreadable delete format must refuse");
-    assert!(error.contains(DELETE_FORMAT_PROPERTY), "{error}");
-    assert!(error.contains("'parquet'"), "{error}");
-    assert!(error.contains("before any file is written"), "{error}");
     assert_eq!(ids(session).await, rows_before);
     let snapshot = current_snapshot(session).await;
     assert_eq!(snapshot.operation, Operation::Append);
@@ -189,6 +193,7 @@ async fn assert_refused_unchanged(session: &ReparkSession, warehouse: &TempDir, 
         files_before,
         "`{sql}` wrote a file"
     );
+    error
 }
 
 fn explicit_delete_format(data: &str, delete: &str) -> String {
@@ -285,4 +290,141 @@ async fn parquet_control_is_unchanged() {
         1,
     )
     .await;
+}
+
+const CASE_VARIANTS: [&str; 3] = ["ICE.NS.T", "ice.NS.t", "ice.ns.T"];
+const BRANCH_TARGET: &str = "ice.ns.t.branch_b";
+const BRANCH_SHAPES: [&str; 4] = [
+    FORK_ROUTE_DELETE,
+    REPARK_ROUTE_DELETE,
+    FORK_ROUTE_UPDATE,
+    REPARK_ROUTE_UPDATE,
+];
+
+fn on_target(sql: &str, target: &str) -> String {
+    sql.replacen("ice.ns.t", target, 1)
+}
+
+async fn branch_head(session: &ReparkSession) -> Option<i64> {
+    let catalogs = session.catalogs_snapshot();
+    let catalog = catalogs.get("ice").expect("ice catalog");
+    let table = catalog
+        .load_table(&TableIdent::from_strs(["ns", "t"]).expect("ident"))
+        .await
+        .expect("load table");
+    table
+        .metadata()
+        .snapshot_for_ref("b")
+        .map(|snapshot| snapshot.snapshot_id())
+}
+
+fn set_session_write_codec(session: &ReparkSession) {
+    let state = session.context().state_ref();
+    let mut guard = state.write();
+    assert!(repark_iceberg::write::apply_session_write_key(
+        guard.config_mut().options_mut(),
+        "spark.sql.iceberg.compression-codec",
+        "zstd",
+    ));
+}
+
+async fn branched_table(format: &str) -> (ReparkSession, TempDir, Option<i64>) {
+    let (session, warehouse) = seeded_table(&data_format(format)).await;
+    run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
+    let head = branch_head(&session).await;
+    assert!(head.is_some(), "branch b exists");
+    (session, warehouse, head)
+}
+
+#[tokio::test]
+async fn case_variant_dml_on_inherited_avro_or_orc_refuses_unchanged() {
+    for format in ["avro", "orc"] {
+        for target in CASE_VARIANTS {
+            for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE, FORK_ROUTE_UPDATE] {
+                let (session, warehouse) = seeded_table(&data_format(format)).await;
+                assert_refused_unchanged(&session, &warehouse, &on_target(sql, target)).await;
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn case_variant_explicit_avro_delete_format_refuses() {
+    for target in CASE_VARIANTS {
+        for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE, FORK_ROUTE_UPDATE] {
+            let (session, warehouse) =
+                seeded_table(&explicit_delete_format("parquet", "avro")).await;
+            assert_refused_unchanged(&session, &warehouse, &on_target(sql, target)).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn case_variant_merge_refuses_like_the_lowercase_spelling() {
+    for target in CASE_VARIANTS {
+        let (session, warehouse) = seeded_table(&data_format("avro")).await;
+        let sql = on_target(MERGE_DELETE_AND_INSERT, target);
+        assert_refused_unchanged(&session, &warehouse, &sql).await;
+    }
+}
+
+#[tokio::test]
+async fn branch_target_dml_on_inherited_avro_or_orc_refuses_with_the_branch_unchanged() {
+    for format in ["avro", "orc"] {
+        for sql in BRANCH_SHAPES {
+            let (session, warehouse, head) = branched_table(format).await;
+            assert_refused_unchanged(&session, &warehouse, &on_target(sql, BRANCH_TARGET)).await;
+            assert_eq!(branch_head(&session).await, head, "`{sql}` moved branch b");
+        }
+    }
+}
+
+#[tokio::test]
+async fn branch_target_dml_under_a_session_write_conf_refuses_with_the_branch_unchanged() {
+    for sql in BRANCH_SHAPES {
+        let (session, warehouse, head) = branched_table("avro").await;
+        set_session_write_codec(&session);
+        assert_refused_unchanged(&session, &warehouse, &on_target(sql, BRANCH_TARGET)).await;
+        assert_eq!(branch_head(&session).await, head, "`{sql}` moved branch b");
+    }
+}
+
+#[tokio::test]
+async fn case_variant_branch_target_dml_fails_with_the_branch_unchanged() {
+    for target in [
+        "ICE.NS.T.branch_b",
+        "ice.NS.t.branch_b",
+        "ice.ns.T.branch_b",
+    ] {
+        for sql in BRANCH_SHAPES {
+            let (session, warehouse, head) = branched_table("avro").await;
+            assert_fails_unchanged(&session, &warehouse, &on_target(sql, target)).await;
+            assert_eq!(branch_head(&session).await, head, "`{sql}` moved branch b");
+        }
+    }
+}
+
+#[tokio::test]
+async fn branch_target_merge_on_inherited_avro_refuses_with_the_branch_unchanged() {
+    let (session, warehouse, head) = branched_table("avro").await;
+    let sql = on_target(MERGE_DELETE_AND_INSERT, BRANCH_TARGET);
+    assert_refused_unchanged(&session, &warehouse, &sql).await;
+    assert_eq!(branch_head(&session).await, head);
+}
+
+#[tokio::test]
+async fn parquet_branch_and_case_variant_dml_is_unchanged() {
+    for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE] {
+        let (session, warehouse) = seeded_table(&data_format("parquet")).await;
+        assert_parquet_position_delete(&session, &warehouse, &on_target(sql, "ICE.NS.T")).await;
+    }
+    let (session, _warehouse, head) = branched_table("parquet").await;
+    run(&session, &on_target(FORK_ROUTE_DELETE, BRANCH_TARGET)).await;
+    assert_ne!(
+        branch_head(&session).await,
+        head,
+        "the branch delete commits"
+    );
+    let rows = attempt(&session, "SELECT id FROM ice.ns.t.branch_b ORDER BY id").await;
+    assert!(rows.is_ok(), "the branch reads back: {rows:?}");
 }
