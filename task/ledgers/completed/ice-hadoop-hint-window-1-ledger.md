@@ -1,0 +1,56 @@
+# Unit ledger — ICE-HADOOP-HINT-WINDOW-1 · the hadoop path read walks past `version-hint.text` to the newest metadata file
+
+**Date:** 2026-10-28 · **Branch:** `fix/ice-hadoop-hint-window-1` · **Base:** `321c6095` (`main`, the branch point) · **Product head:** `749f11a4` (PR #1205) · **Model:** builder `claude-opus-5-5` (commits `1139c665` and `749f11a4`); clerk `claude-haiku-5-5` (the records commits) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+
+**Retires:** this ledger moves to `../completed/` on the merge, 2026-10-29; C-007 is carried OPEN as the owner's question, outside the label's gate.
+
+**Why now.** On `type=hadoop` the fork commits in two steps: it writes `v(N+1).metadata.json`, then advances `version-hint.text` best effort. A kill, or a failed hint write, leaves the hint at `N` while `v(N+1)` is the commit. RePark's path read returned the hinted version, so a row that a committed `DELETE` had removed came back. The independent audit (AUD-001) reproduced it on 2026-10-28. The owner ruled option 1 on 2026-10-22 (ice-integrity-pins-1 C-029); the card is [ICE-HADOOP-HINT-WINDOW-1](../../roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md).
+
+**The change.** `crates/repark-core/src/iceberg_path.rs`: `resolve_metadata_location` calls `newest_from_hint` once the hinted `v{N}.metadata.json` exists. `newest_from_hint` probes `v{N+1}`, `v{N+2}`, ... with `file_io.exists` and returns the last existing file, as Java Iceberg 1.11.0 `HadoopTableOperations.refresh` does (lines 102 to 120). It stops at the first gap and at the Java `int` range, and past `HINT_WALK_LIMIT` (10,000) files it refuses with an `Analysis` error naming the limit. The pins live in `crates/repark-core/src/iceberg_path/hint_walk_tests.rs`, a sibling module, because `iceberg_path/tests.rs` sits near the 1,000-line ceiling.
+
+**Unchanged.** The missing-hinted-file error, the unparsable or out-of-range hint fallback to the listing, the no-hint listing, and an explicit `*.metadata.json` path.
+
+**Status.** Merged 2026-10-29 as PR #1205, squash `9ab67d7d`, after verification round 1 (2026-10-28): Opus 5.5 PASS and Muse MAX PASS on the code at `564285cb`, with the records fixed in that round. C-001 to C-006 and C-008 are PROVEN; C-007 stays OPEN as the owner's question.
+
+## Clauses
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-001 | A `type=hadoop` path read whose hinted `v<N>.metadata.json` exists answers the newest `v<M>.metadata.json` such that `v<N+1>` to `v<M>` all exist. A stale hint is walked past, as Java's `refresh` does. | `stale_hint_walks_to_the_next_metadata_file` (hint `2` over `v1` to `v3` answers `v3`) and `stale_hint_walks_past_every_newer_metadata_file` (hint `2` over `v1` to `v4` answers `v4`). | PROVEN | pins: ice-hadoop-hint-window-1/C-001 (cited in the `iceberg_path` map). Red on `321c6095` (the builder's run, copied: both pins fail with left `v2`, right `v3` and `v4`). Green on `749f11a4`: `iceberg_path` 67 passed, 58 existing and 9 new. The clerk ran no cargo. |
+| C-002 | The walk stops at the first gap: a file past a missing `v<M>` is not reached. | `hint_walk_stops_at_the_first_missing_version` (hint `2` over `v1`, `v2` and `v4` answers `v2`). | PROVEN | pins: ice-hadoop-hint-window-1/C-002 (cited in the `iceberg_path` map). A control: green on `321c6095` as well, because the old code answers the hinted file. Green on `749f11a4` (the builder's run, copied). |
+| C-003 | The walk cap: a walk resolves exactly `HINT_WALK_LIMIT` (10,000) files past the hint, and one more refuses with `Error::Analysis` naming the limit and the hinted version. The cap is defensive; Java has no bound. | `hint_walk_resolves_the_walk_limit_exactly` (hint `0` over `v0` to `v10000` answers `v10000`) and `hint_walk_beyond_the_limit_refuses_naming_it` (hint `0` over `v0` to `v10001` refuses with the text "more than 10000 metadata files follow 'v0.metadata.json', the version version-hint.text names"). | PROVEN | pins: ice-hadoop-hint-window-1/C-003 (cited in the `iceberg_path` map). Green on `749f11a4` (the builder's run, copied). Not measured on `321c6095`: the builder's red run covers the two stale-hint pins and the four unchanged-behaviour pins only. |
+| C-004 | The walk stays inside the Java `int` range: a hint of `2147483647` answers that file and does not probe past `i32::MAX`. | `hint_at_java_int_max_does_not_walk_past_it` (`v2147483647` and `v2147483648` both present, hint `2147483647` answers `v2147483647`). | PROVEN | pins: ice-hadoop-hint-window-1/C-004 (cited in the `iceberg_path` map). Green on `749f11a4` (the builder's run, copied). Not measured on `321c6095`. |
+| C-005 | The unchanged behaviours hold: a current hint selects the hinted file; a hinted file that is missing keeps its error when newer files exist; with no hint, the listing resolves the latest `v` form. | `current_hint_selects_the_hinted_file` (hint `2` over `v1` and `v2` answers `v2`), `hinted_missing_file_keeps_its_error_when_newer_files_exist` (hint `2` over `v1` and `v3` refuses with the `no Iceberg table found` text naming `v2.metadata.json`) and `no_hint_resolves_the_latest_v_form_by_listing` (no hint over `v1` to `v3` answers `v3`). | PROVEN | pins: ice-hadoop-hint-window-1/C-005 (cited in the `iceberg_path` map). Green on `321c6095` and on `749f11a4` (the builder's runs, copied). |
+| C-006 | The facade proof of the audit shape: a `type=hadoop` table of format version 2 with ids 1, 2 and 3, a committed `DELETE` of id 1, and the hint put back to the version before the `DELETE` reads `[2, 3]` through the path door and through the catalog. | `test_load_stale_hint_after_delete_reads_the_newest_metadata_file` in `python/repark/tests/iceberg/test_iceberg_load_path.py`. | PROVEN | pins: ice-hadoop-hint-window-1/C-006 (cited in the python iceberg map). Red with the walk reverted (the builder's run, copied: path read `[1, 2, 3]`, 1 failed, 48 passed). Green on `749f11a4` (49 passed). The clerk ran no pytest. |
+| C-007 | The compressed-codec names: Java's `refresh` also probes `v<N>.gz.metadata.json` and `v<N>.metadata.json.gz`. The hinted lookup never probed them and the walk does not either, so a compressed-codec `type=hadoop` table keeps its pre-existing path-read scope. | None in this unit; the walk pins use plain names only. | OPEN | Pre-existing scope, not widened (the builder's note). The verifier measured the divergence shape: with `v2.metadata.json` and `v3.gz.metadata.json` listed and hint `2`, Java answers `v3.gz` and RePark answers `v2`. Closing question: does the owner bring compressed-codec `type=hadoop` tables into the path read, and in which unit? |
+| C-008 | The format-v2 label re-date. The label carries this unit as declared (ice-v2-label-1 C-028). The label clerk re-dates the label (ice-v2-label-1 C-022) and the registry row ICE-LOCAL-COMMIT-POINT-1 on the merge of PR #1205. | The merge of PR #1205, and the label clerk's re-date on the main that carries it. | **PROVEN** | Merged: PR #1205 is squash `9ab67d7d` on main, 2026-10-29. The label re-dated on that main 2026-10-29 (ice-v2-label-1 C-054, which closes C-022 and C-028); the registry row carries the FIXED line with the merge sha. pins: ice-hadoop-hint-window-1/C-008 (cited in the iceberg_path map, which pins none of it). |
+
+VERDICT (2026-10-28): 8 clauses, 6 PROVEN (C-001 to C-006), 2 OPEN (C-007 and C-008). The walk is PROVEN on the branch head. The closing of ice-integrity-pins-1 C-015, ice-v2-label-1 C-028 and the narrowing of dfload-1 C-003 waits for the merge: their dated rows are ice-integrity-pins-1 C-071, ice-v2-label-1 C-053 and dfload-1 C-011, each OPEN until then.
+
+VERDICT (2026-10-29, on the merge of PR #1205, `9ab67d7d`): 8 clauses, 7 PROVEN (C-001 to C-006 and C-008), 1 OPEN (C-007, the compressed-codec names, the owner's question outside the label's gate).
+
+## Records (2026-10-28, clerk)
+
+- **Maps.** `crates/repark-core/src/map.md` (the `iceberg_path.rs` row states the walk), `crates/repark-core/src/iceberg_path/map.md` (the `hint_walk_tests.rs` row, citing C-001 to C-005), `python/repark/tests/iceberg/map.md` (the facade pin, citing C-006), `task/ledgers/staging/map.md` (this ledger's row) and `task/roadmap/mid-term/map.md` (the card row).
+- **Registry.** ICE-LOCAL-COMMIT-POINT-1 in `docs/spark-sql-iceberg-parity.md` gains a dated bullet of 2026-10-28 that records the FIXED state. The existing sentences keep their text; the dated bullet supersedes the sentence that places the path read outside the row.
+- **Card.** `task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md`: status closes on the merge of PR #1205 (Opus 5.5 verifier PASS and Muse MAX critic PASS on the code at `564285cb`).
+- **Appended rows.** Each is OPEN until PR #1205 merges: ice-integrity-pins-1 C-071 (closes C-015 on the merge), ice-v2-label-1 C-053 (the proof C-028 waits for) and dfload-1 C-011 (narrows C-003; C-003 keeps its text). ice-integrity-pins-1 and ice-v2-label-1 each gain a dated VERDICT line.
+- **Release notes.** One Behaviour changes line in `task/roadmap/mid-term/v1-5-6-release-notes-draft.md`.
+- **Scope of the records.** No product code, test, `Cargo.toml`, `Cargo.lock` or `.github/` file changes in the records commits.
+- **Merge (2026-10-29, clerk).** PR #1205 merged as `9ab67d7d`. C-008 closes by citation of that merge and ice-v2-label-1 C-054; the registry FIXED line, the card and its roadmap row carry the merge sha; the ledger moves to `completed/` in the unit's last commit, with its map rows.
+
+## Verification round 1 (2026-10-28)
+
+The Opus 5.5 verifier (`claude-opus-5-5`) returned PASS on the code at `564285cb`: every product claim holds. Its findings were on the records, and this round fixes all three:
+
+- The VERDICT line and the Records section named ice-integrity-pins-1 C-030, an older unrelated row; both now name C-071, the row this unit appends.
+- The facade pin's docstring cited `dfload-1/C-003`, which states the behaviour the pin now contradicts; it cites `ice-hadoop-hint-window-1/C-006`.
+- The card and its roadmap map row said "closed 2026-10-28 by PR #1205, pending verification"; they now say the card closes on the merge of PR #1205, with the verifier's PASS on the code.
+- **Muse MAX critic** (`muse-spark-1.3`, effort max): PASS on the code at `564285cb`, with one S3 finding, F1, the same C-030 citation error as the first bullet above; the C-071 edit fixes it.
+
+Measurements, copied from the verifier's run:
+
+- C-003 and C-004 are now measured. With main's `iceberg_path.rs`, the walk pins `stale_hint_walks_to_the_next_metadata_file`, `stale_hint_walks_past_every_newer_metadata_file`, `hint_walk_resolves_the_walk_limit_exactly` and `hint_walk_beyond_the_limit_refuses_naming_it` fail, so C-003 is red on main. `hint_at_java_int_max_does_not_walk_past_it` is green on main, because there is no walk to bound, and red under the bound mutation (C-004).
+- Extra facade probes: a hint reset two back answers `[2, 3]` on the plain location, with a trailing slash, and with the `file://` spelling; a hint naming a deleted file raises the existing missing-file error.
+- Mutations: dropping the i32 bound and shrinking the loop each turn one pin red.

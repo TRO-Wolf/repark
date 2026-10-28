@@ -57,6 +57,12 @@ pins.
 - [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal with its complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
 - [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads.
+  The stale-hint pin (2026-10-28, ICE-HADOOP-HINT-WINDOW-1): a hint left one version behind a
+  committed `DELETE` on a `type=hadoop` table reads the newest committed file on the path door
+  and matches the catalog; it is red with the walk reverted.
+  pins: ice-hadoop-hint-window-1/C-006
+  The facade pin is also cited as the merge fact that closes dfload-1 C-011 (dfload-1 C-012, 2026-10-29, merge `9ab67d7d`); the merge fact is not a pin of this file.
+  pins: dfload-1/C-012
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
