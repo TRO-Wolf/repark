@@ -926,6 +926,20 @@ perfectly good read.
 - **Behaviour change** — the copy-on-write identity `DELETE` and `UPDATE` now read the property too, so a table carrying `0` refuses there; the fork's copy-on-write path does not read it. A merge-on-read `UPDATE` (plain or identity-IN) or a merge-on-read `MERGE` with an `UPDATE` or `INSERT` arm fails at `0` after writing its data files, which stay uncommitted; rows and snapshot are unchanged. The identity `UPDATE` case is ruled accepted and recorded here; the plain `UPDATE` and the `MERGE` arms have main's shape, unchanged by this unit, and this unit records it.
 - **Rationale** — FIXED 2026-10-28. The fork's batched writer (F-POSDEL-BATCH-1) does not reach these routes, so the fix is RePark's own: a copy of the fork's chunk helper over RePark's pair type, kept local until the fork card F-EQDEL-CONVERT-BATCH-1 lifts the helper into a shared home. Open: the Python facade suites run in CI (C-019). The copy-on-write identity `UPDATE` refusal is measured through the door and not pinned (C-015).
 
+#### ICE-DELETE-FORMAT-GUARD-1 — a merge-on-read `DELETE` with Avro or ORC position-delete files commits, and the next read fails — **OPEN 2026-10-28 (AUD-003)**
+
+- **repark** — **OPEN 2026-10-28.** On format v2 with merge-on-read, a `DELETE` on a table whose default file format is Avro or ORC commits its position-delete files in that format (the fork's writer selects the requested format, `crates/integrations/datafusion/src/physical_plan/delete_position_deletes.rs`, line 328). The next read fails with a Parquet footer error, because the fork's delete loader opens non-Puffin position deletes with the Parquet-only reader (fork `crates/iceberg/src/arrow/caching_delete_file_loader.rs`, lines 265–271). Statement: `CREATE TABLE … USING iceberg TBLPROPERTIES ('format-version'='2', 'write.format.default'='avro', 'write.delete.mode'='merge-on-read')`, then `INSERT` of 0 to 4, then `DELETE … WHERE id BETWEEN 1 AND 3`, then a `SELECT`. Reproduced by the audit (Appendix B): the Parquet control returns the survivors 0 and 4; the Avro and ORC tables read correctly before the DELETE and fail on the read after it. Expected: a supported successful DELETE leaves a readable table with ids 0 and 4, and an unsupported delete format refuses before publication.
+- **Apache Spark** — not measured; the audit ran no Spark. *(oracle: none.)* The expected survivors follow from the predicate on the fixture.
+- **Pin** — none yet.
+- **Rationale** — OPEN. The RePark unit [ICE-DELETE-FORMAT-GUARD-1](../task/roadmap/mid-term/ice-delete-format-guard-1-card-2026-10-28.md), dispatched 2026-10-28 on an Opus 5.5 builder lane, makes the RePark writer write Parquet position deletes unless the delete format is set explicitly, and an explicit non-Parquet setting refuses before publication, with a hint. The read side is the fork's [F-POSDEL-FORMAT-READ-1](../task/roadmap/mid-term/f-posdel-format-read-1-card-2026-10-28.md) (Muse MAX lane). The row closes when both merge. Source: [the audit report](audits/iceberg-v2-label-independent-audit-2026-10-28.md), AUD-003.
+
+#### F-EQDEL-DROPPED-KEY-1 — the fork's equality-delete read fails after the key column of those deletes is dropped — **OPEN 2026-10-28 (AUD-004, fork)**
+
+- **repark** — the fault is in the fork's read path, which RePark's scans use, and it reads equality deletes that other engines wrote as well as its own. Statement sequence (the audit's probe, through the fork's public Rust APIs): create a v2 table `{id: long, data: string}`; append five rows; commit an equality delete for ids 20 and 40; drop the `id` column with `Transaction::update_schema().delete_column("id")`; scan the `data` column. The baseline scan returns three rows; the scan after the drop returns `Unexpected => field not found`. The RePark SQL route to the same schema change was not run. Expected: the scan returns the three surviving values, applying the deletes with the historical key field.
+- **Apache Spark** — not measured. The expectation is the Iceberg specification's Equality Delete Files section, which requires continued use of a dropped equality-delete column; the audit cites it and needs no Spark run for it.
+- **Pin** — none yet.
+- **Rationale** — OPEN. The fork unit [F-EQDEL-DROPPED-KEY-1](../task/roadmap/mid-term/f-eqdel-dropped-key-1-card-2026-10-28.md), dispatched 2026-10-28 on a Muse MAX lane, closes on the fork merge and the RePark repin. Source: [the audit report](audits/iceberg-v2-label-independent-audit-2026-10-28.md), AUD-004.
+
 #### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
 
 - **repark** — **FIXED 2026-09-17 (ICE-DYN-OVERWRITE-1).** The session conf
@@ -1174,6 +1188,7 @@ perfectly good read.
   2026-10-26 (the label order's step-0 record). The cross-read clause above is ledger C-060; the
   ice-integrity-pins-1 ledger carries its successors C-066 to C-070, and the S3 Tables REST-catalog
   read is aws-ephemeral-runs-1 C-017 and C-030.
+- **Dated 2026-10-28, AUD-005 (independent audit; a gate defect, not a product result; OPEN):** the nightly cross-read helper (`python/repark/tests/parity/_acceptance_cross_read.py`, lines 298–314 and 376–384) classifies every Spark exception as `SPARK-CANNOT-READ`, and accepts that outcome whenever the table has nanosecond columns. A connection failure therefore passes as the expected nanosecond limitation: the audit's probe simulates a `ConnectionError` on a nanosecond table and the gate accepts it, while a non-nanosecond control is rejected. The narrowing (accept only the unsupported-type condition) is CROSS-READ-GATE-CLASS-1, filed and not dispatched (P3; card [cross-read-gate-class-1](../task/roadmap/mid-term/cross-read-gate-class-1-card-2026-10-28.md)). This row also says nothing about the green cross-read runs; the audit makes no claim that one met the simulated failure.
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
@@ -1229,6 +1244,7 @@ perfectly good read.
   door's replace has no cell either; it is the remaining replace entry, carded in
   [NATIVE-DOOR-REPLACE-KILL-1](../task/roadmap/mid-term/native-door-replace-kill-1-card-2026-10-27.md).
   Ledger: [ICE-REPLACE-KILL-DOORS-1](../task/ledgers/staging/ice-replace-kill-doors-1-ledger.md).
+- **Dated 2026-10-28, AUD-001 (independent audit, reproduced 2026-10-28; OPEN until the unit merges):** the path read of a `type=hadoop` table follows `version-hint.text` and does not walk past it. A table whose hint is stale, after a committed `DELETE` (the audit restores the hint to the previous version; the complete newer metadata file remains), answers `session.read.format("iceberg").load(<table location>)` with the deleted row, ids 1, 2, 3, where the catalog and the latest metadata answer ids 2, 3. This is a silent wrong result, not a refusal; the owner's option 1 (ruling 2026-10-22) walks past the hint in ICE-HADOOP-HINT-WINDOW-1, dispatched 2026-10-28 on an Opus 5.5 builder lane, and this row re-widens to the path read on that unit's merge. Source: [the audit report](audits/iceberg-v2-label-independent-audit-2026-10-28.md), AUD-001.
 
 #### DML-6 — `INSERT … BY NAME`
 
@@ -1573,6 +1589,13 @@ perfectly good read.
 - **Card** — [NESTED-TEXT-LEAF-STORE-1](../task/roadmap/mid-term/nested-text-leaf-
   store-1-card-2026-10-25.md) (2026-10-25, open, grade C). Retires when each cell is REFUSED as
   Spark refuses it, or EQUAL to Spark's value, and the census recount moves no other cell.
+
+#### ICE-POST-PUBLISH-OUTCOME-1 — a `CREATE TABLE … AS SELECT` whose catalog refresh fails after publication reports failure for a committed table — **OPEN 2026-10-28 (AUD-002)**
+
+- **repark** — **OPEN 2026-10-28.** The CTAS writer publishes the staged table, then the post-publish catalog refresh (`reregister`; the refresh path is `crates/repark-iceberg/src/catalog/provider.rs`, lines 241 to 254) can fail, and that failure reaches the statement as its error (`crates/repark-spark/src/ctas.rs`). The table is then committed with its rows and a current snapshot, yet the statement reports failure, and the product error does not identify a committed outcome. Statement: `CREATE TABLE … USING iceberg TBLPROPERTIES ('format-version'='2') AS SELECT CAST(7 AS INT) AS id`, with one catalog listing failing immediately after the publish. Reproduced by the audit (Appendix E): the statement returns `Unexpected => AUDIT: catalog listing unavailable after publication`, and one row is readable through the underlying catalog. `CREATE OR REPLACE TABLE … AS SELECT` and `REPLACE TABLE … AS SELECT` pass through the same source path; the audit did not reproduce them.
+- **Apache Spark** — not measured; the audit ran no Spark. *(oracle: none.)* The expectation the audit cites is the production definition's rule that a failed write must not read as though its effects are absent when publication succeeded, and that the last committed state stays intact.
+- **Pin** — none yet. The unit's pins assert the caller's outcome, the committed rows and the safe retry for the CTAS schedule and the replace schedule.
+- **Rationale** — OPEN. The fix unit is [ICE-POST-PUBLISH-OUTCOME-1](../task/roadmap/mid-term/ice-post-publish-outcome-1-card-2026-10-28.md), dispatched 2026-10-28 on the same Opus 5.5 builder lane as ICE-DELETE-FORMAT-GUARD-1. The row closes on the unit's merge. Source: [the audit report](audits/iceberg-v2-label-independent-audit-2026-10-28.md), AUD-002.
 
 ### 2.4 Namespace and table listing statements
 
