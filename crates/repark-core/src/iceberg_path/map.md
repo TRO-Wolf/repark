@@ -62,6 +62,8 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   `hinted_missing_file_keeps_its_error_when_newer_files_exist`,
   `no_hint_resolves_the_latest_v_form_by_listing`).
   pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005
-  The merge facts of ICE-HADOOP-HINT-WINDOW-1 are cited here so the grammar gate counts them: the label re-date (ice-hadoop-hint-window-1 C-008, 2026-10-29, merge `9ab67d7d`) and the option-1 walk's closure of ice-integrity-pins-1 C-015, C-029 and C-071 (C-072). This file pins none of them.
+  The merge facts of ICE-HADOOP-HINT-WINDOW-1 are cited here so the grammar gate counts them: the label re-date (ice-hadoop-hint-window-1 C-008, 2026-10-28, merge `9ab67d7d`) and the option-1 walk's closure of ice-integrity-pins-1 C-015, C-029 and C-071 (C-072). This file pins none of them.
   pins: ice-hadoop-hint-window-1/C-008
   pins: ice-integrity-pins-1/C-072
+  The closure of ice-integrity-pins-1 C-015, C-029 and C-071 is dated 2026-10-28 by its correction C-073, cited below so the grammar gate counts it; the merge fact is not a test pin of this file.
+  pins: ice-integrity-pins-1/C-073
