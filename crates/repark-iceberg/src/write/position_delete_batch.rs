@@ -75,6 +75,17 @@ pub(crate) fn position_delete_chunk_batch(
     )?)
 }
 
+pub(crate) fn position_delete_batches(
+    schema: &SchemaRef,
+    pairs: &[PositionDeletePair],
+    row_bound: usize,
+) -> Result<Vec<RecordBatch>> {
+    chunk_position_delete_pairs(pairs, row_bound, POSITION_DELETE_BATCH_BYTE_BOUND)
+        .into_iter()
+        .map(|range| position_delete_chunk_batch(schema, &pairs[range]))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -409,5 +420,67 @@ mod tests {
             .map(iceberg::spec::DataFile::record_count)
             .sum();
         assert_eq!(rows, u64::try_from(count).expect("count fits u64"));
+    }
+
+    async fn registered_identity_batches(
+        ctx: &datafusion::prelude::SessionContext,
+        name: &str,
+    ) -> Vec<RecordBatch> {
+        let provider = ctx.table_provider(name).await.expect("registered provider");
+        let memory = provider
+            .downcast_ref::<datafusion::datasource::MemTable>()
+            .expect("identity table is a MemTable");
+        assert_eq!(memory.batches.len(), 1, "one MemTable partition");
+        memory.batches[0].read().await.clone()
+    }
+
+    fn scanned_pairs(batches: &[RecordBatch]) -> Vec<(String, i64)> {
+        batches
+            .iter()
+            .flat_map(|batch| {
+                let paths = batch
+                    .column(0)
+                    .as_any()
+                    .downcast_ref::<StringArray>()
+                    .expect("Utf8 paths")
+                    .iter()
+                    .map(|path| path.expect("non-null path").to_string())
+                    .collect::<Vec<_>>();
+                let positions = batch
+                    .column(1)
+                    .as_any()
+                    .downcast_ref::<Int64Array>()
+                    .expect("Int64 positions")
+                    .values()
+                    .to_vec();
+                paths.into_iter().zip(positions)
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn identity_table_over_the_row_bound_registers_several_batches_in_order() {
+        let ctx = datafusion::prelude::SessionContext::new();
+        let pairs = numbered_pairs(25, 8);
+        let name = crate::write::predicate_dml::register_identity_table(&ctx, &pairs, 10)
+            .expect("register identity table");
+        let stored = registered_identity_batches(&ctx, &name).await;
+        assert_eq!(
+            stored.iter().map(RecordBatch::num_rows).collect::<Vec<_>>(),
+            vec![10, 10, 5]
+        );
+        let expected: Vec<(String, i64)> = pairs
+            .iter()
+            .map(|(path, position)| (path.to_string(), *position))
+            .collect();
+        assert_eq!(scanned_pairs(&stored), expected);
+        let scanned = ctx
+            .table(name.as_str())
+            .await
+            .expect("table")
+            .collect()
+            .await
+            .expect("scan identity table");
+        assert_eq!(scanned_pairs(&scanned), expected);
     }
 }
