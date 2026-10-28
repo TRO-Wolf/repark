@@ -58,4 +58,6 @@ Fork unit F-POSDEL-BATCH-1, dispatched 2026-10-27 on a Muse MAX lane, with an Op
 
 **Landed:** 2026-10-27, fork PR #374, squash commit `ea0b7741` on fork main, after an Opus 5.5 verifier PASS at the PR head `437093e6`. The card leaves when RP-60 merges.
 
+**Status, 2026-10-28:** RP-60 repinned RePark to this fix; merged as PR #1200 at `57e37a72`. Closed.
+
 Up: [map.md](map.md).

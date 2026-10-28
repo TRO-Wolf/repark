@@ -4,6 +4,8 @@
 
 **Status:** dispatched 2026-10-27 on an Opus 5.5 builder lane, repin target `ea0b7741`.
 
+**Status, 2026-10-28:** merged as PR #1200 at `57e37a72`, before the format-v2 label date; the label carries no fifth carve-out. Closed.
+
 **Depends on:** F-POSDEL-BATCH-1 landed on the fork (landed 2026-10-27, fork PR #374) ([the fork card](f-posdel-batch-1-card-2026-10-27.md)). No RePark step starts before the fix is on fork main and fork main is green (fork-sync rule 2).
 
 **Grade:** clerk-grade repin, plus one Spark-door pin. Nothing changes in the Python facade.
