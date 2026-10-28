@@ -2646,3 +2646,4 @@ The ICE-INTEGRITY-PINS-1 ledger gains C-066 to C-070 (2026-10-24): C-060's two h
   ICE-TSNS-TYPE-PLANNER-1; no product change, pins only. C-001 and C-002 PROVEN; C-003 (the verifier round)
   stays OPEN as written and is closed append-only by C-004 (PROVEN, Muse MAX PASS at `28d469e4`).
   `risk_tier: standard`. Branch `fix/ice-tsns-update-range-class-1`.
+- [rp-posdel-batch-2-ledger.md](rp-posdel-batch-2-ledger.md) — **RP-POSDEL-BATCH-2 (2026-10-28, PR #1203):** RePark's own position-delete writers (the merge-on-read MERGE, the identity-IN DELETE and UPDATE, the copy-on-write identity scratch table and the plain `>= AND <` DELETE and UPDATE) write bounded batches at the table's batch-rows property, read once per statement. 20 of 21 clauses PROVEN; C-019 (the Python facade suites in CI) stays OPEN. Verifier round 1 (Opus 5.5) and Muse MAX critic PASS at `ce4b21d1`; their S3 findings are fixed in the records. `risk_tier: standard`. Branch `fix/rp-posdel-batch-2`.

@@ -2039,6 +2039,7 @@ repark-core's error map.
 | Parquet compression codec (table property) | `writer_props.rs` |
 | Stage/commit an option-carrying write (summary extras + overrides) | `write_options.rs` |
 | Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
+| Bound the position-delete batches of RePark's own writers (the batch-rows property, the 256 MiB path-text bound, the 32-bit guard) | `position_delete_batch.rs` |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
 | Identity DELETE/UPDATE (subquery `WHERE` and RP-9 r2 plain `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
 | Change which concurrent commits a MERGE / UPDATE / DELETE conflicts with | `conflict_filter.rs` + [merge/map.md](merge/map.md) `snapshot_commit.rs` |
@@ -2181,3 +2182,10 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
 - `mod.rs` — declares `pub mod resource_bound;`. No `lib.rs` re-export.
 
 pins: ice-resource-bound-1/C-001, C-004, C-006, C-007
+
+**RP-POSDEL-BATCH-2 (2026-10-28, PR #1203): RePark's own position-delete writers write bounded batches.**
+
+- `position_delete_batch.rs` (new, crate-private; declared by `mod.rs`) — the batch bound for RePark's two position-delete sites. `position_delete_batch_rows` reads `write.delete.position-delete-batch-rows`: absent gives 1,048,576; a positive integer is taken; zero, a negative value or a non-number refuses with a `Plan` error naming the property. `chunk_position_delete_pairs` cuts the sorted pairs at the row bound, or before the pair that would pass 256 MiB of path text, and never emits an empty chunk. `position_delete_chunk_batch` builds one `RecordBatch` for a chunk and returns `Internal` before the `StringArray` is built when the chunk's path bytes pass `i32::MAX`. `position_delete_batches` is site 2's chunk-then-build. The helpers are a RePark-local copy of the fork's at `ea0b7741`, over RePark's `PositionDeletePair`, until the helper is shared (F-EQDEL-CONVERT-BATCH-1). Its unit pins and its ignored stress pins live in its own test module. pins: rp-posdel-batch-2/C-002, C-003, C-004, C-006, C-013, C-014
+- `position_delete.rs` — site 1: `write_position_deletes` reads the bound once, after the empty-pairs return and before any writer is built, and passes it to every `write_position_deletes_for_partition`. That function writes one batch per chunk to its single writer and closes the writer once, so a `0` refuses before any delete file exists. pins: rp-posdel-batch-2/C-001, C-005
+- `predicate_dml.rs` — site 2: `register_identity_table` takes the bound and registers the identity pairs as bounded batches in one MemTable partition, so the partition count the caller's plan sees is unchanged. Its two callers are in `predicate_dml/cow_commit.rs`, recorded in the `predicate_dml` map.
+- `mod.rs` — declares `position_delete_batch`; no re-export.

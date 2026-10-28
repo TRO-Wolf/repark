@@ -92,3 +92,5 @@ One JSON object: `status`, `head`, `commits`, `matrix` (sha, tallies), `runs` (p
 - Signed by the owner 2026-10-27 (ICE-V2-LABEL-1 PR #1195): NESTED-TEXT-LEAF-STORE-1, owner ruling 2026-10-26.
 
 The label closes on the merge of PR #1195. The owner's words on 2026-10-27: "I sign all four, merge #1195 and #1198."
+
+**Withdrawn pending (2026-10-28, owner ruling "proceed with your recommendations"; independent audit):** the format-v2 PRODUCTION label is withdrawn pending ICE-HADOOP-HINT-WINDOW-1 on AUD-001, a silent wrong value on the `type=hadoop` path read after a committed DELETE, which section 1's rule excludes from carve-outs. It re-dates on that unit's merge. The audit is filed at `docs/audits/iceberg-v2-label-independent-audit-2026-10-28.md` and names AUD-002 to AUD-005: ICE-POST-PUBLISH-OUTCOME-1, ICE-DELETE-FORMAT-GUARD-1, F-POSDEL-FORMAT-READ-1 and F-EQDEL-DROPPED-KEY-1 are dispatched on 2026-10-28; CROSS-READ-GATE-CLASS-1 and DEP-AUDIT-0414-1 are filed, not dispatched. The audit's section 5 gate dimensions are carried to the format-v3 label as its gate input. Ledger rows C-043 to C-052.
