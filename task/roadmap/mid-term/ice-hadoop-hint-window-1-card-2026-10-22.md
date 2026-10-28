@@ -3,7 +3,7 @@
 **Date:** 2026-10-22. **Filed by:** Claude (claude-opus-5-5) in fix round 1 of ICE-INTEGRITY-PINS-1
 (PR #1142), from the §7 halt of that unit's verifier round 1.
 
-**Status:** closed 2026-10-28 by PR #1205 (product head `749f11a4`), pending verification. Owner ruled 2026-10-22: option 1, the product change. The path read walks past
+**Status:** closes on the merge of PR #1205 (Opus 5.5 verifier PASS and Muse MAX critic PASS on the code at `564285cb`). Owner ruled 2026-10-22: option 1, the product change. The path read walks past
 the hint as Java's `HadoopTableOperations.refresh` does, in its own Opus unit after ZONE-SEAM-1;
 ruling 83 stands as written. This is existing product behaviour, not code from PR #1142. Pin K runs on uuid naming, so it never takes this path. The registry row
 [ICE-LOCAL-COMMIT-POINT-1](../../../docs/spark-sql-iceberg-parity.md) is narrowed to

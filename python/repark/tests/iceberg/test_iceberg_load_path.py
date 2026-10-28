@@ -270,7 +270,7 @@ def test_load_stale_hint_after_delete_reads_the_newest_metadata_file(tmp_path: P
     ``version-hint.text``; with the hint back at ``N``, the path read walks past it as
     Iceberg's ``HadoopTableOperations.refresh`` does and answers what the catalog answers.
 
-    pins: dfload-1/C-003
+    pins: ice-hadoop-hint-window-1/C-006
     """
     spark = ReparkSession.builder.appName("pytest-iceberg-load-path-hint").getOrCreate()
     warehouse = tmp_path / "hintwh"
