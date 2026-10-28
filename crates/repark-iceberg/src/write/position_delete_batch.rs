@@ -483,4 +483,39 @@ mod tests {
             .expect("scan identity table");
         assert_eq!(scanned_pairs(&scanned), expected);
     }
+
+    #[tokio::test]
+    #[ignore = "stress: registers more than i32::MAX bytes of identity path text"]
+    async fn stress_identity_table_covers_path_text_past_i32_max() {
+        let ctx = datafusion::prelude::SessionContext::new();
+        let shared: Arc<str> = Arc::from("p".repeat(1024 * 1024).as_str());
+        let pairs = pairs_on(&shared, 2_100);
+        let limit = usize::try_from(i32::MAX).expect("i32::MAX fits usize");
+        assert!(
+            pairs.len() * shared.len() > limit,
+            "the fixture passes i32::MAX"
+        );
+        let name = crate::write::predicate_dml::register_identity_table(
+            &ctx,
+            &pairs,
+            TableProperties::PROPERTY_WRITE_DELETE_POSITION_DELETE_BATCH_ROWS_DEFAULT,
+        )
+        .expect("bounded batches register without an offset overflow");
+        let stored = registered_identity_batches(&ctx, &name).await;
+        assert!(
+            stored.len() >= 9,
+            "the byte bound cuts at least nine batches"
+        );
+        assert!(stored.iter().all(|batch| {
+            batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .is_some_and(|paths| paths.value_data().len() <= POSITION_DELETE_BATCH_BYTE_BOUND)
+        }));
+        assert_eq!(
+            stored.iter().map(RecordBatch::num_rows).sum::<usize>(),
+            pairs.len()
+        );
+    }
 }
