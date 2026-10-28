@@ -14,6 +14,6 @@
 
 **Out of scope:** the native door (`repark-sql`), carded as NATIVE-DOOR-DELETE-FORMAT-1.
 
-**Fix (proposed):** route the Spark door's name-based DML claims, MERGE's catalog lookup and the branch loader through `resolve_dml_target`, so every spelling the planner resolves also runs. Each path gets a red-first pin on a Parquet table, and the refusals on inherited Avro or ORC formats stay as they are.
+**Fix (proposed):** route the Spark door's name-based DML claims, MERGE's catalog lookup and the branch loader through `resolve_dml_target`, so every spelling the planner resolves also runs. Each path gets a red-first pin on a Parquet table. The delete-format refusals that ICE-DELETE-FORMAT-GUARD-1 added are gone (RP-61), so a pin on an inherited Avro or ORC table expects the delete file in the data format. The BUG-001 valve and the encryption check stay as they are.
 
 **Relation:** [ICE-DELETE-FORMAT-GUARD-1 ledger](../../ledgers/staging/ice-delete-format-guard-1-ledger.md) (C-016); [registry row ICE-DELETE-FORMAT-GUARD-1](../../../docs/spark-sql-iceberg-parity.md); [RP-61 revert card](rp-61-delete-format-revert-card-2026-10-28.md).
