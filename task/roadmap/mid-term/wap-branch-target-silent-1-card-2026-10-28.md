@@ -1,6 +1,6 @@
 # Card WAP-BRANCH-TARGET-SILENT-1: under a session WAP branch, a case-varied DELETE on a Parquet table is a silent no-op
 
-**Date:** 2026-10-29. **Filed by:** the ICE-DELETE-FORMAT-GUARD-1 clerk round (`claude-haiku-5-5`), from the verifier's round 2 pre-existing observations (Opus 5.5 verifier at `b9d83f38`). Filed on the ICE-DELETE-FORMAT-GUARD-1 branch.
+**Date:** 2026-10-28. **Filed by:** the ICE-DELETE-FORMAT-GUARD-1 clerk round (`claude-haiku-5-5`), from the verifier's round 2 pre-existing observations (Opus 5.5 verifier at `b9d83f38`). Filed on the ICE-DELETE-FORMAT-GUARD-1 branch.
 
 **Status:** open. Priority P2. Not dispatched. Measured only by the verifier's probe (copied, not re-run by the clerk). Pre-existing on main: the same result on `main`.
 
@@ -10,4 +10,4 @@
 
 **Retires:** the card when the case-varied DELETE under a session WAP branch has a red run on the current head and a green run after the fix.
 
-**Relation:** [ICE-DELETE-FORMAT-GUARD-1 ledger](../../ledgers/staging/ice-delete-format-guard-1-ledger.md) (the resolver it reuses, C-012); [SPARK-DOOR-TARGET-NORMALISATION-1 card](spark-door-target-normalisation-1-card-2026-10-29.md) (the same as-written name class on the other Spark-door paths); [registry row ICE-DELETE-FORMAT-GUARD-1](../../../docs/spark-sql-iceberg-parity.md).
+**Relation:** [ICE-DELETE-FORMAT-GUARD-1 ledger](../../ledgers/staging/ice-delete-format-guard-1-ledger.md) (the resolver it reuses, C-012); [SPARK-DOOR-TARGET-NORMALISATION-1 card](spark-door-target-normalisation-1-card-2026-10-28.md) (the same as-written name class on the other Spark-door paths); [registry row ICE-DELETE-FORMAT-GUARD-1](../../../docs/spark-sql-iceberg-parity.md).

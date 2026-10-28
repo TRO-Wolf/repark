@@ -1095,7 +1095,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
   TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
   pins: rp-5-fork-repin/C-004
-- `write_to_branch.rs` — **ICE-DELETE-FORMAT-GUARD-1 fix round 2 (2026-10-29):** `write_to_tag_refuses_spark_shaped` runs its tag writes under three prefixes (none, a block comment, a line comment); `a_branch_write_with_an_unclassified_head_refuses` pins `branch_write_dml_kind`'s fail-closed refusal of a head it cannot classify, at the function level (the path is unreachable from SQL today). pins: ice-delete-format-guard-1/C-019, C-022
+- `write_to_branch.rs` — **ICE-DELETE-FORMAT-GUARD-1 fix round 2 (2026-10-28):** `write_to_tag_refuses_spark_shaped` runs its tag writes under three prefixes (none, a block comment, a line comment); `a_branch_write_with_an_unclassified_head_refuses` pins `branch_write_dml_kind`'s fail-closed refusal of a head it cannot classify, at the function level (the path is unreachable from SQL today). pins: ice-delete-format-guard-1/C-019, C-022
 - `write_body_carriers.rs` — **WRITE-BODY-CARRIERS-1 build (2026-10-14):** CTAS with
   an INSERT, UPDATE, DELETE or MERGE body refuses `PARSE_SYNTAX_ERROR` 42601 naming the
   body's leading keyword before any write, over the `CREATE TABLE`, `CREATE OR REPLACE

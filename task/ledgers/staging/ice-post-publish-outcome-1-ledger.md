@@ -36,7 +36,7 @@ VERDICT (2026-10-28): 8 clauses. 4 PROVEN (C-001 to C-004, each with a committed
 
 VERDICT (2026-10-28, after fix round 1 at `a8ab9364`): 8 clauses, unchanged: 4 PROVEN (C-001 to C-004), 4 OPEN (C-005 to C-008).
 
-VERDICT (2026-10-29, verification round 2, head `1c6e730b`): 8 clauses, unchanged: 4 PROVEN (C-001 to C-004), 4 OPEN (C-005 to C-008).
+VERDICT (2026-10-28, verification round 2, head `1c6e730b`): 8 clauses, unchanged: 4 PROVEN (C-001 to C-004), 4 OPEN (C-005 to C-008).
 
 ## Verification round 1 (2026-10-28, at `f1935e81`; fix round 1 at `a8ab9364`)
 
@@ -44,7 +44,7 @@ VERDICT (2026-10-29, verification round 2, head `1c6e730b`): 8 clauses, unchange
 - None of V-1 to V-6 or F1 to F4 names a defect in the AUD-002 behaviour, so C-001 to C-004 stand as recorded.
 - Fix round 1 (`a8ab9364`) changes the guard seats only (the resolver, and the delete-format, encryption and BUG-001 guards); this ledger's clauses are unchanged.
 
-## Verification round 2 (2026-10-29, at `b9d83f38`; fix round 2 at `1c6e730b`)
+## Verification round 2 (2026-10-28, at `b9d83f38`; fix round 2 at `1c6e730b`)
 
 - Opus 5.5 verifier: FAIL on R2-V1 to R2-V3. None of the three names the AUD-002 behaviour: R2-V1 and R2-V2 concern the branch path and the target resolver, and R2-V3 concerns the native-door map row. They are recorded in the ICE-DELETE-FORMAT-GUARD-1 ledger's round-2 section. Muse MAX critic: PASS, with F1 and F2, both on the delete-format guard and recorded there.
 - Fix round 2 changes no clause of this unit. The head is shared with ICE-DELETE-FORMAT-GUARD-1. The builder's round-4 gate table, copied and not re-run by the clerk, includes `cargo test -p repark-spark` 3097 passed, which runs the post-publish pins.

@@ -1,6 +1,6 @@
 # Card REPLACE-WHERE-ORPHAN-1: a failed INSERT ... REPLACE WHERE leaves an orphan data file
 
-**Date:** 2026-10-29. **Filed by:** the ICE-DELETE-FORMAT-GUARD-1 clerk round (`claude-haiku-5-5`), from the verifier's round 2 pre-existing observations (Opus 5.5 verifier at `b9d83f38`). Filed on the ICE-DELETE-FORMAT-GUARD-1 branch; not in that unit's scope.
+**Date:** 2026-10-28. **Filed by:** the ICE-DELETE-FORMAT-GUARD-1 clerk round (`claude-haiku-5-5`), from the verifier's round 2 pre-existing observations (Opus 5.5 verifier at `b9d83f38`). Filed on the ICE-DELETE-FORMAT-GUARD-1 branch; not in that unit's scope.
 
 **Status:** open. Priority P3. Not dispatched. Measured only by the verifier's probe (copied, not re-run by the clerk). Pre-existing on main: the same result on `main`.
 
