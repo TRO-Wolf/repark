@@ -263,6 +263,38 @@ def test_load_hinted_missing_metadata_names_the_path(spark: ReparkSession, tmp_p
     assert str(raised.value) == HINTED_MISSING_REFUSAL.format(path=location)
 
 
+def test_load_stale_hint_after_delete_reads_the_newest_metadata_file(tmp_path: Path) -> None:
+    """A ``type=hadoop`` hint left one version behind a committed DELETE reads the newest file.
+
+    The hadoop catalog writes ``v(N+1).metadata.json`` before it advances
+    ``version-hint.text``; with the hint back at ``N``, the path read walks past it as
+    Iceberg's ``HadoopTableOperations.refresh`` does and answers what the catalog answers.
+
+    pins: dfload-1/C-003
+    """
+    spark = ReparkSession.builder.appName("pytest-iceberg-load-path-hint").getOrCreate()
+    warehouse = tmp_path / "hintwh"
+    spark.conf.set("spark.sql.catalog.hinthd.type", "hadoop")
+    spark.conf.set("spark.sql.catalog.hinthd.warehouse", str(warehouse))
+    spark.sql("CREATE NAMESPACE hinthd.ns").collect()
+    spark.sql(
+        "CREATE TABLE hinthd.ns.t (id INT) USING iceberg TBLPROPERTIES ('format-version'='2')"
+    ).collect()
+    spark.sql("INSERT INTO hinthd.ns.t VALUES (1), (2), (3)").collect()
+    location = warehouse / "ns" / "t"
+    hint = location / "metadata" / "version-hint.text"
+    previous_hint = hint.read_text()
+    spark.sql("DELETE FROM hinthd.ns.t WHERE id = 1").collect()
+    newest_hint = hint.read_text()
+    assert int(newest_hint.strip()) == int(previous_hint.strip()) + 1
+    hint.write_text(previous_hint)
+    path_rows = spark.read.format("iceberg").load(str(location)).to_arrow()
+    assert path_rows.schema.field("id").type == pa.int32()
+    assert sorted(path_rows.column("id").to_pylist()) == [2, 3]
+    catalog_rows = spark.sql("SELECT id FROM hinthd.ns.t").to_arrow()
+    assert sorted(catalog_rows.column("id").to_pylist()) == [2, 3]
+
+
 def test_load_two_part_identifier_keeps_catalog_route(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
