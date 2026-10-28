@@ -47,9 +47,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   of §4.1's dated-row split (225 rows cite 136, 125 cite 138), and the plan-first class on
   `repark.sql()` ruled as built (C-016).
 - [ice-integrity-pins-1-ledger.md](ice-integrity-pins-1-ledger.md) — **ICE-INTEGRITY-PINS-1
-  (U-9), updated 2026-10-29:** local kill pin K and live integrity legs U/X, with dated
+  (U-9), updated 2026-10-28:** local kill pin K and live integrity legs U/X, with dated
   review corrections. Run 40025222296 proves U96/X40; C-044 retains the live orphan limit.
-  C-072 closes C-015, C-029 and C-071 on the merge of PR #1205 (`9ab67d7d`, 2026-10-29): the
+  C-072 closes C-015, C-029 and C-071 on the merge of PR #1205 (`9ab67d7d`, 2026-10-28): the
   hadoop path read walks past the hint. C-060 keeps cross-read completion OPEN. C-061/C-062 record the diagnostic process tests
   and active-dump shutdown correction. Earlier runs and review rounds remain in the ledger.
 - [replace-linear-pin-1-ledger.md](replace-linear-pin-1-ledger.md) — **REPLACE-LINEAR-PIN-1
@@ -1542,7 +1542,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Pointers
 - Up: [../map.md](../map.md)
-- [ice-v2-label-1-ledger.md](ice-v2-label-1-ledger.md) — **ICE-V2-LABEL-1 (U-13), 2026-10-26, the format-v2 PRODUCTION label:** the registry rows re-dated as of `59d104d9`, the three carve-outs and the text-leaf row filed, the STATUS maturity section and the 1.5.6 line. PROVEN: PA-01 to PA-04, U-8, EXPLAIN-DML-WRITE-1, ZONE-SEAM-1, GATE-RETIRE-1, WRITE-SPINE-1 steps (0) to (3b), U-9 K, U and X, the cross-read nightly, U-11, the matrix. Re-dated 2026-10-29 on the merge of ICE-HADOOP-HINT-WINDOW-1 (`9ab67d7d`): C-054 closes C-022, C-028, C-038, C-045 and C-053, and the OPEN set is now C-035 (the replace residuals, declared) and C-046 to C-050 (AUD-002 to AUD-005 and the RUSTSEC row, each on its unit); the four carve-outs C-016 to C-019 are closed by the owner's signatures (C-039 to C-041). NESTED-MAP-KEY-ZONE-1 is closed by C-033; the replace doors are closed on the Spark door on the local catalog by C-034. `risk_tier: standard`. Path READING (docs only). Branch `docs/ice-v2-label-1`.
+- [ice-v2-label-1-ledger.md](ice-v2-label-1-ledger.md) — **ICE-V2-LABEL-1 (U-13), 2026-10-26, the format-v2 PRODUCTION label:** the registry rows re-dated as of `59d104d9`, the three carve-outs and the text-leaf row filed, the STATUS maturity section and the 1.5.6 line. PROVEN: PA-01 to PA-04, U-8, EXPLAIN-DML-WRITE-1, ZONE-SEAM-1, GATE-RETIRE-1, WRITE-SPINE-1 steps (0) to (3b), U-9 K, U and X, the cross-read nightly, U-11, the matrix. Re-dated 2026-10-28 on the merge of ICE-HADOOP-HINT-WINDOW-1 (`9ab67d7d`): C-054 closes C-022, C-028, C-038, C-045 and C-053, and the OPEN set is now C-035 (the replace residuals, declared) and C-046 to C-050 (AUD-002 to AUD-005 and the RUSTSEC row, each on its unit); the four carve-outs C-016 to C-019 are closed by the owner's signatures (C-039 to C-041). NESTED-MAP-KEY-ZONE-1 is closed by C-033; the replace doors are closed on the Spark door on the local catalog by C-034. `risk_tier: standard`. Path READING (docs only). Branch `docs/ice-v2-label-1`.
 - [perf-scan-1-plan-once-ledger.md](../completed/perf-scan-1-plan-once-ledger.md) —
   **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04), in flight:** `TargetScanStream` caches
   `FileScanTask`s across concurrent `StreamingTable` re-executes (hardening). Registry
