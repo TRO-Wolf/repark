@@ -3,7 +3,7 @@
 **Date:** 2026-10-23. **Filed by:** Claude (claude-fable-5-1), orchestrator, on the owner's ruling of
 2026-10-23 ("rule it") after the ZONE-SEAM-1 verifier's round-2 finding S1-3.
 
-**Status:** open, clerk grade, to ride with the next fork repin (RP-60 or later). Not a RePark
+**Status:** open, clerk grade, to ride with the next fork repin after RP-60 (RP-60 of 2026-10-28 moved the pin only). Not a RePark
 unit; the RePark half is WRITE-SPINE-1 step (2)
 ([write-spine-1-card-2026-10-22.md](write-spine-1-card-2026-10-22.md)).
 
