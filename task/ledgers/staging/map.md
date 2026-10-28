@@ -4,14 +4,6 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [ice-hadoop-hint-window-1-ledger.md](ice-hadoop-hint-window-1-ledger.md) — **ICE-HADOOP-HINT-WINDOW-1
-  (2026-10-28, PR #1205):** on `type=hadoop` the path read walks past `version-hint.text` to the
-  newest existing metadata file, as Java's `HadoopTableOperations.refresh` does; the walk stops at
-  the first gap, refuses past 10,000 files and stays inside the Java `int` range. C-001 to C-006
-  PROVEN with pins (the stale-hint pins red on `321c6095`, green on `749f11a4`); C-007
-  (compressed-codec names) and C-008 (the label re-date) OPEN. `risk_tier: standard`. Branch
-  `fix/ice-hadoop-hint-window-1`.
-  pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of
@@ -55,9 +47,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   of §4.1's dated-row split (225 rows cite 136, 125 cite 138), and the plan-first class on
   `repark.sql()` ruled as built (C-016).
 - [ice-integrity-pins-1-ledger.md](ice-integrity-pins-1-ledger.md) — **ICE-INTEGRITY-PINS-1
-  (U-9), updated 2026-10-23:** local kill pin K and live integrity legs U/X, with dated
+  (U-9), updated 2026-10-29:** local kill pin K and live integrity legs U/X, with dated
   review corrections. Run 40025222296 proves U96/X40; C-044 retains the live orphan limit.
-  C-060 keeps cross-read completion OPEN. C-061/C-062 record the diagnostic process tests
+  C-072 closes C-015, C-029 and C-071 on the merge of PR #1205 (`9ab67d7d`, 2026-10-29): the
+  hadoop path read walks past the hint. C-060 keeps cross-read completion OPEN. C-061/C-062 record the diagnostic process tests
   and active-dump shutdown correction. Earlier runs and review rounds remain in the ledger.
 - [replace-linear-pin-1-ledger.md](replace-linear-pin-1-ledger.md) — **REPLACE-LINEAR-PIN-1
   (2026-10-22, owner ruling "go with recommendations"):** the depth-40 `replace` memory pin
@@ -682,9 +675,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   time-travel/incremental options beside a path, the catalog route for the pinned
   slash-free near-misses, the `file:` spellings Spark reads or refuses (`Wrong FS`
   for an authority, `URISyntaxException` for a relative path), and `v<N>` / hint versions
-  bounded to the Java `int` range. C-001..C-010 PROVEN. `risk_tier: standard`. Branch
+  bounded to the Java `int` range. C-001..C-010 and C-012 PROVEN (C-011 closed by C-012 on the merge of PR #1205). `risk_tier: standard`. Branch
   `fix/u10-df-load-path`.
-  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the
@@ -1549,7 +1542,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Pointers
 - Up: [../map.md](../map.md)
-- [ice-v2-label-1-ledger.md](ice-v2-label-1-ledger.md) — **ICE-V2-LABEL-1 (U-13), 2026-10-26, the format-v2 PRODUCTION label:** the registry rows re-dated as of `59d104d9`, the three carve-outs and the text-leaf row filed, the STATUS maturity section and the 1.5.6 line. PROVEN: PA-01 to PA-04, U-8, EXPLAIN-DML-WRITE-1, ZONE-SEAM-1, GATE-RETIRE-1, WRITE-SPINE-1 steps (0) to (3b), U-9 K, U and X, the cross-read nightly, U-11, the matrix. OPEN set (2026-10-27, after the owner's signatures): C-022 (the label, closes on the merge of PR #1195), C-028 (the hadoop window, declared), C-035 (the replace residuals, declared) and C-038 (its closing condition, met except the merge); the four carve-outs C-016 to C-019 are closed by the owner's signatures (C-039 to C-041). NESTED-MAP-KEY-ZONE-1 is closed by C-033; the replace doors are closed on the Spark door on the local catalog by C-034. `risk_tier: standard`. Path READING (docs only). Branch `docs/ice-v2-label-1`.
+- [ice-v2-label-1-ledger.md](ice-v2-label-1-ledger.md) — **ICE-V2-LABEL-1 (U-13), 2026-10-26, the format-v2 PRODUCTION label:** the registry rows re-dated as of `59d104d9`, the three carve-outs and the text-leaf row filed, the STATUS maturity section and the 1.5.6 line. PROVEN: PA-01 to PA-04, U-8, EXPLAIN-DML-WRITE-1, ZONE-SEAM-1, GATE-RETIRE-1, WRITE-SPINE-1 steps (0) to (3b), U-9 K, U and X, the cross-read nightly, U-11, the matrix. Re-dated 2026-10-29 on the merge of ICE-HADOOP-HINT-WINDOW-1 (`9ab67d7d`): C-054 closes C-022, C-028, C-038, C-045 and C-053, and the OPEN set is now C-035 (the replace residuals, declared) and C-046 to C-050 (AUD-002 to AUD-005 and the RUSTSEC row, each on its unit); the four carve-outs C-016 to C-019 are closed by the owner's signatures (C-039 to C-041). NESTED-MAP-KEY-ZONE-1 is closed by C-033; the replace doors are closed on the Spark door on the local catalog by C-034. `risk_tier: standard`. Path READING (docs only). Branch `docs/ice-v2-label-1`.
 - [perf-scan-1-plan-once-ledger.md](../completed/perf-scan-1-plan-once-ledger.md) —
   **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04), in flight:** `TargetScanStream` caches
   `FileScanTask`s across concurrent `StreamingTable` re-executes (hardening). Registry

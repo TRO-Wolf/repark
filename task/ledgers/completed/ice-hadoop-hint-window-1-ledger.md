@@ -3,7 +3,7 @@
 **Date:** 2026-10-28 · **Branch:** `fix/ice-hadoop-hint-window-1` · **Base:** `321c6095` (`main`, the branch point) · **Product head:** `749f11a4` (PR #1205) · **Model:** builder `claude-opus-5-5` (commits `1139c665` and `749f11a4`); clerk `claude-haiku-5-5` (the records commits) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
-**Retires:** this ledger moves to `../completed/` when C-007 and C-008 close.
+**Retires:** this ledger moves to `../completed/` on the merge, 2026-10-29; C-007 is carried OPEN as the owner's question, outside the label's gate.
 
 **Why now.** On `type=hadoop` the fork commits in two steps: it writes `v(N+1).metadata.json`, then advances `version-hint.text` best effort. A kill, or a failed hint write, leaves the hint at `N` while `v(N+1)` is the commit. RePark's path read returned the hinted version, so a row that a committed `DELETE` had removed came back. The independent audit (AUD-001) reproduced it on 2026-10-28. The owner ruled option 1 on 2026-10-22 (ice-integrity-pins-1 C-029); the card is [ICE-HADOOP-HINT-WINDOW-1](../../roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md).
 
@@ -11,7 +11,7 @@
 
 **Unchanged.** The missing-hinted-file error, the unparsable or out-of-range hint fallback to the listing, the no-hint listing, and an explicit `*.metadata.json` path.
 
-**Status.** Verification round 1 complete (2026-10-28): Opus 5.5 PASS and Muse MAX PASS on the code at `564285cb`; records fixed in this round; closes on the merge of PR #1205.
+**Status.** Merged 2026-10-29 as PR #1205, squash `9ab67d7d`, after verification round 1 (2026-10-28): Opus 5.5 PASS and Muse MAX PASS on the code at `564285cb`, with the records fixed in that round. C-001 to C-006 and C-008 are PROVEN; C-007 stays OPEN as the owner's question.
 
 ## Clauses
 
@@ -24,9 +24,11 @@
 | C-005 | The unchanged behaviours hold: a current hint selects the hinted file; a hinted file that is missing keeps its error when newer files exist; with no hint, the listing resolves the latest `v` form. | `current_hint_selects_the_hinted_file` (hint `2` over `v1` and `v2` answers `v2`), `hinted_missing_file_keeps_its_error_when_newer_files_exist` (hint `2` over `v1` and `v3` refuses with the `no Iceberg table found` text naming `v2.metadata.json`) and `no_hint_resolves_the_latest_v_form_by_listing` (no hint over `v1` to `v3` answers `v3`). | PROVEN | pins: ice-hadoop-hint-window-1/C-005 (cited in the `iceberg_path` map). Green on `321c6095` and on `749f11a4` (the builder's runs, copied). |
 | C-006 | The facade proof of the audit shape: a `type=hadoop` table of format version 2 with ids 1, 2 and 3, a committed `DELETE` of id 1, and the hint put back to the version before the `DELETE` reads `[2, 3]` through the path door and through the catalog. | `test_load_stale_hint_after_delete_reads_the_newest_metadata_file` in `python/repark/tests/iceberg/test_iceberg_load_path.py`. | PROVEN | pins: ice-hadoop-hint-window-1/C-006 (cited in the python iceberg map). Red with the walk reverted (the builder's run, copied: path read `[1, 2, 3]`, 1 failed, 48 passed). Green on `749f11a4` (49 passed). The clerk ran no pytest. |
 | C-007 | The compressed-codec names: Java's `refresh` also probes `v<N>.gz.metadata.json` and `v<N>.metadata.json.gz`. The hinted lookup never probed them and the walk does not either, so a compressed-codec `type=hadoop` table keeps its pre-existing path-read scope. | None in this unit; the walk pins use plain names only. | OPEN | Pre-existing scope, not widened (the builder's note). The verifier measured the divergence shape: with `v2.metadata.json` and `v3.gz.metadata.json` listed and hint `2`, Java answers `v3.gz` and RePark answers `v2`. Closing question: does the owner bring compressed-codec `type=hadoop` tables into the path read, and in which unit? |
-| C-008 | The format-v2 label re-date. The label carries this unit as declared (ice-v2-label-1 C-028). The label clerk re-dates the label (ice-v2-label-1 C-022) and the registry row ICE-LOCAL-COMMIT-POINT-1 on the merge of PR #1205. | The merge of PR #1205, and the label clerk's re-date on the main that carries it. | OPEN | Closing question: does PR #1205 merge, and when does the re-date land? The format-v2 label was withdrawn pending this unit; the fix is on this branch only (the builder's note). |
+| C-008 | The format-v2 label re-date. The label carries this unit as declared (ice-v2-label-1 C-028). The label clerk re-dates the label (ice-v2-label-1 C-022) and the registry row ICE-LOCAL-COMMIT-POINT-1 on the merge of PR #1205. | The merge of PR #1205, and the label clerk's re-date on the main that carries it. | **PROVEN** | Merged: PR #1205 is squash `9ab67d7d` on main, 2026-10-29. The label re-dated on that main 2026-10-29 (ice-v2-label-1 C-054, which closes C-022 and C-028); the registry row carries the FIXED line with the merge sha. pins: ice-hadoop-hint-window-1/C-008 (cited in the iceberg_path map, which pins none of it). |
 
 VERDICT (2026-10-28): 8 clauses, 6 PROVEN (C-001 to C-006), 2 OPEN (C-007 and C-008). The walk is PROVEN on the branch head. The closing of ice-integrity-pins-1 C-015, ice-v2-label-1 C-028 and the narrowing of dfload-1 C-003 waits for the merge: their dated rows are ice-integrity-pins-1 C-071, ice-v2-label-1 C-053 and dfload-1 C-011, each OPEN until then.
+
+VERDICT (2026-10-29, on the merge of PR #1205, `9ab67d7d`): 8 clauses, 7 PROVEN (C-001 to C-006 and C-008), 1 OPEN (C-007, the compressed-codec names, the owner's question outside the label's gate).
 
 ## Records (2026-10-28, clerk)
 
@@ -36,6 +38,7 @@ VERDICT (2026-10-28): 8 clauses, 6 PROVEN (C-001 to C-006), 2 OPEN (C-007 and C-
 - **Appended rows.** Each is OPEN until PR #1205 merges: ice-integrity-pins-1 C-071 (closes C-015 on the merge), ice-v2-label-1 C-053 (the proof C-028 waits for) and dfload-1 C-011 (narrows C-003; C-003 keeps its text). ice-integrity-pins-1 and ice-v2-label-1 each gain a dated VERDICT line.
 - **Release notes.** One Behaviour changes line in `task/roadmap/mid-term/v1-5-6-release-notes-draft.md`.
 - **Scope of the records.** No product code, test, `Cargo.toml`, `Cargo.lock` or `.github/` file changes in the records commits.
+- **Merge (2026-10-29, clerk).** PR #1205 merged as `9ab67d7d`. C-008 closes by citation of that merge and ice-v2-label-1 C-054; the registry FIXED line, the card and its roadmap row carry the merge sha; the ledger moves to `completed/` in the unit's last commit, with its map rows.
 
 ## Verification round 1 (2026-10-28)
 
