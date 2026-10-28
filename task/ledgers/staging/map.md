@@ -4,14 +4,6 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
-- [ice-hadoop-hint-window-1-ledger.md](ice-hadoop-hint-window-1-ledger.md) — **ICE-HADOOP-HINT-WINDOW-1
-  (2026-10-28, PR #1205):** on `type=hadoop` the path read walks past `version-hint.text` to the
-  newest existing metadata file, as Java's `HadoopTableOperations.refresh` does; the walk stops at
-  the first gap, refuses past 10,000 files and stays inside the Java `int` range. C-001 to C-006
-  PROVEN with pins (the stale-hint pins red on `321c6095`, green on `749f11a4`); C-007
-  (compressed-codec names) OPEN, the owner's question; C-008 (the label re-date) PROVEN by ice-v2-label-1 C-054. `risk_tier: standard`. Merged 2026-10-29 as `9ab67d7d`. Branch
-  `fix/ice-hadoop-hint-window-1`.
-  pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of

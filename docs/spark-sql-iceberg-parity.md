@@ -1246,7 +1246,7 @@ perfectly good read.
   Ledger: [ICE-REPLACE-KILL-DOORS-1](../task/ledgers/staging/ice-replace-kill-doors-1-ledger.md).
 - **Dated 2026-10-28, AUD-001 (independent audit, reproduced 2026-10-28; OPEN until the unit merges):** the path read of a `type=hadoop` table follows `version-hint.text` and does not walk past it. A table whose hint is stale, after a committed `DELETE` (the audit restores the hint to the previous version; the complete newer metadata file remains), answers `session.read.format("iceberg").load(<table location>)` with the deleted row, ids 1, 2, 3, where the catalog and the latest metadata answer ids 2, 3. This is a silent wrong result, not a refusal; the owner's option 1 (ruling 2026-10-22) walks past the hint in ICE-HADOOP-HINT-WINDOW-1, dispatched 2026-10-28 on an Opus 5.5 builder lane, and this row re-widens to the path read on that unit's merge. Source: [the audit report](audits/iceberg-v2-label-independent-audit-2026-10-28.md), AUD-001.
 - **Dated 2026-10-28, FIXED by ICE-HADOOP-HINT-WINDOW-1 (PR #1205, merged 2026-10-29 as squash `9ab67d7d`; product head `749f11a4`; ledger
-  [ice-hadoop-hint-window-1](../task/ledgers/staging/ice-hadoop-hint-window-1-ledger.md)):** the path
+  [ice-hadoop-hint-window-1](../task/ledgers/completed/ice-hadoop-hint-window-1-ledger.md)):** the path
   read of a `type=hadoop` table walks past `version-hint.text` to the newest existing
   `v<N>.metadata.json`, as Java's `HadoopTableOperations.refresh` does, so this row covers the path
   read as well as `register_table`. The repark bullet's sentence that places the path read outside
