@@ -20,6 +20,10 @@ repo.
   status and roadmap pages the orchestrating session publishes as Claude artifacts (first:
   the 2026-08-30 roadmap status). Renderings only — every page cites the documents that own
   its facts, and a filed page is never edited; a later report is a new file.
+- [audits/](audits/map.md) — **independent audit reports**: standalone copies of audits filed
+  by an independent reviewer and never edited after filing; the orchestrator reproduces each
+  finding before dispatch. The v2 label audit of 2026-10-28 is
+  [audits/iceberg-v2-label-independent-audit-2026-10-28.md](audits/iceberg-v2-label-independent-audit-2026-10-28.md).
 - [cutover/](cutover/map.md) — **the production cutover record** (inventory, acceptance checks,
   rollback, canary plan, the owner's rulings of 2026-09-04). Filed by the orchestrating session;
   every measurement it cites lives in the divergence registry.
