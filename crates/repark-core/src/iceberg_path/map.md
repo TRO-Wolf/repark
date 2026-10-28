@@ -50,3 +50,15 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
     listing (`v_form_zero_*`, `v_form_versions_beyond_*`, `v_form_java_int_max_*`,
     `v_form_u64_overflow_*`, `hint_at_java_int_max_*`, `hint_beyond_java_int_*`).
   pins: dfload-1/C-002, C-003, C-005, C-008, C-009, C-010
+- `hint_walk_tests.rs` — the stale-hint walk battery (ICE-HADOOP-HINT-WINDOW-1, 2026-10-28), a
+  sibling of `tests.rs` in the default layout with its own two-line `FileIO` helper. A
+  `version-hint.text` naming `N` is not the last word while `v<N+1>`, ... exist
+  (`stale_hint_walks_*`, red on `321c6095`); the walk stops at the first gap
+  (`hint_walk_stops_at_the_first_missing_version`); it resolves the cap exactly and refuses one
+  file past it (`hint_walk_resolves_the_walk_limit_exactly`,
+  `hint_walk_beyond_the_limit_refuses_naming_it`); it stops at the Java `int` maximum
+  (`hint_at_java_int_max_does_not_walk_past_it`); and the current-hint, hinted-missing and
+  no-hint behaviours are unchanged (`current_hint_selects_the_hinted_file`,
+  `hinted_missing_file_keeps_its_error_when_newer_files_exist`,
+  `no_hint_resolves_the_latest_v_form_by_listing`).
+  pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005
