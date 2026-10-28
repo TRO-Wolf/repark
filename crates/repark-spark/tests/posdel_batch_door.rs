@@ -18,6 +18,12 @@ const RANGE_DELETE: &str =
 const BINARY_OP_RANGE_DELETE: &str =
     "DELETE FROM ice.ns.t WHERE d >= DATE '2026-03-05' AND d < DATE '2026-03-15'";
 const MONTH_DELETE: &str = "DELETE FROM ice.ns.t WHERE m = 4";
+const MARCH_RANGE_IDS: &str =
+    "SELECT id FROM ice.ns.t WHERE d >= DATE '2026-03-05' AND d < DATE '2026-03-15'";
+const DELETE_MOR: &str = "'write.delete.mode'='merge-on-read'";
+const DELETE_COW: &str = "'write.delete.mode'='copy-on-write'";
+const UPDATE_MOR: &str = "'write.delete.mode'='merge-on-read', 'write.update.mode'='merge-on-read'";
+const MERGE_MOR: &str = "'write.delete.mode'='merge-on-read', 'write.merge.mode'='merge-on-read'";
 
 struct Snapshot {
     operation: Operation,
@@ -56,6 +62,10 @@ fn march_day(id: i32) -> i32 {
 }
 
 async fn seeded_table(batch_rows: &str) -> (ReparkSession, TempDir) {
+    seeded_table_with(batch_rows, DELETE_MOR).await
+}
+
+async fn seeded_table_with(batch_rows: &str, modes: &str) -> (ReparkSession, TempDir) {
     let warehouse = TempDir::new().expect("warehouse");
     let session = session();
     session
@@ -67,7 +77,7 @@ async fn seeded_table(batch_rows: &str) -> (ReparkSession, TempDir) {
         &session,
         &format!(
             "CREATE TABLE ice.ns.t (id INT, d DATE, m INT) USING iceberg PARTITIONED BY (m, months(d)) \
-             TBLPROPERTIES ('format-version'='2', 'write.delete.mode'='merge-on-read', \
+             TBLPROPERTIES ('format-version'='2', {modes}, \
              '{BATCH_ROWS_PROPERTY}'='{batch_rows}')"
         ),
     )
@@ -169,10 +179,79 @@ async fn whole_partition_delete_still_takes_the_metadata_door() {
     assert_eq!(snapshot.total("total-delete-files"), 0);
 }
 
+async fn assert_refused_and_unchanged(session: &ReparkSession, sql: &str) {
+    let error = attempt(session, sql)
+        .await
+        .expect_err("a batch size below one must refuse the statement");
+    assert!(error.contains(BATCH_ROWS_PROPERTY), "{error}");
+    assert_eq!(ids(session).await, all_ids());
+    let snapshot = current_snapshot(session).await;
+    assert_eq!(snapshot.operation, Operation::Append);
+    assert_eq!(snapshot.total("total-delete-files"), 0);
+    assert_eq!(snapshot.total("total-records"), all_ids().len() as u64);
+}
+
+async fn assert_completes_with_range_survivors(session: &ReparkSession, sql: &str) {
+    run(session, sql).await;
+    assert_eq!(ids(session).await, range_survivors());
+    assert_position_delete_live(&current_snapshot(session).await);
+}
+
+fn identity_in_delete() -> String {
+    format!("DELETE FROM ice.ns.t WHERE id IN ({MARCH_RANGE_IDS})")
+}
+
+fn identity_in_update() -> String {
+    format!("UPDATE ice.ns.t SET id = id WHERE id IN ({MARCH_RANGE_IDS})")
+}
+
+fn mor_merge_delete() -> String {
+    format!(
+        "MERGE INTO ice.ns.t t USING ({MARCH_RANGE_IDS}) s ON t.id = s.id \
+         WHEN MATCHED THEN DELETE"
+    )
+}
+
 #[tokio::test]
-async fn binary_op_range_delete_takes_the_repark_writer_not_the_fork() {
+async fn binary_op_range_delete_takes_the_batched_repark_writer() {
     let (session, _warehouse) = seeded_table("0").await;
-    run(&session, BINARY_OP_RANGE_DELETE).await;
-    assert_eq!(ids(&session).await, range_survivors());
-    assert_position_delete_live(&current_snapshot(&session).await);
+    assert_refused_and_unchanged(&session, BINARY_OP_RANGE_DELETE).await;
+    let (session, _warehouse) = seeded_table("7").await;
+    assert_completes_with_range_survivors(&session, BINARY_OP_RANGE_DELETE).await;
+}
+
+#[tokio::test]
+async fn identity_in_delete_past_one_batch_completes_and_survivors_match() {
+    let (session, _warehouse) = seeded_table("7").await;
+    assert_completes_with_range_survivors(&session, &identity_in_delete()).await;
+}
+
+#[tokio::test]
+async fn identity_in_delete_refuses_batch_rows_below_one() {
+    let (session, _warehouse) = seeded_table("0").await;
+    assert_refused_and_unchanged(&session, &identity_in_delete()).await;
+}
+
+#[tokio::test]
+async fn identity_in_update_refuses_batch_rows_below_one() {
+    let (session, _warehouse) = seeded_table_with("0", UPDATE_MOR).await;
+    assert_refused_and_unchanged(&session, &identity_in_update()).await;
+}
+
+#[tokio::test]
+async fn cow_identity_in_delete_refuses_batch_rows_below_one() {
+    let (session, _warehouse) = seeded_table_with("0", DELETE_COW).await;
+    assert_refused_and_unchanged(&session, &identity_in_delete()).await;
+}
+
+#[tokio::test]
+async fn mor_merge_past_one_batch_completes_and_survivors_match() {
+    let (session, _warehouse) = seeded_table_with("7", MERGE_MOR).await;
+    assert_completes_with_range_survivors(&session, &mor_merge_delete()).await;
+}
+
+#[tokio::test]
+async fn mor_merge_refuses_batch_rows_below_one() {
+    let (session, _warehouse) = seeded_table_with("0", MERGE_MOR).await;
+    assert_refused_and_unchanged(&session, &mor_merge_delete()).await;
 }

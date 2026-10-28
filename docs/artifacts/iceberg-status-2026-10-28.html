@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Iceberg Status 2026-10-28</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* layout: one reading column, status tiles up top, tables for the record, same series identity as the 10-22 page */
+:root{--bg:#f3f6f7;--fg:#16211f;--muted:#5b6b67;--line:#cfd9d6;--card:#fbfdfd;--accent:#0f6b7a;--ok:#2d6a3e;--okbg:#e3efe6;--warn:#9a6b00;--warnbg:#f6eed6;--bad:#9c2a2a;--badbg:#f4e1e1;--hold:#6b5b95;--holdbg:#e9e4f3;--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0e1418;--fg:#e4ebec;--muted:#9bb0ad;--line:#2a3a3e;--card:#141d21;--accent:#4db1cf;--ok:#7fcf93;--okbg:#17301f;--warn:#e2b75a;--warnbg:#33290e;--bad:#e58a8a;--badbg:#3a1b1b;--hold:#b7a6e3;--holdbg:#272038;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1418;--fg:#e4ebec;--muted:#9bb0ad;--line:#2a3a3e;--card:#141d21;--accent:#4db1cf;--ok:#7fcf93;--okbg:#17301f;--warn:#e2b75a;--warnbg:#33290e;--bad:#e58a8a;--badbg:#3a1b1b;--hold:#b7a6e3;--holdbg:#272038;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--sans);margin:0}
+.wrap{max-width:960px;margin:0 auto;padding-block:28px 56px;padding-inline:16px}
+h1{font:600 30px/1.15 var(--cond);margin:0 0 6px;text-wrap:balance}
+h2{font:600 21px/1.2 var(--cond);margin:36px 0 10px;text-wrap:balance;border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font:600 16px/1.3 var(--cond);margin:18px 0 6px}
+p{margin:0 0 10px;max-width:72ch}
+.lede{color:var(--muted);font-size:14px;margin-bottom:18px}
+code,.sha{font-family:var(--mono);font-size:.9em}
+.sha{color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0 6px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.tile .k{font:500 11px/1.2 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font:600 22px/1.15 var(--cond);margin-top:6px;font-variant-numeric:tabular-nums}
+.tile .d{font-size:12.5px;color:var(--muted);margin-top:4px}
+.chip{display:inline-block;font:500 11px/1 var(--sans);letter-spacing:.04em;padding:4px 7px;border-radius:4px;white-space:nowrap;vertical-align:middle}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.bad{background:var(--badbg);color:var(--bad)}.hold{background:var(--holdbg);color:var(--hold)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card);margin:10px 0 14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font:500 11px/1.2 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:transparent}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+ul{padding-left:20px;margin:6px 0 12px}li{margin:4px 0;max-width:78ch}
+.src{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin-top:36px}
+.src code{font-size:12px}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Iceberg Status, 2026-10-28</h1>
+<p class="lede">Main <span class="sha">321c6095</span>, read at about 09:00 UTC. The sixth page of the closeout series; the last was 2026-10-22. Every figure names the record it comes from, at the foot of the page.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="k">Format-v2 reads and writes</div><div class="v"><span class="chip ok">PRODUCTION</span></div><div class="d">Owner-signed 2026-10-27, PR #1195, four dated carve-outs</div></div>
+  <div class="tile"><div class="k">Format-v3 core</div><div class="v"><span class="chip warn">HARDENED-NARROW</span></div><div class="d">Label PR V3-LABEL-1, date of record Tue 11-17</div></div>
+  <div class="tile"><div class="k">Nanosecond and struct writes</div><div class="v"><span class="chip hold">EXPERIMENTAL</span></div><div class="d">Leave with the v3 label; array floor and create door carry dated rows</div></div>
+  <div class="tile"><div class="k">Parity matrix</div><div class="v">705 / 132 / 5 / 0</div><div class="d">EQUAL, SPARK-CANNOT, REFUSED-REGISTERED, DIFFERENT on the label main</div></div>
+  <div class="tile"><div class="k">Nightlies</div><div class="v">7 green mornings</div><div class="d">parity-live 10-21 to 10-27; today's run in progress. Acceptance legs U and X green today</div></div>
+</div>
+
+<h2>Where the three lines stand</h2>
+<p><strong>Format-v2 is labelled.</strong> ICE-V2-LABEL-1 merged on 2026-10-27 as PR #1195 (<span class="sha">d1304a46</span>) on the owner's word, re-dated on main <span class="sha">105d4625</span>, the main that carries the two last product lanes (#1196 and #1197). The matrix re-run on that main was identical to the release build's. The label ledger stands at 42 clauses, 27 PROVEN, with the open rows being the declared items below. STATUS.md carries the maturity section.</p>
+<p><strong>Format-v3 core waits on one clerk PR.</strong> The v3 plan of 2026-10-26 named three pieces: the nanosecond truth-up (NS-TRUTHUP-1, merged #1192), U-4 (ICE-TSNS-UPDATE-RANGE-CLASS-1, merged #1194; R-012 closed as already fixed by the type planner), and the label PR itself, a clerk day after the v2 label. The first two are on main. The label PR needs the owner's signature on three dated rows (R-002, R-015, R-024) and a green v3 live leg the morning it opens. The plan said the PR could be ready by Thu 11-12 with 11-17 as the date of record.</p>
+<p><strong>The position-delete overflow is closed on the fork and on the common path.</strong> The reported bulk merge-on-read DELETE panicked with <code>offset overflow</code> past about 2 GiB of data-file path text in one partition. The fork fix (F-POSDEL-BATCH-1, fork PR #374) landed 2026-10-27 and RP-60 repinned RePark to it (PR #1200, 2026-10-28), thirteen days inside the v2 label window, so the label carries no fifth carve-out. RePark's own two writers still hold the same shape for the <code>&gt;= AND &lt;</code> spelling, the identity-IN forms and merge-on-read MERGE; that unit (RP-POSDEL-BATCH-2) is building now.</p>
+
+<h2>Landed since the 10-22 page</h2>
+<div class="tbl"><table>
+<tr><th>Unit</th><th>PR</th><th>Merged</th><th>What it changed</th></tr>
+<tr><td>ICE-INTEGRITY-PINS-1, pin K (U-9)</td><td class="n">#1142</td><td class="n">10-22</td><td>The kill-mid-write pin on the local catalog; legs U and X proved live on 10-23 (96/96 and 40/40) and run nightly in aws-acceptance.</td></tr>
+<tr><td>ZONE-SEAM-1</td><td class="n">#1139</td><td class="n">10-23</td><td>Container casts, <code>to_json</code>, <code>from_json</code> and the UTC helpers read timestamps in the session zone; writes store what SELECT yields. Oracle corpus 1,540 of 1,640 EQUAL, up from 1,199. Ledger 29 PROVEN, 0 OPEN.</td></tr>
+<tr><td>WRITE-SPINE-1 steps 1, 3a, 3b, 2</td><td class="n">#1182 #1185 #1189</td><td class="n">10-24 to 10-26</td><td>Shared kernel names and a fail-closed store-kernel lookup; the door matrix against step-0 fixtures; one plan-time conform stage for every routed write door (288 census cells DIFFERENT to EQUAL). Ledger 25 PROVEN, 7 OPEN. Step 4 (the ZS-9 retirement) is the remaining step.</td></tr>
+<tr><td>GATE-RETIRE-1</td><td class="n">#1187</td><td class="n">10-25</td><td>R-011's container-cast arm measured load-bearing and retained; its hint corrected and pinned. The arm's retirement folds into spine step 4.</td></tr>
+<tr><td>NS-TRUTHUP-1</td><td class="n">#1192</td><td class="n">10-26</td><td>R-010 pinned; DESCRIBE shows the nanosecond spec names; R-013, R-018 part 1 and R-001 re-measured on main.</td></tr>
+<tr><td>ICE-RESOURCE-BOUND-1 (U-11)</td><td class="n">#1191</td><td class="n">10-26</td><td>A measured, written resource bound; exceeded means refused. Ledger 11 PROVEN, 1 REJECTED.</td></tr>
+<tr><td>ICE-TSNS-UPDATE-RANGE-CLASS-1 (U-4)</td><td class="n">#1194</td><td class="n">10-26</td><td>R-012 closed as already fixed by the type planner, with the pins that show it.</td></tr>
+<tr><td>ICE-REPLACE-KILL-DOORS-1</td><td class="n">#1196</td><td class="n">10-27</td><td>Kill-mid-write pins for RTAS and CREATE OR REPLACE on the local catalog; Glue, S3 Tables and native-door residuals declared.</td></tr>
+<tr><td>NESTED-LITERAL-SEAM-1</td><td class="n">#1197</td><td class="n">10-27</td><td>Nested literals, constant nested values and MAP timestamp keys reach the zone seam; NESTED-MAP-KEY-ZONE-1 closed by it. Three verifier rounds (Opus 5.5 and Muse MAX) before the merge.</td></tr>
+<tr><td>ICE-V2-LABEL-1 (U-13)</td><td class="n">#1195</td><td class="n">10-27</td><td>The format-v2 PRODUCTION label, the STATUS maturity section, the four signed carve-outs.</td></tr>
+<tr><td>F-POSDEL-BATCH-1 (fork)</td><td class="n">fork #374</td><td class="n">10-27</td><td>The fork's position-delete writer streams its pairs in bounded batches: property <code>write.delete.position-delete-batch-rows</code> (default 1,048,576) or 256 MiB of path text, an error at the guard instead of the panic.</td></tr>
+<tr><td>RP-60-POSDEL-REPIN-1</td><td class="n">#1200 #1201</td><td class="n">10-28</td><td>Fork pin moved to <span class="sha">ea0b7741</span>; Spark-door pins red on the old pin and green on the new; cards and ledger closed. Verified by Opus 5.5 and Muse MAX at the same head.</td></tr>
+</table></div>
+
+<h2>The format-v2 label, as signed</h2>
+<p>The label holds when every row the v2 list names is PROVEN or carries a dated owner carve-out, and no silent value is open. Four carve-outs are owner-signed 2026-10-27; two items are declared on the label by owner ruling the same day.</p>
+<div class="tbl"><table>
+<tr><th>Row</th><th>Standing</th><th>What it is and when it closes</th></tr>
+<tr><td>ENC-1 items 1 and 5</td><td><span class="chip hold">CARVE-OUT 121(b)</span></td><td>An orphan Parquet file a handle loaded before a key was added can stage (unreferenced, never served); the keyed-table gate test is textual. Rebuild in 1.5.7 from the parked PR #1071.</td></tr>
+<tr><td>ENC-CTAS-REPLACE-1</td><td><span class="chip hold">CARVE-OUT 98(a)</span></td><td>A key landing mid-statement during CREATE OR REPLACE AS SELECT leaves an unencrypted file referenced by no snapshot. Dated registry row 2026-10-15.</td></tr>
+<tr><td>NESTED-TEXT-LEAF-STORE-1</td><td><span class="chip hold">CARVE-OUT</span></td><td>A text leaf written into a nested timestamp leaf stores the UTC reading where Spark refuses; 102 census cells. Fix in 1.5.7.</td></tr>
+<tr><td>Hadoop hint window</td><td><span class="chip warn">DECLARED</span></td><td>A path read of a <code>type=hadoop</code> table can answer the version named by <code>version-hint.text</code> while a newer metadata file exists. Owner ruled option 1 (walk past the hint as Java does); unit ICE-HADOOP-HINT-WINDOW-1 is ruled and not yet dispatched. The registry row re-widens when it lands.</td></tr>
+<tr><td>Replace residuals</td><td><span class="chip warn">DECLARED</span></td><td>Glue and S3 Tables have no replace kill cell (the catalog pointer governs there); the native door's replace is unpinned, carded as NATIVE-DOOR-REPLACE-KILL-1 (clerk grade, not chartered).</td></tr>
+</table></div>
+
+<h2>Path to the v3 core label</h2>
+<div class="tbl"><table>
+<tr><th>Gate item</th><th>State today</th></tr>
+<tr><td>Nanosecond rows leave EXPERIMENTAL: U-1 planner, U-3 floor, U-4 class, the four truth-up rows</td><td><span class="chip ok">ON MAIN</span> U-1 and U-3 earlier; U-4 #1194 and NS-TRUTHUP-1 #1192 on 10-26</td></tr>
+<tr><td>U-2 array floor</td><td><span class="chip hold">DATED ROW</span> 1.5.7, per the 10-17 lean carried by the 10-20 plan</td></tr>
+<tr><td>Create door (ICE-TSNS-CREATE-DOOR-1, #1048)</td><td><span class="chip hold">DATED ROW</span> draft held; rebuild in 1.5.7</td></tr>
+<tr><td>R-002, R-015, R-024</td><td><span class="chip warn">OWNER SIGNS</span> three dated rows signed in the label PR</td></tr>
+<tr><td>ENC-1 items 1 and 5</td><td><span class="chip hold">DATED ROW</span> as on the v2 label, unless #1071 is rebuilt first</td></tr>
+<tr><td>The 842-cell matrix on the release build</td><td><span class="chip ok">DONE</span> once in U-13 for both labels: 705/132/5/0 on <span class="sha">105d4625</span></td></tr>
+<tr><td>v3 live leg green the morning of the PR</td><td><span class="chip ok">GREEN</span> legs U and X in run 40658998480 (today), 40476820151 (10-27), 40295982749 (10-26)</td></tr>
+<tr><td>Two green parity-live mornings</td><td><span class="chip ok">MET</span> seven in a row, 10-21 to 10-27; today's run in progress at the time of reading</td></tr>
+<tr><td>v2 label merged first</td><td><span class="chip ok">DONE</span> 2026-10-27, thirteen days early</td></tr>
+</table></div>
+<p>What is left for the label PR is a clerk day: the dated rows, the registry re-date, the STATUS line, and the owner's three signatures. Nothing product-grade stands between main and the v3 label.</p>
+
+<h2>The fork</h2>
+<ul>
+<li><strong>Pin</strong> <span class="sha">ea0b7741</span> (RP-60, 2026-10-28), the squash of fork PR #374. The only fork commits past the previous pin are the lock bump #373 and the position-delete fix #374.</li>
+<li><strong>Fork CI</strong> on main at that sha: CI, CodeQL and Typos green on the push. Nightly Interop last ran green on 10-24.</li>
+<li><strong>Scheduled Security audit red</strong> on 10-28 (00:28 UTC) with four advisories: RUSTSEC-2026-0391, 0398, 0403 and 0410, against the fork's own lock. RePark's cargo-audit on main was green at 01:53 UTC the same day, so none of the four is reachable through RePark's lock. A fork lock bump is the usual answer; not yet filed.</li>
+<li><strong>Cards on the fork:</strong> F-EQDEL-CONVERT-BATCH-1 (the equality-delete conversion holds the same single-array shape, P3, not dispatched); FORK-NS-UNIT-FAIL-CLOSED-1 rides the next repin, since RP-60 moved the pin only.</li>
+</ul>
+
+<h2>Running now</h2>
+<ul>
+<li><strong>RP-POSDEL-BATCH-2</strong> on an Opus 5.5 builder lane from <span class="sha">321c6095</span>: RePark's partition position-delete writer and the identity scratch table write bounded batches with a RePark-local copy of the fork's chunking; the bound is read once per statement before any writer is built; Spark-door pins for the <code>&gt;= AND &lt;</code> DELETE, the identity-IN DELETE and the merge-on-read MERGE, each refused at property 0 and completing past one batch at 7; ignored stress pins at both sites. Then CI, Opus 5.5 and Muse MAX verifiers in parallel, a Haiku records clerk, and your merge word.</li>
+<li><strong>parity-live</strong> run 40649661343, the 10-28 morning, in progress.</li>
+</ul>
+
+<h2>Queue after it, in order</h2>
+<ol>
+<li><strong>WRITE-SPINE-1 step 4</strong>: retire the ZS-9 refusal and R-011's cast arm once the stage covers them; placed after the v2 label and before v3 by the card.</li>
+<li><strong>V3-LABEL-1</strong>: the clerk day above; opens when you sign R-002, R-015 and R-024.</li>
+<li><strong>ICE-HADOOP-HINT-WINDOW-1</strong>: ruled, Opus 5.5 product unit, re-widens the registry row.</li>
+<li><strong>NATIVE-DOOR-REPLACE-KILL-1</strong>: clerk-grade card; a build only on your charter.</li>
+<li><strong>Walkthrough artifact v24</strong>: the updated closeout walkthrough page.</li>
+</ol>
+
+<h2>Your decisions</h2>
+<ul>
+<li><strong>Charter or decline</strong> the four P3 cards filed with RP-60: META-DELETE-DATE-LITERAL-1 (the metadata-delete door takes no DATE literal, so a whole-month date DELETE writes a row-level delete file instead of dropping the data file; result correct), META-TABLE-UNQUOTED-READ-1 (an unquoted <code>cat.ns.t.&lt;meta&gt;</code> read fails to parse on the Rust Spark door; the quoted and AS OF spellings answer), DELETE-TARGET-ALIAS-1 (<code>DELETE FROM t AS x WHERE x.col</code> fails UNRESOLVED_COLUMN where Spark accepts the alias), and F-EQDEL-CONVERT-BATCH-1 on the fork.</li>
+<li><strong>The encryption lane split</strong> before any 1.5.7 encryption work (ENC-1 items 1 and 5, ENC-CTAS-REPLACE-1): builders and verifiers on Opus 5.5 or Muse, plain product briefs, Fable on records and routing only.</li>
+<li><strong>The fork audit</strong>: a fork lock bump as a Muse clerk unit, or leave it until the next product repin.</li>
+<li><strong>Three signatures</strong> for the v3 label PR: R-002 (no second engine writes v3), R-015 (nested nanosecond leaves refused by name), R-024 (an encoded or nested nanosecond source truncates).</li>
+</ul>
+
+<h2>Release line</h2>
+<p>v1.5.5 is tagged at <span class="sha">7fb5f6b2</span> and on PyPI. v1.5.6 is in flight and untagged; its notes draft carries the zone seam, the nested-literal seam, the map-column fixes, the resource bound, NS-TRUTHUP-1, the ZS-9 refusal line and RP-60's behaviour line, with a Known-issues line for the RP-POSDEL-BATCH-2 routes that retires when that unit lands. The plan ships both labels in v1.5.6.</p>
+
+<div class="src">
+<strong>Sources</strong> (all on main <span class="sha">321c6095</span> unless a run id is given): <code>STATUS.md</code> "Iceberg maturity (2026-10-27)" and "Release state"; <code>task/ledgers/staging/ice-v2-label-1-ledger.md</code> (C-016 to C-042 and the dated VERDICT lines); <code>task/wo/ice-v2-label-1/order.md</code>; <code>docs/artifacts/v3-label-plan-2026-10-26.html</code> section 3; the unit ledgers under <code>task/ledgers/staging/</code> and <code>completed/</code> for ZONE-SEAM-1, WRITE-SPINE-1, GATE-RETIRE-1, ICE-RESOURCE-BOUND-1, NS-TRUTHUP-1, ICE-TSNS-UPDATE-RANGE-CLASS-1, ICE-INTEGRITY-PINS-1 and RP-60-POSDEL-REPIN-1; the roadmap cards under <code>task/roadmap/mid-term/</code> named above; <code>task/roadmap/mid-term/v1-5-6-release-notes-draft.md</code>; <code>docs/fork-sync.md</code>; GitHub: RePark PRs #1139 to #1201, fork PR #374, workflow runs parity-live 39562925424 to 40649661343, aws-acceptance 40295982749, 40476820151 and 40658998480, fork Nightly Interop 40072218692, fork Security audit of 2026-10-28, RePark cargo-audit of 2026-10-28. The previous page of this series is <code>docs/artifacts/iceberg-status-2026-10-22.html</code>.
+</div>
+</div>
+</body>
+</html>

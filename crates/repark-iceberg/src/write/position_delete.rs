@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch, StringArray};
 use datafusion::error::{DataFusionError, Result};
 use futures::stream::{self, StreamExt};
 use iceberg::arrow::FieldMatchMode;
@@ -26,6 +25,10 @@ use uuid::Uuid;
 
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::iceberg_err;
+use crate::write::position_delete_batch::{
+    POSITION_DELETE_BATCH_BYTE_BOUND, chunk_position_delete_pairs, position_delete_batch_rows,
+    position_delete_chunk_batch,
+};
 use crate::write::writer_props::position_delete_writer_properties_for;
 
 /// Iceberg default partition-spec id used by the fork when no spec is supplied.
@@ -87,6 +90,7 @@ pub(crate) async fn write_position_deletes(
     if pairs.is_empty() {
         return Ok(Vec::new());
     }
+    let batch_rows = position_delete_batch_rows(table.metadata().properties())?;
     let config = PositionDeleteWriterConfig::new().map_err(iceberg_err)?;
     let prepared = prepare_position_delete_groups(table, pairs).await?;
 
@@ -102,6 +106,7 @@ pub(crate) async fn write_position_deletes(
                     partition_key,
                     builder_spec,
                     staging,
+                    batch_rows,
                 )
                 .await?,
             );
@@ -121,6 +126,7 @@ pub(crate) async fn write_position_deletes(
                     partition_key,
                     builder_spec,
                     staging,
+                    batch_rows,
                 )
                 .await
             }
@@ -258,6 +264,7 @@ async fn write_position_deletes_for_partition(
     partition_key: Option<PartitionKey>,
     builder_spec: Option<PartitionSpec>,
     staging: &crate::write::write_options::WriterStagingOverrides,
+    batch_rows: usize,
 ) -> Result<Vec<DataFile>> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
     crate::write::data_format::resolve_data_format(
@@ -317,16 +324,10 @@ async fn write_position_deletes_for_partition(
         .await
         .map_err(iceberg_err)?;
 
-    let paths: Vec<&str> = pairs.iter().map(|(path, _)| path.as_ref()).collect();
-    let positions: Vec<i64> = pairs.iter().map(|(_, pos)| *pos).collect();
-    let batch = RecordBatch::try_new(
-        config.arrow_schema().clone(),
-        vec![
-            std::sync::Arc::new(StringArray::from(paths)) as ArrayRef,
-            std::sync::Arc::new(Int64Array::from(positions)) as ArrayRef,
-        ],
-    )?;
-    writer.write(batch).await.map_err(iceberg_err)?;
+    for range in chunk_position_delete_pairs(pairs, batch_rows, POSITION_DELETE_BATCH_BYTE_BOUND) {
+        let batch = position_delete_chunk_batch(config.arrow_schema(), &pairs[range])?;
+        writer.write(batch).await.map_err(iceberg_err)?;
+    }
     let files = writer.close().await.map_err(iceberg_err)?;
     if files.is_empty() {
         return Err(DataFusionError::Internal(
@@ -413,6 +414,8 @@ pub async fn refuse_mor_unpartitioned_multi_spec_dml(
 
 #[cfg(test)]
 mod tests {
+    use datafusion::arrow::array::RecordBatch;
+
     use super::*;
 
     /// pins: mw-9-delete-granularity/C-001, C-004

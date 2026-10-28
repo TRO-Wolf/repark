@@ -48,6 +48,7 @@ pub mod partition_spec;
 pub mod partition_write;
 pub mod partitioned_files;
 pub(crate) mod position_delete;
+pub(crate) mod position_delete_batch;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
 pub mod predicate_dml;
 pub mod resource_bound;

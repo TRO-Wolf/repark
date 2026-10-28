@@ -20,6 +20,10 @@ repo.
   status and roadmap pages the orchestrating session publishes as Claude artifacts (first:
   the 2026-08-30 roadmap status). Renderings only — every page cites the documents that own
   its facts, and a filed page is never edited; a later report is a new file.
+- [audits/](audits/map.md) — **independent audit reports**: standalone copies of audits filed
+  by an independent reviewer and never edited after filing; the orchestrator reproduces each
+  finding before dispatch. The v2 label audit of 2026-10-28 is
+  [audits/iceberg-v2-label-independent-audit-2026-10-28.md](audits/iceberg-v2-label-independent-audit-2026-10-28.md).
 - [cutover/](cutover/map.md) — **the production cutover record** (inventory, acceptance checks,
   rollback, canary plan, the owner's rulings of 2026-09-04). Filed by the orchestrating session;
   every measurement it cites lives in the divergence registry.
@@ -47,7 +51,7 @@ repo.
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-60 `ea0b7741` on 2026-10-27).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
   single home for how repark differs from Apache Spark. ICE-COMMIT-UNKNOWN-1 carries U9's dated
-  live proof and measurement limits (updated 2026-10-23). **2026-10-27 (RP-60):** the bulk merge-on-read `DELETE` past one position-delete batch is registry row POSDEL-BATCH-1 in §2.3, beside ICE-META-DELETE-1. **2026-10-27 (NESTED-LITERAL-SEAM-1):** the conform stage seams the nested literal and constant shapes, the D3 map-key literals and columns, the D10 `TRY_CAST` date and wall leaves, and the read-path `CAST` of a map with a timestamp key; the status line under the conform-stage row near R-013 records the cells. **2026-10-22 (ZONE-SEAM-1, PR #1139):**
+  live proof and measurement limits (updated 2026-10-23). **2026-10-27 (RP-60):** the bulk merge-on-read `DELETE` past one position-delete batch is registry row POSDEL-BATCH-1 in §2.3, beside ICE-META-DELETE-1. **2026-10-28 (RP-POSDEL-BATCH-2):** RePark's own position-delete writers are registry row POSDEL-BATCH-2 in §2.3, beside POSDEL-BATCH-1. **2026-10-27 (NESTED-LITERAL-SEAM-1):** the conform stage seams the nested literal and constant shapes, the D3 map-key literals and columns, the D10 `TRY_CAST` date and wall leaves, and the read-path `CAST` of a map with a timestamp key; the status line under the conform-stage row near R-013 records the cells. **2026-10-22 (ZONE-SEAM-1, PR #1139):**
   R-011's status line records the cells the seam moves from the refusal to Spark's stored value,
   the cast arm named for GATE-RETIRE-1, and ZS-9's over-refusal of a nested `TIMESTAMP_NTZ` value
   into a nested `TIMESTAMP` field outside UTC until WRITE-NTZ-TO-LTZ-NESTED-1; R-015's line says

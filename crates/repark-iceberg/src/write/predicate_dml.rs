@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use datafusion::arrow::array::Array;
-use datafusion::arrow::array::{Int64Array, RecordBatch, StringArray};
+use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::datasource::MemTable;
 use datafusion::error::{DataFusionError, Result};
@@ -28,6 +28,7 @@ use crate::write::merge::{
     register_streaming_target, reserved_name_guard, resolve_write_column, scratch_schema,
 };
 use crate::write::position_delete::PositionDeletePair;
+use crate::write::position_delete_batch::position_delete_batches;
 use crate::write::predicate_dml::lineage::{project_update_data_batch, update_values_schema};
 use crate::write::predicate_dml::residual::identity_scan_residual;
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
@@ -456,21 +457,14 @@ fn validate_update_assignments(
 pub(super) fn register_identity_table(
     ctx: &SessionContext,
     pairs: &[PositionDeletePair],
+    batch_rows: usize,
 ) -> Result<String> {
     let schema = Arc::new(ArrowSchema::new(vec![
         Field::new(FILE_PATH_COL, DataType::Utf8, false),
         Field::new(POS_COL, DataType::Int64, false),
     ]));
-    let files: Vec<Option<&str>> = pairs.iter().map(|(path, _)| Some(path.as_ref())).collect();
-    let positions: Vec<i64> = pairs.iter().map(|(_, position)| *position).collect();
-    let batch = RecordBatch::try_new(
-        Arc::clone(&schema),
-        vec![
-            Arc::new(StringArray::from(files)),
-            Arc::new(Int64Array::from(positions)),
-        ],
-    )?;
-    let provider = MemTable::try_new(schema, vec![vec![batch]])?;
+    let batches = position_delete_batches(&schema, pairs, batch_rows)?;
+    let provider = MemTable::try_new(schema, vec![batches])?;
     crate::write::merge::cow_scratch::register_scratch_provider(
         ctx,
         Arc::new(provider),
