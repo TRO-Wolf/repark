@@ -62,7 +62,10 @@ pub(crate) async fn resolve_dml_target(
             on_branch,
         })),
         Err(error) => {
-            if !planner_resolves(ctx, &parts) && !catalog_lists(catalog.as_ref(), &ident).await {
+            if namespace_absent(catalog.as_ref(), &ident).await
+                || (!planner_resolves(ctx, &parts)
+                    && !catalog_lists(catalog.as_ref(), &ident).await)
+            {
                 return Ok(None);
             }
             Err(DataFusionError::Plan(format!(
@@ -102,4 +105,8 @@ fn planner_resolves(ctx: &SessionContext, parts: &[String]) -> bool {
 
 async fn catalog_lists(catalog: &dyn Catalog, ident: &TableIdent) -> bool {
     catalog.table_exists(ident).await.unwrap_or(true)
+}
+
+async fn namespace_absent(catalog: &dyn Catalog, ident: &TableIdent) -> bool {
+    matches!(catalog.namespace_exists(ident.namespace()).await, Ok(false))
 }

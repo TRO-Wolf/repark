@@ -428,3 +428,182 @@ async fn parquet_branch_and_case_variant_dml_is_unchanged() {
     let rows = attempt(&session, "SELECT id FROM ice.ns.t.branch_b ORDER BY id").await;
     assert!(rows.is_ok(), "the branch reads back: {rows:?}");
 }
+
+const COMMENT_PREFIXES: [&str; 2] = [concat!("/", "* c *", "/ "), "-- c\n"];
+const BUG_001_TEXT: &str = "partition specs in history";
+
+fn comment_prefixed(prefix: &str, sql: &str, target: &str) -> String {
+    format!("{prefix}{}", on_target(sql, target))
+}
+
+async fn branched_with(properties: &str) -> (ReparkSession, TempDir, Option<i64>) {
+    let (session, warehouse) = seeded_table(properties).await;
+    run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
+    let head = branch_head(&session).await;
+    assert!(head.is_some(), "branch b exists");
+    (session, warehouse, head)
+}
+
+fn set_session_wap_branch(session: &ReparkSession, branch: &str) {
+    let state = session.context().state_ref();
+    let mut guard = state.write();
+    guard
+        .config_mut()
+        .options_mut()
+        .extensions
+        .insert(repark_spark::wap::WapSessionConfig {
+            branch: Some(branch.to_string()),
+            id: None,
+        });
+}
+
+fn wap_enabled(format: &str) -> String {
+    format!("{}, 'write.wap.enabled'='true'", data_format(format))
+}
+
+#[tokio::test]
+async fn comment_prefixed_branch_dml_on_an_avro_delete_format_refuses_with_the_branch_unchanged() {
+    for properties in [
+        data_format("avro"),
+        explicit_delete_format("parquet", "avro"),
+    ] {
+        for prefix in COMMENT_PREFIXES {
+            for target in [BRANCH_TARGET, "t.branch_b"] {
+                for sql in BRANCH_SHAPES {
+                    let (session, warehouse, head) = branched_with(&properties).await;
+                    if target == "t.branch_b" {
+                        run(&session, "SET datafusion.catalog.default_catalog = 'ice'").await;
+                        run(&session, "SET datafusion.catalog.default_schema = 'ns'").await;
+                    }
+                    let statement = comment_prefixed(prefix, sql, target);
+                    assert_refused_unchanged(&session, &warehouse, &statement).await;
+                    assert_eq!(
+                        branch_head(&session).await,
+                        head,
+                        "`{statement}` moved branch b"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn comment_prefixed_dml_under_a_session_wap_branch_refuses_with_the_branch_unchanged() {
+    for prefix in COMMENT_PREFIXES {
+        for sql in BRANCH_SHAPES {
+            let (session, warehouse, head) = branched_with(&wap_enabled("avro")).await;
+            set_session_wap_branch(&session, "b");
+            let statement = format!("{prefix}{sql}");
+            assert_refused_unchanged(&session, &warehouse, &statement).await;
+            assert_eq!(
+                branch_head(&session).await,
+                head,
+                "`{statement}` moved branch b"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn refused_dml_under_a_session_wap_branch_creates_no_branch() {
+    for prefix in ["", COMMENT_PREFIXES[0], COMMENT_PREFIXES[1]] {
+        for sql in BRANCH_SHAPES {
+            let (session, warehouse) = seeded_table(&wap_enabled("avro")).await;
+            set_session_wap_branch(&session, "b");
+            let statement = format!("{prefix}{sql}");
+            assert_refused_unchanged(&session, &warehouse, &statement).await;
+            assert_eq!(
+                branch_head(&session).await,
+                None,
+                "`{statement}` created branch b"
+            );
+        }
+    }
+}
+
+async fn multi_spec_unpartitioned_branched_table() -> (ReparkSession, TempDir, Option<i64>) {
+    let warehouse = TempDir::new().expect("warehouse");
+    let session = session();
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().expect("path"))
+        .await
+        .expect("catalog");
+    run(&session, "CREATE NAMESPACE ice.ns").await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.t (id INT) USING iceberg PARTITIONED BY (bucket(4, id)) \
+         TBLPROPERTIES ('format-version'='2', 'write.delete.mode'='merge-on-read', \
+         'write.update.mode'='merge-on-read')",
+    )
+    .await;
+    run(
+        &session,
+        "INSERT INTO ice.ns.t VALUES (0), (1), (2), (3), (4)",
+    )
+    .await;
+    run(
+        &session,
+        "ALTER TABLE ice.ns.t DROP PARTITION FIELD bucket(4, id)",
+    )
+    .await;
+    run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
+    let head = branch_head(&session).await;
+    assert!(head.is_some(), "branch b exists");
+    (session, warehouse, head)
+}
+
+#[tokio::test]
+async fn comment_prefixed_branch_dml_on_a_multi_spec_unpartitioned_table_hits_bug_001() {
+    for prefix in ["", COMMENT_PREFIXES[0], COMMENT_PREFIXES[1]] {
+        for sql in BRANCH_SHAPES {
+            let (session, warehouse, head) = multi_spec_unpartitioned_branched_table().await;
+            let files_before = files_under(warehouse.path()).len();
+            let statement = comment_prefixed(prefix, sql, BRANCH_TARGET);
+            let outcome = attempt(&session, &statement).await;
+            let Err(error) = outcome else {
+                panic!("`{statement}` must hit the BUG-001 valve: {outcome:?}");
+            };
+            assert!(error.contains(BUG_001_TEXT), "`{statement}`: {error}");
+            assert_eq!(
+                branch_head(&session).await,
+                head,
+                "`{statement}` moved branch b"
+            );
+            assert_eq!(
+                files_under(warehouse.path()).len(),
+                files_before,
+                "`{statement}` wrote a file"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn insert_into_a_missing_namespace_keeps_the_planner_not_found_error() {
+    let (session, _warehouse) = seeded_table(&data_format("parquet")).await;
+    let error = attempt(&session, "INSERT INTO ice.missing.t VALUES (1)")
+        .await
+        .expect_err("a missing namespace must fail");
+    assert!(!error.contains("cannot load the write target"), "{error}");
+    assert!(error.contains("table 'ice.missing.t' not found"), "{error}");
+}
+
+#[tokio::test]
+async fn comment_prefixed_branch_delete_on_parquet_still_commits() {
+    for prefix in COMMENT_PREFIXES {
+        let (session, _warehouse, head) = branched_table("parquet").await;
+        run(
+            &session,
+            &comment_prefixed(prefix, FORK_ROUTE_DELETE, BRANCH_TARGET),
+        )
+        .await;
+        assert_ne!(
+            branch_head(&session).await,
+            head,
+            "the branch delete commits"
+        );
+        let rows = attempt(&session, "SELECT id FROM ice.ns.t.branch_b ORDER BY id").await;
+        assert!(rows.is_ok(), "the branch reads back: {rows:?}");
+    }
+}

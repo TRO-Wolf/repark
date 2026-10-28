@@ -219,6 +219,38 @@ async fn overwrite_on_diverged_branch_replaces_branch_only() {
     );
 }
 
+const TAG_WRITES: [(&str, &str); 7] = [
+    (
+        "INSERT INTO ice.sales.t.tag_v1 VALUES (99, 'iv')",
+        "Cannot write to table with time travel",
+    ),
+    (
+        "INSERT INTO ice.sales.t.tag_v1 SELECT 99 AS id, 'is' AS name",
+        "Cannot write to table with time travel",
+    ),
+    (
+        "UPDATE ice.sales.t.tag_v1 SET name = 'u' WHERE id = 1",
+        "Cannot modify table with time travel",
+    ),
+    (
+        "DELETE FROM ice.sales.t.tag_v1 WHERE id = 1",
+        "Cannot modify table with time travel",
+    ),
+    (
+        "MERGE INTO ice.sales.t.tag_v1 t USING (SELECT 1 AS id, 'm' AS name) s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
+        "Cannot modify table with time travel",
+    ),
+    (
+        "INSERT OVERWRITE ice.sales.t.tag_v1 VALUES (77, 'ow')",
+        "Cannot write to table with time travel",
+    ),
+    (
+        "TRUNCATE TABLE ice.sales.t.tag_v1",
+        "Cannot write to table with time travel",
+    ),
+];
+
 #[tokio::test]
 async fn write_to_tag_refuses_spark_shaped() {
     let wh = TempDir::new().unwrap();
@@ -230,43 +262,51 @@ async fn write_to_tag_refuses_spark_shaped() {
     )
     .await;
     run(&ctx, &catalogs, "ALTER TABLE ice.sales.t CREATE TAG v1").await;
-    for (sql, needle) in [
-        (
-            "INSERT INTO ice.sales.t.tag_v1 VALUES (99, 'iv')",
-            "Cannot write to table with time travel",
-        ),
-        (
-            "INSERT INTO ice.sales.t.tag_v1 SELECT 99 AS id, 'is' AS name",
-            "Cannot write to table with time travel",
-        ),
-        (
-            "UPDATE ice.sales.t.tag_v1 SET name = 'u' WHERE id = 1",
-            "Cannot modify table with time travel",
-        ),
-        (
-            "DELETE FROM ice.sales.t.tag_v1 WHERE id = 1",
-            "Cannot modify table with time travel",
-        ),
-        (
-            "MERGE INTO ice.sales.t.tag_v1 t USING (SELECT 1 AS id, 'm' AS name) s \
-             ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name",
-            "Cannot modify table with time travel",
-        ),
-        (
-            "INSERT OVERWRITE ice.sales.t.tag_v1 VALUES (77, 'ow')",
-            "Cannot write to table with time travel",
-        ),
-        (
-            "TRUNCATE TABLE ice.sales.t.tag_v1",
-            "Cannot write to table with time travel",
-        ),
+    for prefix in ["", concat!("/", "* c *", "/ "), "-- c\n"] {
+        for (statement, needle) in TAG_WRITES {
+            let sql = format!("{prefix}{statement}");
+            let error = execute(&ctx, &catalogs, &sql)
+                .await
+                .expect_err("tag write must refuse");
+            assert!(
+                error.to_string().contains(needle),
+                "for {sql:?} expected {needle:?}, got: {error}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_branch_write_with_an_unclassified_head_refuses() {
+    for sql in [
+        "WITH s AS (SELECT 1) INSERT INTO ice.sales.t.branch_b SELECT * FROM s",
+        "(INSERT INTO ice.sales.t.branch_b VALUES (1))",
+        "",
     ] {
-        let error = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("tag write must refuse");
+        let error = crate::write_to_branch::branch_write_dml_kind(sql, "b")
+            .expect_err("an unclassified head must refuse");
         assert!(
-            error.to_string().contains(needle),
-            "for {sql:?} expected {needle:?}, got: {error}"
+            error.to_string().contains("before any file is written"),
+            "{sql:?}: {error}"
+        );
+    }
+    for (sql, expected) in [
+        (
+            concat!("/", "* c *", "/ DELETE FROM t.branch_b"),
+            Some("DELETE"),
+        ),
+        ("-- c\nUPDATE t.branch_b SET id = 1", Some("UPDATE")),
+        (
+            concat!("/", "* c *", "/ INSERT INTO t.branch_b VALUES (1)"),
+            None,
+        ),
+        ("-- c\nMERGE INTO t.branch_b USING s ON true", None),
+    ] {
+        let kind = crate::write_to_branch::branch_write_dml_kind(sql, "b").expect("classified");
+        assert_eq!(
+            kind.map(repark_iceberg::write::MorDmlKind::verb),
+            expected,
+            "{sql:?}"
         );
     }
 }
