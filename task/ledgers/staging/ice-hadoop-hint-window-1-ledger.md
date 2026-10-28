@@ -11,7 +11,7 @@
 
 **Unchanged.** The missing-hinted-file error, the unparsable or out-of-range hint fallback to the listing, the no-hint listing, and an explicit `*.metadata.json` path.
 
-**Status.** Verification has not run. The card is closed on this PR, pending verification. No verifier section is written here.
+**Status.** Verification round 1 complete (2026-10-28): Opus 5.5 PASS and Muse MAX PASS on the code at `564285cb`; records fixed in this round; closes on the merge of PR #1205.
 
 ## Clauses
 
@@ -32,7 +32,7 @@ VERDICT (2026-10-28): 8 clauses, 6 PROVEN (C-001 to C-006), 2 OPEN (C-007 and C-
 
 - **Maps.** `crates/repark-core/src/map.md` (the `iceberg_path.rs` row states the walk), `crates/repark-core/src/iceberg_path/map.md` (the `hint_walk_tests.rs` row, citing C-001 to C-005), `python/repark/tests/iceberg/map.md` (the facade pin, citing C-006), `task/ledgers/staging/map.md` (this ledger's row) and `task/roadmap/mid-term/map.md` (the card row).
 - **Registry.** ICE-LOCAL-COMMIT-POINT-1 in `docs/spark-sql-iceberg-parity.md` gains a dated bullet of 2026-10-28 that records the FIXED state. The existing sentences keep their text; the dated bullet supersedes the sentence that places the path read outside the row.
-- **Card.** `task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md`: status closed 2026-10-28 by PR #1205, pending verification.
+- **Card.** `task/roadmap/mid-term/ice-hadoop-hint-window-1-card-2026-10-22.md`: status closes on the merge of PR #1205 (Opus 5.5 verifier PASS and Muse MAX critic PASS on the code at `564285cb`).
 - **Appended rows.** Each is OPEN until PR #1205 merges: ice-integrity-pins-1 C-071 (closes C-015 on the merge), ice-v2-label-1 C-043 (the proof C-028 waits for) and dfload-1 C-011 (narrows C-003; C-003 keeps its text). ice-integrity-pins-1 and ice-v2-label-1 each gain a dated VERDICT line.
 - **Release notes.** One Behaviour changes line in `task/roadmap/mid-term/v1-5-6-release-notes-draft.md`.
 - **Scope of the records.** No product code, test, `Cargo.toml`, `Cargo.lock` or `.github/` file changes in the records commits.
