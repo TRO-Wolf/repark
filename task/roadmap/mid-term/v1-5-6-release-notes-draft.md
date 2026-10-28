@@ -104,6 +104,11 @@ Tables already written keep the values they hold; this release ships no migratio
   bounded batches and the statement completes. The new table property `write.delete.position-delete-batch-rows` sets the row bound:
   default 1,048,576, and a value below one refuses the `DELETE` and names the property.
 
+- **The hadoop path read answers the newest committed metadata file past a stale
+  `version-hint.text` (ICE-HADOOP-HINT-WINDOW-1, PR #1205).** It answered the hinted version, so a
+  row a committed `DELETE` had removed could read back; a walk past 10,000 metadata files refuses
+  with an error that names the limit.
+
 ## Integrity under failure (no stored value or behaviour changes)
 
 - **A writer killed between its data files and its commit is pinned (ICE-INTEGRITY-PINS-1, pin

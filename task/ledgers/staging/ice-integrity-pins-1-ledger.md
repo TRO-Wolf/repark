@@ -579,6 +579,7 @@ The single-table completion cases prevent a later progress flush from hiding an 
 | C-068 | Under AWS-EPHEMERAL-RUNS-1 each leg job cross-reads exactly the tables its run created, finishes inside the 600 s deadline, and the scratch namespaces hold no table of that run after it exits. | one dispatched `aws-acceptance` run on `main` after the unit merges, behind the owner's scoped IAM grant and one-time prune | OPEN | Card `task/roadmap/mid-term/aws-ephemeral-runs-1-card-2026-10-24.md`. |
 | C-069 | Spark reads every S3 Tables table of a run through Iceberg's REST catalog (`type=rest`, SigV4, the table bucket ARN as the warehouse, `S3FileIO`), and each cross-read reports EQUAL or a named Spark error that is not a catalog-init failure. | the same dispatched run, the S3 Tables per-table lines | OPEN | The Spark config block is separate from the one RePark consumes (RePark has no `type=rest` mapping). |
 | C-070 | (Carries the part of C-059 that C-066 does not explain.) Run 3 of 2026-10-23 (tokio 1.54.1) made no cross-read progress for its whole budget inside `metadata_log_entries`; that stall has a named cause. | a reproduction with the per-table lines, or three consecutive runs under C-068 without it | OPEN | Pre-streaming, so no per-table evidence exists for it; distinct from C-066's budget finding. C-060's claim is superseded by C-066 and C-067 and stays as written (append-only). |
+| C-071 | (ICE-HADOOP-HINT-WINDOW-1, 2026-10-28; closes C-015 on the merge.) The option-1 walk that C-029 decided is built on PR #1205, product head `749f11a4`: the `type=hadoop` path read walks past `version-hint.text` to the newest existing metadata file. C-015 and C-029 keep their text. | The walk clauses C-001 to C-006 of ice-hadoop-hint-window-1: the Rust pins in `crates/repark-core/src/iceberg_path/hint_walk_tests.rs` and the facade pin `test_load_stale_hint_after_delete_reads_the_newest_metadata_file`. | **OPEN** | Closes on the merge of PR #1205, when the path read is on main. Verification has not run. |
 
 Scoped validation (2026-10-24): pinned `make py-lint py-format-check`, Python size,
 conventions, docstring-presence, ledger lifecycle/grammar, map links, documentation links/
@@ -587,3 +588,9 @@ preserves existing docstrings and both append-only prefixes, and passes `git dif
 The final restored candidate passes all 50 unit cases. Whole-suite verification remains a
 required CI duty under the owner's September 18 CI-offload ruling; no local native build,
 Spark session or AWS operation runs in this follow-up.
+
+## Hint-window records (2026-10-28)
+
+ICE-HADOOP-HINT-WINDOW-1 (PR #1205, product head `749f11a4`, ledger `ice-hadoop-hint-window-1-ledger.md`) carries the option-1 walk that C-029 decided. C-071 above is the one row this round adds. It is OPEN until the merge, and then closes C-015 by citation. The walk's proof is in that ledger, not here.
+
+VERDICT (2026-10-28, after C-071): 71 clauses, 49 PROVEN, 18 OPEN as written, 4 REJECTED. C-015 and C-029 are OPEN until the merge of PR #1205; C-071 closes with them.
