@@ -15,7 +15,6 @@ use crate::catalog_ops::{catalog_handle, iceberg_err};
 use crate::ref_ddl::{WriteToBranchSniff, sniff_write_to_branch};
 use crate::time_travel::PinnedViews;
 use repark_iceberg::write::MorDmlKind;
-use repark_iceberg::write::data_format;
 
 pub(crate) enum RefSelectorKind {
     Branch(String),
@@ -577,33 +576,19 @@ async fn commit_write_on_branch<'a>(
     {
         return Err(missing_branch_error(&target.branch));
     }
-    let owned_head = is_owned_write_head(ctx, sql);
-    match branch_write_kind(sql, &target.branch)? {
-        Some(BranchWriteKind::Dml(kind)) => {
-            repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
-                catalog.as_ref(),
-                &ident,
-                &ident.to_string(),
-                kind,
-            )
-            .await?;
-            let mode = kind.mode_property();
-            if owned_head {
-                data_format::refuse_any_unreadable_delete_format(&table, mode)?;
-            } else {
-                data_format::refuse_any_unreadable_fork_delete_format(&table, mode)?;
-            }
-        }
-        Some(BranchWriteKind::Merge) => {
-            let mode = data_format::MERGE_MODE_PROPERTY;
-            data_format::refuse_any_unreadable_delete_format(&table, mode)?;
-        }
-        None => {}
+    if let Some(BranchWriteKind::Dml(kind)) = branch_write_kind(sql, &target.branch)? {
+        repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
+            catalog.as_ref(),
+            &ident,
+            &ident.to_string(),
+            kind,
+        )
+        .await?;
     }
     if !target.require_existing_branch {
         create_wap_branch_from_main(catalog.as_ref(), &ident, &table, &target.branch).await?;
     }
-    if owned_head {
+    if is_owned_write_head(ctx, sql) {
         if target.keep_existing_selector {
             return Ok(Cow::Borrowed(sql));
         }
