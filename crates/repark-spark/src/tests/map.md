@@ -132,6 +132,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 141):** `encrypted_table_explain_analyze_insert_refuses`
   now asserts the ruled `EXPLAIN ANALYZE` text, which the seam raises before the ENC-1 refusal;
   the table is unchanged as before. pins: explain-dml-write-1/C-008
+  **ICE-DELETE-FORMAT-GUARD-1 fix round 1 (2026-10-28):** `encrypted_table_case_variant_namespace_delete_refuses` (`DELETE FROM ice.SALES.enc WHERE id = 1` on a keyed table) asserts the ENC-1 refusal; the delete-format guard's fail-open lookup had let it fail as `NamespaceNotFound`. Red on `f1935e81`. pins: ice-delete-format-guard-1/C-015
 - `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as
   pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in
   copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the

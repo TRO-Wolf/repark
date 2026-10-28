@@ -332,7 +332,7 @@ repark-core's error map.
   doors route through. `resolve_data_format(staging_format, table_default)` returns the
   per-write `write-format` option when present, else the `write.format.default` table
   property, else parquet. `resolve_delete_format(staging_format, table_property,
-  data_format, format_version)` returns PUFFIN on format-version 3 before consulting any
+  format_version)` returns PUFFIN on format-version 3 before consulting any
   setting, else the per-write `delete-format` option, else the
   `write.delete.format.default` property, else parquet (**ICE-DELETE-FORMAT-GUARD-1, 2026-10-28:** the data-format fallback is gone; see the dated bullet below). The vocabulary is
   parquet/orc/avro case-insensitively; any other string refuses with
@@ -343,7 +343,7 @@ repark-core's error map.
   sites through them (unpartitioned staging, partitioned fanout, partitioned lineage,
   unpartitioned MERGE, position deletes), and WO3a opened `validate_write_format` to
   orc/avro. pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-025
-- `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or table property, else parquet, whatever the data format. An explicit Avro or ORC refuses with a Plan error that names its source and hints `write.delete.format.default` set to `parquet`. The same file adds `mor_delete_format(table, mode_property)` (the table's delete format and its source, read by the Spark-door guard and by MERGE), `refuse_unreadable_merge_delete_format(catalog, ident)` (the up-front MERGE check that `merge.rs` calls) and `inherited_delete_format_refusal`. The fallback's unit test is removed with the fallback. pins: ice-delete-format-guard-1/C-006
+- `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or table property, else parquet, whatever the data format. An explicit Avro or ORC refuses with a Plan error that names its source and hints `write.delete.format.default` set to `parquet`. The same file adds `mor_delete_format(table, mode_property)` (the table's delete format and its source, read by the Spark-door guard and by MERGE), `refuse_any_unreadable_delete_format(table, mode_property)` (the up-front check that `merge.rs`, `write_to_branch.rs` and the Spark-door delete-format guard call; `MERGE_MODE_PROPERTY` is public) and `inherited_delete_format_refusal`. The fallback's unit test is removed with the fallback. Parquet on an inherited Avro or ORC delete format is a dated divergence from Spark until RP-61. pins: ice-delete-format-guard-1/C-006
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
@@ -1731,7 +1731,7 @@ repark-core's error map.
   Before the round it read the data-file property only, so the delete-codec property was
   silently ignored too; the resolver is comment-free per the owner ban, and this row is where
   its order is written down. pins: ice-session-write-conf-1/C-040
-- `position_delete.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `write_position_deletes_for_partition` takes its delete format from `resolve_delete_format` alone; the data-format parameter is gone, and `resolve_data_format` stays as the staging-format validation. pins: ice-delete-format-guard-1/C-001
+- `position_delete.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `write_position_deletes_for_partition` takes its delete format from `resolve_delete_format` alone; the data-format parameter is gone, and `resolve_data_format` stays as the staging-format validation. Parquet on an inherited Avro or ORC format is a dated divergence from Spark until RP-61. pins: ice-delete-format-guard-1/C-001
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending

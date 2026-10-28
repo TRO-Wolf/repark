@@ -4,7 +4,7 @@
 
 **Status:** dispatched 2026-10-28 on an Opus 5.5 builder lane, the same lane as ICE-POST-PUBLISH-OUTCOME-1. Open until the merge. Registry row: [ICE-DELETE-FORMAT-GUARD-1](../../../docs/spark-sql-iceberg-parity.md).
 
-**Status update, 2026-10-28:** built as PR #1206, awaiting verification.
+**Status update, 2026-10-28:** built as PR #1206, awaiting verification. Fix round 1 at `a8ab9364` (the pre-passthrough guards resolve the DML target as the planner does and fail closed); the verifier's findings and the pins are in the ledger.
 
 **Grade:** product unit, Opus 5.5 builder lane.
 
