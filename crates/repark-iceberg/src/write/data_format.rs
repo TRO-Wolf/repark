@@ -6,6 +6,7 @@ pub const DELETE_FORMAT_PROPERTY: &str = "write.delete.format.default";
 const DELETE_FORMAT_OPTION: &str = "delete-format";
 const DATA_FORMAT_PROPERTY: &str = "write.format.default";
 pub const MERGE_MODE_PROPERTY: &str = "write.merge.mode";
+const MERGE_ON_READ: &str = "merge-on-read";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MorDeleteFormat {
@@ -47,6 +48,27 @@ pub fn resolve_delete_format(
 
 #[allow(clippy::missing_errors_doc)]
 pub fn mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDeleteFormat> {
+    delete_format_under(table, mode_property, repark_reads_merge_on_read)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn fork_mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDeleteFormat> {
+    delete_format_under(table, mode_property, fork_reads_merge_on_read)
+}
+
+fn repark_reads_merge_on_read(mode: &str) -> bool {
+    mode.trim().eq_ignore_ascii_case(MERGE_ON_READ)
+}
+
+fn fork_reads_merge_on_read(mode: &str) -> bool {
+    mode == MERGE_ON_READ
+}
+
+fn delete_format_under(
+    table: &Table,
+    mode_property: &str,
+    reads_merge_on_read: fn(&str) -> bool,
+) -> Result<MorDeleteFormat> {
     let metadata = table.metadata();
     if metadata.format_version() != FormatVersion::V2 {
         return Ok(MorDeleteFormat::Readable);
@@ -54,7 +76,8 @@ pub fn mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDelete
     let properties = metadata.properties();
     let merge_on_read = properties
         .get(mode_property)
-        .is_some_and(|mode| mode.trim().eq_ignore_ascii_case("merge-on-read"));
+        .map(String::as_str)
+        .is_some_and(reads_merge_on_read);
     if !merge_on_read {
         return Ok(MorDeleteFormat::Readable);
     }
@@ -74,7 +97,16 @@ pub fn mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDelete
 
 #[allow(clippy::missing_errors_doc)]
 pub fn refuse_any_unreadable_delete_format(table: &Table, mode_property: &str) -> Result<()> {
-    match mor_delete_format(table, mode_property)? {
+    refuse_inherited(table, mor_delete_format(table, mode_property)?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_any_unreadable_fork_delete_format(table: &Table, mode_property: &str) -> Result<()> {
+    refuse_inherited(table, fork_mor_delete_format(table, mode_property)?)
+}
+
+fn refuse_inherited(table: &Table, resolved: MorDeleteFormat) -> Result<()> {
+    match resolved {
         MorDeleteFormat::Readable => Ok(()),
         MorDeleteFormat::Inherited(format) => Err(inherited_delete_format_refusal(
             &table.identifier().to_string(),

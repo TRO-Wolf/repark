@@ -607,3 +607,109 @@ async fn comment_prefixed_branch_delete_on_parquet_still_commits() {
         assert!(rows.is_ok(), "the branch reads back: {rows:?}");
     }
 }
+
+const WAP_ABSENT_MERGES: [&str; 3] = [
+    "MERGE INTO ice.ns.t t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN DELETE",
+    "MERGE INTO ice.ns.t t USING (SELECT 2 AS id) s ON t.id = s.id \
+     WHEN MATCHED THEN UPDATE SET t.id = 20",
+    "MERGE INTO ice.ns.t t USING (SELECT 9 AS id) s ON t.id = s.id \
+     WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id)",
+];
+
+#[tokio::test]
+async fn refused_merge_under_a_session_wap_branch_creates_no_branch() {
+    for prefix in ["", COMMENT_PREFIXES[0], COMMENT_PREFIXES[1]] {
+        for sql in WAP_ABSENT_MERGES {
+            let (session, warehouse) = seeded_table(&wap_enabled("avro")).await;
+            set_session_wap_branch(&session, "b");
+            let statement = format!("{prefix}{sql}");
+            assert_refused_unchanged(&session, &warehouse, &statement).await;
+            assert_eq!(
+                branch_head(&session).await,
+                None,
+                "`{statement}` created branch b"
+            );
+        }
+    }
+}
+
+async fn upper_case_mode_table(properties: &str) -> (ReparkSession, TempDir) {
+    let (session, warehouse) = seeded_table(properties).await;
+    run(
+        &session,
+        "ALTER TABLE ice.ns.t SET TBLPROPERTIES ('write.delete.mode'='MERGE-ON-READ', \
+         'write.update.mode'='MERGE-ON-READ')",
+    )
+    .await;
+    (session, warehouse)
+}
+
+async fn assert_copy_on_write(
+    session: &ReparkSession,
+    warehouse: &TempDir,
+    sql: &str,
+    read: &str,
+    survivors: &[i32],
+) {
+    let outcome = attempt(session, sql).await;
+    assert!(outcome.is_ok(), "`{sql}` must complete: {outcome:?}");
+    let batches = attempt(session, read)
+        .await
+        .unwrap_or_else(|error| panic!("`{sql}` must read back: {error}"));
+    let rows: Vec<i32> = batches
+        .iter()
+        .flat_map(|batch| {
+            batch
+                .column(0)
+                .as_primitive::<Int32Type>()
+                .values()
+                .to_vec()
+        })
+        .collect();
+    assert_eq!(rows, survivors.to_vec(), "`{sql}` survivors");
+    assert!(
+        position_delete_extensions(warehouse).is_empty(),
+        "`{sql}` wrote a position delete"
+    );
+}
+
+#[tokio::test]
+async fn upper_case_merge_on_read_fork_route_dml_runs_copy_on_write_and_reads_back() {
+    let read = "SELECT id FROM ice.ns.t ORDER BY id";
+    for properties in [
+        data_format("avro"),
+        data_format("orc"),
+        explicit_delete_format("parquet", "avro"),
+    ] {
+        let (session, warehouse) = upper_case_mode_table(&properties).await;
+        assert_copy_on_write(&session, &warehouse, FORK_ROUTE_DELETE, read, &[0, 4]).await;
+        assert_eq!(
+            current_snapshot(&session).await.total("total-delete-files"),
+            0
+        );
+        let (session, warehouse) = upper_case_mode_table(&properties).await;
+        let survivors = [0, 4, 11, 12, 13];
+        assert_copy_on_write(&session, &warehouse, FORK_ROUTE_UPDATE, read, &survivors).await;
+    }
+}
+
+#[tokio::test]
+async fn upper_case_merge_on_read_branch_delete_runs_copy_on_write_on_the_branch() {
+    let read = "SELECT id FROM ice.ns.t.branch_b ORDER BY id";
+    let (session, warehouse) = upper_case_mode_table(&data_format("avro")).await;
+    run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
+    let head = branch_head(&session).await;
+    let sql = on_target(FORK_ROUTE_DELETE, BRANCH_TARGET);
+    assert_copy_on_write(&session, &warehouse, &sql, read, &[0, 4]).await;
+    assert_ne!(
+        branch_head(&session).await,
+        head,
+        "the branch delete commits"
+    );
+}
+
+#[tokio::test]
+async fn upper_case_merge_on_read_repark_route_delete_still_writes_a_parquet_position_delete() {
+    let (session, warehouse) = upper_case_mode_table(&data_format("avro")).await;
+    assert_parquet_position_delete(&session, &warehouse, REPARK_ROUTE_DELETE).await;
+}

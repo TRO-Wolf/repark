@@ -3,8 +3,8 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{ObjectName, Statement};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::data_format::{
-    MorDeleteFormat, inherited_delete_format_refusal, mor_delete_format,
-    refuse_any_unreadable_delete_format,
+    MorDeleteFormat, mor_delete_format, refuse_any_unreadable_delete_format,
+    refuse_any_unreadable_fork_delete_format,
 };
 use repark_iceberg::write::predicate_dml::plain::{
     plain_identity_needs_fork, try_allowed_plain_identity_or_update,
@@ -142,16 +142,12 @@ async fn refuse_unreadable_delete_format(
     if target.on_branch {
         return refuse_any_unreadable_delete_format(&target.table, kind.mode_property());
     }
-    match mor_delete_format(&target.table, kind.mode_property())? {
-        MorDeleteFormat::Readable => Ok(()),
-        MorDeleteFormat::Inherited(_)
-            if repark_writer_takes(catalogs, statement, &target).await? =>
-        {
-            Ok(())
-        }
-        MorDeleteFormat::Inherited(format) => Err(inherited_delete_format_refusal(
-            &target.table.identifier().to_string(),
-            format,
-        )),
+    let repark_route = mor_delete_format(&target.table, kind.mode_property());
+    if matches!(repark_route, Ok(MorDeleteFormat::Readable)) {
+        return Ok(());
     }
+    if repark_writer_takes(catalogs, statement, &target).await? {
+        return repark_route.map(drop);
+    }
+    refuse_any_unreadable_fork_delete_format(&target.table, kind.mode_property())
 }

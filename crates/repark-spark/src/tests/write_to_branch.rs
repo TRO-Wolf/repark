@@ -283,7 +283,7 @@ fn a_branch_write_with_an_unclassified_head_refuses() {
         "(INSERT INTO ice.sales.t.branch_b VALUES (1))",
         "",
     ] {
-        let error = crate::write_to_branch::branch_write_dml_kind(sql, "b")
+        let error = crate::write_to_branch::branch_write_kind(sql, "b")
             .expect_err("an unclassified head must refuse");
         assert!(
             error.to_string().contains("before any file is written"),
@@ -300,14 +300,18 @@ fn a_branch_write_with_an_unclassified_head_refuses() {
             concat!("/", "* c *", "/ INSERT INTO t.branch_b VALUES (1)"),
             None,
         ),
-        ("-- c\nMERGE INTO t.branch_b USING s ON true", None),
+        ("-- c\nMERGE INTO t.branch_b USING s ON true", Some("MERGE")),
+        (
+            concat!("/", "* c *", "/ MERGE INTO t.branch_b USING s ON true"),
+            Some("MERGE"),
+        ),
     ] {
-        let kind = crate::write_to_branch::branch_write_dml_kind(sql, "b").expect("classified");
-        assert_eq!(
-            kind.map(repark_iceberg::write::MorDmlKind::verb),
-            expected,
-            "{sql:?}"
-        );
+        let verb = match crate::write_to_branch::branch_write_kind(sql, "b").expect("classified") {
+            Some(crate::write_to_branch::BranchWriteKind::Dml(kind)) => Some(kind.verb()),
+            Some(crate::write_to_branch::BranchWriteKind::Merge) => Some("MERGE"),
+            None => None,
+        };
+        assert_eq!(verb, expected, "{sql:?}");
     }
 }
 
