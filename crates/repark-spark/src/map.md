@@ -1996,7 +1996,7 @@ pins: rp-4-fork-repin/C-005, C-006
   outer query carrying Spark's display names (**WO TZ-ASOF-1**, 2026-09-26, cell
   `E-TZ-TIMESTAMP-AS-OF`).
   pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
-- `normalize.rs` — **DELETE-FORMAT-GUARD-1 (2026-10-28):** `dml_target_ident` is `pub(crate)`, so the router's delete-format guard resolves a DML target the way the BUG-001 guard does. No behaviour change.
+- `normalize.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `dml_target_ident` is `pub(crate)`, so the router's delete-format guard resolves a DML target the way the BUG-001 guard does. No behaviour change.
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   the `normalize/statement_guard.rs` re-exports for multi-statement refusal (BUG-010), the MoR
@@ -2660,7 +2660,7 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   without the property — that asymmetry is Spark's, and it is the single thing
   most easily got wrong here.
   pins: ipi-19-56-37-schema-evolution-write/C-002, C-004, C-011
-- `merge.rs` — **DELETE-FORMAT-GUARD-1 (2026-10-28):** `execute_merge` calls `refuse_unreadable_merge_delete_format` next to the encryption check, before the fragment rewrite and before execution, so a merge-on-read MERGE with an explicit or inherited Avro or ORC delete format refuses before any data file is written. pins: ice-delete-format-guard-1/C-003, C-004
+- `merge.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `execute_merge` calls `refuse_unreadable_merge_delete_format` next to the encryption check, before the fragment rewrite and before execution, so a merge-on-read MERGE with an explicit or inherited Avro or ORC delete format refuses before any data file is written. pins: ice-delete-format-guard-1/C-003, C-004
 - `merge.rs` + [`merge/`](merge/map.md) — the `MERGE WITH SCHEMA EVOLUTION`
   pre-parse strip and the `schema_evolution` flag it carries into the lowered
   plan. The star-sentinel rewrite moved to `merge/stars.rs` untouched to keep
