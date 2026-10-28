@@ -9,9 +9,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   newest existing metadata file, as Java's `HadoopTableOperations.refresh` does; the walk stops at
   the first gap, refuses past 10,000 files and stays inside the Java `int` range. C-001 to C-006
   PROVEN with pins (the stale-hint pins red on `321c6095`, green on `749f11a4`); C-007
-  (compressed-codec names) and C-008 (the label re-date) OPEN. `risk_tier: standard`. Branch
+  (compressed-codec names) OPEN, the owner's question; C-008 (the label re-date) PROVEN by ice-v2-label-1 C-054. `risk_tier: standard`. Merged 2026-10-29 as `9ab67d7d`. Branch
   `fix/ice-hadoop-hint-window-1`.
-  pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of
@@ -682,9 +682,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   time-travel/incremental options beside a path, the catalog route for the pinned
   slash-free near-misses, the `file:` spellings Spark reads or refuses (`Wrong FS`
   for an authority, `URISyntaxException` for a relative path), and `v<N>` / hint versions
-  bounded to the Java `int` range. C-001..C-010 PROVEN. `risk_tier: standard`. Branch
+  bounded to the Java `int` range. C-001..C-010 and C-012 PROVEN (C-011 closed by C-012 on the merge of PR #1205). `risk_tier: standard`. Branch
   `fix/u10-df-load-path`.
-  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the

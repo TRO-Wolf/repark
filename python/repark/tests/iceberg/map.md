@@ -61,6 +61,8 @@ pins.
   committed `DELETE` on a `type=hadoop` table reads the newest committed file on the path door
   and matches the catalog; it is red with the walk reverted.
   pins: ice-hadoop-hint-window-1/C-006
+  The facade pin is also cited as the merge fact that closes dfload-1 C-011 (dfload-1 C-012, 2026-10-29, merge `9ab67d7d`); the merge fact is not a pin of this file.
+  pins: dfload-1/C-012
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
