@@ -6,6 +6,8 @@
 
 **Status update, 2026-10-28:** built as PR #1206, awaiting verification. Fix round 1 at `a8ab9364` (the pre-passthrough guards resolve the DML target as the planner does and fail closed); the verifier's findings and the pins are in the ledger.
 
+**Status update, 2026-10-29:** fix round 2 at `1c6e730b` (the branch path classifies the statement from its tokenised head and fails closed; the checks run before a session WAP branch is created; the tag path reads the tokenised head; a missing namespace keeps the planner's not-found text; 21 pins in the guard file). The round-2 verifier's findings and the pins are in the ledger; the card awaits the next verification.
+
 **Grade:** product unit, Opus 5.5 builder lane.
 
 **Severity:** Medium, the audit's rating (AUD-003). A fail-loud gap on a documented surface: the DELETE commits, and the next read fails. No silent corruption or physical data loss was observed.

@@ -132,7 +132,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 141):** `encrypted_table_explain_analyze_insert_refuses`
   now asserts the ruled `EXPLAIN ANALYZE` text, which the seam raises before the ENC-1 refusal;
   the table is unchanged as before. pins: explain-dml-write-1/C-008
-  **ICE-DELETE-FORMAT-GUARD-1 fix round 1 (2026-10-28):** `encrypted_table_case_variant_namespace_delete_refuses` (`DELETE FROM ice.SALES.enc WHERE id = 1` on a keyed table) asserts the ENC-1 refusal; the delete-format guard's fail-open lookup had let it fail as `NamespaceNotFound`. Red on `f1935e81`. pins: ice-delete-format-guard-1/C-015
+  **ICE-DELETE-FORMAT-GUARD-1 fix round 1 (2026-10-28):** `encrypted_table_case_variant_namespace_delete_refuses` (`DELETE FROM ice.SALES.enc WHERE id = 1` on a keyed table) asserts the ENC-1 refusal; the encryption guard's fail-open lookup (`refuse_encrypted_write_target` in `catalog_ops.rs`) had let it fail as `NamespaceNotFound`. Red on `f1935e81`. pins: ice-delete-format-guard-1/C-015
 - `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as
   pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in
   copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the
@@ -1095,6 +1095,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
   TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
   pins: rp-5-fork-repin/C-004
+- `write_to_branch.rs` — **ICE-DELETE-FORMAT-GUARD-1 fix round 2 (2026-10-29):** `write_to_tag_refuses_spark_shaped` runs its tag writes under three prefixes (none, a block comment, a line comment); `a_branch_write_with_an_unclassified_head_refuses` pins `branch_write_dml_kind`'s fail-closed refusal of a head it cannot classify, at the function level (the path is unreachable from SQL today). pins: ice-delete-format-guard-1/C-019, C-022
 - `write_body_carriers.rs` — **WRITE-BODY-CARRIERS-1 build (2026-10-14):** CTAS with
   an INSERT, UPDATE, DELETE or MERGE body refuses `PARSE_SYNTAX_ERROR` 42601 naming the
   body's leading keyword before any write, over the `CREATE TABLE`, `CREATE OR REPLACE

@@ -1,11 +1,11 @@
 # Unit ledger — ICE-POST-PUBLISH-OUTCOME-1 · a committed change reports its own outcome when the session name refresh fails (AUD-002)
 
-**Date:** 2026-10-28 · **Branch:** `fix/ice-post-publish-outcome-1` · **Base:** `321c6095` (`main` at the branch point) · **Model:** builder `claude-opus-5-5` (commits `91243499`, `042fd80f`, `24e0c3c7`, `a8ab9364`); clerk `claude-haiku-5-5` (the records commit) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Date:** 2026-10-28 · **Branch:** `fix/ice-post-publish-outcome-1` · **Base:** `321c6095` (`main` at the branch point) · **Model:** builder `claude-opus-5-5` (commits `91243499`, `042fd80f`, `24e0c3c7`, `a8ab9364` and `1c6e730b`); clerk `claude-haiku-5-5` (the records commit) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
-**Unit pair.** This ledger and [the ICE-DELETE-FORMAT-GUARD-1 ledger](ice-delete-format-guard-1-ledger.md) share one PR and one head (`a8ab9364`, fix round 1 on `24e0c3c7`). This ledger proves AUD-002. The card for this unit, `ice-post-publish-outcome-1-card-2026-10-28.md`, is filed by PR #1204, merged to main at `f7c6cda8`; its status line on this branch reads "built as PR #1206, awaiting verification".
+**Unit pair.** This ledger and [the ICE-DELETE-FORMAT-GUARD-1 ledger](ice-delete-format-guard-1-ledger.md) share one PR and one head (`1c6e730b`, fix round 2 on `b9d83f38`; fix round 1 was `a8ab9364`). This ledger proves AUD-002. The card for this unit, `ice-post-publish-outcome-1-card-2026-10-28.md`, is filed by PR #1204, merged to main at `f7c6cda8`; its status line on this branch reads "built as PR #1206, awaiting verification".
 
 **Why now.** Audit finding AUD-002: after a catalog commit succeeded, a failed session name refresh made the statement fail. The caller saw an error for a change that had happened. The session's name directory also kept its old frozen listing, so the committed table was invisible to the next statement that named it.
 
@@ -36,14 +36,22 @@ VERDICT (2026-10-28): 8 clauses. 4 PROVEN (C-001 to C-004, each with a committed
 
 VERDICT (2026-10-28, after fix round 1 at `a8ab9364`): 8 clauses, unchanged: 4 PROVEN (C-001 to C-004), 4 OPEN (C-005 to C-008).
 
+VERDICT (2026-10-29, verification round 2, head `1c6e730b`): 8 clauses, unchanged: 4 PROVEN (C-001 to C-004), 4 OPEN (C-005 to C-008).
+
 ## Verification round 1 (2026-10-28, at `f1935e81`; fix round 1 at `a8ab9364`)
 
 - Opus 5.5 verifier: FAIL on V-1 to V-6. Muse MAX critic: FAIL on F1 to F4. V-1 to V-3 and F1 to F4 concern the delete-format guard and are recorded in the ICE-DELETE-FORMAT-GUARD-1 ledger. V-4 and V-5 concern the delete-format records only. V-6 names both ledgers' stale `#1204 open` and `24e0c3c7` head lines, corrected here.
 - None of V-1 to V-6 or F1 to F4 names a defect in the AUD-002 behaviour, so C-001 to C-004 stand as recorded.
 - Fix round 1 (`a8ab9364`) changes the guard seats only (the resolver, and the delete-format, encryption and BUG-001 guards); this ledger's clauses are unchanged.
 
+## Verification round 2 (2026-10-29, at `b9d83f38`; fix round 2 at `1c6e730b`)
+
+- Opus 5.5 verifier: FAIL on R2-V1 to R2-V3. None of the three names the AUD-002 behaviour: R2-V1 and R2-V2 concern the branch path and the target resolver, and R2-V3 concerns the native-door map row. They are recorded in the ICE-DELETE-FORMAT-GUARD-1 ledger's round-2 section. Muse MAX critic: PASS, with F1 and F2, both on the delete-format guard and recorded there.
+- Fix round 2 changes no clause of this unit. The head is shared with ICE-DELETE-FORMAT-GUARD-1. The builder's round-4 gate table, copied and not re-run by the clerk, includes `cargo test -p repark-spark` 3097 passed, which runs the post-publish pins.
+
 ## Records
 
+- Shared head: `1c6e730b` (fix round 2, the squash of the builder's round-4 commits on `b9d83f38`) changes the delete-format guard seats only; this ledger's clauses are unchanged.
 - Commits: `91243499` (the committed outcome for the Spark-door refresh, with the CTAS pin), `042fd80f` (the round-1 re-route, superseded by `24e0c3c7`), `24e0c3c7` (the round-2 head), `a8ab9364` (fix round 1, the guard seats only; this ledger's clauses are unchanged). The final behaviour is the squash of this branch; the round-1 commit body describes a re-route the head no longer has.
 - The release-notes line for this unit is in `task/roadmap/mid-term/v1-5-6-release-notes-draft.md` under Behaviour changes.
 - The registry row ICE-POST-PUBLISH-OUTCOME-1 is in `docs/spark-sql-iceberg-parity.md`, in the DDL section beside RTAS-OPS-1.
