@@ -18,6 +18,7 @@ use crate::write::merge::{
     resolve_affected_data_files,
 };
 use crate::write::position_delete::PositionDeletePair;
+use crate::write::position_delete_batch::position_delete_batch_rows;
 use crate::write::session_write_conf::resolve_empty_session_write;
 
 #[allow(clippy::too_many_arguments)]
@@ -31,6 +32,7 @@ pub(super) async fn commit_identity_update_cow(
     scope: &CommitScope,
     branch: Option<&str>,
 ) -> Result<()> {
+    let batch_rows = position_delete_batch_rows(table.metadata().properties())?;
     let (pairs, data_batches) = rewrite;
     let mut affected: Vec<String> = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -39,7 +41,7 @@ pub(super) async fn commit_identity_update_cow(
             affected.push(path.to_string());
         }
     }
-    let ident_table = register_identity_table(ctx, &pairs)?;
+    let ident_table = register_identity_table(ctx, &pairs, batch_rows)?;
     let rewrite_name =
         register_affected_rewrite_target(ctx, table, snapshot_id, write_schema, &affected)?;
     let new_table = register_update_values_table(ctx, data_batches)?;
@@ -108,6 +110,7 @@ pub(super) async fn commit_identity_cow(
     scope: &CommitScope,
     branch: Option<&str>,
 ) -> Result<()> {
+    let batch_rows = position_delete_batch_rows(table.metadata().properties())?;
     let mut affected: Vec<String> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for (path, _) in pairs {
@@ -115,7 +118,7 @@ pub(super) async fn commit_identity_cow(
             affected.push(path.to_string());
         }
     }
-    let ident_table = register_identity_table(ctx, pairs)?;
+    let ident_table = register_identity_table(ctx, pairs, batch_rows)?;
     let rewrite_name =
         register_affected_rewrite_target(ctx, table, snapshot_id, write_schema, &affected)?;
     let rewrite_sql = survivor_sql(
