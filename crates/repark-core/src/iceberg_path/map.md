@@ -62,6 +62,36 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   `hinted_missing_file_keeps_its_error_when_newer_files_exist`,
   `no_hint_resolves_the_latest_v_form_by_listing`).
   pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005
+  The gzip-name battery (ICE-HADOOP-GZIP-METADATA-1, 2026-10-29) is in the same module. The
+  compressed names `v<N>.gz.metadata.json` and `v<N>.metadata.json.gz` join the plain name for
+  the hinted version, the walk and the no-hint listing, probed in Java's order (plain, gz
+  infix, legacy). The walk and listing under the three names (`mixed_codec_stale_hint_walks_to_
+  the_newest_gzip_file`, `walk_crosses_from_a_gzip_name_to_a_plain_name`,
+  `gzip_walk_stops_at_the_first_missing_version`, `no_hint_listing_picks_the_newest_across_plain_
+  and_gzip_names`, `compressed_names_parse_to_their_version`,
+  `gzip_hint_walk_beyond_the_limit_refuses_naming_the_hinted_file`) are C-001. The legacy name
+  (`stale_hint_walks_to_a_legacy_gzip_name`, `current_hint_selects_a_legacy_gzip_name`,
+  `no_hint_listing_picks_a_legacy_gzip_newest`) and the name order
+  (`hint_prefers_the_gz_infix_name_over_the_legacy_name`,
+  `listing_prefers_plain_then_gz_infix_then_legacy_for_one_version`,
+  `walk_prefers_the_plain_name_of_a_version_under_two_names`) are C-004. The gzip current hints
+  (`mixed_codec_current_hint_selects_the_gzip_file`, `gzip_table_current_hint_selects_the_gzip_file`)
+  and the end-to-end `gzip_current_hint_after_delete_reads_the_survivors` are C-003; the explicit
+  gzip-named path `explicit_gzip_metadata_path_reads_the_rows` is the step-0 proof that the fork
+  reader decompresses gzip by its magic bytes. The AUD-007 end-to-end pin
+  `mixed_codec_stale_hint_after_delete_reads_the_survivors` is C-002. The refusal
+  `hinted_missing_version_refuses_when_only_newer_gzip_files_exist` is C-005, next to the
+  existing refusal pins `hinted_metadata_file_must_exist` (C-006, the cleanup shape's probe
+  artefact) and `hinted_missing_file_keeps_its_error_when_newer_files_exist` (C-005). The
+  unchanged behaviour (C-007) is the pre-existing hint-walk battery above and the `tests.rs`
+  picker battery, both green and unchanged.
+  pins: ice-hadoop-gzip-metadata-1/C-001
+  pins: ice-hadoop-gzip-metadata-1/C-002
+  pins: ice-hadoop-gzip-metadata-1/C-003
+  pins: ice-hadoop-gzip-metadata-1/C-004
+  pins: ice-hadoop-gzip-metadata-1/C-005
+  pins: ice-hadoop-gzip-metadata-1/C-006
+  pins: ice-hadoop-gzip-metadata-1/C-007
   The merge facts of ICE-HADOOP-HINT-WINDOW-1 are cited here so the grammar gate counts them: the label re-date (ice-hadoop-hint-window-1 C-008, 2026-10-28, merge `9ab67d7d`) and the option-1 walk's closure of ice-integrity-pins-1 C-015, C-029 and C-071 (C-072). This file pins none of them.
   pins: ice-hadoop-hint-window-1/C-008
   pins: ice-integrity-pins-1/C-072
