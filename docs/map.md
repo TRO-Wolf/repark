@@ -24,6 +24,8 @@ repo.
   by an independent reviewer and never edited after filing; the orchestrator reproduces each
   finding before dispatch. The v2 label audit of 2026-10-28 is
   [audits/iceberg-v2-label-independent-audit-2026-10-28.md](audits/iceberg-v2-label-independent-audit-2026-10-28.md).
+  The second audit of 2026-10-29 is
+  [audits/iceberg-v2-label-independent-reaudit-2026-10-29.md](audits/iceberg-v2-label-independent-reaudit-2026-10-29.md).
 - [cutover/](cutover/map.md) — **the production cutover record** (inventory, acceptance checks,
   rollback, canary plan, the owner's rulings of 2026-09-04). Filed by the orchestrating session;
   every measurement it cites lives in the divergence registry.
