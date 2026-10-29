@@ -1295,7 +1295,7 @@ completion observes flushed output before any later flush. These are local funct
 module imports and live engine/AWS behavior are outside their scope. pins: ice-integrity-pins-1/C-065
 
 [test_cross_read_gate.py](test_cross_read_gate.py) pins the narrowed cross-read gate
-without Spark, AWS or the native engine (2026-10-28): the audit's connection-failure
+without Spark, AWS or the native engine (2026-10-29): the audit's connection-failure
 probe on a nanosecond table is rejected with the class in the message, the recorded
 timestamp_ns and timestamptz_ns conditions (first-line match, stack text after) stay
 accepted, a second-line-only condition, an authorization failure and a variant condition

@@ -8498,7 +8498,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   skipped (registry ICE-TSNS-SQL-1-R-002 evidence). No expectation is typed
   per table: the rule is Spark's rows equal RePark's rows.
   pins: ice-spark-cross-read-1/C-001
-  CROSS-READ-GATE-CLASS-1 (2026-10-28): the gate expects SPARK-CANNOT-READ only
+  CROSS-READ-GATE-CLASS-1 (2026-10-29): the gate expects SPARK-CANNOT-READ only
   for the recorded unsupported-type condition on a nanosecond table; every other
   Spark failure is rejected at any precision.
 - [test_acceptance_cross_read_local.py](parity/test_acceptance_cross_read_local.py) —
