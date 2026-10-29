@@ -11,6 +11,7 @@ pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-
 
 from __future__ import annotations
 
+import gzip
 import shutil
 from pathlib import Path
 
@@ -293,6 +294,37 @@ def test_load_stale_hint_after_delete_reads_the_newest_metadata_file(tmp_path: P
     assert sorted(path_rows.column("id").to_pylist()) == [2, 3]
     catalog_rows = spark.sql("SELECT id FROM hinthd.ns.t").to_arrow()
     assert sorted(catalog_rows.column("id").to_pylist()) == [2, 3]
+
+
+def test_load_stale_hint_after_delete_reads_the_gzip_named_newest_file(tmp_path: Path) -> None:
+    """A stale hint reads the survivors when the newest metadata file has Java's gzip name.
+
+    Java's hadoop writer names a metadata file ``v<N>.gz.metadata.json`` under the gzip
+    codec; the path read walks past the hint through that name as Iceberg's
+    ``HadoopTableOperations.refresh`` does, so the deleted row stays deleted.
+    """
+    spark = ReparkSession.builder.appName("pytest-iceberg-load-path-gzip-hint").getOrCreate()
+    warehouse = tmp_path / "gziphintwh"
+    spark.conf.set("spark.sql.catalog.gziphd.type", "hadoop")
+    spark.conf.set("spark.sql.catalog.gziphd.warehouse", str(warehouse))
+    spark.sql("CREATE NAMESPACE gziphd.ns").collect()
+    spark.sql(
+        "CREATE TABLE gziphd.ns.t (id INT) USING iceberg TBLPROPERTIES ('format-version'='2')"
+    ).collect()
+    spark.sql("INSERT INTO gziphd.ns.t VALUES (1), (2), (3)").collect()
+    metadata = warehouse / "ns" / "t" / "metadata"
+    hint = metadata / "version-hint.text"
+    previous_hint = hint.read_text()
+    spark.sql("DELETE FROM gziphd.ns.t WHERE id = 1").collect()
+    newest = int(hint.read_text().strip())
+    assert newest == int(previous_hint.strip()) + 1
+    plain = metadata / f"v{newest}.metadata.json"
+    (metadata / f"v{newest}.gz.metadata.json").write_bytes(gzip.compress(plain.read_bytes()))
+    plain.unlink()
+    hint.write_text(previous_hint)
+    path_rows = spark.read.format("iceberg").load(str(metadata.parent)).to_arrow()
+    assert path_rows.schema.field("id").type == pa.int32()
+    assert sorted(path_rows.column("id").to_pylist()) == [2, 3]
 
 
 def test_load_two_part_identifier_keeps_catalog_route(

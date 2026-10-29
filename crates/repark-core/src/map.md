@@ -345,7 +345,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   is not the last word: `newest_from_hint` probes `v<N+1>`, `v<N+2>`, ... and answers the last
   existing one, stopping at the first gap and at the Java `int` bound, and refuses past
   `HINT_WALK_LIMIT` (10,000) files; the missing-hinted-file error and the listing fallbacks are
-  unchanged, and compressed-codec names are not probed. Lower-case `file://<authority>` and
+  unchanged. From 2026-10-29 (ICE-HADOOP-GZIP-METADATA-1, PR #1218) the hinted version, the walk
+  and the listing also probe Java's compressed names `v<N>.gz.metadata.json` and
+  `v<N>.metadata.json.gz`, in Java's order (`hadoop_metadata_file`, `metadata_file_order`), and
+  the walk-limit refusal names the hinted file found. Lower-case `file://<authority>` and
   `file:<relative>` arguments
   refuse Spark's texts before any I/O, and `file:/abs`-style spellings read as
   `file:///abs`. A location with no resolvable metadata raises `Error::Analysis` naming the
