@@ -11,14 +11,17 @@ A. **Clause rows.** A clause table is any markdown table whose data rows begin w
    row really carries the closing question, and whether a quantified clause is enumerated, are
    the Scope Auditor's readings, not faked by a regex.
 
-B. **Pin binding.** A test cites a clause with `pins: <unit>/C-NNN[, C-MMM...]` where `<unit>`
-   is the ledger's filename without `-ledger.md` (and, in the archive, without its
-   `yyyy-mm-dd-` prefix). Every `PROVEN` clause in a staging ledger must be cited at least
-   once — the measured floor is seeded per ledger in EXCEPTIONS and only ratchets down — and
-   every citation must resolve to a clause that exists in any bin (`staging/`, `completed/`,
-   the archive). A staging ledger whose first 40 lines carry a `**Path:**` field valued
-   `READING` outside a code span is a reading unit: rule B does not apply to its
-   clauses, rules A and C still do.
+B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` in its unit's
+   sidecar `<unit>-pins.md` beside the ledgers (in any bin; in the archive with its
+   `yyyy-mm-dd-` prefix), where `<unit>` is the ledger's filename without `-ledger.md` and
+   without the archive prefix, and an entry is `<path>` or `<path>::<name>`: the path is a
+   tracked file and the name a whole-word token in it. A `pins: <unit>/C-NNN[, C-MMM...]`
+   citation in a tracked file under CITATION_ROOTS also binds. Every `PROVEN` clause in a
+   staging ledger must be bound at least once — the measured floor is seeded per ledger in
+   EXCEPTIONS and only ratchets down — and every binding must resolve to a clause that exists
+   in any bin (`staging/`, `completed/`, the archive). A staging ledger whose first 40 lines
+   carry a `**Path:**` field valued `READING` outside a code span is a reading unit: rule B
+   does not apply to its clauses, rules A and C still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
@@ -45,6 +48,7 @@ STAGING = "task/ledgers/staging"
 COMPLETED = "task/ledgers/completed"
 ARCHIVE = "task/ledgers/archive"
 LEDGER_SUFFIX = "-ledger.md"
+PINS_SUFFIX = "-pins.md"
 # Where tests live; `pins:` citations are read from every tracked file here.
 CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 
@@ -65,6 +69,8 @@ ARCHIVE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 FENCE = re.compile(r"^\s*(```|~~~)")
 READING_FIELD = re.compile(r"\*\*Path:\*\*\s*([A-Za-z0-9_-]+)")
 CODE_SPAN = re.compile(r"`[^`]*`")
+BINDING_LINE = re.compile(r"^(C-\d{3}):\s*(\S.*?)\s*$")
+BINDING_ENTRY = re.compile(r"^([^\s:,]+)(?:::([A-Za-z_][A-Za-z0-9_]*))?$")
 HEADER_LINES = 40
 CATEGORIES: tuple[str, ...] = tuple(f"AT-{n}" for n in range(1, 11))
 SEVERITIES: frozenset[str] = frozenset({"S0", "S1", "S2", "S3"})
@@ -79,9 +85,9 @@ def tracked_paths(repo: Path) -> list[str]:
     return sorted(entry for entry in completed.stdout.split("\0") if entry)
 
 
-def unit_of(path: str) -> str:
-    """The citation key of a ledger: its basename without suffix and archive date."""
-    name = Path(path).name[: -len(LEDGER_SUFFIX)]
+def unit_of(path: str, suffix: str = LEDGER_SUFFIX) -> str:
+    """The citation key of a ledger or sidecar: its basename without suffix and archive date."""
+    name = Path(path).name[: -len(suffix)]
     if path.startswith(ARCHIVE + "/"):
         name = ARCHIVE_PREFIX.sub("", name)
     return name
@@ -161,6 +167,73 @@ def citations(repo: Path, tracked: list[str]) -> dict[tuple[str, str], list[str]
             for clause_id in re.findall(r"C-\d{3}", match.group(2)):
                 found.setdefault((unit, clause_id), []).append(path)
     return found
+
+
+def _token_in(text: str, name: str) -> bool:
+    """Whether `name` occurs in `text` as a whole-word token."""
+    return re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text) is not None
+
+
+def _entry_findings(
+    repo: Path, tracked: set[str], where: str, clause_id: str, entries: str
+) -> list[str]:
+    """Every defect of one binding line's entries: shape, tracked path, name token."""
+    findings: list[str] = []
+    texts: dict[str, str] = {}
+    for raw in entries.split(","):
+        entry = raw.strip()
+        match = BINDING_ENTRY.match(entry)
+        if match is None:
+            findings.append(f"{where}: {clause_id} entry `{entry}` is not <path> or <path>::<name>")
+            continue
+        path, name = match.group(1), match.group(2)
+        if path not in tracked:
+            findings.append(f"{where}: {clause_id} binds {path}, which is not a tracked file")
+            continue
+        if name is None:
+            continue
+        if path not in texts:
+            try:
+                texts[path] = (repo / path).read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                texts[path] = ""
+        if not _token_in(texts[path], name):
+            findings.append(f"{where}: {clause_id} names `{name}`, which is not a token in {path}")
+    return findings
+
+
+def bindings(
+    repo: Path, tracked: list[str]
+) -> tuple[dict[tuple[str, str], list[str]], list[tuple[str, str, str]], list[str]]:
+    """Sidecar bindings: (unit, clause id) -> sidecar lines, every line for the clause check,
+    and the shape findings."""
+    found: dict[tuple[str, str], list[str]] = {}
+    lines: list[tuple[str, str, str]] = []
+    findings: list[str] = []
+    tracked_set = set(tracked)
+    bins = (STAGING + "/", COMPLETED + "/", ARCHIVE + "/")
+    for path in tracked:
+        if not path.startswith(bins) or not path.endswith(PINS_SUFFIX):
+            continue
+        unit = unit_of(path, PINS_SUFFIX)
+        seen: set[str] = set()
+        text = (repo / path).read_text(encoding="utf-8")
+        for number, line in enumerate(text.splitlines(), start=1):
+            if not line.strip() or line.startswith("#"):
+                continue
+            where = f"{path}:{number}"
+            match = BINDING_LINE.match(line)
+            if match is None:
+                findings.append(f"{where}: not a binding line (C-NNN: <path>[::<name>], ...)")
+                continue
+            clause_id = match.group(1)
+            if clause_id in seen:
+                findings.append(f"{where}: {clause_id} is bound twice in this sidecar")
+            seen.add(clause_id)
+            findings.extend(_entry_findings(repo, tracked_set, where, clause_id, match.group(2)))
+            found.setdefault((unit, clause_id), []).append(where)
+            lines.append((where, unit, clause_id))
+    return found, lines, findings
 
 
 def _block_lines(text: str, marker: str) -> list[list[str]]:
@@ -312,6 +385,13 @@ def run(repo: Path) -> int:
     for (unit, clause_id), files in sorted(cited.items()):
         if (unit, clause_id) not in known:
             findings.append(f"{files[0]}: `pins: {unit}/{clause_id}` names no clause in any ledger")
+    bound, binding_lines, binding_findings = bindings(repo, tracked)
+    findings.extend(binding_findings)
+    for where, unit, clause_id in binding_lines:
+        if (unit, clause_id) not in known:
+            findings.append(f"{where}: {clause_id} names no clause of {unit} in any ledger")
+    for key, places in bound.items():
+        cited.setdefault(key, []).extend(places)
     for path, proven_ids in sorted(proven.items()):
         unit = unit_of(path)
         unpinned = [cid for cid in proven_ids if (unit, cid) not in cited]
