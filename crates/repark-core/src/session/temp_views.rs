@@ -11,6 +11,7 @@ use datafusion::physical_expr::PhysicalSortExpr;
 use datafusion::physical_plan::ExecutionPlanProperties;
 use datafusion::prelude::DataFrame;
 use datafusion::sql::TableReference;
+use repark_common::names::NameRule;
 use repark_common::{Error, Result};
 
 use super::ReparkSession;
@@ -252,7 +253,54 @@ impl ReparkSession {
     pub(super) fn temp_view_ref(&self, name: &str) -> Result<TableReference> {
         let reference = crate::temp_view::temp_view_ref(&self.temp_view_home, name)?;
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        Ok(reference)
+        let rule = self.temp_view_rule();
+        let reference = match (rule, written_last_segment(name)) {
+            (Some(NameRule::Exact), Some(table)) => self.home_table_ref(table),
+            _ => reference,
+        };
+        self.held_temp_view_ref(reference, rule)
+    }
+
+    fn temp_view_rule(&self) -> Option<NameRule> {
+        let state = self.context().state_ref();
+        let guard = state.read();
+        self.dialect.temp_view_name_rule(guard.config().options())
+    }
+
+    fn home_table_ref(&self, table: String) -> TableReference {
+        TableReference::full(
+            self.temp_view_home.catalog.clone(),
+            self.temp_view_home.schema.clone(),
+            table,
+        )
+    }
+
+    fn held_temp_view_ref(
+        &self,
+        reference: TableReference,
+        rule: Option<NameRule>,
+    ) -> Result<TableReference> {
+        if rule != Some(NameRule::IgnoreCase)
+            || self
+                .context()
+                .table_exist(reference.clone())
+                .map_err(engine_err)?
+        {
+            return Ok(reference);
+        }
+        Ok(self
+            .case_twin(reference.table())
+            .map_or(reference, |twin| self.home_table_ref(twin)))
+    }
+
+    fn case_twin(&self, table: &str) -> Option<String> {
+        let schema = self.temp_view_home.provider.as_ref()?;
+        let mut twins = schema
+            .table_names()
+            .into_iter()
+            .filter(|held| held.eq_ignore_ascii_case(table));
+        let twin = twins.next()?;
+        twins.next().is_none().then_some(twin)
     }
 
     /// Build a home reference from an already-parsed segment after checking provider identity.
@@ -262,11 +310,13 @@ impl ReparkSession {
         quoted: bool,
     ) -> Result<TableReference> {
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        Ok(crate::temp_view::temp_view_ref_from_segment(
+        let rule = self.temp_view_rule();
+        let reference = crate::temp_view::temp_view_ref_from_segment(
             &self.temp_view_home,
             segment,
-            quoted,
-        ))
+            quoted || rule == Some(NameRule::Exact),
+        );
+        self.held_temp_view_ref(reference, rule)
     }
 
     pub(super) fn temp_view_ref_from_segment_exact(&self, segment: &str) -> Result<TableReference> {
@@ -374,6 +424,15 @@ impl crate::dialect::TempViewSession for ReparkSession {
         ReparkSession::create_or_replace_temp_view_from(self, name, frame)
     }
 
+    fn temp_view_target_ref(&self, name: &str) -> Result<Vec<String>> {
+        let reference = self.temp_view_ref(name)?;
+        Ok(vec![
+            reference.catalog().unwrap_or_default().to_string(),
+            reference.schema().unwrap_or_default().to_string(),
+            reference.table().to_string(),
+        ])
+    }
+
     fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
         ReparkSession::resolve_temp_view_home_ref(self, name)
     }
@@ -389,6 +448,12 @@ impl crate::dialect::TempViewSession for ReparkSession {
     fn drop_temp_view(&self, name: &str) -> Result<bool> {
         ReparkSession::drop_temp_view(self, name)
     }
+}
+
+fn written_last_segment(name: &str) -> Option<String> {
+    crate::parse_table_identifier_segments(name)
+        .ok()
+        .and_then(|mut parts| parts.pop())
 }
 
 const ORDERED_CACHE_CONCAT_LIMIT_BYTES: u64 = 1 << 30;

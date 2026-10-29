@@ -104,5 +104,15 @@ pub(crate) fn temp_view_ref(home: &TempViewHome, name: &str) -> Result<TableRefe
     }
 }
 
+pub(crate) fn legacy_temp_view_segment(name: &str) -> String {
+    match name
+        .strip_prefix('"')
+        .and_then(|rest| rest.strip_suffix('"'))
+    {
+        Some(quoted) => quoted.replace("\"\"", "\""),
+        None => name.to_ascii_lowercase(),
+    }
+}
+
 #[cfg(test)]
 mod tests;

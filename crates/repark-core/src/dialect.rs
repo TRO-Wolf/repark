@@ -43,6 +43,12 @@ pub trait TempViewSession: Send + Sync {
     fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>>;
 
     fn drop_temp_view(&self, name: &str) -> repark_common::Result<bool>;
+
+    fn temp_view_target_ref(&self, name: &str) -> repark_common::Result<Vec<String>> {
+        let mut home = self.temp_view_home()?;
+        home.push(crate::temp_view::legacy_temp_view_segment(name));
+        Ok(home)
+    }
 }
 
 impl<'a> EngineContext<'a> {
@@ -111,6 +117,14 @@ pub trait SqlDialect: Send + Sync {
     }
 
     fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
+        None
+    }
+
+    fn temp_view_name_rule(
+        &self,
+        options: &datafusion::common::config::ConfigOptions,
+    ) -> Option<repark_common::names::NameRule> {
+        let _ = options;
         None
     }
 
