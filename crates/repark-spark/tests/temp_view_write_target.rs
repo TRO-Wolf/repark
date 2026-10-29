@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::array::AsArray;
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Int64Type};
 use datafusion::arrow::record_batch::RecordBatch;
-use repark_core::ReparkSession;
+use repark_core::{OverwriteIntent, ReparkSession};
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
 
@@ -346,5 +347,43 @@ async fn a_qualified_table_name_writes_the_table_with_the_view_in_scope() {
     }
     for route in ROW_LEVEL {
         assert_writes_table(MERGE_ON_READ, Some("t"), route, QUALIFIED).await;
+    }
+}
+
+#[tokio::test]
+async fn a_view_name_with_write_options_still_holds_the_table() {
+    let options = HashMap::from([(
+        "snapshot-property.run_id".to_string(),
+        "view-target".to_string(),
+    )]);
+    for route in EVERY_ROUTE {
+        let seeded = seeded(COPY_ON_WRITE, Some("t")).await;
+        let sql = statement(route, "t");
+        let outcome = match seeded
+            .session
+            .sql_with_write_options(&sql, &options, OverwriteIntent::Session, false)
+            .await
+        {
+            Ok(frame) => frame
+                .collect()
+                .await
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
+            Err(error) => Err(error.to_string()),
+        };
+        assert!(
+            outcome.is_err(),
+            "`{sql}` with write options must refuse while a temporary view holds the name"
+        );
+        assert_eq!(
+            ids(&seeded.session, TABLE_READ).await,
+            SEEDED,
+            "`{sql}` with write options must leave the table unchanged"
+        );
+        assert_eq!(
+            ids(&seeded.session, "SELECT id FROM t").await,
+            VIEW_ROW,
+            "the view must still read its own row after `{sql}` with write options"
+        );
     }
 }

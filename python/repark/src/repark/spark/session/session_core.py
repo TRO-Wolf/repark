@@ -315,7 +315,7 @@ class ReparkSession:
         raw_table = query[name_start:name_end]
         rest = query[name_end:]
         try:
-            qualified = self._qualify_sql_table_ref(raw_table, prefer_temp_view=False)
+            qualified = self._qualify_sql_table_ref(raw_table, prefer_temp_view=True)
         except Exception:
             # Invalid identifier — leave the statement unchanged so the engine/plan error wins.
             return query
@@ -374,7 +374,7 @@ class ReparkSession:
         if not _update_rest_has_set_clause(rest):
             return query
         try:
-            qualified = self._qualify_sql_table_ref(raw_table, prefer_temp_view=False)
+            qualified = self._qualify_sql_table_ref(raw_table, prefer_temp_view=True)
         except Exception:
             return query
         rest_expanded = self._expand_from_join_table_refs_in_sql(rest)
@@ -400,7 +400,7 @@ class ReparkSession:
         raw_table = query[name_start:name_end]
         rest = query[name_end:]
         try:
-            qualified = self._qualify_sql_table_ref(raw_table, prefer_temp_view=False)
+            qualified = self._qualify_sql_table_ref(raw_table, prefer_temp_view=True)
         except Exception:
             return query
         rest_expanded = self._expand_from_join_table_refs_in_sql(rest)
@@ -452,7 +452,7 @@ class ReparkSession:
         if target_name is None:
             return query
         try:
-            target_qualified = self._qualify_sql_table_ref(target_name, prefer_temp_view=False)
+            target_qualified = self._qualify_sql_table_ref(target_name, prefer_temp_view=True)
             if source_name is None:
                 source_qualified = source_blob
             elif source_name.startswith("("):
