@@ -3,9 +3,9 @@
 **Date:** 2026-10-28 · **Branch:** `chore/rp-61-posdel-format-repin` · **Base:** `3ce17f73` (`main` after #1206) · **Model:** builder `claude-opus-5-5` (commits `b4065f88`, `20ee9ef1` and `0acb6ed9`); clerk `claude-haiku-5-5` (the records commits) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
-**Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
+**Retired:** this ledger moved to `../completed/` in the post-merge records commit of 2026-10-29, after PR #1209 merged as `6ec819ef`.
 
-**Why now.** The fork fix is F-POSDEL-FORMAT-READ-1, fork PR `#375`, squash `56aa8913f3d1517c82e85394911b3cfc0c0d74ff`, merged 2026-10-28 on the owner's word. With that pin the interim guard of ICE-DELETE-FORMAT-GUARD-1 is wrong: a position-delete file inherits the data format again, as its card says. Card: [the RP-61 card](../../roadmap/mid-term/rp-61-delete-format-revert-card-2026-10-28.md). Guard ledger: [ice-delete-format-guard-1](ice-delete-format-guard-1-ledger.md), whose C-008 this unit closes.
+**Why now.** The fork fix is F-POSDEL-FORMAT-READ-1, fork PR `#375`, squash `56aa8913f3d1517c82e85394911b3cfc0c0d74ff`, merged 2026-10-28 on the owner's word. With that pin the interim guard of ICE-DELETE-FORMAT-GUARD-1 is wrong: a position-delete file inherits the data format again, as its card says. Card: [the RP-61 card](../../roadmap/mid-term/rp-61-delete-format-revert-card-2026-10-28.md). Guard ledger: [ice-delete-format-guard-1](../staging/ice-delete-format-guard-1-ledger.md), whose C-008 this unit closes.
 
 **Lock.** `make bump-fork-pin` produced two duplicate-edge moves outside the fork (`tempfile` `getrandom` 0.3.4 to 0.4.3; `twox-hash` `rand` 0.9.5 to 0.10.2). That lock was not kept. The lock was restored and only the six fork source lines were rewritten, the RP-60 route (C-002). The orchestrator accepted this route on 2026-10-28.
 
@@ -32,10 +32,13 @@
 | C-015 | The guard's lifted residuals. The insert-only MERGE under a session WAP branch (ICE-DELETE-FORMAT-GUARD-1 C-029) is pinned green by `merge_under_a_session_wap_branch_creates_the_branch_and_commits_on_it`. The plain nested-leaf `UPDATE` (C-009 of that ledger) is not pinned by this unit. | The test named above; no pin for the plain nested-leaf `UPDATE`. | OPEN | Closing question: is a pin for the plain nested-leaf `UPDATE` on an inherited Avro table charted, or is the residual declined? |
 | C-016 | RP-62 repins the fork to `935cc55c` (fork PR `#377`, F-EQDEL-DROPPED-KEY-1). This unit stays on `56aa8913`. | The fork-sync pin history has no row for `935cc55c`; card `rp-62-eqdel-repin-card-2026-10-28.md`. | OPEN | Closing question: does RP-62 merge with its own red-first pin? |
 | C-017 | The native door (`repark.sql()`) fork-route BETWEEN DELETE, scalar DELETE and BETWEEN UPDATE on an inherited Avro or ORC table, and on an explicit Avro delete format, write their position-delete file in the data format and read back on this pin. Native MERGE on an inherited Avro or ORC table matches the Parquet outcome on this pin. | The Opus 5.5 verifier's measurement at `67dcaed5` for the three measured shapes, and the Muse MAX critic's measurement of native MERGE on the same head (verification round 1 below), copied, not re-run by the clerk; the NATIVE-DOOR-DELETE-FORMAT-1 card's Measured line. | OPEN | The three shapes were unreadable on the old pin `ea0b7741` and read back on this one. The row stays OPEN for want of a committed pin: the ledger grammar (rule B) requires a `pins:` citation for a PROVEN clause, and no committed native-door test covers these shapes or native MERGE. Closing question: does a native-door pin for the measured shapes (red on `ea0b7741`, green on `56aa8913`) get charted? A later unit's work. |
+| C-018 | The unit merged on 2026-10-29 as PR #1209, squash `6ec819ef`, with 27 checks green on its final run, after the union of PASS at `67dcaed5` (C-014). | `gh pr view 1209 --json mergeCommit`, copied from the brief; the clerk ran no `gh`. | PROVEN | pins: `6ec819ef` (the merge commit on main, PR #1209). The citation the grammar gate counts is in the tests map row for `delete_format_guard.rs` and in this unit's completed map pins line, cited there so the gate counts it; this clause measures nothing itself. |
 
 VERDICT (2026-10-28): 17 clauses. 13 PROVEN (C-001 to C-013), 4 OPEN (C-014 the verification, C-015 the nested-leaf UPDATE residual, C-016 RP-62, C-017 the native door).
 
 VERDICT (2026-10-28, verification round 1 at `67dcaed5`, the Opus 5.5 verifier's PASS and the Muse MAX critic's PASS): 17 clauses. 14 PROVEN (C-001 to C-014), 3 OPEN (C-015 the nested-leaf UPDATE residual, C-016 RP-62, C-017 the native-door pin for the measured shapes).
+
+VERDICT (2026-10-29, merge): 18 clauses. 15 PROVEN (C-001 to C-014 and C-018), 3 OPEN (C-015 the nested-leaf UPDATE residual, C-016 RP-62, C-017 the native door).
 
 ## Verification round 1 (2026-10-28, at `67dcaed5`)
 
