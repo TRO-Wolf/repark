@@ -110,6 +110,8 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **RePark reads Avro and ORC position-delete files through the fork's own readers (RP-61, fork F-POSDEL-FORMAT-READ-1 `#375`).** The fork's position-delete and equality-delete loaders open Avro and ORC files with their own readers, and an equality key that the current schema no longer has refuses, naming the file and the field id. The fork pin moves to `56aa8913`.
 
+- **RePark reads a dropped equality-delete key on Parquet data files (RP-62, fork F-EQDEL-DROPPED-KEY-1 `#377`).** An equality delete whose key column a later `ALTER TABLE … DROP COLUMN` removed used to fail the read with `field not found`; on Parquet data files the surviving rows now read back through the Spark door and the native door, including after the column is re-added. Avro and ORC data files still refuse the read with an error that names the data file (F-EQDEL-DROPPED-KEY-2). The fork pin moves to `935cc55c`.
+
 - **The hadoop path read answers the newest committed metadata file past a stale
   `version-hint.text` (ICE-HADOOP-HINT-WINDOW-1, PR #1205).** It answered the hinted version, so a
   row a committed `DELETE` had removed could read back; a walk past 10,000 metadata files refuses
