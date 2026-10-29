@@ -14,6 +14,9 @@ use crate::{ReparkSession, engine_err, iceberg_err};
 
 const HINT_WALK_LIMIT: u64 = 10_000;
 
+const HADOOP_METADATA_SUFFIXES: [&str; 3] =
+    [".metadata.json", ".gz.metadata.json", ".metadata.json.gz"];
+
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
     pub async fn read_iceberg_path(&self, path: &str) -> Result<DataFrame> {
@@ -102,12 +105,13 @@ async fn resolve_metadata_location(file_io: &FileIO, location: &str, path: &str)
     if file_io.exists(&hint_location).await.map_err(iceberg_err)?
         && let Some(version) = read_version_hint(file_io, &hint_location).await?
     {
-        let file_name = format!("v{version}.metadata.json");
-        let hinted = format!("{location}/metadata/{file_name}");
-        if file_io.exists(&hinted).await.map_err(iceberg_err)? {
-            return newest_from_hint(file_io, location, version, hinted, path).await;
-        }
-        return Err(hinted_metadata_missing_error(path, &file_name));
+        let Some(hinted) = hadoop_metadata_file(file_io, location, version).await? else {
+            return Err(hinted_metadata_missing_error(
+                path,
+                &format!("v{version}.metadata.json"),
+            ));
+        };
+        return newest_from_hint(file_io, location, version, hinted, path).await;
     }
     let metadata_dir = format!("{location}/metadata");
     let files: Vec<FileInfo> = file_io
@@ -129,20 +133,34 @@ async fn newest_from_hint(
     hinted: String,
     path: &str,
 ) -> Result<String> {
+    let hinted_name = hinted.rsplit('/').next().unwrap_or(&hinted).to_string();
     let mut version = hinted_version;
     let mut newest = hinted;
     for _ in 0..=HINT_WALK_LIMIT {
         let Some(next_version) = next_java_int_version(version) else {
             return Ok(newest);
         };
-        let next = format!("{location}/metadata/v{next_version}.metadata.json");
-        if !file_io.exists(&next).await.map_err(iceberg_err)? {
+        let Some(next) = hadoop_metadata_file(file_io, location, next_version).await? else {
             return Ok(newest);
-        }
+        };
         version = next_version;
         newest = next;
     }
-    Err(hint_walk_limit_error(path, hinted_version))
+    Err(hint_walk_limit_error(path, &hinted_name))
+}
+
+async fn hadoop_metadata_file(
+    file_io: &FileIO,
+    location: &str,
+    version: u64,
+) -> Result<Option<String>> {
+    for suffix in HADOOP_METADATA_SUFFIXES {
+        let candidate = format!("{location}/metadata/v{version}{suffix}");
+        if file_io.exists(&candidate).await.map_err(iceberg_err)? {
+            return Ok(Some(candidate));
+        }
+    }
+    Ok(None)
 }
 
 fn next_java_int_version(version: u64) -> Option<u64> {
@@ -179,11 +197,10 @@ fn hinted_metadata_missing_error(path: &str, file_name: &str) -> Error {
     ))
 }
 
-fn hint_walk_limit_error(path: &str, hinted_version: u64) -> Error {
+fn hint_walk_limit_error(path: &str, hinted_name: &str) -> Error {
     Error::Analysis(format!(
         "cannot resolve the Iceberg table at '{path}': more than {HINT_WALK_LIMIT} \
-         metadata files follow 'v{hinted_version}.metadata.json', the version \
-         version-hint.text names"
+         metadata files follow '{hinted_name}', the version version-hint.text names"
     ))
 }
 
@@ -215,25 +232,37 @@ fn latest_metadata_location(files: &[FileInfo]) -> Option<&str> {
         .iter()
         .filter_map(|file| {
             let name = file.location.rsplit('/').next()?;
-            metadata_file_version(name).map(|version| (version, file.location.as_str()))
+            metadata_file_order(name).map(|order| (order, file.location.as_str()))
         })
-        .max_by_key(|(version, _)| *version)
+        .max_by_key(|(order, _)| *order)
         .map(|(_, location)| location)
 }
 
+#[cfg(test)]
 fn metadata_file_version(name: &str) -> Option<u64> {
-    let stem = name.strip_suffix(".metadata.json")?;
-    if let Some(rest) = stem.strip_prefix('v') {
-        if !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()) {
-            return java_int_version(rest);
+    metadata_file_order(name).map(|(version, _)| version)
+}
+
+fn metadata_file_order(name: &str) -> Option<(u64, usize)> {
+    let preferred = HADOOP_METADATA_SUFFIXES.len();
+    for (index, suffix) in HADOOP_METADATA_SUFFIXES.iter().enumerate() {
+        if let Some(digits) = name
+            .strip_suffix(suffix)
+            .and_then(|stem| stem.strip_prefix('v'))
+            && is_ascii_number(digits)
+        {
+            return java_int_version(digits).map(|version| (version, preferred - index));
         }
+    }
+    let (leading, uuid) = name.strip_suffix(".metadata.json")?.split_once('-')?;
+    if !is_ascii_number(leading) || !is_uuid(uuid) {
         return None;
     }
-    let (leading, uuid) = stem.split_once('-')?;
-    if leading.is_empty() || !leading.bytes().all(|b| b.is_ascii_digit()) || !is_uuid(uuid) {
-        return None;
-    }
-    leading.parse().ok()
+    leading.parse().ok().map(|version| (version, preferred))
+}
+
+fn is_ascii_number(candidate: &str) -> bool {
+    !candidate.is_empty() && candidate.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn is_uuid(candidate: &str) -> bool {

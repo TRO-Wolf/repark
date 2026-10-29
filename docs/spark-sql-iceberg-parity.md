@@ -236,12 +236,16 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   spellings below; relative and `s3://` paths are unpinned). At most one trailing `/` is
   stripped; a table location
   resolves `<loc>/metadata/version-hint.text` when present — a bare integer in the Java
-  `int` range selects `v<N>.metadata.json`, which must exist else `AnalysisException` names
+  `int` range selects the first existing of `v<N>.metadata.json`, `v<N>.gz.metadata.json` and
+  `v<N>.metadata.json.gz`, in that order (rewritten 2026-10-29 by ICE-HADOOP-GZIP-METADATA-1), which
+  must exist under one of the three names else `AnalysisException` names
   the path and the hinted file, while a non-integer, non-UTF-8, negative or out-of-range hint
-  falls through (each pinned), like `HadoopTableOperations.findVersion` — else the highest leading-integer metadata file
+  falls through (each pinned), like `HadoopTableOperations.findVersion`; that comparison does not hold for
+  a negative value, which Java's `parseInt` accepts and then refuses (dated correction 2026-10-29,
+  ICE-HADOOP-GZIP-METADATA-1, S3-4; [HADOOP-HINT-NEGATIVE-1](../task/roadmap/mid-term/hadoop-hint-negative-1-card-2026-10-29.md)) — else the highest leading-integer metadata file
   among the direct children of `<loc>/metadata/` (the fork's local `FileIO::list` is
-  recursive; nested files are not candidates) in either the `NNNNN-<uuid>` or `v<N>`
-  form (the `v` stem is a whole integer no larger than `2147483647`, as Iceberg's Hadoop
+  recursive; nested files are not candidates) in either the `NNNNN-<uuid>` form or the `v<N>` form under any of the three names (rewritten 2026-10-29 by ICE-HADOOP-GZIP-METADATA-1; for one version the plain name ranks first, then the gz infix, then the legacy name)
+  (the `v` stem is a whole integer no larger than `2147483647`, as Iceberg's Hadoop
   tables parse it with `Integer.parseInt`); a local location with no resolvable metadata
   raises `AnalysisException` naming the supplied path. The static table reads through
   `IcebergStaticTableProvider`, and no catalog, namespace, table or temp-view registration is
@@ -1267,8 +1271,20 @@ perfectly good read.
   `test_load_stale_hint_after_delete_reads_the_newest_metadata_file` in
   `python/repark/tests/iceberg/test_iceberg_load_path.py`. The compressed-codec names Java also
   probes (`v<N>.gz.metadata.json`, `v<N>.metadata.json.gz`) stay out of scope and OPEN.
-- **Dated 2026-10-29, AUD-007 (second independent audit; Critical, silent wrong result; OPEN, card [ICE-HADOOP-GZIP-METADATA-1](../task/roadmap/mid-term/ice-hadoop-gzip-metadata-1-card-2026-10-29.md), grade A):** on a `type=hadoop` table whose newer metadata files carry Java's gzip names (`v<N>.gz.metadata.json`, written under `write.metadata.compression-codec` = gzip), a stale `version-hint.text` still returns a deleted row: RePark answers ids 1, 2, 3, Spark answers 2, 3 on the same files. The compressed-codec names that the line above keeps out of scope are measured here as a wrong row, not only as a different hint. Source: [the second audit report](audits/iceberg-v2-label-independent-reaudit-2026-10-29.md), AUD-007.
-- **Dated 2026-10-29, AUD-010 (second independent audit; Medium, a refusal where Spark answers; OPEN, same card):** a gzip-named current metadata file makes the `type=hadoop` path read refuse with "version-hint.text names 'v3.metadata.json', which does not exist", and a stale hint into a version that cleanup removed refuses likewise. Spark answers both. The refusal names a file that does not exist while the table's current metadata exists under its compressed name.
+- **Dated 2026-10-29, FIXED by ICE-HADOOP-GZIP-METADATA-1 (PR #1218, head `df912dc3`, OPEN until it merges; ledger
+  [ice-hadoop-gzip-metadata-1](../task/ledgers/staging/ice-hadoop-gzip-metadata-1-ledger.md)):** the path read of a
+  `type=hadoop` table probes Java's three metadata names per version, in Java's order
+  (`v<N>.metadata.json`, `v<N>.gz.metadata.json`, `v<N>.metadata.json.gz`), for the hinted version, the
+  stale-hint walk and the no-hint listing. The compressed-codec sentence of the 2026-10-28 paragraph above
+  is superseded from this date. AUD-007's stale hint on a mixed-codec table answers ids 2, 3, as Spark
+  does, and AUD-010's gzip-named current file answers. A readable hint naming a version with no file under
+  any of the three names still refuses with its existing text, as Java's `HadoopTableOperations` does
+  ("Metadata file for version %d is missing under %s"). Pins: the gzip family in
+  `crates/repark-core/src/iceberg_path/hint_walk_tests.rs` and the facade pin
+  `test_load_stale_hint_after_delete_reads_the_gzip_named_newest_file` in
+  `python/repark/tests/iceberg/test_iceberg_load_path.py`. The codec is chosen from the bytes on RePark and from the file name in Java, so a gzip-named file whose payload is plain JSON reads here and refuses in Java; Java's writer never produces it (lead C-012 of that ledger, OPEN).
+- **Dated 2026-10-29, AUD-007 (second independent audit; Critical, silent wrong result; OPEN, card [ICE-HADOOP-GZIP-METADATA-1](../task/roadmap/mid-term/ice-hadoop-gzip-metadata-1-card-2026-10-29.md), grade A; fixed on the branch, OPEN until the merge):** on a `type=hadoop` table whose newer metadata files carry Java's gzip names (`v<N>.gz.metadata.json`, written under `write.metadata.compression-codec` = gzip), a stale `version-hint.text` still returns a deleted row: RePark answers ids 1, 2, 3, Spark answers 2, 3 on the same files. The compressed-codec names that the 2026-10-28 paragraph kept out of scope are measured here as a wrong row, not only as a different hint. Source: [the second audit report](audits/iceberg-v2-label-independent-reaudit-2026-10-29.md), AUD-007.
+- **Dated 2026-10-29, AUD-010 (second independent audit; Medium, a refusal where Spark answers; OPEN, same card; narrowed 2026-10-29 to its first shape, fixed on the branch, OPEN until the merge):** a gzip-named current metadata file makes the `type=hadoop` path read refuse with "version-hint.text names 'v3.metadata.json', which does not exist". Spark answers it. The refusal names a file that does not exist while the table's current metadata exists under its compressed name. The second shape, a stale hint into a version that cleanup removed, is a probe artefact and not a product divergence: the probe rewrote `version-hint.text` and left Hadoop's checksum sidecar stale, so Spark ignored the hint; with a readable hint Spark refuses too, as RePark does (ICE-HADOOP-GZIP-METADATA-1, C-006).
 - **Dated 2026-10-29, AUD-014 (second independent audit; Low; OPEN, card [ICE-HADOOP-METADATA-CLEANUP-1](../task/roadmap/mid-term/ice-hadoop-metadata-cleanup-1-card-2026-10-29.md), grade C):** `write.metadata.delete-after-commit.enabled` with `write.metadata.previous-versions-max` is ignored on RePark's hadoop-type writes. After the same DDL and five INSERT statements, RePark keeps metadata versions `v1` to `v6`, and Spark keeps `v5` and `v6`.
 
 #### DML-6 — `INSERT … BY NAME`
