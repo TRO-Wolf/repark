@@ -331,6 +331,20 @@ def assert_bucket_count_valid(writer: DataFrameWriter) -> None:
         )
 
 
+def _refuse_temp_view_write_target(session: Any, name: str) -> None:
+    from repark.spark.session.catalog_resolution import _temp_view_home_ref
+
+    home = _temp_view_home_ref(session, name)
+    if not home:
+        return
+    view = "`" + str(home[-1]).replace("`", "``") + "`"
+    _raise_analysis(
+        f"Writing into a view is not allowed. View: {view}.",
+        "_LEGACY_ERROR_TEMP_1011",
+        message_parameters={"identifier": view},
+    )
+
+
 def refuse_clustered_table_write(
     writer: DataFrameWriter | DataFrameWriterV2,
 ) -> None:
