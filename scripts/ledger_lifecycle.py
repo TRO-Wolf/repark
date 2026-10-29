@@ -69,6 +69,7 @@ FROZEN_DIRS: tuple[str, ...] = (BINS["completed"], ARCHIVE_DIR)
 LEDGER_SUFFIX = "-ledger.md"
 PINS_SUFFIX = "-pins.md"
 MAP_NAME = "map.md"
+SIZE_SCRIPT = "scripts/check_map_size.py"
 # The fetched ref first: on a box where the owner merges remotely, local `main` lags.
 MAIN_REFS: tuple[str, ...] = ("origin/main", "main")
 
@@ -479,6 +480,38 @@ def archive_map_text(tracked_after: list[str]) -> str:
     )
 
 
+def _size_ratchet(repo: Path) -> ModuleType | None:
+    """The target repository's `scripts/check_map_size.py`, or None where it has none."""
+    location = repo / SIZE_SCRIPT
+    if not location.is_file():
+        return None
+    specification = importlib.util.spec_from_file_location("check_map_size", location)
+    if specification is None or specification.loader is None:
+        return None
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
+
+
+def _follow_size_rows(repo: Path, ratchet: ModuleType, before: dict[str, tuple[int, int]]) -> int:
+    """Move each excepted map's baseline row by exactly the growth or shrinkage the link rewrite
+    just caused; a map now within both ceilings loses its row. Returns the rows changed."""
+    rows: dict[str, tuple[int, int]] = dict(ratchet.EXCEPTIONS)
+    changed = 0
+    for path, (old_lines, old_bytes) in sorted(before.items()):
+        new_lines, new_bytes = ratchet.measure(repo, path)
+        if (new_lines, new_bytes) == (old_lines, old_bytes):
+            continue
+        base_lines, base_bytes = rows.pop(path)
+        if ratchet.over(new_lines, new_bytes):
+            rows[path] = (base_lines + new_lines - old_lines, base_bytes + new_bytes - old_bytes)
+        changed += 1
+    if changed:
+        ratchet.rewrite_table(repo / SIZE_SCRIPT, rows)
+        git(repo, "add", SIZE_SCRIPT)
+    return changed
+
+
 def execute(
     repo: Path, tracked: list[str], moves: dict[str, str], verb: str, promised: set[str]
 ) -> int:
@@ -492,10 +525,20 @@ def execute(
             file=sys.stderr,
         )
         return 1
+    ratchet = _size_ratchet(repo)
+    before = {}
+    if ratchet is not None:
+        before = {
+            path: ratchet.measure(repo, path)
+            for path in texts
+            if path in ratchet.EXCEPTIONS and (repo / path).is_file()
+        }
     written = apply(repo, moves, texts)
+    followed = _follow_size_rows(repo, ratchet, before) if ratchet is not None else 0
     print(
         f"ledger-lifecycle: {verb} {len(moves)} file(s), "
-        f"rewrote {rewritten} link(s), wrote {written} file(s)"
+        f"rewrote {rewritten} link(s), wrote {written} file(s), "
+        f"moved {followed} map-size baseline row(s)"
     )
     return 0
 

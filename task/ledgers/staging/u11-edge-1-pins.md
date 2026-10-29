@@ -22,11 +22,11 @@ C-019: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/rep
 C-020: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_u11_edge_case_select.py, scripts/check_rust_file_size.py
 C-021: crates/repark-iceberg/src/write/partition_spec/tests.rs::struct_text_renders_docs_and_decimal_like_java
 C-022: python/repark/tests/resolution/test_u11_edge_case_select.py::test_qualified_drop_binds_through_its_relation, scripts/check_rust_file_size.py
-C-023: python/repark/tests/dataframe/test_filter_predicate_rewrite.py, python/repark/tests/resolution/test_u11_edge_case_select.py, scripts/check_lib_py.py
-C-024: python/repark/tests/resolution/test_u11_edge_case_select.py, scripts/check_lib_py.py
-C-025: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-026: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-027: crates/repark-core/src/column_resolution/tests.rs::attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified, python/repark/tests/resolution/test_u11_edge_case_select.py, scripts/check_lib_py.py
-C-028: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-029: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-030: python/repark/tests/resolution/test_u11_edge_case_select.py
+C-023: python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_column_entry_point_refuses_the_ambiguity_like_spark, python/repark/tests/resolution/test_u11_edge_case_select.py::test_bare_reference_matching_two_fields_is_ambiguous, scripts/check_lib_py.py
+C-024: python/repark/tests/resolution/test_u11_edge_case_select.py::test_column_drop_matching_two_fields_is_ambiguous, python/repark/tests/resolution/test_u11_edge_case_select.py::test_origin_columns_bind_their_own_side, python/repark/tests/resolution/test_u11_edge_case_select.py::test_whole_frame_projections_bind_by_attribute, scripts/check_lib_py.py
+C-025: python/repark/tests/resolution/test_u11_edge_case_select.py::test_column_drop_matching_two_fields_is_ambiguous, python/repark/tests/resolution/test_u11_edge_case_select.py::test_origin_columns_bind_their_own_side, python/repark/tests/resolution/test_u11_edge_case_select.py::test_whole_frame_projections_bind_by_attribute
+C-026: python/repark/tests/resolution/test_u11_edge_case_select.py::test_column_drop_matching_two_fields_is_ambiguous, python/repark/tests/resolution/test_u11_edge_case_select.py::test_origin_columns_bind_their_own_side, python/repark/tests/resolution/test_u11_edge_case_select.py::test_whole_frame_projections_bind_by_attribute
+C-027: crates/repark-core/src/column_resolution/tests.rs::attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified, python/repark/tests/resolution/test_u11_edge_case_select.py::test_compound_origin_columns_keep_their_attribute_binding, scripts/check_lib_py.py
+C-028: python/repark/tests/resolution/test_u11_edge_case_select.py::test_projection_of_a_twin_join_writes_back_into_its_table
+C-029: python/repark/tests/resolution/test_u11_edge_case_select.py::test_attribute_copies_never_collide_with_a_user_field, python/repark/tests/resolution/test_u11_edge_case_select.py::test_star_column_and_suggestions_show_presented_fields_only
+C-030: python/repark/tests/resolution/test_u11_edge_case_select.py::test_attribute_copies_never_collide_with_a_user_field, python/repark/tests/resolution/test_u11_edge_case_select.py::test_star_column_and_suggestions_show_presented_fields_only

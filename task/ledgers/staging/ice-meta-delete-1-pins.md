@@ -8,4 +8,4 @@ C-005: python/repark/tests/writes/test_ice_meta_delete_1.py
 C-006: crates/repark-sql/tests/ansi_meta_delete.rs::ident
 C-007: none (records)
 C-008: python/repark/tests/writes/test_ice_meta_delete_1.py
-C-009: crates/repark-spark/src/tests/call_rm_deletes.rs, python/repark/tests/iceberg/ice_rm_deletes_1_spark_oracle.json
+C-009: crates/repark-spark/src/tests/call_rm_deletes.rs

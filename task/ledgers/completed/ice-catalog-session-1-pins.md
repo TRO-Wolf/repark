@@ -10,7 +10,7 @@ C-007: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_th
 C-008: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
 C-009: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
 C-010: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-011: none (records)
+C-011: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE
 C-012: none (records)
 C-013: none (records)
 C-014: none (records)
@@ -28,5 +28,5 @@ C-025: none (records)
 C-026: none (records)
 C-027: none (records)
 C-028: none (records)
-C-029: python/repark/tests/sql/test_spark_sql_grammar_1.py
+C-029: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE
 C-030: python/repark-parity/tests/test_cap_1_source_file_line_cap.py

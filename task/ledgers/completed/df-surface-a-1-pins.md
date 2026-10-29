@@ -7,4 +7,4 @@ C-004: python/repark/tests/dataframe/test_df_surface_a_1.py
 C-005: python/repark/tests/dataframe/test_df_surface_a_1.py
 C-006: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
 C-007: none (records)
-C-008: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/dataframe/test_df_surface_a_1.py, scripts/check_lib_py.py
+C-008: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/dataframe/test_df_surface_a_1.py::test_to_binary_follows_reported_schema_df_to_binary_1, scripts/check_lib_py.py

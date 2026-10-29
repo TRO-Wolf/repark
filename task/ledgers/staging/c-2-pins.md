@@ -1,11 +1,11 @@
 # c-2 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: crates/repark-connect/tests/it/settings.rs
-C-002: none (records)
-C-003: none (records)
-C-004: none (records)
-C-005: none (records)
-C-006: none (records)
+C-002: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
+C-003: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
+C-004: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
+C-005: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
+C-006: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
 C-007: none (records)
 C-008: none (records)
 C-009: none (records)
@@ -14,9 +14,9 @@ C-011: none (records)
 C-012: none (records)
 C-013: none (records)
 C-014: none (records)
-C-015: none (records)
-C-016: none (records)
-C-017: none (records)
+C-015: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
+C-016: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
+C-017: crates/repark-connect/tests/it/copy_binary.rs::batch_flushes_at_the_exact_byte_cap, crates/repark-connect/tests/it/copy_binary.rs::copy_critical_flag_bits_each_refuse, crates/repark-connect/tests/it/copy_binary.rs::decoder_is_poisoned_after_an_error
 C-018: crates/repark-connect/tests/it/settings.rs
 C-019: crates/repark-connect/tests/it/settings.rs
 C-020: crates/repark-connect/tests/it/settings.rs
@@ -102,15 +102,15 @@ C-100: none (records)
 C-101: none (records)
 C-102: none (records)
 C-103: none (records)
-C-104: none (records)
+C-104: python/repark/tests/io/test_session_sources.py::test_select_under_source_name_resolves_through_the_mount, python/repark/tests/io/test_session_sources.py::test_source_ping_resolves_through_the_mount
 C-105: python/repark-parity/tests/live_db/test_c2_read.py
 C-106: python/repark-parity/tests/live_db/test_c2_federated.py
 C-107: python/repark-parity/tests/live_db/test_c2_credentials.py
 C-108: none (records)
-C-109: none (records)
-C-110: none (records)
+C-109: python/repark-parity/tests/live_db/test_c2_federated.py::test_a_wall_clock_past_2099_matches_the_timestamp_literal
+C-110: python/repark-parity/tests/live_db/test_c2_read.py::test_a_java_form_session_zone_places_the_wall_clock_at_its_offset
 C-111: none (records)
-C-112: none (records)
+C-112: python/repark-parity/tests/live_db/test_c2_read.py::test_ddl_and_dml_refuse_through_both_doors
 C-113: crates/repark-core/src/session/tests/read_postgres.rs::a_dbtable_property_is_the_target_never_a_setting
 C-114: crates/repark-connect/tests/it/copy_binary.rs::a_refused_value_emits_the_rows_before_it_then_refuses
 C-115: none (records)

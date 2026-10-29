@@ -685,3 +685,42 @@ def test_lockstep_refuses_a_bad_base_ref(tmp_path: Path) -> None:
     )
     assert result.returncode == 2
     assert "--base no-such-ref is not a commit" in result.stderr
+
+
+def test_size_ratchet_exempts_the_archive_month_maps(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    month = "task/ledgers/archive/2026-10/map.md"
+    _write(repo, month, "".join(f"- r{n}\n" for n in range(3000)))
+    _write(
+        repo, "task/ledgers/archive/2026-10/deeper/map.md", "".join(f"- r{n}\n" for n in range(300))
+    )
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "task/ledgers/archive/2026-10/deeper/map.md is 300 lines" in result.stderr
+    assert month not in result.stderr
+    (repo / "task/ledgers/archive/2026-10/deeper/map.md").unlink()
+    assert _size(repo).returncode == 0
+
+
+def test_migration_keeps_an_indented_dated_paragraph_with_its_item_only_by_a_defined_name(
+    tmp_path: Path,
+) -> None:
+    text = "\n".join(
+        [
+            "# map",
+            "",
+            "- `pins.rs` — the battery.",
+            f"  **ROUND-2 (2026-10-05):** `other_holds` lands. pins: {_UNIT}/C-001",
+            f"  **ROUND-3 (2026-10-06):** `ghost_fn` only. pins: {_UNIT}/C-002",
+            "",
+        ]
+    )
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn demo_holds() {}\nfn other_holds() {}\n"})
+    result = _migrate(repo)
+    assert result.returncode == 0, result.stderr
+    assert "map citations in an indented dated paragraph: 2" in result.stdout
+    assert "  bound to their item's file by a defined name: 1" in result.stdout
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}::other_holds",
+        "C-002: none (records)",
+    ]

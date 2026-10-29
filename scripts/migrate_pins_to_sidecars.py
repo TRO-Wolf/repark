@@ -9,16 +9,19 @@ archive sidecar takes its ledger's `yyyy-mm-dd-` prefix), in the format rule B o
 
 A citation in a source file binds that file when it is a test file or a script, and stays where
 it is. A citation in a `map.md` binds the file its own entry names, and never looks past that
-entry: the entry is the citation's list row, table row, paragraph or dated entry, and its file is
-its first link under the map's directory, else its first code span. A bare file name that does
-not resolve in the map's directory resolves to the one tracked file of that name under the
-map's directory tree; a name found only elsewhere in the tree is a reference, not the entry's
-file; a name found nowhere, or more than once here, makes the citation unplaceable, and the run
-stops and lists it unless the sidecar on disk already binds that clause by hand. The names are the
-backticked identifiers of the citation's stretch of its entry that the bound file defines. Only
-a test file or a script is bound; a clause left with no bindable entry and no source citation is
-written as `none (records)`. The citation is then cut from the map: a line left with nothing but
-punctuation is deleted, a line that also carries prose keeps the prose and its indentation.
+entry: the entry is the citation's list row, table row, paragraph or column-0 dated entry, and
+its file is its first link under the map's directory, else its first code span. An indented
+dated paragraph inside a list item stays with that item's file, and binds it only when a
+backticked name of the citation's own paragraph is defined there; otherwise it binds nothing. A
+bare file name that does not resolve in the map's directory resolves to the one tracked file of
+that name under the map's directory tree; a name found only elsewhere in the tree is a
+reference, not the entry's file; a name found nowhere, or more than once here, makes the
+citation unplaceable, and the run stops and lists it unless the sidecar on disk already binds
+that clause by hand. The names are the backticked identifiers of the citation's stretch of its
+entry that the bound file defines. Only a test file or a script is bound; a clause left with no
+bindable entry and no source citation is written as `none (records)`. The citation is then cut
+from the map: a line left with nothing but punctuation is deleted, a line that also carries
+prose keeps the prose and its indentation.
 
 A citation is bound but left in the map's text when cutting it would break the sentence around
 it: inside a fenced block, inside a code span the line continues past, or followed by an id the
@@ -50,6 +53,7 @@ LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d+\.)\s")
 TABLE_ROW = re.compile(r"^\s*\|")
 HEADING = re.compile(r"^#{1,6}\s")
 DATED = re.compile(r"^\s*(?:\*\*)?[A-Z][^()\n`]{0,80}?\(\d{4}-\d{2}-\d{2}[^)\n]*\)")
+DATED_TOP = re.compile(r"^(?:\*\*)?[A-Z][^()\n`]{0,80}?\(\d{4}-\d{2}-\d{2}[^)\n]*\)")
 LINK = re.compile(r"\[[^\]]*\]\(\s*<?([^()<>\s]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 CODE_SPAN = re.compile(r"`([^`]+)`")
 FILE_LIKE = re.compile(
@@ -84,6 +88,7 @@ class Binding(NamedTuple):
     kept: bool
     unresolved: str | None
     named: str | None
+    inherited: bool
 
 
 class Target(NamedTuple):
@@ -149,9 +154,9 @@ def fence_mask(lines: list[str]) -> list[bool]:
     return mask
 
 
-def entry_starts(lines: list[str], fenced: list[bool]) -> list[int]:
-    """Line indexes that open an entry: a list item, a table row, a heading, a dated entry or a
-    paragraph."""
+def entry_starts(lines: list[str], fenced: list[bool], dated: re.Pattern[str]) -> list[int]:
+    """Line indexes that open an entry: a list item, a table row, a heading, a dated entry (as
+    `dated` reads one) or a paragraph."""
     starts: list[int] = []
     previous_blank = True
     for index, line in enumerate(lines):
@@ -163,7 +168,7 @@ def entry_starts(lines: list[str], fenced: list[bool]) -> list[int]:
             LIST_ITEM.match(line)
             or TABLE_ROW.match(line)
             or HEADING.match(line)
-            or DATED.match(line)
+            or dated.match(line)
             or previous_blank
             or (index > 0 and HEADING.match(lines[index - 1]))
         ):
@@ -354,7 +359,8 @@ def migrate_map(
     for line in lines:
         offsets.append(offsets[-1] + len(line) + 1)
     fenced = fence_mask(lines)
-    starts = entry_starts(lines, fenced)
+    starts = entry_starts(lines, fenced, DATED_TOP)
+    own_starts = entry_starts(lines, fenced, DATED)
     ends = dict(zip(starts, [*starts[1:], len(lines)], strict=True))
     map_dir = str(Path(path).parent)
     map_dir = "" if map_dir == "." else map_dir
@@ -369,10 +375,15 @@ def migrate_map(
         row_end = ends.get(row, len(lines))
         target = entry_target(map_dir, "\n".join(lines[row:row_end]), tracked, basenames)
         bound = target.path if target.path is not None and GATE.bindable(target.path) else None
-        stretch_start = max(offsets[row], previous_end.get(row, 0))
+        own = own_starts[bisect.bisect_right(own_starts, line_index) - 1] if own_starts else row
+        inherited = own != row
+        stretch_start = max(offsets[own], previous_end.get(row, 0))
         stretch = text[stretch_start : match.start()] + text[match.end() : offsets[end_index + 1]]
         previous_end[row] = match.end()
         names = names_in(stretch, bound, file_text(repo, bound, cache)) if bound else ()
+        if inherited and not names:
+            bound = None
+        unresolved = None if inherited else target.unresolved
         line_end = offsets[end_index + 1] - 1
         kept = fenced[line_index] or keeps_text(
             text, match.start(), match.end(), offsets[line_index], line_end
@@ -388,8 +399,9 @@ def migrate_map(
                 bound,
                 names,
                 kept,
-                target.unresolved,
+                unresolved,
                 named,
+                inherited,
             )
         )
         if not kept:
@@ -422,6 +434,7 @@ def source_bindings(repo: Path, path: str) -> list[Binding]:
             True,
             None,
             None,
+            False,
         )
         for m in GATE.CITATION.finditer(text)
     ]
@@ -608,6 +621,9 @@ def report(
     print(f"map citations bound to a test file or script: {sum(bool(b.path) for b in on_maps)}")
     print(f"map citations bound with names: {sum(bool(b.names) for b in on_maps)}")
     print(f"map citations resolved by basename: {sum(bool(b.named) for b in on_maps)}")
+    inherited = [b for b in on_maps if b.inherited]
+    print(f"map citations in an indented dated paragraph: {len(inherited)}")
+    print(f"  bound to their item's file by a defined name: {sum(bool(b.path) for b in inherited)}")
     print(f"map citations with no bindable file: {sum(b.path is None for b in on_maps)}")
     print(f"map citations left in the text: {sum(b.kept for b in on_maps)}")
     print(f"maps rewritten: {len(rewrites)}")

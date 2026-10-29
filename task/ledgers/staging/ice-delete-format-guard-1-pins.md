@@ -11,7 +11,7 @@ C-010: crates/repark-spark/tests/delete_format_guard.rs
 C-012: none (records)
 C-013: crates/repark-spark/tests/delete_format_guard.rs
 C-014: crates/repark-spark/tests/delete_format_guard.rs
-C-015: crates/repark-spark/tests/delete_format_guard.rs
+C-015: crates/repark-spark/src/tests/enc_1.rs::encrypted_table_case_variant_namespace_delete_refuses, crates/repark-spark/tests/delete_format_guard.rs
 C-017: crates/repark-spark/tests/delete_format_guard.rs
 C-018: crates/repark-spark/tests/delete_format_guard.rs
 C-019: crates/repark-spark/src/tests/write_to_branch.rs::a_branch_write_with_an_unclassified_head_refuses, crates/repark-spark/src/tests/write_to_branch.rs::write_to_tag_refuses_spark_shaped, crates/repark-spark/tests/delete_format_guard.rs

@@ -181,3 +181,42 @@ def test_a_move_then_the_size_ratchet_stays_green(repo: Path) -> None:
     assert len(completed_map.splitlines()) > 250
     result = _size_check(repo)
     assert result.returncode == 0, result.stderr
+
+
+def test_archive_moves_an_excepted_map_row_by_exactly_its_link_growth(repo: Path) -> None:
+    big = "docs/big/map.md"
+    link = "[x1](../../task/ledgers/completed/x1-demo-ledger.md)"
+    body = "".join(f"- row {n}\n" for n in range(250)) + f"- {link} — the demo.\n"
+    _write(repo, big, body)
+    _write(repo, "docs/still/map.md", "".join(f"- still {n}\n" for n in range(240)))
+    _write(repo, "task/ledgers/archive/map.md", "# map — archive\n")
+    source = (_REPO / "scripts" / "check_map_size.py").read_text(encoding="utf-8")
+    start = source.index("\nEXCEPTIONS: dict[str, tuple[int, int]] = {") + 1
+    end = source.index("\n}\n", start) + 3
+    before = (251, len(body.encode()))
+    still = (240, len("".join(f"- still {n}\n" for n in range(240)).encode()))
+    table = (
+        "EXCEPTIONS: dict[str, tuple[int, int]] = {\n"
+        f'    "{big}": {before},\n    "docs/still/map.md": {still},\n}}\n'
+    )
+    _write(repo, "scripts/check_map_size.py", source[:start] + table + source[end:])
+    _commit(repo, "an excepted map links the ledger")
+    result = _run(repo, "archive")
+    assert result.returncode == 0, result.stderr
+    assert "moved 1 map-size baseline row(s)" in result.stdout
+    growth = len("archive/2026-08/2026-08-20-x1-demo-ledger.md") - len(
+        "completed/x1-demo-ledger.md"
+    )
+    after = (repo / big).read_text(encoding="utf-8")
+    assert len(after.encode()) == before[1] + growth
+    script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
+    assert f'    "{big}": (251, {before[1] + growth}),\n' in script
+    assert f'    "docs/still/map.md": {still},\n' in script
+    size = subprocess.run(
+        [sys.executable, str(repo / "scripts/check_map_size.py"), "--repo", str(repo)],
+        capture_output=True,
+        text=True,
+        env=_ENV,
+        check=False,
+    )
+    assert size.returncode == 0, size.stderr

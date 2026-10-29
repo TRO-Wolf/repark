@@ -17,13 +17,13 @@ C-014: crates/repark-core/src/config_file/tests/mod.rs::maintenance_policy_fixtu
 C-015: crates/repark-core/src/config_file/tests/mod.rs::maintenance_policy_fixture, crates/repark-core/src/config_file/tests/mod.rs::stub_environment, crates/repark-core/src/config_file/tests/mod.rs::write_file
 C-016: crates/repark-core/src/config_file/tests/mod.rs::maintenance_policy_fixture, crates/repark-core/src/config_file/tests/mod.rs::stub_environment, crates/repark-core/src/config_file/tests/mod.rs::write_file
 C-017: crates/repark-core/src/config_file/tests/mod.rs::maintenance_policy_fixture, crates/repark-core/src/config_file/tests/mod.rs::stub_environment, crates/repark-core/src/config_file/tests/mod.rs::write_file
-C-018: none (records)
-C-019: none (records)
-C-020: none (records)
-C-021: none (records)
-C-022: none (records)
-C-023: none (records)
-C-025: none (records)
+C-018: crates/repark-core/src/config_file/tests/wiring.rs::test_toml_session_table_sets_builder_knobs
+C-019: crates/repark-core/src/config_file/tests/wiring.rs::test_toml_session_table_sets_builder_knobs
+C-020: crates/repark-core/src/config_file/tests/wiring.rs::test_toml_session_table_sets_builder_knobs
+C-021: crates/repark-core/src/config_file/tests/wiring.rs::test_toml_session_table_sets_builder_knobs
+C-022: crates/repark-core/src/config_file/tests/wiring.rs::test_toml_session_table_sets_builder_knobs
+C-023: crates/repark-core/src/config_file/tests/wiring.rs::test_toml_session_table_sets_builder_knobs
+C-025: crates/repark-core/src/config_file/tests/wiring.rs::test_toml_session_table_sets_builder_knobs
 C-026: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_lib_py.py
 C-027: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
 C-028: python/repark/tests/session/test_config_mirror.py

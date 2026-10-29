@@ -16,9 +16,9 @@ C-013: python/repark/tests/io/test_source_url_redaction_1.py
 C-014: none (records)
 C-015: crates/repark-common/src/redaction/tests.rs
 C-016: crates/repark-spark/src/tests/property_display_redaction.rs
-C-017: none (records)
-C-018: none (records)
-C-019: none (records)
+C-017: python/repark/tests/io/test_source_url_redaction_1.py::test_knob_refusals_never_carry_the_password, python/repark/tests/io/test_source_url_redaction_1.py::test_set_redaction_matches_the_spark_4_1_2_default_regexes
+C-018: crates/repark-iceberg/src/catalog/tests/memory_props_span.rs::memory_catalog_span_masks_a_password_in_the_warehouse
+C-019: python/repark/tests/io/test_source_url_redaction_1.py::test_knob_refusals_never_carry_the_password, python/repark/tests/io/test_source_url_redaction_1.py::test_set_redaction_matches_the_spark_4_1_2_default_regexes
 C-020: none (records)
 C-021: none (records)
 C-022: none (records)
@@ -39,7 +39,7 @@ C-036: none (records)
 C-037: none (records)
 C-038: none (records)
 C-039: none (records)
-C-040: none (records)
+C-040: python/repark/tests/io/test_source_url_redaction_1.py::test_get_database_returns_the_stored_location_and_comment
 C-041: crates/repark-spark/src/tests/property_display_redaction.rs::a_credential_free_storage_location_is_shown_as_spark_shows_it
 C-042: crates/repark-spark/src/tests/property_display_redaction.rs::a_credential_free_storage_location_is_shown_as_spark_shows_it
 C-043: none (records)
@@ -51,9 +51,9 @@ C-048: none (records)
 C-049: none (records)
 C-050: none (records)
 C-051: none (records)
-C-052: crates/repark-common/src/redaction/tests.rs
-C-053: crates/repark-common/src/redaction/tests.rs
-C-054: crates/repark-common/src/redaction/tests.rs
+C-052: none (records)
+C-053: none (records)
+C-054: none (records)
 C-055: crates/repark-spark/src/extension/tests.rs::configure_defaults_ansi_enabled_true, crates/repark-spark/src/extension/tests.rs::configure_defaults_parse_float_as_decimal, crates/repark-spark/src/extension/tests.rs::configure_honors_ansi_enabled_false, crates/repark-spark/src/extension/tests.rs::configure_makes_bare_1_23_decimal128_3_2, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_ansi_refusal, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_case_sensitive_refusal, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_merge_schema_refusal, crates/repark-spark/src/extension/tests.rs::configure_refuses_ansi_notabool, crates/repark-spark/src/extension/tests.rs::masking_a_configuration_message_changes_only_the_url_password, python/repark/tests/io/test_source_url_redact_1_fn.py
 C-056: crates/repark-common/src/redaction/tests.rs::mask_url_userinfo_masks_a_url_password_and_leaves_other_text
 C-057: none (records)
@@ -71,14 +71,14 @@ C-068: none (records)
 C-069: none (records)
 C-071: none (records)
 C-073: none (records)
-C-074: none (records)
-C-075: none (records)
+C-074: crates/repark-common/src/redaction/tests.rs::registered_values_mask_when_their_own_edge_is_punctuation
+C-075: crates/repark-common/src/redaction/tests.rs::registered_values_mask_after_an_ansi_csi_sequence
 C-076: python/repark/tests/io/test_source_url_redact_2_doors.py::eval, python/repark/tests/io/test_source_url_redact_2_doors.py::simpleString, python/repark/tests/io/test_source_url_redact_2_doors.py::start, python/repark/tests/io/test_source_url_redact_2_doors.py::terminate, scripts/check_lib_py.py
 C-077: python/repark/tests/io/test_source_url_redact_2_doors.py, scripts/check_lib_py.py
 C-078: python/repark/tests/io/test_source_url_redact_2_doors.py
 C-079: python/repark/tests/io/test_source_url_redact_2_doors.py
 C-080: python/repark/tests/io/test_source_url_redact_2_doors.py::__new__
-C-081: none (records)
+C-081: crates/repark-common/src/redaction/tests.rs::registered_values_mask_after_an_ecma_48_csi_sequence
 C-082: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/io/test_source_url_redact_2_doors.py, scripts/check_lib_py.py
 C-083: python/repark/tests/io/test_source_url_redact_2_doors.py::__str__
 C-084: python/repark/tests/io/test_source_url_redact_2_doors.py

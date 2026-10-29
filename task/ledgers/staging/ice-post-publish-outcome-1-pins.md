@@ -3,7 +3,7 @@
 C-001: crates/repark-spark/tests/post_publish_outcome.rs
 C-002: crates/repark-spark/tests/post_publish_outcome.rs
 C-003: crates/repark-spark/tests/post_publish_outcome.rs
-C-004: none (records)
+C-004: crates/repark-iceberg/src/catalog/tests/namespace_drop.rs::refresh_after_commit_without_a_registered_provider_states_the_change_is_committed
 C-005: crates/repark-spark/tests/post_publish_outcome.rs
 C-006: crates/repark-spark/tests/post_publish_outcome.rs
 C-008: crates/repark-spark/tests/post_publish_outcome.rs

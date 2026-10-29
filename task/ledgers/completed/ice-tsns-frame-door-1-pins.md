@@ -1,6 +1,6 @@
 # ice-tsns-frame-door-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
+C-001: python/repark/tests/timestamps/_record_ice_tsns_frame_door_1.py::sources, python/repark/tests/timestamps/_record_ice_tsns_frame_door_1.py::transition_frame, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-002: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-003: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-004: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
@@ -10,16 +10,16 @@ C-007: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-008: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-009: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-010: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-011: python/repark/tests/io/test_boundary_shapes_parity.py, python/repark/tests/session/test_production_file_size.py
+C-011: python/repark/tests/io/test_boundary_shapes_parity.py, python/repark/tests/session/test_production_file_size.py, python/repark/tests/timestamps/_ice_tsns_merge_wall_1_doors.py::frame_of, python/repark/tests/timestamps/test_ice_tsns_sql_1.py::write_control
 C-012: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-013: none (records)
 C-014: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-015: none (records)
 C-016: none (records)
-C-017: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-018: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-019: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-020: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-021: none (records)
+C-017: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_categorical_of_nanoseconds_arrives_as_microseconds, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_declared_type_that_is_not_a_timestamp_keeps_main, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_instants_around_a_zone_transition_floor_on_the_ticks, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_int64_minimum_floors_without_wrapping, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_lowest_and_highest_nanoseconds_floor
+C-018: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_categorical_of_nanoseconds_arrives_as_microseconds, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_declared_type_that_is_not_a_timestamp_keeps_main, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_instants_around_a_zone_transition_floor_on_the_ticks, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_int64_minimum_floors_without_wrapping, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_lowest_and_highest_nanoseconds_floor
+C-019: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_categorical_of_nanoseconds_arrives_as_microseconds, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_declared_type_that_is_not_a_timestamp_keeps_main, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_instants_around_a_zone_transition_floor_on_the_ticks, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_int64_minimum_floors_without_wrapping, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_lowest_and_highest_nanoseconds_floor
+C-020: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_categorical_of_nanoseconds_arrives_as_microseconds, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_declared_type_that_is_not_a_timestamp_keeps_main, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_instants_around_a_zone_transition_floor_on_the_ticks, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_extremes_under_a_declared_timestamp_are_floored_first, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_int64_minimum_floors_without_wrapping, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_lowest_and_highest_nanoseconds_floor
+C-021: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_categorical_of_nanoseconds_arrives_as_microseconds, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_declared_type_that_is_not_a_timestamp_keeps_main, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_instants_around_a_zone_transition_floor_on_the_ticks, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_int64_minimum_floors_without_wrapping, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_lowest_and_highest_nanoseconds_floor
 C-022: none (records)
-C-023: none (records)
+C-023: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_categorical_of_nanoseconds_arrives_as_microseconds, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_a_declared_type_that_is_not_a_timestamp_keeps_main, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_instants_around_a_zone_transition_floor_on_the_ticks, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_int64_minimum_floors_without_wrapping, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_the_lowest_and_highest_nanoseconds_floor

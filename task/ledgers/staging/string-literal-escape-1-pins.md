@@ -11,8 +11,8 @@ C-007: python/repark/tests/sql/test_string_literal_escape_1.py
 C-008: python/repark/tests/sql/test_string_literal_escape_1.py
 C-009: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/sql/test_string_literal_escape_1.py, scripts/check_lib_py.py
 C-010: python/repark/tests/sql/test_string_literal_escape_1.py
-C-011: python/repark/tests/sql/test_string_literal_escape_1.py, scripts/check_lib_py.py, scripts/check_rust_file_size.py
+C-011: crates/repark-spark/src/tests/string_literal_escape_1.rs::built_statements_parse_default_on_a_verbatim_session, python/repark/tests/sql/test_string_literal_escape_1.py, scripts/check_lib_py.py, scripts/check_rust_file_size.py
 C-012: python/repark/tests/sql/test_string_literal_escape_1.py
-C-013: python/repark/tests/session/test_catalog_surface_1.py::sql_built
+C-013: none (records)
 C-014: none (records)
 C-015: none (records)

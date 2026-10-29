@@ -19,7 +19,7 @@ C-018: crates/repark-core/src/session/tests/attr_id_fresh.rs, crates/repark-core
 C-019: crates/repark-core/src/session/tests/attr_id_fresh.rs
 C-020: crates/repark-python/src/tests.rs::binding_re_mints_lateral_join_collisions_of_a_self_join
 C-021: crates/repark-core/src/session/tests/attr_id_fresh.rs
-C-023: crates/repark-python/src/tests.rs
+C-023: crates/repark-core/src/session/tests/attr_id.rs::plan_is_stamped_matches_what_stamp_would_change, crates/repark-python/src/tests.rs
 C-024: python/repark/tests/resolution/test_attr_id_1_s3a.py, scripts/check_lib_py.py
 C-025: crates/repark-core/src/session/tests/attr_id_s3b.rs, python/repark/tests/resolution/test_attr_id_1_s3b.py, scripts/check_lib_py.py
 C-026: none (records)
@@ -35,7 +35,7 @@ C-035: none (records)
 C-036: none (records)
 C-037: none (records)
 C-038: none (records)
-C-039: crates/repark-core/src/session/tests/attr_id_resolve.rs::source, crates/repark-core/src/session/tests/attr_id_resolve.rs::stamped, crates/repark-core/src/session/tests/attr_id_resolve.rs::strings, crates/repark-core/src/session/tests/attr_id_s3e.rs, crates/repark-core/src/session/tests/case_bind.rs, crates/repark-python/src/tests.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_attr_id_1_s3e.py, scripts/check_lib_py.py
+C-039: crates/repark-core/src/session/tests/attr_id_resolve.rs::source, crates/repark-core/src/session/tests/attr_id_resolve.rs::stamped, crates/repark-core/src/session/tests/attr_id_resolve.rs::strings, crates/repark-core/src/session/tests/attr_id_s3e.rs, crates/repark-core/src/session/tests/case_bind.rs, crates/repark-python/src/tests.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_attr_id_1_s3b.py::test_filter_facade_held_qualifier_binds_single_id, python/repark/tests/resolution/test_attr_id_1_s3e.py, scripts/check_lib_py.py
 C-040: python/repark/tests/resolution/test_attr_id_1_s4.py
 C-041: scripts/check_lib_py.py
 C-042: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
@@ -47,11 +47,11 @@ C-048: none (records)
 C-049: none (records)
 C-050: crates/repark-python/src/executable_twin_tests.rs::the_twin_is_built_once_per_handle_and_carries_no_id, python/repark/tests/resolution/test_perf_attr_stamp_2_o1.py::test_executing_doors_leave_the_stamped_handle_bindable
 C-051: crates/repark-python/src/executable_twin_tests.rs
-C-052: none (records)
+C-052: crates/repark-core/src/session/tests/attr_id_seam.rs::a_stamped_plan_reaches_the_optimizer_backstop_and_its_collapsed_twin_plans_the_same
 C-053: python/repark/tests/resolution/test_perf_attr_stamp_2_o1.py::test_export_schema_is_clean_over_sql_defined_views, python/repark/tests/resolution/test_perf_attr_stamp_2_o1.py::test_no_new_reader_of_the_attribute_key, python/repark/tests/resolution/test_perf_attr_stamp_2_o1.py::test_the_native_export_schema_is_clean_without_a_facade_strip
 C-054: crates/repark-spark/src/tests/temp_view_attr_ids.rs, python/repark/tests/resolution/test_attr_view_semantics_1.py
 C-055: none (records)
-C-056: none (records)
+C-056: crates/repark-ta/tests/parallel_window.rs::stamped_plan_through_optimizer_reaches_executors_stripped
 C-060: python/repark/tests/resolution/test_attr_id_1_sm2_r1.py
 C-061: python/repark/tests/resolution/_sm2_shared.py
 C-062: none (records)

@@ -16,7 +16,7 @@ C-013: crates/repark-spark/src/tests/spark_dialect.rs
 C-014: crates/repark-spark/src/tests/spark_dialect.rs
 C-015: crates/repark-spark/src/tests/spark_dialect.rs
 C-016: crates/repark-spark/src/tests/spark_dialect.rs
-C-017: crates/repark-spark/src/tests/lambda_door.rs
+C-017: crates/repark-spark/src/tests/common.rs::setup, crates/repark-spark/src/tests/common.rs::setup_v3_at, crates/repark-spark/src/tests/lambda_door.rs
 C-018: python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_explicitly_double_quoted_span_is_a_string_literal
 C-019: none (records)
 C-020: none (records)

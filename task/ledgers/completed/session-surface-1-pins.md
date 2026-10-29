@@ -6,7 +6,7 @@ C-003: python/repark/tests/session/test_session_surface_1.py
 C-004: python/repark/tests/session/test_session_surface_1.py
 C-005: python/repark/tests/session/test_session_surface_1.py
 C-006: python/repark/tests/session/test_session_surface_1.py
-C-007: python/repark/tests/session/test_session_surface_1.py
+C-007: python/repark/tests/session/test_session_surface_1.py::test_tvf_json_tuple_answers_today
 C-008: python/repark/tests/session/test_session_surface_1.py
 C-009: python/repark/tests/session/test_session_surface_1.py
-C-010: python/repark/tests/session/test_session_surface_1.py
+C-010: python/repark/tests/session/test_session_surface_1.py::test_tvf_json_tuple_answers_today

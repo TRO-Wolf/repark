@@ -4,5 +4,5 @@ C-001: python/repark/tests/writes/test_io_bucket_cluster_1.py
 C-002: python/repark/tests/writes/test_io_bucket_cluster_1.py
 C-003: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark-parity/tests/test_ex_0_example_coverage.py, python/repark/tests/writes/test_io_bucket_cluster_1.py, scripts/check_example_coverage.py, scripts/check_lib_py.py
 C-004: python/repark/tests/writes/test_io_bucket_cluster_1.py, scripts/check_lib_py.py
-C-005: python/repark/tests/writes/test_io_bucket_cluster_1.py
+C-005: python/repark/tests/dataframe/_dfcore_1_expected.py::EXPECTED_NEW_PACKAGE_SUBMODULES, python/repark/tests/writes/test_io_bucket_cluster_1.py
 C-006: python/repark/tests/writes/test_io_bucket_cluster_1.py
