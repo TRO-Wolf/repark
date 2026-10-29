@@ -275,6 +275,8 @@ jobs:
       # Every map link must resolve. Mirror `make check-map-sync` and the pre-commit guard.
       - name: map.md link-validity guard (sync_map_md)
         run: python3 scripts/sync_map_md.py --check
+      - name: map.md size ratchet guard (check_map_size)
+        run: python3 scripts/check_map_size.py
       # Full history lets the ledger guard reject wrong bins, dead links, and edits to frozen
       # records. Mirror `make check-ledgers`.
       - name: ledger lifecycle guard (check_ledgers)
