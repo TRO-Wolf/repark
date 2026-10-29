@@ -973,6 +973,8 @@ else. The next pickup's `make ledger-archive` files everything here under
   stamped FIXED at `edc38c6a`. `risk_tier: standard`. Branch `chore/repin-rp-20`.
   pins: rp-20/C-001, C-002, C-003
 - [rp-60-posdel-repin-1-ledger.md](rp-60-posdel-repin-1-ledger.md) — **RP-60-POSDEL-REPIN-1 (2026-10-27, merged 2026-10-28 as PR #1200 at `57e37a72`), completed:** the fork repinned to `ea0b7741` (F-POSDEL-BATCH-1, fork `#374`), with Spark-door pins red at `d80a2884` and green at `ea0b7741`. 6 of 9 clauses PROVEN; C-005 (measured, carded) and C-006 (carded) OPEN; C-008 closed by C-009.
+- [rp-61-posdel-format-repin-1-ledger.md](rp-61-posdel-format-repin-1-ledger.md) — **RP-61-POSDEL-FORMAT-REPIN-1 (2026-10-28, merged 2026-10-29 as PR #1209 at `6ec819ef`), completed:** the fork repinned to `56aa8913` (F-POSDEL-FORMAT-READ-1, fork PR `#375`) and the interim ICE-DELETE-FORMAT-GUARD-1 guard reverted: position-delete files inherit the data format again, and explicit Avro and ORC delete formats are honoured, with the AUD-003 shape pinned through the facade. 15 of 18 clauses PROVEN; the nested-leaf UPDATE pin (C-015), RP-62 (C-016) and the native-door pin (C-017) are OPEN.
+  pins: rp-61-posdel-format-repin-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-018
 - [session-surface-1-ledger.md](session-surface-1-ledger.md) —
   **SESSION-SURFACE-1 step 1 (2026-09-14), in flight:** the 19-name SparkSession
   surface card — job tags, the interrupt trio, the five Connect-only names,
