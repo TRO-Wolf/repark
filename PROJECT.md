@@ -169,7 +169,7 @@ names its evidence; a differentiator without a pointer is aspirational and says 
 - **`unsafe_code = "forbid"`** workspace-wide EXCEPT `crates/repark-python` (landed phase-3 PR-3;
   the crate sets a local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`).
 - **Tests land with the code** (same commit); `cargo test --workspace` is the test command.
-- **`map.md` in every directory, in lockstep** with code changes.
+- **`map.md` where the architecture needs one**, kept honest by the sync and size gates; lockstep with code is a warning, not a gate.
 - **Pin one DataFusion family** across all DF-touching crates; `Cargo.toml` is the SSOT;
   `Cargo.lock` checked in.
 - **Distribution is deferred** behind the `ExecutionBackend` seam.

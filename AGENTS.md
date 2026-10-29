@@ -45,12 +45,12 @@ adapter loses no project knowledge.
 ## Read first
 
 Load only what your role needs. Each row is exhaustive for its role: what it does not name, you
-do not read. Adapters point here and add no second roster.
+do not read.
 
 | Role | Load, in order | Explicitly NOT required |
 |---|---|---|
 | Orchestrator / governing session | [README.md](README.md) → [STATUS.md](STATUS.md) → this contract → [ARCHITECTURE.md](ARCHITECTURE.md) → the SEPMO `## Procedure` section → [task/lessons.md](task/lessons.md) in full | [DEVELOPMENT.md](DEVELOPMENT.md), [docs/testing.md](docs/testing.md), skill `## Reference` sections, critic-critic-critic |
-| Executor (a unit or work order) | This contract's "Hard rules" + "Verify before done" → the work order → the `map.md` of every directory touched → [docs/testing.md](docs/testing.md) → the engineering-method `## Procedure` section → the lessons entries for subsystems you touch (`grep -n <subsystem> task/lessons.md`) | [STATUS.md](STATUS.md) beyond the order's base, [PROJECT.md](PROJECT.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) unless setup blocks you, SEPMO, critic-critic-critic, lessons in full |
+| Executor (a unit or work order) | This contract's "Hard rules" + "Verify before done" → the work order → the `map.md` of each touched directory that has one → [docs/testing.md](docs/testing.md) → the engineering-method `## Procedure` section → the lessons entries for subsystems you touch (`grep -n <subsystem> task/lessons.md`) | [STATUS.md](STATUS.md) beyond the order's base, [PROJECT.md](PROJECT.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) unless setup blocks you, SEPMO, critic-critic-critic, lessons in full |
 | Critic / reviewer | This contract's "Hard rules" → the critic-critic-critic `## Procedure` section → the evidence packet | Everything else |
 | Lookup / status question | [STATUS.md](STATUS.md) only | Everything else |
 
@@ -107,8 +107,8 @@ DataFusion remains the engine under everything. Layout of record:
 
 ## Verify before "done"
 
-`make verify` — a change is not done until lint, format, clippy, **Rust** tests, and the touched
-directories' `map.md` files are all current. `verify` is Rust-only on purpose (inner-loop speed);
+`make verify` — a change is not done until lint, format, clippy, **Rust** tests, and each touched
+directory's `map.md`, where one exists, is current. `verify` is Rust-only on purpose (inner-loop speed);
 it does **not** build the native module. See [docs/testing.md](docs/testing.md). Before opening a
 PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which carries
 the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the canonical
@@ -137,9 +137,11 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   `show`). Full contract: [docs/testing.md](docs/testing.md).
 - **Maps are scoped and hand-written.** A `map.md` sits at a repository root, crate, package or complex
   subsystem boundary where it routes a task, names an owner or a boundary, or names the verification; a
-  new directory need not have one, and a leaf of obvious or generated files does not. History lives in
-  ledgers, PRs or `docs/history/`, never in maps. Lockstep warns (`scripts/check_map_md.sh`);
-  `sync_map_md.py --check` and `scripts/check_map_size.py` are the gates. No generator writes map prose.
+  new directory need not have one, nor a leaf of obvious or generated files. History lives in ledgers,
+  PRs or `docs/history/`, never in maps. Lockstep warns (`scripts/check_map_md.sh`); `sync_map_md.py
+  --check` and `scripts/check_map_size.py` are the gates. No generator writes map prose. Pin bindings
+  live in `task/ledgers/<bin>/<unit>-pins.md`, one line per clause, read by the ledger-grammar gate; the
+  owner-ruling paragraph above is amended on the owner's word.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -209,9 +211,9 @@ How a change is shaped, independent of where it lands.
 
 ## Write for the eventual reader — comments, docstrings, and prose
 
-Owner-stated 2026-08-23. Write every paragraph, comment, doc, PR description, and issue for
-its **eventual reader**, not the current agent conversation. Work out the reader's needs
-privately; do not add an audience-analysis section to the artifact itself.
+Owner-stated 2026-08-23. Write every paragraph, comment, doc, PR description and issue for its
+**eventual reader**, not the current agent conversation, and add no audience-analysis section to the
+artifact.
 
 **Do not over-comment.** Three rules, applied to every comment and docstring:
 
@@ -297,12 +299,10 @@ The **executor** is [.agents/skills/compact-context-docs/SKILL.md](.agents/skill
 
 ## PyO3 build notes
 
-- The cdylib's `extension-module` feature is **off by default**; it is enabled only when
-  maturin builds the wheel.
-- Therefore the test command is **`cargo test --workspace`**, never the flag that enables every
-  feature — that would turn on `extension-module`, which tells PyO3 not to link libpython and
-  breaks a standalone test binary. CI, the Makefile, and this rule all agree.
-- PyO3's build script needs an interpreter; linking `cargo test` needs `libpython3.x.so` present.
+- The cdylib's `extension-module` feature is **off by default** (maturin enables it for the wheel),
+  so the test command is **`cargo test --workspace`**, never the flag that enables every feature:
+  that breaks a standalone test binary by stopping PyO3 linking libpython. `cargo test` needs
+  `libpython3.x.so` present.
 
 ## Version-pin contract
 
@@ -337,8 +337,8 @@ into the fork when useful.
 
 ## Resource discipline — disk and artifacts
 
-Builds, test runs, coverage, and per-unit worktrees are the largest consumers of disk here, and a
-disk that fills halts a campaign mid-unit.
+Builds, tests, coverage and per-unit worktrees are the largest disk consumers; a full disk halts a
+campaign mid-unit.
 
 - **Check free space before you spend it** — before creating a worktree, and before any
   artifact-heavy command.
@@ -385,8 +385,7 @@ section instead of restating it; a brief may narrow these, never relax them.
   around — the sanctioned outs are visible diffs, reviewed like code.
 - **Test relocations follow docs/testing.md "Relocation discipline":** move-only = identity-diff
   gate; path-changing regroups are declared-rename units that ship alone with a name map.
-- **Disk:** the pre-spend checks, scoped cleanup, and handoff report in
-  ["Resource discipline"](#resource-discipline--disk-and-artifacts) bind every unit.
+- **Disk:** ["Resource discipline"](#resource-discipline--disk-and-artifacts) binds every unit.
 - **Never:** AWS credentials/envs, `Cargo.toml [patch]` changes, `.github/` changes,
   secrets in any output. Clean STOP states only — a dirty worktree is not a delivered unit.
 
