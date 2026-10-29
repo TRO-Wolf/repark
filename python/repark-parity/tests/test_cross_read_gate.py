@@ -40,7 +40,7 @@ def _load_helper() -> ModuleType:
 _HELPER = _load_helper()
 
 
-class UnsupportedOperationException(Exception):  # noqa: N818 - Spark names the class
+class SparkUnsupportedTypeError(Exception):
     """Stand-in for the Spark error the pins name."""
 
 
@@ -121,7 +121,7 @@ def test_timestamp_ns_condition_on_a_nanosecond_table_is_accepted() -> None:
         _repark_session(_ns_table()),
         "catalog.scratch.probe",
         _raising_spark(
-            UnsupportedOperationException("Cannot convert unsupported type to Spark: timestamp_ns")
+            SparkUnsupportedTypeError("Cannot convert unsupported type to Spark: timestamp_ns")
         ),
         "catalog.scratch.probe",
         None,
@@ -137,9 +137,7 @@ def test_timestamptz_ns_condition_on_a_nanosecond_table_is_accepted() -> None:
         _repark_session(_ns_table()),
         "catalog.scratch.probe",
         _raising_spark(
-            UnsupportedOperationException(
-                "Cannot convert unsupported type to Spark: timestamptz_ns"
-            )
+            SparkUnsupportedTypeError("Cannot convert unsupported type to Spark: timestamptz_ns")
         ),
         "catalog.scratch.probe",
         None,
@@ -155,7 +153,7 @@ def test_multiline_message_matching_on_its_first_line_is_accepted() -> None:
         _repark_session(_ns_table()),
         "catalog.scratch.probe",
         _raising_spark(
-            UnsupportedOperationException(
+            SparkUnsupportedTypeError(
                 "Cannot convert unsupported type to Spark: timestamp_ns\n"
                 "at org.apache.spark.sql.execution.SparkRead.run"
             )
@@ -174,7 +172,7 @@ def test_condition_only_on_the_second_line_is_rejected() -> None:
         _repark_session(_ns_table()),
         "catalog.scratch.probe",
         _raising_spark(
-            UnsupportedOperationException(
+            SparkUnsupportedTypeError(
                 "Spark read failed: no executor\n"
                 "Cannot convert unsupported type to Spark: timestamp_ns"
             )
@@ -209,7 +207,7 @@ def test_variant_condition_on_a_nanosecond_table_is_rejected() -> None:
         _repark_session(_ns_table()),
         "catalog.scratch.probe",
         _raising_spark(
-            UnsupportedOperationException("Cannot convert unsupported type to Spark: variant")
+            SparkUnsupportedTypeError("Cannot convert unsupported type to Spark: variant")
         ),
         "catalog.scratch.probe",
         None,
@@ -241,7 +239,7 @@ def test_unsupported_condition_text_on_a_microsecond_table_is_rejected() -> None
         _repark_session(_us_table()),
         "catalog.scratch.probe",
         _raising_spark(
-            UnsupportedOperationException("Cannot convert unsupported type to Spark: timestamp_ns")
+            SparkUnsupportedTypeError("Cannot convert unsupported type to Spark: timestamp_ns")
         ),
         "catalog.scratch.probe",
         None,
