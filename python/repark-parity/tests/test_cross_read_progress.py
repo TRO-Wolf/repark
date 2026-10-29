@@ -255,9 +255,17 @@ def _load_reporting_namespace() -> dict[str, Any]:
         "CrossReadOutcome",
         "format_outcome_table",
         "assert_outcomes_expected",
+        "expected_ns_cannot_read",
         "spark_error_first_line",
     }
-    constants = {"EQUAL", "DIFFERENT", "SPARK_CANNOT_READ", "_MAX_ERROR_LINE_CHARS"}
+    constants = {
+        "EQUAL",
+        "DIFFERENT",
+        "SPARK_CANNOT_READ",
+        "_MAX_ERROR_LINE_CHARS",
+        "_NS_TYPE_NAMES",
+        "_NS_UNSUPPORTED_TYPE_PREFIX",
+    }
     nodes = [
         node
         for node in tree.body
@@ -351,7 +359,9 @@ def test_completed_details_flush_before_next_call_and_preserve_final_report(
         assert_outcomes_expected=assertion,
         time=Mock(monotonic=Mock(side_effect=[100.0, 101.25, 200.0])),
     )
-    is_unexpected = status == "DIFFERENT" or (status == "SPARK-CANNOT-READ" and not has_ns_columns)
+    is_unexpected = status == "DIFFERENT" or (
+        status == "SPARK-CANNOT-READ" and not reporting["expected_ns_cannot_read"](outcome)
+    )
     if phase != "complete":
         with pytest.raises(RuntimeError, match="controlled next-call failure"):
             namespace["_cross_read_namespace"](repark, Mock(), "catalog", "scratch")

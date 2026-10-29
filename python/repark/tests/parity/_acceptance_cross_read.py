@@ -5,7 +5,8 @@ the same warehouse, and table names, each table is read on both engines and
 compared on schema (names, common-vocabulary types, nullability) and rows
 (order-insensitive, exact, floats bit-exact). One outcome per table: EQUAL,
 DIFFERENT with the first differences, or SPARK-CANNOT-READ with Spark error
-class and first line. Tables holding nanosecond timestamp columns report
+class and first line; the gate expects that outcome only for the recorded
+unsupported-type condition. Tables holding nanosecond timestamp columns report
 has_ns_columns and are never skipped.
 
 pins: ice-spark-cross-read-1/C-001
@@ -28,6 +29,7 @@ DIFFERENT = "DIFFERENT"
 SPARK_CANNOT_READ = "SPARK-CANNOT-READ"
 
 _NS_TYPE_NAMES = frozenset({"timestamp_ns", "timestamptz_ns"})
+_NS_UNSUPPORTED_TYPE_PREFIX = "Cannot convert unsupported type to Spark: "
 _MAX_ROW_DIFFERENCES = 5
 _MAX_ERROR_LINE_CHARS = 300
 
@@ -373,13 +375,23 @@ def format_outcome_table(outcomes: list[CrossReadOutcome]) -> str:
     return "\n".join(lines)
 
 
+def expected_ns_cannot_read(outcome: CrossReadOutcome) -> bool:
+    """True only for the recorded nanosecond unsupported-type Spark failure."""
+    if outcome.status != SPARK_CANNOT_READ or not outcome.has_ns_columns:
+        return False
+    first_line = outcome.spark_error_first_line or ""
+    if not first_line.startswith(_NS_UNSUPPORTED_TYPE_PREFIX):
+        return False
+    return first_line[len(_NS_UNSUPPORTED_TYPE_PREFIX) :].strip() in _NS_TYPE_NAMES
+
+
 def assert_outcomes_expected(outcomes: list[CrossReadOutcome]) -> None:
-    """Fail unless every table is EQUAL or an expected nanosecond SPARK-CANNOT-READ."""
+    """Fail unless every table is EQUAL or the recorded nanosecond limitation."""
     bad = [
         outcome
         for outcome in outcomes
         if outcome.status == DIFFERENT
-        or (outcome.status == SPARK_CANNOT_READ and not outcome.has_ns_columns)
+        or (outcome.status == SPARK_CANNOT_READ and not expected_ns_cannot_read(outcome))
     ]
     assert not bad, f"cross-read found {len(bad)} unexpected outcome(s):\n" + format_outcome_table(
         outcomes
