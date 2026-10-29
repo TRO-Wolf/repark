@@ -92,6 +92,8 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   pins: ice-hadoop-gzip-metadata-1/C-005
   pins: ice-hadoop-gzip-metadata-1/C-006
   pins: ice-hadoop-gzip-metadata-1/C-007
+  The verification round 1 of ICE-HADOOP-GZIP-METADATA-1 (ledger C-008, 2026-10-29) is cited here on the gzip pin family above, so the grammar gate counts it; the verifiers add no pin of their own.
+  pins: ice-hadoop-gzip-metadata-1/C-008
   The merge facts of ICE-HADOOP-HINT-WINDOW-1 are cited here so the grammar gate counts them: the label re-date (ice-hadoop-hint-window-1 C-008, 2026-10-28, merge `9ab67d7d`) and the option-1 walk's closure of ice-integrity-pins-1 C-015, C-029 and C-071 (C-072). This file pins none of them.
   pins: ice-hadoop-hint-window-1/C-008
   pins: ice-integrity-pins-1/C-072
