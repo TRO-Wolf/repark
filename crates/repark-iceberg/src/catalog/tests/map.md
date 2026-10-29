@@ -12,17 +12,12 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `namespace_drop.rs` — **ICE-DROP-NS-1 (2026-09-19):** `refuse_non_empty_namespace_drop`
   refuses a table-holding namespace with the count, passes an empty one, passes after the
   table is dropped, and fails loud on a missing namespace — all against a memory catalog.
-  pins: ice-drop-ns-1/C-007, C-008
   A child namespace refuses the parent's drop (`Contains 1 child namespace(s).`).
-  pins: ice-drop-ns-1/C-011
   **ICE-VIEWS-1 (2026-09-20):** a view-only namespace refuses the same way
   (`Contains 1 view(s).`).
-  pins: ice-views-1/C-013
   **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** `refresh_after_commit_without_a_registered_provider_states_the_change_is_committed` pins the `committed:` error text when no deferred provider can be installed (the catalog name is not registered).
-  pins: ice-post-publish-outcome-1/C-004
 - `catalog.rs` — AWS-free unit battery: CTAS reality, builder validation, live-list staleness,
   O(1) invalidation, scheme selection, span secret-hygiene, fork-patch proof, T6 residual pins.
-  pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   The listing-cost pin counts catalog calls instead of wall-clock time: a call count is
   deterministic under box load, while an elapsed-time ratio cannot tell a regression from a
   noisy neighbour.
@@ -31,7 +26,6 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   `LineageColumnsTableProvider`: `row_id_read_after_add_column_null_fills_the_added_column`
   and `row_id_read_after_swapping_two_names_reads_each_field_by_id` (projection and a
   `WHERE v = 'a'` filter) hold the rows under the current schema.
-  pins: ice-evo-dml-1/C-016
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the counting-layer pins. Every op kind
   counts once with its bytes (local FS under the wrapper); ranged reads count the RETURNED
   length (a stub `FileRead` whose `read(0..1000)` returns 10 bytes counts 1 request / 10 bytes —
@@ -53,9 +47,6 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   error. The wrapper must reach the stub's own `write_new` and `list` once each, and count one
   data-file write of 12 bytes and one list. Dropping either override, or re-spelling
   `write_new` as `exists` + `write`, reds it (2026-09-19).
-  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-010
-  pins: rp-37-fork-pin/C-001
-  pins: rp-38-fork-pin/C-001
 - `cache_wiring.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the cache-wiring pins, offline. A
   recording `CacheWiredBuilder` proves what `wire_caches` passes (the session's metadata `Arc`,
   the manifest bytes, the credential context; nothing when disabled; each switch alone); real
@@ -72,14 +63,13 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   loads four small tables under a one-entry bound, calls `trim()` with nothing settled first,
   then settles and requires zero retained entries: moka's `entry_count` still reads 0 before its
   pending tasks run, so a `trim` that reads the unsettled `metadata_len()` never clears (red 3/3
-  as `left: 4, right: 0`). pins: ice-catalog-cache-1/C-001, C-003, C-005, C-006,
-  C-008, C-010, C-012
+  as `left: 4, right: 0`).
   **ICE-FOOTER-CACHE-1 (2026-09-19):** the recorder also records the footer `Arc`: it reaches
   the builder by default, not when disabled, alone with a credential context, and not at
   `footerCacheBytes = 0`; `every_builder_holds_the_session_footer_cache` raises the footer
   handle's `strong_count` by one per memory, Glue and S3 Tables build. The counter pin now
   compares warm data-file PAGE reads (requests and bytes) on vs off and requires zero warm
-  footer reads with the caches on (and some with them off). pins: ice-footer-cache-1/C-002, C-005
+  footer reads with the caches on (and some with them off).
 - `footer_cache.rs` — **ICE-FOOTER-CACHE-1 (2026-09-19):** the footer-cache scan pins on a local
   memory-catalog table (three data files of 60,000 rows written through DataFusion's
   `generate_series`, read by a second catalog built with the caches under test). A warm re-scan
@@ -90,35 +80,30 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   one answers right (100 rows, their sum), raises `upgrades`, fetches nothing new and reads no
   footer; a repeat does not upgrade again. Warm page reads are identical on and off. The table
   is reached through `Arc<dyn Catalog>` method calls, so the module imports no `Catalog` trait.
-  pins: ice-footer-cache-1/C-003, C-004, C-005
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
-  pins: rp-1-fork-repin/C-003
-  pins: rp-4-fork-repin/C-002
 - `uuid_presentation.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** kernel pins for
   `../uuid_presentation.rs`: only `uuid` fields (not `fixed[16]`) present as `Utf8`, at top
   level and inside a struct, and store back to the fork's schema; the parser is Java's
   `UUID.fromString` (upper case equals lower case, `1-2-3-4-5` accepted, `nope` and the
   undashed form refused `Invalid UUID string: …`); a nested uuid round-trips text → bytes →
-  lower-case text; bad text refuses with the fork's `DataInvalid` text. pins: u9-types-1/C-013
+  lower-case text; bad text refuses with the fork's `DataInvalid` text.
   **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `a_binary_source_is_decoded_text_like_spark`
   pins the sixteen-byte refusal text Spark printed and a 36-byte canonical text (Binary and
-  LargeBinary) storing the uuid; red before the binary arm. pins: u9-types-1/C-016
+  LargeBinary) storing the uuid; red before the binary arm.
   **WO U9-TYPES-1 round-4 fold (2026-09-26, verifier V-005):** the undashed refusal in
   `the_parser_is_java_uuid_from_string` is Spark's measured core text, oracle step
   `uuid/bd/insert-undashed` (`Invalid UUID string: 123e4567e89b12d3a456426614174000`, the
-  wrapper split held by R-27). pins: u9-types-1/C-013
+  wrapper split held by R-27).
 - `memory_props_span.rs` — **PR-B class sweep (2026-09-24):** the
   `catalog.memory_catalog_cached_with_props` span records exactly `warehouse`,
   `metadata_cache`, `manifest_cache_bytes` and `footer_cache`. No field value carries a prop
   name or value, even with a secret-looking key in the props.
-  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `memory_catalog_span_masks_a_password_in_the_warehouse`. pins: source-url-redact-1/C-018
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `memory_catalog_span_masks_a_password_in_the_warehouse`.
 - `lineage_columns.rs` — **V3-4 critic:** stored `_row_id` wins over `first_row_id +` pos;
   `WHERE id = lit` keeps matching lineage rows; `try_new_with_snapshot` is absent.
-  pins: v3-4-serve-lineage-columns/C-017, C-019, C-020
 - `no_overwrite.rs` — **RP-55 fold (2026-09-27, critic V-001):** a first `writer()` on a fresh
   path succeeds; a second `writer()` on an existing path fails `Unexpected` with the same text
   `write()` refuses with.
-  pins: aws-accept-replace-1/C-001
 - `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the guard's own pins, with no
   entry check in the way: a keyed table handle creates no data, delete, puffin, manifest,
   manifest-list or stats file and does write a `.metadata.json`; an unkeyed or
@@ -127,7 +112,6 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   before the key was added refuses at commit; property commits pass on a keyed table and
   UNSET restores writes; the refusal is found through a source chain and through
   rendered text.
-  pins: enc-1/C-008
   **Fold 2 (2026-10-09), from the re-verify:** the guard's `Debug` renders exactly what the
   wrapped catalog renders (`repark-distributed` reads the catalog kind from that text);
   metadata text that names a file-adding update (a property value, with the verifier's
@@ -136,7 +120,6 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   and follows `write.metadata.path`; and one pin per decorator branch the verifier's
   mutants walked through: `register_table` returns a guarded handle, a statistics commit
   and both publish calls refuse at the catalog for a handle that is not guarded.
-  pins: enc-1/C-010
 
 ## Pointers
 

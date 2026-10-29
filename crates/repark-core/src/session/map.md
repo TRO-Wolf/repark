@@ -19,14 +19,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
   under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
-  `<schema>.<table>`, and a `query` is named `jdbc`. pins: c-2/C-116
+  `<schema>.<table>`, and a `query` is named `jdbc`.
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
   `num_partitions` outside Spark's 32-bit `Int` refuses before any connection.
-  pins: c-3/C-010
 - `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
   from its integer arguments; bounds given as text in `properties` reach
   `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
-  pins: c-3/C-009
 - `read_postgres.rs` — **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
   `lower_bound`, `upper_bound`, `num_partitions` and a `predicates` flag in place of the list
   of option names C-2d refused by. The door refuses `predicates` first (still declared), lifts
@@ -35,7 +33,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   words, all before any connection, and then calls `PostgresTable::partitioned` on the
   resolved table. `source_error` now keeps the `Analysis` and `NumberFormat` classes too.
   `tests/read_postgres.rs` pins each refusal's class and sentence against an unroutable
-  address. pins: c-3/C-006
+  address.
 - `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
   partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
   `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
@@ -44,7 +42,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `PostgresSource` on the `ReadPostgres` door whose pool lives as long as the returned frame's
   provider. `source_error(source, error)` keeps `From<ConnectError>`'s class and prefixes the
   source. Without the `postgres` feature the method refuses ("not compiled into this build").
-  `note_postgres_catalog_names` fills the session's read-only set. pins: c-2/C-100, C-102
+  `note_postgres_catalog_names` fills the session's read-only set.
 - `zone_localiser.rs` — **C-2d (2026-10-07):** `SessionZoneLocaliser` holds the session's
   `runtime_zone` handle. Under `postgres` it implements `repark_connect::WallClockLocaliser`.
   The zone is read at scan time and canonicalised through `canonical_session_zone_id`, as
@@ -63,7 +61,6 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **C-4 fold 3 S3 (2026-10-11):** `localise_at`, `unlocalise`, `place` and
   `unplace` take the column name and carry it into the `UnrepresentableValue`
   refusal; the read-path `localise` keeps the empty name (it has no column).
-  pins: c-2/C-098, C-108, C-109, C-110, C-111
 - `write_postgres.rs` — **C-4 step 2 (2026-10-09):** `execute_postgres_write` is the one
   Postgres sink driver both SQL doors and the `df.write.jdbc` binding call. It builds a
   fresh pool from mounted specs (`ReparkToml` door) or URL properties (`ReadPostgres` door,
@@ -127,12 +124,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   ceiling, so the date pin has no room yet). The store-assignment refusal
   text is the shared Iceberg builder, so it stays byte-identical here
   (ledger §15).
-  pins: c-4/C-013, C-014
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
-  pins: ice-views-1/C-018
   **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits
-  `trim_iceberg_caches()`, which settles the moka cache before it counts. pins: ice-catalog-cache-1/C-012
+  `trim_iceberg_caches()`, which settles the moka cache before it counts.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
   its crate-private body, the session's one statement funnel (spill SET intercept, cache
   trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase
@@ -141,14 +136,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and
   `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** it takes `source_by_name: bool` and fills
-  `EngineContext::source_by_name`; `sql_with` passes `false`. pins: u7-write-df-2/C-013
+  `EngineContext::source_by_name`; `sql_with` passes `false`.
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the funnel takes
   `verbatim_override: Option<bool>` and fills `EngineContext::verbatim_override`;
   `sql_built` passes `Some(false)`, `sql_with` passes `None`.
-  pins: string-literal-escape-1/C-011
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):**
   `ReparkSession::set_time_parser_policy` (runtime `LEGACY`/`CORRECTED`/`EXCEPTION`
   setter; lazily installs the policy carrier, so no builder install exists;
@@ -161,17 +155,14 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   It probes `table_exists` for a qualified name, runs `repark_iceberg::write::plan_writer`, and
   when the plan asks, splits the catalog-qualified name and runs
   `check_layout_matches_catalog_table` before returning the statement.
-  pins: u7-write-df/C-005, C-009, C-018
 - `temp_views.rs` — **IPI-40 PR6 (2026-09-24):** implements `dialect::TempViewSession` for
   `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
-  pins: ice-views-1/C-018
   **ATTR-ID-1 S2 (2026-09-30):** all four `MemTable` constructors
   (`create_or_replace_temp_view`, `register_record_batches_as_temp_view`,
   `register_collected_memtable`, `declare_temp_view_sorted`) run their schema and batches
   through `df_guards::attr_id::strip_record_batches`, so materialized views are born
   without the key (cache reads mint fresh ids — S3 resolve must cope, ledger R-5).
-  pins: attr-id-1/C-009
   **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
   the choke-point fix pushed that file past its ceiling. The old exception then retired under the
   prior default; CAP-1 records the file again at its exact source-size baseline. Holds
@@ -203,7 +194,6 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   sum (the monotonic counter makes per-batch checking boundary-identical to `main`), so
   once the limit is crossed the loop stops retaining batches but keeps pulling to finish
   the count, then refuses with `main`'s byte-identical message.
-  pins: eager-budget-1/C-005, C-007, C-008
   **DECIMAL-CACHE-1 (2026-09-15):** `register_collected_memtable` analyzes the plan with
   the session's own rules before pinning the schema (facade-built plans carry the
   unanalyzed DataFusion-default type, e.g. `(38,10)`, while the executed batches carry the
@@ -220,7 +210,6 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   reorder/missing/duplicate/superset/overflow/null cases; the untouched-batch fast path
   is behavior-identical by construction (same columns, same schema `Arc`) and is held by
   the unchanged end-to-end cache suites.
-  pins: decimal-cache-1/C-003, C-004, C-008, C-009, C-010, C-011
   (The analyze-then-conform pipeline is shared with the plain-`temp_view` path, which
   funnels through the same `register_collected_memtable`.)
   **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** `list_temp_view_names` moves here
@@ -261,13 +250,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   arrow-58 `Array::slice` pushes the offset into the `Buffer` itself and only `data_ptr()`
   makes a slice share its parent's key (the sliced-array pin proves it). Checkpoint
   (`__repark_ckpt_*`), user views, and non-`MemTable` providers are skipped.
-  pins: eager-budget-1/C-002, C-003
   **EAGER-BUDGET-1 step 2 (2026-09-13):** the enumeration body became
   `live_cache_buffer_set()`, which returns the `(pointer set, total)` pair so incremental
   admission seeds its `seen` set with the live cache buffers — a new view's buffers already
   held by a live `__repark_cache_*` MemTable add zero to `admitted`. `retained_cache_bytes`
   is the same walk reporting only the total.
-  pins: eager-budget-1/C-005
 - `memory_catalog.rs` — **PR-B hadoop naming (2026-09-24):** `register_memory_catalog_with_props`,
   the body of `register_memory_catalog`, moved here to keep `session.rs` under the default
   ceiling. The public `register_memory_catalog(name, warehouse)` delegates with an empty map,
@@ -295,34 +282,31 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   bench — can count into the session's set) is what `session.rs::register_catalog_spec` hands `glue_catalog_counted` /
   `s3tables_catalog_counted`, so a configured Glue or S3 Tables catalog counts into the same set
   as the memory catalog. A catalog passed to `register_iceberg_catalog` counts only if its
-  builder was given these counters. pins: ice-read-perf-0/C-003
-  pins: perf-ice-catalog-io-1/C-002, C-003, C-004
+  builder was given these counters.
   **ICE-CATALOG-CACHE-1 (2026-09-19):** `register_catalog_spec` hands the whole `CatalogCaches`
   to the Glue and S3 Tables builders, so they now carry the session's metadata and manifest
   caches too. `iceberg_metadata_cache_report()` returns the fork's `TableMetadataCacheStats`
   (hits, misses, body fetches, evictions); `iceberg_metadata_cache_stats()` keeps its
   `(hits, misses, body_fetches)` signature for the Python census binding.
-  pins: ice-catalog-cache-1/C-002, C-007
   `trim_iceberg_caches` is async and `settle_iceberg_metadata_cache()` is public (the census
-  binding and the bench call it before reading counts). pins: ice-catalog-cache-1/C-012
+  binding and the bench call it before reading counts).
   **ICE-FOOTER-CACHE-1 (2026-09-19):** `iceberg_footer_cache_stats()` returns the fork's
   `ParquetFooterCacheStats` (hits, misses, fetches, upgrades, evictions) of the session's one
   footer cache, `None` when `repark.iceberg.footerCacheBytes = 0`. The cache reaches every
   catalog this session builds through the same `CatalogCaches`, so no registration path changed.
   Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
-  there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
+  there is no settle step before reading.
 - `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `materialize_empty_part`
   writes the csv header from the frame schema's recorded display names
   (`duplicate_names::recorded_display_names`) when it carries them, so the
   header-only part of an empty duplicate-name csv write shows the display
   names, as the sink serializer does for a non-empty one; a frame without
-  the record passes its own column names as before. pins: fa-5-6/C-002
+  the record passes its own column names as before.
   **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
   owns the S3 save-mode protocol: per-call temp view, one `COPY` per part, parts land
   direct under the destination, `_SUCCESS` is the last object, exists means any object
   under the prefix, and `overwrite` lists and deletes the whole prefix. Bucket root
   refuses loud.
-  pins: s3-path-write-1/C-007, C-008, C-009, C-013, C-015
   **S3-PATH-WRITE-1 re-verify (2026-09-28):** the append branch `HEAD`s the
   exact key and refuses loud when an object sits at the destination
   (`R-S3-APPEND-EXACT`), since the exact object would win the read.
@@ -330,7 +314,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   (`timestampFormat`, `timestampNTZFormat`, `dateFormat`) are honored, not
   refused: they skip COPY option SQL and the CSV/JSON `COPY` inner `SELECT`
   comes from `text_write_format::select`, which formats temporal columns in
-  the session zone. pins: text-write-timestamp-zone-1/C-001, C-002
+  the session zone.
   **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the CSV/JSON
   COPY parts (plain inner `SELECT`, resolved `STORED AS`, spec OPTIONS merged
   after the validated format clause) come from
@@ -343,7 +327,6 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   survives on any mode; the append-validation cohort moved to
   [`path_write/append.rs`](path_write/append.rs) under the file-size gate.
   Child: [`path_write/`](path_write/map.md).
-  pins: text-write-timestamp-zone-1/C-007
   **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the
   snapshot rollback is gone: a failed CSV/JSON write deletes exactly the
   output paths its own sink recorded plus a materialized empty part, so a
@@ -353,18 +336,16 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   Spark door runs COPY eagerly, so no plan handle outlives the write), and
   parquet keeps its pre-rollback commit with no cleanup. A cleanup failure
   appends the bare message once, without repeating the variant prefix.
-  pins: text-write-timestamp-zone-1/C-009
   **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** both S3 commit legs run the
   engine-built COPY through `sql_built_with_write_options`, so the statement
   parses in default mode in every session mode.
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the format, mode, compression and destination refusals echo the value or URL
-  through `mask_value_credentials`. pins: source-url-redact-1/C-036
+  through `mask_value_credentials`.
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
   `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy
   messages), the micros-to-wall/zone conversions, and the option-key helpers.
   Child: [`text_write_format/`](text_write_format/map.md).
-  pins: text-write-timestamp-zone-1/C-004
   **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** `micros_to_wall_zone` is
   the shared `micros_to_wall_and_offset`, whose tabulated branch is main's
   `with_timezone` expression.
@@ -378,39 +359,35 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   decided once per pattern instead of once per value.
 - `late_catalogs.rs` — **C-2d fold 1 (2026-10-07), N5:** `check_catalog_refusal` asks
   `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses
-  with that source's text. pins: c-2/C-115
+  with that source's text.
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.
-  pins: perf-ice-catalog-io-1/C-004
   **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `register_late_catalog_block` registers one
   runtime block tolerantly (incomplete parses stay silent; registered names only update
   the side map; register failures propagate, so the postgres S-6 refusal stays), and
   `note_catalog_table_props` folds spec props into the side map (called from the builder
   loop too, one line).
-  pins: ice-catalog-session-1/C-024
   S7 strips the `///` docs (comment-ban zero); the semantics above stand.
   **CATALOG-1 (2026-09-26):** `note_catalog_refusal` / `check_catalog_refusal`
   (the refused-kind placeholder: stored beside the entries, never listed, every use raises
   its refusal; a later long-form block replaces it). The singular late path reports a
   refusal as `false`; the plural path reports refused names in neither list.
-  pins: catalog-1/C-006, C-007, C-008
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
   `session.rs` 1002 → 988 and the CAP-1 exception retired (under the default ceiling).
-  pins: csv-infer-perf-1/C-006
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   `context_with_df_54_1_rule_guards` takes the dialect beside the extension and registers
   the door's `TypePlanner` (`with_type_planner`) when one of them hands one in; the
   dialect's `configure_analyzer_rules` runs after the extension's. A session with neither
-  keeps DataFusion's type mapping. pins: ice-tsns-type-planner-1/C-011
+  keeps DataFusion's type mapping.
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
   unrelated siblings loud. The wrapper preserves DataFusion's rule name and order.
   **PERF-UNPIVOT-1 (2026-09-12):** every core session installs `StackQueryPlanner` and
-  registers the marker `stack` UDF. pins: perf-unpivot-1/C-003
+  registers the marker `stack` UDF.
   **COLUMN-PARITY-1 critic round (2026-09-14):** every core session also registers the
-  `update_fields` and `repark_isnan` UDFs beside `stack`. pins: column-parity-1/C-008
+  `update_fields` and `repark_isnan` UDFs beside `stack`.
   **FNP-8 (2026-09-07):** core hands the complete analyzer vector to the session extension before
   building `SessionState`; the identity hook preserves every guard and its position.
   The two guards sit at **different altitudes**,
@@ -446,20 +423,18 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   Pins: all nine live in `tests/df_guard.rs` (below), not in `tests/session.rs`;
   ledger `task/c25-bugfix-ledger.md` → DEFECT-2; the eighth,
   `a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access`, and the ninth,
-  `a_projection_inner_error_that_is_not_an_extraction_collision_stays_loud`, pins:
-  u8-write-sql/C-030.
+  `a_projection_inner_error_that_is_not_an_extraction_collision_stays_loud`.
   **NEVER-OOM-PANIC-1 (2026-09-16):** `context_with_df_54_1_rule_guards` also appends the
   `NljBuildSideReset` physical-optimizer rule (guard 3, same 54.1-defect family as the two
   above): it runs after DataFusion's own physical rules and wraps each nested-loop-join
   build side so the OOM fallback's second `execute(0)` meets fresh `RepartitionExec`
   channels. Full design in `../map.md` (`nlj_build_reset.rs`).
-  pins: never-oom-panic-1/C-004, C-005
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** one more appended physical rule,
   `ParallelWindowRule`, right after `NljBuildSideReset`. It reads the session's
   `repark.parallel` carrier and is a no-op when the session was built with
   `parallel_single_partition(false)`. Full design in `../parallel_window/map.md`.
   **S3 (2026-10-04):** `ParallelProjectionRule` is appended right after `ParallelWindowRule`
-  and reads the same carrier. pins: ta-series-s3/C-005
+  and reads the same carrier.
   **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;
@@ -468,7 +443,6 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `skipping_limit::skip_safe_physical_optimizer_rules()` as the physical rule list, ahead of
   the three RePark physical rules: DataFusion's list with `EnforceSorting` wrapped. Design,
   cost and the retirement event are in the `df_guards/` directory map.
-  pins: offset-nested-sort-1/C-005
   **DF-SUBQUERY-1 (2026-09-15):** `df_guards.rs` declares `subquery/`'s module,
   registers the `__repark_single_row` guard UDAF on every core session beside
   `stack`/`repark_isnan`, and inserts `repark_projection_exists` +
@@ -476,29 +450,27 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `repark_lateral_projection_hoist` just ahead of `decorrelate_lateral_join` in the
   recommended-rule order. `session.rs` re-exports `resolve_bound_expr` /
   `resolve_scoped_expr` / `resolve_subquery_plan` for the binding layer.
-  pins: df-subquery-1/C-001, C-002, C-004
   **CASESENS-2 port (2026-10-03):** declares the private `predicate_names`
-  module (the join-condition qualifier binder). pins: casesens-2/C-009
+  module (the join-condition qualifier binder).
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `dead_datafusion_54_1_refusal` and the new `invalid_datafusion_config` echo
-  the value masked; `spill.rs`'s `memory_limit` refusal likewise. pins: source-url-redact-1/C-017
+  the value masked; `spill.rs`'s `memory_limit` refusal likewise.
   **STAMP-2-R5P6-2 (2026-10-07):** `df_guards.rs` declares `df_guards/join_exact.rs`, the
   builder of the facade's H1 join statement without the SQL planner (see `df_guards/map.md`).
-  pins: stamp-2-r5p6-2/C-002
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
-  (row in `df_guards/map.md`). pins: u11-edge-1/C-015
+  (row in `df_guards/map.md`).
   Round 2 (2026-09-26): `case_bind` is `pub` and `session.rs` re-exports it as
-  `frame_names`. pins: u11-edge-1/C-017, C-018, C-019, C-020
+  `frame_names`.
   **ATTR-ID-1 S1 (2026-09-30):** `df_guards.rs` also declares the private
   `df_guards/attr_id.rs`, whose public items leave through `frame_names` (row in
-  `df_guards/map.md`). pins: attr-id-1/C-002
+  `df_guards/map.md`).
   **ATTR-ID-1 S2b (2026-09-30):** `unnest_safe_optimizer_rules` puts
   `attr_id::StripAttributeIds` first in every core session's optimizer, so no optimized or
   physical plan carries `repark.attr` (row in `df_guards/map.md`); `tests/df_guard.rs`'s
-  rule-order pin expects it first. pins: attr-id-1/C-015
+  rule-order pin expects it first.
   **ATTR-ID-1 S4 (2026-10-02):** `df_guards.rs` also declares the private
   `df_guards/attr_lineage.rs`, a pure move of the projection lineage out of
-  `attr_id.rs` (row in `df_guards/map.md`). pins: attr-id-1/C-040
+  `attr_id.rs` (row in `df_guards/map.md`).
   **ATTR-ID-1 SJ-1a (2026-10-02):** `df_guards.rs` also declares the private
   `df_guards/frame_lineage.rs`, the self-join lineage core (`FrameNode` and the
   ambiguity walk), whose public items leave through `frame_names` (row in
@@ -521,7 +493,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   round 5, verifier V-003): `BoomOnProjection` errors on every Projection, and the error surfaces
   through the wrapper on a no-`Unnest` plan
   (`a_projection_inner_error_that_is_not_an_extraction_collision_stays_loud`), so a decline
-  widened to every error reds it. pins: u8-write-sql/C-030
+  widened to every error reds it.
 - `spill.rs` — **S-1:** FairSpillPool install + runtime `SET datafusion.runtime.memory_limit`
   intercept (R1). DataFusion 54.1 has no in-place resize (`pool_size` lives outside the mutex),
   so SET **swaps** a new `FairSpillPool` (in-flight reservations stay on the old pool).
@@ -538,12 +510,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   builder `datafusion.runtime.memory_limit` as a runtime SET right after `getOrCreate()` — a
   fresh log there would have disarmed the containment on every bounded facade session, and did
   until it was measured.
-  pins: h3-spill-residue-1/C-002
   **CONF-UNREAD-1 step 1 (2026-09-11):** `maybe_apply_runtime_set` also refuses a
   runtime `SET` of a dead 54.1 key (`coalesce_batches`), so the refusal holds on
   both SQL doors. Pins: `tests/conf_unread.rs`.
-  pins: conf-unread-1/C-003
-  **SOURCE-URL-REDACT-2 (2026-10-06):** `maybe_apply_runtime_set` registers the parsed `SET` value before dispatch, so engine-direct `SET datafusion.*` errors mask it at the boundary. pins: source-url-redact-1/C-058
+  **SOURCE-URL-REDACT-2 (2026-10-06):** `maybe_apply_runtime_set` registers the parsed `SET` value before dispatch, so engine-direct `SET datafusion.*` errors mask it at the boundary.
 - `df_guards/window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer
   rule, installed by `df_guards.rs` on EVERY core session (a DataFusion-54.1 capability guard, like the
   two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding
@@ -585,7 +555,6 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   Pins: `tests/window_rescan.rs` and `python/repark/tests/functions/test_win_slide_1.py`. It sits under
   `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard
   and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
-  pins: win-slide-1/C-001, C-002, C-005, C-006, C-007
 - [df_guards/subquery.rs](df_guards/subquery.rs) — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery —
   outer-reference scope resolution plus three optimizer rules and the
   `__repark_single_row` guard UDAF, all installed on every core session through
@@ -594,19 +563,17 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   correlated `LIMIT 1`, and the projection hoist carries a `SubqueryAlias`
   qualifier through to its lifted outputs.
   Pins: `tests/subquery.rs` and `python/repark/tests/dataframe/test_df_subquery_1.py`.
-  pins: df-subquery-1/C-001, C-002, C-003, C-004
 - `tests/subquery.rs` — **DF-SUBQUERY-1:** plan-level pins for the three subquery
   rules: the scalar guard wraps a non-singleton subplan and leaves a zero-group
   `count(*)` aggregate untouched, the lateral hoist lifts a `Subquery`-wrapped right
   projection and refuses a correlated `Unnest`, and the EXISTS-in-projection rewrite
   keeps the plan's field name.
-  pins: df-subquery-1/C-001, C-002, C-004
 - `tests/window_rescan.rs` — **WIN-SLIDE-1:** the capability pins — a throwaway aggregate with no
   `retract_batch`, registered at test time, answers over a sliding frame and plans as a re-scan;
   `sum` keeps DataFusion's sliding accumulator; an ever-expanding frame is never rewritten; an
   empty frame answers the fresh accumulator, not the aggregate's `default_value` (the throwaway's
   `default_value` is a sentinel so the two are distinguishable); a `FILTER`ed non-retractable
-  aggregate answers the masked frame. pins: win-slide-1/C-005, C-006
+  aggregate answers the masked frame.
 - `tests/aws_gate.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
   never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;
@@ -642,8 +609,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   (the session catalog is wanted unless `repark.sql.autoMemoryCatalog` is `false` / `0` / `no`
   or a `spark.sql.catalog.spark_catalog[.*]` / `repark.sql.catalog.spark_catalog[.*]` key is
   present — other blocks and a different `spark.sql.defaultCatalog` no longer suppress it) and
-  `current_catalog_checked` (the current catalog, or `CATALOG_NOT_FOUND`). pins: catalog-1/C-002,
-  C-004
+  `current_catalog_checked` (the current catalog, or `CATALOG_NOT_FOUND`).
 
 ## Pointers
 
@@ -674,17 +640,13 @@ emits a BARE reference for a session-local view (a bare one is re-resolved again
 `datafusion.catalog.default_catalog`). Both go through `assert_home_intact` first.
 **CASESENS-1 S3 (2026-09-27):** plus `resolve_temp_view_home_ref_exact` (no fold; the
 rule-aware door probe calls it under `caseSensitive=true`), sharing the existence check
-through `home_ref_if_exists`. pins: casesens-1/C-007
+through `home_ref_if_exists`.
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** the reader-options path resolves through the shared
 `time_travel::resolve_reader_spec` with the session zone; the production write path builds
-the context with `EngineContext::new_with_time_zone`. pins: ice-tt-resolve-1/C-002
+the context with `EngineContext::new_with_time_zone`.
 **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `resolve_reader_spec` is async over the session
-context so reader strings cast through the engine. pins: ice-tt-resolve-1/C-002
+context so reader strings cast through the engine.
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26) — the PA-10 detector on cgroup v2.** `spill.rs` — `detect_memory_bytes` reads the unified `0::` line of `/proc/self/cgroup`, walks `memory.max` from the leaf to the root through `cgroup_v2_memory_limit` (a pure function over the cgroup text and a reader closure), takes the minimum finite value and caps it by `MemTotal`. With no finite cgroup value it uses `MemTotal`, as before. The seven fixture cells in `spill_unit_tests` cover a leaf-only limit, a smaller ancestor, every level `max`, a namespace root `0::/`, a cgroup above `MemTotal`, a v1-only host and malformed text; each asserts the clamped pool. cgroup v1, macOS and Windows keep the declared path and need an explicit pool budget; the build does not refuse (declared in the parity registry). `session.rs` is unchanged: the three bound keys ride `concurrency_from_config_map` in the iceberg crate.
 
-pins: ice-resource-bound-1/C-009
-
-
-pins: ice-resource-bound-1/C-013

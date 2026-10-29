@@ -17,7 +17,7 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   `null_prefix_instances_never_cse` (P-S2a-6: prefixed and plain instances differ in equality
   and hash, and both columns survive one `select`); `sql_ta_unchanged` (P-S2a-8: SQL
   `ta_ema(close, 13) OVER (…)` equals the kernel per symbol, NaN prefix, no NULL, and no
-  registered name carries a prefix). pins: ta-series-s2a/C-005, C-006, C-008
+  registered name carries a prefix).
 - `goldens.rs` — **strict `f64::to_bits` equality** per element (NaN ↔ NaN allowed) for every
   kernel × param-set: 41 tests (39 golden checks plus two fixture/manifest checks) over 158 recorded series across two fixtures — the 5000-row
   lognormal walk (happy path, all 5 BBANDS band branches, the WG1 overlap-MA family incl. TRIMA
@@ -71,7 +71,6 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   Mutations (TA-CHAIN-1 C-007): returning the trimmed vector without the NaN re-prefix fails all
   26 on length; forcing the start to 0 fails 24 of 26 (the `linearreg_5` twins survive because
   LINEARREG recomputes each window, so the NaN run leaves no trace once out of the window).
-  pins: ta-chain-1/C-001, C-002, C-003, C-007
 - [goldens/](goldens/map.md) — the recorded fixtures + `manifest.json` (checked in; ~1.5 MB);
   [goldens/prefix/](goldens/prefix/map.md) holds the TA-CHAIN-1 prefix goldens with their own
   manifest.
@@ -91,11 +90,9 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   `stamped_frame_parallel_window_matches_serial_answer` stamps one TA level (SMA 10/20, EMA5)
   with attribute ids, strips the twin for execution, and compares the parallel answer
   bit-identically with the serial answer.
-  pins: ta-series-s2b/C-001, C-002
   **ATTR-ID-1 SM-1 (2026-10-06):** `stamped_plan_through_optimizer_reaches_executors_stripped`
   plans a stamped frame through the optimizer with no hand strip and asserts no `repark.attr`
   on the optimized plan, any physical node, or batch schema with both parallel executors present.
-  pins: attr-id-1/C-056
 
 ## Pointers
 

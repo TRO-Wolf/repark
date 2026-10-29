@@ -21,7 +21,6 @@ every door's planned statement passes through before it executes (Z-2 / Z-3).
   `guard_passes_an_update_whose_set_value_has_no_scalar_subquery` holds it silent for a
   literal, an expression of the column, a subquery in the `WHERE` only, and `arrow_cast` of
   the column. The walk is `Expr::contains_scalar_subquery` over the whole assigned expression.
-  pins: ice-struct-pairing-1/C-034, C-035
 
 ## Pointers
 

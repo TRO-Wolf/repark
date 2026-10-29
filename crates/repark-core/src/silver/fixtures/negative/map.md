@@ -35,8 +35,6 @@ Negative SilverPlan TOML fixtures: one file per `SilverRefusal` variant. See [..
 `unknown_column_key.toml` is a second `UnknownKey` path pin, not a new variant.
 `TomlSyntax` is pinned in `tests/parse.rs` with inline invalid text so taplo never sees a `.toml` file.
 
-pins: silver-s1/C-001, C-002, C-003, C-007
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

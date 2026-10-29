@@ -31,7 +31,6 @@ carriages a write can take and nothing a door needs to parse. The module root
     meanings, `INSERT`'s is the contract. Only a direct `postgres_fdw` table escapes the
     `ForeignTable` reason: it is the one wrapper measured (§11.1), every other wrapper and
     any foreign leaf keeps rows, and a NULL wrapper name falls back.
-  pins: c-4/C-017, C-018, C-019, C-023, C-024
   §8.2, §8.3).
   - **`TARGET_FACTS`** is one statement over `pg_class`, `pg_rewrite`, `pg_trigger`,
     `pg_partition_tree` and `pg_attribute`, with the schema, the table and the written column
@@ -50,7 +49,6 @@ carriages a write can take and nothing a door needs to parse. The module root
     The rule behind every variant: where Postgres gives `COPY` and `INSERT` different
     meanings, `INSERT`'s is the contract. A foreign table agreed under `postgres_fdw` and
     still takes rows, because no other wrapper can be measured here.
-  pins: c-4/C-017, C-018, C-019
 - `postgres_copy.rs` — the bulk path.
   - **`CopyBinaryEncoder`** (public, pure) frames Arrow batches as a
     `COPY … FROM STDIN (FORMAT BINARY)` stream: `batch(&RecordBatch)` checks the batch against
@@ -69,7 +67,6 @@ carriages a write can take and nothing a door needs to parse. The module root
     the client's end of data, so a row the server refuses surfaces at `finish`. The sink owns
     a bounded channel to the connection task, so a slow server holds the sender back and
     nothing queues without limit.
-  pins: c-4/C-004, C-009
 - `row.rs` — the row path.
   - **`WireParam`** is the one `ToSql` type: it writes bytes that are already the type's
     binary wire form and accepts every type, because the encoder chose the form from the
@@ -87,7 +84,6 @@ carriages a write can take and nothing a door needs to parse. The module root
     the remainder at `finish`, run row by row through the single-row statement, so no `Bind`
     message grows with wide rows and no third statement shape is prepared. Statements run
     one after another, never pipelined: the rows reach the table in input order.
-  pins: c-4/C-009, C-010
 
 ## Pointers
 

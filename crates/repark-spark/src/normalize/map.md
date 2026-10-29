@@ -49,7 +49,6 @@ here and is re-exported in one line.
   and marker collisions (C-009), the compound-key clash bail (C-010), the
   display-name output binding plus qualified-key column binding (C-011), and
   the DISTINCT-without-bound-keys bail (C-012).
-  pins: tz-asof-1/C-001, C-002, C-003, C-005, C-006, C-009, C-010, C-011, C-012
 - `map_ordering.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
   planned statement in `../spark_ast.rs`'s passthrough (SELECT, and the UPDATE / DELETE that land
   there) and refuses a map operand of `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN` and
@@ -60,12 +59,10 @@ here and is re-exported in one line.
   does to a planned SELECT after planning, `refuse_map_ordering` then
   `repark_functions::analyze_eagerly`, exported for the binding's native join door so a join
   built without the SQL planner is refused and analyzed exactly as the statement would be.
-  pins: stamp-2-r5p6-2/C-002, C-005
-  pins: u9-types-1/C-012
   **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):** `render` and `input_schema` are
   `pub(crate)` for the join-condition rule below; `render_literal` renders decimal
   scalars scaled (`0.5`, never DataFusion's `Some(5),1,1` tuple), which no pin had
-  depended on. pins: cross-join-condition-1/C-008
+  depended on.
 - `join_condition.rs` — **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):**
   `JoinConditionRefusals`, the Spark door's analyzer rule over `LogicalPlan::Join`
   filters, seated directly before `type_coercion` (after the integral-literal rule,
@@ -77,7 +74,6 @@ here and is re-exported in one line.
   rendering is RePark's. The rule fires for every SQL-planned join, so the
   DataFrame door (whose SQL route plans here) and free SQL share the one site;
   the exact-native path carries single-equality keys only and needs no check.
-  pins: cross-join-condition-1/C-008
 - `replace_table.rs` — **IPI-25 (2026-09-20):** `REPLACE TABLE [AS SELECT]` is Spark's elided
   spelling of `CREATE OR REPLACE TABLE`, and the behaviour behind it already shipped (registry
   `RTAS-OPS-1`). `rewrite_replace_table` inserts `CREATE OR` before the leading `REPLACE`, and it
@@ -91,7 +87,6 @@ here and is re-exported in one line.
   recognizer: it answers the index of a leading unquoted `REPLACE` keyword followed by `TABLE`,
   and both the rewrite and `is_replace_table_sql` read it, so the rewrite and the existence check
   can never disagree about which statements are the elided spelling.
-  pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
 - `clustered_by.rs` — **IPI-26/27 round 1 (2026-09-20):** `rewrite_clustered_by`
   splices a single-column `CLUSTERED BY (col) INTO n BUCKETS` run on a `CREATE TABLE`
   into `PARTITIONED BY (bucket(n, col))`, before `extract_partitioned_by` consumes it.
@@ -109,7 +104,6 @@ here and is re-exported in one line.
   the first bucket run wins, so a column named `clustered` no longer hides the clause; a
   `SORTED BY` element may carry `ASC` (Spark refuses it as `sorted_bucket(id, 4, x)`); `DESC`
   stays the parse error, a residue against Spark's `_LEGACY_ERROR_TEMP_0035` text.
-  pins: u7-write-df/C-013, C-017
 - `create_clauses.rs` — **IPI-26/27 round 2 (2026-09-20):** `extract_create_clauses`
   strips the table `COMMENT` / `LOCATION` clauses from a `CREATE TABLE` before the
   stock parser runs, because sqlparser accepts them only without `TBLPROPERTIES`
@@ -124,12 +118,10 @@ here and is re-exported in one line.
   front-door unclosed bracketed-comment guard. The guard tokenizes with `DatabricksDialect`,
   then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an
   unclosed `/*+` hint on its existing path and returns Spark's parser condition otherwise.
-  pins: wo-c10/C-001, C-002, C-003
   WO-C11 (2026-09-23): the inline test module pins `outermost_unclosed_bracketed_comment`,
   `skip_quoted_text` and `skip_line_comment` to exact indexes, so removing any quote kind,
   escape form, line break, nesting push or pop fails a test. The doubled-quote escape and the
   end-of-input escape guard only change `skip_quoted_text`'s resume index.
-  pins: wo-c10/C-002
 
 ## Pointers
 

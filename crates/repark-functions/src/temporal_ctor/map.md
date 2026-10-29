@@ -14,11 +14,10 @@ parser change (EX-FN-27, run 15c owns the parser).
   magnitude gate; scalar zones resolve once, numeric columns precast once).
   **FNP-11B step 6 (2026-09-15):** the time reader takes `HH:MM:SS[.ffffff]`
   strings (facade `lit(time)` arrives as text) beside TIME values; garbage
-  raises, mirroring the date reader's malformed path. pins: fnp-11b/C-002.
+  raises, mirroring the date reader's malformed path.
   **FNP-11B remediation round 1 (2026-09-16):** the 2/3-arg arm precasts DATE
   to `Date32` and TIME to `Time64(µs)` once, with the row readers' casts and
   error texts; all-null and `Null` inputs still pass through.
-  pins: fnp-11b/C-006, C-007.
 - [`adddiff.rs`](adddiff.rs) — `timestampadd` (calendar months and days in the
   session zone, exact durations below the day; the result keeps the input
   family, so `timestamp_ntz` in answers `timestamp_ntz` with no zone shift)
@@ -43,7 +42,6 @@ parser change (EX-FN-27, run 15c owns the parser).
   `CAST(interval AS STRING)` analyzer rule with Spark's spelled-out text (each
   unit carries its own sign from truncating division).
 
-pins: fnp-11a/C-002, C-003, C-004, C-005, C-017, C-018, C-019
 - **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the SQL test sessions here are built by
   `spark_type_planner::planned_context`, so `TIMESTAMP` is typed by the planner as on
-  every door; no assertion moved. pins: ice-tsns-type-planner-1/C-013
+  every door; no assertion moved.

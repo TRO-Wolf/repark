@@ -21,10 +21,10 @@ table is the "before" of every later unit of the slate. No product behaviour liv
   carry-over head (`CAST(<seconds> AS TIMESTAMP)` of the bed's `ts` column read the narrowed
   integer as nanosecond ticks, then met the by-target kernel) and pass once the integer reads
   seconds; measured against main's binary on one bed under the build lock, every warm and cold
-  median is within 1.05x (unit ledger §11). Not re-pinned. pins: ice-tsns-type-planner-1/C-034
+  median is within 1.05x (unit ledger §11). Not re-pinned.
 - `pins_report.rs` — pins-only module of the `pins.rs` root (ICE-CATALOG-CACHE-1): the report's
-  metadata-cache evictions in JSON and markdown. pins: ice-catalog-cache-1/C-009
-  ICE-FOOTER-CACHE-1: the footer cache's per-sample counters too. pins: ice-footer-cache-1/C-008
+  metadata-cache evictions in JSON and markdown.
+  ICE-FOOTER-CACHE-1: the footer cache's per-sample counters too.
 - `cli.rs` — hand-written argument parsing (no new dependency), the exit codes (`exit_code`
   maps an outcome to 0 / 1 / 3), and the runtime. `cargo bench` appends `--bench`; the parser
   drops it.
@@ -56,7 +56,6 @@ table is the "before" of every later unit of the slate. No product behaviour liv
   `metadata_cache`, and the markdown gains a `footer cache hit/miss` column right after the
   metadata cache's (`off` when disabled). A warm sample now reads zero data-file footers (the
   default session caches them); a cold sample is a fresh session and reads every one.
-  pins: ice-footer-cache-1/C-008
 
 ## Commands
 
@@ -251,7 +250,7 @@ would change what "four at once" measures for the other four (their timings and 
 
 The human markdown header takes `mode=` and `baseline=` from the report document itself
 (`document["mode"]`, `document["baseline"]`), not from a second copy of the options, so the
-header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/C-003
+header cannot disagree with the JSON a reader keeps.
 
 ## Pins (`pins.rs`, `pins_report.rs`)
 
@@ -267,7 +266,6 @@ header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/
   `the_human_table_names_the_baseline_in_its_header_line`. Each reds under the mutation that
   removes its behaviour (ledger C-001…C-003, C-005). The workflow half (C-004) is pinned in
   `python/repark-parity/tests/test_ice_read_perf_bench_workflow.py`.
-  pins: ice-bench-baseline-1/C-001, C-002, C-003, C-005
 
 - **ICE-CATALOG-CACHE-1 (2026-09-19), in `pins_report.rs`** (a module of the `pins.rs` root,
   split out because `pins.rs` sits at the 1000-line ceiling; `pins.rs`'s three `std` imports
@@ -276,7 +274,7 @@ header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/
   evictions and reads them back from the JSON (`metadata_cache.evictions`) and from the markdown
   (`| cache hit/miss/evict |`, `| 5/3/2 |`); `every_measured_sample_reports_its_evictions` runs
   the cold and warm modes on the tiny bed and requires `metadata_cache.evictions` in Q1–Q3's
-  samples. Both red with the JSON field dropped. pins: ice-catalog-cache-1/C-009
+  samples. Both red with the JSON field dropped.
 - **ICE-FOOTER-CACHE-1 (2026-09-19), in `pins_report.rs`:**
   `the_report_carries_footer_cache_hits_and_misses_beside_the_metadata_cache` reads all five
   footer counters back from the JSON, the `| cache hit/miss/evict | footer cache hit/miss |`
@@ -285,11 +283,10 @@ header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/
   Q1–Q3 sample has zero hits and some misses, every warm one some hits and zero misses (red
   with the probe reading no after-stats). In `pins.rs`, the Q1 / Q2 footer-request pin now
   expects 3 in cold mode and 0 in warm mode (it was 3 in both before the cache).
-  pins: ice-footer-cache-1/C-003, C-008
 
 - The decision at limit − 1, limit and limit + 1 (and 0, `u64::MAX`); the constant; exit 3 is
   distinct; a flag appends exactly one line to the step summary and a pass appends none; no
-  `--limit` option parses. pins: ice-read-perf-0/C-007
+  `--limit` option parses.
 - `a_fake_size_above_the_limit_stops_every_mode_and_catalog_before_any_query` (round 3,
   F-MUT-4D / F-MUT-4E). It drives `run_gated` for all four modes on all three catalog choices,
   so twelve cases, on a three-file bed through a stand-in `SessionSource`. The stand-in
@@ -304,10 +301,10 @@ header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/
   must give 3, and the step summary must hold one flag line. The production `run::run` path
   repeats the flag for every local mode. It reds under "return the flag after `measure()` with
   the pre-scan snapshot", and under a flag skipped for concurrent-cold, cold, Glue or S3 Tables
-  (2026-09-19, round 3). pins: ice-read-perf-0/C-008, C-019
+  (2026-09-19, round 3).
 - The `files` metadata table counts a merge-on-read position-delete file: the footprint of a
   table with one data and one delete file is 2 files, 1 delete file, and the byte sum equals
-  the two files on disk, read without a data-file request. pins: ice-read-perf-0/C-009
+  the two files on disk, read without a data-file request.
 - `setup` writes exactly N files; every mode runs on them and writes its JSON (Q3 returns the
   1% window, Q4 one row, Q2 reads data-file ranges); the parser reads every flag and drops
   `--bench`; the Glue and S3 Tables legs fail loud on a missing `warehouse` /
@@ -315,11 +312,9 @@ header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/
   `repark.sql.catalog.bench` config block that parses back to the right catalog kind; a
   source-binding pin holds `register_remote_catalog` to `register_late_configured_catalogs` and
   keeps the bare-handle builders out of `remote.rs` (Grok verification, PR #724).
-  pins: ice-read-perf-0/C-006
 - Q3's scan predicate is the `ts` window since RP-36 (fork #312 F-TS-PUSHDOWN-1; it was `""`
   before) and Q7's is `(id >= 540) AND (id < 552)` on the three-file bed, with the same twelve
-  ids; the plan-line parser. pins: ice-read-perf-0/C-013
-  pins: rp-36-fork-pin/C-001
+  ids; the plan-line parser.
 - Q1 reads NO data file at all since ICE-COUNT-FOLD-1 (0 footer reads, 0 page reads, 0 data-file
   requests of any op, in every mode — the count folds to the scan's exact row count); Q2 reads 3
   footers plus pages in cold and warm; Q1's footer-cache counters are therefore zero on a cold
@@ -331,29 +326,24 @@ header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/
   `run_io_total`; the concurrent-cold group reads manifests while the warm concurrent group reads
   none. The parser reads `--repeat`, `--files`, `--rows-per-file`, `concurrent-cold` and the
   remote `setup` flags and refuses `--repeat 0` and every mixed local / remote setup.
-  pins: ice-read-perf-0/C-015
 - The derived constants of `--files 3 --rows-per-file 400` equal the local manifest's (rows,
-  files, `ts` base and step, categories, and every query's SQL). pins: ice-read-perf-0/C-016
+  files, `ts` base and step, categories, and every query's SQL).
 - The remote phases on a memory-catalog stand-in: create, then create again (exists); write into
   the empty table, then skip; three refusals at other counts or rows; a table with a delete
   file refuses; zero write requests on every skip and refusal; a wrong schema refuses; a
   namespace at another location or with none refuses under the Glue rule; the S3 Tables rule
   creates without a location; both phases end with the R-3 flag under an injected size. The AWS
   failure paths (missing props, `--table`, `--manifest`) fail before any call.
-  pins: ice-read-perf-0/C-017
 
 ## Pairs recorded with this bench
 
 - **RP-36 (fork `fa77fb2b`):** timestamp pushdown and page selection, both beds, in
   [docs/perf/ice-read-perf-baseline-2026-09-19.md](../../../../docs/perf/ice-read-perf-baseline-2026-09-19.md)
   §"RP-36 pair", including the Q6 regression on the 200-file bed.
-  pins: rp-36-fork-pin/C-002, C-003, C-004
 - **RP-37 + ICE-CATALOG-CACHE-1 (fork `27e0d5fa`):** no regression on either local bed; the
   Glue / S3 Tables gain needs the AWS bed (blocked on the IAM grant).
-  pins: ice-catalog-cache-1/C-011
 - **RP-38 + ICE-FOOTER-CACHE-1 (fork `f3bdd598`):** warm footer reads 200 → 0; cold split-file
   footer reads halved on the large bed.
-  pins: ice-footer-cache-1/C-010
 
 ## Baseline (`--baseline`, round 1)
 

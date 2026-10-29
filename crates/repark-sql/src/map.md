@@ -2,10 +2,9 @@
 
 MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21, commit 4): `dialect.rs`'s `AnsiDialect::configure_analyzer_rules` pushes `repark_functions::collection::SparkMapRewrite` after the unit-widen call, the same one push as `NativeDoorTypes` in `repark-python`, so the Rust-embedded ANSI door (no Python entry) sends a non-constant `map(...)` to the Spark per-row kernel instead of panicking `list array` (one source row) or raising `map requires key and value lists to have the same length` (several rows). A repeated or NULL key raises Spark's `[DUPLICATED_MAP_KEY]` / `[NULL_MAP_KEY]` text on this door too; a literal map with distinct keys stays on DataFusion's constructor. The pins are `tests/ansi_door_map_column.rs`.
 
-ICE-MIXED-CASE-1 (2026-09-17): the ANSI door stays exact — `merge.rs`/`router.rs` force `case_insensitive = false` on the MERGE spec so only the Spark door folds case. pins: ice-mixed-case-1/C-006
+ICE-MIXED-CASE-1 (2026-09-17): the ANSI door stays exact — `merge.rs`/`router.rs` force `case_insensitive = false` on the MERGE spec so only the Spark door folds case.
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
@@ -27,37 +26,33 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `router.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `delegate` is
   `delegate_plan` plus execute, so the session-conf INSERT arm can take the delegated PLAN and
   execute only its input. One planner, two endings.
-  pins: ice-session-write-conf-1/C-055
 - [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   the owned append sets `WriterStagingOverrides::fork_insert_dictionary_rule`, so the INSERT
   a session conf owns writes the same Parquet layout the fork's insert exec writes without
   one. Every other RePark write keeps Java's `parquet.enable.dictionary` default.
-  pins: ice-session-write-conf-1/C-064
 - [`session_write_conf.rs`](session_write_conf.rs) — **ICE-SESSION-WRITE-CONF-1 round 4
   (2026-09-20):** `native_static_partition_overwrite_*` pins that the native door's
   static `INSERT OVERWRITE … PARTITION` shares the Spark door's collision oracle — the
   engine value where the filter removes files, a stamp where it removes none.
-  pins: ice-session-write-conf-1/C-044, C-054
 - [`create_table.rs`](create_table.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   CTAS stages its query with the resolved session codec and, when the session sets snapshot
   properties, publishes through a transaction that carries the merged summary instead of the
   staged transaction's unstamped commit. A `CREATE TABLE` with no query resolves nothing, so a
   bogus session codec still refuses at the first write and not at DDL.
-  pins: ice-session-write-conf-1/C-042
   **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_v3_named_primitive` maps `VOID` to Iceberg
-  `unknown` on the ANSI door's CREATE. pins: u9-types-1/C-009
+  `unknown` on the ANSI door's CREATE.
   **IPI-51 (2026-09-20):** the already-exists arm renders `[TABLE_OR_VIEW_ALREADY_EXISTS]` /
   `SQLSTATE: 42P07` through `repark_common::spark_error` with a per-part-backticked
-  `relationName`. pins: ice-error-conditions-1/C-011
+  `relationName`.
   **IPI-51 PR8 (2026-09-21):** `column_def_schema` stamps Spark's
   `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]` / `0A000` as `DataFusionError::Plan`
   when `geospatial_sql_type` names `GEOMETRY` / `GEOGRAPHY` (bare, `(srid)`,
   case-folded), ahead of the `SELECT CAST` fallback; other types keep the CAST arm
-  (cell `TY-GEOMETRY`). pins: ice-error-conditions-1/C-011
+  (cell `TY-GEOMETRY`).
   **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the CTAS
   arm converts its schema through repark-iceberg `arrow_schema_to_iceberg_with_unknown`, so a
   `NULL` column (Spark `void`) becomes Iceberg `unknown` (v3 commits; v1 / v2 refuse with the
-  fork's text). pins: u9-types-1/C-015
+  fork's text).
   **RP-56 DIFF-PROBE fold (2026-09-29):** the ANSI-door staged query passes `true`
   (insensitive) to the plan writer; the door stays case-insensitive.
 - `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
@@ -74,12 +69,12 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `a13_fallback.rs` — **A13 (test-only):** `register_memory_catalog` + location-less ANSI
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `insert_overwrite.rs` — **DML-B:** `INSERT OVERWRITE … PARTITION (…)` static/dynamic;
-  whole-table stays Q9. pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-006
+  whole-table stays Q9.
   ICE-OVERWRITE-MODE-1 (2026-09-19): the native door plans through the same
   `repark_iceberg::write::plan_overwrite` as the Spark door, with the session
   `partitionOverwriteMode` (no writer options here): static-mode `PARTITION (k)` replaces the
   whole table (`commit_overwrite_replace_all`), mixed lists are accepted, a non-partition
-  column refuses `NON_PARTITION_COLUMN`. pins: ice-overwrite-mode-1/C-009
+  column refuses `NON_PARTITION_COLUMN`.
   ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19): the three commit arms take the
   `*_with_summary` variants and the staging takes the resolved session overrides, so a session
   snapshot property and the session codec reach `INSERT OVERWRITE … PARTITION` on the native
@@ -87,10 +82,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Staging and commit moved into `stage_partition_overwrite` / `commit_partition_overwrite`
   because the extra layering pushed `execute_partition_overwrite` past clippy's
   `too_many_lines`; the split is along the same seam the Spark door already uses.
-  pins: ice-session-write-conf-1/C-046
   ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
   write-defaults through the shared `overwrite_source_with_defaults`; the dynamic arm
-  no longer writes NULL for a defaulted column. pins: ice-v3-write-default-1/C-015
+  no longer writes NULL for a defaulted column.
 - `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** the short-VALUES arity intercept,
   duplicated from the Spark door (no door-to-door edge). `refuse_if_short_values` refuses a
   positional `INSERT INTO t VALUES (…)` narrower than the Iceberg target with
@@ -98,7 +92,6 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `DataFusionError::Plan`, wired in `router.rs` on the non-overwrite `Statement::Insert` path
   before `try_execute_session_insert` and `delegate`; every other shape falls through.
   Pins: [../tests/ansi_write_defaults.rs](../tests/ansi_write_defaults.rs).
-  pins: ice-error-conditions-1/C-011
 - `pg_insert.rs` — **C-4 step 2 (2026-10-09):** Postgres-target INSERT routing on this door.
   Appends drive the shared `repark_core::write_postgres` sink (bulk with automatic row fallback,
   no flag); overwrite refuses with the `CONNECT-DECL-pg-write-modes` row, REPLACE and UPDATE
@@ -124,17 +117,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   **C-4 fold 3 S3 (2026-10-11):** the driver-reaching pins assert through
   `assert_reached_pg_driver`, which also accepts the not-compiled refusal, so the
   suite is green without the `postgres` feature.
-  pins: c-4/C-013
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic
   `replace-partitions=true`, empty-dynamic refuse) and the remaining Q9 whole-table refuse.
-  pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005, C-006
   ICE-OVERWRITE-MODE-1 (2026-09-19): `door_with_mode` installs the session mode; the dynamic
   and empty-dynamic pins run in dynamic mode, and three native cells pin static-mode
   whole-table replace plus wipe, the mixed list in both modes, and `NON_PARTITION_COLUMN`.
-  pins: ice-overwrite-mode-1/C-009
   Round 2 (2026-09-19): the empty dynamic `PARTITION (id)` pin now asserts no commit (the
-  snapshot list and every row unchanged). pins: ice-overwrite-mode-1/C-011
+  snapshot list and every row unchanged).
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_identity_or_delegate` runs the
   shared metadata-delete decision (`repark_iceberg::write::meta_delete`) before the identity
   allow-list, after the MoR multi-spec guard, so the ANSI door answers a whole-file DELETE with
@@ -144,7 +134,6 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   splitting plan from commit: the metadata plan is built first (a subquery predicate never
   translates, so it declines silently), the MoR multi-spec guard runs only for a statement the
   route can actually answer, and the cheap G3-E8 subquery valve still fires first.
-  pins: ice-meta-delete-1/C-006
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`;
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** short `INSERT INTO t (cols)` fills omitted
@@ -160,21 +149,17 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `DELETE … WHERE <scalar comparison>` call `execute_predicate_dml`; every other subquery
   `WHERE` still hits G3-E8 then BUG-001
   (cheap-first). Tests: [router/map.md](router/map.md).
-  pins: rp-9-repin-f23/C-005
   **CAST-MAP-SPELL-1 (2026-09-19):** the pre-parse stage runs
   `repark_functions::cast_map::rewrite_map_casts` after `rewrite_set_properties`, so a
   `CAST` / `TRY_CAST` naming `MAP<…>` reaches the parser as the shared cast UDF call.
-  pins: cast-map-spell-1/C-005
   **ICE-LIST-NULL-2 (2026-09-19):** the three-part comparison arm declines through
   `plain::plain_identity_needs_fork` after loading the target — a non-primitive
   selection falls through to the fork delegate.
-  pins: ice-list-null-2/C-003
   **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):** `execute_time_travelled`
   calls `repark_iceberg::write::statement_writes::refuse_wrapped_write` on the parsed statement
   before any routing, so `EXPLAIN ANALYZE` (which went straight to `delegate`) and `PREPARE`
   (the `_` arm) of a write refuse on the ANSI door with the ruled texts.
-  pins: explain-dml-write-1/C-003, C-007
-- `dialect.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `on_session_built` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name, so an ANSI session carries both kernels the conform stage names. pins: write-spine-1/C-017
+- `dialect.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `on_session_built` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name, so an ANSI session carries both kernels the conform stage names.
 - `dialect.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13; ruling 94, 2026-10-15):**
   `AnsiDialect::type_planner` hands the session builder the ANSI variant
   (`spark_type_planner::ansi_type_planner`), so the ANSI door types `TIMESTAMP` as the naive
@@ -186,7 +171,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   (amendment 1). `create_table.rs` resolves declared column types on a copy of the
   session state whose planner answers nothing (`declared_type_state`), so `CREATE TABLE`
   keeps DataFusion's mapping and its refusals of a nanosecond `TIMESTAMP` column and of
-  `TIMESTAMP_LTZ`. pins: ice-tsns-type-planner-1/C-011, C-012, C-015
+  `TIMESTAMP_LTZ`.
 - `dialect.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), owner question 47:**
   `on_session_built` calls `repark_iceberg::write::store_cast::register_store_cast_udfs`, the
   one registration of the by-name store kernels. The shared MERGE and UPDATE text names the
@@ -196,12 +181,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   nanosecond kernel (`__repark_cast_timestamptz_ns__`) beside the naive one. The shared MERGE
   and UPDATE sites now emit it for a `timestamptz_ns` target; without the registration this
   door would answer `UNRESOLVED_ROUTINE` where main stored a value.
-  pins: ice-tstzns-wall-1/C-009
 - `dialect.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `on_session_built` also registers
   the nanosecond wall kernel (`__repark_cast_timestamp_ns__`). The shared MERGE and UPDATE
   sites in `repark-iceberg` now emit it for a `timestamp_ns` target, as they emit the NTZ
   kernel for a microsecond one; without the registration the ANSI door answers
-  `UNRESOLVED_ROUTINE` where main stored a value. pins: ice-tsns-merge-wall-1/C-009
+  `UNRESOLVED_ROUTINE` where main stored a value.
   **The split (2026-10-09):** the nested guard rule fold 2 added here is removed with the
   nested form. This door cannot create a column with a nested `timestamp_ns` leaf (the
   `ROW`, `STRUCT` and `ARRAY` spellings are refused), and it is not behind the Spark router,
@@ -211,14 +195,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this
   dialect raises without Python, and **LOG1P-1** `spark_log1p::register` so ANSI
   SQL `log1p` / `expm1` resolve. In-module tests.
-  pins: f-y10-1-int-overflow/C-003
-  pins: log1p-1-precise-kernels/C-002
   **CAST-MAP-SPELL-1 (2026-09-19):** `on_session_built` also registers
   `cast_map::register`, the UDFs the router's map-cast rewrite calls.
   **WO NTZ-1 verifier fold (2026-09-28):** it also registers the non-try NTZ cast
   UDF, which the shared UPDATE/MERGE wall-cast wrap emits for naive targets.
-  pins: ntz-1/C-006
-  pins: cast-map-spell-1/C-005
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
   catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the
   tier-1 predicate, gating delegated DELETE/UPDATE), the SEC-02 local-filesystem plan gate, and
@@ -232,7 +212,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)):** the valve moved to
   `repark_iceberg::write::predicate_dml::subquery_where`, its one home for this door and
   `repark.sql()`; `router.rs` calls it at both sites with the identity exemption, and the text
-  is unchanged. pins: repark-sql-update-subquery-where-1/C-006, C-007
+  is unchanged.
   SEC-02 scope: it gates DataFusion's own filesystem-as-data DDL (`CREATE EXTERNAL TABLE`,
   `COPY TO`), NOT an intercepted `CREATE TABLE … WITH (location = …)`, which the catalog's
   `LocationPolicy` governs instead.
@@ -243,12 +223,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Tests: [guards/map.md](guards/map.md). RP-6: delegated `DELETE | UPDATE` pass the
   V3-COW-1 valve; MERGE and subquery-WHERE DML still refuse. `dml_target_ident` reads
   the AST and completes short names.
-  pins: rp-6-fork-repin/C-002
   **PA-LOCAL-FS-POLICY-1 (2026-10-15):** guard 5 re-exports
   `repark_core::local_fs_policy::refuse_local_filesystem_plan`; the door's own conf keys,
   entries reader, classification, strip and canonicalization are deleted. The shared reader
   matches the real `repark.sql` extension's unprefixed field, so the ANSI door's explicit
-  opt-in now opens (it never did on main). pins: pa-local-fs-policy-1/C-005, C-016, C-017
+  opt-in now opens (it never did on main).
 - `guards.rs`, `router.rs`, `merge.rs`, `insert_overwrite.rs`, `truncate.rs`, `create_table.rs` —
   **ENC-1 round 2 (2026-10-09):** the ANSI seats of the keyed-table refusal. `guards.rs` gains
   `refuse_encrypted_write_target` / `refuse_encrypted_dml_target` (short names completed
@@ -256,12 +235,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   TRUNCATE and CTAS/replace arms call them before planning, staging or delegation, and
   `delegate_plan` sees through `EXPLAIN ANALYZE` (this door spells no `EXPLAIN`, so that
   arm is defensive parity with the Spark pin). Pinned in `../tests/enc_1.rs`.
-  pins: enc-1/C-005
   **Fold 1 (2026-10-09):** every seat passes the table identifier, so the ANSI door shows
   the same one text as the Spark door (MERGE rendered the catalog name before);
   `create_table.rs` opens a staged create through
   `repark_iceberg::catalog::begin_staged_create`.
-  pins: enc-1/C-008
 - `sniff.rs` — the error-path wrong-door sniff (Q10/G3): on parse/plan FAILURE, name the token,
   the native equivalent, and the Spark door. Tests: [sniff/map.md](sniff/map.md).
   **ICE-RTAS-BYNAME-1 (2026-09-17):** the composite arm steers `INSERT … BY NAME`
@@ -281,7 +258,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   (#354) and RePark's `replace_schema.rs` is deleted; `replacement_if_existed` still takes and
   returns the schema unchanged (a vestigial pass-through, verifier round 1 V-001) — drop the
   parameter on the next touch of this file. Pinned by the two partitioned-replace
-  tests in [create_table/map.md](create_table/map.md). pins: u7-write-df-2/C-011
+  tests in [create_table/map.md](create_table/map.md).
 - `create_table.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** the CTAS arm's `write_stream` is now
   `write_query`, handing the SELECT's physical plan to
   [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md) for one writer per
@@ -291,25 +268,24 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   reader, no `repark-functions` product edge; `execute_staged_create` /
   `iceberg_table_creation` / `iceberg_create_format_version` carry `Model: Grok 4.6 xHigh`;
   **V3-9 (2026-09-02)** dropped the refusal's now-false merge-on-read parenthetical,
-  pins: v3-9-mor-predicate-dml-dv/C-006), A11 nanosecond-timestamp
+), A11 nanosecond-timestamp
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
   three-way `LocationPolicy` resolution (**A13:** `TempFallbackAllowed` root is the memory
   catalog warehouse on the `register_memory_catalog` path), staged create/replace, and the service-managed
   create-first path. **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_stream` inherits
   stream conforming from `write_data_files_from_stream_with_concurrency` (no local edit).
-  pins: ctas-view-1-conform-stream/C-002
   Refuses Iceberg CREATE when any `TableScan`
   source (including expression subqueries) is tighten-derived AND the
   output has a non-nullable field (R-D), or the output schema still carries
   the tag. The write boundary uses the same source walk. **V3-6 C-003:**
   declared `timestamp_ns` / `timestamptz_ns` resolve to their Arrow ns shapes
-  and the A11 gate lets those columns through (pins: v3-6-v3-types/C-003).
+  and the A11 gate lets those columns through.
   **V3-6 C-005:** column-def `DEFAULT` refuses Spark-equal
-  (pins: v3-6-v3-types/C-005). **IPI-51 PR7 (2026-09-21):** the refuse stamps Spark's
+ . **IPI-51 PR7 (2026-09-21):** the refuse stamps Spark's
   `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `0A000` through `repark_common::spark_error`
   as `DataFusionError::Plan` over the backticked three-part target display (the template
   names the table, not the column); `column_def_schema` takes the display the already-exists
-  arm already builds. pins: ice-error-conditions-1/C-011. `router.rs::delegate` additionally calls
+  arm already builds. `router.rs::delegate` additionally calls
   `repark_core::refuse_iceberg_create_of_tightened_ddl` on the planned DDL, so the
   `CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` sinks that fall through the `_ =>` arm
   cannot persist a required column. Both paths use the shared belt: `router.rs::delegate` is
@@ -321,7 +297,6 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `create_first_service_managed` skips `drop_table` and returns the original error
   unwrapped on `is_commit_state_unknown` — the possibly-landed create is never
   abort-dropped; definite kinds keep the drop-and-explain abort.
-  pins: ice-commit-unknown-1/C-001, C-003, C-004
   **ICE-RTAS-OPS-2 round 2 (2026-09-18):** `replace_write = or_replace && query.is_some()`
   — `CREATE OR REPLACE TABLE … AS SELECT` only, never the column-def form. The native
   door's `execute_staged_create` chains `.with_replace_write(replace_write)` on both the
@@ -329,7 +304,6 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   new-table RTAS through `repark_iceberg::write::commit_replace_write` (plain CTAS keeps
   `commit_append`). RTAS records `overwrite`, or `delete` when empty, as on the Spark door
   (ADR-0002 §3).
-  pins: ice-rtas-ops-2/C-015, C-016, C-020
   Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`
@@ -347,7 +321,6 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   unsupported-transform refusal keeps its `NotImplemented` shape. `tests.rs` retargets the
   `with_partitioning_array` tail the same way and sheds a comment plus its doc line
   (ceiling 1513).
-  pins: ice-error-conditions-1/C-011
 - `schema_ddl.rs` — `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`, plus the
   shared catalog-handle / name-parts / identifier-hygiene helpers.
   `IF NOT EXISTS` runs the same location-conflict predicate as the Spark door
@@ -356,11 +329,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `refuse_non_empty_namespace_drop` (CASCADE keeps its own refusal ahead of it);
   `IF EXISTS` does not bypass (**ICE-DROP-NS-1**, 2026-09-19).
   Tests: [schema_ddl/map.md](schema_ddl/map.md).
-  pins: ice-drop-ns-1/C-006, C-007
   The blanket `CASCADE` refusal is gone: `CASCADE` runs the same emptiness check, and a missing
   schema answers Spark's `[SCHEMA_NOT_FOUND]`; `router.rs` no longer passes `cascade`; `tests.rs`
   sheds the stale `CASCADE`-refuses pin and its doc line (ceiling 1513).
-  pins: ice-drop-ns-1/C-011
 - `alter.rs` — **PR-B hadoop naming (2026-09-24):** `rename_table` maps the fork error through
   `repark_iceberg::write::unsupported_message_error`, so a `type=hadoop` catalog answers
   exactly "Cannot rename Hadoop tables". Pinned in [alter/hadoop_rename_tests.rs](alter/map.md).
@@ -372,14 +343,12 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   position-change op; round 2 Q-20b-5: an `ALTER`-prefix fast path, dotted `AFTER` references
   refuse Spark-shaped, one loaded table per move). Curated vocabulary; `partitioning` is the
   pre-designated future spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
-  pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007
   **ICE-NESTED-EVO-1 (2026-09-17):** `alter/nested.rs` is the ANSI door's nested-path pre-parse
   (`try_parse_nested_column_ddl` / `execute_nested_column_ddl`, `GenericDialect`, wired in
   `router.rs` after the move): `ADD COLUMN s.c T`, `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b`,
   claimed only when a path has a dot, committed through
   `repark_iceberg::write::nested_column::apply_column_path_changes`. Child types resolve
   through the door's own `sql_type_to_iceberg`.
-  pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
   **Round 2 (2026-09-18, run 22b):** `router.rs` runs `create_table::rewrite_nested_create_types`
   on a `CREATE TABLE` that spells `STRUCT<` or `MAP<` (`MAP<K, V>` → `MAP(K, V)`, a struct
   child's `NOT NULL` → the required-child option) before the stock parser, and
@@ -391,7 +360,6 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   opt-in now also reads the typed `ReparkSqlConfig` (as `alter.rs` does): DataFusion 54
   lists an extension's entries without its `repark.sql.` prefix, so the key scan alone never
   saw a Spark-extended session's opt-in and `WITH (format_version = '3')` refused there.
-  pins: ice-nested-evo-1/C-016, C-017
 - `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec`.
   ANSI MERGE keeps `commit_branch: None` (dotted write-to-branch is Spark-door only, RP-5).
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms
@@ -405,7 +373,6 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** every rendered
   fragment goes through `repark_iceberg::write::sql_text::render_for_reparse`
   so string values re-parse exactly, mirroring the Spark door.
-  pins: string-literal-escape-1/C-010
 - `time_travel.rs` — the `FOR VERSION|TIMESTAMP AS OF` token-scan rewrite (Q5/G7): recognize,
   resolve through the hoisted `repark_core` half (`TimeTravelSpec` / `read_table_at`), register
   an ephemeral pinned view, splice its name in, THEN parse. `FOR` is mandatory; `"` quotes
@@ -420,27 +387,25 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream
   (whitespace kept) so the shared evaluator receives parseable SQL; the expression evaluates
   as a constant in the session zone through
-  `repark_core::time_travel::evaluate_sql_timestamp_asof`. pins: ice-tt-resolve-1/C-003
+  `repark_core::time_travel::evaluate_sql_timestamp_asof`.
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the door call sites use the 3-arg
-  `EngineContext::new` again. pins: ice-tt-resolve-1/C-003
+  `EngineContext::new` again.
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** a four-part `FOR … AS OF` name refuses
   before resolving — branch selectors with `Can't time travel in branch`, tag
-  selectors with the selector/spec text. pins: ice-tt-resolve-1/C-002
+  selectors with the selector/spec text.
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `time_travel/exec_tests.rs` pins the
   door end to end (string, integer-seconds, CAST expressions plus a version
-  control). pins: ice-tt-resolve-1/C-002
+  control).
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
   spelling stays Spark-only. `WITH SNAPSHOT RETENTION` takes both halves, count then optional
   duration, in lockstep with the Spark door. The two halves are told apart by lookahead;
   a trailing token that is not a duration stays trailing and `reject_trailing` refuses it.
   Tests: [ref_ddl/map.md](ref_ddl/map.md).
-  pins: ref-branch-tag-wap/C-003
   **WO U5 PR2b round 2 (2026-09-25):** the ref helpers return DataFusion `Result`; the
   `.map_err(iceberg_err)` fold is gone.
   **WO RP50-A (2026-09-26):** with the repark-iceberg v1 kernel removed, `CREATE BRANCH`/
   `CREATE TAG` on a v1 table commit here too.
-  pins: ice-nested-evo-1/C-053, C-060
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C). Pins: `truncate_tests.rs`
   (wipe summary keys, `INVALID_PARTITION_OPERATION` class token, IF EXISTS parse refuse).
   **IPI-51 PR4 (2026-09-20):** the PARTITION arm renders
@@ -468,15 +433,13 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Arrow path with value and type checks. The helper uses its warehouse as the temporary fallback
   root; the memory-catalog location pin lives in `a13_fallback.rs`. The column-move e2e
   consolidated into `tests/alter_column_move.rs` (file-size ratchet).
-  pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007
 - `column_defaults.rs` (`#[cfg(test)]`) — **V3-6 C-005:** ANSI-door DEFAULT DDL pins —
   `create_table_column_default_refuses_naming_the_column` (red-first, no table left) and the
   ADD COLUMN / SET DEFAULT refuse battery with the plain-ADD NULL control.
   **IPI-51 PR7 (2026-09-21):** the CREATE pin requires the stamped
   `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `SQLSTATE: 0A000` plus the backticked
   `` `ice`.`sales`.`defcol` `` table; the ADD COLUMN / SET DEFAULT asserts stay as they were.
-  pins: ice-error-conditions-1/C-011
-  (pins: v3-6-v3-types/C-005). Split out of `tests.rs` (file-size ratchet); harness follows
+ . Split out of `tests.rs` (file-size ratchet); harness follows
   the `delete_granularity.rs` self-contained shape.
 
 ## I want to...
@@ -526,5 +489,4 @@ First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](.
 - `merge.rs` — the ANSI `MERGE INTO` lowering names the new `schema_evolution:
   false` field. The native door has no `WITH SCHEMA EVOLUTION` spelling, so it
   never evolves.
-  pins: ipi-19-56-37-schema-evolution-write/C-007
 

@@ -1,7 +1,6 @@
 # map — repark-core/tests
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 ## Purpose
 
@@ -12,7 +11,7 @@ behavior only reachable end-to-end.
 
 ## Contents
 
-- `cast_plan_profile.rs` — PERF-CAST-1 step 2 (pins: perf-cast-1/C-006): an
+- `cast_plan_profile.rs` — PERF-CAST-1 step 2: an
   `#[ignore]`d release micro-bench that phases `session.sql` of the 2500-cast
   over-aggregate statement — parse, `SqlToRel::statement_to_plan`, analyzer
   `execute_and_check` plus per-analyzer-rule walls, optimizer `optimize` plus
@@ -51,7 +50,6 @@ behavior only reachable end-to-end.
   (`analyzed_arrow_schema`) is pinned facade-side.
   EAGER-BUDGET-1 step 2 (2026-09-13): the cache-materialize call sites pass `None` for the
   new `max_total_bytes` parameter; the pinned remint behavior is unchanged.
-  pins: eager-budget-1/C-005
   Round-5: the NATIVE-door battery — `native_door_ddl_sink_over_tightened_source_refuses`
   (Z-2: `ReparkSession::sql` on the default dialect persisted `CREATE VIEW ice.ns.v` /
   `SELECT … INTO ice.ns.t` with required columns, measured on BASE),

@@ -15,10 +15,9 @@ every other type answers false.
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` naming `isnan(<arg>)` and the Spark type
   (containers rendered `STRUCT<>`/`ARRAY<>`/`MAP<>`; scalar leaves share the
   `update_fields` mapping); date, timestamp, boolean, int, decimal and every other
-  type answer false for every row including NULL. pins: column-parity-1/C-008, C-009
+  type answer false for every row including NULL.
 - [`tests.rs`](tests.rs) — double mask, int false, date false-including-NULL, string
   `NaN`/`1.5`/NULL, malformed refusal, literal NaN, struct/array/map plan refusal.
-  pins: column-parity-1/C-008, C-009
 
 ## Pointers
 

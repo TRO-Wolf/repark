@@ -8,7 +8,6 @@ declared in the root [`pyproject.toml`](../pyproject.toml), sharing one `uv.lock
 
 CC-2 audits every tracked Python comment and docstring after the Rust crates finish. Public
 docstrings keep their callable and PySpark contracts in the shortest complete form.
-pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011.
 
 ## Contents
 

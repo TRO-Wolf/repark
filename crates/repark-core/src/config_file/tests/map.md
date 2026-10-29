@@ -13,19 +13,14 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   maintenance pins), CFG-2 step 1's `auto_register` non-boolean refusal, and the shared
   fixtures (`stub_environment`, `write_file`, `maintenance_policy_fixture`). Untouched
   by the split.
-  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
-  C-012, C-013, C-014, C-015, C-016, C-017
-  pins: cfg-2/C-002
   **C-1 (2026-10-05):** the source pins read `identity.name` / `identity.kind` (the CC-2
   move; assertions unchanged) and gain `a_source_identity_round_trips_through_the_loader`:
   name, kind and the unassigned generation (`None`) survive the loader, `key_path()` renders as
   before, the kind spelling round-trips, and a different generation compares unequal.
-  pins: c-1/C-002
   **C-1b (2026-10-06), NS-14:** the generation is built through `Generation::new`, and three
   pins hold the newtype: `a_zero_generation_cannot_be_built` (`new(0)` is `None`),
   `a_non_zero_generation_round_trips_through_new_and_get` (1, 7, `u64::MAX`) and
   `two_different_generations_compare_unequal`.
-  pins: c-1/C-012
 - `wiring.rs` — the 8 step-3 wiring pins (display/session/`conf` translation, nested-`conf`
   dot-join flattening, the builder-profile-default precedence table, the redacted
   source-column dump, the byte-identical catalog done condition, the database-source
@@ -52,18 +47,12 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   `repartition_joins` conf pair, and an empty `write` profile). They live inside
   that pin's body rather than a new `#[test]` fn because the round's comment
   fence matches every added `#[…]` attribute line.
-  pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
-  pins: cfg-2/C-001
-  pins: profiles-1/C-010
-  pins: maint-policy-1/C-020
-  pins: review-fix-7/C-002, C-003
-  pins: review-fix-2/C-001, C-002
 
   **SOURCE-URL-REDACT-1 (2026-10-06):** `file_dump_masks_a_password_inside_a_catalog_uri`: a postgres catalog `url`
-  with a password dumps as `postgresql://u:***@db.example.com/sales`. pins: source-url-redact-1/C-008
+  with a password dumps as `postgresql://u:***@db.example.com/sales`.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `typed_knob_refusals_mask_a_password_in_the_echoed_value`: a URL as
   `session.batch_size` or `maintenance.snapshot_older_than` refuses without the password and
-  with the host. pins: source-url-redact-1/C-017
+  with the host.
 ## Pointers
 
 - Up: [../map.md](../map.md)

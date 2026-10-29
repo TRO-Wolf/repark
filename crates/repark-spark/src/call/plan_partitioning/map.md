@@ -18,7 +18,6 @@ shapes live here so the procedure file stays under its size ceiling.
   asserts the unpartitioned `projected_files_at_target` × target bounds the
   recorded live actuals within 2× (the upper-bound reading of the projection,
   red-first by doctoring the bound).
-  pins: ap-1-close-1/C-001, C-002
 
 ## Pointers
 

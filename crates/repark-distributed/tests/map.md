@@ -23,21 +23,20 @@ Verifier V-1 (2026-10-04): every `ReparkSessionProvider::from_session` / `from_c
 now unwraps the provider's `Result`, and `codec.rs` carries
 `provider_refuses_a_session_with_single_partition_parallelism_on`: a default session is refused
 through both doors with the builder fix in the message; a `false` session and a plain
-`SessionContext::new()` are accepted. pins: ta-series-s2b/C-014
+`SessionContext::new()` are accepted.
 
 **CLUSTER-TESTS-2 (2026-10-10):** the two cancel tests above are green again — their seed
 is `generate_series(0, 99999999)`, whose `LazyMemoryExec` the codec carries as a
 `GenerateSeriesNode`, instead of `range(100000000)`, which has planned the uncarried
 `StreamingTableExec` since RANGE-TVF-ID-1. The third red,
 `date_and_timestamp_predicates_measure_the_pushdown_surface`, went green under
-CLUSTER-CODEC-TEST-1. pins: cluster-tests-2/C-001, C-002, C-003
+CLUSTER-CODEC-TEST-1.
 
 - `local_executor.rs` — three pins against `LocalDataFusionExecutor`:
   `range(1000)` sum equals the direct DataFusion collect (C-001);
   `status` is `Queued`/`Running` before drain and `Completed` after (C-002);
   `cancel` on `range(100000000)` returns within 1 s and status is `Cancelled` (C-003).
   RANGE-TVF-ID-1 (2026-09-18): the seeds read the `id` column.
-  pins: ballista-m1-a/C-001, C-002, C-003
 - `cluster_two_executors.rs` (`feature = "cluster"`) — one scheduler plus two in-process
   executors: `SELECT sum(x) FROM t` equals the local executor; both executors ran at least
   one task; the polled `status` walk is monotone Queued → Running → Completed, with
@@ -54,7 +53,6 @@ CLUSTER-CODEC-TEST-1. pins: cluster-tests-2/C-001, C-002, C-003
   Ballista logical default.
   CLUSTER-TESTS-2 (2026-10-10): the cancel seed reads the `value` column; `range()`
   planned `StreamingTableExec` since RANGE-TVF-ID-1 and fails at submit.
-  pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
 - `codec.rs` (`feature = "cluster"`) — BALLISTA-M2-B: the installed physical codec is the
   RePark wrapper; the five Ballista shuffle nodes and an `IcebergTableScan` round-trip
   through `try_encode`/`try_decode`. Encode reads the scan through typed accessors;
@@ -68,7 +66,6 @@ CLUSTER-CODEC-TEST-1. pins: cluster-tests-2/C-001, C-002, C-003
   `LocalDataFusionExecutor`; the string-typed TIMESTAMP literal cannot bind, so the fork
   drops it and the predicate-less node round-trips. An `IN` list travels exactly or
   refuses. pins: ballista-m2-b/C-001, C-002, C-003, ballista-m2-a/C-001, C-003.
-  pins: cluster-codec-test-1/C-001, C-002.
 - `multi_stage.rs` (`feature = "cluster"`) — D-1: three physical-plan shapes, each built
   once, run through `LocalDataFusionExecutor`, then through a two-executor
   `ReparkClusterExecutor`, compared after sorting rows (cluster partition order is not
@@ -82,7 +79,6 @@ CLUSTER-CODEC-TEST-1. pins: cluster-tests-2/C-001, C-002, C-003
   CLUSTER-TESTS-2 (2026-10-10): the long-series seed is `generate_series(0, 99999999)`
   reading the `value` column; `range()` planned `StreamingTableExec` since
   RANGE-TVF-ID-1 and fails at submit.
-  pins: ballista-m1-c/C-001, C-003, C-004
 - `iceberg_scan.rs` (`feature = "cluster"`) — BALLISTA-M1-D: `IcebergScanSpec` round-trip
   of catalog config, table identifier, snapshot id, projection, and filters (**CATALOG-1
   (2026-09-26):** the spec literals carry `refusal: None`); truncated

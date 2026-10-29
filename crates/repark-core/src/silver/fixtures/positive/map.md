@@ -20,8 +20,6 @@ Positive SilverPlan TOML fixtures for SILVER-S1. See [../map.md](../map.md).
 - `crm_contacts.explain.txt` — golden `explain()` text for `crm_contacts.toml`.
 - `crm_contacts.canonical.txt` — golden `canonical()` bytes recorded before the P2-1 rewrite.
 
-pins: silver-s1/C-002, C-004, C-005, C-007, C-010
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

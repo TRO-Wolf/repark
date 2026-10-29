@@ -17,7 +17,6 @@ everything else passes through.
   `UnaryMinus` null-propagation); the DataFusion scalar kernel would `Internal error`.
 - Nothing else rewrites: valued decimals keep kernel evaluation, non-decimals keep
   their kernel agree-or-refuse behavior.
-  pins: decimal-cache-1/C-012
 
 ## Pointers
 

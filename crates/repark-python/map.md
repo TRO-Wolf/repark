@@ -1,7 +1,6 @@
 # map — repark-python
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
 
@@ -17,10 +16,10 @@ crates; this crate owns the Python boundary and the PyO3/Arrow FFI `unsafe` boun
 - [`src/session.rs`](src/session.rs) provides synchronous session methods over the shared runtime.
 - `Cargo.toml` — **C-2d (2026-10-07):** `repark-core` with `features = ["postgres"]`, so the
   standard wheel carries the Postgres connector (the workspace entry has default features
-  off). pins: c-2/C-096
+  off).
 - [`src/session_runtime.rs`](src/session_runtime.rs) applies one validated runtime conf value
   to the live session (`set_runtime_config`, strict; `restore_runtime_config`, builder-lenient
-  for `RESET`). **SET-ANSI-RUNTIME-1 (2026-09-15).** pins: set-ansi-runtime-1/C-001, C-002, C-003
+  for `RESET`). **SET-ANSI-RUNTIME-1 (2026-09-15).**
 - [`src/dataframe/mod.rs`](src/dataframe/mod.rs) provides immutable plans, actions, transforms, and lazy
   Arrow C Stream export. **FNP-4B (2026-09-15):** `filter_sql` canonicalizes the predicate with
   the Spark-door lexer and maps downstream locations back; `F.expr` contexts parse Databricks.
@@ -35,12 +34,11 @@ crates; this crate owns the Python boundary and the PyO3/Arrow FFI `unsafe` boun
   unambiguous — null, boolean, every integer width, `f32`/`f64`, the three UTF-8 layouts and
   the three binary layouts. Every other kind is either supplied pre-converted by the facade or
   declined (`None`), so the facade's own converter keeps decimals, dates, times, timestamps,
-  intervals and nested values bit-for-bit. pins: perf-facade-1/C-002
+  intervals and nested values bit-for-bit.
 - [`src/logical_names.rs`](src/logical_names.rs) answers `DataFrame.columns` from the plan's
   logical schema without an analyzer pass. Sound because every analyzer rule in
   `repark_functions::analyzer_rules` rewrites through `NamePreserver` and none adds, drops or
   reorders a projection expression; held by a byte-equality pin against the analyzed names.
-  pins: perf-facade-1/C-004
 - [`src/column/`](src/column/map.md) builds immutable DataFusion expressions and facade functions.
 - [`src/fence.rs`](src/fence.rs) converts Rust panics at PyO3 and Arrow callback boundaries.
 - [`src/ml.rs`](src/ml.rs) streams batches into native ML estimators; Python does not compute rows.

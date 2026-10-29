@@ -10,7 +10,7 @@ prefix and copied here with only its live files (600,773 bytes total,
 `truth.json` included). The pin test copies each warehouse back to its
 canonical path before `CALL system.register_table`, so the absolute file URIs
 in the manifests stay valid. The recorder replaces only the five table
-directories on `--rewrite` and keeps this map. pins: ice-page-prune-1/C-001, C-002
+directories on `--rewrite` and keeps this map.
 
 ## Contents
 

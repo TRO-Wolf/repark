@@ -12,7 +12,6 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
   trips exercise the write path's codec. `ConnectError::EncodeNotBuilt` is retired.
   `PlannedColumn::carriage()` answers `WriteCarriage::CopyBinary` or `RowText`; only
   `ServerText` (`interval`) is `RowText`. `mod encode;` joins the codec modules.
-  pins: c-4/C-001, C-005
 - `postgres.rs` — C-1 (2026-10-05), extended by C-2a (2026-10-06; sketch
   [c-2-design.md](../../../../task/wo/c-2-design.md) §2.7). `POSTGRES_TYPES` is the table: one
   `PostgresTypeRow` per Postgres type, keyed by its `pg_type.typname` (`int4`, `bpchar`,
@@ -28,7 +27,7 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
     `bpchar` → `Utf8` (UTF-8 validated, never lossy, so the connection's `client_encoding`
     must be `UTF8`, which C-2b pins; `bpchar` keeps its blank padding); `bytea` → `Binary`.
     Each Arrow type is the one the ADBC PostgreSQL driver's documented type-mapping table names
-    (C-1's R-10). pins: c-1/C-007
+    (C-1's R-10).
   - **Mapped by C-2a (8), each the type Spark's PostgreSQL dialect surfaces:** `numeric` →
     `Numeric(DecimalTarget)`, `Decimal128(p,s)` resolved from the type modifier; `date` →
     `Date32`; `timestamp` → `Timestamp(Microsecond, None)`, the wall clock (C-2c localises it
@@ -39,9 +38,9 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
     `jsonb` → `Jsonb` (all `Utf8`). The codecs live in `postgres/` (its map is under Pointers). Values the
     Arrow type cannot hold exactly refuse per value (`ConnectError::UnrepresentableValue` and
     its `ValueRefusal`, each naming its registry row: `CONNECT-DECL-pg-numeric-special`,
-    `-pg-infinite-datetime`, `-pg-out-of-range`). pins: c-2/C-007, C-008, C-009, C-010
+    `-pg-infinite-datetime`, `-pg-out-of-range`).
   - **Declared (1):** `time`, `CONNECT-DECL-pg-time`, until D-M2 reads Spark 4.1.2's type for a
-    JDBC `time` column (the oracle environment cannot load pgjdbc yet). pins: c-2/C-011
+    JDBC `time` column (the oracle environment cannot load pgjdbc yet).
   - **Resolution.** `PlannedColumn::resolve(name, typname, PgTypeKind, TypeMod)` turns one
     discovered column into the planned column the decoder consumes: a base type in the table
     maps through its row (`numeric` reads the modifier); an enum reads as its label (`Utf8`);
@@ -50,7 +49,7 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
     column, the type, the row (`CONNECT-DECL-pg-unmapped` or the declared row) and the fix.
     Domains resolve to their base type in discovery (C-2b) before this call. `TypeMod` is the
     `atttypmod` newtype (NS-14), and `use self::PostgresMapping as Mapping` keeps the table rows
-    on one line each. pins: c-2/C-011
+    on one line each.
   - **`ColumnAppender`** (crate-private), one variant per mapping, each holding its Arrow
     builder (the `each_builder!` macro writes the per-builder arms of `append_null` and
     `finish`, which differ only in the builder's type): `append(&[u8])` decodes one field from a borrowed slice and returns the builder
@@ -58,13 +57,12 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
     failures are a context-free `CodecError` that the caller places with the column and row
     index. `PlannedColumn::decode` and C-1's `PostgresTypeRow::decode` are thin wrappers over
     it (the row wrapper names the column after its type), so C-1's round trips exercise the
-    same codec as the stream. pins: c-2/C-012
+    same codec as the stream.
   - **Encode** was C-1's ten types until C-4 step 1 (2026-10-08), which built the rest and
     retired `ConnectError::EncodeNotBuilt`; the entry above is the current state.
-    pins: c-2/C-011
 
 - `postgres.rs` — **C-3 (2026-10-07):** `PlannedColumn::postgres_type()` returns the row's
-  Postgres type name, which a partition-column refusal names. pins: c-3/C-005
+  Postgres type name, which a partition-column refusal names.
 
 ## Pointers
 

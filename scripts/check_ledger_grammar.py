@@ -16,12 +16,12 @@ B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` i
    `yyyy-mm-dd-` prefix), where `<unit>` is the ledger's filename without `-ledger.md` and
    without the archive prefix, and an entry is `<path>` or `<path>::<name>`: the path is a
    tracked file and the name a whole-word token in it. A `pins: <unit>/C-NNN[, C-MMM...]`
-   citation in a tracked file under CITATION_ROOTS also binds. Every `PROVEN` clause in a
-   staging ledger must be bound at least once — the measured floor is seeded per ledger in
-   EXCEPTIONS and only ratchets down — and every binding must resolve to a clause that exists
-   in any bin (`staging/`, `completed/`, the archive). A staging ledger whose first 40 lines
-   carry a `**Path:**` field valued `READING` outside a code span is a reading unit: rule B
-   does not apply to its clauses, rules A and C still do.
+   citation in a tracked file under CITATION_ROOTS, other than a `map.md`, also binds. Every
+   `PROVEN` clause in a staging ledger must be bound at least once — the measured floor is
+   seeded per ledger in EXCEPTIONS and only ratchets down — and every binding must resolve to
+   a clause that exists in any bin (`staging/`, `completed/`, the archive). A staging ledger
+   whose first 40 lines carry a `**Path:**` field valued `READING` outside a code span is a
+   reading unit: rule B does not apply to its clauses, rules A and C still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
@@ -49,7 +49,7 @@ COMPLETED = "task/ledgers/completed"
 ARCHIVE = "task/ledgers/archive"
 LEDGER_SUFFIX = "-ledger.md"
 PINS_SUFFIX = "-pins.md"
-# Where tests live; `pins:` citations are read from every tracked file here.
+MAP_NAME = "map.md"
 CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 
 # Ledger -> (unpinned PROVEN clauses allowed, attestation block required). The listed charters
@@ -153,10 +153,11 @@ def check_rows(
 
 
 def citations(repo: Path, tracked: list[str]) -> dict[tuple[str, str], list[str]]:
-    """(unit, clause id) -> the files citing it, from every tracked file under CITATION_ROOTS."""
+    """(unit, clause id) -> the files citing it, from every tracked file under CITATION_ROOTS
+    except the directory maps."""
     found: dict[tuple[str, str], list[str]] = {}
     for path in tracked:
-        if not path.startswith(CITATION_ROOTS):
+        if not path.startswith(CITATION_ROOTS) or Path(path).name == MAP_NAME:
             continue
         try:
             text = (repo / path).read_text(encoding="utf-8")

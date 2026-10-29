@@ -15,7 +15,6 @@ this directory holds the siblings that share its machinery.
   span, right to left so the earlier spans' indices stay valid. It is a sibling of the
   metadata-table rewrite, never part of it: `changes` is not a `MetadataTableType`, and
   `metadata_tables.rs` holds an exact 1062-line baseline that this unit does not touch.
-  pins: ice-changelog-1/C-009
 
 ## Pointers
 

@@ -29,5 +29,3 @@ the `ice_spark_table_1` fixture uses, and removes the copy when the test exits.
 - Up: [../map.md](../map.md)
 - Cells: [../../../../../repark/tests/test_ice_hadoop_vn_1.py](../../../../../repark/tests/iceberg/test_ice_hadoop_vn_1.py)
 - Ledger: `task/ledgers/staging/ice-hadoop-vn-1-ledger.md`
-
-pins: ice-hadoop-vn-1/C-007

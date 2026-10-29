@@ -37,8 +37,7 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   Verifier fold: `evaluate_all_all_invalid_input_answers_nan_for_{ad,plus_dm,aroon_up}` (all-NaN
   and all-NULL through `evaluate_all`; base answered 0.0 there) and
   `evaluate_all_one_input_entirely_invalid_answers_all_nan_for_trange` (one input all-NaN makes
-  the start equal the length); the chain test carries a NULL twin. pins: ta-chain-1/C-007
-  pins: ta-chain-1/C-004, C-006
+  the start equal the length); the chain test carries a NULL twin.
 - `glue.rs` — TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04): the evaluator's zero-copy output and
   input borrow. `float64_array_from_vec` moves the kernel's `Vec<f64>` into a `Float64Array`
   (no copy; the old `Float64Builder` copy is gone). `try_borrow_all_null_free` borrows every
@@ -47,7 +46,7 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   densifies through `mod.rs`. `try_borrow_null_free_f64` moved here unchanged. `udf/mod.rs` shrinks
   1818 → 1801 and its exact baseline ratchets with it. The inline test pins the borrow pointers, the
   moved buffer, and bit-identity against the old densify-and-copy glue for ADX, TRANGE, ATR, WILLR,
-  EMA, RSI and both STOCH bands. pins: ta-series-s2b/C-007
+  EMA, RSI and both STOCH bands.
   **S2a (2026-10-05):** the native `null_lookback`. `TaWindowUdf` carries `null_prefix` and a
   derived `display` name (`ta_ema_null_prefix_12` when non-zero, the plain name otherwise);
   its `PartialEq` / `Hash` live here and cover the base name, function, signature and
@@ -59,7 +58,7 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   rows **of each window partition** NULL in the validity bitmap over the same values buffer
   (no copy; values, and every later NaN, unchanged). `is_ta_window` tells the facade's series
   rewrite that a window function is a TA kernel. `udf/mod.rs` shrinks 1801 → 1791 and its exact
-  baseline and the CAP-1 mirror ratchet with it. pins: ta-series-s2a/C-005, C-006, C-008
+  baseline and the CAP-1 mirror ratchet with it.
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
 

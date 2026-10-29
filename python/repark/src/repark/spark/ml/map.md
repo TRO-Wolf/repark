@@ -14,7 +14,7 @@ delegated estimators live in [feature/map.md](feature/map.md) and [ext/map.md](e
 | `classification.py` | Native binary logistic regression and model. |
 | `clustering.py` | Native Lloyd k-means and model. |
 | `evaluation.py` | Regression, binary, and multiclass evaluators. **FN-FIX-1:** sparse
-  `array_position` not-found is `0`; skip `element_at(..., 0)`. pins: fn-fix-1-registry-rows/C-002 |
+  `array_position` not-found is `0`; skip `element_at(..., 0)`. |
 | `linalg.py` | Dense and sparse vectors and Arrow schema markers. |
 | `param.py` | Parameters, converters, and shared parameter mixins. |
 | `pipeline.py` | Pipeline composition and atomic persistence. |
@@ -35,7 +35,7 @@ delegated estimators live in [feature/map.md](feature/map.md) and [ext/map.md](e
 - `LinearRegressionSummary` exposes no computed metrics and refuses unknown fields.
 - **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** estimator and
   evaluator SQL runs through the native `sql_built` method, so fitted labels parse in default
-  mode whatever the session flag says. pins: string-literal-escape-1/C-011
+  mode whatever the session flag says.
 
 ## Pointers
 

@@ -17,4 +17,3 @@ recorded `QC-*` cells.
   insert one snapshot apart; a row deleted and re-inserted inside the window). Round 2
   (2026-09-20) carries `_commit_snapshot_id` in the `rendered()` helper, so every value
   assertion pins the commit column too.
-  pins: ice-changelog-1/C-011, C-012, C-013

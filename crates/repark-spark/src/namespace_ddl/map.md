@@ -25,7 +25,6 @@ The table-lifecycle work `../namespace_ddl.rs` delegates rather than inlines.
   shared with the tests so the pin cannot drift from the message. The gate is measured Spark
   parity, not an addition: cell `TP-GC-DISABLED-PURGE` records live Spark refusing the same
   statement, and Java's check sits in `SparkCatalog.purgeTable`, upstream of the action.
-  pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
 
 ## Pointers
 

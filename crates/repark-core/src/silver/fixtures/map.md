@@ -10,8 +10,6 @@ TOML fixtures for the SILVER-S1 typed plan. Loaded by `src/silver/tests/`. See [
 - [negative/](negative/map.md) — one file per structural/schema `SilverRefusal` variant,
   plus a nested unknown-key path. `TomlSyntax` is an inline pin, not a `.toml` file.
 
-pins: silver-s1/C-007
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

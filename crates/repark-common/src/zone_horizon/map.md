@@ -18,7 +18,6 @@ Unit tests of the zone horizon ([../zone_horizon.rs](../zone_horizon.rs)).
   gap and its overlap; and the round trip — the wall clock of every sampled instant in
   2100–2500 (one every three days, five hours and 1861 seconds, more than 45 000 samples)
   reads back as that instant, with more than half of the samples in summer time.
-  pins: zone-horizon-render-1/C-003, C-004, C-011
   **Fold 1 Item B (2026-10-08):** an eighth test over a second toy zone,
   `SettledIn2088` (daylight saving up to 2087, steady standard time after): the
   shifting zone has a final rule and the settled one has none, and past 2099 the

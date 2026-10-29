@@ -7,7 +7,6 @@
 ([../../docs/cutover/inventory.md](../../docs/cutover/inventory.md) ruling 2). The unit that
 built it is DBT-1; the design, the measured refusals and the acceptance result live in
 [../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../task/ledgers/completed/dbt-1-adapter-ledger.md).
-pins: dbt-1-adapter/C-001, C-002, C-003, C-004, C-005
 
 **Not published in this unit.** There is no wheel, no PyPI name reserved, no entry in the root
 `pyproject.toml` uv workspace, and no row in `uv.lock`. Adding a workspace member would pull

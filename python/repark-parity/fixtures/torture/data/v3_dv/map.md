@@ -33,5 +33,3 @@ onto exactly that path under a directory lock, the same contract the
 - Up: [../map.md](../map.md)
 - Generator: [../../v3_dv.py](../../v3_dv.py)
 - Cells: [../../../../tests/torture/test_torture_v3_dv.py](../../../../tests/torture/test_torture_v3_dv.py)
-
-pins: torture-1/C-025, C-026

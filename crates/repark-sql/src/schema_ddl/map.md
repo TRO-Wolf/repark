@@ -12,8 +12,7 @@ in `../tests.rs` against a real catalog.
   battery plus, since **ICE-DROP-NS-1 (2026-09-19)**, the ANSI-door drop pins — a non-empty
   `DROP SCHEMA` refuses with the count and keeps everything, a table-dropped-first schema
   drops — over a local door harness against a memory catalog.
-  pins: ice-drop-ns-1/C-006, C-008
-  `IF EXISTS`, `CASCADE` and `DROP DATABASE` still refuse a non-empty schema. pins: ice-drop-ns-1/C-011
+  `IF EXISTS`, `CASCADE` and `DROP DATABASE` still refuse a non-empty schema.
 - `location_guard_tests.rs` — ANSI `CREATE SCHEMA IF NOT EXISTS` four-shape twins (create-new / same /
   conflicting / no-location) against a memory catalog.
 
@@ -29,4 +28,4 @@ in `../tests.rs` against a real catalog.
 
 First checks: `cargo test -p repark-sql schema_ddl::`. Escalate to: [../map.md#debug](../map.md).
 
-**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`. pins: ice-tt-resolve-1/C-003
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`.

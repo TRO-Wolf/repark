@@ -14,18 +14,16 @@ results, no `docs/perf/config-profiles-*.md` — those are steps 2–3.
   `--smoke`), TPC-H through the shared `tpch.datagen.ensure_parquet_sf` dbgen path
   (SF10 full, SF0.01 smoke — the smallest scale that path accepts), and a local
   memory-catalog Iceberg v2 table (`PARTITIONED BY (g)`, CTAS plus one append per file:
-  200 files full, 4 smoke). pins: profiles-1/C-001
+  200 files full, 4 smoke).
 - [queries.py](queries.py) — five reads (`scan_filter`, `group_by` on futures+tpch;
   `hash_join`, `sort_merge_join` on tpch; `window` on futures) and three writes
   (`append_files` × 8, `overwrite_partition` one `PARTITION (g = '7')`,
   `merge_updates` at `MERGE_UPDATE_FRACTION = 0.10`). Every query forces execution
   through the Arrow path (`to_arrow`), never only `show`. The write seeds and the Iceberg bed
   in `datasets.py` read `range(n)`'s column as `id`, Spark's name (RANGE-TVF-ID-1).
-  pins: profiles-1/C-002
 - [harness.py](harness.py) — `require_quiet_box` (`pgrep -f java` empty or the timed
   run refuses), `measure` (quiet check before every repetition), `write_cell_rows`
   (header once, one row per repetition), `median_seconds`, `smoke_config`.
-  pins: profiles-1/C-003, C-004, C-005
 - [run_profiles.py](run_profiles.py) — CLI entry: `--scratch` (required), `--out`,
   `--knob` + `--values`, `--repeats`, `--smoke`, `--futures`. One session per value
   (stopped after, as the step-0 probe did); the write table is rebuilt before every
@@ -34,7 +32,6 @@ results, no `docs/perf/config-profiles-*.md` — those are steps 2–3.
   are Iceberg table properties the session conf only stores, so step 2's fix lands
   them on the rebuilt bed table with `ALTER TABLE … SET TBLPROPERTIES` before the
   timed write (`table_property_alter`), leaving every bed identical across cells.
-  pins: profiles-1/C-007
 - `map.md` — this file.
 
 ## The accepted-but-unread nine

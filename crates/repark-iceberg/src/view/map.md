@@ -22,12 +22,10 @@ fork's `FeatureUnsupported` (Spark's measured wording).
   `provider`/`location`/`format-version` never stored); `view_location`
   (`{warehouse}/{ns}/{view}`, no trailing slash); `view_read_spec` (stored SQL
   plus defaults plus output column names).
-  pins: ice-views-1/C-001, C-002, C-003, C-004, C-005, C-010
 - `tests.rs` — memory-catalog pins for every service row plus the
   `ViewlessCatalog` double (required `Catalog` methods delegate to memory, view
   methods inherit the `FeatureUnsupported` default) binding the A-9 CREATE
   rows with exact `UnsupportedMarker` downcast assertions.
-  pins: ice-views-1/C-001, C-002, C-003, C-004, C-005, C-010
 
 ## Pointers
 

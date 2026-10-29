@@ -41,7 +41,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   `refuse_view_write_target` (INSERT/DELETE/UPDATE/BY NAME guard,
   fail-closed since R2: metadata-table writes refuse up front, `is_view` is a
   `Result`, and names that cannot be views (branch selectors) fall through to
-  the table path). pins: ice-views-1/C-017
+  the table path).
   **IPI-40 PR6:** `route_create_temp_view` / `execute_create_temp_view` plan
   the temp body under the session defaults, refuse
   TEMP_TABLE_OR_VIEW_ALREADY_EXISTS for a plain CREATE on an existing name,
@@ -49,7 +49,6 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   door refuses with `NO_TEMP_VIEW_HOME`); `execute_show_views_with` lists
   catalog rows then temp rows `["", name, true]`, LIKE on both, and a bare
   SHOW VIEWS reads the current namespace (`show_view_rows_batch`).
-  pins: ice-views-1/C-018
   Name completion for CREATE, DROP, ALTER, RENAME targets, and the write guard
   reads `use_ddl::session_defaults(catalogs)`; one-part SHOW VIEWS IN reads its
   catalog from the same defaults. A bare name with no current namespace uses
@@ -65,10 +64,10 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   **WO CASESENS-1 slice 4 (2026-09-27):** both creators refuse
   `COLUMN_ALREADY_EXISTS` 42711 on a folded duplicate in the effective output
   names (aliases when given, else the planned body) under
-  `caseSensitive=false` (R10), before registration. pins: casesens-1/C-012
+  `caseSensitive=false` (R10), before registration.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `show_tblproperties_rows` (views: `SHOW TBLPROPERTIES`, `SHOW CREATE TABLE`)
   masks every stored value and the `location` row through `mask_value_credentials`; the
-  table arm in `show_tblproperties.rs` masks its stored values the same way. pins: source-url-redact-1/C-016
+  table arm in `show_tblproperties.rs` masks its stored values the same way.
 - `parse.rs` + `execute.rs` + the router arm — **PR4 (2026-09-22,
   V-SHOW-TBLPROPERTIES):** `try_parse_show_tblproperties` (quoted, unquoted
   and dotted keys; a quoted key ends at the string; a tail that tokenizes but
@@ -89,12 +88,11 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   **PR4 r2 (2026-09-23):** bare and two-part names complete through
   `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so
   they follow `USE` like ALTER VIEW.
-  pins: ice-views-1/C-017
   **WO TBLPROPS-1 (2026-09-26):** tables no longer fall through —
   `execute_show_tblproperties` answers a session-resolved bare name with the
   empty frame, keeps the view arm, and loads a table through
   `show_tblproperties.rs` once the view arm misses; the missing-name refusal
-  is unchanged. pins: tblprops-1/C-001, C-008, C-009, C-010
+  is unchanged.
 - `show_tblproperties.rs` — **WO TBLPROPS-1 (2026-09-26):** the `SHOW
   TBLPROPERTIES` table arm. `table_rows` builds Spark's sorted `key, value`
   list from the loaded table's metadata: the `current-snapshot-id` / `format`
@@ -105,9 +103,8 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   Called from `execute.rs` once the view arm misses; the frame still comes
   from `show_tblproperties_batch`.
   pins: [`../tests/show_tblproperties.rs`](../tests/show_tblproperties.rs)
-  pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-011
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** table rows and `execute.rs`'s view rows (SHOW TBLPROPERTIES, SHOW CREATE view)
-  apply `displayed_property_value`, the key rule as well as the value rule. pins: source-url-redact-1/C-042
+  apply `displayed_property_value`, the key rule as well as the value rule.
 - `temp_parse.rs` — **IPI-40 PR6** grammar for `CREATE [OR REPLACE] [GLOBAL]
   TEMP|TEMPORARY VIEW`: `try_parse_create_temp_view` (verbatim body, column
   aliases with COMMENT, view COMMENT accepted) and the Spark-measured parse
@@ -117,7 +114,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS (two parts) and
   IDENTIFIER_TOO_MANY_NAME_PARTS (three or more); GLOBAL refuses as
   `NotImplemented` (`GLOBAL_TEMP_VIEW_REFUSAL`). Split out of `parse.rs`
-  after the PR4 rebase (PR6b1). pins: ice-views-1/C-018
+  after the PR4 rebase (PR6b1).
 - `temp_ddl.rs` — **IPI-40 PR6** the session dispatcher
   `route_temp_view_statement`, called from `router.rs::execute_in_session`
   after canonicalization: CREATE TEMPORARY VIEW always; with a session
@@ -127,13 +124,13 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   one-part names are temp-first; DESCRIBE [TABLE] [EXTENDED] of a temp view
   answers Spark rows with an Arrow NULL comment (alias COMMENT clauses kept); SHOW
   VIEWS appends the session's temp rows. Every other target falls through to
-  the catalog arms unchanged. pins: ice-views-1/C-018
+  the catalog arms unchanged.
 - `temp_view.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `ReplanningTempView`
   keeps the plan it built at CREATE (`definition_plan`), and the free function
   `definition_plan` answers it for a provider that is one; `extension.rs` registers that
   function as the session's `ViewDefinitionPlans` resolver so the store gates can follow a
   `-NULL` column through a temp view. `get_logical_plan` stays unimplemented, so
-  DataFusion never inlines a replanning view. pins: store-ts-to-numeric-1/C-002
+  DataFusion never inlines a replanning view.
   **ATTR-VIEW-SEMANTICS-1 item (d) (2026-10-05):** the provider schema is born
   without attribute ids (`strip_schema_ids` at CREATE), while the registered
   frame carries the definition's ids above the scan
@@ -165,7 +162,6 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   through the physical planner at every level, about 95 KiB of debug stack per level),
   with `read.rs`'s `VIEW_EXPANSION_STACK_RED_ZONE` (1 MiB) and
   `VIEW_EXPANSION_STACK_SEGMENT` (8 MiB), so a 100-level chain reads on the caller's stack.
-  pins: ice-views-1/C-018
   **RP-56 DIFF-PROBE fold (2026-09-29):** the provider reports `TableType::Temporary`
   (it is one), so the twin-star guard skips its schema and the re-planned body carries the
   verdict: a scan-free twin body answers, a twin-table body refuses, both like Spark.
@@ -201,7 +197,6 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   and EXTENDED is the same columns-only answer; any supplied column refuses
   with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`. **PR6a2:** `describe_rows_batch`
   is the shared batch builder the temp-view DESCRIBE in `temp_ddl.rs` reuses.
-  pins: ice-views-1/C-017, C-018
 - `show_create.rs` — **PR5 (2026-09-24, V-SHOW-CREATE):**
   `execute_show_create_view` is the `Ok(true)` arm of `try_show_create_intercept`
   (`../show_create.rs`; `AS SERDE` on a view keeps main's fall-through). It
@@ -216,7 +211,6 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   SQL representation refuses with that function's `Plan` error, and an unregistered
   catalog refuses with `catalog_handle`'s. **r2 (2026-09-24):** the renderer has
   no property filter of its own. Residues: D-VIEW-SHOWCREATE-1.
-  pins: ice-views-1/C-017
 
 ## Pointers
 

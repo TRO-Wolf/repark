@@ -78,7 +78,6 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 - Up: [../map.md](../map.md)
 - Related: the testing contract is [../../docs/testing.md](../../docs/testing.md).
 - Audit: [comment compaction ledger](../../task/ledgers/archive/2026-08/2026-08-27-comment-compaction-ledger.md);
-  `pins: comment-compaction/C-001, C-002, C-003, C-004, C-005, C-006, C-007`.
 
 ### PR-6 note
 - The `record` extra is PINNED `pyspark==4.1.2` (was `>=3.5` — the live-oracle drift detector's

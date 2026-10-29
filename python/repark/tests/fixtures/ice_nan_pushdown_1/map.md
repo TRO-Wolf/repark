@@ -7,7 +7,7 @@ canonical `/tmp/repark-ice-nan-pushdown-1/wh` paths (`.crc` sidecars skipped).
 The pin test copies each warehouse back to its canonical path before
 `CALL system.register_table`, so the absolute file URIs in the manifests stay
 valid. The recorder replaces only the six table directories on `--rewrite` and
-keeps this map. pins: ice-nan-pushdown-1/C-009, C-012
+keeps this map.
 
 ## Contents
 

@@ -86,9 +86,6 @@ Measured facts this harness is built on (base `8936346a`, release native,
   Step 2 trimmed the module docstring to one line — the `pins:` citation lives here.
 - `map.md` — this file.
 
-pins: eager-own-1/C-001, C-012
-pins: eager-budget-1/C-001
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

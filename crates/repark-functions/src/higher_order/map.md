@@ -5,8 +5,6 @@
 Spark higher-order kernels registered on the FNP-4a shared table (`functions` /
 `by_name` / `register`). One RePark kernel per Spark name except `reduce` (alias
 of `aggregate`).
-pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006
-pins: fnp-4c-higher-order-kernels/C-007, C-008, C-009, C-010, C-011, C-013, C-014
 
 ## Contents
 
@@ -28,11 +26,10 @@ pins: fnp-4c-higher-order-kernels/C-007, C-008, C-009, C-010, C-011, C-013, C-01
 - `aggregate.rs` — sequential fold; alias `reduce`. The merge-output type must
   equal the init type; `LambdaRebind` refuses a mismatch with Spark's
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` naming `aggregate`.
-  pins: fnp-4c-higher-order-kernels/C-003
 - `zip_with.rs` — null-pad the shorter array.
   **FNP-8-REVIEW (2026-09-07):** lambda parameters are nullable (either side can
   pad nulls, F2) and the result element derives from the lambda's nullability
-  (F3). pins: fnp-8-review/C-002, C-003
+  (F3).
 - `map_common.rs` — flatten/rebuild, `NULL_MAP_KEY`, `DUPLICATED_MAP_KEY`. `NULL_MAP_KEY`
   refuses exactly when a key is null (`logical_null_count`), so an empty `Null`-typed key array
   (the keys of `map()`) passes (U9-TYPES-1, 2026-09-25).

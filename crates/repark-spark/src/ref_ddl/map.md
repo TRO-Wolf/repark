@@ -20,7 +20,6 @@ end-to-end DDL execution pins live in [../tests/map.md](../tests/map.md).
   combination Spark's own parser rejects, class included. These four carry no doc comments: the
   owner's comment ban applies to every source file, so what a comment would have said lives in
   this row.
-  pins: ipi-21-25-42-small-parser/C-001, C-003, C-004
 
 ## Pointers
 

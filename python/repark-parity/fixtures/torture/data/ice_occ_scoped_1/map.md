@@ -102,9 +102,6 @@ strings) whose committed bytes hash to
   its unpartitioned table with two INSERT statements (`id < 50`, `id >= 50`) for the same layout
   (ledger Q-21a-4).
 
-pins: ice-occ-scoped-1/C-015, C-020
-pins: ice-append-retry-1/C-001, C-002
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

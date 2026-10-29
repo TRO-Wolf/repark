@@ -1,7 +1,6 @@
 # map — repark-common/src
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 ## Purpose
 
@@ -42,26 +41,25 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `unsupported` / `illegal_argument` constructors returning `Error`. The
   no-suggestion unresolved-column row preserves Spark's two spaces before
   `SQLSTATE`. Unit tests
-  at the bottom of the module pin every row's name, SQLSTATE, and template. Clippy-clean sqlstate() match (merged same-SQLSTATE arms), if-let in substitute, and a test-module Row alias. pins: ice-error-conditions-1/C-010
+  at the bottom of the module pin every row's name, SQLSTATE, and template. Clippy-clean sqlstate() match (merged same-SQLSTATE arms), if-let in substitute, and a test-module Row alias.
   **ICE-VIEWS-1 (2026-09-20):** `VIEW_ALREADY_EXISTS` / `VIEW_NOT_FOUND` /
   `CREATE_VIEW_COLUMN_ARITY_MISMATCH` (both directions) rows with unit pins.
   **IPI-40 ALTER VIEW (2026-09-23):** `UNSUPPORTED_FEATURE.CATALOG_OPERATION` refuses view property changes on catalogs without view support with SQLSTATE `0A000`.
-  pins: ice-views-1/C-010
   **IPI-40 PR6 (2026-09-24):** the temporary-view rows measured on Spark 4.1.2 —
   `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` (42P07), `TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS` (428EK),
   `IDENTIFIER_TOO_MANY_NAME_PARTS` (42601), `RECURSIVE_VIEW` (42K0H),
   `INCOMPATIBLE_VIEW_SCHEMA_CHANGE` (51024), `CANNOT_UP_CAST_DATATYPE` (42846) and
   `VIEW_EXCEED_MAX_NESTED_DEPTH` (54K00) — with
   byte-exact unit pins; `template()` carries `#[allow(clippy::too_many_lines)]` as a lookup
-  table. pins: ice-views-1/C-018
+  table.
   **CASESENS-1 S3 (2026-09-27):** the `UNRESOLVED_USING_COLUMN_FOR_JOIN` row
   (42703), measured on live Spark (`USING column … on the left side …`), with
-  catalogue + template-param pins (43 conditions). pins: casesens-1/C-009
+  catalogue + template-param pins (43 conditions).
   **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the `CAST_OVERFLOW_IN_TABLE_INSERT` row
   (22003), measured byte-exact on live Spark 4.1.2 for DOUBLE and DECIMAL(38,0)
   sources, with catalogue + template pins (44 conditions).
 
-- `udf_names.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `NARROW_TIMESTAMP_NS_NAME` joins the names here, the narrowing kernel the conform stage names fail-closed (WS2-13). pins: write-spine-1/C-017
+- `udf_names.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `NARROW_TIMESTAMP_NS_NAME` joins the names here, the narrowing kernel the conform stage names fail-closed (WS2-13).
 - `udf_names.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):** the one home of the seven UDF
   names that `repark-functions` and `repark-iceberg` both name: `TIMESTAMP_NTZ_CAST_NAME`,
   `TIMESTAMP_NS_CAST_NAME`, `TIMESTAMPTZ_NS_CAST_NAME`, `CAST_MAP_NAME`, `ZONE_SEAM_NAME`,
@@ -69,7 +67,6 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   re-exports them under its existing identifier, so no call site changed. Why: the iceberg write
   path reaches the function kernels by name through the session's function registry, and the
   names were two copies of the same string on each side of the crate line.
-  pins: write-spine-1/C-001
 
 - `zone_horizon.rs` — **C-2d fold 1 (2026-10-07):** the zone horizon, moved here from
   `repark-functions`' `spark_string_timestamp/instant.rs` so the engine can read it too.
@@ -79,7 +76,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   mean time). `is_leap_year` and `days_from_civil` are the proleptic Gregorian helpers it
   stands on. Two readers: the string → `TIMESTAMP` literal (`repark-functions`) and the
   Postgres wall-clock placement (`repark-core`'s `session/zone_localiser.rs`), so the two agree
-  on every wall clock. pins: c-2/C-109
+  on every wall clock.
   **ZONE-HORIZON-RENDER-1 (2026-10-08):** the inverse direction and one door for both. The
   helpers are generic over `chrono::TimeZone` (so `repark-common` now depends on `chrono`,
   already a workspace dependency, and still carries no zone tables): `offset_at_instant(zone,
@@ -105,7 +102,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `session/text_write_format.rs` (CSV and JSON writes), `text_partition.rs`,
   `partition_discovery.rs`, `orc_scan.rs` (the writer zone), `time_travel/sql_text.rs` and
   `session/zone_localiser.rs`. No call site holds a copy of the rule. Tests:
-  [zone_horizon/map.md](zone_horizon/map.md). pins: zone-horizon-render-1/C-003
+  [zone_horizon/map.md](zone_horizon/map.md).
   **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** four helpers whose tabulated
   branch (a year at or before 2099) is the chrono-tz call the site held on main and
   whose later branch is the proxy: `wall_to_unix_seconds`, `wall_to_micros_earlier`
@@ -129,7 +126,6 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   is detected there (CC-2, CC-9); equality is the only operation C-1 needs. `lib.rs`
   re-exports both. `repark-connect` owns the settings and conversions, `repark-core` the
   loading and handles, `repark-cdc` lineage and offsets.
-  pins: c-1/C-002
   **C-1b (2026-10-06), NS-14:** the generation is the named newtype
   `Generation(NonZeroU64)` (`Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord`), and
   `SourceIdentity.generation` is an `Option<Generation>`, `None` still meaning unassigned.
@@ -138,7 +134,6 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   (North Star NS-14: "never a bare `u64` across a function boundary … in Rust it is
   `Option<Generation>` or a non-zero type"; R-12 as amended, owner, 2026-10-05). `new` is the
   serialized `0` ↔ `None` boundary the first serializing unit calls. `lib.rs` re-exports it.
-  pins: c-1/C-012
 
 - `redaction.rs` — **SOURCE-URL-REDACT-1 (2026-10-06):** the shared property redactor. `prop_key_is_secret`
   (moved here unchanged from `repark-core/src/catalog_config.rs`, which re-exports it),
@@ -149,30 +144,28 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   whole userinfo (fail closed); a secret-named query parameter or libpq / ODBC keyword
   (`prop_key_is_secret`, or a compact name `sig`, `…pwd`, `…signature`) masks its value,
   quoted, braced and unterminated forms included. Unit pins at the bottom of the module.
-  pins: source-url-redact-1/C-001, C-002, C-003, C-004, C-005, C-006
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** userinfo is read only inside the RFC 3986 authority (it ends at the first
   `/`, `?` or `#`), so a path, query or fragment `@` never masks or hides the host; a userinfo
-  whose user part carries an `@` is masked whole. pins: source-url-redact-1/C-002, C-015
+  whose user part carries an `@` is masked whole.
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the legs run key=value (parenthesized pairs included), then quoted-JSON and
   YAML colon pairs, then URL userinfo (the authority ends at `/ ? # ;`, not at whitespace; an
   authority that is not a clean host fails closed up to a later `@host`), then Oracle
   `user/password@host` and bare `user:password@host`. `prop_key_is_secret` adds `account_key`,
   `authorization` and a final `pat`; `column_name_is_secret_shaped` keeps the previous rule for
   the secret-column read flag. Tests moved to [redaction/](redaction/map.md).
-  pins: source-url-redact-1/C-021, C-022, C-024, C-025, C-026, C-027, C-034
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** the legs record masked spans on the original value (URL userinfo, then Oracle
   and bare logins, then key=value, then JSON/YAML) and a later leg skips what an earlier one
   masked, so key=value never fires inside a userinfo; a storage scheme whose userinfo has no
   `:` is shown as is; Oracle TNS descriptors, fail-closed logins and multi-line JSON/YAML are
-  masked. pins: source-url-redact-1/C-041, C-043, C-044, C-045, C-046
+  masked.
   **SOURCE-URL-REDACT-1 fold 4 (2026-10-06):** `host_text` ends a follower host at `" ' ( ) ] { } , < >`
-  too, so an embedded URL fails closed. pins: source-url-redact-1/C-052
-  **SOURCE-URL-REDACT-2 (2026-10-06):** the config-value registry: `register_config_value(value)` keeps the value only when `mask_value_credentials` changes it (256 entries, oldest evicted, poison-safe `Mutex`), `register_config_map` registers a whole map for the builder door, and `mask_registered_values(text)` swaps each kept value and its `{:?}` inner form for its masked render. pins: source-url-redact-1/C-057
+  too, so an embedded URL fails closed.
+  **SOURCE-URL-REDACT-2 (2026-10-06):** the config-value registry: `register_config_value(value)` keeps the value only when `mask_value_credentials` changes it (256 entries, oldest evicted, poison-safe `Mutex`), `register_config_map` registers a whole map for the builder door, and `mask_registered_values(text)` swaps each kept value and its `{:?}` inner form for its masked render.
   **SOURCE-URL-REDACT-2 fold 1 (2026-10-07):** the registry is least-recently-used (a re-registered value moves to most recent, eviction removes the least recent, capacity stays 256), `mask_registered_values` replaces a snapshot sorted by byte length descending, and both the value and its `{:?}` inner form replace whole-token occurrences only. The lock stays `std::sync::Mutex` with `into_inner` recovery, so a poisoned lock still masks. pins: source-url-redact-2/R-A1, R-A2, R-A3
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** an edge counts when the neighbour is the string boundary or outside `[A-Za-z0-9]` — punctuation (`= . - _` included) is a boundary, so `url=<value>` and `conn_<value>` mask while `cpw=abc` still spares a registered `pw=a`.
-  **SOURCE-URL-REDACT-2 fold 3 round B (2026-10-07):** an occurrence is skipped on a side only when both the value's own edge character on that side and the neighbour are in `[A-Za-z0-9]`; a value whose edge is punctuation masks next to any neighbour, so an ODBC value ending in `;` masks before `Encrypt=yes`. pins: source-url-redact-1/C-074
-  **SOURCE-URL-REDACT-2 fold 3 round B2 (2026-10-07):** the left side is also a boundary when the text before the occurrence ends an ANSI CSI sequence (`ESC [`, `[0-9;]*`, one final byte in `0x40..=0x7E`), so a value printed right after an SGR colour code masks; a bare `m` or `[31m` without ESC keeps the skip. pins: source-url-redact-1/C-075
-  **SOURCE-URL-REDACT-2 fold 4 H6 (2026-10-07):** the CSI check follows ECMA-48: introducer `ESC [` or C1 `U+009B`, then any parameter bytes `0x30..=0x3F`, then any intermediate bytes `0x20..=0x2F`, then one final byte `0x40..=0x7E`. The backward scan stops at the previous occurrence's cursor, so the walk stays linear. pins: source-url-redact-1/C-081
+  **SOURCE-URL-REDACT-2 fold 3 round B (2026-10-07):** an occurrence is skipped on a side only when both the value's own edge character on that side and the neighbour are in `[A-Za-z0-9]`; a value whose edge is punctuation masks next to any neighbour, so an ODBC value ending in `;` masks before `Encrypt=yes`.
+  **SOURCE-URL-REDACT-2 fold 3 round B2 (2026-10-07):** the left side is also a boundary when the text before the occurrence ends an ANSI CSI sequence (`ESC [`, `[0-9;]*`, one final byte in `0x40..=0x7E`), so a value printed right after an SGR colour code masks; a bare `m` or `[31m` without ESC keeps the skip.
+  **SOURCE-URL-REDACT-2 fold 4 H6 (2026-10-07):** the CSI check follows ECMA-48: introducer `ESC [` or C1 `U+009B`, then any parameter bytes `0x30..=0x3F`, then any intermediate bytes `0x20..=0x2F`, then one final byte `0x40..=0x7E`. The backward scan stops at the previous occurrence's cursor, so the walk stays linear.
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,
@@ -182,7 +175,6 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `folded_duplicate` (the lower-cased name of the first later name equal
   ignoring case to an earlier one) and `column_already_exists` (Spark's
   42711 text) with the `folded_duplicate_reports_the_lower_cased_twin` pin.
-  pins: casesens-1/C-005, C-006, C-007, C-008, C-012, C-017
 - `java_case.rs` — **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** the single Java
   case-fold home (the binding's fold tables moved out of the Python facade so
   the three copies cannot drift). `fold_b_equal` is OpenJDK
@@ -195,18 +187,15 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   Rust-newer identity sets, the Greek single-upper map, U+0130 lowering to
   `i`). A full-codepoint unit test pins every mapping against
   `java_case_dump.txt`. Reach the folds through `repark-core`'s re-export.
-  pins: attr-id-1/C-032, C-035
   **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** the two-fold split is measured,
   not assumed: `drop(str)`/`dropDuplicates`/`withColumn` use `equalsIgnoreCase`
   (the `Analyzer.resolver` bytecode path; the earlier lower-of-originals form
   missed U+0130/`ı`), while `fillna`/`dropna`/free-Column `drop` use
   length-plus-`String.toLowerCase` (probes s3d16..17; `select` shares this rule
   per the r1 `sel` cells, which is S3a/S3b territory).
-  pins: attr-id-1/C-037
   **CASESENS-2 port (2026-10-03):** `string_lowered` is public so
   `refuse_folded_duplicate_keys` compares `withColumns` keys the way Spark's
   `SchemaUtils.checkColumnNameDuplication` does (`toLowerCase(Locale.ROOT)`).
-  pins: casesens-2/C-010
 - `java_case_dump.txt` — the compacted Zulu-17 `Character` dump behind that
   test: one `cp upper lower` hex line per mapped codepoint, sorted,
   generated from the S3d probe dump with a round-trip check (the generator
@@ -228,11 +217,11 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `CommitStateUnknown { message, operation_id }` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the
   ambiguous-commit class, carrying the attempted commit's `engine.operation-id` when a RePark
   write path minted one) + `Result<T>`. **FNP-MATH-1 WO-6b R3 (2026-09-21):**
-  `Arithmetic(String)` — the verbatim `{0}` ANSI arithmetic class. pins: fnp-math-1/C-004.
+  `Arithmetic(String)` — the verbatim `{0}` ANSI arithmetic class.
   **U7 PR1 round 2 (2026-09-24):** `NumberFormat(String)` — the verbatim `{0}` class for a
   string Java's `Integer.parseInt` refuses (`For input string: "<v>"`), routed
   `NumberFormat → NumberFormat` → `repark.errors.NumberFormatException`, the
-  `IllegalArgumentException` leaf. pins: u7-write-df/C-011. Plus
+  `IllegalArgumentException` leaf. Plus
   `ErrorClass { Parse, Analysis, Arithmetic, Unsupported, IllegalArgument, NumberFormat, CommitStateUnknown, Base }` + `Error::exception_class()`
   — the WG-3/U4/Group-X error-taxonomy routing (`NotImplemented → Unsupported` →
   `repark.errors.UnsupportedOperationException`, the PySpark class for a JVM

@@ -65,12 +65,10 @@ wrapped optimizer rule) and declares this directory.
   4 rows `[2,3,4,5]` where Spark answers `[2,3,4,5,6]`, and 3 of the 16 pins go red:
   `one_partition_family_answers_spark_rows_at_one_partition` (on `m`, one partition) and the parquet
   and Iceberg grids (at 1, 2 and 16); the other 13 stay green. Before the cell, all 16 passed.
-  pins: offset-nested-sort-1/C-004, C-005, C-006, C-008, C-009, C-010, C-013
 - [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
   Its design note, the DataFusion contracts it reads, and the routes it does not take are in
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and
   `python/repark/tests/functions/test_win_slide_1.py`.
-  pins: win-slide-1/C-001, C-005
 - `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** attribute identity as a function of the plan.
   Every output field of a DataFrame plan carries one attribute id in its field metadata under
   `repark.attr`; the design and its rulings are recorded in the unit ledger,
@@ -98,7 +96,7 @@ wrapped optimizer rule) and declares this directory.
   files share it) and answers `Bound(hits)` for one distinct id, `Ambiguous(hits)` for more and
   `Missing` for none; a hit without an id and a display count that differs from the field count
   are internal errors, never a wildcard. The facade does not call any of it yet (S2 stamps
-  every spawned frame). Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-002, C-003, C-004
+  every spawned frame). Pins: `../tests/attr_id.rs`.
   **ATTR-ID-1 S2 (2026-09-30):** `strip(plan)` rebuilds the plan bottom-up with the key
   removed from every stored schema and every embedded `Alias` (nodes rebuild through
   their own `try_new`, so the optimizer cannot resurrect the key by recomputing; unions
@@ -106,13 +104,13 @@ wrapped optimizer rule) and declares this directory.
   `Values`/`EmptyRelation`/`TableScan` leaves are clean by construction and fail loud
   when keyed; statements and `Extension` pass through. `strip_record_batches` gives
   every `MemTable` temp view a clean schema and clean batches at creation. Pins:
-  `../tests/attr_id.rs`. pins: attr-id-1/C-009
+  `../tests/attr_id.rs`.
   **ATTR-ID-1 S2 fix (2026-09-30):** `stamp` only touches relation roots
   (`plan_is_relation`: the 16 relation variants, plus an `EmptyRelation` with fields —
   a field-less one is a planned `DROP TABLE`). Statement roots (`Explain`, `Analyze`,
   `Ddl`, `Dml`, `Copy`, `DescribeTable`, `Statement`, `Extension`) pass through
   unchanged, since wrapping one breaks it (`Explain` must stay root, DML must stay a
-  write). Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-007, C-014
+  write). Pins: `../tests/attr_id.rs`.
   **ATTR-ID-1 S2b (2026-09-30):** ids live on unoptimized and analyzed plans only.
   `StripAttributeIds` (`repark_strip_attribute_ids`) is an optimizer rule that owns its
   recursion: bottom-up, subqueries included, on every node whose schema or expressions carry
@@ -131,7 +129,7 @@ wrapped optimizer rule) and declares this directory.
   sides. It is not an analyzer rule because the Spark SQL door analyzes eagerly
   (`repark_functions::analyze_eagerly`) and keeps the analyzed plan as the frame, whose ids the
   facade's join shape needs. Name resolution reads `DataFrame::schema()`, which the optimizer
-  never touches. Pins: `../tests/attr_id_seam.rs`. pins: attr-id-1/C-015, C-016
+  never touches. Pins: `../tests/attr_id_seam.rs`.
   **PERF-ATTR-STAMP-2 O-1 (2026-10-03, ruling R-O1-1, option A):** `strip_for_execution(plan)`
   is the rule's own collapsing walk (`drop_node_ids`, bottom-up, subqueries included) as a
   plain function, re-exported through `frame_names`. The binding's per-handle twin
@@ -145,12 +143,12 @@ wrapped optimizer rule) and declares this directory.
   `../tests/attr_id_seam.rs`
   (`a_stamped_plan_reaches_the_optimizer_backstop_and_its_collapsed_twin_plans_the_same`,
   `every_session_strips_ids_first_in_its_optimizer_and_never_in_its_analyzer`,
-  `an_analyzed_plan_keeps_its_ids_for_the_eager_sql_door`). pins: attr-id-1/C-052
+  `an_analyzed_plan_keeps_its_ids_for_the_eager_sql_door`).
   **O-1 fold V-1 (2026-10-04):** `strip_schema_ids(schema)` drops the key from every top-level
   field of an Arrow schema and returns the same `Arc` when no field carries it;
   `strip_record_batches` now uses it. The binding applies it to the analyzed export schema, so a
   provider schema that carries ids (a SQL-defined temp view, which neither the backstop nor
-  `drop_node_ids` can clean) never reaches an export. pins: attr-id-1/C-053
+  `drop_node_ids` can clean) never reaches an export.
   **ATTR-ID-1 S1b (2026-09-30):** identity is decided by structure, never by copied metadata
   (DataFusion copies the argument's metadata onto `first_value`, `last_value`, `lag`, `lead`,
   `nth_value`, a cast and a negation). `computed_outputs(node)` answers, by position, which
@@ -170,7 +168,6 @@ wrapped optimizer rule) and declares this directory.
   counter; `AttrId::is_native` tells them from ids another process wrote, and `stamp` never
   keeps a foreign id: a source that carries one is re-minted once. Pins:
   `../tests/attr_id_fresh.rs`, `../tests/attr_id_verify.rs`.
-  pins: attr-id-1/C-017, C-018, C-019, C-020
   **ATTR-ID-1 S3a timing cut (2026-09-30):** `plan_is_stamped(plan)` answers by reference
   whether `stamp` would return the plan unchanged, so the binding can keep an already-stamped
   `PyDataFrame` handle (and its cached analyzed schema) instead of cloning the plan on every
@@ -182,7 +179,6 @@ wrapped optimizer rule) and declares this directory.
   misread a fresh computed node whose copied ids are all native (a `lag` output keeps its
   argument's native id until `stamp` mints it), so the predicate reuses `computed_outputs`,
   `own_id` and `first_input_ids` rather than re-deciding. Pins: `../tests/attr_id.rs`.
-  pins: attr-id-1/C-023
   **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id(expr, name)` builds the `Alias`
   with a freshly minted id in its own metadata, the constructor a user `alias()` uses;
   a second stamp keeps it (the S1b idempotence rule). It joins the `frame_names`
@@ -192,17 +188,15 @@ wrapped optimizer rule) and declares this directory.
   keeps distinct ids. The output schema is not the source: DataFusion's `union_by_name`
   pad projection grafts the other side's field (with its id) into the padded side's
   schema. Pins: `../tests/attr_id.rs` `union_reads_inner_alias_ids_through_plain_machinery_aliases`.
-  pins: attr-id-1/C-024
   **ATTR-ID-1 S3e (2026-10-01):** `resolve` takes the facade-held qualifiers
   (attribute id to qualifier names) and matches a written qualifier against the
   plan relation or a facade entry under the live rule, so join sides and
   `alias()` frames bind through the one id rule; a using-key union binds
-  either side. Pins: `../tests/attr_id_s3e.rs`. pins: attr-id-1/C-039
+  either side. Pins: `../tests/attr_id_s3e.rs`.
   **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids(plan, source)` carries the
   source schema's ids onto the plan by position (a width mismatch is an
   internal error; an already-carried plan returns unchanged), so cache and
   checkpoint scans keep the live frame's identity. Pins: `../tests/attr_id.rs`.
-  pins: attr-id-1/C-045
   **ATTR-ID-1 SJ-1a (2026-10-02):** `remint_join_collisions` becomes
   `remint_shared(plan, left_width, shared)`, which re-mints every right-side id in
   `shared` (one fresh id per shared id, so right-side twins stay twins) and returns the
@@ -233,7 +227,7 @@ wrapped optimizer rule) and declares this directory.
   `Projection::try_new` and one state clone). No short-circuit can gain 1 point. Field
   metadata is Arrow's owned map inside `Field`, so there is nothing here to share behind an
   `Arc`. The Projection arm's `maybe_index_of_column` per output makes the check quadratic in
-  width (14 µs at 40 columns), recorded for a wide-frame unit. pins: stamp-2-r5p6-2/C-009
+  width (14 µs at 40 columns), recorded for a wide-frame unit.
 - `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
   a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
   `projection_source_ids` maps each `Projection` output to its input attribute id
@@ -244,7 +238,7 @@ wrapped optimizer rule) and declares this directory.
   shapes resolve; anything else reads `None` so the caller keeps the old miss
   behavior. Re-exported through `frame_names`. Pins:
   `python/repark/tests/resolution/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression
-  pins). pins: attr-id-1/C-040
+  pins).
   **CASESENS-2 port phase 2 (2026-10-03):** `sort_hits_meet_at_join(plan,
   positions)` follows output positions down through `Filter`, `Sort`, `Limit`,
   `Repartition`, `Distinct::All`, `SubqueryAlias` and plain column projections
@@ -253,7 +247,6 @@ wrapped optimizer rule) and declares this directory.
   `false`. Spark resolves a sort key that is ambiguous in the output through
   the unary children, so twins that meet at one join cannot resolve. Pin:
   `../tests/join_qualifiers.rs` (`sort_twins_from_two_join_positions_meet_at_the_join`).
-  pins: casesens-2/C-012
   **Fold SM-2c round B (2026-10-06):** `sort_sourced_twin_engine(plan, hits,
   written, rule)` binds the one ambiguous twin whose plain-column expression
   chain traces down through projections to a column of the written name
@@ -261,7 +254,7 @@ wrapped optimizer rule) and declares this directory.
   attribute ids, so the trace reads expressions, never ids), and only when
   the projection input carries no column of the name — the
   computed-twin-over-reminted shape, where Spark sorts by the source column
-  through both levels. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
+  through both levels. Pins: `../tests/attr_id_s3b.rs`.
   **Fold SM-2d (2026-10-07):** the deepest-name trace is replaced by the
   nearest-visible rule (C-071 rewritten): the walk descends from the
   projection input to the first level whose schema carries the written name
@@ -274,7 +267,6 @@ wrapped optimizer rule) and declares this directory.
   `UNRESOLVED_COLUMN` both doors raise there. `sort_output_carries_twice`
   reports twin output engines by plain count, gating the input-casing
   respell. Pins: `../tests/attr_id_s3b.rs`.
-  pins: attr-id-1/C-071
   **STAMP-2-R5P6-1 (2026-10-07):** the four lineage doors
   (`sort_hits_meet_at_join`, the twin search `sort_sourced_twin_engine`,
   `sort_input_carries_twice` and `sort_output_carries_twice`)
@@ -282,7 +274,7 @@ wrapped optimizer rule) and declares this directory.
   `#[cfg(test)]`. The trace was already lazy: `bind_free_column` reaches it
   only from the `Ambiguous` arm, and the facade's `_resolve_sort_name` binds a
   unique hit before calling any `_native.sort_*` door. The counter turns that
-  property into a pin. pins: stamp-2-r5p6-1/C-004, C-010
+  property into a pin.
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
   option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every
@@ -362,7 +354,6 @@ wrapped optimizer rule) and declares this directory.
   analysis on the result and coercion happens there. It leaves through `frame_names` as
   `ExactJoin`, `ExactKeys` and `join_exact_sides`. Pins: the binding's
   `crates/repark-python/src/join_exact_tests.rs` (plan equality against `sql_built`).
-  pins: stamp-2-r5p6-2/C-002, C-004
 - `predicate_names.rs` — **CASESENS-2 port (2026-10-03):** the join-condition
   half of #881's `predicate_names.rs` (folds `15a7bb9d`, `b89a7d7f`, `3ac80920`),
   re-pointed at `attr_id::resolve`. `bind_condition_qualifiers(condition, left,
@@ -380,7 +371,7 @@ wrapped optimizer rule) and declares this directory.
   main. `restore_placeholders` puts each side's rendered reference back into the
   rewritten tree. The filter-string half is not ported: the stack's
   `filter_quote.py` already owns alias qualifiers and lambda scope (S3b H-1).
-  Pins: `../tests/join_qualifiers.rs`. pins: casesens-2/C-009
+  Pins: `../tests/join_qualifiers.rs`.
   **R-CS2P-1 (2026-10-03):** `fold_frame_qualifiers(predicate, schema, rule)`
   (re-exported from `case_bind.rs`) is the filter-string half for the
   insensitive door. It walks a parsed predicate with the same scope stack
@@ -392,7 +383,6 @@ wrapped optimizer rule) and declares this directory.
   rule 3). It returns whether anything changed; under `Exact` only a backticked
   exact root is a no-op and an unquoted exact root is re-quoted, which the
   facade never asks for. Pins: `../tests/join_qualifiers.rs`.
-  pins: casesens-2/C-013
 - `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** the self-join condition preparer, the
   post-join reference check and the refusal texts, all Rust (owner ruling 2026-10-02,
   option A: Spark Classic is the oracle, no "left wins" tie-break; sketch
@@ -401,7 +391,7 @@ wrapped optimizer rule) and declares this directory.
   **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):** the nondeterministic-function list is
   published as `NONDETERMINISTIC_FUNCTION_NAMES` (re-exported through `case_bind.rs`),
   the single home the Spark door's join-condition rule reads; the `foldable` use is
-  unchanged. pins: cross-join-condition-1/C-008
+  unchanged.
   - `parse_attr_refs(sql)` reads the reference tokens SJ-2 will render,
     `__REPARK_ATTR_<id>__F<frame>__<qualifiers>__` (the frame field sits before the
     greedy qualifier group, and the qualifier group ends at its last `__`, as the
@@ -479,7 +469,6 @@ wrapped optimizer rule) and declares this directory.
   that rewrites a free alias-qualified name, the final SQL is the rewritten tree
   with each placeholder restored to its rendered side text; otherwise the
   byte-span splice runs unchanged. Pins: `../tests/join_qualifiers.rs`.
-  pins: casesens-2/C-009
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that
@@ -488,7 +477,6 @@ wrapped optimizer rule) and declares this directory.
   output (`SELECT ID` → `ID`, `SELECT id AS Id` → `Id`) or a `createDataFrame` column `Id`
   could not be filtered or projected by `F.col`. Live Spark answers all of these
   (`target/probe-u11-edge-1/spark_r3.json`). Rust pins in the file's own test module.
-  pins: u11-edge-1/C-015
   **Round 2 (2026-09-26, V-001..V-004):** the file is the DataFrame door's one name binder
   (`pub mod`, re-exported as `repark_core::frame_names`). Rule, under the default
   `caseSensitive=false` (the door does not read the setting, like the round-1 hook): an exact
@@ -511,7 +499,6 @@ wrapped optimizer rule) and declares this directory.
   `join_binds_each_side_and_keeps_one_key`, `union_respells_the_right_and_refuses_a_mismatch`;
   the round-1 `exact_ambiguous_and_qualified_references_stay` became
   `exact_and_ambiguous_references_stay` (a qualified exact hit stays).
-  pins: u11-edge-1/C-017, C-018, C-019, C-020
   **Round 4 (2026-09-26, verifier round 2 V-001/V-003):** `drop_named_columns(frame, names,
   references)` takes the string targets and the Column targets apart. A string matches a field
   by its whole text ignoring case (`drop("t.ID")` matches no field); a Column target parses with
@@ -520,7 +507,7 @@ wrapped optimizer rule) and declares this directory.
   `F.col("t.ID")` drops `(t, ID)` and `F.col("b.id")` drops `(b, ID)`). A target matching no
   field is a no-op on both, as Spark answers (`drop("t.ID")`, `drop("u.id")`,
   `drop(F.col("u.id"))`). Spark shapes: `target/probe-u11-edge-1/vz-spark.json` (`q_drop_*`,
-  `j_drop_*`). Rust pin `qualified_drop_binds_through_its_relation`. pins: u11-edge-1/C-022
+  `j_drop_*`). Rust pin `qualified_drop_binds_through_its_relation`.
   **Round 4 (2026-09-26, verifier round 2 V-002/V-008):** the binder's final rule, under
   `caseSensitive=false`: a column reference collects every field whose name matches it ignoring
   case (`case_hits`; a qualified reference first narrows to the fields whose relation matches the
@@ -543,7 +530,7 @@ wrapped optimizer rule) and declares this directory.
   `exact_and_ambiguous_references_stay`, `ambiguous_candidates_render_sorted_like_spark`,
   `unqualified_and_catalog_candidates_render_like_spark`,
   `requalified_join_carries_each_side_relation`. Spark shapes:
-  `target/probe-u11-edge-1/vz-spark.json`, `vz2-spark.json`. pins: u11-edge-1/C-023
+  `target/probe-u11-edge-1/vz-spark.json`, `vz2-spark.json`.
   **Round 5 (2026-09-26, verifier round 3 V-001..V-004):** the ambiguity rule is for references
   the user wrote; Spark resolves the facade's own re-projections and origin Columns by
   attribute. `attribute_reference(name)` builds an unqualified `Expr::Column` for an exact engine
@@ -557,8 +544,7 @@ wrapped optimizer rule) and declares this directory.
   `[`id`, `id`]`, on the self-join → `[`a`.`id`, `b`.`id`]`); string targets keep dropping every
   folded twin. Rust pins `attribute_reference_binds_exactly_where_a_written_one_refuses`,
   `attribute_drop_is_exact_and_a_two_hit_reference_refuses`. Spark shapes:
-  `target/probe-u11-edge-1/vw/fold-spark.json`, `fold2-spark.json`. pins: u11-edge-1/C-024,
-  C-025, C-026
+  `target/probe-u11-edge-1/vw/fold-spark.json`, `fold2-spark.json`.
   Round 6 (2026-09-26, V-001): `with_attribute_copies(frame)` re-projects every held column and
   adds one exact copy per uniquely named field, named `attribute_copy_name(field)`
   (`__repark_attr_` plus the name's bytes in hex, so case twins never collide); the facade's SQL
@@ -567,7 +553,6 @@ wrapped optimizer rule) and declares this directory.
   `is_scratch_relation` names the `_repark_*` / `__repark_*` relations every ambiguity renderer
   leaves unqualified. Rust pin (in `../../column_resolution/tests.rs`)
   `attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified`.
-  pins: u11-edge-1/C-027
   Round 7 (2026-09-26, V-003): `attribute_copy_name_in(schema, name)` spells the copy
   `attribute_copy_name(name)` and appends `_` until no field of `schema` carries it; the hex
   spelling holds no `_`, so two copies never meet. `with_attribute_copies` names every copy
@@ -575,8 +560,7 @@ wrapped optimizer rule) and declares this directory.
   `id` copy (`__repark_attr_6964_`) instead of refusing `Projections require unique expression
   names`. `is_scratch_relation` also filters the SQL door's `UNRESOLVED_COLUMN` suggestions
   (field names, V-002). Rust pin (in `../../column_resolution/tests.rs`)
-  `attribute_copies_never_collide_and_suggestions_hide_scratch_names`. pins: u11-edge-1/C-029,
-  C-030
+  `attribute_copies_never_collide_and_suggestions_hide_scratch_names`.
   **CASESENS-1 S3 (2026-09-27):** the binder reads the session rule. `bind_case_insensitive`
   becomes `bind_names(expr, schema, rule)`: under `Exact` an exact hit binds, a case-only hit
   refuses Spark's `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming the written reference with the
@@ -591,7 +575,6 @@ wrapped optimizer rule) and declares this directory.
   (the `repark-python` door's `repark-common` edge is dev-only, so the literal path does not
   resolve there — no new edge). Rust pins `exact_rule_refuses_a_case_only_match`,
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`.
-  pins: casesens-1/C-009, C-010
   **Verifier fold (2026-09-28, VC-3):** `bind_projection_expr` aliases a bare
   top-level `Cast`/`TryCast` over a direct column child to the written child
   name, so `F.col(x).cast(...)` keeps the child name instead of leaking the
@@ -600,35 +583,31 @@ wrapped optimizer rule) and declares this directory.
   sits 12 lines under the size ceiling, so no unit test lands here.
   **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
   nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
-  pins: casesens-1/C-009
   **ATTR-ID-1 S1 (2026-09-30):** one `pub use` block re-exports `AttrId`, `Resolution`,
   `attribute_ids`, `remint_join_collisions`, `resolve` and `stamp` from `attr_id.rs`, so they
   leave through `frame_names`; `same_relation` moved to `attr_id.rs` and is imported back, so
-  the file shrinks 1000 → 990. pins: attr-id-1/C-002
+  the file shrinks 1000 → 990.
   **ATTR-ID-1 S2 (2026-09-30):** `join_on_named_keys` (USING) counts the kept right-side
   output positions while building the key-dedup projection and runs the S1
   `remint_join_collisions` over the projected join split at that count, so a self-join
   keeps the left ids and re-mints every colliding right id (semi/anti return before the
   projection and need none). `strip` joins the `frame_names` re-export. 990 → 997.
-  pins: attr-id-1/C-011, C-009
   **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id` joins the `frame_names`
-  re-export beside `strip`. pins: attr-id-1/C-024
+  re-export beside `strip`.
   **ATTR-ID-1 S3b (2026-10-01):** re-exports `SortShape`, `sort_shape`,
   `grandchild_key` and `bind_free_names` from `sort_names.rs`; `Hit`,
   `ambiguous_reference` and `unresolved_column` widen to `pub(crate)` for the
-  walker. 999 lines. pins: attr-id-1/C-025
+  walker. 999 lines.
   **ATTR-ID-1 S3b H-1 (2026-10-01):** also re-exports
   `engine_field_is_unique` and `join_dup_below_wrappers` from `sort_names.rs`
   (one brace line). 1000 lines, at ceiling.
-  pins: attr-id-1/C-026
   **ATTR-ID-1 S3e (2026-10-01):** re-exports `bind_qualified_free_refs`,
   `grandchild_qualified_key`, `join_output_sources` and
   `qualifier_star_positions` from `sort_names.rs`; `bind_names` widens to
   `pub(crate)` for the moved tests. The inline test module moves unchanged to
   `../tests/case_bind.rs`, so the file drops 1000 → 552.
-  pins: attr-id-1/C-039
   **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids` joins the `frame_names`
-  re-export. pins: attr-id-1/C-045
+  re-export.
   **ATTR-ID-1 SJ-1a (2026-10-02):** the re-export swaps `remint_join_collisions` for
   `remint_shared` and `join_collisions`, and adds `frame_lineage.rs`'s `AttrRef`,
   `FrameId`, `FrameKind`, `FrameNode`, `all_ids`, `ambiguous`, `renewed_absent` and
@@ -646,11 +625,10 @@ wrapped optimizer rule) and declares this directory.
   refusals on left-side references main answers Spark-exact), and
   `attr_id::with_id` is private again. Coalesced star and per-side key
   fields are the USING-PER-SIDE-KEYS-1 v1.5.3 follow-up.
-  pins: attr-id-1/C-066
   **Fold SM-2c C-3 (2026-10-06):** `rename_output_fields(frame, names)`
   re-projects the frame positionally under the given names (one `select`;
   a length mismatch is a loud plan error) for the write/view registration
-  boundary. pins: attr-id-1/C-067, C-068
+  boundary.
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,
@@ -665,7 +643,7 @@ wrapped optimizer rule) and declares this directory.
   sort — and a miss passes through for the engine. No exact-preference anywhere:
   Spark refuses an exact spelling among folded rivals on both filter doors
   (`test_filter_predicate_rewrite.py`), and the S3a inline exact bind stays a
-  select-only rule. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-025
+  select-only rule. Pins: `../tests/attr_id_s3b.rs`.
   **ATTR-ID-1 S3b H-1 (2026-10-01):** `engine_field_is_unique` (one shared
   guard for select and filter) and `join_dup_below_wrappers`, which descends
   single-input nodes and id-preserving Projections (DataFusion's
@@ -674,17 +652,14 @@ wrapped optimizer rule) and declares this directory.
   refuses a multi-hit bound free column over such a join with the shared
   `ambiguous_for_hits` error; the non-unique-engine arm still leaves the token
   unbound for the engine.
-  pins: attr-id-1/C-026
   **Gate j_cross (2026-10-01):** the walk also descends id-extending
   Projections (above starts with below: `withColumn` appends a column).
-  pins: attr-id-1/C-029
   **ATTR-ID-1 S3d follow-up (2026-10-01):** `union_below_wrappers` answers
   whether a Union sits below through transparent nodes and id-subset
   Projections (every above id appears below, so reorder, rename, and subset
   pass while new expressions and any unstamped side stop); joins and
   aggregates stop the walk. Four unit pins (filter, no-union, reorder,
   new-expression).
-  pins: attr-id-1/C-034
   **ATTR-ID-1 S3d follow-up 2 (2026-10-01):** `union_dup_below_wrappers`
   replaces it with positional tracking: a Projection continues the walk only
   when it maps every bound position to itself (Spark re-resolves through any
@@ -692,7 +667,6 @@ wrapped optimizer rule) and declares this directory.
   star, rename, and append keep union lineage), and the Union arm answers
   true only when two or more distinct positions reach it (a dup created above
   the union never trims). Ten unit pins.
-  pins: attr-id-1/C-036
   **ATTR-ID-1 S3e (2026-10-01):** the qualified-name family over the S1
   `resolve`. `bind_qualified_free_refs` rewrites each qualified free column
   whose head names a plan relation or facade qualifier (struct heads pass
@@ -716,7 +690,6 @@ wrapped optimizer rule) and declares this directory.
   matches a duplicated display under the session case rule; a duplicated
   display with a non-word character always parses. Pins:
   `../tests/case_bind.rs`.
-  pins: attr-id-1/C-039
   **Fold SM-2c round B (2026-10-06):** the Project-sort arm no longer binds the
   oldest id (`oldest_field` is deleted: an oldest twin that is not the source
   column sorts rows neither Spark nor main produces). `bind_free_column` takes
@@ -730,7 +703,6 @@ wrapped optimizer rule) and declares this directory.
   sourced checks are mutually exclusive (one input match versus none), so both
   doors run them in the same order. `project_input_spelling` exposes the
   input walk to the facade. Pins: `../tests/attr_id_s3b.rs`.
-  pins: attr-id-1/C-069, C-070, C-071
   **Fold SM-2d (2026-10-07):** the ambiguous arm refuses `UNRESOLVED_COLUMN`
   when `sort_input_carries_twice` fires (a projection input carrying the
   name twice by visible count, e.g. a self-join input behind a
@@ -739,7 +711,7 @@ wrapped optimizer rule) and declares this directory.
   (`sort_output_carries_twice` is false): over twin engines the key keeps
   the written spelling, so the refusal names the reference as written, as
   main does, while the pushdown case keeps the input casing it resolves
-  under. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
+  under. Pins: `../tests/attr_id_s3b.rs`.
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
@@ -765,11 +737,10 @@ wrapped optimizer rule) and declares this directory.
   This module is the ledger's rust-first roll-call home: all scope resolution, the
   single-row guard, the exists rewrite, the projection hoist, and the Unnest
   refusal live here in repark-core.
-  pins: df-subquery-1/C-001, C-002, C-003, C-004, C-008, C-009
   **CASESENS-1 S3 (2026-09-27):** `resolve_bound_expr` keeps its signature (it binds
   `IgnoreCase`) and gains the sibling `resolve_bound_expr_with(expr, schema, rule)`,
   re-exported through `frame_names` (`session.rs` sits exactly at its ceiling, so the root
-  re-export cannot grow). pins: casesens-1/C-009
+  re-export cannot grow).
 - `duplicate_names.rs` — **FA-5 (2026-10-08, reworked in fold 1 the same
   day):** how a csv write carries repeated display names past an engine that
   cannot hold them. DataFusion refuses one `(qualifier, name)` pair twice
@@ -788,7 +759,7 @@ wrapped optimizer rule) and declares this directory.
   from the generated prefix, which renamed a user's own column called
   `__repark_dup_0_id` (verifier S1); the generated spelling is now only a way
   to be unique. All of it is re-exported through `frame_names`. Pins:
-  `../tests/duplicate_names.rs`. pins: fa-5-6/C-001
+  `../tests/duplicate_names.rs`.
 - `written_names.rs` — **CASESENS-2 port (2026-10-03):** what the ATTR-ID-1
   stack keeps of the charter's written-name matchers (cherry-picks `e4be1feb`,
   `581f91b1`, `28f6d28a`, `111e95b3`): `refuse_folded_duplicate_keys(keys, rule)`
@@ -804,7 +775,6 @@ wrapped optimizer rule) and declares this directory.
   renders an engine miss with Spark's text and every frame field as a
   suggestion. Pin: `../tests/case_bind.rs`
   (`folded_with_columns_keys_refuse_only_under_ignore_case`).
-  pins: casesens-2/C-004, C-010
 
 ## Pointers
 

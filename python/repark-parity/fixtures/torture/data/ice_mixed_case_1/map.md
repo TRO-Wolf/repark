@@ -36,5 +36,4 @@ Each test re-copies fresh because the mutating cells (UPDATE / DELETE / MERGE
   index parses the file and adoption succeeds; references refuse at resolution, and the
   star refuses at planning with the recorded 42711 sentence, so the baked location
   stays untouched.
-  pins: ice-mixed-case-1/C-013
 - `map.md` — this file.

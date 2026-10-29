@@ -1,0 +1,6 @@
+# ice-tsns-coercion-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: python/repark/tests/timestamps/_record_ice_tsns_coercion_1_twins.py, python/repark/tests/timestamps/test_ice_tsns_coercion_1.py
+C-002: python/repark/tests/timestamps/_record_ice_tsns_coercion_1_spark_lattice.py, python/repark/tests/timestamps/test_ice_tsns_coercion_1.py
+C-003: python/repark/tests/timestamps/_record_ice_tsns_coercion_1_twins.py, python/repark/tests/timestamps/_summarize_ice_tsns_coercion_1.py
+C-004: python/repark/tests/timestamps/_record_ice_tsns_coercion_1_casts.py, python/repark/tests/timestamps/_record_ice_tsns_coercion_1_gate.py, python/repark/tests/timestamps/_record_ice_tsns_coercion_1_lambda.py, python/repark/tests/timestamps/_record_ice_tsns_coercion_1_pins.py, python/repark/tests/timestamps/_record_ice_tsns_coercion_1_try_cast.py, python/repark/tests/timestamps/_time_ice_tsns_coercion_1.py

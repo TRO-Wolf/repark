@@ -8,8 +8,6 @@ Repark cells run one subprocess each (peak RSS). Spark explode + struct
 expansion shares one JVM. Sequential Cartesian expansion is preserved;
 DataFusion multi-column Unnest zip/pad is not a substitute.
 
-pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
-
 Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
 requires one, and nothing may say more. Reasons live in this map, not in the source.
 
@@ -24,8 +22,6 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 | verdict | queued only above 3x the noise floor (the spread over 6 repeats of one cell) |
 | release | the runner refuses a debug native build |
 | known asymmetry | Spark's `toArrow()` pays a JVM→Python transfer that repark's in-process `to_arrow()` does not |
-
-pins: perf-dynflatten-1-measure/C-002, C-003
 
 ## Contents
 
@@ -55,7 +51,6 @@ note are the same protocol and not two conventions. The floor is re-measured on 
 because it is a property of the box that hour, not a constant: the 2026-09-04 evening runs
 sat on a far quieter host than PERF-DYNFLATTEN-1's, and the floor moved with it. Comparing an
 after-cost against a stale floor would be the same aggregation error as summing fixtures.
-pins: perf-dynflatten-2-null-mask/C-001, C-005
 
 ## Debug
 

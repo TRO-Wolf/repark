@@ -177,8 +177,135 @@ def test_a_citation_in_source_still_counts(repo: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
-def test_a_citation_in_a_map_still_counts_during_the_transition(repo: Path) -> None:
+def test_a_citation_in_a_map_no_longer_counts(repo: Path) -> None:
     _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}::demo_holds\n")
     _write(repo, "crates/demo/tests/map.md", f"# map\n\n- `pins.rs` pins: {_UNIT}/C-002\n")
     result = _grammar(repo)
+    assert result.returncode == 1
+    assert f"1 PROVEN clause(s) with no `pins: {_UNIT}/C-NNN` citation (ceiling 0): C-002" in (
+        result.stderr
+    )
+
+
+_MAP = "crates/demo/tests/map.md"
+_MAP_TEXT = "\n".join(
+    [
+        "# map",
+        "",
+        "## Contents",
+        "- [`pins.rs`](pins.rs) — the battery: `demo_holds` and `other_holds` and `absent_name`.",
+        f"  pins: {_UNIT}/C-001",
+        f"- `other.rs` — the second file, `other_holds` again. pins: {_UNIT}/C-002",
+        f"- a row naming no file (pins: {_UNIT}/C-001). More prose.",
+        f"- a row with a range. pins: {_UNIT}/C-001..C-002",
+        "",
+        "## Notes",
+        f"Loose prose with no file. pins: {_UNIT}/C-002",
+        "",
+    ]
+)
+
+
+def _migrate(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    scripts = repo / "scripts"
+    scripts.mkdir(exist_ok=True)
+    for name in ("check_ledger_grammar.py", "migrate_pins_to_sidecars.py"):
+        (scripts / name).write_text(
+            (_REPO / "scripts" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    _git(repo, "add", "-A")
+    return subprocess.run(
+        [sys.executable, str(scripts / "migrate_pins_to_sidecars.py"), "--repo", str(repo), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+@pytest.fixture
+def mapped(repo: Path) -> Path:
+    (repo / _SIDECAR).unlink()
+    _write(repo, "crates/demo/tests/other.rs", "fn other_holds() {}\n")
+    _write(repo, _MAP, _MAP_TEXT)
+    return repo
+
+
+def test_migration_binds_rows_and_cuts_the_citations(mapped: Path) -> None:
+    result = _migrate(mapped)
     assert result.returncode == 0, result.stderr
+    assert "unplaceable citations: 0" in result.stdout
+    sidecar = (mapped / _SIDECAR).read_text(encoding="utf-8").splitlines()
+    assert sidecar[0].startswith(f"# {_UNIT} pin binding")
+    assert sidecar[2:] == [
+        f"C-001: crates/demo/tests/other.rs, {_TEST}::demo_holds, {_TEST}::other_holds",
+        f"C-002: {_MAP}, crates/demo/tests/other.rs::other_holds",
+    ]
+    text = (mapped / _MAP).read_text(encoding="utf-8")
+    assert "  pins:" not in text
+    assert "`other_holds` again.\n" in text
+    assert "- a row naming no file. More prose.\n" in text
+    assert f"- a row with a range. pins: {_UNIT}/C-001..C-002\n" in text
+    assert "Loose prose with no file.\n" in text
+    assert _grammar(mapped).returncode == 0
+
+
+def test_migration_is_idempotent(mapped: Path) -> None:
+    assert _migrate(mapped).returncode == 0
+    sidecar = (mapped / _SIDECAR).read_text(encoding="utf-8")
+    text = (mapped / _MAP).read_text(encoding="utf-8")
+    again = _migrate(mapped)
+    assert again.returncode == 0, again.stderr
+    assert "maps rewritten: 0" in again.stdout
+    assert "(0 written by this run)" in again.stdout
+    assert (mapped / _SIDECAR).read_text(encoding="utf-8") == sidecar
+    assert (mapped / _MAP).read_text(encoding="utf-8") == text
+
+
+def test_migration_keeps_a_hand_edited_binding(mapped: Path) -> None:
+    assert _migrate(mapped).returncode == 0
+    first = (mapped / _SIDECAR).read_text(encoding="utf-8").splitlines()[2]
+    edited = _HEADER + f"{first}\nC-002: {_MAP}\n"
+    _write(mapped, _SIDECAR, edited)
+    again = _migrate(mapped)
+    assert again.returncode == 0, again.stderr
+    assert (mapped / _SIDECAR).read_text(encoding="utf-8") == edited
+
+
+def test_migration_check_mode_writes_nothing(mapped: Path) -> None:
+    result = _migrate(mapped, "--check")
+    assert result.returncode == 0, result.stderr
+    assert "maps rewritten: 1" in result.stdout
+    assert not (mapped / _SIDECAR).exists()
+    assert (mapped / _MAP).read_text(encoding="utf-8") == _MAP_TEXT
+
+
+def test_migration_refuses_an_unplaceable_citation(mapped: Path) -> None:
+    _write(mapped, _MAP, _MAP_TEXT + f"- `pins.rs` again. pins: {_UNIT}/C-099\n")
+    for args in ((), ("--check",)):
+        result = _migrate(mapped, *args)
+        assert result.returncode == 1
+        assert "unplaceable citations: 1" in result.stdout
+        assert f"{_MAP}: pins: {_UNIT}/C-099" in result.stderr
+        assert not (mapped / _SIDECAR).exists()
+
+
+def test_migration_binds_a_source_citation_and_leaves_it(mapped: Path) -> None:
+    (mapped / _MAP).unlink()
+    _write(mapped, _TEST, f"// pins: {_UNIT}/C-001, C-002\nfn demo_holds() {{}}\n")
+    assert _migrate(mapped).returncode == 0
+    assert (mapped / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}",
+        f"C-002: {_TEST}",
+    ]
+    assert (mapped / _TEST).read_text(encoding="utf-8").startswith(f"// pins: {_UNIT}/C-001")
+
+
+def test_migration_names_the_archive_sidecar_by_its_ledger(mapped: Path) -> None:
+    old = "old-unit"
+    archived = f"task/ledgers/archive/2026-08/2026-08-20-{old}"
+    _write(mapped, f"{archived}-ledger.md", "| C-001 | Old. | x | PROVEN | x |\n")
+    _write(mapped, _MAP, _MAP_TEXT + f"- `pins.rs` once more. pins: {old}/C-001\n")
+    assert _migrate(mapped).returncode == 0
+    assert (mapped / f"{archived}-pins.md").read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}"
+    ]

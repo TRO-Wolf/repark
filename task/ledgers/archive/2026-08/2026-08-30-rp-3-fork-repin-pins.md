@@ -1,0 +1,13 @@
+# rp-3-fork-repin pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: crates/repark-iceberg/map.md
+C-002: crates/repark-iceberg/map.md, crates/repark-iceberg/src/write/position_delete.rs
+C-003: crates/repark-iceberg/src/write/merge/dv_close.rs::apply_close, crates/repark-iceberg/src/write/merge/dv_close.rs::plan_deletion_vectors
+C-004: crates/repark-spark/src/tests/v3_cow.rs, crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3/branch_tag_time_travel.rs, crates/repark-sql/src/v3/cow.rs, python/repark/tests/iceberg/test_v3_cow_dml.py, python/repark/tests/iceberg/test_v3_live_oracle.py, python/repark/tests/iceberg/test_v3e3_fixtures.py, python/repark/tests/iceberg/test_v3e4_refs_time_travel.py
+C-005: crates/repark-spark/src/tests/call_v3.rs, crates/repark-spark/src/tests/create_table.rs
+C-006: python/repark/tests/perf/test_mw7_scale_smoke.py
+C-007: crates/repark-spark/src/tests/call_register.rs, crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3/partitioned_equality_deletes.rs, python/repark/tests/iceberg/test_v3e3_fixtures.py
+C-008: crates/repark-iceberg/src/catalog/builders.rs::iceberg_to_datafusion, crates/repark-spark/src/tests/call_register.rs, crates/repark-sql/src/v3/cow.rs
+C-009: python/repark/tests/iceberg/test_rp3_c009_write_default.py
+C-010: crates/repark-spark/src/lib.rs, python/repark/tests/iceberg/test_rp3_c009_write_default.py
+C-011: crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/iceberg/test_rp3_c009_write_default.py, python/repark/tests/iceberg/test_v3_live_oracle.py, python/repark/tests/iceberg/test_v3e3_fixtures.py, python/repark/tests/iceberg/test_v3e4_refs_time_travel.py

@@ -1,0 +1,8 @@
+# cutover-schema-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: crates/repark-core/src/spark_nullable.rs::read_parquet_nullable, crates/repark-core/src/spark_nullable.rs::relax_schema_to_nullable, python/repark/tests/parity/test_cutover_schema_1.py, python/repark/tests/parity/test_parity_live_dynflatten.py, python/repark/tests/types/test_nullability_2.py, scripts/check_rust_file_size.py
+C-002: crates/repark-core/src/spark_nullable.rs::read_parquet_nullable, crates/repark-core/src/spark_nullable.rs::relax_schema_to_nullable, crates/repark-spark/src/ctas.rs::write_ctas_query, python/repark/tests/_oracle_pins.py, python/repark/tests/iceberg/_v3_statement_coverage_repark.py, python/repark/tests/parity/test_cutover_schema_1.py, python/repark/tests/types/test_nullability_2.py
+C-003: crates/repark-functions/src/decimal_spark.rs::SparkDecimalExprPlanner, crates/repark-functions/src/decimal_spark.rs::SparkDecimalRewrite, crates/repark-functions/src/decimal_spark.rs::return_field_from_args, crates/repark-spark/src/tests/decimal.rs::pin_int_times_decimal_is_12_2_i128, crates/repark-spark/src/tests/decimal.rs::pin_mul_single_digit_nullability_non_null_i128, python/repark/tests/_oracle_pins.py, python/repark/tests/parity/test_cutover_schema_1.py, python/repark/tests/types/test_nullability_2.py
+C-004: python/repark/tests/parity/test_cutover_schema_1.py, python/repark/tests/types/test_nullability_2.py
+C-005: python/repark/tests/parity/test_cutover_schema_1.py, python/repark/tests/types/test_nullability_2.py
+C-006: python/repark/tests/parity/test_cutover_schema_1.py, python/repark/tests/types/test_nullability_2.py

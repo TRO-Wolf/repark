@@ -11,7 +11,7 @@ pins.
 ## Contents
 
 - [test_a13_ctas_fallback.py](test_a13_ctas_fallback.py) — Location-less CTAS under ``register_memory_catalog`` writes under the catalog warehouse.
-- `test_cast_overflow_insert_1.py` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `test_vo4_1_insert_into_overwrite_reports_arity_first` pins the arity-first order on INSERT OVERWRITE (WS2-29). pins: write-spine-1/C-025
+- `test_cast_overflow_insert_1.py` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `test_vo4_1_insert_into_overwrite_reports_arity_first` pins the arity-first order on INSERT OVERWRITE (WS2-29).
 - [test_cast_overflow_insert_1.py](test_cast_overflow_insert_1.py) — CAST-OVERFLOW-INSERT-1: storing an overflowing value replays the recorded Spark cells on the SQL and DataFrame doors.
 - [test_ctas_division_writeback.py](test_ctas_division_writeback.py) — Facade write-path pins for CTAS integer-division type derivation.
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — Unpartitioned CTAS from a parquet-read temp view (Utf8View batches).
@@ -30,8 +30,6 @@ pins.
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) — ICE-META-DELETE-1 — a DELETE that covers whole data files deletes the files, on both modes. Its live leg runs the recorder's `--check` in its own interpreter (a subprocess), never in-process; see "PARITY-LIVE-RERECORD-1 (2026-10-20)".
 - [test_ice_occ_scoped_1.py](test_ice_occ_scoped_1.py) — ICE-OCC-SCOPED-1 — concurrent Iceberg DML storms commit and refuse exactly where Spark does.
 - [test_ice_orc_avro_1.py](test_ice_orc_avro_1.py) — IPI-41 — ORC and Avro data files: write, read, DELETE / UPDATE / MERGE. **RP-61 (2026-10-28):** `test_mor_delete_on_orc_writes_orc_delete_file` expects `[[0, "ORC", 3], [1, "ORC", 1]]` for `DELETE … WHERE id = 1` on an ORC merge-on-read table, restored from the interim Parquet pin of ICE-DELETE-FORMAT-GUARD-1. `test_mor_delete_on_avro_or_orc_reads_back` (parametrised `avro` and `orc`) is the AUD-003 shape through the facade: insert 0 to 4, `DELETE … BETWEEN 1 AND 3`, read back `[0, 4]`, and the files table `[[0, FORMAT, 5], [1, FORMAT, 3]]`. The builder's facade run passed 26 on `0acb6ed9`, and the Opus 5.5 verifier's count at `67dcaed5` is 26. The `pins:` citation of ICE-DELETE-FORMAT-GUARD-1 C-007 below is kept for the grammar gate; C-007 pinned the interim Parquet delete file, and its superseding dated row is in the ICE-DELETE-FORMAT-GUARD-1 ledger (RP-61 verification round 1, the dated row that supersedes C-007).
-  pins: rp-61-posdel-format-repin-1/C-006, C-011, C-012
-  pins: ice-delete-format-guard-1/C-007
 - [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) — ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every facade overwrite door.
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) — ICE-OVERWRITE-MODE-1 — ``writeTo(t).overwritePartitions()`` on specs that hold a transform.
 - [test_ice_rowid_order_1.py](test_ice_rowid_order_1.py) — ICE-ROWID-ORDER-1: one statement's v3 row ids are deterministic.
@@ -43,7 +41,7 @@ pins.
 - [test_ice_spark_table_1.py](test_ice_spark_table_1.py) — ICE-SPARK-TABLE-1 — RePark writes into a Spark-created Iceberg v2 CoW table.
 - [test_ice_struct_pairing_1.py](test_ice_struct_pairing_1.py) — ICE-STRUCT-PAIRING-1: struct values pair with the target struct the way Spark does on UPDATE / MERGE / INSERT.
 - [test_ice_struct_pairing_1_exception.py](test_ice_struct_pairing_1_exception.py) — ICE-STRUCT-PAIRING-1 exception round: every recorded update-from-subquery cell answers or refuses like Spark.
-- `test_ice_struct_pairing_1_round3.py` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `test_the_partition_carve_out_refuses_with_the_workaround` holds the 106 carve-out cells (ids in the step (2) evidence file). pins: write-spine-1/C-025
+- `test_ice_struct_pairing_1_round3.py` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `test_the_partition_carve_out_refuses_with_the_workaround` holds the 106 carve-out cells (ids in the step (2) evidence file).
 - [test_ice_struct_pairing_1_round3.py](test_ice_struct_pairing_1_round3.py) — ICE-STRUCT-PAIRING-1 round 3: the recorded groups hold every cell of the round-3 recorder and answer like Spark.
 - [test_ice_v3_write_default_1.py](test_ice_v3_write_default_1.py) — ICE-V3-WRITE-DEFAULT-1 — omitted columns fill from ``write_default`` on every write path.
 - [test_ice_wap_branch_1.py](test_ice_wap_branch_1.py) — ICE-WAP-BRANCH-1 — ``spark.wap.branch`` redirects writes and reads to an audit branch.
@@ -61,7 +59,7 @@ pins.
 - [test_io_bucket_cluster_1.py](test_io_bucket_cluster_1.py) — io-bucket-cluster-1 pins: the bucketBy / sortBy / clusterBy writer surface.
 - [test_merge_differential_parity.py](test_merge_differential_parity.py) — MERGE INTO differential rows (gap G3, record-side) — post-MERGE table vs live Spark.
 - [test_merge_insert_scope.py](test_merge_insert_scope.py) — MERGE ``WHEN NOT MATCHED`` source-only resolution scope.
-- [test_explain_dml_write_1.py](test_explain_dml_write_1.py) — EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138, 140 to 142): on `repark.sql()` and the Spark SQL session, `EXPLAIN ANALYZE` and `PREPARE` of `DELETE`, `UPDATE`, `INSERT` and `MERGE` (plain and `IN (SELECT …)`, plus `VERBOSE`, `PREPARE` around `EXPLAIN ANALYZE`, a parameterised `PREPARE`) refuse with the ruled texts and hold rows, snapshots and warehouse files; `EXECUTE p` finds nothing; controls: a prepared query, a plain `EXPLAIN` of a write, `EXPLAIN [ANALYZE] SELECT`, `df.explain("cost")`, the Spark door's bare `IN` forms. Iceberg seeds behind an `IcebergTableScan` guard; on `repark.sql()` a wrapped `MERGE` keeps DataFusion's plan refusal (`UnsupportedOperationException`, `Unsupported SQL statement: MERGE INTO`), since that door plans first. pins: explain-dml-write-1/C-001, C-002, C-004, C-005, C-006
+- [test_explain_dml_write_1.py](test_explain_dml_write_1.py) — EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138, 140 to 142): on `repark.sql()` and the Spark SQL session, `EXPLAIN ANALYZE` and `PREPARE` of `DELETE`, `UPDATE`, `INSERT` and `MERGE` (plain and `IN (SELECT …)`, plus `VERBOSE`, `PREPARE` around `EXPLAIN ANALYZE`, a parameterised `PREPARE`) refuse with the ruled texts and hold rows, snapshots and warehouse files; `EXECUTE p` finds nothing; controls: a prepared query, a plain `EXPLAIN` of a write, `EXPLAIN [ANALYZE] SELECT`, `df.explain("cost")`, the Spark door's bare `IN` forms. Iceberg seeds behind an `IcebergTableScan` guard; on `repark.sql()` a wrapped `MERGE` keeps DataFusion's plan refusal (`UnsupportedOperationException`, `Unsupported SQL statement: MERGE INTO`), since that door plans first.
 - [test_merge_into.py](test_merge_into.py) — R-MERGEINTO — ``DataFrame.mergeInto`` builder lowers to existing SQL MERGE.
 - [test_merge_scan_prune_semantics.py](test_merge_scan_prune_semantics.py) — MERGE scan-prune / residual-probe hardening — M1, M5, M6, M7 (r1 / r2 / r3 / r11).
 - [test_merge_semantics_audit.py](test_merge_semantics_audit.py) — MERGE-audit corpus — green pins for gap-map holes verified in the MERGE audit.
@@ -69,10 +67,10 @@ pins.
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — MW-9: facade Spark `.sql()` honors `write.delete.granularity`.
 - [test_partition_value_audit.py](test_partition_value_audit.py) — Write-path partition-key VALUE audit — CTAS + INSERT vs live Spark 4.1.2 + Iceberg.
 - [test_profiles1_table_properties.py](test_profiles1_table_properties.py) — `write.*` table-property pins — REVIEW-FIX-8 (RF-4, Q-40).
-- [test_repark_sql_update_subquery_where_1.py](test_repark_sql_update_subquery_where_1.py) — REPARK-SQL-UPDATE-SUBQUERY-WHERE-1: ``repark.sql()`` refuses a subquery in a DML WHERE. EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 140): P-E3, P-E4 and P-P1 to P-P4 now assert the wrapper's ruled text, which runs before the G3-E8 walk. pins: explain-dml-write-1/C-008
-- [test_repark_sql_update_subquery_where_1_spark_door.py](test_repark_sql_update_subquery_where_1_spark_door.py) — REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 on the Spark SQL door: a wrapped subquery DML refuses. EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138 and 140): P-S1 to P-S3 assert the ruled `PREPARE` text, and a plain-predicate `PREPARE` refuses too (`test_a_plain_predicate_prepare_refuses`). pins: explain-dml-write-1/C-008
+- [test_repark_sql_update_subquery_where_1.py](test_repark_sql_update_subquery_where_1.py) — REPARK-SQL-UPDATE-SUBQUERY-WHERE-1: ``repark.sql()`` refuses a subquery in a DML WHERE. EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 140): P-E3, P-E4 and P-P1 to P-P4 now assert the wrapper's ruled text, which runs before the G3-E8 walk.
+- [test_repark_sql_update_subquery_where_1_spark_door.py](test_repark_sql_update_subquery_where_1_spark_door.py) — REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 on the Spark SQL door: a wrapped subquery DML refuses. EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138 and 140): P-S1 to P-S3 assert the ruled `PREPARE` text, and a plain-predicate `PREPARE` refuses too (`test_a_plain_predicate_prepare_refuses`).
 - [test_update_set_subquery_walk_1.py](test_update_set_subquery_walk_1.py) — UPDATE-SET-SUBQUERY-WALK-1: ``repark.sql()`` refuses a scalar subquery anywhere in SET.
-- [test_write_body_carriers_1.py](test_write_body_carriers_1.py) — WRITE-BODY-CARRIERS-1 build battery — a write body inside CTAS refuses at parse. EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138 and 141): `test_wrappers_refuse_their_write` (formerly `test_wrappers_keep_running_their_write`): every body under `EXPLAIN ANALYZE` and the prepared `INSERT`s refuse with the ruled texts and the tables hold. pins: explain-dml-write-1/C-008
+- [test_write_body_carriers_1.py](test_write_body_carriers_1.py) — WRITE-BODY-CARRIERS-1 build battery — a write body inside CTAS refuses at parse. EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138 and 141): `test_wrappers_refuse_their_write` (formerly `test_wrappers_keep_running_their_write`): every body under `EXPLAIN ANALYZE` and the prepared `INSERT`s refuse with the ruled texts and the tables hold.
 - [test_write_distribution_1.py](test_write_distribution_1.py) — WRITE-DISTRIBUTION-1 — the hash distribution rule before a partitioned Iceberg write.
 - [test_write_distribution_2.py](test_write_distribution_2.py) — WRITE-DISTRIBUTION-2 — the hash distribution rule on the stream write paths.
 - [test_write_order_dist_1.py](test_write_order_dist_1.py) — WRITE-ORDER-DIST-1 — ALTER TABLE WRITE ORDERED/DISTRIBUTED BY and the writes they shape.
@@ -205,10 +203,6 @@ no Spark behaviour changed.
 
 - `test_ice_resource_bound_1.py` (new) — the facade cells, on format v2 and v3. An ordered `writeTo(...).option(...).append()` refuses at a 32 MiB pool and commits at 128 MiB. A MoR MERGE at 100 % (the key lowered to 0.002 at a 2048 MiB pool) refuses, and the default commits. The changelog `LIMIT 10` collect and `count(id)` to_arrow refuse at 32 MiB, with the export hint appended, and answer at 2048 MiB. Invalid values (`-0.1`, `abc`, `inf`) refuse at build naming the key. A runtime `conf.set` of each key refuses naming the builder door. The 4x and 16x cells (ordered append at 4M and 16M rows, the MoR MERGE and the changelog read) run only with `REPARK_RESOURCE_BOUND_SCALE=1`; the workflow `resource-bound-scale.yml` runs them on manual dispatch.
 - The cost gate's probe is `task/wo/ice-resource-bound-1/probe_cost.py`; its table and the protocol are in `docs/perf/resource-bound-2026-10-26.md`. It runs the write set below the bound against the branch base and the head.
-
-pins: ice-resource-bound-1/C-001, C-002, C-003, C-006, C-010, C-011
-
-pins: ice-resource-bound-1/C-013
 
 ## Pointers
 

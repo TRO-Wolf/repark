@@ -4,10 +4,9 @@
 
 **MAP-COLUMN-PANIC-1 (2026-10-20):** `collection.rs` registers `create_map::sql_map_udf()` (the internal name `__repark_create_map__`, so `create_map` stays unregistered on the SQL door, as Spark leaves it) and re-exports `SQL_MAP_NAME` and `SparkMapRewrite`; `registration.rs` appends the rule to `analyzer_rules()` after the second `LambdaRebind`. Details in [collection/map.md](collection/map.md).
 
-**SOURCE-URL-REDACT-1-FN (2026-10-06):** the `case_sensitive.rs`, `ansi.rs` and `merge_schema.rs` boolean-knob refusals return `BooleanConfRefusal` (`key`, `raw`). `Debug` prints `key` and `raw_len`. `repark-python` and `repark-spark` format the Spark sentence with `mask_value_credentials`. The builder door masks every `Configuration` message. No `repark-functions` → `repark-common` edge. pins: source-url-redact-1/C-035, C-055
+**SOURCE-URL-REDACT-1-FN (2026-10-06):** the `case_sensitive.rs`, `ansi.rs` and `merge_schema.rs` boolean-knob refusals return `BooleanConfRefusal` (`key`, `raw`). `Debug` prints `key` and `raw_len`. `repark-python` and `repark-spark` format the Spark sentence with `mask_value_credentials`. The builder door masks every `Configuration` message. No `repark-functions` → `repark-common` edge.
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
@@ -64,29 +63,26 @@ scalars live under [`try_invert/`](try_invert/map.md).
   A lone alias on a single output is ignored and any other count mismatch raises
   `[UDTF_ALIAS_NUMBER_MISMATCH]`, both per the s34 oracle; the other four names keep
   `[COLUMN_ALIASES_MISMATCH]`.
-  pins: fnp-gen-1/C-002, C-003, C-005
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
   Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
   stringify. Ledger: `task/fn-gt1-ledger.md`.
   **JAVA-DOUBLE-STR-1 (2026-09-15):** `FLOAT`/`DOUBLE` inputs keep their type
   through coercion and count the shared Java-formatter bytes (registry BL-7).
-  pins: java-double-str-1/C-006
   **Round 2 (2026-09-15):** lengths come from the stack formatter's byte count,
-  with no `StringArray` built. pins: java-double-str-1/C-016
+  with no `StringArray` built.
 - `spark_log.rs` — **SEM-1 (2026-08-31):** Spark-door `log`. Owner ruling 2026-08-31
   fixes RE-1 and LOG-1 to Spark. One-arg is the natural log;
   two-arg is `log(base, expr)`. Both arities return NULL on Spark's domain edges (zero,
   negative, null, base <= 0). Overwrites DataFusion's base-10 `LogFunc` from `register_all`.
   Native ANSI `repark.sql()` does not load this kernel.
 - `spark_isnan.rs` — **FN-FIX-1 (2026-09-03):** Spark `isnan`; NULL → false, non-nullable bool.
-  pins: fn-fix-1-registry-rows/C-002
 - `spark_initcap.rs` — **FN-FIX-2 (2026-09-04):** Spark `initcap`; a word starts only after
-  SPACE (U+0020). `'a-b'` → `'A-b'`. pins: fn-fix-2-string-rows/C-001, C-002, C-004
+  SPACE (U+0020). `'a-b'` → `'A-b'`.
 - `spark_chr.rs` — **FN-FIX-2 (2026-09-04):** Spark `chr` / `char`; `n % 256`, `''` when
-  `n < 0`. pins: fn-fix-2-string-rows/C-002
+  `n < 0`.
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
-  `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+  `INVALID_ARRAY_INDEX`; NULL `n` is NULL.
 - `spark_startswith.rs` — **M8-STARTSWITH-1 (2026-09-21):** Spark `startswith` (no
   underscore). NULL-in NULL-out, empty prefix answers true for every non-NULL row,
   non-string inputs stringify (floats through the Java formatter, so `Infinity` and
@@ -106,12 +102,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   /`F`) is accepted when the remainder is a decimal floating literal that already
   parses — `'1d'`, `'1.5F'`, `'1e2d'` answer; suffixes after `Infinity`/lowercase
   names/hex (`'Infinityd'`, `'infd'`, `'1dd'`, `'0x10'`) keep today's refuse/NULL. The shared
-  SQL `CAST` kernel is untouched. pins: fnp-bitmap-facade-1/C-012, C-013, C-014,
-  C-017, C-018
+  SQL `CAST` kernel is untouched.
   **ICE-TSNS-TYPE-PLANNER-1 (2026-10-15):** the unit tests build their session on
   `spark_type_planner::planned_context`, as every door does, so
   `degrees_refuses_every_non_double_family_type` reads a written `TIMESTAMP` as the door types
-  it. pins: ice-tsns-type-planner-1/C-028
+  it.
 - `spark_math.rs` + [`spark_math/`](spark_math/map.md) — **DOOR-CONVERGE-1
   (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
   doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
@@ -136,7 +131,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   survives plan construction. Unit tests pin the literal, the explicit
   `CAST(5 AS BIGINT)`, and the text refusal.
   pins: sql-literal-typing-1/L-002
-  pins: door-converge-1/C-002, C-003, C-008
   **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `bin` / `rint` gain
   `schema_name` overrides so the display reads Spark's `bin(1)` (the D-9
   BOOLEAN refusal already lives in the coercion above).
@@ -149,16 +143,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`incorrect ending byte at N`, `wrong 4-byte ending unit`, `Last unit does not have
   enough valid bits`); encode writes one `StringBuilder`, decode uses a `static`
   table into a single batch buffer with the input null bitmap.
-  pins: door-converge-1/C-001, C-010
 - `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
   `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
   `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
   for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
-  pins: types-1/C-001, C-003, C-005, C-007
   **DOOR-CONVERGE-1 (2026-09-15):** `SignedAggregate` additionally declares
   `is_nullable() = false` with `default_value = 0` — `approx_count_distinct` /
-  `regr_count` answer non-null `bigint`, `0` on empty input. pins: door-converge-1/C-006
+  `regr_count` answer non-null `bigint`, `0` on empty input.
   **FNP-8 (2026-09-07):** exposes the existing single-node provisional-integer narrowing inside
   the crate so HOF preparation can reuse it without changing global literal or overflow rules.
   **SQL-LITERAL-TYPING-1 round 3 (2026-09-16):** the `Negative` fold is gone
@@ -174,7 +166,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `Int64`. `count(5)` and `count(DISTINCT 1)` narrow as before. The walker is public as
   `transform_keeping_count_star` (leaf rewrite as a parameter) with the pre-check
   `needs_count_star_expansion`, so the Spark door's early `SparkIntegralLiteral` shares it.
-  pins: ice-count-fold-1/C-002
   pins: sql-literal-typing-1/V-001
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
   twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it
@@ -187,11 +178,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST(init AS BIGINT)`), so it must see rebound ones; the late seat repairs whatever
   the later narrowers re-stale. Unary and fully-referenced bodies pass through
   untouched, so the Column door's plans are byte-identical.
-  pins: fnp-8/C-004
   **JAVA-DOUBLE-STR-1 round 2 (2026-09-15):** the shared pre-coercion insertion point
   seats one more rule one slot later — `SparkFloatStringify`, which must see `LIKE`
   and `CASE` before `TypeCoercion` errors on (or mis-unifies) float/string mixes.
-  pins: java-double-str-1/C-013
   **DECIMAL-CACHE-1 (2026-09-15):** the same insertion point seats `SparkDecimalPrecision`
   one slot later still (immediately pre-coercion). DataFusion's default `TypeCoercion`
   pre-wraps bare integer literals (`Int32 -> (10,0)`), which the late seat can no longer
@@ -199,12 +188,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the early seat sees bare literals and min-precisions them, so facade `price * 5` reaches
   `(38,8)`. The appended seat stays (sessions without this preparation, and shapes the
   early seat skips); the already-correct-`CAST` stop makes the second run a no-op.
-  pins: decimal-cache-1/C-002
   **WO INTDIV-1 (2026-09-28):** the same insertion point seats
   `integer_spark::fractional_division::SparkFractionalDivision` first, immediately before
   `HigherOrderPreparation`, so integer `/` is DOUBLE in every scope before `TypeCoercion`
   and the integer overflow rule read its type (see `integer_spark/map.md`).
-  pins: intdiv-1/C-001, C-002
   **FNP-8 repair (2026-09-07):** `HigherOrderPreparation` runs only before the first default
   type-coercion pass. It narrows direct constructor literals for indexed `transform`, narrows a
   direct `aggregate`/`reduce` initial literal and its lambda-body literals, and derives direct
@@ -215,7 +202,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Explicit casts remain present. The same module owns
   `analyzer_rules_with_higher_order_preparation`, which places this rule before the first default
   `type_coercion` rule and refuses a vector without that insertion point.
-  pins: fnp-8/C-003, C-004, C-005, C-006
   **FNP-8-REVIEW (2026-09-07):** preparation narrows provisional integer literals in
   every HOF body plus direct array/map constructor literals before the first bind, all
   leading value args — except a column tracing to a still-provisional constructor,
@@ -224,7 +210,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Direct array constructors are wrapped bottom-up so nested non-null elements bind
   non-null (F4). The provisional skip also covers value-side columns fed by bare
   literals (VALUES rows, double-nested subqueries), traced iteratively.
-  pins: fnp-8-review/C-001, C-004
   **FNP-8-REVIEW round 2 (2026-09-07):** both lineage walks resolve through every plan
   node a literal reaches. `source_feeds_bare_integer` maps Join (semi/anti/mark aware,
   both sides plus cross), Aggregate group keys, Window input columns, Unnest
@@ -235,7 +220,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   The Join arm wraps only sides the join cannot pad (padded sides stay conservative,
   since the wrapper asserts a non-null field and padded NULLs would crash Arrow);
   the Values arm resolves every row and bails on any non-constructor cell.
-  pins: fnp-8-review/C-009, C-010
 - `decimal_precision.rs` (`decimal_precision/negate_null_tests.rs`) — **DECIMAL-CACHE-1
   round 2 (2026-09-15):** `SparkNegateNullDecimal`, first in `analyzer_rules()`.
   DataFusion's scalar `Negative` kernel rejects a constant-folded null decimal
@@ -247,7 +231,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   untouched (their kernels already agree with Spark). Recompute runs only when a node
   rewrote. The rule lives in this file (not a new module) so `lib.rs` stays at its exact
   175-line ceiling with the one seat line; tests ride the canonical child module.
-  pins: decimal-cache-1/C-012
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each
@@ -259,7 +242,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   detail lives in `json/map.md`.
   pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, fnp-gen-1/PERF-003
 - `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
-  `Int64`. pins: types-1/C-003
+  `Int64`.
 - `bitmap_agg.rs` (+ [`bitmap_agg/`](bitmap_agg/map.md)) — **FNP-6D (2026-09-15,
   round 2):** Spark `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg`.
   State is `[u8; 4096]` (or `n_groups * 4096` on the groups path). Empty
@@ -268,8 +251,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   BIGINT. Out-of-range positions raise `[INVALID_BITMAP_POSITION]` SQLSTATE
   22003. Sliding frames use the session WIN-SLIDE-1 rescan (no local
   `create_sliding_accumulator` refuse). GroupsAccumulator in `bitmap_agg/groups.rs`.
-  pins: fnp-6d/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017. **FNP-6D-FOLLOWUP-1
+. **FNP-6D-FOLLOWUP-1
   (2026-09-15):** user-defined signatures with planning-time Spark refusals
   (`DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`, BINARY/BIGINT wanted); strict
   ANSI-on STRING-to-BIGINT parsing (`CAST_INVALID_INPUT`, SQLSTATE 22018) with
@@ -277,17 +259,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   copies); numerics truncate as Spark, non-finite and out-of-range numerics raise
   `CAST_OVERFLOW` (SQLSTATE 22003) detected per row from the source array;
   `FixedSizeBinary` folds as BINARY.
-  pins: fnp-6d-followup-1/C-001, C-002, C-003, C-004
   **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, refusal texts (ruling 100, 2026-10-15):**
   `spark_type_name` names every `Timestamp(_, _)` `TIMESTAMP`, Spark 4.1.2's name in its
   refusal texts (`however "x" has the type "TIMESTAMP"`, measured live). With the planner a
   written `TIMESTAMP` is the zoned microsecond type, which the name rendered `TIMESTAMP_LTZ`,
   a name Spark never prints; `spark_degrees.rs` and `spark_startswith.rs` share it. pins:
-  `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs`'s unit tests pins: ice-tsns-type-planner-1/C-028
+  `test_fnp_degrees_rust_1.py`, `test_fnp_6d_followup_1.py`, `spark_degrees.rs`'s unit tests
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
-  even for non-null input — live-measured on 4.1.2). pins: types-1/C-006
+  even for non-null input — live-measured on 4.1.2).
 - `spark_epoch_ctor.rs` — **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** Spark
   `timestamp_seconds` / `timestamp_millis` / `timestamp_micros` over one parameterized
   UDF, registered from `lib.rs::register_all` and embedded by the facade through
@@ -301,21 +282,19 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `Overflow` only past 19 digits or for exact out-of-range micros; the Rust battery
   pins 17 refusals + 5 values and the harness parses fractional literals as decimals
   like the Spark door.
-  pins: sql-epoch-constructors-1/C-002, C-003, C-004, C-005, C-008, C-010
 - `spark_year_pad.rs` — **TYPES-1 round 5 (2026-09-05):** the Java-pattern year arm
   extracted from `datetime.rs` (`datetime.rs` 1709→1700): negative years pad the digits
   and re-attach the sign (`-0499`), `yy` is `abs(year) % 100` (`-499` → `99`), 5+-digit
-  positives keep `+` — all live-measured on 4.1.2. pins: types-1/C-006
+  positives keep `+` — all live-measured on 4.1.2.
 - `java_regex.rs` — **FN-FIX-2 (2026-09-04):** Java nested character-class union. `[[:alpha:]]`
-  is `{':','a','l','p','h'}`, not POSIX alpha. pins: fn-fix-2-string-rows/C-002
+  is `{':','a','l','p','h'}`, not POSIX alpha.
 - `spark_regexp_match.rs` — **FN-FIX-2 (2026-09-04):** `regexp_like` / `rlike` /
-  `regexp_replace` compile through `compile_spark_regex`. pins: fn-fix-2-string-rows/C-002
+  `regexp_replace` compile through `compile_spark_regex`.
 - `percentile_approx.rs` — **FN-FIX-1 (2026-09-03):** discrete `percentile_approx` /
   `approx_percentile` in the column's type; array-of-percentages arm;
   `select_nth_unstable` per requested percentile. Accuracy knob ignored
   (`FN-APPROXPCT-ACC-1`). Group held in memory (`PERF-APPROXPCT-1`).
   Flatten offset-buffer rewrite lives in `collection/flatten.rs`.
-  pins: fn-fix-1-registry-rows/C-002
   **PERF-APPROXPCT-1 (2026-09-05):** the buffer is a Greenwald-Khanna
   `QuantileSummaries` (new `quantile_summaries.rs`), a line-faithful port of Spark 4.1's
   insert/compress/merge/query (same thresholds, delta rule, backwards merge test,
@@ -325,18 +304,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   in `update_batch`. A NULL array element reads as 0.0 (Spark's `toDoubleArray` unboxes
   null to 0.0 — measured on live 4.1.2, not guessed); an empty array answers NULL. Answers
   are inserted doubles cast back, so the `as` int casts never meet an out-of-range value.
-  pins: perf-approxpct-1/C-001
   **Round 2 (2026-09-06):** `merge_batch` stages partial summaries and folds once in
   `evaluate`/`state`, sorted by serialized bytes — the final task sees one partial per
   call in arrival order (16 calls at 1e6), so a within-call sort fixed nothing and one
   session answered 5 distinct values. The fold is order-free given the partial set; the
   sketch arithmetic is untouched. Empty partials skip (a merge no-op).
-  pins: perf-approxpct-1/C-004
   **Round 3 (2026-09-06):** `return_type` plan-refuses a non-integral accuracy with
   Spark's `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` wording (INTEGRAL / SQLSTATE
   42K09 / BOOLEAN·DOUBLE·STRING·DECIMAL). Structured sqlExpr/inputSql params are
   not in the DataFusion `Plan` error (`FN-APPROXPCT-ACC-TYPE-1`).
-  pins: perf-approxpct-1/C-002
 - `quantile_summaries.rs` — the sketch behind `percentile_approx.rs` (see that row). Merge
   takes the other side by reference and stages a flushed clone, so the Digest discipline
   (both sides compressed before merge) holds with no panic path. The head sort uses
@@ -351,27 +327,23 @@ scalars live under [`try_invert/`](try_invert/map.md).
   acc10/acc100 single-scan medians (90.0/99.0) and `state_size_follows_one_over_eps` pins
   the 1e6-row serialized sizes (952656/4776/72 B at acc 10000/100/2); the merge-threshold
   ×4.0 mutant dies on exactly these two and survives the older seventeen.
-  pins: perf-approxpct-1/C-006
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
   (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).
   Numeric coerce to Float64; NULL in → NULL out. Registered from `register_all`
   (Spark door) and `spark_log1p::register` (ANSI door + native `PyReparkSession::native`).
-  pins: log1p-1-precise-kernels/C-002
   **Critic remediation (2026-09-01):** `null_slots_null_out_even_when_the_buffer_holds_a_live_value`
   builds a null slot whose underlying buffer value is 5.0 (both arities) and asserts NULL —
   SQL-door null pins cannot see the null arms because a built null slot reads back 0.0 and the
   domain guard masks it.
-  pins: sem-1-spark-answer-parity/C-001, C-004, C-007, C-009
 - `spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (Java find-loop; positional mid-surrogate probe, not
   `is_match("")`; Dictionary(_, Utf8) coerce). **FN-FIX-2:** `compile_spark_regex`
   translates Java nested classes before `bind_ascii_perl_classes`.
-  pins: fn-fix-2-string-rows/C-002
   **FN-REGEXP-EXTRACT-1 (2026-09-04):** Spark `regexp_extract` (first match's
   group, `''` on no match, any-arg-nullable; `validate_group_index` names the
   caller; round 2: validation runs only inside the match arm — non-matching
   input answers `''` for any idx; the bad-group Rust test uses matching input
-  `'a-b'`). pins: fn-regexp-extract-1/C-001
+  `'a-b'`).
   **SEM-4 (2026-08-21):**
   `validate_group_index` carries Spark's `REGEX_GROUP_INDEX` condition (one
   message for negative and over-large alike); `extract_rows` passes the index
@@ -386,7 +358,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** the shared compiler gains `translate_java_pattern`
   (`\Q…\E` quoting; lookaround/backreference/possessive refuse naming the feature) and the
   bounded `collect_matches_up_to`; unit tests live in `spark_regexp/tests.rs` (file-size split,
-  move-only). pins: door-converge-2/C-008, C-009
+  move-only).
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `spark_time_window.rs` — **FNP-WIN-1 (2026-09-15):** the `window` scalar UDF
@@ -404,13 +376,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `PARAMETER_CONSTRAINT_VIOLATION` text; kernels batch (one downcast per
   batch, typed timestamp builders, streamed sliding starts) and a NULL time
   expands to an empty sliding list.
-  pins: fnp-win-1/C-002, C-005
 - `spark_window_time.rs` — **FNP-WIN-1 step 3 (2026-09-15):** the `window_time`
   scalar UDF (window `end` minus one microsecond, end field's timestamp type,
   NULL struct to NULL); non-struct arguments refuse loud. Remediation 16a
   reuses the batched timestamp kernels; behavior unchanged.
-  pins: fnp-win-1/C-003
-- `timestamp_ns_cast.rs`, `registration.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** the narrowing kernel name re-exports from `repark_common::udf_names`, and `narrow_timestamp_ns_udf()` is added beside the wall kernel (WS2-13). `registration.rs` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name on the Spark session builder. pins: write-spine-1/C-017
+- `timestamp_ns_cast.rs`, `registration.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** the narrowing kernel name re-exports from `repark_common::udf_names`, and `narrow_timestamp_ns_udf()` is added beside the wall kernel (WS2-13). `registration.rs` registers the zone seam (`zone_seam_udf(false)`, WS2-12) and the narrowing kernel by name on the Spark session builder.
 - `timestamp_ns_cast.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   `wall_kernel_by_target` applies the nanosecond wall kernel from the **type** of a cast
   target: an `Expr::Cast` whose target is `Timestamp(ns, _)` and whose source is another
@@ -423,12 +393,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `UPDATE`, `DELETE` and the ANSI door take the kernel without any lowering (R-010).
   The kernel stays registered by name: the Iceberg store doors in `repark-iceberg` look
   it up with `ctx.udf(name)` and render it in generated SQL, and that crate cannot link
-  this one, so R-013 keeps its row. pins: ice-tsns-type-planner-1/C-014
+  this one, so R-013 keeps its row.
   **M3, UNION DISTINCT (2026-10-15):** the kernel's return field carries the source
   field's metadata, as the `Cast` it replaces does. Without it, a `UNION` branch whose
   coercion cast became the kernel lost its `PARQUET:field_id` in the physical plan while
   the union's logical schema, built before the swap, kept it, and `UNION` (DISTINCT)
-  refused the plan. pins: ice-tsns-type-planner-1/C-018
+  refused the plan.
   **Ruling 92, encoded sources (2026-10-15):** the kernel's gate (`checked_source`) looks
   through dictionary and run-end encoding to the value type (`encoded_value_type`) and
   gives the encoded source the verdict that value type gets; `Conversion::convert` decodes
@@ -436,7 +406,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST(value AS timestamp_ns)` text met the gate once the AST lowering was gone, and an
   encoded instant was refused. An encoded value into a microsecond column is untouched
   here and stores what the plain value stores (R-024 and NS-ENCODED-NESTED-FLOOR-1 keep
-  their scope). pins: ice-tsns-type-planner-1/C-020
+  their scope).
 - `instant_ts.rs`, `spark_string_timestamp.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
   the session timestamp rule no longer reads a nanosecond cast target as the SQL
   `TIMESTAMP`. Deleted from `rewrite_cast`: the arm that peeled a cast of an instant to a
@@ -453,7 +423,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   planner (`spark_type_planner::planned_context`), as every door does;
   `spark_nullability.rs`'s tests joined them on 2026-10-15 (without the planner its typed
   `TIMESTAMP` literal stayed DataFusion's nanosecond type and met the by-target kernel).
-  pins: ice-tsns-type-planner-1/C-013
 - `timestamp_unit_widen.rs` — **ICE-TSNS-TYPE-PLANNER-1 amendment 1 (2026-10-13):**
   `SparkTimestampUnitWiden`, the unit lattice rule. DataFusion 54.1 joins two timestamp
   units to the coarser one (`timeunit_coercion`, a free function with no hook), which
@@ -476,17 +445,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   an untouched plan is returned without a schema recompute. A microsecond value outside
   the nanosecond range raises when the cast runs. Seven unit tests over a plain
   DataFusion session with the rule placed.
-  pins: ice-tsns-type-planner-1/C-012
   **M3 rule gaps, aggregate zero (2026-10-15):** `aggregate`'s zero joins the position
   table beside the element unit of its array (`widen_aggregate_zero`): a microsecond zero
   beside nanosecond elements is cast to nanoseconds, keeping its own zone, so the merge
   lambda and the zero agree and `check_merge_types` no longer refuses the pair. The plan's
   lambda variables are resolved again after a rewrite, so `acc` takes the widened type.
-  pins: ice-tsns-type-planner-1/C-017
   **M3 rule gaps, UNION DISTINCT (2026-10-15):** the gap was not in this rule. See
   `timestamp_ns_cast.rs`: the wall kernel that replaces a nanosecond `Cast` after type
   coercion dropped the source field's metadata, so a `UNION`'s stale logical schema kept a
-  `PARQUET:field_id` its physical plan lacked. pins: ice-tsns-type-planner-1/C-018
+  `PARQUET:field_id` its physical plan lacked.
   **Carry-over fix, the three errors (ruling 100, 2026-10-15):** a `DATE` or a string beside a
   zoned timestamp at a shared position (the scalar positions and `UNION` columns) is cast to
   that timestamp's unit and zone before `type_coercion` (`SharedTarget`), as Spark types
@@ -494,7 +461,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   _)` (`temporal_coercion`, `string_temporal_coercion`), which the deleted rules used to read
   as `TIMESTAMP`; after the deletions the by-target kernel stored it as a nanosecond column
   the writer refused (`cannot convert text Timestamp(ns) into byte Timestamp(µs, "UTC")`).
-  Beside a naive timestamp the pair is left to DataFusion. pins: `test_store_ts_doors_2.py` pins: ice-tsns-type-planner-1/C-027
+  Beside a naive timestamp the pair is left to DataFusion. pins: `test_store_ts_doors_2.py`
   **Carry-over fix, ruling 101 (2026-10-15):** eight list cells green on today's main and red
   on the carry-over head. `array_except` and `array_intersect` join the two-list positions
   (with `array_concat` / `concat`), so a written `CAST(c AS TIMESTAMP)` array beside a
@@ -504,7 +471,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `TIMESTAMP_NTZ` value to a `timestamptz_ns` array keeps the value's wall the way its typed
   twin does. pins: the fixture's `position|array_append|ntz|tzns|…`,
   `position|array_prepend|ntz|tzns|…`, `repro|v2_array_except|tzns|…`,
-  `repro|v2_array_intersect|tzns|…` pins: ice-tsns-type-planner-1/C-030
+  `repro|v2_array_intersect|tzns|…`
   **Carry-over fix, mixed VALUES (ruling 100, 2026-10-15):** a `VALUES` column DataFusion
   typed `Timestamp(ns, None)` only because a `DATE` sat beside a non-nanosecond timestamp
   (`widen_values_dates`, no cell of nanoseconds) is retyped by the same position rule before
@@ -513,7 +480,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `TIMESTAMP`) it is read as the instant, as the deleted rules read it. Parents of a retyped
   `VALUES` recompute their schema. The pinned Spark walls are main's pins (`ntz_store_doors_1`
   mixed oracle, `ntz_values_mix.rs`). pins: `test_ntz_store_doors_1.py`,
-  `tests/ntz_values_mix.rs` pins: ice-tsns-type-planner-1/C-032
+  `tests/ntz_values_mix.rs`
 - `spark_type_planner.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkTypePlanner`,
   the one DataFusion `TypePlanner` both SQL doors register. It decides the unit from the
   written SQL type name, before DataFusion's own mapping: `TIMESTAMP` and `TIMESTAMP_LTZ`
@@ -529,7 +496,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   run the Spark session rule (`install_planned_timestamp_cast`: the Rust `AnsiDialect`
   door and the Python native door). The zone label is `"UTC"`, not the session zone: the
   instant type carries no session zone anywhere in the engine.
-  pins: ice-tsns-type-planner-1/C-011
   **Ruling 94 (Q6, 2026-10-15):** `AnsiTypePlanner` is the one ANSI variant, handed in by
   `repark_sql::AnsiDialect` only. It plans `TIMESTAMP` as the naive microsecond wall
   (`Timestamp(µs, None)`) and `TIMESTAMPTZ` as the microsecond instant
@@ -539,13 +505,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   reads seconds, as it did when DataFusion typed it nanoseconds. A side effect: an `Int64`
   cast to `TIMESTAMP(6)` on that door now reads seconds too, since both spell one type.
   The Python `repark.sql()` callable takes the same ANSI variant through `NativeDoorTypes`
-  since the carry-over fix round (2026-10-15); its Q6 cell is green. pins: ice-tsns-type-planner-1/C-015
+  since the carry-over fix round (2026-10-15); its Q6 cell is green.
   **Carry-over fix, the three errors (ruling 100, 2026-10-15):** `planned_instant_cast` reads
   an integer of any width as seconds (`Timestamp(s, None)`, then the instant), as Spark 4.1.2
   does for `CAST(CAST(1 AS INT) AS TIMESTAMP)`; it read a non-`BIGINT` integer as nanosecond
   ticks, and that inner nanosecond `Cast` then met the by-target wall kernel (`cannot cast
   "Int32" to "TIMESTAMP_NS"`). pins: the read-perf bench pins, `test_stamp_2_r5p6_1.py`,
-  `tests/ltz_store.rs` pins: ice-tsns-type-planner-1/C-027
+  `tests/ltz_store.rs`
 - `spark_session_window.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the
   `session_window` marker UDF (GROUP-BY-only; per-row evaluation refuses loud)
   plus the `__repark_session_gap__` / `__repark_ts_micros__` /
@@ -557,10 +523,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   non-positive gaps to NULL for the drop filter) with one parse per distinct
   gap string per batch; the assemble UDF takes an Int64-micros or a
   TIMESTAMP end; `Date32` coerces to `Timestamp(ns)`.
-  pins: fnp-win-1/C-004, C-008. Round 2 (2026-09-15) shares the two-spec
+. Round 2 (2026-09-15) shares the two-spec
   `[_LEGACY_ERROR_TEMP_1039]` refusal text (`MULTIPLE_SESSION_EXPRESSIONS`)
   with the analyzer and SQL staging; the Python door's duplicate-name error
-  is registry row WIN-4. pins: fnp-win-1/C-004
+  is registry row WIN-4.
 - `registration.rs` — **FNP-WIN-1 step 4 (2026-09-15):** the `analyzer_rules()`
   home moved out of `lib.rs` so the crate root stays under its `check_lib_rs`
   ceiling; `SparkSessionWindow` registers beside the window rules.
@@ -593,25 +559,20 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
   `aggregate`/`reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`,
   `map_zip_with`) plus native `exists`. Registry both doors
-  read. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
-  C-008, C-009, C-010, C-011, C-013, C-014
+  read.
   **FNP-8 (2026-09-06):** `exists` is a native kernel (the FNP-4a `array_any_match`
   alias is gone); `aggregate` refuses init/merge width mismatches instead of coercing.
 - `try_invert/` — FNP-7a/7b scalar `try_*` kernels (NULL instead of raise). `try_element_at`
   aliases `element_at`. `try_sum` reuses datafusion-spark; `try_avg` is its own UDAF
   (decimal overflow NULL; INTERVAL input is the FNP-11 loud refuse).
-  pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-  C-011, C-012, C-014, C-015, C-018, C-019
 - `temporal_ctor/` — FNP-11A scalar temporal kernels (constructors, intervals,
   month arithmetic, zone conversion, add/diff, dateadd/datediff arity routes;
   scalar args and column casts hoist out of the row loops). Details in
   [`temporal_ctor/map.md`](temporal_ctor/map.md).
-  pins: fnp-11a/C-002, C-003, C-004, C-005, C-011, C-013
 - `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
   **FNP-BITMAP-FACADE-1 (2026-09-15):** `mod bitmap_agg;` flips to `pub mod bitmap_agg;`
   (same line count) so `repark-python`'s `unary_aggregate_udaf` can reach the three
   `bitmap_agg` UDAF constructors the way it reaches `aggregate`'s.
-  pins: fnp-bitmap-facade-1/C-001
 - `lib.rs` — crate-root stays at **162** under `check_lib_rs` with `pub mod timestamp_type`
   (D-8 one-time FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
   `registration.rs`).
@@ -635,7 +596,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Its carrier `set` refusal now points at the runtime `SET` spelling.
   **TA-SERIES-S0 (2026-10-04):** the raise kernel scans typed value buffers under the null bitmap; results match the scalar path bit for bit (P-S0-1, P-S0-2, P-S0-3).
   **TA-SERIES-S0b (2026-10-04):** float divisors refuse on `== 0.0`, so `-0.0` raises `DIVIDE_BY_ZERO` as Spark 4.1.2 does; NaN still passes (P-S0b-1).
-  pins: set-ansi-runtime-1/C-001
 - `case_sensitive.rs` — **ICE-RTAS-BYNAME-1 round 2 (2026-09-17):** Spark-door
   `spark.sql.caseSensitive` carrier (`SparkCaseSensitiveConfig`,
   `PREFIX = repark.case-sensitive`, default **FALSE**) + builder/runtime
@@ -644,7 +604,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `set_runtime_config`; read by the BY NAME resolver. The runtime parser
   takes case-insensitive `true`/`false` only
   (`INVALID_CONF_VALUE.TYPE_MISMATCH`, SQLSTATE 22022).
-  pins: ice-rtas-byname-1/C-010
   The module carries no doc comments (comment ban); the three `Result` parsers take `#[allow(clippy::missing_errors_doc)]`.
   **ATTR-ID-1 SJ-1b (2026-10-02):** `SparkSelfJoinConfig` (`PREFIX = repark.self-join`)
   carries `fail_ambiguous` (`spark.sql.analyzer.failAmbiguousSelfJoin`) and
@@ -669,7 +628,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   keep Arrow's message. `schema_name` renders `CAST(<operand> AS MAP<K, V>)`.
   `contains_map` / `spark_sql_name` serve the DataFrame door's token and display.
   Registered by `register_all` (Spark door) and by the ANSI door's `on_session_built`.
-  pins: cast-map-spell-1/C-005, C-006, C-007
   **Round 3 (2026-09-19):** the cast is a recursive `spark_cast` over map / list / struct
   that hands leaves to `cast_map/leaf.rs` under a `Mode` (ANSI, legacy, `try_cast`) read from
   the live session config at invoke. Key legality is checked twice: planning refuses a pair
@@ -677,7 +635,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   legacy-only pairs under the live mode. A runtime `spark.sql.ansi.enabled` change never
   reaches a registered UDF, so the mode cannot be fixed at registration. Colliding keys
   after a key cast are kept, as Spark stores them.
-  pins: cast-map-spell-1/C-011, C-012, C-013
 - `iceberg_system.rs` — **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), round 1 of 3:**
   the Iceberg `bucket(n, col)` / `truncate(w, col)` system functions as scalar
   UDFs under reserved internal names (`__iceberg_system_bucket`,
@@ -693,7 +650,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `register` call (181 of the 182 ceiling). WO-2 slots the temporal and version
   UDFs into `functions()`. `Cargo.toml` adds the external `iceberg` dependency
   (invisible to `check-crate-dag` per packet addendum H-02).
-  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
   **Round 2 (2026-09-20):** `years` / `months` / `days` / `hours` join as
   single-argument UDFs over `Transform::Year` / `Month` / `Day` / `Hour`
   (`__iceberg_system_years` etc.), sharing the new `apply_transform` helper
@@ -705,12 +661,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   version, since the fork exposes no version API (H-07) — evaluated per row,
   never null, refusing extra arguments. No `lib.rs` change: the H-05 budget
   was spent in round 1.
-  pins: ice-system-functions-1/C-012, C-013, C-014, C-015, C-016, C-017
   **Round 3 (2026-09-20):** the seven internal-name consts, the sorted
   `SYSTEM_FUNCTION_NAMES` roster, and `internal_name()` join so the Spark
   door's pre-parse rewrite and SHOW executor share one name home with the
   UDFs (the `name()` arms now read the consts).
-  pins: ice-system-functions-1/C-018, C-020
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty
@@ -733,7 +687,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Its carrier `set` refusal now points at the runtime `SET TIME ZONE` spelling.
   **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
   **R-17c-6:** the in-crate canonicaliser mirrors the core gate (exact-case prefixes,
-  zero-seconds to `±HH:MM`) and asserts the same shared table. pins: set-ansi-runtime-1/C-002
+  zero-seconds to `±HH:MM`) and asserts the same shared table.
 - `current_date.rs` — **CURRENT-DATE-SESSION-ZONE-1 (2026-10-10):** the owned `current_date`
   (+ `today` alias) overwrite. DataFusion's builtin folds at plan time from
   `execution.time_zone`, which RePark never sets (parity doc SET-ANSI-RUNTIME note), so it
@@ -748,7 +702,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   present carrier wins, even when set to UTC. The native DataFrame pair agrees with native
   SQL under `SET TIME ZONE` again. A fixed-instant pin sits thirty minutes either side of
   local midnight in `Asia/Kolkata` and `America/New_York`, red under a one-hour shift.
-  pins: current-date-session-zone-1/C-002, C-003, C-004, C-005, C-007, C-008
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
   `SessionName` impl, non-nullable Utf8, `Stable`. `current_database` shares the
@@ -757,7 +710,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`SparkExtension::configure` installs it seeded `spark_catalog` / `default`; `USE`
   mirrors it), falling back to planner `default_catalog` / `default_schema` on
   carrier-less contexts.
-  pins: ice-catalog-session-1/C-012, C-013, C-029
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /
   `coerce_to_timestamp_micros` /
   `coerce_to_date32`: `Timestamp(_, Some(_))` is an LTZ instant; `Timestamp(_, None)` is NTZ
@@ -772,7 +724,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **V3-2:** `allowCreateFormatVersion3` (default false) + `resolve_create_format_version`
   (`Model: Grok 4.6 xHigh`). **V3-9 (2026-09-02):** the refusal dropped its parenthetical
   "v3 tables cannot yet do merge-on-read row-level writes" — false since the `V3-MOR-1` lift;
-  it names the conf and the v2 default only. pins: v3-9-mor-predicate-dml-dv/C-006
+  it names the conf and the v2 default only.
   **WO U5 PR2b (2026-09-24):** the resolver parses the value as an integer and accepts `1`
   (D-CREATE-V1); `0`, `4`, negatives and non-integers refuse, naming v1, v2 or v3.
 
@@ -792,14 +744,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **W-2 U2 ride-along:** Decimal32/64/256 accumulator arms have revert-red pins
   (`group_avg_decimal32_stays_decimal_9_6_i32` and siblings).
   **TYPES-1 (2026-09-05):** registers `count_if` plus the `SignedAggregate` wrappers
-  (`regr_count`, `approx_distinct` → `Int64`). pins: types-1/C-003
+  (`regr_count`, `approx_distinct` → `Int64`).
 - `aggregate.rs` also serves `groups_accumulator_supported` /
   `create_groups_accumulator` (**PERF-AGG-AVG-1**), delegating to `avg_groups.rs`; the
   `Accumulator` arms and `state_fields` are untouched, so window frames keep the retract
   path, and the decimal `DecimalAverager` is shared as `pub(crate)`. Round 2 removed
   the dead `is_distinct` early return in `create_groups_accumulator` (unreachable:
   the only caller is guarded by `groups_accumulator_supported`).
-  pins: perf-agg-avg-1/C-001, C-002
 - `avg_groups.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the
   `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF, shaped on DataFusion 54.1's
   own `AvgGroupsAccumulator` (`datafusion-functions-aggregate/src/average.rs`):
@@ -819,14 +770,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   tests do; the decimal merge test merges three groups with distinct partials
   across two states and asserts every group, so a decimal-arm index scramble reds
   exactly it.
-  pins: perf-agg-avg-1/C-001
 - `groups_null_state.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the groups accumulator's
   per-group validity tracker, split out of `avg_groups.rs` so neither file passes the
   1000-line ceiling. It re-implements the `datafusion-functions-aggregate-common`
   `NullState` All/Some fast-path semantics (no new dependency allowed): batches with no
   nulls and no filter skip tracking entirely, otherwise one validity bit per group with
   `EmitTo::First` splitting the mask. The unit test pins the split.
-  pins: perf-agg-avg-1/C-001
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
@@ -836,18 +785,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `SparkExprSemantics`). **TYPES-1 (2026-09-05):** the default-cast check accepts the
   narrowed `(20,0)`-over-`Int32` shape and keeps `(10,0)`-over-`Int32` user casts declared.
   Ledger: `task/v2-dec-u3u4-ledger.md`.
-  pins: types-1/C-002
   **DECIMAL-CACHE-1 (2026-09-15):** measurement-only so far — the test-only
   `measure_cache_seam_logical_vs_physical_decimal_field` records unanalyzed, analyzed and
   physical fields per probe (facade plans pin the unanalyzed `(38,10)` schema; facade
   `* Int32(5)` analyzes to `(38,6)` where the oracle demands `(38,8)`).
-  pins: decimal-cache-1/C-001
   **DECIMAL-CACHE-1 seam fix (2026-09-15):** the rule is additionally seated pre-coercion
   (see `lambda_rebind.rs`); product logic unchanged. Tests add a prod-like assembly helper
   (`Analyzer::new().rules` + preparation + `analyzer_rules()`, ANSI on) with six pins:
   facade `*`/`+`/col shapes, SQL `* 5`, explicit-cast preservation, explicit `(1,0)` cast —
   each asserting logical == physical (name, type, nullability, metadata) and the value.
-  pins: decimal-cache-1/C-002
 - `decimal_spark.rs` — **R-2:** `SparkDecimalRewrite` (A5 slot: clean `decimal / decimal`
   before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
   compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered
@@ -866,7 +812,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   same-or-wider decimal targets stay non-null); the dead `Boolean` arm is gone —
   every `BOOLEAN → DECIMAL` cast refuses downstream, so the arm's answer was
   unobservable (registry `CAST-BOOL-DEC-1`).
-  pins: cutover-schema-1/C-003
   **NULLABILITY-2 (2026-09-05):** the cast hook is generalized
   (`nullable_spark_cast`): string→{integral, float, boolean, date, timestamp},
   float→integral, timestamp→{int8, int16, int32}, and decimal→integral casts wrap
@@ -878,7 +823,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   operand nullability (division stays always-nullable). Round 4 (2026-09-06):
   `nonnull_spark_cast` is Date32 → Timestamp only; DataFusion already marks CAST
   of a non-null struct/list/map child non-null, so those wrap arms were deleted.
-  pins: nullability-2/C-001, C-002
 - `spark_nullability.rs` — **NULLABILITY-2 (2026-09-05):** the `SparkNullability`
   analyzer rule, slotted after `SparkDecimalRewrite`: date→timestamp casts and
   null-safe equal wrap their output in the non-null identity UDF
@@ -893,11 +837,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   types, so the wrap was tautological; `nonnull_spark_cast` remains Date32 →
   Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
   struct CAST.
-  pins: nullability-2/C-001, C-002, C-004
   *ZONE-SEAM-1 fix round 3 (2026-10-23):* `decimal_cast::SPARK_NONNULL_NAME` is `pub`, so the
   router's ZS-9 gate (`repark-spark/src/router/nested_ns.rs`) can look through the non-null
   marker around a `named_struct` when it reads an UPDATE's assigned struct leaf by leaf.
-  pins: zone-seam-1/C-024
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -906,7 +848,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   reads ANSI once at plan time for the overflow edge (`(2,2)`: raise vs NULL);
   its return field marks overflow-exposed targets nullable. Registry
   `CAST-BOOL-DEC-1`.
-  pins: nullability-2/C-003
 - `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
   slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
   literals: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
@@ -916,14 +857,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   under ANSI on, `CAST_WITHOUT_SUGGESTION` otherwise, `TRY_CAST` always without). The
   rule sees both doors because the SQL door analyzes eagerly at build and the native
   `DataFrame` path analyzes the same rule set at collect. Registry `BL-11`.
-  pins: bl-11-numeric-binary/C-001, C-002, C-003
 - Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
   widened to Int64 because DataFusion types a bare integer literal as Int64.
-  pins: f-y10-1-int-overflow/C-001
   **TYPES-1 (2026-09-05)** retired the literal-width split below: pure-literal `1 + 1`
   is `Int32`, `2147483647 + 1` raises under ANSI and wraps when ANSI is off.
-  pins: types-1/C-002
 - `integer_spark.rs` — **F-Y10-1:** checked integer `+` / `-` / `*` UDFs that
   read `SparkAnsiConfig` (DEC U5 shape). `ansi=true` raises Spark's
   `ARITHMETIC_OVERFLOW`; `ansi=false` wraps at the source Arrow type. An
@@ -938,11 +876,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins i64 sub/mul raise, i32 MIN×−1 wrap, i64 CAST+lit wrap. `install_integer_overflow`
   is the ANSI-door hook. Ledger:
   `task/ledgers/staging/f-y10-1-int-overflow-ledger.md`.
-  pins: f-y10-1-int-overflow/C-001, C-002, C-003, C-004, C-005
   **WO INTDIV-1 (2026-09-28):** declares `pub(crate) mod fractional_division;` — the
   pre-coercion `SparkFractionalDivision` rule in `integer_spark/` that types integer `/` as
   DOUBLE at every nesting level and unarms a checked call whose operand turned fractional.
-  pins: intdiv-1/C-001, C-002, C-003
   (clippy implicit_clone: projection name uses `clone` on the field name)
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims + **SEM-1** `spark_log`
@@ -954,8 +890,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
   cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
   DataFusion's own coercion and re-opens mixes, so the closing pass shuts them before the
-  next rule (pins: types-1/C-007) + `LambdaRebind` twice — after the integer narrowing
-  and final (pins: fnp-8/C-004); the
+  next rule + `LambdaRebind` twice — after the integer narrowing
+  and final; the
   session installs them via the Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +
@@ -1016,7 +952,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **WO NTZ-1 slice 1 (2026-09-26):** the matrix also denies microsecond-naive
   `Timestamp` → any integer / float / decimal, refusing with
   `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]` naming `TIMESTAMP_NTZ` (the DATE pairs
-  keep `_WITH_FUNC_SUGGESTION`). pins: ntz-1/C-002
+  keep `_WITH_FUNC_SUGGESTION`).
 - `analyzer.rs` — `SparkExprSemantics`: integer `/` → always-double division; division/modulo-by-zero
   follows `spark.sql.ansi.enabled` (raise when TRUE, NULL otherwise); `[]` array subscript →
   0-based with invalid-index → NULL (rewrites the planner's
@@ -1025,7 +961,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **DOOR-CONVERGE-2 (2026-09-15):** planner-embedded `array_concat` nodes (the `||`
   operator over equal lists, plus direct calls) rewrite onto the door-converged `concat`
   UDF when every argument is list-shaped or NULL — the nested planner bakes its own UDF
-  in, so only the analyzer sees the name. pins: door-converge-2/C-001;
+  in, so only the analyzer sees the name.
   **F2 octo C1:** `overlay(..., -1)` literal 4th arg dropped to 3-arg (Spark replace-length;
   pin `overlay_len_minus_one_matches_three_arg`);
   **TZ-5 (2026-08-12):** `CAST(TIMESTAMP AS <numeric>)` → epoch SECONDS
@@ -1097,7 +1033,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   non-literal parse-kernel route so the door's `FoldSparkNumericCasts` still
   folds it to a non-null literal; `SUFFIX_LITERAL_NAME` is the `pub` single
   source here that repark-spark re-exports.
-  pins: java-double-str-1/C-003, C-004, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts
   from the end, the window clips (never errors), negative len → `''`, NULL args → NULL.
@@ -1110,20 +1045,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **JAVA-DOUBLE-STR-1 (2026-09-15):** `FLOAT`/`DOUBLE` args keep their type
   through coercion and stringify inside the kernel with the shared Java
   formatter (registry BL-7); every other non-string arg still coerces to `Utf8`.
-  pins: java-double-str-1/C-005
   **Round 2 (2026-09-15):** the owned `__repark_array_join__` shim (built only by
   the float-stringify rule for float-element lists) joins through the same
   stack formatter; string and other leaves mirror the upstream kernel.
-  pins: java-double-str-1/C-010
   **DOOR-CONVERGE-2 (2026-09-15):** one UDF, three arms by argument family — all-array args
   widen through `collection/concat_array.rs` (common element type, OR `containsNull`, NULL
   array → NULL row, `DATA_DIFF_TYPES` on a non-array sibling); any-`Binary` args stay
   `Binary`; everything else keeps the `Utf8` path. The facade `PyColumn::concat` embeds the
   same UDF, so both doors resolve one kernel. The array coerce validates but never casts
-  (provisional widths resolve post-narrowing). pins: door-converge-2/C-001
+  (provisional widths resolve post-narrowing).
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** all-`Binary` stays `Binary`, any other mix
   with `Binary` answers `STRING` (binary read as UTF-8 text); unit tests live in
-  `string/tests.rs` (file-size split, move-only). pins: door-converge-2/C-008
+  `string/tests.rs` (file-size split, move-only).
 - `spark_split.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `split`
   (Java-regex pattern through the shared `compile_spark_regex` + `collect_matches`
   stepping, `limit` > 0 caps with the remainder last, `limit` ≤ 0 keeps trailing
@@ -1131,15 +1064,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   argument casts to string; overlapping matches resume one char past the last start
   (`find_at`, cures `'.'`-pattern Q12-50/51). The facade arm lives in `dispatch_spark.rs`,
   but the Python `F.split` still raises `UnsupportedOperationException` before reaching
-  it — P2 hand-off to run 16a. pins: door-converge-2/C-004
+  it — P2 hand-off to run 16a.
   **FNP-MATH-1 step 6 (2026-09-16, run 18a, D-8):** `schema_name` renders Spark's
   `split(str, pattern, limit)` (literals bare, default limit `-1`); coerce validates
   without casting so literal folds keep Spark nullability; the facade binds above.
-  pins: fnp-math-1/C-008
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** scalar patterns compile once, pattern columns
   resolve through an LRU(64) `PatternCache`, plain literals take the `str` path, and
-  `limit` > 0 stops the match walk after `limit - 1` (equivalence-pinned). pins:
-  door-converge-2/C-009
+  `limit` > 0 stops the match walk after `limit - 1` (equivalence-pinned).
 - `spark_sequence.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `sequence`
   (int widths kept, descending default step, dates with 1-day default and month steps,
   timestamps with interval steps, NULL bound/step → NULL with `containsNull=false`, zero
@@ -1151,47 +1082,44 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Month stepping reuses `datetime::spark_add_months` (now `pub(crate)`). The facade arm
   moved to `dispatch_spark.rs` with the `refuse_facade_literal_expansion` ceiling kept;
   the plan-time `ArrayCardinalityCeiling` still fires on the `sequence` name.
-  pins: door-converge-2/C-003
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** month steps compute element `i` from the start
   (`start + months × i`); the runtime cap reuses the literal refusal text for column stops;
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
-  pins: door-converge-2/C-007, C-009
   **ICE-TSNS-TYPE-PLANNER-1 M1 (2026-10-15):** the timestamp arm works in the element's
   unit and zone. The bounds are cast to the element type (the first non-NULL bound's
   type) and read as ticks (`as_ticks`), the row steps in those ticks, and the values are
   built as the element type (`shape_timestamps`). A nanosecond `sequence` therefore keeps
   its digits below the microsecond and floors nothing; a microsecond one answers as before.
   Before, every row was built as `Timestamp(µs, "UTC")`, so a nanosecond or naive element
-  type failed with `ListArray expected data type …`. pins: ice-tsns-type-planner-1/C-016
+  type failed with `ListArray expected data type …`.
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,
   never NULL) with its Rust tests. Text/binary arms live in `hash_text_value`,
   date/time arms in `hash_time_value` (clippy `too_many_lines` split, same shapes).
-  pins: fnp-math-1/C-002, C-003, C-005
 - `string/format_number.rs` — **FNP-MATH-1 step 5 (2026-09-16, run 18a):** Spark
   `format_number` grouping renderer (HALF_EVEN digit rounding, grouping commas;
   registered through `string::functions()`). Row detail lives in
-  [`string/map.md`](string/map.md). pins: fnp-math-1/C-002, C-003
+  [`string/map.md`](string/map.md).
 - `string/mask.rs` — **FNP-MATH-1 mask slice (2026-09-16, run 18a):** Spark `mask`
   character-class masker (missing replacement → `X`/`x`/`n`/keep default, NULL
   replacement keeps the class; registered through `string::functions()`). Row
-  detail lives in [`string/mask.rs`](string/mask.rs). pins: fnp-math-1/C-002, C-003
+  detail lives in [`string/mask.rs`](string/mask.rs).
 - `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
   (overwrites the string-only DataFusion kernel): arrays reverse element order with the
   element type, `containsNull` and nullability kept; strings reverse by character; untyped
   `NULL` answers a NULL `STRING`; any other type refuses
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`. The facade arm moved to `dispatch_spark.rs`,
-  so both doors resolve this kernel. pins: door-converge-2/C-002
+  so both doors resolve this kernel.
 - `spark_string_timestamp.rs` — **CAST-TS-STRING-1 (2026-09-19):** entry points of Spark's
   `stringToTimestamp` kernel: `string_to_timestamp_micros`, `cast_strings_to_ltz` /
   `cast_columnar_strings_to_ltz` (NULL or `CAST_INVALID_INPUT` on failure), the analyzer's
   string `CAST` literal fold `spark_string_literal`, and `rewrite_string_try_cast` (a string
   `TRY_CAST(… AS TIMESTAMP)` → folded literal or `try_to_timestamp`). The rule lives in
-  [`spark_string_timestamp/`](spark_string_timestamp/map.md). pins: cast-ts-string-1/C-001
+  [`spark_string_timestamp/`](spark_string_timestamp/map.md).
   `is_string_type` also accepts a dictionary of strings; `instant_ts.rs`'s cast-source check and
-  `timestamp_ltz_ntz.rs`'s `try_to_timestamp` use it. pins: cast-ts-string-1/C-013
+  `timestamp_ltz_ntz.rs`'s `try_to_timestamp` use it.
 - `tests/` — crate-root unit battery ([tests/map.md](tests/map.md)).
 - [instant_ts.rs](instant_ts.rs) — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
   `Timestamp(µs, UTC)`. Zoneless LTZ inputs (`TIMESTAMP '…'`,
@@ -1204,22 +1132,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   slot for the session-zone family's SQL-door `current_timezone()` (crate root is at its
   line ceiling). Pins: `instant_ts::tests::*`.
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `to_timestamp` is `Stable` (Spark answers
-  it, so time travel plans it). pins: ice-tt-resolve-1/C-003
+  it, so time travel plans it).
   **CAST-TS-STRING-1 (2026-09-19):** a one-argument string `to_timestamp`, a string
   `CAST(… AS TIMESTAMP)` literal fold, and a string `TRY_CAST(… AS TIMESTAMP)` (rewritten to
   `try_to_timestamp`) run the [`spark_string_timestamp/`](spark_string_timestamp/map.md) kernel.
   `arrow_grammar_to_timestamp_udf` keeps DataFusion's string parse for the `to_timestamp_ntz`
-  path only. pins: cast-ts-string-1/C-001, C-004, C-005
+  path only.
   **WO NTZ-1 slice 2 (2026-09-27):** `rewrite_cast` retargets NTZ-target casts through
-  `timestamp_ntz_cast` before the existing arms (+3 lines). pins: ntz-1/C-006
+  `timestamp_ntz_cast` before the existing arms (+3 lines).
   **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):** `analyze` first runs
   `timestamp_ns_cast::widen_mixed_values_timestamps` with `rewrite_cast` as the cell
   rewrite, before NTZ-1's `retarget_dml_store_casts`. The DML retarget therefore sees a
   mixed `VALUES` column already typed `TIMESTAMP` (+5 lines).
-  pins: ntz-store-doors-1/C-006
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
   `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
-  default timestamp type. pins: ntz-store-doors-1/C-009
+  default timestamp type.
 - `timestamp_cast.rs` — **C-4 fold 3 item 2 (2026-10-11):** the tick, wall-clock and
   formatting kernels of `__repark_timestamp_to_string__` moved to
   `repark-common`'s `spark_timestamp_text.rs` so the Postgres write chokepoint calls
@@ -1241,7 +1168,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   stored wall for NTZ; trailing-zero fractions are stripped (recorded: `.123400` → `.1234`).
   **ICE-TSNS-SQL-1 (2026-09-17):** a `Timestamp(ns)` tick renders from its own nanoseconds,
   so the trimmed fraction keeps up to nine digits (`…00:00:00.000000001`); every other unit
-  still goes through microseconds. pins: ice-tsns-sql-1/C-004
+  still goes through microseconds.
   Embedded, never registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and siblings,
   plus `spark_timestamp_string_trims_trailing_fraction_zeros` / year-shape / LTZ-vs-NTZ here;
   facade corpus `test_timestamp_cast_parity.py`. **TZ-8:** `__repark_timestamp_to_date__`
@@ -1251,7 +1178,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **DATE-FN-1 (2026-09-04):** registered `date` (Spark `CAST AS DATE`) and `unix_timestamp` (the `date` / `unix_timestamp` registrations in `expr_fn.rs` / `timestamp_cast.rs` carry no doc comments; this row is their contract)
   (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
   three-row input yields three identical BIGINT values.
-  pins: date-fn-1-spark-date-spelling/C-002, C-003
 - `java_datetime.rs` — **FNP-11B step 2 (2026-09-15):** the one shared Java-datetime-pattern
   parser (card D-1) behind `to_date` / `to_timestamp` / `unix_timestamp` with a format.
   Tokenizes `yyyy`/`yy`/`M`/`MM`/`MMM`/`MMMM`/`d`/`H`/`h`/`m`/`s`/`S`/quoted literals;
@@ -1264,9 +1190,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   1-arg path with the format ignored. `to_timestamp` 1-arg malformed strings translate to
   `[CAST_INVALID_INPUT]` under ANSI and NULL otherwise. SQL-door double-quoted pattern
   literals stay a run-16c parser seam (cells 129/130).
-  pins: fnp-11b/C-002, C-003, C-004; `java_datetime::tests::*`.
+; `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
-  `spark_from_unixtime.rs`. pins: types-1/C-006
+  `spark_from_unixtime.rs`.
 - `timestamp_ns_cast.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** `store_micros(array,
   target, zone)` is the one function that makes the tick when a timestamp is stored or cast into a
   microsecond `TIMESTAMP` or `TIMESTAMP_NTZ`. It decides by source type, target type and session
@@ -1277,7 +1203,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   replaced `narrow`; its callers are `__repark_narrow_timestamp_ns__` and the `Timestamp` arm of
   `timestamp_ltz_ntz::ntz_single`. Why: into `TIMESTAMP_NTZ` the old arm truncated toward zero
   (`-1 ns` stored `0`), and the doors decided the tick in more than one place.
-  pins: ice-tsns-floor-doors-1/C-006, C-009
 - `timestamp_ns_cast.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the zoned kernel
   `__repark_cast_timestamptz_ns__` is now the one conversion every write door reaches for a
   top-level `timestamptz_ns` column, as the naive kernel is for `timestamp_ns`. Its return
@@ -1287,7 +1212,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   non-nullable but contains null values` where INSERT stores NULL. R-007 had kept the zoned
   rule narrow to hold a required `timestamptz_ns` column's refusal text as a control; that
   type is this unit's subject. The conversion itself did not change.
-  pins: ice-tstzns-wall-1/C-005, C-008
 - `timestamp_ns_cast.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09, fold 1 and the split):** the
   nanosecond wall kernel `__repark_cast_timestamp_ns__` is the one conversion every write door
   reaches for a top-level `timestamp_ns` column. Its return field is nullable for every source
@@ -1298,7 +1222,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   removed by the split, and a nested `timestamp_ns` leaf is refused before any store by
   `repark-iceberg/src/write/nested_ns_gate.rs`. Fold 1 changed this file without a line here,
   which is what the map lockstep guard of the pull request reported once main was merged in.
-  pins: ice-tsns-merge-wall-1/C-018, C-031, C-033
 - `timestamp_ns_cast.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the embedded Spark-door casts
   `__repark_cast_timestamp_ns__` (→ `Timestamp(ns)`) and `__repark_cast_timestamptz_ns__`
   (→ `Timestamp(ns, "UTC")`), registered through `instant_ts::functions()` and reached only
@@ -1326,7 +1249,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   and clones nothing unless one needs a change; same-kind widening is Arrow's vectorized
   checked cast; both ns casts are one shared UDF instance each.
   Tests in [timestamp_ns_cast/](timestamp_ns_cast/map.md).
-  pins: ice-tsns-sql-1/C-001, C-002, C-009
   **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):**
   `widen_mixed_values_timestamps` is the `VALUES` type-coercion seam for a column that mixes
   `TIMESTAMP` and `TIMESTAMP_NTZ`. DataFusion's union resolution types such a column naive
@@ -1338,7 +1260,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the one UNION, CASE and coalesce already choose. All-NTZ and all-LTZ columns, a column with
   any other type, and every other column keep their cells and type. Parents recompute their
   schema only after a widening.
-  pins: ntz-store-doors-1/C-006
   **WO NTZ-STORE-DOORS-1 re-verify fold (2026-09-29, RD2-1):** a `DATE` cell no longer
   counts as an instant. Instant-ness is decided from the pre-rewrite cell: a bare `DATE`, or
   a naive-target `CAST` of a `DATE`, is a date, never an instant, so a `DATE` +
@@ -1351,7 +1272,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   skip equivalent to classifying every cell. A user `CAST` of a naive value to `TIMESTAMP`
   beside a bare `DATE` plans identically to the coerced pair, so that exotic mix follows the
   date side; see the unit ledger's RD2-1 paragraph.
-  pins: ntz-store-doors-1/C-007
   **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1/RD3-2):** the exotic mix
   above is no longer ambiguous. The Spark door's keyword lowering wraps a written
   `CAST(… AS TIMESTAMP)` `VALUES` cell in a second `CAST(… AS TIMESTAMP)` (see
@@ -1362,7 +1282,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   literal or a cast of one) still count as walls for the `TIMESTAMP` widening, as before,
   but the `TIMESTAMP_NTZ` normalization now fires only when at least one non-NULL cell is a
   naive wall (`null_walls`).
-  pins: ntz-store-doors-1/C-008
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the pass deviates
   from base only on positive, syntactic evidence; no cell is classified by its rewritten
   type alone. The evidence reader is
@@ -1378,10 +1297,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   cell leaves the whole column on base's path. Under
   `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by `instant_ts`) the
   `TIMESTAMP`-keyword forms are walls, since Spark types them `TIMESTAMP_NTZ` there.
-  pins: ntz-store-doors-1/C-009
   **ICE-TSNS-TYPE-PLANNER-1 carry-over fix, mixed VALUES (ruling 100, 2026-10-15):**
   `is_values_wall_cell` exposes the `VALUES` evidence's wall test to the widen rule's `VALUES`
-  retype. pins: ice-tsns-type-planner-1/C-032
+  retype.
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered
@@ -1392,29 +1310,25 @@ scalars live under [`try_invert/`](try_invert/map.md).
   planning with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`; the literal folds a wall
   integer and is named `TIMESTAMP_NTZ '<wall>'`.
   Tests in [timestamp_ntz_cast/](timestamp_ntz_cast/map.md).
-  pins: ntz-1/C-001, C-002
   **WO NTZ-1 slice 2 (2026-09-27):** `rewrite_ntz_target_cast`, which `instant_ts`
   `rewrite_cast` calls before its LTZ arms: a `Cast` to exactly `Timestamp(µs, None)`
   from an instant, a non-microsecond naive timestamp, a date or a string becomes the
   embedded cast UDF (session-zone wall / midnight), replacing the peel for NTZ targets.
-  pins: ntz-1/C-006
   **WO NTZ-1 verifier fold part 2 (2026-09-28):** `retarget_dml_store_casts` runs
   before the generic traversal and retargets only whole-expression casts of the
   Projection under each Dml node and of VALUES rows, wrapping bare expressions at
   positional TIMESTAMP_NTZ targets (arity-guarded); nested function-argument casts
   keep the base behavior. The `plan_contains_dml` gate is gone.
-  pins: ntz-1/C-006
   **WO NTZ-1 re-verify fold (2026-09-28):** VALUES cells at naive-microsecond
   VALUES-schema fields wrap in the store cast too, through direct VALUES and
   pass-through subquery nests, so `from_utc_timestamp` / `to_utc_timestamp` /
   `date_trunc` cells store the session wall again; the wrap skips an
-  already-wrapped expression. pins: ntz-1/C-006
+  already-wrapped expression.
 - `timestamp_ltz_ntz.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the `Timestamp` arm of
   `ntz_single` hands every timestamp source to `timestamp_ns_cast::store_micros` with the
   `TIMESTAMP_NTZ` type; its two Arrow casts are gone, and `unlocalize_to_walls` is `pub(crate)`
   for `store_micros`. A nanosecond value before 1970 with digits below the microsecond floors on
   every NTZ door and in the read `CAST(… AS TIMESTAMP_NTZ)` (`-1 ns` is `-1 µs`; it was `0`).
-  pins: ice-tsns-floor-doors-1/C-009
 - `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
   `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
   parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;
@@ -1427,11 +1341,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   arm strips a zone/offset suffix and round-trips the wall through the
   `to_timestamp` kernel before un-localizing, so offset strings keep their
   written wall and malformed strings retarget `[CAST_INVALID_INPUT]` at the
-  `TIMESTAMP_NTZ` name. pins: fnp-11b/C-002, C-003, C-004;
+  `TIMESTAMP_NTZ` name.
   `timestamp_ltz_ntz::tests::*`.
   **CAST-TS-STRING-1 (2026-09-19):** one-argument string `try_to_timestamp` calls the Spark
   kernel with NULL on failure; the `to_timestamp_ntz` arms keep DataFusion's parse through
-  `arrow_grammar_to_timestamp_udf`. pins: cast-ts-string-1/C-004, C-010
+  `arrow_grammar_to_timestamp_udf`.
 - `time_family.rs` — **FNP-11B step 4 (2026-09-15):** the TIME family behind one
   refusal kernel (`TimeRefusal`, unconditional `[UNSUPPORTED_TIME_TYPE]`) serving
   `make_time` / `to_time` / `time_diff` / `time_trunc` on both doors;
@@ -1448,7 +1362,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   casts and answer; `CAST('str' AS TIME)` answers where Spark raises (residual).
   Registration folds into `instant_ts::functions()`; the guard wires into
   `analyzer_rules()` since remediation round 1 (both doors refuse the same
-  CAST-to-TIME text at build). pins: fnp-11b/C-002, C-003, C-004, C-005;
+  CAST-to-TIME text at build).
   `time_family::tests::*`.
   **FNP-11B remediation round 1 (2026-09-16):** `interval_avg` keeps exact-width
   (`i128`) sums with the overflow flag recomputed per add/subtract/merge and
@@ -1456,12 +1370,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   with one cached mask; `make` precasts DATE/TIME once for the 2/3-arg arm;
   `to_number`/`to_binary` cache one format; `ntz_single` strips through one
   builder. PERF-001 stays per-row: the batch forward is unsound against the
-  inner batch-atomic error (see the ledger). pins: fnp-11b/C-006, C-007.
+  inner batch-atomic error (see the ledger).
   **FNP-11B step 6 (2026-09-15):** `SparkTypeof` spells `array<…>` / `map<…>` /
   `struct<…>` recursively through the same table (no second table; the
   `repark-spark` renderer stays uncalled across the crate edge) and wrong arity
   raises Spark's `[WRONG_NUM_ARGS.WITHOUT_SUGGESTION]` verbatim.
-  pins: fnp-11b/C-005.
 - `interval_avg.rs` — **FNP-11B step 4 (2026-09-15, BL-13):** the
   `IntervalAvgAccumulator` behind `avg` / `try_avg` over interval and duration
   inputs (Spark `Long`-micros accumulation with checked adds, round-half-away
@@ -1469,7 +1382,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Spark's `[INTERVAL_ARITHMETIC_OVERFLOW.WITH_SUGGESTION]` on `avg`; all-NULL
   answers NULL; mixed month/day-time inputs follow the overflow arm. `aggregate.rs`
   only gains the signature/return-type/accumulator/state-fields arms; the
-  `[FNP-11]` refusals are gone. pins: fnp-11b/C-006;
+  `[FNP-11]` refusals are gone.
   `interval_avg::tests::*`, `aggregate::tests::*`.
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):
   arrays are 1-based / negative-from-end / OOB → NULL
@@ -1494,7 +1407,6 @@ scalars live under [`try_invert/`](try_invert/map.md).
   coercion is Spark's recursive `findTightestCommonType`, validated (never
   plan-cast) by a user-defined signature and converted at invoke time in
   `collection/array_append/coerce.rs` — see [collection/map.md](collection/map.md).
-  pins: array-null-1/C-003, C-004
   Also `SparkArrayGet`
   (`__repark_array_get__`) — the embedded (never registered) `[]` subscript UDF the analyzer
   swaps in. **E1 octo C2:** `SparkGetItem` / `spark_get_item_udf` (`__repark_get_item__`) —
@@ -1508,7 +1420,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`date_trunc(fmt, ts)` → µs `Timestamp`, format-first arg order, overrides DataFusion's native
   `date_trunc`), `DateFormat` (Java-pattern → `Utf8`; `format_java_pattern` handles quoted literals +
   `y M L d D q Q E H m s` — unsupported letters raise). TYPES-1 round 4 (2026-09-05): `yyyy`
-  renders Java's leading `+` past 4 digits (pins: types-1/C-006). Each exposed via a named
+  renders Java's leading `+` past 4 digits. Each exposed via a named
   `*_udf()` constructor.
   Inputs are coerced by `coerce_date_arg` / `coerce_to_date32` / `coerce_to_timestamp_micros`
   (`user_defined` signature): date / timestamp (any unit+zone) / string — matching Spark. Tests run
@@ -1524,7 +1436,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   SAF-002 downcast evidence + defensive `cast` before `as_primitive`/`as_string` (pin
   `trunc_accepts_large_utf8_format_without_panic`).
   **TYPES-1 (2026-09-05):** the `date_format` pattern compiler and wall-clock helpers are
-  `pub(crate)` for `spark_from_unixtime.rs`. pins: types-1/C-006
+  `pub(crate)` for `spark_from_unixtime.rs`.
 - `format_version.rs` — **V3-10:** `resolve_alter_format_version` is the one `ALTER … format-version`
   resolver for every door: it parses the request, refuses a downgrade and anything above
   `MAX_SUPPORTED_FORMAT_VERSION` naming the key and both versions, returns `None` for the
@@ -1538,15 +1450,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   The `#[allow(clippy::missing_errors_doc)]` on it (and on the three `write/format_version.rs`
   entry points) stands in for the `# Errors` doc comment the no-code-comments ruling forbids;
   the error domain is the row above.
-  pins: v3-10-upgrade-v2-to-v3/C-002, C-003
 - `expr_fn.rs` — logical-`Expr` builders for date, string, collection, URL, bitmap, temporal, and higher-order
   functions. Builders embed the same shims registered by the SQL door, including `unix_date`,
   `bit_length`, regexp/split functions, `shuffle`, `map_from_entries`, and `str_to_map`, so facade
   columns remain self-contained without a `SessionContext`.
-  **TYPES-1 (2026-09-05):** `from_unixtime` builder over the new UDF. pins: types-1/C-006
+  **TYPES-1 (2026-09-05):** `from_unixtime` builder over the new UDF.
   **FNP-11B step 5 (2026-09-15):** `to_char_family` builder dispatching the
   four formatting names onto the `try_invert::strict` kernels by name.
-  pins: fnp-11b/C-001, C-002
   **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** the `factorial`
   builder embeds the `Factorial` shadow UDF (not upstream's), keeping the
   facade kernel identical to the SQL-door registration; the door-parity test
@@ -1569,7 +1479,6 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   inside 1200–2099. `timestamp_cast.rs` (the cast to string, `unix_timestamp` of a string),
   `timestamp_ltz_ntz.rs` (LTZ → NTZ) and `timestamp_ns_cast.rs` read the zone through
   `repark_common::zone_horizon`. Pins: [tests/map.md](tests/map.md).
-  pins: zone-horizon-render-1/C-006, C-007
   **Fold 1 Item A (2026-10-08):** `unix_seconds_from_string` is the shared
   `wall_to_unix_seconds`, whose tabulated branch is main's `from_local_datetime`.
 
@@ -1596,8 +1505,7 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   first argument is cast to `TIMESTAMP` in the session zone, as Spark's implicit cast does, and
   the function returns `TIMESTAMP`. Not converted (ZONE-ORACLE-1 holds no Spark answer): numeric
   targets other than `BIGINT`, a timestamp map key, a container cast to a scalar `STRING`,
-  `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`. **NESTED-LITERAL-SEAM-1 (2026-10-27):** the Map arms of `partial_type` and `convert` convert the key as well as the value (ruling NLS-1 Q1), so a `MAP<TIMESTAMP, …>` key reaches the seam; the file is 677 lines. pins: nested-literal-seam-1/C-004
-  pins: zone-seam-1/C-001, C-002, C-003, C-004, C-011, C-012
+  `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`. **NESTED-LITERAL-SEAM-1 (2026-10-27):** the Map arms of `partial_type` and `convert` convert the key as well as the value (ruling NLS-1 Q1), so a `MAP<TIMESTAMP, …>` key reaches the seam; the file is 677 lines.
 
 ## Pointers
 
@@ -1614,7 +1522,7 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
 
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
 - **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).
-- **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias` (pins: fnp-11a/C-019).
+- **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias`.
 - **FNP-6D-FOLLOWUP-1 rebase (2026-09-15, run 16a):** after #612 moved the Java text helpers into `java_double.rs`, `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`; `json.rs` keeps `mod reader;` private as on main.
 - **FNP-WIN-1 squash onto 4bd43fc8 (2026-09-15, run 16a):** `lib.rs` drops its `use std::sync::Arc;` — `analyzer_rules()` and its `Arc<dyn AnalyzerRule>` list now live in `registration.rs`, so the crate root no longer names `Arc` (clippy `-D warnings`).
 - **FNP-GEN-1 verification-critic fix-up (2026-09-16, run 17a):** `generator.rs::ordinality` packed
@@ -1625,7 +1533,6 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   arrives in ordinary execution after a limit, a take or a concat. It now builds a fresh
   `OffsetBuffer` from the measured lengths, and the `as_list_array` panic-downcast at the call site
   became an `exec_err`. Regression pin: `ordinality_packs_positions_for_a_sliced_list`.
-  pins: fnp-gen-1/C-002
 
 ## IPI-19 + IPI-37 (2026-09-20) — the schema-merging session conf
 
@@ -1640,7 +1547,6 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   `set_runtime_config` allowlist and `repark-spark`'s write-option parser both
   need it — neither can depend on the other. Default `false`, exactly Spark's.
   Tests are file-backed in [`merge_schema/`](merge_schema/map.md).
-  pins: ipi-19-56-37-schema-evolution-write/C-004, C-012
 - **FNP-AGG-1 slice (d) (2026-09-21):** `grouping.rs` (`__repark_grouping`
   UDAF aliased `grouping`, `grouping_id` UDAF, and the `ResolveGroupingId`
   analyzer rule: bitmask from the plan's grouping sets, `Int8` / `Int64` out,
@@ -1656,4 +1562,3 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   `grouping_id` args must equal the grouping columns exactly in order, else
   `GROUPING_ID_COLUMN_MISMATCH` in Spark's message shape (R-18a-19).
   `unqualified_name` is file-local until slice (a) lands `max_min_by.rs`.
-  pins: fnp-agg-1/C-002, C-003, C-004, C-005

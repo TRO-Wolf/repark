@@ -32,7 +32,6 @@ and the COPY commit and declares this directory.
   known gap: a parquet-side rollback needs its own sink. The overwrite mode
   still deletes the old prefix before the COPY, so a failed overwrite loses
   the old data; that order predates this fold and is measured, not changed.
-  pins: text-write-timestamp-zone-1/C-007, C-009
 
 ## Pointers
 

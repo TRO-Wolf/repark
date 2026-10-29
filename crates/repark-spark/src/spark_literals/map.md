@@ -5,7 +5,6 @@ Child of the Spark front-door canonicalizer
 `canonicalize` regions call. Split out 2026-09-29 when `spark_literals.rs`
 reached 999 of its 1,000 lines; the move is byte-identical code with comments
 shed per the owner ruling, and this file carries the shed rationale.
-pins: string-literal-escape-1/C-000
 
 ## Value rules (measured against PySpark 4.1.2, `<pyspark-4.1.2-oracle>`)
 
@@ -46,4 +45,4 @@ verbatim flag; `spark.sql.ansi.doubleQuotedIdentifiers` has no carrier.
   `canonicalize_fragment_for_default_parse` resolves a user-written fragment's
   literals under the session flag, then requotes for the default door, so the
   built statement's forced-default parse recovers the same values. Default input
-  returns borrowed. pins: string-literal-escape-1/C-011
+  returns borrowed.

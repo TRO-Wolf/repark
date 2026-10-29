@@ -65,9 +65,6 @@ PySpark to re-record. Raw-recording SHA-256: `spark_list_null_oracle.json`
   `xs IS NOT NULL` cells still pin RePark's measured 1 delete file (1 DV on v3)
   against Spark's 2 (2 DVs).
 
-pins: ice-list-null-1/C-001, C-002, C-007
-pins: ice-list-null-2/C-005
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

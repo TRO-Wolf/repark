@@ -30,7 +30,7 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   reload once.
   - Pin 1, `test_microbatch_kill_after_commit_resumes_1` (**MB-2a, 2026-10-07**, green guard):
     kill points (a) and (c); the sink equals Bronze, epochs 0 and 1 stamped once, the property
-    equals the head's stamp. pins: mb-2a/C-010, C-013
+    equals the head's stamp.
   - Pin 2, `test_microbatch_duplicate_delivery_skips_1` (**harness, 2026-10-07**; green since MB-2c's closing slice): kill
     point (b) leaves staged files in no snapshot; epoch 0 re-delivered with its original stamp
     against the pre-commit `Table` must not commit, and a claim on the reloaded sink must return
@@ -47,13 +47,13 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
     pins: microbatch-harness/C-004, mb-2c/C-004
   - Pin 5, `test_microbatch_bronze_overwrite_refuses_1` (green guard, MB-1): R2 overwrite and
     R5 delete refuse `NonAppendSnapshot` naming the snapshot, the sink unchanged; R8's replace is
-    skipped and row 4 streams. pins: microbatch-harness/C-005
+    skipped and row 4 streams.
   Pins 2 and 3 carry `#[ignore = "red until F-APPEND-PIN-BASE-1 + MB-2c fence: <scenario>"]`
   (ruling Q2, the split): with the epoch check in, both still fail where the stamped append
   re-bases past a moved base, and the closing slice deletes the two lines. The interim gate is
-  3 passed, 2 ignored. pins: mb-2c/C-005
+  3 passed, 2 ignored.
   Why each red pin has its shape: the [harness ledger](../../../../task/ledgers/staging/microbatch-harness-ledger.md)
-  D-1…D-4. pins: microbatch-harness/C-001, C-006
+  D-1…D-4.
 - `offset.rs` — the sketch's §3.1. Seven newtypes, each `new`/`get`
   (NS-14), with the sketch's named constructors beside them:
   `TableUuid::of`, `QueryId::derive`, `RunId::fresh`, `Epoch::FIRST`/`next`,
@@ -65,8 +65,6 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   MB-2a fold 1 (ruling V4, 2026-10-07): only a JSON integer in the property's
   `format-version` is a version; a string, a float, `null` or any other shape refuses
   `Catalog` as a corrupt stamp, not `UnsupportedOffsetFormat`.
-  pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-024
-  pins: mb-2a/C-016
 - `error.rs` — the sketch's §3.2: `MicroBatchError` with every variant,
   `thiserror`, `#[non_exhaustive]` (NS-15), plus `RecoveryReason`. Fold 1
   adds `OffsetPositionOutOfRange`, and `UnsupportedOffsetFormat.found`
@@ -74,9 +72,9 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   MB-3 round 2 (2026-10-08) adds `DriverPanicked { epoch, message }` and
   `CatalogTimeout { call, waited }`, and `SinkBusy` now reads `sink <sink> is busy: another
   streaming query or batch is active on it; one at a time per sink`, true for the scope's
-  refusal and for the driver's refusal at start. pins: mb-3/C-020
+  refusal and for the driver's refusal at start.
   MB-3 fold 2 (2026-10-08) adds `AwaitFromDriver { query }` with Spark's text, for
-  `await_termination` called from the query's own driver task. pins: mb-3/C-024
+  `await_termination` called from the query's own driver task.
   MB-2a fold 1 (ruling V2, 2026-10-07) adds `RecoveryReason::StampNotInLineage`: a sink stamp
   that is retained but off the current lineage (a rollback), naming a new `queryName` or a
   restore; `StampedSnapshotExpired` keeps the stamp that is truly gone.
@@ -90,12 +88,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   of the refused operation (MERGE, UPDATE or DELETE) and renders
   `stamped write into <sink> needs <property>=serializable`.
   pins: mb-1/C-006, C-020, C-024, C-036, mb-2c/C-007
-  pins: mb-2a/C-014, C-022
   ENC-1 round 2 (2026-10-09) adds `EncryptedSinkRefused { sink }` with the house
   one-sentence text, raised by `commit_stamp_only` before scope claim.
   Fold 1 (2026-10-09): its text is `write::encryption::refusal_text`, the one function, and
   `From<EncryptedTableRefusal>` builds it.
-  pins: enc-1/C-005
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and
   `WindowPlanner::{new, named, initial_offset, next_window}` over a held
@@ -107,12 +103,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   while the private `Window` has room. Per-snapshot append scans list the
   files, sorted by path. The fail-on-non-append scan and the skip builders
   are never called (O-5).
-  pins: mb-1/C-008, C-009, C-010, C-011, C-017, C-018, C-019, C-020, C-023, C-024, C-032, C-034, C-035, C-036, C-037
 - `window_tests.rs` — the `window.rs` pins, split out under `#[path]` when
   the file passed the 1000-line ceiling: the memory-catalog fixture with
   append/overwrite/delete/replace commits plus the 18 start, window, cap,
   fail-loud and guard pins.
-  pins: mb-1/C-008, C-009, C-010, C-011, C-019
 - `window_fold2_pins.rs` — fold 2's window pins, a sibling child of
   `window_tests.rs` that reuses its fixture and fold 1's helpers: the two
   limits at an overwrite or delete (G1) and the position range on a
@@ -120,13 +114,11 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   registry row `MB-1-FL-9` cites (G4), the lineage refusal (G5), and
   `FromTimestamp` over a skewed history built through `TableMetadataBuilder`
   (G6).
-  pins: mb-1/C-032, C-034, C-035, C-036, C-037
 - `window_fold_pins.rs` — fold 1's window pins, a child of `window_tests.rs`
   that reuses its fixture: the non-append start snapshot, the timestamp past
   the head, deliver-first refusal, the planning count read through the
   `#[cfg(test)]` counter, the position bound, truncated history after a real
   `expire_snapshots`, the measured max-rows rule, and the missing record count.
-  pins: mb-1/C-017, C-018, C-019, C-020, C-021, C-023, C-024
 - `provider.rs` — the sketch's §3.3 `MicroBatchTableProvider` (`pub(crate)`):
   reads exactly the planned tasks with `ArrowReaderBuilder` and the crate's
   `conform_batch`, and takes the arrow schema from the end snapshot. Filters
@@ -141,12 +133,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   Fold 2 (G2, 2026-10-07): the caller passes the read schema, and the end
   snapshot is only checked to exist. Every task is re-stamped with that
   schema and its top-level field ids.
-  pins: mb-1/C-012, C-015, C-016, C-022, C-033
   **EMPTY-PROJECTION-COUNT-1 step 1 (2026-10-09):** the red-first
   `provider_counts_rows_through_an_empty_projection` pin — `COUNT(*)` over a
   three-file window holding an empty file, read through the shared
   `conform_batch` with no product change on this branch.
-  pins: empty-projection-count-1/C-005
 
 ## Design notes
 

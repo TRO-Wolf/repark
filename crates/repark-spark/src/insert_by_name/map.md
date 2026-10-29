@@ -17,7 +17,6 @@ recognized form has a row; the executor pins live in the Python suite
   case-sensitive exact match + `EXTRA_COLUMNS`, `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`
   and `CANNOT_FIND_DATA` texts, partition-literal rendering, verbatim
   syntactic names under the flag.
-  pins: ice-rtas-byname-1/C-007, C-009, C-010
 
 ## Round 2 (2026-09-17)
 
@@ -66,7 +65,6 @@ plus the two commits.
   and `INSERT OVERWRITE … BY NAME` now evolves as Spark measures it
   (u6-write-refusals/C-011). `append_with_evolution` is gone; see the U6 section
   below.
-  pins: ipi-19-56-37-schema-evolution-write/C-002, C-011
 
 ## U6 WRITE-REFUSALS (2026-09-24)
 
@@ -81,7 +79,6 @@ plus the two commits.
   including `INSERT OVERWRITE … BY NAME` (measured, C-011).
   `append_with_evolution` is gone. `routes_positional_by_name` is the router's
   gate for a positional `INSERT`.
-  pins: u6-write-refusals/C-002, C-005, C-006
 - Critic r1 remediation (2026-09-24), all in `evolution.rs`:
   - `SourceUnion` names each source column for the union: a matched column
     takes the table's spelling, and a new column takes the source's display
@@ -99,7 +96,6 @@ plus the two commits.
   - `routes_positional_by_name` returns `Result<bool>`. A tag selector or a
     missing table or namespace keeps the positional path; any other load
     failure surfaces (C-014).
-  pins: u6-write-refusals/C-010, C-011, C-012, C-013, C-014
 - `source_names.rs` (superseded by the round-3 entry below) — `syntactic_source_names` and `normalize_ident`, moved out
   of `../insert_by_name.rs` to keep it under the size ceiling. An unaliased
   integer or single-quoted literal is named by its text, as Spark names it.
@@ -108,7 +104,6 @@ plus the two commits.
   planner probe. `aliased_source` rewrites that `SELECT`'s items so each carries its resolved
   name as a backquoted alias, and the projection can address every source column
   by that name.
-  pins: u6-write-refusals/C-002, C-010
 - `../insert_by_name.rs` — `source_from_clause` aliases a `VALUES` source's
   columns `col1..colN` with a derived-table column list. Every other source
   goes through `aliased_source`, because DataFusion's column-list rename looks
@@ -116,7 +111,6 @@ plus the two commits.
   fails.
 - `tests.rs` — pins for the literal spelling, the aliased `FROM` clause and the
   `UNION` arm naming.
-  pins: u6-write-refusals/C-002, C-005, C-006, C-010
 
 ## U6 WRITE-REFUSALS round 3 (2026-09-24, critic r2 V-001..V-003)
 
@@ -145,7 +139,6 @@ per item.
   `NotImplemented` before any evolution, unless the table already has a column
   of that name. `aliased_source` aliases only the non-star items, so a star
   keeps the planner's columns.
-  pins: u6-write-refusals/C-015, C-016, C-017
 - `spark_names.rs` — Spark's rendering of an unaliased expression, measured
   item by item (`target/probe-u6-r2fix/spark*.out`):
   - an integer or plain decimal keeps its text, and a negative literal folds
@@ -161,16 +154,13 @@ per item.
   Anything else stays underived: `CASE`, `substr` (Spark adds default
   arguments), `ceil` (`CEIL`), an exponent literal, or a nested `CAST`. Those
   are residue R-9.
-  pins: u6-write-refusals/C-015, C-016
 - `../insert_by_name.rs` — calls `refuse_underived` before `columns_to_add`. The
   projection addresses `SourceName::column`, and any leftmost `VALUES` takes the
   derived-table column list. The empty-overwrite type guard passes
   `null_assignable = true`: a NULL-typed column (a by-name fill or the
   source's own `NULL`) is assignable, as Spark's is. `INSERT OVERWRITE t SELECT
   9 AS id WHERE false` wipes, and under the conf it adds the new column first.
-  pins: u6-write-refusals/C-018
 - `tests.rs` — the rendering, underived, star-placement and derived-star pins.
-  pins: u6-write-refusals/C-015, C-017
 
 ## U6 WRITE-REFUSALS round 4 (2026-09-24, critic r3 V-001..V-004)
 
@@ -184,7 +174,6 @@ per item.
   planner would have leaked DataFusion's `Projections require unique expression
   names`. With no repeat, the probe's own error surfaces unchanged. A table
   without the property keeps the old path.
-  pins: u6-write-refusals/C-013
 - `source_names.rs` — `user_text` renders an opaque item, a star and the
   whole-source fallback with the router's `__repark_suffix_literal__(x)` marker
   unwrapped to `x`. A refusal therefore never quotes the internal marker. The
@@ -193,14 +182,12 @@ per item.
   literals before this path sees the SQL. The same cast written out is a
   different Spark name (`CAST(9 AS BIGINT)`), so Spark's `9` is not recoverable
   from the AST, and those shapes stay residue R-9.
-  pins: u6-write-refusals/C-017
 
 U8 WRITE-SQL PR1 (2026-09-24): `evolution.rs` `routes_positional_by_name` keeps a positional
 `INSERT INTO … PARTITION (…)` on the by-name door when the table carries
 `write.spark.accept-any-schema`; only the `PARTITION` overwrite stays excluded. Spark answers
 `Field 9 not found in source schema` there (u6-write-refusals residue R-3 part b, appends).
 `spark_names.rs` `expression_name` is crate-visible for the PARTITION arity message.
-pins: u8-write-sql/C-008, C-010
 
 ## U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001)
 

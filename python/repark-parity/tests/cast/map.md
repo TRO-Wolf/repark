@@ -25,7 +25,6 @@ row.
   (runs `measure_one_cell` and asserts 1.5× the golden median),
   `test_cast_2500_over_aggregate_plan_under_linear_budget` (strict xfail:
   2500-cast over_aggregate plan ≤ 50× the 50-cast plan median).
-  pins: perf-cast-1/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## Pointers

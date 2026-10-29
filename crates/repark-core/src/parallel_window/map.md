@@ -31,7 +31,7 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `parallel_single_partition_active(&SessionState)` (re-exported from the crate root) is true
   when the state carries the `parallel_window` rule (`PARALLEL_WINDOW_RULE`, also the rule's
   `name()`) and the carrier reads on; `repark-distributed`'s provider refuses such a session
-  (verifier V-1). pins: ta-series-s2b/C-014
+  (verifier V-1).
 - `rule.rs` — `ParallelWindowRule` (`parallel_window`), a `PhysicalOptimizerRule` appended after
   DataFusion's list, so distribution and ordering are already enforced and the swap changes no
   requirement. It fires on a `WindowAggExec` when the flag is on, **every** expression has an
@@ -121,8 +121,6 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   RoundRobin over one ordered partition (EXPLAIN `maintains_sort_order=true`, the shape S1's
   ordered cache produces above the L1 window, where the RoundRobin spilled the whole batch) is
   dropped the same way.
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 - `projection_tests.rs` — the S3 pins (no TA dependency): `parallel_projection_bit_identical`
   (13 × `round`, 3 × `/`, a `CASE` over a window subquery, through a session against the
   flag-off session); `parallel_projection_removes_rr_spm_sandwich` (the owner's two RoundRobins
@@ -137,14 +135,12 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `maintains_sort_order=true` RoundRobin over a `WindowAggExec` and over a `ParallelWindowExec`,
   P-S3-8); `parallel_projection_keeps_multi_batch_fan_out` (multi-batch single-partition sources
   keep their RoundRobin, P-S3-9). Window inputs come from `window` (two whole-frame `sum`s).
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-012
   keep their RoundRobin, P-S3-9);
   `parallel_projection_single_permit_serial` (with `target_partitions = 1` a batch at the
   threshold stays serial, the `parallel_batches` counter at 0, bit-identical, P-S3-10).
   `parallel_projection_drop_cancels` runs its queued task under two permits (three expressions,
   `target_partitions = 2`), because one permit now takes the serial path. Window inputs come
   from `window` (two whole-frame `sum`s).
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-012, C-013
 - `tests.rs` — the S2b pins on probe window UDFs (no TA dependency; `repark-core` cannot see
   `repark-ta`). `parallel_window_matches_serial_window_across_batches` (five expressions, three
   groups, three input batches); `parallel_window_keeps_multi_output_siblings` (three band
@@ -161,20 +157,18 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `parallel_window_non_ta_windows_bit_identical` (four non-TA queries over three batches, rule on
   against off; `sum`/`avg`/`max`/`count OVER ()` and a mixed whole-frame/`lag` node fire, the
   `lag`/`row_number`/running-`sum` node plans as `BoundedWindowAggExec` and is untouched).
-  pins: ta-series-s2b/C-002, C-003, C-004, C-005, C-006, C-009, C-010, C-013
   **S2a (2026-10-05):** `series_order_current_row_order_partition_index` (P-S2a-4: a
   four-partition `DelayedExec` whose partition i finishes after `(4 - i) × 60 ms`, under a
   coalesced pass-through window UDF; the arm fires with one or two groups, drops the coalesce,
   survives `with_new_children`, and three runs read ids 0…399 in source order) and
   `partition_index_keeps_aggregate_over_coalesce` (aggregates, a mixed node and a fetching
-  coalesce keep today's plan). pins: ta-series-s2a/C-004
+  coalesce keep today's plan).
 - Gates measured for the slice (goldens, kernel race, owner-shape facade identity against base,
-  speed): `task/ledgers/staging/ta-series-s2b-ledger.md`. pins: ta-series-s2b/C-008, C-011, C-012
+  speed): `task/ledgers/staging/ta-series-s2b-ledger.md`.
 - S2a gates (goldens, crate suites, facade, parity, hygiene) and the owner-file correctness record
   on release wheels (bare equals explicit, explicit equals base, 0 rows off polars_talib):
   `task/ledgers/staging/ta-series-s2a-ledger.md`; the speed record on main (bare 0.71× of
   `origin/main` before S3/S1, 0.86 / 0.68 of polars_talib) is its §6.
-  pins: ta-series-s2a/C-009, C-010, C-011
 
 ## Pointers
 

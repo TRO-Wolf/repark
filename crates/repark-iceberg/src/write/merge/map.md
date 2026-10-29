@@ -1,12 +1,12 @@
 # map — repark-iceberg/src/write/merge/
 
-ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional): `cast_one_batch_to_write_schema` asks `conform::refuse_coarser_timestamp` before `convert_uuid_column`, so the merge staging cast cannot coarsen a top-level timestamp (internal error naming the column). pins: ice-tsns-floor-doors-1/C-014
+ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional): `cast_one_batch_to_write_schema` asks `conform::refuse_coarser_timestamp` before `convert_uuid_column`, so the merge staging cast cannot coarsen a top-level timestamp (internal error naming the column).
 
 MERGE-MOD-SPLIT-1 (owner, 2026-10-12): `mod.rs` splits at its planned boundary into `merge_sql.rs`, `copy_on_write.rs` and `merge_on_read.rs`; a move with no behaviour change, and `mod.rs` leaves the file-size exception table. An older entry below that names `mod.rs` describes the file as it was on that entry's date; the Contents rows for the three new files say where each item lives now.
 
-ICE-MIXED-CASE-1 (2026-09-17): the MERGE executor carries the door's case-sensitivity flag on the spec (`mod.rs`, `insert.rs`, `not_matched_by_source.rs`); UPDATE SET rejects case-insensitive duplicate targets instead of first-winning. pins: ice-mixed-case-1/C-004
+ICE-MIXED-CASE-1 (2026-09-17): the MERGE executor carries the door's case-sensitivity flag on the spec (`mod.rs`, `insert.rs`, `not_matched_by_source.rs`); UPDATE SET rejects case-insensitive duplicate targets instead of first-winning.
 
-ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the four write-side twin-check sites delegate to the shared `resolve_write_column` helper (`../name_resolution.rs`); `mod.rs` 1782 → 1780. pins: ice-mixed-case-1/C-004
+ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the four write-side twin-check sites delegate to the shared `resolve_write_column` helper (`../name_resolution.rs`); `mod.rs` 1782 → 1780.
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
 
@@ -33,26 +33,20 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   before; the filter scopes whichever walks are armed, as Java's does (ruling Q-21a-3).
   `commit_on_ref` / `commit_row_delta_on_ref_with_partitions` take the MERGE's filter as a
   parameter; the `#[cfg(test)]` wrappers and `CommitScope::unscoped` keep `AlwaysTrue`.
-  pins: ice-occ-scoped-1/C-005, C-014
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `commit_overwrite` and `commit_row_delta_kind` mint
   the commit's `engine.operation-id` via `write::commit_error::operation_id_and_summary` and
   route the `tx.commit` `Err` through `commit_err`, so a `CommitStateUnknown` surfaces
   stamped for `error_map`'s wrapper downcast — after `abort.rs`'s file cleanup still ran
   (the cleanup carve-out lives in `abort.rs` itself).
-  pins: ice-commit-unknown-1/C-003
   **V3-9:** `referenced` / `abort_paths` are moved out of the prepared deletes with
   `std::mem::take` instead of deep-cloned once per row-delta commit.
-  pins: v3-9-mor-predicate-dml-dv/C-009
-  pins: rp-5-fork-repin/C-004
   **WO U5 PR2b round 2 (2026-09-25):** `mod.rs` answers merge-on-read MERGE on v1 with
   `Deletes are supported in V2 and above`.
   **WO RP50-A (2026-09-26):** the three `maybe_to_branch` calls drop the table argument and
   the `?` with the removed v1 kernel, so a MERGE into a branch of a format v1 table commits.
-  pins: ice-nested-evo-1/C-053, C-057, C-060
 - `snapshot_commit.rs` — **ENC-1 round 2 (2026-10-09):** `commit_overwrite_on_ref` and
   `commit_row_delta_kind_on_ref` refuse a target carrying `encryption.key-id` as commit
   backstops; the MERGE doors also check at entry, so these only fire on direct calls.
-  pins: enc-1/C-005
 - `merge_sql.rs`, `copy_on_write.rs`, `merge_on_read.rs` — **MERGE-MOD-SPLIT-1 (owner,
   2026-10-12):** the SQL builders and the two execution arms, moved out of `mod.rs` byte for
   byte. `mod.rs` sat exactly on its 1,569-line exception ceiling, so no fix could add a line to
@@ -102,13 +96,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `WHEN NOT MATCHED BY SOURCE` clause is present, because that clause reads every target row
   the condition does not match. Both arms hand it to their commit. `residual_join_key_filter`
   moved to `target_scan.rs` unchanged (baseline ratcheted 1792 → 1773 in the same change).
-  pins: ice-occ-scoped-1/C-004, C-006, C-009, C-010, C-011, C-012
   **ICE-PROMOTE-READ-1 (2026-09-16):** every DML target scan pins the snapshot id, so on a table
   with no write since `ALTER COLUMN … TYPE` it reads the pre-promotion types; `conform_scan_batch`
   widens those data columns through `conform::promoted_scan_column` before building the batch
   under the scratch schema (MERGE, identity DELETE/UPDATE and the COW scratch all pass here). Its
   doc line names only the `_file` / `_pos` casts; this entry is where the widening is recorded.
-  pins: ice-promote-read-1/C-006, C-011
   **FNP-4B (2026-09-15):** every generated-SQL identifier quotes with backticks
   (`quote_ident`, incl. the semijoin / discovery / sentinel builders), so the rewrites parse
   under the Spark Databricks session dialect.
@@ -116,7 +108,6 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   batch through `conform_batch_retaining_unmapped_columns` before the fan-out (same
   `write_default_column_names` as the partitioned writer). Callers: Spark/ANSI CTAS,
   unpartitioned append, overwrite stage, MERGE insert stream (lineage extras retained).
-  pins: ctas-view-1-conform-stream/C-002
   **MW-9:** `resolve_merge_mode` parses `write.delete.granularity` on the MoR
   arm (after the V2 gate, before any scan/write) so unknown values cannot
   orphan MATCHED-UPDATE parquet. Identity DELETE/UPDATE share
@@ -129,7 +120,6 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `match_count > 1` still folds mutations / pos-deletes (double-delete is
   idempotent). V3-7: v3 MERGE carries stored `_row_id` through `row_lineage.rs`
   (`schema_with_row_lineage`); last-updated is nulled only on UPDATE rows.
-  pins: v3-7-merge-lineage/C-001
   **IPI-51 type slice (2026-09-21):** both cardinality guards
   (`fold_discovery_batch_into_affected`, `consume_matched_work_batch`) raise
   `DataFusionError::Plan` with `spark_error::message(MERGE_CARDINALITY_VIOLATION, &[])`,
@@ -137,12 +127,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `MERGE_CARDINALITY_VIOLATION` / `23K01` (A-6 substitute for Spark's
   `SparkRuntimeException`). `skip_cardinality` is unchanged.
   `CARDINALITY_VIOLATION_MSG` is gone. Baseline 1656 → 1654.
-  pins: ice-error-conditions-1/C-012
   **WRITE-ORDER-DIST-1 (2026-09-06):** the unpartitioned staged-write entry delegates to the
   distribution module's `drive_unpartitioned`, so a declared default sort order sorts that path
   too; the batch-sink helpers it shares (`BatchWriter`, `ForkBatchWriter`,
   `write_stream_into`, `write_stream_into_parallel`) are `pub(crate)` for that caller.
-  pins: write-order-dist-1/C-008
   **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_data_files*` family moved to
   `file_sink.rs` (re-exported here; baseline 1622 → 1569); the stream writer takes the
   door's `case_insensitive` bit.
@@ -181,11 +169,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   plain `DELETE WHERE` now uses that path instead of the fork delete exec's empty map.
   `plan_deletion_vectors` loads the scanned snapshot's `ManifestList` once and hands it to the
   close as `Option<&ManifestList>` so the list is not read twice.
-  pins: rp-9-repin-f23/C-002, C-005
   **RP-10 (2026-09-04):** pin `85a4aaf0` (fork F-25). The production identity DELETE of the
   newest row on the 192-manifest pure-DV fixture commits with every data manifest except the
   one that holds the touched file hidden (commit-phase opens = 1). Close-phase opens stay 0.
-  pins: rp-10-repin-f25/C-002
   **V3-12 C-006:** `prepare_row_delta_deletes` takes the `snapshot_id`
   `commit_target::snapshot_id_for_commit` already resolved for the target scan and
   `validate_from_snapshot`, and hands it to BOTH the legacy-delete collection and the fork
@@ -194,7 +180,6 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   branch's own deletion vectors, wrote a second DV for a data file that already had one, and the
   commit door refused. One resolved snapshot id now serves the scan, the collection, the close
   and the commit validation. Registry `V3-DV-BRANCH-1`.
-  pins: v3-12-legacy-delete-merge/C-003, C-006
   **V3-9 (2026-09-02):** the position map takes `get_mut` before allocating a key and the V2
   `referenced` set allocates one `String` per distinct path, not one per row (600k rows:
   41.3 → 29.3 ms and 37.3 → 23.9 ms).
@@ -215,17 +200,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   The two manifest-read pins hid the live data manifests and required the close to succeed
   anyway; **RP-8** flipped both because F-22 always walked; **RP-9** restores the complete-map
   skip (`data_sequence_numbers` empty) and keeps the empty-map and legacy-delete walks.
-  pins: rp-3-fork-repin/C-003
-  pins: rp-8-repin-f21-f22/C-002
-  pins: rp-9-repin-f23/C-002
-  pins: v3-5-dv-compaction/C-005
-  pins: v3-9-mor-predicate-dml-dv/C-007, C-009
-  pins: rp-7-f18-repin/C-002, C-003
 - `snapshot_commit.rs` — **RP-7 (2026-09-02):** `commit_row_delta_kind_with_partitions` /
   `commit_row_delta_on_ref_with_partitions` carry the scan's partition map to the DV close. The
   bare `commit_row_delta_kind` / `commit_row_delta_on_ref` wrappers have no production caller
   left and are `#[cfg(test)]`, so the OCC batteries keep their existing spellings.
-  pins: rp-7-f18-repin/C-002
 - `target_scan.rs` — **ICE-EVO-DML-1 (2026-09-17):** every execute plans the pinned
   snapshot with the fork's `project_current_schema()` and reads the planned tasks with
   `ArrowReaderBuilder` (the `to_arrow()` route is gone; plans stay cached per stream). When the
@@ -237,7 +215,6 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   fork API now that F-EVO-SCAN-1 (#289) owns the semantics. The projection also widens a
   single-era promoted column before `conform_scan_batch` sees it (measured: the
   `promoted_scan` table pin stays green with the conform widening bypassed).
-  pins: ice-evo-dml-1/C-010, C-011, C-013
   **ICE-OCC-SCOPED-1 (2026-09-17):** now also holds `residual_join_key_filter`
   (PERF-04's join-key bounds pushed onto the target scan), moved verbatim from `mod.rs`. It is the
   SCAN residual, derived from the SOURCE's key range; it is never the conflict filter, which only
@@ -253,8 +230,6 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   is concurrent-`execute` hardening, not a 3 × N → 1 × N drop on the production identity
   DELETE (one `execute`). Registry `PERF-SCAN-3PASS-1` stays BACKLOG. Round-2 strace at
   base `e6ebd40` and tip, N=8 and N=192: scan-to-puffin 1 × N, close 0, commit 1 × N.
-  pins: rp-7-f18-repin/C-002
-  pins: perf-scan-1-plan-once/C-001, C-002, C-004
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have
@@ -264,15 +239,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the keep-set is now pinned by real-file
   pins in `tests/commit_unknown.rs` — mutation-proven (deleting the early return
   reds both).
-  pins: ice-commit-unknown-1/C-003, C-007
 - `not_matched_by_source.rs` — **DML-A:** `WHEN NOT MATCHED BY SOURCE` types, SQL
   fragments, full-snapshot path listing, MOR work SQL. COW rewrite applies the arm
   through `rewrite_column` ELSE / combined DELETE.
-  pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-008
 - `row_lineage.rs` — V3-7: v3 MERGE write schema (`schema_with_row_lineage`), scratch
   lineage columns, rewrite SQL that keeps `_row_id` and nulls last-updated on UPDATE,
   and partitioned fanout that prefixes user columns for the partition calculator.
-  pins: v3-7-merge-lineage/C-001
   **ICE-WRITER-METRICS-1 (2026-09-20):** the partitioned rewrite builder applies
   `MetricsConfig::for_table` (detail in [../map.md](../map.md)).
   V3-11: `write_partitioned_lineage_files` passes the fanout writer's close result through
@@ -283,20 +255,16 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `iceberg_parquet_schema` widened
   `pub(super)` → `pub(crate)` so the options staging builders reuse the same
   row-lineage schema; no behaviour change.
-  pins: ice-write-options-1/C-003
-  pins: v3-11-row-id-determinism/C-003
   V3-8: `table_carries_merge_lineage` and `scratch_schema_for_table` widen to `pub(crate)`
   so `write::predicate_dml` reuses the same scratch shape for its COW rewrite; the module is
-  `pub(crate) mod`. pins: v3-8-subquery-where-lineage/C-002
+  `pub(crate) mod`.
   **WRITE-DISTRIBUTION-2 (2026-09-06):** MERGE inserts into a partitioned non-lineage table now
   commit one file per partition value — `write_new_data_files_from_stream` still selects this
   serial writer for V3 lineage tables and the shared partitioned stream funnel otherwise, and
   the funnel routes one value to one writer. Row semantics and `_row_id` carry are unchanged.
-  pins: write-distribution-2/C-004, C-007
   **ICE-SORTED-INSERT-1 (2026-09-17):** both MERGE writer sites stamp the
   table's default sort order id through `distribution::stamp` — the lineage
   fanout and the unpartitioned writer in `mod.rs`.
-  pins: ice-sorted-insert-1/C-003
   **ICE-SORTED-INSERT-1 round 3 (2026-09-17):** the stamp alone was a false claim
   here. Round 3's `sorted_lineage_batches` (folded into the writer in round 4) drained the stream and, when the table declares a
   default sort order, hands it to `distribution::sort_batches_by_default_order`
@@ -311,12 +279,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   only a declared order drains (`drain`) and sorts, with the writer built after
   the sort. That matches `distribution::fanout_sorted_serial` and
   `drive_unpartitioned`, which also collect only when an order is declared.
-  pins: ice-sorted-insert-1/C-006, C-010
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot
   refuse a MemTable with rows (two-part `t.branch_b` MERGE).
-  pins: rp-5-fork-repin/C-004
   **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `quote_scratch_name` is `pub(crate)` so
   predicate DML quotes 3-part scratch names per segment like the MERGE SQL builders.
 - `insert.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_projection_with_defaults` wraps a value assigned to a
@@ -328,29 +294,25 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `../update_cast.rs`'s `incompatible_nested_message` first when either side is a map, so
   `UPDATE SET` and `NOT MATCHED INSERT` refuse a map key or value with Spark's
   `CANNOT_SAFELY_CAST` / `CANNOT_FIND_DATA` text, the same text as UPDATE (verifier V-002).
-  pins: u9-types-1/C-011
 - `mod.rs`, `session_staging.rs`, `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):**
   the MERGE write schema is `presented_arrow_schema` (uuid as `Utf8`), so `ON t.u = s.u`, `ON
   t.u = '…'`, `INSERT … VALUES (…, s.u)` and `UPDATE SET u = s.u` plan against text; the target
   scan renders bytes as text (`conform_scan_batch` → `promoted_scan_column`) and
   `session_staging.rs` casts each output batch onto `stored_arrow_schema` through
   `cast_one_batch_to_write_schema`, whose kernel is `convert_uuid_column`.
-  pins: u9-types-1/C-013
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
-  value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
-- `insert.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `zone_wrapping_stream_sql` and its second plan are deleted; the MERGE insert arm (D7, D19) and the MERGE update arm (D8, D9, D19) hand their plans to the conform stage in [conform_stage.rs](../conform_stage.rs) (sites MergeInsert and MergeUpdate). pins: write-spine-1/C-017
+  value into a `VOID` column refuses with Spark's text.
+- `insert.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `zone_wrapping_stream_sql` and its second plan are deleted; the MERGE insert arm (D7, D19) and the MERGE update arm (D8, D9, D19) hand their plans to the conform stage in [conform_stage.rs](../conform_stage.rs) (sites MergeInsert and MergeUpdate).
 - `insert.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** the conform stage (`conform_stage.rs`; formerly `zone_wrapping_stream_sql`) asks
   `ntz_store::store_kernel_sql`, so a `timestamptz_ns` column of a MERGE INSERT goes through
   the zoned kernel and a wall is localised in the session zone, as INSERT localises it.
   Reason and scope: the `ntz_store.rs` row of the parent directory map.
-  pins: ice-tstzns-wall-1/C-003
 - `insert.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** the conform stage (formerly `zone_wrapping_stream_sql`) wraps
   every wall-clock target through `ntz_store::wall_cast_sql`, so a `timestamp_ns` column of a
   MERGE INSERT takes the nanosecond wall kernel; MERGE UPDATE SET reaches the same kernel
   through `store_assignment_cast_sql`. Before, both arms stored an instant's UTC wall in a
   `timestamp_ns` column. Reason and scope: the `ntz_store.rs` row of the parent directory map.
-  pins: ice-tsns-merge-wall-1/C-004
 - `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
   stream builders plan through `analyzed_store_source` and the conform stage (formerly `wrap_store_outputs`), so a
   fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the
@@ -369,22 +331,21 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   through a converting subquery that wraps NTZ target columns in the wall-cast UDF, so
   the gate always judges pre-wrap types and a table without NTZ columns streams its
   SQL untouched. MERGE UPDATE arms convert through `store_assignment_cast_sql`'s
-  wall-cast UDF. pins: ntz-1/C-006, C-007
+  wall-cast UDF.
   **WO NTZ-STORE-DOORS-1 (2026-09-28):** the converting subquery
   (formerly `zone_wrapping_stream_sql`, now the conform stage) also wraps a `TIMESTAMP` column whose analyzed source
   is naive or `DATE` through `store_assignment_cast_sql`, so `INSERT (cols)` and
   `INSERT *` store the session-zone instant; the gates still run first on the raw
   plan, and a table whose instant columns take instants streams its SQL untouched.
   UPDATE SET and UPDATE SET * convert through `store_assignment_cast_sql`.
-  pins: ntz-store-doors-1/C-002, C-003, C-004
 - `insert.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the MERGE INSERT and UPDATE SET
   gates also call `../negated_null_store.rs::refuse_negated_null_writes` with table ``, so a
   `-NULL` value (Spark's DOUBLE) into a DATE, BOOLEAN or timestamp column refuses with
-  Spark's text, through a derived source or a temp view as well. pins: store-ts-to-numeric-1/C-002
+  Spark's text, through a derived source or a temp view as well.
 - `insert.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_then_sql` delegates to
   `../update_cast.rs`'s `store_assignment_cast_sql`, so a struct target casts to its type
   without Iceberg field ids. With the struct-aware gate in `../store_assign.rs`, whole-struct
-  SET, `UPDATE SET *` and struct INSERT values write. pins: u8-write-sql/C-030
+  SET, `UPDATE SET *` and struct INSERT values write.
 - `insert.rs` — NOT MATCHED INSERT machinery: `insert_projection` (clause→projection lowering,
   moved from `mod.rs` 2026-08-15), the source-only execution seam (`insert_stream_checked`),
   and the ANSI store-assignment gate (audit M4/M9). **BL-4 (2026-08-15):**
@@ -418,12 +379,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   carries the fill into the lowered text); explicit NULL stays NULL. The fill entry
   points carry no doc comments per the no-code-comments ruling. Pins in
   `tests/insert_fill.rs`.
-  pins: ice-v3-write-default-1/C-005
   **Round 5 (2026-09-17, R-03):** `insert_sql` takes the Arrow `write_schema`
   `execute_merge` already built, so `table_projection` no longer converts the Iceberg
   schema again, and a table with no primitive `write_default` skips the
   `ColumnDefaults` build (`schema_has_primitive_fill` pre-scan).
-  pins: ice-v3-write-default-1/C-019
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
 - `session_staging.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   session-conf-aware staged-write entry (`write_new_data_files_from_stream_with`
@@ -442,13 +401,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   a commit without it never claims. The merge-on-read arm claims before
   `prepare_row_delta_deletes`, so a refused claim writes no delete file; data files staged by
   `mod.rs` before either arm runs stay orphaned on a refusal, as the sketch's §5 pin 2 allows.
-  pins: mb-2a/C-003, C-004, C-013, C-018
 - `snapshot_commit.rs` — **MB-2c fold 1, K2, MBE-15 (2026-10-07, ruling Q3):** both MERGE arms
   claim through `SiteStamp::claim_isolated` with their `CommitScope`, so a stamped commit under
   `snapshot` isolation refuses `MergeIsolationRefused` before anything is written. `CommitScope`
   carries `isolation_property`: `scoped` and `unscoped` set `write.merge.isolation-level`, and
   `governed_by` names another property (identity UPDATE and DELETE). An unstamped commit is
-  unchanged. pins: mb-2c/C-007
+  unchanged.
 - `snapshot_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   commit arms take the resolved session write (snapshot properties plus codec)
   and stamp it on the commit they build. **Round 1 (2026-09-19):** both arms
@@ -456,7 +414,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   the new and affected data files, the row-delta arm from the data files plus
   `PreparedDeletes::delete_file_changes()` — and go through `summary_with_extras`,
   so an extra that collides with an engine-computed key refuses like Spark
-  instead of replacing the engine value. pins: ice-session-write-conf-1/C-041
+  instead of replacing the engine value.
   **Round 2 (2026-09-19):** once round 1 threaded `branch` through every
   production commit site, the `None`-branch wrappers `commit_overwrite` and
   `commit_row_delta_kind_with_partitions` lost their last production caller, so
@@ -469,11 +427,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `WriterStagingOverrides` so a v2 position-delete file is written with the
   commit's codec (a v3 DV is puffin and takes none). `mod.rs`'s MERGE executor
   and the row-delta commit arms thread that staging from the session resolve.
-  pins: ice-session-write-conf-1/C-040
 - `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the lineage writer
   builds its Parquet properties through `write_options::staged_writer_properties`, the one
   staging-to-properties bridge, so it keeps Java's `parquet.enable.dictionary` default with
-  every other RePark-owned write. pins: ice-session-write-conf-1/C-064
+  every other RePark-owned write.
 - `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the lineage
   fanout writer site honours the session write conf
   (`write_partitioned_lineage_files_with`).
@@ -482,7 +439,6 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   fanout, unpartitioned rewrite, staging carry), and the MERGE format gates leave,
   so copy-on-write rewrites keep the table's ORC / AVRO bytes. The format-version
   gate stays: it guards versions, not formats.
-  pins: ice-orc-avro-1/C-007, C-008, C-009, C-010, C-011, C-012
 
 ## I want to…
 
@@ -526,7 +482,6 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   flag is set `execute_merge` unions the source schema into the table first and
   expands `UPDATE SET *` / `INSERT *` against the evolved schema, so the single
   data commit carries the new column.
-  pins: ipi-19-56-37-schema-evolution-write/C-005, C-006, C-009
 
 ## IPI-51 PR6 slice 2 (2026-09-21) — MERGE-star missing-column stamp
 
@@ -537,7 +492,6 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   case-sensitivity suffix are gone; the `SourceMatch::Ambiguous` arm keeps its own
   text. The edit is line-neutral on the 1656 baseline. Pin:
   `expand_star_clauses_errors_on_missing_source_column` in `tests/merge.rs`.
-  pins: ice-error-conditions-1/C-011
 
 ## U6 WRITE-REFUSALS (2026-09-24)
 
@@ -546,7 +500,6 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   unions the schema only when the flag is set and a clause assigns columns.
 - `mod.rs` — `union_source_schema` calls `evolve_merge_schema`, which adds the
   type changes. The edit is line-neutral on the 1630 baseline.
-  pins: u6-write-refusals/C-007, C-008
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** the merge-on-read bound (PP-02) and the lineage drain (PP-01).
 
@@ -554,5 +507,3 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
 - A MERGE into a table with a declared sort order also passes the ordered drain (PP-01) when `session_staging` sorts the updates. The statement refuses at whichever bound it crosses first; the pin for that order is `PP-02-O8`.
 - `row_lineage.rs` — the lineage writer's `drain` calls `drain_ordered_input` with the bounds its caller passes. The v3 partitioned MERGE, UPDATE and copy-on-write writer uses it.
 - `session_staging.rs`, `file_sink.rs` — pass the bounds to the drains (call sites of the changed signatures).
-
-pins: ice-resource-bound-1/C-002

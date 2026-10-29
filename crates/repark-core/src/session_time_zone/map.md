@@ -28,7 +28,7 @@ authoritative key spelling, and the resolved value reaching engine session state
     the IANA check: Arrow alone would accept `+18:01`, and a sign-led value that fails the
     offset arm never falls through to it. Refusals echo the RAW value (batch-17 oracle).
     A stored runtime zone is what `session_time_zone` reports, on the session and its
-    clones. pins: set-ansi-runtime-1/C-002
+    clones.
   - **canonical companion (R-17c-4, 2026-09-15; corrected by R-17c-6, oracle batch-17):**
     `canonical_session_zone_id` maps the raw snapshot text to the id every value-bearing
     consumer parses — measured against Arrow `Tz::from_str` and Python `ZoneInfo` (which
@@ -40,7 +40,7 @@ authoritative key spelling, and the resolved value reaching engine session state
     shared table is `canonical_zone_table.txt` in this directory, asserted by both crates'
     tests; the same mapping is duplicated in the functions-carrier fill
     (`repark-functions` cannot depend on this crate and the builder fill site is out of
-    fence). pins: set-ansi-runtime-1/C-002
+    fence).
   - **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** `java_display_zone_id`
     pins (`ZoneId.of(raw, SHORT_IDS).getId()` per harness zone), time-parser-policy
     parse pins, the carrier lazy-install pin, and the conf-dump LEGACY-detection pin.

@@ -1,0 +1,8 @@
+# ex-31-inventory-plumbing pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: python/repark-parity/tests/test_ex_0_example_coverage.py::test_ex_1_every_new_name_is_in_the_backlog, scripts/check_example_coverage.py::BACKLOG_BASELINE, scripts/check_example_coverage.py::INVENTORY_EXCLUSIONS, scripts/check_example_coverage.py::enumerate_public_surface, scripts/check_example_coverage.py::example_inventory
+C-002: scripts/check_example_coverage.py::BACKLOG_BASELINE, scripts/check_example_coverage.py::INVENTORY_EXCLUSIONS, scripts/check_example_coverage.py::enumerate_public_surface, scripts/check_example_coverage.py::example_inventory
+C-003: scripts/check_example_coverage.py::BACKLOG_BASELINE, scripts/check_example_coverage.py::INVENTORY_EXCLUSIONS, scripts/check_example_coverage.py::enumerate_public_surface, scripts/check_example_coverage.py::example_inventory
+C-004: scripts/check_example_coverage.py::BACKLOG_BASELINE, scripts/check_example_coverage.py::INVENTORY_EXCLUSIONS, scripts/check_example_coverage.py::enumerate_public_surface, scripts/check_example_coverage.py::example_inventory
+C-005: python/repark-parity/tests/test_ex_0_example_coverage.py::test_ex_1_every_new_name_is_in_the_backlog, scripts/check_example_coverage.py::BACKLOG_BASELINE, scripts/check_example_coverage.py::INVENTORY_EXCLUSIONS, scripts/check_example_coverage.py::enumerate_public_surface, scripts/check_example_coverage.py::example_inventory
+C-006: scripts/check_example_coverage.py::BACKLOG_BASELINE, scripts/check_example_coverage.py::INVENTORY_EXCLUSIONS, scripts/check_example_coverage.py::enumerate_public_surface, scripts/check_example_coverage.py::example_inventory

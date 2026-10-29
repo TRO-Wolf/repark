@@ -12,4 +12,3 @@ refusal order.
   `append_boundaries` (exclusive start / inclusive end, end-without-start, a timestamp bound on the
   append door) and `incremental_spec` (time-travel refusal, the legacy `snapshot-id` message after
   the boundary checks, and the resulting `TimeTravelSpec::Incremental`).
-  pins: ice-changelog-1/C-001, C-004, C-005, C-006

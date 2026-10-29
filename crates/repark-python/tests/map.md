@@ -12,7 +12,7 @@ C Stream value, type, and laziness behavior.
   **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** the two `PyColumn::ta_window` calls pass
   `null_prefix = 0`.
   CFG-1 step 3 (2026-09-09): the `config_path` seam pin (forced file, missing-path
-  refusal, undiscoverable `config_file_pairs(None)` empty). pins: cfg-1/C-027
+  refusal, undiscoverable `config_file_pairs(None)` empty).
   **CATALOG-1 (2026-09-26):** the config-driven memory-catalog pin runs under the
   `catalogExtensions` opt-in.
   **ATTR-ID-1 SJ-3 (2026-10-02):** the `join_on_names` pins stamp both sides and
@@ -30,7 +30,7 @@ C Stream value, type, and laziness behavior.
 - DataFrame joins preserve Spark key and semi/anti output schemas; windows and aggregates retain
   their facade semantics.
 - **TYPES-1 (2026-09-05):** literal-built columns read as `Int32` (Spark int); `sum` still
-  answers `Int64`. pins: types-1/C-001, C-004
+  answers `Int64`.
 - Unsupported readers return named typed refusals without leaking credentials.
 - Panic fences return catchable exceptions and leave the interpreter usable.
 

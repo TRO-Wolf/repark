@@ -18,10 +18,9 @@ dispatched per `NameRule` by the parent
   `check_identity_exact` shares the walker for the single-scope identity-DML
   selection with bare candidates. Both compare names only through
   `repark_common::names::NameRule`.
-  pins: casesens-1/C-008, C-017
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the re-render goes
   through `repark_iceberg::write::sql_text::render_for_reparse` so string
-  values re-parse exactly. pins: string-literal-escape-1/C-010
+  values re-parse exactly.
 
 ## Pointers
 

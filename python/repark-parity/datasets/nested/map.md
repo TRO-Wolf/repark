@@ -21,7 +21,6 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 The four `isolation` shapes (`struct_d3_nonull`, `struct_d6_nonull`, `cartesian_legs_only`,
 `cartesian_tags_only`) exist only so a candidate's cost can be subtracted out; they never
 appear in a headline table. `tags_only` is a single-list kind matching the Cartesian's Tags.
-pins: perf-dynflatten-1-measure/C-001
 
 ## Contents
 
@@ -31,7 +30,6 @@ pins: perf-dynflatten-1-measure/C-001
   list-of-struct 1/8/64, cartesian sibling lists, null-typed list), 30 % null
   parents, dictionary-encoded `Name`, capitalized fields. CLI `--scale
   gate|quick|full --out DIR`. Real-dataset flags/env refused.
-  pins: perf-dynflatten-1-measure/C-001
 - `__init__.py` — re-exports the public door.
 - `map.md` — this file.
 

@@ -33,4 +33,3 @@ past its ratcheted size.
   `date_part` (they never read the session zone) and `datafusion-spark`'s `from_utc_timestamp`
   / `to_utc_timestamp` (ledger R-1, R-2).
   Perf guard and mutations: the unit ledger's §Perf and §Mutations.
-  pins: zone-horizon-render-1/C-011, C-013, C-014

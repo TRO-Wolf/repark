@@ -11,7 +11,6 @@ column type from the plan schema in Rust, so neither door can drift from it.
 - [`tests.rs`](tests.rs) — every signed numeric width casts to its own type,
   float-into-int and int-into-float casts, string/bool/decimal untouched,
   missing field uncast, engine-name miss with display fallback.
-  pins: logical-width-1/C-012
 
 ## Pointers
 

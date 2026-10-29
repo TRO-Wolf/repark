@@ -21,7 +21,6 @@ the committed landing zone, not a generation target.
 - [ice_hadoop_vn_1/](ice_hadoop_vn_1/map.md) — a Spark-written format-v2 Hadoop
   table at `v2` with one seed row, the adoption base for the stale-`vN`-writer
   pins (ICE-HADOOP-VN-1).
-  pins: ice-hadoop-vn-1/C-007
 - [ice_promote_read_1/](ice_promote_read_1/map.md) — the recorded Spark 4.1.2 answers for
   reads and DML after a legal type promotion (`truth.json`, 126 cases) and two
   Spark-created promoted mixed-era tables (v2, v3) for the adoption cells
@@ -50,7 +49,6 @@ the committed landing zone, not a generation target.
   inserts into array columns (`spark_array_insert_oracle.json`, 30 cells: three shapes by
   five doors by two format versions) with rows and footer field ids per cell
   (ICE-ARRAY-INSERT-1, 2026-09-18; JSON only, no table data).
-  pins: ice-array-insert-1/C-001
 - [ice_write_options_rp_1/](ice_write_options_rp_1/map.md) — the recorded Spark 4.1.2
   answers for a caller-supplied `snapshot-property.replace-partitions` value on a
   replace-partitions commit (`spark_rp_oracle.json`, 5 cells: dynamic `insertInto`
@@ -58,14 +56,12 @@ the committed landing zone, not a generation target.
   plus the unrelated-option control) with the commit flag and the newest summary's
   `replace-partitions` and `k` per cell (ICE-WRITE-OPTIONS-RP-1, 2026-09-18; JSON
   only, no table data).
-  pins: ice-write-options-rp-1/C-001
 - [ice_list_null_1/](ice_list_null_1/map.md) — the recorded Spark 4.1.2 answers for
   DELETE and UPDATE with IS NULL on nested columns (`spark_list_null_oracle.json`,
   128 cells: four shapes by four predicates by delete/update by copy-on-write /
   merge-on-read by v2/v3) with the ids left, the newest snapshot's operation and
   its `added-delete-files` / `added-dvs` per cell (ICE-LIST-NULL-1, 2026-09-18;
   JSON only, no table data).
-  pins: ice-list-null-1/C-001
 - [ice_rowid_order_1/](ice_rowid_order_1/map.md) — the recorded Spark 4.1.2 answers
   for v3 row-id assignment order: the a/b/c recording (`spark_rowid_abc_oracle.json`,
   twelve runs each of INSERT INTO SELECT, literal VALUES and CTAS on Hadoop and
@@ -73,7 +69,6 @@ the committed landing zone, not a generation target.
   (`spark_rowid_order_oracle.json`, six runs per configuration over adaptive,
   row count and distribution mode) (ICE-ROWID-ORDER-1, 2026-09-18; JSON only, no
   table data).
-  pins: ice-rowid-order-1/C-001
 
 ## Pointers
 

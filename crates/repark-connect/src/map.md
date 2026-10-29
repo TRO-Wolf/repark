@@ -17,7 +17,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   request is pending). At `COMMIT` that case is a definite failure, not `CommitUnknown`.
   `write_error` cuts a class `22` server message at its first `:` or `"` and appends
   `repark_common::redaction::REDACTED`, so a refused value is not echoed. The read path
-  calls neither. pins: c-4/C-020
+  calls neither.
 - `write.rs`, `error.rs`, `lib.rs` — **C-4 fold 1 (2026-10-09), the verifier's three S1:**
   `open` calls `write/target.rs`'s `route` after `BEGIN_WRITE` and before either lane, so
   the path a writer takes depends on the relation as well as on the column types.
@@ -28,12 +28,12 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   read at `open`, and a later `42501` keeps the server's SQLSTATE and text (a policy, a
   sequence). `WriteRefusal` gains `IdentityAlways { column }` and `GeneratedColumn { column }`
   (`Analysis` class) and is no longer `Copy`. `lib.rs` re-exports `RowFallback` and
-  `TARGET_FACTS`. pins: c-4/C-017, C-018, C-019
+  `TARGET_FACTS`.
 - `write.rs`, `error.rs` — **C-4 fold 1 (2026-10-09), the verifier's S2:** `write` sets the
   kept error to `WriteRefused { Interrupted }` before its lane runs and replaces it with the
   lane's result after, so a `write` future dropped at an `.await` (a timeout, a `select!`)
   leaves the writer poisoned. Without the mark a later `commit` stored a prefix of the
-  cancelled batch on the bulk path and a group twice on the row path. pins: c-4/C-016
+  cancelled batch on the bulk path and a group twice on the row path.
 - `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`: the write core's root
   ([c-4-ledger.md](../../../task/ledgers/staging/c-4-ledger.md) §1). No door calls it yet.
   - **`WriteRequest`** is built from a `ResolvedSource` (C-2's `discover`, unchanged) and
@@ -69,7 +69,6 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   - **`WriteOptions`**: `read_timeout`, `copy_chunk_bytes` (`DEFAULT_COPY_CHUNK_BYTES`, 1 MiB)
     and `rows_per_insert` (`DEFAULT_ROWS_PER_INSERT`, 256). No settings key maps onto the two
     sizes yet (CC-3: a key arrives with the unit that reads it).
-  pins: c-4/C-005, C-010, C-011
 - `write/` — [write/map.md](write/map.md): `postgres_copy.rs` (the COPY stream and its lane)
   and `row.rs` (the INSERT lane).
 - `error.rs`, `discover.rs` — **C-4 step 1 (2026-10-08):** `UnwritableValue { column,
@@ -80,7 +79,6 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   to `repark_common::Error::CommitStateUnknown`. `EncodeNotBuilt` is retired: C-4 built what
   it announced. `Privilege` gains `Insert`, and `PermissionDenied`'s message says "writing to"
   for it and "reading" for the other two, whose text is unchanged.
-  pins: c-4/C-001, C-005, C-010
 - `lib.rs` — **C-4 step 1 (2026-10-08):** `mod write;` under `postgres`, and the re-exports
   `WriteRequest`, `WritePath`, `WriteOptions`, `WriteReport`, `PostgresWriter`,
   `CopyBinaryEncoder`, `CopyChunks`, `BEGIN_WRITE`, `DEFAULT_COPY_CHUNK_BYTES`,
@@ -96,7 +94,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   to `NotImplemented`. The ceiling applies to the count **after** Spark's shrink to the span,
   so `2147483647` over a span of 3 is three strides as Spark plans it (`C3-N08`). The reason:
   every stride is one statement under one open `REPEATABLE READ` snapshot, and each costs
-  client memory; the measurements are the C-3 ledger's §7. pins: c-3/C-010
+  client memory; the measurements are the C-3 ledger's §7.
 - `partition.rs` — **C-3 fold 1 (2026-10-08), the verifier's S2 on bound spelling:** the two
   bounds stay text until the column is known, as Spark keeps them. `PartitionOptions` and
   `PartitionSpec` carry `lower_bound` and `upper_bound` as `String`; `with_props` lifts them
@@ -105,7 +103,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   after the column's type is judged. So a `date` or timestamp column refuses naming the
   registry row whether the bounds are Spark's date text or integers, and only an integer
   column refuses a bound that is not an `i64`. `PartitionOptions::of` builds the options from
-  a door's integer arguments. pins: c-3/C-009
+  a door's integer arguments.
 - `partition.rs` — **C-3 (2026-10-07), the planning slice**, no feature gate and no I/O
   ([c-3-ledger.md](../../../task/ledgers/staging/c-3-ledger.md) §0.1). Spark's JDBC range
   partitioning as numbers.
@@ -137,7 +135,6 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     `IllegalArgumentException`), `NotInteger` to `NumberFormat`, `ColumnNotFound`,
     `AmbiguousColumn` and `ColumnType` to `Analysis`, and `DeclaredColumnType`, which names
     `PARTITIONED_READ_ROW`, to `NotImplemented`.
-  pins: c-3/C-002, C-003
 - `lib.rs` — `mod copy_binary; mod error; mod ident; mod settings; mod types;`, plus
   `mod discover; mod pool; mod read; mod tls;` under the `postgres` feature, and the
   re-exports: `BatchLimits`, `COPY_SIGNATURE`, `CopyBinaryDecoder`, `DEFAULT_BATCH_BYTES`,
@@ -167,10 +164,9 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   (registry row `ZONE_ROW`, `CONNECT-DIV-pg-timestamp-zone`, the message naming
   `prefer_timestamp_ntz`), `DDL_ROW` (`CONNECT-DECL-pg-ddl`) and `read_only_ddl(source)`, all
   outside the `postgres` feature so core's guard needs no driver; `lib.rs` re-exports them.
-  pins: c-2/C-098, C-101
   **Fold 1:** `ValueRefusal::TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`) is the
   placement's refusal when a wall clock's instant falls past chrono's calendar, so it is never
-  reported as a gap. pins: c-2/C-111
+  reported as a gap.
 - `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
   NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
   `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`
@@ -208,14 +204,13 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   adds `FieldBuffer`, folded to `DataFusion`: the allocator refused the carry a straddling
   field needs. It carries no value, and it takes the file to 264, four lines past the sketch
   ceiling (the 1000-line gate is the mechanical one).
-  pins: c-2/C-001, C-015, C-018, C-025, C-037, C-048, C-093
 - `copy_binary.rs` — **C-2d fold 1 (2026-10-07), N4:** a value refusal (`ConnectError::UnrepresentableValue`)
   in a batch that already holds rows does not discard them. `refuse_after_kept_rows` slices
   every builder to the rows before the refused tuple, so the half-appended tuple is dropped. It
   returns those rows as a batch and poisons the decoder with the refusal, which the next
   `decode` or `finish` returns. A refusal in a batch's first row, and every protocol error,
   still fail at once. `recycle_carry` clears the carry after a carried field, dropping its
-  buffer past the byte cap, so `run` stays under clippy's line limit. pins: c-2/C-114
+  buffer past the byte cap, so `run` stays under clippy's line limit.
 - `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
   machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
   cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)
@@ -265,8 +260,6 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   field still peaks at twice its size (the carry and the builder copy). The open items' first
   shape, one up-front reservation of the declared length, let a hostile length word allocate
   1 GiB per scan before any byte arrived, and aborted the process when that failed.
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017, C-091, C-092, C-093,
-  C-094, C-095
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and
   carries every other prop through untouched; the interpreted `auth_method` key leaves the
@@ -280,7 +273,6 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   `repark-core` and is out of this crate's reach. Since C-2a its errors are `ConnectError`'s
   (no behaviour change). C-2b round 1b (2026-10-07) adds `mod postgres;` and re-exports its
   surface; `ConnectionSettings` keeps its shape and stays the one parser of `auth_method`.
-  pins: c-1/C-003, C-004, C-005, C-006
 - `settings/` — [settings/map.md](settings/map.md): `postgres.rs`, the Postgres endpoint keys.
 - `ident.rs` — C-2b round 1b (2026-10-07; sketch §2.2, NS-14). `PgIdent`, built only by
   `PgIdent::new`, which refuses an empty name, a NUL byte, or more than `MAX_IDENT_BYTES` (63)
@@ -292,7 +284,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   adds `QualifiedRelation::parse(dbtable)`: one or two parts split on `.`, each bare (taken
   exactly, FL-14) or double-quoted with `""` for a quote; a single part takes
   `DEFAULT_SCHEMA` (`public`, FL-15); anything else refuses with
-  `IdentRefusal::Qualification`. pins: c-2/C-025, C-045
+  `IdentRefusal::Qualification`.
 - `tls.rs` — C-2b round 2 (2026-10-07; sketch §2.4), behind `postgres`.
   `verify_full_config(sslrootcert)` builds the rustls `ClientConfig` for `sslmode=verify-full`:
   the system roots (`rustls-native-certs`) plus every certificate in `sslrootcert`, rustls's
@@ -306,7 +298,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   refusal to `UntrustedCertificate`, `HostNameMismatch`, `CertificateExpired` or `Handshake`.
   `TrackedTls` wraps `MakeRustlsConnect` and records whether the handshake began, so the
   connector can tell a server that refused TLS from every later failure without reading driver
-  text. pins: c-2/C-028, C-029, C-030, C-058
+  text.
 - `pool.rs` — **C-3 (2026-10-07):** `QueryPool::checkout_up_to(wanted)` takes the
   connections of one partitioned scan (the C-3 ledger's §0.3). The first is an ordinary `checkout()`: it queues for `pool_checkout_timeout_ms` and
   then refuses with `PoolExhausted`. Every further one is taken only if a permit is free at
@@ -315,7 +307,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   on one pool cannot hold each other to a timeout. `lease(permit)` is the shared tail of both
   checkouts (an idle connection, else a new one). `PooledClient::retire()` closes a healthy
   connection without pooling it and without the cancel a dropped lease fires; its permit
-  returns to the pool. pins: c-3/C-005
+  returns to the pool.
 - `pool.rs` — C-2b round 2 (2026-10-07; sketch §2.5, NS-7), behind `postgres`.
   - **`QueryPool<C: Connect>`**, one per mounted source: a semaphore of `pool_max_size` permits;
     `checkout()` waits at most `pool_checkout_timeout_ms` for one (else `PoolExhausted`), reaps
@@ -358,7 +350,6 @@ Product code for `repark-connect`. See [../map.md](../map.md).
     `AuthenticationFailed` for SQLSTATE class `28` (fold 1 X4) and the driver-side rest.
   - **`within(which, limit, work)`** is the NS-7 wrapper round 3 puts around every request and
     COPY chunk; `TimeoutSetting` names the key that fired.
-  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-052, C-054, C-055, C-063, C-064
 - `discover.rs` — C-2b round 3 (2026-10-07; sketch §2.4, §2.8), behind `postgres`.
   `discover(pool, &ScanSource, read_timeout)` resolves one source afresh on every call (FL-7):
   it checks out a client, opens `BEGIN_DISCOVERY` (`BEGIN READ ONLY` with a 30 s local
@@ -389,7 +380,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   - **`ScanColumn::resolve(name, typname, kind, typmod, nullable)`** pairs C-2a's
     `PlannedColumn` with the column's `CastType`. A catalog cell of the wrong type is
     `Protocol(UnexpectedResponse)`. The server encoding is carried on `ResolvedSource`, unused
-    so far. pins: c-2/C-042, C-043, C-044, C-056, C-062
+    so far.
 - `pushdown.rs` — C-2c (2026-10-07; sketch §2.9), behind `postgres`: the classifier and
   renderer. `Pushdown::new(resolved, schema, pushdown_predicate)` gives each column a
   `ColumnClass` from its mapping, cast and surfaced type: `Boolean`, `Integer`, `Decimal`
@@ -414,7 +405,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   unchanged (`exact`): the optimizer keeps simplifying pushed filters after it has removed them,
   and `qty NOT IN (1, NULL)` became a pushed `qty <> NULL` that later simplified to `NULL`,
   which nothing applied. `split` and `push` serve `scan`. With `pushdown_predicate = false`
-  nothing renders; the limit is `pushdown_limit`'s, in `provider/table.rs`. pins: c-2/C-070, C-071, C-072, C-073, C-074, C-078
+  nothing renders; the limit is `pushdown_limit`'s, in `provider/table.rs`.
 - `provider.rs` — C-2c (2026-10-07), C-3 adding `mod partitioned;`: `mod catalog; mod scan; mod schema; mod table;` and their
   re-exports.
 - `provider/` — [provider/map.md](provider/map.md): `PostgresSource`, the catalog, schema and

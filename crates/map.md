@@ -8,7 +8,6 @@ Apache DataFusion + iceberg-rust + Arrow. One-directional dependency DAG.
 CC-2 (2026-08) audits every tracked Rust source comment in the nine delivered crates,
 one crate at a time.
 It preserves only the shortest required contract, invariant, directive, citation, or provenance.
-pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010, C-011.
 
 CC-3 (2026-08-30) continues one level deeper on a named roster and moves test modules under
 `tests/` plus `repark-sql` v3 modules under `v3/`. CC-4 (2026-08-30) applies the same one-line
@@ -17,15 +16,15 @@ rule to the 64 remaining banner files. Ledger:
 
 | Clause | What changed |
 |---|---|
-| C-001 | One commit of `git mv` plus minimal `mod` path edits; no comment edits in that commit. pins: cc-3-comment-condensation/C-001 |
-| C-002 | Every rostered comment block receives the one-line rule. pins: cc-3-comment-condensation/C-002 |
-| C-003 | `Model:` / `pins:` / `MUTATION:` counts per rostered file stay identical. pins: cc-3-comment-condensation/C-003 |
-| C-004 | Equivalence harness plus tests prove no executable change. pins: cc-3-comment-condensation/C-004 |
-| C-005 | Both size-gate homes ratchet to the exact new line counts. pins: cc-3-comment-condensation/C-005 |
-| C-006 | Maps, ledger links, and doc links stay in lockstep. pins: cc-3-comment-condensation/C-006 |
-| C-007 | One PR; `make verify` and `make preflight` exit 0. pins: cc-3-comment-condensation/C-007 |
-| C-008 | Closing Critic attestation (orchestrator). pins: cc-3-comment-condensation/C-008 |
-| C-009 | CC-4: the 64 remaining banner files receive the one-line rule; protected inventory, token equivalence, and gate ratchets hold as for C-002..C-005. pins: cc-3-comment-condensation/C-009 |
+| C-001 | One commit of `git mv` plus minimal `mod` path edits; no comment edits in that commit. |
+| C-002 | Every rostered comment block receives the one-line rule. |
+| C-003 | `Model:` / `pins:` / `MUTATION:` counts per rostered file stay identical. |
+| C-004 | Equivalence harness plus tests prove no executable change. |
+| C-005 | Both size-gate homes ratchet to the exact new line counts. |
+| C-006 | Maps, ledger links, and doc links stay in lockstep. |
+| C-007 | One PR; `make verify` and `make preflight` exit 0. |
+| C-008 | Closing Critic attestation (orchestrator). |
+| C-009 | CC-4: the 64 remaining banner files receive the one-line rule; protected inventory, token equivalence, and gate ratchets hold as for C-002..C-005. |
 
 ## Contents
 
@@ -33,7 +32,7 @@ rule to the 64 remaining banner files. Ledger:
 |---|---|
 | [repark-common](repark-common/map.md) | Shared error-seed types (`Error` / `ErrorClass` / `Result`) + the dialect-neutral SQL surface registry (`surfaces`) both doors' `matrix.rs` audits against. Bottom of the DAG. |
 | [repark-iceberg](repark-iceberg/map.md) | Iceberg surface (tier 1): Glue + S3 Tables catalog wiring for DataFusion (`catalog/`) + the Spark-semantics write adapter — MERGE INTO, append, overwrite, ALTER — over the owned fork (`write/`). Carries the `[patch.crates-io]` fork pin's consumers. |
-| [repark-connect](repark-connect/map.md) | Database connectivity (tier 1, role `table service`, peer of repark-iceberg; card 1.6): connection settings with the reserved auth-method field and the Postgres ↔ Arrow type map since C-1 (2026-10-05). Providers, pushdown, reads and writes arrive with C-2 onward. pins: c-1/C-001 |
+| [repark-connect](repark-connect/map.md) | Database connectivity (tier 1, role `table service`, peer of repark-iceberg; card 1.6): connection settings with the reserved auth-method field and the Postgres ↔ Arrow type map since C-1 (2026-10-05). Providers, pushdown, reads and writes arrive with C-2 onward. |
 | [repark-core](repark-core/map.md) | The Session-centric engine API (tier 2): `ReparkSession` over a DataFusion `SessionContext` + the `ExecutionBackend` / `SqlDialect` / `SessionExtension` seams (delivered; phase-1 PR-C). |
 | [repark-functions](repark-functions/map.md) | Spark-compatible function registry (tier 3): `datafusion-spark` registration + the Spark-semantics date shim + analyzer rules. DataFusion-native — no `repark-core` dep. |
 | [repark-ta](repark-ta/map.md) | Technical-analysis kernels (tier 3): bit-exact TA-Lib 0.4.0 hand-ports, golden-gated, plus the optional `datafusion` feature's window-UDF layer and the door-neutral `TaExtension`. |

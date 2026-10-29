@@ -17,11 +17,10 @@ Spark `UpdateFields` as a DataFusion `ScalarUDF` named `update_fields` for the
   from input children and value arrays, masking every output child with the parent
   validity so a NULL struct (top or intermediate) stays NULL through field extraction;
   the mask ANDs the validity bitmaps onto shared value buffers (no `nullif`
-  `Vec<bool>` roundtrip). pins: column-parity-1/C-008, C-009
+  `Vec<bool>` roundtrip).
 - [`tests.rs`](tests.rs) — plan/exec pins: sequential replace-after-add, drop-after-add,
   add-after-drop order, nested chains, NULL-parent masking, duplicates, case folding,
   empty-name `col{index}`, all three error classes.
-  pins: column-parity-1/C-008
 
 ## Pointers
 

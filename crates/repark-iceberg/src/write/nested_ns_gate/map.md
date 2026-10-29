@@ -16,7 +16,7 @@ parent grew past the 1000-line ceiling; the parent's prose stays in [../map.md](
   *ZONE-SEAM-1 fix round 1 (2026-10-22):* the INSERT cases take the resolved static columns of
   a `PARTITION` clause: a static column is skipped in the positional read (matched without
   case), a clause with none reads every column, and an unresolved clause stays a `Value` with
-  no position. pins: zone-seam-1/C-016
+  no position.
 
 ## Pointers
 

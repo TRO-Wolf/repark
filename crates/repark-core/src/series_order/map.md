@@ -33,7 +33,7 @@ generic order resolver a bare `ta.*` column binds through (design: the series sk
   nanosecond timestamp counts); `series_order_date_fallback` (P-S2a-3b);
   `series_order_current_row_order_without_temporal`; `series_order_notice_claims_once_per_session`
   (clones share the flag, a second session has its own, `SET` refuses, a bare config always
-  claims). pins: ta-series-s2a/C-002, C-003
+  claims).
 
 ## Pointers
 

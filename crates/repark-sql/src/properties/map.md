@@ -12,7 +12,6 @@ refusals especially — a refusal that stops firing is a silent behavior change.
   **WO U5 PR2b (2026-09-24):** `'1'` is accepted as well; `'0'` and `'4'` refuse, naming v1, v2
   or v3. The V3-2 C-007 citation (`'1'` refuses) is superseded (errata in the archived v3-2
   ledger).
-  pins: ice-nested-evo-1/C-052
 
 ## Pointers
 

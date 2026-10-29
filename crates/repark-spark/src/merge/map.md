@@ -22,7 +22,6 @@ and the star-sentinel rewrite live here instead of in it.
   fixed-size list, map or struct column record D8, because the executor's
   `paired_assignment_cast_sql` casts it with no kernel; a non-container leaf column records
   D9.
-  pins: write-spine-1/C-011
 
 - `schema_evolution.rs` — the `MERGE WITH SCHEMA EVOLUTION` pre-parse strip: a
   significant-token match on `MERGE` + `WITH` + `SCHEMA` + `EVOLUTION`
@@ -30,11 +29,9 @@ and the star-sentinel rewrite live here instead of in it.
   so the rest parses as an ordinary MERGE, and a bool carried into the lowered
   plan. A plain `MERGE INTO` is never touched. File-backed tests in
   [schema_evolution/map.md](schema_evolution/map.md).
-  pins: ipi-19-56-37-schema-evolution-write/C-005, C-007
 - `stars.rs` — the `UPDATE SET *` / `INSERT *` sentinel rewrite, moved here from
   `../merge.rs` untouched: a `*` in star position becomes the `STAR_SENTINEL`
   form stock sqlparser parses, and only there.
-  pins: ipi-19-56-37-schema-evolution-write/C-005
 
 - `nested_assign.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the struct arm of `value_sql_for`, `names_match_exactly` and
   `has_required_field` are deleted: a whole struct value goes to `assignment_cast_sql`, which
@@ -47,7 +44,6 @@ and the star-sentinel rewrite live here instead of in it.
   now names the zoned nanosecond kernel; a leaf below the top level takes
   `nested_leaf_cast_sql`, which is what main did. A nested `timestamptz_ns` leaf therefore
   stores through field assignment what it stores through every other door.
-  pins: ice-tstzns-wall-1/C-007
 - `nested_assign.rs` + [nested_assign/](nested_assign/map.md) — **U8 WRITE-SQL PR2
   (2026-09-25):** nested struct-field assignment for the Spark door's UPDATE and MERGE. It
   lives here because `lib.rs` is at its manifest ceiling and `merge.rs` is near the file-size
@@ -85,20 +81,19 @@ and the star-sentinel rewrite live here instead of in it.
   Fix round 5 (2026-09-25): under `case_sensitive` the key lookups (`unqualified`, `resolve_key`)
   match exactly; a key whose column matches only in another case refuses
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` (`resolve_target`), so `INSERT (id, ID)` no longer groups
-  as a repeat. pins: u8-write-sql/C-033
+  as a repeat.
   The design did not reuse repark-iceberg's `resolve_nested_path`. Its path grammar is the
   ALTER one (`key` / `value` / `element` name map and list children, and its refusals are the
   ALTER texts). Spark reads the same spellings in a SET key as value extraction with other
   refusals, and the rebuild needs the Arrow types.
-  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-032, C-033
   **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `merge_target_schema` reads the target through
   repark-iceberg `presented_arrow_schema`, so a `STRUCT<u: uuid>` field folds as `Utf8`:
   `MERGE … UPDATE SET t.s.u = s.v`, `SET t.s.u = '…'` and `SET s = s.ns` commit like Spark
-  instead of refusing `Struct("u": FixedSizeBinary(16))` store-assign. pins: u9-types-1/C-016
+  instead of refusing `Struct("u": FixedSizeBinary(16))` store-assign.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the value renders at
   `leaf_sql`, `Keyed.sql`, and `repeated_insert_keys` go through
   `render_for_reparse`, so doubled quotes survive the nested rebuild and `\'`
-  parses instead of refusing. pins: string-literal-escape-1/C-012
+  parses instead of refusing.
 
 ## Pointers
 

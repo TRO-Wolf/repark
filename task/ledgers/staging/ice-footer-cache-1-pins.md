@@ -1,0 +1,12 @@
+# ice-footer-cache-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: crates/repark-core/src/session/tests/footer_cache_report.rs, crates/repark-iceberg/src/catalog/caches.rs::CatalogCaches, crates/repark-iceberg/src/catalog/caches.rs::disabled, crates/repark-iceberg/src/catalog/caches.rs::footer_cache, crates/repark-iceberg/src/catalog/caches.rs::footer_stats, crates/repark-iceberg/src/catalog/map.md
+C-002: crates/repark-iceberg/src/catalog/builders.rs::memory_catalog_cached, crates/repark-iceberg/src/catalog/cache_wiring.rs::wire_footer_cache, crates/repark-iceberg/src/catalog/map.md, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::every_builder_holds_the_session_footer_cache
+C-003: crates/repark-core/src/session/tests/footer_cache_report.rs, crates/repark-iceberg/src/catalog/tests/footer_cache.rs, crates/repark-spark/benches/ice_read_perf/pins_report.rs::a_warm_sample_hits_the_footer_cache_and_a_cold_one_misses_it, crates/repark-spark/benches/ice_read_perf/pins_report.rs::the_report_carries_footer_cache_hits_and_misses_beside_the_metadata_cache
+C-004: crates/repark-iceberg/src/catalog/tests/footer_cache.rs
+C-005: crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::every_builder_holds_the_session_footer_cache, crates/repark-iceberg/src/catalog/tests/footer_cache.rs
+C-006: crates/repark-core/src/session/iceberg_caches.rs::iceberg_footer_cache_stats, crates/repark-core/src/session/tests/footer_cache_report.rs, crates/repark-iceberg/src/catalog/caches.rs::CatalogCaches, crates/repark-iceberg/src/catalog/caches.rs::disabled, crates/repark-iceberg/src/catalog/caches.rs::footer_cache, crates/repark-iceberg/src/catalog/caches.rs::footer_stats
+C-007: crates/repark-core/src/session/iceberg_caches.rs::iceberg_footer_cache_stats, crates/repark-core/src/session/tests/footer_cache_report.rs
+C-008: crates/repark-spark/benches/ice_read_perf/pins_report.rs::a_warm_sample_hits_the_footer_cache_and_a_cold_one_misses_it, crates/repark-spark/benches/ice_read_perf/pins_report.rs::the_report_carries_footer_cache_hits_and_misses_beside_the_metadata_cache, crates/repark-spark/benches/ice_read_perf/report.rs::footer_delta
+C-009: crates/repark-iceberg/src/catalog/caches.rs::CatalogCaches, crates/repark-iceberg/src/catalog/caches.rs::disabled, crates/repark-iceberg/src/catalog/caches.rs::footer_cache, crates/repark-iceberg/src/catalog/caches.rs::footer_stats
+C-010: crates/repark-spark/benches/ice_read_perf/map.md

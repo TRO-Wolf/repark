@@ -21,4 +21,4 @@ and UDFs and re-exports these scalars, so every existing importer is untouched.
   `repark-functions` (the corpus byte-equality test over the recorded JDK
   17.0.15 fixture and the in-tree tables).
 - `bigint.rs` — the ported `FDBigInteger` magnitude arithmetic, little-endian
-  `u32` limbs, no `unsafe`. pins: java-double-fd-1/C-001, C-002
+  `u32` limbs, no `unsafe`.

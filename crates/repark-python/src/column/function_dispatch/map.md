@@ -20,10 +20,8 @@ unit — so a new family gets a child module and the parent's default arm falls 
   `ScalarFunction::new_udf` over the null-preserving `spark_array_*_udf` shims — one
   native call per facade level, Spark `(array, element)` order.
   pins: fnp-9-collections-json/C-006, C-007, array-null-1/C-003
-  pins: fnp-9-collections-json/C-006, C-007
   **FNP-WIN-1 step 3 (2026-09-15):** the `window_time` arm builds one
   `ScalarFunction::new_udf` over `spark_window_time::window_time_udf`.
-  pins: fnp-win-1/C-003
   **FNP-GEN-1 step 2 (2026-09-16):** the `posexplode` / `posexplode_outer` /
   `inline` / `inline_outer` arms embed the registered placeholder UDFs from
   `repark_functions::generator::generator_udf`, and the `__repark_gen_alias` arm
@@ -36,7 +34,6 @@ unit — so a new family gets a child module and the parent's default arm falls 
   `csv` scalar kernel with two or more arguments.
   **Step 4b (run 18a):** the `schema_of_csv` arm builds `expr_fn::schema_of_csv`
   over the `csv` inference kernel with one or more arguments.
-  pins: fnp-gen-1/C-002, C-003, C-004
 - `dispatch_spark.rs` — **DOOR-CONVERGE-1 (2026-09-15):** the converged scalar arms —
   `abs`, `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
   `array_contains` / `array_has`, `ascii`, `length` / `character_length` /
@@ -46,37 +43,31 @@ unit — so a new family gets a child module and the parent's default arm falls 
   pins: door-converge-1/C-001..C-008
   **DOOR-CONVERGE-2 (2026-09-15):** `reverse` joins the converged arms (the facade's old
   DataFusion-core lowering answered strings only).
-  pins: door-converge-2/C-002
   **DOOR-CONVERGE-2 (2026-09-15):** `sequence` / `generate_series` / `gen_series` join the
   converged arms (replacing the `nested_fn::gen_series` lowering) with the facade literal
   expansion ceiling kept.
-  pins: door-converge-2/C-003
   **DOOR-CONVERGE-2 (2026-09-15):** `split` joins the converged arms (2–3 args, `-1`
   default limit); the Python `F.split` refusal sits above it, owned by run 16a.
-  pins: door-converge-2/C-004
   **FNP-MATH-1 step 6 (2026-09-16, run 18a):** the `split` arm stays (D-8 binds the
   facade above it); the math-arm extraction into `math_expr` keeps the
-  `call_scalar_expr` 100-line ceiling. pins: fnp-math-1/C-008
+  `call_scalar_expr` 100-line ceiling.
   **DOOR-CONVERGE-2 G-2 (2026-09-15):** the three single-name converged arms merge into
   the converge-1 arm (one pattern list, identical bodies), and the `sequence` arm body
   moves to `sequence_expr` (the `call_scalar_expr` 100-line ceiling holds).
-  pins: door-converge-2/C-005
   **FNP-MATH-1 step 2 (2026-09-16, run 18a):** `bround` joins the converged arms (1–2
   args, default scale 0) over `spark_math::call_bround`.
-  pins: fnp-math-1/C-002, C-003
   **FNP-MATH-1 step 3 (2026-09-16, run 18a):** `conv` joins the converged arms (3 args)
-  over `spark_math::call_conv`. pins: fnp-math-1/C-002, C-003, C-004
+  over `spark_math::call_conv`.
   **FNP-MATH-1 step 4 (2026-09-16, run 18a):** `hash` joins the converged arms (1+ args)
-  over `spark_hash::call_hash`. pins: fnp-math-1/C-002, C-003, C-005
+  over `spark_hash::call_hash`.
   **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `format_number` joins the converged arms
-  (2 args) over `string::call_format_number`. pins: fnp-math-1/C-002, C-003
+  (2 args) over `string::call_format_number`.
   **FNP-MATH-1 mask slice (2026-09-16, run 18a):** `mask` joins the converged arms
-  (1–5 args) over `string::call_mask`. pins: fnp-math-1/C-002, C-003
+  (1–5 args) over `string::call_mask`.
   **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis`
   / `timestamp_micros` join the converged arms over
   `repark_functions::spark_epoch_ctor` (the UDFs `register_all` installs; no `expr_fn`
   builder — that file sits on its exact baseline).
-  pins: sql-epoch-constructors-1/C-004, C-005
 
 ## Pointers
 
@@ -86,4 +77,3 @@ unit — so a new family gets a child module and the parent's default arm falls 
   (`make_timestamp` family, `make_ym_interval`, `try_make_interval`, `months_between`,
   `convert_timezone`, `localtimestamp`, `timestampadd`, `timestampdiff`, `datediff`): the parent
   `function_dispatch.rs` is at its 1000-line ceiling, so no arm lands there.
-  pins: fnp-11a/C-002, C-003, C-019

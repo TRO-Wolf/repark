@@ -1,0 +1,3 @@
+# ex-18-dataframe-c pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: python/repark/tests/parity/test_examples_dataframe_c.py, scripts/check_example_coverage.py::BACKLOG_BASELINE

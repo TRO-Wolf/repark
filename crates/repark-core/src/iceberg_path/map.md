@@ -49,7 +49,6 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
     of `2147483647` selects that file, and a hint beyond the range falls back to the
     listing (`v_form_zero_*`, `v_form_versions_beyond_*`, `v_form_java_int_max_*`,
     `v_form_u64_overflow_*`, `hint_at_java_int_max_*`, `hint_beyond_java_int_*`).
-  pins: dfload-1/C-002, C-003, C-005, C-008, C-009, C-010
 - `hint_walk_tests.rs` — the stale-hint walk battery (ICE-HADOOP-HINT-WINDOW-1, 2026-10-28), a
   sibling of `tests.rs` in the default layout with its own two-line `FileIO` helper. A
   `version-hint.text` naming `N` is not the last word while `v<N+1>`, ... exist
@@ -61,7 +60,6 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   no-hint behaviours are unchanged (`current_hint_selects_the_hinted_file`,
   `hinted_missing_file_keeps_its_error_when_newer_files_exist`,
   `no_hint_resolves_the_latest_v_form_by_listing`).
-  pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005
   The gzip-name battery (ICE-HADOOP-GZIP-METADATA-1, 2026-10-29) is in the same module. The
   compressed names `v<N>.gz.metadata.json` and `v<N>.metadata.json.gz` join the plain name for
   the hinted version, the walk and the no-hint listing, probed in Java's order (plain, gz
@@ -85,17 +83,6 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   artefact) and `hinted_missing_file_keeps_its_error_when_newer_files_exist` (C-005). The
   unchanged behaviour (C-007) is the pre-existing hint-walk battery above and the `tests.rs`
   picker battery, both green and unchanged.
-  pins: ice-hadoop-gzip-metadata-1/C-001
-  pins: ice-hadoop-gzip-metadata-1/C-002
-  pins: ice-hadoop-gzip-metadata-1/C-003
-  pins: ice-hadoop-gzip-metadata-1/C-004
-  pins: ice-hadoop-gzip-metadata-1/C-005
-  pins: ice-hadoop-gzip-metadata-1/C-006
-  pins: ice-hadoop-gzip-metadata-1/C-007
   The verification round 1 of ICE-HADOOP-GZIP-METADATA-1 (ledger C-008, 2026-10-29) is cited here on the gzip pin family above, so the grammar gate counts it; the verifiers add no pin of their own.
-  pins: ice-hadoop-gzip-metadata-1/C-008
   The merge facts of ICE-HADOOP-HINT-WINDOW-1 are cited here so the grammar gate counts them: the label re-date (ice-hadoop-hint-window-1 C-008, 2026-10-28, merge `9ab67d7d`) and the option-1 walk's closure of ice-integrity-pins-1 C-015, C-029 and C-071 (C-072). This file pins none of them.
-  pins: ice-hadoop-hint-window-1/C-008
-  pins: ice-integrity-pins-1/C-072
   The closure of ice-integrity-pins-1 C-015, C-029 and C-071 is dated 2026-10-28 by its correction C-073, cited below so the grammar gate counts it; the merge fact is not a test pin of this file.
-  pins: ice-integrity-pins-1/C-073
