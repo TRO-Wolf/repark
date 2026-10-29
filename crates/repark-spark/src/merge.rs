@@ -96,11 +96,6 @@ pub(crate) async fn execute_merge(
         && let Some(target) = crate::dml_target::resolve_dml_target(ctx, catalogs, name).await?
     {
         repark_iceberg::write::refuse_encrypted_table(&target.table)?;
-        let mode = repark_iceberg::write::data_format::MERGE_MODE_PROPERTY;
-        repark_iceberg::write::data_format::refuse_any_unreadable_delete_format(
-            &target.table,
-            mode,
-        )?;
     }
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;

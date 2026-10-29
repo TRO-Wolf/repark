@@ -12,6 +12,8 @@
 
 **Status update, 2026-10-28:** verification round 4 PASS; merges on the owner's word. The round-4 Opus 5.5 verifier passed `78827c24` with one S3 (R4-V1, the WAP branch sentence in the registry row, C-020 and the release notes), fixed in the round-4 records; the late refusal under a WAP branch is carded as WAP-LATE-REFUSAL-BRANCH-1.
 
+**Status update, 2026-10-28:** reverted by RP-61 (PR #1209) once fork PR `#375` was pinned (repin `56aa8913`): the interim guard described above is retired, and position-delete files inherit the data format again. The revert's ledger is `rp-61-posdel-format-repin-1`.
+
 **Grade:** product unit, Opus 5.5 builder lane.
 
 **Severity:** Medium, the audit's rating (AUD-003). A fail-loud gap on a documented surface: the DELETE commits, and the next read fails. No silent corruption or physical data loss was observed.

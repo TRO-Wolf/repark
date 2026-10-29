@@ -1,18 +1,5 @@
-use datafusion::error::{DataFusionError, Result};
+use datafusion::error::Result;
 use iceberg::spec::{DataFileFormat, FormatVersion};
-use iceberg::table::Table;
-
-pub const DELETE_FORMAT_PROPERTY: &str = "write.delete.format.default";
-const DELETE_FORMAT_OPTION: &str = "delete-format";
-const DATA_FORMAT_PROPERTY: &str = "write.format.default";
-pub const MERGE_MODE_PROPERTY: &str = "write.merge.mode";
-const MERGE_ON_READ: &str = "merge-on-read";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MorDeleteFormat {
-    Readable,
-    Inherited(DataFileFormat),
-}
 
 #[allow(clippy::missing_errors_doc)]
 pub fn resolve_data_format(
@@ -32,109 +19,19 @@ pub fn resolve_data_format(
 pub fn resolve_delete_format(
     staging_format: Option<&str>,
     table_property: Option<&str>,
+    data_format: DataFileFormat,
     format_version: FormatVersion,
 ) -> Result<DataFileFormat> {
     if format_version >= FormatVersion::V3 {
         return Ok(DataFileFormat::Puffin);
     }
     if let Some(raw) = staging_format {
-        return readable_delete_format(raw, DELETE_FORMAT_OPTION);
+        return parse_format(raw);
     }
     if let Some(raw) = table_property {
-        return readable_delete_format(raw, DELETE_FORMAT_PROPERTY);
+        return parse_format(raw);
     }
-    Ok(DataFileFormat::Parquet)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDeleteFormat> {
-    delete_format_under(table, mode_property, repark_reads_merge_on_read)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn fork_mor_delete_format(table: &Table, mode_property: &str) -> Result<MorDeleteFormat> {
-    delete_format_under(table, mode_property, fork_reads_merge_on_read)
-}
-
-fn repark_reads_merge_on_read(mode: &str) -> bool {
-    mode.trim().eq_ignore_ascii_case(MERGE_ON_READ)
-}
-
-fn fork_reads_merge_on_read(mode: &str) -> bool {
-    mode == MERGE_ON_READ
-}
-
-fn delete_format_under(
-    table: &Table,
-    mode_property: &str,
-    reads_merge_on_read: fn(&str) -> bool,
-) -> Result<MorDeleteFormat> {
-    let metadata = table.metadata();
-    if metadata.format_version() != FormatVersion::V2 {
-        return Ok(MorDeleteFormat::Readable);
-    }
-    let properties = metadata.properties();
-    let merge_on_read = properties
-        .get(mode_property)
-        .map(String::as_str)
-        .is_some_and(reads_merge_on_read);
-    if !merge_on_read {
-        return Ok(MorDeleteFormat::Readable);
-    }
-    if let Some(raw) = properties.get(DELETE_FORMAT_PROPERTY) {
-        readable_delete_format(raw, DELETE_FORMAT_PROPERTY)?;
-        return Ok(MorDeleteFormat::Readable);
-    }
-    match resolve_data_format(
-        None,
-        properties.get(DATA_FORMAT_PROPERTY).map(String::as_str),
-    )? {
-        DataFileFormat::Avro => Ok(MorDeleteFormat::Inherited(DataFileFormat::Avro)),
-        DataFileFormat::Orc => Ok(MorDeleteFormat::Inherited(DataFileFormat::Orc)),
-        _ => Ok(MorDeleteFormat::Readable),
-    }
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn refuse_any_unreadable_delete_format(table: &Table, mode_property: &str) -> Result<()> {
-    refuse_inherited(table, mor_delete_format(table, mode_property)?)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn refuse_any_unreadable_fork_delete_format(table: &Table, mode_property: &str) -> Result<()> {
-    refuse_inherited(table, fork_mor_delete_format(table, mode_property)?)
-}
-
-fn refuse_inherited(table: &Table, resolved: MorDeleteFormat) -> Result<()> {
-    match resolved {
-        MorDeleteFormat::Readable => Ok(()),
-        MorDeleteFormat::Inherited(format) => Err(inherited_delete_format_refusal(
-            &table.identifier().to_string(),
-            format,
-        )),
-    }
-}
-
-#[must_use]
-pub fn inherited_delete_format_refusal(table_sql: &str, format: DataFileFormat) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "table `{table_sql}` inherits the position-delete format '{format}' from \
-         `{DATA_FORMAT_PROPERTY}`, and RePark cannot read {format} position-delete files yet; \
-         this merge-on-read statement is refused before any file is written. Hint: set \
-         `{DELETE_FORMAT_PROPERTY}` to 'parquet' (Spark reads Parquet position-delete files on \
-         {format} tables)"
-    ))
-}
-
-fn readable_delete_format(raw: &str, source: &str) -> Result<DataFileFormat> {
-    match parse_format(raw)? {
-        DataFileFormat::Parquet => Ok(DataFileFormat::Parquet),
-        format => Err(DataFusionError::Plan(format!(
-            "`{source}` = '{raw}' asks for {format} position-delete files, which RePark cannot \
-             read yet; the merge-on-read write is refused before any file is written. Hint: set \
-             `{source}` to 'parquet'"
-        ))),
-    }
+    Ok(data_format)
 }
 
 fn parse_format(raw: &str) -> Result<DataFileFormat> {
@@ -152,6 +49,7 @@ fn parse_format(raw: &str) -> Result<DataFileFormat> {
 mod tests {
     use super::*;
     use crate::write::IllegalArgumentMarker;
+    use datafusion::error::DataFusionError;
 
     #[test]
     fn staging_format_beats_table_property() {
@@ -204,67 +102,87 @@ mod tests {
     }
 
     #[test]
-    fn v3_delete_side_is_puffin() {
-        let resolved = resolve_delete_format(None, None, FormatVersion::V3).expect("v3 delete");
-        assert_eq!(resolved, DataFileFormat::Puffin);
+    fn v3_delete_side_is_puffin_for_every_data_format() {
+        for data_format in [
+            DataFileFormat::Parquet,
+            DataFileFormat::Orc,
+            DataFileFormat::Avro,
+        ] {
+            let resolved = resolve_delete_format(None, None, data_format, FormatVersion::V3)
+                .expect("v3 delete");
+            assert_eq!(resolved, DataFileFormat::Puffin);
+        }
     }
 
     #[test]
     fn v3_delete_side_ignores_explicit_formats() {
-        let resolved =
-            resolve_delete_format(Some("orc"), Some("avro"), FormatVersion::V3).expect("v3 delete");
+        let resolved = resolve_delete_format(
+            Some("orc"),
+            Some("avro"),
+            DataFileFormat::Orc,
+            FormatVersion::V3,
+        )
+        .expect("v3 delete");
         assert_eq!(resolved, DataFileFormat::Puffin);
     }
 
     #[test]
-    fn v2_delete_defaults_to_parquet_whatever_the_data_format() {
-        let resolved = resolve_delete_format(None, None, FormatVersion::V2).expect("v2 delete");
-        assert_eq!(resolved, DataFileFormat::Parquet);
+    fn delete_falls_back_to_data_format() {
+        let orc = resolve_delete_format(None, None, DataFileFormat::Orc, FormatVersion::V2)
+            .expect("orc delete");
+        assert_eq!(orc, DataFileFormat::Orc);
+        let avro = resolve_delete_format(None, None, DataFileFormat::Avro, FormatVersion::V2)
+            .expect("avro delete");
+        assert_eq!(avro, DataFileFormat::Avro);
     }
 
     #[test]
-    fn explicit_parquet_delete_property_resolves_parquet() {
-        let resolved = resolve_delete_format(None, Some("PARQUET"), FormatVersion::V2)
-            .expect("delete property");
+    fn delete_property_beats_data_format() {
+        let resolved = resolve_delete_format(
+            None,
+            Some("parquet"),
+            DataFileFormat::Orc,
+            FormatVersion::V2,
+        )
+        .expect("delete property");
         assert_eq!(resolved, DataFileFormat::Parquet);
     }
 
     #[test]
     fn staging_delete_format_beats_table_property() {
-        let resolved = resolve_delete_format(Some("parquet"), Some("avro"), FormatVersion::V2)
-            .expect("staging delete");
-        assert_eq!(resolved, DataFileFormat::Parquet);
+        let resolved = resolve_delete_format(
+            Some("avro"),
+            Some("parquet"),
+            DataFileFormat::Orc,
+            FormatVersion::V2,
+        )
+        .expect("staging delete");
+        assert_eq!(resolved, DataFileFormat::Avro);
     }
 
     #[test]
-    fn explicit_avro_or_orc_delete_format_refuses_naming_its_source() {
-        for (staging, property, source, format) in [
-            (None, Some("avro"), DELETE_FORMAT_PROPERTY, "avro"),
-            (None, Some("ORC"), DELETE_FORMAT_PROPERTY, "orc"),
-            (Some("avro"), Some("parquet"), DELETE_FORMAT_OPTION, "avro"),
-            (Some("orc"), None, DELETE_FORMAT_OPTION, "orc"),
+    fn explicit_avro_or_orc_delete_format_is_honoured_on_parquet_data() {
+        for (staging, property, expected) in [
+            (None, Some("avro"), DataFileFormat::Avro),
+            (None, Some("ORC"), DataFileFormat::Orc),
+            (Some("orc"), Some("parquet"), DataFileFormat::Orc),
         ] {
-            let error = resolve_delete_format(staging, property, FormatVersion::V2)
-                .expect_err("an unreadable delete format refuses");
-            let DataFusionError::Plan(message) = &error else {
-                panic!("expected a plan error, got {error:?}");
-            };
-            assert!(message.starts_with(&format!("`{source}` = ")), "{message}");
-            assert!(
-                message.contains(&format!("{format} position-delete files")),
-                "{message}"
-            );
-            assert!(
-                message.contains(&format!("set `{source}` to 'parquet'")),
-                "{message}"
-            );
+            let resolved = resolve_delete_format(
+                staging,
+                property,
+                DataFileFormat::Parquet,
+                FormatVersion::V2,
+            )
+            .expect("an explicit delete format resolves");
+            assert_eq!(resolved, expected);
         }
     }
 
     #[test]
     fn unknown_delete_format_refuses_with_java_shape() {
-        let error = resolve_delete_format(None, Some("csv"), FormatVersion::V2)
-            .expect_err("csv delete property");
+        let error =
+            resolve_delete_format(None, Some("csv"), DataFileFormat::Orc, FormatVersion::V2)
+                .expect_err("csv delete property");
         let DataFusionError::External(inner) = &error else {
             panic!("expected an External marker, got {error:?}");
         };

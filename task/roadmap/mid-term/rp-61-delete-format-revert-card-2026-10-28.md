@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-28. **Filed by:** the ICE-POST-PUBLISH-OUTCOME-1 and ICE-DELETE-FORMAT-GUARD-1 clerk round (`claude-haiku-5-5`), from the coordinator's ruling Q2 on the builder's round-2 hand-back.
 
-**Status:** open. Grade C (clerk). Not dispatched. Depends on fork F-POSDEL-FORMAT-READ-1 (fork PR `#375`) merging on the fork and RePark repinning to it (this card's unit, RP-61).
+**Status:** verification round 1 PASS; merges on the owner's word. Closed by the RP-61 PR (#1209) at `67dcaed5` (Opus 5.5 and Muse MAX PASS). Grade C (clerk). Depended on fork F-POSDEL-FORMAT-READ-1 (fork PR `#375`, squash `56aa8913`), which this unit pins.
 
 **Why:** the interim guard ICE-DELETE-FORMAT-GUARD-1 (ledger [ice-delete-format-guard-1](../../ledgers/staging/ice-delete-format-guard-1-ledger.md)) makes RePark's own merge-on-read writers write Parquet position-delete files on Avro and ORC tables whose delete format is only inherited, and refuses the statements that would write Avro or ORC delete files. The fork at pin `ea0b7741` reads only Parquet delete files, so the refusals and the Parquet default are a workaround. The fork fix is F-POSDEL-FORMAT-READ-1, fork PR `#375`. Once the fork reads Avro and ORC delete files, the interim guard is the wrong behaviour: Spark and Java write delete files in the table's data format, and the divergence in the registry row is only dated.
 

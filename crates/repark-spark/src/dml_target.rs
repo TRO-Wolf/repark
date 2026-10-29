@@ -11,11 +11,9 @@ use repark_core::CatalogRegistry;
 use crate::write_to_branch::{RefSelectorKind, qualify_table_parts, split_write_ref_parts};
 
 pub(crate) struct DmlTarget {
-    pub(crate) catalog_name: String,
     pub(crate) catalog: Arc<dyn Catalog>,
     pub(crate) ident: TableIdent,
     pub(crate) table: Table,
-    pub(crate) on_branch: bool,
 }
 
 pub(crate) async fn resolve_dml_target(
@@ -27,10 +25,10 @@ pub(crate) async fn resolve_dml_target(
         return Ok(None);
     };
     let values: Vec<String> = written.iter().map(|(value, _)| value.clone()).collect();
-    let (kept, on_branch) = match split_write_ref_parts(&values) {
+    let kept = match split_write_ref_parts(&values) {
         Some((_, RefSelectorKind::Tag)) => return Ok(None),
-        Some((stripped, RefSelectorKind::Branch(_))) => (stripped.len(), true),
-        None => (values.len(), false),
+        Some((stripped, RefSelectorKind::Branch(_))) => stripped.len(),
+        None => values.len(),
     };
     let normalize = ctx
         .state()
@@ -55,11 +53,9 @@ pub(crate) async fn resolve_dml_target(
     let ident = TableIdent::new(namespace, table_name.clone());
     match catalog.load_table(&ident).await {
         Ok(table) => Ok(Some(DmlTarget {
-            catalog_name: catalog_name.clone(),
             catalog: Arc::clone(catalog),
             ident,
             table,
-            on_branch,
         })),
         Err(error) => {
             if namespace_absent(catalog.as_ref(), &ident).await

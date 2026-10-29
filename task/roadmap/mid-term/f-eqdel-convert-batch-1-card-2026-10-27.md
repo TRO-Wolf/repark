@@ -32,6 +32,16 @@ The same shape as F-POSDEL-BATCH-1:
 - An integration pin with a tiny batch: one equality delete converted into several position-delete files, and the table reads back the correct rows.
 - An ignored stress pin that reproduces the panic on the pre-fix shape: one equality delete that matches data files whose path text passes `i32::MAX` bytes.
 
+## Second item, dated 2026-10-28: three Parquet-only delete opens in the maintenance actions
+
+Found by the fresh Opus 5.5 verifier of fork PR `#375` (F-POSDEL-FORMAT-READ-1, round 2) at fork `56aa8913`. All three are pre-existing and untouched by that PR. The format dispatch that the position-delete loader now has fits each of them. The priority stays P3.
+
+- `crates/iceberg/src/maintenance/rewrite_position_delete_files.rs`: its caller skips non-Parquet position-delete files with `continue`. Avro and ORC position deletes are left uncompacted; the data stays correct.
+- `crates/iceberg/src/maintenance/rewrite_table_path.rs`: its caller refuses non-Parquet delete files with a typed error.
+- `crates/iceberg/src/maintenance/convert_equality_delete_files.rs`: there is no format gate. An Avro or ORC equality delete converted by this action fails loud with the Parquet footer error. This is by code reading; it was not run.
+
+The fix for each is the same format dispatch on the delete file's format that the loader has, with red-first pins per action that read back the survivors.
+
 ## Out of scope
 
 - The RePark exposure of the action through the Spark door. No RePark step is named here.

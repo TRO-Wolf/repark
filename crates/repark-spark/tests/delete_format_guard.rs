@@ -7,6 +7,7 @@ use datafusion::arrow::datatypes::Int32Type;
 use datafusion::arrow::record_batch::RecordBatch;
 use iceberg::TableIdent;
 use iceberg::spec::Operation;
+use iceberg::table::Table;
 use repark_core::ReparkSession;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
@@ -20,6 +21,41 @@ const MERGE_DELETE_AND_INSERT: &str = "MERGE INTO ice.ns.t t \
      USING (SELECT 2 AS id UNION ALL SELECT 9 AS id) s ON t.id = s.id \
      WHEN MATCHED THEN DELETE WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id)";
 const DELETE_FORMAT_PROPERTY: &str = "write.delete.format.default";
+const MAIN_READ: &str = "SELECT id FROM ice.ns.t ORDER BY id";
+const BRANCH_READ: &str = "SELECT id FROM ice.ns.t.branch_b ORDER BY id";
+const DELETED: &[i32] = &[0, 4];
+const UPDATED: &[i32] = &[0, 4, 11, 12, 13];
+const MERGED: &[i32] = &[0, 1, 3, 4, 9];
+
+struct Shape {
+    sql: &'static str,
+    survivors: &'static [i32],
+    position_deletes: u64,
+}
+
+const fn shape(sql: &'static str, survivors: &'static [i32], position_deletes: u64) -> Shape {
+    Shape {
+        sql,
+        survivors,
+        position_deletes,
+    }
+}
+
+const EVERY_ROUTE: [Shape; 6] = [
+    shape(FORK_ROUTE_DELETE, DELETED, 3),
+    shape(REPARK_ROUTE_DELETE, DELETED, 3),
+    shape(IN_LIST_DELETE, DELETED, 3),
+    shape(FORK_ROUTE_UPDATE, UPDATED, 3),
+    shape(REPARK_ROUTE_UPDATE, UPDATED, 3),
+    shape(MERGE_DELETE_AND_INSERT, MERGED, 1),
+];
+const FORK_ROUTE_SHAPES: [usize; 3] = [0, 2, 3];
+const BRANCH_SHAPES: [Shape; 4] = [
+    shape(FORK_ROUTE_DELETE, DELETED, 3),
+    shape(REPARK_ROUTE_DELETE, DELETED, 3),
+    shape(FORK_ROUTE_UPDATE, UPDATED, 3),
+    shape(REPARK_ROUTE_UPDATE, UPDATED, 3),
+];
 
 struct Snapshot {
     operation: Operation,
@@ -82,8 +118,8 @@ fn data_format(format: &str) -> String {
     format!(", 'write.format.default'='{format}'")
 }
 
-async fn ids(session: &ReparkSession) -> Result<Vec<i32>, String> {
-    let batches = attempt(session, "SELECT id FROM ice.ns.t ORDER BY id").await?;
+async fn rows(session: &ReparkSession, read: &str) -> Result<Vec<i32>, String> {
+    let batches = attempt(session, read).await?;
     Ok(batches
         .iter()
         .flat_map(|batch| {
@@ -96,13 +132,21 @@ async fn ids(session: &ReparkSession) -> Result<Vec<i32>, String> {
         .collect())
 }
 
-async fn current_snapshot(session: &ReparkSession) -> Snapshot {
+async fn ids(session: &ReparkSession) -> Result<Vec<i32>, String> {
+    rows(session, MAIN_READ).await
+}
+
+async fn loaded_table(session: &ReparkSession) -> Table {
     let catalogs = session.catalogs_snapshot();
     let catalog = catalogs.get("ice").expect("ice catalog");
-    let table = catalog
+    catalog
         .load_table(&TableIdent::from_strs(["ns", "t"]).expect("ident"))
         .await
-        .expect("load table");
+        .expect("load table")
+}
+
+async fn current_snapshot(session: &ReparkSession) -> Snapshot {
+    let table = loaded_table(session).await;
     let snapshot = table
         .metadata()
         .current_snapshot()
@@ -147,53 +191,36 @@ fn position_delete_extensions(warehouse: &TempDir) -> Vec<String> {
 }
 
 async fn assert_parquet_position_delete(session: &ReparkSession, warehouse: &TempDir, sql: &str) {
-    assert_parquet_rewrite(session, warehouse, sql, &[0, 4], 3).await;
+    assert_rewrite_in(session, warehouse, sql, &EVERY_ROUTE[0], "parquet").await;
     assert_eq!(current_snapshot(session).await.operation, Operation::Delete);
 }
 
-async fn assert_parquet_rewrite(
+async fn assert_rewrite_in(
     session: &ReparkSession,
     warehouse: &TempDir,
     sql: &str,
-    survivors: &[i32],
-    position_deletes: u64,
+    shape: &Shape,
+    delete_format: &str,
 ) {
     let outcome = attempt(session, sql).await;
     assert!(outcome.is_ok(), "`{sql}` must complete: {outcome:?}");
     assert_eq!(
         ids(session).await,
-        Ok(survivors.to_vec()),
+        Ok(shape.survivors.to_vec()),
         "`{sql}` survivors"
     );
     let snapshot = current_snapshot(session).await;
-    assert_eq!(snapshot.total("total-delete-files"), 1);
-    assert_eq!(snapshot.total("total-position-deletes"), position_deletes);
-    assert_eq!(position_delete_extensions(warehouse), vec!["parquet"]);
-}
-
-async fn assert_refused_unchanged(session: &ReparkSession, warehouse: &TempDir, sql: &str) {
-    let error = assert_fails_unchanged(session, warehouse, sql).await;
-    assert!(error.contains(DELETE_FORMAT_PROPERTY), "{error}");
-    assert!(error.contains("'parquet'"), "{error}");
-    assert!(error.contains("before any file is written"), "{error}");
-}
-
-async fn assert_fails_unchanged(session: &ReparkSession, warehouse: &TempDir, sql: &str) -> String {
-    let files_before = files_under(warehouse.path()).len();
-    let rows_before = ids(session).await;
-    let error = attempt(session, sql)
-        .await
-        .expect_err("an unreadable delete format must refuse");
-    assert_eq!(ids(session).await, rows_before);
-    let snapshot = current_snapshot(session).await;
-    assert_eq!(snapshot.operation, Operation::Append);
-    assert_eq!(snapshot.total("total-delete-files"), 0);
+    assert_eq!(snapshot.total("total-delete-files"), 1, "`{sql}`");
     assert_eq!(
-        files_under(warehouse.path()).len(),
-        files_before,
-        "`{sql}` wrote a file"
+        snapshot.total("total-position-deletes"),
+        shape.position_deletes,
+        "`{sql}`"
     );
-    error
+    assert_eq!(
+        position_delete_extensions(warehouse),
+        vec![delete_format],
+        "`{sql}` delete file format"
+    );
 }
 
 fn explicit_delete_format(data: &str, delete: &str) -> String {
@@ -204,74 +231,75 @@ fn explicit_delete_format(data: &str, delete: &str) -> String {
 }
 
 #[tokio::test]
-async fn inherited_avro_or_orc_repark_route_delete_writes_a_parquet_position_delete() {
+async fn inherited_avro_or_orc_repark_route_dml_writes_a_delete_in_the_data_format() {
     for format in ["avro", "orc"] {
-        let (session, warehouse) = seeded_table(&data_format(format)).await;
-        assert_parquet_position_delete(&session, &warehouse, REPARK_ROUTE_DELETE).await;
-    }
-}
-
-#[tokio::test]
-async fn inherited_avro_or_orc_repark_route_update_writes_a_parquet_position_delete() {
-    for format in ["avro", "orc"] {
-        let (session, warehouse) = seeded_table(&data_format(format)).await;
-        let survivors = [0, 4, 11, 12, 13];
-        assert_parquet_rewrite(&session, &warehouse, REPARK_ROUTE_UPDATE, &survivors, 3).await;
-    }
-}
-
-#[tokio::test]
-async fn inherited_avro_or_orc_fork_route_dml_refuses_unchanged() {
-    for format in ["avro", "orc"] {
-        for sql in [FORK_ROUTE_DELETE, IN_LIST_DELETE, FORK_ROUTE_UPDATE] {
+        for shape in [&EVERY_ROUTE[1], &EVERY_ROUTE[4]] {
             let (session, warehouse) = seeded_table(&data_format(format)).await;
-            assert_refused_unchanged(&session, &warehouse, sql).await;
+            assert_rewrite_in(&session, &warehouse, shape.sql, shape, format).await;
         }
     }
-    for sql in [
-        "DELETE FROM ice.ns.t WHERE s IS NULL",
-        "DELETE FROM ice.ns.t WHERE s IS NULL OR id = 2",
-    ] {
-        let (session, warehouse) = seeded(
-            "id INT, s STRUCT<a: INT>",
-            &data_format("avro"),
-            "(0, named_struct('a', 0)), (1, named_struct('a', 1)), (2, named_struct('a', 2)), \
-             (3, named_struct('a', 3)), (4, named_struct('a', 4))",
+}
+
+#[tokio::test]
+async fn inherited_avro_or_orc_fork_route_dml_reads_back_its_delete_in_the_data_format() {
+    for format in ["avro", "orc"] {
+        for shape in [&EVERY_ROUTE[0], &EVERY_ROUTE[2], &EVERY_ROUTE[3]] {
+            let (session, warehouse) = seeded_table(&data_format(format)).await;
+            assert_rewrite_in(&session, &warehouse, shape.sql, shape, format).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn inherited_avro_struct_predicate_delete_reads_back() {
+    let (session, warehouse) = seeded(
+        "id INT, s STRUCT<a: INT>",
+        &data_format("avro"),
+        "(0, named_struct('a', 0)), (1, named_struct('a', 1)), (2, named_struct('a', 2)), \
+         (3, named_struct('a', 3)), (4, named_struct('a', 4))",
+    )
+    .await;
+    let sql = "DELETE FROM ice.ns.t WHERE s IS NULL OR id = 2";
+    assert_rewrite_in(
+        &session,
+        &warehouse,
+        sql,
+        &shape(sql, &[0, 1, 3, 4], 1),
+        "avro",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn inherited_avro_or_orc_merge_reads_back_its_delete_in_the_data_format() {
+    for format in ["avro", "orc"] {
+        let (session, warehouse) = seeded_table(&data_format(format)).await;
+        assert_rewrite_in(
+            &session,
+            &warehouse,
+            MERGE_DELETE_AND_INSERT,
+            &EVERY_ROUTE[5],
+            format,
         )
         .await;
-        assert_refused_unchanged(&session, &warehouse, sql).await;
     }
 }
 
 #[tokio::test]
-async fn inherited_avro_or_orc_merge_refuses_before_any_data_file() {
-    for format in ["avro", "orc"] {
-        let (session, warehouse) = seeded_table(&data_format(format)).await;
-        assert_refused_unchanged(&session, &warehouse, MERGE_DELETE_AND_INSERT).await;
-    }
-}
-
-#[tokio::test]
-async fn explicit_avro_or_orc_delete_format_refuses_every_route() {
-    for (data, delete) in [("parquet", "avro"), ("orc", "orc")] {
-        for sql in [
-            FORK_ROUTE_DELETE,
-            REPARK_ROUTE_DELETE,
-            FORK_ROUTE_UPDATE,
-            REPARK_ROUTE_UPDATE,
-            MERGE_DELETE_AND_INSERT,
-        ] {
+async fn explicit_avro_or_orc_delete_format_writes_that_format_on_every_route() {
+    for (data, delete) in [("parquet", "avro"), ("parquet", "orc"), ("orc", "orc")] {
+        for shape in &EVERY_ROUTE {
             let (session, warehouse) = seeded_table(&explicit_delete_format(data, delete)).await;
-            assert_refused_unchanged(&session, &warehouse, sql).await;
+            assert_rewrite_in(&session, &warehouse, shape.sql, shape, delete).await;
         }
     }
 }
 
 #[tokio::test]
-async fn explicit_parquet_delete_format_on_avro_data_is_readable() {
-    for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE] {
+async fn explicit_parquet_delete_format_on_avro_data_still_writes_parquet() {
+    for shape in &EVERY_ROUTE {
         let (session, warehouse) = seeded_table(&explicit_delete_format("avro", "parquet")).await;
-        assert_parquet_position_delete(&session, &warehouse, sql).await;
+        assert_rewrite_in(&session, &warehouse, shape.sql, shape, "parquet").await;
     }
 }
 
@@ -282,40 +310,33 @@ async fn parquet_control_is_unchanged() {
         assert_parquet_position_delete(&session, &warehouse, sql).await;
     }
     let (session, warehouse) = seeded_table(&data_format("parquet")).await;
-    assert_parquet_rewrite(
+    assert_rewrite_in(
         &session,
         &warehouse,
         MERGE_DELETE_AND_INSERT,
-        &[0, 1, 3, 4, 9],
-        1,
+        &EVERY_ROUTE[5],
+        "parquet",
     )
     .await;
 }
 
 const CASE_VARIANTS: [&str; 3] = ["ICE.NS.T", "ice.NS.t", "ice.ns.T"];
 const BRANCH_TARGET: &str = "ice.ns.t.branch_b";
-const BRANCH_SHAPES: [&str; 4] = [
-    FORK_ROUTE_DELETE,
-    REPARK_ROUTE_DELETE,
-    FORK_ROUTE_UPDATE,
-    REPARK_ROUTE_UPDATE,
-];
 
 fn on_target(sql: &str, target: &str) -> String {
     sql.replacen("ice.ns.t", target, 1)
 }
 
 async fn branch_head(session: &ReparkSession) -> Option<i64> {
-    let catalogs = session.catalogs_snapshot();
-    let catalog = catalogs.get("ice").expect("ice catalog");
-    let table = catalog
-        .load_table(&TableIdent::from_strs(["ns", "t"]).expect("ident"))
+    loaded_table(session)
         .await
-        .expect("load table");
-    table
         .metadata()
         .snapshot_for_ref("b")
         .map(|snapshot| snapshot.snapshot_id())
+}
+
+async fn main_head(session: &ReparkSession) -> Option<i64> {
+    loaded_table(session).await.metadata().current_snapshot_id()
 }
 
 fn set_session_write_codec(session: &ReparkSession) {
@@ -329,87 +350,201 @@ fn set_session_write_codec(session: &ReparkSession) {
 }
 
 async fn branched_table(format: &str) -> (ReparkSession, TempDir, Option<i64>) {
-    let (session, warehouse) = seeded_table(&data_format(format)).await;
+    branched_with(&data_format(format)).await
+}
+
+async fn branched_with(properties: &str) -> (ReparkSession, TempDir, Option<i64>) {
+    let (session, warehouse) = seeded_table(properties).await;
     run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
     let head = branch_head(&session).await;
     assert!(head.is_some(), "branch b exists");
     (session, warehouse, head)
 }
 
+async fn assert_branch_commit(
+    session: &ReparkSession,
+    warehouse: &TempDir,
+    sql: &str,
+    shape: &Shape,
+    head: Option<i64>,
+    delete_formats: &[&str],
+) {
+    let main_before = main_head(session).await;
+    let outcome = attempt(session, sql).await;
+    assert!(outcome.is_ok(), "`{sql}` must complete: {outcome:?}");
+    let moved_head = branch_head(session).await;
+    assert!(moved_head.is_some(), "`{sql}` left no branch b");
+    assert_ne!(moved_head, head, "`{sql}` did not move branch b");
+    assert_eq!(
+        rows(session, BRANCH_READ).await,
+        Ok(shape.survivors.to_vec()),
+        "`{sql}` branch survivors"
+    );
+    assert_eq!(main_head(session).await, main_before, "`{sql}` moved main");
+    assert_eq!(
+        position_delete_extensions(warehouse),
+        delete_formats,
+        "`{sql}` delete file format"
+    );
+}
+
+#[derive(Debug, PartialEq)]
+struct Outcome {
+    completed: Result<(), String>,
+    main: Result<Vec<i32>, String>,
+    branch: Result<Vec<i32>, String>,
+    deletes: Vec<String>,
+}
+
+async fn outcome_of(properties: &str, delete_format: &str, sql: &str, write_conf: bool) -> Outcome {
+    let (session, warehouse) = seeded_table(properties).await;
+    if write_conf {
+        run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
+        set_session_write_codec(&session);
+    }
+    let completed = attempt(&session, sql).await.map(drop);
+    Outcome {
+        completed,
+        main: ids(&session).await,
+        branch: rows(&session, BRANCH_READ).await,
+        deletes: position_delete_extensions(&warehouse)
+            .into_iter()
+            .map(|extension| {
+                if extension == delete_format {
+                    "delete-format".to_string()
+                } else {
+                    extension
+                }
+            })
+            .collect(),
+    }
+}
+
+async fn assert_matches_parquet(
+    properties: &str,
+    delete_format: &str,
+    sql: &str,
+    shape: &Shape,
+    write_conf: bool,
+) -> bool {
+    let control = outcome_of(&data_format("parquet"), "parquet", sql, write_conf).await;
+    let measured = outcome_of(properties, delete_format, sql, write_conf).await;
+    assert_eq!(measured, control, "`{sql}` with {properties}");
+    if measured.completed.is_err() {
+        return false;
+    }
+    let read = if write_conf {
+        &measured.branch
+    } else {
+        &measured.main
+    };
+    assert_eq!(read, &Ok(shape.survivors.to_vec()), "`{sql}` survivors");
+    assert_eq!(measured.deletes, vec!["delete-format"], "`{sql}`");
+    true
+}
+
 #[tokio::test]
-async fn case_variant_dml_on_inherited_avro_or_orc_refuses_unchanged() {
+async fn case_variant_dml_and_merge_on_inherited_avro_or_orc_match_parquet() {
     for format in ["avro", "orc"] {
         for target in CASE_VARIANTS {
-            for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE, FORK_ROUTE_UPDATE] {
-                let (session, warehouse) = seeded_table(&data_format(format)).await;
-                assert_refused_unchanged(&session, &warehouse, &on_target(sql, target)).await;
+            for (index, shape) in EVERY_ROUTE.iter().enumerate() {
+                let sql = on_target(shape.sql, target);
+                let completed =
+                    assert_matches_parquet(&data_format(format), format, &sql, shape, false).await;
+                if FORK_ROUTE_SHAPES.contains(&index) {
+                    assert!(completed, "`{sql}` must complete on {format}");
+                }
             }
         }
     }
 }
 
 #[tokio::test]
-async fn case_variant_explicit_avro_delete_format_refuses() {
+async fn case_variant_explicit_avro_delete_format_matches_parquet() {
+    let properties = explicit_delete_format("parquet", "avro");
     for target in CASE_VARIANTS {
-        for sql in [FORK_ROUTE_DELETE, REPARK_ROUTE_DELETE, FORK_ROUTE_UPDATE] {
-            let (session, warehouse) =
-                seeded_table(&explicit_delete_format("parquet", "avro")).await;
-            assert_refused_unchanged(&session, &warehouse, &on_target(sql, target)).await;
+        for (index, shape) in EVERY_ROUTE.iter().enumerate() {
+            let sql = on_target(shape.sql, target);
+            let completed = assert_matches_parquet(&properties, "avro", &sql, shape, false).await;
+            if FORK_ROUTE_SHAPES.contains(&index) {
+                assert!(completed, "`{sql}` must complete");
+            }
         }
     }
 }
 
 #[tokio::test]
-async fn case_variant_merge_refuses_like_the_lowercase_spelling() {
-    for target in CASE_VARIANTS {
-        let (session, warehouse) = seeded_table(&data_format("avro")).await;
-        let sql = on_target(MERGE_DELETE_AND_INSERT, target);
-        assert_refused_unchanged(&session, &warehouse, &sql).await;
-    }
-}
-
-#[tokio::test]
-async fn branch_target_dml_on_inherited_avro_or_orc_refuses_with_the_branch_unchanged() {
+async fn branch_target_dml_on_inherited_avro_or_orc_commits_on_the_branch() {
     for format in ["avro", "orc"] {
-        for sql in BRANCH_SHAPES {
+        for shape in &BRANCH_SHAPES {
             let (session, warehouse, head) = branched_table(format).await;
-            assert_refused_unchanged(&session, &warehouse, &on_target(sql, BRANCH_TARGET)).await;
-            assert_eq!(branch_head(&session).await, head, "`{sql}` moved branch b");
+            let branched = on_target(shape.sql, BRANCH_TARGET);
+            assert_branch_commit(&session, &warehouse, &branched, shape, head, &[format]).await;
         }
     }
 }
 
 #[tokio::test]
-async fn branch_target_dml_under_a_session_write_conf_refuses_with_the_branch_unchanged() {
-    for sql in BRANCH_SHAPES {
-        let (session, warehouse, head) = branched_table("avro").await;
-        set_session_write_codec(&session);
-        assert_refused_unchanged(&session, &warehouse, &on_target(sql, BRANCH_TARGET)).await;
-        assert_eq!(branch_head(&session).await, head, "`{sql}` moved branch b");
+async fn branch_target_dml_under_a_session_write_conf_matches_parquet() {
+    for (index, shape) in BRANCH_SHAPES.iter().enumerate() {
+        let sql = on_target(shape.sql, BRANCH_TARGET);
+        let completed =
+            assert_matches_parquet(&data_format("avro"), "avro", &sql, shape, true).await;
+        if index % 2 == 1 {
+            assert!(completed, "`{sql}` must commit on the branch");
+        }
     }
 }
 
 #[tokio::test]
 async fn case_variant_branch_target_dml_fails_with_the_branch_unchanged() {
-    for target in [
-        "ICE.NS.T.branch_b",
-        "ice.NS.t.branch_b",
-        "ice.ns.T.branch_b",
-    ] {
-        for sql in BRANCH_SHAPES {
-            let (session, warehouse, head) = branched_table("avro").await;
-            assert_fails_unchanged(&session, &warehouse, &on_target(sql, target)).await;
-            assert_eq!(branch_head(&session).await, head, "`{sql}` moved branch b");
+    for format in ["avro", "parquet"] {
+        for target in [
+            "ICE.NS.T.branch_b",
+            "ice.NS.t.branch_b",
+            "ice.ns.T.branch_b",
+        ] {
+            for shape in &BRANCH_SHAPES {
+                let (session, warehouse, head) = branched_table(format).await;
+                let sql = on_target(shape.sql, target);
+                assert_fails_unchanged(&session, &warehouse, &sql).await;
+                assert_eq!(branch_head(&session).await, head, "`{sql}` moved branch b");
+            }
         }
     }
 }
 
+async fn assert_fails_unchanged(session: &ReparkSession, warehouse: &TempDir, sql: &str) -> String {
+    let files_before = files_under(warehouse.path()).len();
+    let rows_before = ids(session).await;
+    let error = attempt(session, sql)
+        .await
+        .expect_err("the statement must fail");
+    assert_eq!(ids(session).await, rows_before);
+    let snapshot = current_snapshot(session).await;
+    assert_eq!(snapshot.operation, Operation::Append);
+    assert_eq!(snapshot.total("total-delete-files"), 0);
+    assert_eq!(
+        files_under(warehouse.path()).len(),
+        files_before,
+        "`{sql}` wrote a file"
+    );
+    error
+}
+
 #[tokio::test]
-async fn branch_target_merge_on_inherited_avro_refuses_with_the_branch_unchanged() {
+async fn branch_target_merge_on_inherited_avro_commits_on_the_branch() {
     let (session, warehouse, head) = branched_table("avro").await;
-    let sql = on_target(MERGE_DELETE_AND_INSERT, BRANCH_TARGET);
-    assert_refused_unchanged(&session, &warehouse, &sql).await;
-    assert_eq!(branch_head(&session).await, head);
+    let branched = on_target(MERGE_DELETE_AND_INSERT, BRANCH_TARGET);
+    assert_branch_commit(
+        &session,
+        &warehouse,
+        &branched,
+        &EVERY_ROUTE[5],
+        head,
+        &["avro"],
+    )
+    .await;
 }
 
 #[tokio::test]
@@ -425,7 +560,7 @@ async fn parquet_branch_and_case_variant_dml_is_unchanged() {
         head,
         "the branch delete commits"
     );
-    let rows = attempt(&session, "SELECT id FROM ice.ns.t.branch_b ORDER BY id").await;
+    let rows = attempt(&session, BRANCH_READ).await;
     assert!(rows.is_ok(), "the branch reads back: {rows:?}");
 }
 
@@ -434,14 +569,6 @@ const BUG_001_TEXT: &str = "partition specs in history";
 
 fn comment_prefixed(prefix: &str, sql: &str, target: &str) -> String {
     format!("{prefix}{}", on_target(sql, target))
-}
-
-async fn branched_with(properties: &str) -> (ReparkSession, TempDir, Option<i64>) {
-    let (session, warehouse) = seeded_table(properties).await;
-    run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
-    let head = branch_head(&session).await;
-    assert!(head.is_some(), "branch b exists");
-    (session, warehouse, head)
 }
 
 fn set_session_wap_branch(session: &ReparkSession, branch: &str) {
@@ -462,26 +589,22 @@ fn wap_enabled(format: &str) -> String {
 }
 
 #[tokio::test]
-async fn comment_prefixed_branch_dml_on_an_avro_delete_format_refuses_with_the_branch_unchanged() {
+async fn comment_prefixed_branch_dml_on_an_avro_delete_format_commits_on_the_branch() {
     for properties in [
         data_format("avro"),
         explicit_delete_format("parquet", "avro"),
     ] {
         for prefix in COMMENT_PREFIXES {
             for target in [BRANCH_TARGET, "t.branch_b"] {
-                for sql in BRANCH_SHAPES {
+                for shape in &BRANCH_SHAPES {
                     let (session, warehouse, head) = branched_with(&properties).await;
                     if target == "t.branch_b" {
                         run(&session, "SET datafusion.catalog.default_catalog = 'ice'").await;
                         run(&session, "SET datafusion.catalog.default_schema = 'ns'").await;
                     }
-                    let statement = comment_prefixed(prefix, sql, target);
-                    assert_refused_unchanged(&session, &warehouse, &statement).await;
-                    assert_eq!(
-                        branch_head(&session).await,
-                        head,
-                        "`{statement}` moved branch b"
-                    );
+                    let statement = comment_prefixed(prefix, shape.sql, target);
+                    assert_branch_commit(&session, &warehouse, &statement, shape, head, &["avro"])
+                        .await;
                 }
             }
         }
@@ -489,35 +612,25 @@ async fn comment_prefixed_branch_dml_on_an_avro_delete_format_refuses_with_the_b
 }
 
 #[tokio::test]
-async fn comment_prefixed_dml_under_a_session_wap_branch_refuses_with_the_branch_unchanged() {
+async fn comment_prefixed_dml_under_a_session_wap_branch_commits_on_the_branch() {
     for prefix in COMMENT_PREFIXES {
-        for sql in BRANCH_SHAPES {
+        for shape in &BRANCH_SHAPES {
             let (session, warehouse, head) = branched_with(&wap_enabled("avro")).await;
             set_session_wap_branch(&session, "b");
-            let statement = format!("{prefix}{sql}");
-            assert_refused_unchanged(&session, &warehouse, &statement).await;
-            assert_eq!(
-                branch_head(&session).await,
-                head,
-                "`{statement}` moved branch b"
-            );
+            let statement = format!("{prefix}{}", shape.sql);
+            assert_branch_commit(&session, &warehouse, &statement, shape, head, &["avro"]).await;
         }
     }
 }
 
 #[tokio::test]
-async fn refused_dml_under_a_session_wap_branch_creates_no_branch() {
+async fn dml_under_a_session_wap_branch_creates_the_branch_and_commits_on_it() {
     for prefix in ["", COMMENT_PREFIXES[0], COMMENT_PREFIXES[1]] {
-        for sql in BRANCH_SHAPES {
+        for shape in &BRANCH_SHAPES {
             let (session, warehouse) = seeded_table(&wap_enabled("avro")).await;
             set_session_wap_branch(&session, "b");
-            let statement = format!("{prefix}{sql}");
-            assert_refused_unchanged(&session, &warehouse, &statement).await;
-            assert_eq!(
-                branch_head(&session).await,
-                None,
-                "`{statement}` created branch b"
-            );
+            let statement = format!("{prefix}{}", shape.sql);
+            assert_branch_commit(&session, &warehouse, &statement, shape, None, &["avro"]).await;
         }
     }
 }
@@ -556,10 +669,10 @@ async fn multi_spec_unpartitioned_branched_table() -> (ReparkSession, TempDir, O
 #[tokio::test]
 async fn comment_prefixed_branch_dml_on_a_multi_spec_unpartitioned_table_hits_bug_001() {
     for prefix in ["", COMMENT_PREFIXES[0], COMMENT_PREFIXES[1]] {
-        for sql in BRANCH_SHAPES {
+        for shape in &BRANCH_SHAPES {
             let (session, warehouse, head) = multi_spec_unpartitioned_branched_table().await;
             let files_before = files_under(warehouse.path()).len();
-            let statement = comment_prefixed(prefix, sql, BRANCH_TARGET);
+            let statement = comment_prefixed(prefix, shape.sql, BRANCH_TARGET);
             let outcome = attempt(&session, &statement).await;
             let Err(error) = outcome else {
                 panic!("`{statement}` must hit the BUG-001 valve: {outcome:?}");
@@ -603,32 +716,57 @@ async fn comment_prefixed_branch_delete_on_parquet_still_commits() {
             head,
             "the branch delete commits"
         );
-        let rows = attempt(&session, "SELECT id FROM ice.ns.t.branch_b ORDER BY id").await;
+        let rows = attempt(&session, BRANCH_READ).await;
         assert!(rows.is_ok(), "the branch reads back: {rows:?}");
     }
 }
 
-const WAP_ABSENT_MERGES: [&str; 3] = [
-    "MERGE INTO ice.ns.t t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN DELETE",
-    "MERGE INTO ice.ns.t t USING (SELECT 2 AS id) s ON t.id = s.id \
-     WHEN MATCHED THEN UPDATE SET t.id = 20",
-    "MERGE INTO ice.ns.t t USING (SELECT 9 AS id) s ON t.id = s.id \
-     WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id)",
+const WAP_MERGES: [(Shape, &[&str]); 3] = [
+    (
+        shape(
+            "MERGE INTO ice.ns.t t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN \
+             DELETE",
+            &[0, 1, 3, 4],
+            1,
+        ),
+        &["avro"],
+    ),
+    (
+        shape(
+            "MERGE INTO ice.ns.t t USING (SELECT 2 AS id) s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.id = 20",
+            &[0, 1, 3, 4, 20],
+            1,
+        ),
+        &["avro"],
+    ),
+    (
+        shape(
+            "MERGE INTO ice.ns.t t USING (SELECT 9 AS id) s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id)",
+            &[0, 1, 2, 3, 4, 9],
+            0,
+        ),
+        &[],
+    ),
 ];
 
 #[tokio::test]
-async fn refused_merge_under_a_session_wap_branch_creates_no_branch() {
+async fn merge_under_a_session_wap_branch_creates_the_branch_and_commits_on_it() {
     for prefix in ["", COMMENT_PREFIXES[0], COMMENT_PREFIXES[1]] {
-        for sql in WAP_ABSENT_MERGES {
+        for (shape, delete_formats) in &WAP_MERGES {
             let (session, warehouse) = seeded_table(&wap_enabled("avro")).await;
             set_session_wap_branch(&session, "b");
-            let statement = format!("{prefix}{sql}");
-            assert_refused_unchanged(&session, &warehouse, &statement).await;
-            assert_eq!(
-                branch_head(&session).await,
+            let statement = format!("{prefix}{}", shape.sql);
+            assert_branch_commit(
+                &session,
+                &warehouse,
+                &statement,
+                shape,
                 None,
-                "`{statement}` created branch b"
-            );
+                delete_formats,
+            )
+            .await;
         }
     }
 }
@@ -675,32 +813,29 @@ async fn assert_copy_on_write(
 
 #[tokio::test]
 async fn upper_case_merge_on_read_fork_route_dml_runs_copy_on_write_and_reads_back() {
-    let read = "SELECT id FROM ice.ns.t ORDER BY id";
     for properties in [
         data_format("avro"),
         data_format("orc"),
         explicit_delete_format("parquet", "avro"),
     ] {
         let (session, warehouse) = upper_case_mode_table(&properties).await;
-        assert_copy_on_write(&session, &warehouse, FORK_ROUTE_DELETE, read, &[0, 4]).await;
+        assert_copy_on_write(&session, &warehouse, FORK_ROUTE_DELETE, MAIN_READ, DELETED).await;
         assert_eq!(
             current_snapshot(&session).await.total("total-delete-files"),
             0
         );
         let (session, warehouse) = upper_case_mode_table(&properties).await;
-        let survivors = [0, 4, 11, 12, 13];
-        assert_copy_on_write(&session, &warehouse, FORK_ROUTE_UPDATE, read, &survivors).await;
+        assert_copy_on_write(&session, &warehouse, FORK_ROUTE_UPDATE, MAIN_READ, UPDATED).await;
     }
 }
 
 #[tokio::test]
 async fn upper_case_merge_on_read_branch_delete_runs_copy_on_write_on_the_branch() {
-    let read = "SELECT id FROM ice.ns.t.branch_b ORDER BY id";
     let (session, warehouse) = upper_case_mode_table(&data_format("avro")).await;
     run(&session, "ALTER TABLE ice.ns.t CREATE BRANCH b").await;
     let head = branch_head(&session).await;
     let sql = on_target(FORK_ROUTE_DELETE, BRANCH_TARGET);
-    assert_copy_on_write(&session, &warehouse, &sql, read, &[0, 4]).await;
+    assert_copy_on_write(&session, &warehouse, &sql, BRANCH_READ, DELETED).await;
     assert_ne!(
         branch_head(&session).await,
         head,
@@ -709,7 +844,14 @@ async fn upper_case_merge_on_read_branch_delete_runs_copy_on_write_on_the_branch
 }
 
 #[tokio::test]
-async fn upper_case_merge_on_read_repark_route_delete_still_writes_a_parquet_position_delete() {
+async fn upper_case_merge_on_read_repark_route_delete_writes_a_delete_in_the_data_format() {
     let (session, warehouse) = upper_case_mode_table(&data_format("avro")).await;
-    assert_parquet_position_delete(&session, &warehouse, REPARK_ROUTE_DELETE).await;
+    assert_rewrite_in(
+        &session,
+        &warehouse,
+        REPARK_ROUTE_DELETE,
+        &EVERY_ROUTE[1],
+        "avro",
+    )
+    .await;
 }
