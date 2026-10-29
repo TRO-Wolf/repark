@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+"""Enforce a size ceiling on every tracked `map.md`, with exact-baseline exceptions.
+
+SSOT for map size (MAP-GOVERNANCE-1). Prose points here and never restates the numbers.
+
+Rules over every tracked file named `map.md`:
+1. A map stays within DEFAULT_LINES lines and DEFAULT_BYTES bytes; crossing either fails.
+   Blank lines count.
+2. EXCEPTIONS records the exact (lines, bytes) of each map that was over a ceiling when the
+   ratchet armed. An excepted map must equal its baseline: growth in either measure fails, and
+   shrinkage fails until the row is lowered, or deleted once the map is within both ceilings.
+3. `--update-baselines` rewrites EXCEPTIONS from the tree in the ratchet direction only: a
+   shrunk row is lowered, a row whose map is within both ceilings is deleted. A grown map or a
+   new map over a ceiling is refused and nothing is written; the out is a split or a condensed
+   map, never a raised row.
+
+Exit 0 clean, 1 findings, 2 usage or environment error. Fail-closed: no tracked map, an
+unreadable map, or an EXCEPTIONS key that is no tracked map is an error, never a skip.
+"""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+MAP_NAME = "map.md"
+DEFAULT_LINES = 200
+DEFAULT_BYTES = 16384
+TABLE_OPEN = "EXCEPTIONS: dict[str, tuple[int, int]] = {"
+TABLE_CLOSE = "}"
+LINE_LIMIT = 100
+
+EXCEPTIONS: dict[str, tuple[int, int]] = {
+    ".github/workflows/map.md": (109, 37120),
+    "crates/repark-common/src/map.md": (249, 20712),
+    "crates/repark-connect/src/map.md": (426, 35712),
+    "crates/repark-connect/tests/it/map.md": (468, 38148),
+    "crates/repark-core/map.md": (266, 19890),
+    "crates/repark-core/src/column_resolution/map.md": (209, 15902),
+    "crates/repark-core/src/map.md": (1575, 128502),
+    "crates/repark-core/src/microbatch/map.md": (269, 22599),
+    "crates/repark-core/src/session/df_guards/map.md": (781, 61318),
+    "crates/repark-core/src/session/map.md": (652, 53416),
+    "crates/repark-core/src/session/tests/map.md": (531, 40886),
+    "crates/repark-functions/map.md": (271, 21197),
+    "crates/repark-functions/src/map.md": (1564, 124860),
+    "crates/repark-iceberg/src/catalog/map.md": (635, 53840),
+    "crates/repark-iceberg/src/microbatch/map.md": (280, 18027),
+    "crates/repark-iceberg/src/write/map.md": (2067, 180961),
+    "crates/repark-iceberg/src/write/merge/map.md": (509, 40910),
+    "crates/repark-python/src/column/map.md": (423, 31404),
+    "crates/repark-python/src/map.md": (301, 107803),
+    "crates/repark-spark/benches/ice_read_perf/map.md": (375, 28752),
+    "crates/repark-spark/src/call/map.md": (444, 36836),
+    "crates/repark-spark/src/map.md": (2524, 211510),
+    "crates/repark-spark/src/router/map.md": (332, 27642),
+    "crates/repark-spark/src/tests/map.md": (2814, 237474),
+    "crates/repark-spark/src/view_ddl/map.md": (223, 15207),
+    "crates/repark-spark/src/void_type/map.md": (245, 17027),
+    "crates/repark-spark/tests/map.md": (597, 55136),
+    "crates/repark-sql/src/map.md": (492, 41039),
+    "crates/repark-sql/tests/map.md": (383, 33794),
+    "docs/artifacts/map.md": (59, 29165),
+    "docs/design/map.md": (221, 18635),
+    "docs/examples/functions/map.md": (207, 18079),
+    "docs/guide/map.md": (243, 18311),
+    "docs/map.md": (378, 31254),
+    "docs/perf/map.md": (478, 35483),
+    "map.md": (304, 43700),
+    "python/repark-parity/tests/live_spark/map.md": (304, 20290),
+    "python/repark-parity/tests/map.md": (1221, 127262),
+    "python/repark-parity/tests/spill/map.md": (212, 13184),
+    "python/repark/src/repark/spark/dataframe/map.md": (1890, 142597),
+    "python/repark/src/repark/spark/map.md": (1172, 90111),
+    "python/repark/src/repark/spark/session/map.md": (147, 85507),
+    "python/repark/tests/functions/map.md": (153, 19204),
+    "python/repark/tests/iceberg/map.md": (173, 22376),
+    "python/repark/tests/map.md": (10116, 883866),
+    "python/repark/tests/parity/map.md": (112, 16602),
+    "python/repark/tests/timestamps/map.md": (221, 39702),
+    "python/repark/tests/writes/map.md": (209, 30031),
+    "scripts/map.md": (1501, 133564),
+    "task/ledgers/archive/2026-08/map.md": (180, 40884),
+    "task/ledgers/completed/map.md": (1106, 92502),
+    "task/ledgers/staging/map.md": (2648, 209341),
+    "task/map.md": (228, 24697),
+    "task/roadmap/mid-term/map.md": (1120, 154385),
+    "task/wo/map.md": (62, 17390),
+}
+
+
+def tracked_maps(repo: Path) -> list[str]:
+    """Every tracked `map.md`, repo-relative posix, sorted."""
+    listed = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "-z"], capture_output=True, check=True, text=True
+    )
+    return sorted(
+        entry for entry in listed.stdout.split("\0") if entry and Path(entry).name == MAP_NAME
+    )
+
+
+def measure(repo: Path, path: str) -> tuple[int, int]:
+    """(lines, bytes) of one map."""
+    raw = (repo / path).read_bytes()
+    return len(raw.decode("utf-8").splitlines()), len(raw)
+
+
+def over(lines: int, size: int) -> bool:
+    """Whether a measure crosses either ceiling."""
+    return lines > DEFAULT_LINES or size > DEFAULT_BYTES
+
+
+def check_map(path: str, lines: int, size: int, table: dict[str, tuple[int, int]]) -> list[str]:
+    """Findings for one map against the ceilings and its baseline."""
+    baseline = table.get(path)
+    if baseline is None:
+        if not over(lines, size):
+            return []
+        return [
+            f"ERROR: {path} is {lines} lines and {size} bytes (ceilings {DEFAULT_LINES} lines, "
+            f"{DEFAULT_BYTES} bytes). Condense the map or split the directory; a new "
+            "EXCEPTIONS row needs explicit owner approval."
+        ]
+    base_lines, base_bytes = baseline
+    if not over(base_lines, base_bytes):
+        return [f"ERROR: {path}: baseline ({base_lines}, {base_bytes}) is within both ceilings."]
+    if lines > base_lines or size > base_bytes:
+        return [
+            f"ERROR: {path} grew to {lines} lines and {size} bytes (exact baseline "
+            f"{base_lines} lines, {base_bytes} bytes). Make the edit size-neutral or condense "
+            "the map; a raised baseline needs explicit owner approval."
+        ]
+    if (lines, size) != baseline:
+        action = "delete the row" if not over(lines, size) else "lower the row"
+        return [
+            f"ERROR: {path} shrank to {lines} lines and {size} bytes below its exact baseline "
+            f"{base_lines} lines, {base_bytes} bytes; {action} "
+            "(python3 scripts/check_map_size.py --update-baselines)."
+        ]
+    return []
+
+
+def render_row(path: str, lines: int, size: int) -> list[str]:
+    """One EXCEPTIONS row as ruff formats it."""
+    single = f'    "{path}": ({lines}, {size}),'
+    if len(single) <= LINE_LIMIT:
+        return [single]
+    return [f'    "{path}": (', f"        {lines},", f"        {size},", "    ),"]
+
+
+def rewrite_table(script: Path, rows: dict[str, tuple[int, int]]) -> None:
+    """Replace the EXCEPTIONS literal in this script's source with `rows`."""
+    source = script.read_text(encoding="utf-8").split("\n")
+    start = next(index for index, line in enumerate(source) if line.startswith(TABLE_OPEN))
+    end = start if source[start] == TABLE_OPEN + TABLE_CLOSE else source.index(TABLE_CLOSE, start)
+    body = [line for path in sorted(rows) for line in render_row(path, *rows[path])]
+    table = [TABLE_OPEN, *body, TABLE_CLOSE] if body else [TABLE_OPEN + TABLE_CLOSE]
+    script.write_text("\n".join([*source[:start], *table, *source[end + 1 :]]), encoding="utf-8")
+
+
+def update_baselines(repo: Path, measured: dict[str, tuple[int, int]], script: Path) -> int:
+    """The ratchet-only rewrite of EXCEPTIONS; refuses growth and new violators."""
+    refused: list[str] = []
+    rows: dict[str, tuple[int, int]] = {}
+    for path, (lines, size) in measured.items():
+        baseline = EXCEPTIONS.get(path)
+        if baseline is None:
+            if over(lines, size):
+                refused.append(f"{path}: {lines} lines, {size} bytes, not excepted")
+            continue
+        if lines > baseline[0] or size > baseline[1]:
+            refused.append(f"{path}: grew to {lines} lines, {size} bytes past {baseline}")
+            continue
+        if over(lines, size):
+            rows[path] = (lines, size)
+    if refused:
+        for line in refused:
+            print(f"REFUSED: {line}", file=sys.stderr)
+        print("map-size: --update-baselines refused; nothing written", file=sys.stderr)
+        return 1
+    rewrite_table(script, rows)
+    print(f"map-size: EXCEPTIONS rewritten in {script.relative_to(repo)} ({len(rows)} rows)")
+    return 0
+
+
+def run(repo: Path, update: bool) -> int:
+    """Measure every map, then check or ratchet the table."""
+    try:
+        maps = tracked_maps(repo)
+    except (subprocess.CalledProcessError, OSError) as error:
+        print(f"ERROR: cannot list tracked files ({error})", file=sys.stderr)
+        return 2
+    if not maps:
+        print("ERROR: no tracked map.md found — refuse to pass closed", file=sys.stderr)
+        return 2
+    measured: dict[str, tuple[int, int]] = {}
+    for path in maps:
+        try:
+            measured[path] = measure(repo, path)
+        except (OSError, UnicodeDecodeError) as error:
+            print(f"ERROR: {path}: unreadable ({error})", file=sys.stderr)
+            return 2
+    errors = [
+        f"ERROR: EXCEPTIONS key is no tracked map: {path} (delete the row)"
+        for path in sorted(EXCEPTIONS)
+        if path not in measured
+    ]
+    if update:
+        if errors:
+            for error in errors:
+                print(error, file=sys.stderr)
+            return 1
+        return update_baselines(repo, measured, Path(__file__).resolve())
+    for path, (lines, size) in measured.items():
+        errors.extend(check_map(path, lines, size, EXCEPTIONS))
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        print(f"map-size: FAIL — {len(errors)} finding(s) across {len(maps)} maps", file=sys.stderr)
+        return 1
+    print(
+        f"map-size: {len(maps)} maps clean (ceilings {DEFAULT_LINES} lines, {DEFAULT_BYTES} "
+        f"bytes; {len(EXCEPTIONS)} exceptions)"
+    )
+    return 0
+
+
+def main() -> int:
+    """CLI: `--update-baselines`, and the hidden `--repo` for the tests."""
+    parser = argparse.ArgumentParser(prog="check_map_size.py", description=__doc__.split("\n\n")[0])
+    parser.add_argument(
+        "--update-baselines",
+        action="store_true",
+        help="lower or delete EXCEPTIONS rows from the tree; refuses growth",
+    )
+    parser.add_argument(
+        "--repo", type=Path, default=Path(__file__).resolve().parent.parent, help=argparse.SUPPRESS
+    )
+    arguments = parser.parse_args()
+    return run(arguments.repo.resolve(), arguments.update_baselines)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

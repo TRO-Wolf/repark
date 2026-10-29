@@ -51,7 +51,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-docs-links check-owner-ruling check-model-ban check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-map-size check-docs-compaction check-docs-links check-owner-ruling check-model-ban check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -361,7 +361,7 @@ check-manifest: ## Structural-manifest guard (repo-manifest.toml vs workspace, d
 	@./scripts/check_manifest.sh
 
 .PHONY: check-map-md
-check-map-md: ## map.md lockstep guard over this branch vs BASE (the pull request is the unit; the pre-commit hook's staged mode only warns)
+check-map-md: ## map.md lockstep advisory over this branch vs BASE: warns and exits 0 in both modes (MAP-GOVERNANCE-1)
 	bash scripts/check_map_md.sh --base "$(BASE)"
 
 .PHONY: check-ledgers
@@ -427,6 +427,10 @@ check-map-sync: ## map.md CONTENT guard: every relative link in every map resolv
 	@# `--fix` is mechanical only (drop dead link rows, append TODO(describe) stubs); it never
 	@# writes a description.
 	python3 scripts/sync_map_md.py --check
+
+.PHONY: check-map-size
+check-map-size: ## map.md size ceilings with exact-baseline exceptions that ratchet down only; SSOT scripts/check_map_size.py
+	python3 scripts/check_map_size.py
 
 # ------------------------------------------------------------------------------------------------
 # Security gates (mirror cargo-deny.yml / zizmor.yml)

@@ -309,3 +309,147 @@ def test_migration_names_the_archive_sidecar_by_its_ledger(mapped: Path) -> None
     assert (mapped / f"{archived}-pins.md").read_text(encoding="utf-8").splitlines()[2:] == [
         f"C-001: {_TEST}"
     ]
+
+
+_SIZE = _REPO / "scripts" / "check_map_size.py"
+_GUARD = _REPO / "scripts" / "check_map_md.sh"
+
+
+def _size_repo(tmp_path: Path, table: str) -> Path:
+    repo = tmp_path / "sized"
+    _git(repo.parent, "init", "-q", "-b", "main", str(repo))
+    source = _SIZE.read_text(encoding="utf-8")
+    start = source.index("\nEXCEPTIONS: dict[str, tuple[int, int]] = {") + 1
+    end = source.index("\n}\n", start) + 3
+    _write(repo, "scripts/check_map_size.py", source[:start] + table + source[end:])
+    _write(repo, "map.md", "# root\n")
+    _write(repo, "big/map.md", "".join(f"- row {n}\n" for n in range(250)))
+    return repo
+
+
+def _size(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    _git(repo, "add", "-A")
+    return subprocess.run(
+        [sys.executable, str(repo / "scripts" / "check_map_size.py"), "--repo", str(repo), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _big_bytes() -> int:
+    return len("".join(f"- row {n}\n" for n in range(250)).encode())
+
+
+def _table(rows: str) -> str:
+    return "EXCEPTIONS: dict[str, tuple[int, int]] = {\n" + rows + "}\n"
+
+
+def test_map_over_the_line_ceiling_goes_red(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(""))
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "ERROR: big/map.md is 250 lines" in result.stderr
+
+
+def test_map_over_the_byte_ceiling_goes_red(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(""))
+    _write(repo, "big/map.md", "x" * 16385 + "\n")
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "ERROR: big/map.md is 1 lines and 16386 bytes" in result.stderr
+
+
+def test_excepted_map_at_its_baseline_is_green(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    result = _size(repo)
+    assert result.returncode == 0, result.stderr
+    assert "2 maps clean" in result.stdout
+    assert "1 exceptions" in result.stdout
+
+
+def test_excepted_map_that_grows_goes_red(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    _write(repo, "big/map.md", "".join(f"- row {n}\n" for n in range(250)) + "- one more\n")
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "ERROR: big/map.md grew to 251 lines" in result.stderr
+    assert _size(repo, "--update-baselines").returncode == 1
+    assert f'"big/map.md": (250, {_big_bytes()}),' in (
+        repo / "scripts/check_map_size.py"
+    ).read_text(encoding="utf-8")
+
+
+def test_excepted_map_that_shrinks_ratchets_down(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    shrunk = "".join(f"- row {n}\n" for n in range(240))
+    _write(repo, "big/map.md", shrunk)
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "shrank to 240 lines" in result.stderr
+    assert "lower the row" in result.stderr
+    updated = _size(repo, "--update-baselines")
+    assert updated.returncode == 0, updated.stderr
+    script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
+    assert f'    "big/map.md": (240, {len(shrunk.encode())}),\n' in script
+    assert _size(repo).returncode == 0
+
+
+def test_excepted_map_within_both_ceilings_retires_its_row(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    _write(repo, "big/map.md", "# small\n")
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "delete the row" in result.stderr
+    assert _size(repo, "--update-baselines").returncode == 0
+    script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
+    assert "EXCEPTIONS: dict[str, tuple[int, int]] = {}\n" in script
+    assert _size(repo).returncode == 0
+    assert _size(repo, "--update-baselines").returncode == 0
+
+
+def test_update_refuses_a_new_violator(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(""))
+    result = _size(repo, "--update-baselines")
+    assert result.returncode == 1
+    assert "REFUSED: big/map.md: 250 lines" in result.stderr
+    assert "EXCEPTIONS: dict[str, tuple[int, int]] = {\n}\n" in (
+        repo / "scripts/check_map_size.py"
+    ).read_text(encoding="utf-8")
+
+
+def test_stale_and_hollow_rows_go_red(tmp_path: Path) -> None:
+    rows = f'    "big/map.md": (250, {_big_bytes()}),\n    "gone/map.md": (300, 1),\n'
+    repo = _size_repo(tmp_path, _table(rows + '    "map.md": (7, 7),\n'))
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "EXCEPTIONS key is no tracked map: gone/map.md" in result.stderr
+    assert "map.md: baseline (7, 7) is within both ceilings" in result.stderr
+
+
+def test_real_table_is_clean_on_the_tree() -> None:
+    result = subprocess.run(
+        [sys.executable, str(_SIZE)], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_lockstep_branch_mode_warns_with_the_advisory_note(tmp_path: Path) -> None:
+    repo = tmp_path / "lockstep"
+    _git(tmp_path, "init", "-q", "-b", "main", str(repo))
+    _write(repo, "pkg/mod.rs", "fn a() {}\n")
+    _write(repo, "pkg/map.md", "# pkg\n")
+    _git(repo, "add", "-A")
+    _git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base")
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    _write(repo, "pkg/mod.rs", "fn b() {}\n")
+    _git(repo, "add", "-A")
+    _git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "work")
+    result = subprocess.run(
+        ["bash", str(_GUARD), "--base", base], capture_output=True, text=True, check=False, cwd=repo
+    )
+    assert result.returncode == 0
+    lines = result.stderr.splitlines()
+    assert lines[0] == "WARNING: pkg/map.md was not updated on this branch (map.md lockstep rule)."
+    assert lines[-1].startswith("note: map.md lockstep is advisory")
+    assert "ERROR" not in result.stderr
