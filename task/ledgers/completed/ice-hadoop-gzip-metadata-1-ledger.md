@@ -1,3 +1,5 @@
+**Errata (2026-10-29, clerk).** The charter point on the missing-hint refusal is settled by the owner's merge word for PR #1218 on 2026-10-29. That word was given after the orchestrator reported the deviation in this ledger to the owner (a readable hint naming a missing version keeps Java's refusal; the cleanup case was a probe artefact) and offered a sidecar-honouring unit, which the owner did not take up. It is the owner ruling that the label's C-067 cites under its C-074. This frozen file takes no appended row; this errata is the whole change, and the deviation paragraph and every row keep their text.
+
 # Unit ledger — ICE-HADOOP-GZIP-METADATA-1 · the hadoop path read follows Java's gzip metadata names for the hinted version, the hint walk and the no-hint listing
 
 **Date:** 2026-10-29 · **Branch:** `fix/ice-hadoop-gzip-metadata-1` · **Base:** `c48b1ad7` (`main`, the branch point) · **Product head:** `df912dc3` (PR #1218) · **Model:** builder `claude-opus-5-5` (commits `1bfa44a4`, the tests, and `df912dc3`, the fix); clerk `claude-haiku-5-5` (the records commit) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
