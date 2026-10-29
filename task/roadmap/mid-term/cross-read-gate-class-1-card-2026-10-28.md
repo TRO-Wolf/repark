@@ -2,7 +2,7 @@
 
 **Filed:** 2026-10-28. **Filed by:** the audit clerk round (`claude-haiku-5-5`), from the independent audit ([iceberg-v2-label-independent-audit-2026-10-28.md](../../../docs/audits/iceberg-v2-label-independent-audit-2026-10-28.md)) and the orchestrator's reproduction of 2026-10-28.
 
-**Status:** built 2026-10-29 on branch `fix/cross-read-gate-class-1`, awaiting verification and merge. Registry note: [ICE-COMMIT-UNKNOWN-1](../../../docs/spark-sql-iceberg-parity.md), the dated AUD-005 line.
+**Status:** merged 2026-10-29 as `7ef6bcf4` (PR #1211); closed. Registry note: [ICE-COMMIT-UNKNOWN-1](../../../docs/spark-sql-iceberg-parity.md), the dated AUD-005 line.
 
 **Grade:** not graded yet. It changes a test helper, not a product path.
 

@@ -1300,6 +1300,6 @@ probe on a nanosecond table is rejected with the class in the message, the recor
 timestamp_ns and timestamptz_ns conditions (first-line match, stack text after) stay
 accepted, a second-line-only condition, an authorization failure and a variant condition
 are rejected, the microsecond control rejects both shapes, and EQUAL stays accepted with
-DIFFERENT rejected. pins: cross-read-gate-class-1/C-001, C-002, C-003
+DIFFERENT rejected. pins: cross-read-gate-class-1/C-001, C-002, C-003, C-004, C-005
 
 `test_v3r_1_rulings.py` re-pins the OD-3b runbook needles on 2026-10-24: the owner's policy revision adds `s3tables:DeleteTable` under the namespace condition, so the test now asserts that sentence and the remaining `DeleteNamespace` / `DeleteTableBucket` refusal instead of the superseded "Still no `s3tables:DeleteTable`".

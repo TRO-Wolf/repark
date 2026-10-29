@@ -3,7 +3,7 @@
 **Date:** 2026-10-29 · **Branch:** `chore/rp-62-eqdel-repin` · **Base:** `6ec819ef` (`main` after RP-61, #1209) · **Model:** builder `claude-opus-5-5` (commits `a8f780e4`, `b7719fa3` and `cf86f319`); clerk `claude-haiku-5-5` (the records commit) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
-**Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
+**Retired:** this ledger moved to `../completed/` in the post-merge records commit of 2026-10-29, after PR #1213 merged as `df43dca5`.
 
 **Why now.** The fork fix is F-EQDEL-DROPPED-KEY-1, fork PR `#377`, squash `935cc55c8e2b20ee337c01eca45314ecb10e0c2f`, merged 2026-10-28 after a fresh Opus 5.5 PASS. RePark stayed on `56aa8913` (RP-61) because `935cc55c` merged after that pin was chosen. Card: [the RP-62 card](../../roadmap/mid-term/rp-62-eqdel-repin-card-2026-10-28.md). Fork card: [F-EQDEL-DROPPED-KEY-1](../../roadmap/mid-term/f-eqdel-dropped-key-1-card-2026-10-28.md).
 
@@ -27,10 +27,13 @@
 | C-010 | The RP-61 pins stay as they were. The three RP-61 suites (`delete_format_guard`, `posdel_batch_door`, `post_publish_outcome`) pass at `935cc55c` unchanged, and the RP-62 commits change no file under `crates/repark-spark/` or `python/`. | The committed diff of `crates/repark-spark` and `python` against `6ec819ef` is empty; the suite counts are in C-011. | PROVEN | The clerk's read-only `git diff --stat` for those paths, which prints nothing; the RP-62 diff touches four files (`Cargo.toml`, `Cargo.lock` and the two new test files). The suite counts (24, 10 and 3, total 37) are the builder's, copied. |
 | C-011 | The gate counts hold at `935cc55c`. `cargo test -p repark-iceberg` 1061 passed; `-p repark-spark` 3100 passed; `-p repark-sql` 603 passed (596, plus four in `eqdel_dropped_key_door` and three in `native_door_delete_format`); none failed. `make rust-fmt-check`, `rust-clippy`, `rust-panic-ban`, `check-rust-file-size` (1261 files clean), `check-model-ban`, `py-lint` and `py-format-check` exit 0; the comment gate reports zero hits. | The builder's gate table, step 5 of its notes, copied. | PROVEN | The builder's runs, copied. The clerk ran no cargo and no Python gate; the clerk's records gates are listed under Records. |
 | C-012 | This unit is verified: an Opus 5.5 verifier and a Muse MAX critic each PASS on the head. | The two verdicts, each at `9d02c8f7`, on the union of PASS. | PROVEN | Verification round 1 (2026-10-29): the Opus 5.5 verifier PASS and the Muse MAX critic PASS, both at `9d02c8f7`; see the Verification round 1 section. |
+| C-013 | The unit merged on 2026-10-29 as PR #1213, squash `df43dca5`, with 25 checks green, after the union of PASS at `9d02c8f7` (C-012). | `gh pr view 1213 --json mergeCommit`, copied from the brief; the clerk ran no `gh`. | PROVEN | pins: `df43dca5` (the merge commit on main, PR #1213). The citation the grammar gate counts is in `crates/repark-sql/tests/map.md`, the pins line under the row for `native_door_delete_format.rs`, and in this unit's completed map pins line; this clause measures nothing itself. |
 
 VERDICT (2026-10-29, at build, before verification): 12 clauses. 9 PROVEN (C-001 to C-005 and C-008 to C-011), 3 OPEN (C-006 and C-007, the Avro and ORC data residue pending F-EQDEL-DROPPED-KEY-2; C-012, verification not run).
 
 VERDICT (2026-10-29, verification round 1): 12 clauses. 10 PROVEN (C-001 to C-005 and C-008 to C-012), 2 OPEN (C-006 and C-007, the Avro and ORC data residue pending F-EQDEL-DROPPED-KEY-2).
+
+VERDICT (2026-10-29, merge): 13 clauses. 11 PROVEN (C-001 to C-005 and C-008 to C-013), 2 OPEN (C-006 and C-007, the Avro and ORC data residue pending F-EQDEL-DROPPED-KEY-2).
 
 ## Records
 
