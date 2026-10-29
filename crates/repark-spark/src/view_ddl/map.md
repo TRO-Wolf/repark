@@ -128,6 +128,8 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   answers Spark rows with an Arrow NULL comment (alias COMMENT clauses kept); SHOW
   VIEWS appends the session's temp rows. Every other target falls through to
   the catalog arms unchanged. pins: ice-views-1/C-018
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29):** before the DROP and DESCRIBE arms, the router calls `temp_write::refuse_temp_view_write_target` when the statement's write-options map is empty, so a view-named write target refuses before any write route runs; with write options, the existing write-options refusal answers first. `temp_view_home_segments` is `pub(crate)` for that check. pins: spark-door-temp-view-target-1/C-001, C-004
+- `temp_write.rs` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29, AUD-006):** `refuse_temp_view_write_target`, called by `temp_ddl.rs::route_temp_view_statement`. It parses only the target of `DELETE FROM`, `UPDATE`, `MERGE INTO`, `INSERT [INTO | OVERWRITE] [TABLE]` (not `[LOCAL] DIRECTORY`) and `TRUNCATE TABLE`, resolves it through `temp_view_home_segments` (shared with DROP and DESCRIBE), and refuses a view-named target: `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` for DELETE, INSERT, INSERT OVERWRITE and TRUNCATE TABLE (the statement's own operation token), and Spark's `UNSUPPORTED_FEATURE.TABLE_OPERATION` text for UPDATE and MERGE INTO. A resolution error counts as not a view, so an ordinary write never fails because of the check. pins: spark-door-temp-view-target-1/C-001, C-002, C-003
 - `temp_view.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `ReplanningTempView`
   keeps the plan it built at CREATE (`definition_plan`), and the free function
   `definition_plan` answers it for a provider that is one; `extension.rs` registers that

@@ -117,6 +117,7 @@ pins: perf-facade-cdf-1/C-002, C-003, C-004
   `resolve_temp_view_home_ref`; every product path emits the home-qualified spelling
   (`"datafusion"."public"."v"`) for a session-local view. `createDataFrame`'s scratch view is
   named through `repark.spark._temp_views.scratch_view_name`.
+- **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29):** the write-target expansions prefer the temporary view. `session_core.py` `_try_expand_insert_sql` (INSERT INTO and INSERT OVERWRITE), `_try_expand_update_sql`, `_try_expand_delete_sql` and the target of `_expand_merge_into_sql`, and `sql_relations.py` `_expand_truncate_target_sql`, resolve with `prefer_temp_view=True`, the read side's lookup. A view-named target therefore reaches the Spark door as the view's home name and refuses there (`crates/repark-spark/src/view_ddl/temp_write.rs`); every other name qualifies as before. CREATE TABLE, durable CREATE VIEW and the DataFrame writer paths keep `prefer_temp_view=False`. pins: spark-door-temp-view-target-1/C-001, C-002
 
 ## Debug
 
