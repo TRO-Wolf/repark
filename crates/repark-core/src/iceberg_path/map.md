@@ -84,8 +84,6 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   unchanged behaviour (C-007) is the pre-existing hint-walk battery above and the `tests.rs`
   picker battery, both green and unchanged.
   The verification round 1 of ICE-HADOOP-GZIP-METADATA-1 (ledger C-008, 2026-10-29) is cited here on the gzip pin family above, so the grammar gate counts it; the verifiers add no pin of their own.
-  pins: ice-hadoop-gzip-metadata-1/C-008
   The merge of ICE-HADOOP-GZIP-METADATA-1 (ledger C-009, 2026-10-29, squash `f5a0cf88`, PR #1218) is cited here on the gzip pin family, so the grammar gate counts it; this file pins none of its own.
-  pins: ice-hadoop-gzip-metadata-1/C-009
   The merge facts of ICE-HADOOP-HINT-WINDOW-1 are cited here so the grammar gate counts them: the label re-date (ice-hadoop-hint-window-1 C-008, 2026-10-28, merge `9ab67d7d`) and the option-1 walk's closure of ice-integrity-pins-1 C-015, C-029 and C-071 (C-072). This file pins none of them.
   The closure of ice-integrity-pins-1 C-015, C-029 and C-071 is dated 2026-10-28 by its correction C-073, cited below so the grammar gate counts it; the merge fact is not a test pin of this file.

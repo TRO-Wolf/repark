@@ -1,0 +1,21 @@
+# Card MAP-GOVERNANCE-1: pin bindings leave the maps for ledger sidecars; map lockstep warns; a map size ratchet
+
+**Date:** 2026-10-29. **Filed by:** Claude (claude-haiku-5-5), records clerk, from the builder's hand-back on `feat/map-governance-1` (PR #1221), under the owner's adoption of the map policy evaluation ("go with your recommendations across the board").
+
+**Status:** built at `acaec00b`, main merged as `f2df6de8`; verification round 1 FAIL fixed in rounds 3 and 4 (`13e7baf1`, `acaec00b`); re-verification pending; merge waits on the owner's ruling amendment to the owner-ruling block. Grade A. Ledger: [staging/map-governance-1-ledger.md](../../ledgers/staging/map-governance-1-ledger.md).
+
+**Why.** 5,395 pin citations in 268 maps (4,914 under the grammar gate's roots by line, 481 in the 34 maps outside them) were the only legal home for a ledger clause's pin, so a unit that pinned a clause edited a map, and every executor read the maps it touched first: 105k tokens of mandatory map reads for one unit, by the evaluation's measure. Lockstep made a map touch a merge condition, and nothing bounded a map's size: 57 maps were over the 200-line or 16 KiB ceilings at `f5a0cf88`.
+
+**Site.** `scripts/check_ledger_grammar.py` (rule B reads sidecars); `scripts/migrate_pins_to_sidecars.py` (new); `scripts/check_map_size.py` (new); `scripts/check_map_md.sh` (warns); `scripts/ledger_lifecycle.py` (carries sidecars, moves size rows); `Makefile` (`check-map-size`); `.github/workflows/ci.yml` (the size guard step); `python/repark-parity/tests/test_map_governance_1.py` and `test_map_governance_1_lifecycle.py` (new); `test_map_pr_gate_1.py` (the warning contract); `AGENTS.md` (the map rule) and `DEVELOPMENT.md` (the lockstep rows); `task/ledgers/<bin>/<unit>-pins.md` for 449 units.
+
+**Fix.**
+1. **Pin binding leaves the maps.** A ledger's clauses bind in `task/ledgers/<bin>/<unit>-pins.md`, one line per clause: `C-NNN: <path>[::<name>], ...` or `C-NNN: none (records)`. The grammar gate reads the sidecars, a map no longer counts, and a deleted or renamed test goes red. The one-time migration wrote 449 sidecars and cut 2,657 citation lines out of 231 maps; it cut citation text and wrote no map prose.
+2. **The lifecycle carries the sidecar.** `move` and `archive` take `<unit>-pins.md` with its ledger; a sidecar in `completed/` or the archive is not frozen, a ledger row is.
+3. **Lockstep warns.** `check_map_md.sh` prints `WARNING:` and exits 0 in both modes. `sync_map_md.py --check` (link validity, duplicate rows) stays a gate.
+4. **A size ratchet.** A tracked map over 200 lines or 16 KiB fails unless it is an exact-baseline row; excepted maps only ratchet down; the bin and archive-month maps are exempt lifecycle inventories.
+
+**Measured** (builder, `f5a0cf88` and `acaec00b`): 4,642 distinct pinned clause ids before and after the migration; 0 unplaceable citations; 449 sidecars of 773,891 bytes after the entry-bounded binding of fix rounds 3 and 4; 1,144 `none (records)` lines at `acaec00b`; misbinding scan 0.
+
+**Retires.** The rule that a pin lives in a map; lockstep as a merge gate; unbounded map growth.
+
+**Relation to the evaluation and the later steps.** This card carries the four parts of the owner-adopted map policy evaluation. Its measured gap is the `none (records)` clauses (1,144 at `acaec00b`) and the 129 citations left as inert prose; later steps of the adopted plan, outside this unit, reduce them, and this unit binds neither. The owner-ruling block (AGENTS.md lines 14 to 20 and CLAUDE.md) still says a `pins:` citation in a map counts. `check_owner_ruling.py` holds that text byte-for-byte, so its new wording waits on the owner's word; this card does not edit it.

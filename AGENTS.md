@@ -135,9 +135,11 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   ANSI SQL / Spark facade) is the testing structure. A divergence-class claim pins *every* class it
   names, per entry point, on the Arrow path (`collect`/`to_arrow`, value AND type — never only
   `show`). Full contract: [docs/testing.md](docs/testing.md).
-- **`map.md` in every directory, updated in the same change** (`scripts/check_map_md.sh`; the hook
-  warns). New directory → new `map.md`, no judgment call. Maps are **hand-written**: no generator
-  exists, and the one piece of `map.md` automation only *checks* — it never writes one.
+- **Maps are scoped and hand-written.** A `map.md` sits at a repository root, crate, package or complex
+  subsystem boundary where it routes a task, names an owner or a boundary, or names the verification; a
+  new directory need not have one, and a leaf of obvious or generated files does not. History lives in
+  ledgers, PRs or `docs/history/`, never in maps. Lockstep warns (`scripts/check_map_md.sh`);
+  `sync_map_md.py --check` and `scripts/check_map_size.py` are the gates. No generator writes map prose.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -258,7 +260,7 @@ amended, what retires it, and where its record goes afterwards.
 |---|---|---|
 | **contract** | [AGENTS.md](AGENTS.md), [docs/testing.md](docs/testing.md), [PROJECT.md](PROJECT.md) | permanent; amended deliberately, never as a passenger |
 | **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so no changelog section |
-| **navigation** | every `map.md` | lockstep with the directory's content, in the same commit |
+| **navigation** | a `map.md` where the architecture needs one | the sync and size gates, not lockstep |
 | **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) at close |
 | **ledger** | [task/ledgers/](task/ledgers/map.md): `staging/<unit>-ledger.md` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<unit>-ledger.md` | the directory is the status. Append-only in `staging/`; `move`d to `completed/` in the unit's last commit and frozen; filed to `archive/` by `make ledger-archive` at the next pickup, immutable. A campaign's `docs/history/` folder links to its ledgers in the monthly archive; pre-2026-08-23 folders keep theirs |
 | **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a measured-and-**declined** rule is written down so nobody re-litigates it |

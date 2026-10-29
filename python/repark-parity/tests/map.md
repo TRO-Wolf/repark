@@ -1,52 +1,6 @@
 # map — python/repark-parity/tests
 
-MERGE-MOD-SPLIT-1 (owner, 2026-10-12): the CAP-1 mirror drops the retired `repark-iceberg/src/write/merge/mod.rs` row (1569, under the default after the split), and the Rust exception count goes 33 → 32. The `check_rust_file_size.py` row left in the same commit; no row raised.
-
-ATTR-ID-1 S3b (2026-10-01): CAP-1 mirror row ratcheted down with the code — `dataframe/core.py` 3921 → 3846 (the filter quoter moves to `column_fields.py`). The `check_lib_py.py` exception row moved in the same commit; no row raised.
-STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277.
-
-STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): the CAP-1 mirror follows the shrink-only ratchet `repark-python/src/session.rs` 1122 → 1097.
-
-WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37.
-
-U1-MEM-LAYOUT-1 layout-r7 (2026-09-23): the CAP-1 mirror row for `crates/repark-spark/src/tests/ctas.rs` follows the Rust gate's 1357 baseline; it still named 1361 and reddened the Python job.
-
-ICE-MIXED-CASE-1 round 3 (2026-09-17): the CAP-1 mirror `_RUST_BASELINES` follows the six shrink-only ratchets (merge/mod.rs 1782, merge/tests/merge.rs 1032, streaming_scan.rs 3020, predicate_dml.rs 1141, predicate_dml/tests 1440, cross_door.rs 1254).
-
-ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the mirror follows two more ratchets (merge/mod.rs 1780, predicate_dml.rs 1139).
-**FNP-AGG-1 slice (d) (2026-09-21):** EX-0 count 1085 → 1086 (the new
-`F.grouping_id` row, added-only).
-
-DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
-ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
-`sameSemantics` body moves to `dataframe/plan_introspect.py`). The
-`check_lib_py.py` exception row moved in the same commit; no row raised.
-
-TYPES-BASES-1 (2026-09-14): CAP-1 mirror row ratcheted down with the code —
-`spark/types.py` 1834→1791 after the abstract bases, spatial types,
-`UserDefinedType`, and spatial token helpers moved to `spark/types_bases.py`.
-The `check_lib_py.py` exception row moved in the same commit; no row raised.
-Follow-up on FACADE-4 step 1: `spark/types.py` 1792→1770 (critic round 1 —
-the `_merge_type` spatial arms and `StructField`/`StructType` conversion
-delegates added inside the file; the struct conversion bodies live in
-`types_bases.py`). The `test_ex_0_example_coverage.py` count moves 930 → 942
-and the types family 32 → 44 as the twelve new `types.*` names join the
-enumerated surface (both covered by the new `docs/examples/types/` scripts).
-
-REVIEW-FIX-5 (2026-09-10): CAP-1 mirror tuple ratcheted down with the code — catalog_config.rs
-1044→1028 after the seventeen `//` reasons moved to `crates/repark-core/src/map.md` under the
-owner's no-code-comments ruling (D-5). The exact-baseline gate row moved with it; no row raised.
-
-CC-4 (2026-08-30): CAP-1 mirror tuples ratchet down only
-analyzer.rs 1194→1161; datetime.rs 1783→1709;
-dynamic_flatten/tests.rs 1469→1443→1442; declared_sorted.rs 1381→1348.
-
-CC-3 (2026-08-30): comments condensed to one line; banners removed. CAP-1 mirror tuples ratcheted with each slice, including the Python binding files. D-001 catalog.rs 1845→1843; TA kernels 2284→2098 / 1676→1578 / 1873→1821. Spark CAP-1 rows ratcheted; session_timezone.rs retired at 891. Rust exception count 39→38. Router comment-pin expected string restored byte-exact.
-
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
-
-CC-2 slice complete: comments and docstrings condensed; oracle discriminators, pins, mutation payloads, and safety contracts kept byte-exact; history narration deleted.
+Dated CAP-1 mirror history is not kept in this map: the mirror tuples and the exact-baseline rows hold the current values, and `git log -- python/repark-parity/tests/map.md` holds the record of each change.
 
 ## Purpose
 
@@ -867,37 +821,7 @@ both tables with the script baselines (backtick-disclosure retire).
   `V3-VARIANT-SHRED-1` assertion to the landed §4 row citing the binary-vs-shredded pins,
   and bounds the geo slice before the new section;
   ruff-formatted in the same pass.
-- `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
-  tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
-  a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`
-  clause and a dead `pins:` citation go red, archived and completed clauses can be cited; the attestation is
-  required once no clause is `OPEN` and its shape defects (no artifacts, no justification, a
-  missing category, an inconsistent `complete:`) go red; a ledger with no clause table goes
-  red; `FINDING:` fields are checked; a raised ceiling or a stale `EXCEPTIONS` row goes red
-  against the real tree. Each test cites the DL-2 clause it pins. The DL-1 file's archive-row
-  tests likewise cite the DL-3 clauses (the condense rule).
-  **LEDGER-READING-1 (2026-09-09):** the same scratch tree gains a reading ledger — its
-  `Path` header field set to READING inside the first 40 lines — and three cases: the reading
-  ledger's unpinned `PROVEN` clause passes rule B; the identical ledger without the marker reds
-  with the standing rule-B message; the reading ledger without an attestation block still reds
-  rule C. The new tests carry no inline pins, so the unit's clauses are cited on this line.
-  Step 2 (2026-09-09) added C-004, the real-tree flip of BALLISTA-AUDIT-0's twelve clauses;
-  no new test was written for it, so its citation rides this line with its evidence cell
-  holding the gate runs.
-  **REVIEW-FIX-10 (2026-09-10):** three new pins on the same scratch tree — a `STANDARD`
-  ledger quoting the marker in prose and a `READING-FOO` header both fire rule B, and a
-  mid-line `READING.` field stays exempt; the real-field exemption rides the existing test.
-  The new tests carry no inline pins, so the unit's clause is cited on this line.
-  **REVIEW-FIX-15 (2026-09-11):** the reading fixture's Verdict and Evidence cells are
-  the way round the grammar describes (Q-49), and the unit cited LEDGER-READING-1's
-  C-001..C-003 from the tests that pin them. Under ruling S2-14 (2026-09-11) a `pins:`
-  citation lives in this map, never in code, so the `_pins` code-as-data bindings the
-  unit first used are gone and the unit's own clause citations sit on the next line.
-  C-004 has no pinning test (its pin is the real-tree gate run in its evidence cell), so
-  its citation rides the ledger-reading-1 line only, which keeps all four rows as
-  navigation.
-  **REVIEW-FIX-15B (2026-09-11):** the S2-14 move itself — the four `_pins` bindings
-  deleted from the tests, the citations they carried re-homed to this bullet.
+- `test_dl_2_ledger_grammar.py` — **DL-2:** the ledger grammar gate on a scratch tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts; a bad verdict cell, a duplicate id and a row without evidence go red; an unbound `PROVEN` clause and a dead sidecar binding go red, and archived and completed clauses can be bound; the attestation is required once no clause is `OPEN` and its shape defects go red; a ledger with no clause table goes red; `FINDING:` fields are checked; a raised ceiling or a stale `EXCEPTIONS` row goes red against the real tree. The unbound finding reads `with no binding` (MAP-GOVERNANCE-1; it read `pins:` citation before). **LEDGER-READING-1:** a `READING` ledger's unbound `PROVEN` clause passes rule B; the same ledger without the marker reds, and a reading ledger without an attestation block still reds rule C. A `STANDARD` ledger quoting the marker in prose and a `READING-FOO` header both fire rule B; a mid-line `READING.` field stays exempt.
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans
@@ -909,19 +833,15 @@ both tables with the script baselines (backtick-disclosure retire).
   `check`: a ledger outside the bins, an archive prefix disagreeing with its
   month, a dead ledger link in a non-map document, and the frozen rule (link
   repair and a prepended errata pass; a prose edit and a deletion fail).
+- `test_map_governance_1.py` — **MAP-GOVERNANCE-1 (2026-10-29):** the sidecar binding the grammar gate reads (`task/ledgers/<bin>/<unit>-pins.md`): a bound path is tracked and bindable (a test or a script, never a map, ledger or readme); a `::name` is a definition of its file; `C-NNN: none (records)` counts and is listed; a sidecar counts only beside its own ledger; a source `pins:` citation binds and a map citation does not. The migration (`migrate_pins_to_sidecars.py`) binds each row to its file, cuts only citation text, keeps hand edits, is idempotent, writes nothing in `--check` and refuses an unplaceable citation. The size ratchet (`check_map_size.py`): the 200-line and 16 KiB ceilings, exact-baseline rows that fail on growth and on unlowered shrinkage, `EXEMPT_PATTERNS` for the archive month maps, `--update-baselines` that only lowers and refuses a new violator, and the `make ci` and ci.yml wiring. The lockstep contract is a warning in both modes with the advisory note.
+- `test_map_governance_1_lifecycle.py` — **MAP-GOVERNANCE-1:** `ledger_lifecycle.py` carries a unit's sidecar with its ledger on `move` and `archive`, with no map row; `archive` files it under the ledger's own date; a sidecar in a frozen bin may be edited and a ledger row may not; a move followed by the size ratchet stays green; `archive` moves an excepted map's ratchet row by exactly its link growth.
 - `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22; the prose-homes pin retargeted to PYC's
   history record by DL-4, 2026-08-25):** five presence
   rules only; style `D` not in py-lint select; tests keep the `D` per-file
   ignore; EXCEPTIONS is 39 keys summing to 136, no `/tests/` path, sorted;
   Ruff pin matches the Makefile; dual-wired `make ci` + ci.yml; on the
   pre-commit hook (conventions stays off).
-- `test_map_pr_gate_1.py` — **MAP-PR-GATE-1:** the map.md lockstep unit is the pull request.
-  Branch-mode fixtures (`--base <ref>`) over scratch repos: pass on code+map, red on code-only,
-  red on a new directory without a map, quiet on deletion-only, root-level file maps to `map.md`;
-  staged mode exits 0 with `WARNING:` naming ci.yml's `map.md guard`; the `sync_map_md.py`
-  duplicate-row rule fires on a two-row fixture and stays quiet on a single row naming a file twice.
-  C-011 pins ci.yml's guard step as PR-only with the base ref taken into `env` as `BASE_REF` and
-  expanded as `${BASE_REF}` in both run lines (since 2026-10-18; no `${{ }}` inside the run block).
+- `test_map_pr_gate_1.py` — **MAP-PR-GATE-1:** the map.md lockstep is a warning in both modes (MAP-GOVERNANCE-1). Branch-mode fixtures (`--base <ref>`) over scratch repos: code and map together pass; code-only, a new directory without a map, and a `.py` change without its map each print `WARNING:` and exit 0; deletion-only is quiet; a root-level file maps to `map.md`; a diff is taken from the merge base. Staged mode exits 0 with `WARNING:`. The `sync_map_md.py` duplicate-row rule fires on a two-row fixture, survives `--fix` and stays quiet on a single row naming a file twice. C-011 pins ci.yml's guard step as PR-only with the base ref taken into `env` as `BASE_REF` and expanded as `${BASE_REF}` in both run lines (no `${{ }}` inside the run block).
 - `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
   record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;
