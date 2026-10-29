@@ -144,6 +144,8 @@ else. The next pickup's `make ledger-archive` files everything here under
   re-derived, and the guide gained the `datafusion.*` forwarding/refusal
   paragraph. `risk_tier: standard`. Branch `feat/conf-unread-1`.
   pins: conf-unread-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [cross-read-gate-class-1-ledger.md](cross-read-gate-class-1-ledger.md) — **CROSS-READ-GATE-CLASS-1 (2026-10-29, AUD-005; merged 2026-10-29 as PR #1211 at `7ef6bcf4`), completed:** the cross-read gate accepts `SPARK-CANNOT-READ` only for the recorded unsupported-type condition (the recorded prefix plus `timestamp_ns` or `timestamptz_ns`) on a nanosecond table; the audit's connection-failure probe, a second-line-only condition, an authorization failure and a variant condition are rejected, the microsecond control rejects both shapes, and EQUAL and DIFFERENT handling is unchanged. 5 of 6 clauses PROVEN (11 red-first pins); C-006 (the two S3 observations: the first-line cap truncation shape, and cosmetic trailing blank lines) OPEN. `risk_tier: standard`. Branch `fix/cross-read-gate-class-1`.
+  pins: cross-read-gate-class-1/C-001, C-002, C-003, C-004, C-005
 - [csv-infer-perf-1-ledger.md](csv-infer-perf-1-ledger.md) —
   **CSV-INFER-PERF-1 (2026-09-06), in flight:** local CSV `inferSchema` no longer
   materializes the frame per candidate cast. Native DataFusion inference plus
@@ -975,6 +977,8 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [rp-60-posdel-repin-1-ledger.md](rp-60-posdel-repin-1-ledger.md) — **RP-60-POSDEL-REPIN-1 (2026-10-27, merged 2026-10-28 as PR #1200 at `57e37a72`), completed:** the fork repinned to `ea0b7741` (F-POSDEL-BATCH-1, fork `#374`), with Spark-door pins red at `d80a2884` and green at `ea0b7741`. 6 of 9 clauses PROVEN; C-005 (measured, carded) and C-006 (carded) OPEN; C-008 closed by C-009.
 - [rp-61-posdel-format-repin-1-ledger.md](rp-61-posdel-format-repin-1-ledger.md) — **RP-61-POSDEL-FORMAT-REPIN-1 (2026-10-28, merged 2026-10-29 as PR #1209 at `6ec819ef`), completed:** the fork repinned to `56aa8913` (F-POSDEL-FORMAT-READ-1, fork PR `#375`) and the interim ICE-DELETE-FORMAT-GUARD-1 guard reverted: position-delete files inherit the data format again, and explicit Avro and ORC delete formats are honoured, with the AUD-003 shape pinned through the facade. 15 of 18 clauses PROVEN; the nested-leaf UPDATE pin (C-015), RP-62 (C-016) and the native-door pin (C-017) are OPEN.
   pins: rp-61-posdel-format-repin-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-018
+- [rp-62-eqdel-repin-1-ledger.md](rp-62-eqdel-repin-1-ledger.md) — **RP-62-EQDEL-REPIN-1 (2026-10-29, merged 2026-10-29 as PR #1213 at `df43dca5`), completed:** the fork repinned to `935cc55c` (F-EQDEL-DROPPED-KEY-1, fork PR `#377`), with the lock moved by hand. The audit's dropped-key sequence is pinned through both doors: Parquet data reads the survivors, and Avro and ORC data stay loud-or-correct (F-EQDEL-DROPPED-KEY-2, OPEN). The native door's DELETE, UPDATE and MERGE delete-format shapes are pinned (NATIVE-DOOR-DELETE-FORMAT-1). 11 of 13 clauses PROVEN; C-006 and C-007 (the Avro and ORC residue) are OPEN.
+  pins: rp-62-eqdel-repin-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 - [session-surface-1-ledger.md](session-surface-1-ledger.md) —
   **SESSION-SURFACE-1 step 1 (2026-09-14), in flight:** the 19-name SparkSession
   surface card — job tags, the interrupt trio, the five Connect-only names,

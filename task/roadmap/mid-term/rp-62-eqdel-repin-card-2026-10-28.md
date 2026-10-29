@@ -2,7 +2,7 @@
 
 **Filed:** 2026-10-28. **Filed by:** the RP-61 clerk round (`claude-haiku-5-5`), from fork PR `#377`'s round-2 verifier (fresh Opus 5.5, PASS) and the landed line of the fork card.
 
-**Status:** built 2026-10-29 on branch `chore/rp-62-eqdel-repin`; verification round 1 PASS; merges on the owner's word. Clerk grade. Depends on RP-61 merging: this unit's pin history and lock are its base.
+**Status:** merged 2026-10-29 as `df43dca5` (PR #1213, 25 checks green); verification round 1 PASS; closed. Clerk grade. Depended on RP-61 (PR #1209), whose pin history and lock are its base.
 
 **Target pin:** `935cc55c`, the squash of fork PR `#377` (F-EQDEL-DROPPED-KEY-1 fold 2: equality deletes resolve dropped, nested and re-added key columns by field id in every format; AUD-004 on the fork). The fork card is [f-eqdel-dropped-key-1-card-2026-10-28.md](f-eqdel-dropped-key-1-card-2026-10-28.md).
 
