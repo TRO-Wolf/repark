@@ -1,9 +1,9 @@
 # perf-approxpct-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-functions/src/percentile_approx.rs::update_batch, crates/repark-functions/src/quantile_summaries.rs::QuantileSummaries, crates/repark-functions/src/quantile_summaries.rs::threshold_value_serializes
-C-002: crates/repark-functions/src/percentile_approx.rs::return_type, crates/repark-python/src/column/expr_build.rs::percentile_approx_list_expr, crates/repark-python/src/column/expr_build.rs::percentile_approx_scalar_expr, crates/repark-python/src/column/mod.rs::approx_percentile_cont, crates/repark-python/src/column/mod.rs::approx_percentile_list, python/repark-parity/bench/approxpct/run_cells.py, python/repark/src/repark/spark/_integral.py::attach_error_condition, python/repark/src/repark/spark/_integral.py::checked_integral, python/repark/src/repark/spark/functions_json.py, python/repark/tests/iceberg/test_ice_change_column_rename_1.py, python/repark/tests/perf/test_perf_approxpct_1.py::test_run_cells_help_exits_zero
+C-001: none (records)
+C-002: python/repark/tests/perf/test_perf_approxpct_1.py
 C-003: python/repark/tests/perf/test_perf_approxpct_1.py
-C-004: crates/repark-functions/src/percentile_approx.rs::evaluate, crates/repark-functions/src/percentile_approx.rs::merge_batch, crates/repark-functions/src/percentile_approx.rs::state, python/repark-parity/bench/approxpct/map.md, python/repark/tests/perf/test_perf_approxpct_1.py::test_hundred_thousand_groups_repeat_bit_equal, python/repark/tests/perf/test_perf_approxpct_1.py::test_million_row_repeats_one_value
+C-004: python/repark/tests/perf/test_perf_approxpct_1.py
 C-005: python/repark/tests/perf/test_perf_approxpct_1.py
-C-006: crates/repark-functions/src/quantile_summaries.rs::accuracy_ten_and_hundred_pin_single_scan_answers, crates/repark-functions/src/quantile_summaries.rs::state_size_follows_one_over_eps, python/repark/tests/perf/test_perf_approxpct_1.py
+C-006: python/repark/tests/perf/test_perf_approxpct_1.py
 C-007: scripts/check_rust_file_size.py

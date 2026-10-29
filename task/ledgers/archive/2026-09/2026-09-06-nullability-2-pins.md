@@ -1,10 +1,10 @@
 # nullability-2 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-functions/src/decimal_spark.rs, crates/repark-functions/src/spark_nullability.rs::SparkNullability, python/repark/tests/types/test_nullability_2.py
-C-002: crates/repark-functions/src/decimal_spark.rs, crates/repark-functions/src/spark_nullability.rs::SparkNullability, python/repark/tests/types/test_nullability_2.py
-C-003: crates/repark-functions/src/bool_decimal.rs::BoolDecimalCast, crates/repark-functions/src/bool_decimal.rs::install_shared_analyzer_rules, crates/repark-python/src/writer_layout.rs, python/repark/tests/types/test_nullability_2.py
-C-004: crates/repark-functions/src/spark_nullability.rs::SparkNullability, python/repark/tests/types/test_nullability_2.py
-C-005: crates/repark-core/src/spark_nullable.rs, python/repark/tests/types/test_nullability_2.py
-C-006: crates/repark-core/src/read_options.rs::read_csv_path, python/repark/src/repark/spark/dataframe/core.py::mergeInto, python/repark/src/repark/spark/dataframe/core.py::schema, python/repark/src/repark/spark/session/reader.py::_iceberg_time_travel_opts, python/repark/src/repark/spark/session/reader.py::_reject_csv_json_parse_options, python/repark/src/repark/spark/session/reader.py::excel, python/repark/src/repark/spark/session/reader.py::load, python/repark/src/repark/spark/session/reader.py::option, python/repark/src/repark/spark/session/reader.py::options, python/repark/src/repark/spark/session/reader.py::schema, python/repark/src/repark/spark/session/reader.py::sheet_names, python/repark/src/repark/spark/session/reader.py::smartCsv, python/repark/src/repark/spark/session/reader.py::table, python/repark/src/repark/spark/session/reader_support.py::_CSV_JSON_ONLY_OPTION_KEYS, python/repark/src/repark/spark/session/reader_support.py::_CSV_NATIVE_OPTION_KEYS, python/repark/src/repark/spark/session/reader_support.py::_ICEBERG_INCREMENTAL_OPTIONS, python/repark/src/repark/spark/session/reader_support.py::_ICEBERG_TIME_TRAVEL_OPTIONS, python/repark/src/repark/spark/session/reader_support.py::_JSON_NATIVE_OPTION_KEYS, python/repark/src/repark/spark/session/reader_support.py::_UNSUPPORTED_SEMANTIC_READER_OPTIONS, python/repark/src/repark/spark/session/reader_support.py::_parse_as_of_timestamp_option, python/repark/src/repark/spark/session/reader_support.py::_parse_snapshot_id_option, python/repark/src/repark/spark/session/reader_support.py::_promote_csv_string_types, python/repark/src/repark/spark/session/reader_support.py::_reject_csv_json_parse_options, python/repark/src/repark/spark/session/reader_support.py::collect_incremental_window, python/repark/tests/types/test_nullability_2.py, scripts/check_lib_py.py
+C-001: python/repark/tests/types/test_nullability_2.py
+C-002: python/repark/tests/types/test_nullability_2.py
+C-003: python/repark/tests/types/test_nullability_2.py
+C-004: python/repark/tests/types/test_nullability_2.py
+C-005: python/repark/tests/types/test_nullability_2.py
+C-006: python/repark/tests/types/test_nullability_2.py, scripts/check_lib_py.py
 C-007: python/repark/tests/types/test_nullability_2.py, scripts/check_lib_py.py
 C-008: python/repark/tests/types/test_nullability_2.py

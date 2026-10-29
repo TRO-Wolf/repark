@@ -832,7 +832,7 @@ DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249�
   (accuracy check out to `_integral.py`, one shared Column return).
 
 CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
-. analyzer.rs 1194→1161; datetime.rs 1783→1709;
+analyzer.rs 1194→1161; datetime.rs 1783→1709;
 dynamic_flatten/tests.rs 1469→1443; declared_sorted.rs 1381→1348.
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed. Size-gate rows ratcheted with each slice, including the Python binding files. D-001 catalog.rs 1845→1843; TA kernels 2284→2098 / 1676→1578 / 1873→1821. Spark size-gate rows ratcheted; session_timezone.rs retired at 891. AGENTS.md compaction ceiling restored to 32000.

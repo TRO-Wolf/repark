@@ -1148,7 +1148,7 @@ repark-core's error map.
   dynamic `PARTITION (k)` / empty `PARTITION ()` via `replace_partitions`; empty-input
   dynamic guard names the three empty-dynamic surfaces (STATIC wipe, writeTo no-op, RePark
   refuse) in its rustdoc and error. `commit_*_to` variants pass `.to_branch`.
- V3-COV pins in this file: a view-string source conforms to its Utf8 target instead of failing the rebuild (V3-COV-1); the identity arm hands the same buffer back while a non-assignable pair still refuses.
+  V3-COV pins in this file: a view-string source conforms to its Utf8 target instead of failing the rebuild (V3-COV-1); the identity arm hands the same buffer back while a non-assignable pair still refuses.
   **ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17, ruling Q-21b-3):**
   `stage_static_partition_overwrite_files` takes the statement column list; a
   non-empty list maps the source by name (static columns from the clause, listed

@@ -1,15 +1,15 @@
 # ice-catalog-cache-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-iceberg/src/catalog/builders.rs::glue_catalog, crates/repark-iceberg/src/catalog/builders.rs::memory_catalog_cached, crates/repark-iceberg/src/catalog/builders.rs::s3tables_catalog, crates/repark-iceberg/src/catalog/cache_wiring.rs::CacheWiredBuilder, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
-C-002: crates/repark-core/src/session.rs, crates/repark-core/src/session/iceberg_caches.rs::iceberg_metadata_cache_report, crates/repark-core/src/session/iceberg_caches.rs::iceberg_metadata_cache_stats, crates/repark-core/src/session/tests/metadata_cache_report.rs::register_catalog_spec, crates/repark-iceberg/src/catalog/builders.rs::glue_catalog, crates/repark-iceberg/src/catalog/builders.rs::memory_catalog_cached, crates/repark-iceberg/src/catalog/builders.rs::s3tables_catalog
-C-003: crates/repark-iceberg/src/catalog/cache_wiring.rs::CacheWiredBuilder, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
+C-001: crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
+C-002: crates/repark-core/src/session/tests/metadata_cache_report.rs::register_catalog_spec
+C-003: crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
 C-004: crates/repark-core/src/session/tests/metadata_cache_report.rs::register_catalog_spec
 C-005: crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
-C-006: crates/repark-core/src/session/tests/metadata_cache_report.rs::register_catalog_spec, crates/repark-iceberg/src/catalog/caches.rs::new, crates/repark-iceberg/src/catalog/caches.rs::trim, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
-C-007: crates/repark-core/src/session/iceberg_caches.rs::iceberg_metadata_cache_report, crates/repark-core/src/session/iceberg_caches.rs::iceberg_metadata_cache_stats, crates/repark-core/src/session/tests/metadata_cache_report.rs::register_catalog_spec, crates/repark-iceberg/src/catalog/caches.rs::new, crates/repark-iceberg/src/catalog/caches.rs::trim
+C-006: crates/repark-core/src/session/tests/metadata_cache_report.rs::register_catalog_spec, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
+C-007: crates/repark-core/src/session/tests/metadata_cache_report.rs::register_catalog_spec
 C-008: crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
-C-009: crates/repark-spark/benches/ice_read_perf/pins_report.rs::every_measured_sample_reports_its_evictions, crates/repark-spark/benches/ice_read_perf/pins_report.rs::the_report_carries_metadata_cache_evictions
-C-010: crates/repark-iceberg/src/catalog/cache_wiring.rs::CacheWiredBuilder, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
-C-011: crates/repark-spark/benches/ice_read_perf/map.md
-C-012: crates/repark-core/src/session/iceberg_caches.rs::settle_iceberg_metadata_cache, crates/repark-core/src/session/iceberg_caches.rs::trim_iceberg_caches, crates/repark-core/src/session/write_options.rs, crates/repark-iceberg/src/catalog/caches.rs::metadata_len, crates/repark-iceberg/src/catalog/caches.rs::settle, crates/repark-iceberg/src/catalog/caches.rs::settled_metadata_len, crates/repark-iceberg/src/catalog/caches.rs::trim, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark, crates/repark-python/src/catalog_census.rs, crates/repark-spark/src/tests/catalog_cache_staleness.rs
-C-013: crates/repark-iceberg/src/catalog/caches.rs::CatalogCaches
+C-009: none (records)
+C-010: crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark
+C-011: none (records)
+C-012: crates/repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark, crates/repark-spark/src/tests/catalog_cache_staleness.rs
+C-013: none (records)

@@ -6,9 +6,9 @@ C-003: crates/repark-core/src/dynamic_flatten/tests/preserve_nulls.rs
 C-004: crates/repark-core/src/dynamic_flatten/tests/preserve_nulls.rs
 C-005: crates/repark-core/src/dynamic_flatten/tests/preserve_nulls.rs
 C-006: crates/repark-core/src/dynamic_flatten/tests/preserve_nulls.rs
-C-007: crates/repark-core/src/dynamic_flatten/map.md
-C-008: crates/repark-core/src/dynamic_flatten/map.md
-C-009: crates/repark-core/src/dynamic_flatten/map.md
-C-010: crates/repark-core/src/dynamic_flatten/map.md
-C-011: crates/repark-core/src/dynamic_flatten/map.md
-C-012: crates/repark-core/src/dynamic_flatten/map.md
+C-007: none (records)
+C-008: none (records)
+C-009: none (records)
+C-010: none (records)
+C-011: none (records)
+C-012: none (records)

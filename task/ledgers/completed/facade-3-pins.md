@@ -1,29 +1,29 @@
 # facade-3 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
-C-002: python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
-C-003: python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
-C-004: python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
-C-005: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-006: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-007: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-008: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-009: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-010: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx, crates/repark-python/src/cdf_infer/build.rs::build_utf8, crates/repark-python/src/cdf_infer/cells.rs::Cell, crates/repark-python/src/cdf_infer/cells.rs::CellKind, crates/repark-python/src/cdf_infer/cells.rs::Ctx, crates/repark-python/src/cdf_infer/infer.rs, python/repark/src/repark/spark/session/create_dataframe_columns.py::_rust_cdf_arrow_table, python/repark/src/repark/spark/session/create_dataframe_columns.py::_rust_cdf_named_arrow_table, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_facade_3_cdf_dispatch.py
-C-011: python/repark/src/repark/spark/session/create_dataframe_columns.py::_rust_cdf_arrow_table, python/repark/src/repark/spark/session/create_dataframe_columns.py::_rust_cdf_named_arrow_table
-C-012: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-013: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx
-C-014: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx, crates/repark-python/src/cdf_infer/screen.rs, python/repark/tests/dataframe/_dfcore_1_expected.py
-C-015: crates/repark-python/src/cdf_infer/build.rs::build_utf8, crates/repark-python/src/cdf_infer/cells.rs::Cell, crates/repark-python/src/cdf_infer/cells.rs::CellKind, crates/repark-python/src/cdf_infer/cells.rs::Ctx
-C-016: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx
-C-017: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx
-C-018: python/repark/src/repark/spark/session/create_dataframe_columns.py::_rust_cdf_named_arrow_table
-C-019: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx, crates/repark-python/src/cdf_infer/named.rs::build_row_cells, crates/repark-python/src/cdf_infer/named.rs::cdf_arrow_export_named, crates/repark-python/src/cdf_infer/named.rs::collect_row_cells, python/repark/src/repark/spark/session/create_dataframe_columns.py::_rust_cdf_named_arrow_table, python/repark/src/repark/spark/session/create_dataframe_rows.py::_rows_from_mapping_list, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_facade_3_cdf_step3.py
-C-020: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx, crates/repark-python/src/cdf_infer/cells.rs::Cell, crates/repark-python/src/cdf_infer/cells.rs::CellKind, crates/repark-python/src/cdf_infer/cells.rs::Ctx, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_facade_3_cdf_step3.py
-C-021: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-022: python/repark/src/repark/spark/session/create_dataframe_columns.py::_rust_cdf_named_arrow_table
-C-023: python/repark/tests/dataframe/_dfcore_1_expected.py
-C-024: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx
-C-025: crates/repark-python/src/cdf_infer.rs::PyCdfArrowExport, crates/repark-python/src/cdf_infer.rs::__arrow_c_stream__, crates/repark-python/src/cdf_infer.rs::build_batch, crates/repark-python/src/cdf_infer.rs::cdf_arrow_export, crates/repark-python/src/cdf_infer.rs::make_ctx
-C-026: crates/repark-python/src/cdf_infer/cells.rs::Cell, crates/repark-python/src/cdf_infer/cells.rs::CellKind, crates/repark-python/src/cdf_infer/cells.rs::Ctx, crates/repark-python/src/cdf_infer/named.rs::build_row_cells, crates/repark-python/src/cdf_infer/named.rs::cdf_arrow_export_named, crates/repark-python/src/cdf_infer/named.rs::collect_row_cells, python/repark/src/repark/spark/session/create_dataframe_rows.py::_rows_from_mapping_list, python/repark/tests/dataframe/_dfcore_1_expected.py
-C-027: crates/repark-python/src/cdf_infer/cells.rs::Cell, crates/repark-python/src/cdf_infer/cells.rs::CellKind, crates/repark-python/src/cdf_infer/cells.rs::Ctx, python/repark/tests/dataframe/_dfcore_1_expected.py
+C-002: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
+C-003: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
+C-004: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
+C-005: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
+C-006: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
+C-007: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
+C-008: python/repark/tests/io/test_facade_3_create_dataframe_goldens.py
+C-009: none (records)
+C-010: python/repark/tests/io/test_facade_3_cdf_dispatch.py::as_tuple
+C-011: none (records)
+C-012: none (records)
+C-013: none (records)
+C-014: python/repark/tests/io/test_facade_3_cdf_dispatch.py::as_tuple
+C-015: none (records)
+C-016: none (records)
+C-017: none (records)
+C-018: none (records)
+C-019: python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateSub, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateToordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDtYear, python/repark/tests/io/test_facade_3_cdf_step3.py::__sub__, python/repark/tests/io/test_facade_3_cdf_step3.py::spy, python/repark/tests/io/test_facade_3_cdf_step3.py::test_fresh_tzinfo_property_applies_per_access_offset, python/repark/tests/io/test_facade_3_cdf_step3.py::toordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::tzinfo, python/repark/tests/io/test_facade_3_cdf_step3.py::year
+C-020: python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateSub, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateToordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDtYear, python/repark/tests/io/test_facade_3_cdf_step3.py::__sub__, python/repark/tests/io/test_facade_3_cdf_step3.py::spy, python/repark/tests/io/test_facade_3_cdf_step3.py::test_fresh_tzinfo_property_applies_per_access_offset, python/repark/tests/io/test_facade_3_cdf_step3.py::toordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::tzinfo, python/repark/tests/io/test_facade_3_cdf_step3.py::year
+C-021: none (records)
+C-022: none (records)
+C-023: none (records)
+C-024: none (records)
+C-025: none (records)
+C-026: python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateSub, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateToordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDtYear, python/repark/tests/io/test_facade_3_cdf_step3.py::__sub__, python/repark/tests/io/test_facade_3_cdf_step3.py::spy, python/repark/tests/io/test_facade_3_cdf_step3.py::test_fresh_tzinfo_property_applies_per_access_offset, python/repark/tests/io/test_facade_3_cdf_step3.py::toordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::tzinfo, python/repark/tests/io/test_facade_3_cdf_step3.py::year
+C-027: python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateSub, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDateToordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::_SubDtYear, python/repark/tests/io/test_facade_3_cdf_step3.py::__sub__, python/repark/tests/io/test_facade_3_cdf_step3.py::spy, python/repark/tests/io/test_facade_3_cdf_step3.py::test_fresh_tzinfo_property_applies_per_access_offset, python/repark/tests/io/test_facade_3_cdf_step3.py::toordinal, python/repark/tests/io/test_facade_3_cdf_step3.py::tzinfo, python/repark/tests/io/test_facade_3_cdf_step3.py::year

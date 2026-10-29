@@ -4,4 +4,4 @@ C-001: crates/repark-spark/src/tests/show_create.rs::show_create_table_on_a_view
 C-002: crates/repark-spark/src/tests/show_create.rs::show_create_table_on_a_view_answers_the_view_text
 C-003: crates/repark-spark/src/tests/show_create.rs::show_create_table_on_a_view_answers_the_view_text
 C-004: crates/repark-spark/src/tests/show_create.rs::show_create_table_on_a_view_answers_the_view_text
-C-005: python/repark/src/repark/errors.py, python/repark/tests/_acceptance.py
+C-005: none (records)

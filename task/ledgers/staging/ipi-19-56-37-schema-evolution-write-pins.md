@@ -1,14 +1,14 @@
 # ipi-19-56-37-schema-evolution-write pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-iceberg/src/write/schema_evolution/map.md, crates/repark-iceberg/src/write/schema_evolution/tests.rs, python/repark/src/repark/spark/dataframe/writer_schema.py, python/repark/tests/writes/test_ice_merge_schema_1.py, scripts/check_lib_py.py
-C-002: crates/repark-spark/src/insert_by_name/evolution.rs::columns_to_add, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/src/repark/spark/dataframe/writer_schema.py, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-003: crates/repark-iceberg/src/write/schema_evolution/map.md, crates/repark-iceberg/src/write/schema_evolution/tests.rs, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-004: crates/repark-functions/src/merge_schema/map.md, crates/repark-functions/src/merge_schema/tests.rs, crates/repark-python/src/session_runtime.rs::set_runtime_config, crates/repark-spark/src/insert_by_name/evolution.rs::columns_to_add, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/src/repark/spark/session/session_configuration.py::MERGE_SCHEMA_KEY, python/repark/src/repark/spark/session/session_configuration.py::_SQLCONF_DEFAULTS, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-005: crates/repark-iceberg/src/write/merge/spec.rs::MergeSpec, crates/repark-iceberg/src/write/schema_evolution/map.md, crates/repark-iceberg/src/write/schema_evolution/tests.rs, crates/repark-spark/src/merge/map.md, crates/repark-spark/src/merge/schema_evolution/map.md, crates/repark-spark/src/merge/schema_evolution/tests.rs, crates/repark-spark/src/merge/stars.rs::STAR_SENTINEL, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-006: crates/repark-iceberg/src/write/merge/spec.rs::MergeSpec, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-007: crates/repark-iceberg/src/write/merge/tests/helpers.rs, crates/repark-spark/src/merge/map.md, crates/repark-spark/src/merge/schema_evolution/map.md, crates/repark-spark/src/merge/schema_evolution/tests.rs, crates/repark-sql/src/merge.rs, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-008: python/repark/src/repark/spark/merge_aliases.py, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-009: crates/repark-iceberg/src/write/merge/spec.rs::MergeSpec, python/repark/tests/writes/test_ice_merge_schema_1.py, python/repark/tests/writes/test_merge_into.py
-C-010: python/repark/src/repark/spark/merge_aliases.py, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-011: crates/repark-spark/src/insert_by_name/evolution.rs::columns_to_add, python/repark/tests/writes/test_ice_merge_schema_1.py
-C-012: crates/repark-functions/src/merge_schema/map.md, crates/repark-functions/src/merge_schema/tests.rs, crates/repark-python/src/session_runtime.rs::set_runtime_config, python/repark/src/repark/spark/session/session_configuration.py::MERGE_SCHEMA_KEY, python/repark/src/repark/spark/session/session_configuration.py::_SQLCONF_DEFAULTS, python/repark/tests/writes/test_ice_merge_schema_1.py
+C-001: crates/repark-iceberg/src/write/schema_evolution/tests.rs, python/repark/tests/writes/test_ice_merge_schema_1.py, scripts/check_lib_py.py
+C-002: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/writes/test_ice_merge_schema_1.py
+C-003: crates/repark-iceberg/src/write/schema_evolution/tests.rs, python/repark/tests/writes/test_ice_merge_schema_1.py
+C-004: crates/repark-functions/src/merge_schema/tests.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/writes/test_ice_merge_schema_1.py
+C-005: crates/repark-iceberg/src/write/schema_evolution/tests.rs, crates/repark-spark/src/merge/schema_evolution/tests.rs, python/repark/tests/writes/test_ice_merge_schema_1.py
+C-006: python/repark/tests/writes/test_ice_merge_schema_1.py
+C-007: crates/repark-iceberg/src/write/merge/tests/helpers.rs, crates/repark-spark/src/merge/schema_evolution/tests.rs, python/repark/tests/writes/test_ice_merge_schema_1.py
+C-008: python/repark/tests/writes/test_ice_merge_schema_1.py
+C-009: python/repark/tests/writes/test_ice_merge_schema_1.py, python/repark/tests/writes/test_merge_into.py
+C-010: python/repark/tests/writes/test_ice_merge_schema_1.py
+C-011: python/repark/tests/writes/test_ice_merge_schema_1.py
+C-012: crates/repark-functions/src/merge_schema/tests.rs, python/repark/tests/writes/test_ice_merge_schema_1.py

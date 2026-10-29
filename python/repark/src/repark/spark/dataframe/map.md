@@ -599,7 +599,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   one-line docstring said "default spark"; the default has been `polars` since step 1, so the
   token is corrected here — the resolved default itself comes from
   `session/session_configuration.py`'s `default_display_style()`, not from this module.
- Every display door still opens with `_ensure_alive`,
+  Every display door still opens with `_ensure_alive`,
   which validates the window, random, and stratified-sampling markers; the
   narration above those calls was the audit-named removable and is gone.
   The styled-vertical warning carries `stacklevel=3` since the move put a wrapper frame

@@ -1,20 +1,20 @@
 # perf-unpivot-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-core/src/dynamic_flatten.rs, crates/repark-core/src/stack/map.md, crates/repark-core/src/stack/tests.rs, python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
-C-002: crates/repark-core/src/dynamic_flatten.rs, crates/repark-core/src/stack/map.md, crates/repark-core/src/stack/tests.rs, crates/repark-python/src/dataframe_stack.rs::stack_dataframe, python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
-C-003: crates/repark-core/src/dynamic_flatten.rs, crates/repark-core/src/session/df_guards.rs, crates/repark-core/src/stack/map.md, crates/repark-core/src/stack/tests.rs, python/repark/src/repark/spark/dataframe/core.py::select, python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
-C-004: crates/repark-core/src/dynamic_flatten.rs, crates/repark-core/src/stack/map.md, crates/repark-core/src/stack/tests.rs, python/repark-parity/tests/test_ex_0_example_coverage.py, python/repark/src/repark/spark/dataframe/core.py::select, python/repark/src/repark/spark/functions_stack.py::StackCall, python/repark/src/repark/spark/functions_stack.py::select_with_stack_if_present, python/repark/src/repark/spark/functions_stack.py::stack, python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot, scripts/check_example_coverage.py
-C-005: crates/repark-core/src/dynamic_flatten.rs, crates/repark-core/src/stack/map.md, crates/repark-core/src/stack/tests.rs, python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
-C-006: crates/repark-core/src/dynamic_flatten.rs, crates/repark-core/src/stack/exec.rs::UnpivotExec, crates/repark-core/src/stack/exec.rs::UnpivotStream, crates/repark-core/src/stack/exec.rs::labeled, crates/repark-core/src/stack/map.md, crates/repark-core/src/stack/tests.rs
-C-007: crates/repark-core/src/dynamic_flatten.rs, crates/repark-core/src/stack/exec.rs::UnpivotExec, crates/repark-core/src/stack/exec.rs::UnpivotStream, crates/repark-core/src/stack/exec.rs::labeled, crates/repark-core/src/stack/map.md, crates/repark-core/src/stack/tests.rs
-C-008: python/repark/src/repark/spark/dataframe/core.py, python/repark/tests/perf/test_perf_describe_1.py, python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
+C-001: python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
+C-002: python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
+C-003: python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
+C-004: python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot, scripts/check_lib_py.py
+C-005: python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
+C-006: none (records)
+C-007: none (records)
+C-008: python/repark/tests/perf/test_perf_describe_1.py, python/repark/tests/perf/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
 C-009: python/repark/tests/perf/test_perf_describe_1.py
 C-010: python/repark/tests/perf/test_perf_describe_1.py
-C-011: python/repark/src/repark/spark/dataframe/core.py
+C-011: none (records)
 C-012: python/repark/tests/perf/test_perf_describe_1.py
 C-013: python/repark/tests/perf/test_perf_describe_1.py
-C-014: crates/repark-core/src/stack/exec.rs, crates/repark-python/src/dataframe_stack.rs::stack_dataframe, python/repark/src/repark/spark/dataframe/core.py, python/repark/tests/perf/test_perf_describe_1.py
+C-014: python/repark/tests/perf/test_perf_describe_1.py
 C-015: python/repark/tests/perf/test_perf_describe_1.py
-C-016: python/repark/src/repark/spark/dataframe/core.py
-C-017: crates/repark-core/src/stack/exec.rs
+C-016: none (records)
+C-017: none (records)
 C-018: python/repark/tests/perf/test_perf_describe_1.py

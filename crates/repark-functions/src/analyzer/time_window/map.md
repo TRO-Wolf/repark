@@ -28,7 +28,7 @@ re-exports through `mod.rs` so its registration path never moved.
   `mod.rs` recurses the `window_time` provenance walk through Filter /
   Limit / Sort / Distinct / Repartition / Subquery into the defining input
   and Join / Union into the owning child, failing closed otherwise.
-. Round 2 (2026-09-15): a second session spec per
+  Round 2 (2026-09-15): a second session spec per
   block refuses with Spark's `1039` text on the SQL door; the Python door
   meets DataFusion's duplicate-name error first (registry WIN-4).
 

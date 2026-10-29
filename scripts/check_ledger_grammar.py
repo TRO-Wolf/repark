@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Check the shape of live ledgers so the Scope Auditor and the Critic do not have to.
 
-Scope: every tracked `*-ledger.md` under `task/ledgers/staging/` and `completed/`; the archive
-is immutable and is read for citations only. Three rules, on top of the SEPMO skill's meanings:
+Scope: every tracked `*-ledger.md` under `task/ledgers/staging/` and `completed/`; the archive's
+ledgers are read for their clause ids and its sidecars for their bindings. Three rules, on top of
+the SEPMO skill's meanings:
 
 A. **Clause rows.** A clause table is any markdown table whose data rows begin with
    `| C-NNN |`. Each row: the id is unique in the ledger; exactly one cell is a verdict —
@@ -12,23 +13,27 @@ A. **Clause rows.** A clause table is any markdown table whose data rows begin w
    the Scope Auditor's readings, not faked by a regex.
 
 B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` in its unit's
-   sidecar `<unit>-pins.md` beside the ledgers (in any bin; in the archive with its
-   `yyyy-mm-dd-` prefix), where `<unit>` is the ledger's filename without `-ledger.md` and
-   without the archive prefix, and an entry is `<path>` or `<path>::<name>`: the path is a
-   tracked file and the name a whole-word token in it. A `pins: <unit>/C-NNN[, C-MMM...]`
-   citation in a tracked file under CITATION_ROOTS, other than a `map.md`, also binds. Every
-   `PROVEN` clause in a staging ledger must be bound at least once — the measured floor is
-   seeded per ledger in EXCEPTIONS and only ratchets down — and every binding must resolve to
-   a clause that exists in any bin (`staging/`, `completed/`, the archive). A staging ledger
-   whose first 40 lines carry a `**Path:**` field valued `READING` outside a code span is a
-   reading unit: rule B does not apply to its clauses, rules A and C still do.
+   sidecar `<unit>-pins.md`, which counts only beside its own ledger (same bin, same name; in
+   the archive with the ledger's `yyyy-mm-dd-` prefix). `<unit>` is the ledger's filename
+   without `-ledger.md` and without the archive prefix. An entry is `<path>` or
+   `<path>::<name>`: the path is a tracked test file (under a `tests/` directory, `tests.rs`,
+   `*_tests.rs`, `test_*.py`, `*_test.py`) or a file under `scripts/`, never a map, a ledger,
+   a sidecar, a licence or a readme; the name is a fn, type, module, constant or class the
+   file defines. The line `C-NNN: none (records)` binds a clause that no test pins; the gate
+   counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]` citation in a tracked
+   file under CITATION_ROOTS, other than a `map.md`, also binds. Every `PROVEN` clause in a
+   staging or completed ledger must be bound at least once — the measured floor is seeded per
+   ledger in EXCEPTIONS and only ratchets down — and every binding must resolve to a clause
+   that exists in any bin (`staging/`, `completed/`, the archive). A staging or completed
+   ledger whose first 40 lines carry a `**Path:**` field valued `READING` outside a code span
+   is a reading unit: rule B does not apply to its clauses, rules A and C still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
    `N/A` a `justification:`; `complete:` is `true` iff every category satisfies that. A
-   staging ledger not listed in EXCEPTIONS must carry a clause table and, once no clause is
-   `OPEN`, the attestation. A `FINDING:` record, where present, carries `id`, a severity in
-   S0..S3, a category in AT-1..AT-10, a clause list and a disposition from ref 05's
+   staging or completed ledger not listed in EXCEPTIONS must carry a clause table and, once no
+   clause is `OPEN`, the attestation. A `FINDING:` record, where present, carries `id`, a
+   severity in S0..S3, a category in AT-1..AT-10, a clause list and a disposition from ref 05's
    enumeration.
 
 The meanings stay in `.agents/skills/sepmo/` (SKILL.md "The gate is a ledger, not a score";
@@ -50,6 +55,11 @@ ARCHIVE = "task/ledgers/archive"
 LEDGER_SUFFIX = "-ledger.md"
 PINS_SUFFIX = "-pins.md"
 MAP_NAME = "map.md"
+RECORDS = "none (records)"
+TEST_NAMES = re.compile(r"^(?:tests\.rs|.+_tests\.rs|test_.+\.py|.+_test\.py)$")
+UNBINDABLE = re.compile(
+    r"^(?:map\.md|.+-ledger\.md|.+-pins\.md|LICEN[CS]E.*|README.*)$", re.IGNORECASE
+)
 CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 
 # Ledger -> (unpinned PROVEN clauses allowed, attestation block required). The listed charters
@@ -69,7 +79,7 @@ ARCHIVE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 FENCE = re.compile(r"^\s*(```|~~~)")
 READING_FIELD = re.compile(r"\*\*Path:\*\*\s*([A-Za-z0-9_-]+)")
 CODE_SPAN = re.compile(r"`[^`]*`")
-BINDING_LINE = re.compile(r"^(C-\d{3}):\s*(\S.*?)\s*$")
+BINDING_LINE = re.compile(r"^(C-\d{3}): (\S(?:.*\S)?)$")
 BINDING_ENTRY = re.compile(r"^([^\s:,]+)(?:::([A-Za-z_][A-Za-z0-9_]*))?$")
 HEADER_LINES = 40
 CATEGORIES: tuple[str, ...] = tuple(f"AT-{n}" for n in range(1, 11))
@@ -170,19 +180,47 @@ def citations(repo: Path, tracked: list[str]) -> dict[tuple[str, str], list[str]
     return found
 
 
-def _token_in(text: str, name: str) -> bool:
-    """Whether `name` occurs in `text` as a whole-word token."""
-    return re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text) is not None
+class SidecarUnreadableError(Exception):
+    """A tracked sidecar that is missing from disk or is not UTF-8."""
+
+
+def defines(path: str, text: str, name: str) -> bool:
+    """Whether a Rust or Python file defines `name`: a fn, type, module, constant or class."""
+    escaped = re.escape(name)
+    if path.endswith(".rs"):
+        pattern = rf"\b(?:fn|struct|enum|trait|mod|const|static|type|union)\s+{escaped}\b"
+        return re.search(pattern + rf"|macro_rules!\s*{escaped}\b", text) is not None
+    if path.endswith(".py"):
+        pattern = rf"\b(?:def|class)\s+{escaped}\b|^{escaped}\s*[:=]"
+        return re.search(pattern, text, flags=re.MULTILINE) is not None
+    return False
+
+
+def bindable(path: str) -> bool:
+    """Whether a sidecar entry may name `path`: a test file or a file under `scripts/`."""
+    name = Path(path).name
+    if UNBINDABLE.match(name):
+        return False
+    return (
+        path.startswith("scripts/")
+        or "tests" in Path(path).parts[:-1]
+        or TEST_NAMES.match(name) is not None
+    )
 
 
 def _entry_findings(
-    repo: Path, tracked: set[str], where: str, clause_id: str, entries: str
+    repo: Path, tracked: set[str], where: str, clause_id: str, entries: list[str]
 ) -> list[str]:
-    """Every defect of one binding line's entries: shape, tracked path, name token."""
+    """Every defect of one binding line's entries: shape, kind, tracked path, defined name."""
     findings: list[str] = []
     texts: dict[str, str] = {}
-    for raw in entries.split(","):
-        entry = raw.strip()
+    if RECORDS in entries and len(entries) > 1:
+        findings.append(f"{where}: {clause_id} `{RECORDS}` must be the only entry")
+    if len(set(entries)) != len(entries):
+        findings.append(f"{where}: {clause_id} repeats an entry")
+    for entry in entries:
+        if entry == RECORDS:
+            continue
         match = BINDING_ENTRY.match(entry)
         if match is None:
             findings.append(f"{where}: {clause_id} entry `{entry}` is not <path> or <path>::<name>")
@@ -191,6 +229,11 @@ def _entry_findings(
         if path not in tracked:
             findings.append(f"{where}: {clause_id} binds {path}, which is not a tracked file")
             continue
+        if not bindable(path):
+            findings.append(
+                f"{where}: {clause_id} binds {path}, which is not a test file or a script"
+            )
+            continue
         if name is None:
             continue
         if path not in texts:
@@ -198,27 +241,41 @@ def _entry_findings(
                 texts[path] = (repo / path).read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 texts[path] = ""
-        if not _token_in(texts[path], name):
-            findings.append(f"{where}: {clause_id} names `{name}`, which is not a token in {path}")
+        if not defines(path, texts[path], name):
+            findings.append(f"{where}: {clause_id} names `{name}`, which {path} does not define")
     return findings
+
+
+def _sidecar_text(repo: Path, path: str) -> str:
+    """A tracked sidecar's text, or SidecarUnreadableError."""
+    try:
+        return (repo / path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        message = f"{path}: tracked sidecar is unreadable ({error})"
+        raise SidecarUnreadableError(message) from error
 
 
 def bindings(
     repo: Path, tracked: list[str]
-) -> tuple[dict[tuple[str, str], list[str]], list[tuple[str, str, str]], list[str]]:
+) -> tuple[dict[tuple[str, str], list[str]], list[tuple[str, str, str]], list[str], list[str]]:
     """Sidecar bindings: (unit, clause id) -> sidecar lines, every line for the clause check,
-    and the shape findings."""
+    the shape findings, and the `unit/C-NNN` ids bound to `none (records)`."""
     found: dict[tuple[str, str], list[str]] = {}
     lines: list[tuple[str, str, str]] = []
     findings: list[str] = []
+    records: list[str] = []
     tracked_set = set(tracked)
     bins = (STAGING + "/", COMPLETED + "/", ARCHIVE + "/")
     for path in tracked:
         if not path.startswith(bins) or not path.endswith(PINS_SUFFIX):
             continue
+        ledger = path[: -len(PINS_SUFFIX)] + LEDGER_SUFFIX
+        if ledger not in tracked_set:
+            findings.append(f"{path}: no ledger {Path(ledger).name} beside it; it binds nothing")
+            continue
         unit = unit_of(path, PINS_SUFFIX)
         seen: set[str] = set()
-        text = (repo / path).read_text(encoding="utf-8")
+        text = _sidecar_text(repo, path)
         for number, line in enumerate(text.splitlines(), start=1):
             if not line.strip() or line.startswith("#"):
                 continue
@@ -231,10 +288,13 @@ def bindings(
             if clause_id in seen:
                 findings.append(f"{where}: {clause_id} is bound twice in this sidecar")
             seen.add(clause_id)
-            findings.extend(_entry_findings(repo, tracked_set, where, clause_id, match.group(2)))
+            entries = match.group(2).split(", ")
+            findings.extend(_entry_findings(repo, tracked_set, where, clause_id, entries))
+            if entries == [RECORDS]:
+                records.append(f"{unit}/{clause_id}")
             found.setdefault((unit, clause_id), []).append(where)
             lines.append((where, unit, clause_id))
-    return found, lines, findings
+    return found, lines, findings, sorted(records)
 
 
 def _block_lines(text: str, marker: str) -> list[list[str]]:
@@ -341,7 +401,7 @@ def check_findings(path: str, text: str) -> list[str]:
 
 
 def run(repo: Path) -> int:
-    """All three rules over the staging ledgers; the summary line; the exit code."""
+    """All three rules over the live ledgers; the summary, the records list; the exit code."""
     try:
         tracked = tracked_paths(repo)
     except (subprocess.CalledProcessError, OSError) as error:
@@ -386,7 +446,11 @@ def run(repo: Path) -> int:
     for (unit, clause_id), files in sorted(cited.items()):
         if (unit, clause_id) not in known:
             findings.append(f"{files[0]}: `pins: {unit}/{clause_id}` names no clause in any ledger")
-    bound, binding_lines, binding_findings = bindings(repo, tracked)
+    try:
+        bound, binding_lines, binding_findings, records = bindings(repo, tracked)
+    except SidecarUnreadableError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
     findings.extend(binding_findings)
     for where, unit, clause_id in binding_lines:
         if (unit, clause_id) not in known:
@@ -399,8 +463,9 @@ def run(repo: Path) -> int:
         ceiling = EXCEPTIONS.get(Path(path).name, (0, True))[0]
         if len(unpinned) > ceiling:
             findings.append(
-                f"{path}: {len(unpinned)} PROVEN clause(s) with no `pins: {unit}/C-NNN` citation "
-                f"(ceiling {ceiling}): {', '.join(unpinned[: max(1, len(unpinned) - ceiling)])}"
+                f"{path}: {len(unpinned)} PROVEN clause(s) with no binding (ceiling {ceiling}): "
+                f"{', '.join(unpinned[: max(1, len(unpinned) - ceiling)])} — add a "
+                f"`C-NNN: <test path>[::<name>]` line to {unit}{PINS_SUFFIX} beside the ledger"
             )
         elif ceiling and len(unpinned) < ceiling:
             findings.append(
@@ -420,6 +485,13 @@ def run(repo: Path) -> int:
         f"ledger-grammar: {len(live)} live ledgers clean ({clauses} clauses, "
         f"{len(cited)} pinned clause ids, {len(EXCEPTIONS)} exception rows)"
     )
+    print(f"ledger-grammar: {len(records)} clause(s) bound to `{RECORDS}`, no test pins them")
+    by_unit: dict[str, list[str]] = {}
+    for record in records:
+        unit, clause_id = record.rsplit("/", 1)
+        by_unit.setdefault(unit, []).append(clause_id)
+    for unit in sorted(by_unit):
+        print(f"  {unit}: {', '.join(by_unit[unit])}")
     return 0
 
 

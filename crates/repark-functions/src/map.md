@@ -251,7 +251,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   BIGINT. Out-of-range positions raise `[INVALID_BITMAP_POSITION]` SQLSTATE
   22003. Sliding frames use the session WIN-SLIDE-1 rescan (no local
   `create_sliding_accumulator` refuse). GroupsAccumulator in `bitmap_agg/groups.rs`.
-. **FNP-6D-FOLLOWUP-1
+  **FNP-6D-FOLLOWUP-1
   (2026-09-15):** user-defined signatures with planning-time Spark refusals
   (`DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`, BINARY/BIGINT wanted); strict
   ANSI-on STRING-to-BIGINT parsing (`CAST_INVALID_INPUT`, SQLSTATE 22018) with
@@ -523,7 +523,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   non-positive gaps to NULL for the drop filter) with one parse per distinct
   gap string per batch; the assemble UDF takes an Int64-micros or a
   TIMESTAMP end; `Date32` coerces to `Timestamp(ns)`.
-. Round 2 (2026-09-15) shares the two-spec
+  Round 2 (2026-09-15) shares the two-spec
   `[_LEGACY_ERROR_TEMP_1039]` refusal text (`MULTIPLE_SESSION_EXPRESSIONS`)
   with the analyzer and SQL staging; the Python door's duplicate-name error
   is registry row WIN-4.
@@ -1190,7 +1190,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   1-arg path with the format ignored. `to_timestamp` 1-arg malformed strings translate to
   `[CAST_INVALID_INPUT]` under ANSI and NULL otherwise. SQL-door double-quoted pattern
   literals stay a run-16c parser seam (cells 129/130).
-; `java_datetime::tests::*`.
+  `java_datetime::tests::*`.
   **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
   `spark_from_unixtime.rs`.
 - `timestamp_ns_cast.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** `store_micros(array,

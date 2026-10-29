@@ -1,14 +1,14 @@
 # dfload-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/src/repark/spark/session/reader.py::_iceberg_time_travel_opts, python/repark/src/repark/spark/session/reader.py::_reject_csv_json_parse_options, python/repark/src/repark/spark/session/reader.py::load, python/repark/src/repark/spark/session/reader.py::option, python/repark/src/repark/spark/session/reader.py::options, python/repark/src/repark/spark/session/reader.py::smartCsv, python/repark/src/repark/spark/session/reader.py::table, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-002: crates/repark-core/src/iceberg_path/map.md, crates/repark-core/src/iceberg_path/tests.rs, python/repark/src/repark/spark/session/reader.py::_iceberg_time_travel_opts, python/repark/src/repark/spark/session/reader.py::_reject_csv_json_parse_options, python/repark/src/repark/spark/session/reader.py::load, python/repark/src/repark/spark/session/reader.py::option, python/repark/src/repark/spark/session/reader.py::options, python/repark/src/repark/spark/session/reader.py::smartCsv, python/repark/src/repark/spark/session/reader.py::table, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-003: crates/repark-core/src/iceberg_path/map.md, crates/repark-core/src/iceberg_path/tests.rs, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-004: crates/repark-core/src/iceberg_path/map.md, crates/repark-python/src/session_sources.rs::mask_url_userinfo, crates/repark-python/src/session_sources.rs::mask_user_visible, crates/repark-python/src/session_sources.rs::read_iceberg_path, crates/repark-python/src/session_sources.rs::register_config_value, python/repark/src/repark/spark/session/reader_iceberg_path.py::load_iceberg_path, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-005: crates/repark-core/src/iceberg_path/map.md, crates/repark-core/src/iceberg_path/tests.rs, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-006: python/repark/src/repark/spark/session/reader.py::_iceberg_time_travel_opts, python/repark/src/repark/spark/session/reader.py::_reject_csv_json_parse_options, python/repark/src/repark/spark/session/reader.py::load, python/repark/src/repark/spark/session/reader.py::option, python/repark/src/repark/spark/session/reader.py::options, python/repark/src/repark/spark/session/reader.py::smartCsv, python/repark/src/repark/spark/session/reader.py::table, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-007: crates/repark-core/src/iceberg_path/map.md, python/repark/src/repark/spark/session/reader_iceberg_path.py::load_iceberg_path, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-008: crates/repark-core/src/iceberg_path/map.md, crates/repark-core/src/iceberg_path/tests.rs, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-009: crates/repark-core/src/iceberg_path/map.md, crates/repark-core/src/iceberg_path/tests.rs, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-010: crates/repark-core/src/iceberg_path/map.md, crates/repark-core/src/iceberg_path/tests.rs, python/repark/tests/iceberg/test_iceberg_load_path.py
-C-012: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-013: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-001: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-002: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-003: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-004: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-005: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-006: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-007: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-008: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-009: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-010: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-012: none (records)
+C-013: none (records)

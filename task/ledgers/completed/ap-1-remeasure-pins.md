@@ -1,6 +1,6 @@
 # ap-1-remeasure pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark-parity/bench/adaptpart/map.md, python/repark-parity/bench/adaptpart/run_adaptpart.py
-C-002: python/repark-parity/bench/adaptpart/map.md, python/repark-parity/bench/adaptpart/run_adaptpart.py
-C-003: python/repark-parity/bench/adaptpart/map.md, python/repark-parity/bench/adaptpart/run_adaptpart.py
-C-004: python/repark-parity/bench/adaptpart/map.md, python/repark-parity/bench/adaptpart/run_adaptpart.py
+C-001: none (records)
+C-002: none (records)
+C-003: none (records)
+C-004: none (records)

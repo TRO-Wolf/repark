@@ -1,15 +1,15 @@
 # never-oom-panic-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/conftest.py
-C-002: python/repark/tests/conftest.py
-C-003: crates/repark-core/src/session/tests/nlj_tight_pool.rs
-C-004: crates/repark-core/src/nlj_build_reset.rs::NljBuildSideExec, crates/repark-core/src/nlj_build_reset.rs::NljBuildSideReset, crates/repark-core/src/nlj_build_reset.rs::execute, crates/repark-core/src/nlj_build_reset.rs::metrics, crates/repark-core/src/session/df_guards.rs::context_with_df_54_1_rule_guards
-C-005: crates/repark-core/src/nlj_build_reset.rs::NljBuildSideExec, crates/repark-core/src/nlj_build_reset.rs::NljBuildSideReset, crates/repark-core/src/nlj_build_reset.rs::execute, crates/repark-core/src/nlj_build_reset.rs::metrics, crates/repark-core/src/session/df_guards.rs::context_with_df_54_1_rule_guards
-C-006: crates/repark-core/src/nlj_build_reset.rs::NljBuildSideExec, crates/repark-core/src/nlj_build_reset.rs::NljBuildSideReset, crates/repark-core/src/nlj_build_reset.rs::execute, crates/repark-core/src/nlj_build_reset.rs::metrics, crates/repark-core/src/session/tests/nlj_tight_pool.rs
-C-007: python/repark/tests/conftest.py
-C-008: python/repark/tests/conftest.py
-C-009: python/repark/tests/conftest.py
-C-010: python/repark/tests/conftest.py
-C-011: crates/repark-core/src/nlj_build_reset.rs::BuildSidePolicy, crates/repark-core/src/nlj_build_reset.rs::NljBuildSideExec, crates/repark-core/src/nlj_build_reset.rs::for_join, crates/repark-core/src/nlj_build_reset.rs::metrics, crates/repark-core/src/nlj_build_reset.rs::policy, python/repark/tests/conftest.py
-C-012: crates/repark-core/src/nlj_build_reset.rs::BuildSidePolicy, crates/repark-core/src/nlj_build_reset.rs::NljBuildSideExec, crates/repark-core/src/nlj_build_reset.rs::for_join, crates/repark-core/src/nlj_build_reset.rs::metrics, crates/repark-core/src/nlj_build_reset.rs::policy, crates/repark-core/src/session/tests/nlj_tight_pool.rs, python/repark/tests/conftest.py
-C-013: crates/repark-core/src/nlj_build_reset.rs::BuildSidePolicy, crates/repark-core/src/nlj_build_reset.rs::NljBuildSideExec, crates/repark-core/src/nlj_build_reset.rs::for_join, crates/repark-core/src/nlj_build_reset.rs::metrics, crates/repark-core/src/nlj_build_reset.rs::policy, python/repark/tests/conftest.py
+C-001: none (records)
+C-002: none (records)
+C-003: none (records)
+C-004: none (records)
+C-005: none (records)
+C-006: none (records)
+C-007: none (records)
+C-008: none (records)
+C-009: none (records)
+C-010: none (records)
+C-011: none (records)
+C-012: none (records)
+C-013: none (records)

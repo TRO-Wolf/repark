@@ -20,34 +20,34 @@ C-020: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
 C-021: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
 C-022: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
 C-023: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
-C-026: crates/repark-spark/src/tests/commit_unknown_doors.rs
-C-027: crates/repark-spark/src/tests/commit_unknown_doors.rs
-C-028: crates/repark-spark/src/tests/commit_unknown_doors.rs
+C-026: none (records)
+C-027: none (records)
+C-028: none (records)
 C-030: crates/repark-spark/src/tests/commit_unknown_doors.rs
-C-032: python/repark/tests/parity/previous_release_requirements.txt
-C-033: python/repark/tests/parity/previous_release_requirements.txt
-C-034: python/repark/tests/parity/previous_release_requirements.txt
-C-035: python/repark/tests/parity/previous_release_requirements.txt
-C-036: python/repark/tests/parity/previous_release_requirements.txt
-C-039: python/repark/tests/parity/previous_release_requirements.txt
-C-040: python/repark/tests/parity/previous_release_requirements.txt
-C-041: python/repark/tests/parity/previous_release_requirements.txt
-C-042: python/repark/tests/parity/previous_release_requirements.txt
-C-043: python/repark/tests/parity/previous_release_requirements.txt
-C-045: python/repark/tests/parity/previous_release_requirements.txt
-C-046: python/repark/tests/parity/previous_release_requirements.txt
-C-047: python/repark/tests/parity/previous_release_requirements.txt
-C-048: python/repark/tests/parity/previous_release_requirements.txt
-C-050: python/repark/tests/parity/previous_release_requirements.txt
-C-051: python/repark/tests/parity/previous_release_requirements.txt
-C-052: python/repark/tests/parity/previous_release_requirements.txt
-C-054: python/repark/tests/parity/previous_release_requirements.txt
-C-055: python/repark/tests/parity/previous_release_requirements.txt
-C-058: python/repark/tests/parity/previous_release_requirements.txt
-C-061: python/repark-parity/tests/test_cross_read_diagnostics.py
-C-062: python/repark-parity/tests/test_cross_read_diagnostics.py
-C-063: python/repark-parity/tests/test_cross_read_diagnostics.py
-C-064: python/repark-parity/tests/test_cross_read_progress.py, python/repark/tests/parity/map.md
-C-065: python/repark-parity/tests/test_cross_read_progress.py, python/repark/tests/parity/map.md
+C-032: none (records)
+C-033: none (records)
+C-034: none (records)
+C-035: none (records)
+C-036: none (records)
+C-039: none (records)
+C-040: none (records)
+C-041: none (records)
+C-042: none (records)
+C-043: none (records)
+C-045: none (records)
+C-046: none (records)
+C-047: none (records)
+C-048: none (records)
+C-050: none (records)
+C-051: none (records)
+C-052: none (records)
+C-054: none (records)
+C-055: none (records)
+C-058: none (records)
+C-061: none (records)
+C-062: none (records)
+C-063: none (records)
+C-064: python/repark-parity/tests/test_cross_read_progress.py
+C-065: python/repark-parity/tests/test_cross_read_progress.py
 C-072: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
 C-073: crates/repark-core/src/iceberg_path/hint_walk_tests.rs

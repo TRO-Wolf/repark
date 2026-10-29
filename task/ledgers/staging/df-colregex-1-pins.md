@@ -1,8 +1,8 @@
 # df-colregex-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/src/repark/spark/dataframe/colregex.py::RegexColumn, python/repark/src/repark/spark/dataframe/colregex.py::col_regex_column, python/repark/src/repark/spark/dataframe/colregex.py::expand_col_regex, python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py
+C-001: python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py
 C-002: python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py
-C-003: python/repark/src/repark/spark/dataframe/colregex.py::RegexColumn, python/repark/src/repark/spark/dataframe/colregex.py::col_regex_column, python/repark/src/repark/spark/dataframe/colregex.py::expand_col_regex, python/repark/src/repark/spark/dataframe/core.py::colRegex, python/repark/src/repark/spark/dataframe/core.py::select, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py
+C-003: python/repark/tests/dataframe/test_df_easy.py, python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py
 C-004: scripts/check_example_coverage.py::BACKLOG_BASELINE
-C-005: python/repark/src/repark/spark/dataframe/colregex.py::RegexColumn, python/repark/src/repark/spark/dataframe/colregex.py::col_regex_column, python/repark/src/repark/spark/dataframe/colregex.py::expand_col_regex, python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py
-C-006: python/repark/src/repark/spark/dataframe/colregex.py::RegexColumn, python/repark/src/repark/spark/dataframe/colregex.py::col_regex_column, python/repark/src/repark/spark/dataframe/colregex.py::expand_col_regex, python/repark/tests/parity/test_examples_dataframe_d.py
+C-005: python/repark/tests/parity/test_examples_dataframe_a.py, python/repark/tests/parity/test_examples_dataframe_d.py
+C-006: python/repark/tests/parity/test_examples_dataframe_d.py

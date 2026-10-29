@@ -1,18 +1,18 @@
 # s3-path-write-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/src/repark/spark/dataframe/writer_readwriter.py
-C-002: python/repark/src/repark/spark/dataframe/writer_readwriter.py
-C-003: python/repark/src/repark/spark/dataframe/writer_readwriter.py
-C-004: python/repark/src/repark/spark/dataframe/writer_readwriter.py
-C-005: python/repark/src/repark/spark/dataframe/writer_readwriter.py
-C-006: python/repark/src/repark/spark/dataframe/writer_readwriter.py
-C-007: crates/repark-core/src/session/path_write/rollback.rs, crates/repark-core/src/session/tests/path_write.rs, crates/repark-python/src/session_write_options.rs::session_sql_with_write_options, crates/repark-python/src/session_write_options.rs::session_write_path, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/src/repark/spark/dataframe/writer_s3.py::is_s3_url, python/repark/src/repark/spark/dataframe/writer_s3.py::write_s3_path, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_s3_path_write_1.py, scripts/check_rust_file_size.py
-C-008: crates/repark-core/src/session/path_write/rollback.rs, crates/repark-core/src/session/tests/path_write.rs, python/repark/src/repark/spark/dataframe/writer_s3.py::is_s3_url, python/repark/src/repark/spark/dataframe/writer_s3.py::write_s3_path, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_s3_path_write_1.py
-C-009: crates/repark-core/src/session/path_write/rollback.rs, crates/repark-core/src/session/tests/path_write.rs, python/repark/src/repark/spark/dataframe/writer_s3.py::is_s3_url, python/repark/src/repark/spark/dataframe/writer_s3.py::write_s3_path, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_s3_path_write_1.py
-C-010: crates/repark-core/src/object_store_s3.rs::AwsConfigCredentialProvider, crates/repark-core/src/object_store_s3.rs::build_amazon_s3_store, crates/repark-core/src/object_store_s3.rs::is_s3_scheme, crates/repark-core/src/object_store_s3.rs::parse_s3_bucket, crates/repark-core/src/object_store_s3.rs::register_bucket_store
-C-011: python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/parity/test_aws_acceptance.py
-C-012: crates/repark-core/src/object_store_s3.rs::AwsConfigCredentialProvider, crates/repark-core/src/object_store_s3.rs::build_amazon_s3_store, crates/repark-core/src/object_store_s3.rs::is_s3_scheme, crates/repark-core/src/object_store_s3.rs::parse_s3_bucket, crates/repark-core/src/object_store_s3.rs::register_bucket_store, python/repark/src/repark/spark/dataframe/writer_s3.py::is_s3_url, python/repark/src/repark/spark/dataframe/writer_s3.py::write_s3_path, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_s3_path_write_1.py
-C-013: crates/repark-core/src/object_store_s3.rs::resolve_s3_prefix_for_read, crates/repark-core/src/read_options.rs::read_csv_path, crates/repark-core/src/session.rs::read_json, crates/repark-core/src/session/path_write/rollback.rs, crates/repark-core/src/session/tests/s3_prefix_read.rs, crates/repark-core/src/spark_nullable.rs::read_parquet_nullable, python/repark/src/repark/spark/dataframe/writer_s3.py::is_s3_url, python/repark/src/repark/spark/dataframe/writer_s3.py::write_s3_path, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/io/test_s3_path_write_1.py
-C-014: python/repark/src/repark/spark/dataframe/writer_s3.py::is_s3_url, python/repark/src/repark/spark/dataframe/writer_s3.py::write_s3_path, python/repark/tests/dataframe/_dfcore_1_expected.py
-C-015: crates/repark-core/src/session/path_write/rollback.rs, crates/repark-core/src/session/tests/path_write.rs, python/repark/src/repark/spark/dataframe/writer_s3.py::is_s3_url, python/repark/src/repark/spark/dataframe/writer_s3.py::write_s3_path, python/repark/tests/dataframe/_dfcore_1_expected.py
-C-016: python/repark/tests/_acceptance.py, python/repark/tests/parity/test_aws_acceptance.py
+C-001: none (records)
+C-002: none (records)
+C-003: none (records)
+C-004: none (records)
+C-005: none (records)
+C-006: none (records)
+C-007: crates/repark-core/src/session/tests/path_write.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/io/test_s3_path_write_1.py, scripts/check_lib_py.py
+C-008: crates/repark-core/src/session/tests/path_write.rs, python/repark/tests/io/test_s3_path_write_1.py
+C-009: crates/repark-core/src/session/tests/path_write.rs, python/repark/tests/io/test_s3_path_write_1.py
+C-010: none (records)
+C-011: python/repark/tests/parity/test_aws_acceptance.py
+C-012: python/repark/tests/io/test_s3_path_write_1.py
+C-013: crates/repark-core/src/session/tests/s3_prefix_read.rs, python/repark/tests/io/test_s3_path_write_1.py
+C-014: none (records)
+C-015: crates/repark-core/src/session/tests/path_write.rs
+C-016: python/repark/tests/parity/test_aws_acceptance.py

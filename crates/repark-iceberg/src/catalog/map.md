@@ -481,7 +481,7 @@ Source comments retain only API and safety contracts; implementation narration i
   applies). Time-travel plus lineage is `V3-ROWID-2` at the SQL rewrite; snapshot-pinned
   scan is the follow-up. `SELECT *` stays user columns because the SQL doors only register
   this provider when a query names the columns.
- V3-COV pins in this file: a scan column left behind by a widening ALTER promotes instead of failing (V3-COV-2); the projection is resolved once per scan schema and reused for every batch; a scan that lost a lineage column names it rather than rebuilding a short batch.
+  V3-COV pins in this file: a scan column left behind by a widening ALTER promotes instead of failing (V3-COV-2); the projection is resolved once per scan schema and reused for every batch; a scan that lost a lineage column names it rather than rebuilding a short batch.
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `MetadataColumnsTableProvider`
   serves `_file` (Utf8), `_pos` (Int64), `_spec_id` (Int32), `_partition` (the NULLABLE
   union struct) and `_deleted` (non-null Boolean) on current-snapshot reads by handing the

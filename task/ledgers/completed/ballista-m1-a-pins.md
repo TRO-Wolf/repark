@@ -1,6 +1,6 @@
 # ballista-m1-a pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-distributed/src/executor.rs::DistributedExecutor, crates/repark-distributed/src/executor.rs::JobHandle, crates/repark-distributed/src/executor.rs::JobId, crates/repark-distributed/src/executor.rs::JobStatus, crates/repark-distributed/src/executor.rs::StageMetrics, crates/repark-distributed/src/executor.rs::cancel, crates/repark-distributed/tests/local_executor.rs
-C-002: crates/repark-distributed/src/executor.rs::DistributedExecutor, crates/repark-distributed/src/executor.rs::JobHandle, crates/repark-distributed/src/executor.rs::JobId, crates/repark-distributed/src/executor.rs::JobStatus, crates/repark-distributed/src/executor.rs::cancel, crates/repark-distributed/src/local.rs::LocalDataFusionExecutor, crates/repark-distributed/src/local.rs::cancel, crates/repark-distributed/src/local.rs::status, crates/repark-distributed/tests/local_executor.rs
-C-003: crates/repark-distributed/src/executor.rs::DistributedExecutor, crates/repark-distributed/src/executor.rs::JobHandle, crates/repark-distributed/src/executor.rs::JobId, crates/repark-distributed/src/executor.rs::JobStatus, crates/repark-distributed/src/executor.rs::cancel, crates/repark-distributed/src/local.rs::LocalDataFusionExecutor, crates/repark-distributed/src/local.rs::cancel, crates/repark-distributed/src/local.rs::status, crates/repark-distributed/tests/local_executor.rs
-C-004: crates/repark-distributed/src/executor.rs::DistributedExecutor, crates/repark-distributed/src/executor.rs::JobHandle, crates/repark-distributed/src/executor.rs::JobId, crates/repark-distributed/src/executor.rs::JobStatus, crates/repark-distributed/src/executor.rs::cancel
+C-001: none (records)
+C-002: none (records)
+C-003: none (records)
+C-004: none (records)

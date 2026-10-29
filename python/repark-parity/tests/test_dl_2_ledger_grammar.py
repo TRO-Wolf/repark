@@ -140,10 +140,7 @@ def test_unpinned_proven_clause_and_dead_citation_go_red(repo: Path) -> None:
     result = _run(repo)
     assert result.returncode == 1
     assert f"`pins: {_UNIT}/C-099` names no clause in any ledger" in result.stderr
-    assert (
-        f"1 PROVEN clause(s) with no `pins: {_UNIT}/C-NNN` citation (ceiling 0): C-002"
-        in result.stderr
-    )
+    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-002 — add a" in result.stderr
 
 
 def test_reading_marker_exempts_rule_b(repo: Path) -> None:
@@ -156,10 +153,7 @@ def test_reading_rule_b_applies_without_the_marker(repo: Path) -> None:
     _write(repo, _READING_LEDGER, _READING_TEXT.replace(f"{_READING_MARKER_LINE}\n\n", ""))
     result = _run(repo)
     assert result.returncode == 1
-    assert (
-        f"1 PROVEN clause(s) with no `pins: {_READING_UNIT}/C-NNN` citation (ceiling 0): C-001"
-        in result.stderr
-    )
+    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-001 — add a" in result.stderr
 
 
 def test_reading_quoted_marker_in_prose_is_not_exempt(repo: Path) -> None:
@@ -170,10 +164,7 @@ def test_reading_quoted_marker_in_prose_is_not_exempt(repo: Path) -> None:
     _write(repo, _READING_LEDGER, quoted)
     result = _run(repo)
     assert result.returncode == 1
-    assert (
-        f"1 PROVEN clause(s) with no `pins: {_READING_UNIT}/C-NNN` citation (ceiling 0): C-001"
-        in result.stderr
-    )
+    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-001 — add a" in result.stderr
 
 
 def test_reading_foo_value_is_not_exempt(repo: Path) -> None:
@@ -182,10 +173,7 @@ def test_reading_foo_value_is_not_exempt(repo: Path) -> None:
     )
     result = _run(repo)
     assert result.returncode == 1
-    assert (
-        f"1 PROVEN clause(s) with no `pins: {_READING_UNIT}/C-NNN` citation (ceiling 0): C-001"
-        in result.stderr
-    )
+    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-001 — add a" in result.stderr
 
 
 def test_reading_midline_value_with_period_is_exempt(repo: Path) -> None:

@@ -1,11 +1,11 @@
 # polars-is-duplicated-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-python/src/column/display.rs::is_duplicated, crates/repark-python/src/column/expr_build.rs::is_duplicated_expr, python/repark/src/repark/spark/qualified_names.py, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
-C-002: crates/repark-python/src/dataframe/mod.rs::drive_columns, crates/repark-python/src/dataframe/mod.rs::filter, crates/repark-python/src/dataframe/mod.rs::select, crates/repark-python/src/is_duplicated.rs::dup_key_udf, crates/repark-python/src/is_duplicated.rs::dup_mask_udf, crates/repark-python/src/is_duplicated.rs::filter_frame, crates/repark-python/src/is_duplicated.rs::select_frame, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
-C-003: crates/repark-python/src/is_duplicated.rs::dup_key_udf, crates/repark-python/src/is_duplicated.rs::dup_mask_udf, crates/repark-python/src/is_duplicated.rs::filter_frame, crates/repark-python/src/is_duplicated.rs::select_frame, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
-C-004: crates/repark-python/src/is_duplicated.rs::dup_key_udf, crates/repark-python/src/is_duplicated.rs::dup_mask_udf, crates/repark-python/src/is_duplicated.rs::filter_frame, crates/repark-python/src/is_duplicated.rs::select_frame, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
-C-005: crates/repark-python/src/is_duplicated.rs::dup_key_udf, crates/repark-python/src/is_duplicated.rs::dup_mask_udf, crates/repark-python/src/is_duplicated.rs::filter_frame, crates/repark-python/src/is_duplicated.rs::select_frame, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
-C-006: crates/repark-python/src/column/expr_build.rs::is_duplicated_expr, crates/repark-python/src/is_duplicated.rs::dup_key_udf, crates/repark-python/src/is_duplicated.rs::dup_mask_udf, crates/repark-python/src/is_duplicated.rs::filter_frame, crates/repark-python/src/is_duplicated.rs::select_frame, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
-C-007: crates/repark-python/src/is_duplicated.rs::dup_key_udf, crates/repark-python/src/is_duplicated.rs::dup_mask_udf, crates/repark-python/src/is_duplicated.rs::filter_frame, crates/repark-python/src/is_duplicated.rs::select_frame, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
-C-008: python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-001: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-002: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-003: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-004: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-005: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-006: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-007: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
+C-008: python/repark/tests/dataframe/test_polars_is_duplicated_1.py
 C-009: python/repark-parity/tests/test_ex_0_example_coverage.py::Column, python/repark/tests/dataframe/test_polars_is_duplicated_1.py

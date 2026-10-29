@@ -1,8 +1,8 @@
 # perf-agg-avg-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-functions/map.md, crates/repark-functions/src/aggregate.rs::DecimalAverager, crates/repark-functions/src/aggregate.rs::create_groups_accumulator, crates/repark-functions/src/aggregate.rs::groups_accumulator_supported, crates/repark-functions/src/aggregate.rs::state_fields, crates/repark-functions/src/avg_groups.rs::convert_to_state, crates/repark-functions/src/avg_groups.rs::evaluate, crates/repark-functions/src/avg_groups.rs::merge_batch, crates/repark-functions/src/avg_groups.rs::size, crates/repark-functions/src/avg_groups.rs::state, crates/repark-functions/src/avg_groups.rs::update_batch, crates/repark-functions/src/groups_null_state.rs, python/repark/tests/perf/test_perf_agg_avg_1.py, python/repark/tests/writes/test_write_distribution_2.py
-C-002: crates/repark-functions/map.md, crates/repark-functions/src/aggregate.rs::DecimalAverager, crates/repark-functions/src/aggregate.rs::create_groups_accumulator, crates/repark-functions/src/aggregate.rs::groups_accumulator_supported, crates/repark-functions/src/aggregate.rs::state_fields, python/repark/tests/perf/test_perf_agg_avg_1.py, python/repark/tests/writes/test_write_distribution_2.py
-C-003: python/repark/tests/perf/test_perf_agg_avg_1.py, python/repark/tests/writes/test_write_distribution_2.py
-C-004: python/repark/tests/perf/test_perf_agg_avg_1.py, python/repark/tests/writes/test_write_distribution_2.py
-C-005: python/repark/tests/perf/test_perf_agg_avg_1.py, python/repark/tests/writes/test_write_distribution_2.py
-C-006: python/repark/tests/writes/test_write_distribution_2.py
+C-001: python/repark/tests/perf/test_perf_agg_avg_1.py
+C-002: python/repark/tests/perf/test_perf_agg_avg_1.py
+C-003: python/repark/tests/perf/test_perf_agg_avg_1.py
+C-004: python/repark/tests/perf/test_perf_agg_avg_1.py
+C-005: python/repark/tests/perf/test_perf_agg_avg_1.py
+C-006: python/repark/tests/perf/test_perf_agg_avg_1.py

@@ -24,7 +24,7 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   existing GroupedData path carries struct grouping keys untouched; dangling
   parent references to the pre-rename display remap to `window`. Non-literal
   durations and a second window specification per block refuse loud.
-. Step 3 adds `SparkWindowTimeGrouping`,
+  Step 3 adds `SparkWindowTimeGrouping`,
   which refuses a `window_time(...)` call placed directly in an aggregate with
   the oracle `[MISSING_AGGREGATION]` text.
   `mod.rs` keeps the window rules; `session_window.rs` (step 4) owns the
@@ -32,7 +32,7 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   `check_rust_file_size` ceiling. Month/year gaps refuse loud beside the
   rule. Round 2 (2026-09-15):
   `session_window.rs` chains dynamic gaps on the running maximum of ends.
-. The `window_time` provenance walk recurses through
+  The `window_time` provenance walk recurses through
   Filter / Limit / Sort / Distinct / Repartition / Subquery / Join / Union
   into the defining input, failing closed otherwise.
 - `cast_legality.rs` — Spark's CAST / TRY_CAST type-legality deny matrix covers
@@ -43,7 +43,7 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   **WO NTZ-1 slice 1 (2026-09-27):** `Timestamp(µs, None)` → integer / float / decimal
   denies with `CAST_WITHOUT_SUGGESTION` naming `TIMESTAMP_NTZ`; the microsecond-naive
   source only, so TZ-5 `CAST(TIMESTAMP … AS BIGINT)` epoch seconds stay green.
-. Legality is independent of ANSI evaluation mode.
+  Legality is independent of ANSI evaluation mode.
 
 Deliberately NOT here: the ANSI **store-assignment** matrix
 (`crates/repark-iceberg/src/write/store_assign.rs`). It answers a different question and is laxer

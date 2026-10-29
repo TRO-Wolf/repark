@@ -7,7 +7,7 @@ C-004: python/repark/tests/writes/test_ice_spark_table_1.py
 C-005: python/repark/tests/writes/test_ice_spark_table_1.py
 C-006: python/repark/tests/writes/test_ice_spark_table_1.py
 C-007: python/repark/tests/writes/test_ice_spark_table_1.py
-C-008: python/repark-parity/fixtures/torture/data/ice_spark_table_1/map.md, python/repark/tests/writes/test_ice_spark_table_1.py
+C-008: python/repark/tests/writes/test_ice_spark_table_1.py
 C-009: python/repark/tests/writes/test_ice_spark_table_1.py
 C-010: python/repark/tests/writes/test_ice_spark_table_1.py
 C-011: python/repark/tests/writes/test_ice_spark_table_1.py

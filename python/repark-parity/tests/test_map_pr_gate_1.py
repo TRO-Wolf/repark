@@ -83,7 +83,6 @@ def test_branch_mode_passes_when_code_and_map_change(repo: Path) -> None:
 
 
 def test_branch_mode_warns_when_only_code_changes(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-002."""
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "pkg" / "mod.rs").write_text("fn b() {}\n", encoding="utf-8")
     _commit(repo, "work")
@@ -94,7 +93,6 @@ def test_branch_mode_warns_when_only_code_changes(repo: Path) -> None:
 
 
 def test_branch_mode_warns_for_a_new_directory_without_map(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-003."""
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "newdir").mkdir()
     (repo / "newdir" / "x.rs").write_text("fn x() {}\n", encoding="utf-8")
@@ -129,8 +127,6 @@ def test_branch_mode_handles_a_root_level_file(repo: Path) -> None:
 
 
 def test_branch_mode_diffs_from_the_merge_base(tmp_path: Path) -> None:
-    """pins: map-pr-gate-1/C-002 — `base...HEAD` reads the merge-base; a main-side
-    code-only change sits outside the pull-request diff even across a merge."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-b", "main")
@@ -160,7 +156,6 @@ def test_branch_mode_diffs_from_the_merge_base(tmp_path: Path) -> None:
 
 
 def test_branch_mode_warns_on_py_change_without_map(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-002 — `*.py` is inside the suffix filter."""
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "pkg" / "tool.py").write_text("x = 1\n", encoding="utf-8")
     _commit(repo, "work")
@@ -177,8 +172,6 @@ def test_branch_mode_warns_on_py_change_without_map(repo: Path) -> None:
 
 
 def test_branch_mode_manifest_changes_and_unlisted_files(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-002 — `Cargo.toml` is inside the filter; an unlisted
-    suffix is ignored entirely."""
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "pkg" / "Cargo.toml").write_text('[package]\nname = "pkg"\n', encoding="utf-8")
     _commit(repo, "manifest")

@@ -70,7 +70,7 @@ works, so the attribute is gone rather than documented.
   four-part `table.branch_*` names, and names whose catalog is not in the session
   registry (Spark rewrites a branch DELETE onto `datafusion.public.<temp>`) stay on
   the fork `TableProvider`.
- (`plain.rs::try_allowed_plain_identity` refuses with a plan error on an invalid target namespace; its `# Errors` doc is the one line the clippy `missing_errors_doc` gate forces on a `pub fn` returning `Result`)
+  (`plain.rs::try_allowed_plain_identity` refuses with a plan error on an invalid target namespace; its `# Errors` doc is the one line the clippy `missing_errors_doc` gate forces on a `pub fn` returning `Result`)
   **ICE-LIST-NULL-2 (2026-09-19):** `selection_refs_non_primitive` parses the claimed
   selection and resolves every bare or target-qualified column against the table's
   Iceberg schema through the shared `conflict_filter::top_level_field` rule; any

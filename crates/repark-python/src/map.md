@@ -83,7 +83,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   argument is now the `(max_bytes, max_total_bytes)` budgets tuple, forwarded
   to the core admission loop; the one-argument signature keeps the file's exact
   CAP-1 baseline. |
- |
+  |
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
   Native and Spark Python sessions install F-Y10-1 integer overflow checks.
@@ -110,7 +110,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   then calls `NamedSource::ping` so the connector-pending refusal keeps its engine class.
   **C-2d (2026-10-07):** `session_source_ping` resolves the handle, then detaches and blocks on
   the binding's shared runtime over the now-`async` `NamedSource::ping`.
- **SOURCE-URL-REDACT-1 (2026-10-06):** two pure `#[pyfunction]`s,
+  **SOURCE-URL-REDACT-1 (2026-10-06):** two pure `#[pyfunction]`s,
   `redact_property_value(key, value)` and `mask_value_credentials(value)`, expose
   `repark_core::redaction` to the facade's `getAll` and `SET` listings.
   **ICE-CHANGELOG-1 (2026-09-20):** a fourth free
@@ -118,11 +118,11 @@ and hand execution, SQL, and ML semantics to the engine crates.
   (the incremental window, and the time-travel pins found beside it) and drives
   `repark_core::time_travel::incremental::read_incremental` — the facade decides nothing, and
   `session.rs` keeps its exact baseline because the binding is a free function, not a method.
- **U10 / R-DF-LOAD-PATH (2026-09-23):** a fifth free
+  **U10 / R-DF-LOAD-PATH (2026-09-23):** a fifth free
   `#[pyfunction]`, `read_iceberg_path`, takes the raw path and drives
   `ReparkSession::read_iceberg_path` — the `format("iceberg").load(<path>)` static-table
   read, identifier resolution and travel options already refused upstream.
- **SOURCE-URL-REDACT-2 (2026-10-06):** a sixth free `#[pyfunction]`, `register_config_value`, exposes the registry to the facade doors. **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** seventh and eighth free `#[pyfunction]`s, `mask_user_visible` (the `exceptions` narrow helper: registered values, then URL userinfo) and `mask_url_userinfo`, for the facade scrub and the writer path echoes. |
+  **SOURCE-URL-REDACT-2 (2026-10-06):** a sixth free `#[pyfunction]`, `register_config_value`, exposes the registry to the facade doors. **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** seventh and eighth free `#[pyfunction]`s, `mask_user_visible` (the `exceptions` narrow helper: registered values, then URL userinfo) and `mask_url_userinfo`, for the facade scrub and the writer path echoes. |
 | [`text_io.rs`](text_io.rs) | **IO-TEXT-1 (2026-09-14):** the text read/write bindings — two free `#[pyfunction]`s **IO-TEXT-1 (2026-09-15, orchestrator):** `text_io.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   (the `session_sources` shape, since pyo3 allows one `#[pymethods]` block per type):
   runtime, `write_text_frame` drives `repark_core::write_text_frame` with a newline
@@ -172,7 +172,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   NULL even where the signature returns `PyResult`. The list is now allocated once at its final
   length and filled in place (`PyList_SetItem`), and each row tuple likewise, so the intermediate
   `Vec<Bound<PyTuple>>` is gone.
- |
+  |
 | [`cdf_infer.rs`](cdf_infer.rs) + [`cdf_infer/`](cdf_infer/) | **FACADE-3 step 2
   (2026-09-13):** `createDataFrame` rows/tuple/dict inference and cell conversion in Rust.
   `cdf_arrow_export` extracts each tuple cell into a typed `Cell` (cells.rs), infers the
@@ -218,13 +218,13 @@ and hand execution, SQL, and ML semantics to the engine crates.
   cached by `tzinfo` identity armed only for exact `datetime.timezone`. `Ctx` gains
   `timezone_type`, `epoch_date` and the `utcoffset_cache`, built once per export call in the
   shared `make_ctx`.
- |
+  |
 | [`cache_budget.rs`](cache_budget.rs) | **EAGER-BUDGET-1 step 1 (2026-09-13):** `_native.retained_cache_bytes(session)` returns the live session's distinct-buffer retained cache bytes (D-2) as `u64`, blocking on the shared runtime inside `py.detach`. A free `#[pyfunction]` like `catalog_census` because `session.rs` sits on its exact CAP-1 baseline and pyo3 allows one `#[pymethods]` block per type; `PyReparkSession.runtime` went `pub(crate)` (same line, same count) to expose the shared runtime. Step 2 (2026-09-13): unchanged — the session-total budget flows through `session.rs::materialize_as_cache_view`'s `(max_bytes, max_total_bytes)` budgets tuple. |
 | [`catalog_census.rs`](catalog_census.rs) | **ICE-CATALOG-CACHE-1 (2026-09-19):** the census first
   settles the session's metadata cache (`settle_iceberg_metadata_cache`, run on the shared runtime
   with the GIL detached): since fork PR #311 the cache is moka, whose entry count lags until its
   pending tasks run, so an unsettled `entries` under-reports. The tuple is unchanged.
- **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
+  **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins
   read: `body_fetches` is exactly the number of `metadata.json` documents parsed, which on a Glue
@@ -232,12 +232,12 @@ and hand execution, SQL, and ML semantics to the engine crates.
   rather than a `PyReparkSession` method, because `session.rs` sits on its exact CAP-1 baseline
   and pyo3 allows one `#[pymethods]` block per type; the product path pays nothing, since the
   counters are two relaxed atomic loads read only when asked.
- **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `namespace_metadata(session, catalog, namespace)` returns the stored comment and location for `getDatabase`. |
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `namespace_metadata(session, catalog, namespace)` returns the stored comment and location for `getDatabase`. |
 | [`logical_names.rs`](logical_names.rs) | `DataFrame.columns` from the plan's logical schema,
   with no analyzer pass. Sound because every rule in `repark_functions::analyzer_rules` rewrites
   through `NamePreserver` and none adds, drops or reorders a projection expression;
   `column_names` stays analyzer-backed as the oracle the byte-equality pin measures against.
- **Re-verify fold (2026-09-30):** the schema walk runs inside `grown_sync` sized from cached levels. **ATTR-ID-1 S3b H-1 (2026-10-01):** `logical_column_qualifiers(frame)` reads the plan relation qualifiers by position for the dotted token routing. **Gate j_cross (2026-10-01):** method-call closure lint fix, no behavior change. |
+  **Re-verify fold (2026-09-30):** the schema walk runs inside `grown_sync` sized from cached levels. **ATTR-ID-1 S3b H-1 (2026-10-01):** `logical_column_qualifiers(frame)` reads the plan relation qualifiers by position for the dotted token routing. **Gate j_cross (2026-10-01):** method-call closure lint fix, no behavior change. |
 | [`ml.rs`](ml.rs) | Batch-streaming binders for linear, logistic, and KMeans fits. **Re-verify fold (2026-09-30):** frame clones grown (cached levels; `open_stream` surveys its borrowed plan, cold). |
 | [`type_bridge.rs`](type_bridge.rs) | **FACADE-4 step 1 (2026-09-14):** PyO3 bridge over `repark_spark::type_table` — free `#[pyfunction]`s the facade's type module calls. Descriptors cross the boundary as tagged tuples (`("kind", …)` positional slots) outbound and dicts inbound; Arrow types cross as `"arrow_schema"` C-Data-Interface capsules both directions (`__arrow_c_schema__` in, `pa.DataType._import_from_c_capsule` out). Exposes `spark_descriptor_from_ddl`, `spark_descriptor_from_arrow_type`, `spark_descriptor_from_arrow_schema`, `arrow_type_capsule_from_descriptor`, `sql_token_to_arrow_capsule`, the four token surfaces (`simple_string`, engine, DDL, SQL marker), `struct_field_ddl_from_descriptor`, `csv_sql_cast_token`, `csv_engine_token`, `csv_rung_descriptor` and `default_timestamp_descriptor`. Python keeps every behavior the table cannot carry: unknown-subtype descriptor trees, decimals outside the Arrow FFI scale envelope, collation refusal policy, and the `fromJson`/`jsonValue` surface. S2-21 remediation (P2-DICT, P3-COLLATION): every dict key and kind tag interned via `pyo3::intern!`; the inbound `kind`/collation extract as borrowed `Cow<str>` and the default collation borrows `DEFAULT_COLLATION` instead of allocating per node. Round-2 remediation (L-001): `TypeTableError::IntegerOverflow` maps to `PyOverflowError`; every other table error stays `PyValueError`. PY-P2-002/003: the emit side produces tagged tuples instead of `PyDict` trees and `csv_engine_token` answers rung engine casts without a `DataType` round-trip. **TYPES-GEO-DDL-1 (2026-09-15):** the two spatial tags cross both ways — `Geometry`/`Geography { srid }` emit as `("geometry"/"geography", srid)` tuples and build from `{"kind", "srid"}` dicts (`-1` is Spark's `any`, `repark_spark::type_table::SPATIAL_MIXED_SRID`). Round 2: inbound SRIDs validate through `spatial_srid_supported` (`ValueError` naming the SRID). pins: facade-4/C-011, C-018, C-019, C-020, C-026, C-027; types-geo-ddl-1/C-002 |
 | [`session_tests.rs`](session_tests.rs) | **Re-verify fold (2026-09-30):** the `session` unit tests, moved verbatim from the inline module. |

@@ -3,6 +3,10 @@ set -euo pipefail
 
 if [[ "${1:-}" == "--base" ]]; then
   base="${2:?usage: check_map_md.sh [--base <ref>]}"
+  if ! git rev-parse --verify --quiet "${base}^{commit}" >/dev/null; then
+    echo "ERROR: --base ${base} is not a commit in this repository" >&2
+    exit 2
+  fi
   changed_code="$(git diff --name-only --diff-filter=d "${base}...HEAD")"
   changed_all="$(git diff --name-only "${base}...HEAD")"
   branch_mode=1

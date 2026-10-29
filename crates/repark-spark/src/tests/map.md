@@ -865,7 +865,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   MOR DELETE on the partitioned DV;
   C-007 measured fork R136 as a parquet-to-DV conversion no-op on DV-only (zeros); B-MOR-3 FIXED 2026-09-03;
   the measurement pin does not write outside the crate
- (2026-09-03: this row, not an inner-doc header in `call_register.rs` / `call_v3_dv.rs` / `v3e3.rs`, is where the B-MOR-3 pins are cited)
+  (2026-09-03: this row, not an inner-doc header in `call_register.rs` / `call_v3_dv.rs` / `v3e3.rs`, is where the B-MOR-3 pins are cited)
   (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
   **V3-5:** `rewrite_data_files` on the partitioned DV fixture drops both
   vectors (delete-ratio admits each one-file group);
@@ -1073,12 +1073,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   fall-throughs (plain DESCRIBE/DESC, DESCRIBE NAMESPACE/HISTORY, SHOW PARTITIONS /
   NAMESPACES / FUNCTIONS, SET TBLPROPERTIES / LOCATION, ANALYZE DATABASE / TABLES, bare
   MSCK, SELECT 1).
-), `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
+  , `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
   PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts;
   since IPI-40 PR6a2 the SHOW NAMESPACES shadowing pin asserts that bare `SHOW VIEWS` answers
   its `namespace`/`viewName`/`isTemporary` frame while `SHOW ALL` keeps DataFusion's refusal,
   pinned as its complete Plan text since PR6 r2.
-), `alter`, `dml`
+  , `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
@@ -1096,7 +1096,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   key or value case turns a whole-table overwrite dynamic; `static`, `bogus` and
   `partitionOverwriteMode` do not; static values and the static `saveAsTable` intent win),
   and the typed dynamic intent of `writeTo.overwritePartitions` in static session mode;
-; round 2: the mixed
+  round 2: the mixed
   list also runs `BY NAME`, an empty mixed source commits nothing in dynamic mode and deletes
   `k='v'` in static mode, and `PARTITION (d = '2024-01-01')` casts to a `DATE` partition
   while `'2024-13-45'` refuses with the cast text; `partition_overwrite`'s empty dynamic
@@ -1117,9 +1117,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   append, serializable refuses it (ruling Q-20a-6 closes L-001/L-002);
   `truncate` (DML-C: wipe summary keys, equal empty-overwrite keys, time travel,
   missing-table / view / `INVALID_PARTITION_OPERATION` / IF EXISTS parse refuse;
-; IPI-51 PR4 (2026-09-20): the
+  IPI-51 PR4 (2026-09-20): the
   partition pin also asserts `SQLSTATE: 42601` and the backticked target.
-; ICE-VIEWS-1 (2026-09-20):
+  ICE-VIEWS-1 (2026-09-20):
   `truncate_view_is_expect_table_not_view` namespace-qualifies its fixture SQL
   (`CREATE VIEW ice.sales.v_trunc ...` / `TRUNCATE TABLE ice.sales.v_trunc`);
   assertions unchanged; WO-A10 (2026-09-23): the leading-`IF EXISTS` and missing-`TABLE`

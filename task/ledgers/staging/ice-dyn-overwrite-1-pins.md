@@ -1,25 +1,25 @@
 # ice-dyn-overwrite-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/session/test_catalog_surface.py, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-002: python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_oracle.json, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-001: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-002: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-003: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-004: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-005: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-006: python/repark/src/repark/spark/dataframe/writer_readwriter.py::saveAsTable, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-007: crates/repark-core/src/partition_overwrite_mode.rs, crates/repark-python/src/session_runtime.rs::apply_runtime_config, crates/repark-python/src/session_runtime.rs::prepare_session_sql, crates/repark-python/src/session_runtime.rs::register_late_catalog_block, crates/repark-python/src/session_runtime.rs::register_native_door_functions, crates/repark-python/src/session_runtime.rs::session_case_sensitive, crates/repark-python/src/session_runtime.rs::session_defaults, crates/repark-python/src/session_runtime.rs::set_runtime_config, crates/repark-python/src/session_runtime.rs::unset_runtime_config, python/repark/src/repark/spark/session/session_configuration.py::PARTITION_OVERWRITE_MODE_KEY, python/repark/src/repark/spark/session/session_configuration.py::SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY, python/repark/src/repark/spark/session/session_configuration.py::SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY, python/repark/src/repark/spark/session/session_configuration.py::TIME_PARSER_POLICY_KEY, python/repark/src/repark/spark/session/session_configuration.py::WAP_BRANCH_KEY, python/repark/src/repark/spark/session/session_configuration.py::WAP_ID_KEY, python/repark/src/repark/spark/session/session_configuration.py::WAP_SESSION_KEYS, python/repark/src/repark/spark/session/session_configuration.py::_SQLCONF_DEFAULTS, python/repark/src/repark/spark/session/session_configuration.py::_forward_datafusion_conf, python/repark/src/repark/spark/session/session_configuration.py::_normalize_display_int, python/repark/src/repark/spark/session/session_configuration.py::is_iceberg_session_write_key, python/repark/src/repark/spark/session/session_configuration.py::lookup_int_entry, python/repark/src/repark/spark/session/session_configuration.py::normalize_display_style, python/repark/src/repark/spark/session/session_core.py::_try_expand_create_view_sql, python/repark/src/repark/spark/session/session_core.py::sql, python/repark/src/repark/spark/session/sql_set_statements.py::_REDACTION_RE, python/repark/src/repark/spark/session/sql_set_statements.py::_redact_conf_value, python/repark/src/repark/spark/session/sql_set_statements.py::_requirement_error, python/repark/src/repark/spark/session/sql_set_statements.py::_type_mismatch_error, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-006: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-007: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-008: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-009: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-010: crates/repark-core/src/partition_overwrite_mode.rs, crates/repark-python/src/session_runtime.rs::apply_runtime_config, crates/repark-python/src/session_runtime.rs::prepare_session_sql, crates/repark-python/src/session_runtime.rs::register_late_catalog_block, crates/repark-python/src/session_runtime.rs::register_native_door_functions, crates/repark-python/src/session_runtime.rs::session_case_sensitive, crates/repark-python/src/session_runtime.rs::session_defaults, crates/repark-python/src/session_runtime.rs::set_runtime_config, crates/repark-python/src/session_runtime.rs::unset_runtime_config, python/repark/src/repark/spark/session/sql_set_statements.py::_REDACTION_RE, python/repark/src/repark/spark/session/sql_set_statements.py::_redact_conf_value, python/repark/src/repark/spark/session/sql_set_statements.py::_requirement_error, python/repark/src/repark/spark/session/sql_set_statements.py::_type_mismatch_error, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-010: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-011: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-012: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-013: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-014: crates/repark-core/src/partition_overwrite_mode.rs, crates/repark-python/src/session_runtime.rs::apply_runtime_config, crates/repark-python/src/session_runtime.rs::prepare_session_sql, crates/repark-python/src/session_runtime.rs::register_late_catalog_block, crates/repark-python/src/session_runtime.rs::register_native_door_functions, crates/repark-python/src/session_runtime.rs::session_case_sensitive, crates/repark-python/src/session_runtime.rs::session_defaults, crates/repark-python/src/session_runtime.rs::set_runtime_config, crates/repark-python/src/session_runtime.rs::unset_runtime_config, crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/tests/overwrite_mode.rs, python/repark/src/repark/spark/dataframe/writer_readwriter.py::saveAsTable, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-015: crates/repark-spark/src/tests/create_table.rs, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-016: crates/repark-spark/src/tests/create_table.rs, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-014: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-015: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-016: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-017: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-018: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-019: crates/repark-spark/src/insert_by_name/map.md, crates/repark-spark/src/tests/create_table.rs, python/repark-parity/fixtures/torture/data/ice_dyn_overwrite_1/spark_byname_dyn_oracle.json, python/repark/tests/session/test_catalog_surface.py, python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py
-C-020: crates/repark-spark/src/insert_by_name/map.md, crates/repark-spark/src/tests/overwrite_mode.rs
-C-021: crates/repark-spark/src/insert_by_name/map.md, crates/repark-spark/src/tests/create_table.rs
-C-022: python/repark/src/repark/spark/session/builder_conf.py::get, python/repark/src/repark/spark/session/builder_conf.py::getAll, python/repark/src/repark/spark/session/builder_conf.py::set, python/repark/src/repark/spark/session/builder_conf.py::unset, python/repark/tests/session/test_catalog_surface.py, python/repark/tests/types/test_integer_overflow_parity.py, python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py
-C-023: crates/repark-spark/src/insert_by_name/map.md
+C-019: python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py
+C-020: none (records)
+C-021: none (records)
+C-022: python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py
+C-023: none (records)

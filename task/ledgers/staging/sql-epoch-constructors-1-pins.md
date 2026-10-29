@@ -1,12 +1,12 @@
 # sql-epoch-constructors-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/functions/test_map_column_panic_1.py
-C-002: crates/repark-functions/src/spark_epoch_ctor.rs, python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
-C-003: crates/repark-functions/src/spark_epoch_ctor.rs, python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
-C-004: crates/repark-functions/src/spark_epoch_ctor.rs, crates/repark-python/src/column/function_dispatch.rs::dispatch_spark, crates/repark-python/src/column/function_dispatch/dispatch_spark.rs, python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
-C-005: crates/repark-functions/src/spark_epoch_ctor.rs, crates/repark-python/src/column/function_dispatch/dispatch_spark.rs, python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
-C-006: python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
-C-007: python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
-C-008: crates/repark-functions/src/spark_epoch_ctor.rs, crates/repark-python/src/column/function_dispatch.rs::dispatch_spark
-C-009: python/repark/tests/functions/test_map_column_panic_1.py, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
-C-010: crates/repark-functions/src/spark_epoch_ctor.rs
+C-001: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json
+C-002: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
+C-003: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
+C-004: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
+C-005: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
+C-006: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
+C-007: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
+C-008: none (records)
+C-009: python/repark/tests/timestamps/sql_epoch_constructors_1_spark_oracle.json, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py
+C-010: none (records)

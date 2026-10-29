@@ -1,6 +1,6 @@
 # date-fn-1-spark-date-spelling pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: python/repark/tests/functions/test_date_fn_1.py, python/repark/tests/parity/test_parity_live.py
-C-002: crates/repark-functions/src/timestamp_cast.rs::epoch_seconds_floor_is_floor_not_truncation, crates/repark-functions/src/timestamp_cast.rs::ltz_date_is_session_zone_and_ntz_is_stored_wall, crates/repark-functions/src/timestamp_cast.rs::spark_timestamp_string_trims_trailing_fraction_zeros, crates/repark-iceberg/src/write/conform.rs, crates/repark-python/src/column/function_dispatch/dispatch_json.rs, python/repark/src/repark/spark/functions_json.py, python/repark/tests/functions/test_date_fn_1.py
-C-003: crates/repark-functions/src/timestamp_cast.rs::epoch_seconds_floor_is_floor_not_truncation, crates/repark-functions/src/timestamp_cast.rs::ltz_date_is_session_zone_and_ntz_is_stored_wall, crates/repark-functions/src/timestamp_cast.rs::spark_timestamp_string_trims_trailing_fraction_zeros, python/repark/tests/_sql_harden_cutover_repark.py, python/repark/tests/functions/test_date_fn_1.py, python/repark/tests/functions/test_functions_d.py, python/repark/tests/parity/test_parity_live.py
+C-002: python/repark/tests/functions/test_date_fn_1.py
+C-003: python/repark/tests/_sql_harden_cutover_repark.py, python/repark/tests/functions/test_date_fn_1.py, python/repark/tests/functions/test_functions_d.py, python/repark/tests/parity/test_parity_live.py
 C-004: python/repark/tests/functions/test_date_fn_1.py

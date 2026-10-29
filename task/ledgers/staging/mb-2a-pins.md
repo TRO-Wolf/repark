@@ -1,24 +1,24 @@
 # mb-2a pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-002: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-003: crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_overwrite_on_ref, crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_row_delta_kind_on_ref, crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-004: crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_overwrite_on_ref, crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_row_delta_kind_on_ref, crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-005: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-006: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-007: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-008: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-009: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-010: crates/repark-iceberg/src/microbatch/crash_tests.rs::test_microbatch_kill_after_commit_resumes_1
-C-011: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-012: crates/repark-iceberg/src/write/sink_offsets.rs::BatchScope, crates/repark-iceberg/src/write/sink_offsets.rs::CommitStamp, crates/repark-iceberg/src/write/sink_offsets.rs::SiteStamp, crates/repark-iceberg/src/write/sink_offsets.rs::claim, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-013: crates/repark-iceberg/src/microbatch/crash_tests.rs::test_microbatch_kill_after_commit_resumes_1, crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_overwrite_on_ref, crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_row_delta_kind_on_ref, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point, crates/repark-iceberg/src/write/sink_offsets.rs::token
-C-014: crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point, crates/repark-iceberg/src/write/sink_offsets.rs::token
-C-015: crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point, crates/repark-iceberg/src/write/sink_offsets.rs::token
-C-016: crates/repark-iceberg/src/microbatch/offset.rs
-C-017: crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point, crates/repark-iceberg/src/write/sink_offsets.rs::token
-C-018: crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_overwrite_on_ref, crates/repark-iceberg/src/write/merge/snapshot_commit.rs::commit_row_delta_kind_on_ref
-C-019: crates/repark-iceberg/src/write/sink_offsets.rs::commit_stamp_only, crates/repark-iceberg/src/write/sink_offsets.rs::enter, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point, crates/repark-iceberg/src/write/sink_offsets.rs::token
-C-020: crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-021: crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
-C-022: crates/repark-iceberg/src/microbatch/error.rs, crates/repark-iceberg/src/write/sink_offsets.rs::read_resume_point
+C-001: none (records)
+C-002: none (records)
+C-003: none (records)
+C-004: none (records)
+C-005: none (records)
+C-006: none (records)
+C-007: none (records)
+C-008: none (records)
+C-009: none (records)
+C-010: none (records)
+C-011: none (records)
+C-012: none (records)
+C-013: none (records)
+C-014: none (records)
+C-015: none (records)
+C-016: none (records)
+C-017: none (records)
+C-018: none (records)
+C-019: none (records)
+C-020: none (records)
+C-021: none (records)
+C-022: none (records)

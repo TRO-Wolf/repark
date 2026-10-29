@@ -1,19 +1,19 @@
 # rp-posdel-batch-2 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-iceberg/src/write/position_delete.rs::write_position_deletes, crates/repark-iceberg/src/write/position_delete.rs::write_position_deletes_for_partition
-C-002: crates/repark-iceberg/src/write/position_delete_batch.rs::chunk_position_delete_pairs, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batch_rows, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batches, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_chunk_batch
-C-003: crates/repark-iceberg/src/write/position_delete_batch.rs::chunk_position_delete_pairs, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batch_rows, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batches, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_chunk_batch
-C-004: crates/repark-iceberg/src/write/position_delete_batch.rs::chunk_position_delete_pairs, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batch_rows, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batches, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_chunk_batch
-C-005: crates/repark-iceberg/src/write/position_delete.rs::write_position_deletes, crates/repark-iceberg/src/write/position_delete.rs::write_position_deletes_for_partition
-C-006: crates/repark-iceberg/src/write/position_delete_batch.rs::chunk_position_delete_pairs, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batch_rows, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batches, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_chunk_batch
+C-001: none (records)
+C-002: none (records)
+C-003: none (records)
+C-004: none (records)
+C-005: none (records)
+C-006: none (records)
 C-007: crates/repark-spark/tests/posdel_batch_door.rs
 C-008: crates/repark-spark/tests/posdel_batch_door.rs
 C-009: crates/repark-spark/tests/posdel_batch_door.rs
 C-010: crates/repark-spark/tests/posdel_batch_door.rs
-C-011: crates/repark-iceberg/src/write/predicate_dml/cow_commit.rs::commit_identity_cow, crates/repark-iceberg/src/write/predicate_dml/cow_commit.rs::commit_identity_update_cow, crates/repark-spark/tests/posdel_batch_door.rs
+C-011: crates/repark-spark/tests/posdel_batch_door.rs
 C-012: crates/repark-spark/tests/posdel_batch_door.rs
-C-013: crates/repark-iceberg/src/write/position_delete_batch.rs::chunk_position_delete_pairs, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batch_rows, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batches, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_chunk_batch
-C-014: crates/repark-iceberg/src/write/position_delete_batch.rs::chunk_position_delete_pairs, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batch_rows, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_batches, crates/repark-iceberg/src/write/position_delete_batch.rs::position_delete_chunk_batch
+C-013: none (records)
+C-014: none (records)
 C-015: crates/repark-spark/tests/posdel_batch_door.rs
 C-016: crates/repark-spark/tests/posdel_batch_door.rs
 C-017: crates/repark-spark/tests/posdel_batch_door.rs

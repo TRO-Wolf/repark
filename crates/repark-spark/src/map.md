@@ -1424,7 +1424,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   **FNP-4B round 7 (2026-09-15):** angle-bracket `ARRAY<T>` maps to an Iceberg
   list with nullable `element` fields and table-unique ids from a checked
   allocator (R-16b-21 grant); bare/square-bracket forms still refuse.
- (round-7 fmt/clippy follow-ups carry no behavior change)
+  (round-7 fmt/clippy follow-ups carry no behavior change)
   **ICE-NESTED-EVO-1 (2026-09-17):** `STRUCT<a: T, …>` maps to an Iceberg struct of nullable
   children and `MAP<K, V>` to an Iceberg map (required key, nullable value), both from the same
   checked id allocator, so `CREATE TABLE` with struct, array-of-struct and map-of-struct columns

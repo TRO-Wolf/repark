@@ -79,7 +79,7 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   DV and equality-delete + DV fixtures, plus `$delete_files` content 1/2, cross-partition DV
   DELETE, live-DV UPDATE Spark-equal lineage (`Model: Grok 4.6 xHigh`; rp-6-fork-repin/C-003),
   and C-007 ANSI CALL / fork no-op of `rewrite_position_delete_files`
- . **V3-4:** ANSI `_row_id` / `_last_updated_sequence_number`
+  **V3-4:** ANSI `_row_id` / `_last_updated_sequence_number`
   on both fixtures, `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`FOR VERSION AS OF` refuse `V3-ROWID-2`, v2 unresolved
   as `No field named _row_id`.

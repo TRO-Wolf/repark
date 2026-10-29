@@ -38,7 +38,7 @@ REVIEW-FIX-5 (2026-09-10): CAP-1 mirror tuple ratcheted down with the code — c
 owner's no-code-comments ruling (D-5). The exact-baseline gate row moved with it; no row raised.
 
 CC-4 (2026-08-30): CAP-1 mirror tuples ratchet down only
-. analyzer.rs 1194→1161; datetime.rs 1783→1709;
+analyzer.rs 1194→1161; datetime.rs 1783→1709;
 dynamic_flatten/tests.rs 1469→1443→1442; declared_sorted.rs 1381→1348.
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed. CAP-1 mirror tuples ratcheted with each slice, including the Python binding files. D-001 catalog.rs 1845→1843; TA kernels 2284→2098 / 1676→1578 / 1873→1821. Spark CAP-1 rows ratcheted; session_timezone.rs retired at 891. Rust exception count 39→38. Router comment-pin expected string restored byte-exact.
@@ -669,7 +669,7 @@ both tables with the script baselines (backtick-disclosure retire).
   **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261.
   RP-7 (2026-09-02) mirrors the two downward ratchets `write/merge/mod.rs` 1889→1795 and `write/predicate_dml.rs` 1164→1142. V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and
   `repark-iceberg/src/write/alter.rs` 1641→1630
- . **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-6 ratchets merge/mod.rs 1894→1892 and predicate_dml.rs 1227→1226; V3-8 ratchets predicate_dml.rs 1226→1164 after the lineage helpers move to `predicate_dml/lineage.rs`.
+  **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-6 ratchets merge/mod.rs 1894→1892 and predicate_dml.rs 1227→1226; V3-8 ratchets predicate_dml.rs 1226→1164 after the lineage helpers move to `predicate_dml/lineage.rs`.
   (**DML-B 2026-08-30:** `insert_overwrite.rs` tests 1249→1233, `writer_readwriter.py` 1117→1113)
   B-MOR-3 (2026-09-03): ratchets `repark-spark/src/tests/call.rs` 1307→1303 after the
   live-DV refusal and its counter helper are deleted
@@ -854,7 +854,7 @@ both tables with the script baselines (backtick-disclosure retire).
   to "no 🚫, `V3-MOR-1` FIXED plus the dated `V3-DV-1` residual naming fork F-18 and repin
   RP-7", and the STATUS assertions follow the compacted v3 block — including the
   `F-rp3-c7 consumed` substring, which no longer depends on where the line wraps
- . **RP-7 (2026-09-02):** the same row now
+  **RP-7 (2026-09-02):** the same row now
   asserts `V3-DV-1` FIXED and that STATUS's Known-issues link to it is GONE, so the residual
   cannot be re-opened silently.
   V3-7 (2026-09-02) lifts MERGE; V3-8 (2026-09-02) lifts subquery-`WHERE` DML and the row

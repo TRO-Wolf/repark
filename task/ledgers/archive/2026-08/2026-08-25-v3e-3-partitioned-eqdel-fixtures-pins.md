@@ -6,10 +6,9 @@ C-003: crates/repark-spark/src/tests/v3e3.rs
 C-004: crates/repark-spark/src/tests/v3e3.rs
 C-005: crates/repark-spark/src/tests/v3e3.rs
 C-006: crates/repark-spark/src/tests/v3e3.rs
-C-007: crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3/partitioned_equality_deletes.rs
-C-008: crates/repark-sql/src/v3/partitioned_equality_deletes.rs
+C-007: crates/repark-spark/src/tests/v3e3.rs
 C-009: python/repark/tests/iceberg/test_v3e3_fixtures.py
-C-010: crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3/partitioned_equality_deletes.rs, python/repark/tests/iceberg/test_v3e3_fixtures.py
+C-010: crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/iceberg/test_v3e3_fixtures.py
 C-011: crates/repark-spark/src/tests/v3e3.rs
 C-012: crates/repark-spark/src/tests/v3e3.rs
 C-013: crates/repark-spark/src/tests/v3e3.rs

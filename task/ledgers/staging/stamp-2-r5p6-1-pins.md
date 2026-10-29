@@ -1,13 +1,13 @@
 # stamp-2-r5p6-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/src/repark/spark/dataframe/actions_export.py::_fill_sources, python/repark/src/repark/spark/dataframe/actions_export.py::fill, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_route_sources, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
-C-002: python/repark/src/repark/spark/dataframe/actions_export.py::_fill_sources, python/repark/src/repark/spark/dataframe/actions_export.py::fill, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_route_sources, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
-C-003: python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_route_sources, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
-C-004: crates/repark-core/src/session/df_guards/attr_lineage.rs::SORT_TRACES, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_hits_meet_at_join, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_input_carries_twice, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_output_carries_twice, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_sourced_twin_engine, crates/repark-core/src/session/tests/attr_id_s3b.rs, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
-C-005: python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_route_sources
-C-006: python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_route_sources
-C-007: python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_ATTR_TOKEN_RE, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_EXACT_CAST_TYPE, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_exact_child, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_emit_join_side_columns, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_join_condition_attr_names, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_select_via_attr_sql, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
-C-008: python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_exact_child, python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_attr_exact_plan, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-001: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-002: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-003: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-004: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-005: none (records)
+C-006: none (records)
+C-007: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-008: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
 C-009: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
-C-010: crates/repark-core/src/session/df_guards/attr_lineage.rs::SORT_TRACES, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_hits_meet_at_join, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_input_carries_twice, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_output_carries_twice, crates/repark-core/src/session/df_guards/attr_lineage.rs::sort_sourced_twin_engine, crates/repark-core/src/session/tests/attr_id_s3b.rs, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
-C-011: python/repark/src/repark/spark/dataframe/join_attr_tokens.py::_exact_shape, python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-010: python/repark/tests/resolution/test_stamp_2_r5p6_1.py
+C-011: python/repark/tests/resolution/test_stamp_2_r5p6_1.py

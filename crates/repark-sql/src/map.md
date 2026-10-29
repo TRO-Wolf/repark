@@ -268,7 +268,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   reader, no `repark-functions` product edge; `execute_staged_create` /
   `iceberg_table_creation` / `iceberg_create_format_version` carry `Model: Grok 4.6 xHigh`;
   **V3-9 (2026-09-02)** dropped the refusal's now-false merge-on-read parenthetical,
-), A11 nanosecond-timestamp
+  , A11 nanosecond-timestamp
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
   three-way `LocationPolicy` resolution (**A13:** `TempFallbackAllowed` root is the memory
   catalog warehouse on the `register_memory_catalog` path), staged create/replace, and the service-managed
@@ -281,7 +281,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   declared `timestamp_ns` / `timestamptz_ns` resolve to their Arrow ns shapes
   and the A11 gate lets those columns through.
   **V3-6 C-005:** column-def `DEFAULT` refuses Spark-equal
- . **IPI-51 PR7 (2026-09-21):** the refuse stamps Spark's
+  **IPI-51 PR7 (2026-09-21):** the refuse stamps Spark's
   `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `0A000` through `repark_common::spark_error`
   as `DataFusionError::Plan` over the backticked three-part target display (the template
   names the table, not the column); `column_def_schema` takes the display the already-exists
@@ -439,7 +439,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   **IPI-51 PR7 (2026-09-21):** the CREATE pin requires the stamped
   `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `SQLSTATE: 0A000` plus the backticked
   `` `ice`.`sales`.`defcol` `` table; the ADD COLUMN / SET DEFAULT asserts stay as they were.
- . Split out of `tests.rs` (file-size ratchet); harness follows
+  Split out of `tests.rs` (file-size ratchet); harness follows
   the `delete_granularity.rs` self-contained shape.
 
 ## I want to...

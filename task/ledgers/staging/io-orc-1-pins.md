@@ -1,12 +1,12 @@
 # io-orc-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-002: crates/repark-core/src/orc_footer.rs, crates/repark-core/src/orc_scan.rs::OrcBatchStream, crates/repark-core/src/orc_scan.rs::OrcReadOptions, crates/repark-core/src/orc_scan.rs::execute, crates/repark-core/src/orc_scan.rs::expand_orc_paths, crates/repark-core/src/orc_scan.rs::read_orc, crates/repark-core/src/orc_schema.rs, crates/repark-python/src/orc_io.rs::read_orc, python/repark/src/repark/spark/session/reader.py::load, python/repark/src/repark/spark/session/reader_orc.py::load_orc, python/repark/src/repark/spark/session/reader_orc.py::orc, python/repark/tests/fixtures/map.md, python/repark/tests/fixtures/orc/map.md, python/repark/tests/io/test_io_orc_1.py
-C-003: crates/repark-core/src/orc_scan.rs::OrcBatchStream, crates/repark-core/src/orc_scan.rs::OrcReadOptions, crates/repark-core/src/orc_scan.rs::execute, crates/repark-core/src/orc_scan.rs::expand_orc_paths, crates/repark-core/src/orc_scan.rs::read_orc, python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-004: crates/repark-core/src/orc_scan.rs::OrcBatchStream, crates/repark-core/src/orc_scan.rs::OrcReadOptions, crates/repark-core/src/orc_scan.rs::execute, crates/repark-core/src/orc_scan.rs::expand_orc_paths, crates/repark-core/src/orc_scan.rs::read_orc, python/repark/src/repark/spark/session/reader_orc.py::load_orc, python/repark/src/repark/spark/session/reader_orc.py::orc, python/repark/tests/dataframe/_dfcore_1_expected.py, python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-005: crates/repark-core/src/orc_scan.rs::OrcBatchStream, crates/repark-core/src/orc_scan.rs::OrcReadOptions, crates/repark-core/src/orc_scan.rs::execute, crates/repark-core/src/orc_scan.rs::expand_orc_paths, crates/repark-core/src/orc_scan.rs::read_orc, python/repark/src/repark/spark/session/reader.py::load, python/repark/src/repark/spark/session/reader_orc.py::load_orc, python/repark/src/repark/spark/session/reader_orc.py::orc, python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-006: crates/repark-core/src/orc_scan.rs::OrcBatchStream, crates/repark-core/src/orc_scan.rs::OrcReadOptions, crates/repark-core/src/orc_scan.rs::execute, crates/repark-core/src/orc_scan.rs::expand_orc_paths, crates/repark-core/src/orc_scan.rs::read_orc, crates/repark-core/src/orc_schema.rs, crates/repark-core/src/text_glob.rs::match_file_name_glob, python/repark/src/repark/spark/session/reader.py::load, python/repark/src/repark/spark/session/reader_orc.py::load_orc, python/repark/src/repark/spark/session/reader_orc.py::orc, python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-007: crates/repark-core/src/orc_scan.rs::OrcBatchStream, crates/repark-core/src/orc_scan.rs::OrcReadOptions, crates/repark-core/src/orc_scan.rs::execute, crates/repark-core/src/orc_scan.rs::expand_orc_paths, crates/repark-core/src/orc_scan.rs::read_orc, crates/repark-core/src/orc_schema.rs, python/repark/src/repark/spark/session/reader_orc.py::load_orc, python/repark/src/repark/spark/session/reader_orc.py::orc, python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-008: crates/repark-core/src/orc_scan.rs::OrcBatchStream, crates/repark-core/src/orc_scan.rs::OrcReadOptions, crates/repark-core/src/orc_scan.rs::execute, crates/repark-core/src/orc_scan.rs::expand_orc_paths, crates/repark-core/src/orc_scan.rs::read_orc, python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-009: python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
-C-010: python/repark/tests/fixtures/map.md, python/repark/tests/io/test_io_orc_1.py
+C-001: python/repark/tests/io/test_io_orc_1.py
+C-002: python/repark/tests/io/test_io_orc_1.py
+C-003: python/repark/tests/io/test_io_orc_1.py
+C-004: python/repark/tests/io/test_io_orc_1.py
+C-005: python/repark/tests/io/test_io_orc_1.py
+C-006: python/repark/tests/io/test_io_orc_1.py
+C-007: python/repark/tests/io/test_io_orc_1.py
+C-008: python/repark/tests/io/test_io_orc_1.py
+C-009: python/repark/tests/io/test_io_orc_1.py
+C-010: python/repark/tests/io/test_io_orc_1.py

@@ -102,7 +102,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (see `session/map.md`). **ICE-CATALOG-CACHE-1 (2026-09-19):**
   both now receive the whole `CatalogCaches` (`iceberg_caches::caches_of`), so configured and
   late-configured Glue and S3 Tables catalogs get the session's metadata and manifest caches.
- **ICE-WRITE-OPTIONS-1
+  **ICE-WRITE-OPTIONS-1
   round 3 (2026-09-17):** `sql_with_write_options` runs the session dialect's
   `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
   Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,
@@ -110,7 +110,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   funnel. **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `sql_built` /
   `sql_built_with_write_options` carry facade-built SQL with `verbatim_override: Some(false)`;
   `sql_with` passes `None` (user text follows the session flag).
- **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
   overwrite_intent)` fills `EngineContext::overwrite_intent` (`Session` / `Static` for
   `saveAsTable` / `Dynamic` for `writeTo.overwritePartitions`), and `sql_with` calls it with an
   empty map and `Session`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014;

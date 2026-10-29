@@ -2,26 +2,31 @@
 """Move `pins: <unit>/C-NNN` citations out of directory maps into per-ledger sidecars.
 
 MAP-GOVERNANCE-1. Every citation the grammar gate's CITATION regex finds in a tracked file under
-its CITATION_ROOTS becomes a line of `task/ledgers/<bin>/<unit>-pins.md` (the archive sidecar
-takes its ledger's `yyyy-mm-dd-` prefix), in the format rule B of
-`scripts/check_ledger_grammar.py` verifies: `C-NNN: <path>[::<name>], ...`.
+its CITATION_ROOTS becomes a line of `task/ledgers/<bin>/<unit>-pins.md` beside its ledger (the
+archive sidecar takes its ledger's `yyyy-mm-dd-` prefix), in the format rule B of
+`scripts/check_ledger_grammar.py` verifies: `C-NNN: <path>[::<name>], ...` or
+`C-NNN: none (records)`.
 
-A citation in a source file binds that file and stays where it is. A citation in a `map.md`
-binds the file its row describes: the nearest row at or above it, within its section, whose
-first link or first code span names a tracked file under the map's directory, else the map
-itself. The names are the backticked identifiers of the citation's stretch of that row that
-occur in the bound file as whole-word tokens and that the file defines (a Rust or Python fn,
-type, module, constant or class); a citation bound to its own map is path-only,
-since every name in it trivially occurs there. The citation is then cut from the map: a line left
-with nothing but punctuation is deleted, a line that also carries prose keeps the prose.
+A citation in a source file binds that file when it is a test file or a script, and stays where
+it is. A citation in a `map.md` binds the file its own entry names, and never looks past that
+entry: the entry is the citation's list row, table row, paragraph or dated entry, and its file is
+its first link under the map's directory, else its first code span. A bare file name that does
+not resolve in the map's directory resolves to the one tracked file of that name under the
+map's directory tree; a name found only elsewhere in the tree is a reference, not the entry's
+file; a name found nowhere, or more than once here, makes the citation unplaceable, and the run
+stops and lists it unless the sidecar on disk already binds that clause by hand. The names are the
+backticked identifiers of the citation's stretch of its entry that the bound file defines. Only
+a test file or a script is bound; a clause left with no bindable entry and no source citation is
+written as `none (records)`. The citation is then cut from the map: a line left with nothing but
+punctuation is deleted, a line that also carries prose keeps the prose and its indentation.
 
 A citation is bound but left in the map's text when cutting it would break the sentence around
 it: inside a fenced block, inside a code span the line continues past, or followed by an id the
 regex does not read (a range, a second unit, a non-clause id).
 
 Idempotent: an existing sidecar's lines are kept and the new entries merged in. `--check`
-writes nothing, prints the same report and exits 1 when a citation names no clause in any
-ledger. Exit 0 clean, 1 unplaceable citations, 2 usage or environment error.
+writes nothing, prints the same report and exits 1 when a citation is unplaceable or a rewrite
+is pending. Exit 0 clean, 1 unplaceable or pending, 2 usage or environment error.
 """
 
 from __future__ import annotations
@@ -44,8 +49,14 @@ FENCE = re.compile(r"^\s*(```|~~~)")
 LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d+\.)\s")
 TABLE_ROW = re.compile(r"^\s*\|")
 HEADING = re.compile(r"^#{1,6}\s")
+DATED = re.compile(r"^\s*(?:\*\*)?[A-Z][^()\n`]{0,80}?\(\d{4}-\d{2}-\d{2}[^)\n]*\)")
 LINK = re.compile(r"\[[^\]]*\]\(\s*<?([^()<>\s]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 CODE_SPAN = re.compile(r"`([^`]+)`")
+FILE_LIKE = re.compile(
+    r"^[\w./-]*[\w-]\.(?:rs|py|json|jsonl|toml|sh|md|sql|yaml|yml|txt|csv|parquet|avro|orc|"
+    r"ipynb|j2|cfg|ini)$",
+    re.ASCII,
+)
 QUALIFIED = re.compile(
     r"^(?:[\w./-]+::)?(?:[A-Za-z_]\w*(?:::|\.))*([A-Za-z_]\w*)(?:\(\))?$", re.ASCII
 )
@@ -58,21 +69,33 @@ TAIL = re.compile(
     r"|\s*(?:\.\.|…))"
 )
 EMPTY_REST = re.compile(r"^[\s\-*+.,;:()·]*$")
+LEADING_STRAY = ".;)"
 
 
 class Binding(NamedTuple):
-    """One citation, resolved: where it was, what it binds, and whether it left the text."""
+    """One citation, resolved: where it was, the bindable file it names, and its fate."""
 
     source: str
+    line: int
     unit: str
     clause_ids: tuple[str, ...]
-    path: str
+    path: str | None
     names: tuple[str, ...]
     kept: bool
+    unresolved: str | None
+    named: str | None
+
+
+class Target(NamedTuple):
+    """What a map entry names: a tracked file, or an unresolvable file name, or nothing."""
+
+    path: str | None
+    unresolved: str | None
+    by_basename: bool
 
 
 def load_gate() -> ModuleType:
-    """The grammar gate, so the citation regex and the bins stay single-homed."""
+    """The grammar gate, so the citation regex, the bins and the binding rules stay single-homed."""
     location = Path(__file__).resolve().parent / "check_ledger_grammar.py"
     spec = importlib.util.spec_from_file_location("check_ledger_grammar", location)
     if spec is None or spec.loader is None:
@@ -126,8 +149,9 @@ def fence_mask(lines: list[str]) -> list[bool]:
     return mask
 
 
-def row_starts(lines: list[str], fenced: list[bool]) -> list[int]:
-    """Line indexes that open a row: a list item, a table row, a heading or a paragraph."""
+def entry_starts(lines: list[str], fenced: list[bool]) -> list[int]:
+    """Line indexes that open an entry: a list item, a table row, a heading, a dated entry or a
+    paragraph."""
     starts: list[int] = []
     previous_blank = True
     for index, line in enumerate(lines):
@@ -139,6 +163,7 @@ def row_starts(lines: list[str], fenced: list[bool]) -> list[int]:
             LIST_ITEM.match(line)
             or TABLE_ROW.match(line)
             or HEADING.match(line)
+            or DATED.match(line)
             or previous_blank
             or (index > 0 and HEADING.match(lines[index - 1]))
         ):
@@ -147,13 +172,8 @@ def row_starts(lines: list[str], fenced: list[bool]) -> list[int]:
     return starts
 
 
-def resolve_named_file(map_dir: str, candidate: str, tracked: set[str]) -> str | None:
-    """A tracked file under the map's directory that `candidate` names, if any."""
-    target = candidate.strip().split("#", 1)[0].split("::", 1)[0].rstrip("/")
-    if not target or target.startswith(("http:", "https:", "mailto:", "/")):
-        return None
-    prefix = f"{map_dir}/" if map_dir else ""
-    joined = Path(prefix + target).as_posix() if prefix else Path(target).as_posix()
+def normalise(joined: str) -> str | None:
+    """A posix path with `.` and `..` folded, or None when it climbs above the root."""
     parts: list[str] = []
     for part in joined.split("/"):
         if part in ("", "."):
@@ -164,56 +184,70 @@ def resolve_named_file(map_dir: str, candidate: str, tracked: set[str]) -> str |
             parts.pop()
             continue
         parts.append(part)
-    resolved = "/".join(parts)
-    if resolved in tracked and resolved.startswith(prefix):
+    return "/".join(parts)
+
+
+def under(map_dir: str, path: str) -> bool:
+    """Whether `path` sits in the map's directory tree."""
+    return not map_dir or path.startswith(f"{map_dir}/")
+
+
+def resolve_link(map_dir: str, target: str, tracked: set[str]) -> str | None:
+    """The tracked file under the map's directory a link target names, if any."""
+    cleaned = target.strip().split("#", 1)[0].rstrip("/")
+    if not cleaned or cleaned.startswith(("http:", "https:", "mailto:", "/")):
+        return None
+    resolved = normalise(f"{map_dir}/{cleaned}" if map_dir else cleaned)
+    if resolved is not None and resolved in tracked and under(map_dir, resolved):
         return resolved
-    if target in tracked and target.startswith(prefix):
-        return target
     return None
 
 
-def row_file(map_dir: str, row_text: str, tracked: set[str]) -> str | None:
-    """The file a row describes: its first link's target, else its first code span."""
-    without_spans = CODE_SPAN.sub("", row_text)
-    link = LINK.search(without_spans)
+def resolve_span(
+    map_dir: str, span: str, tracked: set[str], basenames: dict[str, list[str]]
+) -> Target:
+    """What a code span names: a tracked file under the map's directory, found by its relative
+    path or by its unique basename; nothing, when the name is a file elsewhere in the tree; or an
+    unresolvable name, when the file exists nowhere or its basename is ambiguous here."""
+    candidate = span.strip().split("::", 1)[0]
+    if not FILE_LIKE.match(candidate):
+        return Target(None, None, by_basename=False)
+    relative = normalise(f"{map_dir}/{candidate}" if map_dir else candidate)
+    if relative is not None and relative in tracked and under(map_dir, relative):
+        return Target(relative, None, by_basename=False)
+    if candidate in tracked and under(map_dir, candidate):
+        return Target(candidate, None, by_basename=False)
+    name = candidate.rsplit("/", 1)[-1]
+    elsewhere = [
+        path
+        for path in basenames.get(name, [])
+        if path == candidate or path.endswith(f"/{candidate}")
+    ]
+    if "/" in candidate:
+        if elsewhere or (relative is not None and relative in tracked):
+            return Target(None, None, by_basename=False)
+        return Target(None, f"{candidate} (no such file)", by_basename=False)
+    matches = [path for path in elsewhere if under(map_dir, path)]
+    if len(matches) == 1:
+        return Target(matches[0], None, by_basename=True)
+    if not matches and elsewhere:
+        return Target(None, None, by_basename=False)
+    return Target(None, f"{candidate} ({len(matches)} matches here)", by_basename=False)
+
+
+def entry_target(
+    map_dir: str, entry_text: str, tracked: set[str], basenames: dict[str, list[str]]
+) -> Target:
+    """The file an entry describes: its first link's target, else its first code span."""
+    link = LINK.search(CODE_SPAN.sub("", entry_text))
     if link is not None:
-        named = resolve_named_file(map_dir, link.group(1), tracked)
+        named = resolve_link(map_dir, link.group(1), tracked)
         if named is not None:
-            return named
-    span = CODE_SPAN.search(row_text)
-    if span is not None:
-        return resolve_named_file(map_dir, span.group(1), tracked)
-    return None
-
-
-def bound_file(
-    map_path: str, lines: list[str], starts: list[int], line_index: int, tracked: set[str]
-) -> str:
-    """The nearest row at or above `line_index`, inside its section, that names a file."""
-    map_dir = str(Path(map_path).parent)
-    map_dir = "" if map_dir == "." else map_dir
-    earlier = [start for start in starts if start <= line_index]
-    ends = dict(zip(starts, [*starts[1:], len(lines)], strict=True))
-    for start in reversed(earlier):
-        text = "\n".join(lines[start : ends[start]])
-        named = row_file(map_dir, text, tracked)
-        if named is not None:
-            return named
-        if HEADING.match(lines[start]):
-            break
-    return map_path
-
-
-def defines(path: str, text: str, name: str) -> bool:
-    """Whether a Rust or Python file defines `name`: a fn, type, module, constant or class."""
-    escaped = re.escape(name)
-    if path.endswith(".rs"):
-        pattern = rf"\b(?:fn|struct|enum|trait|mod|const|static|type|union)\s+{escaped}\b"
-        return re.search(pattern + rf"|macro_rules!\s*{escaped}\b", text) is not None
-    if path.endswith(".py"):
-        pattern = rf"\b(?:def|class)\s+{escaped}\b|^{escaped}\s*[:=]"
-        return re.search(pattern, text, flags=re.MULTILINE) is not None
-    return False
+            return Target(named, None, by_basename=False)
+    span = CODE_SPAN.search(entry_text)
+    if span is None:
+        return Target(None, None, by_basename=False)
+    return resolve_span(map_dir, span.group(1), tracked, basenames)
 
 
 def names_in(stretch: str, path: str, file_text: str) -> tuple[str, ...]:
@@ -228,27 +262,39 @@ def names_in(stretch: str, path: str, file_text: str) -> tuple[str, ...]:
             continue
         if not any(char.islower() or char == "_" for char in name):
             continue
-        if is_token(file_text, name) and defines(path, file_text, name):
+        if is_token(file_text, name) and GATE.defines(path, file_text, name):
             found.add(name)
     return tuple(sorted(found))
 
 
 def cut_span(text: str, start: int, end: int) -> tuple[int, int]:
-    """Widen a citation to the separators and brackets that go with it."""
+    """Widen a citation to the separators and brackets that go with it; a citation that opens
+    its line keeps the indentation and takes the stray punctuation after it."""
+    line_start = text.rfind("\n", 0, start) + 1
     if start > 0 and end < len(text) and text[start - 1] == "`" and text[end] == "`":
         start, end = start - 1, end + 1
     before = start
-    while before > 0 and text[before - 1] in " \t":
+    while before > line_start and text[before - 1] in " \t":
         before -= 1
-    if before > 0 and text[before - 1] == "(" and end < len(text) and text[end] == ")":
+    wrapped = (
+        before > line_start and text[before - 1] == "(" and end < len(text) and text[end] == ")"
+    )
+    if wrapped:
         start, end = before - 1, end + 1
-        if start > 0 and text[start - 1] in " \t":
+    if not text[line_start:start].strip():
+        while end < len(text) and text[end] in LEADING_STRAY:
+            end += 1
+        while end < len(text) and text[end] in " \t":
+            end += 1
+        return start, end
+    if wrapped:
+        if text[start - 1] in " \t":
             start -= 1
         return start, end
     start = before
-    if start > 0 and text[start - 1] in ",;·":
+    if start > line_start and text[start - 1] in ",;·":
         start -= 1
-        while start > 0 and text[start - 1] in " \t":
+        while start > line_start and text[start - 1] in " \t":
             start -= 1
     head = text[:start].rstrip(" \t")
     if end < len(text) and text[end] in ".,;" and head and head[-1] in ".:;,!?":
@@ -291,8 +337,15 @@ def tidy(text: str) -> tuple[str, int, int]:
     return "\n".join(kept), deleted, trimmed
 
 
+def file_text(repo: Path, path: str, cache: dict[str, str]) -> str:
+    """A tracked file's text, cached; undecodable bytes replaced."""
+    if path not in cache:
+        cache[path] = (repo / path).read_text(encoding="utf-8", errors="replace")
+    return cache[path]
+
+
 def migrate_map(
-    repo: Path, path: str, tracked: set[str]
+    repo: Path, path: str, tracked: set[str], basenames: dict[str, list[str]]
 ) -> tuple[list[Binding], str | None, int, int]:
     """Bind every citation of one map and cut the ones that can go; the new text if changed."""
     text = (repo / path).read_text(encoding="utf-8")
@@ -301,29 +354,44 @@ def migrate_map(
     for line in lines:
         offsets.append(offsets[-1] + len(line) + 1)
     fenced = fence_mask(lines)
-    starts = row_starts(lines, fenced)
-    matches = list(GATE.CITATION.finditer(text))
+    starts = entry_starts(lines, fenced)
+    ends = dict(zip(starts, [*starts[1:], len(lines)], strict=True))
+    map_dir = str(Path(path).parent)
+    map_dir = "" if map_dir == "." else map_dir
     bindings: list[Binding] = []
     cuts: list[tuple[int, int]] = []
-    file_texts: dict[str, str] = {}
+    cache: dict[str, str] = {}
     previous_end: dict[int, int] = {}
-    for match in matches:
+    for match in GATE.CITATION.finditer(text):
         line_index = bisect.bisect_right(offsets, match.start()) - 1
         end_index = bisect.bisect_right(offsets, match.end()) - 1
-        row = max((start for start in starts if start <= line_index), default=line_index)
-        target = bound_file(path, lines, starts, line_index, tracked)
-        if target not in file_texts:
-            file_texts[target] = (repo / target).read_text(encoding="utf-8", errors="replace")
+        row = starts[bisect.bisect_right(starts, line_index) - 1] if starts else line_index
+        row_end = ends.get(row, len(lines))
+        target = entry_target(map_dir, "\n".join(lines[row:row_end]), tracked, basenames)
+        bound = target.path if target.path is not None and GATE.bindable(target.path) else None
         stretch_start = max(offsets[row], previous_end.get(row, 0))
         stretch = text[stretch_start : match.start()] + text[match.end() : offsets[end_index + 1]]
         previous_end[row] = match.end()
-        names = () if target == path else names_in(stretch, target, file_texts[target])
+        names = names_in(stretch, bound, file_text(repo, bound, cache)) if bound else ()
         line_end = offsets[end_index + 1] - 1
         kept = fenced[line_index] or keeps_text(
             text, match.start(), match.end(), offsets[line_index], line_end
         )
         clause_ids = tuple(re.findall(r"C-\d{3}", match.group(2)))
-        bindings.append(Binding(path, match.group(1), clause_ids, target, names, kept))
+        named = target.path if target.by_basename else None
+        bindings.append(
+            Binding(
+                path,
+                line_index + 1,
+                match.group(1),
+                clause_ids,
+                bound,
+                names,
+                kept,
+                target.unresolved,
+                named,
+            )
+        )
         if not kept:
             cuts.append((match.start(), match.end()))
     if not cuts:
@@ -337,13 +405,24 @@ def migrate_map(
 
 
 def source_bindings(repo: Path, path: str) -> list[Binding]:
-    """Citations in a source file: each binds that file, path only, and stays."""
+    """Citations in a source file: each binds that file when it is bindable, and stays."""
     try:
         text = (repo / path).read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
         return []
+    bound = path if GATE.bindable(path) else None
     return [
-        Binding(path, m.group(1), tuple(re.findall(r"C-\d{3}", m.group(2))), path, (), True)
+        Binding(
+            path,
+            text.count("\n", 0, m.start()) + 1,
+            m.group(1),
+            tuple(re.findall(r"C-\d{3}", m.group(2))),
+            bound,
+            (),
+            True,
+            None,
+            None,
+        )
         for m in GATE.CITATION.finditer(text)
     ]
 
@@ -356,14 +435,18 @@ def parse_sidecar(text: str) -> dict[str, set[str]]:
         if match is None:
             continue
         bucket = entries.setdefault(match.group(1), set())
-        bucket.update(entry.strip() for entry in match.group(2).split(",") if entry.strip())
+        bucket.update(entry.strip() for entry in match.group(2).split(", ") if entry.strip())
     return entries
 
 
 def normalised(entries: set[str]) -> list[str]:
-    """Sorted entries; a bare path is dropped where the same path also carries a name."""
-    named = {entry.split("::", 1)[0] for entry in entries if "::" in entry}
-    return sorted(entry for entry in entries if "::" in entry or entry not in named)
+    """Sorted entries: a bare path is dropped where the same path also carries a name, and
+    `none (records)` where any real entry exists."""
+    real = {entry for entry in entries if entry != GATE.RECORDS}
+    if not real:
+        return [GATE.RECORDS] if entries else []
+    named = {entry.split("::", 1)[0] for entry in real if "::" in entry}
+    return sorted(entry for entry in real if "::" in entry or entry not in named)
 
 
 def render_sidecar(unit: str, entries: dict[str, set[str]]) -> str:
@@ -392,6 +475,9 @@ def collect(
 ) -> tuple[list[Binding], dict[str, tuple[str, int, int]]]:
     """Every citation under CITATION_ROOTS, bound; and the new text of every map that changes."""
     tracked_set = set(tracked)
+    basenames: dict[str, list[str]] = {}
+    for path in tracked:
+        basenames.setdefault(Path(path).name, []).append(path)
     bindings: list[Binding] = []
     rewrites: dict[str, tuple[str, int, int]] = {}
     for path in tracked:
@@ -400,27 +486,42 @@ def collect(
         if Path(path).name != MAP_NAME:
             bindings.extend(source_bindings(repo, path))
             continue
-        found, new, deleted, trimmed = migrate_map(repo, path, tracked_set)
+        found, new, deleted, trimmed = migrate_map(repo, path, tracked_set, basenames)
         bindings.extend(found)
         if new is not None:
             rewrites[path] = (new, deleted, trimmed)
     return bindings, rewrites
 
 
+class Plan(NamedTuple):
+    """The sidecar side of a run."""
+
+    changed: dict[str, str]
+    unplaceable: list[str]
+    hand_bound: list[str]
+    records: list[str]
+
+
 def plan_sidecars(
     repo: Path, bindings: list[Binding], homes: dict[str, str], known: set[tuple[str, str]]
-) -> tuple[dict[str, str], list[str]]:
-    """Sidecar path -> new text for every sidecar that gains an entry, and the unplaceable
-    citations. A path the sidecar on disk already binds for a clause is left as it stands."""
+) -> Plan:
+    """Every sidecar that gains a line, the unplaceable and hand-bound citations, and the
+    clauses written as `none (records)`. A path the sidecar on disk already binds for a clause
+    is left as it stands, and a clause the sidecar on disk already carries gets no records line."""
     entries: dict[str, dict[str, set[str]]] = {}
     on_disk: dict[str, dict[str, set[str]]] = {}
     units: dict[str, str] = {}
     grown: set[str] = set()
     unplaceable: list[str] = []
+    hand_bound: list[str] = []
+    wanted: dict[tuple[str, str], str] = {}
+    source_cited: set[tuple[str, str]] = set()
     for binding in bindings:
         for clause_id in binding.clause_ids:
-            if (binding.unit, clause_id) not in known or binding.unit not in homes:
-                unplaceable.append(f"{binding.source}: pins: {binding.unit}/{clause_id}")
+            key = (binding.unit, clause_id)
+            where = f"{binding.source}:{binding.line}: pins: {binding.unit}/{clause_id}"
+            if key not in known or binding.unit not in homes:
+                unplaceable.append(f"{where} names no clause in any ledger")
                 continue
             sidecar = sidecar_path(homes[binding.unit])
             units[sidecar] = binding.unit
@@ -429,37 +530,63 @@ def plan_sidecars(
                 text = existing.read_text(encoding="utf-8") if existing.is_file() else ""
                 entries[sidecar] = parse_sidecar(text)
                 on_disk[sidecar] = parse_sidecar(text)
+            if kind_of(binding.source) != "map":
+                source_cited.add(key)
+            if binding.unresolved is not None:
+                if clause_id in on_disk[sidecar]:
+                    hand_bound.append(f"{where} ({binding.unresolved})")
+                else:
+                    unplaceable.append(f"{where} names {binding.unresolved}")
+                continue
+            wanted.setdefault(key, sidecar)
+            if binding.path is None:
+                continue
             bound = {entry.split("::", 1)[0] for entry in on_disk[sidecar].get(clause_id, set())}
             if binding.path in bound:
                 continue
             bucket = entries[sidecar].setdefault(clause_id, set())
-            before = len(bucket)
+            before = set(bucket)
             if binding.names:
                 bucket.update(f"{binding.path}::{name}" for name in binding.names)
             else:
                 bucket.add(binding.path)
-            if len(bucket) != before:
+            if bucket != before:
                 grown.add(sidecar)
+    records: list[str] = []
+    for (unit, clause_id), sidecar in sorted(wanted.items()):
+        if clause_id in on_disk[sidecar] or (unit, clause_id) in source_cited:
+            continue
+        bucket = entries[sidecar].setdefault(clause_id, set())
+        if bucket - {GATE.RECORDS}:
+            continue
+        if not bucket:
+            bucket.add(GATE.RECORDS)
+            grown.add(sidecar)
+        records.append(f"{unit}/{clause_id}")
     changed = {sidecar: render_sidecar(units[sidecar], entries[sidecar]) for sidecar in grown}
-    return changed, unplaceable
+    return Plan(changed, unplaceable, hand_bound, records)
 
 
 def sidecar_totals(repo: Path, tracked: list[str], changed: dict[str, str]) -> tuple[int, ...]:
-    """(sidecars, binding lines, path-only entries, named entries) over the planned tree."""
+    """(sidecars, binding lines, path-only entries, named entries, records lines, bytes) over
+    the planned tree."""
     texts = dict(changed)
     for path in tracked:
         if path.endswith(GATE.PINS_SUFFIX) and path not in texts and (repo / path).is_file():
             texts[path] = (repo / path).read_text(encoding="utf-8")
-    lines = path_only = named = 0
+    lines = path_only = named = records = 0
     for text in texts.values():
         for clause_entries in parse_sidecar(text).values():
             lines += 1
             for entry in normalised(clause_entries):
-                if "::" in entry:
+                if entry == GATE.RECORDS:
+                    records += 1
+                elif "::" in entry:
                     named += 1
                 else:
                     path_only += 1
-    return len(texts), lines, path_only, named
+    size = sum(len(text.encode("utf-8")) for text in texts.values())
+    return len(texts), lines, path_only, named, records, size
 
 
 def report(
@@ -467,7 +594,7 @@ def report(
     rewrites: dict[str, tuple[str, int, int]],
     totals: tuple[int, ...],
     written: int,
-    unplaceable: list[str],
+    plan: Plan,
 ) -> None:
     """The migration report, one count per line."""
     by_kind: dict[str, list[int]] = {}
@@ -477,20 +604,25 @@ def report(
         counts[1] += len(binding.clause_ids)
     for kind in sorted(by_kind):
         print(f"citations[{kind}]: {by_kind[kind][0]} ({by_kind[kind][1]} clause ids)")
-    map_bindings = [b for b in bindings if kind_of(b.source) == "map"]
-    print(f"map citations bound to the map itself: {sum(b.path == b.source for b in map_bindings)}")
-    print(f"map citations bound with names: {sum(bool(b.names) for b in map_bindings)}")
-    print(f"map citations left in the text: {sum(b.kept for b in map_bindings)}")
+    on_maps = [b for b in bindings if kind_of(b.source) == "map"]
+    print(f"map citations bound to a test file or script: {sum(bool(b.path) for b in on_maps)}")
+    print(f"map citations bound with names: {sum(bool(b.names) for b in on_maps)}")
+    print(f"map citations resolved by basename: {sum(bool(b.named) for b in on_maps)}")
+    print(f"map citations with no bindable file: {sum(b.path is None for b in on_maps)}")
+    print(f"map citations left in the text: {sum(b.kept for b in on_maps)}")
     print(f"maps rewritten: {len(rewrites)}")
     print(f"map lines removed: {sum(deleted for _t, deleted, _k in rewrites.values())}")
     print(f"map lines trimmed: {sum(trimmed for _t, _d, trimmed in rewrites.values())}")
-    sidecars, lines, path_only, named = totals
+    sidecars, lines, path_only, named, records, size = totals
     print(f"sidecars: {sidecars} ({written} written by this run)")
     print(f"sidecar lines: {lines}")
     print(f"path-only entries: {path_only}")
     print(f"named entries: {named}")
-    print(f"unplaceable citations: {len(unplaceable)}")
-    for line in unplaceable:
+    print(f"none (records) lines: {records}")
+    print(f"sidecar bytes: {size}")
+    print(f"hand-bound citations: {len(plan.hand_bound)}")
+    print(f"unplaceable citations: {len(plan.unplaceable)}")
+    for line in plan.unplaceable:
         print(f"  {line}", file=sys.stderr)
 
 
@@ -506,17 +638,26 @@ def run(repo: Path, check: bool) -> int:
         print("ERROR: no ledgers found under task/ledgers — refuse to pass closed", file=sys.stderr)
         return 2
     bindings, rewrites = collect(repo, tracked)
-    changed, unplaceable = plan_sidecars(repo, bindings, homes, known)
-    totals = sidecar_totals(repo, tracked, changed)
-    if unplaceable:
-        report(bindings, rewrites, totals, 0, unplaceable)
+    plan = plan_sidecars(repo, bindings, homes, known)
+    totals = sidecar_totals(repo, tracked, plan.changed)
+    if plan.unplaceable:
+        report(bindings, rewrites, totals, 0, plan)
         return 1
-    if not check:
-        for sidecar, text in changed.items():
-            (repo / sidecar).write_text(text, encoding="utf-8")
-        for path, (text, _deleted, _trimmed) in rewrites.items():
-            (repo / path).write_text(text, encoding="utf-8")
-    report(bindings, rewrites, totals, 0 if check else len(changed), unplaceable)
+    if check:
+        report(bindings, rewrites, totals, 0, plan)
+        pending = len(rewrites) + len(plan.changed)
+        if pending:
+            print(
+                f"pending: {len(rewrites)} map(s) and {len(plan.changed)} sidecar(s) would change",
+                file=sys.stderr,
+            )
+            return 1
+        return 0
+    for sidecar, text in plan.changed.items():
+        (repo / sidecar).write_text(text, encoding="utf-8")
+    for path, (text, _deleted, _trimmed) in rewrites.items():
+        (repo / path).write_text(text, encoding="utf-8")
+    report(bindings, rewrites, totals, len(plan.changed), plan)
     return 0
 
 

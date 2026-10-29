@@ -1,12 +1,12 @@
 # ice-v3-write-default-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-002: python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/record.py, python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-002: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-003: crates/repark-iceberg/src/write/merge/tests/insert_fill.rs::column_defaults_ignores_struct_default, python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-004: crates/repark-iceberg/src/write/insert_defaults.rs, crates/repark-iceberg/src/write/insert_defaults/tests/mod.rs, crates/repark-spark/src/spark_ast.rs::rewrite_binary_casts, crates/repark-sql/tests/ansi_write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-005: crates/repark-iceberg/src/write/insert_defaults.rs, crates/repark-iceberg/src/write/merge/insert.rs::insert_stream_checked, crates/repark-iceberg/src/write/merge/insert.rs::table_projection, crates/repark-iceberg/src/write/merge/insert.rs::update_stream_checked, crates/repark-iceberg/src/write/merge/insert.rs::validate_update_store_assignment, crates/repark-iceberg/src/write/merge/tests/insert_fill.rs::column_defaults_ignores_struct_default, python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-006: crates/repark-iceberg/src/write/insert_defaults.rs, crates/repark-iceberg/src/write/insert_defaults/tests/mod.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/src/repark/spark/dataframe/core.py, python/repark/src/repark/spark/dataframe/writer_readwriter.py, python/repark/tests/session/test_catalog_surface.py, python/repark/tests/writes/test_ice_v3_write_default_1.py, scripts/check_lib_py.py
-C-007: crates/repark-iceberg/src/write/insert_defaults.rs, crates/repark-spark/src/insert_by_name/map.md, crates/repark-spark/src/spark_ast.rs::rewrite_binary_casts, python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-004: crates/repark-iceberg/src/write/insert_defaults/tests/mod.rs, crates/repark-sql/tests/ansi_write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-005: crates/repark-iceberg/src/write/merge/tests/insert_fill.rs::column_defaults_ignores_struct_default, python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-006: crates/repark-iceberg/src/write/insert_defaults/tests/mod.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/writes/test_ice_v3_write_default_1.py, scripts/check_lib_py.py
+C-007: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-008: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-009: crates/repark-iceberg/src/write/merge/tests/insert_fill.rs::column_defaults_ignores_struct_default
 C-010: crates/repark-iceberg/src/write/insert_defaults/tests/mod.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
@@ -14,13 +14,13 @@ C-011: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-012: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-013: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-014: python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-015: crates/repark-iceberg/src/write/insert_defaults.rs::ColumnDefaults, crates/repark-iceberg/src/write/insert_defaults.rs::overwrite_source_with_defaults, crates/repark-iceberg/src/write/insert_defaults.rs::schema_has_primitive_fill, crates/repark-iceberg/src/write/partition_overwrite.rs::stage_static_partition_overwrite_files, crates/repark-iceberg/src/write/partition_overwrite.rs::static_partition_source_columns, crates/repark-spark/src/spark_rewrites/mod.rs::plan_insert_partition_column_list_regions, crates/repark-spark/src/tests/overwrite_mode.rs, crates/repark-spark/src/tests/spark_dialect.rs, crates/repark-sql/src/insert_overwrite.rs, crates/repark-sql/tests/ansi_write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-016: crates/repark-iceberg/src/write/insert_defaults.rs::query_has_default_marker, crates/repark-iceberg/src/write/insert_defaults.rs::rewrite_insert_markers, crates/repark-iceberg/src/write/insert_defaults.rs::rewrite_markers_with_table, crates/repark-spark/src/tests/overwrite_mode.rs, crates/repark-spark/src/tests/write_defaults.rs, crates/repark-sql/tests/ansi_write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-015: python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-016: crates/repark-spark/src/tests/write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-017: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-018: python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-019: crates/repark-iceberg/src/write/insert_defaults.rs::ColumnDefaults, crates/repark-iceberg/src/write/insert_defaults.rs::overwrite_source_with_defaults, crates/repark-iceberg/src/write/insert_defaults.rs::schema_has_primitive_fill, crates/repark-iceberg/src/write/merge/insert.rs::table_projection, crates/repark-iceberg/src/write/merge/tests/insert_fill.rs::target_schema
-C-020: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/src/repark/spark/dataframe/writer_readwriter.py::overwritePartitions, python/repark/tests/writes/test_ice_v3_write_default_1.py, scripts/check_lib_py.py
-C-021: crates/repark-iceberg/src/write/insert_defaults.rs::MarkerRewrite, crates/repark-iceberg/src/write/insert_defaults.rs::column_defaults, crates/repark-iceberg/src/write/insert_defaults.rs::fill_insert_plan, crates/repark-iceberg/src/write/insert_defaults.rs::is_default_marker, crates/repark-iceberg/src/write/insert_defaults.rs::refuse_default_marker_under_with, crates/repark-iceberg/src/write/insert_defaults.rs::rewrite_insert_markers, crates/repark-iceberg/src/write/insert_defaults.rs::rewrite_markers_with_table, crates/repark-iceberg/src/write/insert_defaults.rs::schema_has_primitive_fill, crates/repark-iceberg/src/write/insert_defaults.rs::tests, crates/repark-spark/src/tests/write_defaults.rs, crates/repark-sql/tests/ansi_write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-019: none (records)
+C-020: python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-021: crates/repark-spark/src/tests/write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-022: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-023: crates/repark-spark/src/tests/write_defaults.rs
-C-024: crates/repark-iceberg/src/write/insert_defaults/tests/map.md, crates/repark-spark/src/tests/overwrite_mode.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
+C-024: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py

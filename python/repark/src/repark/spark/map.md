@@ -1000,7 +1000,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   sort, and null-placement semantics explicit. TYPES-1 round 4: `with_row_index` casts
   `row_number` to BIGINT. DF-EAGER-1 step 2 (2026-09-09):
   `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
- . **ATTR-ID-1 SJ-3 (2026-10-02):** `PolarsFrame.join`
+  **ATTR-ID-1 SJ-3 (2026-10-02):** `PolarsFrame.join`
   re-mints over the lineage shared set and spawns with the `Join` node via
   `join_plan_lineage`, so later self-join checks see its lineage.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built join scan

@@ -2,15 +2,15 @@
 
 C-001: crates/repark-functions/src/tests/zone_horizon_render.rs, python/repark/tests/timestamps/test_zone_horizon_render_1.py
 C-002: crates/repark-functions/src/tests/zone_horizon_render.rs, python/repark/tests/timestamps/test_zone_horizon_render_1.py
-C-003: crates/repark-common/src/zone_horizon/map.md, crates/repark-common/src/zone_horizon/tests.rs::TabulatedToHorizon
+C-003: crates/repark-common/src/zone_horizon/tests.rs::TabulatedToHorizon
 C-004: crates/repark-common/src/zone_horizon/tests.rs::TabulatedToHorizon, crates/repark-functions/src/tests/zone_horizon_render.rs
 C-005: python/repark/tests/timestamps/test_zone_horizon_render_1.py
-C-006: crates/repark-functions/src/datetime/map.md, crates/repark-functions/src/tests/zone_horizon_render.rs, python/repark/tests/timestamps/test_zone_horizon_render_1.py
-C-007: crates/repark-functions/src/datetime/map.md, crates/repark-functions/src/tests/zone_horizon_render.rs, python/repark/tests/timestamps/test_zone_horizon_render_1.py
+C-006: crates/repark-functions/src/tests/zone_horizon_render.rs, python/repark/tests/timestamps/test_zone_horizon_render_1.py
+C-007: crates/repark-functions/src/tests/zone_horizon_render.rs, python/repark/tests/timestamps/test_zone_horizon_render_1.py
 C-008: crates/repark-core/src/session/tests/text_write_format_cache.rs::an_instant_after_2099_is_written_at_the_final_rule, python/repark/tests/timestamps/test_zone_horizon_render_1.py
 C-009: python/repark/tests/timestamps/test_zone_horizon_render_1.py
 C-010: python/repark/tests/timestamps/test_zone_horizon_render_1.py
-C-011: crates/repark-common/src/zone_horizon/tests.rs::TabulatedToHorizon, crates/repark-core/src/catalog_state.rs, crates/repark-core/src/time_travel/sql_text.rs::zoned_wall_to_ms, crates/repark-functions/src/datetime/session_wall.rs::datetime_from_micros, crates/repark-functions/src/datetime/session_wall.rs::instant_part, crates/repark-functions/src/datetime/session_wall.rs::local_datetime_from_micros, crates/repark-functions/src/datetime/session_wall.rs::localize_wall_micros_in_zone, crates/repark-functions/src/datetime/session_wall.rs::micros_from_local_datetime, crates/repark-functions/src/datetime/session_wall.rs::offset_at_instant, crates/repark-functions/src/datetime/session_wall.rs::within_the_tables, crates/repark-functions/src/tests/zone_horizon_render.rs
-C-013: crates/repark-functions/src/datetime/session_wall.rs::datetime_from_micros, crates/repark-functions/src/datetime/session_wall.rs::instant_part, crates/repark-functions/src/datetime/session_wall.rs::local_datetime_from_micros, crates/repark-functions/src/datetime/session_wall.rs::localize_wall_micros_in_zone, crates/repark-functions/src/datetime/session_wall.rs::micros_from_local_datetime, crates/repark-functions/src/datetime/session_wall.rs::offset_at_instant, crates/repark-functions/src/datetime/session_wall.rs::within_the_tables
-C-014: crates/repark-functions/src/datetime/session_wall.rs::datetime_from_micros, crates/repark-functions/src/datetime/session_wall.rs::instant_part, crates/repark-functions/src/datetime/session_wall.rs::local_datetime_from_micros, crates/repark-functions/src/datetime/session_wall.rs::localize_wall_micros_in_zone, crates/repark-functions/src/datetime/session_wall.rs::micros_from_local_datetime, crates/repark-functions/src/datetime/session_wall.rs::offset_at_instant, crates/repark-functions/src/datetime/session_wall.rs::within_the_tables
-C-015: python/repark/tests/timestamps/test_zone_horizon_render_1.py
+C-011: crates/repark-common/src/zone_horizon/tests.rs::TabulatedToHorizon, crates/repark-functions/src/tests/zone_horizon_render.rs
+C-013: none (records)
+C-014: none (records)
+C-015: none (records)

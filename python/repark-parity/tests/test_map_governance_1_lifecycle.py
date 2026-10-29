@@ -148,3 +148,36 @@ def test_archive_of_a_named_ledger_carries_its_sidecar(repo: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert (repo / _ARCHIVED_SIDECAR).is_file()
     assert not (repo / _SIDECAR).exists()
+
+
+def _size_check(repo: Path) -> subprocess.CompletedProcess[str]:
+    source = (_REPO / "scripts" / "check_map_size.py").read_text(encoding="utf-8")
+    start = source.index("\nEXCEPTIONS: dict[str, tuple[int, int]] = {") + 1
+    end = source.index("\n}\n", start) + 3
+    empty = "EXCEPTIONS: dict[str, tuple[int, int]] = {\n}\n"
+    _write(repo, "scratch/check_map_size.py", source[:start] + empty + source[end:])
+    _git(repo, "add", "-A")
+    return subprocess.run(
+        [sys.executable, str(repo / "scratch/check_map_size.py"), "--repo", str(repo)],
+        capture_output=True,
+        text=True,
+        env=_ENV,
+        check=False,
+    )
+
+
+def test_a_move_then_the_size_ratchet_stays_green(repo: Path) -> None:
+    rows = "".join(f"- [r{n}-ledger.md](r{n}-ledger.md) — **R{n}:** row.\n" for n in range(250))
+    for n in range(250):
+        _write(repo, f"{_COMPLETED}/r{n}-ledger.md", f"# R{n}\n")
+    _write(repo, f"{_COMPLETED}/map.md", _bin_map("completed", rows))
+    _write(repo, "task/ledgers/archive/map.md", "# map — archive\n")
+    _write(repo, "task/ledgers/staging/z3-live-ledger.md", "# Z3\n")
+    _commit(repo, "a full completed bin")
+    assert _size_check(repo).returncode == 0
+    moved = _run(repo, "move", "task/ledgers/staging/z3-live-ledger.md", "completed")
+    assert moved.returncode == 0, moved.stderr
+    completed_map = (repo / f"{_COMPLETED}/map.md").read_text(encoding="utf-8")
+    assert len(completed_map.splitlines()) > 250
+    result = _size_check(repo)
+    assert result.returncode == 0, result.stderr
