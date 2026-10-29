@@ -41,9 +41,9 @@ while IFS= read -r file; do
 
   if [[ ! -f "$map_path" ]]; then
     if [[ "$branch_mode" == 1 ]]; then
-      echo "WARNING: $dir has changed code but no map.md (every directory needs one)." >&2
+      echo "WARNING: $dir has changed code but no map.md (a map is required at a crate, package or subsystem boundary; see AGENTS.md \"navigation\")." >&2
     else
-      echo "WARNING: $dir has staged code but no map.md (every directory needs one)." >&2
+      echo "WARNING: $dir has staged code but no map.md (a map is required at a crate, package or subsystem boundary; see AGENTS.md \"navigation\")." >&2
     fi
     missing=1
     continue
