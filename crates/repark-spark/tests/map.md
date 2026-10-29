@@ -596,6 +596,8 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   pins: spark-door-temp-view-target-1/C-001, C-002, C-003, C-005
   pins: spark-door-temp-view-target-1/C-004 (the write-options control, `a_view_name_with_write_options_still_holds_the_table`)
   pins: spark-door-temp-view-target-1/C-006 (the suite counts are the builder's runs, copied in the ledger; this file pins none of them)
+- [temp_view_name_case.rs](temp_view_name_case.rs) — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** the temporary-view name fold through a real `ReparkSession` with `SparkDialect`, 10 tests: an upper-case quoted, an unquoted upper-case and a lower-case view each hold every spelling of its name under the default rule, the DELETE, UPDATE, MERGE, INSERT, INSERT OVERWRITE and TRUNCATE routes refusing with the table unchanged; the same on merge-on-read; a view replaced or dropped under another spelling is the same view; a DataFrame view registered under a quoted name holds every spelling; `caseSensitive=true` keeps an upper-case view apart from the lower-case table; `MERGE WITH SCHEMA EVOLUTION` through a view refuses as a merge; a two-part table name writes the table with the view in scope (the control for the Muse S2). Red on the round-0 product code (9 failed, the control passed), green at `3243444a`.
+  pins: spark-door-temp-view-target-1/C-011, C-013, C-014
 
 ## I want to...
 

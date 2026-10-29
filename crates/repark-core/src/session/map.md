@@ -166,6 +166,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
   pins: ice-views-1/C-018
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** the temp-view name rule is read at the two lookup choke points (`temp_view_ref` and `temp_view_ref_from_segment`) through `SqlDialect::temp_view_name_rule`. `Exact` takes the written last segment verbatim against the home; `IgnoreCase` keeps the created spelling, and a missed exact lookup falls back to the unique case-insensitive twin (`case_twin`, which refuses an ambiguous pair). `temp_view_target_ref` answers the `[catalog, schema, table]` a CREATE registers under (C-011, C-013).
   **ATTR-ID-1 S2 (2026-09-30):** all four `MemTable` constructors
   (`create_or_replace_temp_view`, `register_record_batches_as_temp_view`,
   `register_collected_memtable`, `declare_temp_view_sorted`) run their schema and batches

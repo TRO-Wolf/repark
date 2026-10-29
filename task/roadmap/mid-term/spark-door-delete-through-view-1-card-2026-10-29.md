@@ -4,6 +4,8 @@
 
 **Status:** open. Grade B, P2 (the builder's grading, copied). Not dispatched; awaiting the owner's charter.
 
+**Re-measured 2026-10-29 (verification round 1, F-3):** the Opus 5.5 verifier measured `DELETE FROM t WHERE id = 2` through a temporary view `t` over the table at `a76699c6`: Spark deletes and RePark refuses with `EXPECT_TABLE_NOT_VIEW`, the table unchanged, as the lead above says. The temporary-view fix round does not change this route, so the card stays open at its grade.
+
 **Why:** RePark refuses a statement that Spark answers. No wrong value is produced: before the parent unit the statement failed with `TableNotFound`, and after it the statement fails with the view refusal (`EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE`). The table is unchanged on RePark in both cases. P2, because the refusal is wrong, not silent.
 
 **Measured (2026-10-29, builder's step 0 on Spark 4.1.2 with Iceberg 1.11.0, copy-on-write and merge-on-read):** with a temporary view `v` defined as `SELECT * FROM` a table in the current namespace, `DELETE FROM v WHERE id = 2` executes and takes the table from `1,2,3` to `1,3` on both table kinds. `DELETE FROM v WHERE id = 77` executes and matches no row. Spark's `UPDATE v SET …` refuses with `UNSUPPORTED_FEATURE.TABLE_OPERATION`, naming the underlying table. RePark at base `c48b1ad7`: `TableNotFound` for the DELETE, the UPDATE and the INSERT. RePark at `7984ed39`: `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` naming `v` for the DELETE, `UPDATE` refused naming `v`, and the INSERT refused as Spark does. The table is unchanged in every RePark case.

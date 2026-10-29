@@ -9,6 +9,8 @@ CC-2 close: `dynamicFlatten` docstring again names ``repark_core::dynamic_flatte
 The Spark DataFrame facade. It builds lazy native plans and exposes Spark-compatible actions,
 joins, grouping, exports, UDF bridges, and writers. Engine computation stays in Rust; Python
 callbacks run only where the API accepts user UDFs and receive Arrow batches.
+- `writer_layout.py` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `_refuse_temp_view_write_target` raises `_LEGACY_ERROR_TEMP_1011` ("Writing into a view is not allowed", with the view's name) when a one-part `writeTo` target names a temporary view, through the shared `catalog_resolution._temp_view_home_ref`; it runs before anything is resolved, staged or written (C-012). The helper lives here because `writer_readwriter.py` is at its size ceiling.
+- `writer_readwriter.py` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `DataFrameWriterV2._existing_table_ref` calls `writer_layout._refuse_temp_view_write_target` first, so `writeTo(...).append()`, `overwritePartitions()` and `overwrite()` (and their option forms) refuse a view name. `create`, `createOrReplace`, `replace`, `insertInto` and `saveAsTable` are unchanged, as Spark measures (C-012).
 - `writer_readwriter.py` — **CATALOG-1 (2026-09-26):** `_resolve_writer_table` passes only the
   current catalog and database to `resolve_table_name` (no known-catalog alias). pins: catalog-1/C-002
 - `writer_readwriter.py` — **S3-PATH-WRITE-1 step 0 (2026-09-28, oracle, no code change):**
