@@ -8,6 +8,6 @@ C-005: crates/repark-iceberg/src/catalog/provider.rs, python/repark/tests/confte
 C-006: crates/repark-iceberg/src/catalog/provider.rs
 C-007: python/repark/tests/conftest.py
 C-008: python/repark/tests/conftest.py
-C-009: python/repark-parity/bench/icescan/map.md::count_id, python/repark-parity/bench/icescan/map.md::count_star, python/repark-parity/bench/icescan/map.md::string_len, python/repark-parity/bench/icescan/map.md::sum_all, python/repark/tests/conftest.py
+C-009: python/repark-parity/bench/icescan/map.md, python/repark/tests/conftest.py
 C-010: crates/repark-iceberg/src/catalog/provider.rs
 C-011: python/repark/tests/conftest.py

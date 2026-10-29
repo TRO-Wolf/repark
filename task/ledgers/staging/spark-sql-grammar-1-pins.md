@@ -1,8 +1,8 @@
 # spark-sql-grammar-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-003: crates/repark-spark/src/keyword_lower/map.md::TIMESTAMP_NTZ, python/repark/tests/sql/test_spark_sql_grammar_1.py::datediff, python/repark/tests/sql/test_spark_sql_grammar_1.py::selectExpr, python/repark/tests/sql/test_spark_sql_grammar_1.py::sql
-C-004: crates/repark-spark/src/keyword_lower/map.md::TIMESTAMP_NTZ, python/repark/tests/sql/test_spark_sql_grammar_1.py::datediff, python/repark/tests/sql/test_spark_sql_grammar_1.py::selectExpr, python/repark/tests/sql/test_spark_sql_grammar_1.py::sql
-C-005: crates/repark-spark/src/keyword_lower/map.md::TIMESTAMP_NTZ, python/repark/tests/sql/test_spark_sql_grammar_1.py::datediff, python/repark/tests/sql/test_spark_sql_grammar_1.py::selectExpr, python/repark/tests/sql/test_spark_sql_grammar_1.py::sql
-C-006: python/repark/tests/sql/test_spark_sql_grammar_1.py::datediff, python/repark/tests/sql/test_spark_sql_grammar_1.py::selectExpr, python/repark/tests/sql/test_spark_sql_grammar_1.py::sql
-C-008: crates/repark-spark/src/bare_unit.rs::dateadd, crates/repark-spark/src/bare_unit.rs::datediff, crates/repark-spark/src/bare_unit.rs::timestampadd, crates/repark-spark/src/bare_unit.rs::timestampdiff, python/repark/tests/sql/test_spark_sql_grammar_1.py::datediff, python/repark/tests/sql/test_spark_sql_grammar_1.py::selectExpr, python/repark/tests/sql/test_spark_sql_grammar_1.py::sql
-C-010: crates/repark-spark/src/bare_nullary.rs::current_catalog, crates/repark-spark/src/bare_nullary.rs::current_database, crates/repark-spark/src/bare_nullary.rs::current_schema, crates/repark-spark/src/bare_nullary.rs::current_timezone, crates/repark-spark/src/bare_nullary.rs::demote_refusing_nullary_calls, crates/repark-spark/src/bare_nullary.rs::localtimestamp, crates/repark-spark/src/bare_nullary.rs::map_bare_nullary_column_error, crates/repark-spark/src/bare_nullary.rs::now, python/repark/tests/sql/test_spark_sql_grammar_1.py::datediff, python/repark/tests/sql/test_spark_sql_grammar_1.py::selectExpr, python/repark/tests/sql/test_spark_sql_grammar_1.py::sql
+C-003: crates/repark-spark/src/keyword_lower/map.md, python/repark/tests/sql/test_spark_sql_grammar_1.py
+C-004: crates/repark-spark/src/keyword_lower/map.md, python/repark/tests/sql/test_spark_sql_grammar_1.py
+C-005: crates/repark-spark/src/keyword_lower/map.md, python/repark/tests/sql/test_spark_sql_grammar_1.py
+C-006: python/repark/tests/sql/test_spark_sql_grammar_1.py
+C-008: crates/repark-spark/src/bare_unit.rs, python/repark/tests/sql/test_spark_sql_grammar_1.py
+C-010: crates/repark-spark/src/bare_nullary.rs::demote_refusing_nullary_calls, crates/repark-spark/src/bare_nullary.rs::map_bare_nullary_column_error, python/repark/tests/sql/test_spark_sql_grammar_1.py

@@ -1,7 +1,7 @@
 # ballista-m2-b pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-distributed/src/codec.rs::BallistaPhysicalExtensionCodec, crates/repark-distributed/src/codec.rs::ReparkPhysicalExtensionCodec, crates/repark-distributed/src/codec.rs::scan, crates/repark-distributed/tests/codec.rs::Expr, crates/repark-distributed/tests/codec.rs::IcebergTableScan, crates/repark-distributed/tests/codec.rs::LocalDataFusionExecutor, crates/repark-distributed/tests/codec.rs::predicates, crates/repark-distributed/tests/codec.rs::try_decode, crates/repark-distributed/tests/codec.rs::try_encode
-C-002: crates/repark-distributed/src/codec.rs, crates/repark-distributed/src/predicate_expr.rs::Expr, crates/repark-distributed/src/predicate_expr.rs::Predicate, crates/repark-distributed/src/predicate_expr.rs::UTC_TIME_ZONE, crates/repark-distributed/tests/codec.rs::Expr, crates/repark-distributed/tests/codec.rs::IcebergTableScan, crates/repark-distributed/tests/codec.rs::LocalDataFusionExecutor, crates/repark-distributed/tests/codec.rs::predicates, crates/repark-distributed/tests/codec.rs::try_decode, crates/repark-distributed/tests/codec.rs::try_encode
-C-003: crates/repark-distributed/src/codec.rs, crates/repark-distributed/tests/codec.rs::Expr, crates/repark-distributed/tests/codec.rs::IcebergTableScan, crates/repark-distributed/tests/codec.rs::LocalDataFusionExecutor, crates/repark-distributed/tests/codec.rs::predicates, crates/repark-distributed/tests/codec.rs::try_decode, crates/repark-distributed/tests/codec.rs::try_encode
-C-004: crates/repark-distributed/src/codec.rs::BallistaPhysicalExtensionCodec, crates/repark-distributed/src/codec.rs::ReparkPhysicalExtensionCodec, crates/repark-distributed/src/codec.rs::scan
+C-001: crates/repark-distributed/src/codec.rs::ReparkPhysicalExtensionCodec, crates/repark-distributed/tests/codec.rs
+C-002: crates/repark-distributed/src/codec.rs, crates/repark-distributed/src/predicate_expr.rs, crates/repark-distributed/tests/codec.rs
+C-003: crates/repark-distributed/src/codec.rs, crates/repark-distributed/tests/codec.rs
+C-004: crates/repark-distributed/src/codec.rs::ReparkPhysicalExtensionCodec
 C-005: crates/repark-distributed/src/codec.rs

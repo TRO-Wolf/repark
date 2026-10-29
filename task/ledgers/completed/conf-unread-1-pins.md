@@ -1,9 +1,9 @@
 # conf-unread-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-core/src/session/tests/conf_unread.rs::SessionConfig, crates/repark-core/src/session/tests/conf_unread.rs::bloom_filter_on_read, crates/repark-core/src/session/tests/conf_unread.rs::coalesce_batches, crates/repark-core/src/session/tests/conf_unread.rs::enable_page_index, crates/repark-core/src/session/tests/conf_unread.rs::write_batch_size
-C-002: crates/repark-core/src/session/tests/conf_unread.rs::SessionConfig, crates/repark-core/src/session/tests/conf_unread.rs::bloom_filter_on_read, crates/repark-core/src/session/tests/conf_unread.rs::coalesce_batches, crates/repark-core/src/session/tests/conf_unread.rs::enable_page_index, crates/repark-core/src/session/tests/conf_unread.rs::write_batch_size
-C-003: crates/repark-core/src/session/spill.rs::maybe_apply_runtime_set, crates/repark-core/src/session/tests/conf_unread.rs::SessionConfig, crates/repark-core/src/session/tests/conf_unread.rs::bloom_filter_on_read, crates/repark-core/src/session/tests/conf_unread.rs::coalesce_batches, crates/repark-core/src/session/tests/conf_unread.rs::enable_page_index, crates/repark-core/src/session/tests/conf_unread.rs::write_batch_size
-C-004: crates/repark-core/src/session/tests/conf_unread.rs::SessionConfig, crates/repark-core/src/session/tests/conf_unread.rs::bloom_filter_on_read, crates/repark-core/src/session/tests/conf_unread.rs::coalesce_batches, crates/repark-core/src/session/tests/conf_unread.rs::enable_page_index, crates/repark-core/src/session/tests/conf_unread.rs::write_batch_size, python/repark/tests/_acceptance.py::set
-C-005: python/repark/tests/_acceptance.py::set
+C-001: crates/repark-core/src/session/tests/conf_unread.rs
+C-002: crates/repark-core/src/session/tests/conf_unread.rs
+C-003: crates/repark-core/src/session/spill.rs::maybe_apply_runtime_set, crates/repark-core/src/session/tests/conf_unread.rs
+C-004: crates/repark-core/src/session/tests/conf_unread.rs, python/repark/tests/_acceptance.py
+C-005: python/repark/tests/_acceptance.py
 C-006: python/repark/tests/_acceptance.py
 C-007: crates/repark-core/src/session/tests/conf_unread.rs
