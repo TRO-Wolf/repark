@@ -1,10 +1,10 @@
 # sepmo-e0-e1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark-parity/tests/test_sepmo_usage.py
-C-002: python/repark-parity/tests/test_sepmo_usage.py
-C-003: python/repark-parity/tests/test_sepmo_usage.py
-C-004: python/repark-parity/tests/test_sepmo_usage.py, scripts/sepmo_usage.py
-C-005: python/repark-parity/tests/test_sepmo_usage.py, scripts/sepmo_usage.py
-C-006: python/repark-parity/tests/test_sepmo_usage.py, scripts/sepmo_usage.py
-C-007: python/repark-parity/tests/fixtures/sepmo_usage/map.md, python/repark-parity/tests/test_sepmo_usage.py
-C-008: python/repark-parity/tests/test_sepmo_usage.py
+C-001: python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index
+C-002: python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index
+C-003: python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index
+C-004: python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index, scripts/sepmo_usage.py::SEPMO_MUSE_RUNS_TSV, scripts/sepmo_usage.py::SEPMO_MUSE_SESSIONS_ROOT, scripts/sepmo_usage.py::cache_read_input_tokens, scripts/sepmo_usage.py::completed, scripts/sepmo_usage.py::exit, scripts/sepmo_usage.py::missing_reason, scripts/sepmo_usage.py::modelUsage, scripts/sepmo_usage.py::steps, scripts/sepmo_usage.py::tool_calls, scripts/sepmo_usage.py::tsv
+C-005: python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index, scripts/sepmo_usage.py::SEPMO_MUSE_RUNS_TSV, scripts/sepmo_usage.py::SEPMO_MUSE_SESSIONS_ROOT, scripts/sepmo_usage.py::cache_read_input_tokens, scripts/sepmo_usage.py::completed, scripts/sepmo_usage.py::exit, scripts/sepmo_usage.py::missing_reason, scripts/sepmo_usage.py::modelUsage, scripts/sepmo_usage.py::steps, scripts/sepmo_usage.py::tool_calls, scripts/sepmo_usage.py::tsv
+C-006: python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index, scripts/sepmo_usage.py::SEPMO_MUSE_RUNS_TSV, scripts/sepmo_usage.py::SEPMO_MUSE_SESSIONS_ROOT, scripts/sepmo_usage.py::cache_read_input_tokens, scripts/sepmo_usage.py::completed, scripts/sepmo_usage.py::exit, scripts/sepmo_usage.py::missing_reason, scripts/sepmo_usage.py::modelUsage, scripts/sepmo_usage.py::steps, scripts/sepmo_usage.py::tool_calls, scripts/sepmo_usage.py::tsv
+C-007: python/repark-parity/tests/fixtures/sepmo_usage/map.md, python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index
+C-008: python/repark-parity/tests/test_sepmo_usage.py::exit, python/repark-parity/tests/test_sepmo_usage.py::index

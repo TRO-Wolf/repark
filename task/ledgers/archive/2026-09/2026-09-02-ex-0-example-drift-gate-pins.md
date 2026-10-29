@@ -1,12 +1,12 @@
 # ex-0-example-drift-gate pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py, scripts/check_example_coverage.sh
-C-002: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
-C-003: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py, scripts/check_example_coverage.sh
-C-004: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py, scripts/check_example_coverage.sh
-C-005: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py, scripts/check_example_coverage.sh
-C-006: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
-C-007: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py, scripts/check_example_coverage.sh
-C-008: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
-C-009: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py, scripts/check_example_coverage.sh
-C-010: python/repark-parity/tests/test_ex_0_example_coverage.py
+C-001: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py, scripts/check_example_coverage.sh::examples
+C-002: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py
+C-003: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py, scripts/check_example_coverage.sh::examples
+C-004: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py, scripts/check_example_coverage.sh::examples
+C-005: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py, scripts/check_example_coverage.sh::examples
+C-006: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py
+C-007: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py, scripts/check_example_coverage.sh::examples
+C-008: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py
+C-009: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with, scripts/check_example_coverage.py, scripts/check_example_coverage.sh::examples
+C-010: python/repark-parity/tests/test_ex_0_example_coverage.py::__all__, python/repark-parity/tests/test_ex_0_example_coverage.py::yml, python/repark-parity/tests/test_ex_0_example_coverage.py::zip_with

@@ -10,7 +10,8 @@ A citation in a source file binds that file and stays where it is. A citation in
 binds the file its row describes: the nearest row at or above it, within its section, whose
 first link or first code span names a tracked file under the map's directory, else the map
 itself. The names are the backticked identifiers of the citation's stretch of that row that
-occur in the bound file as whole-word tokens. The citation is then cut from the map: a line left
+occur in the bound file as whole-word tokens; a citation bound to its own map is path-only,
+since every name in it trivially occurs there. The citation is then cut from the map: a line left
 with nothing but punctuation is deleted, a line that also carries prose keeps the prose.
 
 A citation is bound but left in the map's text when cutting it would break the sentence around
@@ -44,7 +45,9 @@ TABLE_ROW = re.compile(r"^\s*\|")
 HEADING = re.compile(r"^#{1,6}\s")
 LINK = re.compile(r"\[[^\]]*\]\(\s*<?([^()<>\s]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 CODE_SPAN = re.compile(r"`([^`]+)`")
-QUALIFIED = re.compile(r"^(?:[\w./-]+::)?(?:[A-Za-z_]\w*(?:::|\.))*([A-Za-z_]\w*)(?:\(\))?$")
+QUALIFIED = re.compile(
+    r"^(?:[\w./-]+::)?(?:[A-Za-z_]\w*(?:::|\.))*([A-Za-z_]\w*)(?:\(\))?$", re.ASCII
+)
 STOP_NAMES: frozenset[str] = frozenset(
     {"true", "false", "None", "True", "False", "null", "self", "Self", "NULL", "pins"}
 )
@@ -200,20 +203,8 @@ def bound_file(
     return map_path
 
 
-def defines(path: str, text: str, name: str) -> bool:
-    """Whether a Rust or Python file defines `name`: a fn, type, module, constant or class."""
-    escaped = re.escape(name)
-    if path.endswith(".rs"):
-        pattern = rf"\b(?:fn|struct|enum|trait|mod|const|static|type|union)\s+{escaped}\b"
-        return re.search(pattern + rf"|macro_rules!\s*{escaped}\b", text) is not None
-    if path.endswith(".py"):
-        pattern = rf"\b(?:def|class)\s+{escaped}\b|^{escaped}\s*[:=]"
-        return re.search(pattern, text, flags=re.MULTILINE) is not None
-    return False
-
-
-def names_in(stretch: str, path: str, file_text: str) -> tuple[str, ...]:
-    """Backticked identifiers of `stretch` that the bound file defines and carries as tokens."""
+def names_in(stretch: str, file_text: str) -> tuple[str, ...]:
+    """Backticked identifiers of `stretch` that occur in the bound file as whole-word tokens."""
     found: set[str] = set()
     for span in CODE_SPAN.findall(stretch):
         match = QUALIFIED.match(span.strip())
@@ -224,7 +215,7 @@ def names_in(stretch: str, path: str, file_text: str) -> tuple[str, ...]:
             continue
         if not any(char.islower() or char == "_" for char in name):
             continue
-        if is_token(file_text, name) and defines(path, file_text, name):
+        if is_token(file_text, name):
             found.add(name)
     return tuple(sorted(found))
 
@@ -313,7 +304,7 @@ def migrate_map(
         stretch_start = max(offsets[row], previous_end.get(row, 0))
         stretch = text[stretch_start : match.start()] + text[match.end() : offsets[end_index + 1]]
         previous_end[row] = match.end()
-        names = names_in(stretch, target, file_texts[target])
+        names = () if target == path else names_in(stretch, file_texts[target])
         line_end = offsets[end_index + 1] - 1
         kept = fenced[line_index] or keeps_text(
             text, match.start(), match.end(), offsets[line_index], line_end

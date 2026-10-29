@@ -11,7 +11,7 @@ C-008: crates/repark-functions/src/lib.rs, python/repark/tests/functions/test_fn
 C-009: crates/repark-functions/src/lib.rs, crates/repark-functions/src/try_invert/map.md, python/repark/tests/functions/test_fnp7_try_inversions.py
 C-010: crates/repark-functions/src/lib.rs, crates/repark-functions/src/try_invert/map.md, python/repark/tests/functions/test_fnp7_try_inversions.py
 C-011: crates/repark-functions/src/lib.rs, crates/repark-functions/src/try_invert/map.md, python/repark/tests/functions/test_fnp7_try_inversions.py
-C-012: crates/repark-functions/src/lib.rs, python/repark-parity/bench/windows/roster.py::REFUSING_SLIDING_NAMES, python/repark-parity/bench/windows/roster.py::RESCANNED_SLIDING_NAMES, python/repark/tests/functions/test_fnp7_try_inversions.py
+C-012: crates/repark-functions/src/lib.rs, python/repark-parity/bench/windows/roster.py::REFUSING_SLIDING_NAMES, python/repark-parity/bench/windows/roster.py::RESCANNED_SLIDING_NAMES, python/repark-parity/bench/windows/roster.py::count_if, python/repark-parity/bench/windows/roster.py::try_avg, python/repark/tests/functions/test_fnp7_try_inversions.py
 C-013: crates/repark-functions/src/collection/str_to_map.rs, crates/repark-python/src/column/map.md, python/repark/src/repark/spark/functions_try.py, python/repark/tests/functions/test_fnp7_try_inversions.py, python/repark/tests/functions/test_functions_split_identity.py
 C-014: crates/repark-functions/src/lib.rs, crates/repark-functions/src/try_invert/map.md, python/repark/tests/functions/test_fnp7_try_inversions.py
 C-015: crates/repark-functions/src/lib.rs, crates/repark-functions/src/try_invert/map.md, crates/repark-functions/src/try_invert/temporal.rs, python/repark/tests/functions/test_fnp7_try_inversions.py

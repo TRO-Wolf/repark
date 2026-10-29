@@ -1,11 +1,11 @@
 # ipi-07-branch-read-schema-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-002: crates/repark-core/src/time_travel.rs::read_table_at, crates/repark-core/src/time_travel.rs::resolve_snapshot_id, crates/repark-spark/src/tests/create_table.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-003: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-004: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-005: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-006: crates/repark-core/src/time_travel.rs::read_table_at, crates/repark-core/src/time_travel.rs::resolve_snapshot_id, crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-007: python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-008: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py
-C-009: python/repark/tests/iceberg/test_ice_branch_schema_1.py
+C-001: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs::VersionRef, crates/repark-spark/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/time_travel.rs::try_new_from_table_snapshot, python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-002: crates/repark-core/src/time_travel.rs::DataFrame, crates/repark-core/src/time_travel.rs::VersionRef, crates/repark-core/src/time_travel.rs::read_table_at, crates/repark-core/src/time_travel.rs::resolve_snapshot_id, crates/repark-core/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/tests/create_table.rs, python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-003: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs::VersionRef, crates/repark-spark/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/time_travel.rs::try_new_from_table_snapshot, python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-004: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs::VersionRef, crates/repark-spark/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/time_travel.rs::try_new_from_table_snapshot, python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-005: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs::VersionRef, crates/repark-spark/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/time_travel.rs::try_new_from_table_snapshot, python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-006: crates/repark-core/src/time_travel.rs::DataFrame, crates/repark-core/src/time_travel.rs::VersionRef, crates/repark-core/src/time_travel.rs::read_table_at, crates/repark-core/src/time_travel.rs::resolve_snapshot_id, crates/repark-core/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs::VersionRef, crates/repark-spark/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/time_travel.rs::try_new_from_table_snapshot, python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-007: python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-008: crates/repark-spark/src/tests/create_table.rs, crates/repark-spark/src/time_travel.rs::VersionRef, crates/repark-spark/src/time_travel.rs::try_new_from_table_ref, crates/repark-spark/src/time_travel.rs::try_new_from_table_snapshot, python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag
+C-009: python/repark/tests/iceberg/test_ice_branch_schema_1.py::tag

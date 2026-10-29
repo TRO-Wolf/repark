@@ -1,16 +1,16 @@
 # ice-integrity-pins-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-spark/src/tests/kill_mid_write.rs
-C-002: crates/repark-spark/src/tests/kill_mid_write.rs
-C-003: crates/repark-spark/src/tests/kill_mid_write.rs
-C-004: crates/repark-spark/src/tests/kill_mid_write.rs
-C-005: crates/repark-spark/src/tests/kill_mid_write.rs
-C-006: crates/repark-spark/src/tests/kill_mid_write.rs
-C-007: crates/repark-spark/src/tests/kill_mid_write.rs
-C-008: crates/repark-spark/src/tests/kill_mid_write.rs
-C-009: crates/repark-spark/src/tests/kill_mid_write.rs
-C-010: crates/repark-spark/src/tests/kill_mid_write.rs
-C-011: crates/repark-spark/src/tests/kill_mid_write.rs
+C-001: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-002: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-003: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-004: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-005: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-006: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-007: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-008: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-009: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-010: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
+C-011: crates/repark-spark/src/tests/kill_mid_write.rs::Catalog, crates/repark-spark/src/tests/kill_mid_write.rs::HoldCatalog, crates/repark-spark/src/tests/kill_mid_write.rs::REPARK_KILL_MID_WRITE_CHILD, crates/repark-spark/src/tests/kill_mid_write.rs::remove_orphan_files
 C-014: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
 C-016: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
 C-017: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
@@ -23,7 +23,7 @@ C-023: crates/repark-spark/src/tests/kill_mid_write_hold.rs::register_table
 C-026: crates/repark-spark/src/tests/commit_unknown_doors.rs
 C-027: crates/repark-spark/src/tests/commit_unknown_doors.rs
 C-028: crates/repark-spark/src/tests/commit_unknown_doors.rs
-C-030: crates/repark-spark/src/tests/commit_unknown_doors.rs
+C-030: crates/repark-spark/src/tests/commit_unknown_doors.rs::CommitStateUnknown, crates/repark-spark/src/tests/commit_unknown_doors.rs::GateCatalog, crates/repark-spark/src/tests/commit_unknown_doors.rs::engine_err, crates/repark-spark/src/tests/commit_unknown_doors.rs::load_table, crates/repark-spark/src/tests/commit_unknown_doors.rs::operation_id, crates/repark-spark/src/tests/commit_unknown_doors.rs::register_table
 C-032: python/repark/tests/parity/previous_release_requirements.txt
 C-033: python/repark/tests/parity/previous_release_requirements.txt
 C-034: python/repark/tests/parity/previous_release_requirements.txt

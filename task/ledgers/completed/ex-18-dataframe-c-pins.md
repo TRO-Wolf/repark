@@ -1,3 +1,3 @@
 # ex-18-dataframe-c pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/parity/test_examples_dataframe_c.py, scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-001: python/repark/tests/parity/test_examples_dataframe_c.py::replace, python/repark/tests/parity/test_examples_dataframe_c.py::sameSemantics, python/repark/tests/parity/test_examples_dataframe_c.py::sample, python/repark/tests/parity/test_examples_dataframe_c.py::sampleBy, python/repark/tests/parity/test_examples_dataframe_c.py::show, python/repark/tests/parity/test_examples_dataframe_c.py::summary, python/repark/tests/parity/test_examples_dataframe_c.py::toJSON, scripts/check_example_coverage.py::BACKLOG_BASELINE

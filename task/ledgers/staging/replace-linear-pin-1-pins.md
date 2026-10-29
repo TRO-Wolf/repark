@@ -1,5 +1,5 @@
 # replace-linear-pin-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/dataframe/test_replace_linear_1.py::_DELTA_FLOOR, python/repark/tests/dataframe/test_replace_linear_1.py::_DEPTH, python/repark/tests/dataframe/test_replace_linear_1.py::_HEADROOM
-C-002: python/repark/tests/dataframe/test_replace_linear_1.py::_DELTA_FLOOR, python/repark/tests/dataframe/test_replace_linear_1.py::_DEPTH, python/repark/tests/dataframe/test_replace_linear_1.py::_HEADROOM
-C-003: python/repark/tests/dataframe/test_replace_linear_1.py::_DELTA_FLOOR, python/repark/tests/dataframe/test_replace_linear_1.py::_DEPTH, python/repark/tests/dataframe/test_replace_linear_1.py::_HEADROOM
+C-001: python/repark/tests/dataframe/test_replace_linear_1.py::VmHWM, python/repark/tests/dataframe/test_replace_linear_1.py::_DELTA_FLOOR, python/repark/tests/dataframe/test_replace_linear_1.py::_DEPTH, python/repark/tests/dataframe/test_replace_linear_1.py::_HEADROOM, python/repark/tests/dataframe/test_replace_linear_1.py::replace
+C-002: python/repark/tests/dataframe/test_replace_linear_1.py::VmHWM, python/repark/tests/dataframe/test_replace_linear_1.py::_DELTA_FLOOR, python/repark/tests/dataframe/test_replace_linear_1.py::_DEPTH, python/repark/tests/dataframe/test_replace_linear_1.py::_HEADROOM, python/repark/tests/dataframe/test_replace_linear_1.py::replace
+C-003: python/repark/tests/dataframe/test_replace_linear_1.py::VmHWM, python/repark/tests/dataframe/test_replace_linear_1.py::_DELTA_FLOOR, python/repark/tests/dataframe/test_replace_linear_1.py::_DEPTH, python/repark/tests/dataframe/test_replace_linear_1.py::_HEADROOM, python/repark/tests/dataframe/test_replace_linear_1.py::replace

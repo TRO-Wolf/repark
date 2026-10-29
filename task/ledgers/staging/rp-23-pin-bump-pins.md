@@ -1,6 +1,6 @@
 # rp-23-pin-bump pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/_acceptance.py, python/repark/tests/iceberg/_v3_statement_coverage_golden.py, python/repark/tests/iceberg/_v3_statement_coverage_repark.py, python/repark/tests/iceberg/test_sql_harden_cutover.py, python/repark/tests/writes/test_ice_spark_table_1.py
+C-001: python/repark/tests/_acceptance.py, python/repark/tests/iceberg/_v3_statement_coverage_golden.py, python/repark/tests/iceberg/_v3_statement_coverage_repark.py, python/repark/tests/iceberg/test_sql_harden_cutover.py::date, python/repark/tests/iceberg/test_sql_harden_cutover.py::delete_files, python/repark/tests/iceberg/test_sql_harden_cutover.py::sqlh1, python/repark/tests/iceberg/test_sql_harden_cutover.py::to_date, python/repark/tests/iceberg/test_sql_harden_cutover.py::unix_timestamp, python/repark/tests/writes/test_ice_spark_table_1.py::owner
 C-002: python/repark/tests/_acceptance.py, python/repark/tests/iceberg/test_mw8_runbook.py, python/repark/tests/perf/test_mw7_scale_smoke.py
-C-003: python/repark/tests/iceberg/test_sql_harden_cutover.py
-C-004: python/repark/tests/iceberg/test_sql_harden_cutover.py
+C-003: python/repark/tests/iceberg/test_sql_harden_cutover.py::date, python/repark/tests/iceberg/test_sql_harden_cutover.py::delete_files, python/repark/tests/iceberg/test_sql_harden_cutover.py::sqlh1, python/repark/tests/iceberg/test_sql_harden_cutover.py::to_date, python/repark/tests/iceberg/test_sql_harden_cutover.py::unix_timestamp
+C-004: python/repark/tests/iceberg/test_sql_harden_cutover.py::date, python/repark/tests/iceberg/test_sql_harden_cutover.py::delete_files, python/repark/tests/iceberg/test_sql_harden_cutover.py::sqlh1, python/repark/tests/iceberg/test_sql_harden_cutover.py::to_date, python/repark/tests/iceberg/test_sql_harden_cutover.py::unix_timestamp

@@ -1,13 +1,13 @@
 # profiles-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark-parity/bench/profiles/datasets.py, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py
-C-002: python/repark-parity/bench/profiles/map.md, python/repark-parity/bench/profiles/queries.py, python/repark-parity/tests/test_profiles_bed.py
-C-003: python/repark-parity/bench/profiles/harness.py::measure, python/repark-parity/bench/profiles/harness.py::median_seconds, python/repark-parity/bench/profiles/harness.py::require_quiet_box, python/repark-parity/bench/profiles/harness.py::smoke_config, python/repark-parity/bench/profiles/harness.py::write_cell_rows, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py
-C-004: python/repark-parity/bench/profiles/harness.py::measure, python/repark-parity/bench/profiles/harness.py::median_seconds, python/repark-parity/bench/profiles/harness.py::require_quiet_box, python/repark-parity/bench/profiles/harness.py::smoke_config, python/repark-parity/bench/profiles/harness.py::write_cell_rows, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py
-C-005: python/repark-parity/bench/profiles/harness.py::measure, python/repark-parity/bench/profiles/harness.py::median_seconds, python/repark-parity/bench/profiles/harness.py::require_quiet_box, python/repark-parity/bench/profiles/harness.py::smoke_config, python/repark-parity/bench/profiles/harness.py::write_cell_rows, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py
-C-006: python/repark-parity/tests/test_profiles_bed.py
-C-007: python/repark-parity/bench/profiles/run_profiles.py::table_property_alter, python/repark-parity/tests/test_profiles_bed.py
-C-008: python/repark-parity/tests/test_profiles_bed.py
-C-009: python/repark-parity/tests/test_profiles_bed.py
-C-010: crates/repark-core/src/config_file/tests/wiring.rs, python/repark-parity/tests/test_profiles_bed.py
-C-011: python/repark-parity/tests/test_profiles_bed.py
+C-001: python/repark-parity/bench/profiles/datasets.py::ensure_parquet_sf, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-002: python/repark-parity/bench/profiles/map.md, python/repark-parity/bench/profiles/queries.py::append_files, python/repark-parity/bench/profiles/queries.py::group_by, python/repark-parity/bench/profiles/queries.py::hash_join, python/repark-parity/bench/profiles/queries.py::merge_updates, python/repark-parity/bench/profiles/queries.py::overwrite_partition, python/repark-parity/bench/profiles/queries.py::scan_filter, python/repark-parity/bench/profiles/queries.py::sort_merge_join, python/repark-parity/bench/profiles/queries.py::to_arrow, python/repark-parity/bench/profiles/queries.py::window, python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-003: python/repark-parity/bench/profiles/harness.py::measure, python/repark-parity/bench/profiles/harness.py::median_seconds, python/repark-parity/bench/profiles/harness.py::require_quiet_box, python/repark-parity/bench/profiles/harness.py::smoke_config, python/repark-parity/bench/profiles/harness.py::write_cell_rows, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-004: python/repark-parity/bench/profiles/harness.py::measure, python/repark-parity/bench/profiles/harness.py::median_seconds, python/repark-parity/bench/profiles/harness.py::require_quiet_box, python/repark-parity/bench/profiles/harness.py::smoke_config, python/repark-parity/bench/profiles/harness.py::write_cell_rows, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-005: python/repark-parity/bench/profiles/harness.py::measure, python/repark-parity/bench/profiles/harness.py::median_seconds, python/repark-parity/bench/profiles/harness.py::require_quiet_box, python/repark-parity/bench/profiles/harness.py::smoke_config, python/repark-parity/bench/profiles/harness.py::write_cell_rows, python/repark-parity/bench/profiles/map.md, python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-006: python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-007: python/repark-parity/bench/profiles/run_profiles.py::table_property_alter, python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-008: python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-009: python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-010: crates/repark-core/src/config_file/tests/wiring.rs, python/repark-parity/tests/test_profiles_bed.py::table_property_alter
+C-011: python/repark-parity/tests/test_profiles_bed.py::table_property_alter

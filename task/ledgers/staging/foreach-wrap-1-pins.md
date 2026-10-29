@@ -1,6 +1,6 @@
 # foreach-wrap-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/src/repark/spark/dataframe/surface_b.py::foreach, python/repark/src/repark/spark/dataframe/surface_b.py::foreachPartition, python/repark/tests/conftest.py
-C-002: python/repark/src/repark/spark/dataframe/surface_b.py::foreach, python/repark/src/repark/spark/dataframe/surface_b.py::foreachPartition, python/repark/tests/conftest.py
-C-003: python/repark/src/repark/spark/dataframe/surface_b.py::foreach, python/repark/src/repark/spark/dataframe/surface_b.py::foreachPartition, python/repark/tests/conftest.py
-C-004: python/repark-parity/tests/live_spark/fw1_callback_oracle.py::define_cells, python/repark-parity/tests/live_spark/fw1_callback_oracle.py::record_all
+C-001: python/repark/src/repark/spark/dataframe/surface_b.py::Exception, python/repark/src/repark/spark/dataframe/surface_b.py::foreach, python/repark/src/repark/spark/dataframe/surface_b.py::foreachPartition, python/repark/tests/conftest.py
+C-002: python/repark/src/repark/spark/dataframe/surface_b.py::Exception, python/repark/src/repark/spark/dataframe/surface_b.py::foreach, python/repark/src/repark/spark/dataframe/surface_b.py::foreachPartition, python/repark/tests/conftest.py
+C-003: python/repark/src/repark/spark/dataframe/surface_b.py::Exception, python/repark/src/repark/spark/dataframe/surface_b.py::foreach, python/repark/src/repark/spark/dataframe/surface_b.py::foreachPartition, python/repark/tests/conftest.py
+C-004: python/repark-parity/tests/live_spark/fw1_callback_oracle.py::FW1_OUT, python/repark-parity/tests/live_spark/fw1_callback_oracle.py::FW1_WAREHOUSE, python/repark-parity/tests/live_spark/fw1_callback_oracle.py::define_cells, python/repark-parity/tests/live_spark/fw1_callback_oracle.py::pyspark, python/repark-parity/tests/live_spark/fw1_callback_oracle.py::record_all

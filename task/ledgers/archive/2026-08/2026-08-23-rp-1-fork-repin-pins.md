@@ -2,7 +2,7 @@
 
 C-001: crates/repark-iceberg/map.md
 C-002: crates/repark-iceberg/map.md
-C-003: crates/repark-iceberg/map.md, crates/repark-iceberg/src/catalog/tests/namespace_scoped.rs
+C-003: crates/repark-iceberg/map.md, crates/repark-iceberg/src/catalog/tests/namespace_scoped.rs::NamespaceScopedCatalog
 C-005: crates/repark-spark/src/tests/metadata_tables.rs, crates/repark-sql/tests/introspection.rs
 C-007: crates/repark-spark/src/tests/call.rs
 C-008: crates/repark-spark/src/tests/call.rs, python/repark/tests/_acceptance.py

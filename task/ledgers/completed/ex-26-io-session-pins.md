@@ -14,4 +14,4 @@ C-011: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-012: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-013: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-014: scripts/check_example_coverage.py::BACKLOG_BASELINE
-C-015: python/repark/tests/parity/test_examples_io_session.py, scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-015: python/repark/tests/parity/test_examples_io_session.py::register, python/repark/tests/parity/test_examples_io_session.py::saveAsTable, scripts/check_example_coverage.py::BACKLOG_BASELINE

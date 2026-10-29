@@ -453,3 +453,28 @@ def test_lockstep_branch_mode_warns_with_the_advisory_note(tmp_path: Path) -> No
     assert lines[0] == "WARNING: pkg/map.md was not updated on this branch (map.md lockstep rule)."
     assert lines[-1].startswith("note: map.md lockstep is advisory")
     assert "ERROR" not in result.stderr
+
+
+def test_migration_binds_a_used_token_and_leaves_a_self_bound_map_path_only(mapped: Path) -> None:
+    _write(mapped, _TEST, "fn demo_holds() {}\nfn other_holds() { helper_call(); }\n")
+    _write(
+        mapped,
+        _MAP,
+        "\n".join(
+            [
+                "# map",
+                "",
+                "## Contents",
+                f"- `pins.rs` — calls `helper_call` and `ghost_name`. pins: {_UNIT}/C-001",
+                "",
+                "## Notes",
+                f"Prose naming `demo_holds` with no file row. pins: {_UNIT}/C-002",
+                "",
+            ]
+        ),
+    )
+    assert _migrate(mapped).returncode == 0
+    assert (mapped / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}::helper_call",
+        f"C-002: {_MAP}",
+    ]

@@ -8,7 +8,7 @@ C-005: python/repark-parity/tests/test_map_pr_gate_1.py
 C-006: python/repark-parity/tests/test_map_pr_gate_1.py
 C-007: python/repark-parity/tests/test_map_pr_gate_1.py
 C-008: python/repark-parity/tests/test_map_pr_gate_1.py
-C-009: python/repark-parity/tests/test_map_pr_gate_1.py, scripts/check_map_md.sh
-C-010: python/repark-parity/tests/test_map_pr_gate_1.py, scripts/check_map_md.sh
-C-011: python/repark-parity/tests/test_map_pr_gate_1.py, scripts/check_map_md.sh
-C-012: scripts/check_map_md.sh
+C-009: python/repark-parity/tests/test_map_pr_gate_1.py, scripts/check_map_md.sh::toml
+C-010: python/repark-parity/tests/test_map_pr_gate_1.py, scripts/check_map_md.sh::toml
+C-011: python/repark-parity/tests/test_map_pr_gate_1.py, scripts/check_map_md.sh::toml
+C-012: scripts/check_map_md.sh::toml
