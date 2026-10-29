@@ -6,6 +6,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::Tokenizer;
 use repark_core::TempViewSession;
 
+use crate::namespace_ddl::consume_word;
 use crate::view_ddl::temp_ddl::temp_view_home_segments;
 
 const WRITE_HEADS: [&str; 5] = ["DELETE", "UPDATE", "MERGE", "INSERT", "TRUNCATE"];
@@ -43,7 +44,7 @@ fn write_target(sql: &str) -> Option<(WriteRoute, ObjectName)> {
         WriteRoute::Delete
     } else if parser.parse_keyword(Keyword::UPDATE) {
         WriteRoute::Update
-    } else if parser.parse_keywords(&[Keyword::MERGE, Keyword::INTO]) {
+    } else if merge_head(&mut parser) {
         WriteRoute::Merge
     } else if parser.parse_keyword(Keyword::INSERT) {
         insert_route(&mut parser)?
@@ -54,6 +55,18 @@ fn write_target(sql: &str) -> Option<(WriteRoute, ObjectName)> {
     };
     let name = parser.parse_object_name(false).ok()?;
     Some((route, name))
+}
+
+fn merge_head(parser: &mut Parser<'_>) -> bool {
+    if !parser.parse_keyword(Keyword::MERGE) {
+        return false;
+    }
+    if consume_word(parser, "WITH")
+        && !(consume_word(parser, "SCHEMA") && consume_word(parser, "EVOLUTION"))
+    {
+        return false;
+    }
+    parser.parse_keyword(Keyword::INTO)
 }
 
 fn insert_route(parser: &mut Parser<'_>) -> Option<WriteRoute> {
