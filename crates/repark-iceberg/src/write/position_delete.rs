@@ -267,7 +267,7 @@ async fn write_position_deletes_for_partition(
     batch_rows: usize,
 ) -> Result<Vec<DataFile>> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    crate::write::data_format::resolve_data_format(
+    let data_format = crate::write::data_format::resolve_data_format(
         staging.write_format.as_deref(),
         Some(table_props.write_format_default.as_str()),
     )?;
@@ -276,8 +276,9 @@ async fn write_position_deletes_for_partition(
         table
             .metadata()
             .properties()
-            .get(crate::write::data_format::DELETE_FORMAT_PROPERTY)
+            .get("write.delete.format.default")
             .map(String::as_str),
+        data_format,
         table.metadata().format_version(),
     )?;
     let location_generator =

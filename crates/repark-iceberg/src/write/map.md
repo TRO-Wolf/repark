@@ -334,7 +334,7 @@ repark-core's error map.
   property, else parquet. `resolve_delete_format(staging_format, table_property,
   format_version)` returns PUFFIN on format-version 3 before consulting any
   setting, else the per-write `delete-format` option, else the
-  `write.delete.format.default` property, else parquet (**ICE-DELETE-FORMAT-GUARD-1, 2026-10-28:** the data-format fallback is gone; see the dated bullet below). The vocabulary is
+  `write.delete.format.default` property, else the data format (**RP-61, 2026-10-28:** the interim parquet default of ICE-DELETE-FORMAT-GUARD-1 is reverted; see the dated bullet below). The vocabulary is
   parquet/orc/avro case-insensitively; any other string refuses with
   `Invalid file format: {name}` (IllegalArgumentException), the same shape
   `validate_write_format` uses. Callers pass
@@ -343,7 +343,7 @@ repark-core's error map.
   sites through them (unpartitioned staging, partitioned fanout, partitioned lineage,
   unpartitioned MERGE, position deletes), and WO3a opened `validate_write_format` to
   orc/avro. pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-025
-- `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or table property, else parquet, whatever the data format. An explicit Avro or ORC refuses with a Plan error that names its source and hints `write.delete.format.default` set to `parquet`. The same file adds `mor_delete_format(table, mode_property)` (the table's delete format and its source, read by the Spark-door guard and by MERGE), `refuse_any_unreadable_delete_format(table, mode_property)` (the up-front check that `merge.rs`, `write_to_branch.rs` and the Spark-door delete-format guard call; `MERGE_MODE_PROPERTY` is public) and `inherited_delete_format_refusal`. The fallback's unit test is removed with the fallback. Parquet on an inherited Avro or ORC delete format is a dated divergence from Spark until RP-61. Round 3 (2026-10-28): `fork_mor_delete_format` and `refuse_any_unreadable_fork_delete_format` read the mode with the fork's exact `merge-on-read` parse, through the same `delete_format_under` body as the RePark parse (trimmed, case-insensitive); the fork-route arm and the redirected branch DML use them, and MERGE keeps the RePark parse. No error text changed. pins: ice-delete-format-guard-1/C-006, C-026, C-030
+- `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), reverted by RP-61 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or the `write.delete.format.default` property (through `parse_format`, so `avro` and `orc` are honoured), else the data format. The guard's helpers are removed with their callers: `MorDeleteFormat`, `mor_delete_format`, `fork_mor_delete_format`, `delete_format_under`, `repark_reads_merge_on_read`, `fork_reads_merge_on_read`, `refuse_any_unreadable_delete_format`, `refuse_any_unreadable_fork_delete_format`, `refuse_inherited`, `inherited_delete_format_refusal` and `readable_delete_format`, with the constants `DELETE_FORMAT_PROPERTY`, `DELETE_FORMAT_OPTION`, `DATA_FORMAT_PROPERTY`, `MERGE_MODE_PROPERTY` and `MERGE_ON_READ`. The file is the pre-guard state on `3d24ad40` plus one unit test, `explicit_avro_or_orc_delete_format_is_honoured_on_parquet_data`; the fallback's test `delete_falls_back_to_data_format` is back. pins: rp-61-posdel-format-repin-1/C-003, C-005
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
@@ -1731,7 +1731,7 @@ repark-core's error map.
   Before the round it read the data-file property only, so the delete-codec property was
   silently ignored too; the resolver is comment-free per the owner ban, and this row is where
   its order is written down. pins: ice-session-write-conf-1/C-040
-- `position_delete.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28):** `write_position_deletes_for_partition` takes its delete format from `resolve_delete_format` alone; the data-format parameter is gone, and `resolve_data_format` stays as the staging-format validation. Parquet on an inherited Avro or ORC format is a dated divergence from Spark until RP-61. pins: ice-delete-format-guard-1/C-001
+- `position_delete.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), reverted by RP-61 (2026-10-28):** `write_position_deletes_for_partition` takes the resolved data format again and passes it to `resolve_delete_format`, so an inherited Avro or ORC format writes Avro or ORC position deletes that the pinned fork reads back. The file is byte-identical to `3d24ad40`. pins: rp-61-posdel-format-repin-1/C-003
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending

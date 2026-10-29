@@ -376,8 +376,8 @@ def test_partitioned_v3_cow_delete_rewrites_orc(spark: ReparkSession) -> None:
     _cow_files_are(spark, table, "ORC", [[2, "b", "y"], [3, "c", "x"]])
 
 
-def test_mor_delete_on_orc_writes_parquet_delete_file(spark: ReparkSession) -> None:
-    """M-1: a v2 merge-on-read ORC table writes Parquet position deletes.
+def test_mor_delete_on_orc_writes_orc_delete_file(spark: ReparkSession) -> None:
+    """M-1: a v2 merge-on-read ORC table writes ORC position deletes.
 
     pins: ice-orc-avro-1/C-013.
     """
@@ -392,7 +392,7 @@ def test_mor_delete_on_orc_writes_parquet_delete_file(spark: ReparkSession) -> N
         spark,
         f"SELECT content, file_format, record_count FROM {table}.files "
         "ORDER BY content, file_format",
-    ) == [[0, "ORC", 3], [1, "PARQUET", 1]]
+    ) == [[0, "ORC", 3], [1, "ORC", 1]]
 
 
 def test_delete_format_default_overrides(spark: ReparkSession) -> None:
@@ -610,3 +610,26 @@ def test_compaction_keeps_table_format(spark: ReparkSession) -> None:
     ).to_arrow()
     assert _live_data_formats(spark, table) == ["ORC"]
     assert _ordered_rows(spark, f"SELECT id FROM {table} ORDER BY id") == [[1], [2]]
+
+
+@pytest.mark.parametrize("file_format", ["avro", "orc"])
+def test_mor_delete_on_avro_or_orc_reads_back(spark: ReparkSession, file_format: str) -> None:
+    """The audit's AUD-003 probe: a merge-on-read DELETE on Avro or ORC data reads back.
+
+    The DELETE writes its position-delete file in the data format, and the next read
+    applies it.
+    """
+    table = f"{CATALOG}.{NS}.aud_003_{file_format}"
+    spark.sql(
+        f"CREATE TABLE {table} (id INT) USING iceberg TBLPROPERTIES ('format-version' = '2', "
+        f"'write.format.default' = '{file_format}', 'write.delete.mode' = 'merge-on-read')"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (0), (1), (2), (3), (4)")
+    assert _ordered_rows(spark, f"SELECT id FROM {table} ORDER BY id") == [[0], [1], [2], [3], [4]]
+    spark.sql(f"DELETE FROM {table} WHERE id BETWEEN 1 AND 3")
+    assert _ordered_rows(spark, f"SELECT id FROM {table} ORDER BY id") == [[0], [4]]
+    assert _ordered_rows(
+        spark,
+        f"SELECT content, file_format, record_count FROM {table}.files "
+        "ORDER BY content, file_format",
+    ) == [[0, file_format.upper(), 5], [1, file_format.upper(), 3]]
