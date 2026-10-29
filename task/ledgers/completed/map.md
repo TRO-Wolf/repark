@@ -630,7 +630,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   newest existing metadata file, as Java's `HadoopTableOperations.refresh` does; the walk stops at
   the first gap, refuses past 10,000 files and stays inside the Java `int` range. C-001 to C-006
   PROVEN with pins (the stale-hint pins red on `321c6095`, green on `749f11a4`); C-007
-  (compressed-codec names) OPEN, the owner's question; C-008 (the label re-date) PROVEN by ice-v2-label-1 C-054. `risk_tier: standard`. Merged 2026-10-28 as `9ab67d7d`. Branch
+  (compressed-codec names) closed by citation of ICE-HADOOP-GZIP-METADATA-1 (PR #1218, `f5a0cf88`), per the errata of 2026-10-29; C-008 (the label re-date) PROVEN by ice-v2-label-1 C-054. `risk_tier: standard`. Merged 2026-10-28 as `9ab67d7d`. Branch
   `fix/ice-hadoop-hint-window-1`.
   pins: ice-hadoop-hint-window-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
 - [ice-merge-append-1-ledger.md](ice-merge-append-1-ledger.md) —
@@ -979,6 +979,8 @@ else. The next pickup's `make ledger-archive` files everything here under
   pins: rp-61-posdel-format-repin-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-018
 - [rp-62-eqdel-repin-1-ledger.md](rp-62-eqdel-repin-1-ledger.md) — **RP-62-EQDEL-REPIN-1 (2026-10-29, merged 2026-10-29 as PR #1213 at `df43dca5`), completed:** the fork repinned to `935cc55c` (F-EQDEL-DROPPED-KEY-1, fork PR `#377`), with the lock moved by hand. The audit's dropped-key sequence is pinned through both doors: Parquet data reads the survivors, and Avro and ORC data stay loud-or-correct (F-EQDEL-DROPPED-KEY-2, OPEN). The native door's DELETE, UPDATE and MERGE delete-format shapes are pinned (NATIVE-DOOR-DELETE-FORMAT-1). 11 of 13 clauses PROVEN; C-006 and C-007 (the Avro and ORC residue) are OPEN.
   pins: rp-62-eqdel-repin-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [ice-hadoop-gzip-metadata-1-ledger.md](ice-hadoop-gzip-metadata-1-ledger.md) — **ICE-HADOOP-GZIP-METADATA-1 (2026-10-29, AUD-007 Critical, AUD-010 Medium; merged 2026-10-29 as PR #1218 at `f5a0cf88`), completed:** the `type=hadoop` path read's hinted version, hint walk and no-hint listing see Java's compressed metadata names (`v<N>.gz.metadata.json` and `v<N>.metadata.json.gz`) in Java's order, so a stale hint after a committed delete reads the surviving rows and a gzip-named current file reads. A readable hint naming a missing version keeps Java's refusal (the cleanup shape was a probe artefact). 9 of 12 clauses PROVEN (C-001 to C-009); C-010 and C-011 (the owner's leads) and C-012 (the codec-by-bytes lead) are OPEN. Grade A. Branch `fix/ice-hadoop-gzip-metadata-1`.
+  pins: ice-hadoop-gzip-metadata-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [session-surface-1-ledger.md](session-surface-1-ledger.md) —
   **SESSION-SURFACE-1 step 1 (2026-09-14), in flight:** the 19-name SparkSession
   surface card — job tags, the interrupt trio, the five Connect-only names,
