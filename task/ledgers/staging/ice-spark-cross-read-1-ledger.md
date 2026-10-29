@@ -21,6 +21,8 @@ against a local warehouse, and on AWS when the owner wires the workflow step.
 | C-004 | The AWS leg discovers the scratch tables on Glue and on S3 Tables, gates like the AWS legs plus a PySpark skip, collects cleanly unset, and is not run. | Two discovery cells with the module-level skip; collect-only proof. | PROVEN | `python/repark/tests/parity/test_aws_acceptance_cross_read.py`: 2 tests collected and 2 skipped with the variable unset, in an interpreter without PySpark. No AWS cell was attempted. |
 | C-005 | The AWS leg runs green on wired AWS. | The owner wires the workflow step from the unit order; the nightly then runs it. | OPEN | Pending owner wire-up; the step is proposed as a fenced diff in `task/wo/ice-spark-cross-read-1/order.md`. |
 
+| C-006 | Dated 2026-10-29: the gate now accepts `SPARK-CANNOT-READ` only for the recorded unsupported-type condition (first line the recorded prefix plus `timestamp_ns` or `timestamptz_ns`) on a nanosecond table; every other Spark failure is rejected at any precision (CROSS-READ-GATE-CLASS-1, AUD-005). C-003 keeps its text. | The cross-read-gate-class-1 ledger, clauses C-001 to C-003, and their pins. | OPEN | Built on branch `fix/cross-read-gate-class-1`; closes on its merge. |
+
 ## Local outcome table (2026-10-14)
 
 ```

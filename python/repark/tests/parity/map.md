@@ -48,7 +48,7 @@ pins.
 - [_acceptance_cross_release_runner.py](_acceptance_cross_release_runner.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): the one script both releases run in leg X, with calls 1.5.5 has (the builder, `sql`, `to_arrow`): it refuses unless its version and install origin (`index-wheel` or `local-build`) are its role's, adopts a local table's newest metadata file, creates one of the X kinds, appends, or reads, and writes the read to Arrow IPC with the current snapshot's id, `total-records` and delete files.
 - [_acceptance_sigv4.py](_acceptance_sigv4.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): SigV4 header signing in the standard library (ruling 88 and Q10), test-only.
 - [_acceptance_commit_resolver.py](_acceptance_commit_resolver.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): leg U's resolver rules: the stable snapshot-id read (two reads 2 s apart agree within 60 s, else `UnresolvedError`), the attempted snapshot from the held metadata file, and the missing status-check properties.
-- [_acceptance_cross_read.py](_acceptance_cross_read.py) — Spark reads RePark-written tables and answers row-equal.
+- [_acceptance_cross_read.py](_acceptance_cross_read.py) — Spark reads RePark-written tables and answers row-equal. CROSS-READ-GATE-CLASS-1 (2026-10-29): the gate expects SPARK-CANNOT-READ only for the recorded unsupported-type condition (the recorded prefix plus timestamp_ns or timestamptz_ns) on a nanosecond table; every other Spark failure is rejected at any precision.
 - [_acceptance_replace.py](_acceptance_replace.py) — CREATE OR REPLACE TABLE … AS twice leg body for the real-AWS acceptance harness.
 - [_acceptance_v3.py](_acceptance_v3.py) — Format-version-3 leg body for the real-AWS acceptance harness (LIVE-v3).
 
