@@ -415,8 +415,7 @@ check-docs-links: ## Markdown link gate over tracked *.md: relative links resolv
 
 .PHONY: check-map-sync
 check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)
-	@# Companion to check-map-md: that one forces a map to be TOUCHED, this one checks what it
-	@# says. SSOT: scripts/sync_map_md.py. Link validity is armed here, on both pre-commit
+	@# SSOT: scripts/sync_map_md.py. Link validity is armed here, on both pre-commit
 	@# paths (measured n=5 median 0.08 s over 143 maps) and — since 2026-08-23 — as the
 	@# `map.md link-validity guard` step in ci.yml's guards job. Change one, change the other. The COVERAGE rule — every mappable
 	@# tracked file mentioned by its directory's map — is behind `--strict` and NOT armed: the
