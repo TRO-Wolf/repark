@@ -291,3 +291,33 @@ def test_create_or_replace_temp_view_registers_a_name_spark_accepts(
     session.createDataFrame([(99,)], "id INT").createOrReplaceTempView(name)
     for read in reads:
         assert _ids(session, f"SELECT id FROM {read}") == [99]
+
+
+@pytest.mark.parametrize(
+    "name", ["`Ä`", "`ä`", "`1a`"], ids=["upper-letter", "lower-letter", "digit"]
+)
+def test_get_table_answers_a_backticked_view_name_as_temporary(
+    session: ReparkSession, name: str
+) -> None:
+    view = "`Ä`" if "ä" in name.lower() else name
+    _seed(session, "t", view, False, False)
+    table = session.catalog.getTable(name)
+    assert table.tableType == "TEMPORARY"
+    assert table.isTemporary is True
+
+
+@pytest.mark.parametrize(
+    "name", ["`Ä`", "`ä`", "`1a`"], ids=["upper-letter", "lower-letter", "digit"]
+)
+def test_the_cache_identity_apis_resolve_a_backticked_view_name(
+    session: ReparkSession, name: str
+) -> None:
+    view = "`Ä`" if "ä" in name.lower() else name
+    _seed(session, "t", view, False, False)
+    assert session.catalog.isCached(name) is False
+    session.catalog.cacheTable(name)
+    assert session.catalog.isCached(name) is True
+    assert _ids(session, f"SELECT id FROM {name}") == [99]
+    session.catalog.uncacheTable(name)
+    assert session.catalog.isCached(name) is False
+    assert _table(session, "t") == [1, 2, 3]
