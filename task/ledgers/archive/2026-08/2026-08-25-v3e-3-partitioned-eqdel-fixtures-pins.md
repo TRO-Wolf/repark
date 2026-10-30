@@ -7,6 +7,7 @@ C-004: crates/repark-spark/src/tests/v3e3.rs
 C-005: crates/repark-spark/src/tests/v3e3.rs
 C-006: crates/repark-spark/src/tests/v3e3.rs
 C-007: crates/repark-spark/src/tests/v3e3.rs
+C-008: none (records)
 C-009: python/repark/tests/iceberg/test_v3e3_fixtures.py
 C-010: crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/iceberg/test_v3e3_fixtures.py
 C-011: crates/repark-spark/src/tests/v3e3.rs

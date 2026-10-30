@@ -1072,13 +1072,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   JSON, MSCK REPAIR, ANALYZE COMPUTE STATISTICS) and the near-miss pins hold the ten
   fall-throughs (plain DESCRIBE/DESC, DESCRIBE NAMESPACE/HISTORY, SHOW PARTITIONS /
   NAMESPACES / FUNCTIONS, SET TBLPROPERTIES / LOCATION, ANALYZE DATABASE / TABLES, bare
-  MSCK, SELECT 1).
-  , `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
+  MSCK, SELECT 1).), `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
   PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts;
   since IPI-40 PR6a2 the SHOW NAMESPACES shadowing pin asserts that bare `SHOW VIEWS` answers
   its `namespace`/`viewName`/`isTemporary` frame while `SHOW ALL` keeps DataFusion's refusal,
-  pinned as its complete Plan text since PR6 r2.
-  , `alter`, `dml`
+  pinned as its complete Plan text since PR6 r2.), `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
@@ -1107,14 +1105,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   empty source commits no snapshot under dynamic (partitioned and unpartitioned) and
   wipes under static, and the
   static entry pins whole-table replace for `BY NAME` under a dynamic conf — reuses the
-  `setup_dynamic` / `seed` / `run_static` helpers of its sibling;
+  `setup_dynamic` / `seed` / `run_static` helpers of its sibling;),
   `dyn_partition_overwrite` (ICE-DYN-OVERWRITE-1: dynamic PARTITION-less replace keeps
   siblings + `replace-partitions=true`, dynamic-empty no-op (partitioned and not),
   static whole-table, unpartitioned-dynamic whole-table, the marker-as-payload pins
   (string literal and trailing comment stay partition-scoped under dynamic),
   the dedicated static-entry pin, and the deterministic stale-handle race twins —
   snapshot replaces the same-partition append and keeps a surviving-partition
-  append, serializable refuses it (ruling Q-20a-6 closes L-001/L-002);
+  append, serializable refuses it (ruling Q-20a-6 closes L-001/L-002);),
   `truncate` (DML-C: wipe summary keys, equal empty-overwrite keys, time travel,
   missing-table / view / `INVALID_PARTITION_OPERATION` / IF EXISTS parse refuse;
   IPI-51 PR4 (2026-09-20): the
@@ -1127,7 +1125,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `Error during planning: [PARSE_SYNTAX_ERROR] ...` text — the current class, where Spark
   4.1.2 raises `ParseException`),
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
-  MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
+  MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;),
   `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
@@ -1201,7 +1199,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   eight, a comma relation beside a subquery or a CTE body is redirected too, an explicit
   `t.branch_main` beside a plain name stays on main, and a GROUP BY comma list is not a
   relation list (red-first: the round-1 walker answers two rows where the branch answers four).
-  `a_delete_creates_the_wap_branch_that_does_not_exist` and its UPDATE twin pin WAP-002.
+  `a_delete_creates_the_wap_branch_that_does_not_exist` and its UPDATE twin pin WAP-002.),
   `wap_id` (**IPI-05, 2026-09-21:** the `spark.wap.id` staged half on the Rust door — a plain
   INSERT with only the id set stages a snapshot stamped `wap.id` while main stays put;
   `publish_changes(table, wap_id)` answers `(source_snapshot_id, current_snapshot_id)`,
@@ -1267,12 +1265,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   real-table-wins branch — a real `snapshots` table under catalog-built namespace
   `sales.sub` beside base table `sales.sub` must make `read_metadata_path_at`
   fall through (both doors refuse the four-part name) instead of serving
-  `sales.sub` snapshot metadata.
+  `sales.sub` snapshot metadata.),
   `branch_read_schema` (**xo55-bs R1 (2026-09-22):** the R-BRANCH-SCHEMA battery — the
   branch selector and `VERSION AS OF 'b0'` project the current schema after ADD/DROP/RENAME
   COLUMN with `z` NULL and `WHERE z IS NULL` answering; tag, snapshot-id, and timestamp
   pins keep the snapshot schema; unknown refs refuse verbatim; the `read_table_at` pin
-  covers the reader-options door.
+  covers the reader-options door.),
   `normalize`, `local_fs_ddl`,
   `router` (`bug010_multi_statement_refuses_parse_class`: multi-statement `PARSE_SYNTAX_ERROR` /
   `42601`, trailing-semicolon acceptance, F-BR-2 eager DML), `show_create`

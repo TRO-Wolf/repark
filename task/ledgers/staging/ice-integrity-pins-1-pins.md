@@ -50,4 +50,4 @@ C-063: none (records)
 C-064: python/repark-parity/tests/test_cross_read_progress.py
 C-065: python/repark-parity/tests/test_cross_read_progress.py
 C-072: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
-C-073: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
+C-073: none (records)

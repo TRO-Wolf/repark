@@ -7,5 +7,5 @@ C-004: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
 C-005: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
 C-006: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
 C-007: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
-C-008: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
-C-009: crates/repark-core/src/iceberg_path/hint_walk_tests.rs
+C-008: none (records)
+C-009: none (records)

@@ -5349,7 +5349,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `"any"`, the `ST_INVALID_ALGORITHM_VALUE` JSON form, CRS round trips) and the
   reader-schema V3-GEO-1 pin. The spatial DDL doors now parse
   (**TYPES-GEO-DDL-1**, 2026-09-15 — flipped to
-  `test_geometry_ddl_door_answers` / `test_spatial_ddl_door_answers`;
+  `test_geometry_ddl_door_answers` / `test_spatial_ddl_door_answers`;).
 - `test_types_geo_ddl_1.py` + `fixtures-batch13-geo.json` — **TYPES-GEO-DDL-1 (2026-09-15):**
   the recorded PySpark 4.1.2 `_parse_datatype_string` oracle (cells `G13-0 … G13-20`,
   copied verbatim) pinned on both DDL doors (`DataType.fromDDL` and

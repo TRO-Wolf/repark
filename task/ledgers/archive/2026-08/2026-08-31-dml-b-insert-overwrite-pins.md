@@ -5,3 +5,4 @@ C-002: crates/repark-spark/src/tests/partition_overwrite.rs, python/repark/tests
 C-003: python/repark/tests/writes/test_writer_v2.py
 C-004: crates/repark-spark/src/tests/insert_overwrite.rs, crates/repark-spark/src/tests/partition_overwrite.rs, python/repark/tests/writes/test_dml_b_partition_overwrite.py, python/repark/tests/writes/test_writer_v2.py
 C-005: crates/repark-spark/src/tests/insert_overwrite.rs, crates/repark-spark/src/tests/partition_overwrite.rs, python/repark/tests/writes/test_dml_b_partition_overwrite.py
+C-006: none (records)

@@ -11,6 +11,6 @@ C-008: crates/repark-spark/src/tests/nan_pushdown.rs::assert_unary_nan, crates/r
 C-009: python/repark/tests/iceberg/test_ice_nan_pushdown_1.py
 C-010: python/repark/tests/iceberg/test_ice_nan_pushdown_1.py
 C-011: python/repark/tests/iceberg/test_ice_nan_pushdown_1.py
-C-012: python/repark/tests/iceberg/test_ice_nan_pushdown_1.py
+C-012: none (records)
 C-013: python/repark/tests/iceberg/test_ice_nan_pushdown_1.py
 C-014: python/repark/tests/iceberg/test_ice_nan_pushdown_1.py

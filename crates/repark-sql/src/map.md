@@ -267,8 +267,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   resolved at execute against `repark.sql.allowCreateFormatVersion3` (default false; entries()
   reader, no `repark-functions` product edge; `execute_staged_create` /
   `iceberg_table_creation` / `iceberg_create_format_version` carry `Model: Grok 4.6 xHigh`;
-  **V3-9 (2026-09-02)** dropped the refusal's now-false merge-on-read parenthetical,
-  , A11 nanosecond-timestamp
+  **V3-9 (2026-09-02)** dropped the refusal's now-false merge-on-read parenthetical,), A11 nanosecond-timestamp
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
   three-way `LocationPolicy` resolution (**A13:** `TempFallbackAllowed` root is the memory
   catalog warehouse on the `register_memory_catalog` path), staged create/replace, and the service-managed

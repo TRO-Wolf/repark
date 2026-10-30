@@ -3,7 +3,7 @@
 C-001: crates/repark-spark/src/tests/u9_timestamp_ltz.rs, python/repark/tests/timestamps/test_u9_types_1.py
 C-002: crates/repark-spark/src/tests/u9_timestamp_ltz.rs, python/repark/tests/timestamps/test_u9_types_1.py
 C-003: crates/repark-spark/src/tests/u9_timestamp_ltz.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-004: crates/repark-sql/tests/ansi_door_u9_types.rs::TIMESTAMP_LTZ
+C-004: crates/repark-sql/tests/ansi_door_u9_types.rs
 C-005: python/repark/tests/timestamps/test_u9_types_1.py
 C-006: crates/repark-spark/src/tests/u9_map.rs, python/repark/tests/timestamps/test_u9_types_1.py
 C-007: python/repark/tests/timestamps/test_u9_types_1.py
@@ -15,4 +15,4 @@ C-012: crates/repark-spark/src/tests/u9_map.rs, python/repark/tests/timestamps/t
 C-013: crates/repark-iceberg/src/catalog/tests/uuid_presentation.rs::the_parser_is_java_uuid_from_string, crates/repark-spark/src/tests/u9_uuid_void_writes.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/timestamps/test_u9_types_1.py::run_step, python/repark/tests/timestamps/test_u9_types_1.py::write_dataframe, scripts/check_rust_file_size.py
 C-014: crates/repark-spark/src/tests/u9_uuid_void_writes.rs, python/repark/tests/timestamps/test_u9_types_1.py
 C-015: crates/repark-spark/src/tests/u9_uuid_void_writes.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-016: crates/repark-iceberg/src/catalog/tests/uuid_presentation.rs::a_binary_source_is_decoded_text_like_spark, crates/repark-spark/src/tests/u9_uuid_void_writes.rs::a_binary_source_into_uuid_is_decoded_text_like_spark, crates/repark-spark/src/tests/u9_uuid_void_writes.rs::nested_uuid_assignments_type_as_text_like_spark, python/repark/tests/timestamps/test_u9_types_1.py::decode, python/repark/tests/timestamps/test_u9_types_1.py::write_dataframe
+C-016: none (records)

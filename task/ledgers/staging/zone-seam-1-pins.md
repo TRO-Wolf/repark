@@ -3,9 +3,9 @@
 C-001: none (records)
 C-002: none (records)
 C-003: none (records)
-C-004: python/repark/tests/timestamps/ntz_9_verify_spark_oracle.json
+C-004: python/repark/tests/timestamps/test_ntz_9_verify.py
 C-005: none (records)
-C-006: python/repark/tests/timestamps/zone_oracle_1_main_difference.json
+C-006: python/repark/tests/timestamps/test_zone_oracle_1.py
 C-007: python/repark/tests/timestamps/test_zone_seam_1.py
 C-008: python/repark/tests/timestamps/test_zone_seam_1.py
 C-009: crates/repark-spark/tests/ntz_nested_refuse_casts.rs::CONTAINER_CASTS, crates/repark-spark/tests/ntz_nested_refuse_casts.rs::IN_A_SUBQUERY, crates/repark-spark/tests/ntz_nested_refuse_casts.rs::ON_LINEAGE, crates/repark-spark/tests/ntz_nested_refuse_casts.rs::a_container_cast_of_an_instant_stores_the_session_wall_on_every_door_outside_utc, crates/repark-spark/tests/ntz_nested_refuse_casts.rs::a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped, crates/repark-spark/tests/ntz_nested_refuse_casts.rs::the_cast_walk_reads_only_what_reaches_the_column, python/repark/tests/timestamps/test_ice_ntz_nested_refuse_1.py
@@ -13,7 +13,7 @@ C-010: crates/repark-functions/src/tests/zone_seam_pairs.rs::a_value_under_a_nul
 C-011: none (records)
 C-012: none (records)
 C-013: crates/repark-functions/src/tests/zone_seam_pairs.rs
-C-014: python/repark/tests/timestamps/zone_horizon_render_1_residue.json
+C-014: python/repark/tests/timestamps/test_zone_horizon_render_1.py
 C-015: crates/repark-spark/tests/ntz_into_ltz_nested.rs, python/repark/tests/timestamps/test_zone_seam_1.py
 C-016: crates/repark-iceberg/src/write/nested_ns_gate/tests.rs, crates/repark-spark/tests/ntz_into_ltz_nested.rs::a_partitioned_overwrite_in_utc_stores_the_utc_read, crates/repark-spark/tests/ntz_into_ltz_nested.rs::a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file
 C-017: crates/repark-spark/tests/ntz_into_ltz_nested.rs::a_partitioned_overwrite_in_utc_stores_the_utc_read, crates/repark-spark/tests/ntz_into_ltz_nested.rs::a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file

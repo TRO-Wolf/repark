@@ -724,3 +724,97 @@ def test_migration_keeps_an_indented_dated_paragraph_with_its_item_only_by_a_def
         f"C-001: {_TEST}::other_holds",
         "C-002: none (records)",
     ]
+
+
+def test_a_definition_inside_a_string_or_comment_does_not_count(repo: Path) -> None:
+    script = "crates/demo/tests/test_kinds.py"
+    _write(repo, script, 'MESSAGE = "class Column is missing"\n\n\ndef test_real():\n    pass\n')
+    rust = "crates/demo/tests/strings.rs"
+    _write(repo, rust, 'const S: &str = "fn ghost() {}";\n// fn commented() {}\nfn real() {}\n')
+    for path, name in ((script, "Column"), (rust, "ghost"), (rust, "commented")):
+        _write(repo, _SIDECAR, _HEADER + f"C-001: {path}::{name}\nC-002: {_TEST}\n")
+        result = _grammar(repo)
+        assert result.returncode == 1, (path, name)
+        assert f"C-001 names `{name}`, which {path} does not define" in result.stderr
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {script}::MESSAGE, {rust}::real\nC-002: {_TEST}\n")
+    assert _grammar(repo).returncode == 0
+
+
+def test_a_fixture_never_binds(repo: Path) -> None:
+    fixture = "crates/demo/tests/oracle.json"
+    _write(repo, fixture, "{}\n")
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {fixture}\nC-002: {_TEST}\n")
+    result = _grammar(repo)
+    assert result.returncode == 1
+    assert f"C-001 binds {fixture}, which is not a test file or a script" in result.stderr
+
+
+def test_a_citation_in_production_source_does_not_count(repo: Path) -> None:
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}::demo_holds\n")
+    _write(repo, "crates/demo/src/lib.rs", f"// pins: {_UNIT}/C-002\nfn x() {{}}\n")
+    result = _grammar(repo)
+    assert result.returncode == 1
+    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-002" in result.stderr
+
+
+def test_migration_binds_the_test_that_reads_a_fixture_else_records(tmp_path: Path) -> None:
+    fixture = "crates/demo/tests/oracle.json"
+    reader = "crates/demo/tests/reads.rs"
+    text = "\n".join(
+        [
+            "# map",
+            "",
+            f"- `oracle.json` — the cells; `reads.rs` loads them. pins: {_UNIT}/C-001",
+            f"- `oracle.json` — the same cells, no reader named. pins: {_UNIT}/C-002",
+            "",
+        ]
+    )
+    files = {fixture: "{}\n", reader: 'fn load() { include_str!("oracle.json"); }\n'}
+    repo = _scratch_map_repo(tmp_path, text, files)
+    assert _migrate(repo).returncode == 0
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {reader}",
+        "C-002: none (records)",
+    ]
+
+
+def test_migration_keeps_a_records_line_and_honours_a_disclaimer(tmp_path: Path) -> None:
+    text = "\n".join(
+        [
+            "# map",
+            "",
+            "- `pins.rs` — the battery.",
+            f"  pins: {_UNIT}/C-001",
+            "  The merge is cited here so the grammar gate counts it; this file pins none.",
+            f"  pins: {_UNIT}/C-002",
+            "",
+        ]
+    )
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn a() {}\n"})
+    _write(repo, _SIDECAR, _HEADER + "C-001: none (records)\n")
+    result = _migrate(repo)
+    assert result.returncode == 0, result.stderr
+    assert "map citations whose own text disclaims a pin: 1" in result.stdout
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        "C-001: none (records)",
+        "C-002: none (records)",
+    ]
+    assert _migrate(repo, "--check").returncode == 0
+
+
+def test_migration_cut_keeps_a_parenthesis_balanced(tmp_path: Path) -> None:
+    text = "\n".join(
+        [
+            "# map",
+            "",
+            "- `pins.rs` — the battery (the long note,",
+            "  which runs on",
+            f"  pins: {_UNIT}/C-001), `next` follows.",
+            "",
+        ]
+    )
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn a() {}\n"})
+    assert _migrate(repo).returncode == 0
+    lines = (repo / _MAP).read_text(encoding="utf-8").splitlines()
+    assert lines[3] == "  which runs on), `next` follows."
+    assert len(lines) == 4

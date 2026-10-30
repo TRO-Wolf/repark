@@ -2,6 +2,7 @@
 
 C-001: crates/repark-spark/src/tests/v3_lineage.rs
 C-002: crates/repark-spark/src/tests/v3_lineage.rs
+C-003: none (records)
 C-004: python/repark/tests/iceberg/test_v3_lineage_columns.py
 C-005: crates/repark-spark/src/tests/v3_lineage.rs, python/repark/tests/iceberg/test_v3_lineage_columns.py
 C-006: crates/repark-spark/src/tests/v3_lineage.rs

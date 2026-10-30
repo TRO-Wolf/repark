@@ -12,5 +12,6 @@ C-009: python/repark/tests/functions/test_fnp4c_higher_order.py
 C-010: python/repark/tests/functions/test_fnp4c_higher_order.py
 C-011: python/repark/tests/functions/test_fnp4c_higher_order.py, python/repark/tests/functions/test_functions_split_identity.py
 C-012: python/repark/tests/functions/test_fnp4c_higher_order.py
+C-013: none (records)
 C-014: python/repark/tests/functions/test_fnp4c_higher_order.py
 C-015: python/repark/tests/functions/test_fnp4c_higher_order.py

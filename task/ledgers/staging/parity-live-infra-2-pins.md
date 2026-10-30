@@ -2,4 +2,5 @@
 
 C-001: python/repark/tests/_spark_python.py::resolve_live_spark_python
 C-002: none (records)
+C-003: none (records)
 C-004: none (records)

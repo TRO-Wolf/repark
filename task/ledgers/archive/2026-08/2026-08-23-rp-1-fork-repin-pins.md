@@ -9,3 +9,4 @@ C-008: crates/repark-spark/src/tests/call.rs, python/repark/tests/_acceptance.py
 C-009: crates/repark-spark/src/tests/call.rs
 C-010: crates/repark-iceberg/src/write/merge/tests/occ.rs
 C-011: crates/repark-iceberg/src/catalog/tests/catalog.rs
+C-012: none (records)

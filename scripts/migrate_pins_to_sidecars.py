@@ -18,10 +18,13 @@ that name under the map's directory tree; a name found only elsewhere in the tre
 reference, not the entry's file; a name found nowhere, or more than once here, makes the
 citation unplaceable, and the run stops and lists it unless the sidecar on disk already binds
 that clause by hand. The names are the backticked identifiers of the citation's stretch of its
-entry that the bound file defines. Only a test file or a script is bound; a clause left with no
-bindable entry and no source citation is written as `none (records)`. The citation is then cut
-from the map: a line left with nothing but punctuation is deleted, a line that also carries
-prose keeps the prose and its indentation.
+entry that the bound file defines. Only a `.rs`, `.py` or `.sh` test file or script is bound: an
+entry whose file is a fixture binds the test its entry names that reads that fixture, if any; a
+citation whose own text says the file pins nothing ("so the grammar gate counts it") binds
+nothing; and a clause left with no bindable entry and no citation in a test or script is written
+as `none (records)`, which a rerun never replaces. The citation is then cut from the map: a line
+left with nothing but punctuation is deleted, a line that also carries prose keeps the prose and
+its indentation.
 
 A citation is bound but left in the map's text when cutting it would break the sentence around
 it: inside a fenced block, inside a code span the line continues past, or followed by an id the
@@ -74,6 +77,9 @@ TAIL = re.compile(
 )
 EMPTY_REST = re.compile(r"^[\s\-*+.,;:()·]*$")
 LEADING_STRAY = ".;)"
+DISCLAIMER = re.compile(
+    r"grammar gate counts|pins? none|pins nothing|not a test pin", re.IGNORECASE
+)
 
 
 class Binding(NamedTuple):
@@ -89,6 +95,7 @@ class Binding(NamedTuple):
     unresolved: str | None
     named: str | None
     inherited: bool
+    disclaimed: bool
 
 
 class Target(NamedTuple):
@@ -272,9 +279,17 @@ def names_in(stretch: str, path: str, file_text: str) -> tuple[str, ...]:
     return tuple(sorted(found))
 
 
+def _open_paren(text: str, start: int) -> bool:
+    """Whether the paragraph before `start` leaves a parenthesis open, code spans aside."""
+    paragraph = text.rfind("\n\n", 0, start)
+    before = CODE_SPAN.sub("", text[paragraph + 1 if paragraph != -1 else 0 : start])
+    return before.count("(") > before.count(")")
+
+
 def cut_span(text: str, start: int, end: int) -> tuple[int, int]:
     """Widen a citation to the separators and brackets that go with it; a citation that opens
-    its line keeps the indentation and takes the stray punctuation after it."""
+    its line keeps the indentation and takes the stray punctuation after it, except a `)` that
+    closes a parenthesis opened earlier in the paragraph, which joins the line above."""
     line_start = text.rfind("\n", 0, start) + 1
     if start > 0 and end < len(text) and text[start - 1] == "`" and text[end] == "`":
         start, end = start - 1, end + 1
@@ -287,6 +302,8 @@ def cut_span(text: str, start: int, end: int) -> tuple[int, int]:
     if wrapped:
         start, end = before - 1, end + 1
     if not text[line_start:start].strip():
+        if line_start > 0 and end < len(text) and text[end] == ")" and _open_paren(text, start):
+            return line_start - 1, end
         while end < len(text) and text[end] in LEADING_STRAY:
             end += 1
         while end < len(text) and text[end] in " \t":
@@ -349,6 +366,28 @@ def file_text(repo: Path, path: str, cache: dict[str, str]) -> str:
     return cache[path]
 
 
+def fixture_reader(
+    repo: Path,
+    map_dir: str,
+    entry_text: str,
+    fixture: str,
+    tracked: set[str],
+    basenames: dict[str, list[str]],
+    cache: dict[str, str],
+) -> str | None:
+    """A test file the entry names that reads `fixture`, when the entry's own file is a fixture."""
+    candidates = [resolve_link(map_dir, link, tracked) for link in LINK.findall(entry_text)]
+    candidates.extend(
+        resolve_span(map_dir, span, tracked, basenames).path
+        for span in CODE_SPAN.findall(entry_text)
+    )
+    name = Path(fixture).name
+    for candidate in candidates:
+        if candidate and GATE.bindable(candidate) and name in file_text(repo, candidate, cache):
+            return candidate
+    return None
+
+
 def migrate_map(
     repo: Path, path: str, tracked: set[str], basenames: dict[str, list[str]]
 ) -> tuple[list[Binding], str | None, int, int]:
@@ -374,7 +413,12 @@ def migrate_map(
         row = starts[bisect.bisect_right(starts, line_index) - 1] if starts else line_index
         row_end = ends.get(row, len(lines))
         target = entry_target(map_dir, "\n".join(lines[row:row_end]), tracked, basenames)
+        entry_text = "\n".join(lines[row:row_end])
         bound = target.path if target.path is not None and GATE.bindable(target.path) else None
+        if target.path is not None and bound is None:
+            bound = fixture_reader(
+                repo, map_dir, entry_text, target.path, tracked, basenames, cache
+            )
         own = own_starts[bisect.bisect_right(own_starts, line_index) - 1] if own_starts else row
         inherited = own != row
         stretch_start = max(offsets[own], previous_end.get(row, 0))
@@ -383,6 +427,9 @@ def migrate_map(
         names = names_in(stretch, bound, file_text(repo, bound, cache)) if bound else ()
         if inherited and not names:
             bound = None
+        disclaimed = DISCLAIMER.search(stretch) is not None
+        if disclaimed:
+            bound, names = None, ()
         unresolved = None if inherited else target.unresolved
         line_end = offsets[end_index + 1] - 1
         kept = fenced[line_index] or keeps_text(
@@ -402,6 +449,7 @@ def migrate_map(
                 unresolved,
                 named,
                 inherited,
+                disclaimed,
             )
         )
         if not kept:
@@ -434,6 +482,7 @@ def source_bindings(repo: Path, path: str) -> list[Binding]:
             True,
             None,
             None,
+            False,
             False,
         )
         for m in GATE.CITATION.finditer(text)
@@ -543,7 +592,7 @@ def plan_sidecars(
                 text = existing.read_text(encoding="utf-8") if existing.is_file() else ""
                 entries[sidecar] = parse_sidecar(text)
                 on_disk[sidecar] = parse_sidecar(text)
-            if kind_of(binding.source) != "map":
+            if kind_of(binding.source) != "map" and GATE.bindable(binding.source):
                 source_cited.add(key)
             if binding.unresolved is not None:
                 if clause_id in on_disk[sidecar]:
@@ -552,7 +601,7 @@ def plan_sidecars(
                     unplaceable.append(f"{where} names {binding.unresolved}")
                 continue
             wanted.setdefault(key, sidecar)
-            if binding.path is None:
+            if binding.path is None or on_disk[sidecar].get(clause_id) == {GATE.RECORDS}:
                 continue
             bound = {entry.split("::", 1)[0] for entry in on_disk[sidecar].get(clause_id, set())}
             if binding.path in bound:
@@ -622,6 +671,7 @@ def report(
     print(f"map citations bound with names: {sum(bool(b.names) for b in on_maps)}")
     print(f"map citations resolved by basename: {sum(bool(b.named) for b in on_maps)}")
     inherited = [b for b in on_maps if b.inherited]
+    print(f"map citations whose own text disclaims a pin: {sum(b.disclaimed for b in on_maps)}")
     print(f"map citations in an indented dated paragraph: {len(inherited)}")
     print(f"  bound to their item's file by a defined name: {sum(bool(b.path) for b in inherited)}")
     print(f"map citations with no bindable file: {sum(b.path is None for b in on_maps)}")

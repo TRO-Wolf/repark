@@ -16,17 +16,21 @@ B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` i
    sidecar `<unit>-pins.md`, which counts only beside its own ledger (same bin, same name; in
    the archive with the ledger's `yyyy-mm-dd-` prefix). `<unit>` is the ledger's filename
    without `-ledger.md` and without the archive prefix. An entry is `<path>` or
-   `<path>::<name>`: the path is a tracked test file (under a `tests/` directory, `tests.rs`,
-   `*_tests.rs`, `test_*.py`, `*_test.py`) or a file under `scripts/`, never a map, a ledger,
-   a sidecar, a licence or a readme; the name is a fn, type, module, constant or class the
-   file defines. The line `C-NNN: none (records)` binds a clause that no test pins; the gate
-   counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]` citation in a tracked
-   file under CITATION_ROOTS, other than a `map.md`, also binds. Every `PROVEN` clause in a
-   staging or completed ledger must be bound at least once — the measured floor is seeded per
-   ledger in EXCEPTIONS and only ratchets down — and every binding must resolve to a clause
-   that exists in any bin (`staging/`, `completed/`, the archive). A staging or completed
-   ledger whose first 40 lines carry a `**Path:**` field valued `READING` outside a code span
-   is a reading unit: rule B does not apply to its clauses, rules A and C still do.
+   `<path>::<name>`: the path is a tracked `.rs`, `.py` or `.sh` file that is a test (under a
+   `tests/` directory, `tests.rs`, `*_tests.rs`, `test_*.py`, `*_test.py`) or a script under
+   `scripts/`, never a fixture, a map, a ledger, a sidecar, a licence or a readme; the name is a
+   definition the file makes, read by parsing (Python: module- and class-level functions,
+   classes and assigned names; Rust: line-start fn, struct, enum, trait, type, const, static,
+   mod, union and macro_rules with comments and literals blanked; shell: functions). The line
+   `C-NNN: none (records)` binds a clause that no test pins; the gate counts and lists those
+   clauses. A `pins: <unit>/C-NNN[, C-MMM...]` citation also binds when it sits in a tracked
+   test file or script under CITATION_ROOTS; one in a map or in production source does not.
+   Every `PROVEN` clause in a staging or completed ledger must be bound at least once — the
+   measured floor is seeded per ledger in EXCEPTIONS and only ratchets down — and every binding
+   must resolve to a clause that exists in any bin (`staging/`, `completed/`, the archive). A
+   staging or completed ledger whose first 40 lines carry a `**Path:**` field valued `READING`
+   outside a code span is a reading unit: rule B does not apply to its clauses, rules A and C
+   still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
@@ -44,6 +48,7 @@ or environment error.
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import subprocess
 import sys
@@ -57,6 +62,21 @@ PINS_SUFFIX = "-pins.md"
 MAP_NAME = "map.md"
 RECORDS = "none (records)"
 TEST_NAMES = re.compile(r"^(?:tests\.rs|.+_tests\.rs|test_.+\.py|.+_test\.py)$")
+CODE_SUFFIXES: frozenset[str] = frozenset({".rs", ".py", ".sh"})
+RUST_RAW_OPEN = re.compile(r'b?r(#*)"')
+RUST_CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
+RUST_DEFINITION = re.compile(
+    r"^[ \t]*(?:pub(?:\([^)\n]*\))?[ \t]+)?"
+    r"(?:(?:async|const|unsafe|default|extern[ \t]+\"[^\"\n]*\")[ \t]+)*"
+    r"(?:fn|struct|enum|trait|type|const|static|mod|union)[ \t]+([A-Za-z_][A-Za-z0-9_]*)"
+    r"|^[ \t]*macro_rules![ \t]*([A-Za-z_][A-Za-z0-9_]*)",
+    re.MULTILINE,
+)
+SHELL_DEFINITION = re.compile(
+    r"^[ \t]*function[ \t]+([A-Za-z_][A-Za-z0-9_-]*)|^[ \t]*([A-Za-z_][A-Za-z0-9_-]*)[ \t]*\(\)",
+    re.MULTILINE,
+)
+_DEFINITIONS: dict[tuple[str, int], frozenset[str]] = {}
 UNBINDABLE = re.compile(
     r"^(?:map\.md|.+-ledger\.md|.+-pins\.md|LICEN[CS]E.*|README.*)$", re.IGNORECASE
 )
@@ -163,11 +183,11 @@ def check_rows(
 
 
 def citations(repo: Path, tracked: list[str]) -> dict[tuple[str, str], list[str]]:
-    """(unit, clause id) -> the files citing it, from every tracked file under CITATION_ROOTS
-    except the directory maps."""
+    """(unit, clause id) -> the files citing it, from every tracked test file or script under
+    CITATION_ROOTS (see `bindable`); a map or a production source never counts."""
     found: dict[tuple[str, str], list[str]] = {}
     for path in tracked:
-        if not path.startswith(CITATION_ROOTS) or Path(path).name == MAP_NAME:
+        if not path.startswith(CITATION_ROOTS) or not bindable(path):
             continue
         try:
             text = (repo / path).read_text(encoding="utf-8")
@@ -184,22 +204,120 @@ class SidecarUnreadableError(Exception):
     """A tracked sidecar that is missing from disk or is not UTF-8."""
 
 
-def defines(path: str, text: str, name: str) -> bool:
-    """Whether a Rust or Python file defines `name`: a fn, type, module, constant or class."""
-    escaped = re.escape(name)
-    if path.endswith(".rs"):
-        pattern = rf"\b(?:fn|struct|enum|trait|mod|const|static|type|union)\s+{escaped}\b"
-        return re.search(pattern + rf"|macro_rules!\s*{escaped}\b", text) is not None
+def _rust_skip_quoted(text: str, index: int) -> int:
+    """The index just past a Rust string, raw string or char literal that opens at `index`, or
+    `index` itself when no literal opens there."""
+    raw = RUST_RAW_OPEN.match(text, index)
+    if raw is not None:
+        closing = '"' + raw.group(1)
+        found = text.find(closing, raw.end())
+        return len(text) if found == -1 else found + len(closing)
+    head = text[index]
+    if head == "b" and index + 1 < len(text) and text[index + 1] in "\"'":
+        index += 1
+        head = text[index]
+    if head == '"':
+        cursor = index + 1
+        while cursor < len(text) and text[cursor] != '"':
+            cursor += 2 if text[cursor] == "\\" else 1
+        return cursor + 1
+    if head == "'":
+        char = RUST_CHAR.match(text, index)
+        return char.end() if char is not None else index + 1
+    return index
+
+
+def strip_rust(text: str) -> str:
+    """Rust source with comments, string, raw-string and char literals blanked; newlines kept."""
+    out: list[str] = []
+    index = 0
+    while index < len(text):
+        if text.startswith("//", index):
+            stop = text.find("\n", index)
+            index = len(text) if stop == -1 else stop
+            continue
+        if text.startswith("/*", index):
+            depth, cursor = 1, index + 2
+            while cursor < len(text) and depth:
+                if text.startswith("/*", cursor):
+                    depth, cursor = depth + 1, cursor + 2
+                elif text.startswith("*/", cursor):
+                    depth, cursor = depth - 1, cursor + 2
+                else:
+                    cursor += 1
+            out.append("\n" * text.count("\n", index, cursor))
+            index = cursor
+            continue
+        opens_literal = text[index] in "\"'" or (
+            text[index] in "br"
+            and (index == 0 or not (text[index - 1].isalnum() or text[index - 1] == "_"))
+        )
+        if opens_literal:
+            stop = _rust_skip_quoted(text, index)
+            if stop != index:
+                out.append("\n" * text.count("\n", index, stop))
+                index = stop
+                continue
+        out.append(text[index])
+        index += 1
+    return "".join(out)
+
+
+def _python_definitions(text: str) -> set[str]:
+    """Module-level and class-level functions, classes and assigned names of a Python file."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return set()
+    names: set[str] = set()
+    bodies = [tree.body]
+    bodies.extend(node.body for node in tree.body if isinstance(node, ast.ClassDef))
+    for body in bodies:
+        for node in body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(node.name)
+            elif isinstance(node, ast.Assign):
+                names.update(
+                    target.id
+                    for assigned in node.targets
+                    for target in ast.walk(assigned)
+                    if isinstance(target, ast.Name)
+                )
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                names.add(node.target.id)
+    return names
+
+
+def definitions(path: str, text: str) -> frozenset[str]:
+    """Every name a bindable file defines: Python by parsing, Rust by line-start definitions over
+    the source with comments and literals blanked, shell by function definitions."""
+    key = (path, hash(text))
+    cached = _DEFINITIONS.get(key)
+    if cached is not None:
+        return cached
+    names: set[str] = set()
     if path.endswith(".py"):
-        pattern = rf"\b(?:def|class)\s+{escaped}\b|^{escaped}\s*[:=]"
-        return re.search(pattern, text, flags=re.MULTILINE) is not None
-    return False
+        names = _python_definitions(text)
+    elif path.endswith(".rs"):
+        names = {
+            match.group(1) or match.group(2) for match in RUST_DEFINITION.finditer(strip_rust(text))
+        }
+    elif path.endswith(".sh"):
+        names = {match.group(1) or match.group(2) for match in SHELL_DEFINITION.finditer(text)}
+    result = frozenset(names)
+    _DEFINITIONS[key] = result
+    return result
+
+
+def defines(path: str, text: str, name: str) -> bool:
+    """Whether a bindable file defines `name`."""
+    return name in definitions(path, text)
 
 
 def bindable(path: str) -> bool:
-    """Whether a sidecar entry may name `path`: a test file or a file under `scripts/`."""
+    """Whether a sidecar entry may name `path`: a `.rs`, `.py` or `.sh` test file or script."""
     name = Path(path).name
-    if UNBINDABLE.match(name):
+    if UNBINDABLE.match(name) or Path(path).suffix not in CODE_SUFFIXES:
         return False
     return (
         path.startswith("scripts/")

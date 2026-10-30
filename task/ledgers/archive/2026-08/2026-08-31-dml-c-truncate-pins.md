@@ -7,3 +7,4 @@ C-004: python/repark/tests/writes/test_dml_c_truncate.py
 C-005: crates/repark-spark/src/tests/truncate.rs
 C-006: crates/repark-spark/src/tests/truncate.rs, crates/repark-sql/src/truncate_tests.rs, python/repark/tests/writes/test_dml_c_truncate.py
 C-007: crates/repark-spark/src/tests/truncate.rs, crates/repark-sql/src/truncate_tests.rs, python/repark/tests/writes/test_dml_c_truncate.py
+C-008: none (records)

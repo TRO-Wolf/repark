@@ -193,7 +193,7 @@ def test_branch_mode_manifest_changes_and_unlisted_files(repo: Path) -> None:
 
 
 def test_staged_mode_warns_and_exits_zero(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-006 — the hook warns; ci.yml's map.md guard holds the rule."""
+    """pins: map-pr-gate-1/C-006 — the hook warns."""
     (repo / "pkg" / "mod.rs").write_text("fn b() {}\n", encoding="utf-8")
     _git(repo, "add", "pkg/mod.rs")
     result = _guard(repo)

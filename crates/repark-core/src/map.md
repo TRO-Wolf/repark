@@ -150,7 +150,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   conf key > default; CFG-1 step 3: `from_config_file(path?)` forces a file (`None` keeps
   automatic discovery), `build()` resolves the file first and merges its pairs UNDER the
   builder map (builder wins per key) with the file's `session` knobs as typed fallbacks,
-  printing the file's discovery warnings (REVIEW-FIX-7 step 1, 2026-09-10:
+  printing the file's discovery warnings (REVIEW-FIX-7 step 1, 2026-09-10:),
   and the session keeps the redacted `(key, value, source)` `conf_dump()`), attaches the
   write/scan knobs as
   DataFusion `ConfigExtension`s via `repark_iceberg::write::*` (`with_merge_session_knobs`,

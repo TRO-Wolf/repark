@@ -4,6 +4,7 @@ C-001: crates/repark-spark/src/tests/v3e4.rs
 C-002: crates/repark-spark/src/tests/v3e4.rs
 C-003: crates/repark-spark/src/tests/v3e4.rs
 C-004: crates/repark-spark/src/tests/v3e4.rs
+C-005: none (records)
 C-006: crates/repark-spark/src/tests/v3e4.rs
 C-007: crates/repark-spark/src/tests/v3e4.rs
 C-008: crates/repark-spark/src/tests/v3e4.rs, python/repark/tests/iceberg/test_v3e4_refs_time_travel.py

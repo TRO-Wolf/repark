@@ -21,7 +21,7 @@ C-018: crates/repark-sql/tests/write_door_native.rs::a_missing_kernel_refuses_on
 C-019: crates/repark-spark/tests/ntz_into_ltz_nested.rs::a_nested_zone_pair_in_an_assignment_names_the_seam
 C-020: crates/repark-sql/tests/write_door_native.rs::a_missing_kernel_refuses_on_every_routed_door, crates/repark-sql/tests/write_door_native.rs::a_partition_overwrite_guards_an_integer_overflow_at_plan_time, crates/repark-sql/tests/write_door_native.rs::a_plain_update_from_add_months_stores_session_midnight, crates/repark-sql/tests/write_door_native.rs::every_value_writing_door_passes_the_stage, crates/repark-sql/tests/write_door_native.rs::the_sink_guard_never_fires_on_a_routed_door
 C-021: crates/repark-iceberg/src/write/conform_stage/tests.rs
-C-022: python/repark/tests/timestamps/test_write_spine_1_doors.py::test_fixture_cells_are_the_census, python/repark/tests/timestamps/write_spine_1_step2_moves.json
+C-022: python/repark/tests/timestamps/test_write_spine_1_doors.py::test_fixture_cells_are_the_census
 C-025: crates/repark-spark/tests/struct_pairing_doors.rs::the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1, python/repark/tests/timestamps/test_ntz_store_doors_1.py::test_write_door_stores_sparks_value, python/repark/tests/writes/test_cast_overflow_insert_1.py::test_vo4_1_insert_into_overwrite_reports_arity_first, python/repark/tests/writes/test_ice_struct_pairing_1_round3.py::test_the_partition_carve_out_refuses_with_the_workaround
 C-028: python/repark/tests/timestamps/test_write_spine_1_doors.py::test_fixture_cells_are_the_census
 C-030: none (records)
