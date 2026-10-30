@@ -30,8 +30,9 @@ leaves them, not because it disappears.
 
 - **[STATUS.md](../../../STATUS.md)** — release state, delivery, active/deferred workstreams.
   Every other document that mentions state must *point here*, never restate it.
-- **Every touched directory's `map.md`** — navigation truth, kept in lockstep by
-  `scripts/check_map_md.sh` (the pre-commit oracle).
+- **Every touched map at a crate, package or subsystem boundary** — navigation truth
+  (policy [docs/maps-policy.md](../../../docs/maps-policy.md)); lockstep warns
+  (`scripts/check_map_md.sh`), and `make check-map-sync` and `make check-map-size` are the gates.
 - **`task/`** — the rules in force (`lessons.md`), the metrics ledger (`metrics.md`), and the
   per-unit ledgers, filed by state under [task/ledgers/](../../../task/ledgers/map.md)
   (`staging/` in flight → `completed/` frozen → `archive/yyyy-mm/` immutable; the directory is
@@ -61,8 +62,11 @@ leaves them, not because it disappears.
 3. **Sweep for stale lifecycle claims.** Search the docs for language the landing falsified —
    "not yet", "planned", "when it exists", "deferred", old phase numbers, superseded dates —
    and fix each occurrence in its authoritative home.
-4. **map.md lockstep.** Every directory whose contents changed gets its `map.md` updated in
-   the same commit. New directory → new `map.md` + a Contents row in the parent's map.
+4. **map.md lockstep.** A map at a crate, package or subsystem boundary whose contents changed
+   is updated in the same commit (`scripts/check_map_md.sh` warns; `make check-map-sync` and
+   `make check-map-size` are the gates; policy in [docs/maps-policy.md](../../../docs/maps-policy.md)).
+   A new boundary with a map gets a Contents row in the parent's map; a directory without one
+   needs neither.
 5. **Archive what closed.** The unit's own ledger leaves `staging/` in the departure commit:
    `python3 scripts/ledger_lifecycle.py move task/ledgers/staging/<unit>-ledger.md completed`
    (a charter stays in `staging/` until the event it names has happened; the move also takes the

@@ -22,3 +22,7 @@ C-027: python/repark-parity/tests/test_map_governance_1_union.py::test_nested_sh
 C-028: python/repark-parity/tests/test_map_governance_1_union.py::test_a_row_named_test_binds_by_intent_and_ambiguity_is_reported
 C-029: python/repark-parity/tests/test_map_governance_1_union.py::test_the_gate_reports_records_whose_row_names_a_defined_test
 C-030: python/repark-parity/tests/test_map_governance_1_union.py::test_heredoc_herestring_escape_and_rust_comment_shapes
+C-032: python/repark-parity/tests/test_map_governance_1_union.py::test_a_double_backtick_span_and_a_parametrize_id_still_bind
+C-033: python/repark-parity/tests/test_map_governance_1_union.py::test_two_regenerations_are_byte_identical
+C-034: python/repark-parity/tests/test_map_governance_1_union.py::test_arithmetic_ansi_quotes_extern_macro_and_cfg_shapes
+C-035: python/repark-parity/tests/test_map_governance_1_union.py::test_the_gate_reports_records_whose_row_names_a_defined_test, python/repark-parity/tests/test_map_governance_1_union.py::test_a_double_backtick_span_and_a_parametrize_id_still_bind

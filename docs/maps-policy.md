@@ -41,7 +41,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 - A ledger's clause pins live in `task/ledgers/<bin>/<unit>-pins.md`, beside the ledger. The bin is `staging`, `completed` or `archive`.
 - One line per clause: `C-NNN: <path>[::<name>], ...` or `C-NNN: none (records)`.
-- `none (records)` means no map citation and no row-named test binds it; the gate's `--report row-named-records` lists any such line whose row names a defined test. The gate counts and lists it. A rerun never replaces an on-disk records line.
+- `none (records)` means no map citation and no row-named test binds it; the gate's `--report row-named-records` lists any such line whose row names a defined test. The gate counts and lists it. A rerun never replaces an on-disk records line except by the row-named pass: a row that backticks a test which exactly one bindable file defines binds that file and the name, and the grammar gate fails when a PROVEN clause's row names such a test and no binding names its file, so a hand records line over such a row fails the gate.
 - A sidecar counts only beside its own ledger. A unit in two bins is refused by `ledger_lifecycle.py check`.
 
 ## How the grammar gate reads sidecars
