@@ -190,12 +190,15 @@ the test that discharges one says so where the test is, not only where the ledge
 
 `pins: <unit>/C-NNN` — `<unit>` is the ledger's filename without `-ledger.md` (and, once archived,
 without its date prefix); further ids after a comma inherit the unit. Any comment syntax works
-(`//`, `#`, a docstring); `scripts/check_ledger_grammar.py` (`make check-ledger-grammar`) reads
-every tracked file under `crates/`, `python/` and `scripts/`. The rule it holds: every `PROVEN`
-clause in a live ledger is cited by at least one test, and every citation names a clause that
-exists — a `PROVEN` clause nobody pins is the "green pin that proves nothing" above, in ledger
-form. The measured floor at arming (2026-08-23) is seeded per ledger in the script and ratchets
-down only. The citation is a binding, not a generator: no script derives a test from a clause.
+(`//`, `#`, a docstring) binds it from test or script source; the unit's pin sidecar,
+`task/ledgers/<bin>/<unit>-pins.md`, binds it beside the ledger. `scripts/check_ledger_grammar.py`
+(`make check-ledger-grammar`) reads both under `crates/`, `python/` and `scripts/`; a `pins:`
+citation in a map or in production source binds nothing. The rule it holds: every `PROVEN` clause
+in a live ledger is bound by at least one sidecar line or citation, every binding names a clause
+that exists, and a `PROVEN` clause nobody binds is the "green pin that proves nothing" above, in
+ledger form. The measured floor at arming (2026-08-23) is seeded per ledger in the script and
+ratchets down only. The binding is a sidecar line or citation, not a generator: no script derives
+a test from a clause.
 
 **Reading units.** A unit that adds no code proves its clauses on document evidence instead of
 tests. Its ledger header carries `**Path:** READING` (beside `LIGHT`, `STANDARD`, `HIGH`) within

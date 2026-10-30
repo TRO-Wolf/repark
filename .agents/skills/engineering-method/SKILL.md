@@ -196,10 +196,10 @@ Additional rules:
 
 ## Navigation: `map.md` Convention
 
-Policy (hand-written maps, same-change lockstep, no generator) lives in
-[AGENTS.md](../../../AGENTS.md) "Hard rules". The method:
+Policy (hand-written maps, lockstep warns, no generator) lives in
+[docs/maps-policy.md](../../../docs/maps-policy.md). The method:
 
-1. Read the `map.md` of every directory the task will touch before editing a file there.
+1. Read the `map.md` of each touched directory that has one before editing a file there.
 2. Use `I want to... → go to` and `Pointers` to choose the file.
 3. If code and `map.md` disagree, the code is truth — update the map in the same change.
 4. On failure, open that directory's `## Debug` first, then run §8. They are sequential.
@@ -211,7 +211,7 @@ Policy (hand-written maps, same-change lockstep, no generator) lives in
 - [ ] Read [AGENTS.md](../../../AGENTS.md) and follow your role's row in its "Read first" table.
 - [ ] Read the Procedure section above, then the lessons entries for subsystems you touch (§2; in full only when orchestrating).
 - [ ] Read [STATUS.md](../../../STATUS.md) + the unit's ledger (or [task/todo.md](../../../task/todo.md)) to pick up mid-flight work.
-- [ ] Read the `map.md` of every directory your task will touch (Navigation section).
+- [ ] Read the `map.md` of each touched directory that has one (Navigation section).
 - [ ] Know your mode (interactive vs. delegated) and how its check-in rule applies.
 - [ ] Asked "what can go wrong with what I build?" for the work ahead — design, implementation, and tests (Risk-First Mindset).
 - [ ] Reasoned through inputs, edge cases, and failure modes per §1.
@@ -288,7 +288,7 @@ Ask it before writing code (it shapes the design), while writing code (it shapes
 | **Numeric / type correctness** | Decimal/float casts, aggregation order, and date/time rules drift silently until results diverge — pin with `f64::to_bits` / exact-value fixtures. | [docs/testing.md](../../../docs/testing.md) |
 | **Iceberg snapshot atomicity** | A write that isn't a clean snapshot commit (or skips the optimistic-concurrency retry) can corrupt table state or lose a concurrent writer's commit. | [AGENTS.md](../../../AGENTS.md) "Hard rules" + [docs/adr/0001-own-iceberg-fork.md](../../../docs/adr/0001-own-iceberg-fork.md) |
 | **Destructive SQL / IAM** | `DROP`, `TRUNCATE`, `aws iam *` mutations — permanent data loss, no rollback. Layered defense exists because the cost is irreversible. | [AGENTS.md](../../../AGENTS.md) "Safety — destructive / outward-facing operations" |
-| **`map.md` drift from code** | A stale `map.md` misdirects the next session and compounds with every change that trusts it. Strict same-change rule. | [AGENTS.md](../../../AGENTS.md) "Hard rules" (`map.md` in every directory) |
+| **`map.md` drift from code** | A stale `map.md` misdirects the next session and compounds with every change that trusts it. Lockstep warns; the gates hold. | [docs/maps-policy.md](../../../docs/maps-policy.md) |
 
 **Risk-First is not "defensive programming."** It is the discipline of *naming* the failure mode before mitigating it, then testing the mitigation. Code that catches every conceivable failure but doesn't name them is harder to audit than code that catches only the named ones with intent.
 

@@ -8,6 +8,7 @@ C-005: python/repark-parity/tests/test_map_governance_1.py::test_excepted_map_th
 C-006: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_move_then_the_size_ratchet_stays_green, python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_sidecar_in_a_frozen_bin_may_be_edited_and_a_ledger_may_not, python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_an_archived_sidecar_may_be_edited, python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_archive_carries_the_sidecar_under_the_ledger_date, python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_archive_moves_an_excepted_map_row_by_exactly_its_link_growth, python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_move_carries_the_sidecar_without_a_map_row
 C-007: python/repark-parity/tests/test_map_governance_1.py::test_ci_runs_the_map_size_ratchet_and_make_ci_lists_it
 C-008: none (records)
+C-011: none (records)
 C-014: python/repark-parity/tests/test_map_governance_1.py::test_a_definition_inside_a_string_or_comment_does_not_count, python/repark-parity/tests/test_map_governance_1.py::test_shell_and_python_definitions_need_a_real_binding
 C-015: python/repark-parity/tests/test_map_governance_1.py::test_a_fixture_never_binds, python/repark-parity/tests/test_map_governance_1.py::test_a_recorder_never_binds, python/repark-parity/tests/test_map_governance_1.py::test_a_test_placed_helper_without_tests_never_binds, python/repark-parity/tests/test_map_governance_1.py::test_migration_binds_nothing_to_a_fixture_whose_entry_names_only_its_recorder, python/repark-parity/tests/test_map_governance_1.py::test_migration_binds_the_test_that_reads_a_fixture_else_records
 C-016: python/repark-parity/tests/test_map_governance_1.py::test_a_citation_in_production_source_does_not_count
@@ -26,3 +27,11 @@ C-032: python/repark-parity/tests/test_map_governance_1_union.py::test_a_double_
 C-033: python/repark-parity/tests/test_map_governance_1_union.py::test_two_regenerations_are_byte_identical
 C-034: python/repark-parity/tests/test_map_governance_1_union.py::test_arithmetic_ansi_quotes_extern_macro_and_cfg_shapes
 C-035: python/repark-parity/tests/test_map_governance_1_union.py::test_the_gate_reports_records_whose_row_names_a_defined_test, python/repark-parity/tests/test_map_governance_1_union.py::test_a_double_backtick_span_and_a_parametrize_id_still_bind
+C-036: none (records)
+C-037: python/repark-parity/tests/test_map_governance_1_union.py::test_a_row_named_test_binds_by_name_and_a_rename_goes_red
+C-038: python/repark-parity/tests/test_map_governance_1_union.py::test_a_reading_unit_skips_the_row_named_rule
+C-039: python/repark-parity/tests/test_map_governance_1_union.py::test_a_backslash_escaped_backtick_opens_no_span
+C-040: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_map_grown_only_on_main_passes
+C-041: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_map_grown_on_the_branch_past_both_goes_red
+C-042: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_update_baselines_raises_a_row_to_the_merge_base_size
+C-043: none (records)
