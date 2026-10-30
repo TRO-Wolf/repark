@@ -15,3 +15,6 @@ C-017: python/repark-parity/tests/test_map_governance_1.py::test_migration_keeps
 C-018: python/repark-parity/tests/test_map_governance_1.py::test_migration_cut_keeps_a_parenthesis_balanced
 C-020: python/repark-parity/tests/test_map_governance_1.py::test_a_disclaimer_unbinds_only_the_clauses_it_names, python/repark-parity/tests/test_map_governance_1.py::test_a_test_placed_helper_without_tests_never_binds, python/repark-parity/tests/test_map_governance_1.py::test_shell_and_python_definitions_need_a_real_binding
 C-021: python/repark-parity/tests/test_map_governance_1.py::test_a_shared_citation_binds_each_clause_by_its_own_row
+C-024: python/repark-parity/tests/test_map_governance_1_union.py::test_an_id_less_disclaimer_keeps_the_binding_and_is_reported, python/repark-parity/tests/test_map_governance_1_union.py::test_a_row_named_test_file_is_added_beside_the_citations_file
+C-025: python/repark-parity/tests/test_map_governance_1_union.py::test_a_sidecar_in_another_bin_does_not_satisfy_the_floor, python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_one_unit_in_two_bins_is_refused
+C-026: python/repark-parity/tests/test_map_governance_1_union.py::test_more_shell_rust_and_decorator_shapes_define_nothing

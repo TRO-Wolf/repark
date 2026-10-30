@@ -687,7 +687,6 @@ both tables with the script baselines (backtick-disclosure retire).
   25,000-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
   names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims
   each carry a dated correction. Whitespace-normalized reads, so a re-wrap does not red it.
-  pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001, C-002, C-003
   **V1-GATE (2026-09-03):** the `S3T-V3-1` half gains the confirmation run — the row must say
   `confirmed live 2026-09-03` and name run 33699342417, base `a0fe83a` and `6 passed in
   230.67s`, and the two phrasings of the old "not re-dispatched" note join the stale set.
@@ -833,8 +832,9 @@ both tables with the script baselines (backtick-disclosure retire).
   `check`: a ledger outside the bins, an archive prefix disagreeing with its
   month, a dead ledger link in a non-map document, and the frozen rule (link
   repair and a prepended errata pass; a prose edit and a deletion fail).
-- `test_map_governance_1.py` — **MAP-GOVERNANCE-1 (2026-10-29):** the sidecar binding the grammar gate reads (`task/ledgers/<bin>/<unit>-pins.md`): a bound path is tracked and bindable (a test or a script, never a map, ledger or readme); a `::name` is a definition of its file; `C-NNN: none (records)` counts and is listed; a sidecar counts only beside its own ledger; a source `pins:` citation binds and a map citation does not. The migration (`migrate_pins_to_sidecars.py`) binds each row to its file, cuts only citation text, keeps hand edits, is idempotent, writes nothing in `--check` and refuses an unplaceable citation. The size ratchet (`check_map_size.py`): the 200-line and 16 KiB ceilings, exact-baseline rows that fail on growth and on unlowered shrinkage, `EXEMPT_PATTERNS` for the archive month maps, `--update-baselines` that only lowers and refuses a new violator, and the `make ci` and ci.yml wiring. The lockstep contract is a warning in both modes with the advisory note.
+- `test_map_governance_1.py` — **MAP-GOVERNANCE-1 (2026-10-29):** the sidecar the grammar gate reads (`task/ledgers/<bin>/<unit>-pins.md`): a path binds only if tracked and bindable, a `::name` only if its file defines it, `none (records)` counts and is listed, and a sidecar counts only beside its own ledger. The migration binds, cuts citation text only, keeps hand edits and is idempotent. The size ratchet: 200 lines and 16 KiB, exact-baseline rows that fail on growth and on unlowered shrinkage, `--update-baselines` that only lowers, and the `make ci` and ci.yml wiring.
 - `test_map_governance_1_lifecycle.py` — **MAP-GOVERNANCE-1:** `ledger_lifecycle.py` carries a unit's sidecar with its ledger on `move` and `archive`, with no map row; `archive` files it under the ledger's own date; a sidecar in a frozen bin may be edited and a ledger row may not; a move followed by the size ratchet stays green; `archive` moves an excepted map's ratchet row by exactly its link growth.
+- `test_map_governance_1_union.py` — **MAP-GOVERNANCE-1 (2026-10-30, round 10):** the union binding model (a clause binds its citing entries' bindable files and its ledger row's bindable files; an id-less disclaimer keeps the binding and is reported); a row-named test file is added beside the citation's file; a sidecar in another bin does not satisfy the floor; shell heredocs, multi-line quoted strings, `$((...))`, nested Rust block comments and strict pytest decorators define nothing.
 - `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22; the prose-homes pin retargeted to PYC's
   history record by DL-4, 2026-08-25):** five presence
   rules only; style `D` not in py-lint select; tests keep the `D` per-file

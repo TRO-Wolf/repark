@@ -34,11 +34,12 @@ it: `make check-model-ban` fails any tracked file that names a 5.0 Opus id, and 
 preserves this block byte-for-byte in `AGENTS.md` and `CLAUDE.md`.
 
 This is the **single authoritative project contract** for repark, written for **any contributor —
-human or automated agent**, naming no tool or model: the precedence chain, invariants, change guide, verification and safety boundaries. When a
+human or automated agent**, naming no tool or model: the precedence chain, the architectural
+invariants, the change-location guide, required verification, and the safety boundaries. When a
 rule changes, it changes **here**; other files point at this contract, they do not restate it.
 
 Tool-specific onboarding lives in clearly-labelled **adapter** files that carry no authoritative
-facts: [CLAUDE.md](CLAUDE.md) and [.agents/](.agents/map.md). Deleting any
+facts (so they cannot drift): [CLAUDE.md](CLAUDE.md) and [.agents/](.agents/map.md). Deleting any
 adapter loses no project knowledge.
 
 ## Read first
@@ -78,7 +79,7 @@ Current state: [STATUS.md](STATUS.md) — do not restate it here.
 
 ## Crate map — where a change will go
 
-`deferred` homes do **not** exist yet: they are the
+Which home owns which kind of change. `deferred` homes do **not** exist yet: they are the
 `planned` rows of [repo-manifest.toml](repo-manifest.toml) (`make check-manifest` reds if anything
 appears at their path) with tiers and edges pre-declared in `scripts/check_crate_dag.py`; never
 create one ahead of its first unit. Delivery state:
@@ -101,7 +102,7 @@ create one ahead of its first unit. Delivery state:
 | The PySpark facade | `python/repark/spark` | delivered |
 | The dbt adapter | `python/dbt-repark` | delivered (DBT-1) |
 
-Layout of record:
+DataFusion remains the engine under everything. Layout of record:
 [task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md](task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md).
 
 ## Verify before "done"
@@ -112,7 +113,7 @@ it does **not** build the native module. See [docs/testing.md](docs/testing.md).
 PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which carries
 the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the canonical
 fast gate. Tool versions are pinned identically in the Makefile and the workflows, and CI-enforced
-tools never silently skip locally.
+tools never silently skip locally (uvx provisions the pinned tool on demand).
 
 ## Hard rules (non-negotiable)
 
@@ -134,14 +135,7 @@ tools never silently skip locally.
   ANSI SQL / Spark facade) is the testing structure. A divergence-class claim pins *every* class it
   names, per entry point, on the Arrow path (`collect`/`to_arrow`, value AND type — never only
   `show`). Full contract: [docs/testing.md](docs/testing.md).
-- **Maps are scoped and hand-written.** A `map.md` sits at a repository root, crate, package or complex
-  subsystem boundary where it routes a task, names an owner or a boundary, or names the verification; a
-  new directory need not have one, nor a leaf of obvious or generated files. History lives in ledgers,
-  PRs or `docs/history/`, never in maps; a map holding dated history is not wrong until its ratchet row
-  is lowered. Lockstep warns (`scripts/check_map_md.sh`); `scripts/sync_map_md.py --check` and
-  `scripts/check_map_size.py` gate. `scripts/ledger_lifecycle.py` creates and edits the bin, archive and
-  history maps. Pin bindings live in `task/ledgers/<bin>/<unit>-pins.md`, one line per clause, read by
-  the ledger-grammar gate; the owner-ruling paragraph above awaits the owner's word.
+- **Maps are architecture-scoped** (policy: [docs/maps-policy.md](docs/maps-policy.md)); pin bindings live in `task/ledgers/<bin>/<unit>-pins.md`, read by the ledger-grammar gate.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -213,8 +207,9 @@ How a change is shaped, independent of where it lands.
 
 ## Write for the eventual reader — comments, docstrings, and prose
 
-Owner-stated 2026-08-23. Write every paragraph, comment, doc, PR description, and issue for its
-**eventual reader**, not the current agent conversation. Work out the reader's needs privately; do not add an audience-analysis section to the artifact itself.
+Owner-stated 2026-08-23. Write every paragraph, comment, doc, PR description, and issue for
+its **eventual reader**, not the current agent conversation. Work out the reader's needs
+privately; do not add an audience-analysis section to the artifact itself.
 
 **Do not over-comment.** Three rules, applied to every comment and docstring:
 
@@ -251,11 +246,13 @@ mirror PySpark's where PySpark has one.
 **The 91-`=` banner keeps its form; its body obeys rules 1–2.** Consolidating existing long
 comments is chartered sweep work, never a passenger on a fix.
 
-**Held by:** review — except docstring **presence**, which `scripts/check_docstring_presence.py` holds. Style `D` declined (facade mirrors PySpark).
+**Held by:** review — except docstring **presence**, which
+`scripts/check_docstring_presence.py` holds. Style `D` declined (facade mirrors PySpark).
 
 ## Markdown document lifecycle
 
-Every markdown document belongs to **exactly one class**, which sets how it is amended, retired and archived.
+Every markdown document here belongs to **exactly one class**, and the class decides how it is
+amended, what retires it, and where its record goes afterwards.
 
 | Class | Members | Lifecycle |
 |---|---|---|
@@ -290,17 +287,19 @@ The **executor** is [.agents/skills/compact-context-docs/SKILL.md](.agents/skill
 
 ## Working style and communication
 
-- **Stop gathering once you can act.** Redundant reads are waste; in a delegated unit they are the main way a
-  context budget is lost.
+- **Stop gathering once you can act.** Redundant reads and exploratory work past sufficient
+  context are waste — in a delegated unit they are the main way a context budget is lost.
 - **Answer in the language the requester used.** Source code, comments, identifiers, commit
   messages, and PR titles and bodies stay **English** regardless.
 - **Be concise.** No sycophantic openers, no closing filler, no narrated status.
 
 ## PyO3 build notes
 
-- The cdylib's `extension-module` feature is **off by default** (maturin enables it for the wheel),
-  so the test command is **`cargo test --workspace`**, never the flag that enables every feature:
-  that breaks a standalone test binary by stopping PyO3 linking libpython.
+- The cdylib's `extension-module` feature is **off by default**; it is enabled only when
+  maturin builds the wheel.
+- Therefore the test command is **`cargo test --workspace`**, never the flag that enables every
+  feature — that would turn on `extension-module`, which tells PyO3 not to link libpython and
+  breaks a standalone test binary. CI, the Makefile, and this rule all agree.
 - PyO3's build script needs an interpreter; linking `cargo test` needs `libpython3.x.so` present.
 
 ## Version-pin contract
@@ -330,20 +329,25 @@ defects that motivate them) live on the crate that owns the code:
 
 ## Upstream contribution policy
 
-Upstream-mergeability with `apache/iceberg-rust` is **not a constraint**: upstreaming is
-**optional**. We still **cherry-pick upstream improvements** into the fork when useful.
+Upstream-mergeability with `apache/iceberg-rust` is **not a constraint** — upstreaming a primitive
+is **optional/opportunistic**, not an obligation. We still **cherry-pick upstream improvements**
+into the fork when useful.
 
 ## Resource discipline — disk and artifacts
 
-Builds, tests and worktrees are the largest disk consumers; a full disk halts a campaign mid-unit.
+Builds, test runs, coverage, and per-unit worktrees are the largest consumers of disk here, and a
+disk that fills halts a campaign mid-unit.
 
 - **Check free space before you spend it** — before creating a worktree, and before any
   artifact-heavy command.
-- **Re-check at phase boundaries** and before broad validation. If the remaining space may not safely carry the next command, stop and reclaim task-owned artifacts — never start the command hoping it fits.
+- **Re-check at phase boundaries** and before broad validation. If the remaining space may not
+  safely carry the next command, stop and reclaim task-owned artifacts — never start the command
+  hoping it fits.
 - **Cleanup is scoped.** Remove the generated artifacts *this* task created, once unneeded.
   **Never delete another task's worktree, and never delete uncommitted files.**
 - **Share caches instead of duplicating them** across worktrees where the tool allows it.
-- **Report it at handoff:** the checks run, the cleanup done, and any artifact kept, with its reason.
+- **Report it at handoff:** the disk checks you ran, the cleanup you performed, and any worktree or
+  artifact you deliberately kept, with the reason it is still needed.
 
 Procedure: [.agents/skills/check-disk-headroom/SKILL.md](.agents/skills/check-disk-headroom/SKILL.md).
 
@@ -370,7 +374,8 @@ section instead of restating it; a brief may narrow these, never relax them.
   gate, release native, `cargo test -p` touched crates, own pytests) plus CI's required checks —
   never the whole-workspace suite locally (owner, 2026-09-18); REAL exit codes; Makefile-pinned lint.
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
-  directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit. Ledger presence is a gate item.
+  directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
+  Ledger presence is a gate item.
 - **Oracles:** oracle/differential test files are NAMED deliverables per unit; live-oracle
   output recorded verbatim; hand-computed expectations are not an oracle. Divergences get
   honest `_divergence` pins, never silent absorption.
@@ -378,7 +383,8 @@ section instead of restating it; a brief may narrow these, never relax them.
   around — the sanctioned outs are visible diffs, reviewed like code.
 - **Test relocations follow docs/testing.md "Relocation discipline":** move-only = identity-diff
   gate; path-changing regroups are declared-rename units that ship alone with a name map.
-- **Disk:** ["Resource discipline"](#resource-discipline--disk-and-artifacts) binds every unit.
+- **Disk:** the pre-spend checks, scoped cleanup, and handoff report in
+  ["Resource discipline"](#resource-discipline--disk-and-artifacts) bind every unit.
 - **Never:** AWS credentials/envs, `Cargo.toml [patch]` changes, `.github/` changes,
   secrets in any output. Clean STOP states only — a dirty worktree is not a delivered unit.
 
@@ -386,7 +392,8 @@ section instead of restating it; a brief may narrow these, never relax them.
 
 Single-agent-in-the-main-thread is the default. The orchestrating agent owns architecture and
 assembly; delegated fan-out is for **search, mechanical edits, and narrow, well-scoped
-implementation**, never for architectural judgement. Every unit inherits the standing rules above and the "Safety" approval boundaries — it may narrow those, never relax them. Tier policy:
+implementation**, never for architectural judgement. Every unit inherits the standing rules above
+and the "Safety" approval boundaries — it may narrow those, never relax them. Tier policy:
 owner-approved executor tiers (owner, 2026-09-20); launch mechanics live in [CLAUDE.md](CLAUDE.md).
 
 ## Process governance (SEPMO)
@@ -394,6 +401,7 @@ owner-approved executor tiers (owner, 2026-09-20); launch mechanics live in [CLA
 Non-trivial work runs under the **SEPMO control plane**
 ([.agents/skills/sepmo/SKILL.md](.agents/skills/sepmo/SKILL.md)): scope audit (proposition-ledger gate:
 every clause `PROVEN`, zero `OPEN`/`REJECTED`) → adversarial Actor–Critic → per-PR delivery →
-retrospective. SEPMO governs **only how work flows** and **cedes every engineering decision to this contract** — on conflict the chain in [`## Precedence`](#precedence) wins. Roles bind via
+retrospective. SEPMO governs **only how work flows** and **cedes every engineering decision to this
+contract** — on conflict the chain in [`## Precedence`](#precedence) wins. Roles bind via
 [.agents/skills/sepmo/binding-manifest.md](.agents/skills/sepmo/binding-manifest.md). Actor–Critic runs
 **single-session by default**; sub-agent fan-out follows "Delegated work" above.

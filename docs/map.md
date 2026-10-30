@@ -42,6 +42,8 @@ repo.
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.
+- [maps-policy.md](maps-policy.md) — the **architecture-scoped map policy** (2026-10-29): where a
+  `map.md` lives, the pin sidecars the grammar gate reads, the size ratchet and the gates.
 - [production-grade.md](production-grade.md) — the **definition of "production grade"** and its
   review rubric (PROD-GRADE-DEF-1, 2026-10-13): the operating envelope, assessment per
   capability, the attribute-and-evidence table, anti-patterns, five review questions and the
@@ -215,19 +217,15 @@ repo.
   **ICE-COLUMN-REORDER-1 (2026-09-17):** row `ICE-COLUMN-REORDER-1` FIXED (`ALTER COLUMN …
   FIRST/AFTER` moves with ids intact; the I6 move refusal text is removed, the COMMENT
   refusal stays); the self-move diagnostic delta is recorded in the row, not absorbed.
-  pins: ice-column-reorder-1/C-013
   ICE-WRITE-OPTIONS-1 round 3 (2026-09-17): the FIXED row's channel paragraph moves
   out of band (plus the Round 3 bullet: SQL-02/03, SNAP-08..13, merged gzip refusal).
   ICE-DYN-OVERWRITE-1 (2026-09-17): DML-1 points at new rows DML-1B (dynamic
   PARTITION-less overwrite FIXED) and DML-1C (overwrite-vs-append race FIXED, serializable
   surface documented).
-  pins: ice-dyn-overwrite-1/C-017
   **ICE-EVO-DML-1 (2026-09-17):** rows `ICE-EVO-DML-1` / `ICE-EVO-SWAP-1` /
   `ICE-EVO-LINEAGE-READ-1` FIXED with pin names and the fork-pin note.
-  pins: ice-evo-dml-1/C-014
   ICE-WRITE-OPTIONS-1 run 22b (2026-09-18): the FIXED row gains the rebase bullet (dynamic
   overwrite, static pin, empty dynamic source, RTAS, sorted tables, column lists).
-  pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
   **ICE-REGISTRY-SWEEP-1B (2026-09-18):** twelve rating rows and claims
   re-measured on merged main — nine verify unchanged, three tighten with a
   measured clause (ORC/Avro table-property refusal, ENC-1 cleartext bytes,
@@ -314,7 +312,6 @@ repo.
   **ICE-GOLD-TWICE-1 (2026-09-14):** §6 also carries the two `replace2` legs (Glue exact counts,
   S3 Tables relaxed counts with identical retention/type/`append` pins) and §7 the dbt gold
   module — the workflow's second pytest step, per-run stems, two `dbt run` passes and `dbt test`.
-  pins: live-v3-aws-legs/C-004; live-v3-first-measurement/C-002
 - [release.md](release.md) — release engineering (wired and proven): PyPI trusted-publishing
   setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags
   settled, and the still-open items. Which versions shipped is [../STATUS.md](../STATUS.md);
@@ -328,7 +325,6 @@ repo.
   **PLATFORM-1 (2026-09-12):** the wheel-matrix open item settles — "Settled at the first
   tags" now lists the five `cp312-abi3` wheels (`manylinux-x86_64`, `manylinux-aarch64`,
   `macos-arm64`, `macos-x86_64`, `windows-x86_64` with their runners); musllinux stays open.
-  pins: api-freeze/C-002; platform-1/C-005
   `FNP8-NULLABILITY` names the padded outer-join shape since FNP-8-REVIEW r3 (2026-09-07).
 
 ## I want to...
