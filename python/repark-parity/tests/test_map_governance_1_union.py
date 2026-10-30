@@ -3,16 +3,19 @@ multi-line definition shapes."""
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+from test_dl_2_ledger_grammar import _ATTESTATION
 from test_map_governance_1 import (
     _GRAMMAR,
     _HEADER,
     _LEDGER,
     _MAP,
+    _REPO,
     _ROWS,
     _SIDECAR,
     _SIDECAR_TEXT,
@@ -202,7 +205,7 @@ def test_the_gate_reports_records_whose_row_names_a_defined_test(repo: Path) -> 
     assert result.returncode == 1
     assert (
         f"{_LEDGER}: C-001 row names `demo_holds`, which only {_TEST} defines, and no binding"
-        " names that file"
+        f" names it: add `{_TEST}::demo_holds` to the clause's sidecar line"
     ) in result.stderr
     assert "row-named records: 1 (0 ambiguous)" in result.stdout
     assert f"  {_UNIT}/C-001\tdemo_holds\t{_TEST}" in result.stdout
@@ -319,5 +322,63 @@ def test_arithmetic_ansi_quotes_extern_macro_and_cfg_shapes(repo: Path) -> None:
         f"{rust}::real_extern, {rust}::battery, {rust}::real_after"
     )
     _write(repo, _SIDECAR, _HEADER + f"C-001: {good}\nC-002: {_TEST}\n")
+    result = _grammar(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_a_row_named_test_binds_by_name_and_a_rename_goes_red(repo: Path) -> None:
+    _write(repo, _LEDGER, _rows("`demo_holds`", "measured"))
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}\nC-002: {_TEST}\n")
+    result = _grammar(repo)
+    assert result.returncode == 1
+    assert f"C-001 row names `demo_holds`, which only {_TEST} defines" in result.stderr
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}::demo_holds\nC-002: {_TEST}\n")
+    assert _grammar(repo).returncode == 0
+    _write(repo, _TEST, "#[test]\nfn demo_holds_renamed() {}\nfn other_holds() {}\n")
+    result = _grammar(repo)
+    assert result.returncode == 1
+    assert f"C-001 names `demo_holds`, which {_TEST} does not define" in result.stderr
+    cited = "#[test]\nfn demo_holds() {}\n" + f'const PINS: &str = "pins: {_UNIT}/C-001";\n'
+    _write(repo, _TEST, cited)
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}\nC-002: {_TEST}\n")
+    assert _grammar(repo).returncode == 0
+
+
+def test_a_reading_unit_skips_the_row_named_rule(repo: Path) -> None:
+    reading = "task/ledgers/completed/mg-demo-reading-ledger.md"
+    text = "\n".join(
+        [
+            "# Unit ledger — demo reading",
+            "",
+            "**Unit:** demo · **Path:** READING",
+            "",
+            "| Clause | Proposition | Verdict | Evidence |",
+            "|---|---|---|---|",
+            "| C-001 | Line counts by crate, tests split into `tests/` and `demo_holds` | PROVEN"
+            " | docs: docs/audit.md#counts |",
+            "",
+        ]
+    )
+    _write(repo, reading, text + _ATTESTATION)
+    result = _grammar(repo)
+    assert result.returncode == 0, result.stderr
+    _write(repo, reading, text.replace("**Path:** READING", "**Path:** BUILD") + _ATTESTATION)
+    result = _grammar(repo)
+    assert result.returncode == 1
+    assert "C-001 row names `demo_holds`" in result.stderr
+
+
+def test_a_backslash_escaped_backtick_opens_no_span(repo: Path) -> None:
+    text_module = _REPO / "scripts" / "migrate_pins_text.py"
+    spec = importlib.util.spec_from_file_location("text", text_module)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.code_spans("a \\`b` c `d`") == ["c"]
+    assert module.code_spans("`a\\`") == ["a\\"]
+    assert module.code_spans("\\\\`x`") == ["x"]
+    assert module.code_spans("\\``x``") == []
+    _write(repo, _LEDGER, _rows("\\`demo_holds\\`", "measured"))
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}\nC-002: {_TEST}\n")
     result = _grammar(repo)
     assert result.returncode == 0, result.stderr

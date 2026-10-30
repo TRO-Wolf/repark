@@ -3,8 +3,8 @@
 
 Entries are a map's list rows, table rows, headings, dated entries and paragraphs; a cut takes a
 `pins:` citation out of a map with the separators and brackets that go with it; a disclaimer is a
-sentence that says a cited file pins nothing. The migration imports this module; it is not run on
-its own.
+sentence that says a cited file pins nothing. The migration imports this module, and the grammar
+gate imports its code-span reader; it is not run on its own.
 """
 
 from __future__ import annotations
@@ -31,25 +31,42 @@ def load_gate() -> ModuleType:
     return _LOADED["gate"]
 
 
+def _opener(text: str, index: int) -> tuple[int, int] | None:
+    """The next run of backticks at or after `index` that can open a span, as (start, end): a
+    backtick behind an odd number of backslashes is an escaped literal, so the run opens one
+    backtick later, and a run made only of that backtick opens nothing."""
+    while True:
+        run = BACKTICK_RUN.search(text, index)
+        if run is None:
+            return None
+        before = text[index : run.start()]
+        start = run.start() + (len(before) - len(before.rstrip("\\"))) % 2
+        if start < run.end():
+            return start, run.end()
+        index = run.end()
+
+
 def code_spans(text: str) -> list[str]:
     """The contents of every CommonMark code span in `text`: a run of N backticks opens a span
     that only the next run of exactly N backticks closes; runs of another length inside it are
-    literal, and an opener with no closer is literal text. One leading and one trailing space
+    literal, and an opener with no closer is literal text. Outside a span a backslash escapes
+    the backtick after it; inside one a backslash is literal. One leading and one trailing space
     are dropped when both are present and the content is not all spaces."""
     spans: list[str] = []
     index = 0
     while True:
-        opener = BACKTICK_RUN.search(text, index)
+        opener = _opener(text, index)
         if opener is None:
             return spans
-        width = len(opener.group(0))
-        closer = BACKTICK_RUN.search(text, opener.end())
+        start, end = opener
+        width = end - start
+        closer = BACKTICK_RUN.search(text, end)
         while closer is not None and len(closer.group(0)) != width:
             closer = BACKTICK_RUN.search(text, closer.end())
         if closer is None:
-            index = opener.end()
+            index = end
             continue
-        content = text[opener.end() : closer.start()].replace("\n", " ")
+        content = text[end : closer.start()].replace("\n", " ")
         if len(content) > 1 and content[0] == " " and content[-1] == " " and content.strip():
             content = content[1:-1]
         spans.append(content)

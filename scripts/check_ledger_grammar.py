@@ -25,18 +25,21 @@ B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` i
    readme; the name is a definition the file makes, read by parsing (Python: module- and
    class-level functions, classes and the names an assignment binds, never a subscript or
    attribute target; Rust: line-start fn, struct, enum, trait, type, const, static, mod, union
-   and macro_rules with comments (nested block comments included) and literals blanked; shell:
-   functions outside heredocs, whatever their delimiter quoting, and quoted strings, which may
-   span lines). The line `C-NNN: none (records)` binds a clause that no test pins; the gate
-   counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]` citation also binds when
-   it sits in a tracked test file or script under CITATION_ROOTS; one in a map or in production
-   source does not. Every `PROVEN` clause in a staging or completed ledger must be bound at
-   least once — the measured floor is seeded per ledger in EXCEPTIONS and only ratchets down — a
-   sidecar line counts only for the ledger beside it and must name a clause of that ledger, and
-   a source citation must resolve to a clause that exists in any bin (`staging/`, `completed/`,
-   the archive). A staging or completed ledger whose first 40 lines carry a `**Path:**` field
-   valued `READING` outside a code span is a reading unit: rule B does not apply to its clauses,
-   rules A and C still do.
+   and macro_rules with comments (nested block comments included) and literals blanked and with
+   `macro_rules!` bodies and `#[cfg(any())]` items skipped; shell: functions outside heredocs,
+   whatever their delimiter quoting, quoted strings, which may span lines, `$'...'` strings and
+   `((...))` and `$((...))` arithmetic). The line `C-NNN: none (records)` binds a clause that no
+   test pins; the gate counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]`
+   citation also binds when it sits in a tracked file under CITATION_ROOTS that an entry could
+   name; one in a map, a helper or production source does not. A `PROVEN` row that backticks a
+   test exactly one such file defines must bind it by name, `<file>::<name>` on its sidecar line
+   or a citation in that file. Every `PROVEN` clause in a staging or completed ledger must be
+   bound at least once — the measured floor is seeded per ledger in EXCEPTIONS and only ratchets
+   down — a sidecar line counts only for the ledger beside it and must name a clause of that
+   ledger, and a source citation must resolve to a clause that exists in any bin (`staging/`,
+   `completed/`, the archive). A staging or completed ledger whose first 40 lines carry a
+   `**Path:**` field valued `READING` outside a code span is a reading unit: rule B does not
+   apply to its clauses, rules A and C still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
@@ -553,8 +556,8 @@ def backticked_names(text: str) -> list[str]:
     return names
 
 
-def bound_files(repo: Path, tracked: list[str]) -> dict[tuple[str, str], set[str]]:
-    """(ledger beside the sidecar, clause id) -> the files its sidecar line names."""
+def bound_entries(repo: Path, tracked: list[str]) -> dict[tuple[str, str], set[str]]:
+    """(ledger beside the sidecar, clause id) -> the entries its sidecar line names."""
     files: dict[tuple[str, str], set[str]] = {}
     tracked_set = set(tracked)
     for path in tracked:
@@ -568,7 +571,7 @@ def bound_files(repo: Path, tracked: list[str]) -> dict[tuple[str, str], set[str
             if match is None:
                 continue
             files.setdefault((ledger, match.group(1)), set()).update(
-                entry.split("::", 1)[0] for entry in match.group(2).split(", ") if entry != RECORDS
+                entry for entry in match.group(2).split(", ") if entry != RECORDS
             )
     return files
 
@@ -579,20 +582,25 @@ def intent_findings(
     proven_rows: dict[tuple[str, str], str],
     cited: dict[tuple[str, str], list[str]],
 ) -> list[str]:
-    """A PROVEN clause whose own row backticks a test that exactly one bindable file defines
-    must bind that file, by its sidecar line or by a citation in that file."""
+    """A PROVEN clause of a non-reading unit whose own row backticks a test that exactly one
+    bindable file defines must bind that test by name, `<file>::<name>` on its sidecar line, or
+    by a citation in that file."""
     index = test_index(repo, tracked)
-    files = bound_files(repo, tracked)
+    entries = bound_entries(repo, tracked)
     findings: list[str] = []
     for (ledger, clause_id), row in sorted(proven_rows.items()):
         unit = unit_of(ledger)
-        have = files.get((ledger, clause_id), set()) | set(cited.get((unit, clause_id), []))
+        have = entries.get((ledger, clause_id), set())
+        citing = set(cited.get((unit, clause_id), []))
         for name in backticked_names(row):
             defining = index.get(name, [])
-            if len(defining) == 1 and defining[0] not in have:
+            if len(defining) != 1 or defining[0] in citing:
+                continue
+            if f"{defining[0]}::{name}" not in have:
                 findings.append(
                     f"{ledger}: {clause_id} row names `{name}`, which only {defining[0]} "
-                    "defines, and no binding names that file"
+                    f"defines, and no binding names it: add `{defining[0]}::{name}` to the "
+                    "clause's sidecar line"
                 )
     return findings
 
@@ -869,9 +877,11 @@ def run(repo: Path, row_named_report: bool = False) -> int:
         known.update((unit, cid) for cid in verdicts)
         clauses_of[path] = {cid for _n, cid, _c in rows}
         row_texts.update(((path, cid), " | ".join(cells)) for _n, cid, cells in rows)
+        reading = is_reading(text)
         for _n, cid, cells in rows:
             marks = [VERDICT_CELL.match(cell) for cell in cells]
-            if any(mark is not None and mark.group(1) == "PROVEN" for mark in marks):
+            proven_row = any(mark is not None and mark.group(1) == "PROVEN" for mark in marks)
+            if proven_row and not reading:
                 proven_rows[(path, cid)] = " | ".join(cells)
 
     cited = citations(repo, tracked)

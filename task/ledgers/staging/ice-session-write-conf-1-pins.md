@@ -36,7 +36,7 @@ C-033: crates/repark-iceberg/src/tests/session_write_conf.rs::bogus_session_code
 C-034: crates/repark-spark/src/tests/session_write_conf.rs::bogus_session_codec_refuses_naming_the_codec, crates/repark-spark/src/tests/session_write_conf.rs::session_team_stamps_cow_delete_overwrite, crates/repark-spark/src/tests/session_write_conf.rs::session_team_stamps_plain_insert, crates/repark-spark/src/tests/session_write_conf.rs::unset_session_conf_restores_unstamped_writes
 C-035: python/repark/tests/writes/test_ice_session_write_conf_1.py::test_sp_update_stamps_overwrite
 C-036: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
-C-037: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
+C-037: python/repark/tests/writes/test_ice_session_write_conf_1.py::test_live_oracle_fixture_reproduces, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
 C-038: crates/repark-spark/src/tests/write_to_branch.rs, python/repark/tests/writes/test_ice_session_write_conf_1.py::test_sp_update_stamps_overwrite, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_session_property_path_matches_spark
 C-039: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_branch_dataframe_append_stamps_session_team
 C-040: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_exception_tables_equal_the_measured_debt, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_session_codec_path_matches_spark
