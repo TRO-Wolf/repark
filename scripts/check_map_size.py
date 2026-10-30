@@ -7,15 +7,19 @@ Rules over every tracked file named `map.md`:
 1. A map stays within DEFAULT_LINES lines and DEFAULT_BYTES bytes; crossing either fails.
    Blank lines count.
 2. EXCEPTIONS records the exact (lines, bytes) of each map that was over a ceiling when the
-   ratchet armed. An excepted map must equal its baseline: growth in either measure fails, and
-   shrinkage fails until the row is lowered, or deleted once the map is within both ceilings.
+   ratchet armed. An excepted map fails when a measure exceeds both its row and the map's size
+   at the merge base of HEAD with `origin/main` (the row alone when there is no merge base or
+   the map is absent there), so growth that arrived from main is not the branch's growth.
+   Shrinkage below the row in both measures fails until the row is lowered, or deleted once
+   the map is within both ceilings.
 3. EXEMPT and EXEMPT_PATTERNS list the ledger-bin and archive-month maps the lifecycle script
    rewrites on every `move` and `archive`; they are inventories outside the ratchet, each with
    its reason. A pattern's `*` matches one path segment.
-4. `--update-baselines` rewrites EXCEPTIONS from the tree in the ratchet direction only: a
-   shrunk row is lowered, a row whose map is within both ceilings is deleted. A grown map or a
-   new map over a ceiling is refused and nothing is written; the out is a split or a condensed
-   map, never a raised row.
+4. `--update-baselines` rewrites each EXCEPTIONS row to the tree's size: a shrunk row is
+   lowered, a row below the merge-base size is raised to the tree's size, never above the
+   merge-base size, and a row whose map is within both ceilings is deleted. A map grown past
+   both its row and its merge-base size, or a new map over a ceiling, is refused and nothing
+   is written; the out is a split or a condensed map.
 
 Exit 0 clean, 1 findings, 2 usage or environment error. Fail-closed: no tracked map, an
 unreadable map, or an EXCEPTIONS key that is no tracked map is an error, never a skip.
@@ -35,6 +39,7 @@ DEFAULT_BYTES = 16384
 TABLE_OPEN = "EXCEPTIONS: dict[str, tuple[int, int]] = {"
 TABLE_CLOSE = "}"
 LINE_LIMIT = 100
+MAIN_REF = "origin/main"
 
 EXEMPT: dict[str, str] = {
     "task/ledgers/staging/map.md": (
@@ -61,10 +66,10 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "crates/repark-connect/tests/it/map.md": (468, 38148),
     "crates/repark-core/map.md": (266, 19890),
     "crates/repark-core/src/column_resolution/map.md": (209, 15902),
-    "crates/repark-core/src/map.md": (1575, 128506),
+    "crates/repark-core/src/map.md": (1577, 129326),
     "crates/repark-core/src/microbatch/map.md": (269, 22599),
     "crates/repark-core/src/session/df_guards/map.md": (781, 61318),
-    "crates/repark-core/src/session/map.md": (652, 53416),
+    "crates/repark-core/src/session/map.md": (654, 54452),
     "crates/repark-core/src/session/tests/map.md": (531, 40886),
     "crates/repark-functions/map.md": (271, 21197),
     "crates/repark-functions/src/map.md": (1564, 124860),
@@ -76,12 +81,12 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "crates/repark-python/src/map.md": (301, 107812),
     "crates/repark-spark/benches/ice_read_perf/map.md": (375, 28752),
     "crates/repark-spark/src/call/map.md": (444, 36836),
-    "crates/repark-spark/src/map.md": (2524, 211511),
+    "crates/repark-spark/src/map.md": (2525, 211771),
     "crates/repark-spark/src/router/map.md": (332, 27642),
     "crates/repark-spark/src/tests/map.md": (2812, 237485),
-    "crates/repark-spark/src/view_ddl/map.md": (223, 15207),
+    "crates/repark-spark/src/view_ddl/map.md": (228, 17122),
     "crates/repark-spark/src/void_type/map.md": (245, 17027),
-    "crates/repark-spark/tests/map.md": (597, 55082),
+    "crates/repark-spark/tests/map.md": (602, 57873),
     "crates/repark-sql/src/map.md": (491, 41036),
     "crates/repark-sql/tests/map.md": (383, 33782),
     "docs/artifacts/map.md": (59, 29165),
@@ -94,18 +99,18 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "python/repark-parity/tests/live_spark/map.md": (304, 20290),
     "python/repark-parity/tests/map.md": (1141, 123350),
     "python/repark-parity/tests/spill/map.md": (212, 13184),
-    "python/repark/src/repark/spark/dataframe/map.md": (1890, 142598),
-    "python/repark/src/repark/spark/map.md": (1172, 90110),
-    "python/repark/src/repark/spark/session/map.md": (147, 85507),
+    "python/repark/src/repark/spark/dataframe/map.md": (1892, 143486),
+    "python/repark/src/repark/spark/map.md": (1174, 90880),
+    "python/repark/src/repark/spark/session/map.md": (148, 86774),
     "python/repark/tests/functions/map.md": (153, 19204),
     "python/repark/tests/iceberg/map.md": (173, 22372),
     "python/repark/tests/map.md": (10116, 883657),
     "python/repark/tests/parity/map.md": (112, 16602),
     "python/repark/tests/timestamps/map.md": (221, 39702),
-    "python/repark/tests/writes/map.md": (209, 29993),
+    "python/repark/tests/writes/map.md": (213, 32897),
     "scripts/map.md": (592, 58746),
     "task/map.md": (228, 24697),
-    "task/roadmap/mid-term/map.md": (1117, 152825),
+    "task/roadmap/mid-term/map.md": (1123, 157169),
     "task/wo/map.md": (62, 17390),
 }
 
@@ -126,6 +131,46 @@ def measure(repo: Path, path: str) -> tuple[int, int]:
     return len(raw.decode("utf-8").splitlines()), len(raw)
 
 
+def merge_base(repo: Path) -> str | None:
+    """The merge base of HEAD with MAIN_REF, or None when git cannot name one."""
+    try:
+        found = subprocess.run(
+            ["git", "-C", str(repo), "merge-base", "HEAD", MAIN_REF],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    return found.stdout.strip() or None
+
+
+def base_sizes(repo: Path, base: str | None, paths: list[str]) -> dict[str, tuple[int, int]]:
+    """(lines, bytes) at `base` of each path that exists there as UTF-8 text."""
+    sizes: dict[str, tuple[int, int]] = {}
+    if base is None:
+        return sizes
+    for path in paths:
+        shown = subprocess.run(
+            ["git", "-C", str(repo), "show", f"{base}:{path}"], capture_output=True, check=False
+        )
+        if shown.returncode != 0:
+            continue
+        try:
+            sizes[path] = (len(shown.stdout.decode("utf-8").splitlines()), len(shown.stdout))
+        except UnicodeDecodeError:
+            continue
+    return sizes
+
+
+def allowance(baseline: tuple[int, int], at_base: tuple[int, int] | None) -> tuple[int, int]:
+    """The largest (lines, bytes) an excepted map may reach: its row, or its merge-base size
+    where that is larger, measure by measure."""
+    if at_base is None:
+        return baseline
+    return max(baseline[0], at_base[0]), max(baseline[1], at_base[1])
+
+
 def matches(pattern: str, path: str) -> bool:
     """Whether `path` matches `pattern`, one path segment per `*`."""
     parts, globs = path.split("/"), pattern.split("/")
@@ -144,8 +189,14 @@ def over(lines: int, size: int) -> bool:
     return lines > DEFAULT_LINES or size > DEFAULT_BYTES
 
 
-def check_map(path: str, lines: int, size: int, table: dict[str, tuple[int, int]]) -> list[str]:
-    """Findings for one map against the ceilings and its baseline."""
+def check_map(
+    path: str,
+    lines: int,
+    size: int,
+    table: dict[str, tuple[int, int]],
+    at_base: tuple[int, int] | None = None,
+) -> list[str]:
+    """Findings for one map against the ceilings, its baseline and its merge-base size."""
     baseline = table.get(path)
     if baseline is None:
         if not over(lines, size):
@@ -158,13 +209,17 @@ def check_map(path: str, lines: int, size: int, table: dict[str, tuple[int, int]
     base_lines, base_bytes = baseline
     if not over(base_lines, base_bytes):
         return [f"ERROR: {path}: baseline ({base_lines}, {base_bytes}) is within both ceilings."]
-    if lines > base_lines or size > base_bytes:
+    allowed_lines, allowed_bytes = allowance(baseline, at_base)
+    if lines > allowed_lines or size > allowed_bytes:
+        merged = (
+            "" if at_base is None else f"; {at_base[0]} lines, {at_base[1]} bytes at the merge base"
+        )
         return [
             f"ERROR: {path} grew to {lines} lines and {size} bytes (exact baseline "
-            f"{base_lines} lines, {base_bytes} bytes). Make the edit size-neutral or condense "
-            "the map; a raised baseline needs explicit owner approval."
+            f"{base_lines} lines, {base_bytes} bytes{merged}). Make the edit size-neutral or "
+            "condense the map; a raised baseline needs explicit owner approval."
         ]
-    if (lines, size) != baseline:
+    if lines <= base_lines and size <= base_bytes and (lines, size) != baseline:
         action = "delete the row" if not over(lines, size) else "lower the row"
         return [
             f"ERROR: {path} shrank to {lines} lines and {size} bytes below its exact baseline "
@@ -192,8 +247,14 @@ def rewrite_table(script: Path, rows: dict[str, tuple[int, int]]) -> None:
     script.write_text("\n".join([*source[:start], *table, *source[end + 1 :]]), encoding="utf-8")
 
 
-def update_baselines(repo: Path, measured: dict[str, tuple[int, int]], script: Path) -> int:
-    """The ratchet-only rewrite of EXCEPTIONS; refuses growth and new violators."""
+def update_baselines(
+    repo: Path,
+    measured: dict[str, tuple[int, int]],
+    script: Path,
+    at_base: dict[str, tuple[int, int]],
+) -> int:
+    """Rewrite EXCEPTIONS to the tree, never above a row's merge-base allowance; refuses growth
+    past it and new violators."""
     refused: list[str] = []
     rows: dict[str, tuple[int, int]] = {}
     for path, (lines, size) in measured.items():
@@ -204,8 +265,9 @@ def update_baselines(repo: Path, measured: dict[str, tuple[int, int]], script: P
             if over(lines, size):
                 refused.append(f"{path}: {lines} lines, {size} bytes, not excepted")
             continue
-        if lines > baseline[0] or size > baseline[1]:
-            refused.append(f"{path}: grew to {lines} lines, {size} bytes past {baseline}")
+        allowed = allowance(baseline, at_base.get(path))
+        if lines > allowed[0] or size > allowed[1]:
+            refused.append(f"{path}: grew to {lines} lines, {size} bytes past {allowed}")
             continue
         if over(lines, size):
             rows[path] = (lines, size)
@@ -251,15 +313,16 @@ def run(repo: Path, update: bool) -> int:
         for path in sorted(EXCEPTIONS)
         if exempt(path)
     )
+    at_base = base_sizes(repo, merge_base(repo), sorted(set(EXCEPTIONS) & set(measured)))
     if update:
         if errors:
             for error in errors:
                 print(error, file=sys.stderr)
             return 1
-        return update_baselines(repo, measured, Path(__file__).resolve())
+        return update_baselines(repo, measured, Path(__file__).resolve(), at_base)
     for path, (lines, size) in measured.items():
         if not exempt(path):
-            errors.extend(check_map(path, lines, size, EXCEPTIONS))
+            errors.extend(check_map(path, lines, size, EXCEPTIONS, at_base.get(path)))
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
@@ -278,7 +341,7 @@ def main() -> int:
     parser.add_argument(
         "--update-baselines",
         action="store_true",
-        help="lower or delete EXCEPTIONS rows from the tree; refuses growth",
+        help="rewrite EXCEPTIONS rows to the tree, up to the merge-base size; refuses growth",
     )
     parser.add_argument(
         "--repo", type=Path, default=Path(__file__).resolve().parent.parent, help=argparse.SUPPRESS

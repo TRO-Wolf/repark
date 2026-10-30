@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from test_map_governance_1 import _big_bytes, _size, _size_repo, _table
 
 _REPO = Path(__file__).resolve().parents[3]
 _SCRIPT = _REPO / "scripts" / "ledger_lifecycle.py"
@@ -228,3 +229,52 @@ def test_one_unit_in_two_bins_is_refused(repo: Path) -> None:
     result = _run(repo, "check")
     assert result.returncode == 1
     assert "x1-demo: one unit, ledgers in two bins" in result.stderr
+
+
+def _rows(count: int) -> str:
+    return "".join(f"- row {n}\n" for n in range(count))
+
+
+def _main_grew(tmp_path: Path) -> Path:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "seed")
+    _write(repo, "big/map.md", _rows(260))
+    _git(repo, "commit", "-q", "-am", "main grows the map")
+    _git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+    _git(repo, "checkout", "-q", "-b", "feature")
+    return repo
+
+
+def test_a_map_grown_only_on_main_passes(tmp_path: Path) -> None:
+    repo = _main_grew(tmp_path)
+    result = _size(repo)
+    assert result.returncode == 0, result.stderr
+    _git(repo, "update-ref", "-d", "refs/remotes/origin/main")
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "ERROR: big/map.md grew to 260 lines" in result.stderr
+
+
+def test_a_map_grown_on_the_branch_past_both_goes_red(tmp_path: Path) -> None:
+    repo = _main_grew(tmp_path)
+    _write(repo, "big/map.md", _rows(261))
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "ERROR: big/map.md grew to 261 lines" in result.stderr
+    assert "260 lines" in result.stderr
+    assert "at the merge base" in result.stderr
+    assert _size(repo, "--update-baselines").returncode == 1
+
+
+def test_update_baselines_raises_a_row_to_the_merge_base_size(tmp_path: Path) -> None:
+    repo = _main_grew(tmp_path)
+    size = len(_rows(260).encode())
+    assert _size(repo, "--update-baselines").returncode == 0
+    script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
+    assert f'    "big/map.md": (260, {size}),' in script
+    _write(repo, "big/map.md", _rows(255))
+    assert _size(repo, "--update-baselines").returncode == 0
+    script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
+    assert f'    "big/map.md": (255, {len(_rows(255).encode())}),' in script
+    assert _size(repo).returncode == 0
