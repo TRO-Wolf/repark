@@ -51,6 +51,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   SHOW VIEWS reads the current namespace (`show_view_rows_batch`).
   pins: ice-views-1/C-018
   **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `execute_create_temp_view` takes the view's home from `TempViewSession::temp_view_target_ref`, so a CREATE stores the key the rule-aware lookup reads, under whichever spelling the statement used (C-011).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** `temp_view_home_segment` folds an unquoted name with Unicode `to_lowercase` (it was ASCII-only), so the door's key agrees with the core's fold under the default rule (C-020).
   Name completion for CREATE, DROP, ALTER, RENAME targets, and the write guard
   reads `use_ddl::session_defaults(catalogs)`; one-part SHOW VIEWS IN reads its
   catalog from the same defaults. A bare name with no current namespace uses

@@ -12,8 +12,8 @@
 
 **Measured:** for the three writer paths, see the dated regrade above (2026-10-29, measured on Spark 4.1.2 at verification round 1). The Rust-door `USE` behaviour was observed by the builder while writing the parent unit's Rust pins (2026-10-29), not as a Spark comparison.
 
-**Fix (not built):** measure Spark 4.1.2's answers for `insertInto`, `writeTo(...).append()` and `saveAsTable` onto a temporary view with the table in scope. If Spark refuses a form, route that writer path through the same check with `prefer_temp_view=True`, with a pin per form. The Rust-door `USE` gap is in this card for the record: fix it only if the measurement shows a SQL or writer route reaching the wrong object.
+**Fix (not built):** the Rust door alone resolves a bare or two-part name through DataFusion's `default_catalog`/`default_schema`, not `USE`. Make the Rust door's bare reads and writes follow the session namespace and the temporary-view lookup, or record that the Rust door makes no Spark name-resolution claim.
 
-**Retires:** the card when each measured writer form matches Spark with a temporary view in scope, each form pinned, and the Rust-door `USE` behaviour is either fixed or recorded as matching Spark.
+**Retires:** the card when the Rust door's bare-name reads and writes either match the facade's resolution (pinned per route) or are recorded as out of the Spark claim, with the reason. The `writeTo`, `insertInto` and `saveAsTable` measurement is done (C-012) and needs no further work.
 
 **Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md); [SPARK-DOOR-TEMP-VIEW-TARGET-1 ledger](../../ledgers/staging/spark-door-temp-view-target-1-ledger.md), clause C-010.
