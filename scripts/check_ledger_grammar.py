@@ -66,8 +66,13 @@ MAP_NAME = "map.md"
 RECORDS = "none (records)"
 TEST_NAMES = re.compile(r"^(?:tests\.rs|.+_tests\.rs|test_.+\.py|.+_test\.py)$")
 CODE_SUFFIXES: frozenset[str] = frozenset({".rs", ".py", ".sh"})
-RUST_RAW_OPEN = re.compile(r'b?r(#*)"')
-RUST_CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'")
+RUST_LITERAL = re.compile(
+    r"//[^\n]*|/\*.*?\*/"
+    r'|(?<![A-Za-z0-9_])b?r(#*)".*?"\1'
+    r'|(?<![A-Za-z0-9_])b?"(?:\\.|[^"\\])*"'
+    r"|(?<![A-Za-z0-9_])b?'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'",
+    re.DOTALL,
+)
 RUST_DEFINITION = re.compile(
     r"^[ \t]*(?:pub(?:\([^)\n]*\))?[ \t]+)?"
     r"(?:(?:async|const|unsafe|default|extern[ \t]+\"[^\"\n]*\")[ \t]+)*"
@@ -85,6 +90,8 @@ RUST_TEST_ATTRIBUTE = re.compile(r"#\[(?:test|tokio::test|rstest)\b")
 PYTHON_TEST_MARKERS = ("fixture", "parametrize")
 _DEFINITIONS: dict[tuple[str, int], frozenset[str]] = {}
 _TEXTS: dict[str, str] = {}
+_CARRIES: dict[tuple[str, int], bool] = {}
+_STRIPPED: dict[int, str] = {}
 UNBINDABLE = re.compile(
     r"^(?:map\.md|.+-ledger\.md|.+-pins\.md|LICEN[CS]E.*|README.*|_record.*)$", re.IGNORECASE
 )
@@ -201,7 +208,7 @@ def citations(repo: Path, tracked: list[str]) -> dict[tuple[str, str], list[str]
             text = (repo / path).read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        if not bindable(path, text):
+        if CITATION.search(text) is None or not bindable(path, text):
             continue
         for match in CITATION.finditer(text):
             unit = match.group(1)
@@ -214,63 +221,18 @@ class SidecarUnreadableError(Exception):
     """A tracked sidecar that is missing from disk or is not UTF-8."""
 
 
-def _rust_skip_quoted(text: str, index: int) -> int:
-    """The index just past a Rust string, raw string or char literal that opens at `index`, or
-    `index` itself when no literal opens there."""
-    raw = RUST_RAW_OPEN.match(text, index)
-    if raw is not None:
-        closing = '"' + raw.group(1)
-        found = text.find(closing, raw.end())
-        return len(text) if found == -1 else found + len(closing)
-    head = text[index]
-    if head == "b" and index + 1 < len(text) and text[index + 1] in "\"'":
-        index += 1
-        head = text[index]
-    if head == '"':
-        cursor = index + 1
-        while cursor < len(text) and text[cursor] != '"':
-            cursor += 2 if text[cursor] == "\\" else 1
-        return cursor + 1
-    if head == "'":
-        char = RUST_CHAR.match(text, index)
-        return char.end() if char is not None else index + 1
-    return index
-
-
 def strip_rust(text: str) -> str:
-    """Rust source with comments, string, raw-string and char literals blanked; newlines kept."""
-    out: list[str] = []
-    index = 0
-    while index < len(text):
-        if text.startswith("//", index):
-            stop = text.find("\n", index)
-            index = len(text) if stop == -1 else stop
-            continue
-        if text.startswith("/*", index):
-            depth, cursor = 1, index + 2
-            while cursor < len(text) and depth:
-                if text.startswith("/*", cursor):
-                    depth, cursor = depth + 1, cursor + 2
-                elif text.startswith("*/", cursor):
-                    depth, cursor = depth - 1, cursor + 2
-                else:
-                    cursor += 1
-            out.append("\n" * text.count("\n", index, cursor))
-            index = cursor
-            continue
-        opens_literal = text[index] in "\"'" or (
-            text[index] in "br"
-            and (index == 0 or not (text[index - 1].isalnum() or text[index - 1] == "_"))
-        )
-        if opens_literal:
-            stop = _rust_skip_quoted(text, index)
-            if stop != index:
-                out.append("\n" * text.count("\n", index, stop))
-                index = stop
-                continue
-        out.append(text[index])
-        index += 1
-    return "".join(out)
+    """Rust source with comments and literals blanked, cached per text (see `_strip_rust`)."""
+    key = hash(text)
+    if key not in _STRIPPED:
+        _STRIPPED[key] = _strip_rust(text)
+    return _STRIPPED[key]
+
+
+def _strip_rust(text: str) -> str:
+    """Rust source with comments, string, raw-string, byte and char literals blanked; newlines
+    kept."""
+    return RUST_LITERAL.sub(lambda match: "\n" * match.group(0).count("\n"), text)
 
 
 def _bound_names(target: ast.expr) -> set[str]:
@@ -356,6 +318,14 @@ def defines(path: str, text: str, name: str) -> bool:
 
 
 def carries_tests(path: str, text: str) -> bool:
+    """Whether a test-located source holds a test, cached per file text (see `_carries_tests`)."""
+    key = (path, hash(text))
+    if key not in _CARRIES:
+        _CARRIES[key] = _carries_tests(path, text)
+    return _CARRIES[key]
+
+
+def _carries_tests(path: str, text: str) -> bool:
     """Whether a test-located source holds a test: a Python `test_*` function at module or class
     level, or a pytest fixture or parametrize; a Rust `#[test]`, `#[tokio::test]` or
     `#[rstest]` outside comments and literals. A shell file counts as it stands."""
