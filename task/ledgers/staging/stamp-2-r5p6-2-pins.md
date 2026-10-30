@@ -11,4 +11,4 @@ C-008: none (records)
 C-009: none (records)
 C-010: crates/repark-python/src/dataframe/tests.rs::name_rule_is_read_once_per_handle_and_children_inherit_their_parents, python/repark/tests/resolution/test_stamp_2_r5p6_2.py::test_frames_keep_the_case_rule_of_their_own_session_state
 C-011: none (records)
-C-012: none (records)
+C-012: python/repark/tests/resolution/test_stamp_2_r5p6_2.py::test_join_refusals_are_the_sql_route_refusals, python/repark/tests/resolution/test_stamp_2_r5p6_2.py::test_raising_native_cross_join_keeps_the_sql_route_answer

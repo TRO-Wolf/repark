@@ -12,7 +12,7 @@ C-009: none (records)
 C-010: none (records)
 C-011: none (records)
 C-012: none (records)
-C-013: none (records)
+C-013: crates/repark-spark/src/extension/tests.rs::analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion
 C-014: none (records)
 C-015: none (records)
 C-016: none (records)

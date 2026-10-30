@@ -3,10 +3,13 @@ multi-line definition shapes."""
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 from test_map_governance_1 import (
+    _GRAMMAR,
     _HEADER,
     _LEDGER,
     _MAP,
@@ -15,6 +18,7 @@ from test_map_governance_1 import (
     _SIDECAR_TEXT,
     _TEST,
     _UNIT,
+    _git,
     _grammar,
     _migrate,
     _scratch_map_repo,
@@ -119,3 +123,116 @@ def test_more_shell_rust_and_decorator_shapes_define_nothing(repo: Path) -> None
     result = _grammar(repo)
     assert result.returncode == 1
     assert f"C-001 binds {used}, which is not a test file or a script" in result.stderr
+
+
+_ITEM_TEST = "#[test]\nfn demo_holds() {}\n#[test]\nfn sub_case_holds() {}\n"
+
+
+def _rows(*cells: str) -> str:
+    head = (
+        "| Clause | Proposition | Proof obligation | Verdict | Evidence |\n|---|---|---|---|---|\n"
+    )
+    return (
+        head
+        + "".join(
+            f"| C-00{n} | A clause. | A pin. | PROVEN | {cell} |\n"
+            for n, cell in enumerate(cells, 1)
+        )
+        + "| C-009 | Open. | Needs work. | OPEN | waiting |\n"
+    )
+
+
+def test_nested_shapes_bind_the_enclosing_items_file(tmp_path: Path) -> None:
+    text = "\n".join(
+        [
+            "# map",
+            "",
+            "- `pins.rs` — the battery.",
+            f"  **ROUND-2 (2026-10-05):** a later round. pins: {_UNIT}/C-001, C-002",
+            f"  - `sub_case_holds` covers the sub case. pins: {_UNIT}/C-003",
+            f"  - a sub-bullet with prose only. pins: {_UNIT}/C-004",
+            "",
+        ]
+    )
+    rows = _rows("`demo_holds` is green", "measured", "measured", "`sub_case_holds` too")
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: _ITEM_TEST})
+    _write(repo, _LEDGER, rows)
+    assert _migrate(repo).returncode == 0
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}::demo_holds",
+        "C-002: none (records)",
+        f"C-003: {_TEST}::sub_case_holds",
+        f"C-004: {_TEST}::sub_case_holds",
+    ]
+
+
+def test_a_row_named_test_binds_by_intent_and_ambiguity_is_reported(tmp_path: Path) -> None:
+    second = "crates/demo/tests/second.rs"
+    files = {
+        _TEST: _ITEM_TEST,
+        second: "#[test]\nfn shared_name() {}\n",
+        "crates/demo/tests/third.rs": "#[test]\nfn shared_name() {}\n",
+    }
+    text = f"# map\n\nNothing cited here. pins: {_UNIT}/C-003\n"
+    repo = _scratch_map_repo(tmp_path, text, files)
+    _write(repo, _LEDGER, _rows("`demo_holds`", "`shared_name`", "measured"))
+    _write(repo, _SIDECAR, _HEADER + "C-001: none (records)\n")
+    report = _migrate(repo, "--check", "--report", "hand-candidates")
+    assert (
+        f"  {_UNIT}/C-002\tshared_name\tcrates/demo/tests/second.rs, crates/demo/tests/third.rs"
+        "\tambiguous row-named test"
+    ) in report.stdout
+    assert _migrate(repo).returncode == 0
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}::demo_holds",
+        "C-003: none (records)",
+    ]
+
+
+def test_the_gate_reports_records_whose_row_names_a_defined_test(repo: Path) -> None:
+    _write(repo, _LEDGER, _rows("`demo_holds`", "measured"))
+    _write(repo, _SIDECAR, _HEADER + "C-001: none (records)\nC-002: none (records)\n")
+    _git(repo, "add", "-A")
+    result = subprocess.run(
+        [sys.executable, str(_GRAMMAR), "--repo", str(repo), "--report", "row-named-records"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "row-named records: 1 (0 ambiguous)" in result.stdout
+    assert f"  {_UNIT}/C-001\tdemo_holds\t{_TEST}" in result.stdout
+
+
+def test_heredoc_herestring_escape_and_rust_comment_shapes(repo: Path) -> None:
+    script = "scripts/check_shapes.sh"
+    body = (
+        "cat <<1EOF\nphantom_digit() {\n1EOF\n"
+        "cat <<END-X\nphantom_hyphen() {\nEND-X\n"
+        'grep x <<< "$v"\nreal_after_herestring() {\n  :\n}\n'
+        "echo it\\'s\nreal_after_escape() {\n  :\n}\n"
+    )
+    _write(repo, script, body)
+    rust = "crates/demo/tests/comments.rs"
+    _write(
+        repo,
+        rust,
+        '/* a " quote and // slashes */\n#[test]\nfn real_one() {}\n'
+        'const S: &str = c"multi\nfn phantom_cstring() {}\n";\n#[test]\nfn real_two() {}\n',
+    )
+    for path, name in (
+        (script, "phantom_digit"),
+        (script, "phantom_hyphen"),
+        (rust, "phantom_cstring"),
+    ):
+        _write(repo, _SIDECAR, _HEADER + f"C-001: {path}::{name}\nC-002: {_TEST}\n")
+        result = _grammar(repo)
+        assert result.returncode == 1, name
+        assert f"C-001 names `{name}`, which {path} does not define" in result.stderr
+    good = (
+        f"{script}::real_after_herestring, {script}::real_after_escape, "
+        f"{rust}::real_one, {rust}::real_two"
+    )
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {good}\nC-002: {_TEST}\n")
+    result = _grammar(repo)
+    assert result.returncode == 0, result.stderr

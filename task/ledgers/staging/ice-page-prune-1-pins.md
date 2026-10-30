@@ -1,7 +1,7 @@
 # ice-page-prune-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: none (records)
-C-002: none (records)
+C-001: python/repark/tests/iceberg/test_ice_page_prune_1.py
+C-002: python/repark/tests/iceberg/test_ice_page_prune_1.py
 C-003: python/repark/tests/iceberg/test_ice_page_prune_1.py::_TABLES, python/repark/tests/iceberg/test_ice_page_prune_1.py::test_sql_door_answers_every_recorded_cell
 C-004: python/repark/tests/iceberg/test_ice_page_prune_1.py::test_dataframe_door_answers_every_recorded_cell
 C-005: python/repark/tests/iceberg/test_ice_page_prune_1.py::test_repark_written_v2_answers_its_own_reads

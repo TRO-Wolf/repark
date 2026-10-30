@@ -5,7 +5,7 @@ C-001: crates/repark-spark/src/tests/string_literal_escape_1.rs, python/repark/t
 C-002: crates/repark-spark/src/tests/string_literal_escape_1.rs::raw_doubled_quote_splits_like_spark, python/repark/tests/sql/test_string_literal_escape_1.py
 C-003: crates/repark-spark/src/tests/string_literal_escape_1.rs, python/repark/tests/sql/test_string_literal_escape_1.py::VERBATIM_CASES
 C-004: crates/repark-spark/src/tests/string_literal_escape_1.rs, python/repark-parity/tests/test_pr_245_revalidation_record.py, python/repark/tests/sql/test_string_literal_escape_1.py
-C-005: python/repark/tests/sql/test_string_literal_escape_1.py
+C-005: crates/repark-spark/src/tests/string_literal_escape_1.rs::verbatim_ddl_positions_take_default_treatment, python/repark/tests/sql/test_string_literal_escape_1.py
 C-006: python/repark/tests/sql/test_string_literal_escape_1.py
 C-007: python/repark/tests/sql/test_string_literal_escape_1.py
 C-008: python/repark/tests/sql/test_string_literal_escape_1.py
@@ -15,4 +15,4 @@ C-011: crates/repark-spark/src/tests/string_literal_escape_1.rs::built_statement
 C-012: python/repark/tests/sql/test_string_literal_escape_1.py
 C-013: none (records)
 C-014: none (records)
-C-015: scripts/coordinator/gate.sh
+C-015: python/repark-parity/tests/test_sepmo_usage.py::test_index_live_muse_worker_includes_inventory_stamps, scripts/coordinator/gate.sh

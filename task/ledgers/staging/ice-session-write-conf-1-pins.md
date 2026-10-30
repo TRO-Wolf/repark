@@ -34,16 +34,16 @@ C-031: python/repark/tests/writes/test_ice_session_write_conf_1.py::test_cz_conf
 C-032: python/repark/tests/writes/test_ice_session_write_conf_1.py::test_live_oracle_fixture_reproduces
 C-033: crates/repark-iceberg/src/tests/session_write_conf.rs::bogus_session_codec_refuses_naming_the_codec, crates/repark-iceberg/src/tests/session_write_conf.rs::builder_map_installs_carrier, crates/repark-iceberg/src/tests/session_write_conf.rs::statement_snapshot_wins_over_session, crates/repark-iceberg/src/tests/session_write_conf.rs::unset_clears_each_shape
 C-034: crates/repark-spark/src/tests/session_write_conf.rs::bogus_session_codec_refuses_naming_the_codec, crates/repark-spark/src/tests/session_write_conf.rs::session_team_stamps_cow_delete_overwrite, crates/repark-spark/src/tests/session_write_conf.rs::session_team_stamps_plain_insert, crates/repark-spark/src/tests/session_write_conf.rs::unset_session_conf_restores_unstamped_writes
-C-035: none (records)
+C-035: python/repark/tests/writes/test_ice_session_write_conf_1.py::test_sp_update_stamps_overwrite
 C-036: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
 C-037: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
-C-038: crates/repark-spark/src/tests/write_to_branch.rs, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_session_property_path_matches_spark
+C-038: crates/repark-spark/src/tests/write_to_branch.rs, python/repark/tests/writes/test_ice_session_write_conf_1.py::test_sp_update_stamps_overwrite, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_session_property_path_matches_spark
 C-039: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_branch_dataframe_append_stamps_session_team
 C-040: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_exception_tables_equal_the_measured_debt, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_session_codec_path_matches_spark
 C-041: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_summary_key_collision_matches_spark
 C-042: none (records)
 C-043: crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs::branch_selector_delete_is_identity_dml_on_the_branch, crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs::empty_branch_selector_delete_is_not_plain_identity, crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs::tag_selector_delete_is_not_plain_identity
-C-044: none (records)
+C-044: crates/repark-spark/src/tests/session_write_conf.rs::session_team_stamps_cow_delete_overwrite
 C-045: crates/repark-spark/src/tests/session_write_conf.rs, crates/repark-spark/src/tests/v3_subquery_dml.rs
 C-046: none (records)
 C-047: crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_a_new_partition_stamps_deleted_records, crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_an_existing_partition_names_the_engine_value
@@ -63,4 +63,4 @@ C-060: crates/repark-spark/src/tests/session_write_conf_removals.rs::an_identity
 C-061: crates/repark-spark/src/tests/session_write_conf_removals.rs::an_empty_source_static_overwrite_names_the_partition_it_clears
 C-062: none (records)
 C-063: crates/repark-spark/src/tests/session_write_conf.rs::an_owned_plain_update_resolves_a_mixed_case_set_target
-C-064: crates/repark-iceberg/src/tests/session_write_conf.rs, crates/repark-spark/src/tests/parquet_dictionary.rs::a_table_without_the_dictionary_property_writes_dictionary_pages, crates/repark-spark/src/tests/parquet_dictionary.rs::parquet_enable_dictionary_false_turns_the_dictionary_pages_off, crates/repark-spark/src/tests/parquet_dictionary.rs::parquet_enable_dictionary_true_keeps_the_dictionary_pages_on, crates/repark-spark/src/tests/parquet_dictionary.rs::the_owned_plain_insert_takes_the_fork_insert_exec_dictionary_rule
+C-064: crates/repark-iceberg/src/tests/session_write_conf.rs, crates/repark-spark/src/tests/parquet_dictionary.rs::a_table_without_the_dictionary_property_writes_dictionary_pages, crates/repark-spark/src/tests/parquet_dictionary.rs::parquet_enable_dictionary_false_turns_the_dictionary_pages_off, crates/repark-spark/src/tests/parquet_dictionary.rs::parquet_enable_dictionary_true_keeps_the_dictionary_pages_on, crates/repark-spark/src/tests/parquet_dictionary.rs::the_owned_plain_insert_takes_the_fork_insert_exec_dictionary_rule, crates/repark-spark/src/tests/session_write_conf.rs::a_session_conf_keeps_a_plain_insert_layout

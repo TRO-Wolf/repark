@@ -5,7 +5,7 @@ C-002: python/repark/tests/functions/test_door_converge_2.py
 C-003: python/repark/tests/functions/test_door_converge_2.py::test_facade_sequence_illegal_step_text
 C-004: python/repark/tests/functions/test_door_converge_2.py::test_facade_split_refusal_handoff_16a
 C-005: python/repark/tests/functions/test_door_converge_2.py::test_facade_concat_arrays, python/repark/tests/functions/test_door_converge_2.py::test_facade_reverse_arrays, python/repark/tests/functions/test_door_converge_2.py::test_facade_reverse_string, python/repark/tests/functions/test_door_converge_2.py::test_facade_sequence_column_stop, python/repark/tests/functions/test_door_converge_2.py::test_facade_sequence_literals, python/repark/tests/functions/test_door_converge_2.py::test_facade_split_refusal_handoff_16a
-C-006: none (records)
+C-006: crates/repark-python/src/column/door_parity_tests.rs::EXPECTED_DIVERGENCES, crates/repark-python/src/column/door_parity_tests.rs::SCALAR_NAMES
 C-007: python/repark/tests/functions/test_door_converge_2.py::test_facade_sequence_column_cap, python/repark/tests/functions/test_door_converge_2.py::test_facade_sequence_month_step, python/repark/tests/functions/test_door_converge_2.py::test_reverse_nested_column_keeps_inner
 C-008: crates/repark-functions/src/spark_regexp/tests.rs, crates/repark-functions/src/string/tests.rs, python/repark/tests/functions/test_door_converge_2.py::test_facade_concat_string_binary, python/repark/tests/functions/test_fn_regexp_extract.py::test_extract_java_lookbehind_is_loud
 C-009: python/repark/tests/functions/test_door_converge_2.py::test_split_limit_early_stop_matches_full_walk, python/repark/tests/functions/test_door_converge_2.py::test_split_per_row_pattern_column

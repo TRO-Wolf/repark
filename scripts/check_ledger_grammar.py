@@ -47,8 +47,9 @@ C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a f
    enumeration.
 
 The meanings stay in `.agents/skills/sepmo/` (SKILL.md "The gate is a ledger, not a score";
-references/05-critic.md); this script owns only the shape. Exit 0 clean, 1 findings, 2 usage
-or environment error.
+references/05-critic.md); this script owns only the shape. `--report row-named-records`
+also lists the records lines whose row backticks a test that bindable files define. Exit 0
+clean, 1 findings, 2 usage or environment error.
 """
 
 from __future__ import annotations
@@ -69,10 +70,11 @@ MAP_NAME = "map.md"
 RECORDS = "none (records)"
 TEST_NAMES = re.compile(r"^(?:tests\.rs|.+_tests\.rs|test_.+\.py|.+_test\.py)$")
 CODE_SUFFIXES: frozenset[str] = frozenset({".rs", ".py", ".sh"})
+RUST_COMMENT_MARK = re.compile(r"/\*|\*/")
 RUST_TOKEN = re.compile(
     r"//[^\n]*|/\*|\*/"
-    r'|(?<![A-Za-z0-9_])b?r(#*)".*?"\1'
-    r'|(?<![A-Za-z0-9_])b?"(?:\\.|[^"\\])*"'
+    r'|(?<![A-Za-z0-9_])[bc]?r(#*)".*?"\1'
+    r'|(?<![A-Za-z0-9_])[bc]?"(?:\\.|[^"\\])*"'
     r"|(?<![A-Za-z0-9_])b?'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'",
     re.DOTALL,
 )
@@ -87,13 +89,21 @@ SHELL_DEFINITION = re.compile(
     r"^[ \t]*function[ \t]+([A-Za-z_][A-Za-z0-9_-]*)|^[ \t]*([A-Za-z_][A-Za-z0-9_-]*)[ \t]*\(\)",
     re.MULTILINE,
 )
-SHELL_HEREDOC = re.compile(r"<<-?[ \t]*\\?[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?")
+SHELL_HEREDOC = re.compile(r"<<(?!<)-?[ \t]*\\?[\"']?([A-Za-z0-9_][A-Za-z0-9_-]*)[\"']?")
 RUST_TEST_ATTRIBUTE = re.compile(r"#\[(?:test|tokio::test|rstest)\b")
 PYTHON_TEST_MARKERS = frozenset(
     {"pytest.fixture", "fixture", "pytest.mark.parametrize", "parametrize"}
 )
 _DEFINITIONS: dict[tuple[str, int], frozenset[str]] = {}
 _TEXTS: dict[str, str] = {}
+_TEST_NAMES: dict[tuple[str, int], frozenset[str]] = {}
+RUST_TEST_FUNCTION = re.compile(
+    r"#\[(?:test|tokio::test|rstest)\b[^\]]*\](?:\s*#\[[^\]]*\])*\s*"
+    r"(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)"
+)
+QUALIFIED_SPAN = re.compile(
+    r"^(?:[\w./-]*::)?(?:[A-Za-z_]\w*(?:::|\.))*([A-Za-z_]\w*)(?:\(\))?$", re.ASCII
+)
 _CARRIES: dict[tuple[str, int], bool] = {}
 _STRIPPED: dict[int, str] = {}
 UNBINDABLE = re.compile(
@@ -234,36 +244,36 @@ def strip_rust(text: str) -> str:
 
 
 def _strip_rust(text: str) -> str:
-    """Rust source with comments (block comments nested), string, raw-string, byte and char
-    literals blanked; newlines kept."""
+    """Rust source with comments (block comments nested, and everything inside them, quotes and
+    `//` included), string, raw-string, byte, C-string and char literals blanked; newlines kept."""
     out: list[str] = []
     cursor = 0
-    depth = 0
-    opened = 0
-    for token in RUST_TOKEN.finditer(text):
-        lexeme = token.group(0)
-        if depth:
-            if lexeme == "/*":
-                depth += 1
-            elif lexeme == "*/":
-                depth -= 1
-                if not depth:
-                    out.append("\n" * text.count("\n", opened, token.end()))
-                    cursor = token.end()
-            continue
-        if lexeme == "*/":
-            continue
+    index = 0
+    while True:
+        token = RUST_TOKEN.search(text, index)
+        if token is None:
+            out.append(text[cursor:])
+            return "".join(out)
         out.append(text[cursor : token.start()])
-        if lexeme == "/*":
-            depth, opened = 1, token.start()
+        lexeme = token.group(0)
+        if lexeme == "*/":
+            out.append(lexeme)
+            cursor = index = token.end()
             continue
-        out.append("\n" * lexeme.count("\n"))
-        cursor = token.end()
-    if depth:
-        out.append("\n" * text.count("\n", opened))
-    else:
-        out.append(text[cursor:])
-    return "".join(out)
+        if lexeme != "/*":
+            out.append("\n" * lexeme.count("\n"))
+            cursor = index = token.end()
+            continue
+        depth, scan = 1, token.end()
+        while depth:
+            mark = RUST_COMMENT_MARK.search(text, scan)
+            if mark is None:
+                scan = len(text)
+                break
+            depth += 1 if mark.group(0) == "/*" else -1
+            scan = mark.end()
+        out.append("\n" * text.count("\n", token.start(), scan))
+        cursor = index = scan
 
 
 def _bound_names(target: ast.expr) -> set[str]:
@@ -303,6 +313,10 @@ def strip_shell(text: str) -> str:
                     quote = None
                 index += 1
                 continue
+            if char == "\\":
+                kept.append(" ")
+                index += 2
+                continue
             if char in "\"'":
                 quote = char
                 index += 1
@@ -312,6 +326,9 @@ def strip_shell(text: str) -> str:
             if line.startswith("$((", index):
                 stop = line.find("))", index)
                 index = len(line) if stop == -1 else stop + 2
+                continue
+            if line.startswith("<<<", index):
+                index += 3
                 continue
             heredoc = SHELL_HEREDOC.match(line, index)
             if heredoc is not None:
@@ -423,6 +440,69 @@ def bindable(path: str, text: str) -> bool:
     return located and carries_tests(path, text)
 
 
+def test_names(path: str, text: str) -> frozenset[str]:
+    """The test functions a bindable file defines: Python module- or class-level `test_*`
+    functions; Rust functions under `#[test]`, `#[tokio::test]` or `#[rstest]`."""
+    key = (path, hash(text))
+    cached = _TEST_NAMES.get(key)
+    if cached is not None:
+        return cached
+    names: set[str] = set()
+    if path.endswith(".rs"):
+        names = {match.group(1) for match in RUST_TEST_FUNCTION.finditer(strip_rust(text))}
+    elif path.endswith(".py"):
+        names = {name for name in _python_definitions(text) if name.startswith("test_")}
+    result = frozenset(names)
+    _TEST_NAMES[key] = result
+    return result
+
+
+def test_index(repo: Path, tracked: list[str]) -> dict[str, list[str]]:
+    """Test function name -> the bindable files that define it, over the whole tree."""
+    index: dict[str, list[str]] = {}
+    for path in tracked:
+        if Path(path).suffix not in (".rs", ".py"):
+            continue
+        text = read_tracked(repo, path)
+        if not text or not bindable(path, text):
+            continue
+        for name in test_names(path, text):
+            index.setdefault(name, []).append(path)
+    return index
+
+
+def backticked_names(text: str) -> list[str]:
+    """The identifiers a row backticks: the last segment of each qualified or `path::name` span."""
+    names: list[str] = []
+    for span in re.findall(r"`([^`]+)`", text):
+        match = QUALIFIED_SPAN.match(span.strip())
+        if match is not None and match.group(1) not in names:
+            names.append(match.group(1))
+    return names
+
+
+def report_row_named_records(
+    repo: Path,
+    tracked: list[str],
+    records: list[tuple[str, str, str]],
+    row_texts: dict[tuple[str, str], str],
+) -> None:
+    """Records lines whose clause row backticks a test that bindable files define: one file is
+    a missed binding, more than one is ambiguous and needs a hand line."""
+    index = test_index(repo, tracked)
+    found: list[str] = []
+    ambiguous = 0
+    for unit, clause_id, ledger in records:
+        for name in backticked_names(row_texts.get((ledger, clause_id), "")):
+            files = index.get(name, [])
+            if files:
+                ambiguous += len(files) > 1
+                found.append(f"  {unit}/{clause_id}\t{name}\t{', '.join(sorted(files))}")
+    print(f"row-named records: {len(found)} ({ambiguous} ambiguous)")
+    for line in found:
+        print(line)
+
+
 def read_tracked(repo: Path, path: str) -> str:
     """A tracked file's text, cached for the run; an unreadable file reads as empty."""
     key = f"{repo}/{path}"
@@ -478,14 +558,19 @@ def _sidecar_text(repo: Path, path: str) -> str:
 
 def bindings(
     repo: Path, tracked: list[str]
-) -> tuple[dict[tuple[str, str], list[str]], list[tuple[str, str, str]], list[str], list[str]]:
+) -> tuple[
+    dict[tuple[str, str], list[str]],
+    list[tuple[str, str, str]],
+    list[str],
+    list[tuple[str, str, str]],
+]:
     """Sidecar bindings: (ledger beside the sidecar, clause id) -> sidecar lines, every line as
-    (where, ledger, clause id) for the clause check, the shape findings, and the `unit/C-NNN` ids
-    bound to `none (records)`."""
+    (where, ledger, clause id) for the clause check, the shape findings, and the clauses bound to
+    `none (records)` as (unit, clause id, ledger)."""
     found: dict[tuple[str, str], list[str]] = {}
     lines: list[tuple[str, str, str]] = []
     findings: list[str] = []
-    records: list[str] = []
+    records: list[tuple[str, str, str]] = []
     tracked_set = set(tracked)
     bins = (STAGING + "/", COMPLETED + "/", ARCHIVE + "/")
     for path in tracked:
@@ -513,7 +598,7 @@ def bindings(
             entries = match.group(2).split(", ")
             findings.extend(_entry_findings(repo, tracked_set, where, clause_id, entries))
             if entries == [RECORDS]:
-                records.append(f"{unit}/{clause_id}")
+                records.append((unit, clause_id, ledger))
             found.setdefault((ledger, clause_id), []).append(where)
             lines.append((where, ledger, clause_id))
     return found, lines, findings, sorted(records)
@@ -622,7 +707,7 @@ def check_findings(path: str, text: str) -> list[str]:
     return findings
 
 
-def run(repo: Path) -> int:
+def run(repo: Path, row_named_report: bool = False) -> int:
     """All three rules over the live ledgers; the summary, the records list; the exit code."""
     try:
         tracked = tracked_paths(repo)
@@ -642,6 +727,7 @@ def run(repo: Path) -> int:
     findings: list[str] = []
     known: set[tuple[str, str]] = set()
     clauses_of: dict[str, set[str]] = {}
+    row_texts: dict[tuple[str, str], str] = {}
     proven: dict[str, list[str]] = {}
     clauses = 0
     for path in live + archived:
@@ -665,6 +751,7 @@ def run(repo: Path) -> int:
             verdicts = {cid: "" for _n, cid, _c in rows}
         known.update((unit, cid) for cid in verdicts)
         clauses_of[path] = {cid for _n, cid, _c in rows}
+        row_texts.update(((path, cid), " | ".join(cells)) for _n, cid, cells in rows)
 
     cited = citations(repo, tracked)
     for (unit, clause_id), files in sorted(cited.items()):
@@ -714,24 +801,30 @@ def run(repo: Path) -> int:
     )
     print(f"ledger-grammar: {len(records)} clause(s) bound to `{RECORDS}`, no test pins them")
     by_unit: dict[str, list[str]] = {}
-    for record in records:
-        unit, clause_id = record.rsplit("/", 1)
+    for unit, clause_id, _ledger in records:
         by_unit.setdefault(unit, []).append(clause_id)
     for unit in sorted(by_unit):
         print(f"  {unit}: {', '.join(by_unit[unit])}")
+    if row_named_report:
+        report_row_named_records(repo, tracked, records, row_texts)
     return 0
 
 
 def main() -> int:
-    """CLI: `--repo` only (hidden), for the provocation tests."""
+    """CLI: `--report row-named-records`, and the hidden `--repo` for the provocation tests."""
     parser = argparse.ArgumentParser(
         prog="check_ledger_grammar.py", description=__doc__.split("\n\n")[0]
     )
     parser.add_argument(
         "--repo", type=Path, default=Path(__file__).resolve().parent.parent, help=argparse.SUPPRESS
     )
+    parser.add_argument(
+        "--report",
+        choices=["row-named-records"],
+        help="list records lines whose ledger row names a test one bindable file defines",
+    )
     arguments = parser.parse_args()
-    return run(arguments.repo.resolve())
+    return run(arguments.repo.resolve(), arguments.report == "row-named-records")
 
 
 if __name__ == "__main__":

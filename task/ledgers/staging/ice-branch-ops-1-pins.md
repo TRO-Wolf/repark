@@ -12,7 +12,7 @@ C-009: none (records)
 C-010: none (records)
 C-011: none (records)
 C-012: none (records)
-C-013: none (records)
+C-013: python/repark/tests/iceberg/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes
 C-014: none (records)
 C-015: none (records)
 C-016: none (records)

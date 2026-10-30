@@ -2,7 +2,7 @@
 
 C-001: none (records)
 C-002: none (records)
-C-003: none (records)
+C-003: crates/repark-iceberg/src/write/merge/tests/dv_close.rs::shared_puffin_row_delta_keeps_the_untouched_sibling
 C-004: crates/repark-spark/src/tests/v3_cow.rs, crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/iceberg/test_v3_cow_dml.py, python/repark/tests/iceberg/test_v3_live_oracle.py, python/repark/tests/iceberg/test_v3e3_fixtures.py, python/repark/tests/iceberg/test_v3e4_refs_time_travel.py
 C-005: crates/repark-spark/src/tests/call_v3.rs
 C-006: python/repark/tests/perf/test_mw7_scale_smoke.py

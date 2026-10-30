@@ -1,5 +1,5 @@
 # review-fix-7 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: python/repark/tests/session/test_config_mirror.py::test_catalog_name_with_header_break_refuses, python/repark/tests/session/test_config_mirror.py::test_profile_name_with_header_break_refuses, python/repark/tests/session/test_config_mirror.py::test_profile_name_with_quote_refuses, python/repark/tests/session/test_config_mirror.py::test_source_name_with_newline_refuses, python/repark/tests/session/test_config_mirror.py::test_spaced_profile_name_renders_one_quoted_header
-C-002: none (records)
-C-003: none (records)
+C-002: crates/repark-core/src/config_file/tests/mod.rs::a_parse_error_carries_position_but_never_the_source_line
+C-003: crates/repark-core/src/config_file/tests/wiring.rs::discovered_glue_catalog_warns_once_naming_path_and_catalog, crates/repark-core/src/config_file/tests/wiring.rs::discovered_memory_catalog_warns_nothing, crates/repark-core/src/config_file/tests/wiring.rs::forced_glue_catalog_warns_nothing, crates/repark-core/src/config_file/tests/wiring.rs::home_discovered_glue_catalog_warns_once, crates/repark-core/src/config_file/tests/wiring.rs::repark_config_named_glue_catalog_warns_nothing

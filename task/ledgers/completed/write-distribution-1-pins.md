@@ -8,4 +8,4 @@ C-005: crates/repark-iceberg/src/write/distribution/tests.rs::bucket_and_day_tra
 C-006: crates/repark-iceberg/src/write/distribution/tests.rs::an_unpartitioned_table_keeps_one_file_per_input_partition, python/repark/tests/perf/test_perf_ice_writepath_1.py::test_ctas_writes_one_data_file_per_plan_partition
 C-007: python/repark/tests/writes/test_write_distribution_1.py::test_partitioned_ctas_file_count_matches_spark
 C-008: crates/repark-iceberg/src/write/distribution/tests.rs
-C-009: python/repark/tests/writes/test_write_distribution_1.py::test_partitioned_ctas_writes_one_data_file_per_partition_value
+C-009: python/repark/tests/perf/test_perf_ice_writepath_1.py::test_partitioned_ctas_files_ascend_by_partition_value, python/repark/tests/writes/test_write_distribution_1.py::test_partitioned_ctas_writes_one_data_file_per_partition_value

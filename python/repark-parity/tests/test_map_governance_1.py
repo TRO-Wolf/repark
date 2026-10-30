@@ -292,7 +292,7 @@ _MAP_TEXT = "\n".join(
 def _migrate(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     scripts = repo / "scripts"
     scripts.mkdir(exist_ok=True)
-    for name in ("check_ledger_grammar.py", "migrate_pins_to_sidecars.py"):
+    for name in ("check_ledger_grammar.py", "migrate_pins_to_sidecars.py", "migrate_pins_text.py"):
         (scripts / name).write_text(
             (_REPO / "scripts" / name).read_text(encoding="utf-8"), encoding="utf-8"
         )

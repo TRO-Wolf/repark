@@ -2,7 +2,7 @@
 
 C-001: none (records)
 C-002: none (records)
-C-003: none (records)
+C-003: crates/repark-spark/src/tests/catalog_cache_staleness.rs::with_zero_bytes_a_repeated_read_opens_manifests_again
 C-004: none (records)
 C-005: none (records)
 C-006: none (records)

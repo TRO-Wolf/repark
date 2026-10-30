@@ -14,8 +14,8 @@ C-011: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-012: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-013: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-014: python/repark/tests/writes/test_ice_dyn_overwrite_1.py::dynamic
-C-015: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-016: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-015: crates/repark-spark/src/tests/dyn_partition_overwrite.rs::snapshot_race_replaces_concurrent_same_partition_append, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-016: crates/repark-spark/src/tests/dyn_partition_overwrite.rs::serializable_race_refuses_concurrent_same_partition_append, python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-017: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-018: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-019: python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py

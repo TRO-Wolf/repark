@@ -3,22 +3,22 @@
 C-001: crates/repark-iceberg/src/write/sink_offsets_tests.rs::dm5_empty_merge_append_commits_one_stamp_only_append_snapshot
 C-002: crates/repark-iceberg/src/write/sink_offsets_tests.rs::a_second_stamped_commit_in_one_batch_refuses, crates/repark-iceberg/src/write/sink_offsets_tests.rs::scope_holds_one_stamp_per_sink_and_claims_once
 C-003: crates/repark-iceberg/src/write/sink_offsets_tests.rs::append_arm_stamps_summary_and_property_in_one_commit_on_both_doors, crates/repark-iceberg/src/write/sink_offsets_tests.rs::copy_on_write_arm_stamps_both_overwrite_shapes, crates/repark-iceberg/src/write/sink_offsets_tests.rs::merge_on_read_arm_stamps_the_row_delta
-C-004: none (records)
+C-004: crates/repark-iceberg/src/write/sink_offsets_tests.rs::a_branch_commit_leaves_the_claim_for_main, crates/repark-iceberg/src/write/sink_offsets_tests.rs::unscoped_arms_commit_without_any_stamp
 C-005: crates/repark-iceberg/src/write/sink_offsets_tests.rs::record_commit_refuses_a_head_without_the_stamp
-C-006: none (records)
+C-006: crates/repark-iceberg/src/write/sink_offsets_tests.rs::commit_stamp_only_commits_one_append_snapshot_with_both_halves
 C-007: crates/repark-iceberg/src/write/sink_offsets_tests.rs::load_table, crates/repark-iceberg/src/write/sink_offsets_tests.rs::resume_reads_the_last_offset_from_one_loaded_table
-C-008: none (records)
+C-008: crates/repark-iceberg/src/write/sink_offsets_tests.rs::a_concurrent_unrelated_append_still_commits_both_halves_exactly_once
 C-009: crates/repark-iceberg/src/write/sink_offsets_tests.rs::resume_refuses_a_newer_offset_format, crates/repark-iceberg/src/write/sink_offsets_tests.rs::resume_refuses_a_property_whose_stamped_snapshot_expired, crates/repark-iceberg/src/write/sink_offsets_tests.rs::resume_refuses_when_summary_and_property_disagree
-C-010: none (records)
-C-011: none (records)
+C-010: crates/repark-iceberg/src/microbatch/crash_tests.rs::run_epoch, crates/repark-iceberg/src/microbatch/crash_tests.rs::test_microbatch_kill_after_commit_resumes_1
+C-011: crates/repark-iceberg/src/write/sink_offsets_tests.rs::a_second_stamped_commit_in_one_batch_refuses, crates/repark-iceberg/src/write/sink_offsets_tests.rs::commit_stamp_only_commits_one_append_snapshot_with_both_halves, crates/repark-iceberg/src/write/sink_offsets_tests.rs::resume_reads_the_last_offset_from_one_loaded_table, crates/repark-iceberg/src/write/sink_offsets_tests.rs::resume_refuses_when_summary_and_property_disagree, crates/repark-iceberg/src/write/sink_offsets_tests.rs::scope_holds_one_stamp_per_sink_and_claims_once
 C-012: none (records)
-C-013: none (records)
-C-014: none (records)
-C-015: none (records)
-C-016: none (records)
-C-017: none (records)
-C-018: none (records)
+C-013: crates/repark-iceberg/src/microbatch/crash_tests.rs::test_microbatch_kill_after_commit_resumes_1, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::a_foreign_writer_inside_the_scope_commits_as_on_main_and_leaves_the_claim, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::a_writer_with_a_wrong_token_does_not_claim, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::the_session_snapshot_property_carries_the_token_to_the_arm, crates/repark-iceberg/src/write/sink_offsets_tests.rs::scope_holds_one_stamp_per_sink_and_claims_once
+C-014: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::resume_refuses_a_rollback_before_every_stamp_as_not_in_lineage, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::resume_refuses_a_rollback_between_stamps_with_the_summary_as_authority, crates/repark-iceberg/src/write/sink_offsets_tests.rs::resume_refuses_a_property_whose_stamped_snapshot_expired
+C-015: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::caller_extras_cannot_displace_the_stamp, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::site_stamp_extras_put_the_stamp_last_and_drop_the_token
+C-016: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::resume_refuses_a_malformed_property_version_as_corrupt
+C-017: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::a_mismatched_stamp_only_commit_leaves_the_claim
+C-018: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::a_refused_merge_on_read_claim_stages_no_delete_file
 C-019: crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::a_bare_empty_merge_append_refuses_on_an_empty_and_a_seeded_sink, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::a_racing_stamp_of_another_query_keeps_both_records, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::an_injected_failure_lands_neither_half_on_every_arm, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::an_unknown_outcome_that_landed_holds_both_halves_on_every_arm, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::interleaved_queries_each_resume_their_own, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::one_catalog_request_carries_both_halves_on_every_arm, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::resume_never_falls_back_to_an_older_stamp_when_the_newest_expired, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::resume_reads_a_stamp_only_chain_and_a_root_stamp, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::resume_refuses_a_newer_format_on_both_halves, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::resume_refuses_a_property_behind_the_summary, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::three_racing_appends_still_stamp_exactly_once_on_every_arm, crates/repark-iceberg/src/write/sink_offsets_probe_tests.rs::update_table
-C-020: none (records)
-C-021: none (records)
-C-022: none (records)
+C-020: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::resume_reads_a_gap_in_the_ancestry_as_expiry_not_rollback, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::resume_reads_a_v1_rollback_after_expiry_by_timestamp, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::resume_refuses_a_rollback_past_the_stamp_after_routine_expiry_as_not_in_lineage
+C-021: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::a_replayed_or_case_variant_token_key_never_claims, crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::the_batch_session_token_never_lands_on_a_replace_or_overwrite_filter_commit
+C-022: crates/repark-iceberg/src/write/sink_offsets_scope_tests.rs::a_second_sink_write_in_one_batch_names_the_loss_and_the_fix

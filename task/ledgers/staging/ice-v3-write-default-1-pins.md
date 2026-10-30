@@ -13,14 +13,14 @@ C-010: crates/repark-iceberg/src/write/insert_defaults/tests/mod.rs, python/repa
 C-011: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-012: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-013: python/repark/tests/iceberg/test_rp3_c009_write_default.py, python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-014: python/repark/tests/writes/test_ice_v3_write_default_1.py
-C-015: crates/repark-spark/src/tests/spark_dialect.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_dynamic_partition_named_list_fills_write_default, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_overwrite_partitions_api_replaces_source_partitions, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_partitioned_whole_table_named_list_fills_write_default, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_static_partition_named_list_fills_write_default
-C-016: crates/repark-spark/src/tests/write_defaults.rs, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_overwrite_default_keyword_fills_write_default
+C-014: python/repark/tests/parity/test_examples_io_session.py::test_missing_table_text, python/repark/tests/writes/test_ice_v3_write_default_1.py
+C-015: crates/repark-spark/src/tests/spark_dialect.rs, crates/repark-sql/tests/ansi_write_defaults.rs::ansi_static_partition_column_list_refusals, crates/repark-sql/tests/ansi_write_defaults.rs::ansi_static_partition_value_wins_over_its_write_default, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_dynamic_partition_named_list_fills_write_default, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_overwrite_partitions_api_replaces_source_partitions, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_partitioned_whole_table_named_list_fills_write_default, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_static_partition_named_list_fills_write_default
+C-016: crates/repark-spark/src/tests/write_defaults.rs, crates/repark-sql/tests/ansi_write_defaults.rs::ansi_partition_overwrite_default_keyword_fills_write_default, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_overwrite_default_keyword_fills_write_default
 C-017: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-018: python/repark/tests/writes/test_ice_v3_write_default_1.py::_live_rollcall, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_missing_nullable_no_default_accepts_and_nulls
 C-019: crates/repark-iceberg/src/write/merge/tests/insert_fill.rs::target_schema
 C-020: python/repark/tests/writes/test_ice_v3_write_default_1.py::_live_overwrite_partitions, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_overwrite_partitions_api_fills_missing_defaulted_column
-C-021: crates/repark-spark/src/tests/write_defaults.rs::spark_default_in_outer_select_under_with_refuses_unresolved, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_default_outside_the_insert_list_refuses
+C-021: crates/repark-spark/src/tests/write_defaults.rs::spark_default_in_outer_select_under_with_refuses_unresolved, crates/repark-sql/tests/ansi_write_defaults.rs::ansi_default_in_outer_select_under_with_refuses_unresolved, python/repark/tests/writes/test_ice_v3_write_default_1.py::test_default_outside_the_insert_list_refuses
 C-022: python/repark/tests/writes/test_ice_v3_write_default_1.py
 C-023: crates/repark-spark/src/tests/write_defaults.rs::spark_overwrite_default_keyword_fills_write_default
 C-024: crates/repark-iceberg/src/write/insert_defaults/tests/mod.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/iceberg/test_rp3_c009_write_default.py::test_engine_sources_do_not_set_write_default, scripts/check_lib_py.py

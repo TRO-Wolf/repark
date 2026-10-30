@@ -14,7 +14,7 @@ C-011: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_ac
 C-012: python/repark-parity/tests/test_aws_acceptance_job_split.py
 C-013: python/repark-parity/tests/test_aws_acceptance_job_split.py
 C-014: python/repark-parity/tests/test_aws_acceptance_job_split.py
-C-015: python/repark-parity/tests/test_aws_acceptance_job_split.py
+C-015: python/repark-parity/tests/test_aws_acceptance_job_split.py, python/repark/tests/parity/test_aws_acceptance.py::test_u12_s3_path_write_against_scratch_prefix
 C-016: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py
 C-017: python/repark/tests/parity/test_aws_acceptance_cross_read.py
 C-019: python/repark/tests/parity/test_acceptance_ephemeral_runs.py
@@ -28,4 +28,4 @@ C-026: python/repark-parity/tests/test_aws_acceptance_cleanup.py, python/repark-
 C-027: python/repark-parity/tests/test_aws_acceptance_job_split.py
 C-030: python/repark/tests/parity/test_aws_acceptance_cross_read.py
 C-031: python/repark/tests/parity/test_acceptance_cross_read_types.py
-C-032: python/repark/tests/parity/test_aws_acceptance_cross_read.py
+C-032: python/repark/tests/parity/test_aws_acceptance.py::test_process_silver_acceptance_against_s3tables, python/repark/tests/parity/test_aws_acceptance_cross_read.py

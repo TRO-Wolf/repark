@@ -10,8 +10,8 @@ C-007: none (records)
 C-008: none (records)
 C-009: none (records)
 C-010: crates/repark-iceberg/src/catalog/tests/io_stats.rs::every_defaulted_storage_method_delegates_to_the_inner_storage, crates/repark-iceberg/src/catalog/tests/io_stats.rs::exists, crates/repark-iceberg/src/catalog/tests/io_stats.rs::list, crates/repark-iceberg/src/catalog/tests/io_stats.rs::write, crates/repark-iceberg/src/catalog/tests/io_stats.rs::write_new, crates/repark-iceberg/src/catalog/tests/io_stats.rs::writer
-C-011: none (records)
-C-012: none (records)
+C-011: crates/repark-iceberg/src/catalog/tests/io_stats.rs::a_ranged_read_ending_on_the_tail_magic_of_a_data_or_delete_file_is_a_footer_read, crates/repark-iceberg/src/catalog/tests/io_stats.rs::a_scan_reads_data_file_ranges_through_the_counter
+C-012: crates/repark-iceberg/src/catalog/tests/io_stats.rs::every_counter_cell_owns_its_cache_line
 C-013: none (records)
 C-014: none (records)
 C-015: none (records)

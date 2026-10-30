@@ -2,7 +2,7 @@
 
 C-001: python/repark/tests/perf/test_perf_ice_catalog_io_1.py
 C-002: crates/repark-spark/src/tests/catalog_cache_staleness.rs
-C-003: crates/repark-spark/src/tests/catalog_cache_staleness.rs
+C-003: crates/repark-spark/src/tests/catalog_cache_staleness.rs, crates/repark-spark/src/tests/catalog_ops.rs::drop_table
 C-004: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_rust_file_size.py
 C-005: python/repark/tests/perf/test_perf_ice_catalog_io_1.py
 C-006: python/repark/tests/perf/test_perf_ice_catalog_io_1.py
