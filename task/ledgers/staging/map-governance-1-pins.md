@@ -35,3 +35,6 @@ C-040: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_growt
 C-041: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_map_grown_on_the_branch_past_main_goes_red
 C-042: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_update_baselines_raises_a_row_to_the_merge_base_size
 C-043: none (records)
+C-047: none (records)
+C-048: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_without_a_merge_base_the_update_refuses_growth
+C-049: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_branch_lowered_map_growing_back_toward_the_base_goes_red
