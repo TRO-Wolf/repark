@@ -6,7 +6,7 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
-- [map-governance-1-card-2026-10-29.md](map-governance-1-card-2026-10-29.md) — **card MAP-GOVERNANCE-1 (filed 2026-10-29, grade A, built at `acaec00b`, head `728829bc`, round 5 pending):** pin bindings leave the maps for `task/ledgers/<bin>/<unit>-pins.md` sidecars that the grammar gate reads; lockstep warns; a map size ratchet (exact-baseline exceptions); the lifecycle carries the sidecar. Ledger [map-governance-1-ledger.md](../../ledgers/staging/map-governance-1-ledger.md). Leaves at its merge, which waits on the owner's ruling on the owner-ruling block.
+- [map-governance-1-card-2026-10-29.md](map-governance-1-card-2026-10-29.md) — **card MAP-GOVERNANCE-1 (filed 2026-10-29, grade A, built at `acaec00b`, head `6292eab9`, round 6 pending):** pin bindings leave the maps for `task/ledgers/<bin>/<unit>-pins.md` sidecars that the grammar gate reads; lockstep warns; a map size ratchet (exact-baseline exceptions); the lifecycle carries the sidecar. Ledger [map-governance-1-ledger.md](../../ledgers/staging/map-governance-1-ledger.md). Leaves at its merge, which waits on the owner's ruling on the owner-ruling block.
 - [crate-layout-review-2026-09-30.md](crate-layout-review-2026-09-30.md) — **crate layout review
   (2026-09-30):** RePark's test placement (53 % of Rust lines are tests; 36 single-file `tests.rs`
   directories; 45 integration binaries) measured against Sail, Polars and DataFusion, the four

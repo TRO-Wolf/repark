@@ -18,3 +18,7 @@ C-021: python/repark-parity/tests/test_map_governance_1.py::test_a_shared_citati
 C-024: python/repark-parity/tests/test_map_governance_1.py::test_a_disclaimer_unbinds_only_the_clauses_it_names, python/repark-parity/tests/test_map_governance_1.py::test_a_shared_citation_binds_each_clause_by_its_own_row, python/repark-parity/tests/test_map_governance_1_union.py::test_a_row_named_test_file_is_added_beside_the_citations_file, python/repark-parity/tests/test_map_governance_1_union.py::test_an_id_less_disclaimer_keeps_the_binding_and_is_reported
 C-025: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_one_unit_in_two_bins_is_refused, python/repark-parity/tests/test_map_governance_1_union.py::test_a_sidecar_in_another_bin_does_not_satisfy_the_floor
 C-026: python/repark-parity/tests/test_map_governance_1_union.py::test_more_shell_rust_and_decorator_shapes_define_nothing
+C-027: python/repark-parity/tests/test_map_governance_1_union.py::test_nested_shapes_bind_the_enclosing_items_file
+C-028: python/repark-parity/tests/test_map_governance_1_union.py::test_a_row_named_test_binds_by_intent_and_ambiguity_is_reported
+C-029: python/repark-parity/tests/test_map_governance_1_union.py::test_the_gate_reports_records_whose_row_names_a_defined_test
+C-030: python/repark-parity/tests/test_map_governance_1_union.py::test_heredoc_herestring_escape_and_rust_comment_shapes

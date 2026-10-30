@@ -3,8 +3,9 @@
 > **Purpose of this file.** Orient any agent or contributor to *what RePark is, why it exists, and
 > the decisions that must not be undone*. The single authoritative day-to-day contract is
 > [AGENTS.md](AGENTS.md) (which holds the precedence chain; [CLAUDE.md](CLAUDE.md) is a thin
-> tool adapter), with a `map.md` in every directory. **This file states INTENT; the contract states
-> MECHANICS** — if they conflict, reconcile, never silently discard intent.
+> tool adapter), with a `map.md` where the architecture needs one (see `docs/maps-policy.md`).
+> **This file states INTENT; the contract states MECHANICS** — if they conflict, reconcile, never
+> silently discard intent.
 
 ## What RePark is
 
@@ -276,5 +277,5 @@ does not restate current state. The port that stood this repository up is record
 Rust: rustfmt `max_width=100`, edition 2024, clippy `all`+`pedantic` `-D warnings`, 91-`=` banner
 doc blocks on section functions, `thiserror`/`anyhow`, no panics in prod (no `unwrap`/`expect`).
 Python: type hints, Pydantic v2, `pathlib`, `logging`, Ruff line-100. `make ci` is the gate;
-`make verify` and `make preflight` extend it. Every directory carries a `map.md`
+`make verify` and `make preflight` extend it. A `map.md` sits where the architecture needs one
 (Purpose / Contents / I want to… / Pointers / Debug).

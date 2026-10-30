@@ -4,7 +4,7 @@
 
 ## Purpose
 
-A `map.md` routes a reader to the document or code that owns a fact. It is a navigation aid, not a record. Before this policy every unit that pinned a ledger clause edited a map, and every executor read the maps it touched first. The maps held 5,395 pin citations, and a single unit's mandatory map reads cost about 105k tokens. Pins now live in ledger sidecars (below), and maps route.
+A `map.md` routes a reader to the document or code that owns a fact. It is a navigation aid, not a record. Before this policy every unit that pinned a ledger clause edited a map, and every executor read the maps it touched first. The maps held 5,405 pin citations at `aa52b585`, and a single unit's mandatory map reads cost about 105k tokens. Pins now live in ledger sidecars (below), and maps route.
 
 ## Where a map lives
 
@@ -17,7 +17,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 - Routes, owners, boundaries and the verification for its directory.
 - Not history. History lives in ledgers, PRs or `docs/history/`, never in a map.
 - Transition: a map that still holds dated history is not wrong until its ratchet row is lowered. Lowering the row is the moment the history must leave.
-- Not pins. A clause's pin is a sidecar line, never a `pins:` citation in a map. The migration cut the 2,657 citation lines out of 231 maps and wrote no map prose.
+- Not pins. A clause's pin is a sidecar line, never a `pins:` citation in a map. The migration removed 2,650 citation lines from 231 maps and wrote no map prose.
 
 ## Ownership
 
@@ -41,7 +41,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 - A ledger's clause pins live in `task/ledgers/<bin>/<unit>-pins.md`, beside the ledger. The bin is `staging`, `completed` or `archive`.
 - One line per clause: `C-NNN: <path>[::<name>], ...` or `C-NNN: none (records)`.
-- `none (records)` means the clause has no bindable test. The gate counts and lists it. A rerun never replaces an on-disk records line.
+- `none (records)` means no map citation and no row-named test binds it; the gate's `--report row-named-records` lists any such line whose row names a defined test. The gate counts and lists it. A rerun never replaces an on-disk records line.
 - A sidecar counts only beside its own ledger. A unit in two bins is refused by `ledger_lifecycle.py check`.
 
 ## How the grammar gate reads sidecars
@@ -55,7 +55,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 ## Migration
 
-`scripts/migrate_pins_to_sidecars.py` moved the citations once. It is idempotent: a rerun writes nothing, `--check` writes nothing and exits 1 when a rewrite is pending, and `--report hand-candidates` lists the disclaiming sentences that name no clause id, for a hand `none (records)` line. A disclaiming sentence unbinds only the clause ids it names explicitly. A "proves … only" sentence unbinds nothing and is reported.
+`scripts/migrate_pins_to_sidecars.py` moved the citations once. It is idempotent: a rerun writes nothing, `--check` writes nothing and exits 1 when a rewrite is pending, and `--report hand-candidates` lists the disclaiming sentences that name no clause id, for a hand `none (records)` line. A disclaiming sentence unbinds only the clause ids it names explicitly. A "proves … only" sentence unbinds nothing and is reported. A row-named pass then binds each PROVEN clause to a test its own row backticks when exactly one bindable file defines that name, overriding a records line; a name that two or more files define is listed as an ambiguous row-named test for a hand line. A citation in an indented dated paragraph or a nested sub-bullet of a test file's item binds that item's file per clause only when the clause's paragraph or row backticks a name that file defines.
 
 ## Open
 

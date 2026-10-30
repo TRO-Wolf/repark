@@ -103,7 +103,7 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "python/repark/tests/parity/map.md": (112, 16602),
     "python/repark/tests/timestamps/map.md": (221, 39702),
     "python/repark/tests/writes/map.md": (209, 29993),
-    "scripts/map.md": (592, 58843),
+    "scripts/map.md": (592, 58746),
     "task/map.md": (228, 24697),
     "task/roadmap/mid-term/map.md": (1117, 152825),
     "task/wo/map.md": (62, 17390),

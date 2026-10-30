@@ -27,7 +27,7 @@ C-025: crates/repark-spark/src/tests/ntz_nested_refuse_routes.rs::a_prepared_wri
 C-026: none (records)
 C-027: none (records)
 C-028: crates/repark-spark/tests/ntz_nested_refuse_casts.rs::the_plain_update_refuses_a_timestamp_ntz_cast_in_a_whole_struct_outside_utc, crates/repark-spark/tests/ntz_nested_refuse_casts.rs::the_plain_update_stores_a_wall_beside_a_zoned_sub_expression
-C-029: none (records)
+C-029: crates/repark-spark/tests/ntz_nested_refuse.rs::the_refusal_names_the_table_the_column_and_the_leaf
 C-030: none (records)
 C-031: none (records)
 C-032: none (records)
