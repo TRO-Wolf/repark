@@ -778,8 +778,9 @@ def run(repo: Path, row_named_report: bool = False) -> int:
         if len(unpinned) > ceiling:
             findings.append(
                 f"{path}: {len(unpinned)} PROVEN clause(s) with no binding (ceiling {ceiling}): "
-                f"{', '.join(unpinned[: max(1, len(unpinned) - ceiling)])} — add a "
-                f"`C-NNN: <test path>[::<name>]` line to {unit}{PINS_SUFFIX} beside the ledger"
+                f"{', '.join(unpinned[: max(1, len(unpinned) - ceiling)])} — no sidecar line binds "
+                f"them; add `C-NNN: <test path>[::<name>]` or `C-NNN: {RECORDS}` to "
+                f"{unit}{PINS_SUFFIX} beside the ledger"
             )
         elif ceiling and len(unpinned) < ceiling:
             findings.append(

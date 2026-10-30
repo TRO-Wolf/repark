@@ -92,7 +92,10 @@ def test_unbound_proven_clause_goes_red(repo: Path) -> None:
     _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}::demo_holds\n")
     result = _grammar(repo)
     assert result.returncode == 1
-    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-002 — add a" in result.stderr
+    assert (
+        "1 PROVEN clause(s) with no binding (ceiling 0): C-002 — no sidecar line binds them; add"
+        in result.stderr
+    )
 
 
 def test_name_missing_from_the_file_goes_red(repo: Path) -> None:
@@ -267,7 +270,10 @@ def test_a_citation_in_a_map_no_longer_counts(repo: Path) -> None:
     _write(repo, "crates/demo/tests/map.md", f"# map\n\n- `pins.rs` pins: {_UNIT}/C-002\n")
     result = _grammar(repo)
     assert result.returncode == 1
-    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-002 — add a" in result.stderr
+    assert (
+        "1 PROVEN clause(s) with no binding (ceiling 0): C-002 — no sidecar line binds them; add"
+        in result.stderr
+    )
 
 
 _MAP = "crates/demo/tests/map.md"
