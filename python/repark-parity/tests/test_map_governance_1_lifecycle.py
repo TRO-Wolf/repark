@@ -246,25 +246,34 @@ def _main_grew(tmp_path: Path) -> Path:
     return repo
 
 
-def test_a_map_grown_only_on_main_passes(tmp_path: Path) -> None:
+def test_growth_from_main_reds_the_check_until_an_update_reseeds_it(tmp_path: Path) -> None:
     repo = _main_grew(tmp_path)
-    result = _size(repo)
-    assert result.returncode == 0, result.stderr
-    _git(repo, "update-ref", "-d", "refs/remotes/origin/main")
     result = _size(repo)
     assert result.returncode == 1
     assert "ERROR: big/map.md grew to 260 lines" in result.stderr
+    assert _size(repo, "--update-baselines").returncode == 0
+    script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
+    assert f'    "big/map.md": (260, {len(_rows(260).encode())}),' in script
+    assert _size(repo).returncode == 0, _size(repo).stderr
 
 
-def test_a_map_grown_on_the_branch_past_both_goes_red(tmp_path: Path) -> None:
+def test_without_a_merge_base_the_update_refuses_growth(tmp_path: Path) -> None:
+    repo = _main_grew(tmp_path)
+    _git(repo, "update-ref", "-d", "refs/remotes/origin/main")
+    result = _size(repo, "--update-baselines")
+    assert result.returncode == 1
+    assert "REFUSED: big/map.md: grew to 260 lines" in result.stderr
+
+
+def test_a_map_grown_on_the_branch_past_main_goes_red(tmp_path: Path) -> None:
     repo = _main_grew(tmp_path)
     _write(repo, "big/map.md", _rows(261))
     result = _size(repo)
     assert result.returncode == 1
     assert "ERROR: big/map.md grew to 261 lines" in result.stderr
-    assert "260 lines" in result.stderr
-    assert "at the merge base" in result.stderr
-    assert _size(repo, "--update-baselines").returncode == 1
+    result = _size(repo, "--update-baselines")
+    assert result.returncode == 1
+    assert f"past (260, {len(_rows(260).encode())})" in result.stderr
 
 
 def test_update_baselines_raises_a_row_to_the_merge_base_size(tmp_path: Path) -> None:
@@ -278,3 +287,21 @@ def test_update_baselines_raises_a_row_to_the_merge_base_size(tmp_path: Path) ->
     script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
     assert f'    "big/map.md": (255, {len(_rows(255).encode())}),' in script
     assert _size(repo).returncode == 0
+
+
+def test_a_branch_lowered_map_growing_back_toward_the_base_goes_red(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "seed")
+    _git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+    _git(repo, "checkout", "-q", "-b", "feature")
+    _write(repo, "big/map.md", _rows(240))
+    assert _size(repo, "--update-baselines").returncode == 0
+    _git(repo, "commit", "-q", "-am", "the branch lowers the map")
+    _write(repo, "big/map.md", _rows(248))
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "ERROR: big/map.md grew to 248 lines" in result.stderr
+    result = _size(repo, "--update-baselines")
+    assert result.returncode == 1
+    assert "REFUSED: big/map.md: grew to 248 lines" in result.stderr

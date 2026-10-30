@@ -7,19 +7,18 @@ Rules over every tracked file named `map.md`:
 1. A map stays within DEFAULT_LINES lines and DEFAULT_BYTES bytes; crossing either fails.
    Blank lines count.
 2. EXCEPTIONS records the exact (lines, bytes) of each map that was over a ceiling when the
-   ratchet armed. An excepted map fails when a measure exceeds both its row and the map's size
-   at the merge base of HEAD with `origin/main` (the row alone when there is no merge base or
-   the map is absent there), so growth that arrived from main is not the branch's growth.
-   Shrinkage below the row in both measures fails until the row is lowered, or deleted once
-   the map is within both ceilings.
+   ratchet armed. An excepted map must equal its baseline: growth in either measure fails, and
+   shrinkage fails until the row is lowered, or deleted once the map is within both ceilings.
 3. EXEMPT and EXEMPT_PATTERNS list the ledger-bin and archive-month maps the lifecycle script
    rewrites on every `move` and `archive`; they are inventories outside the ratchet, each with
    its reason. A pattern's `*` matches one path segment.
 4. `--update-baselines` rewrites each EXCEPTIONS row to the tree's size: a shrunk row is
-   lowered, a row below the merge-base size is raised to the tree's size, never above the
-   merge-base size, and a row whose map is within both ceilings is deleted. A map grown past
-   both its row and its merge-base size, or a new map over a ceiling, is refused and nothing
-   is written; the out is a split or a condensed map.
+   lowered and a row whose map is within both ceilings is deleted. A row is raised only by the
+   growth main made to its map since the row was committed: the map's size at the merge base
+   of HEAD with `origin/main` less its size at the merge base of the commit that set the row,
+   and never above the size at the current merge base. Any other growth, a row not yet
+   committed, no merge base, or a new map over a ceiling is refused and nothing is written;
+   the out is a split or a condensed map.
 
 Exit 0 clean, 1 findings, 2 usage or environment error. Fail-closed: no tracked map, an
 unreadable map, or an EXCEPTIONS key that is no tracked map is an error, never a skip.
@@ -28,6 +27,7 @@ unreadable map, or an EXCEPTIONS key that is no tracked map is an error, never a
 from __future__ import annotations
 
 import argparse
+import ast
 import fnmatch
 import subprocess
 import sys
@@ -40,6 +40,7 @@ TABLE_OPEN = "EXCEPTIONS: dict[str, tuple[int, int]] = {"
 TABLE_CLOSE = "}"
 LINE_LIMIT = 100
 MAIN_REF = "origin/main"
+SCRIPT_PATH = "scripts/check_map_size.py"
 
 EXEMPT: dict[str, str] = {
     "task/ledgers/staging/map.md": (
@@ -131,44 +132,98 @@ def measure(repo: Path, path: str) -> tuple[int, int]:
     return len(raw.decode("utf-8").splitlines()), len(raw)
 
 
-def merge_base(repo: Path) -> str | None:
-    """The merge base of HEAD with MAIN_REF, or None when git cannot name one."""
+def git_text(repo: Path, *args: str) -> str | None:
+    """A git command's stdout, or None when it fails."""
     try:
-        found = subprocess.run(
-            ["git", "-C", str(repo), "merge-base", "HEAD", MAIN_REF],
-            capture_output=True,
-            check=True,
-            text=True,
+        done = subprocess.run(
+            ["git", "-C", str(repo), *args], capture_output=True, check=True, text=True
         )
-    except (subprocess.CalledProcessError, OSError):
+    except (subprocess.CalledProcessError, OSError, UnicodeDecodeError):
         return None
-    return found.stdout.strip() or None
+    return done.stdout
 
 
-def base_sizes(repo: Path, base: str | None, paths: list[str]) -> dict[str, tuple[int, int]]:
-    """(lines, bytes) at `base` of each path that exists there as UTF-8 text."""
-    sizes: dict[str, tuple[int, int]] = {}
-    if base is None:
-        return sizes
+def merge_base(repo: Path, rev: str = "HEAD") -> str | None:
+    """The merge base of `rev` with MAIN_REF, or None when git cannot name one."""
+    found = git_text(repo, "merge-base", rev, MAIN_REF)
+    if found is None:
+        return None
+    return found.strip() or None
+
+
+def size_at(repo: Path, rev: str | None, path: str) -> tuple[int, int] | None:
+    """(lines, bytes) of `path` at `rev`, or None when it is absent there."""
+    if rev is None:
+        return None
+    shown = subprocess.run(
+        ["git", "-C", str(repo), "show", f"{rev}:{path}"], capture_output=True, check=False
+    )
+    if shown.returncode != 0:
+        return None
+    try:
+        return len(shown.stdout.decode("utf-8").splitlines()), len(shown.stdout)
+    except UnicodeDecodeError:
+        return None
+
+
+def table_at(repo: Path, rev: str) -> dict[str, tuple[int, int]]:
+    """The EXCEPTIONS table of SCRIPT_PATH as committed at `rev`, empty when unreadable."""
+    source = git_text(repo, "show", f"{rev}:{SCRIPT_PATH}")
+    lines = (source or "").split("\n")
+    starts = [index for index, line in enumerate(lines) if line.startswith(TABLE_OPEN)]
+    if not starts or lines[starts[0]] == TABLE_OPEN + TABLE_CLOSE:
+        return {}
+    if TABLE_CLOSE not in lines[starts[0] :]:
+        return {}
+    end = lines.index(TABLE_CLOSE, starts[0])
+    try:
+        table = ast.literal_eval("{" + "\n".join(lines[starts[0] + 1 : end]) + "}")
+    except (SyntaxError, ValueError):
+        return {}
+    return table if isinstance(table, dict) else {}
+
+
+def row_commits(repo: Path, table: dict[str, tuple[int, int]]) -> dict[str, str]:
+    """Path -> the first-parent commit that set its current row, for rows HEAD carries."""
+    revisions = git_text(repo, "log", "--first-parent", "--format=%H", "--", SCRIPT_PATH)
+    found: dict[str, str] = {}
+    open_paths = set(table)
+    for revision in (revisions or "").split():
+        rows = table_at(repo, revision)
+        for path in sorted(open_paths):
+            if rows.get(path) == table[path]:
+                found[path] = revision
+            else:
+                open_paths.discard(path)
+        if not open_paths:
+            break
+    return found
+
+
+def raise_limits(
+    repo: Path, table: dict[str, tuple[int, int]], paths: list[str]
+) -> dict[str, tuple[int, int]]:
+    """Path -> the largest (lines, bytes) `--update-baselines` may write: the row plus main's
+    growth of the map since the row was committed, never above its current merge-base size."""
+    base_now = merge_base(repo)
+    commits = row_commits(repo, table) if base_now is not None else {}
+    bases: dict[str, str | None] = {}
+    limits: dict[str, tuple[int, int]] = {}
     for path in paths:
-        shown = subprocess.run(
-            ["git", "-C", str(repo), "show", f"{base}:{path}"], capture_output=True, check=False
+        row = table[path]
+        commit = commits.get(path)
+        if commit is not None and commit not in bases:
+            bases[commit] = merge_base(repo, commit)
+        now = size_at(repo, base_now, path)
+        then = size_at(repo, bases.get(commit) if commit else None, path)
+        if now is None or then is None:
+            limits[path] = row
+            continue
+        limits[path] = (
+            min(max(row[0], now[0]), row[0] + max(0, now[0] - then[0])),
+            min(max(row[1], now[1]), row[1] + max(0, now[1] - then[1])),
         )
-        if shown.returncode != 0:
-            continue
-        try:
-            sizes[path] = (len(shown.stdout.decode("utf-8").splitlines()), len(shown.stdout))
-        except UnicodeDecodeError:
-            continue
-    return sizes
-
-
-def allowance(baseline: tuple[int, int], at_base: tuple[int, int] | None) -> tuple[int, int]:
-    """The largest (lines, bytes) an excepted map may reach: its row, or its merge-base size
-    where that is larger, measure by measure."""
-    if at_base is None:
-        return baseline
-    return max(baseline[0], at_base[0]), max(baseline[1], at_base[1])
+    return limits
 
 
 def matches(pattern: str, path: str) -> bool:
@@ -189,14 +244,8 @@ def over(lines: int, size: int) -> bool:
     return lines > DEFAULT_LINES or size > DEFAULT_BYTES
 
 
-def check_map(
-    path: str,
-    lines: int,
-    size: int,
-    table: dict[str, tuple[int, int]],
-    at_base: tuple[int, int] | None = None,
-) -> list[str]:
-    """Findings for one map against the ceilings, its baseline and its merge-base size."""
+def check_map(path: str, lines: int, size: int, table: dict[str, tuple[int, int]]) -> list[str]:
+    """Findings for one map against the ceilings and its baseline."""
     baseline = table.get(path)
     if baseline is None:
         if not over(lines, size):
@@ -209,17 +258,14 @@ def check_map(
     base_lines, base_bytes = baseline
     if not over(base_lines, base_bytes):
         return [f"ERROR: {path}: baseline ({base_lines}, {base_bytes}) is within both ceilings."]
-    allowed_lines, allowed_bytes = allowance(baseline, at_base)
-    if lines > allowed_lines or size > allowed_bytes:
-        merged = (
-            "" if at_base is None else f"; {at_base[0]} lines, {at_base[1]} bytes at the merge base"
-        )
+    if lines > base_lines or size > base_bytes:
         return [
             f"ERROR: {path} grew to {lines} lines and {size} bytes (exact baseline "
-            f"{base_lines} lines, {base_bytes} bytes{merged}). Make the edit size-neutral or "
-            "condense the map; a raised baseline needs explicit owner approval."
+            f"{base_lines} lines, {base_bytes} bytes). Make the edit size-neutral or condense "
+            "the map; growth that came from main is re-seeded by --update-baselines, and any "
+            "other raised baseline needs explicit owner approval."
         ]
-    if lines <= base_lines and size <= base_bytes and (lines, size) != baseline:
+    if (lines, size) != baseline:
         action = "delete the row" if not over(lines, size) else "lower the row"
         return [
             f"ERROR: {path} shrank to {lines} lines and {size} bytes below its exact baseline "
@@ -251,10 +297,10 @@ def update_baselines(
     repo: Path,
     measured: dict[str, tuple[int, int]],
     script: Path,
-    at_base: dict[str, tuple[int, int]],
+    limits: dict[str, tuple[int, int]],
 ) -> int:
-    """Rewrite EXCEPTIONS to the tree, never above a row's merge-base allowance; refuses growth
-    past it and new violators."""
+    """Rewrite EXCEPTIONS to the tree, never above a row's limit; refuses growth past it and new
+    violators."""
     refused: list[str] = []
     rows: dict[str, tuple[int, int]] = {}
     for path, (lines, size) in measured.items():
@@ -265,7 +311,7 @@ def update_baselines(
             if over(lines, size):
                 refused.append(f"{path}: {lines} lines, {size} bytes, not excepted")
             continue
-        allowed = allowance(baseline, at_base.get(path))
+        allowed = limits.get(path, baseline)
         if lines > allowed[0] or size > allowed[1]:
             refused.append(f"{path}: grew to {lines} lines, {size} bytes past {allowed}")
             continue
@@ -313,16 +359,16 @@ def run(repo: Path, update: bool) -> int:
         for path in sorted(EXCEPTIONS)
         if exempt(path)
     )
-    at_base = base_sizes(repo, merge_base(repo), sorted(set(EXCEPTIONS) & set(measured)))
     if update:
         if errors:
             for error in errors:
                 print(error, file=sys.stderr)
             return 1
-        return update_baselines(repo, measured, Path(__file__).resolve(), at_base)
+        limits = raise_limits(repo, EXCEPTIONS, sorted(set(EXCEPTIONS) & set(measured)))
+        return update_baselines(repo, measured, Path(__file__).resolve(), limits)
     for path, (lines, size) in measured.items():
         if not exempt(path):
-            errors.extend(check_map(path, lines, size, EXCEPTIONS, at_base.get(path)))
+            errors.extend(check_map(path, lines, size, EXCEPTIONS))
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
@@ -341,7 +387,7 @@ def main() -> int:
     parser.add_argument(
         "--update-baselines",
         action="store_true",
-        help="rewrite EXCEPTIONS rows to the tree, up to the merge-base size; refuses growth",
+        help="rewrite EXCEPTIONS rows to the tree; raises only by main's growth since the row",
     )
     parser.add_argument(
         "--repo", type=Path, default=Path(__file__).resolve().parent.parent, help=argparse.SUPPRESS

@@ -31,7 +31,7 @@ C-036: none (records)
 C-037: python/repark-parity/tests/test_map_governance_1_union.py::test_a_row_named_test_binds_by_name_and_a_rename_goes_red
 C-038: python/repark-parity/tests/test_map_governance_1_union.py::test_a_reading_unit_skips_the_row_named_rule
 C-039: python/repark-parity/tests/test_map_governance_1_union.py::test_a_backslash_escaped_backtick_opens_no_span
-C-040: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_map_grown_only_on_main_passes
-C-041: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_map_grown_on_the_branch_past_both_goes_red
+C-040: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_growth_from_main_reds_the_check_until_an_update_reseeds_it
+C-041: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_a_map_grown_on_the_branch_past_main_goes_red
 C-042: python/repark-parity/tests/test_map_governance_1_lifecycle.py::test_update_baselines_raises_a_row_to_the_merge_base_size
 C-043: none (records)
