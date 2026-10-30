@@ -17,17 +17,18 @@ bare file name that does not resolve in the map's directory resolves to the one 
 that name under the map's directory tree; a name found only elsewhere in the tree is a
 reference, not the entry's file; a name found nowhere, or more than once here, makes the
 citation unplaceable, and the run stops and lists it unless the sidecar on disk already binds
-that clause by hand. A clause of a citation shared with other ids, whose own ledger row names
-`.rs`, `.py` or `.sh` files but not the citation's file, binds the bindable ones of those
-instead, or nothing. The names are the backticked identifiers, of the citation's stretch of its
-entry and of the clause's own ledger row, that the bound file defines. Only a `.rs`, `.py` or
-`.sh` test file or script is bound: an entry whose file is a fixture or a test-placed helper
-with no test binds the test its entry names that reads it, if any; a disclaiming sentence ("so
-the grammar gate counts it", "this file pins none") unbinds the clause ids it names, or, naming
-none, the citation on its own line; and a clause left with no bindable entry and no citation in
-a test or script is written as `none (records)`, which a rerun never replaces. The citation is
-then cut from the map: a line left with nothing but punctuation is deleted, a line that also
-carries prose keeps the prose and its indentation.
+that clause by hand. A clause's binding is the union of its citing entries' files and every
+bindable `.rs`, `.py` or `.sh` file its own ledger row names (an explicit path, else by its
+basename). The names are the backticked identifiers, of the citation's stretch of its entry and
+of the clause's own ledger row, that the bound file defines. Only a `.rs`, `.py` or `.sh` test
+file or script is bound: an entry whose file is a fixture or a test-placed helper with no test
+binds the test its entry names that reads it, if any; a disclaiming clause ("so the grammar gate
+counts it") unbinds only the clause ids it names explicitly; one that names none, and a "proves
+... only" sentence, unbind nothing and are listed by `--report hand-candidates` for a hand
+records line; and a clause left with no bindable entry and no citation in a test or script is
+written as `none (records)`, which a rerun never replaces. The citation is then cut from the
+map: a line left with nothing but punctuation is deleted, a line that also carries prose keeps
+the prose and its indentation.
 
 A citation is bound but left in the map's text when cutting it would break the sentence around
 it: inside a fenced block, inside a code span the line continues past, or followed by an id the
@@ -83,6 +84,7 @@ EMPTY_REST = re.compile(r"^[\s\-*+.,;:()·]*$")
 LEADING_STRAY = ".;)"
 CODE_SUFFIXES = (".rs", ".py", ".sh")
 SENTENCE_END = re.compile(r"\.(?=\s)")
+PROVES_ONLY = re.compile(r"\bproves?\b[^.;]*?\bonly\b", re.IGNORECASE)
 DISCLAIMER = re.compile(
     r"grammar gate counts|pins? none|pins nothing|not a test pin", re.IGNORECASE
 )
@@ -180,6 +182,8 @@ def row_code_files(row: str, tracked: set[str], basenames: dict[str, list[str]])
                 path for path in basenames.get(Path(token).name, []) if path.endswith(f"/{token}")
             ]
         )
+        if not hits:
+            hits = basenames.get(Path(token).name, [])
         if len(hits) == 1 and hits[0] not in found:
             found.append(hits[0])
     for token in (token for token in tokens if "/" not in token):
@@ -441,14 +445,30 @@ def fixture_reader(
     return None
 
 
+def clauses_of(sentence: str) -> list[tuple[int, str]]:
+    """A sentence split at the semicolons outside parentheses, with each clause's offset."""
+    parts: list[tuple[int, str]] = []
+    depth = 0
+    begin = 0
+    for index, char in enumerate(sentence):
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth = max(0, depth - 1)
+        elif char == ";" and depth == 0:
+            parts.append((begin, sentence[begin:index]))
+            begin = index + 1
+    parts.append((begin, sentence[begin:]))
+    return parts
+
+
 def disclaimers(
     text: str, lines: list[str], offsets: list[int], row: int, row_end: int
-) -> tuple[set[tuple[int, str]], list[tuple[int, int]], set[int]]:
-    """What an entry's disclaiming clauses unbind: the clause ids they name; else the ids of the
-    clause before them in the same sentence; else the citations inside their sentence; else the
-    citation on their own line. A sentence ends at a full stop, a `pins:` line is a sentence of
-    its own, and a semicolon separates clauses. A named id unbinds the first citation after the
-    clause that cites it, else the last one before; the result keys are (citation start, id)."""
+) -> tuple[set[tuple[int, str]], list[tuple[int, str, str]]]:
+    """An entry's disclaimers: a clause naming ids unbinds each at the nearest citation citing
+    it (among the units the sentence names); an id-less one, unless it follows a clause naming
+    ids, and a `proves ... only` sentence unbind nothing and yield hand candidates
+    (citation start, id, sentence). Sentences end at a full stop; a `pins:` line is one."""
     start, end = offsets[row], offsets[row_end]
     bounds = {start, end}
     bounds.update(match.end() for match in SENTENCE_END.finditer(text, start, end))
@@ -456,47 +476,65 @@ def disclaimers(
         if lines[index].lstrip().startswith("pins:"):
             bounds.update({offsets[index], offsets[index + 1]})
     ordered = sorted(bounds)
-    named_at: list[tuple[int, set[str]]] = []
-    spans: list[tuple[int, int]] = []
-    own_lines: set[int] = set()
-    for low, high in itertools.pairwise(ordered):
-        sentence = text[low:high]
-        if DISCLAIMER.search(sentence) is None:
-            continue
-        previous: set[str] = set()
-        clause_start = low
-        for clause in sentence.split(";"):
-            named = set(re.findall(r"C-\d{3}", GATE.CITATION.sub("", clause)))
-            found = DISCLAIMER.search(clause)
-            if found is not None:
-                if named or previous:
-                    named_at.append((clause_start, named or previous))
-                elif GATE.CITATION.search(sentence) is not None:
-                    spans.append((low, high))
-                else:
-                    own_lines.add(bisect.bisect_right(offsets, clause_start + found.start()) - 1)
-            previous = named
-            clause_start += len(clause) + 1
     citations = [
-        (match.start(), set(re.findall(r"C-\d{3}", match.group(2))))
+        (match.start(), match.group(1), set(re.findall(r"C-\d{3}", match.group(2))))
         for match in GATE.CITATION.finditer(text, start, end)
     ]
     unbound: set[tuple[int, str]] = set()
-    for position, named in named_at:
-        for clause_id in named:
-            after = [at for at, cited in citations if at >= position and clause_id in cited]
-            before = [at for at, cited in citations if at < position and clause_id in cited]
-            if after:
-                unbound.add((after[0], clause_id))
-            elif before:
-                unbound.add((before[-1], clause_id))
-    return unbound, spans, own_lines
+    candidates: list[tuple[int, str, str]] = []
+    for low, high in itertools.pairwise(ordered):
+        sentence = text[low:high]
+        plain = GATE.CITATION.sub("", sentence)
+        quoted = " ".join(sentence.split())
+        proves = PROVES_ONLY.search(plain)
+        if proves is not None:
+            proven = set(re.findall(r"C-\d{3}", proves.group(0)))
+            candidates.extend(
+                (at, clause_id, quoted)
+                for at, _unit, cited in citations
+                for clause_id in sorted(cited - proven)
+            )
+        if DISCLAIMER.search(plain) is None:
+            continue
+        lowered = sentence.lower()
+        units = {unit for _at, unit, _cited in citations if unit.lower() in lowered}
+        anaphor = False
+        for offset, clause in clauses_of(sentence):
+            if DISCLAIMER.search(GATE.CITATION.sub("", clause)) is None:
+                continue
+            named = set(re.findall(r"C-\d{3}", GATE.CITATION.sub("", clause)))
+            position = low + offset
+            if not named and anaphor:
+                continue
+            anaphor = bool(named)
+            if not named:
+                candidates.extend(
+                    (at, clause_id, quoted)
+                    for at, _unit, cited in citations
+                    if at >= low
+                    for clause_id in sorted(cited)
+                )
+                continue
+            eligible = [item for item in citations if not units or item[1] in units]
+            for clause_id in named:
+                after = [at for at, _u, cited in eligible if at >= position and clause_id in cited]
+                before = [at for at, _u, cited in eligible if at < position and clause_id in cited]
+                if after:
+                    unbound.add((after[0], clause_id))
+                elif before:
+                    unbound.add((before[-1], clause_id))
+    return unbound, candidates
 
 
 def migrate_map(
-    repo: Path, path: str, tracked: set[str], basenames: dict[str, list[str]]
+    repo: Path,
+    path: str,
+    tracked: set[str],
+    basenames: dict[str, list[str]],
+    candidates: list[tuple[str, str, str, str, str]],
 ) -> tuple[list[Binding], str | None, int, int]:
-    """Bind every citation of one map and cut the ones that can go; the new text if changed."""
+    """Bind every citation of one map and cut the ones that can go; the new text if changed.
+    Hand candidates (unit, clause, bound file, where, sentence) are appended to `candidates`."""
     text = (repo / path).read_text(encoding="utf-8")
     lines = text.split("\n")
     offsets = [0]
@@ -512,7 +550,8 @@ def migrate_map(
     cuts: list[tuple[int, int]] = []
     cache: dict[str, str] = {}
     previous_end: dict[int, int] = {}
-    disclaimed_by_row: dict[int, tuple[set[tuple[int, str]], list[tuple[int, int]], set[int]]] = {}
+    disclaimed_by_row: dict[int, tuple[set[tuple[int, str]], list[tuple[int, str, str]]]] = {}
+    reported: set[tuple[int, str]] = set()
     for match in GATE.CITATION.finditer(text):
         line_index = bisect.bisect_right(offsets, match.start()) - 1
         end_index = bisect.bisect_right(offsets, match.end()) - 1
@@ -537,7 +576,7 @@ def migrate_map(
             bound = None
         if row not in disclaimed_by_row:
             disclaimed_by_row[row] = disclaimers(text, lines, offsets, row, row_end)
-        disclaimed_ids, disclaimed_spans, disclaimed_lines = disclaimed_by_row[row]
+        disclaimed_ids, row_candidates = disclaimed_by_row[row]
         unresolved = None if inherited else target.unresolved
         line_end = offsets[end_index + 1] - 1
         kept = fenced[line_index] or keeps_text(
@@ -545,9 +584,13 @@ def migrate_map(
         )
         clause_ids = tuple(re.findall(r"C-\d{3}", match.group(2)))
         named = target.path if target.by_basename else None
-        own_line = any(index in disclaimed_lines for index in range(line_index, end_index + 1))
-        own_line = own_line or any(low <= match.start() < high for low, high in disclaimed_spans)
-        refused = tuple(i for i in clause_ids if own_line or (match.start(), i) in disclaimed_ids)
+        refused = tuple(i for i in clause_ids if (match.start(), i) in disclaimed_ids)
+        for at, clause_id, sentence in row_candidates:
+            fresh = (at, clause_id) not in reported and clause_id not in refused
+            if at == match.start() and clause_id in clause_ids and fresh:
+                reported.add((at, clause_id))
+                where = f"{path}:{line_index + 1}"
+                candidates.append((match.group(1), clause_id, bound or "-", where, sentence))
         accepted = tuple(i for i in clause_ids if i not in refused)
         for ids, path_bound, path_names, disclaimed in (
             (accepted, bound, names, False),
@@ -651,9 +694,13 @@ def kind_of(path: str) -> str:
 
 
 def collect(
-    repo: Path, tracked: list[str]
+    repo: Path,
+    tracked: list[str],
+    candidates: list[tuple[str, str, str, str, str]] | None = None,
 ) -> tuple[list[Binding], dict[str, tuple[str, int, int]]]:
-    """Every citation under CITATION_ROOTS, bound; and the new text of every map that changes."""
+    """Every citation under CITATION_ROOTS, bound; and the new text of every map that changes.
+    Hand candidates go to `candidates` when it is given."""
+    sink: list[tuple[str, str, str, str, str]] = [] if candidates is None else candidates
     tracked_set = set(tracked)
     basenames: dict[str, list[str]] = {}
     for path in tracked:
@@ -666,7 +713,7 @@ def collect(
         if Path(path).name != MAP_NAME:
             bindings.extend(source_bindings(repo, path))
             continue
-        found, new, deleted, trimmed = migrate_map(repo, path, tracked_set, basenames)
+        found, new, deleted, trimmed = migrate_map(repo, path, tracked_set, basenames, sink)
         bindings.extend(found)
         if new is not None:
             rewrites[path] = (new, deleted, trimmed)
@@ -680,7 +727,30 @@ class Plan(NamedTuple):
     unplaceable: list[str]
     hand_bound: list[str]
     records: list[str]
-    rerouted: dict[tuple[str, str], list[str]]
+    row_added: dict[tuple[str, str], list[str]]
+
+
+def add_entry(
+    repo: Path,
+    entries: dict[str, set[str]],
+    on_disk: dict[str, set[str]],
+    clause_id: str,
+    target: str,
+    row: str,
+    own_names: tuple[str, ...],
+) -> bool:
+    """Add `target` to a clause's bucket with its own names and the row's names the file
+    defines, unless the sidecar on disk already binds that file; whether the bucket grew."""
+    if target in {entry.split("::", 1)[0] for entry in on_disk.get(clause_id, set())}:
+        return False
+    bucket = entries.setdefault(clause_id, set())
+    before = set(bucket)
+    names = sorted(set(own_names) | set(names_in(row, target, GATE.read_tracked(repo, target))))
+    if names:
+        bucket.update(f"{target}::{name}" for name in names)
+    else:
+        bucket.add(target)
+    return bucket != before
 
 
 def plan_sidecars(
@@ -700,7 +770,7 @@ def plan_sidecars(
     grown: set[str] = set()
     unplaceable: list[str] = []
     hand_bound: list[str] = []
-    rerouted: dict[tuple[str, str], list[str]] = {}
+    row_added: dict[tuple[str, str], list[str]] = {}
     basenames: dict[str, list[str]] = {}
     for path in sorted(tracked):
         basenames.setdefault(Path(path).name, []).append(path)
@@ -731,29 +801,31 @@ def plan_sidecars(
             wanted.setdefault(key, sidecar)
             if binding.path is None or on_disk[sidecar].get(clause_id) == {GATE.RECORDS}:
                 continue
-            targets = [binding.path]
-            if kind_of(binding.source) == "map" and len(binding.clause_ids) > 1:
-                named = row_code_files(rows.get(key, ""), tracked, basenames)
-                if named and binding.path not in named:
-                    targets = [
-                        path for path in named if GATE.bindable(path, GATE.read_tracked(repo, path))
-                    ]
-                    rerouted[key] = targets
-            bound = {entry.split("::", 1)[0] for entry in on_disk[sidecar].get(clause_id, set())}
-            for target in targets:
-                if target in bound:
-                    continue
-                bucket = entries[sidecar].setdefault(clause_id, set())
-                before = set(bucket)
-                row_names = names_in(rows.get(key, ""), target, GATE.read_tracked(repo, target))
-                own = set(binding.names) if target == binding.path else set()
-                names = sorted(own | set(row_names))
-                if names:
-                    bucket.update(f"{target}::{name}" for name in names)
-                else:
-                    bucket.add(target)
-                if bucket != before:
-                    grown.add(sidecar)
+            row = rows.get(key, "")
+            if add_entry(
+                repo,
+                entries[sidecar],
+                on_disk[sidecar],
+                clause_id,
+                binding.path,
+                row,
+                binding.names,
+            ):
+                grown.add(sidecar)
+    for key, sidecar in sorted(wanted.items()):
+        clause_id = key[1]
+        if on_disk[sidecar].get(clause_id) == {GATE.RECORDS}:
+            continue
+        for target in row_code_files(rows.get(key, ""), tracked, basenames):
+            if not GATE.bindable(target, GATE.read_tracked(repo, target)):
+                continue
+            already = {entry.split("::", 1)[0] for entry in entries[sidecar].get(clause_id, set())}
+            if add_entry(
+                repo, entries[sidecar], on_disk[sidecar], clause_id, target, rows.get(key, ""), ()
+            ):
+                grown.add(sidecar)
+                if target not in already:
+                    row_added.setdefault(key, []).append(target)
     records: list[str] = []
     for (unit, clause_id), sidecar in sorted(wanted.items()):
         if clause_id in on_disk[sidecar] or (unit, clause_id) in source_cited:
@@ -766,7 +838,7 @@ def plan_sidecars(
             grown.add(sidecar)
         records.append(f"{unit}/{clause_id}")
     changed = {sidecar: render_sidecar(units[sidecar], entries[sidecar]) for sidecar in grown}
-    return Plan(changed, unplaceable, hand_bound, records, rerouted)
+    return Plan(changed, unplaceable, hand_bound, records, row_added)
 
 
 def sidecar_totals(repo: Path, tracked: list[str], changed: dict[str, str]) -> tuple[int, ...]:
@@ -826,15 +898,47 @@ def report(
     print(f"named entries: {named}")
     print(f"none (records) lines: {records}")
     print(f"sidecar bytes: {size}")
-    print(f"shared-citation clauses rebound by their own ledger row: {len(plan.rerouted)}")
-    print(f"  of which nothing bindable remains: {sum(not t for t in plan.rerouted.values())}")
+    print(f"clauses that gained a file their own ledger row names: {len(plan.row_added)}")
     print(f"hand-bound citations: {len(plan.hand_bound)}")
     print(f"unplaceable citations: {len(plan.unplaceable)}")
     for line in plan.unplaceable:
         print(f"  {line}", file=sys.stderr)
 
 
-def run(repo: Path, check: bool) -> int:
+def open_candidates(
+    repo: Path,
+    candidates: list[tuple[str, str, str, str, str]],
+    homes: dict[str, str],
+    changed: dict[str, str],
+) -> list[tuple[str, str, str, str, str]]:
+    """The candidates whose clause the planned sidecar does not already set to records."""
+    kept: list[tuple[str, str, str, str, str]] = []
+    parsed: dict[str, dict[str, set[str]]] = {}
+    for candidate in candidates:
+        home = homes.get(candidate[0])
+        if home is None:
+            continue
+        sidecar = sidecar_path(home)
+        if sidecar not in parsed:
+            existing = repo / sidecar
+            text = changed.get(sidecar)
+            if text is None:
+                text = existing.read_text(encoding="utf-8") if existing.is_file() else ""
+            parsed[sidecar] = parse_sidecar(text)
+        if parsed[sidecar].get(candidate[1]) != {GATE.RECORDS}:
+            kept.append(candidate)
+    return kept
+
+
+def print_candidates(candidates: list[tuple[str, str, str, str, str]]) -> None:
+    """The hand-candidate list: one tab-separated line per clause a disclaimer with no clause id
+    leaves bound, for a hand `none (records)` line."""
+    print(f"hand candidates: {len(candidates)}")
+    for unit, clause_id, path, where, sentence in sorted(candidates):
+        print(f"  {unit}/{clause_id}\t{path}\t{where}\t{sentence[:240]}")
+
+
+def run(repo: Path, check: bool, report_candidates: bool = False) -> int:
     """Plan, report, and unless `check`, write the sidecars and the cut maps."""
     try:
         tracked = GATE.tracked_paths(repo)
@@ -845,12 +949,15 @@ def run(repo: Path, check: bool) -> int:
     if not homes:
         print("ERROR: no ledgers found under task/ledgers — refuse to pass closed", file=sys.stderr)
         return 2
-    bindings, rewrites = collect(repo, tracked)
+    candidates: list[tuple[str, str, str, str, str]] = []
+    bindings, rewrites = collect(repo, tracked, candidates)
     plan = plan_sidecars(repo, bindings, homes, known, ledger_rows(repo, homes), set(tracked))
     totals = sidecar_totals(repo, tracked, plan.changed)
     if plan.unplaceable:
         report(bindings, rewrites, totals, 0, plan)
         return 1
+    if report_candidates:
+        print_candidates(open_candidates(repo, candidates, homes, plan.changed))
     if check:
         report(bindings, rewrites, totals, 0, plan)
         pending = len(rewrites) + len(plan.changed)
@@ -870,16 +977,21 @@ def run(repo: Path, check: bool) -> int:
 
 
 def main() -> int:
-    """CLI: `--check` (write nothing) and the hidden `--repo` for the tests."""
+    """CLI: `--check` (write nothing), `--report hand-candidates`, and the hidden `--repo`."""
     parser = argparse.ArgumentParser(
         prog="migrate_pins_to_sidecars.py", description=__doc__.split("\n\n")[0]
     )
     parser.add_argument("--check", action="store_true", help="report only; write nothing")
     parser.add_argument(
+        "--report",
+        choices=["hand-candidates"],
+        help="also list the clauses an id-less disclaimer leaves bound, for hand records lines",
+    )
+    parser.add_argument(
         "--repo", type=Path, default=Path(__file__).resolve().parent.parent, help=argparse.SUPPRESS
     )
     arguments = parser.parse_args()
-    return run(arguments.repo.resolve(), arguments.check)
+    return run(arguments.repo.resolve(), arguments.check, arguments.report == "hand-candidates")
 
 
 if __name__ == "__main__":

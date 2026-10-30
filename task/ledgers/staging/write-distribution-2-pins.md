@@ -6,5 +6,5 @@ C-003: python/repark/tests/writes/test_write_distribution_2.py
 C-004: crates/repark-iceberg/src/write/distribution/tests.rs::merge_inserts_into_a_partitioned_table_route_one_value_to_one_writer, crates/repark-iceberg/src/write/distribution/tests.rs::stream_path_distribution_is_deterministic_across_runs
 C-005: crates/repark-iceberg/src/write/distribution/tests.rs::stream_path_null_partition_values_share_one_writer, crates/repark-iceberg/src/write/distribution/tests.rs::stream_path_two_field_spec_keys_on_the_transform_value
 C-006: crates/repark-iceberg/src/write/distribution/tests.rs::a_late_failure_into_a_partitioned_table_leaves_no_data_file
-C-007: none (records)
+C-007: python/repark/tests/iceberg/test_v3_legacy_delete_merge.py, python/repark/tests/iceberg/test_v3_lineage_columns.py, python/repark/tests/iceberg/test_v3_statement_coverage.py, python/repark/tests/perf/test_perf_ice_writepath_1.py, python/repark/tests/writes/test_merge_differential_parity.py, python/repark/tests/writes/test_merge_insert_scope.py, python/repark/tests/writes/test_merge_into.py, python/repark/tests/writes/test_merge_scan_prune_semantics.py, python/repark/tests/writes/test_merge_semantics_audit.py, python/repark/tests/writes/test_merge_store_assign.py
 C-008: crates/repark-iceberg/src/write/distribution/tests.rs

@@ -42,9 +42,9 @@ C-039: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_b
 C-040: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_exception_tables_equal_the_measured_debt, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_session_codec_path_matches_spark
 C-041: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_summary_key_collision_matches_spark
 C-042: none (records)
-C-043: none (records)
+C-043: crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs::branch_selector_delete_is_identity_dml_on_the_branch, crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs::empty_branch_selector_delete_is_not_plain_identity, crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs::tag_selector_delete_is_not_plain_identity
 C-044: none (records)
-C-045: crates/repark-spark/src/tests/session_write_conf.rs
+C-045: crates/repark-spark/src/tests/session_write_conf.rs, crates/repark-spark/src/tests/v3_subquery_dml.rs
 C-046: none (records)
 C-047: crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_a_new_partition_stamps_deleted_records, crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_an_existing_partition_names_the_engine_value
 C-048: crates/repark-iceberg/src/tests/session_write_conf.rs::a_mixed_case_prefix_is_not_a_session_write_key, crates/repark-iceberg/src/tests/session_write_conf.rs::snapshot_suffix_keeps_its_case_and_last_write_wins

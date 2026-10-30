@@ -16,6 +16,6 @@ C-013: python/repark/tests/functions/test_fnp7_try_inversions.py, python/repark/
 C-014: python/repark/tests/functions/test_fnp7_try_inversions.py
 C-015: python/repark/tests/functions/test_fnp7_try_inversions.py
 C-016: none (records)
-C-017: none (records)
+C-017: scripts/ledger_lifecycle.py
 C-018: python/repark/tests/functions/test_fnp7_try_inversions.py
 C-019: python/repark/tests/functions/test_fnp7_try_inversions.py

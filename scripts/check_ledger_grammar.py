@@ -18,22 +18,25 @@ B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` i
    without `-ledger.md` and without the archive prefix. An entry is `<path>` or
    `<path>::<name>`: the path is a tracked `.rs`, `.py` or `.sh` file that is a script under
    `scripts/` or a test by place or name (under a `tests/` directory, `tests.rs`, `*_tests.rs`,
-   `test_*.py`, `*_test.py`) that carries a test (a Python `test_*` function, fixture or
-   parametrize; a Rust `#[test]`, `#[tokio::test]` or `#[rstest]`), never a fixture, a helper,
-   oracle or recorder (`_record*`, or a test-placed file with no test), a map, a ledger, a
-   sidecar, a licence or a readme; the name is a definition the file makes, read by parsing
-   (Python: module- and class-level functions, classes and the names an assignment binds, never
-   a subscript or attribute target; Rust: line-start fn, struct, enum, trait, type, const,
-   static, mod, union and macro_rules with comments and literals blanked; shell: functions
-   outside heredocs and quoted strings). The line `C-NNN: none (records)` binds a clause that no
-   test pins; the gate counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]`
-   citation also binds when it sits in a tracked test file or script under CITATION_ROOTS; one
-   in a map or in production source does not. Every `PROVEN` clause in a staging or completed
-   ledger must be bound at least once — the measured floor is seeded per ledger in EXCEPTIONS
-   and only ratchets down — and every binding must resolve to a clause that exists in any bin
-   (`staging/`, `completed/`, the archive). A staging or completed ledger whose first 40 lines
-   carry a `**Path:**` field valued `READING` outside a code span is a reading unit: rule B does
-   not apply to its clauses, rules A and C still do.
+   `test_*.py`, `*_test.py`) that carries a test (a Python `test_*` function, or a
+   `pytest.fixture` / `fixture` / `pytest.mark.parametrize` / `parametrize` decorator; a Rust
+   `#[test]`, `#[tokio::test]` or `#[rstest]`), never a fixture, a helper, oracle or recorder
+   (`_record*`, or a test-placed file with no test), a map, a ledger, a sidecar, a licence or a
+   readme; the name is a definition the file makes, read by parsing (Python: module- and
+   class-level functions, classes and the names an assignment binds, never a subscript or
+   attribute target; Rust: line-start fn, struct, enum, trait, type, const, static, mod, union
+   and macro_rules with comments (nested block comments included) and literals blanked; shell:
+   functions outside heredocs, whatever their delimiter quoting, and quoted strings, which may
+   span lines). The line `C-NNN: none (records)` binds a clause that no test pins; the gate
+   counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]` citation also binds when
+   it sits in a tracked test file or script under CITATION_ROOTS; one in a map or in production
+   source does not. Every `PROVEN` clause in a staging or completed ledger must be bound at
+   least once — the measured floor is seeded per ledger in EXCEPTIONS and only ratchets down — a
+   sidecar line counts only for the ledger beside it and must name a clause of that ledger, and
+   a source citation must resolve to a clause that exists in any bin (`staging/`, `completed/`,
+   the archive). A staging or completed ledger whose first 40 lines carry a `**Path:**` field
+   valued `READING` outside a code span is a reading unit: rule B does not apply to its clauses,
+   rules A and C still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
@@ -66,8 +69,8 @@ MAP_NAME = "map.md"
 RECORDS = "none (records)"
 TEST_NAMES = re.compile(r"^(?:tests\.rs|.+_tests\.rs|test_.+\.py|.+_test\.py)$")
 CODE_SUFFIXES: frozenset[str] = frozenset({".rs", ".py", ".sh"})
-RUST_LITERAL = re.compile(
-    r"//[^\n]*|/\*.*?\*/"
+RUST_TOKEN = re.compile(
+    r"//[^\n]*|/\*|\*/"
     r'|(?<![A-Za-z0-9_])b?r(#*)".*?"\1'
     r'|(?<![A-Za-z0-9_])b?"(?:\\.|[^"\\])*"'
     r"|(?<![A-Za-z0-9_])b?'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'",
@@ -84,10 +87,11 @@ SHELL_DEFINITION = re.compile(
     r"^[ \t]*function[ \t]+([A-Za-z_][A-Za-z0-9_-]*)|^[ \t]*([A-Za-z_][A-Za-z0-9_-]*)[ \t]*\(\)",
     re.MULTILINE,
 )
-SHELL_HEREDOC = re.compile(r"<<-?[ \t]*[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?")
-SHELL_QUOTED = re.compile(r"'[^']*'|\"(?:\\.|[^\"\\])*\"")
+SHELL_HEREDOC = re.compile(r"<<-?[ \t]*\\?[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?")
 RUST_TEST_ATTRIBUTE = re.compile(r"#\[(?:test|tokio::test|rstest)\b")
-PYTHON_TEST_MARKERS = ("fixture", "parametrize")
+PYTHON_TEST_MARKERS = frozenset(
+    {"pytest.fixture", "fixture", "pytest.mark.parametrize", "parametrize"}
+)
 _DEFINITIONS: dict[tuple[str, int], frozenset[str]] = {}
 _TEXTS: dict[str, str] = {}
 _CARRIES: dict[tuple[str, int], bool] = {}
@@ -230,9 +234,36 @@ def strip_rust(text: str) -> str:
 
 
 def _strip_rust(text: str) -> str:
-    """Rust source with comments, string, raw-string, byte and char literals blanked; newlines
-    kept."""
-    return RUST_LITERAL.sub(lambda match: "\n" * match.group(0).count("\n"), text)
+    """Rust source with comments (block comments nested), string, raw-string, byte and char
+    literals blanked; newlines kept."""
+    out: list[str] = []
+    cursor = 0
+    depth = 0
+    opened = 0
+    for token in RUST_TOKEN.finditer(text):
+        lexeme = token.group(0)
+        if depth:
+            if lexeme == "/*":
+                depth += 1
+            elif lexeme == "*/":
+                depth -= 1
+                if not depth:
+                    out.append("\n" * text.count("\n", opened, token.end()))
+                    cursor = token.end()
+            continue
+        if lexeme == "*/":
+            continue
+        out.append(text[cursor : token.start()])
+        if lexeme == "/*":
+            depth, opened = 1, token.start()
+            continue
+        out.append("\n" * lexeme.count("\n"))
+        cursor = token.end()
+    if depth:
+        out.append("\n" * text.count("\n", opened))
+    else:
+        out.append(text[cursor:])
+    return "".join(out)
 
 
 def _bound_names(target: ast.expr) -> set[str]:
@@ -248,22 +279,50 @@ def _bound_names(target: ast.expr) -> set[str]:
 
 
 def strip_shell(text: str) -> str:
-    """Shell source with heredoc bodies, quoted strings and comment lines blanked."""
+    """Shell source with heredoc bodies (any delimiter quoting), quoted strings (which may span
+    lines) and comments blanked; newlines kept. `$((...))` is arithmetic, not a heredoc."""
     out: list[str] = []
+    quote: str | None = None
     closing: str | None = None
+    pending: str | None = None
     for line in text.split("\n"):
         if closing is not None:
             out.append("")
             if line.lstrip("\t") == closing:
                 closing = None
             continue
-        if line.lstrip().startswith("#"):
-            out.append("")
-            continue
-        heredoc = SHELL_HEREDOC.search(line)
-        if heredoc is not None:
-            closing = heredoc.group(1)
-        out.append(SHELL_QUOTED.sub("''", line))
+        kept: list[str] = []
+        index = 0
+        while index < len(line):
+            char = line[index]
+            if quote is not None:
+                if quote == '"' and char == "\\":
+                    index += 2
+                    continue
+                if char == quote:
+                    quote = None
+                index += 1
+                continue
+            if char in "\"'":
+                quote = char
+                index += 1
+                continue
+            if char == "#" and (index == 0 or line[index - 1] in " \t;"):
+                break
+            if line.startswith("$((", index):
+                stop = line.find("))", index)
+                index = len(line) if stop == -1 else stop + 2
+                continue
+            heredoc = SHELL_HEREDOC.match(line, index)
+            if heredoc is not None:
+                pending = heredoc.group(1)
+                index = heredoc.end()
+                continue
+            kept.append(char)
+            index += 1
+        out.append("".join(kept))
+        if pending is not None and quote is None:
+            closing, pending = pending, None
     return "\n".join(out)
 
 
@@ -345,9 +404,10 @@ def _carries_tests(path: str, text: str) -> bool:
                 continue
             if node.name.startswith("test_"):
                 return True
-            decorators = " ".join(ast.unparse(decorator) for decorator in node.decorator_list)
-            if any(marker in decorators for marker in PYTHON_TEST_MARKERS):
-                return True
+            for decorator in node.decorator_list:
+                target = decorator.func if isinstance(decorator, ast.Call) else decorator
+                if ast.unparse(target) in PYTHON_TEST_MARKERS:
+                    return True
     return False
 
 
@@ -419,8 +479,9 @@ def _sidecar_text(repo: Path, path: str) -> str:
 def bindings(
     repo: Path, tracked: list[str]
 ) -> tuple[dict[tuple[str, str], list[str]], list[tuple[str, str, str]], list[str], list[str]]:
-    """Sidecar bindings: (unit, clause id) -> sidecar lines, every line for the clause check,
-    the shape findings, and the `unit/C-NNN` ids bound to `none (records)`."""
+    """Sidecar bindings: (ledger beside the sidecar, clause id) -> sidecar lines, every line as
+    (where, ledger, clause id) for the clause check, the shape findings, and the `unit/C-NNN` ids
+    bound to `none (records)`."""
     found: dict[tuple[str, str], list[str]] = {}
     lines: list[tuple[str, str, str]] = []
     findings: list[str] = []
@@ -453,8 +514,8 @@ def bindings(
             findings.extend(_entry_findings(repo, tracked_set, where, clause_id, entries))
             if entries == [RECORDS]:
                 records.append(f"{unit}/{clause_id}")
-            found.setdefault((unit, clause_id), []).append(where)
-            lines.append((where, unit, clause_id))
+            found.setdefault((ledger, clause_id), []).append(where)
+            lines.append((where, ledger, clause_id))
     return found, lines, findings, sorted(records)
 
 
@@ -580,6 +641,7 @@ def run(repo: Path) -> int:
 
     findings: list[str] = []
     known: set[tuple[str, str]] = set()
+    clauses_of: dict[str, set[str]] = {}
     proven: dict[str, list[str]] = {}
     clauses = 0
     for path in live + archived:
@@ -602,6 +664,7 @@ def run(repo: Path) -> int:
         else:
             verdicts = {cid: "" for _n, cid, _c in rows}
         known.update((unit, cid) for cid in verdicts)
+        clauses_of[path] = {cid for _n, cid, _c in rows}
 
     cited = citations(repo, tracked)
     for (unit, clause_id), files in sorted(cited.items()):
@@ -613,14 +676,17 @@ def run(repo: Path) -> int:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
     findings.extend(binding_findings)
-    for where, unit, clause_id in binding_lines:
-        if (unit, clause_id) not in known:
-            findings.append(f"{where}: {clause_id} names no clause of {unit} in any ledger")
-    for key, places in bound.items():
-        cited.setdefault(key, []).extend(places)
+    for where, ledger, clause_id in binding_lines:
+        if clause_id not in clauses_of.get(ledger, set()):
+            findings.append(
+                f"{where}: {clause_id} names no clause of {unit_of(ledger)} in the ledger beside it"
+            )
+    pinned = set(cited) | {(unit_of(ledger), cid) for ledger, cid in bound}
     for path, proven_ids in sorted(proven.items()):
         unit = unit_of(path)
-        unpinned = [cid for cid in proven_ids if (unit, cid) not in cited]
+        unpinned = [
+            cid for cid in proven_ids if (path, cid) not in bound and (unit, cid) not in cited
+        ]
         ceiling = EXCEPTIONS.get(Path(path).name, (0, True))[0]
         if len(unpinned) > ceiling:
             findings.append(
@@ -644,7 +710,7 @@ def run(repo: Path) -> int:
         return 1
     print(
         f"ledger-grammar: {len(live)} live ledgers clean ({clauses} clauses, "
-        f"{len(cited)} pinned clause ids, {len(EXCEPTIONS)} exception rows)"
+        f"{len(pinned)} pinned clause ids, {len(EXCEPTIONS)} exception rows)"
     )
     print(f"ledger-grammar: {len(records)} clause(s) bound to `{RECORDS}`, no test pins them")
     by_unit: dict[str, list[str]] = {}

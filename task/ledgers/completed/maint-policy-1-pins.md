@@ -20,13 +20,13 @@ C-017: crates/repark-spark/src/tests/run_maintenance.rs::apply_omits_gate_skippe
 C-018: crates/repark-spark/src/tests/run_maintenance.rs::a_repark_toml_policy_reaches_run_maintenance, crates/repark-spark/src/tests/run_maintenance.rs::apply_removes_orphan
 C-019: crates/repark-spark/src/tests/run_maintenance.rs::apply_removes_orphan, crates/repark-spark/src/tests/run_maintenance.rs::the_d6_refusal_names_the_active_profile
 C-020: none (records)
-C-021: none (records)
+C-021: python/repark/tests/iceberg/test_maintenance_policy_1.py::test_run_maintenance_dry_run_defaults_to_true
 C-022: none (records)
 C-023: none (records)
 C-024: none (records)
 C-025: none (records)
 C-026: none (records)
-C-027: none (records)
+C-027: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark-parity/tests/test_ex_0_example_coverage.py
 C-028: crates/repark-spark/src/tests/call_rewrite_options.rs
 C-029: crates/repark-spark/src/tests/call_rewrite_options.rs::call_rewrite_missing_table_reports_the_table_before_a_bad_flag
 C-030: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark-parity/tests/test_ex_0_example_coverage.py::test_ex_0_enumerator_emits_five_families_and_repark_sql, scripts/check_rust_file_size.py

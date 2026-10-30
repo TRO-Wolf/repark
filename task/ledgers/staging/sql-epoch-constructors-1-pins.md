@@ -7,6 +7,6 @@ C-004: python/repark/tests/timestamps/test_sql_epoch_constructors_1.py::test_dat
 C-005: python/repark/tests/timestamps/test_sql_epoch_constructors_1.py::test_dataframe_door_matches_spark
 C-006: python/repark/tests/timestamps/test_sql_epoch_constructors_1.py::test_native_door_refuses_the_spark_spellings
 C-007: python/repark/tests/timestamps/test_sql_epoch_constructors_1.py::test_live_oracle_matches_committed_fixture
-C-008: none (records)
+C-008: crates/repark-python/src/column/door_parity_tests.rs::SCALAR_NAMES
 C-009: python/repark/tests/timestamps/test_sql_epoch_constructors_1.py::test_dataframe_door_matches_spark, python/repark/tests/timestamps/test_sql_epoch_constructors_1.py::test_sql_door_matches_spark
 C-010: none (records)

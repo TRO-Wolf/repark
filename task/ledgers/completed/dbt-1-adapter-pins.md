@@ -4,4 +4,4 @@ C-001: python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fa
 C-002: python/dbt-repark/tests/test_cursor.py, python/dbt-repark/tests/test_gold_models.py::test_docs_generate_reads_relations_and_columns
 C-003: python/dbt-repark/tests/test_gold_models.py
 C-004: python/dbt-repark/tests/test_gold_models.py
-C-005: python/dbt-repark/tests/test_aws_acceptance_gold.py::_repoint_profile, python/dbt-repark/tests/test_aws_acceptance_gold.py::glue_project
+C-005: python/dbt-repark/tests/test_aws_acceptance_gold.py::_repoint_profile, python/dbt-repark/tests/test_aws_acceptance_gold.py::glue_project, python/repark/tests/parity/test_aws_acceptance.py

@@ -12,7 +12,7 @@ C-009: crates/repark-spark/src/tests/kill_mid_write.rs
 C-010: crates/repark-spark/src/tests/kill_mid_write.rs
 C-011: crates/repark-spark/src/tests/kill_mid_write.rs
 C-014: none (records)
-C-016: none (records)
+C-016: crates/repark-spark/src/tests/kill_mid_write.rs::kill_cell
 C-017: none (records)
 C-018: none (records)
 C-019: none (records)
@@ -20,33 +20,33 @@ C-020: none (records)
 C-021: none (records)
 C-022: none (records)
 C-023: none (records)
-C-026: none (records)
-C-027: none (records)
-C-028: none (records)
+C-026: crates/repark-spark/src/tests/kill_mid_write.rs, crates/repark-spark/src/tests/kill_mid_write_release.rs::a_child_whose_parent_is_gone_before_it_starts_releases_at_the_hold_without_committing, crates/repark-spark/src/tests/kill_mid_write_release.rs::a_held_child_whose_live_parent_never_kills_it_is_released_at_the_hold_limit, crates/repark-spark/src/tests/kill_mid_write_release.rs::a_held_child_whose_parent_is_gone_exits_without_committing
+C-027: crates/repark-spark/src/tests/kill_mid_write_release.rs
+C-028: crates/repark-spark/src/tests/kill_mid_write_release.rs
 C-030: crates/repark-spark/src/tests/commit_unknown_doors.rs
-C-032: none (records)
+C-032: python/repark/tests/parity/test_acceptance_commit_gate.py
 C-033: none (records)
 C-034: none (records)
-C-035: none (records)
+C-035: python/repark/tests/parity/test_cross_release_local.py
 C-036: none (records)
 C-039: none (records)
-C-040: none (records)
+C-040: python/repark/tests/parity/test_acceptance_commit_resolver.py
 C-041: none (records)
 C-042: none (records)
 C-043: none (records)
-C-045: none (records)
+C-045: python/repark/tests/parity/test_cross_release_local.py::test_x_compare_sees_a_string_read_as_a_large_string
 C-046: none (records)
 C-047: none (records)
 C-048: none (records)
-C-050: none (records)
-C-051: none (records)
-C-052: none (records)
-C-054: none (records)
+C-050: python/repark/tests/parity/test_acceptance_commit_gate.py
+C-051: python/repark/tests/parity/test_cross_release_local.py
+C-052: python/repark/tests/parity/test_acceptance_cross_read_local.py::from_uri
+C-054: python/repark/tests/parity/test_acceptance_commit_resolver.py
 C-055: none (records)
 C-058: none (records)
-C-061: none (records)
+C-061: python/repark-parity/tests/test_cross_read_diagnostics.py
 C-062: none (records)
-C-063: none (records)
+C-063: python/repark-parity/tests/test_cross_read_diagnostics.py::test_progress_is_visible_before_pytest_finishes
 C-064: python/repark-parity/tests/test_cross_read_progress.py
 C-065: python/repark-parity/tests/test_cross_read_progress.py
 C-072: none (records)

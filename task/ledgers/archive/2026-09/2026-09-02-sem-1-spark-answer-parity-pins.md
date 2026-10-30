@@ -8,5 +8,5 @@ C-005: crates/repark-python/src/column/door_parity_tests.rs::EXPECTED_DIVERGENCE
 C-006: python/repark/tests/functions/test_sem1_spark_log.py
 C-007: python/repark/tests/functions/test_sem1_spark_log.py
 C-008: python/repark/tests/functions/test_lrs4_door_domain.py
-C-009: none (records)
+C-009: scripts/ledger_lifecycle.py
 C-010: python/repark/tests/functions/test_sem1_extract_all_group_default.py, python/repark/tests/functions/test_sem1_spark_log.py

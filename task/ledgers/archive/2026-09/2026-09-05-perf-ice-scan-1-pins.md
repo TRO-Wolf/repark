@@ -5,8 +5,8 @@ C-002: none (records)
 C-003: none (records)
 C-004: none (records)
 C-005: none (records)
-C-006: none (records)
-C-007: none (records)
+C-006: scripts/check_rust_file_size.sh
+C-007: python/repark/tests/perf/test_perf_ice_scan_1.py
 C-008: none (records)
 C-009: none (records)
 C-010: none (records)

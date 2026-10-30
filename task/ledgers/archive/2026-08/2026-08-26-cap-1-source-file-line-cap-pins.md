@@ -9,6 +9,6 @@ C-006: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1
 C-007: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_exception_records_are_actionable
 C-008: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_exact_baseline_is_green_and_growth_is_red
 C-009: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_existing_gate_surfaces_remain_dual_wired
-C-010: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_facade_no_stub_scope_is_unchanged
+C-010: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_facade_no_stub_scope_is_unchanged, scripts/check_lib_py.py
 C-011: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_only_named_fixture_paths_are_exempt
 C-012: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_prose_and_navigation_name_the_generalized_gate

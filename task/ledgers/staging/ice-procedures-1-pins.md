@@ -8,7 +8,7 @@ C-005: python/repark/tests/iceberg/test_ice_procedures_1.py::test_bind_unknown_a
 C-006: python/repark/tests/iceberg/test_ice_procedures_1.py::test_bind_missing_required_refuses
 C-007: python/repark/tests/iceberg/test_ice_procedures_1.py::test_bind_excess_positional_refuses
 C-008: python/repark/tests/iceberg/test_ice_procedures_1.py::test_bind_null_is_unset
-C-009: none (records)
+C-009: crates/repark-spark/src/tests/call.rs
 C-010: python/repark/tests/iceberg/test_ice_procedures_1.py::test_dangling_extra_and_precedence_kept
 C-011: none (records)
 C-012: python/repark/tests/iceberg/test_ice_procedures_1.py::test_rpd_where_rewrites_matching_partition

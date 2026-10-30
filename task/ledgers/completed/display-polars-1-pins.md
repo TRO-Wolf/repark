@@ -5,4 +5,4 @@ C-002: python/repark/tests/conftest.py::spark, python/repark/tests/dataframe/tes
 C-003: python/repark/tests/dataframe/test_display_polars_default.py::test_large_frame_counts_once, python/repark/tests/dataframe/test_display_polars_default.py::test_small_frame_renders_without_count
 C-004: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
 C-005: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
-C-006: none (records)
+C-006: scripts/sync_map_md.py

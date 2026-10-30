@@ -5,7 +5,7 @@ C-002: python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py
 C-003: python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py
 C-004: python/repark/tests/writes/test_repark_sql_update_subquery_where_1.py
 C-005: crates/repark-core/src/dialect/tests.rs::the_default_dialect_refuses_a_subquery_in_update_or_delete_where
-C-006: crates/repark-sql/tests/ansi_subquery_where_identity.rs
+C-006: crates/repark-sql/src/guards/tests.rs, crates/repark-sql/tests/ansi_subquery_where_identity.rs
 C-007: crates/repark-iceberg/src/write/predicate_dml/tests/subquery_where.rs
 C-008: none (records)
 C-009: none (records)

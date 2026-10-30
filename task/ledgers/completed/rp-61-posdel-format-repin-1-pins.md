@@ -9,7 +9,7 @@ C-006: crates/repark-spark/tests/delete_format_guard.rs, python/repark/tests/wri
 C-007: crates/repark-spark/tests/delete_format_guard.rs::case_variant_dml_and_merge_on_inherited_avro_or_orc_match_parquet
 C-008: crates/repark-spark/tests/delete_format_guard.rs::branch_target_dml_on_inherited_avro_or_orc_commits_on_the_branch
 C-009: crates/repark-spark/tests/delete_format_guard.rs::upper_case_merge_on_read_fork_route_dml_runs_copy_on_write_and_reads_back
-C-010: crates/repark-spark/src/tests/enc_1.rs::encrypted_table_case_variant_namespace_delete_refuses, crates/repark-spark/src/tests/write_to_branch.rs::a_branch_write_with_an_unclassified_head_refuses
+C-010: crates/repark-spark/src/tests/enc_1.rs::encrypted_table_case_variant_namespace_delete_refuses, crates/repark-spark/src/tests/write_to_branch.rs::a_branch_write_with_an_unclassified_head_refuses, crates/repark-spark/tests/delete_format_guard.rs
 C-011: python/repark/tests/writes/test_ice_orc_avro_1.py::test_mor_delete_on_avro_or_orc_reads_back, python/repark/tests/writes/test_ice_orc_avro_1.py::test_mor_delete_on_orc_writes_orc_delete_file
 C-012: python/repark/tests/writes/test_ice_orc_avro_1.py::test_mor_delete_on_avro_or_orc_reads_back, python/repark/tests/writes/test_ice_orc_avro_1.py::test_mor_delete_on_orc_writes_orc_delete_file
 C-013: none (records)

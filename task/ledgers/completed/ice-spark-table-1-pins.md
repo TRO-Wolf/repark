@@ -9,5 +9,5 @@ C-006: python/repark/tests/writes/test_ice_spark_table_1.py
 C-007: python/repark/tests/writes/test_ice_spark_table_1.py
 C-008: python/repark/tests/writes/test_ice_spark_table_1.py
 C-009: python/repark/tests/writes/test_ice_spark_table_1.py::_assert_table_rows
-C-010: python/repark/tests/writes/test_ice_spark_table_1.py
+C-010: python/repark/tests/iceberg/test_v3e3_fixtures.py, python/repark/tests/writes/test_ice_spark_table_1.py
 C-011: python/repark/tests/writes/test_ice_spark_table_1.py

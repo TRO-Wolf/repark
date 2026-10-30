@@ -16,7 +16,7 @@ C-013: none (records)
 C-014: scripts/check_lib_py.py
 C-015: none (records)
 C-016: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/types/test_facade_4_ddl_round_trip.py::test_atomic_tokens_agree_with_rust_table, scripts/check_lib_py.py
-C-017: none (records)
+C-017: python/repark/tests/types/test_facade_4_census_pins.py
 C-018: none (records)
 C-019: none (records)
 C-020: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/types/test_facade_4_step1_remediation.py::test_fromddl_integer_params_beyond_i64, scripts/check_lib_py.py
@@ -28,7 +28,7 @@ C-025: python/repark/tests/types/test_facade_4_step1_remediation.py::test_sql_ty
 C-026: none (records)
 C-027: python/repark/tests/types/test_facade_4_step1_remediation.py::test_csv_rung_cast_tokens_agree_with_rust_table
 C-028: python/repark/tests/types/test_facade_4_step1_remediation.py::test_wide_decimal_conversions_take_python_fallback
-C-029: python/repark/tests/types/test_facade_4_step1_remediation.py
+C-029: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/types/test_facade_4_step1_remediation.py, scripts/check_lib_py.py
 C-030: python/repark/tests/types/test_facade_4_step1_remediation.py
 C-031: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/types/test_facade_4_step1_remediation.py, scripts/check_lib_py.py
 C-032: python/repark/tests/types/test_facade_4_step1_remediation.py

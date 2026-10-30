@@ -6,6 +6,6 @@ C-003: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py::test_live_recovery_s
 C-004: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py::test_exception_contract_matches_occ
 C-005: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py::test_dataframe_doors_stale_writer_raises
 C-006: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py
-C-007: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py
+C-007: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py, python/repark/tests/writes/test_ice_spark_table_1.py
 C-008: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py
 C-009: python/repark/tests/iceberg/test_ice_hadoop_vn_1.py

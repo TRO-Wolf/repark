@@ -5,5 +5,5 @@ C-002: python/repark/tests/dataframe/test_df_eager_1.py::test_repr_of_eager_fram
 C-003: python/repark/tests/dataframe/test_display_lazy_1.py::test_eager_eval_lazy_repr_renders_rows_with_one_plan_run
 C-004: python/repark/tests/dataframe/test_display_bridge_1.py::test_bridged_show_matches_repr_duckdb, python/repark/tests/dataframe/test_display_bridge_1.py::test_bridged_show_matches_repr_polars, python/repark/tests/dataframe/test_display_bridge_1.py::test_bridged_small_peek_shape_exact_duckdb, python/repark/tests/dataframe/test_display_lazy_1.py::test_lazy_bridged_repr_renders_header, python/repark/tests/dataframe/test_display_lazy_1.py::test_spark_door_and_str_and_html_unchanged
 C-005: python/repark/tests/dataframe/test_display_lazy_1.py::test_transformations_stay_lazy_until_action
-C-006: none (records)
+C-006: python/repark/tests/dataframe/test_display_styles.py::_DUCKDB_ELLIPSIS_GOLDEN, python/repark/tests/dataframe/test_display_styles.py::test_styled_show_does_not_full_collect
 C-007: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/dataframe/test_display_lazy_1.py::test_pending_checkpoint_discharge_renders_data, python/repark/tests/dataframe/test_display_lazy_1.py::test_plain_checkpoint_repr_renders_data_with_zero_reruns, scripts/check_lib_py.py

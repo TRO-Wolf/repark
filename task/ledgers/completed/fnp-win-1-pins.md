@@ -6,7 +6,7 @@ C-003: python/repark/tests/functions/test_fnp_win_1.py, scripts/check_rust_file_
 C-004: python/repark/tests/functions/test_fnp_win_1.py, scripts/check_rust_file_size.py
 C-005: python/repark/tests/functions/test_fnp_win_1.py::test_window_bad_duration_raises, python/repark/tests/functions/test_fnp_win_1.py::test_window_time_sql_missing_aggregation
 C-006: none (records)
-C-007: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark-parity/tests/test_ex_0_example_coverage.py, python/repark/tests/functions/test_fnp_win_1.py, python/repark/tests/functions/test_functions_split_identity.py
+C-007: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark-parity/tests/test_ex_0_example_coverage.py, python/repark/tests/functions/test_fnp_win_1.py, python/repark/tests/functions/test_functions_c.py, python/repark/tests/functions/test_functions_split_identity.py
 C-008: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/functions/test_fnp_win_1.py, scripts/check_rust_file_size.py
 C-009: python/repark/tests/functions/test_fnp_win_1.py::test_resid_zone_tumble
 C-010: python/repark/tests/functions/test_fnp_win_1.py::test_resid_dst_sliding

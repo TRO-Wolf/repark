@@ -30,7 +30,8 @@ Four subcommands:
   relative link anywhere in the repository's tracked markdown whose target is a
   `-ledger.md` that does not exist; a `completed/` or `archive/` file other than a
   map or a `-pins.md` sidecar changed since the base commit beyond a link repair or
-  an errata note prepended at its top (the "frozen" and "immutable" rules).
+  an errata note prepended at its top (the "frozen" and "immutable" rules); one unit
+  name with ledgers in two bins.
 - `compact` — the live documents carry only live state: every `unit` marker in
   `briefs/next-sequence.md` whose ledger sits in `completed/` or the archive leaves the slate
   whole (row, prose, no obituary), and every `state=closed` ws block in `STATUS.md` moves to
@@ -74,6 +75,7 @@ SIZE_SCRIPT = "scripts/check_map_size.py"
 MAIN_REFS: tuple[str, ...] = ("origin/main", "main")
 
 ARCHIVE_NAME = re.compile(r"^(\d{4}-\d{2})-\d{2}-.+\.md$")
+ARCHIVE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 MONTH_DIR = re.compile(r"^\d{4}-\d{2}$")
 # `](target)` — the part of a link the lifecycle is allowed to change. A target with
 # whitespace in it is visible prose, not a path, and stays in the comparison.
@@ -825,6 +827,16 @@ def run_check(repo: Path, base: str | None) -> int:
                 )
             elif match.group(1) != month:
                 findings.append(f"{path}: prefix {match.group(1)} disagrees with directory {month}")
+
+    units: dict[str, list[str]] = {}
+    for path in tracked:
+        name = Path(path).name
+        if path.startswith(LEDGERS_DIR + "/") and name.endswith(LEDGER_SUFFIX):
+            unit = ARCHIVE_PREFIX.sub("", name[: -len(LEDGER_SUFFIX)])
+            units.setdefault(unit, []).append(path)
+    for unit, homes in sorted(units.items()):
+        if len(homes) > 1:
+            findings.append(f"{unit}: one unit, ledgers in two bins ({', '.join(homes)})")
 
     links = 0
     for path in tracked:

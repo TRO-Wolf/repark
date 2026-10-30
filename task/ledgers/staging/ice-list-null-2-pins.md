@@ -1,6 +1,6 @@
 # ice-list-null-2 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: none (records)
+C-001: crates/repark-iceberg/src/write/predicate_dml/tests/plain.rs
 C-002: crates/repark-spark/src/tests/list_null_compound.rs
 C-003: none (records)
 C-004: python/repark/tests/writes/test_ice_list_null_1.py

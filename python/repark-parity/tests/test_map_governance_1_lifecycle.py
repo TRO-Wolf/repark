@@ -220,3 +220,11 @@ def test_archive_moves_an_excepted_map_row_by_exactly_its_link_growth(repo: Path
         check=False,
     )
     assert size.returncode == 0, size.stderr
+
+
+def test_one_unit_in_two_bins_is_refused(repo: Path) -> None:
+    _write(repo, "task/ledgers/staging/x1-demo-ledger.md", "# Ledger — X1 again\n")
+    _commit(repo, "a copy in staging")
+    result = _run(repo, "check")
+    assert result.returncode == 1
+    assert "x1-demo: one unit, ledgers in two bins" in result.stderr

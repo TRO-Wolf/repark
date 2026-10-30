@@ -2,4 +2,4 @@
 
 C-001: python/repark/tests/iceberg/test_partname_1.py
 C-002: python/repark/tests/iceberg/test_partname_1.py
-C-003: python/repark/tests/iceberg/test_partname_1.py
+C-003: python/repark/tests/iceberg/test_partname_1.py, python/repark/tests/timestamps/test_u9_types_1.py

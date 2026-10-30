@@ -15,11 +15,11 @@ C-012: crates/repark-iceberg/src/write/partition_spec/tests.rs::replace_by_trans
 C-013: python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_partition_field_case_rules_ignore_case_sensitive_conf
 C-014: python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_write_ordered_by_accepts_any_case
 C-015: python/repark/tests/perf/test_perf_facade_logical_names.py, python/repark/tests/resolution/test_u11_edge_case_select.py::test_dataframe_door_binds_spelled_sql_columns
-C-016: none (records)
+C-016: crates/repark-spark/src/tests/create_format_version_one.rs
 C-017: python/repark/tests/resolution/test_u11_edge_case_select.py::test_drop_binds_spelled_names
 C-018: python/repark/tests/resolution/test_u11_edge_case_select.py::test_qualified_references_bind_spelled_names
 C-019: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_u11_edge_case_select.py::test_join_on_a_spelled_key, scripts/check_rust_file_size.py
-C-020: python/repark/tests/resolution/test_u11_edge_case_select.py::test_union_by_name_matches_names_case_insensitively
+C-020: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_u11_edge_case_select.py::test_union_by_name_matches_names_case_insensitively, scripts/check_rust_file_size.py
 C-021: crates/repark-iceberg/src/write/partition_spec/tests.rs::struct_text_renders_docs_and_decimal_like_java
 C-022: python/repark/tests/resolution/test_u11_edge_case_select.py::test_qualified_drop_binds_through_its_relation, scripts/check_rust_file_size.py
 C-023: python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_column_entry_point_refuses_the_ambiguity_like_spark, python/repark/tests/resolution/test_u11_edge_case_select.py::test_bare_reference_matching_two_fields_is_ambiguous, scripts/check_lib_py.py

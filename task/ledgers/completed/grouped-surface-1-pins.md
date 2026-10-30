@@ -7,5 +7,5 @@ C-004: python/repark/tests/io/test_grouped_surface_1.py::test_cogroup_type_and_u
 C-005: python/repark/tests/io/test_grouped_surface_1.py::test_cogroup_key_count_mismatch
 C-006: python/repark/tests/io/test_grouped_surface_1.py::test_state_api_refusals
 C-007: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark-parity/tests/test_ex_0_example_coverage.py, python/repark/tests/io/test_grouped_surface_1.py::test_fixture_covers_the_named_cells, scripts/check_lib_py.py
-C-008: python/repark/tests/io/test_grouped_surface_1.py
+C-008: python/repark/tests/dataframe/test_dfcore_1_exports.py, python/repark/tests/dataframe/test_t0_df_regions_import_freeze.py, python/repark/tests/io/test_applyinpandas.py, python/repark/tests/io/test_applyinpandas_oracle.py, python/repark/tests/io/test_grouped_surface_1.py, python/repark/tests/io/test_mapinarrow.py, python/repark/tests/io/test_mapinarrow_oracle.py
 C-009: python/repark/tests/io/test_grouped_surface_1.py::test_apply_in_arrow_zero_column_result_drops_group

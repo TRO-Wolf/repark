@@ -23,8 +23,8 @@ _ROWS = """# Charter
 
 | Clause | Proposition | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | The thing holds. | A pin. | PROVEN | `pins.rs` |
-| C-002 | The other thing holds. | A pin. | PROVEN | `pins.rs` |
+| C-001 | The thing holds. | A pin. | PROVEN | the battery |
+| C-002 | The other thing holds. | A pin. | PROVEN | the battery |
 | C-003 | Not yet known. | Needs the module. | OPEN | waiting |
 """
 
@@ -59,8 +59,8 @@ def _grammar(repo: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-@pytest.fixture
-def repo(tmp_path: Path) -> Path:
+def seed_repo(tmp_path: Path) -> Path:
+    """The scratch tree every gate pin starts from."""
     _git(tmp_path, "init", "-q", "-b", "main")
     for name, (ceiling, _governed) in _exceptions().items():
         rows = "".join(f"| C-{n:03d} | legacy | x | PROVEN | x |\n" for n in range(1, ceiling + 1))
@@ -69,6 +69,11 @@ def repo(tmp_path: Path) -> Path:
     _write(tmp_path, _TEST, "#[test]\nfn demo_holds() {}\nfn other_holds() {}\n")
     _write(tmp_path, _SIDECAR, _SIDECAR_TEXT)
     return tmp_path
+
+
+@pytest.fixture
+def repo(tmp_path: Path) -> Path:
+    return seed_repo(tmp_path)
 
 
 def test_sidecar_binding_pins_proven_clauses(repo: Path) -> None:
@@ -197,7 +202,9 @@ def test_missing_clause_goes_red(repo: Path) -> None:
     _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}\nC-002: {_TEST}\nC-009: {_TEST}\n")
     result = _grammar(repo)
     assert result.returncode == 1
-    assert f"{_SIDECAR}:5: C-009 names no clause of {_UNIT} in any ledger" in result.stderr
+    assert (
+        f"{_SIDECAR}:5: C-009 names no clause of {_UNIT} in the ledger beside it" in result.stderr
+    )
 
 
 def test_malformed_and_duplicate_lines_go_red(repo: Path) -> None:
@@ -234,7 +241,7 @@ def test_archive_sidecar_strips_the_date_prefix(repo: Path) -> None:
     _write(repo, f"{archived}-pins.md", f"# old-unit pin binding\n\nC-002: {_TEST}\n")
     result = _grammar(repo)
     assert result.returncode == 1
-    assert "C-002 names no clause of old-unit in any ledger" in result.stderr
+    assert "C-002 names no clause of old-unit in the ledger beside it" in result.stderr
 
 
 def test_floor_keeps_its_meaning(repo: Path) -> None:
@@ -872,14 +879,18 @@ def test_a_disclaimer_unbinds_only_the_clauses_it_names(tmp_path: Path) -> None:
     rows = _ROWS + "".join(f"| C-00{n} | More. | A pin. | PROVEN | x |\n" for n in range(4, 6))
     repo = _scratch_map_repo(tmp_path, text, {_TEST: "#[test]\nfn demo_holds() {}\n"})
     _write(repo, _LEDGER, rows)
+    report = _migrate(repo, "--check", "--report", "hand-candidates")
+    assert "hand candidates: 2" in report.stdout
+    assert f"  {_UNIT}/C-004\t{_TEST}\t{_MAP}:5\t" in report.stdout
+    assert f"  {_UNIT}/C-005\t{_TEST}\t{_MAP}:6\t" in report.stdout
     result = _migrate(repo)
     assert result.returncode == 0, result.stderr
-    assert "map citations whose own text disclaims a pin: 2" in result.stdout
+    assert "map citations whose own text disclaims a pin: 1" in result.stdout
     assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
         f"C-001: {_TEST}",
         f"C-002: {_TEST}",
         "C-003: none (records)",
-        "C-004: none (records)",
+        f"C-004: {_TEST}",
         f"C-005: {_TEST}",
     ]
 
@@ -948,11 +959,10 @@ def test_a_shared_citation_binds_each_clause_by_its_own_row(tmp_path: Path) -> N
     _write(repo, _LEDGER, rows)
     result = _migrate(repo)
     assert result.returncode == 0, result.stderr
-    assert "shared-citation clauses rebound by their own ledger row: 2" in result.stdout
-    assert "  of which nothing bindable remains: 1" in result.stdout
+    assert "clauses that gained a file their own ledger row names: 1" in result.stdout
     assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
         f"C-001: {_TEST}::demo_holds",
-        f"C-002: {other}::other_holds",
-        "C-003: none (records)",
+        f"C-002: {other}::other_holds, {_TEST}",
+        f"C-003: {_TEST}",
         f"C-004: {_TEST}",
     ]

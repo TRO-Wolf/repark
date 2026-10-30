@@ -9,4 +9,4 @@ C-006: python/repark/tests/io/test_io_orc_1.py::test_orc_sql_create_using_refusa
 C-007: python/repark/tests/io/test_io_orc_1.py::test_orc_sql_create_using_refusal
 C-008: python/repark/tests/io/test_io_orc_1.py::test_orc_sql_create_using_refusal
 C-009: python/repark/tests/io/test_io_orc_1.py::test_orc_sql_create_using_refusal
-C-010: python/repark/tests/io/test_io_orc_1.py, scripts/check_example_coverage.sh
+C-010: python/repark/tests/io/test_io_orc_1.py::test_orc_sql_create_using_refusal, scripts/check_example_coverage.sh

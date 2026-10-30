@@ -1,7 +1,7 @@
 # rp-2-fork-repin pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: crates/repark-spark/src/tests/v3_cow.rs
-C-002: crates/repark-spark/src/tests/v3_cow.rs
+C-002: crates/repark-spark/src/tests/metadata_tables.rs, crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/tests/introspection.rs
 C-003: crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_mor_delete_commits_a_puffin_deletion_vector, python/repark/tests/iceberg/test_v3_cow_dml.py
 C-004: crates/repark-spark/src/tests/call_v3.rs, crates/repark-spark/src/tests/v3_cow.rs
 C-005: crates/repark-spark/src/tests/v3_cow.rs, python/repark/tests/iceberg/test_v3_cow_dml.py

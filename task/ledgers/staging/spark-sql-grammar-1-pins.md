@@ -4,5 +4,5 @@ C-003: python/repark/tests/sql/test_spark_sql_grammar_1.py
 C-004: python/repark/tests/sql/test_spark_sql_grammar_1.py
 C-005: python/repark/tests/sql/test_spark_sql_grammar_1.py
 C-006: python/repark/tests/sql/test_spark_sql_grammar_1.py
-C-008: python/repark/tests/sql/test_spark_sql_grammar_1.py
+C-008: python/repark/tests/functions/test_fnp11a_temporal.py, python/repark/tests/sql/test_spark_sql_grammar_1.py
 C-010: python/repark/tests/sql/test_spark_sql_grammar_1.py

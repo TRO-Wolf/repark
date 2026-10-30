@@ -11,5 +11,5 @@ C-008: crates/repark-spark/src/tests/call_v3.rs::the_engine_still_cannot_produce
 C-010: python/repark/tests/iceberg/test_v3_create_opt_in.py
 C-011: crates/repark-spark/src/tests/call_v3.rs, python/repark/tests/iceberg/test_v3_create_opt_in.py
 C-012: none (records)
-C-013: none (records)
+C-013: scripts/check_crate_dag.py
 C-015: crates/repark-spark/src/tests/call_v3.rs

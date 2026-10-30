@@ -8,7 +8,7 @@ C-005: python/repark/tests/resolution/test_casesens_2.py::test_s3_drop_duplicate
 C-006: python/repark/tests/resolution/test_casesens_2.py::test_s1_false_door_byte_identical, python/repark/tests/resolution/test_casesens_2.py::test_s2_overlay_replace_unchanged
 C-007: none (records)
 C-008: python/repark/tests/resolution/test_casesens_2.py
-C-009: crates/repark-core/src/session/tests/join_qualifiers.rs
+C-009: crates/repark-core/src/session/tests/join_qualifiers.rs, python/repark/tests/dataframe/test_h2_group_h2.py::test_h2_compound_alias_free_names_answer, python/repark/tests/resolution/test_casesens_2.py::test_s4_selfjoin_answers_as_spark, python/repark/tests/resolution/test_casesens_2.py::test_s4_wrongcase_alias_qualifier_refuses_under_true
 C-010: crates/repark-core/src/session/tests/case_bind.rs::folded_with_columns_keys_refuse_only_under_ignore_case, python/repark/tests/resolution/test_casesens_2.py
 C-011: python/repark/tests/resolution/test_casesens_2.py::_assert_df_step, python/repark/tests/resolution/test_casesens_2.py::test_s4_probe10_false_shapes_answer_as_spark, python/repark/tests/resolution/test_casesens_2.py::test_s4_probe10_true_multi_hit_answers_as_spark
 C-012: crates/repark-core/src/session/tests/join_qualifiers.rs::sort_twins_from_two_join_positions_meet_at_the_join, python/repark/tests/resolution/test_casesens_2.py::test_port_sort_twins_from_one_join_refuse_as_spark

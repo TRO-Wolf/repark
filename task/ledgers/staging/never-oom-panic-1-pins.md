@@ -2,7 +2,7 @@
 
 C-001: python/repark/tests/perf/test_h3_spill_matrix.py::_WORKER, python/repark/tests/perf/test_h3_spill_matrix.py::test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr
 C-002: python/repark/tests/perf/test_h3_spill_matrix.py::_WORKER, python/repark/tests/perf/test_h3_spill_matrix.py::test_never_oom_panic_1_a_tight_pool_leaves_no_panic_blocks_on_stderr
-C-003: none (records)
+C-003: crates/repark-core/src/session/tests/nlj_tight_pool.rs
 C-004: none (records)
 C-005: none (records)
 C-006: none (records)

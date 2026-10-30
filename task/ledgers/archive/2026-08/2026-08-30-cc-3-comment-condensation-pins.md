@@ -4,7 +4,7 @@ C-001: none (records)
 C-002: none (records)
 C-003: none (records)
 C-004: none (records)
-C-005: none (records)
+C-005: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_rust_file_size.py
 C-006: none (records)
 C-007: none (records)
 C-008: none (records)

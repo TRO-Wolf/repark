@@ -1,11 +1,11 @@
 # ex-25-functions-a pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: scripts/check_example_coverage.py::BACKLOG_BASELINE
-C-002: none (records)
-C-003: none (records)
-C-004: none (records)
-C-005: none (records)
-C-006: none (records)
-C-007: none (records)
+C-002: scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-003: scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-004: scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-005: scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-006: scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-007: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-008: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-009: python/repark/tests/parity/test_examples_functions_a.py, scripts/check_example_coverage.py::BACKLOG_BASELINE

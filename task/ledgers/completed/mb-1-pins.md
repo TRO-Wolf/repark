@@ -13,8 +13,8 @@ C-010: crates/repark-iceberg/src/microbatch/window_tests.rs::delete_inside_windo
 C-011: crates/repark-iceberg/src/microbatch/window_tests.rs::replace_inside_window_skipped_silently
 C-012: none (records)
 C-013: none (records)
-C-014: none (records)
-C-015: none (records)
+C-014: crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_defaults_to_unbounded_earliest, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_parses_caps, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_parses_from_timestamp, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_parses_start_after_snapshot_id, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_passes_unprefixed_keys, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_both_skip_keys, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_malformed_values, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_two_start_keys, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_unknown_keys_under_interpreted_prefixes
+C-015: crates/repark-core/src/time_travel/microbatch_source_tests.rs::capped_batches_agree_with_their_plans_row_for_row, crates/repark-core/src/time_travel/microbatch_source_tests.rs::initial_offset_on_an_empty_table_reads_none, crates/repark-core/src/time_travel/microbatch_source_tests.rs::open_refuses_unknown_tables_and_malformed_identifiers, crates/repark-core/src/time_travel/microbatch_source_tests.rs::open_streams_two_appends_then_reports_none
 C-016: none (records)
 C-017: none (records)
 C-018: none (records)
@@ -30,7 +30,7 @@ C-027: crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_optio
 C-028: crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_accepts_skip_keys_set_to_false_as_a_no_op, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_both_skip_keys
 C-029: crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_recognised_spark_streaming_keys_it_does_not_support
 C-030: crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_caps_above_the_spark_int_range
-C-031: none (records)
+C-031: python/repark/tests/functions/test_lrs3_registered_divergences.py, python/repark/tests/parity/test_parity_live.py, python/repark/tests/session/test_dropin_disclosure.py, scripts/check_docs_links.py
 C-032: none (records)
 C-033: crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs::a_drop_and_re_add_never_shows_the_dropped_field, crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs::a_rename_before_start_reads_every_batch_under_the_new_name, crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs::a_schema_change_after_open_leaves_the_batch_schema_alone, crates/repark-core/src/time_travel/microbatch_source_fold2_tests.rs::a_type_promotion_before_start_reads_every_batch_promoted
 C-034: none (records)

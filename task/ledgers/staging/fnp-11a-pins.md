@@ -5,7 +5,7 @@ C-002: python/repark/tests/functions/test_fnp11a_temporal.py::test_make_timestam
 C-003: python/repark/tests/functions/test_fnp11a_temporal.py
 C-004: python/repark/tests/functions/test_fnp11a_temporal.py
 C-005: python/repark/tests/functions/test_fnp11a_temporal.py
-C-006: python/repark/tests/functions/test_fnp11a_temporal.py
+C-006: python/repark/tests/functions/test_fnp11a_temporal.py, python/repark/tests/functions/test_fnp7_try_inversions.py, python/repark/tests/parity/test_examples_functions_a.py
 C-007: none (records)
 C-008: python/repark/tests/functions/test_fnp11a_r2.py::test_r2_l001_ntz_add_preserves_type
 C-009: python/repark/tests/functions/test_fnp11a_r2.py::test_r2_l002_calendar_diff
@@ -16,6 +16,6 @@ C-013: python/repark/tests/functions/test_fnp11a_r2.py
 C-014: python/repark/tests/functions/test_fnp11a_r2.py::test_r2_l009_zero_arg_asymmetry
 C-015: python/repark/tests/functions/test_fnp11a_r2.py::test_r2_facade_shortest_call_shape
 C-016: python/repark/tests/functions/test_fnp11a_r2.py
-C-017: none (records)
+C-017: python/repark/tests/functions/test_fnp11a_temporal.py
 C-018: none (records)
 C-019: none (records)

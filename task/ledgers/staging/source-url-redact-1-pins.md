@@ -10,15 +10,15 @@ C-007: none (records)
 C-008: crates/repark-core/src/session/tests/conf_dump_redaction.rs::conf_dump_masks_url_userinfo_while_the_endpoint_resolves_raw
 C-009: none (records)
 C-010: crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_masks_url_userinfo_spark_would_show, crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_redaction_truth_table
-C-011: python/repark/tests/io/test_source_url_redaction_1.py::test_config_dump_never_carries_the_password
+C-011: python/repark/tests/io/test_source_url_redaction_1.py::test_config_dump_never_carries_the_password, python/repark/tests/sql/test_sql_set_door_1.py
 C-012: python/repark/tests/io/test_source_url_redaction_1.py::test_config_dump_never_carries_the_password, python/repark/tests/io/test_source_url_redaction_1.py::test_sources_rows_never_carry_the_password
 C-013: python/repark/tests/io/test_source_url_redaction_1.py
 C-014: none (records)
 C-015: crates/repark-common/src/redaction/tests.rs::userinfo_is_read_only_inside_the_authority
 C-016: crates/repark-spark/src/tests/property_display_redaction.rs
-C-017: python/repark/tests/io/test_source_url_redaction_1.py::test_knob_refusals_never_carry_the_password, python/repark/tests/io/test_source_url_redaction_1.py::test_set_redaction_matches_the_spark_4_1_2_default_regexes
-C-018: crates/repark-iceberg/src/catalog/tests/memory_props_span.rs::memory_catalog_span_masks_a_password_in_the_warehouse
-C-019: python/repark/tests/io/test_source_url_redaction_1.py::test_knob_refusals_never_carry_the_password, python/repark/tests/io/test_source_url_redaction_1.py::test_set_redaction_matches_the_spark_4_1_2_default_regexes
+C-017: python/repark/tests/io/test_source_url_redaction_1.py::test_knob_refusals_never_carry_the_password, python/repark/tests/io/test_source_url_redaction_1.py::test_set_redaction_matches_the_spark_4_1_2_default_regexes, python/repark/tests/session/test_production_file_size.py
+C-018: crates/repark-iceberg/src/catalog/tests/memory_props_span.rs::memory_catalog_span_masks_a_password_in_the_warehouse, scripts/check_crate_dag.py
+C-019: python/repark/tests/io/test_source_url_redaction_1.py::test_knob_refusals_never_carry_the_password, python/repark/tests/io/test_source_url_redaction_1.py::test_set_redaction_matches_the_spark_4_1_2_default_regexes, python/repark/tests/sql/test_sql_set_door_1.py
 C-020: none (records)
 C-021: none (records)
 C-022: none (records)
@@ -31,10 +31,10 @@ C-028: none (records)
 C-029: crates/repark-spark/src/tests/describe_show.rs::describe_namespace_masks_comment_location_and_owner_credentials
 C-030: none (records)
 C-031: none (records)
-C-032: python/repark-parity/tests/torture/test_torture_secrets.py
+C-032: python/repark-parity/tests/torture/test_torture_secrets.py, python/repark/tests/session/test_a3_secrets_redaction.py, python/repark/tests/session/test_production_file_size.py
 C-033: none (records)
 C-034: none (records)
-C-035: none (records)
+C-035: scripts/check_crate_dag.py, scripts/check_crate_dag.sh
 C-036: none (records)
 C-037: none (records)
 C-038: none (records)
@@ -48,13 +48,13 @@ C-045: none (records)
 C-046: none (records)
 C-047: none (records)
 C-048: none (records)
-C-049: none (records)
+C-049: scripts/check_docs_links.py
 C-050: none (records)
 C-051: none (records)
 C-052: none (records)
 C-053: none (records)
 C-054: none (records)
-C-055: crates/repark-spark/src/extension/tests.rs::configure_defaults_ansi_enabled_true, crates/repark-spark/src/extension/tests.rs::configure_defaults_parse_float_as_decimal, crates/repark-spark/src/extension/tests.rs::configure_honors_ansi_enabled_false, crates/repark-spark/src/extension/tests.rs::configure_makes_bare_1_23_decimal128_3_2, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_ansi_refusal, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_case_sensitive_refusal, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_merge_schema_refusal, crates/repark-spark/src/extension/tests.rs::configure_refuses_ansi_notabool, crates/repark-spark/src/extension/tests.rs::masking_a_configuration_message_changes_only_the_url_password, python/repark/tests/io/test_source_url_redact_1_fn.py
+C-055: crates/repark-spark/src/extension/tests.rs::configure_defaults_ansi_enabled_true, crates/repark-spark/src/extension/tests.rs::configure_defaults_parse_float_as_decimal, crates/repark-spark/src/extension/tests.rs::configure_honors_ansi_enabled_false, crates/repark-spark/src/extension/tests.rs::configure_makes_bare_1_23_decimal128_3_2, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_ansi_refusal, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_case_sensitive_refusal, crates/repark-spark/src/extension/tests.rs::configure_masks_a_url_password_in_the_merge_schema_refusal, crates/repark-spark/src/extension/tests.rs::configure_refuses_ansi_notabool, crates/repark-spark/src/extension/tests.rs::masking_a_configuration_message_changes_only_the_url_password, python/repark/tests/io/test_source_url_redact_1_fn.py, scripts/check_crate_dag.sh
 C-056: crates/repark-common/src/redaction/tests.rs::mask_url_userinfo_masks_a_url_password_and_leaves_other_text
 C-057: none (records)
 C-058: none (records)
@@ -63,12 +63,12 @@ C-060: none (records)
 C-061: none (records)
 C-062: none (records)
 C-063: python/repark/tests/io/test_source_url_redact_2.py
-C-064: none (records)
+C-064: python/repark/tests/io/test_source_url_redact_2.py
 C-065: none (records)
 C-066: none (records)
 C-067: none (records)
 C-068: none (records)
-C-069: none (records)
+C-069: python/repark/tests/io/test_source_url_redact_2.py
 C-071: none (records)
 C-073: none (records)
 C-074: crates/repark-common/src/redaction/tests.rs::registered_values_keep_letter_or_digit_neighbours, crates/repark-common/src/redaction/tests.rs::registered_values_mask_at_punctuation_boundaries, crates/repark-common/src/redaction/tests.rs::registered_values_mask_when_their_own_edge_is_punctuation

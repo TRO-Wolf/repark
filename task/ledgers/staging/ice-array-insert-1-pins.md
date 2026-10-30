@@ -8,5 +8,5 @@ C-005: python/repark/tests/writes/test_ice_array_insert_1.py
 C-006: python/repark/tests/writes/test_ice_array_insert_1.py
 C-007: python/repark/tests/writes/test_ice_array_insert_1.py::test_live_spark_reads_repark_table
 C-008: python/repark/tests/writes/test_ice_array_insert_1.py
-C-009: none (records)
+C-009: python/repark/tests/iceberg/test_ice_nested_evo_1.py
 C-010: none (records)

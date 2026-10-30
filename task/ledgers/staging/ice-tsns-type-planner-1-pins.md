@@ -21,12 +21,12 @@ C-023: none (records)
 C-024: none (records)
 C-025: none (records)
 C-026: none (records)
-C-027: crates/repark-spark/src/tests/ltz_store.rs::door
-C-028: python/repark/tests/functions/test_fnp_degrees_rust_1.py::test_refusal_timestamp_python_door_names_sparks_type
-C-029: python/repark/tests/types/test_nullability_2.py::test_cast_nullability_native_door_keeps_datafusion
+C-027: crates/repark-spark/src/tests/ltz_store.rs::door, python/repark/tests/resolution/test_stamp_2_r5p6_1.py, python/repark/tests/timestamps/test_store_ts_doors_2.py
+C-028: python/repark/tests/functions/test_fnp_6d_followup_1.py, python/repark/tests/functions/test_fnp_degrees_rust_1.py::test_refusal_timestamp_python_door_names_sparks_type
+C-029: python/repark/tests/iceberg/test_ice_tt_resolve_1.py, python/repark/tests/types/test_nullability_2.py::test_cast_nullability_native_door_keeps_datafusion
 C-030: none (records)
 C-031: none (records)
-C-032: none (records)
+C-032: crates/repark-spark/src/tests/ntz_values_mix.rs, python/repark/tests/timestamps/test_ntz_9_verify.py, python/repark/tests/timestamps/test_ntz_store_doors_1.py
 C-033: crates/repark-spark/src/tests/ntz_door.rs::nested_ntz_cast_targets_answer_sparks_walls, python/repark/tests/timestamps/test_ice_tstzns_wall_1.py::expected_instants, python/repark/tests/timestamps/test_ntz_1.py::test_equal_and_default_cells_store_like_spark, python/repark/tests/timestamps/test_ntz_1.py::test_select_cells_replay_spark, python/repark/tests/timestamps/test_ntz_1.py::test_stacked_sign_shapes_into_ntz_refuse
 C-034: none (records)
 C-035: none (records)

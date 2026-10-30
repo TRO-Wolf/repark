@@ -12,7 +12,7 @@ C-009: crates/repark-core/src/named_sources/tests.rs::unknown_source_handle_refu
 C-010: python/repark/tests/session/test_config_mirror.py::test_rendered_database_source_loads
 C-011: crates/repark-core/src/named_sources/tests.rs
 C-012: none (records)
-C-013: python/repark/tests/io/test_session_sources.py::test_sources_lists_declared_source_with_redacted_properties
+C-013: python/repark/tests/io/test_session_sources.py::test_sources_lists_declared_source_with_redacted_properties, python/repark/tests/session/test_config_mirror.py
 C-014: python/repark/tests/io/test_session_sources.py
 C-015: python/repark/tests/io/test_session_sources.py::test_unknown_source_raises_naming_declared_sources
 C-016: python/repark/tests/io/test_session_sources.py

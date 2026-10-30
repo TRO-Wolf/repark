@@ -5,6 +5,6 @@ C-002: python/repark/tests/dataframe/test_dfcore_1_exports.py::MOVED_SELECT_HELP
 C-003: python/repark/tests/dataframe/test_dfcore_1_exports.py::MOVED_SELECT_HELPERS
 C-004: none (records)
 C-005: none (records)
-C-006: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
+C-006: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/io/test_pandas_udf.py, scripts/check_lib_py.py
 C-007: python/repark/tests/dataframe/test_dfcore_1_exports.py::MOVED_SELECT_HELPERS
 C-008: python/repark/tests/dataframe/test_dfcore_1_exports.py::MOVED_SELECT_HELPERS

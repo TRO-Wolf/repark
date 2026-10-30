@@ -5,10 +5,10 @@ C-002: python/repark/tests/dataframe/test_facade_2_column_display_goldens.py
 C-003: python/repark/tests/dataframe/test_facade_2_column_display_goldens.py::test_column_display_goldens_match_committed_bytes, python/repark/tests/dataframe/test_facade_2_column_display_goldens.py::test_record_mode_fails_when_ci_is_set
 C-004: python/repark/tests/dataframe/test_facade_2_column_display_goldens.py::test_isinstance_column_is_repark_column
 C-005: none (records)
-C-006: none (records)
+C-006: python/repark/tests/dataframe/test_column_access.py, python/repark/tests/dataframe/test_column_x1_census.py, python/repark/tests/dataframe/test_columns.py, python/repark/tests/functions/test_fnp_9_collections_json.py, python/repark/tests/parity/test_examples_column_a.py
 C-007: none (records)
 C-008: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
-C-009: python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py
+C-009: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py, scripts/check_lib_py.py
 C-010: python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py
 C-011: none (records)
 C-012: python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py

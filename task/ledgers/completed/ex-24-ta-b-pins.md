@@ -2,5 +2,5 @@
 
 C-001: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-002: scripts/check_example_coverage.py::BACKLOG_BASELINE
-C-003: scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-003: python/repark/tests/parity/test_examples_window_catalog.py, scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-004: scripts/check_example_coverage.py::BACKLOG_BASELINE
