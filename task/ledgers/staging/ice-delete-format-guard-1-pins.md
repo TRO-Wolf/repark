@@ -6,7 +6,7 @@ C-003: none (records)
 C-004: none (records)
 C-005: none (records)
 C-006: none (records)
-C-007: python/repark/tests/writes/test_ice_orc_avro_1.py
+C-007: none (records)
 C-010: crates/repark-spark/tests/delete_format_guard.rs
 C-012: none (records)
 C-013: none (records)
