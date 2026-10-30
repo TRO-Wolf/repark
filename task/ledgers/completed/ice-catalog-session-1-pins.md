@@ -10,7 +10,7 @@ C-007: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_th
 C-008: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_returns_no_rows
 C-009: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_default_reaches_the_use_arm
 C-010: crates/repark-spark/src/tests/use_ddl.rs::complete_name_bare_table_under_empty_namespace_is_not_found, crates/repark-spark/src/tests/use_ddl.rs::complete_name_expands_one_and_two_part_names, crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-011: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE, python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_answer
+C-011: none (records)
 C-012: none (records)
 C-013: none (records)
 C-014: none (records)
@@ -28,5 +28,5 @@ C-025: none (records)
 C-026: none (records)
 C-027: none (records)
 C-028: none (records)
-C-029: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE, python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_answer, python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_divergence
+C-029: python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_answer, python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_divergence
 C-030: python/repark-parity/tests/test_cap_1_source_file_line_cap.py

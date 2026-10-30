@@ -1,6 +1,6 @@
 # cast-ts-string-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-functions/src/tests/spark_string_timestamp.rs, python/repark/tests/timestamps/test_cast_ts_string_1.py
+C-001: python/repark/tests/timestamps/test_cast_ts_string_1.py
 C-002: crates/repark-functions/src/tests/spark_string_timestamp.rs::the_raise_failure_mode_names_the_first_bad_value_in_spark_quoting, python/repark/tests/timestamps/test_cast_ts_string_1.py
 C-003: crates/repark-functions/src/tests/spark_string_timestamp.rs::chrono_tz_tables_stop_after_the_last_tabulated_year, python/repark/tests/timestamps/test_cast_ts_string_1.py
 C-004: crates/repark-functions/src/tests/spark_string_timestamp_sql.rs, python/repark/tests/timestamps/test_cast_ts_string_1.py

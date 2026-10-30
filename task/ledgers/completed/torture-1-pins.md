@@ -17,15 +17,15 @@ C-014: python/repark-parity/tests/torture/test_ci_tier_under_60s.py::test_ci_tie
 C-015: none (records)
 C-016: none (records)
 C-017: python/repark-parity/tests/torture/test_torture_secrets.py::test_flagged_names_match_the_needle_set, python/repark-parity/tests/torture/test_torture_secrets.py::test_secret_flag_off_warn_refuse
-C-018: python/repark-parity/tests/torture/test_torture_secrets.py::test_secret_flag_off_warn_refuse
+C-018: none (records)
 C-019: python/repark-parity/tests/torture/test_torture_secrets.py::test_secret_flag_off_warn_refuse
 C-020: none (records)
 C-021: none (records)
 C-022: python/repark-parity/tests/torture/test_ci_tier_under_60s.py::test_ci_tier_step3_family_under_60_seconds
 C-023: none (records)
-C-024: python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_cli_registers_and_refuses, python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_generate_refuses_without_live_flag, python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_live_generate_and_read
+C-024: none (records)
 C-025: python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_fixture_truth_is_self_consistent, python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_live_generate_and_read
-C-026: python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_live_generate_and_read
+C-026: python/repark/tests/iceberg/test_v3_live_oracle.py
 C-027: python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_live_generate_and_read
 C-028: none (records)
 C-029: python/repark-parity/tests/torture/test_torture_v3_dv.py::test_v3_dv_live_generate_and_read

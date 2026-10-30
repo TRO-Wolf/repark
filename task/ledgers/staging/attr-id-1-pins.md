@@ -6,14 +6,14 @@ C-003: crates/repark-core/src/session/tests/attr_id.rs::the_join_re_mint_keeps_t
 C-004: crates/repark-core/src/session/tests/attr_id.rs
 C-005: crates/repark-python/src/tests.rs::binding_re_mints_lateral_join_collisions_of_a_self_join, crates/repark-python/src/tests.rs::binding_re_mints_using_join_collisions_of_a_self_join, crates/repark-python/src/tests.rs::binding_stamps_resolves_and_re_mints_a_self_join
 C-006: crates/repark-core/src/session/tests/attr_id.rs
-C-007: python/repark/tests/resolution/test_attr_id_1_s2.py
+C-007: none (records)
 C-008: python/repark/tests/resolution/test_attr_id_1_s2.py
 C-009: python/repark/tests/resolution/test_attr_id_1_s2.py
 C-010: python/repark/tests/resolution/test_attr_id_1_s2.py
 C-011: crates/repark-python/src/tests.rs::binding_re_mints_lateral_join_collisions_of_a_self_join, crates/repark-python/src/tests.rs::binding_re_mints_using_join_collisions_of_a_self_join, python/repark/tests/resolution/test_attr_id_1_s2.py
 C-014: python/repark/tests/resolution/test_attr_id_1_s2.py
 C-015: crates/repark-core/src/session/tests/attr_id_seam.rs
-C-016: crates/repark-core/src/session/tests/attr_id_seam.rs
+C-016: python/repark/tests/io/test_e2_readwriter.py
 C-017: crates/repark-core/src/session/tests/attr_id_fresh.rs::cast_negated_and_arithmetic_group_keys_get_fresh_ids, crates/repark-core/src/session/tests/attr_id_fresh.rs::every_aggregate_value_the_facade_emits_gets_a_fresh_id, crates/repark-core/src/session/tests/attr_id_fresh.rs::every_window_output_gets_a_fresh_id_and_the_input_passes_through, crates/repark-core/src/session/tests/attr_id_verify.rs::va_cast_and_negative_group_keys_get_fresh_ids, crates/repark-core/src/session/tests/attr_id_verify.rs::va_first_and_last_value_aggregates_get_fresh_ids, crates/repark-core/src/session/tests/attr_id_verify.rs::va_lag_and_lead_window_roots_get_fresh_ids
 C-018: crates/repark-core/src/session/tests/attr_id_fresh.rs::a_projection_over_a_same_op_window_or_aggregate_mints_what_it_computes, crates/repark-core/src/session/tests/attr_id_fresh.rs::assert_idempotent, crates/repark-core/src/session/tests/attr_id_fresh.rs::sql_group_by_and_having_over_a_view_mint_the_computed_outputs, crates/repark-core/src/session/tests/attr_id_verify.rs::va_alias_over_an_aliased_cast_that_carries_an_id_is_re_minted_once, crates/repark-core/src/session/tests/attr_id_verify.rs::va_first_value_through_sql_over_a_view_gets_a_fresh_id, crates/repark-core/src/session/tests/attr_id_verify.rs::va_lag_through_select_is_ambiguous_with_its_source, crates/repark-core/src/session/tests/attr_id_verify.rs::va_union_of_unions_takes_the_outermost_first_input
 C-019: crates/repark-core/src/session/tests/attr_id_fresh.rs::a_source_id_minted_by_another_process_is_re_minted_once

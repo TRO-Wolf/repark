@@ -3,14 +3,14 @@
 C-001: python/repark/tests/parity/test_acceptance_ephemeral_runs.py
 C-002: python/repark/tests/parity/test_acceptance_ephemeral_runs.py
 C-003: python/dbt-repark/tests/test_aws_acceptance_gold.py::glue_project, python/repark/tests/parity/test_acceptance_ephemeral_runs.py
-C-004: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
+C-004: python/repark-parity/tests/test_aws_acceptance_cleanup.py
 C-005: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
 C-006: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
 C-007: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
 C-008: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
 C-009: python/repark-parity/tests/test_cross_read_progress.py::test_discovery_keeps_only_the_run_and_leg_prefix_and_never_the_bench_table, python/repark/tests/parity/test_aws_acceptance_cross_read.py
 C-010: python/repark/tests/parity/test_acceptance_ephemeral_runs.py
-C-011: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
+C-011: python/repark-parity/tests/test_aws_acceptance_cleanup.py
 C-012: python/repark-parity/tests/test_aws_acceptance_job_split.py
 C-013: python/repark-parity/tests/test_aws_acceptance_job_split.py
 C-014: python/repark-parity/tests/test_aws_acceptance_job_split.py
@@ -18,13 +18,13 @@ C-015: python/repark-parity/tests/test_aws_acceptance_job_split.py
 C-016: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py
 C-017: python/repark/tests/parity/test_aws_acceptance_cross_read.py
 C-019: python/repark/tests/parity/test_acceptance_ephemeral_runs.py
-C-020: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
-C-021: python/repark-parity/tests/test_aws_acceptance_cleanup.py, scripts/aws_acceptance_cleanup.py::boto3_client
-C-022: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_age_mode_deletes_old_tables_of_every_leg_and_never_path_objects, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_builds_no_s3_tables_client_without_a_table_bucket, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_dry_run_lists_everything_and_deletes_nothing, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_execute_deletes_exactly_the_selected_leg_everywhere, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_exits_two_on_a_bad_prefix_or_a_placeholder_warehouse_without_a_client, scripts/aws_acceptance_cleanup.py::boto3_client, scripts/aws_acceptance_cleanup.py::main
+C-020: python/repark-parity/tests/test_aws_acceptance_cleanup.py
+C-021: python/repark-parity/tests/test_aws_acceptance_cleanup.py
+C-022: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_age_mode_deletes_old_tables_of_every_leg_and_never_path_objects, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_builds_no_s3_tables_client_without_a_table_bucket, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_dry_run_lists_everything_and_deletes_nothing, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_execute_deletes_exactly_the_selected_leg_everywhere, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_exits_two_on_a_bad_prefix_or_a_placeholder_warehouse_without_a_client
 C-023: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_age_mode_ignores_the_attempt_less_old_shape, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_names_with_letters_in_the_run_or_attempt_digits_are_never_grouped_or_selected, python/repark/tests/parity/test_acceptance_ephemeral_runs.py
 C-024: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_dry_run_also_counts_an_anomalous_location, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_location_leaf_that_differs_from_the_name_only_in_case_is_an_anomaly, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_nested_location_is_an_anomaly_and_a_direct_child_is_not, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_sibling_named_leaf_in_a_nested_or_outside_location_is_an_anomaly_not_a_twin, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_table_with_an_anomalous_location_is_kept_with_its_objects_and_counted_as_a_failure, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_twin_of_a_table_outside_the_selected_set_is_an_anomaly, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_twin_of_a_twin_is_deleted_without_a_second_object_delete, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_an_alias_twin_goes_without_a_second_object_delete, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_exits_one_and_keeps_a_bad_location_table_everywhere
 C-025: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::delete_objects, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_failed_s3_object_delete_is_a_failure_in_the_table_and_path_object_cleanups, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_failing_first_glue_batch_does_not_stop_the_remaining_batches, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_a_raising_object_batch_is_counted_and_the_other_batches_still_go, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_an_s3_tables_delete_exception_alone_makes_main_exit_one, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_continues_past_item_failures_and_exits_one, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_main_exits_one_when_an_object_delete_raises, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py::test_objects_of_a_table_that_failed_to_delete_are_kept
-C-026: python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py, python/repark/tests/parity/test_acceptance_ephemeral_runs.py
+C-026: python/repark-parity/tests/test_aws_acceptance_cleanup.py, python/repark-parity/tests/test_aws_acceptance_cleanup_wiring.py, python/repark/tests/parity/test_acceptance_ephemeral_runs.py
 C-027: python/repark-parity/tests/test_aws_acceptance_job_split.py
 C-030: python/repark/tests/parity/test_aws_acceptance_cross_read.py
 C-031: python/repark/tests/parity/test_acceptance_cross_read_types.py

@@ -13,8 +13,8 @@ C-010: crates/repark-iceberg/src/microbatch/window_tests.rs::delete_inside_windo
 C-011: crates/repark-iceberg/src/microbatch/window_tests.rs::replace_inside_window_skipped_silently
 C-012: none (records)
 C-013: none (records)
-C-014: crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_defaults_to_unbounded_earliest, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_parses_caps, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_parses_from_timestamp, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_parses_start_after_snapshot_id, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_passes_unprefixed_keys, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_both_skip_keys, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_malformed_values, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_two_start_keys, crates/repark-core/src/time_travel/microbatch_source_tests.rs::from_options_refuses_unknown_keys_under_interpreted_prefixes
-C-015: crates/repark-core/src/time_travel/microbatch_source_tests.rs::capped_batches_agree_with_their_plans_row_for_row, crates/repark-core/src/time_travel/microbatch_source_tests.rs::initial_offset_on_an_empty_table_reads_none, crates/repark-core/src/time_travel/microbatch_source_tests.rs::open_refuses_unknown_tables_and_malformed_identifiers, crates/repark-core/src/time_travel/microbatch_source_tests.rs::open_streams_two_appends_then_reports_none
+C-014: none (records)
+C-015: none (records)
 C-016: none (records)
 C-017: none (records)
 C-018: none (records)

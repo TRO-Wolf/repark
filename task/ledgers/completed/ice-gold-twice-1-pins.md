@@ -4,5 +4,5 @@ C-001: python/repark/tests/parity/test_acceptance_replace_offline.py
 C-002: none (records)
 C-003: python/dbt-repark/tests/test_aws_acceptance_gold.py::_repoint_profile, python/dbt-repark/tests/test_aws_acceptance_gold.py::_snapshot_count, python/dbt-repark/tests/test_aws_acceptance_gold.py::glue_project
 C-004: python/dbt-repark/tests/test_aws_acceptance_gold.py
-C-005: python/dbt-repark/tests/test_aws_acceptance_gold.py
+C-005: python/repark/tests/parity/test_aws_acceptance.py
 C-006: python/dbt-repark/tests/test_aws_acceptance_gold.py

@@ -2,5 +2,5 @@
 
 C-001: python/repark/tests/writes/test_cast_overflow_insert_1.py::_frame_run
 C-002: python/repark/tests/writes/test_cast_overflow_insert_1.py::_frame_run
-C-003: python/repark/tests/writes/test_cast_overflow_insert_1.py::_frame_run
+C-003: python/repark/tests/timestamps/test_ltz_store_int_1.py, python/repark/tests/types/test_intdiv_1.py
 C-004: python/repark/tests/writes/test_cast_overflow_insert_1.py::_frame_run

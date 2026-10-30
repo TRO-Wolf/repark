@@ -925,3 +925,34 @@ def test_shell_and_python_definitions_need_a_real_binding(repo: Path) -> None:
     _write(repo, _SIDECAR, _HEADER + f"C-001: {good}\nC-002: {_TEST}\n")
     result = _grammar(repo)
     assert result.returncode == 0, result.stderr
+
+
+def test_a_shared_citation_binds_each_clause_by_its_own_row(tmp_path: Path) -> None:
+    other = "crates/demo/tests/other_battery.rs"
+    production = "crates/demo/src/engine.rs"
+    rows = (
+        "| Clause | Proposition | Proof obligation | Verdict | Evidence |\n"
+        "|---|---|---|---|---|\n"
+        "| C-001 | The battery. | A pin. | PROVEN | `pins.rs::demo_holds` |\n"
+        "| C-002 | Elsewhere. | A pin. | PROVEN | `other_battery.rs::other_holds` |\n"
+        "| C-003 | Production only. | A pin. | PROVEN | `engine.rs` is unchanged |\n"
+        "| C-004 | Unnamed. | A pin. | PROVEN | measured |\n"
+    )
+    text = f"# map\n\n- `pins.rs` — the battery. pins: {_UNIT}/C-001, C-002, C-003, C-004\n"
+    files = {
+        _TEST: "#[test]\nfn demo_holds() {}\n",
+        other: "#[test]\nfn other_holds() {}\n",
+        production: "pub fn run() {}\n",
+    }
+    repo = _scratch_map_repo(tmp_path, text, files)
+    _write(repo, _LEDGER, rows)
+    result = _migrate(repo)
+    assert result.returncode == 0, result.stderr
+    assert "shared-citation clauses rebound by their own ledger row: 2" in result.stdout
+    assert "  of which nothing bindable remains: 1" in result.stdout
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}::demo_holds",
+        f"C-002: {other}::other_holds",
+        "C-003: none (records)",
+        f"C-004: {_TEST}",
+    ]

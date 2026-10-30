@@ -63,7 +63,7 @@ C-060: none (records)
 C-061: none (records)
 C-062: none (records)
 C-063: python/repark/tests/io/test_source_url_redact_2.py
-C-064: python/repark/tests/io/test_source_url_redact_2.py
+C-064: none (records)
 C-065: none (records)
 C-066: none (records)
 C-067: none (records)

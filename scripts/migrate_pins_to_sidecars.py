@@ -17,7 +17,9 @@ bare file name that does not resolve in the map's directory resolves to the one 
 that name under the map's directory tree; a name found only elsewhere in the tree is a
 reference, not the entry's file; a name found nowhere, or more than once here, makes the
 citation unplaceable, and the run stops and lists it unless the sidecar on disk already binds
-that clause by hand. The names are the backticked identifiers, of the citation's stretch of its
+that clause by hand. A clause of a citation shared with other ids, whose own ledger row names
+`.rs`, `.py` or `.sh` files but not the citation's file, binds the bindable ones of those
+instead, or nothing. The names are the backticked identifiers, of the citation's stretch of its
 entry and of the clause's own ledger row, that the bound file defines. Only a `.rs`, `.py` or
 `.sh` test file or script is bound: an entry whose file is a fixture or a test-placed helper
 with no test binds the test its entry names that reads it, if any; a disclaiming sentence ("so
@@ -79,6 +81,7 @@ TAIL = re.compile(
 )
 EMPTY_REST = re.compile(r"^[\s\-*+.,;:()·]*$")
 LEADING_STRAY = ".;)"
+CODE_SUFFIXES = (".rs", ".py", ".sh")
 SENTENCE_END = re.compile(r"\.(?=\s)")
 DISCLAIMER = re.compile(
     r"grammar gate counts|pins? none|pins nothing|not a test pin", re.IGNORECASE
@@ -154,6 +157,37 @@ def ledger_rows(repo: Path, homes: dict[str, str]) -> dict[tuple[str, str], str]
         for _number, clause_id, cells in GATE.clause_rows(text):
             rows.setdefault((unit, clause_id), " | ".join(cells))
     return rows
+
+
+def row_code_files(row: str, tracked: set[str], basenames: dict[str, list[str]]) -> list[str]:
+    """The `.rs`, `.py` and `.sh` files a ledger row names, in order: explicit paths first (whole
+    or by a unique path suffix), then bare names, which take an explicit path of the same name
+    from the row, else the one tracked file of that name."""
+    tokens: list[str] = []
+    for span in [*CODE_SPAN.findall(row), *LINK.findall(row)]:
+        for word in span.split():
+            token = word.split("::", 1)[0].split("#", 1)[0].strip(",;()")
+            while token.startswith("../"):
+                token = token[3:]
+            if token.endswith(CODE_SUFFIXES) and FILE_LIKE.match(token):
+                tokens.append(token)
+    found: list[str] = []
+    for token in (token for token in tokens if "/" in token):
+        hits = (
+            [token]
+            if token in tracked
+            else [
+                path for path in basenames.get(Path(token).name, []) if path.endswith(f"/{token}")
+            ]
+        )
+        if len(hits) == 1 and hits[0] not in found:
+            found.append(hits[0])
+    for token in (token for token in tokens if "/" not in token):
+        same = [path for path in found if Path(path).name == token]
+        hits = same or basenames.get(token, [])
+        if len(hits) == 1 and hits[0] not in found:
+            found.append(hits[0])
+    return found
 
 
 def sidecar_path(ledger: str) -> str:
@@ -646,6 +680,7 @@ class Plan(NamedTuple):
     unplaceable: list[str]
     hand_bound: list[str]
     records: list[str]
+    rerouted: dict[tuple[str, str], list[str]]
 
 
 def plan_sidecars(
@@ -654,6 +689,7 @@ def plan_sidecars(
     homes: dict[str, str],
     known: set[tuple[str, str]],
     rows: dict[tuple[str, str], str],
+    tracked: set[str],
 ) -> Plan:
     """Every sidecar that gains a line, the unplaceable and hand-bound citations, and the
     clauses written as `none (records)`. A path the sidecar on disk already binds for a clause
@@ -664,6 +700,10 @@ def plan_sidecars(
     grown: set[str] = set()
     unplaceable: list[str] = []
     hand_bound: list[str] = []
+    rerouted: dict[tuple[str, str], list[str]] = {}
+    basenames: dict[str, list[str]] = {}
+    for path in sorted(tracked):
+        basenames.setdefault(Path(path).name, []).append(path)
     wanted: dict[tuple[str, str], str] = {}
     source_cited: set[tuple[str, str]] = set()
     for binding in bindings:
@@ -691,21 +731,29 @@ def plan_sidecars(
             wanted.setdefault(key, sidecar)
             if binding.path is None or on_disk[sidecar].get(clause_id) == {GATE.RECORDS}:
                 continue
+            targets = [binding.path]
+            if kind_of(binding.source) == "map" and len(binding.clause_ids) > 1:
+                named = row_code_files(rows.get(key, ""), tracked, basenames)
+                if named and binding.path not in named:
+                    targets = [
+                        path for path in named if GATE.bindable(path, GATE.read_tracked(repo, path))
+                    ]
+                    rerouted[key] = targets
             bound = {entry.split("::", 1)[0] for entry in on_disk[sidecar].get(clause_id, set())}
-            if binding.path in bound:
-                continue
-            bucket = entries[sidecar].setdefault(clause_id, set())
-            before = set(bucket)
-            row_names = names_in(
-                rows.get(key, ""), binding.path, GATE.read_tracked(repo, binding.path)
-            )
-            names = sorted(set(binding.names) | set(row_names))
-            if names:
-                bucket.update(f"{binding.path}::{name}" for name in names)
-            else:
-                bucket.add(binding.path)
-            if bucket != before:
-                grown.add(sidecar)
+            for target in targets:
+                if target in bound:
+                    continue
+                bucket = entries[sidecar].setdefault(clause_id, set())
+                before = set(bucket)
+                row_names = names_in(rows.get(key, ""), target, GATE.read_tracked(repo, target))
+                own = set(binding.names) if target == binding.path else set()
+                names = sorted(own | set(row_names))
+                if names:
+                    bucket.update(f"{target}::{name}" for name in names)
+                else:
+                    bucket.add(target)
+                if bucket != before:
+                    grown.add(sidecar)
     records: list[str] = []
     for (unit, clause_id), sidecar in sorted(wanted.items()):
         if clause_id in on_disk[sidecar] or (unit, clause_id) in source_cited:
@@ -718,7 +766,7 @@ def plan_sidecars(
             grown.add(sidecar)
         records.append(f"{unit}/{clause_id}")
     changed = {sidecar: render_sidecar(units[sidecar], entries[sidecar]) for sidecar in grown}
-    return Plan(changed, unplaceable, hand_bound, records)
+    return Plan(changed, unplaceable, hand_bound, records, rerouted)
 
 
 def sidecar_totals(repo: Path, tracked: list[str], changed: dict[str, str]) -> tuple[int, ...]:
@@ -778,6 +826,8 @@ def report(
     print(f"named entries: {named}")
     print(f"none (records) lines: {records}")
     print(f"sidecar bytes: {size}")
+    print(f"shared-citation clauses rebound by their own ledger row: {len(plan.rerouted)}")
+    print(f"  of which nothing bindable remains: {sum(not t for t in plan.rerouted.values())}")
     print(f"hand-bound citations: {len(plan.hand_bound)}")
     print(f"unplaceable citations: {len(plan.unplaceable)}")
     for line in plan.unplaceable:
@@ -796,7 +846,7 @@ def run(repo: Path, check: bool) -> int:
         print("ERROR: no ledgers found under task/ledgers — refuse to pass closed", file=sys.stderr)
         return 2
     bindings, rewrites = collect(repo, tracked)
-    plan = plan_sidecars(repo, bindings, homes, known, ledger_rows(repo, homes))
+    plan = plan_sidecars(repo, bindings, homes, known, ledger_rows(repo, homes), set(tracked))
     totals = sidecar_totals(repo, tracked, plan.changed)
     if plan.unplaceable:
         report(bindings, rewrites, totals, 0, plan)

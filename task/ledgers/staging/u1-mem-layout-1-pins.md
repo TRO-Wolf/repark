@@ -10,7 +10,7 @@ C-007: crates/repark-spark/src/tests/mem_layout.rs::mem_layout_refuses_path_esca
 C-008: crates/repark-spark/src/tests/mem_layout.rs::mem_layout_file_uri_warehouse_gives_the_plain_location
 C-009: none (records)
 C-010: crates/repark-spark/src/tests/mem_layout.rs
-C-011: crates/repark-spark/src/tests/call_orphan_cotenancy.rs
+C-011: none (records)
 C-012: crates/repark-spark/src/tests/call_orphan_cotenancy.rs::call_orphan_cotenancy_two_catalogs_on_one_warehouse_refuse
 C-013: crates/repark-spark/src/tests/call_orphan_cotenancy.rs::call_orphan_cotenancy_two_sessions_with_one_catalog_name_refuse
 C-014: crates/repark-spark/src/tests/call_orphan_cotenancy.rs::call_orphan_cotenancy_location_inside_another_table_refuses

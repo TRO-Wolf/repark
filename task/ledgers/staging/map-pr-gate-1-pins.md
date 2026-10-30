@@ -11,4 +11,4 @@ C-008: python/repark-parity/tests/test_map_pr_gate_1.py::test_duplicate_row_rule
 C-009: python/repark-parity/tests/test_map_pr_gate_1.py::test_makefile_runs_branch_mode_over_base, scripts/check_map_md.sh
 C-010: python/repark-parity/tests/test_map_pr_gate_1.py::test_both_hook_paths_call_the_staged_mode_identically, scripts/check_map_md.sh
 C-011: python/repark-parity/tests/test_map_pr_gate_1.py::test_ci_guard_is_pr_only_and_gitattributes_carries_union, scripts/check_map_md.sh
-C-012: scripts/check_map_md.sh
+C-012: scripts/sync_map_md.py

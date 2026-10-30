@@ -8,7 +8,7 @@ C-005: none (records)
 C-006: none (records)
 C-007: none (records)
 C-008: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_lib_py.py
-C-009: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py, scripts/check_lib_py.py
+C-009: python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py
 C-010: python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py
 C-011: none (records)
 C-012: python/repark/tests/dataframe/test_facade_2_group2_no_python_assembly.py

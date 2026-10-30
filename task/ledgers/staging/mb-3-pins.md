@@ -19,7 +19,7 @@ C-016: crates/repark-core/src/microbatch/lifecycle_tests.rs::a_second_query_on_a
 C-017: crates/repark-core/src/microbatch/lifecycle_tests.rs::a_processing_time_trigger_fires_on_the_interval_boundary
 C-018: crates/repark-core/src/microbatch/lifecycle_tests.rs::a_sink_replaced_under_the_body_ends_recovery_required, crates/repark-core/src/microbatch/lifecycle_tests.rs::a_stop_during_planning_never_starts_the_body, crates/repark-core/src/microbatch/lifecycle_tests.rs::a_zero_stop_timeout_waits_for_the_batch
 C-019: none (records)
-C-020: crates/repark-core/src/microbatch/lifecycle_tests.rs
+C-020: none (records)
 C-021: crates/repark-core/src/microbatch/lifecycle_tests.rs::a_registered_query_does_not_keep_the_session_alive, crates/repark-core/src/microbatch/lifecycle_tests.rs::dropping_the_session_stops_its_queries_and_releases_the_catalog, crates/repark-core/src/microbatch/lifecycle_tests.rs::the_session_drop_wakes_a_waiting_query_without_a_poll
 C-022: crates/repark-core/src/microbatch/reload_tests.rs::FORK_REFRESH, crates/repark-core/src/microbatch/reload_tests.rs::the_driver_loads_the_sink_fresh_for_every_batch
 C-023: none (records)

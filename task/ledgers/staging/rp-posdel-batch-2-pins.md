@@ -17,6 +17,6 @@ C-014: none (records)
 C-015: none (records)
 C-016: none (records)
 C-017: crates/repark-spark/tests/posdel_batch_door.rs::batch_rows_property_below_one_is_refused_through_the_door, crates/repark-spark/tests/posdel_batch_door.rs::bulk_mor_delete_past_one_batch_completes_and_survivors_match, crates/repark-spark/tests/posdel_batch_door.rs::whole_partition_delete_still_takes_the_metadata_door
-C-018: crates/repark-spark/tests/posdel_batch_door.rs
+C-018: none (records)
 C-020: none (records)
 C-021: none (records)

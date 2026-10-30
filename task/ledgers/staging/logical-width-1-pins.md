@@ -1,6 +1,6 @@
 # logical-width-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-spark/src/type_table/tests.rs::describe_keeps_spark_ddl_spellings_for_narrow_widths, crates/repark-spark/src/type_table/tests.rs::logical_key_reports_spark_narrow_widths, python/repark/tests/types/test_logical_width_1.py
+C-001: python/repark/tests/types/test_logical_width_1.py
 C-002: crates/repark-spark/src/type_table/tests.rs::describe_keeps_spark_ddl_spellings_for_narrow_widths, crates/repark-spark/src/type_table/tests.rs::logical_key_reports_spark_narrow_widths, python/repark/tests/types/test_logical_width_1.py
 C-003: python/repark/tests/types/test_logical_width_1.py
 C-004: python/repark/tests/types/test_logical_width_1.py
