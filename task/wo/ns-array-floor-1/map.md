@@ -4,7 +4,7 @@ NS-ARRAY-FLOOR-1 (2026-10-14): measures whether the pandas and Arrow doors
 refuse a nanosecond value at one shared site or one site per door, so the
 type-planner unit knows whether to take the doors fix. No product code. The
 ledger is
-[ns-array-floor-1-ledger.md](../../ledgers/staging/ns-array-floor-1-ledger.md).
+[ns-array-floor-1-ledger.md](../../ledgers/completed/ns-array-floor-1-ledger.md).
 This directory closes when the unit's pull request merges.
 
 - [evidence/](evidence/map.md) — the D1 input cells, the D2 output cells, the D3 refusal sites, and the F2 echo cells.
