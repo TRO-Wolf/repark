@@ -1,6 +1,6 @@
 # Architecture-scoped maps
 
-**Class:** contract (AGENTS.md "Markdown document lifecycle"); amended deliberately. **Adopted:** 2026-10-29, by the owner's word on the map policy evaluation. **Built by:** MAP-GOVERNANCE-1 (card [task/roadmap/mid-term/map-governance-1-card-2026-10-29.md](../task/roadmap/mid-term/map-governance-1-card-2026-10-29.md); ledger [task/ledgers/staging/map-governance-1-ledger.md](../task/ledgers/staging/map-governance-1-ledger.md)).
+**Class:** contract (AGENTS.md "Markdown document lifecycle"); amended deliberately. **Adopted:** 2026-10-29, by the owner's word on the map policy evaluation. **Built by:** MAP-GOVERNANCE-1 (card [task/roadmap/mid-term/map-governance-1-card-2026-10-29.md](../task/roadmap/mid-term/map-governance-1-card-2026-10-29.md); ledger [task/ledgers/staging/map-governance-1-ledger.md](../task/ledgers/completed/map-governance-1-ledger.md)).
 
 ## Purpose
 

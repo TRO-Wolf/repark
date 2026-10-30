@@ -15,4 +15,4 @@ Muse rated both S2. If Spark refuses the first shape, RePark's replacement of th
 
 **Retires:** the card when both shapes match Spark 4.1.2 on the probe and each is pinned, or the charter declines them.
 
-**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) and its [unit ledger](../../ledgers/staging/spark-door-temp-view-target-1-ledger.md), clause C-028. The other round-3 leads are in [TEMP-VIEW-NAME-VALIDATION-1](temp-view-name-validation-1-card-2026-10-30.md) (name grammar) and [TEMP-VIEW-SURFACE-LEADS-1](temp-view-surface-leads-1-card-2026-10-29.md) (listings and classes).
+**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) and its [unit ledger](../../ledgers/completed/spark-door-temp-view-target-1-ledger.md), clause C-028. The other round-3 leads are in [TEMP-VIEW-NAME-VALIDATION-1](temp-view-name-validation-1-card-2026-10-30.md) (name grammar) and [TEMP-VIEW-SURFACE-LEADS-1](temp-view-surface-leads-1-card-2026-10-29.md) (listings and classes).
