@@ -14,4 +14,4 @@
 
 **Retires:** the card when `MERGE WITH SCHEMA EVOLUTION INTO ns.t` executes on the facade and matches Spark's table contents, pinned, and the view refusal of the same spelling still holds.
 
-**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) (its fix round's F-4 leftovers; the two-part lead is ledger clause C-017); [SPARK-DOOR-TEMP-VIEW-TARGET-1 ledger](../../ledgers/staging/spark-door-temp-view-target-1-ledger.md).
+**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) (its fix round's F-4 leftovers; the two-part lead is ledger clause C-017); [SPARK-DOOR-TEMP-VIEW-TARGET-1 ledger](../../ledgers/completed/spark-door-temp-view-target-1-ledger.md).

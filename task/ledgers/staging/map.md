@@ -5,7 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <path>[::<name>], ...` line per clause, or `C-NNN: none (records)`), read by `scripts/check_ledger_grammar.py` rule B; it moves with its ledger and gets no row here.
 ## Contents
-- [map-governance-1-ledger.md](map-governance-1-ledger.md) — **MAP-GOVERNANCE-1 (2026-10-29), in flight:** pin bindings move from the maps to the `<unit>-pins.md` sidecars; map lockstep becomes a warning in both modes; `check_map_size.py` ratchets map size (200 lines or 16 KiB); the lifecycle carries sidecars. Branch `feat/map-governance-1`, PR #1221; card [../../roadmap/mid-term/map-governance-1-card-2026-10-29.md](../../roadmap/mid-term/map-governance-1-card-2026-10-29.md).
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of
@@ -1541,10 +1540,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   Branch `fix/parity-live-stop-1`.
   pins: parity-live-stop-1/C-001, C-002, C-003, C-004
 - [ice-resource-bound-1-ledger.md](ice-resource-bound-1-ledger.md) — **ICE-RESOURCE-BOUND-1 (U-11), 2026-10-26, steps 0 to 6:** the bound measured on 261 cells (v2 and v3; largest process peak 14.1 GiB), ruled by the owner and built with its pins; eleven clauses PROVEN with `pins:` citations (C-005 REJECTED: the D8/D9 door mismatch, carded), and C-012 OPEN by its append-only verdict, closed by the dated row C-013 (the verifier rounds passed on head 76bd5891). Branch `feat/ice-resource-bound-1`.
-- [spark-door-temp-view-target-1-ledger.md](spark-door-temp-view-target-1-ledger.md) — **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29, AUD-006, Critical):** a one-part write target that names a temporary view refuses on the Spark door as Spark 4.1.2 does, and the same-named table is unchanged, on all six write routes and on the facade and the Rust door alike. Fix round 1 (`3243444a`) and fix round 2 (`50667abb`, main merged as `ceb681c9`) fold a view's name at creation and at lookup under the rule then in force (Unicode, with the catalog APIs on the same keys), refuse a name Spark cannot parse and make `writeTo` refuse a view name; verification round 2 returned FAIL from both verifiers; verification round 3 PASS from both verifiers at `bfce6032` (pin `3c699355`), so fifteen of thirty-one clauses are PROVEN; the merge and the leads (DELETE through a view over a table, the DataFrame writer paths, the class and spelling leads, the three surface leads, and the round-3 name, DDL and metadata leads) are OPEN. `Path: STANDARD`. Branch `fix/spark-door-temp-view-target-1`.
-  pins: spark-door-temp-view-target-1/C-001, C-002, C-003, C-004, C-005, C-006
-  pins: spark-door-temp-view-target-1/C-011, C-012, C-013, C-014, C-019, C-020, C-021
-  pins: spark-door-temp-view-target-1/C-007, C-025
 
 ## Pointers
 - Up: [../map.md](../map.md)
