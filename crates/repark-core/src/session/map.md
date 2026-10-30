@@ -166,6 +166,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
   pins: ice-views-1/C-018
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** the temp-view name rule is read at the two lookup choke points (`temp_view_ref` and `temp_view_ref_from_segment`) through `SqlDialect::temp_view_name_rule`. `Exact` takes the written last segment verbatim against the home; `IgnoreCase` keeps the created spelling, and a missed exact lookup fell back to the unique case-insensitive twin (`case_twin`, which refused an ambiguous pair; removed in fix round 2). `temp_view_target_ref` answers the `[catalog, schema, table]` a CREATE registers under (C-011, C-013).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** the key folds at creation and at lookup under the rule then in force, through `temp_view_key`: Unicode `to_lowercase` under `IgnoreCase`, the written segment verbatim under `Exact`. The twin fallback (`held_temp_view_ref` and `case_twin`) is removed, so a view created under one rule and looked up under the other answers as Spark does (C-019), and non-ASCII letters fold as Spark folds them (C-020).
   **ATTR-ID-1 S2 (2026-09-30):** all four `MemTable` constructors
   (`create_or_replace_temp_view`, `register_record_batches_as_temp_view`,
   `register_collected_memtable`, `declare_temp_view_sorted`) run their schema and batches

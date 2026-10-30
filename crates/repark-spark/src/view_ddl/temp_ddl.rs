@@ -19,6 +19,7 @@ use crate::view_ddl::execute::{
 use crate::view_ddl::parse::try_parse_show_views;
 use crate::view_ddl::temp_parse::try_parse_create_temp_view;
 use crate::view_ddl::temp_view::temp_view_column_comments;
+use crate::view_ddl::temp_write::refuse_temp_view_write_target;
 use crate::write_options::StatementWriteOptions;
 
 #[allow(clippy::missing_errors_doc)]
@@ -36,6 +37,11 @@ pub(crate) async fn route_temp_view_statement(
     }
     let temp_views = temp_views?;
     let head = first_word(sql)?;
+    if write_options.is_empty()
+        && let Some(refusal) = refuse_temp_view_write_target(&head, sql, temp_views)
+    {
+        return Some(Err(refusal));
+    }
     if head.eq_ignore_ascii_case("DROP") {
         return try_drop_temp_view(ctx, sql, write_options, temp_views);
     }
@@ -181,7 +187,7 @@ fn temp_view_target(name: &ObjectName, temp_views: &dyn TempViewSession) -> Resu
     }))
 }
 
-fn temp_view_home_segments(
+pub(crate) fn temp_view_home_segments(
     name: &ObjectName,
     temp_views: &dyn TempViewSession,
 ) -> Result<Option<Vec<String>>> {

@@ -127,8 +127,9 @@ pub(crate) async fn execute_create_temp_view(
         ));
     };
     let (catalog, namespace_name) = crate::use_ddl::session_defaults(catalogs);
-    let mut home = temp_views.temp_view_home().map_err(temp_view_err)?;
-    home.push(temp_view_home_segment(&statement.name));
+    let home = temp_views
+        .temp_view_target_ref(&temp_view_name_arg(&statement.name))
+        .map_err(temp_view_err)?;
     let definition = TempViewDefinition {
         home,
         display: format!("`{}`", statement.name.value.replace('`', "``")),
@@ -174,7 +175,7 @@ pub(crate) fn temp_view_home_segment(ident: &Ident) -> String {
     if ident.quote_style.is_some() {
         ident.value.clone()
     } else {
-        ident.value.to_ascii_lowercase()
+        ident.value.to_lowercase()
     }
 }
 

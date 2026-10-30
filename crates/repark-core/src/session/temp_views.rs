@@ -11,6 +11,7 @@ use datafusion::physical_expr::PhysicalSortExpr;
 use datafusion::physical_plan::ExecutionPlanProperties;
 use datafusion::prelude::DataFrame;
 use datafusion::sql::TableReference;
+use repark_common::names::NameRule;
 use repark_common::{Error, Result};
 
 use super::ReparkSession;
@@ -252,7 +253,25 @@ impl ReparkSession {
     pub(super) fn temp_view_ref(&self, name: &str) -> Result<TableReference> {
         let reference = crate::temp_view::temp_view_ref(&self.temp_view_home, name)?;
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        Ok(reference)
+        let Some(rule) = self.temp_view_rule() else {
+            return Ok(reference);
+        };
+        let written = written_last_segment(name).unwrap_or_else(|| reference.table().to_string());
+        Ok(self.home_table_ref(temp_view_key(&written, rule)))
+    }
+
+    fn temp_view_rule(&self) -> Option<NameRule> {
+        let state = self.context().state_ref();
+        let guard = state.read();
+        self.dialect.temp_view_name_rule(guard.config().options())
+    }
+
+    fn home_table_ref(&self, table: String) -> TableReference {
+        TableReference::full(
+            self.temp_view_home.catalog.clone(),
+            self.temp_view_home.schema.clone(),
+            table,
+        )
     }
 
     /// Build a home reference from an already-parsed segment after checking provider identity.
@@ -262,11 +281,12 @@ impl ReparkSession {
         quoted: bool,
     ) -> Result<TableReference> {
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        Ok(crate::temp_view::temp_view_ref_from_segment(
-            &self.temp_view_home,
-            segment,
-            quoted,
-        ))
+        Ok(match self.temp_view_rule() {
+            Some(rule) => self.home_table_ref(temp_view_key(segment, rule)),
+            None => {
+                crate::temp_view::temp_view_ref_from_segment(&self.temp_view_home, segment, quoted)
+            }
+        })
     }
 
     pub(super) fn temp_view_ref_from_segment_exact(&self, segment: &str) -> Result<TableReference> {
@@ -374,6 +394,15 @@ impl crate::dialect::TempViewSession for ReparkSession {
         ReparkSession::create_or_replace_temp_view_from(self, name, frame)
     }
 
+    fn temp_view_target_ref(&self, name: &str) -> Result<Vec<String>> {
+        let reference = self.temp_view_ref(name)?;
+        Ok(vec![
+            reference.catalog().unwrap_or_default().to_string(),
+            reference.schema().unwrap_or_default().to_string(),
+            reference.table().to_string(),
+        ])
+    }
+
     fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
         ReparkSession::resolve_temp_view_home_ref(self, name)
     }
@@ -389,6 +418,19 @@ impl crate::dialect::TempViewSession for ReparkSession {
     fn drop_temp_view(&self, name: &str) -> Result<bool> {
         ReparkSession::drop_temp_view(self, name)
     }
+}
+
+fn temp_view_key(segment: &str, rule: NameRule) -> String {
+    match rule {
+        NameRule::IgnoreCase => segment.to_lowercase(),
+        NameRule::Exact => segment.to_string(),
+    }
+}
+
+fn written_last_segment(name: &str) -> Option<String> {
+    crate::parse_table_identifier_segments(name)
+        .ok()
+        .and_then(|mut parts| parts.pop())
 }
 
 const ORDERED_CACHE_CONCAT_LIMIT_BYTES: u64 = 1 << 30;

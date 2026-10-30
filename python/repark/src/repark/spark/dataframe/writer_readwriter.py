@@ -839,6 +839,7 @@ class DataFrameWriterV2:
         """Return session and quoted name after checking the target (or its ref's table) exists."""
         self._dataframe._ensure_alive()
         session = self._dataframe._session
+        writer_layout._refuse_temp_view_write_target(session, self._table)
         qualified, table_ref = self._resolved_table()
         if not session.table_exists(writer_layout.table_of_ref_target(qualified)):
             raise AnalysisException(
