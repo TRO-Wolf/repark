@@ -12,13 +12,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   clauses PROVEN (C-012 OPEN: the D8 CAST forms stay ZS-9-refused).
   The census grows to 43 spellings and 12,720 cells: 52 moves, all DIFFERENT to EQUAL, zero
   regressions; the worst cost ratio is 1.034. `risk_tier: standard`. Branch `feat/nested-literal-seam-1`.
-- [ice-replace-kill-doors-1-ledger.md](ice-replace-kill-doors-1-ledger.md) —
-  **ICE-REPLACE-KILL-DOORS-1 (2026-10-27), grade B:** kill-mid-write pins K-8 and K-9 for the two
-  replace spellings on the local catalog, format v2 and v3; the forward-instead-of-hold mutant red
-  20 of 20 with the discriminator; ICE-INTEGRITY-PINS-1 C-024 closed for the local catalog. The Glue
-  and S3 Tables replace kill (C-007) and the verifier round (C-008) are OPEN. `risk_tier: standard`.
-  Branch `fix/ice-replace-kill-doors-1`.
-  pins: ice-replace-kill-doors-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [aws-ephemeral-runs-1-ledger.md](aws-ephemeral-runs-1-ledger.md) — **AWS-EPHEMERAL-RUNS-1
   (2026-10-24):** every `aws-acceptance` run creates, cross-reads and removes its own tables under
   `testing_r<run_id>a<attempt>_<leg>_`. Built: the run-and-leg prefix at every creating site, the cleanup script (with the
@@ -33,43 +26,12 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   session-zone carrier. Fold 1 (C-007, C-008 PROVEN): carrier-absent fallback to
   `execution.time_zone` plus a midnight-adjacent pin. `risk_tier: standard`. Branch
   `fix/current-date-session-zone-1`.
-- [explain-dml-write-1-ledger.md](explain-dml-write-1-ledger.md) — **EXPLAIN-DML-WRITE-1
-  (2026-10-21, rulings 136, 138 to 144):** `EXPLAIN ANALYZE` and `PREPARE` of a write
-  (`DELETE`, `UPDATE`, `INSERT`, `MERGE`) refuse on every door through one seam,
-  `statement_writes::refuse_wrapped_write`, with the two ruled texts. Step 1 (red first) on main
-  `c91f69c5`; the flipped pins and the docstrings touched are listed. `risk_tier: standard`.
-  Branch `feat/explain-dml-write-1`.
-  Steps 2 to 7 (2026-10-21): the seam and three call sites, pins green on every door, three
-  reverts and five mutants killed, the census of 424 cells on four doors with no answer lost
-  outside the card's table, 350 dated planner rows (ruling 144), records; 13 of 13 clauses
-  PROVEN. Verifier pending.
-  Fix round 1 (2026-10-21, verifier FAIL at `eccd920a`): §9 adds the spelling pins that kill the
-  trailing-semicolon mutant (C-014), the prepared name as written (C-015) and a dated correction
-  of §4.1's dated-row split (225 rows cite 136, 125 cite 138), and the plan-first class on
-  `repark.sql()` ruled as built (C-016).
 - [ice-integrity-pins-1-ledger.md](ice-integrity-pins-1-ledger.md) — **ICE-INTEGRITY-PINS-1
   (U-9), updated 2026-10-28:** local kill pin K and live integrity legs U/X, with dated
   review corrections. Run 40025222296 proves U96/X40; C-044 retains the live orphan limit.
   C-072 closes C-015, C-029 and C-071 on the merge of PR #1205 (`9ab67d7d`, 2026-10-28): the
   hadoop path read walks past the hint. C-060 keeps cross-read completion OPEN. C-061/C-062 record the diagnostic process tests
   and active-dump shutdown correction. Earlier runs and review rounds remain in the ledger.
-- [replace-linear-pin-1-ledger.md](replace-linear-pin-1-ledger.md) — **REPLACE-LINEAR-PIN-1
-  (2026-10-22, owner ruling "go with recommendations"):** the depth-40 `replace` memory pin
-  counted first-touch code pages of the native module, so it failed on #1140 and moved with the
-  runner. C-001 (PROVEN): on the runner the shift is `RssFile` inside the `_native` mapping, `RssAnon`
-  74 to 106 KB, two builds of one `.so` read 8.26 MB and 9.90 MB. C-002 (PROVEN): the child runs
-  the same mode at depth 1 before it reads the peak; local deltas 0.79 MB flat and 0.95 MB replace
-  against 4.85 MB and 7.78 MB without it. C-003 (PROVEN): bound, floor, depth and headroom unchanged.
-  `risk_tier: standard`. Branch `fix/replace-linear-pin-1`.
-- [spill-reach-fair-pool-flake-1-ledger.md](spill-reach-fair-pool-flake-1-ledger.md) — **SPILL-REACH-FAIR-POOL-FLAKE-1
-  (2026-10-22, owner rulings "Re run" and "go with your recommendations"):** the small-fair-pool join probe refused
-  `ExternalSorterMerge` on CI three times; the default pool of `test_t2_spill_reach.py` moves from 64M to 72M. C-001
-  (PROVEN): at 64M the probe refuses 0 of 30 alone and 4 of 67 loaded. C-002 (PROVEN): every refusal exceeds the bytes
-  the pool quoted; alone 48M refuses 20 of 20 and 56M 9 of 20. C-003 (PROVEN): the ordered sweep is clean at 72M, 80M
-  and 96M. C-004 (PROVEN): pooled 7 of 280 at 64M against 0 of 221 at 72M. C-005 (PROVEN): one knob, assertions
-  unchanged. C-006 (OPEN): the runner half was not measured, push denied. C-007 (PROVEN): the hangs, carded apart as
-  FAIR-POOL-HANG-1. C-008 (PROVEN, orchestrator ruling 2026-10-22): the default is 80M, not 72M, on the stress table's hang counts.
-  `risk_tier: standard`. Branch `fix/spill-reach-fair-pool-flake-1`.
 - [ice-tstzns-wall-1-ledger.md](ice-tstzns-wall-1-ledger.md) — **ICE-TSTZNS-WALL-1
   (2026-10-10), parity row R-008, the mirror of R-007:** every write door stores the instant
   INSERT stores into a `timestamptz_ns` column. Main measured first: 38 cells differ and 6
@@ -100,17 +62,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   Ruling 112 (2026-10-15) re-pins the analyzer rule list; ruling 113 records that the ANSI
   planner variant lives once in `repark-functions`. C-025 stays OPEN. `risk_tier: standard`. Branch
   `fix/ice-tsns-type-planner-1-fresh`.
-- [ice-tsns-floor-doors-1-ledger.md](ice-tsns-floor-doors-1-ledger.md) —
-  **ICE-TSNS-FLOOR-DOORS-1 step 0 (2026-10-14), parity row R-009:** measurement
-  only on main `018d0efd`, no product code. The door matrix over nine doors,
-  two sources, two microsecond targets, two versions and three zones is
-  recorded with rule-derived references (C-001); TIMESTAMP splits append-class
-  EQUAL against four overwrite doors (C-002), NTZ truncates on every door
-  (C-003), the 72 registry cells reproduce collapsed (C-004); the seam list
-  with EXPLAIN pastes counts three narrowing points (C-005), so the
-  more-than-one-seam halt fires (C-006 OPEN); scope and non-measurement stated
-  (C-007). `risk_tier: standard`. Branch `fix/ice-tsns-floor-doors-1`.
-  pins: ice-tsns-floor-doors-1/C-001, C-002, C-003, C-004, C-005, C-007
 - [ice-ntz-nested-refuse-1-ledger.md](ice-ntz-nested-refuse-1-ledger.md) —
   **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20), parity row R-011, ruling T-3:** a nested
   microsecond `TIMESTAMP_NTZ` leaf refuses a value that is not provably naive outside UTC, on
@@ -131,15 +82,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   the revert-alone runs and the records; C-020 (cost) is OPEN on which bar the gate reads.
   `risk_tier: standard`. Branch `fix/ice-struct-pairing-1`, build round 2. §8 records the
   exception round, ruling 95's pins included.
-- [sql-epoch-constructors-1-ledger.md](sql-epoch-constructors-1-ledger.md) —
-  **SQL-EPOCH-CONSTRUCTORS-1 (2026-10-08):** `timestamp_seconds` / `timestamp_millis` /
-  `timestamp_micros` resolve on the Spark SQL door and the DataFrame door over one
-  `repark_functions::spark_epoch_ctor` kernel per spelling, with Spark's values, refusal
-  classes and `timestamp` schema (C-002..C-005, C-008); the 304-cell live Spark 4.1.2
-  oracle (C-001, C-009) and its live drift check (C-007) sit under `python/repark/tests`;
-  the native door stays a declared refusal (C-006); fold 1 (2026-10-09) pins the
-  decimal-boundary order (C-010) and files the verdict S3s as O-3..O-5.
-  `risk_tier: standard`. Branch `fix/sql-epoch-constructors-1`.
 - [ice-tsns-merge-wall-1-ledger.md](ice-tsns-merge-wall-1-ledger.md) —
   **ICE-TSNS-MERGE-WALL-1 (2026-10-09), readiness finding R-007:** every write door stores
   the same nanosecond wall. Step 0: the review's test red on main (C-001), Spark 4.1.2 with
@@ -195,29 +137,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `CREATE TABLE AS INSERT` (C-053, with the table of the parser's `Statement` variants);
   plain `EXPLAIN`, allowed statements and tables without the leaf are unchanged, six mutants
   die (C-054). Q14 asks whether `EXPLAIN ANALYZE` should run a write at all.
-- [cross-join-condition-1-ledger.md](cross-join-condition-1-ledger.md) —
-  **CROSS-JOIN-CONDITION-1 (2026-10-08), from the STAMP-2-R5P6-2 hand-back:** a cross join with
-  a condition ignored it (12 rows where Spark answers 2); the H1 door now routes cross-with-condition
-  onto the inner path on both routes (C-001), `crossJoin` and `join(None, "cross")` are unmoved
-  (C-002), two self-join shapes answer as inner (C-003), shared-name and Column-list refusals are
-  kept (C-004), four mutations (C-005), neighbours unchanged (C-006), card and maps closed (C-007).
-  Fold 1 (2026-10-08): route assertions with the inequality and false cells SQL-only, live Spark
-  self-join literals, and the Spark-refused leniency pinned as cross-equals-inner, carried OPEN
-  (C-008) to card JOIN-CONDITION-REFUSALS-1.
-  Fold 2 (2026-10-08): the `JoinConditionRefusals` analyzer rule refuses those conditions with
-  Spark's class, condition and text on every how of both doors (C-008 PROVEN); the card is closed.
-  Fold 3 (2026-10-09): the refusals answer the accessors with no rule header (pins assert them);
-  the card re-opens narrowed to residues R-CJC-1..R-CJC-5.
-  `risk_tier: standard`. Branch `fix/cross-join-condition-1`.
-- [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
-  **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
-  under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
-  over an offset-only limit answered the wrong rows at every partition count. Reproduction on
-  stock DataFusion 54.1.0 and on three facade doors (C-001, C-002), the 70-statement Spark grid
-  (C-003), the defect located in `EnforceSorting`'s sort pushdown (C-004), the guard and its
-  wiring (C-005), 840 cells right (C-006), the live cell (C-007), five mutations (C-008), the
-  perf guard (C-009), card and registry (C-010), gates (C-011). `risk_tier: standard`. Branch
-  `fix/offset-nested-sort-1`.
 - [attr-id-1-ledger.md](attr-id-1-ledger.md) —
   **WO ATTR-ID-1 (2026-09-30), in flight:** every output field of every DataFrame plan
   carries one attribute id in field metadata (`repark.attr`), and the DataFrame door resolves a
@@ -268,24 +187,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `transform` stays a passthrough as Spark 4.1.2 does, by the dated row `DF-TRANSFORM-1`
   (C-003), and the live Spark recording (C-004); `doors4.py` prints `TOTAL 1` in both
   modes. `risk_tier: high`. Branch `fix/foreach-wrap-1`.
-- [mb-3-ledger.md](mb-3-ledger.md) —
-  **MB-3 (2026-10-07), the Session-owned micro-batch driver, round 1:** MB0b-R18 measured before
-  the capped trigger (C-001), the `toTable` door's racing-driver guarantee left open on
-  `F-APPEND-PIN-BASE-1` (C-002), and the driver slices that follow. **Fold 1 (2026-10-07):**
-  the verifier's findings, a panic on the driver task (C-011), `start` racing `stop` (C-012),
-  the session's end (C-013), the replay window declared (C-014), static frames in the template
-  (C-015), two queries on one sink (C-016), the trigger schedule (C-017) and the S3s (C-018);
-  the catalog timeout stays open (C-010). **Round 2 (2026-10-08):** the typed panic and
-  timeout variants (C-020), the session's drop as a signal with no poll (C-021), the catalog
-  timeout built and C-010 closed, and the fresh sink load per batch (C-022). **Fold 2
-  (2026-10-08):** the re-verify's findings, a stop from inside a body (C-024), the timeout on
-  the catalog load only (C-025), the unstamped check (C-026), the unpinned branches (C-027)
-  and the session watch (C-028). **Round 3 (2026-10-08):** main merged with the append fence,
-  the `toTable` door's exactly-once guarantee against a racing driver pinned and C-002 closed,
-  the fence's refusals at the driver (C-030); no clause is open and the coverage attestation
-  is filed.
-  `risk_tier: standard`.
-  Branch `feat/mb-3-driver`.
 - [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
   **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
   in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
@@ -297,15 +198,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   multi-line documents, mutants, known limits). C-055 closes the boolean-knob follow-up
   without a new crate edge. `risk_tier: high`.
   **SOURCE-URL-REDACT-2 (2026-10-06):** C-057..C-064 close the re-verify's three S1 classes (registry, boundary, chained-`ValueError`); round B (C-065..C-069) fixes the shape generally (credential-shaped chain cut, masked message parameters, cause-chain scrub, option doors).
-- [c-1-ledger.md](c-1-ledger.md) —
-  **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
-  footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and
-  `SourceIdentity { name, kind, generation }` in `repark-common` (C-002); `settings.rs` reserves
-  `auth_method` with password accepted, `iam_token` / `kerberos` declared and anything else an
-  invalid specification (C-003..C-006); the Postgres type map maps ten types with a round-trip
-  pin each and declares nine (C-007, C-008); eleven `CONNECT-DECL-*` registry rows (C-009); ADBC
-  and ConnectorX cited (C-010); gates (C-011). `risk_tier: standard`. Branch
-  `feat/c-1-connect-skeleton`.
 - [c-4-ledger.md](c-4-ledger.md) —
   **C-4, card 1.6 (2026-10-08), in flight:** Postgres writes. Step 1 is the write core in
   `repark-connect`: one binary encoder for every mapped type (C-001…C-003), the
@@ -331,72 +223,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   items and the S3 batch: the store-assignment gate, the engine text rendering,
   positional aliasing, and the seven S3 as four fixes and three records.
   `risk_tier: standard`. Branch `feat/c-4-writes`.
-- [c-3-ledger.md](c-3-ledger.md) —
-  **C-3, card 1.6 (2026-10-07), in flight:** partitioned parallel Postgres reads and the
-  ConnectorX benchmark. §0 is the design note: Spark's four JDBC options as the surface with
-  every malformed combination measured on live Spark 4.1.2 (C-001), one exported snapshot per
-  scan, strides run on at most `pool_max_size` connections inside one DataFusion partition, a
-  pushed `LIMIT` per stride capped above, and what `CONNECT-DECL-pg-partitioned-read` still
-  declares. Then the slices: Spark's stride arithmetic checked against 740 recorded triples and
-  the option rule (C-002, C-003), the stride predicate (C-004), execution on one snapshot with
-  nine live cells (C-005), the three doors and the rewritten registry row (C-006), the 10M-row
-  benchmark against ConnectorX and pandas with its factor recorded and no pass declared
-  (C-007), and the ConnectorX and ADBC citations (C-008); thirteen mutations, all red.
-  **Fold 1 (2026-10-08):** main merged; a declared column type names the registry row for
-  Spark's own bound spelling (C-009); `numPartitions` is Spark's 32-bit `Int` and a read stops
-  at 10 000 strides, after the shrink (C-010); a quoted column in another case resolves as
-  Spark's does (C-011); five more mutations, all red.
-  `risk_tier: standard`. Branch `feat/c-3-partitioned-reads`.
-- [c-2-ledger.md](c-2-ledger.md) —
-  **C-2, card 1.6 (2026-10-06), in flight:** the Postgres read path, slice by slice. **C-2a**, the
-  pure slice: `ConnectError` folds C-1's two error enums (C-001); the COPY BINARY decoder's
-  header, trailer, truncation, chunk independence, field checks and batch bounds (C-002..C-006);
-  `date`, `timestamp` / `timestamptz`, `numeric`, and the text-rendered types mapped with byte
-  anchors and per-value refusals (C-007..C-010); resolution refuses unmapped types and keeps
-  `time` declared, D-M2 deferred (C-011); C-1's round trips through the appender (C-012); eight
-  registry rows retired and four added, the R-7 citations (C-013); gates (C-014). Twenty
-  mutations, each red. FL-1…FL-14 as dated rows. `risk_tier: standard`. Branch
-  `feat/c-2-postgres-read`.
-- [ta-series-s2a-ledger.md](ta-series-s2a-ledger.md) —
-  **TA-SINGLE-SERIES-PARALLEL-1 S2a + D (2026-10-05), in flight:** a bare `ta.*` column binds as
-  the explicit `.over(Window.orderBy(K))` spelling, K being the declared order, else the first
-  timestamp column, else the first date column, else the current row order with a
-  partition-index read (C-001..C-004); one `UserWarning` per session for the last two (C-003);
-  native `null_lookback` per window partition in both spellings (C-005, C-006); mixing and SQL
-  unchanged (C-007, C-008); gates (C-009); owner-file correctness on release wheels (C-010);
-  docs note (C-012); speed on main: bare 0.71× of main today, 0.86 / 0.68 of polars_talib (C-011). `risk_tier: standard`. Branch
-  `perf/ta-series-s2a-series-order`.
-  pins: ta-series-s2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
-- [ta-series-s3-ledger.md](ta-series-s3-ledger.md) —
-  **TA-SINGLE-SERIES-PARALLEL-1 S3 (2026-10-04), in flight:** `ParallelProjectionRule` drops a
-  RoundRobin over a one-batch window output under a projection chain when the parent's
-  requirements still hold (the old sketch's S4, folded in by ruling Q-S3-1 = A, narrowed by
-  Q-S3-3 = A so multi-batch sources keep their fan-out, C-012), and `ParallelProjectionExec` runs
-  the non-column expressions of a one-partition projection on the blocking pool, bit-identical
-  to `ProjectionExec` (C-001..C-005, C-008, C-009); never on a volatile expression (C-007);
-  facade identity on release wheels (C-006); gates green (C-010); bare −41 ms, explicit −118 ms, partitioned unchanged, threshold kept at 16,384 by measurement (C-011).
-  `risk_tier: standard`. Branch `perf/ta-series-s3-parallel-projection`.
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
-- [ta-series-s2b-ledger.md](ta-series-s2b-ledger.md) —
-  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04), in flight:** `ParallelWindowExec` runs the
-  argument groups of a one-partition, empty-`PARTITION BY` `WindowAggExec` on the blocking pool,
-  bit-identical to the serial node (C-001..C-006, C-009); zero-copy TA output and borrowed
-  multi-series inputs (C-007); owner shape identical to base through the facade (C-008); a
-  single-node opt-out that distributed sessions set (C-010); goldens and kernel race (C-011);
-  bare −106 ms, explicit −122 ms, partitioned unchanged (C-012); EXPLAIN and plan-count pins
-  (C-013); the distributed provider refuses a session with the flag on (C-014, verifier V-1).
-  `risk_tier: standard`. Branch `perf/ta-series-s2b-parallel-window`.
-  pins: ta-series-s2b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
-- [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
-  **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
-  writes format LTZ in the session zone under Spark's default `timestampFormat`,
-  NTZ and DATE under their zone-free defaults, through one shared Rust
-  SELECT-level formatter (local + s3a); user patterns honored per kind, bad
-  patterns refused with Spark's class (C-001..C-005); parquet/reads untouched,
-  one intended neighbour change, four mandated flips (C-006); post-2100 tzdata,
-  zone-name, sink and inference residues R-1..R-5.
-  `risk_tier: standard`. Branch `fix/text-write-timestamp-zone-1`.
-  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
   **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
   `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file
@@ -405,80 +231,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   AWS acceptance rerun is an owner residue (R-1).
   `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
   pins: aws-accept-replace-1/C-001
-- [rp-56-ledger.md](rp-56-ledger.md) —
-  **WO RP-56 (2026-09-28), in flight:** RP-56 repins the fork to
-  `e1d74bef` (F-SCHEMA-LCI-LAZY-1 `#364` — case-twin columns build; the
-  lower-case index refuses only on a case-insensitive lookup, as Java does) and
-  carries the Spark-door twin pins under `caseSensitive=true` (CREATE and CTAS,
-  red at `6e937f49`, green at `e1d74bef`, C-001) plus the bare-name refusal under
-  `false`; the false-door CREATE acceptance is a dated residue (R-1). The Opus-verifier
-  fold (2026-09-28, VR-1..VR-5) scopes the star refusal to catalog-table scans, routes
-  nested DDL by the session flag (C-002/C-003), and records R-6…R-9.
-  `risk_tier: standard`. Branch `chore/rp-56-case-twin-schema`.
-  pins: rp-56/C-001
-- [intdiv-1-ledger.md](intdiv-1-ledger.md) —
-  **WO INTDIV-1 (2026-09-28), in flight:** arithmetic over an integer `/` answers
-  Spark's DOUBLE type and values in every scope — same scope, derived table, CTE, temp
-  and session views, nested and chained scopes, `WHERE`, `ORDER BY`, `sum`/`avg`, CTAS
-  and INSERT into DOUBLE (C-001) — through one pre-coercion rule seated before
-  `higher_order_preparation` (C-002), leaving genuinely integral arithmetic and its
-  ANSI overflow unchanged (C-003); a fractional quotient stores into BIGINT/INT
-  columns with Spark's toward-zero store assignment on INSERT, VALUES, OVERWRITE,
-  UPDATE and MERGE (C-004, R-INTDIV-1 closed); decimal division precision, `div`,
-  the overflow SQLSTATE, the derived INT literal and the store-overflow message
-  class are dated residues.
-  `risk_tier: standard`. Branch `fix/derived-int-division`.
-  pins: intdiv-1/C-001, C-002, C-003, C-004
-- [ltz-store-int-1-ledger.md](ltz-store-int-1-ledger.md) —
-  **WO LTZ-STORE-INT-1 (2026-09-28), in flight:** an INT stored into a
-  `TIMESTAMP` (LTZ) column refuses with Spark's recorded `ins_l_int` answer on
-  VALUES and with the `CANNOT_SAFELY_CAST` class on SELECT, UPDATE, MERGE and
-  DataFrame append, while NULL, DATE, TIMESTAMP and TIMESTAMP_NTZ sources still
-  store (C-001); the VALUES residual stays open for every other target (R-1).
-  `risk_tier: standard`. Branch `fix/ltz-store-int-1`.
-  pins: ltz-store-int-1/C-001
-- [store-ts-to-numeric-1-ledger.md](store-ts-to-numeric-1-ledger.md) —
-  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28), in flight:** TIMESTAMP, DATE, STRING,
-  BOOLEAN and `-NULL` sources refuse with Spark's `CANNOT_SAFELY_CAST` text where
-  Spark's ANSI store assignment refuses them — the VALUES door into numeric, DATE and
-  BOOLEAN columns (C-001), `-NULL` on every write door (C-002), STRING into
-  FLOAT/DOUBLE on the INSERT doors (C-003), STRING into DECIMAL on UPDATE (C-004) —
-  while every store Spark allows still stores (C-005). `risk_tier: standard`. Branch
-  `fix/store-ts-to-numeric-1`.
-  pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
-  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING-source refusals are withdrawn
-  (C-003, C-004 REJECTED) and return to base behaviour (C-006); a branching source
-  refuses only when every leaf is a refused type (C-007). The STRING class moves to
-  v1.5.2 card STORE-STRING-ASSIGN-1. pins: store-ts-to-numeric-1/C-006, C-007
-- [store-ts-doors-2-ledger.md](store-ts-doors-2-ledger.md) —
-  **WO STORE-TS-DOORS-2 (2026-09-29), in flight:** the two write doors #885
-  missed refuse like Spark — TIMESTAMP, TIMESTAMP_NTZ and DATE through a VALUES
-  node inside INSERT … SELECT into numeric columns (C-001) and `-NULL` into
-  TIMESTAMP, DATE and BOOLEAN through static-partition OVERWRITE (C-002) — while
-  every base match keeps its answer (C-003). `risk_tier: standard`. Branch
-  `fix/store-ts-doors-2`.
-  pins: store-ts-doors-2/C-001, C-002, C-003
-- [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
-  **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
-  counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
-  cuts at UTF-16 code-unit offsets (32 left, 36 past the token start) with `...` on
-  each cut side — and never panics on non-ASCII SQL (C-001); the four oracle
-  messages replay byte for byte, M1 reds both Rust pins, and the mid-surrogate `?`,
-  the NTZ astral question and the unscannable-token fallback are dated residues.
-  `risk_tier: standard`. Branch `fix/uuid-cast-window-1`.
-  pins: uuid-cast-window-1/C-001
-- [casesens-1-ledger.md](casesens-1-ledger.md) —
-  **WO CASESENS-1 (2026-09-27), in flight:** names resolve the way Spark resolves
-  them under `spark.sql.caseSensitive` false and true. Slice 1: nested SQL scopes
-  keep the written spelling (derived tables, CTEs, the leftmost set-operation
-  branch, column-alias lists; C-001, C-002) and a MERGE with a derived source
-  spelled in another case answers (C-004); the catalog view (C-003) stays OPEN
-  with its S1-3 record, homed with R-CS1-1 to S1b. Later slices: `true` exact
-  on the SQL door (C-005…C-008), the
-  DataFrame door and `describe` (C-009, C-010), case twins (C-011, C-012), Iceberg
-  DDL exactness (C-013…C-016); one rule (C-017) and no regressions (C-018) flip
-  last. `risk_tier: high`. Branch `feat/casesens-1-s1`.
-  pins: casesens-1/C-001, C-002, C-004
 - [casesens-2-ledger.md](casesens-2-ledger.md) —
   **WO CASESENS-2 (2026-09-28), in flight:** the DataFrame door resolves names
   in Rust — `true` exact on every name API, qualified strings bind,
@@ -490,13 +242,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `risk_tier: high`. **R-CS2P-1 (2026-10-03):** closed by C-013, with the six
   cells and Spark's answers in the residue row and mutations M11-M13.
   pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-013
-- [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
-  **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
-  lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs
-  split 2–4, C-002; one combined task with a per-plan file order, C-003), so no code
-  changed and the dated carve-out C-5 is recorded (C-004 PROVEN 2026-09-27; R-3 filed).
-  `risk_tier: standard`. Branch `fix/r-fileorder-2`.
-  pins: r-fileorder-2/C-001, C-002, C-003, C-004
 - [row-lineage-order-1-ledger.md](row-lineage-order-1-ledger.md) —
   **WO F-ROW-LINEAGE-ORDER-1 (2026-09-26), in flight:** a delegated `INSERT` commits
   its data files in Spark's fanout-writer order through the fork's `DataFileCommitOrder`
@@ -507,65 +252,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   facade pin (C-013). S4 is OPEN, deferred to R-FILEORDER-2 (C-014).
   `risk_tier: standard`. Branch `feat/row-lineage-order-1`.
   pins: row-lineage-order-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
-- [tblprops-1-ledger.md](tblprops-1-ledger.md) —
-  **WO TBLPROPS-1 (2026-09-26), in flight:** `SHOW TBLPROPERTIES` on an Iceberg table
-  answers Spark's rows — the fresh five (C-001), the decimal snapshot id after insert
-  (C-002), the post-SET seven with `format=iceberg/orc` (C-003), the v1 single version
-  (C-004), `comment`/`owner` never rows (C-005), keyed hits and case-sensitive misses
-  (C-006), short names after `USE` (C-007), the empty temp-view frame (C-008), the kept
-  not-found refusal (C-009), the fall-through sweep (C-010), and the stored codec win
-  with the post-`UNSET` default (C-011); both cells replay EQUAL and `DBT-TBLPROPS-1` is
-  FIXED.
-  `risk_tier: standard`. Branch `feat/tblprops-1`.
-  pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
-- [ntz-store-doors-1-ledger.md](ntz-store-doors-1-ledger.md) —
-  **WO NTZ-STORE-DOORS-1 (2026-09-28), in flight:** the remaining write doors
-  (`BY NAME`, the `INSERT OVERWRITE` family, `writeTo().overwritePartitions()`, MERGE
-  UPDATE SET / SET * / INSERT (cols) / INSERT *) store `TIMESTAMP` into
-  `TIMESTAMP_NTZ` as the session-zone wall (C-001) and `TIMESTAMP_NTZ` into
-  `TIMESTAMP` as the session-zone instant (C-002) through one seam, refusals and
-  same-type stores unchanged (C-003), `DATE` stores the session midnight (C-004),
-  partition transforms follow the stored value (C-005). The verifier fold
-  (2026-09-29) adds C-006: a `VALUES` column that mixes `TIMESTAMP` and
-  `TIMESTAMP_NTZ` is typed `TIMESTAMP` through the session zone at the `VALUES`
-  coercion site. It widens R-1 to the nested types, adds R-5 (MERGE `ON`) and
-  R-6, and closes R-4. The re-verify fold (2026-09-29) adds C-007: a `DATE` cell
-  never triggers the widening, so `DATE` + `TIMESTAMP_NTZ` stays `TIMESTAMP_NTZ`,
-  and corrects the fold's "0 moved away" claim and R-6. The second re-verify fold
-  (2026-09-29) adds C-008: a written `CAST(… AS TIMESTAMP)` `VALUES` cell is
-  `TIMESTAMP` beside a `DATE` or `TIMESTAMP_NTZ` cell, and NULL rows never make a
-  column `TIMESTAMP_NTZ`; it records R-7 (card NTZ-DST-GAP-CAST-1) to R-10. The third
-  re-verify fold (2026-09-29) adds C-009: the `VALUES` pass deviates from base only on
-  positive, syntactic evidence, so an expression cell such as `date_trunc` of an NTZ
-  beside a `DATE` keeps base's `TIMESTAMP`; it records R-11 and R-12.
-  `risk_tier: standard`. Branch `fix/ntz-store-doors-1`.
-  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-- [ntz-1-ledger.md](ntz-1-ledger.md) —
-  **WO NTZ-1 (2026-09-26), in flight:** `TIMESTAMP_NTZ` literals, casts and
-  store assignment answer as Spark. Slice 1 (this commit): the literal and the
-  explicit casts on both doors — the wall literal and its refusal (C-001), the
-  casts and numeric refusals (C-002), the DataFrame door (C-003), the DML reach
-  and both cells EQUAL (C-004), the nested R4 refusal (C-005); store assignment
-  (C-006, C-007) and the storage surface with TZ-6 (C-008, C-009) are later
-  slices. `risk_tier: standard`. Branch `feat/ntz-1`.
-  pins: ntz-1/C-001, C-002, C-003, C-004, C-005
-- [tz-asof-1-ledger.md](tz-asof-1-ledger.md) —
-  **WO TZ-ASOF-1 (2026-09-26), in flight:** an expression whose Spark display name
-  equals its ORDER BY key plans — the Spark-door passthrough projects un-projected
-  sort keys under internal aliases in a derived table and carries Spark's display
-  names on the outer query (C-001..C-007, C-009), so cell E-TZ-TIMESTAMP-AS-OF
-  replays EQUAL (C-008).
-  `risk_tier: standard`. Branch `feat/tz-asof-1`.
-  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-- [partname-1-ledger.md](partname-1-ledger.md) —
-  **WO PARTNAME-1 (2026-09-26), in flight:** partition-field names pinned per door
-  against Spark's measured answers — the CREATE door omits the width (C-001), the
-  UPDATE door keeps it with DROP and REPLACE (C-002); the U9 `bucket_uuid` step runs
-  both engines through the UPDATE door so `uuid/part/md` replays EQUAL and U9 R-26
-  retires (C-003); the redundancy divergence is a dated fork residue (R-1) with card
-  F-PARTSPEC-REDUNDANT-1. No product code changes.
-  `risk_tier: standard`. Branch `feat/partname-1`.
-  pins: partname-1/C-001, C-002, C-003
 - [u9-types-1-ledger.md](u9-types-1-ledger.md) —
   **WO U9-TYPES-1 (2026-09-25), in flight:** four column types end to end on the Spark door,
   measured against Spark 4.1.2 + Iceberg 1.11 and replayed step by step from
@@ -591,57 +277,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
   pins: u9-types-1/C-013, C-014, C-015, C-016
-- [u11-edge-1-ledger.md](u11-edge-1-ledger.md) —
-  **U11-EDGE-1 (2026-09-26), in flight:** `E-CASE-SELECT` (output columns keep the query's
-  spelling; `F.col` binds a spelled frame on the DataFrame door) and `E-CASE-PARTITION-FIELD`
-  (partition sources bind case-sensitively with Iceberg's `ValidationException` text) replay
-  EQUAL / both-refuse; `TP-FORMAT-V1-DELETE` recorded EQUAL with no code change;
-  `E-CATALOG-LISTDATABASES` moved to the catalog unit (2026-09-25). Round 2 (2026-09-26):
-  the DataFrame door's one case-insensitive binder (drop, qualified refs, join on names,
-  unionByName, C-017…C-020), Java's struct text (C-021) and the replace-arm pins. Residues
-  R-1…R-10 (R-5…R-10 dated 2026-09-26, candidates for CASESENS-1). Round 4 (2026-09-26): a qualified
-  Column drop binds through its relation and an unmatched drop is a no-op (C-022); a bare
-  reference matching two fields ignoring case refuses AMBIGUOUS_REFERENCE, exact spelling
-  included (C-023). Residues R-11…R-15 dated 2026-09-26 for CASESENS-1 (qualified string
-  names in select, the `(t.id + 1)` name, the ANSI positional INT/STRING union, the missing
-  relation text, the folded reference spelling on compound Columns). Round 5 (2026-09-26):
-  the facade's own re-projections and origin Columns bind by attribute, exactly (C-024, C-025),
-  and a Column drop matching two fields refuses AMBIGUOUS_REFERENCE (C-026).
-  Residues R-16…R-21 dated 2026-09-26 for CASESENS-1 (orderBy's UNRESOLVED class on twins,
-  candidate rendering on selectExpr / string filter / SQL subquery, aliased and USING joins,
-  eager getitem refusal, twin rename and replace, star forms).
-  Round 6 (2026-09-26): compound origin Columns keep their side's exact binding through
-  arithmetic, cast, alias, `when` and `withColumn` on a case-twin join, and no ambiguity text
-  names a scratch relation (C-027). Residue R-22 dated 2026-09-26 (pre-existing on main: exact-duplicate
-  plain frames refuse their re-projections, a two-`id` join's `dropna` answers, a `a.b` column's
-  `dropna` answers).
-  Round 7 (2026-09-26): a projection of a twin join writes back into its own table (the SQL
-  audit no longer walks a named view's body, C-028); no scratch name in a suggestion list,
-  `F.col("*")` expands to the presented fields (C-029); attribute copies never collide with a
-  user field (C-030). Residues R-23…R-27 dated 2026-09-26 for CASESENS-1 (`F.struct("*")`, the
-  `__repark_sel_q_<n>` name through a view and unionByName, AMBIGUOUS on grouping and sort by
-  origin Columns, `withColumns` case duplicates, the overwrite refusal class and the suggestion
-  order).
-  `risk_tier: standard`. Branch `feat/u11-edge-1`.
-- [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
-  **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
-  overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional
-  INSERT sources whose names repeat (the bucketed `range()` cell). Supersedes the refusal
-  text of ice-overwrite-mode-1/C-013. Critic r1 remediation (2026-09-25): NULL partition keys
-  under `<`, `<=`, `NOT` and `NOT IN`, repeated-name REPLACE WHERE sources, out-of-range
-  literals. Critic r2 remediation: `<=>` and beyond-i64 constants, Spark's conjunct-split
-  refusal texts, repeated-name arity naming, and the committed Spark oracle. Critic r3
-  disposition: decimal literals on INT columns (C-022), Spark's data-column names (C-023), the
-  suffix-literal rendering (C-024), residues R-11 (typed / DECIMAL / timestamp-string literals)
-  and R-12 (a NULL key in the same INSERT). C-001..C-024 PROVEN.
-  `risk_tier: standard`. Branch `feat/u8-write-sql`.
-  **PR2 (2026-09-25):** nested struct-field assignment in UPDATE and MERGE (C-025..C-031);
-  fix round 2 routes top-level whole-struct values through the by-name check (C-032, retires
-  R-17); fix round 3 resolves star-expanded and inserted struct values by name (C-030) and
-  refuses repeated top-level keys with Spark's text (C-029); fix rounds 4 and 5 apply
-  `spark.sql.caseSensitive` to struct values, stars, SET keys and INSERT column lists (C-033).
-  Branch `feat/u8-write-sql-2`.
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 - [u6-write-refusals-ledger.md](u6-write-refusals-ledger.md) —
   **U6 WRITE-REFUSALS PR1 (2026-09-24), in flight:** refusal parity on
   `write.spark.accept-any-schema` tables — positional writes resolve by name and
@@ -746,84 +381,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   Branch `fix/ipi-43-rdf-sort-zorder`.
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011
-- [ice-wap-branch-1-ledger.md](ice-wap-branch-1-ledger.md) —
-  **ICE-WAP-BRANCH-1 (2026-09-19), in flight:** the session conf `spark.wap.branch` redirects
-  writes and the session's plain reads to an audit branch, as Spark does (IPI-05, RePark
-  half) — one Rust resolver (explicit selector > the conf when `write.wap.enabled=true` >
-  `main`), a `WapSessionConfig` carrier served through `conf.set` and SQL `SET`, the branch
-  created by the write when absent, and Java's `Cannot set both WAP ID and branch` refusal;
-  19-cell recorded Spark 4.1.2 oracle plus red-first pins (5/19 before, 19/19 after);
-  registry `ICE-WAP-BRANCH-1` FIXED, REF-3 and CONF-WAP-1 narrowed to what is still open.
-  `risk_tier: standard`. Branch `fix/ice-wap-branch-1`.
-  pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-- [ice-rm-deletes-1-ledger.md](ice-rm-deletes-1-ledger.md) —
-  **ICE-RM-DELETES-1 (2026-09-20), in flight:** `CALL rewrite_manifests` rewrites delete
-  manifests through the fork #318 opt-in and honours `spec_id` (IPI-11, RePark half) —
-  per-leg work gating in `rewrite_if`, the lone-manifest no-op on both legs, unknown-spec
-  refusal in Spark's recorded `Invalid spec id` text; 14-cell recorded Spark 4.1.2 oracle
-  plus red-first replay pins; registry MANIFEST-1 FIXED, MANIFEST-2 spec half FIXED.
-  `risk_tier: standard`. Branch `fix/ice-rm-deletes-1`.
-  pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [ice-overwrite-mode-1-ledger.md](ice-overwrite-mode-1-ledger.md) —
-  **ICE-OVERWRITE-MODE-1 (2026-09-19), in flight:** Spark's overwrite partition set on
-  every overwrite door (IPI-03) — one Rust decision over the session
-  `partitionOverwriteMode`, the typed `saveAsTable` / `overwritePartitions` intent and the
-  `overwrite-mode` writer option; static-mode `PARTITION (k)` replaces the whole table,
-  mixed lists run, `NON_PARTITION_COLUMN` refuses; 60-cell recorded oracle plus red-first
-  pins. Round 2 (same day): 88 cells; an empty dynamic source commits nothing, `BY NAME`
-  mixed lists run, static values are cast to the partition type, transform-source keys
-  refuse `NON_PARTITION_COLUMN`. Round 3 (same day): 96 cells with the 8 empty-frame
-  `writeTo` / `insertInto` cells, and the typed intent flags pinned at the PyO3 binding.
-  `risk_tier: standard`. Branch `fix/ice-overwrite-mode-1`.
-  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-  C-011, C-012, C-013, C-014, C-015, C-016, C-017
-- [range-tvf-id-1-ledger.md](range-tvf-id-1-ledger.md) —
-  **RANGE-TVF-ID-1 (2026-09-18), in flight:** the `range(...)` table function
-  names its column `id` like Spark 4.1.2 on both SQL doors — a RePark-owned
-  `TableFunctionImpl` over DataFusion's series generator, 1–4 arguments, string
-  coercion, loud zero-step refusal; recorded oracle plus red-first pins.
-  `risk_tier: standard`. Branch `fix/range-id-1`.
-  pins: range-tvf-id-1/C-001, C-002, C-003, C-004, C-005
-- [repark-sql-update-subquery-where-1-ledger.md](repark-sql-update-subquery-where-1-ledger.md) —
-  **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a)), round 2, the
-  stopgap:** `repark.sql()` refuses every `UPDATE` and `DELETE` whose `WHERE` holds a
-  subquery with the G3-E8 text and writes nothing, where it wrote every row or emptied the
-  table. The refusal moved from the ANSI door's guards to one home in `repark-iceberg`
-  (`write::predicate_dml::subquery_where`); the ANSI router calls it with the identity
-  exemption, `DataFusionDialect` without. 22 pins red on main, revert checks and six
-  mutants, never worse against Spark 4.1.2 and the four crates' suites. Routing stays on the
-  card. `risk_tier: standard`. Branch `fix/repark-sql-update-subquery-where-1`.
-  **Round 3 (2026-10-16, rulings 131 and 126):** the refusal inside `EXPLAIN ANALYZE`, and the
-  merge of #1075. **Round 4 (2026-10-17, rulings 135 and 136):** the refusal reads the shared
-  walk (`PREPARE`, `EXPLAIN ANALYZE`), the pins run on Iceberg tables behind one guard, a pin on
-  the MsSQL dialect, and card EXPLAIN-DML-WRITE-1 corrected; section 12. **Round 4 continued
-  (2026-10-17, rulings 138 and 139):** the repark-spark doors' strict pregate reads the same walk,
-  so `PREPARE` of a subquery-predicate DML refuses on both; the sketch sends DataFusion's own
-  `EXPLAIN ANALYZE` there to card EXPLAIN-DML-WRITE-1; section 13.
-- [range-tvf-id-2-ledger.md](range-tvf-id-2-ledger.md) —
-  **RANGE-TVF-ID-2 (2026-09-19), in flight:** the `range(...)` argument edge
-  cases answer Spark 4.1.2 — NULL bounds refuse with `UNEXPECTED_INPUT_TYPE`,
-  every Spark-accepted width coerces with `CAST_INVALID_INPUT` on malformed
-  strings, the owned `RangeTable` provider streams exactly the `i128` element
-  count so overflow bounds emit one row, and `numPartitions` validates with
-  `IllegalArgumentException` on non-positive counts; recorded 19-cell oracle
-  plus red-first pins on both SQL doors. `risk_tier: standard`. Branch
-  `fix/range-id-2`.
-  pins: range-tvf-id-2/C-001, C-002, C-003, C-004, C-005, C-006
-- [v3-multiarg-1-ledger.md](v3-multiarg-1-ledger.md) —
-  **V3-MULTIARG-1 (2026-09-18), in flight:** multi-argument partition transforms
-  (`source-ids`) DECLARED out of 1.x under owner ruling 2026-09-18 (rating row V3-05)
-  — docs plus one pin: the SQL-door arity refusal, the recorded Spark 4.1.2 DDL
-  refusal fixture, the foreign-metadata register refusal, registry row V3-MULTIARG-1,
-  post-1.x card. `risk_tier: standard`. Branch `docs/v3-multiarg-1`.
-  pins: v3-multiarg-1/C-001, C-002, C-003, C-004, C-005
-- [ice-append-retry-1-ledger.md](ice-append-retry-1-ledger.md) —
-  **ICE-APPEND-RETRY-1 (2026-09-18), in flight:** the INSERT-STORM row corrected to what
-  Spark measures over repetitions (rating row V2-20a remaining distance) — the six-repetition
-  Spark oracle on two catalogs, the recorder, the corrected registry row and test docstring,
-  no product change under ruling Q-23b-1. `risk_tier: standard`. Branch
-  `docs/ice-append-retry-1`.
-  pins: ice-append-retry-1/C-001, C-002, C-003, C-004, C-005
 - [ice-tsns-sql-1-ledger.md](ice-tsns-sql-1-ledger.md) —
   **ICE-TSNS-SQL-1 (2026-09-17), in flight:** `timestamp_ns` / `timestamptz_ns` on the SQL door
   (rating row V3-06 and the ns half of V3-04) answer the Iceberg v3 spec with a PyIceberg 0.12.0
@@ -929,23 +486,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   of one cell per shape, registry row ICE-LIST-NULL-1 FIXED. Test-only, no product
   change. `risk_tier: standard`. Branch `chore/rp-31-fork-pin`.
   pins: ice-list-null-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [ice-count-fold-1-ledger.md](ice-count-fold-1-ledger.md) —
-  **ICE-COUNT-FOLD-1 (2026-09-19), in flight:** `count(*)` folds from an exact Iceberg
-  row count again — both integer-literal rules (`SparkIntegerLiteral`, the Spark door's
-  `SparkIntegralLiteral`) keep a count-of-`1` argument as DataFusion's `Int64(1)`
-  expansion through one shared walker; names, LongType and values unchanged on both
-  doors. `risk_tier: standard`. Branch `perf/ice-count-fold-1`.
-  pins: ice-count-fold-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [ice-list-null-2-ledger.md](ice-list-null-2-ledger.md) —
-  **ICE-LIST-NULL-2 (2026-09-19), in flight:** copy-on-write DELETE with a compound
-  predicate over a nested column answers Spark — the identity path declines
-  non-primitive selections to the fork DELETE path on both SQL doors, the six-cell
-  Rust door battery and the seven gate unit pins, the 128-cell Python pins flipped
-  from strict-xfail to plain (the eight OR cells pinning RePark's measured
-  `overwrite` operation), registry row ICE-LIST-NULL-1 corrected to RePark-side
-  FIXED. Product-path valve plus pins. `risk_tier: standard`. Branch
-  `fix/ice-list-null-2`.
-  pins: ice-list-null-2/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice-rowid-order-1-ledger.md](ice-rowid-order-1-ledger.md) —
   **ICE-ROWID-ORDER-1 (2026-09-18), in flight:** one statement's v3 row ids are
   deterministic at fork #300 (F-ROWID-ORDER-1) — both Spark recordings (a/b/c
@@ -963,34 +503,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   the other — the DML target scan plans the pinned snapshot and reads it under the current
   schema. v2/v3 × CoW/MoR, both doors, a Spark-created evolved table adopted. Registry rows
   ICE-EVO-DML-1, ICE-EVO-SWAP-1. `risk_tier: high`. Branch `fix/ice-evo-dml-1`.
-- [ice-promote-read-1-ledger.md](ice-promote-read-1-ledger.md) —
-  **ICE-PROMOTE-READ-1 (2026-09-16), in flight:** reads and DML after a legal
-  `ALTER COLUMN … TYPE` promotion answer Spark 4.1.2 — range / long-`IN` filters, promoted
-  partition sources, MERGE keyed on the promoted column, range UPDATE, single-era DML,
-  promoted-identity-partition DML and overwrite, Spark-created adopted tables, v2 and v3.
-  Fork half F-PROMOTE-READ-1 (manifest values read under the promoted type); RePark half
-  the DML target-scan conform. Registry rows ICE-PROMOTE-READ-1, ICE-PROMOTE-DML-1,
-  ICE-PROMOTE-PARTITION-1 (FIXED 2026-09-16). `risk_tier: high`. Branch `fix/ice-promote-read-1`.
-- [ice-column-reorder-1-ledger.md](ice-column-reorder-1-ledger.md) —
-  **ICE-COLUMN-REORDER-1 (2026-09-17), in flight:** `ALTER COLUMN … FIRST/AFTER`
-  column moves on Iceberg tables (rating row V2-10b) — move as a schema update with
-  unchanged field ids, or a typed Spark-shaped refusal with a dated registry row.
-  `risk_tier: standard`. Branch `fix/ice-column-reorder-1`.
-  pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
-- [ice-page-prune-1-ledger.md](ice-page-prune-1-ledger.md) —
-  **ICE-PAGE-PRUNE-1 (2026-09-19), in flight:** the RePark pins for page-level
-  row selection (slate unit 1, run 24a) — the Spark 4.1.2 recorder, the five
-  rewritten fixture warehouses plus compacted truth, both-door answer pins
-  with lineage, RePark-written self-consistency and page-index pins, and the
-  live re-derivation tier; the rewritten `del_v2` and the bare-decimal ranges
-  pin loud divergences. `risk_tier: standard`. Branch `perf/ice-page-prune-1`.
-  pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
-  **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
-  panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
-  join ends in `ResourcesExhausted` or spills on every scheduling, per owner ruling
-  Q-17c-7. `risk_tier: standard`. Branch `fix/never-oom-panic-1`.
-  pins: never-oom-panic-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [fnp-agg-1-ledger.md](fnp-agg-1-ledger.md) —
   **FNP-AGG-1 slice (d) (2026-09-21), in flight:** grouping_id plus the shared
   foundation (dispatch widening, refusal mapping, installer, oracles) ported onto
@@ -1003,81 +515,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   PySpark 4.1.2) and IO-JDBC-FORMAT-1 (owner ruling Q-15B-4). No product change. Attested complete.
   `risk_tier: standard`. Branch `docs/registry-16b-1`.
   pins: registry-16b-1/C-001, C-002, C-003
-- [ice-branch-ops-1-ledger.md](ice-branch-ops-1-ledger.md) —
-  **ICE-BRANCH-OPS-1 (2026-09-17), in flight:** `fast_forward`, `cherrypick_snapshot`,
-  `set_current_snapshot` and `rollback_to_timestamp` as RePark-side procedure wiring over
-  the fork's `ManageSnapshots` / `Transaction::cherry_pick` (no fork change), with a
-  recorded Spark oracle (`branch_ops_1_truth.json`), red-first pins on both doors, and
-  registry rows REF-5–REF-8. `risk_tier: standard`. Branch `fix/ice-branch-ops-1`.
-  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
-- [ice-procs-route-1-ledger.md](ice-procs-route-1-ledger.md) —
-  **ICE-PROCS-ROUTE-1 (2026-09-19), in flight:** `ancestors_of`,
-  `compute_table_stats`, `compute_partition_stats`, `rewrite_table_path` as
-  Spark-door routing over the fork's maintenance actions (no fork change), with
-  a 27-cell recorded Spark oracle, red-first pins on both doors, registry row
-  `ICE-PROCS-ROUTE-1`, and a strict-xfail pair plus fork ask for the
-  incremental version range. `risk_tier: standard`. Branch `fix/ice-procs-route-1`.
-  pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
-- [df-rust-3-ledger.md](df-rust-3-ledger.md) —
-  **DF-RUST-3 (2026-09-15), in flight:** `DataFrame.freqItems`,
-  `DataFrameStatFunctions.freqItems`, and `DataFrame.transpose` implemented Rust-first —
-  a `FreqItemCounter`-exact DataFusion UDAF and an eager `ResolveTranspose`-equivalent
-  kernel in repark-core, `#[pyfunction]` shims in repark-python, thin facade bindings.
-  Oracle: run-16b PySpark 4.1.2 cells (`freq_*`, `transpose_*`).
-  `risk_tier: standard`. Branch `feat/df-rust-3`.
-  pins: df-rust-3/C-001, C-002, C-003, C-004, C-005, C-006
-- [df-subquery-1-ledger.md](df-subquery-1-ledger.md) —
-  **DF-SUBQUERY-1 (2026-09-15), in flight:** `DataFrame.scalar` / `.exists` /
-  `.lateralJoin` / `.asTable` over `Column.outer` — `Expr::ScalarSubquery`,
-  `Expr::Exists`, `OuterReferenceColumn` and `LogicalPlan::Subquery` built in
-  Rust (repark-python + repark-core), EXISTS-in-projection and
-  lateral-projection-hoist rewrites in the core optimizer list, the
-  `SCALAR_SUBQUERY_TOO_MANY_ROWS` execution guard, `TableArg` + the UDTF
-  table-argument path, and the Spark-classic unqualified-resolution quirk
-  pinned both ways. Round 3 (2026-09-16): the Grok reviews' four P2s — the
-  hoist keeps the right side's `SubqueryAlias` qualifier, a correlated
-  `LIMIT` is stripped into `__repark_any_row` / `__repark_single_row`, the
-  `lateral_tvf_like` pin's claim is narrowed to what it reads with both
-  residuals disclosed, and `how="left"` gains a red-capable qualified pin;
-  P-201..P-206 / Y-1..Y-3 recorded as residue.
-  `risk_tier: standard`. Branch `feat/df-subquery-1`.
-  pins: df-subquery-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-- [subq-cells-1-ledger.md](subq-cells-1-ledger.md) —
-  **SUBQ-CELLS-1 (2026-09-16), in flight:** the run-18b follow-up folding the six
-  live-measured subquery cells (`lateral_inner_qualified_sql`,
-  `lateral_left_qualified_sql`, `lateral_sql_outer_expr_aliased_filter`,
-  `lateral_sql_outer_expr_aliased_on`, `lateral_sql_outer_expr_aliased_plain`,
-  `scalar_limit1_correlated_sql`, recorded on PySpark 4.1.2 by
-  `oracle-input/probe_subq_wanted.py`, 2026-09-16) into
-  `facade_df_subquery_oracle.json` and repointing the round-3 shape-only pins —
-  two repointed `_assert_frame` pins, a second assertion on the aliased-hoist
-  pin, two new SQL-door qualified-lateral pins, and ruling S-1's shape
-  assertions on the correlated `LIMIT 1` SQL door. No product code.
-  `risk_tier: standard`. Branch `test/subq-cells-1`.
-  pins: subq-cells-1/C-001, C-002, C-003, C-004, C-005
-- [facade-5-ledger.md](facade-5-ledger.md) —
-  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
-  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
-  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
-  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
-  proven), and the step-1 target — a measured format wall and its Rust move, or
-  the smallest byte-identical consolidation naming what stays for `eager.py`.
-  No product change under `python/repark/src/` or `crates/`.
-  `risk_tier: standard`. Branch `perf/facade-5-s0`.
-  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
-  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
-  to DataFusion's kernel and grafts the input array's outer null buffer back
-  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
-  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
-  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
-  order, and the depth-40 memory pin runs by default on both functions.
-  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
-  `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
-  L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
 - [ice-catalog-cache-1-ledger.md](ice-catalog-cache-1-ledger.md) —
   **ICE-CATALOG-CACHE-1 (2026-09-19), in flight:** the session's Iceberg metadata and manifest
   caches reach the Glue and S3 Tables builders (fork PR #311's handles); the credential-context
@@ -1094,82 +531,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `TBD-orchestrator`. `risk_tier: standard`. Branch `perf/ice-footer-cache-1`.
   pins: ice-footer-cache-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010
-- [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
-  **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
-  `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
-  default) and the `ice_read_perf` bench bed (setup, cold / warm / concurrent runs, the R-3
-  3 GiB size flag with exit 3). No product behaviour change. Every clause PROVEN, attestation
-  complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
-  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010
-- [ice-bench-baseline-1-ledger.md](ice-bench-baseline-1-ledger.md) —
-  **ICE-BENCH-BASELINE-1 (2026-09-19), in flight:** the read bench's own "before" switch —
-  a bare `run --baseline` flag that builds every run session with the shared caches off and
-  the fork's page-index row selection disabled, reports `baseline` / `baseline_switches` in
-  the JSON and the baseline in the table header, plus the boolean `baseline` dispatch input
-  on the `ice-read-perf-bench` job. No product behaviour change. Every clause PROVEN. What it
-  cannot switch off (timestamp pushdown, the `count(*)` fold) is recorded in the ledger, so
-  the number is never read as pre-campaign main. `risk_tier: standard`. Branch
-  `perf/ice-bench-baseline-1`.
-  pins: ice-bench-baseline-1/C-001, C-002, C-003, C-004, C-005
-- [cast-ts-string-1-ledger.md](cast-ts-string-1-ledger.md) —
-  **CAST-TS-STRING-1 (2026-09-19), in flight:** `CAST(<string> AS TIMESTAMP)` follows Spark
-  4.1.2's `stringToTimestamp` on every door — one Rust kernel
-  (`repark_functions::spark_string_timestamp`) behind `CAST`, `TRY_CAST`, `Column.cast`,
-  one-argument `to_timestamp` and time travel; a 604-cell recorded oracle plus red-first pins;
-  ICE-TT-RESOLVE-1's cast-gap strict xfails flipped. `risk_tier: standard`. Branch
-  `fix/cast-ts-string-1`.
-  pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011, C-012
-- [cast-overflow-insert-1-ledger.md](cast-overflow-insert-1-ledger.md) —
-  **CAST-OVERFLOW-INSERT-1 (2026-09-29), in flight:** out-of-range DOUBLE, FLOAT and
-  DECIMAL stores into integer columns refuse Spark 4.1.2's `CAST_OVERFLOW_IN_TABLE_INSERT`
-  on all nine write doors — the `StoreOverflowCast` Dml analyzer rule plus the same
-  conformance applied between eager analysis and optimization on the non-Dml internal
-  plans, with checked-cast boundary UDFs and a Spark-error catalog entry; R-INTDIV-9
-  closed. Verifier fold (2026-09-29): VO-1 judges the truncated value, VO-2 stops at
-  `LIMIT 0`, and the seven S3 observations stand as residues R-VO-S3-1..7.
-  `risk_tier: standard`. Branch `fix/cast-overflow-insert-1`.
-  pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004
-- [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
-  **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
-  `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
-  feature (stock sqlparser has no `MAP<…>` type and DataFusion 54 plans
-  `SQLDataType::Map` as unsupported); 21-cell recorded oracle plus red-first pins.
-  Steps 3–5 (claude-opus-5): the `repark_functions::cast_map` kernel serves every door,
-  the old refusal pins flip, every clause is PROVEN and the attestation is complete.
-  `risk_tier: standard`. Branch `fix/cast-map-spell-1`.
-  pins: cast-map-spell-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010
-- [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
-  **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
-  native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
-  rewrite embedded its child 3×/2× per level, so nested chains were exponential in native
-  memory (run 9 OBS-R9-6 / INC-R9-1: aborting at depth ~14, 84 GB uncapped). The depth-40
-  memory pin runs in a subprocess under `RLIMIT_AS` with a per-level bound exit. The
-  `when(...)` audit table covers `nullif` (lowered), `array_append`'s `_glue_element` and
-  the `DataFrame.replace` dict loop (2× embeds, no one-call native answer — each needs
-  its own card; `dataframe/core.py` is fenced to another lane).
-  `risk_tier: standard`. Branch `fix/abs-expr-1`.
-  pins: abs-expr-1/C-001, C-002, C-003, C-004, C-005
-- [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
-  **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
-  upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),
-  no formula change (D-1), the note and frame `notes` say "upper bound", the pin
-  reproduces the three AP-0 beds' RP-18 frame (bound ≥ live actual ≤ 2×, ranking
-  identical, red first by doctoring the bound), residue AP-1-R-001 closes
-  2026-09-12, the maintenance guide's S2-24 known-issues line retires, and the
-  AP-1 remeasure ledger departs to `completed/` through the lifecycle tool.
-  `risk_tier: standard`. Branch `chore/ap-1-close-1`.
-  pins: ap-1-close-1/C-001, C-002, C-003, C-004, C-005
-- [ap-3-ledger.md](ap-3-ledger.md) —
-  **AP-3 step 1 (2026-09-12), in flight:** `projected_files_at_target` multiplies
-  each item's footer `total_uncompressed_size` sum by `byte_ratio` — compression
-  counted once (S2-23, Q-1 ruled); the 0.55 fallback estimates uncompressed as
-  `file_size_in_bytes / 0.55`; the residue note, the frame `notes` and the
-  maintenance guide's S2-24 known-issues line move with it.
-  `risk_tier: standard`. Branch `feat/ap-3`.
-  pins: ap-3/C-001, C-002, C-003, C-004, C-005, C-006
 - [bl-11-numeric-binary-ledger.md](bl-11-numeric-binary-ledger.md) —
   **BL-11 (2026-09-16), in flight:** numeric to BINARY under runtime ANSI (batch-17
   oracle): ANSI-off big-endian encode of the integrals via the `IntToBinaryCast`
@@ -1186,29 +547,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [df-colregex-1-ledger.md](df-colregex-1-ledger.md) —
-  **DF-COLREGEX-1 step 1 (2026-09-11), in flight:** `colRegex`/`col_regex` reach the
-  measured Spark contract — a backticked pattern returns the `RegexColumn` marker
-  (`python/repark/src/repark/spark/dataframe/colregex.py`) that `select` expands to
-  every full-matching column in frame order, case-insensitively, zero matches
-  included; a bare pattern resolves as a literal column name at the call. `drop`
-  no-ops the marker; `withColumn`/`groupBy`/`orderBy`/`.alias` on it refuse. Both
-  pins flipped to parity (`test_colregex_backtick_spelling_parity`,
-  `test_colregex_multi_match_expands`, `test_colregex_duplicate_names_expand_positionally`);
-  EX-DF-1 FIXED both arms. Remediation round (ruling S2-21, review P2-1):
-  `expand_col_regex` binds matches only — 16.7–23.5× on sparse matches, parity at
-  500 — while overlay/duplicate-name frames keep the positional path. Facade-only —
-  no engine change. `risk_tier: standard`. Branch `fix/df-colregex-1`.
-  pins: df-colregex-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md) —
-  **DF-DESCRIBE-STR-1 (2026-09-11), in flight:** `describe`/`summary` answer Spark's
-  ordered stat rows on string columns — `mean`/`stddev` over `try_cast(col AS DOUBLE)`
-  (NULL for `"a"`/`"b"`, `6.0` for `"10","2","a"`), non-numeric non-string columns
-  skipped by the bare forms and refused with `PySparkValueError` when named, UNION ALL
-  legs ordered by a stat ordinal. §7 EX-DF-4 FIXED whole; EX-DF-15 narrowed to the
-  bare-`summary()` percentile refusal. `risk_tier: standard`. Branch
-  `fix/df-describe-str-1`.
-  pins: df-describe-str-1/C-001, C-002, C-003, C-004
 - [ex-29-class-remainder-ledger.md](ex-29-class-remainder-ledger.md) —
   **EX-29 (2026-09-11), in flight:** the v1.1 example backfill's class-surface
   remainder — the 29 non-`F.*` backlog names at base `a10062b8`. Re-measured on
@@ -1239,23 +577,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   walk still reports the seven so the API-freeze register keeps them frozen.
   `risk_tier: standard`. Branch `docs/ex-31-inventory-plumbing`.
   pins: ex-31-inventory-plumbing/C-001, C-002, C-003, C-004, C-005, C-006
-- [facade-1-ledger.md](facade-1-ledger.md) —
-  **FACADE-1 step 1 (2026-09-12), in flight:** the Arrow C Stream boundary —
-  `__arrow_c_stream__` capsules both ways, pyarrow optional at import and for
-  polars/pandas capsule consumers, `pa_ipc.new_stream` kept as the version-skew
-  fallback. `risk_tier: standard`. Branch `feat/facade-1`.
-  pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [facade-2-ledger.md](facade-2-ledger.md) —
-  **FACADE-2 step 3 (2026-09-13), in flight:** Group-1 `PyColumn.sql` sites are typed
-  native constructors (`lit_timestamp`/`lit_date`/`lit_time`/`lit_array_cast`/`pi`/`uuid`
-  in `column/display/construct.rs`); the generic `name(args)` render moved to
-  `PyColumnParts.call_scalar`; `F.expr` stays the sole parser caller. 39
-  generic-builder goldens proven byte-identical to a base release re-record.
-  C-017 release: depth-100 chains +1.2%, `lit(datetime)` −98% (no engine re-parse).
-  S2-21 remediation: `call_scalar` drops the second `Expr` clone and extracts part
-  lists in one `PyBackedStr` pass; cfa8ad2e→fix −17.5% on both deciding chains.
-  Branch `feat/facade-2-s3`.
-  pins: facade-2/C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
 - [facade-4-ledger.md](facade-4-ledger.md) —
   **FACADE-4 steps 0–1 (2026-09-14), in flight:** step 0 is measurement and pins
   only — release baseline cells isolating `repark_type_to_arrow` /
@@ -1292,24 +613,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   oracle pins on both doors; P2-2 stays OPEN residue.
   `risk_tier: standard`. Branch `feat/java-double-fd-1`.
   pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
-  **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
-  on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
-  naming the table and the service's `unreferencedFileRemoval` maintenance as the remedy
-  (D-1); `dry_run` refuses identically; `run_maintenance` keeps the orphan step in the plan
-  but reports it `skipped` with that reason on the dry run and on apply (D-2); the refusal
-  keys on `LocationPolicy::ServiceManagedLocation` so the pins need no AWS (D-3); the
-  maintenance guide's S3 Tables paragraph and the parity registry row land with it (C-005).
-  `risk_tier: standard`. Branch `fix/orphan-s3tables-1`.
-  pins: orphan-s3tables-1/C-001, C-002, C-003, C-004, C-005
-- [ice-hadoop-vn-1-ledger.md](ice-hadoop-vn-1-ledger.md) —
-  **ICE-HADOOP-VN-1 (2026-09-17), in flight:** the stale Hadoop `vN` writer raises
-  loud and loses nothing — fork #286 exclusive-creates `vN` names
-  (`75da2b58`, in-tree via RP-21); the RePark side pins the `conc` / `conc2`
-  shapes, the re-register recovery, the Spark stale-commit oracle, and the
-  DataFrame-door stale writers, plus registry row ICE-HADOOP-VN-1.
-  `risk_tier: standard`. Branch `fix/ice-hadoop-vn-1`.
-  pins: ice-hadoop-vn-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [perf-describe-1-ledger.md](perf-describe-1-ledger.md) —
   **PERF-DESCRIBE-1 (2026-09-11), in flight:** `describe`/`summary` aggregate in one
   pass — one `AggregateExec` computes count/avg/stddev/min/max per column over the
@@ -1390,12 +693,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   source; probe tests live only in `fork/` on `probe/silver-s0`.
   `risk_tier: standard`. Branch `docs/silver-s0`.
   pins: silver-s0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
-- [silver-s1-ledger.md](silver-s1-ledger.md) —
-  **SILVER-S1 (2026-09-12), in flight:** typed `SilverPlan` in `crates/repark-core/src/silver/`
-  — TOML parse with key-path refusals, closed operation enums, parse-time structural
-  validation, canonical identity bytes, deterministic `explain()`. No data execution.
-  `risk_tier: standard`. Branch `feat/silver-s1`.
-  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:
@@ -1486,60 +783,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `risk_tier: standard`. Branch `feat/ice-sorted-insert-1`.
   pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
-- [ice-session-write-conf-1-ledger.md](ice-session-write-conf-1-ledger.md) —
-  **ICE-SESSION-WRITE-CONF-1 (2026-09-19), in flight:** the session confs
-  `spark.sql.iceberg.snapshot-property.*` and
-  `spark.sql.iceberg.compression-codec` reach every Iceberg write with
-  writer-option over session-conf over table-property precedence (one Rust
-  resolver, router fold, facade forwards keys only); the 63-cell Spark oracle
-  (`ice_session_write_conf_1_spark_oracle.json`) and the red-first pins
-  (`test_ice_session_write_conf_1.py`: 26 red, 3 green controls on the base;
-  `test_ice_session_write_conf_1_paths.py`: the 38 run-25c path cells, 23 red).
-  Rounds 1 and 2 (2026-09-19) close a verification critic's four P1s and two P2s:
-  branch writes, the native `repark.sql` door, position-delete codecs, the
-  one-collision-rule summary merge, the mutation-proof Rust pins, and the
-  measured no-stamp on TRUNCATE / metadata-only delete. Three named residues —
-  `F-RDF-SESSION-CONF-1` (fork `rewrite_data_files`) on strict xfails, `IPI-08`
-  (whole-partition DELETE routing) on a dated xfail, and the
-  `engine-name` / `engine-version` reading; registry row FIXED. Round 6 (2026-09-20)
-  CLOSES the `IPI-08` residue: #739 landed the metadata-delete route, the dated xfail
-  re-measured green on the merged build, and `QS-DELETE-PART-META` is a pin.
-  Round 3 (2026-09-19) closes a SECOND verification critic's four P1s, six P2s and one
-  P3: no session conf decides a statement's route any more (a codec-only conf was
-  changing a plain UPDATE's committed file count), the native door answers a plain
-  UPDATE and `INSERT OVERWRITE … PARTITION`, a dynamic `overwritePartitions` builds its
-  collision oracle from the partitions it actually replaces, the property suffix is
-  carried verbatim as Spark carries it, and the three claims that lived only in the
-  Python pins have Rust pins. Two of the critic's premises were refuted by measurement
-  (Spark folds no conf-key prefix; Spark stamps no `rewrite_manifests` replace snapshot)
-  and a third measurement narrowed `F-RDF-SESSION-CONF-1` to its codec half. Fifteen new
-  Spark cells (`QP-*`, `QK-*`, `QM-*`); the fixture gains a per-cell `stamped` observation.
-  Round 4 (2026-09-20) closes a THIRD verification critic's two P1s and two P2s: the STATIC
-  `INSERT OVERWRITE … PARTITION` resolves the files its row filter removes (eight `QO-*`
-  cells), the owned INSERT plans the insert rather than a rebuilt `SELECT` so a session conf
-  changes what a commit stamps and never how its source types, the collision lookup uses the
-  verbatim suffix Spark stamps (three `QC-*` cells), and the layout battery asserts Spark's
-  OWN file count (six `QU-*` cells). The thirty-two round-3 and round-4 cells entered the
-  fixture and the live recorder, which re-derives all 95.
-  `risk_tier: standard`. Branch `fix/ice-session-write-conf-1`.
-  pins: ice-session-write-conf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-  pins: ice-session-write-conf-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
-  pins: ice-session-write-conf-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
-  pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
-  pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
-  pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
-  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053, C-054, C-055, C-056
-  pins: ice-session-write-conf-1/C-057, C-058
-- [parity-live-stop-1-ledger.md](parity-live-stop-1-ledger.md) —
-  **PARITY-LIVE-STOP-1, card v1.5.3 (2026-10-07):** no test stops the shared live-oracle
-  context. Measured over the full nightly command with a stop/rebuild probe: 0 stops, 0 guard
-  hits, `4 failed, 15968 passed` on main (the card's out-of-scope four), C-001. The
-  meta-delete and sorted-insert-2 recorders shared the generic `sc` catalog with procs-route
-  and now bind private names, red-first in the colliding order (C-002); three ordered runs
-  keep later live modules green (C-003); test-side only (C-004). `risk_tier: standard`.
-  Branch `fix/parity-live-stop-1`.
-  pins: parity-live-stop-1/C-001, C-002, C-003, C-004
-- [ice-resource-bound-1-ledger.md](ice-resource-bound-1-ledger.md) — **ICE-RESOURCE-BOUND-1 (U-11), 2026-10-26, steps 0 to 6:** the bound measured on 261 cells (v2 and v3; largest process peak 14.1 GiB), ruled by the owner and built with its pins; eleven clauses PROVEN with `pins:` citations (C-005 REJECTED: the D8/D9 door mismatch, carded), and C-012 OPEN by its append-only verdict, closed by the dated row C-013 (the verifier rounds passed on head 76bd5891). Branch `feat/ice-resource-bound-1`.
 
 ## Pointers
 - Up: [../map.md](../map.md)
@@ -1565,7 +808,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
   `feat/rp-10-repin-f25`.
-- [rp-19-ledger.md](rp-19-ledger.md) — **RP-19 (2026-09-12), in flight:** consume fork pin
+- [rp-19-ledger.md](../completed/rp-19-ledger.md) — **RP-19 (2026-09-12), in flight:** consume fork pin
   `3ebf7d36` (F-S3ROOT-1 `#281`, the whole bump — a bare-bucket object-store
   location, every S3 Tables table's, resolves to the bucket root like Java's
   `S3URI` for S3, GCS and OSS). Consumer: the ORPHAN-S3TABLES-1 registry row opens
@@ -1574,7 +817,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   loud refusal itself is the ORPHAN-S3TABLES-1 card. No product code, no live test
   (D-2/D-3). `risk_tier: standard`. Branch `chore/repin-rp-19`.
   pins: rp-19/C-001, C-002, C-003
-- [rp-16-ledger.md](rp-16-ledger.md) — **RP-16 (2026-09-11), in flight:** consume fork pin
+- [rp-16-ledger.md](../completed/rp-16-ledger.md) — **RP-16 (2026-09-11), in flight:** consume fork pin
   `090bc821` (F-WRITE-COMPRESS-1 `#276` plus riders `#273`–`#275`, `#277`). Consumer
   fix: `PERF-CATALOG-CACHE-WEIGHT-1` FIXED — charged object-graph weight, measured
   retain 1,071,000 / evict 1,070,000, retain pin 1,250,000, old 280000 now evicts. Do not re-measure
@@ -1684,7 +927,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
   No product change. `risk_tier: standard`. Branch `perf/cast-1`.
   pins: perf-cast-1/C-001, C-002, C-003, C-004
-- [polars-is-duplicated-1-ledger.md](polars-is-duplicated-1-ledger.md) —
+- [polars-is-duplicated-1-ledger.md](../completed/polars-is-duplicated-1-ledger.md) —
   **WO POLARS-IS-DUPLICATED-1 (2026-09-28):** `Column.is_duplicated()` on both
   doors answers real polars through filter, select and withColumn(s) (C-001..C-005),
   general window predicates keep today's refusal and every keep-cell answers
@@ -1695,7 +938,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   (a sort before/after the mask survives untouched).
   `risk_tier: standard`. Branch `feat/polars-is-duplicated-1`.
   pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-- [platform-1-ledger.md](platform-1-ledger.md) —
+- [platform-1-ledger.md](../completed/platform-1-ledger.md) —
   **PLATFORM-1 step 1 (2026-09-12), in flight:** the abi3 wheel matrix —
   `wheels.yml` `platform-matrix` runs the four legs PRs never see (manylinux
   aarch64, macOS arm64, macOS x86_64, Windows x86_64) on a nightly cron plus
@@ -1995,7 +1238,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   RED, findings F-001/F-002). C-009 OPEN per R-17c-7. Branch
   `feat/spark-sql-grammar-1`.
   pins: spark-sql-grammar-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-- [unresolved-routine-1-ledger.md](unresolved-routine-1-ledger.md) —
+- [unresolved-routine-1-ledger.md](../completed/unresolved-routine-1-ledger.md) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16), in flight:** every unknown routine
   refuses with Spark's `UNRESOLVED_ROUTINE` on both doors (Q-17c-3) — ledger with
   the card rulings plus R-18c-1/R-18c-2/R-18c-3, the red-first table (41
@@ -2017,7 +1260,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   clauses OPEN). No product code in step 1.
   `risk_tier: standard`. Branch `feat/fnp-11b-temporal-formats`.
   pins: fnp-11b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [logical-width-1-ledger.md](logical-width-1-ledger.md) —
+- [logical-width-1-ledger.md](../completed/logical-width-1-ledger.md) —
   **LOGICAL-WIDTH-1 step 1 (2026-09-16), in flight:** Spark's logical widths on the facade —
   ledger with the card rulings W-1..W-7 plus owner rulings Q-16b-3/Q-17a-2/Q-17a-4, the
   Spark-cell fixture (`python/repark/tests/types/facade_logical_width_oracle.json`: 22 width cells
@@ -2045,7 +1288,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   fixtures (`python/repark/tests/fixtures/orc/`).
   `risk_tier: standard`. Branch `feat/io-orc-1`.
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
-- [ice-dyn-overwrite-1-ledger.md](ice-dyn-overwrite-1-ledger.md) —
+- [ice-dyn-overwrite-1-ledger.md](../completed/ice-dyn-overwrite-1-ledger.md) —
   **ICE-DYN-OVERWRITE-1 (2026-09-17), in flight:** dynamic `partitionOverwriteMode`
   routing for PARTITION-less overwrites (V2-24b) plus the INSERT OVERWRITE half of the
   V2-20a K4 race — Rust-first conf carrier, dynamic path through `ReplacePartitions`,
@@ -2081,7 +1324,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   beside `ICE-RDF-DANGLE-2`. Docs-only unit, no product change.
   `risk_tier: standard`. Branch `docs/ice-rdf-fork-asks-1`.
   pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-- [listing-cost-flake-1-ledger.md](listing-cost-flake-1-ledger.md) —
+- [listing-cost-flake-1-ledger.md](../completed/listing-cost-flake-1-ledger.md) —
   **LISTING-COST-FLAKE-1 (2026-09-18), in flight:** the catalog
   listing-cost pin counts calls, not wall-clock — the `Instant` ratio
   assertion over 20 iterations becomes exact `list_tables` / `load_table`
@@ -2132,7 +1375,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   it, and the staging map loses its duplicated `array-null-1` / `fnp-11b` entries.
   `risk_tier: standard`. Branch `test/test-hygiene-1`.
   pins: test-hygiene-1/C-001, C-002, C-003, C-004, C-005
-- [ice-rtas-ops-2-ledger.md](ice-rtas-ops-2-ledger.md) —
+- [ice-rtas-ops-2-ledger.md](../completed/ice-rtas-ops-2-ledger.md) —
   **ICE-RTAS-OPS-2 (2026-09-18), in flight:** the RePark opt-in for the fork's
   RTAS replace commit (rating row V2-24) — `with_replace_write(ctas.or_replace)`
   on both staged CTAS branches, the four RTAS pins un-xfailed, plain-CTAS and
@@ -2142,7 +1385,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   new-table RTAS commits through the fork's public overwrite path, `commit_replace_write`).
   `risk_tier: standard`. Branch `ice-rtas-ops-2`.
   pins: ice-rtas-ops-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
-- [ice-tt-resolve-1-ledger.md](ice-tt-resolve-1-ledger.md) —
+- [ice-tt-resolve-1-ledger.md](../completed/ice-tt-resolve-1-ledger.md) —
   **ICE-TT-RESOLVE-1 (2026-09-19), in flight:** 1:1 Spark Iceberg time-travel resolution on
   every door — one shared `repark-core` resolver for the reader built-ins and both SQL doors,
   Spark refusal texts, the 94-cell oracle green offline plus live. Round 1 steps 1–2 committed
@@ -2159,7 +1402,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   (ORC/Avro table-property refusal, ENC-1 cleartext bytes, north-star C-2 FIXED
   citation); V3-05 recorded in the ledger only (PR #700 owns the row).
   `risk_tier: standard`. Branch `docs/ice-registry-sweep-1b`.
-- [ice-drop-ns-1-ledger.md](ice-drop-ns-1-ledger.md) —
+- [ice-drop-ns-1-ledger.md](../completed/ice-drop-ns-1-ledger.md) —
   **ICE-DROP-NS-1 (2026-09-19), in flight:** `DROP NAMESPACE` on a non-empty
   namespace refuses like Spark 4.1.2 — the 26-cell oracle plus red-first pins
   on the facade door, one shared pre-drop emptiness helper in `repark-iceberg`
@@ -2167,7 +1410,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   row FIXED with the nested-namespace boundary and the exception-class
   residual. `risk_tier: standard`. Branch `fix/ice-drop-ns-1`.
   pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-- [ice-replace-columns-1-ledger.md](ice-replace-columns-1-ledger.md) —
+- [ice-replace-columns-1-ledger.md](../completed/ice-replace-columns-1-ledger.md) —
   **ICE-REPLACE-COLUMNS-1 (2026-09-19), in flight:** `ALTER TABLE … REPLACE
   COLUMNS` drops every current top-level column and adds the listed ones with
   fresh field ids, as Spark's Hive-style form does — the 34-cell oracle
@@ -2179,7 +1422,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   replay of 34 / 34 equal (was 12 / 34). `risk_tier: standard`. Branch
   `fix/ice-replace-columns-1`.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-- [ice-writer-metrics-1-ledger.md](ice-writer-metrics-1-ledger.md) —
+- [ice-writer-metrics-1-ledger.md](../completed/ice-writer-metrics-1-ledger.md) —
   **ICE-WRITER-METRICS-1 (2026-09-20), in flight:** RePark's writers honour
   `write.metadata.metrics.*` and write Java's position-delete properties (IPI-09,
   RePark half) — `MetricsConfig::for_table` on every Parquet data-file writer,
@@ -2392,7 +1635,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
-- [u7-write-df-ledger.md](u7-write-df-ledger.md) —
+- [u7-write-df-ledger.md](../completed/u7-write-df-ledger.md) —
   **WO U7 PR1 (2026-09-24):** the DataFrame writer surface. `format("iceberg").save(name)`
   is a table write in every mode (Spark's TABLE_OR_VIEW_NOT_FOUND / ALREADY_EXISTS texts,
   partitionBy checked against the table), a path target refuses as Spark does or keeps the
@@ -2438,7 +1681,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   awaits the owner run on real AWS).
   `risk_tier: standard`. Branch `feat/s3-path-write-1`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
-- [deep-filter-chain-crash-1-ledger.md](deep-filter-chain-crash-1-ledger.md) —
+- [deep-filter-chain-crash-1-ledger.md](../completed/deep-filter-chain-crash-1-ledger.md) —
   **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29), in flight:** deep operator chains
   answer instead of killing the interpreter — every native entry point polls on
   a 256 MiB stacker segment and the shared runtime builds 256 MiB pool threads
@@ -2450,7 +1693,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   VmSize/VmRSS base-vs-head record live in the ledger; residues R-1..R-4.
   `risk_tier: standard`. Branch `fix/deep-filter-chain-crash-1`.
   pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
-- [string-literal-escape-1-ledger.md](string-literal-escape-1-ledger.md) —
+- [string-literal-escape-1-ledger.md](../completed/string-literal-escape-1-ledger.md) —
   **STRING-LITERAL-ESCAPE-1 (2026-09-29):** SQL string literals unescape as
   Spark does (C-000 the 229-literal Step-0 matrix, C-001 quote-aware doubles
   plus double-raw, C-002 raw head/tail splits, C-003 verbatim-exact values,
@@ -2488,7 +1731,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   close the sketch's two open refusal shapes; D-2 records the two
   saturations. `risk_tier: standard`. Branch `feat/mb-1-source`.
   pins: mb-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [threaded-collect-segv-1-ledger.md](threaded-collect-segv-1-ledger.md) —
+- [threaded-collect-segv-1-ledger.md](../completed/threaded-collect-segv-1-ledger.md) —
   **THREADED-COLLECT-SEGV-1 (2026-10-08):** the cause of the threaded-`collect()`
   segfault is pyarrow 25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in
   25.0.1), not RePark: the native stack, the reproduction without RePark, the
@@ -2507,7 +1750,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   (C-007) and the gates + card filing (C-009). `risk_tier: standard`. Branch
   `fix/empty-projection-count-1`.
   pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-- [cluster-codec-test-1-ledger.md](cluster-codec-test-1-ledger.md) —
+- [cluster-codec-test-1-ledger.md](../completed/cluster-codec-test-1-ledger.md) —
   **CLUSTER-CODEC-TEST-1 (2026-10-10), in flight:** the one `cluster`-feature test that
   fails on main, fixed ahead of the CI job. The TIMESTAMP refusal became a sound drop
   (C-001) and the DATE drop became a correct push (C-002), both in RP-27; the test
@@ -2521,7 +1764,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   the honest fix is test-side (C-002); the `generate_series` seed restores both
   cancel pins (C-003). `risk_tier: standard`. Branch `fix/cluster-tests-2`.
   pins: cluster-tests-2/C-001, C-002, C-003
-- [parity-live-infra-2-ledger.md](parity-live-infra-2-ledger.md) —
+- [parity-live-infra-2-ledger.md](../completed/parity-live-infra-2-ledger.md) —
   **PARITY-LIVE-INFRA-2 (2026-10-11):** the nightly live run goes green on all
   ten reds, tests and prose only. The six `FileNotFoundError` reproduce tests
   resolve the recorder interpreter through one helper (env override, box lane,
@@ -2534,7 +1777,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   fixed) (C-004). `risk_tier: standard`. Branch
   `test/parity-live-infra-2`.
   pins: parity-live-infra-2/C-001, C-002, C-003, C-004
-- [write-body-carriers-1-ledger.md](write-body-carriers-1-ledger.md) —
+- [write-body-carriers-1-ledger.md](../completed/write-body-carriers-1-ledger.md) —
   **WRITE-BODY-CARRIERS-1 step 0 (2026-10-14):** measurement only, no product
   code. Spark 4.1.2 refuses all 20 CTAS-with-write-body cells at parse and
   moves nothing (C-001); main's 40 CTAS cells commit the inner write then fail
@@ -2552,13 +1795,13 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   pending the owner wire-up (C-005). `risk_tier: standard`. Branch
   `test/ice-spark-cross-read-1`.
   pins: ice-spark-cross-read-1/C-001, C-002, C-003, C-004
-- [ns-array-floor-1-ledger.md](ns-array-floor-1-ledger.md) —
+- [ns-array-floor-1-ledger.md](../completed/ns-array-floor-1-ledger.md) —
   **NS-ARRAY-FLOOR-1 (2026-10-14):** step 0 measures whether the pandas and
   Arrow doors refuse nanoseconds at one site or one per door (C-001 input
   cells on main and the U-1 head, C-002 live input control, C-003 output cells
   on main, C-004 live output cells, C-005 the six sites). `risk_tier:
   standard`. Branch `fix/ns-array-floor-1`.
-- [pa-dbt-mismatch-redact-1-ledger.md](pa-dbt-mismatch-redact-1-ledger.md) —
+- [pa-dbt-mismatch-redact-1-ledger.md](../completed/pa-dbt-mismatch-redact-1-ledger.md) —
   **PA-DBT-MISMATCH-REDACT-1 (2026-10-16), audit PA-01:** step 0 measured main: the dbt
   profile-mismatch refusal carries all three sentinels and `dbt debug` prints two through
   `catalog_properties` (C-006). The refusal still compares the full configuration (C-001,
@@ -2575,7 +1818,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   v3 deletion-vector rewrite (C-003). Live Spark splits the same way (C-004). The doors differ
   only before the MERGE starts (C-005). The pin's tolerance is OPEN for the owner (C-006).
   `risk_tier: standard`. Branch `fix/occ-disjoint-merge-flake-1`.
-- [mb-fence-body-flake-1-ledger.md](mb-fence-body-flake-1-ledger.md) —
+- [mb-fence-body-flake-1-ledger.md](../completed/mb-fence-body-flake-1-ledger.md) —
   **MB-FENCE-BODY-FLAKE-1 (2026-10-18), the two-driver fence pin's CI failure:** step 0
   found a product gap, not an over-asserting pin. `enter_scope` loaded the sink before it
   entered the sink's scope, so a second driver in the process could run its `foreachBatch`
@@ -2628,13 +1871,13 @@ Spark refusal classification remain open. Exact measurements stay in the live-ru
 ICE-INTEGRITY-PINS-1 immediate-detail follow-up records its scoped plan and local validation in the existing ledger (2026-10-24). C-060 remains OPEN.
 
 The ICE-INTEGRITY-PINS-1 ledger gains C-066 to C-070 (2026-10-24): C-060's two halves measured and REJECTED from the first streamed nightly (the Glue walk is a budget finding, the S3 Tables catalog class is absent from both Iceberg 1.11.0 jars), the two AWS-EPHEMERAL-RUNS-1 obligations OPEN, and run 3's pre-streaming stall carried as its own OPEN row.
-- [gate-retire-1-ledger.md](gate-retire-1-ledger.md) —
+- [gate-retire-1-ledger.md](../completed/gate-retire-1-ledger.md) —
   **GATE-RETIRE-1 (2026-10-25), R-011's container-cast arm:** the arm is retained after the Muse MAX round-1 FAIL
   (GR-9): C-001 (retire the arm, never worse) REJECTED by measurement; C-002 (the hint, corrected) and C-003 (the
   discriminating walker tests) PROVEN; C-005 (the arm's refusals of four whole-container cast shapes pinned)
   PROVEN; C-004 (the Critic's coverage attestation, filed 2026-10-25 from the round-2 verdict) PROVEN. `risk_tier: standard`. Branch `feat/gate-retire-1`.
-- [ns-truthup-1-ledger.md](ns-truthup-1-ledger.md) — **NS-TRUTHUP-1 (2026-10-26), registry rows R-010, R-013, R-018 part 1 and R-001:** the four rows re-measured on main `9fd60149` (39 cells: 12 store, 13 answer, 12 refuse, 2 error), re-dated, and `DESCRIBE TABLE` shows `timestamp_ns` and `timestamptz_ns`; C-001, C-003 and C-004 PROVEN, C-002 OPEN on card SHOW-FUNCTIONS-1. Branch `feat/ns-truthup-1`.
-- [ice-tsns-update-range-class-1-ledger.md](ice-tsns-update-range-class-1-ledger.md) —
+- [ns-truthup-1-ledger.md](../completed/ns-truthup-1-ledger.md) — **NS-TRUTHUP-1 (2026-10-26), registry rows R-010, R-013, R-018 part 1 and R-001:** the four rows re-measured on main `9fd60149` (39 cells: 12 store, 13 answer, 12 refuse, 2 error), re-dated, and `DESCRIBE TABLE` shows `timestamp_ns` and `timestamptz_ns`; C-001, C-003 and C-004 PROVEN, C-002 OPEN on card SHOW-FUNCTIONS-1. Branch `feat/ns-truthup-1`.
+- [ice-tsns-update-range-class-1-ledger.md](../completed/ice-tsns-update-range-class-1-ledger.md) —
   **ICE-TSNS-UPDATE-RANGE-CLASS-1 (2026-10-26, U-4, parity row R-012):** the unfiltered `UPDATE` of an
   out-of-range `TIMESTAMP` literal reports INSERT's overflow class and text. Closed as already fixed by
   ICE-TSNS-TYPE-PLANNER-1; no product change, pins only. C-001 and C-002 PROVEN; C-003 (the verifier round)

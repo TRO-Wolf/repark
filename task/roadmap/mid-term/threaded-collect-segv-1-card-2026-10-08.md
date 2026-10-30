@@ -62,7 +62,7 @@ pyarrow 25.0.1 by a bump of the bundled mimalloc.
   `ARROW_DEFAULT_MEMORY_POOL=system`.
 
 The evidence, the tables and the recommendation are in the
-[ledger](../../ledgers/staging/threaded-collect-segv-1-ledger.md). The facade test is
+[ledger](../../ledgers/completed/threaded-collect-segv-1-ledger.md). The facade test is
 `python/repark/tests/session/test_threaded_collect_segv_1.py`; it skips on pyarrow 25.0.0.
 
 **Ruled 2026-10-09 (owner):** the floor is `pyarrow>=25.0.1`, in `python/repark/pyproject.toml`

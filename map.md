@@ -49,7 +49,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **C-2b round 1a (2026-10-07):** `tokio-postgres 0.7`, `tokio-postgres-rustls 0.13` and
   `rustls-native-certs 0.8` (already in the lock transitive) for the Postgres read path,
   consumed only behind `repark-connect`'s default-on `postgres` feature; D-M1 in the
-  [C-2 ledger](task/ledgers/staging/c-2-ledger.md).
+  [C-2 ledger](task/ledgers/completed/c-2-ledger.md).
   **C-2b round 2 (2026-10-07):** `rustls 0.23` (already in the lock) with no default features,
   so `repark-connect` can name its crypto provider (`ring`, already in its tree) for the
   `verify-full` TLS config; H-CRYPTO in the same ledger, §7.

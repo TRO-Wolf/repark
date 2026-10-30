@@ -275,4 +275,4 @@ COVERAGE_ATTESTATION:
 - Change: [../../../python/repark/src/repark/spark/dataframe/statistics.py](../../../python/repark/src/repark/spark/dataframe/statistics.py)
 - Pins: [../../../python/repark/tests/perf/test_perf_describe_1.py](../../../python/repark/tests/perf/test_perf_describe_1.py)
 - Motivation: `/tmp/oc-worker/grok-rev-descr/report.md` (S2-21 reviewer); oracle contract:
-  [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md)
+  [df-describe-str-1-ledger.md](../completed/df-describe-str-1-ledger.md)

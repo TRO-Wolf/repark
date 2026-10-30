@@ -20,7 +20,7 @@ The tag target is the release commit `f4e424c1`; the last product commit is `e84
   NULL condition, for every join type, with Spark's error class, condition and text:
   `INVALID_NON_DETERMINISTIC_EXPRESSIONS` for the first, `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE`
   for the second. The DataFrame door and the SQL door both refuse.
-- Ledger: [cross-join-condition-1-ledger.md](../../ledgers/staging/cross-join-condition-1-ledger.md)
+- Ledger: [cross-join-condition-1-ledger.md](../../ledgers/completed/cross-join-condition-1-ledger.md)
   (C-001, C-004, C-008).
 
 ## Dependency floor (#1015, `4224aeee`)
@@ -29,7 +29,7 @@ The tag target is the release commit `f4e424c1`; the last product commit is `e84
   segfaults a first threaded `collect()`, `take()`, `head()`, `first()` or `toLocalIterator()`
   when pyarrow is not yet loaded on the main thread (five of six doors measured). The fault is
   upstream (apache/arrow GH-50471), fixed in 25.0.1.
-- Ledger: [threaded-collect-segv-1-ledger.md](../../ledgers/staging/threaded-collect-segv-1-ledger.md).
+- Ledger: [threaded-collect-segv-1-ledger.md](../../ledgers/completed/threaded-collect-segv-1-ledger.md).
 
 ## `COUNT(*)` over the changelog, incremental and lineage readers (#1017, `ca5a062a`)
 
@@ -97,7 +97,7 @@ Ledger: [ice-tsns-merge-wall-1-ledger.md](../../ledgers/staging/ice-tsns-merge-w
   does.
 - A decimal argument is exact at every boundary Spark answers, and the argument types Spark
   rejects refuse with `DATATYPE_MISMATCH`; overflow refuses as Spark does.
-- Ledger: [sql-epoch-constructors-1-ledger.md](../../ledgers/staging/sql-epoch-constructors-1-ledger.md).
+- Ledger: [sql-epoch-constructors-1-ledger.md](../../ledgers/completed/sql-epoch-constructors-1-ledger.md).
 
 ## Known issues carried to v1.5.5
 

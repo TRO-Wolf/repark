@@ -1257,7 +1257,7 @@ perfectly good read.
   On Glue and S3 Tables the catalog pointer governs, and no replace cell exists yet. The native
   door's replace has no cell either; it is the remaining replace entry, carded in
   [NATIVE-DOOR-REPLACE-KILL-1](../task/roadmap/mid-term/native-door-replace-kill-1-card-2026-10-27.md).
-  Ledger: [ICE-REPLACE-KILL-DOORS-1](../task/ledgers/staging/ice-replace-kill-doors-1-ledger.md).
+  Ledger: [ICE-REPLACE-KILL-DOORS-1](../task/ledgers/completed/ice-replace-kill-doors-1-ledger.md).
 - **Dated 2026-10-28, AUD-001 (independent audit, reproduced 2026-10-28; OPEN until the unit merges):** the path read of a `type=hadoop` table follows `version-hint.text` and does not walk past it. A table whose hint is stale, after a committed `DELETE` (the audit restores the hint to the previous version; the complete newer metadata file remains), answers `session.read.format("iceberg").load(<table location>)` with the deleted row, ids 1, 2, 3, where the catalog and the latest metadata answer ids 2, 3. This is a silent wrong result, not a refusal; the owner's option 1 (ruling 2026-10-22) walks past the hint in ICE-HADOOP-HINT-WINDOW-1, dispatched 2026-10-28 on an Opus 5.5 builder lane, and this row re-widens to the path read on that unit's merge. Source: [the audit report](audits/iceberg-v2-label-independent-audit-2026-10-28.md), AUD-001.
 - **Dated 2026-10-28, FIXED by ICE-HADOOP-HINT-WINDOW-1 (PR #1205, merged 2026-10-28 as squash `9ab67d7d`; product head `749f11a4`; ledger
   [ice-hadoop-hint-window-1](../task/ledgers/completed/ice-hadoop-hint-window-1-ledger.md)):** the path
@@ -2283,7 +2283,7 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 
 - **repark** — the public Rust functions `append`, `write_data_files`, `write_data_files_from_stream`, `write_partitioned_data_files` and `write_partitioned_data_files_from_stream` build `WriteConcurrency::default()`, which has no pool, so the ordered-input bound never fires through them. The `_with_concurrency` variants carry whatever bound the caller resolved.
 - **Apache Spark** — not applicable: a Rust API has no Spark counterpart.
-- **Pin** — none. The declaration rests on the reading of the call sites in `crates/repark-iceberg/src/write/append.rs` and `partitioned_files.rs`, and on the sites in `merge/file_sink.rs`. This row has no test that reaches it, so it does not meet the rule that a row lands with its pin; the owner rules whether it stays. ([ledger](../task/ledgers/staging/ice-resource-bound-1-ledger.md) C-006 cites the bound keys only.)
+- **Pin** — none. The declaration rests on the reading of the call sites in `crates/repark-iceberg/src/write/append.rs` and `partitioned_files.rs`, and on the sites in `merge/file_sink.rs`. This row has no test that reaches it, so it does not meet the rule that a row lands with its pin; the owner rules whether it stays. ([ledger](../task/ledgers/completed/ice-resource-bound-1-ledger.md) C-006 cites the bound keys only.)
 - **Rationale** — DATED ROW 2026-10-26, orchestrator ruling O-2: the session carries the bound; a session-less API has no pool to bound against.
 - **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** unchanged: the ctx-less
   public Rust APIs carry no pool and so no bound. Carried on the format-v2 label (ICE-V2-LABEL-1).

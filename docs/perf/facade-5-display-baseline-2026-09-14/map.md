@@ -26,4 +26,4 @@ door's bytes (`door_check`).
 
 - Up: [../map.md](../map.md)
 - Baseline doc: [../facade-5-display-baseline-2026-09-14.md](../facade-5-display-baseline-2026-09-14.md)
-- Ledger: [../../../task/ledgers/staging/facade-5-ledger.md](../../../task/ledgers/staging/facade-5-ledger.md)
+- Ledger: [../../../task/ledgers/staging/facade-5-ledger.md](../../../task/ledgers/completed/facade-5-ledger.md)

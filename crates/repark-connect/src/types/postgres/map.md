@@ -75,7 +75,7 @@ inverse, from an Arrow value to the field, and `encode.rs` dispatches to those. 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Ledger: [c-2-ledger.md](../../../../../task/ledgers/staging/c-2-ledger.md)
+- Ledger: [c-2-ledger.md](../../../../../task/ledgers/completed/c-2-ledger.md)
 
 ## Debug
 

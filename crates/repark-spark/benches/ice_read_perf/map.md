@@ -372,4 +372,4 @@ the page pin grows `rows_per_file` instead.
 - Up: [../map.md](../map.md)
 - Baseline file (filled by the orchestrator):
   `docs/perf/ice-read-perf-baseline-2026-09-19.md`
-- Ledger: [task/ledgers/staging/ice-read-perf-0-ledger.md](../../../../task/ledgers/staging/ice-read-perf-0-ledger.md)
+- Ledger: [task/ledgers/staging/ice-read-perf-0-ledger.md](../../../../task/ledgers/completed/ice-read-perf-0-ledger.md)

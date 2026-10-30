@@ -3,7 +3,7 @@
 **Date:** 2026-10-18. **Filed by:** Claude (claude-opus-5-5), executor of unit MB-FENCE-BODY-FLAKE-1.
 
 **Status:** the fenced-body race is fixed in the unit's pull request (ledger
-[mb-fence-body-flake-1](../../ledgers/staging/mb-fence-body-flake-1-ledger.md)). One question
+[mb-fence-body-flake-1](../../ledgers/completed/mb-fence-body-flake-1-ledger.md)). One question
 stays open: the second way the same pin fails, its 10 s bound, below.
 
 **Retires:** when the unit's pull request merges and the owner rules on the open question (keep

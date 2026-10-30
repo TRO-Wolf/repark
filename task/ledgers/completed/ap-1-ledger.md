@@ -13,7 +13,7 @@ files does not compress worse once the dead dictionary pages are gone. The
 `RESIDUE_NOTE` and every frame row's `notes` spell the bound; the AP-3 formula
 is unchanged (uncompressed footer sum × `byte_ratio`, compression counted
 once). Clause table:
-[task/ledgers/staging/ap-1-close-1-ledger.md](../staging/ap-1-close-1-ledger.md).
+[task/ledgers/staging/ap-1-close-1-ledger.md](ap-1-close-1-ledger.md).
 
 The four measurements (synthetic beds; projection vs live rewrite actual):
 

@@ -4,7 +4,7 @@
 **Model:** swe-2-high · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
-[rp-16-ledger.md](rp-16-ledger.md).
+[rp-16-ledger.md](../completed/rp-16-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 

@@ -16,4 +16,4 @@
 
 **Relation to WRITE-SPINE-1:** the door naming is part of the door matrix and the conform stage that [WRITE-SPINE-1](write-spine-1-card-2026-10-22.md) owns. This card is not scheduled; the owner picks its place against WRITE-SPINE-1's steps.
 
-**Where to look:** the probe, `task/wo/ice-resource-bound-1/probe_bound.py` (`merge_statement`); the table, [step-0-bound-table-2026-10-26.md](../../wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md); the unit ledger, [ice-resource-bound-1-ledger.md](../../ledgers/staging/ice-resource-bound-1-ledger.md), clause C-005.
+**Where to look:** the probe, `task/wo/ice-resource-bound-1/probe_bound.py` (`merge_statement`); the table, [step-0-bound-table-2026-10-26.md](../../wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md); the unit ledger, [ice-resource-bound-1-ledger.md](../../ledgers/completed/ice-resource-bound-1-ledger.md), clause C-005.

@@ -288,5 +288,5 @@ Incidents, all recovered:
 
 - Up: [map.md](map.md) · Ledger: [../../ledgers/staging/facade-4-ledger.md](../../ledgers/staging/facade-4-ledger.md)
 - Perf: [../../../docs/perf/facade-4-types-baseline-2026-09-14.md](../../../docs/perf/facade-4-types-baseline-2026-09-14.md)
-- FACADE-5: [../../ledgers/staging/facade-5-ledger.md](../../ledgers/staging/facade-5-ledger.md) · [../../../docs/perf/facade-5-display-baseline-2026-09-14.md](../../../docs/perf/facade-5-display-baseline-2026-09-14.md)
+- FACADE-5: [../../ledgers/staging/facade-5-ledger.md](../../ledgers/completed/facade-5-ledger.md) · [../../../docs/perf/facade-5-display-baseline-2026-09-14.md](../../../docs/perf/facade-5-display-baseline-2026-09-14.md)
 - Audit: [../epic-term/facade-audit-2026-09-10.md](../epic-term/facade-audit-2026-09-10.md) · Previous: [overnight-report-2026-09-13-run12.md](overnight-report-2026-09-13-run12.md)

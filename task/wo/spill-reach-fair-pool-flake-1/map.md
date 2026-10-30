@@ -36,7 +36,7 @@ with 0 refusals in 229 loaded-type runs and the join still spilling 12 to 14 tim
 the default argument and the docstring digit that names the pool; the assertions are untouched.
 
 The evidence is in [evidence/](evidence/map.md). The unit's ledger is
-[../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md);
+[../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/completed/spill-reach-fair-pool-flake-1-ledger.md);
 it stays in staging because clause C-006 (the runner sample) is open.
 
 Up: [../map.md](../map.md).
