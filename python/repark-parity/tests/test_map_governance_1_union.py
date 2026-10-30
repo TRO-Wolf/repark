@@ -199,7 +199,11 @@ def test_the_gate_reports_records_whose_row_names_a_defined_test(repo: Path) -> 
         text=True,
         check=False,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 1
+    assert (
+        f"{_LEDGER}: C-001 row names `demo_holds`, which only {_TEST} defines, and no binding"
+        " names that file"
+    ) in result.stderr
     assert "row-named records: 1 (0 ambiguous)" in result.stdout
     assert f"  {_UNIT}/C-001\tdemo_holds\t{_TEST}" in result.stdout
 
@@ -232,6 +236,87 @@ def test_heredoc_herestring_escape_and_rust_comment_shapes(repo: Path) -> None:
     good = (
         f"{script}::real_after_herestring, {script}::real_after_escape, "
         f"{rust}::real_one, {rust}::real_two"
+    )
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {good}\nC-002: {_TEST}\n")
+    result = _grammar(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_a_double_backtick_span_and_a_parametrize_id_still_bind(tmp_path: Path) -> None:
+    pytest_file = "crates/demo/tests/test_cells.py"
+    files = {
+        _TEST: _ITEM_TEST,
+        pytest_file: "def test_option_cell_values():\n    pass\n",
+    }
+    text = f"# map\n\nNothing named here. pins: {_UNIT}/C-003\n"
+    repo = _scratch_map_repo(tmp_path, text, files)
+    _write(
+        repo,
+        _LEDGER,
+        _rows(
+            "the message ``a `quoted` word`` then `demo_holds`",
+            "`test_option_cell_values[COLL-00..08]` and `test_option_cell_values[*]`",
+            "measured",
+        ),
+    )
+    assert _migrate(repo).returncode == 0
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}::demo_holds",
+        f"C-002: {pytest_file}::test_option_cell_values",
+        "C-003: none (records)",
+    ]
+    _write(repo, _SIDECAR, _HEADER + "C-001: none (records)\nC-002: none (records)\n")
+    result = _grammar(repo)
+    assert result.returncode == 1
+    assert f"C-002 row names `test_option_cell_values`, which only {pytest_file} defines" in (
+        result.stderr
+    )
+
+
+def test_two_regenerations_are_byte_identical(tmp_path: Path) -> None:
+    other = "crates/demo/tests/other.rs"
+    text = f"# map\n\n- `pins.rs` — the battery. pins: {_UNIT}/C-001, C-002\n"
+    outputs = []
+    for attempt in ("first", "second"):
+        (tmp_path / attempt).mkdir()
+        repo = _scratch_map_repo(
+            tmp_path / attempt, text, {_TEST: _ITEM_TEST, other: "#[test]\nfn other_holds() {}\n"}
+        )
+        _write(repo, _LEDGER, _rows("`other.rs` and `demo_holds`", "measured"))
+        _write(repo, _SIDECAR, _HEADER + "C-001: none (records)\n")
+        assert _migrate(repo).returncode == 0
+        again = _migrate(repo)
+        assert "(0 written by this run)" in again.stdout
+        outputs.append((repo / _SIDECAR).read_text(encoding="utf-8"))
+    assert outputs[0] == outputs[1]
+    assert outputs[0].splitlines()[2:] == [
+        f"C-001: {other}, {_TEST}::demo_holds",
+        f"C-002: {_TEST}",
+    ]
+
+
+def test_arithmetic_ansi_quotes_extern_macro_and_cfg_shapes(repo: Path) -> None:
+    script = "scripts/check_arith.sh"
+    body = (
+        "(( x << 2 ))\nreal_after_arith() {\n  :\n}\necho $'it\\'s'\nreal_after_ansi() {\n  :\n}\n"
+    )
+    _write(repo, script, body)
+    rust = "crates/demo/tests/shapes.rs"
+    _write(
+        repo,
+        rust,
+        'extern "C" fn real_extern() {}\n'
+        "macro_rules! battery {\n    () => {\n        fn phantom_macro() {}\n    };\n}\n"
+        "#[cfg(any())]\nfn phantom_cfg() {}\n#[test]\nfn real_after() {}\n",
+    )
+    for path, name in ((rust, "phantom_macro"), (rust, "phantom_cfg")):
+        _write(repo, _SIDECAR, _HEADER + f"C-001: {path}::{name}\nC-002: {_TEST}\n")
+        result = _grammar(repo)
+        assert result.returncode == 1, name
+        assert f"C-001 names `{name}`, which {path} does not define" in result.stderr
+    good = (
+        f"{script}::real_after_arith, {script}::real_after_ansi, "
+        f"{rust}::real_extern, {rust}::battery, {rust}::real_after"
     )
     _write(repo, _SIDECAR, _HEADER + f"C-001: {good}\nC-002: {_TEST}\n")
     result = _grammar(repo)

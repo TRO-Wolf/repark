@@ -965,7 +965,8 @@ def test_a_shared_citation_binds_each_clause_by_its_own_row(tmp_path: Path) -> N
     _write(repo, _LEDGER, rows)
     result = _migrate(repo)
     assert result.returncode == 0, result.stderr
-    assert "clauses that gained a file their own ledger row names: 1" in result.stdout
+    assert "clauses that gained a file their own ledger row names: 0" in result.stdout
+    assert "PROVEN clauses bound by a test their row names: 2" in result.stdout
     assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
         f"C-001: {_TEST}::demo_holds",
         f"C-002: {other}::other_holds, {_TEST}",

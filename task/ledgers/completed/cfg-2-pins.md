@@ -10,7 +10,7 @@ C-007: crates/repark-core/src/named_sources/tests.rs::auto_register_false_lists_
 C-008: crates/repark-core/src/named_sources/tests.rs::catalog_named_like_source_refuses_as_duplicate
 C-009: crates/repark-core/src/named_sources/tests.rs::unknown_source_handle_refuses_naming_declared_sources
 C-010: python/repark/tests/session/test_config_mirror.py::test_rendered_database_source_loads
-C-011: crates/repark-core/src/named_sources/tests.rs
+C-011: crates/repark-core/src/named_sources/tests.rs, crates/repark-spark/src/tests/catalog_ops.rs::drop_table
 C-012: none (records)
 C-013: python/repark/tests/io/test_session_sources.py::test_sources_lists_declared_source_with_redacted_properties, python/repark/tests/session/test_config_mirror.py
 C-014: python/repark/tests/io/test_session_sources.py

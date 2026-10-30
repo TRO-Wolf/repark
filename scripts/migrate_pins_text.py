@@ -17,18 +17,62 @@ from types import ModuleType
 
 
 def load_gate() -> ModuleType:
-    """The grammar gate, for its citation regex."""
-    location = Path(__file__).resolve().parent / "check_ledger_grammar.py"
-    spec = importlib.util.spec_from_file_location("check_ledger_grammar", location)
-    if spec is None or spec.loader is None:
-        message = f"cannot load {location}"
-        raise RuntimeError(message)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """The grammar gate, for its citation regex; loaded on first use, because the gate itself
+    imports this module for its code-span reader."""
+    if "gate" not in _LOADED:
+        location = Path(__file__).resolve().parent / "check_ledger_grammar.py"
+        spec = importlib.util.spec_from_file_location("check_ledger_grammar", location)
+        if spec is None or spec.loader is None:
+            message = f"cannot load {location}"
+            raise RuntimeError(message)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _LOADED["gate"] = module
+    return _LOADED["gate"]
 
 
-GATE = load_gate()
+def code_spans(text: str) -> list[str]:
+    """The contents of every CommonMark code span in `text`: a run of N backticks opens a span
+    that only the next run of exactly N backticks closes; runs of another length inside it are
+    literal, and an opener with no closer is literal text. One leading and one trailing space
+    are dropped when both are present and the content is not all spaces."""
+    spans: list[str] = []
+    index = 0
+    while True:
+        opener = BACKTICK_RUN.search(text, index)
+        if opener is None:
+            return spans
+        width = len(opener.group(0))
+        closer = BACKTICK_RUN.search(text, opener.end())
+        while closer is not None and len(closer.group(0)) != width:
+            closer = BACKTICK_RUN.search(text, closer.end())
+        if closer is None:
+            index = opener.end()
+            continue
+        content = text[opener.end() : closer.start()].replace("\n", " ")
+        if len(content) > 1 and content[0] == " " and content[-1] == " " and content.strip():
+            content = content[1:-1]
+        spans.append(content)
+        index = closer.end()
+
+
+def span_name(span: str) -> str | None:
+    """The identifier a code span names: the last segment of a qualified, `path::name` or
+    `::name` span, with a trailing `()` or a pytest parametrize id `[...]` dropped."""
+    match = SPAN_NAME.match(span.strip())
+    return match.group(1) if match is not None else None
+
+
+def gate_citation() -> re.Pattern[str]:
+    """The grammar gate's citation regex."""
+    return load_gate().CITATION
+
+
+_LOADED: dict[str, ModuleType] = {}
+BACKTICK_RUN = re.compile(r"`+")
+SPAN_NAME = re.compile(
+    r"^(?:[\w./-]*::)?(?:[A-Za-z_]\w*(?:::|\.))*([A-Za-z_]\w*)(?:\(\)|\[[^\]]*\])?$", re.ASCII
+)
 SENTINEL = "\x00"
 FENCE = re.compile(r"^\s*(```|~~~)")
 LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d+\.)\s")
@@ -218,13 +262,13 @@ def disclaimers(
     ordered = sorted(bounds)
     citations = [
         (match.start(), match.group(1), set(re.findall(r"C-\d{3}", match.group(2))))
-        for match in GATE.CITATION.finditer(text, start, end)
+        for match in gate_citation().finditer(text, start, end)
     ]
     unbound: set[tuple[int, str]] = set()
     candidates: list[tuple[int, str, str]] = []
     for low, high in itertools.pairwise(ordered):
         sentence = text[low:high]
-        plain = GATE.CITATION.sub("", sentence)
+        plain = gate_citation().sub("", sentence)
         quoted = " ".join(sentence.split())
         proves = PROVES_ONLY.search(plain)
         if proves is not None:
@@ -240,9 +284,9 @@ def disclaimers(
         units = {unit for _at, unit, _cited in citations if unit.lower() in lowered}
         anaphor = False
         for offset, clause in clauses_of(sentence):
-            if DISCLAIMER.search(GATE.CITATION.sub("", clause)) is None:
+            if DISCLAIMER.search(gate_citation().sub("", clause)) is None:
                 continue
-            named = set(re.findall(r"C-\d{3}", GATE.CITATION.sub("", clause)))
+            named = set(re.findall(r"C-\d{3}", gate_citation().sub("", clause)))
             position = low + offset
             if not named and anaphor:
                 continue

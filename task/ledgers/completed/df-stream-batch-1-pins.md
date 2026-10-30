@@ -1,6 +1,6 @@
 # df-stream-batch-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: none (records)
+C-001: python/repark/tests/dataframe/test_df_stream_batch_1.py::test_write_stream_refuses_with_spark_error_class
 C-002: python/repark/tests/dataframe/test_df_stream_batch_1.py::test_with_watermark_parses_spark_interval_forms, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_with_watermark_rejects_negative_delay, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_with_watermark_rejects_non_str_arguments, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_with_watermark_rejects_unparsable_delay, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_with_watermark_returns_the_same_batch_frame
 C-003: python/repark/tests/dataframe/test_df_stream_batch_1.py::test_drop_duplicates_within_watermark_refuses_on_batch, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_drop_duplicates_within_watermark_rejects_bad_subset, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_drop_duplicates_within_watermark_reports_missing_column
 C-004: python/repark/tests/dataframe/test_df_stream_batch_1.py::test_pandas_api_raises_spark_not_implemented, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_plot_property_raises_spark_not_implemented, python/repark/tests/dataframe/test_df_stream_batch_1.py::test_rdd_property_raises_spark_not_implemented

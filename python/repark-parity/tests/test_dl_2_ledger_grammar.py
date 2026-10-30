@@ -295,6 +295,10 @@ def test_exceptions_table_ratchets_down_only(tmp_path: Path) -> None:
     )
     copy = tmp_path / "raised_ceilings.py"
     copy.write_text(raised, encoding="utf-8")
+    text_module = _SCRIPT.parent / "migrate_pins_text.py"
+    (tmp_path / text_module.name).write_text(
+        text_module.read_text(encoding="utf-8"), encoding="utf-8"
+    )
     result = subprocess.run(
         [sys.executable, str(copy), "--repo", str(_REPO)],
         capture_output=True,

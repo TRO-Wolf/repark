@@ -56,10 +56,12 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib.util
 import re
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 STAGING = "task/ledgers/staging"
 COMPLETED = "task/ledgers/completed"
@@ -71,6 +73,8 @@ RECORDS = "none (records)"
 TEST_NAMES = re.compile(r"^(?:tests\.rs|.+_tests\.rs|test_.+\.py|.+_test\.py)$")
 CODE_SUFFIXES: frozenset[str] = frozenset({".rs", ".py", ".sh"})
 RUST_COMMENT_MARK = re.compile(r"/\*|\*/")
+RUST_MACRO_BODY = re.compile(r"macro_rules![ \t]*[A-Za-z_][A-Za-z0-9_]*[ \t\n]*[{(\[]")
+RUST_CFG_NEVER = re.compile(r"#\[cfg\(any\(\)\)\]")
 RUST_TOKEN = re.compile(
     r"//[^\n]*|/\*|\*/"
     r'|(?<![A-Za-z0-9_])[bc]?r(#*)".*?"\1'
@@ -80,7 +84,7 @@ RUST_TOKEN = re.compile(
 )
 RUST_DEFINITION = re.compile(
     r"^[ \t]*(?:pub(?:\([^)\n]*\))?[ \t]+)?"
-    r"(?:(?:async|const|unsafe|default|extern[ \t]+\"[^\"\n]*\")[ \t]+)*"
+    r"(?:(?:async|const|unsafe|default|extern(?:[ \t]+\"[^\"\n]*\")?)[ \t]+)*"
     r"(?:fn|struct|enum|trait|type|const|static|mod|union)[ \t]+([A-Za-z_][A-Za-z0-9_]*)"
     r"|^[ \t]*macro_rules![ \t]*([A-Za-z_][A-Za-z0-9_]*)",
     re.MULTILINE,
@@ -100,9 +104,6 @@ _TEST_NAMES: dict[tuple[str, int], frozenset[str]] = {}
 RUST_TEST_FUNCTION = re.compile(
     r"#\[(?:test|tokio::test|rstest)\b[^\]]*\](?:\s*#\[[^\]]*\])*\s*"
     r"(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)"
-)
-QUALIFIED_SPAN = re.compile(
-    r"^(?:[\w./-]*::)?(?:[A-Za-z_]\w*(?:::|\.))*([A-Za-z_]\w*)(?:\(\))?$", re.ASCII
 )
 _CARRIES: dict[tuple[str, int], bool] = {}
 _STRIPPED: dict[int, str] = {}
@@ -134,6 +135,21 @@ HEADER_LINES = 40
 CATEGORIES: tuple[str, ...] = tuple(f"AT-{n}" for n in range(1, 11))
 SEVERITIES: frozenset[str] = frozenset({"S0", "S1", "S2", "S3"})
 DISPOSITIONS: tuple[str, ...] = ("OPEN", "REMEDIATED", "ACCEPTED_FLAGGED", "DISPUTED")
+
+
+def load_text() -> ModuleType:
+    """The map-text helpers beside this script, for the shared code-span reader."""
+    location = Path(__file__).resolve().parent / "migrate_pins_text.py"
+    spec = importlib.util.spec_from_file_location("migrate_pins_text", location)
+    if spec is None or spec.loader is None:
+        message = f"cannot load {location}"
+        raise RuntimeError(message)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+TEXT = load_text()
 
 
 def tracked_paths(repo: Path) -> list[str]:
@@ -276,6 +292,48 @@ def _strip_rust(text: str) -> str:
         cursor = index = scan
 
 
+def _balanced_end(text: str, start: int) -> int:
+    """The index just past the bracket group that opens at `start`, or the end of the text."""
+    pairs = {"{": "}", "(": ")", "[": "]"}
+    closing = pairs[text[start]]
+    depth = 0
+    for index in range(start, len(text)):
+        if text[index] == text[start]:
+            depth += 1
+        elif text[index] == closing:
+            depth -= 1
+            if not depth:
+                return index + 1
+    return len(text)
+
+
+def without_inert_rust(stripped: str) -> str:
+    """Stripped Rust with the bodies of `macro_rules!` and the items under `#[cfg(any())]`
+    blanked (newlines kept): a `fn` there is a template or compiled out, not a definition."""
+    spans: list[tuple[int, int]] = []
+    for macro in RUST_MACRO_BODY.finditer(stripped):
+        spans.append((macro.end() - 1, _balanced_end(stripped, macro.end() - 1)))
+    for attribute in RUST_CFG_NEVER.finditer(stripped):
+        brace = stripped.find("{", attribute.end())
+        semicolon = stripped.find(";", attribute.end())
+        if brace != -1 and (semicolon == -1 or brace < semicolon):
+            spans.append((attribute.start(), _balanced_end(stripped, brace)))
+        elif semicolon != -1:
+            spans.append((attribute.start(), semicolon + 1))
+    if not spans:
+        return stripped
+    out: list[str] = []
+    cursor = 0
+    for start, end in sorted(spans):
+        if start < cursor:
+            continue
+        out.append(stripped[cursor:start])
+        out.append("\n" * stripped.count("\n", start, end))
+        cursor = end
+    out.append(stripped[cursor:])
+    return "".join(out)
+
+
 def _bound_names(target: ast.expr) -> set[str]:
     """The names an assignment target binds: a Name, or the Names inside a Tuple, List or
     Starred; a subscript or attribute target binds none."""
@@ -290,7 +348,8 @@ def _bound_names(target: ast.expr) -> set[str]:
 
 def strip_shell(text: str) -> str:
     """Shell source with heredoc bodies (any delimiter quoting), quoted strings (which may span
-    lines) and comments blanked; newlines kept. `$((...))` is arithmetic, not a heredoc."""
+    lines), `$'...'` strings and comments blanked; newlines kept. `$((...))` and `((...))` are
+    arithmetic, not heredocs."""
     out: list[str] = []
     quote: str | None = None
     closing: str | None = None
@@ -323,9 +382,17 @@ def strip_shell(text: str) -> str:
                 continue
             if char == "#" and (index == 0 or line[index - 1] in " \t;"):
                 break
-            if line.startswith("$((", index):
-                stop = line.find("))", index)
+            arithmetic = 3 if line.startswith("$((", index) else 0
+            arithmetic = arithmetic or (2 if line.startswith("((", index) else 0)
+            if arithmetic:
+                stop = line.find("))", index + arithmetic)
                 index = len(line) if stop == -1 else stop + 2
+                continue
+            if line.startswith("$'", index):
+                cursor = index + 2
+                while cursor < len(line) and line[cursor] != "'":
+                    cursor += 2 if line[cursor] == "\\" else 1
+                index = cursor + 1
                 continue
             if line.startswith("<<<", index):
                 index += 3
@@ -376,7 +443,8 @@ def definitions(path: str, text: str) -> frozenset[str]:
         names = _python_definitions(text)
     elif path.endswith(".rs"):
         names = {
-            match.group(1) or match.group(2) for match in RUST_DEFINITION.finditer(strip_rust(text))
+            match.group(1) or match.group(2)
+            for match in RUST_DEFINITION.finditer(without_inert_rust(strip_rust(text)))
         }
     elif path.endswith(".sh"):
         names = {
@@ -449,7 +517,10 @@ def test_names(path: str, text: str) -> frozenset[str]:
         return cached
     names: set[str] = set()
     if path.endswith(".rs"):
-        names = {match.group(1) for match in RUST_TEST_FUNCTION.finditer(strip_rust(text))}
+        names = {
+            match.group(1)
+            for match in RUST_TEST_FUNCTION.finditer(without_inert_rust(strip_rust(text)))
+        }
     elif path.endswith(".py"):
         names = {name for name in _python_definitions(text) if name.startswith("test_")}
     result = frozenset(names)
@@ -472,13 +543,58 @@ def test_index(repo: Path, tracked: list[str]) -> dict[str, list[str]]:
 
 
 def backticked_names(text: str) -> list[str]:
-    """The identifiers a row backticks: the last segment of each qualified or `path::name` span."""
+    """The identifiers a row backticks, read by the shared CommonMark code-span reader: the last
+    segment of each qualified or `path::name` span, a parametrize id dropped."""
     names: list[str] = []
-    for span in re.findall(r"`([^`]+)`", text):
-        match = QUALIFIED_SPAN.match(span.strip())
-        if match is not None and match.group(1) not in names:
-            names.append(match.group(1))
+    for span in TEXT.code_spans(text):
+        name = TEXT.span_name(span)
+        if name is not None and name not in names:
+            names.append(name)
     return names
+
+
+def bound_files(repo: Path, tracked: list[str]) -> dict[tuple[str, str], set[str]]:
+    """(ledger beside the sidecar, clause id) -> the files its sidecar line names."""
+    files: dict[tuple[str, str], set[str]] = {}
+    tracked_set = set(tracked)
+    for path in tracked:
+        if not path.endswith(PINS_SUFFIX):
+            continue
+        ledger = path[: -len(PINS_SUFFIX)] + LEDGER_SUFFIX
+        if ledger not in tracked_set:
+            continue
+        for line in read_tracked(repo, path).splitlines():
+            match = BINDING_LINE.match(line)
+            if match is None:
+                continue
+            files.setdefault((ledger, match.group(1)), set()).update(
+                entry.split("::", 1)[0] for entry in match.group(2).split(", ") if entry != RECORDS
+            )
+    return files
+
+
+def intent_findings(
+    repo: Path,
+    tracked: list[str],
+    proven_rows: dict[tuple[str, str], str],
+    cited: dict[tuple[str, str], list[str]],
+) -> list[str]:
+    """A PROVEN clause whose own row backticks a test that exactly one bindable file defines
+    must bind that file, by its sidecar line or by a citation in that file."""
+    index = test_index(repo, tracked)
+    files = bound_files(repo, tracked)
+    findings: list[str] = []
+    for (ledger, clause_id), row in sorted(proven_rows.items()):
+        unit = unit_of(ledger)
+        have = files.get((ledger, clause_id), set()) | set(cited.get((unit, clause_id), []))
+        for name in backticked_names(row):
+            defining = index.get(name, [])
+            if len(defining) == 1 and defining[0] not in have:
+                findings.append(
+                    f"{ledger}: {clause_id} row names `{name}`, which only {defining[0]} "
+                    "defines, and no binding names that file"
+                )
+    return findings
 
 
 def report_row_named_records(
@@ -728,6 +844,7 @@ def run(repo: Path, row_named_report: bool = False) -> int:
     known: set[tuple[str, str]] = set()
     clauses_of: dict[str, set[str]] = {}
     row_texts: dict[tuple[str, str], str] = {}
+    proven_rows: dict[tuple[str, str], str] = {}
     proven: dict[str, list[str]] = {}
     clauses = 0
     for path in live + archived:
@@ -752,6 +869,10 @@ def run(repo: Path, row_named_report: bool = False) -> int:
         known.update((unit, cid) for cid in verdicts)
         clauses_of[path] = {cid for _n, cid, _c in rows}
         row_texts.update(((path, cid), " | ".join(cells)) for _n, cid, cells in rows)
+        for _n, cid, cells in rows:
+            marks = [VERDICT_CELL.match(cell) for cell in cells]
+            if any(mark is not None and mark.group(1) == "PROVEN" for mark in marks):
+                proven_rows[(path, cid)] = " | ".join(cells)
 
     cited = citations(repo, tracked)
     for (unit, clause_id), files in sorted(cited.items()):
@@ -769,6 +890,7 @@ def run(repo: Path, row_named_report: bool = False) -> int:
                 f"{where}: {clause_id} names no clause of {unit_of(ledger)} in the ledger beside it"
             )
     pinned = set(cited) | {(unit_of(ledger), cid) for ledger, cid in bound}
+    findings.extend(intent_findings(repo, tracked, proven_rows, cited))
     for path, proven_ids in sorted(proven.items()):
         unit = unit_of(path)
         unpinned = [
@@ -795,6 +917,8 @@ def run(repo: Path, row_named_report: bool = False) -> int:
         for finding in findings:
             print(finding, file=sys.stderr)
         print(f"ledger-grammar: FAIL — {len(findings)} finding(s)", file=sys.stderr)
+        if row_named_report:
+            report_row_named_records(repo, tracked, records, row_texts)
         return 1
     print(
         f"ledger-grammar: {len(live)} live ledgers clean ({clauses} clauses, "

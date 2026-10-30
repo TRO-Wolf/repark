@@ -15,5 +15,5 @@ C-012: python/repark/tests/writes/test_ice_evo_dml_1.py::test_adopted_spark_tabl
 C-013: python/repark/tests/iceberg/test_ice_promote_read_1.py
 C-014: python/repark/tests/writes/test_ice_evo_dml_1.py
 C-015: python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_current_date_bare_and_paren, python/repark/tests/writes/test_ice_evo_dml_1.py
-C-016: crates/repark-iceberg/src/catalog/tests/evolved_lineage_read.rs::row_id_read_after_add_column_null_fills_the_added_column, crates/repark-iceberg/src/catalog/tests/evolved_lineage_read.rs::row_id_read_after_swapping_two_names_reads_each_field_by_id, python/repark/tests/writes/test_ice_evo_dml_1.py
-C-017: python/repark/tests/writes/test_ice_evo_dml_1.py
+C-016: crates/repark-iceberg/src/catalog/tests/evolved_lineage_read.rs::row_id_read_after_add_column_null_fills_the_added_column, crates/repark-iceberg/src/catalog/tests/evolved_lineage_read.rs::row_id_read_after_swapping_two_names_reads_each_field_by_id, python/repark/tests/writes/test_ice_evo_dml_1.py::test_lineage_read_matches_spark
+C-017: python/repark/tests/writes/test_ice_evo_dml_1.py::test_dataframe_door_matches_spark, python/repark/tests/writes/test_ice_evo_dml_1.py::test_sql_door_matches_spark

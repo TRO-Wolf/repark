@@ -25,7 +25,7 @@ C-027: crates/repark-spark/src/tests/kill_mid_write_release.rs
 C-028: crates/repark-spark/src/tests/kill_mid_write_release.rs
 C-030: crates/repark-spark/src/tests/commit_unknown_doors.rs
 C-032: python/repark/tests/parity/test_acceptance_commit_gate.py
-C-033: none (records)
+C-033: python/repark/tests/parity/test_acceptance_commit_gate.py::test_signer_matches_the_published_aws_vector
 C-034: none (records)
 C-035: python/repark/tests/parity/test_cross_release_local.py
 C-036: none (records)
@@ -33,7 +33,7 @@ C-039: none (records)
 C-040: python/repark/tests/parity/test_acceptance_commit_resolver.py
 C-041: none (records)
 C-042: python/repark/tests/parity/test_acceptance_commit_gate.py::test_glue_refuses_every_request_the_drills_do_not_send, python/repark/tests/parity/test_acceptance_commit_gate.py::test_s3tables_refuses_every_request_the_drills_do_not_send
-C-043: python/repark/tests/parity/test_acceptance_commit_gate.py::test_the_vector_set_covers_the_gate_paths
+C-043: python/repark/tests/parity/test_acceptance_commit_gate.py::test_signer_matches_the_published_aws_vector, python/repark/tests/parity/test_acceptance_commit_gate.py::test_the_vector_set_covers_the_gate_paths
 C-045: python/repark/tests/parity/test_acceptance_commit_resolver.py::test_a_missing_status_check_property_is_named, python/repark/tests/parity/test_cross_release_local.py::test_x_compare_sees_a_string_read_as_a_large_string
 C-046: none (records)
 C-047: none (records)
@@ -49,5 +49,5 @@ C-062: none (records)
 C-063: python/repark-parity/tests/test_cross_read_diagnostics.py::test_progress_is_visible_before_pytest_finishes
 C-064: python/repark-parity/tests/test_cross_read_progress.py
 C-065: python/repark-parity/tests/test_cross_read_progress.py
-C-072: python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_stale_hint_after_delete_reads_the_newest_metadata_file
+C-072: crates/repark-core/src/iceberg_path/hint_walk_tests.rs, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_stale_hint_after_delete_reads_the_newest_metadata_file
 C-073: none (records)

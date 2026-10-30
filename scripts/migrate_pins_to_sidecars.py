@@ -29,8 +29,9 @@ it, if any; a disclaiming clause ("so the grammar gate counts it") unbinds only 
 it names explicitly; one that names none, and a "proves ... only" sentence, unbind nothing and
 are listed by `--report hand-candidates` for a hand records line; and a clause left with no
 bindable entry and no citation in a test or script is written as `none (records)`, which a rerun
-never replaces. The citation is then cut from the map: a line left with nothing but punctuation
-is deleted, a line that also carries prose keeps the prose and its indentation.
+never replaces except by the row-named pass. The citation is then cut from the map: a line left
+with nothing but punctuation is deleted, a line that also carries prose keeps the prose and its
+indentation.
 
 A citation is bound but left in the map's text when cutting it would break the sentence around
 it: inside a fenced block, inside a code span the line continues past, or followed by an id the
@@ -61,9 +62,6 @@ FILE_LIKE = re.compile(
     r"^[\w./-]*[\w-]\.(?:rs|py|json|jsonl|toml|sh|md|sql|yaml|yml|txt|csv|parquet|avro|orc|"
     r"ipynb|j2|cfg|ini)$",
     re.ASCII,
-)
-QUALIFIED = re.compile(
-    r"^(?:[\w./-]*::)?(?:[A-Za-z_]\w*(?:::|\.))*([A-Za-z_]\w*)(?:\(\))?$", re.ASCII
 )
 STOP_NAMES: frozenset[str] = frozenset(
     {"true", "false", "None", "True", "False", "null", "self", "Self", "NULL", "pins"}
@@ -310,11 +308,10 @@ def entry_target(
 def names_in(stretch: str, path: str, file_text: str) -> tuple[str, ...]:
     """Backticked identifiers of `stretch` that the bound file defines and carries as tokens."""
     found: set[str] = set()
-    for span in CODE_SPAN.findall(stretch):
-        match = QUALIFIED.match(span.strip())
-        if match is None:
+    for span in TEXT.code_spans(stretch):
+        name = TEXT.span_name(span)
+        if name is None:
             continue
-        name = match.group(1)
         if len(name) < 3 or name in STOP_NAMES:
             continue
         if not any(char.islower() or char == "_" for char in name):
@@ -602,8 +599,11 @@ def plan_sidecars(
     proven: set[tuple[str, str]],
 ) -> Plan:
     """Every sidecar that gains a line, the unplaceable and hand-bound citations, and the
-    clauses written as `none (records)`. A path the sidecar on disk already binds for a clause
-    is left as it stands, and a clause the sidecar on disk already carries gets no records line."""
+    clauses written as `none (records)`. The row-named pass runs first, so the citation and
+    row-file passes see its result and a rerun adds nothing; a records line blocks those two
+    passes only while it is still records. A path the sidecar on disk already binds for a
+    clause is left as it stands, and a clause the sidecar on disk already carries gets no
+    records line."""
     entries: dict[str, dict[str, set[str]]] = {}
     on_disk: dict[str, dict[str, set[str]]] = {}
     units: dict[str, str] = {}
@@ -614,6 +614,30 @@ def plan_sidecars(
     basenames: dict[str, list[str]] = {}
     for path in sorted(tracked):
         basenames.setdefault(Path(path).name, []).append(path)
+    by_intent: set[tuple[str, str]] = set()
+    ambiguous: list[tuple[str, str, str, list[str]]] = []
+    index = GATE.test_index(repo, sorted(tracked))
+    for unit, clause_id in sorted(proven):
+        sidecar = sidecar_path(homes[unit])
+        units[sidecar] = unit
+        if sidecar not in entries:
+            existing = repo / sidecar
+            text = existing.read_text(encoding="utf-8") if existing.is_file() else ""
+            entries[sidecar] = parse_sidecar(text)
+            on_disk[sidecar] = parse_sidecar(text)
+        for name in GATE.backticked_names(rows.get((unit, clause_id), "")):
+            files = index.get(name, [])
+            if len(files) > 1:
+                ambiguous.append((unit, clause_id, name, sorted(files)))
+            if len(files) != 1:
+                continue
+            bucket = entries[sidecar].setdefault(clause_id, set())
+            entry = f"{files[0]}::{name}"
+            if entry not in bucket:
+                bucket.discard(GATE.RECORDS)
+                bucket.add(entry)
+                grown.add(sidecar)
+                by_intent.add((unit, clause_id))
     wanted: dict[tuple[str, str], str] = {}
     source_cited: set[tuple[str, str]] = set()
     for binding in bindings:
@@ -639,7 +663,7 @@ def plan_sidecars(
                     unplaceable.append(f"{where} names {binding.unresolved}")
                 continue
             wanted.setdefault(key, sidecar)
-            if binding.path is None or on_disk[sidecar].get(clause_id) == {GATE.RECORDS}:
+            if binding.path is None or entries[sidecar].get(clause_id) == {GATE.RECORDS}:
                 continue
             row = rows.get(key, "")
             path_text = GATE.read_tracked(repo, binding.path)
@@ -661,7 +685,7 @@ def plan_sidecars(
                 grown.add(sidecar)
     for key, sidecar in sorted(wanted.items()):
         clause_id = key[1]
-        if on_disk[sidecar].get(clause_id) == {GATE.RECORDS}:
+        if entries[sidecar].get(clause_id) == {GATE.RECORDS}:
             continue
         for target in row_code_files(rows.get(key, ""), tracked, basenames):
             if not GATE.bindable(target, GATE.read_tracked(repo, target)):
@@ -673,30 +697,6 @@ def plan_sidecars(
                 grown.add(sidecar)
                 if target not in already:
                     row_added.setdefault(key, []).append(target)
-    by_intent: set[tuple[str, str]] = set()
-    ambiguous: list[tuple[str, str, str, list[str]]] = []
-    index = GATE.test_index(repo, sorted(tracked))
-    for unit, clause_id in sorted(proven):
-        sidecar = sidecar_path(homes[unit])
-        units[sidecar] = unit
-        if sidecar not in entries:
-            existing = repo / sidecar
-            text = existing.read_text(encoding="utf-8") if existing.is_file() else ""
-            entries[sidecar] = parse_sidecar(text)
-            on_disk[sidecar] = parse_sidecar(text)
-        for name in GATE.backticked_names(rows.get((unit, clause_id), "")):
-            files = index.get(name, [])
-            if len(files) > 1:
-                ambiguous.append((unit, clause_id, name, sorted(files)))
-            if len(files) != 1:
-                continue
-            bucket = entries[sidecar].setdefault(clause_id, set())
-            entry = f"{files[0]}::{name}"
-            if entry not in bucket:
-                bucket.discard(GATE.RECORDS)
-                bucket.add(entry)
-                grown.add(sidecar)
-                by_intent.add((unit, clause_id))
     records: list[str] = []
     for (unit, clause_id), sidecar in sorted(wanted.items()):
         if clause_id in on_disk[sidecar] or (unit, clause_id) in source_cited:
