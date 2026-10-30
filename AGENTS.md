@@ -108,12 +108,12 @@ DataFusion remains the engine under everything. Layout of record:
 ## Verify before "done"
 
 `make verify` — a change is not done until lint, format, clippy, **Rust** tests, and each touched
-directory's `map.md`, where one exists, is current. `verify` is Rust-only on purpose (inner-loop speed);
-it does **not** build the native module. See [docs/testing.md](docs/testing.md). Before opening a
-PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which carries
-the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the canonical
-fast gate. Tool versions are pinned identically in the Makefile and the workflows, and CI-enforced
-tools never silently skip locally (uvx provisions the pinned tool on demand).
+directory's `map.md`, where one exists, is current. `verify` is Rust-only on purpose (inner-loop
+speed); it does **not** build the native module. See [docs/testing.md](docs/testing.md). Before
+opening a PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which
+carries the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the
+canonical fast gate. Tool versions are pinned identically in the Makefile and the workflows, and
+CI-enforced tools never silently skip locally (uvx provisions the pinned tool on demand).
 
 ## Hard rules (non-negotiable)
 
@@ -135,7 +135,8 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   ANSI SQL / Spark facade) is the testing structure. A divergence-class claim pins *every* class it
   names, per entry point, on the Arrow path (`collect`/`to_arrow`, value AND type — never only
   `show`). Full contract: [docs/testing.md](docs/testing.md).
-- **Maps are architecture-scoped** (policy: [docs/maps-policy.md](docs/maps-policy.md)); pin bindings live in `task/ledgers/<bin>/<unit>-pins.md`, read by the ledger-grammar gate.
+- **Maps are architecture-scoped** (policy: [docs/maps-policy.md](docs/maps-policy.md)); pin
+  bindings live in `task/ledgers/<bin>/<unit>-pins.md`, read by the ledger-grammar gate.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -258,7 +259,7 @@ amended, what retires it, and where its record goes afterwards.
 |---|---|---|
 | **contract** | [AGENTS.md](AGENTS.md), [docs/testing.md](docs/testing.md), [PROJECT.md](PROJECT.md) | permanent; amended deliberately, never as a passenger |
 | **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so no changelog section |
-| **navigation** | a `map.md` where the architecture needs one | the sync and size gates, not lockstep |
+| **navigation**|a `map.md` where the architecture needs one|the sync and size gates, not lockstep |
 | **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) at close |
 | **ledger** | [task/ledgers/](task/ledgers/map.md): `staging/<unit>-ledger.md` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<unit>-ledger.md` | the directory is the status. Append-only in `staging/`; `move`d to `completed/` in the unit's last commit and frozen; filed to `archive/` by `make ledger-archive` at the next pickup, immutable. A campaign's `docs/history/` folder links to its ledgers in the monthly archive; pre-2026-08-23 folders keep theirs |
 | **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a measured-and-**declined** rule is written down so nobody re-litigates it |
