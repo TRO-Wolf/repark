@@ -1,6 +1,6 @@
 # map — scripts/
 
-Dated ratchet history (2026-08 to 2026-10) is not kept in this map: each baseline table holds its current value, and `git log -- scripts/map.md` and the merged pull requests hold the record of each change.
+Dated ratchet history (2026-08 to 2026-10) is being moved out of this map: each baseline table holds its current value, and `git log -- scripts/map.md` and the merged pull requests record each change.
 
 `build_api_freeze.py` writes the frozen-surface register (API-FREEZE). It reads the answered API-review packet and the tree (the `check_example_coverage.py` enumerator for public Python names and their required parameters, `repark_common::surfaces::ALL` plus both door matrices, the conf-key constants, `repark.errors.__all__`, the two `pyproject.toml`/`Cargo.toml` packaging facts) and writes `docs/design/v1-0-api-freeze.json`. `--write` regenerates; bare invocation checks the tree against the checked-in file. The register is pinned by `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the same commit as any intended additive change.
 
@@ -72,7 +72,7 @@ repark-parity slice.
   contract in [../docs/fork-sync.md](../docs/fork-sync.md).
 - `check_map_md.sh` — the map.md **lockstep** advisory (MAP-PR-GATE-1; a warning since MAP-GOVERNANCE-1). Bare mode reads `git diff --cached`; `--base <ref>` reads `<ref>...HEAD`, so a map that lands in any commit of the branch satisfies it. A `.rs`, `.py`, `Cargo.toml` or `pyproject.toml` change (lockfiles excluded; root-level manifests map to `map.md`) that does not change its directory's `map.md` in the same diff prints a `WARNING:` line. Both modes exit 0: lockstep is review, not a gate, and the map gates are `check_map_size.py` and `sync_map_md.py --check`. Invoked by `.pre-commit-config.yaml`, the hook `make install-hooks` writes, `make check-map-md` and ci.yml's `map.md guard` step. Proofs: `python/repark-parity/tests/test_map_pr_gate_1.py`, `test_map_governance_1.py`.
 - `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one
-  requires the map to change in the same pull request; this one checks what the map actually
+  prints a warning when code changes without its map; this one checks what the map actually
   says) and the SSOT for its rules.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
   (1) **link validity** — every relative markdown link resolves to an existing file or directory

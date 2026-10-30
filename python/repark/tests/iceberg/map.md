@@ -65,7 +65,7 @@ pins.
   (`v<N>.gz.metadata.json`) reads `[2, 3]` on the path door, not the deleted row. It is red on
   the test commit before the fix (`assert [1, 2, 3] == [2, 3]`).
   The facade pin is also cited as the merge fact that closes dfload-1 C-011 (dfload-1 C-012, 2026-10-28, merge `9ab67d7d`); the merge fact is not a pin of this file.
-  The merge fact is dated 2026-10-28 by its correction dfload-1 C-013, cited below so the grammar gate counts it; the merge fact itself is not a test pin of this file.
+  The merge fact is dated 2026-10-28 by its correction dfload-1 C-013, a records entry in dfload-1's sidecar; the merge fact itself is not a test pin of this file.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.

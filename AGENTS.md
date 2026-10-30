@@ -45,7 +45,7 @@ adapter loses no project knowledge.
 ## Read first
 
 Load only what your role needs. Each row is exhaustive for its role: what it does not name, you
-do not read.
+do not read. Adapters point here and add no second roster.
 
 | Role | Load, in order | Explicitly NOT required |
 |---|---|---|
@@ -138,8 +138,8 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
 - **Maps are scoped and hand-written.** A `map.md` sits at a repository root, crate, package or complex
   subsystem boundary where it routes a task, names an owner or a boundary, or names the verification; a
   new directory need not have one, nor a leaf of obvious or generated files. History lives in ledgers,
-  PRs or `docs/history/`, never in maps. Lockstep warns (`scripts/check_map_md.sh`); `sync_map_md.py
-  --check` and `scripts/check_map_size.py` are the gates. No generator writes map prose. Pin bindings
+  PRs or `docs/history/`, never in maps. History moves out of maps as each is condensed; a map that still holds dated history is not wrong until its ratchet row is lowered. Lockstep warns (`scripts/check_map_md.sh`); `sync_map_md.py
+  --check` and `scripts/check_map_size.py` are the gates. Maps are hand-written: the lifecycle script generates only the archive-month maps, and the pin migration cut citation text once. Pin bindings
   live in `task/ledgers/<bin>/<unit>-pins.md`, one line per clause, read by the ledger-grammar gate; the
   owner-ruling paragraph above is amended on the owner's word.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
@@ -176,6 +176,8 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     the workflow compared on load-bearing tokens; fail-closed on a parse miss.
   - *`map.md` content* (`scripts/sync_map_md.py`) — link validity armed (`make check-map-sync`);
     coverage behind `--strict`. Policy: ["Markdown document lifecycle"](#markdown-document-lifecycle).
+  - *Map size* (`scripts/check_map_size.py`, `make check-map-size`) — exact-baseline rows ratchet
+    DOWN only; the ceilings live in the script.
   - v1 helper scripts not yet re-homed: [scripts/map.md](scripts/map.md) "Not re-homed". Each
     returns only with a concrete driver named there.
 - **Rust module layout is the default one** — `mod foo;` resolved by `foo.rs`, `foo/mod.rs`, or
@@ -186,7 +188,7 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
 - **Python:** hints on every parameter, return, and public attribute; Pydantic v2 `BaseModel`
   for structured data, never `dataclasses`/`attrs`; module- or class-level `def`s, never nested;
   verb-phrase names; a docstring on every public function, class, method, `__init__`, and magic
-  method (presence held by `scripts/check_docstring_presence.py`; style `D` declined); `pathlib`;
+  method (presence held by its gate); `pathlib`;
   `logging`; f-strings; never bare
   `except`; Ruff `line-length=100`.
 - **Spell things out** — no casual abbreviations (`config` not `cfg`, `index` not `idx`).
@@ -250,8 +252,7 @@ mirror PySpark's where PySpark has one.
 **The 91-`=` banner keeps its form; its body obeys rules 1–2.** Consolidating existing long
 comments is chartered sweep work, never a passenger on a fix.
 
-**Held by:** review — except docstring **presence**, which
-`scripts/check_docstring_presence.py` holds. Style `D` declined (facade mirrors PySpark).
+**Held by:** review, except docstring **presence** (`scripts/check_docstring_presence.py`).
 
 ## Markdown document lifecycle
 
@@ -291,8 +292,8 @@ The **executor** is [.agents/skills/compact-context-docs/SKILL.md](.agents/skill
 
 ## Working style and communication
 
-- **Stop gathering once you can act.** Redundant reads and exploratory work past sufficient
-  context are waste — in a delegated unit they are the main way a context budget is lost.
+- **Stop gathering once you can act.** Redundant reads are waste; in a delegated unit they are the main way a
+  context budget is lost.
 - **Answer in the language the requester used.** Source code, comments, identifiers, commit
   messages, and PR titles and bodies stay **English** regardless.
 - **Be concise.** No sycophantic openers, no closing filler, no narrated status.
@@ -301,8 +302,9 @@ The **executor** is [.agents/skills/compact-context-docs/SKILL.md](.agents/skill
 
 - The cdylib's `extension-module` feature is **off by default** (maturin enables it for the wheel),
   so the test command is **`cargo test --workspace`**, never the flag that enables every feature:
-  that breaks a standalone test binary by stopping PyO3 linking libpython. `cargo test` needs
-  `libpython3.x.so` present.
+  that breaks a standalone test binary by stopping PyO3 linking libpython. CI, the Makefile, and
+  this rule all agree.
+- PyO3's build script needs an interpreter; linking `cargo test` needs `libpython3.x.so` present.
 
 ## Version-pin contract
 
@@ -331,9 +333,8 @@ defects that motivate them) live on the crate that owns the code:
 
 ## Upstream contribution policy
 
-Upstream-mergeability with `apache/iceberg-rust` is **not a constraint** — upstreaming a primitive
-is **optional/opportunistic**, not an obligation. We still **cherry-pick upstream improvements**
-into the fork when useful.
+Upstream-mergeability with `apache/iceberg-rust` is **not a constraint**: upstreaming is
+**optional**. We still **cherry-pick upstream improvements** into the fork when useful.
 
 ## Resource discipline — disk and artifacts
 
@@ -342,14 +343,11 @@ campaign mid-unit.
 
 - **Check free space before you spend it** — before creating a worktree, and before any
   artifact-heavy command.
-- **Re-check at phase boundaries** and before broad validation. If the remaining space may not
-  safely carry the next command, stop and reclaim task-owned artifacts — never start the command
-  hoping it fits.
+- **Re-check at phase boundaries** and before broad validation; if the space may not carry the next command, reclaim task-owned artifacts first.
 - **Cleanup is scoped.** Remove the generated artifacts *this* task created, once unneeded.
   **Never delete another task's worktree, and never delete uncommitted files.**
 - **Share caches instead of duplicating them** across worktrees where the tool allows it.
-- **Report it at handoff:** the disk checks you ran, the cleanup you performed, and any worktree or
-  artifact you deliberately kept, with the reason it is still needed.
+- **Report it at handoff:** the checks run, the cleanup done, and any artifact kept, with its reason.
 
 Procedure: [.agents/skills/check-disk-headroom/SKILL.md](.agents/skills/check-disk-headroom/SKILL.md).
 
@@ -359,7 +357,7 @@ The engine touches AWS (Glue, S3 Tables, S3). **Never drop or delete a Glue tabl
 table, or S3 data, and never mutate IAM, without explicit user action** — if such an operation
 seems needed, stop and ask. AWS writes go only through the engine's sanctioned catalog/write paths
 (`repark-iceberg`). **Commit or push only when the user asks.** These approval boundaries bind every
-contributor and every unit; a unit may narrow them, never relax them.
+contributor and every unit.
 
 ## Delegated-agent standing rules
 
@@ -377,7 +375,6 @@ section instead of restating it; a brief may narrow these, never relax them.
   never the whole-workspace suite locally (owner, 2026-09-18); REAL exit codes; Makefile-pinned lint.
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
   directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
-  Ledger presence is a gate item.
 - **Oracles:** oracle/differential test files are NAMED deliverables per unit; live-oracle
   output recorded verbatim; hand-computed expectations are not an oracle. Divergences get
   honest `_divergence` pins, never silent absorption.
@@ -393,8 +390,7 @@ section instead of restating it; a brief may narrow these, never relax them.
 
 Single-agent-in-the-main-thread is the default. The orchestrating agent owns architecture and
 assembly; delegated fan-out is for **search, mechanical edits, and narrow, well-scoped
-implementation**, never for architectural judgement. Every unit inherits the standing rules above
-and the "Safety" approval boundaries — it may narrow those, never relax them. Tier policy:
+implementation**, never for architectural judgement. Every unit inherits the standing rules above and the "Safety" boundaries. Tier policy:
 owner-approved executor tiers (owner, 2026-09-20); launch mechanics live in [CLAUDE.md](CLAUDE.md).
 
 ## Process governance (SEPMO)
@@ -402,7 +398,6 @@ owner-approved executor tiers (owner, 2026-09-20); launch mechanics live in [CLA
 Non-trivial work runs under the **SEPMO control plane**
 ([.agents/skills/sepmo/SKILL.md](.agents/skills/sepmo/SKILL.md)): scope audit (proposition-ledger gate:
 every clause `PROVEN`, zero `OPEN`/`REJECTED`) → adversarial Actor–Critic → per-PR delivery →
-retrospective. SEPMO governs **only how work flows** and **cedes every engineering decision to this
-contract** — on conflict the chain in [`## Precedence`](#precedence) wins. Roles bind via
+retrospective. SEPMO governs **only how work flows**; [`## Precedence`](#precedence) decides any conflict. Roles bind via
 [.agents/skills/sepmo/binding-manifest.md](.agents/skills/sepmo/binding-manifest.md). Actor–Critic runs
 **single-session by default**; sub-agent fan-out follows "Delegated work" above.

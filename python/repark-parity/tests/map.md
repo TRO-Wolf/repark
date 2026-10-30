@@ -1,6 +1,6 @@
 # map — python/repark-parity/tests
 
-Dated CAP-1 mirror history is not kept in this map: the mirror tuples and the exact-baseline rows hold the current values, and `git log -- python/repark-parity/tests/map.md` holds the record of each change.
+Dated CAP-1 mirror history is being moved out of this map: the mirror tuples and exact-baseline rows hold current values, and `git log -- python/repark-parity/tests/map.md` holds the record of each change.
 
 ## Purpose
 
