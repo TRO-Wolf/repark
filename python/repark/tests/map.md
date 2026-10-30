@@ -78,6 +78,7 @@ testing contract is [docs/testing.md](../../../docs/testing.md); the pre-pilot r
 | Pin a reader, writer or interchange behavior | [io/](io/map.md) |
 | Pin a perf or resource budget | [perf/](perf/map.md) |
 | Pin a cross-subsystem parity case | [parity/](parity/map.md) |
+| Re-validate the PR #245 SQL-escape family | [parity/test_pr_245_revalidation.py](parity/test_pr_245_revalidation.py) |
 | Pin an ML behavior | [ml/](ml/map.md) |
 | Find a binary fixture's provenance | [fixtures/](fixtures/map.md) |
 | Run the suite | `make develop` then `make py-test-facade` (`make py-test-facade-fast` skips the `slow` tier) |
