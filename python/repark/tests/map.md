@@ -31,11 +31,9 @@ Rules for new files:
   with its own `map.md` (charter plus one row per file) and a row in the table above.
 - A helper (`_*.py`) or data file used from one directory lives in that directory; one used from
   two or more directories, by this `conftest.py`, by the parity harness or by a script stays here.
-  The root keeps [conftest.py](conftest.py), [_live_parity.py](_live_parity.py),
-  [_oracle_pins.py](_oracle_pins.py), [_acceptance.py](_acceptance.py),
-  [_spark_python.py](_spark_python.py), the five `_sql_harden_cutover_*.py` helpers,
-  [facade_reader_writer_oracle.json](facade_reader_writer_oracle.json) and
-  [fixtures/](fixtures/map.md).
+  The root keeps `conftest.py`, `_live_parity.py`, `_oracle_pins.py`, `_acceptance.py`,
+  `_spark_python.py`, the five `_sql_harden_cutover_*.py` helpers,
+  `facade_reader_writer_oracle.json` and `fixtures/` (each indexed under Contents below).
 - Test modules that import each other share a directory.
 - A recorder (`_record_*.py`) runs from the repository root by its new path. One that imports a
   root helper puts this directory on `sys.path` itself (`Path(__file__).resolve().parents[1]`),
