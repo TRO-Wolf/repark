@@ -18,19 +18,19 @@ B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` i
    without `-ledger.md` and without the archive prefix. An entry is `<path>` or
    `<path>::<name>`: the path is a tracked `.rs`, `.py` or `.sh` file that is a test (under a
    `tests/` directory, `tests.rs`, `*_tests.rs`, `test_*.py`, `*_test.py`) or a script under
-   `scripts/`, never a fixture, a map, a ledger, a sidecar, a licence or a readme; the name is a
-   definition the file makes, read by parsing (Python: module- and class-level functions,
-   classes and assigned names; Rust: line-start fn, struct, enum, trait, type, const, static,
-   mod, union and macro_rules with comments and literals blanked; shell: functions). The line
-   `C-NNN: none (records)` binds a clause that no test pins; the gate counts and lists those
-   clauses. A `pins: <unit>/C-NNN[, C-MMM...]` citation also binds when it sits in a tracked
-   test file or script under CITATION_ROOTS; one in a map or in production source does not.
-   Every `PROVEN` clause in a staging or completed ledger must be bound at least once — the
-   measured floor is seeded per ledger in EXCEPTIONS and only ratchets down — and every binding
-   must resolve to a clause that exists in any bin (`staging/`, `completed/`, the archive). A
-   staging or completed ledger whose first 40 lines carry a `**Path:**` field valued `READING`
-   outside a code span is a reading unit: rule B does not apply to its clauses, rules A and C
-   still do.
+   `scripts/`, never a fixture, a recorder that writes one (`_record*`), a map, a ledger, a
+   sidecar, a licence or a readme; the name is a definition the file makes, read by parsing
+   (Python: module- and class-level functions, classes and assigned names; Rust: line-start fn,
+   struct, enum, trait, type, const, static, mod, union and macro_rules with comments and
+   literals blanked; shell: functions). The line `C-NNN: none (records)` binds a clause that no
+   test pins; the gate counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]`
+   citation also binds when it sits in a tracked test file or script under CITATION_ROOTS; one
+   in a map or in production source does not. Every `PROVEN` clause in a staging or completed
+   ledger must be bound at least once — the measured floor is seeded per ledger in EXCEPTIONS
+   and only ratchets down — and every binding must resolve to a clause that exists in any bin
+   (`staging/`, `completed/`, the archive). A staging or completed ledger whose first 40 lines
+   carry a `**Path:**` field valued `READING` outside a code span is a reading unit: rule B does
+   not apply to its clauses, rules A and C still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
@@ -78,7 +78,7 @@ SHELL_DEFINITION = re.compile(
 )
 _DEFINITIONS: dict[tuple[str, int], frozenset[str]] = {}
 UNBINDABLE = re.compile(
-    r"^(?:map\.md|.+-ledger\.md|.+-pins\.md|LICEN[CS]E.*|README.*)$", re.IGNORECASE
+    r"^(?:map\.md|.+-ledger\.md|.+-pins\.md|LICEN[CS]E.*|README.*|_record.*)$", re.IGNORECASE
 )
 CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 

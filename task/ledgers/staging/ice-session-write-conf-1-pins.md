@@ -1,7 +1,7 @@
 # ice-session-write-conf-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/writes/_record_ice_session_write_conf_1_oracle.py, python/repark/tests/writes/test_ice_session_write_conf_1.py
-C-002: python/repark/tests/writes/_record_ice_session_write_conf_1_oracle.py, python/repark/tests/writes/test_ice_session_write_conf_1.py
+C-001: python/repark/tests/writes/test_ice_session_write_conf_1.py
+C-002: python/repark/tests/writes/test_ice_session_write_conf_1.py
 C-003: python/repark/tests/writes/test_ice_session_write_conf_1.py
 C-004: python/repark/tests/writes/test_ice_session_write_conf_1.py
 C-005: python/repark/tests/writes/test_ice_session_write_conf_1.py
@@ -35,8 +35,8 @@ C-032: python/repark/tests/writes/test_ice_session_write_conf_1.py
 C-033: crates/repark-iceberg/src/tests/session_write_conf.rs
 C-034: crates/repark-spark/src/tests/session_write_conf.rs::session_team_stamps_cow_delete_overwrite
 C-035: none (records)
-C-036: python/repark/tests/writes/_record_ice_session_write_conf_1_oracle.py, python/repark/tests/writes/_record_ice_session_write_conf_1_paths.py, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
-C-037: none (records)
+C-036: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
+C-037: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
 C-038: crates/repark-spark/src/tests/write_to_branch.rs, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py
 C-039: python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_branch_dataframe_append_stamps_session_team
 C-040: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_exception_tables_equal_the_measured_debt, python/repark/tests/writes/test_ice_session_write_conf_1_paths.py::test_session_codec_path_matches_spark
@@ -46,20 +46,20 @@ C-043: none (records)
 C-044: none (records)
 C-045: crates/repark-spark/src/tests/session_write_conf.rs
 C-046: none (records)
-C-047: crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_a_new_partition_stamps_deleted_records, crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_an_existing_partition_names_the_engine_value, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py
-C-048: crates/repark-iceberg/src/tests/session_write_conf.rs, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py
-C-049: crates/repark-spark/src/tests/session_write_conf.rs, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py
+C-047: crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_a_new_partition_stamps_deleted_records, crates/repark-spark/src/tests/session_write_conf.rs::replace_partitions_into_an_existing_partition_names_the_engine_value
+C-048: crates/repark-iceberg/src/tests/session_write_conf.rs
+C-049: crates/repark-spark/src/tests/session_write_conf.rs
 C-050: none (records)
 C-051: crates/repark-spark/src/tests/session_write_conf.rs::truncate_does_not_stamp_and_does_not_refuse_a_colliding_key
 C-052: crates/repark-spark/src/tests/session_write_conf.rs::truncate_does_not_stamp_and_does_not_refuse_a_colliding_key
-C-053: python/repark/tests/writes/_record_ice_session_write_conf_1_paths.py::SUMMARY_KEYS, python/repark/tests/writes/_record_ice_session_write_conf_1_paths.py::stamped_rows
-C-054: crates/repark-spark/src/tests/session_write_conf.rs, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py
+C-053: none (records)
+C-054: crates/repark-spark/src/tests/session_write_conf.rs
 C-055: crates/repark-spark/src/tests/session_write_conf.rs::a_session_conf_keeps_a_compound_null_insert, crates/repark-spark/src/tests/session_write_conf.rs::a_session_conf_keeps_the_default_keyword_refusal, crates/repark-spark/src/tests/session_write_conf.rs::a_session_conf_keeps_the_values_list_typing
-C-056: crates/repark-spark/src/tests/session_write_conf.rs::a_mixed_case_metric_suffix_is_a_different_key_and_stamps, crates/repark-spark/src/tests/session_write_conf.rs::the_exact_metric_suffix_still_refuses, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py
+C-056: crates/repark-spark/src/tests/session_write_conf.rs::a_mixed_case_metric_suffix_is_a_different_key_and_stamps, crates/repark-spark/src/tests/session_write_conf.rs::the_exact_metric_suffix_still_refuses
 C-057: crates/repark-spark/src/tests/session_write_conf.rs::a_mixed_case_metric_suffix_is_a_different_key_and_stamps, crates/repark-spark/src/tests/session_write_conf.rs::the_exact_metric_suffix_still_refuses
 C-058: none (records)
-C-059: crates/repark-spark/src/tests/session_write_conf_removals.rs, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py
-C-060: crates/repark-spark/src/tests/session_write_conf_removals.rs, python/repark/tests/writes/_record_ice_session_write_conf_1_rounds.py
+C-059: crates/repark-spark/src/tests/session_write_conf_removals.rs
+C-060: crates/repark-spark/src/tests/session_write_conf_removals.rs
 C-061: crates/repark-spark/src/tests/session_write_conf_removals.rs::an_empty_source_static_overwrite_names_the_partition_it_clears
 C-062: none (records)
 C-063: crates/repark-spark/src/tests/session_write_conf.rs::an_owned_plain_update_resolves_a_mixed_case_set_target

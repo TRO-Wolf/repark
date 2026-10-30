@@ -818,3 +818,31 @@ def test_migration_cut_keeps_a_parenthesis_balanced(tmp_path: Path) -> None:
     lines = (repo / _MAP).read_text(encoding="utf-8").splitlines()
     assert lines[3] == "  which runs on), `next` follows."
     assert len(lines) == 4
+
+
+def test_a_recorder_never_binds(repo: Path) -> None:
+    recorder = "crates/demo/tests/_record_demo.py"
+    _write(repo, recorder, "def record():\n    pass\n")
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {recorder}::record\nC-002: {_TEST}\n")
+    result = _grammar(repo)
+    assert result.returncode == 1
+    assert f"C-001 binds {recorder}, which is not a test file or a script" in result.stderr
+    _write(repo, recorder, f"# pins: {_UNIT}/C-001\n")
+    _write(repo, _SIDECAR, _HEADER + f"C-002: {_TEST}\n")
+    unpinned = _grammar(repo)
+    assert unpinned.returncode == 1
+    assert "1 PROVEN clause(s) with no binding (ceiling 0): C-001" in unpinned.stderr
+
+
+def test_migration_binds_nothing_to_a_fixture_whose_entry_names_only_its_recorder(
+    tmp_path: Path,
+) -> None:
+    fixture = "crates/demo/tests/oracle.json"
+    recorder = "crates/demo/tests/_record_oracle.py"
+    text = f"# map\n\n- `oracle.json` — written by `_record_oracle.py`. pins: {_UNIT}/C-001\n"
+    files = {fixture: "{}\n", recorder: 'OUT = "oracle.json"\n'}
+    repo = _scratch_map_repo(tmp_path, text, files)
+    assert _migrate(repo).returncode == 0
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        "C-001: none (records)"
+    ]
