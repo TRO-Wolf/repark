@@ -61,7 +61,7 @@ pub(crate) fn temp_view_ref_from_segment(
     let table = if quoted {
         segment.to_string()
     } else {
-        segment.to_ascii_lowercase()
+        segment.to_lowercase()
     };
     TableReference::full(home.catalog.clone(), home.schema.clone(), table)
 }
@@ -110,7 +110,7 @@ pub(crate) fn legacy_temp_view_segment(name: &str) -> String {
         .and_then(|rest| rest.strip_suffix('"'))
     {
         Some(quoted) => quoted.replace("\"\"", "\""),
-        None => name.to_ascii_lowercase(),
+        None => name.to_lowercase(),
     }
 }
 

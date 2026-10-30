@@ -253,12 +253,11 @@ impl ReparkSession {
     pub(super) fn temp_view_ref(&self, name: &str) -> Result<TableReference> {
         let reference = crate::temp_view::temp_view_ref(&self.temp_view_home, name)?;
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        let rule = self.temp_view_rule();
-        let reference = match (rule, written_last_segment(name)) {
-            (Some(NameRule::Exact), Some(table)) => self.home_table_ref(table),
-            _ => reference,
+        let Some(rule) = self.temp_view_rule() else {
+            return Ok(reference);
         };
-        self.held_temp_view_ref(reference, rule)
+        let written = written_last_segment(name).unwrap_or_else(|| reference.table().to_string());
+        Ok(self.home_table_ref(temp_view_key(&written, rule)))
     }
 
     fn temp_view_rule(&self) -> Option<NameRule> {
@@ -275,34 +274,6 @@ impl ReparkSession {
         )
     }
 
-    fn held_temp_view_ref(
-        &self,
-        reference: TableReference,
-        rule: Option<NameRule>,
-    ) -> Result<TableReference> {
-        if rule != Some(NameRule::IgnoreCase)
-            || self
-                .context()
-                .table_exist(reference.clone())
-                .map_err(engine_err)?
-        {
-            return Ok(reference);
-        }
-        Ok(self
-            .case_twin(reference.table())
-            .map_or(reference, |twin| self.home_table_ref(twin)))
-    }
-
-    fn case_twin(&self, table: &str) -> Option<String> {
-        let schema = self.temp_view_home.provider.as_ref()?;
-        let mut twins = schema
-            .table_names()
-            .into_iter()
-            .filter(|held| held.eq_ignore_ascii_case(table));
-        let twin = twins.next()?;
-        twins.next().is_none().then_some(twin)
-    }
-
     /// Build a home reference from an already-parsed segment after checking provider identity.
     pub(super) fn temp_view_ref_from_segment(
         &self,
@@ -310,13 +281,12 @@ impl ReparkSession {
         quoted: bool,
     ) -> Result<TableReference> {
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        let rule = self.temp_view_rule();
-        let reference = crate::temp_view::temp_view_ref_from_segment(
-            &self.temp_view_home,
-            segment,
-            quoted || rule == Some(NameRule::Exact),
-        );
-        self.held_temp_view_ref(reference, rule)
+        Ok(match self.temp_view_rule() {
+            Some(rule) => self.home_table_ref(temp_view_key(segment, rule)),
+            None => {
+                crate::temp_view::temp_view_ref_from_segment(&self.temp_view_home, segment, quoted)
+            }
+        })
     }
 
     pub(super) fn temp_view_ref_from_segment_exact(&self, segment: &str) -> Result<TableReference> {
@@ -447,6 +417,13 @@ impl crate::dialect::TempViewSession for ReparkSession {
 
     fn drop_temp_view(&self, name: &str) -> Result<bool> {
         ReparkSession::drop_temp_view(self, name)
+    }
+}
+
+fn temp_view_key(segment: &str, rule: NameRule) -> String {
+    match rule {
+        NameRule::IgnoreCase => segment.to_lowercase(),
+        NameRule::Exact => segment.to_string(),
     }
 }
 

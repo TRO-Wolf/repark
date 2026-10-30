@@ -175,7 +175,7 @@ pub(crate) fn temp_view_home_segment(ident: &Ident) -> String {
     if ident.quote_style.is_some() {
         ident.value.clone()
     } else {
-        ident.value.to_ascii_lowercase()
+        ident.value.to_lowercase()
     }
 }
 
