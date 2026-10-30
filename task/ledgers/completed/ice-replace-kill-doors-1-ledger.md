@@ -44,3 +44,5 @@ registry row, the release-notes draft and the order.
 ## Dated notes
 
 - **Dated 2026-10-27 (under C-008):** Muse MAX critic (muse-spark-1.3-contributor) PASS on PR #1196 head `83a342b2`, no findings; CI 24 green; all 30 kill-mid-write tests run; the forward-instead-of-hold mutant red 30 of 30 through the returned-marker discriminator; K-1 to K-7 and the controls untouched. Recorded by the ICE-V2-LABEL-1 clerk from the orchestrator's merge report. C-008 keeps its text above.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `c3e634a2` (2026-10-27, PR #1196); clauses as written.

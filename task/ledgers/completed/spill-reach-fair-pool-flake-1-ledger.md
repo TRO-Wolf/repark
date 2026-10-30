@@ -123,3 +123,5 @@ COVERAGE_ATTESTATION:
       artifacts: [task/wo/spill-reach-fair-pool-flake-1/evidence/step-a-local-pool-sweep.tsv, task/wo/spill-reach-fair-pool-flake-1/evidence/step-b-stress-spill-counts.tsv]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `c88d434a` (2026-10-22, PR #1158); clauses as written.

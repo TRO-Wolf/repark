@@ -544,6 +544,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   `risk_tier: standard`. Branch `feat/fnp-misc-1`.
   pins: fnp-misc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [fnp-win-1-ledger.md](fnp-win-1-ledger.md) — Charter ledger — FNP-WIN-1 · window, window_time, session_window (run 15a)
+- [gate-retire-1-ledger.md](gate-retire-1-ledger.md) — Unit ledger — GATE-RETIRE-1 · R-011's container-cast arm retained (GR-9): the micros hint corrected and the arm's refusals pinned
 - [grouped-surface-1-ledger.md](grouped-surface-1-ledger.md) —
   **GROUPED-SURFACE-1 step 1 (2026-09-14), in flight:** `GroupedData.apply`,
   `applyInArrow`, `cogroup` + `PandasCogroupedOps` answer live-PySpark 4.1.2 over
@@ -646,6 +647,14 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   DECLARED with fork asks. `risk_tier: standard`. Branch `fix/ice-merge-append-1`.
   pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010
+- [ice-replace-kill-doors-1-ledger.md](ice-replace-kill-doors-1-ledger.md) —
+  **ICE-REPLACE-KILL-DOORS-1 (2026-10-27), grade B:** kill-mid-write pins K-8 and K-9 for the two
+  replace spellings on the local catalog, format v2 and v3; the forward-instead-of-hold mutant red
+  20 of 20 with the discriminator; ICE-INTEGRITY-PINS-1 C-024 closed for the local catalog. The Glue
+  and S3 Tables replace kill (C-007) and the verifier round (C-008) are OPEN. `risk_tier: standard`.
+  Branch `fix/ice-replace-kill-doors-1`.
+  pins: ice-replace-kill-doors-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ice-resource-bound-1-ledger.md](ice-resource-bound-1-ledger.md) — **ICE-RESOURCE-BOUND-1 (U-11), 2026-10-26, steps 0 to 6:** the bound measured on 261 cells (v2 and v3; largest process peak 14.1 GiB), ruled by the owner and built with its pins; eleven clauses PROVEN with `pins:` citations (C-005 REJECTED: the D8/D9 door mismatch, carded), and C-012 OPEN by its append-only verdict, closed by the dated row C-013 (the verifier rounds passed on head 76bd5891). Branch `feat/ice-resource-bound-1`.
 - [ice-spark-table-1-ledger.md](ice-spark-table-1-ledger.md) —
   **ICE-SPARK-TABLE-1 (2026-09-14), in flight:** evidence unit — RePark writes into a
   **Spark-created** Iceberg v2 copy-on-write table (inventory §8 ruling 6, G-3 / the
@@ -682,6 +691,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   or aware (C-022); Spark-side disclosures, the named move's surfaces and the append doors
   recorded (C-023). `risk_tier: standard`. Branch
   `fix/ice-tsns-frame-door-1`.
+- [ice-tsns-update-range-class-1-ledger.md](ice-tsns-update-range-class-1-ledger.md) — Unit ledger — ICE-TSNS-UPDATE-RANGE-CLASS-1 (U-4, row R-012) · the unfiltered UPDATE reports an out-of-range literal as INSERT does (closed as already fixed, pinned)
 - [io-bucket-cluster-1-ledger.md](io-bucket-cluster-1-ledger.md) —
   **IO-BUCKET-CLUSTER-1 step 1 (2026-09-14), in flight:** `DataFrameWriter.bucketBy` /
   `sortBy` / `clusterBy` and `DataFrameWriterV2.clusterBy` bind on the writers with
@@ -768,6 +778,16 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   live suite: 6298 passed, 0 failed on this box. `risk_tier: standard`. Branch
   `fix/nightly-live-1`.
   pins: nightly-live-1/C-001, C-002, C-003, C-004
+- [ns-truthup-1-ledger.md](ns-truthup-1-ledger.md) — Unit ledger — NS-TRUTHUP-1 · the four nanosecond registry rows re-measured on main, re-dated, and `DESCRIBE` shows the Iceberg spec names
+- [offset-nested-sort-1-ledger.md](offset-nested-sort-1-ledger.md) —
+  **OFFSET-NESTED-SORT-1 (2026-10-08), a wrong answer from the pinned DataFusion:** an `OFFSET`
+  under a nested `ORDER BY` answered no rows when the scan had one partition, and an outer sort
+  over an offset-only limit answered the wrong rows at every partition count. Reproduction on
+  stock DataFusion 54.1.0 and on three facade doors (C-001, C-002), the 70-statement Spark grid
+  (C-003), the defect located in `EnforceSorting`'s sort pushdown (C-004), the guard and its
+  wiring (C-005), 840 cells right (C-006), the live cell (C-007), five mutations (C-008), the
+  perf guard (C-009), card and registry (C-010), gates (C-011). `risk_tier: standard`. Branch
+  `fix/offset-nested-sort-1`.
 - [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
   **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
   `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
@@ -1001,6 +1021,15 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   pins: spark-door-temp-view-target-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: spark-door-temp-view-target-1/C-011, C-012, C-013, C-014, C-019, C-020, C-021
   pins: spark-door-temp-view-target-1/C-007, C-025
+- [spill-reach-fair-pool-flake-1-ledger.md](spill-reach-fair-pool-flake-1-ledger.md) — **SPILL-REACH-FAIR-POOL-FLAKE-1
+  (2026-10-22, owner rulings "Re run" and "go with your recommendations"):** the small-fair-pool join probe refused
+  `ExternalSorterMerge` on CI three times; the default pool of `test_t2_spill_reach.py` moves from 64M to 72M. C-001
+  (PROVEN): at 64M the probe refuses 0 of 30 alone and 4 of 67 loaded. C-002 (PROVEN): every refusal exceeds the bytes
+  the pool quoted; alone 48M refuses 20 of 20 and 56M 9 of 20. C-003 (PROVEN): the ordered sweep is clean at 72M, 80M
+  and 96M. C-004 (PROVEN): pooled 7 of 280 at 64M against 0 of 221 at 72M. C-005 (PROVEN): one knob, assertions
+  unchanged. C-006 (OPEN): the runner half was not measured, push denied. C-007 (PROVEN): the hangs, carded apart as
+  FAIR-POOL-HANG-1. C-008 (PROVEN, orchestrator ruling 2026-10-22): the default is 80M, not 72M, on the stress table's hang counts.
+  `risk_tier: standard`. Branch `fix/spill-reach-fair-pool-flake-1`.
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
 - [sql-harden-2-cow-shapes-ledger.md](sql-harden-2-cow-shapes-ledger.md) — Unit ledger — SQL-HARDEN-2 · copy-on-write cutover shapes
@@ -1047,6 +1076,38 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   divert and the inbound-SRID validation).
   `risk_tier: standard`. Branch `feat/types-geo-ddl-1`.
   pins: types-geo-ddl-1/C-001, C-002, C-003, C-004, C-005
+- [u11-edge-1-ledger.md](u11-edge-1-ledger.md) —
+  **U11-EDGE-1 (2026-09-26), in flight:** `E-CASE-SELECT` (output columns keep the query's
+  spelling; `F.col` binds a spelled frame on the DataFrame door) and `E-CASE-PARTITION-FIELD`
+  (partition sources bind case-sensitively with Iceberg's `ValidationException` text) replay
+  EQUAL / both-refuse; `TP-FORMAT-V1-DELETE` recorded EQUAL with no code change;
+  `E-CATALOG-LISTDATABASES` moved to the catalog unit (2026-09-25). Round 2 (2026-09-26):
+  the DataFrame door's one case-insensitive binder (drop, qualified refs, join on names,
+  unionByName, C-017…C-020), Java's struct text (C-021) and the replace-arm pins. Residues
+  R-1…R-10 (R-5…R-10 dated 2026-09-26, candidates for CASESENS-1). Round 4 (2026-09-26): a qualified
+  Column drop binds through its relation and an unmatched drop is a no-op (C-022); a bare
+  reference matching two fields ignoring case refuses AMBIGUOUS_REFERENCE, exact spelling
+  included (C-023). Residues R-11…R-15 dated 2026-09-26 for CASESENS-1 (qualified string
+  names in select, the `(t.id + 1)` name, the ANSI positional INT/STRING union, the missing
+  relation text, the folded reference spelling on compound Columns). Round 5 (2026-09-26):
+  the facade's own re-projections and origin Columns bind by attribute, exactly (C-024, C-025),
+  and a Column drop matching two fields refuses AMBIGUOUS_REFERENCE (C-026).
+  Residues R-16…R-21 dated 2026-09-26 for CASESENS-1 (orderBy's UNRESOLVED class on twins,
+  candidate rendering on selectExpr / string filter / SQL subquery, aliased and USING joins,
+  eager getitem refusal, twin rename and replace, star forms).
+  Round 6 (2026-09-26): compound origin Columns keep their side's exact binding through
+  arithmetic, cast, alias, `when` and `withColumn` on a case-twin join, and no ambiguity text
+  names a scratch relation (C-027). Residue R-22 dated 2026-09-26 (pre-existing on main: exact-duplicate
+  plain frames refuse their re-projections, a two-`id` join's `dropna` answers, a `a.b` column's
+  `dropna` answers).
+  Round 7 (2026-09-26): a projection of a twin join writes back into its own table (the SQL
+  audit no longer walks a named view's body, C-028); no scratch name in a suggestion list,
+  `F.col("*")` expands to the presented fields (C-029); attribute copies never collide with a
+  user field (C-030). Residues R-23…R-27 dated 2026-09-26 for CASESENS-1 (`F.struct("*")`, the
+  `__repark_sel_q_<n>` name through a view and unionByName, AMBIGUOUS on grouping and sort by
+  origin Columns, `withColumns` case duplicates, the overwrite refusal class and the suggestion
+  order).
+  `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [win-slide-1-ledger.md](win-slide-1-ledger.md) — **WIN-SLIDE-1 (2026-09-04), in flight:** the
   thirteen aggregates that refused over a sliding frame now answer Spark-equal on both doors.
   One mechanism, not thirteen: a `sliding_frame_rescan` analyzer rule on every core session

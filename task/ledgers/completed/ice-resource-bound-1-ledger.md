@@ -46,3 +46,5 @@ VERDICT (2026-10-26, after the verifier rounds on head 76bd5891): 13 clauses, 11
 
 - Q-B1 and Q-B2 are ruled (order). The CTAS plan writer resolves the bound per partition, unreached today (a declared row in the parity registry). The bare `UPDATE ... SET` takes the fork's plain path and is not the pinned spelling; `UPDATE ... WHERE` is.
 - The declared rows with no pin (the ctx-less public Rust APIs and the CTAS arm) are flagged in the hand-back for the owner's ruling; they are not clauses here.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `59d104d9` (2026-10-26, PR #1191); clauses as written.

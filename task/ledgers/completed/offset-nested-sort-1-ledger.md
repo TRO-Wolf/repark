@@ -434,3 +434,5 @@ COVERAGE_ATTESTATION:
       evidence: Five mutations run against the pin module; M5 found a gap (sealing every limit stayed green) and the plan-identity pin was widened until it went red; M1 is red at one partition and green at two and sixteen for the one-partition family.
       artifacts: [task/ledgers/staging/offset-nested-sort-1-ledger.md, crates/repark-core/src/session/tests/skipping_limit.rs]
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `a8b04260` (2026-10-08); clauses as written.

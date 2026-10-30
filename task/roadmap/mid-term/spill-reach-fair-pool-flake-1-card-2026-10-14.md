@@ -16,7 +16,7 @@ distinct probe). The default is now 72 MiB, with a dated row in
 [the perf map](../../../python/repark/tests/perf/map.md). The runner half was not measured (the push of the diagnostic
 branch was denied on 2026-10-22), so the first CI run of the shard that holds this file is the only runner sample. Work
 order and evidence: [../../wo/spill-reach-fair-pool-flake-1/map.md](../../wo/spill-reach-fair-pool-flake-1/map.md); ledger:
-[../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md).
+[../../ledgers/staging/spill-reach-fair-pool-flake-1-ledger.md](../../ledgers/completed/spill-reach-fair-pool-flake-1-ledger.md).
 The hangs found on the way are carded apart as [FAIR-POOL-HANG-1](fair-pool-hang-under-load-1-card-2026-10-22.md).
 
 **Status update, later the same day (orchestrator ruling 2026-10-22, under the owner's "go with your recommendations"):** the

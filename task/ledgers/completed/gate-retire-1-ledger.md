@@ -7,7 +7,7 @@
 **Order:** [../../wo/gate-retire-1/order.md](../../wo/gate-retire-1/order.md) (grade B, release 1.5.6);
 parity row R-011 with its 2026-10-25 status line in
 [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md); the seam's
-ledger [zone-seam-1-ledger.md](zone-seam-1-ledger.md).
+ledger [zone-seam-1-ledger.md](../staging/zone-seam-1-ledger.md).
 
 **Orchestrator ruling (2026-10-25, on the builder's H3 halt, as the builder's notes record it):** the
 three lineage-walker tests in `nested_ns/tests.rs` keep their assertions and expected values and take a
@@ -80,3 +80,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/tests/ntz_nested_refuse.rs, crates/repark-spark/src/router/nested_ns.rs]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `cf6641a4` (2026-10-25, PR #1187); clauses as written.

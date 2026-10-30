@@ -40,3 +40,5 @@
 - The DESCRIBE surfaces that keep the microsecond names are `DESCRIBE <table> <column>`, the DESCRIBE partition section, nested struct, array and map leaves inside `DESCRIBE TABLE`, and `DESCRIBE TABLE` on a view; card DESCRIBE-NS-NAMES-2 holds them. `SHOW CREATE TABLE`, `df.schema`, `dtypes` and `printSchema` are unchanged by design: they carry the Arrow type.
 - The six bare `VALUES` answers of C-003 are pinned by no test in the tree. The citation for C-003 covers the twelve refusals only.
 - R-018 part 2 (a multi-row `map(…)` mixing a `TIMESTAMP_NTZ` literal and `to_timestamp_ntz(…)`, which panics in Arrow) was not re-measured; it keeps its 2026-10-09 reading.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `69b7375f` (2026-10-26, PR #1192); clauses as written.

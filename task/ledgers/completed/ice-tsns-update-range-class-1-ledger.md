@@ -39,3 +39,5 @@ literal's string, and the kernel reports the range failure on every path. The un
 - `handback-notes.md`, committed at the clone root by mistake in `9e7356a6`, is removed; its facts are in the order's §7.
 - Registry row R-012 is FIXED (status 2026-10-26), with the 2026-10-09 measurement kept as history.
 - The 1.5.6 release-notes draft carries one line under "Integrity under failure (no stored value or behaviour changes)".
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `a8c51551` (2026-10-26, PR #1194); clauses as written.
