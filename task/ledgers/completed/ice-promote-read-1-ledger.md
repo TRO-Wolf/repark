@@ -380,3 +380,5 @@ The catalog-digest cell passes (the re-recorded digest matches the extended
 driver). The DataFrame-door cells fail at the same SQL-fallback `partitions`
 step — their only DataFrame twin (`p_eq_7`) is never reached, so no door
 difference is measured here. This is the critic's L-01 verbatim.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `433a8352` (2026-09-17); clauses as written.

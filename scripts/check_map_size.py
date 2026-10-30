@@ -80,7 +80,7 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "crates/repark-iceberg/src/write/merge/map.md": (509, 40910),
     "crates/repark-python/src/column/map.md": (423, 31404),
     "crates/repark-python/src/map.md": (301, 107812),
-    "crates/repark-spark/benches/ice_read_perf/map.md": (375, 28752),
+    "crates/repark-spark/benches/ice_read_perf/map.md": (375, 28754),
     "crates/repark-spark/src/call/map.md": (444, 36836),
     "crates/repark-spark/src/map.md": (2525, 211771),
     "crates/repark-spark/src/router/map.md": (332, 27642),

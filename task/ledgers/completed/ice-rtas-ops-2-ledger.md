@@ -138,3 +138,5 @@ COVERAGE_ATTESTATION:
       evidence: Registry RTAS-OPS-1 and the fork-sync RP-23 consumer clause state what the code now does, and the live oracle's four cells plus the orchestrator's column-def cell are the only Spark claims.
       artifacts: [docs/spark-sql-iceberg-parity.md, docs/fork-sync.md]
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `91b15ebe` (2026-09-18); clauses as written.

@@ -281,3 +281,5 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/ice-hadoop-vn-1-ledger.md]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `64a0e7b4` (2026-09-17, PR #675); clauses as written.

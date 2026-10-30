@@ -356,3 +356,5 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/writes/test_ice_meta_delete_1.py, docs/spark-sql-iceberg-parity.md]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `1e2be9ca` (2026-09-20); clauses as written.

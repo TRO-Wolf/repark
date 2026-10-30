@@ -185,3 +185,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/wap_branch.rs, python/repark/tests/writes/test_ice_wap_branch_1.py]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `e4160a58` (2026-09-20); clauses as written.

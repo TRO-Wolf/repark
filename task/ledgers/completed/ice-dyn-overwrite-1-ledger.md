@@ -395,3 +395,5 @@ Orchestrator gates on the rebased squash (`main` `e980d945`, release native with
 codegen-units 16): comment ban `hits=0`; facade `9726 passed, 2 failed` (only the q14
 `current_date` pair, which fails locally between 20:00 and 24:00 EDT); parity `756 passed`;
 `cargo test -p repark-spark --lib` green; `make verify` rc 0.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `50740088` (2026-09-18); clauses as written.

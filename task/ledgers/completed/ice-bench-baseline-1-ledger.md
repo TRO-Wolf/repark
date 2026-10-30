@@ -119,3 +119,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/benches/ice_read_perf/pins_report.rs]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `17241c7d` (2026-09-19); clauses as written.

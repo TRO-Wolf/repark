@@ -440,3 +440,5 @@ FINDING:
   title: The After path allocated sibling-id vectors and lowercased every sibling name
   evidence: The order simulation is deleted with L-003; resolution is fork-index lookups with no per-sibling allocation in RePark.
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `b1111b49` (2026-09-17, PR #677); clauses as written.

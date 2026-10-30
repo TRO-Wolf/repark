@@ -339,3 +339,5 @@ Every Python and Rust consumer comparing a logical type key against a literal se
 | `na.drop`, `union`/`unionByName`, `toPandas`, UDF returns, cache, writers | checked, no change — no type-key branch (critic probes). |
 
 VERDICT: 16 clauses, 16 PROVEN, 0 OPEN, 0 REJECTED.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `778fa9b1` (2026-09-16, PR #655); clauses as written.

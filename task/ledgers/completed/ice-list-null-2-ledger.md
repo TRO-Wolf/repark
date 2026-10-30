@@ -166,3 +166,5 @@ Done: three commits on `fix/ice-list-null-2` — red pins (`2c498d5a`), the fix 
 flipped Python pins (`2fcd08a1`), registry plus ledger (`a1cd884f`) — and this close-out.
 All sixteen cells answer Spark's rows; the eight OR cells pin the measured `overwrite`
 operation (Q-2, flagged for orchestrator confirm). No ceiling raised, no fork change.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `9cada921` (2026-09-19); clauses as written.

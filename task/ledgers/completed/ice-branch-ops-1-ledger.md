@@ -382,3 +382,5 @@ The removal restores the fork's refusal; the green run after the rebuild is the 
   `listing_cost_list_tables_cheaper_than_provider_rebuild`, which fails only under
   sibling-lane contention and passed on the green run; no shared code path with this
   diff).
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `cda49b18` (2026-09-17, PR #674); clauses as written.

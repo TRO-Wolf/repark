@@ -615,3 +615,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/session_write_conf_removals.rs, crates/repark-iceberg/src/write/summary_collision.rs, crates/repark-iceberg/src/write/static_value.rs, crates/repark-spark/src/tests/parquet_dictionary.rs]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `82952d40` (2026-09-20); clauses as written.

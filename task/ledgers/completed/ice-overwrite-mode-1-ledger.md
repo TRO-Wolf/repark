@@ -315,3 +315,5 @@ refuses Spark's `[CAST_INVALID_INPUT] … SQLSTATE: 22018` as `IllegalArgumentEx
 (measured on Spark 4.1.2, `target/probe-u8-pr1/probe3.py`), not the Arrow `Cast error` text.
 The facade pin is renamed `test_invalid_static_date_refuses_with_spark_cast_invalid_input`.
 See `task/ledgers/staging/u8-write-sql-ledger.md` C-009.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `6dacd1d5` (2026-09-19); clauses as written.

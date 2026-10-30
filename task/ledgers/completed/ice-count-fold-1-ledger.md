@@ -177,3 +177,5 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/perf/test_perf_ice_scan_1.py]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `1aef92cd` (2026-09-19); clauses as written.

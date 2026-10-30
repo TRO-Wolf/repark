@@ -221,3 +221,5 @@ COVERAGE_ATTESTATION:
 ## RP-54 note (2026-09-26)
 
 RP-54 repin: test_evolved_spec_default_is_a_no_op re-pinned to the fork-owned shape after fork #361 — before-layout is the merged [(0,0,5,0),(0,1,0,0)], the (0,0) no-op call, snapshot and row pins stand.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `52f695f9` (2026-09-19); clauses as written.

@@ -113,3 +113,5 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/writes/test_ice_write_options_1.py, crates/repark-sql/tests/parser_productions.rs]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `077f87a7` (2026-09-19); clauses as written.

@@ -272,4 +272,6 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/iceberg/test_ice_procs_route_1.py, python/repark/tests/iceberg/_record_ice_procs_route_1_oracle.py]
 ```
 
-Up: [map.md](map.md)
+Up: [map.md](../staging/map.md)
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `ae08c218` (2026-09-20); clauses as written.

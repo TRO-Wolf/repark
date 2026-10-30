@@ -164,3 +164,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/alter.rs, python/repark/tests/iceberg/test_alter_table.py]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `b66a0146` (2026-09-19); clauses as written.
