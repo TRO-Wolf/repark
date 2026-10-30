@@ -12,18 +12,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_layout.py` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `_refuse_temp_view_write_target` raises `_LEGACY_ERROR_TEMP_1011` ("Writing into a view is not allowed", with the view's name) when a one-part `writeTo` target names a temporary view, through the shared `catalog_resolution._temp_view_home_ref`; it runs before anything is resolved, staged or written (C-012). The helper lives here because `writer_readwriter.py` is at its size ceiling.
 - `writer_readwriter.py` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `DataFrameWriterV2._existing_table_ref` calls `writer_layout._refuse_temp_view_write_target` first, so `writeTo(...).append()`, `overwritePartitions()` and `overwrite()` (and their option forms) refuse a view name. `create`, `createOrReplace`, `replace`, `insertInto` and `saveAsTable` are unchanged, as Spark measures (C-012).
 - `writer_readwriter.py` — **CATALOG-1 (2026-09-26):** `_resolve_writer_table` passes only the
-  current catalog and database to `resolve_table_name` (no known-catalog alias). pins: catalog-1/C-002
+  current catalog and database to `resolve_table_name` (no known-catalog alias).
 - `writer_readwriter.py` — **S3-PATH-WRITE-1 step 0 (2026-09-28, oracle, no code change):**
   Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
   moto emulator; the evidence and the design answers live in `task/ledgers/staging/u12-probes/`.
-  pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `writer_readwriter.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   temporal options leave the CSV/JSON unsupported sets for
   `_TEMPORAL_WRITE_OPTIONS` (skipped in COPY option SQL, honored through the
   SELECT builder), and the local CSV/JSON COPY inner `SELECT` comes from
   `_build_text_write_select` (other formats keep `SELECT *`, so parquet
   stays binary).
-  pins: text-write-timestamp-zone-1/C-001, C-002, C-006
   **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the local
   COPY statement comes from `writer_layout.text_write_copy_sql` (plain
   inner `SELECT`, resolved `STORED AS` name, merged spec OPTIONS); the
@@ -36,7 +34,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_layout.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
   `text_write_select` carries writer state to the `session_text_write_select`
   binding, which returns the COPY inner `SELECT`.
-  pins: text-write-timestamp-zone-1/C-001
   **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):**
   `text_write_copy_parts` carries writer state plus `STORED AS` to the
   `session_text_write_copy_parts` binding and returns the inner `SELECT`,
@@ -51,10 +48,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `s3://` / `s3a://` here; the partition-clause helper moved unchanged to
   `writer_layout.partitioned_by_sql_clause`, retiring
   `writer_readwriter.py`'s size exception (996 lines).
-  pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
   **ATTR-ID-1 S2 (2026-09-30):** the frame handed to `session_write_path` is
   stripped of `repark.attr` first, in place on the argument line.
-  pins: attr-id-1/C-009
 
 ## Modules
 
@@ -65,17 +60,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `udf_schema.py`, grouped-UDF assembly to `grouped_udf.py` (6302 → 5954, mirrored in the CAP-1
   test). `core.py` re-imports every moved private name, so the package export surface is
   unchanged; the `PySparkNotImplementedError` import stays because it is part of that surface.
-  pins: dfcore-1/C-001, C-002, C-004, C-005, C-006
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the export doors keep the
   `scrub_exception` copy in `failure` and raise after the handler, so `__context__` is None.
-  pins: source-url-redact-1/C-071
   DML-A: `mergeInto` `whenNotMatchedBySource` DELETE/UPDATE execute.
   NULLABILITY-2 (2026-09-05): the `schema` property maps the `timestamp`/`timestamp_ntz`
   type keys through `ReparkDataType.fromDDL` — `fromDDL("timestamp")` equals the old
   `TimestampType()` arm, and `timestamp_ntz` now lands on `TimestampNTZType` instead of
   the `StringType` fallback. One import line removed (6303 → 6302, mirrored in the CAP-1
   test). Registry `READ-TSNTZ-DTYPE-1`.
-  pins: nullability-2/C-006
   TYPES-1 (2026-09-05): `sample`/`randomSplit` hash arithmetic wraps `__repark_rn` in
   `CAST(__repark_rn AS BIGINT)` (+2 lines, absorbed back in round 4).
   DFCORE-2 (2026-09-07): the four UDF select rewrites moved out — scalar and
@@ -83,13 +75,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (5954 → 5263, mirrored in the CAP-1 test). `select` keeps two one-line
   delegations; `core` binds the two modules, so the package and core surfaces
   gain exactly those two names and the class loses exactly the four methods.
-  pins: dfcore-2/C-001, C-002, C-003, C-006
   DFCORE-3 (2026-09-07): the six statistics bodies moved to `statistics.py`
   (5263 → 5060, mirrored in the CAP-1 test). The public methods stay as one-line
   wrappers, so the class dir is unchanged; `summary`'s wrapper imports its helper
   locally because its `*statistics` parameter shadows the module binding. `core`
   binds the module, so the package and core surfaces gain exactly that one name.
-  pins: dfcore-3/C-001, C-002, C-003, C-004, C-006
   DFCORE-4a (2026-09-07): the three sampling bodies plus argument normalization
   and seed coercion moved to `sampling.py` (5060 → 4819, mirrored in the CAP-1
   test). The public methods stay as one-line wrappers; `_prepare_sample_args`
@@ -97,7 +87,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   package and core surfaces gain exactly the one module name. The move took
   `core`'s last module-scope `IllegalArgumentException` use with it, so the
   now-redundant function-local re-import in staying code is gone (same object).
-  pins: dfcore-4a/C-001, C-002, C-003, C-004
   DFCORE-4b (2026-09-07): the ten display bodies moved to `display.py`
   (4819 → 4539, mirrored in the CAP-1 test). `show`, `__repr__`,
   `_repr_html_`, and `_preview_tail_rows` stay as one-line wrappers; the six
@@ -106,7 +95,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   helper with the moved code.   The new binding shadows a join-side loop
   variable, so that local is renamed `display_name` (ruff F402,
   behavior-neutral, +2 lines for the wrapped f-string).
-  pins: dfcore-4b/C-001, C-002, C-003, C-004
   DF-EXPLAIN-1 (2026-09-08): `explain` renders Spark section headers over verbatim DataFusion
   plan text through the new `_explain_text` (same `(extended, mode)` shape, returns `str`,
   prints and returns `None`); rows come through `toLocalIterator`, which the spy pin holds out
@@ -114,16 +102,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the exact baseline ratchets 4539 → 4536 in the same commit. The CAP-1 freeze pins absorb the
   split: `EXPECTED_DATAFRAME_DIR` gains `_explain_text`, the package gains the `explain`
   submodule, and the frozen core/package surfaces gain the two private imports.
-  pins: df-explain-1/C-003
   PERF-UNPIVOT-1 (2026-09-12): `select` dispatches one `StackCall` through
   `functions_stack.select_with_stack_if_present` onto `PyDataFrame.stack` /
-  `UnpivotExec`. Baseline 4485 → 4483. pins: perf-unpivot-1/C-003, C-004
+  `UnpivotExec`. Baseline 4485 → 4483.
   DF-EAGER-1 step 2 (2026-09-09): `eager` / `lazy` stay as one-line wrappers with the
   `compute` = `eager` alias; the cache-guard trio (`_CACHE_MAX_BYTES_KEY`,
   `_cache_conf_lookup`, `_resolve_cache_max_bytes`) moves to `eager.py`, re-imported by
   `core` by identity, so the frozen core/package surfaces keep every name and the package
   gains exactly the `eager` submodule. The exact baseline ratchets 4525 → 4487 in the same
-  commit. pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
+  commit.
   REVIEW-FIX-6 (2026-09-10): `_explain_text` refuses the both-set shape first —
   `extended` and `mode` together raise `PySparkValueError` `CANNOT_SET_TOGETHER` (the
   `Row(1, a=2)` message shape) — above the untouched string-`extended` remap. The
@@ -135,16 +122,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   by listing first because the engine only offers createOrReplace, and v1 disclosed
   behavior does not fail on replace. The exact baseline ratchets 4487 → 4486 with the
   CAP-1 mirror in the same commit.
-  pins: review-fix-6/C-001, C-002, C-004
   REVIEW-FIX-3 (2026-09-10): `show`'s docstring states the probe-first count D-5
   introduced, line-neutral at the exact baseline.
-  pins: review-fix-3/C-004
   DF-COLREGEX-1 (2026-09-11): `colRegex`/`col_regex` delegate to `colregex.py` — a
   backticked pattern returns the `RegexColumn` marker `select` expands, a bare
   `colName` resolves as a literal column name at the call. `select` checks the
   marker before the `*` arm, so expansion keeps the marker's position in the
   projection. Line-neutral at the exact baseline.
-  pins: df-colregex-1/C-003
   FACADE-1 (2026-09-12): mapInArrow construction registers an empty Arrow table through
   the capsule helper (IPC only when the native symbol is absent). `to_arrow` /
   `to_arrow_batches` go through `require_pyarrow`. `to_polars` consumes the
@@ -157,7 +141,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   RecordBatchReader over the generator would re-enter `__arrow_c_stream__` while Rust
   holds the GIL and abort. Use `Table.from_batches`, not `RecordBatchReader.from_batches`,
   so tests that patch `pa.RecordBatchReader` keep tracking `from_stream`. Exact baseline
-  ratchets 4485 → 4473 → 4470. pins: facade-1/C-001, C-002, C-006
+  ratchets 4485 → 4473 → 4470.
   DF-SURFACE-A-1 step 1 (2026-09-14): the `localCheckpoint` body moves to
   `surface_a.py` (checkpoint's sibling) and the seven surface-a names bind
   one-line each. Critic round 1 (rulings R-5/R-6): `inputFiles` and
@@ -165,19 +149,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   not a facade surface) and the `_schema_override` sticker is deleted —
   `schema` reports the engine plan (the narrow-width divergence is registry
   LOGICAL-WIDTH-1). Exact baseline ratchets 4044 → 4035, mirrored in the
-  CAP-1 test. pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
+  CAP-1 test.
   CATALOG-SURFACE-1 critic round 1 (2026-09-14): `create_or_replace_temp_view`
   delegates registration to `catalog_surface._register_temp_view` so the catalog
   overlay records each view's registration object for staleness checks; the file
   stays on its exact baseline (4044 → 4043, ratcheted down).
-  pins: catalog-surface-1/C-009
   COLUMN-PARITY-1 step 1 (2026-09-14): `DataFrame` gains `_field_metadata`:
   `Column.name(..., metadata=…)` stores it and `schema` overlays it on the projected
   `StructField`. `__str__` moved to `column_fields` for baseline headroom and the
   module binds here for the metadata helpers.
   **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
-  boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
+  boundary rewrite runs.
   ATTR-ID-1 S2 (2026-09-30): `DataFrame.__init__` stamps the wrapped native frame
   (`_native.stamp_attribute_ids`, idempotent, in place on the assignment line), so every
   facade construction site (`_spawn`, the session readers and `sql`, the catalog surface,
@@ -189,18 +172,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_inner` replacements: cache, checkpoint, bridge, declared sort) and fails loud when
   a stamped position still lacks an id. Both edits are line-neutral at 3973 (the
   condensed docstring funds the `attr_id` kwarg). Nothing reads `_attr_id` yet (S3).
-  pins: attr-id-1/C-007, C-008
   ATTR-ID-1 S2 exports (2026-09-30): `_apply_export_display_names` (the funnel behind
   `to_arrow`/`toArrow`, `to_arrow_batches`, hence `toPandas` and `collect`) also drops
   `repark.attr` from every exported Arrow field through
   `column_fields._strip_attribute_id_metadata`, nested in place on the tighten-strip
   line (line-neutral at 3973). `schema`/`printSchema`/`show`/`_repr` build from
   name/type/nullable triples and carry no field metadata.
-  pins: attr-id-1/C-010
   PERF-ATTR-STAMP-2 O-1 (2026-10-03): the funnel no longer strips `repark.attr`; it
   keeps only the tighten strip, because the native export now runs the per-handle id-free
   twin and its schema carries no id (`tests/test_perf_attr_stamp_2_o1.py`).
-  pins: attr-id-1/C-053
   ATTR-ID-1 S3a (2026-09-30): `__getitem__` and `__getattr__` route strings through
   `column_fields._bind_resolved_name`, and `_column_of` / `_rebind_stable_name_column`
   become one-line delegates to `column_fields` (bodies in the `column_fields.py` row
@@ -208,7 +188,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   getitem, `_iter_bound_columns`, ordering) and the ambiguous-with-exact delegation.
   `alias` restores the parent display/engine overlay when the `SubqueryAlias` dedupes
   a display name, so resolve sees the presented names. 3973 → 3921, with the CAP-1
-  mirror. pins: attr-id-1/C-024
+  mirror.
   ATTR-ID-1 S3b (2026-10-01): `filter` (both the `Column` and the `str` arm) and
   `_sort_specs` route name binding through `column_fields` (`_rebind_free_names`,
   `_quote_filter_sql_identifiers`, `_bind_sort_key`; bodies in the
@@ -217,7 +197,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_quote_filter_idents_in_fragment`, the `DataFrame._quote_filter_sql_identifiers`
   method and `_SQL_LITERAL_KEYWORDS` (the set is re-homed in `column_fields`;
   grep proof of no outside caller in the ledger). 3921 → 3846, with the CAP-1
-  mirror. pins: attr-id-1/C-025
+  mirror.
   ATTR-ID-1 S3e (2026-10-01): the `DataFrame._frame_qualifiers` slot (id to
   qualifier names, copied by `_spawn`, set by `alias`, unioned onto join
   output by `_join_frame_qualifiers` at all four join sites, re-minting
@@ -227,12 +207,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `select` expands a qualified star through `qualified_names`; `selectExpr`
   delegates to `filter_quote._select_expr_frame`. No helper is deleted: the
   qualified-path candidates each keep an outside-family caller (proof in the
-  ledger). 3803 → 3800, with the CAP-1 mirror. pins: attr-id-1/C-039
+  ledger). 3803 → 3800, with the CAP-1 mirror.
   ATTR-ID-1 S4 follow-up (2026-10-02): `_bind_schema_column`,
   `_bind_engine_display_column`, the `withColumnsRenamed` rewrap, and the
   duplicate-output select rewrite carry `Column._birth_frame` with `_attr_id`;
   `_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line
-  delegate (3715 → 3653, with the CAP-1 mirror). pins: attr-id-1/C-041
+  delegate (3715 → 3653, with the CAP-1 mirror).
   **ATTR-ID-1 SJ-2 (2026-10-02):** every frame carries `_frame_node`
   (`frame_root` in `__init__`, `frame_derived` in `_spawn` with an optional
   caller node, joins keep today's spawn); the unemitted-id family moves to
@@ -263,7 +243,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the stack's `_bind_schema_column`, `filter`, `withColumn(s)`, renames, `na` and
   `dropDuplicates` bodies, which bind through `resolve` (S3a–S3e). The port adds
   no Python-side name matcher (the C-007 rule; `column_errors.py` loses its
-  `lower()` filter). pins: casesens-2/C-003, C-006, C-007, C-010
+  `lower()` filter).
   CASESENS-2 port (2026-10-03, join conditions): `_join_on_condition_h1` passes
   `*_join_condition_args(self, other, cond_sql, left_alias, right_alias)` to the
   native preparer; the new `join_attr_tokens._join_condition_args` assembles the
@@ -275,7 +255,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_native.refuse_folded_duplicate_keys(self._session, keys)` after the key
   checks, so folded keys refuse `COLUMN_ALREADY_EXISTS` under the live `false`
   rule (live Spark 4.1.2, 2026-10-03). `core.py` 3485 → 3476 (ceilings
-  ratcheted). pins: casesens-2/C-004, C-009
+  ratcheted).
   **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_node` leaves the slots for the
   lazily-built property `frame_nodes.py` binds; births assign `None` (root)
   or `(parent, others)` (derived), joins assign the built node, and the
@@ -290,7 +270,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `join(other, None, "cross")` keep main's plan and rows. Net zero lines (3461, ceiling
   unchanged). A list of Columns and shared names under `"cross"` keep main's refusals, pinned
   beside the fix. Pins: `python/repark/tests/dataframe/test_cross_join_condition_1.py`.
-  pins: cross-join-condition-1/C-001, C-002, C-003, C-004
 - `frame_nodes.py` — **ATTR-ID-1 PERF-1 (2026-10-03):** the lazy lineage-node
   home. `_bind_frame_node` attaches `_frame_node` as a property at package
   import; reads build root/derived nodes on first touch into a weak table
@@ -310,43 +289,42 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built scans, joins,
   unpivot, and explain run through the native `sql_built` method; `selectExpr` stays on `sql`
   (user text follows the flag). The set-op wrap plus its dict join ratchet the
-  baseline 3973 → 3971. pins: string-literal-escape-1/C-011
+  baseline 3973 → 3971.
   **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_iter_map_in_arrow_output` (`mapInArrow`,
   `mapInPandas`) keeps one user-failure handler (the redundant inner one around the call is
   gone; same message), masks it and raises after the `finally`; 3971 → 3965 in `check_lib_py.py`.
-  pins: source-url-redact-1/C-076
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
-  (multi-name frames keep their display/engine binds). pins: u11-edge-1/C-024
+  (multi-name frames keep their display/engine binds).
   **ATTR-ID-1 S3d (2026-10-01):** `fill` (scalar subset and dict keys) and
   `drop` (subset) bind each key through `spark/subset_resolve` under the live
   rule: one id fills or filters every hit position, two ids refuse
   `AMBIGUOUS_REFERENCE` past the shared guard, and a miss refuses
   `UNRESOLVED_COLUMN.WITH_SUGGESTION`. Scalar fill targets positions, so a
-  twin pair fills per position. pins: attr-id-1/C-032
+  twin pair fills per position.
   IO-DECLARED-1 (2026-09-14): `replace` joins the missing-data surface as the exact
   `DataFrame.replace` delegation with the same no-value sentinel
   (`replace_expr._NO_VALUE`) — PySpark's `<no value>` default — so `na.replace(x)`
   over a non-dict `to_replace` raises `ARGUMENT_REQUIRED` while an explicit `None`
-  value null-replaces. pins: io-declared-1/C-004
+  value null-replaces.
   LOGICAL-WIDTH-1 (2026-09-16): `fill` casts the fill literal to the column's own
   width (`byte`/`short`/`int`/`long`/`float`/`double`, Spark's cast-the-literal rule)
   so `fillna` never widens the schema; the display-overlay key map knows the narrow
-  keys too. pins: logical-width-1/C-004
+  keys too.
   LOGICAL-WIDTH-1 round 2 (2026-09-16, R-12): the cast decision and the coalesce move
   to `repark_core::na_fill_expr` via free `fill_expr_for_column`; `_fill_expr_for_bound`
   keeps the probe literal, the `F.coalesce` composition and the identity/alias wrapper;
   dead `_fill_expr` goes away while `_type_keys` stays as a schema reader pinned by
   `test_mapinarrow_unpersist_action_then_plan_child`. The cast texts unpack as one
-  nested unit. pins: logical-width-1/C-012
+  nested unit.
   **STAMP-2-R5P6-1 (2026-10-07):** `fill` (scalar and mapping) builds every
   position from `_fill_sources`. When a target carries an attribute id and
   the frame takes the attribute-token select route,
   `join_attr_tokens._attr_route_sources` returns each position's bound column
   at the first position holding its id, the field that route reads, so the
   select stays exact and skips the SQL re-plan. Otherwise the frame's own
-  bound columns are used unchanged. pins: stamp-2-r5p6-1/C-001, C-002
+  bound columns are used unchanged.
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
   same-type-group `MIXED_TYPE_REPLACEMENT`, subset resolution through
@@ -374,14 +352,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   sites. `DataFrame.replace` is a one-line wrapper.
   **ATTR-ID-1 S3e (2026-10-01):** `_aliased_join_sides` restores each side's
   user qualifiers over the generated re-alias, so the join output carries
-  `a`/`b` while the plan keeps its generated relations. pins: attr-id-1/C-039
+  `a`/`b` while the plan keeps its generated relations.
   IO-DECLARED-1 (2026-09-14): the module owns the shared no-value sentinel
   `_NO_VALUE` — PySpark's `<no value>` — now the default of both
   `DataFrame.replace` and `DataFrameNaFunctions.replace`; a non-dict
   `to_replace` with the sentinel value raises `ARGUMENT_REQUIRED` (Spark's
   message and params byte-exact, pinned by `na_replace_novalue_nondict`), an
   explicit `None` value still null-replaces, and the `MIXED_TYPE_REPLACEMENT`
-  raise carries Spark's full message text. pins: io-declared-1/C-004
+  raise carries Spark's full message text.
 - `surface_a.py` owns the DF-SURFACE-A-1 method bodies (2026-09-14) behind the
   one-line class bindings: `to` (store-assignment reconciliation over a
   `StructType` — case-insensitive name match with the schema's spelling
@@ -404,12 +382,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   removed `inputFiles`/`semanticHash` (R-5 — EXPLAIN-text introspection
   belongs to a Rust unit) and the `_schema_override` sticker (R-6 — the
   narrow-width divergence `to(…smallint)` reports is LOGICAL-WIDTH-1).
-  pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
   DF-RUST-3 (2026-09-15): `transpose` joins the surface here — the facade resolves the
   index argument (str / `Column` / None → first display column), reads
   `spark.sql.transposeMaxValues` off the session conf, calls the native `transpose`
   kernel, and attaches `_spark_error_class` / `_spark_message_parameters` /
-  `_spark_sql_state` from the conditioned engine error. pins: df-rust-3/C-003, C-004
+  `_spark_sql_state` from the conditioned engine error.
   **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
   **ATTR-ID-1 SJ-2 (2026-10-02):** `checkpoint` re-roots the child's frame
   node with `frame_root`. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
@@ -431,7 +408,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   files)` with native-identity validation and copy-out answers, so repeated
   calls skip the re-plan plus re-listing while a new frame over the same path
   lists again.
-  pins: df-plan-introspect-1/C-001, C-002, C-006, C-008, C-009, C-010, C-011, C-013, C-014
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the
@@ -442,11 +418,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Two costs the old loop paid per row are gone: the names tuple is built once per batch instead
   of once per `Row`, and the cyclic collector is suspended across the batch, restored in a
   `finally`, because a million freshly tracked `Row` objects otherwise make every generation-2
-  pass rescan the whole result. pins: perf-facade-1/C-001, C-002, C-003
+  pass rescan the whole result.
   DFCORE-1 (2026-09-07): also owns `_arrow_map_pairs`, `_arrow_cell_to_spark_python`, and
   `_refuse_calendar_interval_python_value`, moved here from `core.py` with no behaviour change;
   its `core` imports are gone. An empty map arrives as `[]` from `to_pylist` and must become
-  `{}` — never an empty array. pins: dfcore-1/C-004
+  `{}` — never an empty array.
 - `export_errors.py` owns mid-stream Arrow export failure mapping (DFCORE-1, moved from
   `core.py`). Sort failures surface through DataFusion or PyArrow. The marker list names
   memory / ExternalSorter / FairSpillPool texts, and matching is case-insensitive. The
@@ -454,19 +430,19 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   sometimes wraps capsule failures in `dynamically evaluated source` noise instead of the
   engine message. The extractor prefers the longest non-noise candidate and strips the
   leading `External error: ` shell DataFusion adds on the Arrow boundary. Error classes,
-  chaining, and the memory advice text are unchanged. pins: dfcore-1/C-005
+  chaining, and the memory advice text are unchanged.
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** `_export_engine_error` scrubs the
   cause chain first, covering the three live `core.py` export sites without touching that
-  file's exact baseline. pins: source-url-redact-1/C-067
+  file's exact baseline.
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `_export_engine_error` maps the message
   from the scrubbed copy the narrow scrub returns.
   **FNP-MATH-1 WO-6b R3 (2026-09-21):** `_export_engine_error` re-raises a mid-stream
   message carrying `[ARITHMETIC_OVERFLOW]` as `ArithmeticException` with the structured
   payload (cut at the SQLSTATE token), never the longest `to_string()` candidate; every
-  other message keeps today's shape. pins: fnp-math-1/C-004
+  other message keeps today's shape.
 - `udf_schema.py` owns mapInArrow schema coercion and batch validation (DFCORE-1, moved from
   `core.py`). Arrow widths match the session `createDataFrame` path, so `SMALLINT` / `TINYINT`
-  / `FLOAT` stay narrow. pins: dfcore-1/C-006
+  / `FLOAT` stay narrow.
 - `grouped_udf.py` owns contiguous-group assembly for the applyInPandas bridge (DFCORE-1,
   moved from `core.py`). The key-missing sentinel marks "no group seen yet" in the single-pass
   boundary scan; it is never a real key. An empty returned frame with no columns is an empty
@@ -483,13 +459,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **Fold SM-2 R4 (2026-10-06):** `_grouped_agg_pandas` names each input Series
   by its positional slot (`_0`, …), as Spark 4.1.2 does, so the
   `__repark_gagg_in_*` intermediate never reaches user code.
-  pins: attr-id-1/C-063
   **ATTR-ID-1 SJ-4 (2026-10-02):** `_grouped_agg_pandas` moves here from
   `joins_columns.py` (pure move at the size ceiling).
   **SOURCE-URL-REDACT-2 merge of main (2026-10-07):** the GROUPED_AGG user-exception door takes
   `(detail, failure)` from `_secrets.scrub_user_failure`, scrubs a user-raised `PySparkException`
   through `scrub_exception`, and raises after the handler `from` the copy.
-  pins: source-url-redact-1/C-076, C-077
 - `grouped_arrow.py` owns the grouped map bridges bound on `GroupedData` (GROUPED-SURFACE-1,
   2026-09-14): `apply` accepts only a GROUPED_MAP pandas marker and delegates to
   `applyInPandas` behind Spark's deprecation `UserWarning`; `applyInArrow` routes
@@ -502,10 +476,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `transformWithStateInPandas` are dated `NOT_IMPLEMENTED` refusals (Structured Streaming
   state stores; registry `GROUPED-DECL-*`). The pandas bridge
   `_apply_in_pandas_arrow_batches` moved here unchanged-in-behavior to keep
-  `joins_columns.py` under its ceiling. pins: grouped-surface-1/C-001, C-002, C-003, C-006
+  `joins_columns.py` under its ceiling.
   **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_call_grouped_user_func` (`applyInPandas`,
   `applyInArrow`, both cogroup forms) and `_iter_apply_in_arrow_results` mask the user failure
-  through `_secrets.scrub_user_failure` and raise after the handler. pins: source-url-redact-1/C-076
+  through `_secrets.scrub_user_failure` and raise after the handler.
   **ATTR-ID-1 SJ-5 (2026-10-03):** the pandas terminals funnel the raw group
   keys instead of the rebound ones.
 - `grouped_pivot.py` — **ATTR-ID-1 SJ-5 (2026-10-03):** the twelve `_pivot_*`
@@ -519,7 +493,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   present on one side calls the callback with an empty frame/table of the other's schema
   (Spark's shape). Key-count mismatch raises Spark's `requirement failed` text;
   `cogroup(DataFrame)` is refused at the call with `NOT_EXPECTED_TYPE` where Spark accepts
-  silently (R-1; registry `GROUPED-COGROUP-1`). pins: grouped-surface-1/C-004, C-005
+  silently (R-1; registry `GROUPED-COGROUP-1`).
 - `udf_projection.py` owns the scalar pandas and classic UDF select rewrites (DFCORE-2,
   moved from `core.py`). Windowed GROUPED_AGG markers never enter the scalar bridge; they
   route to `udf_window_projection.py`. Partition-transform inputs are refused (they project
@@ -532,7 +506,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   construction). Both map-bridge halves are patched with the built identity: `mapInArrow`
   coercion drops timestamp timezones and collapses `timestamp_ntz` / `varchar(n)` /
   `char(n)`. Classic UDFs run once per row: slower than `pandas_udf` by design.
-  pins: dfcore-2/C-004
 - `udf_window_projection.py` owns the windowed GROUPED_AGG select rewrites (DFCORE-2,
   moved from `core.py`). One select's markers share partition keys, order keys, and frame
   bounds; order is all-or-none. The unbounded path strips the window, aggregates per
@@ -541,9 +514,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   follows caller order with last-wins duplicates, so `withColumn` overwrite keeps the
   window result. The ordered path carries partition, order, and UDF inputs plus every
   source column on the group frame, overwrites same-name sources, and projects caller
-  order last-wins. pins: dfcore-2/C-005
+  order last-wins.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built projection SQL
-  runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
+  runs through the native `sql_built` method.
 - `statistics.py` owns the statistics bodies behind the public wrappers (DFCORE-3,
   moved from `core.py` and `DataFrameStatFunctions.freqItems`; DF-RUST-3, 2026-09-15:
   `freqItems` runs the `FreqItemCounter` UDAF through `frame._plan().freq_items` —
@@ -579,7 +552,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **CASESENS-1 S3 (2026-09-27):** explicit columns resolve through
   `_native.resolve_frame_names` (one `(written, engine)` pair per name, bound by
   the session rule in Rust), replacing the display/engine zip.
-  pins: casesens-1/C-010
   **Verifier fold (2026-09-28, VC-4):** with a display/engine mapping under
   `false` (rule read live via `frame_case_sensitive`), `_display_target_pairs`
   binds each written name against displays ignoring case, refuses duplicate
@@ -596,11 +568,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   collect, a
   NULL cell answers NaN per probability, and the engine reports the first failing
   column so mixed good/bad errors keep their order.
-  pins: dfcore-3/C-004, C-005
-  pins: dfcore-5/C-001, C-002
   `crosstab` casts both strata to string for Spark's
   string-key pivot form, feeds `pivot` simple-name aggregate inputs, and fills absent
-  pairs with 0. pins: dfcore-3/C-004, C-005
+  pairs with 0.
   **ATTR-ID-1 SJ-5 F1 (2026-10-03):** the no-columns `summary`/`describe`
   path runs the native free-name check over the displays first, so a twice
   shown display refuses with `AMBIGUOUS_REFERENCE` as Spark does.
@@ -623,15 +593,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   true), drops absent strata, refuses bool seeds (Spark's seed is Long), and filters
   each stratum against one shared `rand(seed)` column so the sequence advances once
   per row. All three carry display names, engine names, and the origin map to each
-  child, which keeps the `_repr_html_` hook. pins: dfcore-4a/C-004
+  child, which keeps the `_repr_html_` hook.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built sample scans
-  run through the native `sql_built` method. pins: string-literal-escape-1/C-011
+  run through the native `sql_built` method.
 - `display.py` owns the ten display bodies behind the public wrappers (DFCORE-4b,
   moved from `core.py`). DISPLAY-POLARS-1 departure (2026-09-09): `_resolve_display_style`'s
   one-line docstring said "default spark"; the default has been `polars` since step 1, so the
   token is corrected here — the resolved default itself comes from
   `session/session_configuration.py`'s `default_display_style()`, not from this module.
-  pins: display-polars-1/C-001 Every display door still opens with `_ensure_alive`,
+  Every display door still opens with `_ensure_alive`,
   which validates the window, random, and stratified-sampling markers; the
   narration above those calls was the audit-named removable and is gone.
   The styled-vertical warning carries `stacklevel=3` since the move put a wrapper frame
@@ -677,7 +647,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   frame identically — DISPLAY-POLARS-1-S3-Q-001 closed. The styled-vertical warning moved
   above the style dispatch (one warn site, same message and `stacklevel=3`), so it fires on
   the styled bridge path too.
-  pins: display-bridge-1/C-001, C-002, C-003
   Styled previews
   collect head and tail windows only. R-11 (2026-09-09): the polars door
   probes `2 * edge + 1` = 11 rows first. A shorter probe renders the frame
@@ -691,9 +660,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   styled renderer calls the tail preview through the frame (not module-local)
   so the class-level collect spy keeps firing.   The module carries its own
   logger; record names move `core` → `display` while message text and levels
-  stay identical. pins: dfcore-4b/C-004
-  pins: dfcore-6/C-001, C-002, C-003, C-004
-  pins: display-polars-1/C-004
+  stay identical.
   DISPLAY-POLARS-1 step 4 (2026-09-09): `_display_session_ints` reads
   `(max_rows, max_cols, str_len)` from the token (builder map, then defaults)
   at render time. The polars probe is `limit(max_rows + 1)` with edges
@@ -702,7 +669,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   it stays byte-identical to `show()` defaults. The duckdb door keeps its
   count-first fetch and its `n`-based keep-set; the protected
   no-full-collect pin pins that shape, so unifying the doors needs its own
-  card. pins: display-polars-1/C-005
+  card.
   DISPLAY-LAZY-1 step 1 (2026-09-10, R-22): `_repr` renders the schema header for
   a lazy frame (no stored shape, no materialised cache view) without running the
   plan — header labels come from `_analyzed_arrow_schema` through the same
@@ -710,15 +677,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   data header; materialised frames keep the data render, and eagerEval renders
   rows through the `show(maxNumRows)` path. RF-5 rides here: the duckdb door now
   probes `limit(max_rows + 1)` first like polars (the awaited unification card),
-  slicing short probes with no `count()`. pins: display-lazy-1/C-001, C-002,
-  C-003, C-004, C-005, C-006
+  slicing short probes with no `count()`.
   DISPLAY-LAZY-1 step 2 (2026-09-10): the checkpoint arm of
   `_materialize_cache_if_needed` records `_eager_shape` (one count over the pinned
   view, skipped when a shape is stored), so a plain `localCheckpoint()` classifies as
   materialised with zero plan re-runs at `repr`. The `_cache_view`-set early return
   carries a `not self._checkpoint_lazy` term because returning on the view alone left
   a pending checkpoint sticky with lineage untruncated — checkpoint-after-cache must
-  still run. pins: display-lazy-1/C-007
+  still run.
 - `eager.py` owns the eager materialization bodies behind the public wrappers (DF-EAGER-1
   step 2, moved from `core.py`): the `repark.cache.max_bytes` /
   `repark.cache.max_total_bytes` budget resolvers over the shared
@@ -727,11 +693,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   returns the `(max_bytes, max_total_bytes)` pair `core.py` forwards to the native
   materialize call), and the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`.
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the materialize refusal scrubs the
-  cause before re-raising. pins: source-url-redact-1/C-067
+  cause before re-raising.
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the materialize refusal re-raises from
   the scrubbed copy the narrow scrub returns.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the materialize refusal raises after the handler from
-  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
+  the scrubbed copy, so `__context__` is None.
   `eager()` materializes
   the plan through the existing cache-view call on an `_identity_child` sibling (the source
   frame is untouched), then fills `_eager_shape` once with a count over the built MemTable
@@ -740,11 +706,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   wrapped to name `.eager()`. `lazy()` answers `self` on lazy frames and a shape-less view
   scan on eager ones (no re-execution, no drop). `count()` answers a known shape with no
   query. `unpersist()` clears the shape with the view, so a shape never outlives its
-  materialization. pins: df-eager-1/C-001, C-002, C-003, C-004
+  materialization.
   EAGER-OWN-1 step 1 (2026-09-13): `eager()` on a frame that already scans a live
   cache view returns a wrapper sharing the view, the `CacheViewHandle`, and the
   shape — no collection, no new registration (D-4). A frame whose view was
-  explicitly dropped materializes afresh. pins: eager-own-1/C-004
+  explicitly dropped materializes afresh.
   EAGER-BUDGET-1 step 2 (2026-09-13): `repark.cache.max_total_bytes` is the session-wide
   retained-bytes budget (D-1, Q-E2 REFUSE): the native admission loop checks
   `retained + admitted` after every streamed batch and refuses with
@@ -760,7 +726,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   first on the lowercased key, last spelling set wins — sharing
   `_resolve_cache_byte_budget` for both keys. SQL `SET repark.cache.*` still raises
   the DataFusion `config namespace "repark"` error, now pinned.
-  pins: eager-budget-1/C-004, C-005, C-007, C-008
 - `cache_handle.py` owns the refcounted `CacheViewHandle` for `__repark_cache_*`
   registrations (EAGER-OWN-1 step 1, 2026-09-13). The registering frame is the
   owner; every frame whose plan scans the view carries the handle in its
@@ -774,21 +739,19 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   plan still scans a dropped view keeps answering — the native plan holds the
   resolved provider. `cache()` / `persist()` views follow the same handle (D-3).
   `_warn_storage_level_cosmetic_once` moved here unchanged and is re-imported by
-  `core`, keeping the frozen surfaces. pins: eager-own-1/C-002, C-003, C-004,
-  C-005, C-006, C-007, C-008, C-010, C-011
+  `core`, keeping the frozen surfaces.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** `_register_cache_frame` moved here
   unchanged and is re-imported by `core`, paying for the export doors' raise-after-handler
-  shape inside `core.py`'s exact baseline. pins: source-url-redact-1/C-071
+  shape inside `core.py`'s exact baseline.
   CATALOG-SURFACE-1 critic round 1 (2026-09-14): `bind_registered_view` notes the
   materialize-time identity token (`catalog_surface._note_frame_cached`) for
   `spark.table(name)` frames, so the catalog overlay can tell a still-current
-  `.cache()` from a stale one. pins: catalog-surface-1/C-009
+  `.cache()` from a stale one.
   **ATTR-ID-1 V-4 (2026-10-02):** `bind_registered_view` stamps the fresh cache
   scan with the lineage plan's ids by position (native `copy_attribute_ids`),
   and `bind_checkpoint_scan` (moved out of `core`'s checkpoint arm) does the
   same for checkpoint scans, so a live frame keeps its identity across
   materialization; `unpersist` already restores the lineage plan untouched.
-  pins: attr-id-1/C-045
   REVIEW-FIX-4 (2026-09-10, closes Q-12, Q-13, Q-50): `lazy()` on an eager
   frame is `_spawn_preserving_identity(frame._inner)` with no `_cache_view`
   interpolation — a set `_eager_shape` with no `_cache_view` (the checkpoint
@@ -796,9 +759,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `none` stays unreachable. `_count_rows` and `_styled_total_rows` run the
   pending-checkpoint materialize first and then reuse the shape, so
   `localCheckpoint(eager=False)` discharges on the next action with no count
-  query. pins: review-fix-4/C-001, C-002, C-003
+  query.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built cache
-  shape scan runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
+  shape scan runs through the native `sql_built` method.
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the
@@ -808,7 +771,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   physical header (`EXPLAIN FORMAT TREE` measured one `physical_plan` row), and `cost` /
   any mode containing `analyze` runs `EXPLAIN ANALYZE`, whose measured rows carry
   `plan_type='Plan with Metrics'`. Unknown modes raise `PySparkValueError` naming the five
-  modes. pins: df-explain-1/C-001, C-002, C-004, C-005
+  modes.
 - `colregex.py` owns the `colRegex` marker (DF-COLREGEX-1, 2026-09-11; §7 EX-DF-1 FIXED).
   `RegexColumn` carries the stripped pattern on a never-resolvable quoted ref, so every
   surface but `select` fails it as an unresolved column while `drop` no-ops through its
@@ -827,7 +790,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `AMBIGUOUS_REFERENCE`) and binds each position through its attribute id
   (ATTR-ID-1 S4 deleted the origin map this branch once read). Measured
   500-col/10-match 5.40 → 0.32 ms (ledger C-006).
-  pins: df-colregex-1/C-001, C-003, C-005, C-006
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
@@ -840,7 +802,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   LOGICAL-WIDTH-1 round 3 (2026-09-16): the zero-arg `sum`/`avg`/`mean`/`min`/`max`
   keep-set (`core._is_numeric_type_key`) covers the narrow widths
   (byte/short/float), matching Spark's NumericType.
-  pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007; pins: logical-width-1/C-013
+  pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007
   **ATTR-ID-1 SJ-4 (2026-10-02):** `GroupedData.agg` funnels aggregate
   expressions through `_refuse_self_join_refs` (covering `DataFrame.agg` by
   delegation); `_grouped_agg_pandas` moves to `grouped_udf.py` at the size
@@ -854,20 +816,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   behind same-named imports (1151 → 955, with the CAP-1 mirror; the exception
   row retires under the default ceiling).
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built agg SQL runs
-  through the native `sql_built` method. pins: string-literal-escape-1/C-011
+  through the native `sql_built` method.
   **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** `_grouped_agg_pandas` moved to `udf_bridge.py`
   (pure move, re-imported; 1169 → 1117 in `check_lib_py.py`); the merge of main imports it from
-  `grouped_udf.py`, its SJ-4 home. pins: source-url-redact-1/C-076
+  `grouped_udf.py`, its SJ-4 home.
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
   control flow (`_format_polars_show`, `_display_type_labels_from_arrow`) and
   re-exports the spelling helpers; the spellings themselves live in
-  `polars_cells.py`. pins: display-polars-1/C-005
+  `polars_cells.py`.
   COLUMN-PARITY-1 step 1 (2026-09-14): `_collapse_identity_projection_alias` propagates
   the carried struct-edit/metadata attrs through `column_fields.carried_select_attrs`
   and skips pending columns unchanged; the pending-check folds into the existing
-  early-return guard to hold the exact baseline. pins: column-parity-1/C-004
+  early-return guard to hold the exact baseline.
   ATTR-ID-1 S4 (2026-10-02): the join attribute-token siding block moves to
   `join_attr_tokens.py` (CAP-1 split, pure move); this module re-exports the nine
   names so `core` and the frozen surface keep working. 1111 → 910 drops below the
@@ -878,18 +840,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_join_condition_attr_names`, `_replace_local_attr_token`,
   `_rewrite_attr_tokens_local`).
   ATTR-ID-1 S4 follow-up (2026-10-02): the identity-alias peel carries
-  `Column._birth_frame` with `_attr_id`. pins: attr-id-1/C-041
+  `Column._birth_frame` with `_attr_id`.
 - `join_attr_tokens.py` owns `__REPARK_ATTR_` token scanning: the single-frame local
   rewrite, the `_select_via_attr_sql` fast path, and `_join_condition_attr_names`
   (birth-frame display names for the native join-condition preparer).
   **ATTR-ID-1 S4 (2026-10-02):** the arm guard treats `IS [NOT] DISTINCT FROM`
   as a comparison boundary like `=` (the `eqNullSafe` spelling), and the local
   single-frame rewrite consults the native `projection_source_ids` lineage for a
-  token the frame does not hold. pins: attr-id-1/C-040
+  token the frame does not hold.
   **ATTR-ID-1 S4 follow-up (2026-10-02):** `_select_via_attr_sql` (the
   temp-view select route for projections whose join SQL still carries attribute
   tokens) moves here from `core.py` (pure move); a one-line delegate on
-  `DataFrame` keeps the frozen surface. pins: attr-id-1/C-041
+  `DataFrame` keeps the frozen surface.
   **ATTR-ID-1 SJ-2 (2026-10-02):** `_ATTR_TOKEN_RE` takes the `F<frame>` field
   (`__REPARK_ATTR_<id>__F<frame>__<quals>__`); the qualifier group moves from 2
   to 3. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
@@ -919,17 +881,17 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the SQL route at `0`, `1` and `999999999`, overflow errors included. A
   native `CAST(n AS TIMESTAMP)` reads `n` as microseconds where the Spark door
   reads seconds, so datetime, string, boolean and binary targets keep the SQL
-  route. pins: stamp-2-r5p6-1/C-007
+  route.
   `_attr_exact_child` wraps `_attr_exact_plan`: any exception in the native
   attempt is a miss and the SQL route runs, so a refusal carries the SQL
-  route's text, not the native planner's. pins: stamp-2-r5p6-1/C-008
+  route's text, not the native planner's.
   `_exact_shape` admits `DECIMAL(p,s)` only for a valid Spark decimal,
   `1 <= p <= 38` and `s <= p`, checked numerically on the regex's `precision`
   and `scale` groups. The regex alone admitted `DECIMAL(39,0)`, `DECIMAL(5,6)`
   and `DECIMAL(0,0)`: these planned natively with a made-up `.schema`, and
   their actions raised `PySparkException`. On the SQL route they raise head's
   `AnalysisException` at head's call (`.schema` for `DECIMAL(39,0)`, the
-  `select` for the others). pins: stamp-2-r5p6-1/C-011
+  `select` for the others).
   Replacing each token by the engine the SQL route binds (the first position
   holding the id) must reproduce the column's `_sql_expr`, so both routes read
   the same fields. The native output names must equal the names the SQL route
@@ -944,7 +906,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   later input differs at the twin positions included). The attribution and the
   pre-measure (r5p6 1.182 → 1.128 against main `575f57ca`) are in the unit ledger.
   Pins: `python/repark/tests/resolution/test_stamp_2_r5p6_1.py`.
-  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-005, C-006
   **STAMP-2-R5P6-2 (2026-10-07):** `_join_exact_or_sql` is the H1 join door's route
   switch (`core.py`'s `_join_on_condition_h1` calls it in place of `sql_built`).
   `_join_exact_plan` asks `_native.join_exact_sides` for the join built without the SQL
@@ -971,7 +932,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   The unit's answers gate (replay corpus, suites, sort grid) and its lane-side speed
   runs are in the ledger.
   Pins: `python/repark/tests/resolution/test_stamp_2_r5p6_2.py`.
-  pins: stamp-2-r5p6-2/C-001, C-003, C-005, C-006, C-007, C-008, C-011, C-012
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`
@@ -983,7 +943,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `join_sql_part()` tokens. Pins: `python/repark/tests/resolution/test_attr_id_1_sj4.py`.
   **Fold SM-2 R6 (2026-10-06):** the funnel also runs the USING-key column
   choke first when the frame carries a mark, covering filter/sort/select
-  `Column` args (filter has no other qualified rebind). pins: attr-id-1/C-066
+  `Column` args (filter has no other qualified rebind).
 - `repartition_ops.py` — **ATTR-ID-1 SJ-4 (2026-10-02):** the single-node
   repartition no-op trio (`repartition`/`repartitionByRange`/`repartitionById`),
   split out of `core.py` at the size ceiling (pure move with the SJ-4 funnel
@@ -1009,25 +969,23 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pins: display-polars-1/C-005, review-fix-9/C-002, review-fix-9/C-003
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
-  projection rewrites moved out. pins: dfcore-2/C-005
+  projection rewrites moved out.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the classic and pandas UDF user-exception
   doors interpolate the `scrub_exception` copy, mask the `format_exc()` detail through
-  `_native.mask_user_visible`, and raise after the handler from the copy. pins: source-url-redact-1/C-073
+  `_native.mask_user_visible`, and raise after the handler from the copy.
   **SOURCE-URL-REDACT-2 fold 4 (2026-10-07):** every user-callback door here takes
   `(detail, failure)` from `_secrets.scrub_user_failure`; `_grouped_agg_pandas` (non-windowed and
   unbounded-window GROUPED_AGG) lives in `grouped_udf.py` after the merge of main, with the same scrub.
-  pins: source-url-redact-1/C-076
   **SOURCE-URL-REDACT-2 fold 4 H3 (2026-10-07):** a user-raised `PySparkException` is scrubbed
   too: re-raised in place when `scrub_exception` returns it unchanged, else its masked copy is
   raised after the handler. `grouped_arrow.py`, `core.py`'s mapInArrow handler and the UDTF `eval`
-  doors carry the same clause. pins: source-url-redact-1/C-077
+  doors carry the same clause.
   **SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07):** `core.py`'s mapInArrow handler takes
   `(detail, failure)` from `_secrets.scrub_user_failure` like the other doors, so a lone surrogate
-  in the user's text no longer raises `UnicodeEncodeError` there. pins: source-url-redact-1/C-082
+  in the user's text no longer raises `UnicodeEncodeError` there.
   **Fold SM-2 R4 (2026-10-06):** `_pandas_udf_series_args_for_slot` names each
   input Series by its positional slot (`_0`, `_1`, …), as Spark 4.1.2 does, so
   the `__repark_pudf_in_*` intermediate never reaches user code.
-  pins: attr-id-1/C-063
 - `io_declared.py` owns the orc-write / xml declared-refusal bodies and the `jdbc` reader-writer
   surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1).
   **IO-ORC-1 (2026-09-16):** the orc reader refusal is deleted (the read side is a real
@@ -1042,13 +1000,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   every other non-path format kept byte-identical.
   C-3 (2026-10-07): `reader_jdbc` passes its three integers through `_jdbc_i64`, so a value
   outside 64 bits is `NumberFormatException` and never a binding `OverflowError`; the four
-  range arguments now partition the read. pins: c-3/C-006
+  range arguments now partition the read.
   C-3 fold 2 (2026-10-08): `reader_jdbc` takes `lowerBound`, `upperBound` and `numPartitions` as
   int or str, as PySpark does, and hands each on as text in `properties` (`_put_jdbc_option_text`;
   a properties key that already spells the option keeps its own spelling, so the engine door's
   conflict refusal answers). The facade no longer compares, parses or counts them: the engine door
   resolves the column first, then parses the bounds, and refuses an incomplete set in Spark's
-  sentence, so `_jdbc_i64` is no longer on this door. pins: c-3/C-006
+  sentence, so `_jdbc_i64` is no longer on this door.
   R-3 (2026-09-14 round 2): `reader_jdbc` is main's PostgreSQL read path —
   dbtable-from-properties resolution, the three `IllegalArgumentException` teaching
   errors, and the `read_postgres` delegation with main's argument names — behind
@@ -1068,7 +1026,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Python is correct here under the Rust-first instruction: a Rust ORC or XML
   reader/writer needs a new crate (owner question Q-15B-1), JDBC writes and
   non-PostgreSQL drivers need the JVM driver layer — refusals, a restored connector
-  delegation, not compute. pins: io-declared-1/C-001, C-002, C-003, C-007
+  delegation, not compute.
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the `DATA_SOURCE_NOT_FOUND` format echo
   and the JDBC `INVALID_SAVE_MODE` echo mask the value through `mask_credentials`.
   **C-4 step 2 (2026-10-09):** `writer_jdbc` is the real Postgres writer door: the mode
@@ -1085,60 +1043,54 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   per-statement row cap can refuse bulk while admitting row.
   **C-4 fold 3 S3 (2026-10-11):** the docstring states both row-path statement
   bounds (up to 256 rows or about 1 MiB per statement).
-  pins: c-4/C-014
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** both `option` methods
   register the stored value, and the overwrite re-raise scrubs the cause first.
-  pins: source-url-redact-1/C-067, C-068
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** `_materialize_empty_path_write` moved to
   `writer_layout._materialize_empty_path_write` (pure move; the method delegates), freeing
   ceiling room for the F2-3/F2-4 masks. The save-mode/format/provider refusals echo the
   value through `mask_credentials`, the path echoes through `mask_url_userinfo`, and the
   overwrite re-raise re-raises from the scrubbed `OSError` copy.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the append and overwrite refusals raise after the handler from
-  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
+  the scrubbed copy, so `__context__` is None.
   **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
   like any other option (the refusal is gone); no writer reads it, so the write lands on main
-  as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005
+  as Spark's does (`check_lib_py.py` 1039 → 1033).
   `DataFrameWriterV2.overwrite(condition)` runs `writer_schema.replace_where_statement`
   through the temp view with the writer's options; the `UnsupportedOperationException`
-  refusal is gone (1033 → 1031). pins: u7-write-df-2/C-006 **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**
+  refusal is gone (1033 → 1031). **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**
   `overwrite(condition)` runs it through `writer_layout.run_overwrite_condition`, which raises
   the native `source_by_name` flag; no session read of the target's columns remains here
-  (1031 → 1029). pins: u7-write-df-2/C-013 **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
-  (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
+  (1031 → 1029). **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
+  (ceiling 1117→1113).
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** table writes emit an explicit target
   column list and pass through columns missing from the frame; the engine fills
   them from `write_default`. Extra frame columns still refuse.
-  pins: ice-v3-write-default-1/C-006
   Run 21b round 2 (2026-09-18, ruling Q-21b-8): `overwritePartitions()` carries the
   same target column list, `INSERT OVERWRITE t (cols) PARTITION (…) SELECT …`, so an
   omitted defaulted column fills as Spark does instead of refusing on arity
-  (1095 → 1094, mirrored in the CAP-1 test). pins: ice-v3-write-default-1/C-020
+  (1095 → 1094, mirrored in the CAP-1 test).
   DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
   `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
-  the stat accessor shape. pins: dfcore-3/C-005, C-006
+  the stat accessor shape.
   DF-RUST-3 (2026-09-15): `freqItems` delegates the live call to the same
   `statistics._freq_items` body — line-neutral against the exact 1101 baseline.
-  pins: df-rust-3/C-001, C-005
   ICE-DYN-OVERWRITE-1 (2026-09-17): `saveAsTable` overwrite passes a typed
   `static_overwrite` flag into the dedicated native `sql_static_overwrite` entry
   (Spark ignores the dynamic conf there too); round 2, ruling Q-20a-6:
   1101 → 1109 for the flag threading.
-  pins: ice-dyn-overwrite-1/C-006, C-014
   IO-BUCKET-CLUSTER-1 (2026-09-14): `bucketBy` / `sortBy` / `clusterBy` (v1) and
   `clusterBy` (V2) bind here as thin delegates; the class carries the layout slots and
   runs `writer_layout`'s checks at `save` / `saveAsTable` / V2 `create` / `replace` /
   `createOrReplace`. The five module-level write helpers moved to `writer_layout.py`
   and are re-imported here, so `core.py`'s import surface is unchanged
   (1111 → 1105, mirrored in the CAP-1 test).
-  pins: io-bucket-cluster-1/C-001, C-002, C-004
   IO-DECLARED-1 (2026-09-14): `orc`/`xml`/`jdbc` bind on `DataFrameWriter` from
   `io_declared.py` and `save()`'s non-path-format fallback delegates to
   `_io_declared.refuse_writer_save_format` (1111 → 1110, mirrored in the CAP-1
   test); the orc arm of the old `DATA_SOURCE_NOT_FOUND` refusal became the declared
   `NOT_IMPLEMENTED` (IO-ORC-1) and the duplicate `_VALID_MODES`/`_PATH_MODES`
-  tuple became one shared line. pins: io-declared-1/C-001, C-003
+  tuple became one shared line.
   ICE-WRITE-OPTIONS-1 (2026-09-17): `DataFrameWriterV2` stores `option`/`options`
   (case-insensitive last-wins; branch/tag still refuse) and every Iceberg action
   (`append`, `overwritePartitions`, CTAS; V1 `saveAsTable`/`insertInto` likewise)
@@ -1148,16 +1100,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Round 3 (2026-09-17): the text-clause rendering is gone with the channel;
   both `_run_through_temp_view` bodies share `writer_layout.run_through_temp_view`
   and `writer_readwriter.py` holds its exact 1093 baseline.
-  pins: ice-write-options-1/C-001, C-005
   IPI-51 (2026-09-20): the four TAKE writer raises now carry Spark's stamped
   text — `saveAsTable` error-mode and V2 `create` get `[TABLE_OR_VIEW_ALREADY_EXISTS]`/
   `SQLSTATE: 42P07`, V2 `replace` and `_existing_table_ref` (append-missing) get
   `[TABLE_OR_VIEW_NOT_FOUND]`/`SQLSTATE: 42P01`; in-place appends keep the wording and the
-  1091 baseline. pins: ice-error-conditions-1/C-011
+  1091 baseline.
   **C-4 step 2 (2026-10-09):** `save()` lets a `jdbc` format past the path check and
   routes non-path formats through `save_or_refuse_writer_format` (jdbc writes, the rest
   refuse as before); two lines changed in place, the file holds 999 of 1000.
-  pins: c-4/C-014
 - `writer_save.py` owns the U7 PR1 (2026-09-24) Iceberg `save(target)` and bucketed
   `saveAsTable` routing. `save_iceberg` asks the native `writer_save_target` kernel for the
   action (explicit `format("iceberg")` only; the default format keeps EX-IO-5's refusal), then
@@ -1171,7 +1121,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writer_readwriter.py` delegates `save`'s iceberg branch and `_ctas_sql` here, and
   `writer_layout.py` drops `refuse_bucketed_table_write` (Ruling R-1 retired);
   `check_lib_py.py` ratchets `writer_readwriter.py` 1077 → 1073.
-  pins: u7-write-df/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   **Round 2 (2026-09-24, Rust-first):** the module composes SQL only. `write_table` asks the
   native `writer_plan` kernel for the statement of a `saveAsTable` or `save(name)` write
   (`ctas`, `rtas`, `append` after the kernel's layout check, the static by-name `overwrite`, or
@@ -1185,14 +1134,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (`INVALID_BUCKET_COUNT`); the missing bucket column is the kernel's `_LEGACY_ERROR_TEMP_3060`
   (Ruling Q1), and `refuse_bucketed_or_clustered_table_write` and `_backticked_table_name` are
   removed. The `bucketBy` docstring states the bucket transform.
-  pins: u7-write-df/C-004, C-005, C-015, C-018
   **U7 PR2 (2026-09-24):** the kernel answers `rtas` for every `saveAsTable` overwrite, so
   `write_table` runs `CREATE OR REPLACE TABLE … AS SELECT` there (Spark's replace), and the
   static by-name `overwrite` arm now serves `save(name)` only.
-  pins: u7-write-df-2/C-002
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the two compression refusals
-  echo the value through `mask_credentials`. pins: source-url-redact-1/C-068
+  echo the value through `mask_credentials`.
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —
   path saves refuse `_LEGACY_ERROR_TEMP_1312` and `SORT_BY_WITHOUT_BUCKETING`,
@@ -1214,8 +1161,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writeTo(t).overwritePartitions()` sends `INSERT OVERWRITE t (cols) SELECT …` with the
   dynamic intent and no `PARTITION` clause, so Rust replaces the staged partitions of any spec
   (a `PARTITION (<spec field names>)` clause refused `[NON_PARTITION_COLUMN]` on transform
-  fields). pins: ice-overwrite-mode-1/C-018
-  pins: io-bucket-cluster-1/C-001, C-002
+  fields).
   Critic round 1 (2026-09-14): `_unpack_column_args` enforces Spark's call-time
   order — `CANNOT_SET_TOGETHER` for a list/tuple `col` with extra `cols`, the
   `col[0]` `IndexError` for an empty list, `NOT_LIST_OF_STR` (`col` then `cols`);
@@ -1224,14 +1170,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   and `insertInto` (1312 alone, 1313 with sortBy, then SORT_BY_WITHOUT_BUCKETING);
   `refuse_bucketed_or_clustered_table_write` merges the table-write checks so
   `writer_readwriter.py` holds its exact 1105 baseline.
-  pins: io-bucket-cluster-1/C-005
   **ATTR-ID-1 S2 (2026-09-30):** `run_through_temp_view` (the funnel behind every
   SQL-composed write: local COPY for parquet/CSV/JSON, CTAS/RTAS, by-name append,
   static overwrite, `saveAsTable`, `insertInto`, V2 `writeTo`) registers the source
   stripped of `repark.attr` (`_native.strip_attribute_ids`), so no written file's
   footer or stored schema carries the key. Text writes carry values only (no schema
   channel) and are unchanged.
-  pins: attr-id-1/C-009
   **Re-check (2026-09-15):** `_unpack_column_args` checks `cols` before `col` and raises `NOT_LIST_OF_STR` with Spark's sentence through `_refuse_not_list_of_str`.
   ICE-WRITE-OPTIONS-1 (2026-09-17): `store_writer_option` (case-insensitive
   last-wins dedup shared by both writers) and `run_through_temp_view` (the one
@@ -1242,9 +1186,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writeTo.overwritePartitions` with it, so Rust replaces only the source partitions even in
   Spark's default static mode (the `PARTITION (fields)` clause alone now means whole table
   there). Writer options, `overwrite-mode` included, travel unchanged to Rust, which decides.
-  pins: ice-overwrite-mode-1/C-006, C-007
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
-- `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
+- `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down.
   2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`
   streams `f(row)` through `toLocalIterator`; `foreachPartition` calls `f` once per
   Arrow batch with a `Row` iterator (an empty frame still calls `f` once).
@@ -1262,14 +1205,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   first action; a non-`Column` expr refuses `NOT_LIST_OF_COLUMN` at `observe`.
   Driver-side callable execution and the second aggregation pass are DECLARED
   (`DF-FOREACH-1`, `DF-OBSERVE-1`).
-  pins: df-surface-b-1/C-001, C-002, C-003, C-004, C-007
   **FOREACH-WRAP-1 (2026-10-07):** `foreach` and `foreachPartition` catch an `Exception`
   from the loop, keep `scrub_exception(error)` and raise it after the handler, so
   `__context__` is None. A credential in the user's exception leaves as a masked copy
   of the same class (`DF-FOREACH-1`); one with none leaves as the user's own object,
   byte for byte. Spark 4.1.2 shows the credential inside its `Py4JJavaError`; RePark
   is stricter by the security ruling. `transform` keeps its plain passthrough, as
-  Spark does (`DF-TRANSFORM-1`). pins: foreach-wrap-1/C-001, C-002, C-003
+  Spark does (`DF-TRANSFORM-1`).
   **Re-check (2026-09-15):** a thread-local suppression keeps plan-only work from filling an Observation — `register_view_without_fill` (temp views, EXPLAIN's scratch view) and `rows_without_fill` (EXPLAIN's rows); `empty_rows_after_fill` answers `tail(0)`. `core.py` swaps its three call sites line for line; writers register through the session method directly and still fill.
   Path-write notes (moved from the class docstring, IO-TEXT-1): table writes use CTAS or
   INSERT paths and creation rejects tightened frames; CSV/JSON/Parquet path writes run
@@ -1278,7 +1220,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `format("text").save` routes to `writer_text.write_text_path`, and `text` joins
   `_PATH_FORMATS`; the class docstring condenses to one line and the CSV docstring joins
   to one line to fund those five lines, so the file ratchets DOWN 1111 → 1109 (mirrored
-  in the CAP-1 test). pins: io-text-1/C-002, C-003
+  in the CAP-1 test).
 - `writer_text.py` owns the text path write. **IO-TEXT-1 (2026-09-14):**
   `DataFrameWriter.text` overlays `compression` / `lineSep` into options, then
   `write_text_path` refuses non-`none` compression (IO-TEXT-GZIP-1), mirrors the path
@@ -1295,12 +1237,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   destination is absent.
   pins: io-text-1/C-002, C-003, T-6, T-9, U-1, U-2, U-10, U-11
   **SOURCE-URL-REDACT-2 fold 1 round B (2026-10-06):** the append/overwrite re-raises
-  scrub the cause first. pins: source-url-redact-1/C-067
+  scrub the cause first.
   **SOURCE-URL-REDACT-2 fold 2 (2026-10-07):** the mode refusal masks through
   `mask_credentials`, every path echo through `mask_url_userinfo`, and both re-raises
   re-raise from the scrubbed copy.
   **SOURCE-URL-REDACT-2 fold 3 round A2 (2026-10-07):** the append and overwrite refusals raise after the handler from
-  the scrubbed copy, so `__context__` is None. pins: source-url-redact-1/C-071
+  the scrubbed copy, so `__context__` is None.
 - `streaming_batch.py` owns the streaming-named DataFrame surface on a batch frame
   (DF-STREAM-BATCH-1 step 1, 2026-09-14), bound on the class from `core.py` at
   exact ceiling: `writeStream` is a property raising `AnalysisException`
@@ -1323,7 +1265,6 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DF-DECL-rdd/-pandas_api/-plot). Structured `AnalysisException` errors reuse
   `_integral.py`'s `_spark_error_class` attach helpers; the helpers are bound
   as real class members so `__getattr__` column access can never shadow them.
-  pins: df-stream-batch-1/C-001, C-002, C-003, C-004
 - `subquery.py` owns the DF-SUBQUERY-1 method bodies (2026-09-15), bound on the class
   from `core.py` as four individual class-body assignments (`scalar = subquery.scalar`
   &c.) so the AST inventory walk sees them: `scalar` / `exists` raise Spark's
@@ -1348,7 +1289,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   at depth 100 — because `_bind_schema_column` re-resolved each name against `self.columns`.
   `_iter_bound_columns` now reads `columns` once and passes the canonical name through, falling
   back to the resolving path when the frame carries duplicate names so the `[AMBIGUOUS_REFERENCE]`
-  contract is unchanged. pins: perf-facade-1/C-004, C-005
+  contract is unchanged.
 - Arrow export maps execution failures to `PySparkException` while preserving the engine message.
   Planning and analysis errors keep their classified facade exceptions.
 - DataFrame origins preserve side identity through joins. Semi and anti joins emit left columns
@@ -1366,7 +1307,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - Optional pandas, Polars, and DuckDB surfaces fail clearly when their dependencies are absent.
   Streaming UDF bridges preserve plan stability and close Arrow resources on failure.
 - `printSchema` stdout is Spark's tree plus the blank line (`treeString`'s newline and
-  `print`'s). pins: df-printschema-1-trailing-newline/C-001, C-004
+  `print`'s).
 
 ## cache-view ownership (EAGER-OWN-1)
 
@@ -1430,15 +1371,12 @@ swept the orphans by prefix, so repeated calls accumulated full result sets.
   and this was the smallest unrelated block that could leave without
   condensing code mid-fix (ledger R11-D-5, orchestrator-accepted).
 
-pins: eager-own-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-C-010, C-011, C-012
-
 ## core.py rationale (COMMENT-CORE-1)
 
 In-code comments left `core.py` in this unit. Docstrings and `# noqa` / `# type:` pragmas
-stay. The AST equals `origin/main` (pins: comment-core-1/C-001, C-002). Each
+stay. The AST equals `origin/main`. Each
 `moved-to-map` row in the unit ledger has its sentence here, grouped under the function
-that held the comment (pins: comment-core-1/C-003).
+that held the comment.
 
 - `(module)`: Vertical `show` is Spark-style only; styled displays stay horizontal and
   warn once. WriterV2 `option`/`options` are accepted for signature parity but ignored
@@ -1470,7 +1408,7 @@ that held the comment (pins: comment-core-1/C-003).
   source-only. Tighten-nulls propagates to derived frames. `_mia_temp_views` holds
   MemTable names for deferred bridge results; they are dropped during finalization.
 - `_identity_child`: Identity-preserving operations keep display, engine, and origin
-  maps. pins: perf-facade-1/C-004, C-005
+  maps.
 - `_materialize_cache_if_needed`: Cache keeps `_map_bridge` so `unpersist` restores
   re-run; checkpoint truncates lineage. Never route VALUES / `createDataFrame` through
   this entry. Commit handle state only after a successful materialize. Converting an
@@ -1486,7 +1424,7 @@ that held the comment (pins: comment-core-1/C-003).
 - `_execute_map_in_arrow_bridge`: Fall back to the IPC path when the native C-stream
   register is absent (version-skew). Output batches drain in Python first: a live
   `RecordBatchReader` over the generator would re-enter `__arrow_c_stream__` while Rust
-  holds the GIL and abort. pins: facade-1/C-001, C-002, C-006
+  holds the GIL and abort.
 - `_execute_map_in_arrow_bridge_ipc`: An empty iterator writes a schema-only IPC stream
   (zero batches).
 - `_register_ipc_bytes_as_inner`: Own the view before `sql()` so finalize drops it even
@@ -1516,7 +1454,6 @@ that held the comment (pins: comment-core-1/C-003).
   (Spark fans out across one id and across two — no ambiguity refusal), a miss
   appends, and among folded-duplicate keys the last wins, as before. Each
   replaced or appended position gets its own fresh id through `.alias`.
-  pins: attr-id-1/C-030
 - `_try_merge_adjacent_window_layer`: Do not merge past a cache mark (that would orphan
   the intermediate MemTable pin). Replay both maps on the pre-layer frame so DataFusion
   fuses one `WindowAggr`.
@@ -1589,7 +1526,6 @@ that held the comment (pins: comment-core-1/C-003).
   a plain NULL literal included (W-1). Overlay Spark-legal display names while engine
   fields stay unique.
 - `printSchema`: `treeString` ends with a newline and `print` adds Spark's second one.
-  pins: df-printschema-1-trailing-newline/C-001, C-004
 - `toDF`: Multi-name frames cannot re-bind bare display strings; rename positionally
   via engine/display bindings.
 - `selectExpr`: A bare `*` keeps multi-name display identity. Use a plan-stable
@@ -1622,7 +1558,6 @@ that held the comment (pins: comment-core-1/C-003).
   resolved-but-absent Column (alias, other frame, compound) is a no-op, as is
   a miss; a str fans out to every hit; a free Column refuses a two-attribute
   display. Dotted or backticked free Columns keep the native qualified path.
-  pins: attr-id-1/C-032
 - `order_by`: Sort does not change column identity; keep display and engine maps.
 - `join`: Normalize Spark aliases to engine tokens. The semi family folds
   `left_semi` / `left_anti` after stripping underscores. A conditionless semi/anti
@@ -1656,13 +1591,12 @@ that held the comment (pins: comment-core-1/C-003).
   **ATTR-ID-1 S3d (2026-10-01):** each key's hit set is the shared live-rule
   computation (`spark/subset_resolve._fanout_subset`); every hit position keys
   the dedup with no ambiguity refusal, and a miss raises Spark's
-  `_LEGACY_ERROR_TEMP_1201`. pins: attr-id-1/C-032
+  `_LEGACY_ERROR_TEMP_1201`.
 - `with_column_renamed`: Multi-name frames bind by engine/display pairs.
   **ATTR-ID-1 S3c (2026-10-01):** the existing name's hit set is the shared
   live-rule computation; every hit is renamed (Spark fans out, no ambiguity
   refusal), a miss is a no-op returning the same frame, and each renamed
   position mints one fresh id through `Column.alias` (live-Spark §9f ruling).
-  pins: attr-id-1/C-030
 - `with_columns_renamed`: Multi-name frames already carry Spark-legal duplicate
   displays; allow them and rename via engine bindings. Keep origin so multi-name
   select identity survives the rename.
@@ -1670,7 +1604,7 @@ that held the comment (pins: comment-core-1/C-003).
   rule instead of exact-only, and each renamed position mints one fresh id
   through the native fresh-id alias (§9f ruling). Colliding final names
   materialize through the display overlay; the Group F refusal is gone
-  (EX-DF-18 FIXED). pins: attr-id-1/C-030
+  (EX-DF-18 FIXED).
 - `_column_of`: Stable-name rebind (`F.col` / requested spelling) then origin rebind
   so `orderBy` / `groupBy` / `select` parent Columns hit the correct post-join engine
   field.
@@ -1747,86 +1681,75 @@ that held the comment (pins: comment-core-1/C-003).
 - File-size records: PYC-1 (2026-08-22) moved the UDF callbacks from `core.py` to
   `udf_bridge.py`. Under CAP-1, `core.py` carries an exact exception row;
   `udf_bridge.py` stays below the source-size default. TYPES-1 round 4 (2026-09-05): `core.py`
-  6305→6303 — one import joined absorbs the round's increase (pins: types-1/C-008).
+  6305→6303 — one import joined absorbs the round's increase.
   DFCORE-1 (2026-09-07): `core.py` 6302→5954, `joins_columns.py` 1239→1238; the three new leaf
-  modules stay below the source-size default (pins: dfcore-1/C-007).
+  modules stay below the source-size default.
   DFCORE-2 (2026-09-07): `core.py` 5954→5263; `udf_projection.py` (349) and
   `udf_window_projection.py` (337) stay below the source-size default
-  (pins: dfcore-2/C-006).
   DFCORE-3 (2026-09-07): `core.py` 5263→5060, `writer_readwriter.py` 1113→1111;
-  `statistics.py` (261) stays below the source-size default (pins: dfcore-3/C-006).
+  `statistics.py` (261) stays below the source-size default.
   IO-BUCKET-CLUSTER-1 (2026-09-14): `writer_readwriter.py` 1111→1105 — the binding
   and check-call growth was paid by moving the five write helpers to
   `writer_layout.py` (312, below the source-size default); both mirrored in the
-  CAP-1 test (pins: io-bucket-cluster-1/C-003).
+  CAP-1 test.
   DFCORE-4a (2026-09-07): `core.py` 5060→4819; `sampling.py` (288) stays below the
-  source-size default (pins: dfcore-4a/C-005).
+  source-size default.
   DFCORE-4b (2026-09-07): `core.py` 4819→4539; `display.py` (322) stays below the
-  source-size default (pins: dfcore-4b/C-005).
+  source-size default.
   DF-EAGER-1 step 2 (2026-09-09): `core.py` 4525→4487; `eager.py` (92), `display.py`
   (+6 for the eager-shape total), and `polars.py` (+4 for the `eager` mirror) stay below
-  the source-size default (pins: df-eager-1/C-001, C-002, C-003, C-004, C-006).
+  the source-size default.
   GROUPED-SURFACE-1 (2026-09-14): `joins_columns.py` 1238→1169 as the pandas bridge moved
   to `grouped_arrow.py` (484) and `cogroup.py` (350), both below the source-size default
-  (pins: grouped-surface-1/C-007).
   DFCORE-5 (2026-09-07): `statistics.py` 261→264, no new module, no ceiling row;
-  stays below the source-size default (pins: dfcore-5/C-005).
+  stays below the source-size default.
   DFCORE-6 (2026-09-07): `display.py` 322→320, no new module, no ceiling row;
-  stays below the source-size default (pins: dfcore-6/C-005).
+  stays below the source-size default.
   DF-DESCRIBE-STR-1 (2026-09-11): `statistics.py` 264→325→318, no new module, no
-  ceiling row; stays below the source-size default (pins: df-describe-str-1/C-001,
-  C-005).
+  ceiling row; stays below the source-size default.
   PERF-DESCRIBE-1 (2026-09-12): `statistics.py` 318→372, no new module, no ceiling
-  row; stays below the source-size default (pins: perf-describe-1/C-002, C-005).
+  row; stays below the source-size default.
   PERF-UNPIVOT-1 step 2 (2026-09-12): `statistics.py` 372→337→334, no new module,
-  no ceiling row; stays below the source-size default (pins: perf-unpivot-1/C-008,
-  C-011). The chunk loop's ten `RoundRobinBatch(64)` repartitions over the eager
+  no ceiling row; stays below the source-size default. The chunk loop's ten `RoundRobinBatch(64)` repartitions over the eager
   source measured inside run noise when toggled off and the switch is
   session-global — residue PERF-UNPIVOT-1-R-001 in the unit ledger.
-  pins: perf-unpivot-1/C-014, C-016
   FACADE-1 (2026-09-12): `core.py` 4485→4473→4470; `_pyarrow.py` and `_arrow_stream.py`
-  stay below the source-size default (pins: facade-1/C-001, C-002, C-006).
+  stay below the source-size default.
   DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new
-  `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
+  `colregex.py` (52) stays below the source-size default.
   COMMENT-CORE-1 (2026-09-13): `core.py` 4468→4117; comments removed, no code change
-  (pins: comment-core-1/C-004, C-005, C-006).
   EAGER-OWN-1 step 1 (2026-09-13): `core.py` 4117→4094 — the ownership wiring is a
   net minus because `_warn_storage_level_cosmetic_once` moved to `cache_handle.py`
-  (169 lines, below the source-size default). pins: eager-own-1/C-002
+  (169 lines, below the source-size default).
   DF-RUST-3 (2026-09-15): `core.py` stays at its exact 4015 baseline — the
   `freqItems` and `transpose` class bindings are one line each, paid for by a
   moved `statistics` import and collapsed adjacent statements; `statistics.py`
   332→415 and `surface_a.py` 328→416, both below the source-size default;
   `writer_readwriter.py` holds its exact 1101 baseline.
-  pins: df-rust-3/C-005
   ICE-WRITE-OPTIONS-1 (2026-09-17): `core.py` 4015→3991 (warning machinery out);
   `writer_readwriter.py` 1101→1114 (options slots, storage, clause rendering);
   `writer_layout.py` 365→376 (render helper, below the default).
-  pins: ice-write-options-1/C-001, C-005
   ICE-V3-WRITE-DEFAULT-1 (2026-09-17): `writer_readwriter.py` 1101→1095 — both
   `_by_name_projection` variants return the target column list with the source
   projection and stop refusing missing DataFrame columns, so the engine fills
   omitted defaulted columns from `write_default` in Rust.
-  pins: ice-v3-write-default-1/C-006
   ICE-WRITE-OPTIONS-1 run 22b rebase (2026-09-18): `writer_readwriter.py` 1102→1095 — the
   merge keeps main's column list and `static_overwrite` flag and this unit's options map on
   every Iceberg writer action; the V1 funnel hands both to
   `writer_layout.run_through_temp_view`, whose one native call
   `session_sql_with_write_options(session, sql, options, static_overwrite)` carries the
   typed flag (the separate `sql_static_overwrite` native is retired, Q-22b-WO-1).
-  pins: ice-write-options-1/C-014
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
 
 EAGER-BUDGET-1 review round (2026-09-13): `eager.py::_cache_conf_lookup` matches cache budget keys
 case-insensitively, like the `repark.cache.retained_bytes` intercept: any spelling in the unset tomb disables the key,
-and when two spellings coexist the last one set wins (runtime layer over builder). pins: eager-budget-1/C-004
+and when two spellings coexist the last one set wins (runtime layer over builder).
 - **FNP-4B (2026-09-15, run 15b cleared):** the aggregate rebind leaf matchers in `joins_columns.py` (simple / collect / first-last / binary forms) and `plan_collapse.py` (`_parse_count_distinct_simple_names`) accept a backtick or a double-quoted leaf, so `sum(`x`)` rebinds after internal SQL moved to backtick quoting. pins: `test_select_global_agg.py::test_select_case_preserved_sum_alias_and_alias_lit`, `::test_select_case_preserved_rebind_extended_afs`.- `writer_layout.py` / `writer_readwriter.py` — **ICE-SESSION-WRITE-CONF-1 round 1
   (2026-09-19):** `table_of_ref_target` strips a trailing `branch_<name>` / `tag_<name>`
   selector for the writer's existence probe (spelling only — the Rust router still decides
   whether the ref may be written, and refuses a tag), so
   `writeTo("t.branch_b").append()` reaches the engine instead of failing the probe.
-  pins: ice-session-write-conf-1/C-039
 
 - **FNP-4B (2026-09-15, run 15b cleared):** the aggregate rebind leaf matchers in `joins_columns.py` (simple / collect / first-last / binary forms) and `plan_collapse.py` (`_parse_count_distinct_simple_names`) accept a backtick or a double-quoted leaf, so `sum(`x`)` rebinds after internal SQL moved to backtick quoting. pins: `test_select_global_agg.py::test_select_case_preserved_sum_alias_and_alias_lit`, `::test_select_case_preserved_rebind_extended_afs`.
 
@@ -1839,14 +1762,13 @@ and when two spellings coexist the last one set wins (runtime layer over builder
   Spark's `NOT_COLUMN_OR_STR` text), the frame's columns in table order with `NULL AS <col>`
   for a column the frame lacks, or every frame column in frame order when it carries one the
   table lacks so the engine answers Spark's arity refusal. The overwrite itself is U8's
-  REPLACE WHERE door. pins: u7-write-df-2/C-006, C-007
+  REPLACE WHERE door.
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `replace_where_statement(dataframe, table_ref,
   condition)` names the frame's columns, quoted, in frame order and decides nothing else: the
   Rust door binds them to the table by name (`NULL` for a column the frame lacks,
   `EXTRA_COLUMNS` for one the table lacks — before, an extra beside a missing column reached
   the engine positionally and committed shifted columns). `writer_layout.run_through_temp_view`
   takes `source_by_name` (the sixth native argument) and `run_overwrite_condition` sets it.
-  pins: u7-write-df-2/C-013
   `by_name_projection` is the old refusal path, still used by the overwrite
   arms. `append_statement` is the new one: when the frame carries columns the
   table does not have, the append lowers to `INSERT INTO t BY NAME SELECT …`
@@ -1862,22 +1784,21 @@ and when two spellings coexist the last one set wins (runtime layer over builder
   answer a message of its own with no error class.
   `writer_readwriter.py` ratchets 1091 → 1077 as both copies of
   `_by_name_projection` collapse into the shared one.
-  pins: ipi-19-56-37-schema-evolution-write/C-001, C-002
 
 U11-EDGE-1 round 2 (2026-09-26, V-004): `core.py`'s `union_by_name` no longer decides the
 column match; it passes `allowMissingColumns` to the native `union_by_name`, whose Rust binder
 pairs names case-insensitively, keeps the left spelling and raises the mismatch refusal.
-`core.py` 3991 → 3981. pins: u11-edge-1/C-020
+`core.py` 3991 → 3981.
 U11-EDGE-1 round 4 (2026-09-26, V-001/V-003): `core.py`'s `drop` sends string targets and
 Column targets apart to the native `drop_frame_columns`, so a qualified Column binds through its
 relation in Rust and an unmatched string or Column is a no-op; the line cost is paid by the
-docstring, `core.py` stays at 3981. pins: u11-edge-1/C-022
+docstring, `core.py` stays at 3981.
 U11-EDGE-1 round 4 (2026-09-26, V-002): `_join_on_condition_h1` calls the native
 `refuse_ambiguous_join_condition` on the rewritten ON text before planning, and passes the
 planned join through `requalify_join_sides` so the output carries each side's relations;
 `drop`'s display bookkeeping is compressed to pay for the two lines and the `filter`
 docstring now states the Column form refuses like Spark (line-neutral). `core.py`
-3981 → 3979. pins: u11-edge-1/C-023
+3981 → 3979.
 U11-EDGE-1 round 5 (2026-09-26, V-001..V-004): attribute references are declared where the
 facade already knows the exact field — `_bind_engine_display_column`, `_rebind_origin_column` and
 `_bind_schema_column(name, canonical)` with an explicit canonical (`_iter_bound_columns`,
@@ -1886,7 +1807,7 @@ facade already knows the exact field — `_bind_engine_display_column`, `_rebind
 `select("*")` expands through `_iter_bound_columns`, so `selectExpr("*")`, `withColumn(s)`,
 `toDF` and `fillna` re-project by attribute; `dropDuplicates(subset)` keys every field matching a
 subset name ignoring case, as Spark does, bound by attribute; `drop` sends an origin Column's
-engine name as an exact attribute. `core.py` 3979 → 3976. pins: u11-edge-1/C-024, C-025, C-026
+engine name as an exact attribute. `core.py` 3979 → 3976.
 U11-EDGE-1 round 6 (2026-09-26, V-001): `_select_via_qcol_sql` registers its scratch view over
 `_native.attribute_copies(plan)` and rewrites each resolved QCOL token — and each rebound bare
 origin Column whose SQL is its quoted engine name — to that engine's exact copy
@@ -1894,16 +1815,15 @@ origin Column whose SQL is its quoted engine name — to that engine's exact cop
 so a compound origin Column on a case-twin join (`b["id"] + 1`, a cast, an alias, `when`, `isin`,
 a comparison) binds its side instead of refusing. `with_columns` matches its targets ignoring
 case, as Spark's resolver does: `withColumn("id", …)` replaces `ID` and `id` and names both `id`.
-`core.py` 3976 → 3973. pins: u11-edge-1/C-027
+`core.py` 3976 → 3973.
 U11-EDGE-1 round 7 (2026-09-26, V-002, V-003): `select` expands an unaliased `F.col("*")`
 (`column_fields.is_bare_star`) through `_iter_bound_columns` like the string `"*"`, so on a
 twin-join frame `select(b["id"] + 1, F.col("*"))` answers the presented fields `ID`, `data`,
 `id`, `w`, not the scratch view's copies. `_select_via_qcol_sql` spells copies through
 `functools.partial(_native.attribute_copy_name, self._plan())`, the collision-free name the
 native copy projection gave each field. `core.py` stays 3973 (the docstring gave the line).
-pins: u11-edge-1/C-029, C-030
 **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the REPLACE WHERE scan
-runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
+runs through the native `sql_built` method.
 **Fold SM-2 R2 (2026-10-06):** frames with duplicate display names refuse the
 named writes with Spark's exact `COLUMN_ALREADY_EXISTS` (SQLSTATE 42711) before
 any file is created: `writer_layout._refuse_duplicate_output_columns` checks
@@ -1915,14 +1835,13 @@ create/replace), `_run_ctas` and V2 `append`. `insertInto` stays positional
 (Spark writes it); saveAsTable-append stays by-name loud. The case rule comes
 from the frame's stored plan handle (`frame_case_sensitive` over `_inner`,
 which never materializes bridges), never the session object, so proxied
-sessions keep working and lazy frames still run once. pins: attr-id-1/C-061
+sessions keep working and lazy frames still run once.
 **Fold SM-2 R3 (2026-10-06):** `core.py`'s `__arrow_c_stream__` delegates to
-`qualified_names._arrow_c_stream_with_display`. pins: attr-id-1/C-062
+`qualified_names._arrow_c_stream_with_display`.
 **Fold SM-2 R4 (2026-10-06):** `core.py`'s `mapInArrow` calls
 `qualified_names._refuse_ambiguous_map_input` after schema coercion, covering
 `mapInPandas` and the grouped/cogroup bridges; the call is line-neutral
 against the `mapInPandas` docstring at the exact 3464 baseline.
-pins: attr-id-1/C-063
 **Fold SM-2 R5 (2026-10-06):** `core.py`'s `create_or_replace_temp_view`
 (covering `create_temp_view`) and `create_global_temp_view` (covering both
 global spellings) call `writer_layout._refuse_duplicate_output_columns`
@@ -1933,7 +1852,7 @@ unsupported error for duplicate-free frames. The refusal stays out of
 `surface_b.register_view_without_fill` because EXPLAIN registers twin
 frames through it. Line-neutral at the exact 3464 baseline (the
 `create_temp_view` alive check is subsumed by the refusal's `columns` read;
-the `mapInPandas` docstring is one line). pins: attr-id-1/C-064
+the `mapInPandas` docstring is one line).
 **Fold SM-2 R6 (2026-10-06):** the two DataFrame USING sites record their
 mark with `qualified_names._using_state` (SM-2b item 5: the mark lives in
 that module's `_USING_MARKS` weak map, never as a `DataFrame` slot, so the
@@ -1943,7 +1862,6 @@ Line-neutral at the exact 3464 baseline (the `join` docstring tightens five
 lines and the condition docstring one; the dropped "`drop` is a no-op"
 half-sentence named no frame; SM-2b rebalances the two refusal imports
 against the slot/`__init__` removals plus one filter-docstring join).
-pins: attr-id-1/C-066
 **Fold SM-2c C-3 (2026-10-06):** every writer and temp-view door registers a
 frame whose output fields are renamed to the display names when they differ
 and are exactly unique, so a dropped-side twin engine name never reaches a
@@ -1956,7 +1874,6 @@ rename, so refusals and positional `insertInto` behave as before. EXPLAIN's
 scratch view passes `rename_fields=False` through
 `register_view_without_fill`, so the plan text shows the true engine plan
 (the R5 refusal stays out of that helper for the same reason).
-pins: attr-id-1/C-067, C-068
 **FA-5 (2026-10-08):** the csv path write no longer refuses exact-duplicate
 display names. `writer_layout._rename_duplicate_tolerant` hands the frame to
 the native `rename_duplicate_tolerant` when a display name repeats (unique
@@ -1972,4 +1889,4 @@ registered, so no refusal can name the scratch view.
 parquet, json, orc, `saveAsTable` and `writeTo` keep
 `_refuse_duplicate_output_columns`. `writer_readwriter.py` calls
 `writer_layout.run_through_temp_view` directly for the path `COPY`, which
-keeps the file under its ceiling. pins: fa-5-6/C-002, C-003, C-004
+keeps the file under its ceiling.

@@ -44,8 +44,6 @@ PySpark to re-record. Raw-recording SHA-256: `spark_array_insert_oracle.json`
   Measured 2026-09-18 on live Spark 4.1.2 (UTC): all 8 substitute cells (4 doors x v2/v3)
   answer the recorded rows and the recorded footer field ids byte-identically.
 
-pins: ice-array-insert-1/C-001, C-005, C-010
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

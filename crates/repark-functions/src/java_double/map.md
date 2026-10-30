@@ -55,7 +55,6 @@ sets an ALT flag that appends `.` when precision is 0.
   doubles + 100 seeded random rows; 579 non-shortest floats + 100 seeded random
   rows) so CI holds the claim without the fixture file.
 - `tests_corpus.rs` — the corpus byte-equality test and the in-tree table test.
-  pins: java-double-fd-1/C-001, C-002
 - `tests_suffix_marker.rs` — **Fix round 1 (2026-09-15, R-17c-2):** pins the
   `__repark_suffix_literal__` exemption with a stub marker UDF (identity,
   always-nullable field, the door's real contract) — the cast survives

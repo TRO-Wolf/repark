@@ -13,11 +13,10 @@ parent keeps the UDF plumbing, dispatch (scalar/column paths), shaping and the
   `days_from_ymd`) and bound-formatting helpers. Month steps compute element `i`
   from the start (`start + months × i`); runtime expansion refuses with the
   literal ceiling's text. Extracted 2026-09-15 as a file-size split (move-only).
-  pins: door-converge-2/C-007, C-009
   `timestamp_row` takes the element's `TimeUnit` (ICE-TSNS-TYPE-PLANNER-1 M1,
   2026-10-15): the stride turns into ticks of that unit, a month or day step shifts the
   wall read from those ticks (`datetime_from_ticks`, `ticks_from_datetime`), and a step
-  finer than the unit refuses as a sub-microsecond step does. pins: ice-tsns-type-planner-1/C-016
+  finer than the unit refuses as a sub-microsecond step does.
 
 ## Contracts pinned
 

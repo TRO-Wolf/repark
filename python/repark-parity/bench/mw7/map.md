@@ -74,8 +74,6 @@ deleting every seeded row.
 | RePark after | exact; lower == upper == the 103-byte seeded path | rewritten 5, `removed_delete_files_count` 1 | 2 data files, 0 delete files, 0 delete records, 2,500 rows |
 | PySpark 4.1.2 + Iceberg 1.11.0 | exact; lower == upper (both granularities) | rewritten 3, `removed_delete_files_count` 0 | 1 data file, 1 dangling delete file, 2,500 delete records, 2,500 rows |
 
-pins: rdf-1-position-delete-bounds/C-001
-
 ## Constraints
 
 - Measure only. An engine defect this harness surfaces is an OPEN finding in the ledger
@@ -113,8 +111,6 @@ the step stays a listing, because Spark's default deletes.
 so the sequence no longer arms capture for it. Any refusal on v2, and any other v3
 refusal, still aborts the run.
 
-pins: scale-v3-mw7/C-001
-
 ## The v3 numbers (SCALE-v3, 2026-09-02)
 
 `1e7 x 50` on format 3 at the MW-7 knobs, one host, 2:42:36 wall. Ratios against the
@@ -127,5 +123,3 @@ pins: scale-v3-mw7/C-001
 | MoR point probe p50 at merge 50 | 3,878 ms | 2,493 ms | 0.64x |
 | MoR 50 merges | 1,297.7 s | 2,059.6 s | 1.59x |
 | MoR after the runbook | 8 delete files, 10,000,000 delete records, 2.02x the COW control | 0 delete files, 0 delete records, 0.61x the COW control | — |
-
-pins: scale-v3-mw7/C-002, C-003

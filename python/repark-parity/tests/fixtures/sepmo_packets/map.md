@@ -16,8 +16,6 @@ directory paths. Used by `test_sepmo_packet.py`.
 - `cdf1-actor.md` / `cdf1-actor.json` — actor packet for PERF-FACADE-CDF-1.
 - `icescan-actor.md` / `icescan-actor.json` — actor packet for PERF-ICE-SCAN-1.
 
-pins: sepmo-e2/C-005
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

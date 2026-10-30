@@ -27,7 +27,6 @@ second reading of `file_format` beside dbt-spark's.
   `dbt debug`'s events and `dbt.log` and in the Jinja `target` `Profile.to_target_dict` builds,
   where a login-shaped catalog is also masked in `target.database` and `target.catalog`
   (PA-DBT-MISMATCH-REDACT-1).
-  pins: pa-dbt-mismatch-redact-1/C-003, C-005
 - `session.py` — the process-wide session, and the pyodbc-shaped cursor dbt drives it through.
   RePark's `getOrCreate` answers **one session per process**, so a second profile with a
   different catalog or warehouse would silently run against the first one's engine. That is
@@ -35,7 +34,6 @@ second reading of `file_format` beside dbt-spark's.
   The refusal compares the full configuration but names only the live and requested `database`
   and `warehouse` (through the same redaction) and the changed keys, never a property value
   (audit PA-01).
-  pins: pa-dbt-mismatch-redact-1/C-002, C-005
 - `relation.py` — `ReparkRelation`. It subclasses `BaseRelation`, **not** `SparkRelation`, for two
   reasons a subclass could not work around: `SparkRelation.__post_init__` raises when `database`
   is set, and `SparkRelation.render()` raises when database and schema are both included. RePark
@@ -47,7 +45,6 @@ second reading of `file_format` beside dbt-spark's.
   types from the facade schema, not `DESCRIBE EXTENDED` text, registry `DBT-DESC-1`),
   `_get_columns_for_catalog` (same reason, for `dbt docs`), and `get_relation`, which un-does
   dbt-spark's nulling of the database.
-  pins: dbt-1-adapter/C-002
 
 ## I want to...
 

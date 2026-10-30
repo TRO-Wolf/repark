@@ -47,8 +47,6 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   design evidence for the route choice and the pin behind every registry row this unit filed.
   It needs **no adapter**, which is why it stays green when the package is removed — the
   red-first evidence lives in the two files below.
-  pins: dbt-1-adapter/C-001
-  pins: sql-set-door-1/C-005
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20, re-measured after the current-catalog flip):**
   `R-SHOW-DATABASES`, `R-DESCRIBE-TWO-PART` and
   `R-SHOW-TABLES` move to served (a registered memory catalog becomes the current catalog,
@@ -60,7 +58,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   the source catalog, like Spark. `S-RENAME` now pins the catalog-less target
   (`rename to gold.gold_fct_renamed`), and `R-RENAME-THREE-PART` pins the three-part target that
   `spark__rename_relation` emits for a dbt-repark relation: Spark's `Namespace does not exist:
-  ice.gold`. Residue R-U5-PR3-DBT-RENAME. pins: ice-nested-evo-1/C-059
+  ice.gold`. Residue R-U5-PR3-DBT-RENAME.
   **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served, and
   `test_show_table_extended_answers_spark_shape` compares every column name and value of the one
   four-column row (`to_pylist()`), including the full information text; `R-SHOW-TBLPROPERTIES` stays
@@ -82,7 +80,6 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row
   path had **no** coverage, and truncating `fetchall` to one row survived the whole suite
   (ledger F-DBT-1-5).
-  pins: dbt-1-adapter/C-002
   The `description` type of a VALUES-literal column reads `int32` since TYPES-1 (2026-09-05): a bare
   integer literal is Spark `int` on the Spark door.
 - `test_gold_models.py` — the acceptance. Builds a dbt project in a tmp directory from the S6
@@ -91,7 +88,6 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   materialization refusals and the mutation guard. Since ICE-RTAS-OPS-2 (2026-09-18) a
   table model's `create or replace ... as select` records `overwrite`, not `append`, as
   Spark 4.1.2 does; the properties test asserts the one `overwrite` snapshot.
-  pins: dbt-1-adapter/C-002, C-003, C-004
   **IPI-26/27 round 2 (2026-09-20):** the relation-documentation and `location_root`
   pins inverted to success — the description lands as the `comment` property and
   the table lands under `location_root` with readable rows — while the `OPTIONS`,
@@ -107,7 +103,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   the same env variables as `python/repark/tests/parity/test_aws_acceptance.py`. It writes to
   `testing_repark_acceptance` and nowhere else. **The orchestrator runs it; a unit agent never
   does.** **ICE-GOLD-TWICE-1 (2026-09-14):** the stem is unique per run
-  (`testing_r<run_id>a<attempt>_<leg>_dbt1_<uuid8>` since AWS-EPHEMERAL-RUNS-1 step 1, 2026-10-24; pins: aws-ephemeral-runs-1/C-003; minted in the `glue_project` fixture and passed to
+  (`testing_r<run_id>a<attempt>_<leg>_dbt1_<uuid8>` since AWS-EPHEMERAL-RUNS-1 step 1, 2026-10-24; minted in the `glue_project` fixture and passed to
   `_repoint_profile`, no module constant), the test runs `dbt run`, checks the S6
   `FCT_ROWS`/`AGG_ROWS` and records both gold models' snapshot counts, runs `dbt run` a
   second time — success, the same rows, and each model's history grown by exactly one
@@ -118,8 +114,6 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   the pre-credentials build step; docs/tier2-aws.md §7 is the operator note. The fixture's
   `finally` runs `release_session()` plus `_stop_any_session()` (imported from
   `test_gold_models`) so a fixture-time failure cannot leave a Glue session process-wide.
-  pins: dbt-1-adapter/C-005
-  pins: ice-gold-twice-1/C-003, C-004, C-005, C-006
 - `test_profile_mismatch_redact.py` — **PA-DBT-MISMATCH-REDACT-1 (2026-10-16, audit PA-01):**
   10 cases with sentinel secrets in both property dictionaries and a source URL carrying a
   password in each. The profile-mismatch refusal names the live and requested `database` and
@@ -129,12 +123,11 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   and `dbt debug` (events and `dbt.log`, the profile carrying a warehouse URL with a password)
   carry no sentinel. The live session is a stand-in, so nothing is built and no catalog is reached.
   8 red on main; the step 0 measurements are in the unit ledger §1.
-  pins: pa-dbt-mismatch-redact-1/C-001, C-002, C-003, C-004, C-005, C-006
 - **CATALOG-1 (2026-09-26):** registering a memory catalog no longer makes it current, so the
   statement-surface session sets `spark.sql.defaultCatalog` to the fixture catalog, as a Spark
   profile does; the served shapes are unchanged. The adapter qualifies every relation, so
   `test_gold_models.py` and `test_cursor.py` need no change. The C-011 sweep ran this suite
-  green with no further rewrite. pins: catalog-1/C-011
+  green with no further rewrite.
 
 ## I want to...
 

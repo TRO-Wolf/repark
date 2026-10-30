@@ -1,0 +1,10 @@
+# sepmo-e2 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: python/repark-parity/tests/test_sepmo_packet.py::test_fixture_packets_validate_against_schema, python/repark-parity/tests/test_sepmo_packet.py::test_schema_file_lists_eight_groups_and_source_identity
+C-002: python/repark-parity/tests/test_sepmo_packet.py::test_fixture_packets_validate_against_schema, python/repark-parity/tests/test_sepmo_packet.py::test_malformed_sidecar_fails_loudly, python/repark-parity/tests/test_sepmo_packet.py::test_rebuild_matches_checked_in_packets, python/repark-parity/tests/test_sepmo_packet.py::test_remote_url_is_rejected, python/repark-parity/tests/test_sepmo_packet.py::test_uncaptured_boundary_path_fails_build, python/repark-parity/tests/test_sepmo_packet.py::test_verification_commands_are_shell_and_not_prose, scripts/sepmo_packet.py, scripts/sepmo_packet_extract.py
+C-003: python/repark-parity/tests/test_sepmo_packet.py::test_critic_packet_keeps_prefix_and_excludes_actor_narrative, python/repark-parity/tests/test_sepmo_packet.py::test_dropping_a_sidecar_constraint_fails_check, python/repark-parity/tests/test_sepmo_packet.py::test_dropping_a_stable_rule_fails_check, python/repark-parity/tests/test_sepmo_packet.py::test_prefix_is_byte_identical_across_five_briefs, python/repark-parity/tests/test_sepmo_packet.py::test_prefix_is_byte_identical_across_three_units, scripts/sepmo_packet.py
+C-004: python/repark-parity/tests/test_sepmo_packet.py::test_diff_shows_only_the_dynamic_delta, scripts/sepmo_packet.py
+C-005: python/repark-parity/tests/test_sepmo_packet.py::test_fixtures_have_no_home_paths, python/repark-parity/tests/test_sepmo_packet.py::test_rebuild_matches_checked_in_packets
+C-006: python/repark-parity/tests/test_sepmo_packet.py::test_baseline_table_matches_fixture_sizes_and_e0_ratios
+C-007: python/repark-parity/tests/test_sepmo_packet.py::test_adoption_names_each_adapter_prompt_file
+C-008: python/repark-parity/tests/test_sepmo_packet.py::test_brief_hash_refresh_is_detected, scripts/sepmo_packet.py

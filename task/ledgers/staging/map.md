@@ -3,7 +3,9 @@
 ## Purpose
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
+A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <path>[::<name>], ...` line per clause, or `C-NNN: none (records)`), read by `scripts/check_ledger_grammar.py` rule B; it moves with its ledger and gets no row here.
 ## Contents
+- [map-governance-1-ledger.md](map-governance-1-ledger.md) — **MAP-GOVERNANCE-1 (2026-10-29), in flight:** pin bindings move from the maps to the `<unit>-pins.md` sidecars; map lockstep becomes a warning in both modes; `check_map_size.py` ratchets map size (200 lines or 16 KiB); the lifecycle carries sidecars. Branch `feat/map-governance-1`, PR #1221; card [../../roadmap/mid-term/map-governance-1-card-2026-10-29.md](../../roadmap/mid-term/map-governance-1-card-2026-10-29.md).
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of

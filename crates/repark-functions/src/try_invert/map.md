@@ -8,8 +8,6 @@ raising path that already exists. Aggregates `try_sum` (datafusion-spark reuse) 
 [`../aggregate.rs`](../aggregate.rs) and [`../lib.rs`](../lib.rs). `try_element_at` is an
 alias of `element_at` in [`../collection.rs`](../collection.rs).
 
-pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-014, C-015, C-017, C-018, C-019
-
 ## Contents
 
 - `mod.rs` — register the thirteen scalar kernels.
@@ -19,18 +17,16 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
   types for temporal overloads live here; invoke is `temporal.rs`.
 - `temporal.rs` — DATE/TIMESTAMP ± INTERVAL and INTERVAL / numeric (including `/0` → NULL).
   **TYPES-1 (2026-09-05):** the interval divisor accepts narrowed `Int32`
-  (`Float64`/`Int64` before). pins: types-1/C-002
+  (`Float64`/`Int64` before).
   DATE + HOUR/MINUTE/SECOND (nanos ≠ 0) promotes to timestamp; DATE + DAY/MONTH stays date.
   Interval-interval add/sub NULLs when the day-time duration exceeds i64 microseconds
   (Spark Duration max, 106751991 days). Interval `try_avg` is not here (FNP-11 refuse in
   [`../aggregate.rs`](../aggregate.rs)).
-  pins: fnp-7-try-inversions/C-015, C-019
 - `convert.rs` — `try_to_date`, `try_to_number`, `try_to_binary`, `try_to_time`.
   Live Spark 4.1.2 `try_to_time` raises `UNSUPPORTED_TIME_TYPE`; this kernel matches that.
   `try_to_date` Java patterns default missing month/day to 01 and parse `MMM`/`MMMM`.
   **FN-FIX-1:** non-foldable `try_to_number` format raises `NON_FOLDABLE_INPUT`.
   The number-format grammar and the binary decoders are `pub(crate)` for `strict.rs`.
-  pins: fn-fix-1-registry-rows/C-002
 - `strict.rs` — **FNP-11B step 5 (2026-09-15):** the raising twins `to_number` /
   `to_binary` over the shared `convert.rs` grammar (mismatch raises Spark's
   `[INVALID_FORMAT.MISMATCH_INPUT]`, malformed bytes raise `[CONVERSION_INVALID_INPUT]`;
@@ -42,13 +38,12 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
   timestamps and dates render through the `datetime.rs` Java-pattern path in the session
   zone; binaries render `hex` / `base64` / `utf-8`; strings pass through. Nullability is
   per input kind (timestamps answer non-nullable like `date_format`, `utf-8` binary arms
-  stay nullable). pins: fnp-11b/C-002, C-003, C-004, C-005;
+  stay nullable).
   `strict::tests::*`.
   **FNP-11B remediation round 1 (2026-09-16):** `to_char` resolves its input arm
   once (lazily, so all-null unknown inputs still answer null) with one cached
   mask and a sized builder; `to_number` / `to_binary` cache one format and
   `to_binary` sizes its builder — answers unchanged, only allocations move.
-  pins: fnp-11b/C-006, C-007.
 
 ## I want to...
 

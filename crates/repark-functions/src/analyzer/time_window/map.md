@@ -14,7 +14,7 @@ re-exports through `mod.rs` so its registration path never moved.
   nested (field-access-wrapped) `window` calls rewrite through their wrappers,
   `window_time` refuses provably non-window structs with the oracle
   `_LEGACY_ERROR_TEMP_3101` text, and touched projections rebase to input
-  qualifiers. pins: fnp-win-1/C-002, C-003, C-005, C-006, C-008, C-010, C-012, C-014
+  qualifiers.
 - `session_window.rs` — `SparkSessionWindow` (lag / new-session flag /
   running sum / min-max sessionize over staged `session_window` markers).
   Remediation 16a: the dynamic-gap path threads `__repark_session_end__`
@@ -22,17 +22,15 @@ re-exports through `mod.rs` so its registration path never moved.
   DATE times cast to timestamp, unkeyed plans stay single-partition while keyed
   plans hash-partition on the grouping keys, and display-named session refs
   rebase like the window side.
-  pins: fnp-win-1/C-004, C-006, C-008, C-009, C-011, C-012, C-013, C-015.
   Round 2 (2026-09-15): the dynamic-gap path chains on the running maximum
   of session ends (`max(end)` over preceding rows per key) instead of the
-  previous row's end. pins: fnp-win-1/C-004. Round 2 (2026-09-15):
+  previous row's end. Round 2 (2026-09-15):
   `mod.rs` recurses the `window_time` provenance walk through Filter /
   Limit / Sort / Distinct / Repartition / Subquery into the defining input
   and Join / Union into the owning child, failing closed otherwise.
-  pins: fnp-win-1/C-003. Round 2 (2026-09-15): a second session spec per
+  Round 2 (2026-09-15): a second session spec per
   block refuses with Spark's `1039` text on the SQL door; the Python door
   meets DataFusion's duplicate-name error first (registry WIN-4).
-  pins: fnp-win-1/C-004.
 
 ## Pointers
 

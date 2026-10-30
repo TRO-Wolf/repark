@@ -39,7 +39,6 @@ the `fixtures/torture` generators and enumerated its outside consumers: `nested`
 `schema_inference`, `extreme_types` and `smartcsv` are partly covered. No family
 retired; the coverage tables and verdicts live in
 [../../../docs/perf/torture-1-2026-09-11.md](../../../docs/perf/torture-1-2026-09-11.md).
-pins: torture-1/C-036
 
 ## I want to…
 

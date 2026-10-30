@@ -28,16 +28,13 @@ Source comments are condensed to API and safety contracts; executable behavior i
   to every catalog this session builds, and the `repark.iceberg.*` knobs that shape them (two in
   IO-1, three since **PERF-ICE-CATALOG-IO-2** added `manifestCacheBytes`). See
   [catalog/map.md](catalog/map.md).
-  pins: perf-ice-catalog-io-1/C-002
-  pins: perf-ice-catalog-io-2/C-001, C-002
   **ICE-FOOTER-CACHE-1 (2026-09-19):** a fourth knob, `repark.iceberg.footerCacheBytes` (default
   64 MiB, `0` disables), sizes one session-owned `ParquetFooterCache` that every catalog builder
-  receives. pins: ice-footer-cache-1/C-001, C-002
+  receives.
 - `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite /
   partition overwrite (DML-B) / ALTER /
   snapshot refs over the owned fork. Named-ref commits use `commit_target` / `to_branch`.
   See [write/map.md](write/map.md).
-  pins: rp-5-fork-repin/C-004
 - [microbatch/](microbatch/map.md) — **MB-1 round 2 (2026-10-07):** the
   micro-batch track's offsets, identifiers, offset JSON, the track's one
   error enum (`MicroBatchError`), and the window planner plus the batch
@@ -46,10 +43,8 @@ Source comments are condensed to API and safety contracts; executable behavior i
 - [view/](view/map.md) — **ICE-VIEWS-1 (2026-09-20):** the view service over the
   fork's `Catalog` view methods (`create_or_replace_view`, `drop_catalog_view`,
   `list_catalog_views`, schema/property/location helpers, `view_read_spec`).
-  pins: ice-views-1/C-001, C-002, C-003, C-004, C-005
 - [tests/](tests/map.md) — crate-root test modules: fork-pin proof, shared tracing harness,
   and the R91 unknown-write refuse pin.
-  pins: rp-5-fork-repin/C-006
 
 ## I want to...
 

@@ -13,7 +13,6 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md): the write
   cells, the grouping refutation and the grouping-independent invariants
   (PERF-ICE-WRITEPATH-1 round 3).
-  pins: perf-ice-writepath-1/C-010
 
 - `bench_coalesce_chain.py` — progressive withColumns/sort/show wall times on a VALUES frame.
 - `bench_mor_merge.py` — local memory-catalog MoR vs COW MERGE phase timings;
@@ -41,41 +40,34 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   4.1.2 oracles; see [windows/map.md](windows/map.md).
 - `dynflatten/` — **PERF-DYNFLATTEN-1** `dynamicFlatten` measurement bed +
   isolated repark cells + Spark explode oracle; see [dynflatten/map.md](dynflatten/map.md).
-  pins: perf-dynflatten-1-measure/C-001, C-002, C-003
 - `facade/` — **PERF-FACADE-1** facade-boundary battery: `collect()` row materialization and
   `withColumn` chain building, with the pre-unit code path reconstructed in-process so both
   legs of every before/after pair share one module and one load. No JVM, by design — the box
   allows one Spark JVM at a time and this battery must not compete for it. See
-  [facade/map.md](facade/map.md). pins: perf-facade-1/C-009
+  [facade/map.md](facade/map.md).
 - `spill/` — **H3-SPILL-1** the Never-OOM truth table: every operator the engine can plan,
   under a bounded `FairSpillPool` at 1e6 and 1e7 rows, classified `ok` / `spilled` /
   `degraded` / `clean_error` / `abort` / `wrong`. One subprocess per cell under an
   address-space cap; peak RSS polled from `/proc`; the answer compared against the unbounded
-  run. See [spill/map.md](spill/map.md). pins: h3-spill-1/C-001, C-002
+  run. See [spill/map.md](spill/map.md).
 - [icescan/](icescan/map.md) — **PERF-ICE-SCAN-1** read cells: bed generator plus the
   §7.4 before/after battery (`count_star`, `count_id`, `sum_all`, `string_len`, DV legs).
   See [icescan/map.md](icescan/map.md).
-  pins: perf-ice-scan-1/C-009
 - [profiles/](profiles/map.md) — **PROFILES-1 step 1 (2026-09-10)** config-profile
   measurement bed: three D-2 datasets, five reads + three writes, knob × value timing
   harness writing one CSV row per cell, one-JVM guard, `--smoke` proof mode.
-  pins: profiles-1/C-001, C-002, C-003, C-004, C-005
 - [approxpct/](approxpct/map.md) — **PERF-APPROXPCT-1 round 2 (2026-09-06)** sketch
   cells: `run_cells.py ROWS ATTEMPTS [--control]` times the `percentile_approx(id,
   0.5)` wall/peak/answer rows (or the `count(id)` control) on a range scan, release
   module only. See [approxpct/map.md](approxpct/map.md).
-  pins: perf-approxpct-1/C-004
 - [cast/](cast/map.md) — **PERF-CAST-1 step 1 (2026-09-12)** CAST-cost
   measurement: 200k-row eager MemTable, CAST counts 50 / 250 / 2500, three
   plan shapes, warmup + three reps, one CSV row per cell, attribution probes.
-  pins: perf-cast-1/C-001, C-002, C-003
 - [adaptpart/](adaptpart/map.md) — **AP-0 (measure, 2026-09-10)** adaptive-partitioning
   candidate measurement: three local Iceberg beds scored from `files`/`partitions`
   manifest bounds (P-2 candidates, P-3 target-band scores, one ranked table per bed).
   **AP-1 / RP-16 re-measure (2026-09-11):** `--plan` runs `CALL plan_partitioning`
   on those beds. See [adaptpart/map.md](adaptpart/map.md).
-  pins: ap-0/C-001, C-002, C-003, C-004
-  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## I want to…

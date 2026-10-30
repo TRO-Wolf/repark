@@ -17,22 +17,18 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `Ok(None)`; `REPARK_CONFIG` set but empty disables discovery; a named-but-missing path
   refuses naming it. Step 1. **REVIEW-FIX-7 step 1 (2026-09-10):** `CONFIG_VARIABLE` is
   `pub(crate)` so the wiring can tell an explicitly named file (trusted) from a
-  directory-search hit (warned). pins: cfg-1/C-001, C-002, C-003
-  pins: review-fix-7/C-003
+  directory-search hit (warned).
 - `profile.rs` — `profile_from_table` (typed `display` / `session` allowlists, free-form
   `conf` / `catalog` / `database`, unknown keys refuse with the `name.table.key` path) and
   `effective_table` (`[default]` deep-merged under the named profile; `None` selects default
   alone; an unknown `REPARK_ENV` profile refuses naming it and the known list). Nothing here
   reads the process `REPARK_ENV`; step 3 passes it in. Step 1.
-  pins: cfg-1/C-004, C-005
   **WO CATALOG-1 C-010 (2026-09-26):** the session allowlist gains `default_catalog`.
-  pins: catalog-1/C-010
 - `interpolate.rs` — `${VAR}` expansion over the effective table's strings (nested tables and
   arrays included, scalars untouched); a missing variable refuses naming the key path and the
   variable; `$` without `{` stays verbatim; `$$` escapes a literal `$`, so `$${NAME}` renders
   `${NAME}` with no environment lookup; an unterminated `${` refuses naming the key path.
   Step 1; the two `$`-edge behaviours flipped by ruling R-14 in step 1b.
-  pins: cfg-1/C-006, C-007, C-008, C-009
 - `sources.rs` — `profile_sources(profile_name, profile)` → `ProfileSources` (`catalogs` +
   `sources`). The catalog family joins each `[<profile>.catalog.<name>]` block into
   `repark.sql.catalog.<name>.<prop>` keys and reuses `../../catalog_config.rs`'s
@@ -52,35 +48,29 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   **WO CATALOG-1 C-010 (2026-09-26):** `memory_type_rewrite` maps a block's
   `type = "memory"` to the `InMemoryCatalog` long form, replacing `type` (a memory-kind
   `catalog-impl` beside it is kept and `type` dropped; a non-memory one keeps both keys).
-  pins: catalog-1/C-010
   **CFG-2 step 1 (2026-09-13):** `SourceSpec` also carries `profile` and
   `auto_register` — a per-entry TOML boolean defaulting to true, refused non-boolean
   naming `<profile>.database.<kind>.<name>.auto_register`, and kept out of `props`
   (D-5). `key_path()` renders the `<profile>.database.<kind>.<name>` spelling the
   refusal messages and the collision error share.
-  pins: cfg-1/C-010, C-011, C-012, C-013, C-014, C-016, C-017
-  pins: cfg-2/C-002
   **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind` moved to `repark-common`
   unchanged, and `SourceSpec` carries a `repark_common::SourceIdentity` (`name`, `kind`,
   `generation`) in place of its `name` and `kind` fields; the loader builds it with
   `SourceIdentity::unassigned` (generation `None`, R-12 as amended by the owner, 2026-10-05). `profile`, `auto_register` and `props`
   stay here, `key_path()` renders the same spelling, and the manual `Debug` prints the
   identity where it printed `name` and `kind`, still masking props through `redact_value`.
-  Loader behavior is unchanged. pins: c-1/C-002
+  Loader behavior is unchanged.
   **C-1b (2026-10-06):** the identity's generation is `Option<repark_common::Generation>`
   (NS-14); the loader still builds it unassigned, so this module needed no edit.
-  pins: c-1/C-012
 - `redact.rs` — `redact_value` / `redact_config` over `../../catalog_config.rs`'s
   `prop_key_is_secret` (widened to `pub(crate)` this step, the one authorized edit outside
   the family; the predicate is not re-implemented). The `***` mask matches the `CatalogSpec`
   `Debug` placeholder; `SourceSpec`'s `Debug` masks through the same function, so a secret
   value never reaches `Debug`/dump output. Step 3 wires `redact_value` into the dump's
   value column. Step 2.
-  pins: cfg-1/C-015
   **SOURCE-URL-REDACT-1 (2026-10-06):** `redact_value` now comes from `repark-common::redaction`: the key rule is
   unchanged and every other value is masked by `mask_value_credentials` (URL userinfo, secret
   query parameters, libpq / ODBC keywords). `redact_config` stays the test helper.
-  pins: source-url-redact-1/C-006
 - `wiring.rs` — step-3 builder seam. `load_file_config(forced, environment, current_directory,
   home)` (forced path refuses naming it when absent, else automatic discovery; empty
   `REPARK_CONFIG` disables, empty `REPARK_ENV` selects default) then `REPARK_ENV` profile,
@@ -112,16 +102,11 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   (or a Glue/S3Tables `catalog-impl`) records exactly one warning naming the path and
   the catalogs, which the builder prints at session build. `rest` still refuses first
   through the unrecognized-value error until `CatalogKind::Rest` arrives.
-  pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
-  pins: review-fix-7/C-003
   **REVIEW-FIX-2 (2026-09-10):** the C-023 control session builds from a forced empty
   staged file, so no discovered file can reach the control side on any machine.
-  pins: review-fix-2/C-002
-  pins: catalog-1/C-010
   **SOURCE-URL-REDACT-1 (2026-10-06):** `raw_conf_dump_rows` builds the merged `(key, value, source)` rows unredacted
   and `redact_dump_rows` masks them; `conf_dump_rows` (tests only) composes the two.
-  pins: source-url-redact-1/C-008
-  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the `session.*` integer refusal echoes the value masked. pins: source-url-redact-1/C-017
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the `session.*` integer refusal echoes the value masked.
 - `maintenance.rs` — `MaintenancePolicy` (the six D-1 profile-level keys plus the
   `tables` map of per-table `TablePolicy` entries) with `from_table` (unknown keys refuse
   naming the `name.maintenance.key` path; `adaptive_partitioning` refuses as not yet
@@ -132,12 +117,11 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   validates eagerly through `from_table` but still stores the raw table on
   `Profile.maintenance`, so both `parse()` and the typed API refuse; `profile_as_table`
   carries the slot so the `REPARK_ENV` merge keeps it. Step 1 of MAINT-POLICY-1.
-  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
   **MAINT-POLICY-1 step 2 (2026-09-10):** the policy types, `resolve`, `parse_duration`,
   and `parse_maintenance_policy` (full-document text in, typed policy out, `None` for a
   profile with no maintenance table) are public for the Spark procedure; the
   `#[allow(dead_code)]` is gone now that `plan_steps` calls `resolve` through the stamp.
-  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `parse_duration`'s refusal echoes the value masked. pins: source-url-redact-1/C-017
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `parse_duration`'s refusal echoes the value masked.
 - `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
   discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
   pins) plus CFG-2 step 1's `auto_register` non-boolean refusal; `wiring.rs` carries the
@@ -150,21 +134,15 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file policy resolves with its
   profile name, `REPARK_ENV` names a non-default stamp with and without a table, the
   file-built session carries the stamp on its registry).
-  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
-  C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
-  pins: cfg-2/C-001, C-002
-  pins: maint-policy-1/C-020
   **REVIEW-FIX-2 (2026-09-10):** the seed no-file pin drives `discover` /
   `load_file_config` with `home: None` and a stub environment instead of the public
   `load()`, so no pin reads the developer's `HOME`; the suite passes under a stub
   `HOME` carrying a visible `repark.toml`.
-  pins: review-fix-2/C-001, C-002
   **WO CATALOG-1 C-010 (2026-09-26):** `tests/session_catalog.rs` carries the seven
   rewrite and `default_catalog` pins; `native_type_catalog_blocks_match_the_flat_config_path`
   pins the still-matching `hadoop` arm, and
   `file_built_session_registers_the_same_catalogs_as_config_calls` gains the
   `type=memory`-file versus long-form-calls arm.
-  pins: catalog-1/C-010
 
 ## Pointers
 

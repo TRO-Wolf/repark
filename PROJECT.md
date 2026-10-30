@@ -3,8 +3,9 @@
 > **Purpose of this file.** Orient any agent or contributor to *what RePark is, why it exists, and
 > the decisions that must not be undone*. The single authoritative day-to-day contract is
 > [AGENTS.md](AGENTS.md) (which holds the precedence chain; [CLAUDE.md](CLAUDE.md) is a thin
-> tool adapter), with a `map.md` in every directory. **This file states INTENT; the contract states
-> MECHANICS** — if they conflict, reconcile, never silently discard intent.
+> tool adapter), with a `map.md` where the architecture needs one (see `docs/maps-policy.md`).
+> **This file states INTENT; the contract states MECHANICS** — if they conflict, reconcile, never
+> silently discard intent.
 
 ## What RePark is
 
@@ -169,7 +170,7 @@ names its evidence; a differentiator without a pointer is aspirational and says 
 - **`unsafe_code = "forbid"`** workspace-wide EXCEPT `crates/repark-python` (landed phase-3 PR-3;
   the crate sets a local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`).
 - **Tests land with the code** (same commit); `cargo test --workspace` is the test command.
-- **`map.md` in every directory, in lockstep** with code changes.
+- **`map.md` where the architecture needs one**, kept honest by the sync and size gates; lockstep with code is a warning, not a gate.
 - **Pin one DataFusion family** across all DF-touching crates; `Cargo.toml` is the SSOT;
   `Cargo.lock` checked in.
 - **Distribution is deferred** behind the `ExecutionBackend` seam.
@@ -276,5 +277,5 @@ does not restate current state. The port that stood this repository up is record
 Rust: rustfmt `max_width=100`, edition 2024, clippy `all`+`pedantic` `-D warnings`, 91-`=` banner
 doc blocks on section functions, `thiserror`/`anyhow`, no panics in prod (no `unwrap`/`expect`).
 Python: type hints, Pydantic v2, `pathlib`, `logging`, Ruff line-100. `make ci` is the gate;
-`make verify` and `make preflight` extend it. Every directory carries a `map.md`
+`make verify` and `make preflight` extend it. A `map.md` sits where the architecture needs one
 (Purpose / Contents / I want to… / Pointers / Debug).

@@ -1,7 +1,6 @@
 # map — repark-functions/src/analyzer
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 ## Purpose
 
@@ -13,12 +12,11 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
 
 - `like_escape.rs` — **FN-FIX-2 (2026-09-04):** a LIKE/ILIKE pattern that ends in the
   unconsumed escape char is `DataFusionError::Plan` `[INVALID_FORMAT.ESC_AT_THE_END]`
-  SQLSTATE 42601. Foldable literals only. pins: fn-fix-2-string-rows/C-002
+  SQLSTATE 42601. Foldable literals only.
 - `overlay.rs` — `overlay(..., -1)` drops the Spark default length to the 3-arg form.
   **SQL-LITERAL-TYPING-1 (2026-09-16):** the `-1` match sees through one compiler
   `CAST` (early Int32 narrowing makes the first coercion wrap the literal before
   this rewrite runs; Spark treats every `-1` length as omit).
-  pins: sql-literal-typing-1/C-002
 - `time_window/` — **FNP-WIN-1 (2026-09-15):** `SparkTimeWindow`, the
   `TimeWindowing` equivalent. Bare `window(...)` group/projection keys take the
   `window` name (explicit aliases win); sliding calls expand one row per
@@ -26,17 +24,17 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   existing GroupedData path carries struct grouping keys untouched; dangling
   parent references to the pre-rename display remap to `window`. Non-literal
   durations and a second window specification per block refuse loud.
-  pins: fnp-win-1/C-002, C-005, C-006. Step 3 adds `SparkWindowTimeGrouping`,
+  Step 3 adds `SparkWindowTimeGrouping`,
   which refuses a `window_time(...)` call placed directly in an aggregate with
-  the oracle `[MISSING_AGGREGATION]` text. pins: fnp-win-1/C-005.
+  the oracle `[MISSING_AGGREGATION]` text.
   `mod.rs` keeps the window rules; `session_window.rs` (step 4) owns the
   `SparkSessionWindow` sessionize rewrite so each file stays under the
   `check_rust_file_size` ceiling. Month/year gaps refuse loud beside the
-  rule. pins: fnp-win-1/C-004, C-006, C-008, C-011. Round 2 (2026-09-15):
+  rule. Round 2 (2026-09-15):
   `session_window.rs` chains dynamic gaps on the running maximum of ends.
-  pins: fnp-win-1/C-004. The `window_time` provenance walk recurses through
+  The `window_time` provenance walk recurses through
   Filter / Limit / Sort / Distinct / Repartition / Subquery / Join / Union
-  into the defining input, failing closed otherwise. pins: fnp-win-1/C-003.
+  into the defining input, failing closed otherwise.
 - `cast_legality.rs` — Spark's CAST / TRY_CAST type-legality deny matrix covers
   `{Date32, Date64} ↔ {Int8, Int16, Int32, Int64}` and, since NTZ-1 slice 1, the
   `TIMESTAMP_NTZ` → numeric pairs described below. Refusals are `DataFusionError::Plan` with
@@ -45,7 +43,7 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   **WO NTZ-1 slice 1 (2026-09-27):** `Timestamp(µs, None)` → integer / float / decimal
   denies with `CAST_WITHOUT_SUGGESTION` naming `TIMESTAMP_NTZ`; the microsecond-naive
   source only, so TZ-5 `CAST(TIMESTAMP … AS BIGINT)` epoch seconds stay green.
-  pins: ntz-1/C-002. Legality is independent of ANSI evaluation mode.
+  Legality is independent of ANSI evaluation mode.
 
 Deliberately NOT here: the ANSI **store-assignment** matrix
 (`crates/repark-iceberg/src/write/store_assign.rs`). It answers a different question and is laxer

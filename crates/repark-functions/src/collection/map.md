@@ -3,7 +3,6 @@
 MAP-COLUMN-PANIC-1 (2026-10-20): `create_map.rs` serves the Spark SQL door too. `sql_map_udf()` is the same kernel under the internal name `__repark_create_map__` (`SQL_MAP_NAME`), registered in `functions()`; `create_map` itself stays unregistered, as Spark leaves it. The kernel no longer slices one row at a time: one key and one value array per pair, null and repeated keys found with vectorised kernels, the pairs interleaved in one pass. `map_rewrite.rs` is the analyzer rule that sends a non-constant `map(make_array(keys), make_array(values))` to it.
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 ## Purpose
 
@@ -23,7 +22,6 @@ needed.
 - `map_from_entries.rs` — **X7:** `map_from_entries` under Spark's `EXCEPTION` map-key dedup
   policy (duplicate keys raise rather than last-wins).
 - `array_position.rs` — **FN-FIX-1:** not-found → `0`; NULL only for NULL array/needle.
-  pins: fn-fix-1-registry-rows/C-002
 - `array_insert.rs` — **FNP-9 (2026-09-05):** Spark `array_insert(array, position, value)`. A
   positive position is 1-based; a negative one counts back from the end so `-1` appends. A
   position past either end pads with NULLs. Position `0` raises `INVALID_INDEX_OF_ZERO`.
@@ -32,7 +30,6 @@ needed.
   widens the array instead of truncating the value, and a BOOLEAN or STRING against an INT array
   raises `ARRAY_FUNCTION_DIFF_TYPES` the way Spark raises it. DataFusion's `comparison_coercion`
   alone is too loose here: it accepts string-with-numeric, which Spark refuses.
-  pins: fnp-9-collections-json/C-006
 - `arrays_zip.rs` — **FNP-9 (2026-09-05):** Spark `arrays_zip`. Zips to the LONGEST array and
   NULL-fills the rest; the struct field takes its 0-based position — NOT the child column name
   Spark uses for an attribute child. A UDF's return field must be a pure function of the
@@ -41,12 +38,12 @@ needed.
   pinning the names in `simplify` only moved the same failure onto the analyzer's schema.
   Divergence `FNP9-ARRAYS-ZIP-NAMES-1`. The NULL-fill test exists because a mutation knob
   found its absence: with the field-name tests alone, zipping to the SHORTEST array was
-  0 red of 42. pins: fnp-9-collections-json/C-006, C-008, C-009
+  0 red of 42.
 - `map_concat.rs` — **FNP-9 (2026-09-05):** Spark `map_concat`. A NULL map argument nulls the
   row and an untyped NULL raises `MAP_CONCAT_DIFF_TYPES`, both the way Spark answers them;
   a key repeated across the concatenated maps raises `DUPLICATED_MAP_KEY` with the text
   `map_from_entries` and `str_to_map` already use; no arguments answer an empty
-  `MAP<STRING,STRING>`. pins: fnp-9-collections-json/C-006
+  `MAP<STRING,STRING>`.
 - `map_rewrite.rs` — **MAP-COLUMN-PANIC-1 (2026-10-20):** `SparkMapRewrite`, an `AnalyzerRule` appended after the second `LambdaRebind`. DataFusion plans `map(k1, v1, k2, v2)` as `map(make_array(k1, k2), make_array(v1, v2))`, whose kernel builds a map only when both lists are constants or both are per row; a constant list beside a per-row list panics `list array` or answers `map requires key and value lists to have the same length`. The rule keeps a map whose keys and values are all literals (through a cast or a negation, or a constant `array`, `named_struct`, `struct` or `map`), with distinct non-NULL keys, on DataFusion's kernel and its consumers (the CSV option fold, the map-ordering refusal text, the nullability marker). Every other map takes the per-row kernel, which raises Spark's `NULL_MAP_KEY` and `DUPLICATED_MAP_KEY`. The rule keeps the output column name.
 - `create_map.rs` — **FNP-9 (2026-09-05):** the PySpark-only `create_map(k1, v1, …)` name. It is
   NOT in `functions()`: the Spark door spells this `map(...)` and already has it, so the kernel
@@ -61,14 +58,11 @@ needed.
   pins: fnp-9-collections-json/C-006, fnp-gen-1/C-002
 - `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
   (asc NULLS FIRST, desc NULLS LAST).
-  pins: fn-fix-1-registry-rows/C-002
 - `arrays_overlap.rs` — **FN-FIX-1:** three-valued overlap. HashSet of owned
   `ScalarValue` per row; a borrowed-key set is not a one-line change.
-  pins: fn-fix-1-registry-rows/C-002
 - `flatten.rs` — **FN-FIX-1:** a NULL sub-array makes the row NULL.
   Output `ListArray` from inner values + mapped offsets (no per-row concat).
   `#[ignore = "1e6-row release bench"]` `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
-  pins: fn-fix-1-registry-rows/C-002
 - `concat_array.rs` — **DOOR-CONVERGE-2 (2026-09-15):** the array arm of the door-converged
   `concat` UDF (`string.rs` keeps the name; this module holds the helpers). Element types fold
   through `array_insert::tightest_common` (text pairs normalize to `Utf8`, binary pairs to
@@ -79,9 +73,8 @@ needed.
   casts (same provisional-`Int64` sandwich as `sequence`: widths resolve post-narrowing,
   the kernel casts internally). `all_list_args` is the analyzer's gate for the
   `array_concat` → `concat` rewrite (every argument list-shaped or NULL).
-  pins: door-converge-2/C-001
   **Round 3 (2026-09-15):** the `MutableArrayData` capacity is the total child length
-  (P3-trivial hint, no behavior change). pins: door-converge-2/C-009
+  (P3-trivial hint, no behavior change).
 - `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
   `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL
@@ -111,20 +104,20 @@ needed.
 - `size.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `size` / `cardinality` under the
   Spark-4 `sizeOfNull=false` default: a NULL array/map answers NULL, the field is
   nullable `int32` (the DF kernels answer `-1` `uint64`). Covers list / large-list /
-  fixed-size-list and map (`MapArray::value_length`). pins: door-converge-1/C-004
+  fixed-size-list and map (`MapArray::value_length`).
 - `array_contains.rs` — **DOOR-CONVERGE-1 (2026-09-15):** `array_contains` wraps
   datafusion-spark's `SparkArrayContains` (already three-valued: match → TRUE, no match
   with a NULL element → NULL, no match → FALSE) behind `Signature::user_defined` and a
   `coerce_types` that refuses a `Null`-typed needle with `DATATYPE_MISMATCH.NULL_TYPE`
   before the signature can coerce it. Registered under the `array_has` alias too — the
   facade lowers `F.array_contains` through that spelling, so both doors resolve the same
-  kernel. pins: door-converge-1/C-005
+  kernel.
   **Round 2 (2026-09-16):** `coerce_types` widens element and needle to their tightest
   common type (never needle→element), refuses incompatible pairs with
   `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` (`'x'` vs `array<int>` either
   direction, ANSI on and off), adopts the needle type for an untyped empty array, and
   reads the element field's nullability into the result (`Spark`'s
-  `left || right || containsNull` rule). pins: door-converge-1/C-011, C-012, C-013
+  `left || right || containsNull` rule).
 
 ## I want to...
 

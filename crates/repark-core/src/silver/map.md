@@ -16,8 +16,6 @@ D-3 requires selection keys and order fields to be mapped source ids, so the pos
 `crm_contacts` fixture maps 91 as `source_version`. Bronze record id 90 stays on
 `input_contract` and is not a silver column.
 
-pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-
 ## Contents
 
 - `../silver.rs` — module root: submodule declarations and re-exports. No logic.

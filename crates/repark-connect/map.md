@@ -13,7 +13,6 @@ The `repark-core → repark-connect` edge arrives with C-2, its first caller (th
 C-2 also restores its policy row: R-14 took that row out of `ALLOWED_EDGES`, because the DAG
 gate's drift rule reds a declared edge with no dependency behind it once both crates are
 members. C-1 lands no provider, no read path, no pool and no driver dependency.
-pins: c-1/C-001
 
 C-2 (sketch [c-2-design.md](../../task/wo/c-2-design.md), four slices) makes it the Postgres read
 path. **C-2a (2026-10-06)** is the pure half, with no driver and no network: the crate's one error
@@ -23,16 +22,16 @@ per-value refusals. C-2b adds the driver behind the `postgres` feature (settings
 query pool, the COPY read), C-2c the provider, pushdown and EXPLAIN, C-2d the mount in
 `repark-core`. C-2b round 1a (2026-10-07) is the feature and the lockfile only. C-2b round 1b
 (2026-10-07) adds the Postgres settings keys (`settings/postgres.rs`) and the quoted identifier
-types (`ident.rs`), both pure. pins: c-2/C-013, C-026, C-027
+types (`ident.rs`), both pure.
 
 C-2b round 2 (2026-10-07) adds the `verify-full` TLS config (`tls.rs`) and the query pool with
 its Postgres connector, the session pins and the connect timeout (`pool.rs`), both behind
-`postgres`. pins: c-2/C-030, C-037
+`postgres`.
 
 C-2b round 3 (2026-10-07) adds the read path: relation and query discovery with the server
 floor (`discover.rs`), and the COPY statement, the `set_config` carriage and the COPY stream
 under the read timeout (`read/postgres.rs`), both behind `postgres`, with sketch §5.6's live
-crash matrix under `make pg-up`. pins: c-2/C-046, C-048
+crash matrix under `make pg-up`.
 
 C-2c (2026-10-07) adds the DataFusion provider and the pushdown, both behind `postgres`:
 `PostgresSource` with its catalog, schema and table providers and `PostgresScanExec`
@@ -41,7 +40,6 @@ A conjunct pushes exactly or stays above the scan, and EXPLAIN shows, per scan, 
 statement pushed and what it left (CC-1). D-M6 measured DataFusion 54.1 first: it hands
 `Inexact` filters to `scan` and withholds `limit` while a filter remains above, so H-DF did not
 fire. The crate gains `async-trait` (already in the tree), optional under `postgres`.
-pins: c-2/C-068, C-075, C-080, C-088
 
 **C-4 step 1 (2026-10-08)** adds the write core behind `postgres` (`write.rs`, `write/`):
 `COPY … FROM STDIN (FORMAT BINARY)` as the bulk path, a row `INSERT` path, and the selector
@@ -49,14 +47,13 @@ pins: c-2/C-068, C-075, C-080, C-088
 (`types/postgres/encode.rs`), so they store byte-identical tables; `interval` is the one type
 COPY BINARY cannot carry and puts a write on the row path. One write is one transaction. No
 door calls it yet: the routing and the `write.path` option are the next slice. No new
-dependency. pins: c-4/C-005, C-006
+dependency.
 
 **C-4 fold 1 (2026-10-09).** The selector also reads the target relation at `open`
 (`write/target.rs`): where Postgres gives `COPY` and `INSERT` different meanings (an `INSERT`
 rule, a view, a row-security policy, a statement trigger, a foreign table), a `Bulk` request
 takes the row path and `PostgresWriter::fallback()` says why; a named identity or generated
 column refuses on both paths. `INSERT`'s meaning is the contract and bulk only optimises it.
-pins: c-4/C-017, C-018
 
 ## Contents
 
@@ -72,7 +69,7 @@ pins: c-4/C-017, C-018
   crypto provider (H-CRYPTO); `tokio` names `net`, `rt`, `sync` and `time`.
   `--no-default-features` keeps the pure C-2a half with no driver. `sqlx` and `tiberius` wait for the read and write paths
   (C-4 onward). The `repark-core → repark-connect` edge is still absent; C-2d adds it with
-  the mount. pins: c-1/C-011 · pins: c-2/C-014
+  the mount.
 - `src/` — [src/map.md](src/map.md): `error.rs` (`ConnectError`), `copy_binary.rs` (the COPY
   BINARY decoder), `settings.rs` (the connection settings and the reserved auth-method field),
   `settings/postgres.rs` (the Postgres endpoint keys), `ident.rs` (`PgIdent`,
@@ -92,7 +89,7 @@ row is the type the ADBC PostgreSQL driver's documented type-mapping table names
 Postgres type (a documented basis, not a run of the driver; C-2's live cells against the C-0
 container are the first measurement), and a row where ADBC and another reading disagree (or where Postgres has values the Arrow type cannot hold) is
 declared, not chosen. **ConnectorX** shapes the partitioned reads; nothing in C-1 reads, so it is
-recorded as not yet (C-2, C-3). pins: c-1/C-010
+recorded as not yet (C-2, C-3).
 
 **C-2a.** ConnectorX shaped the read path: its PostgreSQL source reads `COPY (query) TO STDOUT
 WITH BINARY` over the rust-postgres family into typed Arrow destination columns. C-2a keeps the
@@ -101,7 +98,7 @@ protocol and the typed destination, and replaces ConnectorX's per-row parse thro
 keeps the ten C-1 rows; for `numeric`, `interval` and `uuid`, ADBC's documented Arrow types
 (string, month-day-nano, fixed-size binary) give way to the types Spark's dialect surfaces,
 because Spark governs the surface (North Star §2). Both bars are documents, not runs; the full
-citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4. pins: c-2/C-013
+citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
 
 **C-4 step 1.** ADBC is the bar for the write: append into an existing table as one COPY
 statement, a typed refusal when a batch does not fit the table, and one type table for the bulk
@@ -109,7 +106,7 @@ path and the bound-parameter path, which here is one encoder. C-4 departs where 
 Arrow types are the ones Spark's dialect surfaces) and writes `interval` from the server's text
 on the row path. ConnectorX has no load into a database; its binary COPY codec shape is reused
 in the write direction. Both are documents, not runs; the citations are in the
-[C-4 ledger](../../task/ledgers/staging/c-4-ledger.md) §6. pins: c-4/C-012
+[C-4 ledger](../../task/ledgers/staging/c-4-ledger.md) §6.
 
 ## I want to...
 
@@ -173,7 +170,7 @@ in the write direction. Both are documents, not runs; the citations are in the
   [c-2-ledger.md](../../task/ledgers/staging/c-2-ledger.md),
   [c-4-ledger.md](../../task/ledgers/staging/c-4-ledger.md)
 - Registry rows: [docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md) §5,
-  the `CONNECT-DECL-*` family beside `SES-DECL`. pins: c-1/C-009
+  the `CONNECT-DECL-*` family beside `SES-DECL`.
 
 ## Debug
 

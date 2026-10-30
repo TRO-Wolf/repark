@@ -7,8 +7,6 @@ materialization and `withColumn` chain building. The fixture generator is checke
 parquet lands under `/tmp/oc-facade-bed/` (never the repo). One session, one process, no JVM
 — every cell is repark-only, so this battery does not contend for the box's single Spark JVM.
 
-pins: perf-facade-1/C-001, C-006, C-007, C-009
-
 Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
 requires one, and nothing may say more. Reasons live in this map, not in the source.
 
@@ -38,8 +36,6 @@ still mirror what `PERF-FACADE-1` replaced; if `columns`, `_iter_bound_columns` 
 `_rows_from_arrow_table` changes again, the old leg stops being the right comparison and must
 be re-derived or dropped. The `create_old` leg is not a reconstruction — it calls the kept
 legacy path itself, so it stays the right comparison until the legacy path is removed.
-
-pins: perf-facade-cdf-1/C-001, C-005, C-006, C-008
 
 ## The createDataFrame cells (PERF-FACADE-CDF-1)
 

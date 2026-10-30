@@ -28,26 +28,22 @@ function-registry + analyzer-rule installation + the composed
   the session-build refusal. Fold 1 masks every `Configuration` message from
   `configure` (`masking_a_configuration_message_changes_only_the_url_password`,
   `configure_masks_a_url_password_in_the_case_sensitive_refusal`,
-  `configure_masks_a_url_password_in_the_ansi_refusal`). pins: source-url-redact-1/C-055
+  `configure_masks_a_url_password_in_the_ansi_refusal`).
   **Q10:** `configure_defaults_timestamp_type_ltz`,
   `configure_honors_timestamp_type_ntz`, `configure_refuses_invalid_timestamp_type`.
   **FNP-8 (2026-09-07):** `analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion`
   pins both insertions (JAVA-DOUBLE-STR-1 round 2 seats `spark_float_stringify` pre-coercion;
   the LIKE/CASE/coalesce pins prove the seat) and proves every other default rule remains ordered;
   `analyzer_configuration_refuses_a_missing_type_coercion_rule` pins the loud failure.
-  pins: fnp-8/C-003, C-004
   **DECIMAL-CACHE-1 (2026-09-15):** the same contract test now pins a third pre-coercion
   seat, `spark_decimal_precision` immediately before `type_coercion` (name kept so the
   FNP-8 citation still resolves); the facade `* Int32` min-precision pins prove the seat.
-  pins: decimal-cache-1/C-002
   **DECIMAL-CACHE-1 round 2 (2026-09-15):** the filter additionally passes
   `spark_negate_null_decimal` through (first in `analyzer_rules()`, not a pre-coercion
   insert, so the seating contract is unchanged).
-  pins: decimal-cache-1/C-012
   **SQL-LITERAL-TYPING-1 (2026-09-16):** the same contract test now pins a fourth
   pre-coercion seat, `spark_integral_literal` immediately before `type_coercion`
   (name kept); the BL-20 door pins prove the seat.
-  pins: sql-literal-typing-1/C-001, C-002, C-007
   **Remediation round 1 (2026-09-16):** the seat stays fourth, immediately
   before `type_coercion` (a first-among-pre-coercion seat was measured and
   reverted with the 24 broken FNP-8 HOF pins as evidence). `register`
@@ -57,16 +53,13 @@ function-registry + analyzer-rule installation + the composed
   **WO INTDIV-1 (2026-09-28):** the same contract test pins a fifth pre-coercion seat,
   `spark_fractional_division` immediately before `higher_order_preparation` (the four
   existing offsets are unchanged), and the filter passes it through.
-  pins: intdiv-1/C-002
   **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):** the same contract test pins a sixth
   pre-coercion seat, `join_condition_refusals` between `spark_integral_literal` and
   `type_coercion`, and the filter passes it through.
-  pins: cross-join-condition-1/C-008
   **Ruling 112 (2026-10-15):** the same contract test names `spark_timestamp_unit_widen`
   among the insertions and asserts its seat before `type_coercion` at the position the
   configured list holds, immediately before `spark_fractional_division`. The existing
   assertions keep their entries in their present order.
-  pins: ice-tsns-type-planner-1/C-012, C-025
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),
   `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),
@@ -76,7 +69,6 @@ function-registry + analyzer-rule installation + the composed
   a one-part `USE`. Otherwise it returns before tokenizing. A refused catalog name in
   `USE` / `SHOW … IN|FROM` operand position, or as the first part of a two- or three-part
   dotted name, raises its refusal first (skipped entirely when no refusal is stored).
-  pins: catalog-1/C-003, C-004, C-006, C-007, C-008, C-014
 
 ## Pointers
 

@@ -11,11 +11,11 @@ New catalog-config pins live here so the parent file stays under its size baseli
   error class, `UnsupportedOperation` / `IllegalArgument`), the
   `repark.sql.catalogExtensions` opt-in read (any case of the key, only the value `true`),
   and the `Block` refusal decision (a kind from `type=memory` alone, or from both
-  `type` and `catalog-impl`, with raw values echoed). pins: catalog-1/C-006, C-007, C-008
+  `type` and `catalog-impl`, with raw values echoed).
 - `refusal_tests.rs` — **CATALOG-1 (2026-09-26):** the parse-level refusal pins (the
   `type=memory` shapes incl. case variants, the both-keys shapes, the long form and
   `type=hadoop` staying catalogs, the opt-in keeping the memory type and the agreeing
-  pair, the opt-in reading only a `true` value). pins: catalog-1/C-006, C-007, C-008
+  pair, the opt-in reading only a `true` value).
 - `hadoop_naming_tests.rs` — **PR-B hadoop naming (2026-09-24):** `type=hadoop` (and
   ` Hadoop `, and the `repark.sql.catalog.` spelling) puts `metadata-naming=hadoop` into the spec
   props. `type=memory` and `catalog-impl=org.apache.iceberg.inmemory.InMemoryCatalog` add no

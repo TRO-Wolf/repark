@@ -57,8 +57,7 @@ feature. See [../map.md](../map.md).
     back as `::pg_catalog.int8`, so an `int2` or `int4` column compares through the
     catalog's cross-type operators and a cut outside the column's range never fails a cast.
     A stride open on both sides returns the request unchanged; an unknown column or a cut
-    past the slot bound answers `None`. pins: c-3/C-004
-  pins: c-2/C-038, C-039, C-040, C-041, C-053, C-054, C-056, C-059, C-062, C-074, C-076
+    past the slot bound answers `None`.
 
 - `postgres.rs` — **C-3 (2026-10-07):** the COPY reader is split so a prepared connection can
   run more than one statement. `ScanRequest::prepared(options)` builds a `Prepared` (the
@@ -67,7 +66,7 @@ feature. See [../map.md](../map.md).
   `next_batch()` is unchanged; `into_client()` drops the finished stream and hands the
   connection back. The one-statement scan keeps its behaviour through them: `Copying::open`
   checks out, opens `BEGIN READ ONLY` when a value or a query source needs it, and `finish`
-  commits and releases. pins: c-3/C-005
+  commits and releases.
 - `postgres_lanes.rs` — **C-3 (2026-10-07)**, the connections of one partitioned scan
   ([c-3-ledger.md](../../../../task/ledgers/staging/c-3-ledger.md) §0.2, §0.3).
   `scan_lanes(pool, strides, max_lanes, options, meter)` prepares every stride, takes between
@@ -93,7 +92,6 @@ feature. See [../map.md](../map.md).
     the connection is never pooled.
   - `time_to_first_byte` is the first connection's alone; `bytes_received` and `decode` sum
     over every connection.
-  pins: c-3/C-005
 
 ## Pointers
 

@@ -48,7 +48,7 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     (`CONNECT-DECL-pg-partitioned-read`). Since C-3 (2026-10-07) the four range options
     (`partitionColumn`, `lowerBound`, `upperBound`, `numPartitions`) are not settings: the
     door lifts them out of the property map (`PartitionOptions::with_props`, `../partition.rs`)
-    before `from_props` runs, so here they are unknown keys on both doors. pins: c-3/C-006
+    before `from_props` runs, so here they are unknown keys on both doors.
   - **Unknown keys.** Any other key refuses with `SpecRefusal::UnknownKey`, which lists the
     accepted keys and never echoes a value (`CONNECT-DIV-pg-unknown-option`). Inside the `url`
     query the key is named only as `Spelling::UrlPart("query key")`, and a malformed query value
@@ -60,8 +60,6 @@ crate interprets the props; core only carries them). See [../map.md](../map.md).
     userinfo when it has no `:`) and every query value whose key, percent-decoded, is secret
     (fold 1 X7: `pass%77ord`); then, as for every other value, it delegates to
     `repark_common::redaction::redact_value`, which masks a secret-named key whole.
-
-  pins: c-2/C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-036, C-049, C-050, C-051, C-065, C-082
 
 ## Pointers
 

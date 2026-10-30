@@ -10,7 +10,7 @@ conformance it calls before staging.
 
 - `store.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `conform_types` takes the door's `StructPairing` and table label
   and passes them to the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`).
-- `store.rs` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `gate_op` is set only for the InsertOverwrite site, so the PARTITION path's own refusal text answers (WS2-28). pins: write-spine-1/C-025
+- `store.rs` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `gate_op` is set only for the InsertOverwrite site, so the PARTITION path's own refusal text answers (WS2-28).
 - `store.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `conform_types` resolves the
   positional targets (`table_targets`) and runs the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) over the analyzed source plan, so an
   out-of-range fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column

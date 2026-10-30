@@ -14,14 +14,14 @@ Only tests; `mod.rs` is the module manifest.
   calendar and clock range checks, Java offset forms and limits, the legacy padding, prefixes,
   short ids and regions, DST gap and overlap, the chrono-tz table end and the far-future
   proxy, local mean time, the i64 microsecond edges, and both failure modes (NULL, and
-  `CAST_INVALID_INPUT` with Spark's `'…'` quoting). pins: cast-ts-string-1/C-001, C-002, C-003, C-008
+  `CAST_INVALID_INPUT` with Spark's `'…'` quoting).
   **C-2d fold 1 (2026-10-07):** the horizon pins import `LAST_TABULATED_YEAR` and `proxy_year`
   from `repark_common::zone_horizon`, their new home; every assertion is unchanged.
 - `spark_string_timestamp_sql.rs` — the same kernel through the analyzer: literal and column
   `CAST`, ANSI on and off, `TRY_CAST`, one-argument `to_timestamp` and `try_to_timestamp`, each
-  as `Timestamp(µs, "UTC")`. pins: cast-ts-string-1/C-004, C-005, C-006
+  as `Timestamp(µs, "UTC")`.
   A dictionary-encoded string column runs the kernel on every door, and the kernel battery
-  pins the doubled-blank refusal (verification critic). pins: cast-ts-string-1/C-013
+  pins the doubled-blank refusal (verification critic).
 - `zone_horizon_render.rs` — **ZONE-HORIZON-RENDER-1 (2026-10-08):** the horizon in real
   zones, against answers recorded on live Spark 4.1.2. 40 recorded instants (New York, Sydney,
   Lord Howe, Kolkata, UTC; 2099 controls, 2100, 2104, 2500, 9999; both sides of each
@@ -35,7 +35,6 @@ Only tests; `mod.rs` is the module manifest.
   constructor expressions answer Spark's New York 2100 cells through the analyzer; and a batch
   reads Arrow's kernel only when every instant is inside the tables (a 2024 + 2099 batch, a
   2024 + 2100 batch and a 2100 + 2500 batch each answer the right hour, weekday and year).
-  pins: zone-horizon-render-1/C-001, C-002, C-004, C-006, C-007, C-011
   The same unit rewrote `spark_string_timestamp.rs::chrono_tz_tables_stop_after_the_last_tabulated_year`:
   it read the table end through `micros_from_local_datetime`, which now reads the horizon, so
   it reads chrono-tz itself for the table end (−4 at 2099, −5 at 2100) and the funnel for the
@@ -66,25 +65,24 @@ Only tests; `mod.rs` is the module manifest.
   Spark door.
   **Step 3b (ZS-6):** `from_json` into a `TIMESTAMP_NTZ` field — Spark's text form is the
   wall in New York and Kolkata, a `Z` or offset text is NULL; a space separator and a date-only
-  text keep main's New York answers. pins: zone-seam-1/C-013
+  text keep main's New York answers.
   **Step 5:** `a_value_under_a_null_struct_never_reaches_an_ansi_leaf` holds the parent-null mask
-  (a malformed string under a NULL struct row does not raise under ANSI). pins: zone-seam-1/C-010
+  (a malformed string under a NULL struct row does not raise under ANSI).
   **Fix round 1 (2026-10-22, verifier S1-2):**
   `a_container_cast_converts_every_element_of_every_row_of_a_list` casts a column of two list
   rows (three and four elements, one NULL) of instants to `ARRAY<TIMESTAMP_NTZ>` in New York and
   holds every element's wall and the offsets; it reds when the list arm converts only the first
-  value. pins: zone-seam-1/C-018
+  value.
   **NESTED-LITERAL-SEAM-1 (2026-10-27, fix round 1):** three key pins through the product seam,
   `a_container_cast_of_a_date_key_to_timestamp_starts_at_the_session_midnight`,
   `a_container_cast_of_a_wall_key_to_timestamp_reads_it_in_the_session_zone` and
   `a_container_cast_of_an_instant_key_to_timestamp_ntz_takes_the_session_wall`, assert a date key, a
   wall key and an instant key of a `MAP<TIMESTAMP, …>` in New York and Kolkata against Spark's
-  values; the key pass-through mutant is red on all three. pins: nested-literal-seam-1/C-004, C-016
-  pins: zone-seam-1/C-001, C-002, C-003, C-004, C-005
+  values; the key pass-through mutant is red on all three.
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
 - **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the SQL test sessions here are built by
   `spark_type_planner::planned_context`, so `TIMESTAMP` is typed by the planner as on
-  every door; no assertion moved. pins: ice-tsns-type-planner-1/C-013
+  every door; no assertion moved.

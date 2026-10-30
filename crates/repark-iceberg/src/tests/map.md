@@ -12,7 +12,6 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the two
   staging literals take `..WriterStagingOverrides::none()`, so the struct's new
   `fork_insert_dictionary_rule` field defaults there instead of being restated.
-  pins: ice-session-write-conf-1/C-064
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   resolver precedence pins (writer option over session conf over table property, bogus
   codec refuses naming the codec) plus the `SessionWriteView` carrier shape
@@ -22,20 +21,18 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   case-insensitive `dynamic` reading, `plan_overwrite` on a two-level identity table (mixed
   list: row filter `cat = "x"` in static mode, replace partitions in dynamic mode; both keys
   dynamic: whole table / replace), and `NON_PARTITION_COLUMN` on an unpartitioned table and
-  for a non-partition column. pins: ice-overwrite-mode-1/C-002, C-004, C-005, C-006, C-007
+  for a non-partition column.
   Round 2 (2026-09-19): a key naming a `bucket` source (static, dynamic, by spec field name,
   or with a typed literal) refuses `NON_PARTITION_COLUMN` in both modes, while a typed literal
   on an identity key keeps its literal refusal; a static `'2024-01-01'` on a `DATE` partition
   plans the row filter `d = 2024-01-01` and `'2024-13-45'` refuses with the Arrow cast text;
   an empty dynamic stage skips the commit (`replace_partitions_is_noop`).
-  pins: ice-overwrite-mode-1/C-011, C-013, C-014
 - `v1_ref_writes.rs` — **WO RP50-A (2026-09-26):** the v1 ref-commit pin for C-060 (it
   replaces the round-2 C-053 kernel pin). On a format v1 table, `create_branch_on_empty_table`
   commits `b0` with no `main`, `commit_append_to(…, Some("main"))` seeds main,
   `create_snapshot_ref` commits branch `b1` and tag `t1` at the seed, and
   `commit_append_to(…, Some("b1"))` moves only the branch; a reload holds every ref on
   format-version 1. Red-first: the pin failed on the unfixed tree with the removed guard's text.
-  pins: ice-nested-evo-1/C-060
 - `merge_append_series.rs` — **ICE-MERGE-APPEND-1 (2026-09-19):** replays the recorded Spark
   4.1.2 / Iceberg 1.11.0 manifest series (`../../../../python/repark/tests/writes/ice_merge_append_1_truth.json`)
   through `write::commit_append` — 120 sequential single-file appends per variant, probed at
@@ -50,7 +47,6 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   All seven pins green after the routing change; the branch leg merges at the hundredth
   manifest on the branch (the carried seed plus 99 branch appends), not the hundredth branch
   append, and main's pointer never moves.
-  pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-008
 - `output_spec.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` pins over a memory catalog
   table evolved with `ADD PARTITION FIELD cat`: Java int parsing and its refusal text, the
   staging view's swapped default spec (the real table untouched), Spark's unknown-id text for
@@ -58,7 +54,6 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   the option committing two spec-1 files. Round 2 (2026-09-24): the refusal is a
   `NumberFormatMarker`, the partitioned stager follows an unpartitioned output spec (one
   spec-0 file), and `staged_spec_is_partitioned` answers per id and refuses `7`.
-  pins: u7-write-df/C-014, C-016
 - `writer_partitioning.rs` — **U7 PR1 (2026-09-24):** the layout and save-target kernels:
   provided and table transform rendering (quoting, `sorted_bucket`, `days`/`truncate`), the
   mismatch text with an empty and a three-field table side, count and case mismatches, a
@@ -67,16 +62,14 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   doubled-slash, `s3://`, relative and one-segment paths, and `save_target_names_table`.
   Round 3: a void field dropped from the table side and `years`/`months`/`hours` named, as
   Spark measured them (`bucket_existing_void_append`, `bucket_existing_time_append`).
-  pins: u7-write-df/C-005, C-006, C-014
 - `writer_plan.rs` — **U7 PR1 round 2 (2026-09-24):** `plan_writer` pins: the `saveAsTable`
   statement for every mode and existence with and without buckets, Spark's already-exists
   text, the missing bucket column on every create-or-replace arm (and not on an existing
   append), a case-sensitive session keeping `ID`, the `_LEGACY_ERROR_TEMP_3060` text (round 3:
   the name backticked when it contains a `.`, and only then), a missing `sortBy` column after
   the bucket columns (round 4), and the `save()` statements with their layout check.
-  pins: u7-write-df/C-015, C-018
   U7 PR2 (2026-09-24): a `saveAsTable` overwrite plans `rtas` whether or not the table
-  exists or is bucketed. pins: u7-write-df-2/C-002
+  exists or is bucketed.
 - `filter_validation.rs` — **U7 PR2 (2026-09-24):** `FilterValidation` through a real
   overwrite-by-filter commit on a memory catalog seeded with one file per row: an explicit
   `serializable` or `snapshot` level validates from the requested snapshot (a later delete of
@@ -84,7 +77,6 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   level without a start validates from the loaded snapshot (residue R-6), `serializable`
   refuses a matching append and `snapshot` does not, a change to other rows never conflicts,
   and a start that is not a long or not an ancestor refuses with Java's text.
-  pins: u7-write-df-2/C-009
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.
@@ -98,11 +90,10 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   refuse). **C-002:** `fork_variant_scan_refuses_naming_the_type` — a real data file plus a
   variant projection refuses at the fork's reader guard (empty table streams cleanly);
   the §4 registry row `V3-VARIANT-SHRED-1` cites these pins and the STATUS v3 block
-  truth-up rides the same landings (pins: v3-6-v3-types/C-007).
-  pins: rp-5-fork-repin/C-006
+  truth-up rides the same landings.
   **C-005 (2026-09-01):** `write_default` fills an omitted column on append
   (red-first vs the old refuse pin), a supplied column is kept, and `initial_default`
-  reads into files missing the column. pins: v3-6-v3-types/C-001, C-002, C-005
+  reads into files missing the column.
 - `enc_1_gate.rs` — **ENC-1 fold 1 (2026-10-09):** the source-scan gate that keeps the two
   chokepoints closed. It reads every Rust source under `crates/`, drops test code
   (`tests/`, `benches/`, `#[cfg(test)]` items and modules, and every module a test module
@@ -125,7 +116,6 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   used (`<iceberg::table::Table>::builder()`, `table::TableBuilder`, an import alias of
   `Table`). The gate stays textual: it matches spellings, not resolved paths, so a new
   alias can still walk past it. Recorded on card ENC-1-RESIDUE-1.
-  pins: enc-1/C-009, C-010
 
 ## Pointers
 

@@ -1,0 +1,7 @@
+# f-y10-1-int-overflow pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: crates/repark-sql/tests/ansi_door_values.rs, python/repark/tests/types/test_integer_overflow_parity.py
+C-002: crates/repark-sql/tests/ansi_door_values.rs, python/repark/tests/types/test_integer_overflow_parity.py
+C-003: crates/repark-sql/tests/ansi_door_values.rs::ansi_door_int32_add_overflow_raises, crates/repark-sql/tests/cross_door.rs::cross_door_decimal_add_same_precision_scale_bit_exact, crates/repark-sql/tests/cross_door.rs::cross_door_decimal_mul_money_by_quantity_bit_exact, crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_correlated_in_delete_executes_identically, crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_exists_delete_executes_identically, crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_not_in_delete_executes_identically, crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_refusals_render_identically, crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_update_in_executes_identically, crates/repark-sql/tests/cross_door.rs::cross_door_tvl_case_when_null_predicate, crates/repark-sql/tests/cross_door.rs::cross_door_tvl_true_and_null_is_null, crates/repark-sql/tests/cross_door_int_overflow.rs::cross_door_int32_add_overflow_wraps_on_spark_ansi_false_raises_on_ansi, python/repark/tests/types/test_integer_overflow_parity.py::test_native_sql_int32_add_overflow_raises
+C-004: none (records)
+C-005: none (records)

@@ -14,7 +14,7 @@ See [../map.md](../map.md).
 - `write_shapes.rs` — **C-4 fold 1 (2026-10-09)**, no network: nine column families, each
   encoded from its plain array and from up to five other encodings of the same values
   (`cast` builds them), with equal bytes required; and four encodings of other types that
-  must still refuse naming the type that came. pins: c-4/C-021
+  must still refuse naming the type that came.
 - `live_write_faults.rs` — **C-4 fold 1 (2026-10-09), the S3 cells:**
   `rows_arrive_in_input_order_on_both_paths` (a `bigserial` the write does not name numbers
   the arrivals; it replaces the three `ctid` assertions `live_write.rs` carried, which the
@@ -22,7 +22,7 @@ See [../map.md](../map.md).
   `a_row_write_idle_past_the_read_timeout_ends_as_that_timeout` (700 ms timeout, 2.2 s idle,
   with a second `write`, with a remainder `commit` must flush, and with a full group so that
   `COMMIT` is the first request after the wait; the bulk path commits under the same waits) and
-  `other_arrow_encodings_store_the_same_table_on_both_paths`. pins: c-4/C-020, C-021, C-022
+  `other_arrow_encodings_store_the_same_table_on_both_paths`.
   **C-4 fold 3 S3 (2026-10-11):** the idle-timeout pin opens and writes its first
   batch through `open_row_writer_past_load`, which retries past `Timeout` under
   suite load (2 min deadline; 3 min on the bulk control); the asserted timeouts
@@ -52,7 +52,6 @@ See [../map.md](../map.md).
   `postgres_fdw` twin asserts the same remote rows and remote trigger audits on both paths,
   the `file_fdw` twin asserts the same `0A000` refusal) and
   `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
-  pins: c-4/C-017, C-018, C-019, C-023, C-024
 - `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
   `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
   `a_statement_trigger_fires_once_by_bulk_and_per_statement_by_row`: its counting trigger
@@ -64,27 +63,25 @@ See [../map.md](../map.md).
   pins the `fdwname` fact instead). **C-4 fold 2 item 4 (2026-10-10):** the counting cell
   holds the row path to full groups plus one remainder statement (330 rows run 2, 48, 330
   and 1 statements across the four option cases; the widest case runs 2).
-  pins: c-4/C-017, C-018, C-023, C-024
   `row_triggers_stay_bulk_and_statement_triggers_take_the_row_path`,
   `partitions_inheritance_persistence_and_constraints_agree_on_both_paths`,
   `row_security_and_grants_are_judged_the_same_on_both_paths` (a second role),
   `a_foreign_table_or_partition_takes_the_row_path` (a loopback `postgres_fdw` server, dropped
   at the end; `CREATE EXTENSION IF NOT EXISTS` leaves the extension in the disposable
   database) and `another_sessions_temporary_table_is_refused_the_same_on_both_paths`.
-  pins: c-4/C-017, C-018, C-019
 - `live_write.rs`, `write.rs` — **C-4 fold 1 (2026-10-09):**
   `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` is now
   `a_statement_trigger_sees_the_same_bounded_inserts_whatever_was_asked`: its counting
   trigger is a statement trigger, so a `Bulk` request on that table now takes rows, and the
   cell holds both requests to the same statement counts. The pure pins gain
   `a_named_identity_or_generated_column_refuses_in_one_class_and_names_the_fix` and
-  `every_fallback_reason_says_why_copy_was_not_used`. pins: c-4/C-017, C-018
+  `every_fallback_reason_says_why_copy_was_not_used`.
 - `live_write_faults.rs` — **C-4 fold 1 (2026-10-09)**, behind `postgres`, live. It shares
   `live_write.rs`'s helpers (now `pub(crate)`); new fault cells live here because
   `live_write.rs` is at the file-size ceiling.
   `a_write_dropped_mid_flight_poisons_the_writer_and_stores_nothing` is the verifier's repro on
   both paths: a 200 000-row `write` under a 500 µs timeout, then `write` and `commit` both
-  answer `Interrupted` and the table stays empty. pins: c-4/C-016
+  answer `Interrupted` and the table stays empty.
 - `write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`, no network. It holds the sample
   matrix both write suites share (`samples()`: one column per mapped type the bulk path
   carries, `numeric` at four scales, an enum and a domain, eight rows with two NULLs each, the
@@ -96,34 +93,34 @@ See [../map.md](../map.md).
   three batch cuts, with the empty stream as header and trailer; one tuple byte for byte; a
   refused value's row counted over the whole stream; the selector (`interval` is the only
   row-only type); the two statements byte for byte; the refusals before any connection and
-  the class each write error folds to. pins: c-4/C-001, C-002, C-003, C-004, C-005
+  the class each write error folds to.
 - `live_write.rs` — **C-4 step 1 (2026-10-08)**, behind `postgres`, live like `live_pg.rs`
   (`#[ignore]`, `make pg-up`, `REPARK_PG_URL`). Every cell writes the same Arrow batches by
   the bulk path into `bulk` and by the row path into `row`, and `diverging` compares the two
   tables on the server: a `FULL JOIN` on `id` that returns every row whose `*_send` bytes
   differ in any column, or that one table lacks. `stored_order` reads `ctid` order.
   - `bulk_and_row_store_byte_identical_tables_for_every_declared_type` is the parity pin over
-    the sample matrix; both tables also read back to the input batch. pins: c-4/C-006
+    the sample matrix; both tables also read back to the input batch.
   - `an_interval_column_takes_the_row_path_whatever_was_asked`: three interval types, seven
     spellings, a third table filled through the server's own text input as the oracle, and
-    `22007` on both requests for nonsense. pins: c-4/C-007
+    `22007` on both requests for nonsense.
   - `type_modifiers_and_text_forms_store_what_the_server_itself_parses`: `varchar(5)`,
     `char(4)`, `timestamp(3)`, `timestamptz(0)`, five `uuid` spellings, `jsonb` and `json`,
-    against the same kind of oracle table. pins: c-4/C-003, C-008
+    against the same kind of oracle table.
   - `empty_and_multi_batch_streams_store_the_same_rows_in_the_same_order` (five option sets)
     and `the_bulk_path_is_one_copy_and_the_row_path_bounded_inserts` (a statement-level
-    trigger counts the statements each path runs). pins: c-4/C-009
+    trigger counts the statements each path runs).
   - The failure cells: `a_server_refusal_is_the_same_on_both_paths_and_stores_nothing` (six
     SQLSTATEs), `a_refused_value_poisons_the_writer_and_stores_nothing`,
     `a_writer_dropped_or_killed_before_commit_stores_nothing`,
     `a_commit_refused_is_definite_and_a_commit_unanswered_is_unknown` (a deferred unique key,
     and a deferred trigger that sleeps past `read_timeout_ms`) and
-    `a_role_without_insert_is_refused_naming_the_privilege`. pins: c-4/C-010
-  - `a_write_returns_its_connection_clean_and_names_only_its_columns`. pins: c-4/C-011
+    `a_role_without_insert_is_refused_naming_the_privilege`.
+  - `a_write_returns_its_connection_clean_and_names_only_its_columns`.
 - `postgres_types.rs` — **C-4 step 1 (2026-10-08):** `new_mappings_wait_for_the_write_path_to_encode`
   is replaced by `every_mapped_row_encodes_and_a_wrong_array_names_both_types`: the eight
   C-2a mappings now encode, so every mapped row refuses an array of another type with
-  `ArrowType` and encodes an empty array. pins: c-4/C-001
+  `ArrowType` and encodes an empty array.
 - `partition.rs` — C-3 (2026-10-07), no network. `strides_equal_sparks_recorded_grid` reads
   [c3_stride_grid.txt](../../../../python/repark-parity/tests/live_spark/c3_stride_grid.txt),
   the 740 triples recorded on live Spark 4.1.2, and compares `stride_cuts` with every recorded
@@ -138,27 +135,27 @@ See [../map.md](../map.md).
   the class each refusal folds to. `rendering` (behind `postgres`) pins the three stride
   shapes byte for byte, the `int8` cast on every cut, the NULL test on the first stride
   alone, a stride after a pushed conjunct with projection and `LIMIT` kept, and the refusals
-  past the slot bound. pins: c-3/C-002, C-003, C-004
+  past the slot bound.
 - `partition_plan.rs` — **C-3 fold 1 (2026-10-08):** `the_partition_column_resolves_as_spark_resolves_it`
   now holds RePark to Spark's resolver, not to exact quoted matching: six spellings of `qty`
   and of `Mixed` (bare and quoted, three cases each) resolve to the one column, a quoted name
   with a doubled quote included; a missing name refuses listing the columns, quoted or bare;
   with `Key` and `KEY` both present, four inexact spellings refuse as ambiguous naming both
-  and each exact spelling, quoted or bare, picks its own. pins: c-3/C-011
+  and each exact spelling, quoted or bare, picks its own.
 - `partition.rs` — **C-3 fold 1 (2026-10-08):** `num_partitions_is_sparks_32_bit_int` (the
   `Int` extremes parse; `3000000000`, one past either extreme, padded text and a fraction refuse
   as `NumberFormat` naming the option, from the property and from a door's integer) and
   `strides_above_the_ceiling_refuse_after_sparks_shrink` (10 000 strides plan, 10 001 refuse
   naming the row and the ceiling; `Int.MaxValue` over a span of 3 is Spark's three strides,
   over a span of 10 000 plans, over 10 001 refuses; an overflowed span keeps the count and
-  refuses). pins: c-3/C-010
+  refuses).
 - `partition_plan.rs`, `partition.rs` — **C-3 fold 1 (2026-10-08):**
   `a_declared_column_type_refuses_naming_the_row_whatever_the_bound_spelling` (a `date`,
   `timestamp` or `timestamptz` column with Spark's date text, its timestamp text, integers or
   nonsense as bounds refuses as declared, naming the row and never the bound; an integer column
   refuses a date bound as `NumberFormat` naming the option; a `text` column refuses in Spark's
   sentence) and `bounds_stay_text_until_the_column_is_known`; the lift pin now shows the text
-  kept and the count parsed before any bound. pins: c-3/C-009
+  kept and the count parsed before any bound.
 - `partition_plan.rs` — C-3 (2026-10-07), behind `postgres`, no network, over an injected
   resolution. The column resolves in another case and when quoted, a quoted name is exact, a
   missing column lists the relation's columns, two case-twins refuse as ambiguous unless one is
@@ -168,7 +165,6 @@ See [../map.md](../map.md).
   pushed filter, the projection and the `LIMIT`, and a residual keeps the limit above; EXPLAIN,
   `VERBOSE` and the tree format name the column, the strides and the connection bound and no
   endpoint; the two snapshot statements are pinned byte for byte.
-  pins: c-3/C-005
 - `live_partition.rs` — C-3 (2026-10-07), behind `postgres`, live like `live_pg.rs`. The cells
   take turns (`TURN`) and share one pool per cell, so the suite stays under the container's 50
   connections when it runs in parallel.
@@ -192,10 +188,9 @@ See [../map.md](../map.md).
   `cancel_aborts_every_connection_and_leaves_no_backend`,
   `num_partitions_above_the_pool_never_opens_past_it` (16 strides on two connections, one pooled
   clean and reused) and `a_busy_pool_narrows_a_partitioned_read_and_never_fails_it`.
-  pins: c-3/C-005
 - `pool.rs` — **C-3 (2026-10-07):** `a_multi_checkout_takes_what_is_free_and_never_passes_the_pool`,
   `a_multi_checkout_queues_for_its_first_connection_only` and
-  `a_retired_connection_is_closed_and_never_pooled`. pins: c-3/C-005
+  `a_retired_connection_is_closed_and_never_pooled`.
 - `explain.rs` — C-2c (2026-10-07), behind `postgres`, no network: sketch §5.3 over the
   `pushdown.rs` fixture's injected resolution. `explain_renders_pushed_and_residual_per_scan`
   (the exact `PostgresScanExec` line for one pushed and one residual conjunct, and for a pushed
@@ -209,7 +204,6 @@ See [../map.md](../map.md).
   `datafusion_hands_inexact_filters_to_scan_and_withholds_limit`, drives DataFusion 54.1 with a
   recording provider. `listing_a_postgres_source_is_empty_and_declared` pins
   `CONNECT-DECL-pg-listing` and a missing endpoint refusing at first resolution.
-  pins: c-2/C-068, C-069, C-075
 - `pushdown.rs` — C-2c (2026-10-07), behind `postgres`, no network. The fixture: an `orders`
   resolution with every mapped type, a `PostgresSource` whose props hold a fake endpoint and
   password, and `FixedZone`, a fixed-offset `WallClockLocaliser` (`-05:00`); `split` plans a
@@ -223,7 +217,7 @@ See [../map.md](../map.md).
   `pushdown_limit_gates_the_limit_and_pushdown_predicate_the_filters` (fold 1: each switch gates
   its own push); and
   `a_filter_the_optimizer_would_still_rewrite_stays_inexact` (`qty <> NULL` renders but stays
-  `Inexact`). pins: c-2/C-070, C-071, C-072, C-073, C-074, C-077, C-078, C-081, C-082, C-087
+  `Inexact`).
 - `live_pushdown.rs` — C-2c (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
   `Cell` it shares). Each cell seeds `edges`, one table holding every edge sketch §5.2 names
   (an all-NULL row; the integer extremes; `numeric(10,2)` and unconstrained `numeric` with a
@@ -257,8 +251,7 @@ See [../map.md](../map.md).
   `a_missing_relation_is_table_not_found_live` (DataFusion's own table-not-found, and a 64-byte
   name refusing with `PgIdent`'s reason) and `pushed_compare_keeps_the_index_live` (D-M3: a pushed
   `id OPERATOR(pg_catalog.=) current_setting('repark.p0')::int4` over one million rows plans as
-  an index-only scan). pins: c-2/C-069, C-071, C-072, C-073, C-076, C-077, C-079, C-081, C-082,
-  C-083, C-084, C-085, C-086
+  an index-only scan).
 - `url.rs` — C-2b fold 1 (2026-10-07), pure: the `url` parse and the redaction seam against the
   verifier's shapes. `the_userinfo_ends_at_the_last_at_before_the_first_slash` (the verifier's
   `u:S3CRET?leakedfragment=1@h`, and `@`, `#`, `:` and `?a=b&c` in a password, each raw and
@@ -273,7 +266,6 @@ See [../map.md](../map.md).
   `a_percent_escape_needs_two_hex_digits` (`%+A`, `%-1`, `% A`, `%A@`, `%g0`, in the password,
   the user and a query value) and `redaction_masks_every_password_the_parser_takes`
   (`pass%77ord`, `PASS%57ORD`, the leaked-fragment userinfo, a userinfo without `:`).
-  pins: c-2/C-049, C-050, C-051, C-065
 - `live_pool.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, live like `live_pg.rs` (whose
   harness it shares). `a_pooled_connection_is_reset_before_reuse` (the verifier's four poison
   shapes on `pool_max_size = 1`: `IntervalStyle`, `default_transaction_read_only`,
@@ -299,12 +291,11 @@ See [../map.md](../map.md).
   and `a_pushed_enum_compare_orders_by_text` (Z5, CONNECT-DIV-pg-enum-compare: over `('sad',
   'ok', 'happy')` a pushed `> 'ok'` returns `sad` in relation and query mode, where the server's
   enum order returns `happy`).
-  pins: c-2/C-052, C-053, C-054, C-055, C-056, C-062, C-063, C-064, C-066
 - `scan.rs` — C-2b fold 1 (2026-10-07), behind `postgres`, no Postgres server: a loopback fake
   backend answers the startup, the prepare and a one-row binary COPY.
   `a_copy_stream_without_its_trailer_fails_the_scan` (with the trailer `scan()` reads `[7]`;
   without it the scan fails `Disconnected`; the fake refuses the release query, so nothing is
-  pooled). pins: c-2/C-059
+  pooled).
 - `read.rs` — C-2b round 3 (2026-10-07), behind `postgres`, pure (no server):
   `statement_casts_every_column_and_server_text_to_text` (the exact `COPY` text for `int4`,
   `numeric(8,3)`, `interval`, `jsonb`, an enum, unconstrained `numeric` and a negative-scale
@@ -316,7 +307,6 @@ See [../map.md](../map.md).
   `dbtable_parses_exact_qualified_and_quoted_parts`, `servers_older_than_14_are_declared` and
   `read_errors_name_the_relation_and_fold_as_operational`. Fold 1 renders every compare as
   `OPERATOR(pg_catalog.op)` and pins `ScanSource::search_path()` for both modes.
-  pins: c-2/C-038, C-039, C-044, C-045, C-048, C-056, C-062
 - `live_pg.rs` — C-2b round 3 (2026-10-07), behind `postgres`. Every cell is
   `#[ignore = "live: make pg-up, REPARK_PG_URL"]`, panics rather than skips without
   `REPARK_PG_URL`, creates and drops a schema `c2_<tag>`, and names its pool's
@@ -339,7 +329,7 @@ See [../map.md](../map.md).
   `generate_series` in the target list, which streams; in `FROM` it materialises first. Since
   fold 1 the harness (`Cell`, `Reader`, `url`, `int32s`) is `pub(crate)` for `live_pool.rs`,
   and the drift cell stands for `CONNECT-DECL-pg-drift-cast` (a narrowing cast rounds,
-  recorded, not pinned). pins: c-2/C-040, C-041, C-042, C-043, C-046, C-047, C-057
+  recorded, not pinned).
 - `settings.rs` — C-1 (2026-10-05): absent and explicit `password` (the other props carried,
   `auth_method` dropped from the map); `iam_token` and `kerberos` refuse naming their registry
   rows and fold to the Unsupported class; empty, wrong-case, hyphenated, padded and unknown
@@ -358,8 +348,6 @@ See [../map.md](../map.md).
   `fetchsize_zero_is_the_session_batch_default` (`fetchsize` `0` and `00` on `read_postgres`
   leave `batch_rows` unset; `batch_rows` `0` refuses on both doors). Fold 1 (2026-10-07) changes
   two expectations: an unknown key in the `url` query refuses as `UrlPart("query key")`.
-  pins: c-1/C-003, C-004, C-005, C-006 · pins: c-2/C-001, C-018, C-019, C-020, C-021, C-022,
-  C-023, C-024, C-036
 - `tls.rs` — C-2b round 2 (2026-10-07), behind `postgres`: in-memory rustls handshakes (no
   socket) between `verify_full_config` and a `ServerConfig` over the fixtures.
   `verify_full_trusts_sslrootcert_and_checks_the_host_name` (the `localhost` leaf verifies
@@ -368,7 +356,7 @@ See [../map.md](../map.md).
   key-only PEM and a garbled certificate each refuse, naming `sslrootcert` and never the path,
   in the `Base` class). `fixture` and `server_config` are shared with `pool.rs`. Fold 1 adds
   `a_bundle_with_one_unusable_certificate_refuses` (the CA fixture plus a block rustls ignores;
-  V-M7's pin). pins: c-2/C-028, C-029, C-058
+  V-M7's pin).
 - `pool.rs` — C-2b round 2 (2026-10-07), behind `postgres`. The pool through `FakeConnector`
   (each fake connection holds a pending task, so an abort is observable):
   `a_clean_release_is_reused_by_the_next_checkout`,
@@ -384,7 +372,6 @@ See [../map.md](../map.md).
   and completes a rustls handshake as the `localhost` leaf, reached at `127.0.0.1`). Fold 1
   awaits `release_clean()`; the fakes take `reset`'s and `canceller`'s defaults. An idle
   backend that dies just before checkout is still handed out (FL-11, accepted).
-  pins: c-2/C-031, C-032, C-033, C-034, C-035, C-060, C-061, C-067
 - `fixtures/` — C-2b round 2 (2026-10-07): static PEM test identities, generated once with the
   local `openssl` (EC P-256, valid to 2126) because `rcgen` is not in the lock: `ca.pem`;
   `server.pem`, a `localhost` leaf it signs, and `server.key`, its PKCS#8 key; and
@@ -392,10 +379,10 @@ See [../map.md](../map.md).
 - `ident.rs` — C-2b round 1b (2026-10-07): `identifiers_render_double_quoted_with_quotes_doubled`
   (an embedded `"`, a lone `"`, an injection-shaped name, a qualified relation) and
   `identifiers_refuse_empty_nul_and_more_than_63_bytes` (63 ASCII bytes and 62 bytes of `é` pass;
-  64 bytes, as 64 ASCII or 32 `é`, refuse with the IllegalArgument class). pins: c-2/C-025
+  64 bytes, as 64 ASCII or 32 `é`, refuse with the IllegalArgument class).
 - `copy_binary.rs` — **C-2d fold 1 (2026-10-07):** `a_refused_value_emits_the_rows_before_it_then_refuses`: a
   `NaN` in the third of four rows yields a two-row batch, then the refusal at index 2 from
-  `decode` and `finish`; a `NaN` in a batch's first row refuses at once. pins: c-2/C-114
+  `decode` and `finish`; a `NaN` in a batch's first row refuses at once.
 - `copy_binary.rs` — C-2a (2026-10-06), the stream half of sketch §5.1, through
   `CopyBinaryDecoder` with hand-built streams: `copy_header_is_the_signature_flags_and_extension`
   (every signature byte flipped, low flag bits ignored, the extension skipped),
@@ -422,7 +409,6 @@ See [../map.md](../map.md).
   24 and 30 each refuse). The C-2a F-7 fold (2026-10-06) adds
   `decoder_is_poisoned_after_an_error` (an OID refusal, then a valid chunk answers the same
   error unread, and so does `finish`).
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
 - `copy_accounting.rs` — C-2a open items (2026-10-07), fold 1 the same day: exact counts on
   `CopyBinaryDecoder::buffered_bytes()` under the default limits, so nothing flushes. Each count
   follows the decoder's accounting model, not Arrow's per-column layout: one `i32` offset slot
@@ -444,7 +430,6 @@ See [../map.md](../map.md).
   (`abc`, five bytes, `7`, then two empty values and `8`, charge (3 + 4) + (5 + 4) + 4 + 4 + 4
   + 4 + ceil(6 / 8)). It borrows `copy_binary.rs`'s stream builders, which are `pub(crate)` for
   it.
-  pins: c-2/C-090, C-092, C-093
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
   over NULLs and boundary values (`MIN` / `MAX`, `-0.0`, the infinities and NaN compared by bit
@@ -454,7 +439,6 @@ See [../map.md](../map.md).
   row's refusal. The error pins cover wrong wire length, invalid UTF-8 and a wrong Arrow type.
   `type_map_has_one_row_per_type_and_a_live_pin_per_row` reads this file through
   `include_str!`, so a row whose `pin` names no test here is red.
-  pins: c-1/C-007, C-008
   - **C-2a (2026-10-06)**, the type-map half of sketch §5.1, wire → Arrow over the §2.7 byte
     anchors computed from the documented formats: `date_anchors_round_trip`,
     `timestamp_ntz_anchors_round_trip` and `timestamptz_anchors_round_trip` (the two anchors,
@@ -474,7 +458,6 @@ See [../map.md](../map.md).
     `pg-unmapped` and `pg-time` refusals, enums as labels), 
     `new_mappings_wait_for_the_write_path_to_encode`, `decode_errors_fold_by_class`. The declared
     list in `declared_types_refuse_naming_their_row` is `time` alone.
-    pins: c-2/C-007, C-008, C-009, C-010, C-011, C-012
 
 ## Pointers
 

@@ -33,7 +33,6 @@ RP-56 verifier fold (2026-09-28): the refusal additionally requires the twin key
 non-scratch table scan in the projection scope (`scan_twin_keys`), so derived/CTE/join/temp-view
 stars answer per p9/p9b (`vr3_derived_cte_and_join_twin_stars_answer`) while wrapped twin-table
 stars still refuse; the merge split the guard into `star_twins.rs` under the file-size gate.
-pins: rp-56/C-002
 Run 22b (2026-09-18, the debug-wheel segfault): `s22b_*` plan a 1,000-branch `UNION ALL`
 (plain and wrong-case fold) and a 5,000-branch one (both case modes) through
 `plan_statement_with_column_repair` on a thread with a 2 MiB stack — the tokio worker default.
@@ -42,7 +41,6 @@ The 5,000-branch pin plans in the default mode only (about 48 s in debug: DataFu
 per-level `span()` walk is quadratic). `s22b_stack_estimate_counts_every_union_level_inside_a_subquery`
 pins the estimate. `fold.rs`'s `Level::collect` and `CaseFold::fold_usings` walk a set
 operation's branches with an explicit stack (left branch first, the old recursion's order).
-pins: ice-mixed-case-1/C-007, C-009, C-013, C-014, C-015, C-016, C-017, C-020, C-021
 
 IPI-51 PR6 slice 1 (2026-09-21): a `FieldNotFound` that survives the fold is stamped
 `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703` by `stamp_unresolved_column`, while empty
@@ -52,7 +50,6 @@ red under deletion of the early return). The DataFrame SQL-lowering facade pins
 `test_unpivot_quotes_hostile_names_and_labels`, `test_select_hostile_count_name_does_not_retarget_from`
 and `test_select_batch4_af_sql_expr_and_case_preserved` require the stamped condition / `42703`,
 not raw FieldNotFound text (retargeted 2026-09-21).
-pins: ice-error-conditions-1/C-011
 
 ## Files
 
@@ -74,22 +71,20 @@ pins: ice-error-conditions-1/C-011
   `plan_statement_with_column_repair` polls the repair through. The per-level 32 KiB is
   about 1.9× the measured debug cost of the derived `SetExpr::clone` (17,216 B per `UNION`
   level); at 8 KiB the 1,000-branch pins crash (mutation proof, ledger Run 22b).
-  pins: ice-mixed-case-1/C-022
   **IPI-40 PR6 (2026-09-24):** `GrownStack` and `on_grown_stack_with(red_zone, segment, future)`
   are public through `column_resolution` (`on_grown_stack` passes one value for both) so
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
-  overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
+  overflows the 100-level temp-view chain pins.
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** `remaining_stack` is
   public through `column_resolution` too, so the binding's small-stack backstop
   reads the calling thread's remaining stack without a new dependency edge.
   **CI segv (2026-09-30):** `run_on_grown_stack(red_zone, segment, work)` is the
   sync form of the same primitive, so column clone/combine/drop runs grown
-  without a future or a runtime handle. pins: deep-filter-chain-crash-1/C-012
+  without a future or a runtime handle.
 - `tests.rs` — the battery below. **WO CASESENS-1 slice 2 (2026-09-27):**
   `sensitive_session_refuses_folded_names_and_keeps_backticks` answers unquoted
   exact `userId` where it refused `userid` (normalization-off exactness, net-zero
   lines under the no-growth ceiling; ledger Tests rewritten).
-  pins: casesens-1/C-006
 - `inner_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** the inner-scope
   spelling pass. `respell_inner_scopes` collects the written projections of the
   original statement's derived tables and CTE bodies in visit order (the leftmost
@@ -109,7 +104,6 @@ pins: ice-error-conditions-1/C-011
   (`VALUES`, a set operation whose leftmost leg is `VALUES`) collects an
   explicit empty scope, so the collector and the applier walk the same shape
   and later scopes keep their own spelling.
-  pins: casesens-1/C-001, C-002
 - `scope_fields.rs` — **WO CASESENS-1 S1b (2026-09-27):** the syntactic scope
   outputs the repair fold needs before a plan exists. `query_outputs` reads a
   query's projection the way the repaired plan names it (a plain or compound
@@ -132,10 +126,9 @@ pins: ice-error-conditions-1/C-011
   valid fields, `fold_statement`, re-plan, one pass per distinct miss) and
   returns the folded text, unchanged when the first plan succeeds; the MERGE
   door folds a parenthesized derived source with it before the fragment rewrite.
-  pins: casesens-1/C-004
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** folded exits render
   through `repark_iceberg::write::sql_text::render_for_reparse` so string
-  values re-parse exactly. pins: string-literal-escape-1/C-010
+  values re-parse exactly.
 - `twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the case-twin output
   pass (R9). `is_unique_name_error` matches DataFusion's `Projections require
   unique expression names` head through its wrappers; `respell_case_twins`
@@ -143,7 +136,6 @@ pins: ice-error-conditions-1/C-011
   group (a `*` counts as its stored names, so a twin beside a star is quoted)
   and leaves identical written names alone (ID-3). `plan_with_repair` re-plans
   once on a match and continues as a first-plan success. Text battery inline.
-  pins: casesens-1/C-011
 - `ambiguity.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the ambiguity audit,
   split out of `../column_resolution.rs` under the file-size gate. The walk
   carries an inside-a-subquery flag (set under `SubqueryAlias`, unchanged
@@ -160,7 +152,6 @@ pins: ice-error-conditions-1/C-011
   `Projection`/`Join`/`Filter`/`Aggregate`/`Window` — DataFusion emits no
   `SubqueryAlias` for an unaliased derived table) and under `Subquery`
   (lateral only), so every derived-table boundary audits as nested.
-  pins: casesens-1/C-011
 - `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
   default `caseSensitive=false`, `display_rewrite` compares the planned output names with the
   projection as written (the left branch of a set operation) and re-plans once with quoted
@@ -172,7 +163,6 @@ pins: ice-error-conditions-1/C-011
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` text (`` `ID` `` and the stored names as suggestions).
   `count(*)` keeps DataFusion's `count(*)` name (Spark says `count(1)`; out of the unit).
   Measured: `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`.
-  pins: u11-edge-1/C-001, C-003, C-005, C-006, C-007
   Rust pins in `tests.rs`: `display_rewrite_keeps_the_written_spelling`,
   `wrong_case_select_filters_orders_and_reads_rows`, `quoted_wrong_case_and_qualified_resolve`,
   `group_by_wrong_case_groups`, `sensitive_session_refuses_folded_names_and_keeps_backticks`;
@@ -182,7 +172,7 @@ pins: ice-error-conditions-1/C-011
   that the repair or the display rewrite aliased (`t.id AS "ID"`, `t.Data AS data`) its
   relation back on the top projection (through `Sort` / `Limit` / `DISTINCT`), so a later
   DataFrame `F.col("t.ID")` still finds `t`; an explicit `AS` alias stays unqualified as in
-  Spark. Pin `respelled_plain_references_keep_their_relation`. pins: u11-edge-1/C-018
+  Spark. Pin `respelled_plain_references_keep_their_relation`.
 - `star_twins.rs` — **RP-56 merge (2026-09-28):** the twin-star guard split from
   `../column_resolution.rs` under the file-size gate, a pure move with no renamed
   items. `refuse_star_twins` refuses a written projection star over a non-scratch
@@ -194,13 +184,11 @@ pins: ice-error-conditions-1/C-011
   the guarded door at every read, so a table-backed body refuses there and a
   scan-free body answers (live Spark 4.1.2 answers the literal-twin view and
   refuses the table-backed one, both 42711-shaped).
-  pins: rp-56/C-002
 - `struct_fields.rs` — **RP-56 DIFF-PROBE fold (2026-09-29):** the struct-twin
   post-pass. A query that reads a struct field with two case-insensitive matches
   refuses `42000 AMBIGUOUS_REFERENCE_TO_FIELDS` naming the written leaf; quoting
   changes nothing (live Spark 4.1.2 refuses every spelling alike, 2026-09-29).
   The pass runs only under `caseSensitive=false`.
-  pins: rp-56/C-003
 
 ## Purpose
 
@@ -210,13 +198,12 @@ U11-EDGE-1 round 6 (2026-09-26, V-001): `tests.rs` gains
 `attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified` — a
 `_repark_h1_sel_*` view over the `tw` case twins refuses a written `id` with unqualified
 candidates, and its attribute copies answer a cast, a `CASE WHEN` and an `IN` exactly.
-pins: u11-edge-1/C-027
 Round 7 (2026-09-26, V-001): `a_view_body_is_not_audited_against_the_outer_statement` — a
 view over the `tw` case twins projecting `ID AS id` answers `SELECT id, Data FROM vj`, while a
 CTE (plain and aliased) and a derived table over the twins still refuse. Red on d3993f87
-(`target/probe-u11-edge-1/red-r7-rust.txt`). pins: u11-edge-1/C-028
+(`target/probe-u11-edge-1/red-r7-rust.txt`).
 Round 7 (V-002, V-003): `attribute_copies_never_collide_and_suggestions_hide_scratch_names` — a
 frame holding `id`, `__repark_attr_6964` and `__repark_attr_6964_` gets its `id` copy as
 `__repark_attr_6964__`, answers `copy + 1` and the user field's `7`, and a missing name's
 suggestion list is `[`id`]`. Red with the copy collision and with the filter off
-(`red-r7-rust.txt`, mutation M19). pins: u11-edge-1/C-029, C-030
+(`red-r7-rust.txt`, mutation M19).

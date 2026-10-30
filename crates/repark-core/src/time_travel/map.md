@@ -26,23 +26,20 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   timestamp (the snapshot's own id on an exact match, its parent otherwise) and the newest
   ancestor at or before the end timestamp, with `noSnapshotsAfter` / `noSnapshotsBetween` as the
   two empty-scan short-circuits.
-  pins: ice-changelog-1/C-001, C-004, C-005, C-006, C-010
 - `tests.rs` — parser + resolution pins (`#[cfg(test)] mod tests;` in `../time_travel.rs`).
   **ICE-CHANGELOG-1 round 1 (2026-09-20):** the incremental-refusal mapping pins — a
   `DataInvalid` fork refusal becomes `IllegalArgument` with the message intact, every other
-  failure passes through. pins: ice-changelog-1/C-007
+  failure passes through.
 - `sql_text.rs` — SQL-text timestamp parsing, zone math, token extraction (re-exported at
-  `../time_travel.rs`). pins: ice-tt-resolve-1/C-010
+  `../time_travel.rs`).
 - `sql_ast.rs` — column-refusal check of the `AS OF` expression.
-  pins: ice-tt-resolve-1/C-010
 - `sql_eval.rs` — constant-expression evaluation of the `AS OF` value (`evaluate_sql_timestamp_asof`).
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** non-determinism decided from the planned
   expression (`Volatility::Volatile` scalar functions, subquery plans included), not a name
-  list. pins: ice-tt-resolve-1/C-003
+  list.
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** every string (reader `timestampAsOf`, bare
   SQL literals, `Utf8` scalars) resolves through the engine `CAST(... AS TIMESTAMP)` in the
-  session zone; the hand parser is gone. pins: ice-tt-resolve-1/C-002
-  pins: ice-tt-resolve-1/C-010
+  session zone; the hand parser is gone.
 - `microbatch_source.rs` — **MB-1 round 3 (2026-10-07):** the Session-bound
   source wrapper over the shipped window planner (the sketch's §3.5).
   `SourceOptions::from_options` parses the Spark reader keys (checklist line
@@ -62,66 +59,55 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   a crate-private `WeakSessionState` (a closure over `SessionContext::state_weak_ref`, so the
   lock type is not named) and takes one state snapshot per batch frame, building the frame as
   `SessionContext::read_table` does. A source therefore never keeps its session alive; a
-  batch planned after the session ended refuses `Catalog` naming that. pins: mb-3/C-021
+  batch planned after the session ended refuses `Catalog` naming that.
   **MB-3 fold 2 (2026-10-08):** `with_catalog_timeout` gives the source a limit for its one
   `load_table` call per planning call; past it the call fails `CatalogTimeout` (`load the
   source`). The manifest walk after the load is not bounded. A source opened without it (the
-  streaming frame, the MB-1 pins) is unbounded as before. pins: mb-3/C-025
-  pins: mb-1/C-014, C-015, C-016
+  streaming frame, the MB-1 pins) is unbounded as before.
   **MB-1 fold 1 round B (2026-10-07):** the source holds the catalog handle
   and the `TableIdent`, not a `Table`. `initial_offset` and `next_batch`
   reload the table each call and plan over the fresh metadata, as Spark's
   `latestOffset` refreshes every trigger, so a long-lived source sees new
   snapshots and can refuse `SourceReplaced`. `open` still loads once to
   refuse a missing table up front.
-  pins: mb-1/C-026
   **MB-1 fold 1 round B (2026-10-07):** option keys match ASCII
   case-insensitively, as Spark's `CaseInsensitiveStringMap` does; each key is
   lowercased once at parse and values keep their case. Two spellings of one
   key with different values refuse `Catalog` naming both spellings and no
   value, so an unprefixed credential never renders.
-  pins: mb-1/C-027
   The skip keys refuse only when `true` (any case); `false` is Spark's
   default and passes as a no-op, and any other value refuses `Catalog`.
-  pins: mb-1/C-028
   The four Iceberg 1.11 `SparkReadOptions` streaming keys RePark does not
   implement (`streaming-snapshot-polling-interval-ms` and the three `async-`
   planning keys, which carry no interpreted prefix) refuse `Catalog` as
   recognised but unsupported, never "fix the spelling".
-  pins: mb-1/C-029
   The two caps parse in Spark's `intConf` range; above `i32::MAX` refuses.
-  pins: mb-1/C-030
   FL-9 (ruled KEEP): an `Earliest` or `stream-from-timestamp` start on a
   zero-added-files `overwrite`/`delete` refuses at `initial_offset` where
   Spark idles while no snapshot follows it; the parity registry's row
-  `MB-1-FL-9` declares it. pins: mb-1/C-031, C-035
+  `MB-1-FL-9` declares it.
   **MB-1 fold 2 (2026-10-07):** `open` captures the table's current schema
   as the run's read schema and passes it to every `provider_for_plan` call,
   so each batch of one source has the same columns and types, whatever the
   window's end snapshot or a later schema change (G2).
-  pins: mb-1/C-033
   A key with any non-ASCII character whose Unicode lowercase starts with an
   interpreted prefix (the Kelvin-sign `repar\u{212A}.cdc.`) refuses `Catalog`
   rather than passing silently, and two spellings of a skip key compare as
   booleans, so `false`/`FALSE` twins are accepted (G7).
-  pins: mb-1/C-038
   Both planner calls go through `WindowPlanner::named(name)`, so a planner
   refusal such as `SourceReplaced` names the table as the source was opened
   (G8).
-  pins: mb-1/C-039
   **MB-3 (2026-10-07):** `available_now_target` returns the uncapped walk's end (Spark's
   `prepareForTriggerAvailableNow`), and `next_batch_until` plans a capped window and cuts it at
   that end by ancestry and position, so an `availableNow` drain never reads a snapshot committed
   after it started. `table_uuid`, `table_identifier` and `name` serve the driver's resume check,
   and `arrow_schema` presents the run's read schema to the streaming frame's placeholder.
-  pins: mb-3/C-004, C-008
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
-  under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029, C-030
+  under `#[path]` (fold 1 round B).
 - `microbatch_source_fold2_tests.rs` — fold 2's source pins, a child of
   `microbatch_source_tests.rs`: the per-run read schema over a rename, a drop
   and re-add, a type promotion and a change after open; the Unicode-folded
   keys and the boolean twins; the `SourceReplaced` text.
-  pins: mb-1/C-033, C-038, C-039
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/
@@ -129,13 +115,12 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   reader name with a metadata suffix past the three-part loader (real table wins, missing
   parent falls through to today's error), and `read_sql` quotes the un-pinned read so it
   takes the router path `spark.sql` takes. `repark-spark`'s caller is a net deletion.
-  pins: ipi-23-mt-reader-1/C-004, C-005, C-006, C-007
 
 **ZONE-HORIZON-RENDER-1 (2026-10-08):** `sql_text.rs::zoned_wall_to_ms` and
 `::format_snapshot_bound_ms` read a region zone through `repark_common::zone_horizon`
 (`offsets_at_wall`, the earlier instant in an overlap as before; `offset_at_instant`), so a
 bound after 2099 is placed and printed at the final rule. `tests.rs` pins both directions at
-2099 and 2100. pins: zone-horizon-render-1/C-011
+2099 and 2100.
 **Fold 1 Item A (2026-10-08):** `zoned_wall_to_ms` is the shared
 `wall_to_millis_earlier`, whose tabulated branch is main's `from_local_datetime`
 with `first.min(second)` in an overlap.

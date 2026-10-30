@@ -23,7 +23,6 @@ round-trip destroys.
   with `.`/`e` through the shared `java_double_text` ([`../java_double.rs`](../java_double.rs));
   that module reproduces `Double.toString` — plain decimal for `1e-3 <= |x| < 1e7`, `d.dddEn`
   outside it, always one digit after the point.
-  pins: fnp-9-collections-json/C-002
 - `path.rs` — the `get_json_object` path grammar and evaluator. Supported steps: `$`, `.name`,
   `['name']`, `[index]`, `[*]`. **Round 2 (2026-09-06, critic finding F3):** the evaluator is
   Spark's three-style state machine, not a rule fitted to the cells that happened to be
@@ -34,10 +33,9 @@ round-trip destroys.
   step immediately before a wildcard switches `Raw` to `New`. `Flatten` is the style a
   double wildcard (`[*][*]`) hands its children: an array at the end of the path flattens into
   the parent instead of nesting. `["name"]`, `$..name` and `.*` do not parse, which is Spark's
-  answer of NULL rather than an error. pins: fnp-9-collections-json/C-002
+  answer of NULL rather than an error.
 - `scalars.rs` — `get_json_object`, `json_array_length`, `json_object_keys`. All nullable; a
   malformed document or a wrong-shaped value is NULL, never an error.
-  pins: fnp-9-collections-json/C-002
 - `tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the internal
   `__repark_json_tuple` kernel behind the `json_tuple` generator arm. One parse per row
   for all N fields through the shared `reader.rs` (`parse_json`, `json_number_text`,
@@ -57,18 +55,17 @@ round-trip destroys.
   findings F10/F15):** a field name that is not a plain identifier is backtick-quoted with an
   embedded backtick doubled, so the output round-trips through `ddl.rs`; an all-empty struct
   field is pruned the way Spark's `canonicalizeType` prunes it; a repeated key is KEPT rather
-  than merged; an empty document infers STRING. pins: fnp-9-collections-json/C-003
+  than merged; an empty document infers STRING.
 - `to_json.rs` — `to_json` over STRUCT / ARRAY / MAP. A NULL **struct field** is omitted; a NULL
   **map value** is written as `null` — the asymmetry is Spark's, measured. Binary is base64,
   timestamps render in the session zone with three fraction digits, decimals keep their scale,
   and NaN/Infinity are JSON strings. Round 2 (2026-09-15, P2-4): float rows render
-  through `with_java_double_text` into the row buffer. pins: fnp-9-collections-json/C-004
+  through `with_java_double_text` into the row buffer.
 - `ddl.rs` — the DDL schema parser `from_json` reads. Accepts a bare field list
   (`a INT, b STRING`) and a full type (`STRUCT<…>` / `ARRAY<…>` / `MAP<…>` / a primitive),
   case-insensitively, with backticked names — a doubled backtick inside one is the escape, which
   is what `schema_of_json` emits. `NOT NULL` and `COMMENT '…'` field modifiers parse and are
   ignored, as Spark ignores them. `INTERVAL` is refused loudly (§7 `FNP10-FROM-JSON-DDL-1`).
-  pins: fnp-9-collections-json/C-005
 - `decode.rs` — JSON → Arrow for `from_json`, one pass per target field, carrying a per-row
   **bad-record flag** beside the array. **Round 2 (2026-09-06, findings F1/F2/F6/F7/F8):** a
   value that cannot be decoded sets the flag, which is what `from_json` reads for FAILFAST and
@@ -90,7 +87,7 @@ round-trip destroys.
   are honoured; every other option is REFUSED rather than silently ignored, because Spark honours
   around twenty of them and a silent ignore would be a wrong answer. The facade applies the same
   rule to `to_json` and `schema_of_json`, which implement no option at all. Registry row
-  `FNP10-JSON-OPTIONS-1`. pins: fnp-9-collections-json/C-005, C-008
+  `FNP10-JSON-OPTIONS-1`.
 
 Each kernel file carries its own `#[cfg(test)] mod tests` running the measured Spark cells
 through a `SessionContext`.
@@ -110,7 +107,7 @@ through a `SessionContext`.
   `2026-01-02T03:04:05.123`, in every session zone, as Spark 4.1.2 does (ZONE-ORACLE-1
   `*.wall.to_json`). Before, it rendered the wall as a UTC instant in the session zone
   (`2026-01-01T22:04:05.123-05:00` in New York). A zoned leaf keeps `timestamp_text`. Pinned in
-  `../tests/zone_seam_pairs.rs`. pins: zone-seam-1/C-005
+  `../tests/zone_seam_pairs.rs`.
 - **ZONE-SEAM-1 step 3b (2026-10-22, ruling ZS-6, reversible by reverting that one commit):**
   `decode.rs::build_timestamp` reads a `TIMESTAMP_NTZ` field (`Timestamp(_, None)`) through
   `wall_micros`: a text with `Z` or an offset (the two zoned patterns) is NULL; a text of the form
@@ -118,7 +115,6 @@ through a `SessionContext`.
   separator, minutes only, a date only) keeps `timestamp_micros` and main's answer. A
   `TIMESTAMP` field is unchanged. Before, every zoneless text was read in the session zone and a
   zoned text answered its UTC wall. Pinned in `../tests/zone_seam_pairs.rs`.
-  pins: zone-seam-1/C-013
 
 ## Pointers
 

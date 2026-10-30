@@ -17,7 +17,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   and bare/two-part catalog names refuse without publishing the sink. All-nullable projection
   CREATE and INSERT remain allowed. EAGER-BUDGET-1 step 2 (2026-09-13): the
   cache-materialize call site passes `None` for the new `max_total_bytes` parameter; the
-  pinned refusal is unchanged. pins: eager-budget-1/C-005
+  pinned refusal is unchanged.
   **ICE-VIEWS-1 / V-001 (2026-09-22):** CREATE VIEW over a tightened source
   refuses before the catalog write — including the facade's
   `/* repark:bare-name */` marked spelling, which is a registered-catalog
@@ -43,7 +43,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   divergences are covered. **FNP-11B step 4 (2026-09-15):**
   `time_arguments_never_move_with_the_session_zone` asserts the zone-independent
   `[UNSUPPORTED_TIME_TYPE]` refusal (hour/minute/second over TIME) instead of
-  the old answering values. pins: fnp-11b/C-005
+  the old answering values.
 - [timestamp_cast_seconds.rs](timestamp_cast_seconds.rs) — the
   `CAST(TIMESTAMP AS <numeric>)` epoch-seconds class at the **Spark door** and the **native
   DataFrame API**, on real sessions, value AND Arrow type. Nine pins: whole instants either side
@@ -81,21 +81,18 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   and INSERT itself is held to the fixed New York instants (INSERT of the encoded source
   refuses, as the kernel refuses an encoded argument). Kills the mutant that stops seeing
   through `Dictionary` for the zoned target at the store.
-  pins: ice-tstzns-wall-1/C-003, C-004, C-005, C-010
 - [ice_tsns_type_planner_1_update_forms.rs](ice_tsns_type_planner_1_update_forms.rs) —
   **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):** in an America/New_York session, a
   `timestamp_ns` and a `timestamptz_ns` source into a `TIMESTAMP` column, copy-on-write and
   merge-on-read: `UPDATE … SET v = c`, the same with `WHERE id >= 0`, and `SET v = CAST(c
   AS TIMESTAMP) WHERE id >= 0` store one value (a pre-1970 value with digits below the
   microsecond among them). Red with the identity UPDATE seam reverted alone.
-  pins: ice-tsns-type-planner-1/C-019
-- `timestamp_ns_wall_doors.rs`, `an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update` — **ICE-TSNS-UPDATE-RANGE-CLASS-1 (2026-10-26, U-4, R-012):** the same 16 cells as the facade pin, one unfiltered `UPDATE` per literal on COW and MOR tables in UTC, New York and Kolkata, each equal to INSERT's error text. pins: ice-tsns-update-range-class-1/C-001, C-002, C-004 pins: ice-tsns-merge-wall-1/C-055
+- `timestamp_ns_wall_doors.rs`, `an_out_of_range_literal_reports_inserts_overflow_on_unfiltered_update` — **ICE-TSNS-UPDATE-RANGE-CLASS-1 (2026-10-26, U-4, R-012):** the same 16 cells as the facade pin, one unfiltered `UPDATE` per literal on COW and MOR tables in UTC, New York and Kolkata, each equal to INSERT's error text.
 - [timestamp_ns_wall_doors.rs](timestamp_ns_wall_doors.rs) — **ICE-TSNS-MERGE-WALL-1
   (2026-10-09):** the readiness review's first probe test, ported unchanged in substance. In
   an America/New_York session `INSERT … VALUES` and `MERGE … INSERT *` of one `TIMESTAMP`
   literal into a `timestamp_ns` column must store one value. Red on main `40fc916f`
   (INSERT `1767323045123456000`, MERGE `1767341045123456000`).
-  pins: ice-tsns-merge-wall-1/C-001
   **The Rust-door matrix (same unit):** six `timestamptz_ns` instants with non-zero digits
   below the microsecond (before the epoch, on each side of New York's gap, the two instants
   of one overlap wall) go through eight doors — `INSERT … SELECT`, `INSERT OVERWRITE`,
@@ -106,7 +103,6 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `every_door_keeps_a_nanosecond_instant_in_a_zoned_column` is the `timestamptz_ns` control.
   The expected walls are the facade matrix's `zoneinfo` values. Mutants M1, M2 and M3 of
   the ledger each red the wall test at the door they break.
-  pins: ice-tsns-merge-wall-1/C-004, C-005, C-006, C-007, C-011
   **Fold 1 (2026-10-09), pins from the verify.**
   `a_nested_microsecond_ntz_field_keeps_the_split_main_has` holds the control: field
   assignment stores the session wall, the other four doors the UTC wall (parity row
@@ -120,11 +116,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   carry pin the facade module gave up: DELETE, sibling UPDATE and MERGE and the three
   maintenance rewrites, both row-level modes, `timestamp_ns` and `timestamptz_ns`.
   The two nested store pins of fold 1 left with the split; the nested pins are the next row.
-  pins: ice-tsns-merge-wall-1/C-017, C-018, C-019, C-023, C-024
   **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control above is rewritten into
   `a_nested_microsecond_ntz_field_refuses_an_instant_outside_utc`: in New York and Kolkata the
   six doors refuse the instant with R-011's text and the three seeded rows keep a NULL leaf; in
-  UTC they store `1767323045123456`, the wall main stored. pins: ice-ntz-nested-refuse-1/C-002, C-003
+  UTC they store `1767323045123456`, the wall main stored.
 - [write_door_record.rs](write_door_record.rs) — **WRITE-SPINE-1 step 3a round 2 (2026-10-24):**
   the runtime door record on a production-built Spark session over a memory catalog. One
   statement per Spark door, each followed by `last_write_doors`: `INSERT … SELECT` D1,
@@ -142,20 +137,19 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `MAP<STRING, INT>` and `ARRAY<STRUCT<…>>` columns record D8, leaf `TIMESTAMP` and
   `TIMESTAMP_NTZ` columns D9). Risk: a branch that
   writes without recording, or a record that survives into the next statement.
-  pins: write-spine-1/C-011
 - [store_kernel_registry.rs](store_kernel_registry.rs) — **ICE-STRUCT-PAIRING-1 build round 2
   (2026-10-14), parity row R-013:** at session build the Spark door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
   entry names its own kernel, and the wall names equal `repark-functions`' constants. The ANSI
-  door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`. pins: ice-struct-pairing-1/C-014
+  door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`.
   **WRITE-SPINE-1 step 1b (2026-10-24):** `missing_wall_kernel_refuses_instead_of_storing_utc`.
   In New York, a session that holds `__repark_cast_timestamp_ntz__` stores the instant
   `2026-01-02 03:04:05.123456+00:00` written `BY NAME` into a `TIMESTAMP_NTZ` column as the
   session wall `1767305045123456`. The same session with that kernel deregistered refuses the
   write with the internal error that names the kernel, and the table stays empty. Main stored
   the UTC wall. Risk: a session built without the kernel stores a wall shifted by the zone
-  offset with no error. pins: write-spine-1/C-002
-- `struct_pairing_doors.rs` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins the PARTITION carve-out of ice-struct-pairing-1 C-031 on the stage's PartitionOverwrite site. pins: write-spine-1/C-025
+  offset with no error.
+- `struct_pairing_doors.rs` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins the PARTITION carve-out of ice-struct-pairing-1 C-031 on the stage's PartitionOverwrite site.
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
@@ -173,13 +167,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   refuses with the static-partition hint and `PARTITION (p)` (S2 through
   `write_overwrite_staged_files_from_stream`) with the batch hint, the seeded row kept; the
   same static statement with the struct in the table's field order stores.
-  pins: ice-struct-pairing-1/C-002, C-008, C-009, C-011, C-013
   **Build round 3 (2026-10-14, ruling 55(a) F-07):**
   `a_by_name_frame_door_pairs_under_the_session_case_rule` drives the by-name DataFrame door
   (`source_by_name`) with a recased struct under each value of the session's case carrier:
   case-insensitive it stores `{a:1, b:2}`, case-sensitive it refuses with Spark's
   `CANNOT_FIND_DATA` for `` `st`.`a` `` and stores nothing (kills verifier 1's mutant O5, the
-  passthrough dropping `caseSensitive`). pins: ice-struct-pairing-1/C-032
+  passthrough dropping `caseSensitive`).
   **Exception round (2026-10-15, V2-02):**
   `multi_row_values_refuse_as_spark_when_rows_disagree_on_struct_names` drives a two-row
   `VALUES` through the three column-list spellings (none, `(id, st)`, `(st, id)`) with field
@@ -187,7 +180,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   under each value of the session's case carrier: each disagreement refuses with Spark's
   `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE` text for `col2` (`col1` for the
   swapped list) and writes neither row; rows that agree, in case-insensitive mode or in an order
-  other than the table's, store by position as Spark does. pins: ice-struct-pairing-1/C-033
+  other than the table's, store by position as Spark does.
   **Exception round (2026-10-15, verifier 2's V2-03): the four mutant pins.**
   `a_paired_struct_leaf_spark_refuses_refuses_on_every_insert_spelling` (`INSERT … SELECT`,
   `VALUES`, column-list `VALUES` and `INSERT OVERWRITE` of `named_struct('b', '5', 'a', 1)`
@@ -199,7 +192,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `caseSensitive=true`, with and without `WHERE`, refuse `CANNOT_FIND_DATA` for `` `st`.`b` ``;
   kills `V2_N4`); `an_update_from_a_column_subquery_with_a_comparison_stores_spark_value`
   (`WHERE id = 0` from a reordered and an in-order source stores `{a: 1, b: 2}`; kills
-  `V2_N5`). pins: ice-struct-pairing-1/C-037
+  `V2_N5`).
   **ICE-TSNS-FLOOR-DOORS-1 fold 1 (2026-10-14), the door pin the verify asked for.**
   `every_door_stores_a_nanosecond_source_as_insert_does_in_new_york` writes `-1 ns`,
   `-1,001 ns`, an exact microsecond and New York's gap wall (and a NULL row) through the MERGE
@@ -209,7 +202,6 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `INSERT`'s answer in the same America/New_York session, read back in the test, and that
   answer must differ from plain `INSERT` in a UTC session. The verify's mutants M2 (the MERGE
   insert arm reads the wall as UTC) and M10 (the wall is not localised) each red it.
-  pins: ice-tsns-floor-doors-1/C-015
 - [update_subquery_refusal.rs](update_subquery_refusal.rs) —
   **ICE-STRUCT-PAIRING-1 exception round (2026-10-15), owner rulings 74(a) and 90(a):** the
   Spark SQL door. `UPDATE t SET col = (SELECT col FROM t_src)` and the subquery with its own
@@ -243,7 +235,6 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `SET v = 1 + (SELECT v FROM src)`, `COALESCE((SELECT v FROM src), 0)` and
   `CASE WHEN true THEN (SELECT v FROM src) ELSE 0 END`, each under `WHERE true` (the identity
   path does not run), to the ruling-90 text with both seeded rows unchanged.
-  pins: ice-struct-pairing-1/C-034, C-035, C-036
 - [timestamp_ns_nested_shapes.rs](timestamp_ns_nested_shapes.rs) —
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** a nested `timestamp_ns` leaf is refused.
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` puts nine shapes (struct,
@@ -268,22 +259,20 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   source are refused and store nothing; a plain column, a typed NULL, a zoned source, a
   literal, a microsecond literal beside an untyped NULL and a narrowing that sits only in a
   `CASE` condition store; `CAST(c AS TIMESTAMP)` and `date_trunc` with a `WHERE` still store.
-  pins: ice-tsns-merge-wall-1/C-040, C-041, C-042, C-043, C-047
   **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20):** the control's nested `TIMESTAMP_NTZ` row stored the
   UTC wall of a New York instant; it now asserts R-011's refusal (not R-015's text), dated in
-  the test's doc comment. pins: ice-ntz-nested-refuse-1/C-008
+  the test's doc comment.
   **ZONE-SEAM-1 fix round 3 (2026-10-23, owner ruling on verifier round 2 S1-3):**
   `a_partitioned_insert_refuses_a_nested_nanosecond_leaf_even_for_a_bare_null`: a
   format-version 3 table with `st STRUCT<v: timestamp_ns, n: INT>` partitioned by `k`, the
   partition column last, first and in the middle; a static and a dynamic `INSERT OVERWRITE` and
   `INSERT INTO`; a bare `NULL` and a value; UTC and New York: R-015's refusal and no new file in
   all 48 cells. Red on fix round 2's head (`b74f17e0`): the 24 bare-`NULL` cells stored.
-  pins: zone-seam-1/C-023
   **NS-TRUTHUP-1 (2026-10-26):** the `insert values` and `insert overwrite values` doors of
   `every_door_refuses_a_nested_nanosecond_leaf_and_writes_nothing` pin the refusal of
   `CAST('…' AS timestamp_ns)` literals inside `array(…)`, `named_struct(…)` and `map(…)` with the
   named refusal and no file written. The `TIMESTAMP`-literal refusals of registry row R-018 part 1
-  are recorded in the evidence file (cells `r018.*`), not pinned here. pins: ns-truthup-1/C-003
+  are recorded in the evidence file (cells `r018.*`), not pinned here.
 - [ntz_nested_refuse.rs](ntz_nested_refuse.rs) — **ICE-NTZ-NESTED-REFUSE-1 (U-8, 2026-10-20),
   parity row R-011:** outside UTC a nested microsecond `TIMESTAMP_NTZ` leaf refuses an instant.
   `every_door_refuses_an_instant_outside_utc_and_writes_nothing`: five shapes (struct, struct in
@@ -309,13 +298,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   rule removed, M4 the struct arm of `holds_zoned_timestamp` removed, M5 the field-path pruning
   removed, M6 `PREPARE` decided by the zone, M7 the every-column fallback removed (M2b: a
   failed INSERT plan read as naive); each reds a named pin.
-  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-006, C-007, C-008, C-012, C-013,
-  C-034
   (`the_type_read_follows_a_cte_skips_a_zoned_sibling_and_fails_closed` holds C-001 and C-004;
   `a_frame_through_a_repartition_or_an_unmodelled_node_refuses` holds C-034, described with
   `ntz_nested_refuse_casts.rs` below.)
-- `ntz_into_ltz_nested.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pin 6, `a_nested_zone_pair_in_an_assignment_names_the_seam`, named by the order (WS2-23). pins: write-spine-1/C-019
-- [map_timestamp_key_zone_seam.rs](map_timestamp_key_zone_seam.rs) — **NESTED-LITERAL-SEAM-1 (2026-10-27, fix rounds 1 and 2):** the MAP timestamp key through the Spark door, in New York and Kolkata, with Spark's values. `map_date_keys_store_the_session_midnight_through_insert_by_name` stores a date literal and a date column as a `MAP<TIMESTAMP, …>` key on an `INSERT … BY NAME` (door D3); `map_date_keys_store_the_session_midnight_through_update_and_merge` stores a date literal key on an `UPDATE` (door D10) and a date literal and a date column key on a `MERGE … UPDATE SET` (door D8); `map_key_casts_on_the_read_path_answer_spark_values` answers the four read-path `CAST` shapes of a map with a date, wall or instant key, which main answered on the UTC reading. The product-seam pairs are in `crates/repark-functions/src/tests/zone_seam_pairs.rs`. pins: nested-literal-seam-1/C-004, C-015, C-016, C-017
+- `ntz_into_ltz_nested.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pin 6, `a_nested_zone_pair_in_an_assignment_names_the_seam`, named by the order (WS2-23).
+- [map_timestamp_key_zone_seam.rs](map_timestamp_key_zone_seam.rs) — **NESTED-LITERAL-SEAM-1 (2026-10-27, fix rounds 1 and 2):** the MAP timestamp key through the Spark door, in New York and Kolkata, with Spark's values. `map_date_keys_store_the_session_midnight_through_insert_by_name` stores a date literal and a date column as a `MAP<TIMESTAMP, …>` key on an `INSERT … BY NAME` (door D3); `map_date_keys_store_the_session_midnight_through_update_and_merge` stores a date literal key on an `UPDATE` (door D10) and a date literal and a date column key on a `MERGE … UPDATE SET` (door D8); `map_key_casts_on_the_read_path_answer_spark_values` answers the four read-path `CAST` shapes of a map with a date, wall or instant key, which main answered on the UTC reading. The product-seam pairs are in `crates/repark-functions/src/tests/zone_seam_pairs.rs`.
 - [ntz_into_ltz_nested.rs](ntz_into_ltz_nested.rs) — **ZONE-SEAM-1 step 3c (2026-10-22, ruling
   ZS-9):** a nested `TIMESTAMP_NTZ` value (a container cast of an instant, a `TIMESTAMP_NTZ`
   literal) into a `STRUCT<v: TIMESTAMP, n: INT>` column refuses outside UTC, with the whole text
@@ -323,7 +310,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   from `VALUES`, MERGE `INSERT`, MERGE `UPDATE SET t.st =`, MERGE `UPDATE SET *`, plain `UPDATE`);
   stores the wall read in UTC on the same doors in a UTC session; and stores the wall read in New
   York on the doors that convert in the plan (positional `INSERT … SELECT` and `VALUES`, a MERGE
-  assignment to the leaf, `BY NAME` of a leaf cast to `TIMESTAMP`). pins: zone-seam-1/C-015
+  assignment to the leaf, `BY NAME` of a leaf cast to `TIMESTAMP`).
   *Fix round 1 (2026-10-22, verifier S1-1):*
   `a_partitioned_overwrite_refuses_a_nested_wall_outside_utc_and_writes_no_file` holds six
   spellings of `INSERT OVERWRITE … PARTITION` on a table partitioned by `k` (a `SELECT` of a
@@ -332,13 +319,13 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `TIMESTAMP_NTZ` value, in New York, Sydney and Kathmandu: the whole refusal text, the data file
   count unchanged from the seed's, no value stored. Red on `58321e94` (all 36 cells stored);
   `a_partitioned_overwrite_in_utc_stores_the_utc_read` is the UTC control on the same twelve
-  writes. pins: zone-seam-1/C-016, C-017
+  writes.
   *Fix round 1 (2026-10-22, verifier S1-2):* `an_update_of_an_inner_struct_with_a_wall_refuses_outside_utc`
   (`UPDATE … SET st.i = named_struct('v', TIMESTAMP_NTZ …)` on `STRUCT<i: STRUCT<v: TIMESTAMP>>`
   refuses naming `st`.`i`.`v`, the seed kept; reds when `type_at` answers the column type for any
   path) and `a_plain_update_of_a_struct_with_a_cast_wall_text_stores_spark_instant` (the plain
   `UPDATE` exemption: `CAST('<wall>' AS TIMESTAMP_NTZ)` in the struct stores Spark's New York
-  instant; reds when the exemption is removed). pins: zone-seam-1/C-018
+  instant; reds when the exemption is removed).
   *Fix round 2 (2026-10-23, verifier round 2 S1-1):*
   `a_partition_column_before_the_struct_still_refuses_outside_utc_and_writes_no_file` puts the
   partition column FIRST (`(k, id, st)`) and in the MIDDLE (`(id, k, st)`) of the schema, for a
@@ -348,8 +335,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (16 cells); `a_partition_column_before_the_struct_stores_the_utc_read_in_utc` is the UTC control
   on the same eight writes. The earlier partitioned pins keep the column last, where the struct
   column has one index with or without the partition skip. Red on the verifier's mutants Y2 (the
-  router hands the gate an empty clause) and Y3 (a dynamic name skipped as static). pins:
-  zone-seam-1/C-021
+  router hands the gate an empty clause) and Y3 (a dynamic name skipped as static).
   *Fix round 3 (2026-10-23, item A):*
   `a_plain_update_with_an_unshifted_wall_beside_the_shifted_cast_refuses_outside_utc`: three
   values (an extract of a container cast beside the cast leaf; an extract leaf with the cast only
@@ -359,12 +345,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   stored. `a_plain_update_with_two_walls_in_utc_stores_the_utc_read` is the UTC control;
   `a_plain_update_whose_only_wall_is_the_shifted_cast_stores_spark_instant` holds the exemption
   (the text cast stores the New York and Sydney read, the instant cast stores the instant).
-  pins: zone-seam-1/C-024
   *Fold 4 (2026-10-23, verifier round 3 S1-2):*
   `a_plain_update_whose_only_naive_leaf_is_a_try_cast_stores_spark_instant` holds the `TRY_CAST`
   half of the exemption in New York: wall text stores the New York read, bad text stores `NULL`,
   an instant stores the instant, and the two-leaf `(CAST(instant), TRY_CAST(wall))` stores both;
-  mutant Z6 (only the `CAST` name exempts) reds it. pins: zone-seam-1/C-028
+  mutant Z6 (only the `CAST` name exempts) reds it.
   **GATE-RETIRE-1 (2026-10-25, GR-9):** the expected hint of `the_refusal_names_the_table_the_column_and_the_leaf`
   says a whole-struct cast is refused unless its fields line up with the target's (ledger C-002). The round-1
   pin `a_whole_container_cast_of_an_instant_stores_the_session_wall_and_the_hint_no_longer_names_it` is renamed
@@ -376,8 +361,8 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `refused_and_unwritten`: CANNOT_SAFELY_CAST with the hint, no snapshot), and
   `an_update_assigning_a_cross_position_whole_struct_cast_is_refused_outside_utc` and
   `a_merge_updating_a_cross_position_whole_struct_cast_is_refused_outside_utc` (helper `refused_and_seed_only`:
-  the same refusal, and the table keeps its seed snapshot only). pins: gate-retire-1/C-002, C-005
-  **Coverage attestation (2026-10-25, ledger C-004):** the GATE-RETIRE-1 attestation is filed from the Muse MAX round-2 verdict on `5b46c6b0` (PASS); its refusal pins are the four new pins above. pins: gate-retire-1/C-004
+  the same refusal, and the table keeps its seed snapshot only).
+  **Coverage attestation (2026-10-25, ledger C-004):** the GATE-RETIRE-1 attestation is filed from the Muse MAX round-2 verdict on `5b46c6b0` (PASS); its refusal pins are the four new pins above.
 - [ntz_nested_refuse_casts.rs](ntz_nested_refuse_casts.rs) — **ICE-NTZ-NESTED-REFUSE-1, fix
   round 1 (2026-10-20, after the verifier's FAIL on PR #1124):**
   `a_container_cast_of_an_instant_refuses_on_every_door_outside_utc`: a `CAST` or `TRY_CAST`
@@ -403,7 +388,6 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   round 1 blamed the container cast). The round's door matrix and named-shape probe
   (`task/wo/ice-ntz-nested-refuse-1/evidence/`) and its seven hand mutants (ledger §10: each
   one-line revert of a round-1 rule reds one of these pins) back the same rules.
-  pins: ice-ntz-nested-refuse-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021
   **Fix round 2 (2026-10-20, after the verifier's round-1 FAIL):**
   `the_plain_update_stores_a_wall_beside_a_zoned_sub_expression`: on the plain `UPDATE` of a
   whole struct, `to_timestamp_ntz(<instant>)` (also over `coalesce` of a zoned column) stores
@@ -439,15 +423,12 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`ntz_nested_refuse.rs`) writes from a frame view through `repartition` and one through
   `distinct_on` (read whole); each refuses and adds no snapshot. Each pin fails under its
   one-line mutant (L5, L7, L8, L9, L13, L14, L18, R5, R6).
-  pins: ice-ntz-nested-refuse-1/C-034
   The over-refusal classes the round lists with their counts (ledger C-035) are held by pins
   already here: the `PREPARE` pins and, in `src/tests/`, `only_a_utc_zone_lets_an_instant_through`.
-  pins: ice-ntz-nested-refuse-1/C-035
   `a_view_the_write_reads_is_inlined_before_the_walk` plans through `ReparkSession::sql`, which
   reaches `router::execute_calibrated`, the function the type read's `planned()` calls, on the
   same text (ledger C-040, verifier round-2 S3-3). The verifier rounds' outcomes are C-036 to
   C-039.
-  pins: ice-ntz-nested-refuse-1/C-036, C-037, C-038, C-040
   **Owner ruling 1 (2026-10-21, ledger C-041):** `a_subquery_in_the_columns_expression_is_read_whole`
   is renamed `a_scalar_subquery_is_read_by_its_output_and_a_boolean_subquery_is_skipped`. A
   scalar subquery that returns a container cast of an instant (directly, through a derived
@@ -456,17 +437,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `WHERE`, or a column it does not return, a correlated one whose outer reference feeds only its
   `WHERE`, and an `EXISTS` in the value store the wall in New York and Kolkata. Each storing
   cell refuses on the round-2 walk.
-  pins: ice-ntz-nested-refuse-1/C-041
   **Owner ruling 3 (2026-10-21, ledger C-042):** `only_a_utc_zone_lets_an_instant_through`
   (`src/tests/`) now stores in `Etc/UTC`, `Etc/GMT`, `Etc/Universal`, `Etc/Zulu`, `Zulu` and
   `GMT0` beside the spellings it held, and refuses in `Africa/Abidjan`, `Atlantic/Reykjavik`,
   `Europe/London` and the non-zero zones.
-  pins: ice-ntz-nested-refuse-1/C-042
   After the rulings (ledger C-043): `a_frame_through_a_repartition_or_an_unmodelled_node_refuses`
   adds a `DISTINCT ON` frame over a SQL temporary view, read whole into the view (mutant M8a),
   and `router::nested_ns::tests::only_a_pure_utc_alias_counts_as_utc` writes its alias list out
   rather than reading the set it tests (mutant Z3).
-  pins: ice-ntz-nested-refuse-1/C-043, C-044
   The `PREPARE` pins above also hold fix round 2's corrected statement: a UTC session refuses
   a `PREPARE` of an instant or of a parameter that supplies the column, and nothing else; the
   correct cells that costs are counted in the ledger (verifier S2-3, S2-4).
@@ -479,8 +457,6 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   The round's door matrix and named-shape probe (C-030), its 35 hand mutants, each killed by
   one of these pins or the router's unit test (C-031), and its gates (C-032) back the same
   rules.
-  pins: ice-ntz-nested-refuse-1/C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030,
-  C-031, C-032
   **Fix round 4 (2026-10-21, after the verifier's round-3 FAIL, ledger C-045, C-046):**
   `a_scalar_subquery_returning_the_container_cast_under_an_unnest_refuses` (`ntz_nested_refuse.rs`)
   plans a frame whose projection holds a scalar subquery that returns the container cast of an
@@ -494,7 +470,6 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `append`, `write.insertInto` and an `INSERT … SELECT` from a temporary view; the kill is
   recorded in `task/wo/ice-ntz-nested-refuse-1/evidence/m10-kill-round-4.txt`. The earlier
   equivalence claim for M10 (C-043) is superseded by C-046.
-  pins: ice-ntz-nested-refuse-1/C-045, C-046
   **Comment strip (fix round 4, ledger C-047):** the `///` lines the unit added to
   `ntz_nested_refuse.rs` (37), `ntz_nested_refuse_casts.rs` (63), `timestamp_ns_nested_shapes.rs`
   (5) and `timestamp_ns_wall_doors.rs` (7) are removed; the rows above hold every test's reason
@@ -519,30 +494,25 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   the head with the engine's own error; the pin holds that the same statement with the wall
   `named_struct('v', w, 'n', 1)` in place of the cast fails with the same text, so the failure is
   not the seam's. The plain `UPDATE` refusal (`shifts_in_an_update`) and every other refusal in
-  both files are unchanged. pins: zone-seam-1/C-009
-  pins: ice-ntz-nested-refuse-1/C-047
+  both files are unchanged.
   **Count (fix round 4, ledger C-048):** `docs/spark-sql-iceberg-parity.md` R-011 counts ruling 2's
   over-refused correct cells as 16 in 8 shapes: the verifier's scalar-subquery shape, `INSERT INTO
   ice.ns.t SELECT id, (SELECT named_struct('v', w, 'n', size(CAST(array(x) AS
   ARRAY<TIMESTAMP_NTZ>))) FROM ice.ns.src LIMIT 1), 0 FROM ice.ns.src`, joins the sibling-field
   class (2 cells, New York and Kolkata; Spark and main store the wall, the build refuses). The
   count covers the shapes measured and the class is open-ended.
-  pins: ice-ntz-nested-refuse-1/C-048
   **Gates (fix round 4, ledger C-049):** on the merged head the 3168-cell door matrix and the
   84-cell named-shape probe answer cell for cell as the committed head files (360 and 48 moved
   against main, every one to the refusal), and the unit's live module passes 67 of 67.
-  pins: ice-ntz-nested-refuse-1/C-049
   **Owner ruling (2026-10-21, ledger C-050):** the New York nested-NTZ `INSERT` cell, which reads
   1.04–1.09x of main across four measurements (the type read's planning, about 3 ms per
   statement), is accepted as cost until GATE-RETIRE-1; the 1.05x gate does not move.
-  pins: ice-ntz-nested-refuse-1/C-050
   **Cost ruling restated (2026-10-21, ledger C-051):** the ruled cell is an `INSERT` of a
   `named_struct` holding a `TIMESTAMP_NTZ` value in a non-UTC session zone (New York measured).
   It reads 1.00–1.15x of main across six measurements (builder 1.082 and 1.038, verifier 1.090
   and 1.050, fix round 4 1.147 and 1.004; main's 10-run rounds spread 24–33 ms, so the cell is
   bimodal), at or over the 1.05x gate on four of them; R-011 and the v1.5.6 notes draft state
   all six.
-  pins: ice-ntz-nested-refuse-1/C-051
   **ICE-TSNS-TYPE-PLANNER-1 re-pin (R-017, ruling 100, 2026-10-15):** R-017's pin moves with
   R-017's fix: `an_update_with_no_where_stores_a_value_beside_a_null_as_its_source_stores`
   (was `an_update_with_no_where_refuses_a_value_narrowed_from_nanoseconds`) asserts that
@@ -550,11 +520,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   (`NULL_SIBLING_UPDATES`) store what `SET v = c` stores, nine digits, for a `timestamp_ns`
   and a `timestamptz_ns` source. Oracle: Spark 4.1.2's microsecond twin of the four statements
   (Iceberg 1.11.0, New York, 2026-10-15) stores `c` unchanged; a NULL takes its sibling's
-  type. pins: ice-tsns-type-planner-1/C-033
+  type.
   **EXPLAIN-DML-WRITE-1 (2026-10-21, ruling 141):** the three prepared `INSERT` controls of
   `a_prepared_write_with_a_parameter_that_supplies_the_column_refuses_in_every_zone` now take the
   ruled `PREPARE` text (never the NTZ hint), their `EXECUTE`s fail and nothing is stored.
-  pins: explain-dml-write-1/C-008
 - [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
   fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
   DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to
@@ -579,27 +548,19 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `create_physical_plan`); an intervening filter between two live windows stacks two
   (`sql_intervening_filter_between_windows_stacks_window_agg_exec`). Ledger:
   [../../../task/ta1-sql-fusion-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-ta1-sql-fusion-ledger.md).
-- [post_publish_outcome.rs](post_publish_outcome.rs) — **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** a CTAS and an RTAS whose session name refresh fails after the publish report the committed outcome, and the next statement lists the table once the refresh recovers. A catalog failure before the publish still fails and leaves no table (the control). A fault-injecting catalog wrapper arms the failure after the publish. Red on `321c6095` (`Err("Unexpected => table listing unavailable")`), green at `24e0c3c7`. pins: ice-post-publish-outcome-1/C-001, C-002, C-003
-  The round-4 measurement of C-005 and C-006 (two failed listing references, then success; no product site calls the old invalidation directly) is cited here so the grammar gate counts it; this file pins none of it.
-  pins: ice-post-publish-outcome-1/C-005, C-006
-  The round-4 gate runs of C-008 (the suites and the facade at `78827c24`, copied) are cited here so the grammar gate counts them; this file pins none of them.
-  pins: ice-post-publish-outcome-1/C-008
-- [delete_format_guard.rs](delete_format_guard.rs) — **RP-61-POSDEL-FORMAT-REPIN-1 (2026-10-28): the post-revert contract.** Twenty-four `#[tokio::test]` functions, looped over Avro and ORC where a format applies, on format-v2 merge-on-read tables. An inherited Avro or ORC delete format writes its position-delete file in the data format on the RePark route (DELETE and UPDATE), on the fork route (a `BETWEEN` DELETE, an IN-list DELETE, a `BETWEEN` UPDATE) and on MERGE, and each reads back: DELETE `[0, 4]`, UPDATE `[0, 4, 11, 12, 13]`, one delete file each. An explicit `write.delete.format.default` of avro or orc is honoured on every route, and an explicit Parquet format on Avro data still writes Parquet. The case-varied targets (`ICE.NS.T`, `ice.NS.t`, `ice.ns.T`) and the branch-qualified targets match the Parquet outcome on the same statement. A branch DML or MERGE on an inherited Avro or ORC table commits on the branch, a comment-prefixed one too, and a session WAP branch is created and committed on. The upper-case `MERGE-ON-READ` mode runs copy-on-write on the fork route and on the branch DELETE; the RePark route still writes a delete file. The Parquet controls and the BUG-001 pin are unchanged. Red first: on the pin `ea0b7741` with the reverted code, the Avro and ORC reads fail with `Corrupt footer` (the AUD-003 shape); on the RP-61 pin with the interim guard, 15 of 24 fail on the guard's refusals. The interim ICE-DELETE-FORMAT-GUARD-1 tests are gone; their clause citations below stay so the grammar gate counts the merged ledger.
-  pins: rp-61-posdel-format-repin-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010
-  pins: rp-61-posdel-format-repin-1/C-001, C-002, C-013 (the lock, route and gate measurements, cited here so the grammar gate counts them; this file pins none of them)
-  pins: rp-61-posdel-format-repin-1/C-014 (the verification of this unit, cited here so the grammar gate counts it; this file pins none of it)
-  pins: rp-61-posdel-format-repin-1/C-018 (the merge of this unit, cited here so the grammar gate counts it; this file pins none of it)
-  pins: ice-delete-format-guard-1/C-001, C-002, C-003, C-004, C-005, C-006, C-013, C-014, C-015, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028
-  pins: ice-delete-format-guard-1/C-010
-- [posdel_batch_door.rs](posdel_batch_door.rs) — **RP-60-POSDEL-REPIN-1 (2026-10-27):** the Spark-door pins of the fork repin to `ea0b7741` (F-POSDEL-BATCH-1, fork `#374`), on a format-v2 merge-on-read table partitioned by `(m, months(d))`. `bulk_mor_delete_past_one_batch_completes_and_survivors_match` (`write.delete.position-delete-batch-rows` at `7`): a `DELETE … WHERE d BETWEEN` deletes 40 rows across more than five batches, and the survivor ids match exactly. `batch_rows_property_below_one_is_refused_through_the_door` (at `0`): the same DELETE refuses naming the property, with the rows and the current snapshot unchanged; red on the old pin `d80a2884`, where the DELETE succeeded and deleted 40 rows (exit 101), green on `ea0b7741`. `whole_partition_delete_still_takes_the_metadata_door` (`WHERE m = 4`, a whole identity partition value, since the metadata door translates no DATE literal): deleted-data-files 1, total-delete-files 0. `binary_op_range_delete_takes_the_repark_writer_not_the_fork` (the control, at `0`): `>= AND <` on `d`, a top-level `BinaryOp`, takes RePark's own writer, which the RP-POSDEL-BATCH-2 unit flips. This file proves C-003 and C-004 only; C-001, C-002 and C-007 are the builder's lock and gate measurements, cited here so the grammar gate counts them. **RP-POSDEL-BATCH-2 (2026-10-28, PR #1203):** the same file gains the pins of the batched RePark writers, on the same fixture. `binary_op_range_delete_takes_the_batched_repark_writer` is RP-60's control renamed and flipped: `>= AND <` on `d` at `0` now refuses naming the property, with the rows and the snapshot unchanged, and at `7` the survivors are exact. `identity_in_delete_refuses_batch_rows_below_one`, `identity_in_update_refuses_batch_rows_below_one`, `mor_merge_refuses_batch_rows_below_one` and `cow_identity_in_delete_refuses_batch_rows_below_one` each refuse at `0` with the rows and snapshot unchanged, and each is red on `321c6095` and green at head. `identity_in_delete_past_one_batch_completes_and_survivors_match` and `mor_merge_past_one_batch_completes_and_survivors_match` complete at `7` with the survivors exact; they pass on the base too, so they guard completion, not the fix. The copy-on-write identity `UPDATE` door is measured at the head and not pinned here (ledger C-015). C-015, C-016, C-020 and C-021 are measured by the verifier in round 1 and cited here so the grammar gate counts them; this file pins none of them. pins: rp-60-posdel-repin-1/C-001, C-002, C-003, C-004, C-007, C-009. pins: rp-posdel-batch-2/C-007, C-008, C-009, C-010, C-011, C-012, C-015, C-016, C-017, C-018, C-020, C-021
+- [post_publish_outcome.rs](post_publish_outcome.rs) — **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** a CTAS and an RTAS whose session name refresh fails after the publish report the committed outcome, and the next statement lists the table once the refresh recovers. A catalog failure before the publish still fails and leaves no table (the control). A fault-injecting catalog wrapper arms the failure after the publish. Red on `321c6095` (`Err("Unexpected => table listing unavailable")`), green at `24e0c3c7`.
+  The round-4 measurement of C-005 and C-006 (two failed listing references, then success; no product site calls the old invalidation directly) is a records entry in its unit's sidecar; this file pins none of them.
+  The round-4 gate runs of C-008 (the suites and the facade at `78827c24`, copied) are records in its unit's sidecar; this file pins none of them.
+- [delete_format_guard.rs](delete_format_guard.rs) — **RP-61-POSDEL-FORMAT-REPIN-1 (2026-10-28): the post-revert contract.** Twenty-four `#[tokio::test]` functions, looped over Avro and ORC where a format applies, on format-v2 merge-on-read tables. An inherited Avro or ORC delete format writes its position-delete file in the data format on the RePark route (DELETE and UPDATE), on the fork route (a `BETWEEN` DELETE, an IN-list DELETE, a `BETWEEN` UPDATE) and on MERGE, and each reads back: DELETE `[0, 4]`, UPDATE `[0, 4, 11, 12, 13]`, one delete file each. An explicit `write.delete.format.default` of avro or orc is honoured on every route, and an explicit Parquet format on Avro data still writes Parquet. The case-varied targets (`ICE.NS.T`, `ice.NS.t`, `ice.ns.T`) and the branch-qualified targets match the Parquet outcome on the same statement. A branch DML or MERGE on an inherited Avro or ORC table commits on the branch, a comment-prefixed one too, and a session WAP branch is created and committed on. The upper-case `MERGE-ON-READ` mode runs copy-on-write on the fork route and on the branch DELETE; the RePark route still writes a delete file. The Parquet controls and the BUG-001 pin are unchanged. Red first: on the pin `ea0b7741` with the reverted code, the Avro and ORC reads fail with `Corrupt footer` (the AUD-003 shape); on the RP-61 pin with the interim guard, 15 of 24 fail on the guard's refusals. The interim ICE-DELETE-FORMAT-GUARD-1 tests are gone; their clause ids stay in the merged ledger and its sidecar.
+  (the lock, route and gate measurements are records in its unit's sidecar; this file pins none of them)
+  (the verification of this unit, a records entry in its sidecar; this file pins none of it)
+  (the merge of this unit, a records entry in its sidecar; this file pins none of it)
+- [posdel_batch_door.rs](posdel_batch_door.rs) — **RP-60-POSDEL-REPIN-1 (2026-10-27):** the Spark-door pins of the fork repin to `ea0b7741` (F-POSDEL-BATCH-1, fork `#374`), on a format-v2 merge-on-read table partitioned by `(m, months(d))`. `bulk_mor_delete_past_one_batch_completes_and_survivors_match` (`write.delete.position-delete-batch-rows` at `7`): a `DELETE … WHERE d BETWEEN` deletes 40 rows across more than five batches, and the survivor ids match exactly. `batch_rows_property_below_one_is_refused_through_the_door` (at `0`): the same DELETE refuses naming the property, with the rows and the current snapshot unchanged; red on the old pin `d80a2884`, where the DELETE succeeded and deleted 40 rows (exit 101), green on `ea0b7741`. `whole_partition_delete_still_takes_the_metadata_door` (`WHERE m = 4`, a whole identity partition value, since the metadata door translates no DATE literal): deleted-data-files 1, total-delete-files 0. `binary_op_range_delete_takes_the_repark_writer_not_the_fork` (the control, at `0`): `>= AND <` on `d`, a top-level `BinaryOp`, takes RePark's own writer, which the RP-POSDEL-BATCH-2 unit flips. This file proves C-003 and C-004 only; C-001, C-002 and C-007 are the builder's lock and gate measurements, records entries in rp-60-posdel-repin-1's sidecar. **RP-POSDEL-BATCH-2 (2026-10-28, PR #1203):** the same file gains the pins of the batched RePark writers, on the same fixture. `binary_op_range_delete_takes_the_batched_repark_writer` is RP-60's control renamed and flipped: `>= AND <` on `d` at `0` now refuses naming the property, with the rows and the snapshot unchanged, and at `7` the survivors are exact. `identity_in_delete_refuses_batch_rows_below_one`, `identity_in_update_refuses_batch_rows_below_one`, `mor_merge_refuses_batch_rows_below_one` and `cow_identity_in_delete_refuses_batch_rows_below_one` each refuse at `0` with the rows and snapshot unchanged, and each is red on `321c6095` and green at head. `identity_in_delete_past_one_batch_completes_and_survivors_match` and `mor_merge_past_one_batch_completes_and_survivors_match` complete at `7` with the survivors exact; they pass on the base too, so they guard completion, not the fix. The copy-on-write identity `UPDATE` door is measured at the head and not pinned here (ledger C-015). C-015, C-016, C-020 and C-021 are measured by the verifier in round 1 and are records in rp-posdel-batch-2's sidecar; this file pins none of them.
 - [temp_view_write_target.rs](temp_view_write_target.rs) — **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29, AUD-006):** a temporary view's name on a one-part write target, through a real `ReparkSession` with `SparkDialect`, a memory catalog, the table seeded `1,2,3` and the view over `SELECT 99 AS id`. Twelve tests: eight refusal pins (DELETE, UPDATE and MERGE INTO on copy-on-write and on merge-on-read, INSERT, INSERT OVERWRITE, TRUNCATE TABLE, and the quoted, upper-case and home-qualified spellings) and four controls (no view in scope, a view with another name, a qualified name, and write options on a view name). Each refusal asserts the class token, the statement's shape, that the table reads `1,2,3` and that the view reads `99`. Seven refusal pins are red on the base; the TRUNCATE pin passes there because the existing truncate route already answers Spark's class. The base-red record is in the ledger.
-  pins: spark-door-temp-view-target-1/C-001, C-002, C-003, C-005
-  pins: spark-door-temp-view-target-1/C-004 (the write-options control, `a_view_name_with_write_options_still_holds_the_table`)
-  pins: spark-door-temp-view-target-1/C-006 (the suite counts are the builder's runs, copied in the ledger; this file pins none of them)
+  The write-options control is `a_view_name_with_write_options_still_holds_the_table`.
+  The suite counts are a records entry in the unit's ledger; this file pins none of them.
 - [temp_view_name_case.rs](temp_view_name_case.rs) — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** the temporary-view name fold through a real `ReparkSession` with `SparkDialect`, 10 tests: an upper-case quoted, an unquoted upper-case and a lower-case view each hold every spelling of its name under the default rule, the DELETE, UPDATE, MERGE, INSERT, INSERT OVERWRITE and TRUNCATE routes refusing with the table unchanged; the same on merge-on-read; a view replaced or dropped under another spelling is the same view; a DataFrame view registered under a quoted name holds every spelling; `caseSensitive=true` keeps an upper-case view apart from the lower-case table; `MERGE WITH SCHEMA EVOLUTION` through a view refuses as a merge; a two-part table name writes the table with the view in scope (the control for the Muse S2). Red on the round-0 product code (9 failed, the control passed), green at `3243444a`.
-  pins: spark-door-temp-view-target-1/C-011, C-013, C-014
 - [temp_view_name_fold.rs](temp_view_name_fold.rs) — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** the temporary-view name fold across a switch of `spark.sql.caseSensitive` and for non-ASCII letters, through a real `ReparkSession` with `SparkDialect`; the rule is switched through the session's `SparkCaseSensitiveConfig`, because SQL `SET` of the rule is not a Rust-door path. Five tests: a view created under the default rule keeps its folded name when the rule turns exact, and the reverse; a non-ASCII view name folds with Unicode lower-casing and is exact under the case-sensitive rule; a DataFrame view registered under a non-ASCII name is stored folded. Red at `7e63beb2` (four failed; the non-ASCII exact control passed), green at `50667abb`.
-  pins: spark-door-temp-view-target-1/C-019, C-020
 
 ## I want to...
 

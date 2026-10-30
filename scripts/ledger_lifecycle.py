@@ -28,9 +28,10 @@ Four subcommands:
 - `check` — the gate: a `*-ledger.md` under `task/` outside the bins; an archive
   name whose `yyyy-mm-dd-` prefix disagrees with its `yyyy-mm/` directory; a
   relative link anywhere in the repository's tracked markdown whose target is a
-  `-ledger.md` that does not exist; a `completed/` or `archive/` file changed
-  since the base commit beyond a link repair or an errata note prepended at its
-  top (the "frozen" and "immutable" rules).
+  `-ledger.md` that does not exist; a `completed/` or `archive/` file other than a
+  map or a `-pins.md` sidecar changed since the base commit beyond a link repair or
+  an errata note prepended at its top (the "frozen" and "immutable" rules); one unit
+  name with ledgers in two bins.
 - `compact` — the live documents carry only live state: every `unit` marker in
   `briefs/next-sequence.md` whose ledger sits in `completed/` or the archive leaves the slate
   whole (row, prose, no obituary), and every `state=closed` ws block in `STATUS.md` moves to
@@ -67,11 +68,14 @@ BINS: dict[str, str] = {
 LEDGER_BINS: tuple[str, ...] = (BINS["staging"], BINS["completed"])
 FROZEN_DIRS: tuple[str, ...] = (BINS["completed"], ARCHIVE_DIR)
 LEDGER_SUFFIX = "-ledger.md"
+PINS_SUFFIX = "-pins.md"
 MAP_NAME = "map.md"
+SIZE_SCRIPT = "scripts/check_map_size.py"
 # The fetched ref first: on a box where the owner merges remotely, local `main` lags.
 MAIN_REFS: tuple[str, ...] = ("origin/main", "main")
 
 ARCHIVE_NAME = re.compile(r"^(\d{4}-\d{2})-\d{2}-.+\.md$")
+ARCHIVE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 MONTH_DIR = re.compile(r"^\d{4}-\d{2}$")
 # `](target)` — the part of a link the lifecycle is allowed to change. A target with
 # whitespace in it is visible prose, not a path, and stays in the comparison.
@@ -389,6 +393,8 @@ def plan(
         texts[new_path] = new_text
 
     for old, new in sorted(moves.items()):
+        if new.endswith(PINS_SUFFIX):
+            continue
         source_map = posixpath.join(posixpath.dirname(old), MAP_NAME)
         target_dir = posixpath.dirname(new)
         target_map = posixpath.join(target_dir, MAP_NAME)
@@ -457,7 +463,11 @@ def archive_map_text(tracked_after: list[str]) -> str:
     counts: dict[str, int] = {}
     for path in tracked_after:
         parts = path.split("/")
-        if path.startswith(ARCHIVE_DIR + "/") and len(parts) == 5 and parts[4] != MAP_NAME:
+        if (
+            path.startswith(ARCHIVE_DIR + "/")
+            and len(parts) == 5
+            and parts[4].endswith(LEDGER_SUFFIX)
+        ):
             counts[parts[3]] = counts.get(parts[3], 0) + 1
     rows = [
         f"- [{month}/]({month}/map.md) — {count} ledger{'s' if count != 1 else ''}\n"
@@ -470,6 +480,38 @@ def archive_map_text(tracked_after: list[str]) -> str:
         "## Contents\n" + "".join(rows) + "\n## Pointers\n- Up: [../map.md](../map.md)\n"
         '- Policy: [../../../AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle"\n'
     )
+
+
+def _size_ratchet(repo: Path) -> ModuleType | None:
+    """The target repository's `scripts/check_map_size.py`, or None where it has none."""
+    location = repo / SIZE_SCRIPT
+    if not location.is_file():
+        return None
+    specification = importlib.util.spec_from_file_location("check_map_size", location)
+    if specification is None or specification.loader is None:
+        return None
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
+
+
+def _follow_size_rows(repo: Path, ratchet: ModuleType, before: dict[str, tuple[int, int]]) -> int:
+    """Move each excepted map's baseline row by exactly the growth or shrinkage the link rewrite
+    just caused; a map now within both ceilings loses its row. Returns the rows changed."""
+    rows: dict[str, tuple[int, int]] = dict(ratchet.EXCEPTIONS)
+    changed = 0
+    for path, (old_lines, old_bytes) in sorted(before.items()):
+        new_lines, new_bytes = ratchet.measure(repo, path)
+        if (new_lines, new_bytes) == (old_lines, old_bytes):
+            continue
+        base_lines, base_bytes = rows.pop(path)
+        if ratchet.over(new_lines, new_bytes):
+            rows[path] = (base_lines + new_lines - old_lines, base_bytes + new_bytes - old_bytes)
+        changed += 1
+    if changed:
+        ratchet.rewrite_table(repo / SIZE_SCRIPT, rows)
+        git(repo, "add", SIZE_SCRIPT)
+    return changed
 
 
 def execute(
@@ -485,12 +527,34 @@ def execute(
             file=sys.stderr,
         )
         return 1
+    ratchet = _size_ratchet(repo)
+    before = {}
+    if ratchet is not None:
+        before = {
+            path: ratchet.measure(repo, path)
+            for path in texts
+            if path in ratchet.EXCEPTIONS and (repo / path).is_file()
+        }
     written = apply(repo, moves, texts)
+    followed = _follow_size_rows(repo, ratchet, before) if ratchet is not None else 0
     print(
         f"ledger-lifecycle: {verb} {len(moves)} file(s), "
-        f"rewrote {rewritten} link(s), wrote {written} file(s)"
+        f"rewrote {rewritten} link(s), wrote {written} file(s), "
+        f"moved {followed} map-size baseline row(s)"
     )
     return 0
+
+
+def sidecar_of(path: str) -> str | None:
+    """The pin sidecar path beside a ledger path, or None for any other file."""
+    if not path.endswith(LEDGER_SUFFIX):
+        return None
+    return path[: -len(LEDGER_SUFFIX)] + PINS_SUFFIX
+
+
+def _carried(paths: list[str]) -> set[str]:
+    """Sidecars whose ledger is among `paths`: they travel with it, under its date."""
+    return {sidecar for path in paths if (sidecar := sidecar_of(path)) is not None}
 
 
 def run_archive(repo: Path, paths: list[str]) -> int:
@@ -501,10 +565,13 @@ def run_archive(repo: Path, paths: list[str]) -> int:
         prefix = BINS["completed"] + "/"
         paths = [p for p in tracked if p.startswith(prefix) and Path(p).name != MAP_NAME]
     moves: dict[str, str] = {}
+    carried = _carried(paths)
     for path in sorted(paths):
         if path not in tracked:
             print(f"ERROR: {path} is not a tracked file", file=sys.stderr)
             return 2
+        if path in carried:
+            continue
         date = archive_date(repo, path)
         if date is None:
             if named:
@@ -521,6 +588,13 @@ def run_archive(repo: Path, paths: list[str]) -> int:
             print(f"ERROR: {new} already exists", file=sys.stderr)
             return 1
         moves[path] = new
+        sidecar = sidecar_of(path)
+        if sidecar is not None and sidecar in tracked:
+            twin = f"{ARCHIVE_DIR}/{date[:7]}/{date}-{Path(sidecar).name}"
+            if twin in tracked or (repo / twin).exists():
+                print(f"ERROR: {twin} already exists", file=sys.stderr)
+                return 1
+            moves[sidecar] = twin
     if not moves:
         print("ledger-lifecycle: nothing to archive")
         return 0
@@ -547,7 +621,15 @@ def run_move(repo: Path, path: str, bin_name: str) -> int:
     if new in tracked or (repo / new).exists():
         print(f"ERROR: {new} already exists", file=sys.stderr)
         return 1
-    status = execute(repo, tracked, {path: new}, "moved", set())
+    moves = {path: new}
+    sidecar = sidecar_of(path)
+    if sidecar is not None and sidecar in tracked:
+        twin = f"{BINS[bin_name]}/{Path(sidecar).name}"
+        if twin in tracked or (repo / twin).exists():
+            print(f"ERROR: {twin} already exists", file=sys.stderr)
+            return 1
+        moves[sidecar] = twin
+    status = execute(repo, tracked, moves, "moved", set())
     if status or bin_name != "completed":
         return status
     return run_compact(repo)
@@ -677,8 +759,10 @@ def _base_commit(repo: Path, base: str | None) -> str | None:
 
 
 def _frozen(path: str) -> bool:
-    """True for a file the frozen/immutable rule protects."""
-    return any(path.startswith(d + "/") for d in FROZEN_DIRS) and Path(path).name != MAP_NAME
+    """True for a file the frozen/immutable rule protects; maps and pin sidecars stay editable."""
+    name = Path(path).name
+    in_bin = any(path.startswith(d + "/") for d in FROZEN_DIRS)
+    return in_bin and name != MAP_NAME and not name.endswith(PINS_SUFFIX)
 
 
 def _archived_twins(repo: Path, path: str) -> list[str]:
@@ -734,7 +818,7 @@ def run_check(repo: Path, base: str | None) -> int:
                 bins = ", ".join((*LEDGER_BINS, f"{ARCHIVE_DIR}/yyyy-mm"))
                 findings.append(f"{path}: ledger outside the bins ({bins})")
         if path.startswith(ARCHIVE_DIR + "/") and name != MAP_NAME:
-            archived += 1
+            archived += name.endswith(LEDGER_SUFFIX)
             month = Path(directory).name
             match = ARCHIVE_NAME.match(name)
             if directory == ARCHIVE_DIR or not MONTH_DIR.match(month) or match is None:
@@ -743,6 +827,16 @@ def run_check(repo: Path, base: str | None) -> int:
                 )
             elif match.group(1) != month:
                 findings.append(f"{path}: prefix {match.group(1)} disagrees with directory {month}")
+
+    units: dict[str, list[str]] = {}
+    for path in tracked:
+        name = Path(path).name
+        if path.startswith(LEDGERS_DIR + "/") and name.endswith(LEDGER_SUFFIX):
+            unit = ARCHIVE_PREFIX.sub("", name[: -len(LEDGER_SUFFIX)])
+            units.setdefault(unit, []).append(path)
+    for unit, homes in sorted(units.items()):
+        if len(homes) > 1:
+            findings.append(f"{unit}: one unit, ledgers in two bins ({', '.join(homes)})")
 
     links = 0
     for path in tracked:

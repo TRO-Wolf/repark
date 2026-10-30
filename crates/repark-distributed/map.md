@@ -20,7 +20,7 @@ call that fixes it. Both doors read the carrier, because `from_session` goes thr
 `from_context` and the carrier lives on the context's own `SessionState`. A plain
 `SessionContext::new()` carries no such rule and is accepted. It refuses rather than forcing the
 flag off in the cloned state, because the plans a cluster runs are built on the original
-context. pins: ta-series-s2b/C-014 The rule and its flag:
+context. The rule and its flag:
 [../repark-core/src/parallel_window/map.md](../repark-core/src/parallel_window/map.md).
 
 ## Design notes (card BALLISTA-M1-A, D-1 and D-2)
@@ -56,29 +56,27 @@ context. pins: ta-series-s2b/C-014 The rule and its flag:
 - **D-3 / D-4 (step 1).** `src/executor.rs` holds `DistributedExecutor`, `JobHandle`, `JobId`,
   and `JobStatus`. `src/local.rs` holds `LocalDataFusionExecutor`: it runs a plan on the
   session `SessionContext` in-process, reports `Completed`/`Failed` after the stream drains,
-  and `cancel` sets `Cancelled` without a detached spawn. pins: ballista-m1-a/C-001, C-002,
-  C-003, C-004
+  and `cancel` sets `Cancelled` without a detached spawn.
 - **BALLISTA-M1-B step 1.** `src/cluster.rs` is `ReparkClusterExecutor`: one in-process
   scheduler plus N executors on ephemeral ports (constructor arguments). Session state comes
   from `ReparkSessionProvider`; the codec seat is `repark_ballista_codec()`. The two-executor
-  pin is `tests/cluster_two_executors.rs`. pins: ballista-m1-b/C-001, C-002
+  pin is `tests/cluster_two_executors.rs`.
 - **BALLISTA-M1-B step 2.** UDF-on-executor pin (`repark_times_ten` through the provider,
   vanilla session fails to resolve the same plan); cancel mid-flight (`Cancelled`, no running
   tasks within 5 s); codec install pin (`repark_ballista_codec()` matches Ballista defaults,
   and the two-executor job shuffles through those codecs). C-004 (round-trip serde over the
   five shuffle nodes) stayed OPEN / PARKED until RF-9 took `datafusion-proto`; re-proven by
-  ballista-m2-a/C-002. pins: ballista-m1-b/C-003, C-005, C-006
+  ballista-m2-a/C-002.
 - **BALLISTA-M1-C step 1.** Three multi-stage shapes against the local executor on the same
   physical plan (`tests/multi_stage.rs`): hash aggregate over 4 partitions, partitioned hash
   join of two tables, sort-merge join with `prefer_hash_join=false`. Cluster row order is
-  sorted before compare. pins: ballista-m1-c/C-001
+  sorted before compare.
 - **BALLISTA-M1-C step 2.** `JobStatus::Completed { stages, retried_stages }` from the
   scheduler graph (rows, shuffle bytes, wall time, attempt number). Shuffle bytes > 0 on
   the two-stage hash aggregate. Session spill dir has no shuffle files after complete or
   cancel (Ballista standalone work_dir is a dropped `TempDir`, not the session spill dir).
   Retry is OPEN: ChaosExec is not fail-once; stopping an executor needs `arrow_flight`.
   Design: [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md).
-  pins: ballista-m1-c/C-003, C-004
 - **BALLISTA-M1-D step 1.** `src/iceberg_provider.rs` is `IcebergScanSpec`: the provider
   codec round-trips `(catalog, table identifier, snapshot id, projection, filters)` and
   rebuilds the Iceberg table from `ReparkSessionProvider`'s session catalog. The
@@ -86,18 +84,15 @@ context. pins: ta-series-s2b/C-014 The rule and its flag:
   filtered scan match local; both executors ran a task). `IcebergTableScan` itself did not
   serialize until M2-A; the file-group rewrite stays as the fallback for a node with no
   codec entry. S3/Glue executor credentials stay residue (D-2).
-  pins: ballista-m1-d/C-001, C-002, C-003
 - **BALLISTA-M1-D step 2.** Iceberg section and success-list line 17 in
   `docs/design/distributed-m1.md`. The runtime
   abstraction is in place. Iceberg writes and the commit coordinator are Milestone 3
   (ADR-0004). The `IcebergTableScan` serde wall fell at BALLISTA-M2-A: `datafusion-proto`
   is now a `cluster`-gated dependency and the codec carries the scan.
-  pins: ballista-m1-d/C-001, C-002, C-003
 - **BALLISTA-M2-A (2026-09-11, RF-9).** `src/codec.rs`'s `ReparkPhysicalExtensionCodec` is a
   real delegating `PhysicalExtensionCodec` — every unowned node to
   `BallistaPhysicalExtensionCodec`, `IcebergTableScan` owned. Pins in `tests/codec.rs`.
   Residue BALLISTA-M2-A-R-001 (text recovery) is closed by BALLISTA-M2-B.
-  pins: ballista-m2-a/C-001, C-002, C-003, C-004
 - **BALLISTA-M2-B (2026-09-11, S2-17).** Typed encode: downcast to `IcebergTableScan` and
   read `table().identifier()`, `resolved_snapshot_id()`, `projection()`, `predicates()`.
   Predicates travel as `datafusion-proto` `Expr`s (`src/predicate_expr.rs`). String
@@ -105,7 +100,6 @@ context. pins: ta-series-s2b/C-014 The rule and its flag:
   retired; decode keeps the frozen-snapshot check and session-authority rule. Catalog spec
   recovery stays a Debug probe — no typed catalog accessor at this pin. Wire `RPIC`
   version 2; each filter item is a tag byte (0 = SQL, 1 = Expr) so both lists travel.
-  pins: ballista-m2-b/C-001, C-002, C-003, C-004, C-005
 
 ## Contents
 

@@ -1,944 +1,8 @@
 # map — scripts/
 
-FACADE-TESTS-LAYOUT-1 (2026-10-19): `check_lib_py.py` re-keys its fifteen `python/repark/tests` exceptions to the files' subsystem directories (`dataframe/`, `functions/`, `io/`, `ml/`, `perf/`, `timestamps/`, `writes/`); every baseline is unchanged and `_live_parity.py` stays at the tests root. The CAP-1 mirror in `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` follows in the same branch.
+Dated ratchet history (2026-08 to 2026-10) is being moved out of this map: each baseline table holds its current value, and `git log -- scripts/map.md` and the merged pull requests record each change.
 
-ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)): `check_rust_file_size.py` ratchets `repark-spark/src/tests/dml.rs` 1154 → 1139, shrink-only, with the CAP-1 mirror in `python/repark-parity/tests/test_cap_1_source_file_line_cap.py`; the G3-E8 negative that held an `UPDATE … SET col = (SELECT …)` storing on the harness context became the two-statement refusal pin.
-
-ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional): `check_rust_file_size.py` ratchets the `repark-iceberg/src/write/overwrite.rs` baseline 1053 → 1049, shrink-only, with the CAP-1 mirror; the guard's commit removed the file's local strict-cast options when its two batch casts moved to `conform::strict_store_cast`. pins: ice-tsns-floor-doors-1/C-014
-
-MERGE-MOD-SPLIT-1 (owner, 2026-10-12): `check_rust_file_size.py` retires the `repark-iceberg/src/write/merge/mod.rs` row (1569, under the default after the split; the SQL builders and the copy-on-write and merge-on-read arms move verbatim to `merge/merge_sql.rs`, `merge/copy_on_write.rs` and `merge/merge_on_read.rs`), shrink-only, with the CAP-1 mirror.
-
-C-4 step 2 (2026-10-09): `check_rust_file_size.py` retires the `repark-sql/src/guards/tests.rs` row (1207 → 770, under the default; the AnsiDoor harness and its end-to-end pins move verbatim to `guards/ansi_door.rs`), shrink-only.
-
-STAMP-2-R5P6-2 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3462 → 3461 (the H1 join door builds its statement in three lines and hands the route choice to `join_attr_tokens._join_exact_or_sql`), shrink-only, with the CAP-1 mirror. pins: stamp-2-r5p6-2/C-003
-SOURCE-URL-REDACT-2 fold 4 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3971 → 3965 (the redundant inner mapInArrow user-call handler is gone), `dataframe/joins_columns.py` 1169 → 1117 (`_grouped_agg_pandas` moves unchanged to `udf_bridge.py`) and `spark/functions_udf.py` 1300 → 1287 (`_refuse_udtf_as_scalar_udf` moves unchanged to `udtf.py`), with the CAP-1 mirror, shrink-only. pins: source-url-redact-1/C-076
-SOURCE-URL-REDACT-2 fold 4 H3 (2026-10-07): `check_lib_py.py` sets `dataframe/core.py` 3965 → 3969 for the mapInArrow `PySparkException` scrub, still below the 3971 base, with the CAP-1 mirror. pins: source-url-redact-1/C-077
-SOURCE-URL-REDACT-2 fold 5 K1 (2026-10-07): `check_lib_py.py` ratchets `dataframe/core.py` 3969 → 3967 (the mapInArrow handler takes `scrub_user_failure` and drops its local `traceback` import), with the CAP-1 mirror. pins: source-url-redact-1/C-082
-ATTR-ID-1 S4 follow-up (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1527 → 1485 (the sort-marker family moves to `column_sort.py` behind `Column` bindings) and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line delegate), shrink-only. pins: attr-id-1/C-041
-
-ATTR-ID-1 S4 alias fix (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1485 → 1378 (the string-predicate family moves to `column_string.py` behind `Column` bindings), shrink-only. pins: attr-id-1/C-042
-
-ATTR-ID-1 V-4 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3653 → 3652 (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-045
-
-ATTR-ID-1 SJ-3 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3595 → 3583 (the join-token siding calls are deleted with V-2's positional siding), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj3.py`.
-CASESENS-2 port, PERF-1 merge (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` to the merged head's measured 3466 (PERF-1's 3475 less the port's 9-line join-argument move), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_casesens_2.py`.
-CASESENS-2 port (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3485 → 3476 (the join preparer's arguments move to `join_attr_tokens._join_condition_args`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_casesens_2.py`.
-ATTR-ID-1 PERF-1 (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3485 → 3475 (the frame-node and snapshot caches move to `frame_nodes.py`), shrink-only, with the CAP-1 mirror.
-ATTR-ID-1 SJ-5 (2026-10-03): `check_lib_py.py` ratchets `dataframe/core.py` 3494 → 3485 and retires the `dataframe/joins_columns.py` exception (the pivot family moves to `grouped_pivot.py`; the file is 955 lines, under the default ceiling), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj5.py`.
-ATTR-ID-1 SJ-4 (2026-10-02): `check_lib_py.py` ratchets `dataframe/core.py` 3583 → 3494 (the repartition trio moves to `repartition_ops.py` behind `DataFrame` bindings) and `dataframe/joins_columns.py` 1169 → 1119 (`_grouped_agg_pandas` moves to `grouped_udf.py`), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj4.py`.
-ATTR-ID-1 SJ-2 (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1378 → 1331 (the fragment-render family moves to `column_render.py` behind `Column` bindings) and `dataframe/core.py` 3652 → 3595 (the unemitted-id family moves to `unemitted_ids.py` behind `DataFrame` bindings), shrink-only, with the CAP-1 mirror. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
-
-ATTR-ID-1 S3e (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3803 → 3800 (the `selectExpr` body moves to `filter_quote._select_expr_frame` and the select star arms fold into one `qualified_names` delegate), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-039
-
-ATTR-ID-1 S3b (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3921 → 3846 (the filter quoter and its token helpers move to `column_fields.py`, `filter`/`_sort_specs` delegate to it), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-025
-
-ATTR-ID-1 S3a (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3921 (`_column_of` and `_rebind_stable_name_column` become one-line delegates to `column_fields`, `__getitem__`/`__getattr__` route through the resolve rule, the alias overlay restores deduplicated display names), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-024
-ZONE-HORIZON-RENDER-1 (2026-10-08): `check_rust_file_size.py` ratchets `repark-functions/src/datetime.rs` 1699 → 1639 (the instant ↔ wall-clock helpers move to the new `datetime/session_wall.rs`, the crate's one reader of `repark_common::zone_horizon`).
-TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1801 → 1791 (`make_udf` moves to `udf/glue.rs` beside the native `null_prefix` helpers; `window_udf` delegates to `window_udf_with_null_prefix`) and `check_lib_py.py` ratchets `python/repark/src/repark/spark/ta.py` 1818 → 1795 (the `row_number` + CASE rewrite in `_NullLookbackColumn.over` is gone), shrink-only, with the CAP-1 mirror.
-TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1818 → 1801 (the output copy and the single-series borrow move to the new `udf/glue.rs`), shrink-only, with the CAP-1 mirror.
-TA-CHAIN-1 S1 (2026-10-03): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1821 → 1818 (the four `compute` / `compute_all` calls in `evaluate_all` route through the new `udf/prefix.rs` helpers; the wrapper tests live in `prefix.rs`), shrink-only, integer only (owner amendment R-TC1-6, 2026-10-03).
-RP-56 DIFF-PROBE fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1804 → 1737 (the `write_partitioned_data_files*` family moved to `partitioned_files.rs`) and `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 (the `write_data_files*` family moved to `merge/file_sink.rs`), shrink-only.
-DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1011 → 1005 (rustfmt joins three calls shortened by the grown clone-out; the `Clone` derive leaves with the manual impl), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-012
-
-DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1012 → 1011 (the SQL text-cap call leaves `Column.sql`), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-009
-STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277, with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
-
-STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1122 → 1097 (`apply_session_knobs` moves to `session_runtime.rs` to fund the `sql_built` method), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
-
-STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30): `check_lib_py.py` ratchets `spark/functions.py` 1984 → 1938 (the `lit` rendering helpers move unchanged to `functions_lit.py`; the shed `#` notes live in the spark map), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-009
-
-WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
-
-WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009
-U12 S3-PATH-WRITE-1 round 1 (2026-09-28): `check_lib_py.py` retires the `writer_readwriter.py` row (1093 → 996, under the default) when the partition-clause helper moves unchanged to `writer_layout.py`; exception count 32 → 31, with the CAP-1 mirror. pins: s3-path-write-1/C-007
-
-WO CATALOG-1 (2026-09-26): `check_rust_file_size.py` retires the `catalog_config.rs` row (1006 → 965, under the default) and ratchets `session/tests/session.rs` 1407 → 1406, shrink-only. pins: catalog-1/C-006
-
-WO U9-TYPES-1 round-1 fixer (2026-09-26): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1628 → 1622 (the MERGE batch cast became one `convert_uuid_column` call), shrink-only. pins: u9-types-1/C-013
-
-WO U9-TYPES-1 PR2 (2026-09-26): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1353 → 1272 (`ALTER COLUMN … TYPE` moved to `alter_column_type.rs`). pins: u9-types-1/C-010
-
-WO U5 PR3 (2026-09-25): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1354 → 1353 and `repark-sql/tests/cross_door.rs` 1254 → 1253. The `RENAME TO` cross-catalog refusal is deleted: the target is read inside the source catalog (`use_ddl::rename_dest`, `use_ddl::rename_error`). Shrink-only. pins: ice-nested-evo-1/C-059
-
-WO U5 PR2b round 2 (2026-09-25): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1630 → 1628 (the merge-on-read v1 refusal became Spark's two-line `Deletes are supported in V2 and above`) and `repark-spark/src/tests/ctas.rs` 1357 → 1356 (a stale `pins:` line removed). Shrink-only. pins: ice-nested-evo-1/C-057
-
-WO U5 PR2a (2026-09-24): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1382 → 1354 and `repark-spark/src/tests/alter.rs` 1184 → 1182. The residual `refuse_unsupported_alter_sql` (`ALTER COLUMN … COMMENT` refusal) is deleted, `nested_column_ddl.rs` serves the statement, and the old refusal pin now asserts the landed doc. Shrink-only. pins: ice-nested-evo-1/C-037
-
-WO U5 PR1 round 2 (2026-09-24): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1384 → 1382. The UNSET `IF EXISTS` span moves to `table_props_ddl::unset_if_exists_pair`. Shrink-only. pins: ice-nested-evo-1/C-031
-
-PR-B hadoop naming (2026-09-24): `check_rust_file_size.py` ratchets `repark-core/src/catalog_config.rs` 1007 → 1006 (bare-value kind resolution moves to `catalog_kind.rs` beside the hadoop-naming helpers), shrink-only.
-
-U1-MEM-LAYOUT-1 (2026-09-23): `check_rust_file_size.py` ratchets `repark-spark/src/tests/ctas.rs` 1361 → 1357 (the A13 door pin's path shortens under the new layout), shrink-only; layout-r8 changes no baseline. The map lockstep and ledger grammar checks cover the memory-catalog layout pins.
-
-C1 SHOW CREATE (2026-09-23): `check_lib_rs.py` raises `repark-spark` 152 → 154 for `mod show_create;` and `mod table_props_view;` (measured 154).
-SHOW-TABLE-EXTENDED-1 (2026-09-23): `check_lib_rs.py` raises `repark-spark` 154 → 156 for `mod show_table_extended;` and `mod spark_tree_string;` (measured 156) after C1 SHOW CREATE raised it 152 → 154.
-DESCRIBE-COLUMN-1 formatting follow-up (2026-09-23): Ruff condenses the
-`session_core.py` describe-tail regex, and `check_lib_py.py` ratchets its exact
-baseline from 2327 to 2325.
-
-xo55-mt R1 (2026-09-22): `check_rust_file_size.py` ratchets `repark-spark/src/metadata_tables.rs` 1062 → 1059 (the blanket AS OF refusal folds into the shared rule-3 helper), shrink-only.
-IPI-51 PR10 (2026-09-22): `check_lib_rs.py` gains the `repark-spark` 152 row for `mod update_cast;` (measured 151, one past the default 150). pins: ipi-51/W-UPDATE-TYPE-ERR
-IPI-41 WO2a/WO2b (2026-09-22): `check_rust_file_size.py` ratchets `write/append.rs` 1816 → 1804 (the append format gate and its comment lines leave when the site routes through `resolve_data_format`) and `write/merge/mod.rs` 1654 → 1630 (the MERGE format gates leave; REM4 drops the stale `plan_and_commit_cow` Parquet-write doc line), both shrink-only. pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
-IPI-26/27 round 3 (2026-09-21): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1444 → 1389 (the `REPLACE PARTITION FIELD` parser moves to the sibling `replace_partition_field.rs`, which also takes the transform-LHS form), shrink-only.
-M8-STARTSWITH-1 (2026-09-21): startswith adds pub mod spark_startswith plus one register_all chain link; root file measured 181, fits under the standing repark-functions ceiling 182 with no raise.
-
-IPI-26/27 round 1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1449 → 1447 (the comma splitter folds angle tracking into one depth counter), shrink-only.
-IPI-51 type slice (2026-09-21): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1656 → 1654 (the ad-hoc cardinality string leaves; both guards render `MERGE_CARDINALITY_VIOLATION` through the catalogue), shrink-only. pins: ice-error-conditions-1/C-012
-
-IPI-40 views PR1 WO-R1 (2026-09-21): `check_lib_py.py` ratchets `session/session_core.py` 2287 → 2279 (TEMP VIEW body expansion moves to `sql_relations.py`; durable CREATE VIEW and TRUNCATE targets expand through the SSOT), shrink-only.
-
-IPI-40 views PR1 WO-R2 (2026-09-21): `check_lib_py.py` ratchets `session/session_core.py` 2279 → 2269 (the DROP TABLE block consolidates with DROP VIEW expansion into `sql_relations._expand_drop_table_or_view_sql`), shrink-only.
-
-U7 PR1 (2026-09-24): `check_lib_py.py` ratchets `spark/dataframe/writer_readwriter.py` 1077 → 1073 (the iceberg `save` branch and the CTAS body move to `writer_save.py`; the `_format_explicit` slot adds three lines back), shrink-only. Round 2 (2026-09-24): 1073 → 1039 (`saveAsTable`'s mode and bucket branches move into the Rust `writer_plan` kernel; `_ctas_sql` leaves), with the CAP-1 mirror. U7 PR2 (2026-09-24): 1039 → 1033 (the `DataFrameWriterV2.option` branch/tag refusal leaves), with the CAP-1 mirror, then 1033 → 1031 (`overwrite(condition)` hands its SQL to `writer_schema.replace_where_statement`), then 1031 → 1029 (slice-2 round 2, 2026-09-25: the by-name binding moves to the Rust door), each with the CAP-1 mirror. `docs_links_allowlist.txt` loses the `iceberg-guide.md` REF-1 anchor row: the guide now links the row's full heading slug. pins: u7-write-df-2/C-005, C-006
-
-ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19): `check_rust_file_size.py` DROPS the `write/predicate_dml.rs` exception (1034 → 960, under the default ceiling: the MoR arms split to `predicate_dml/mor_commit.rs` and the UPDATE allow-list moved to `predicate_dml/plain.rs`) `write/merge/tests/streaming_scan.rs` 3020 → 3018 and `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435, all shrink-only, with the CAP-1 mirror.
-
-DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30): `check_rust_file_size.py` DROPS the `repark-python/src/column/mod.rs` exception (1005 → 969, under the default ceiling: the unit tests moved verbatim to `column/expr_tests.rs` and the `PyColumn` level constructors to `column/levels.rs`) and the `repark-python/src/session.rs` exception (1122 → 802, under the default ceiling: the unit tests moved verbatim to `session_tests.rs`), both shrink-only, with the CAP-1 mirror (rust count 36 → 34). pins: deep-filter-chain-crash-1/C-013
-
-ICE-SESSION-WRITE-CONF-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1761 → 1701 (MERGE staging splits to `session_staging.rs`) and `write/predicate_dml.rs` 1139 → 1034 (identity COW commits split to `cow_commit.rs`), both shrink-only, with the CAP-1 mirror.
-ICE-RDF-SORT-PARSE-1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/tests/call.rs` 1303 → 1289 (`call_rewrite_sort_strategy_refuses_loud` becomes `call_rewrite_positional_strategy_routes_to_the_rewriter` — the R135 wording it pinned no longer exists, and the replacement asserts the fork's unsorted-table refusal through both the named and the positional door), shrink-only. pins: ice-rdf-sort-parse-1/C-004
-ICE-RDF-SORT-PARSE-1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/tests/call.rs` 1303 → 1287 (`call_rewrite_sort_strategy_refuses_loud` becomes `call_rewrite_positional_strategy_routes_to_the_rewriter` — the R135 wording it pinned no longer exists, and the replacement asserts the fork's unsorted-table refusal through both the named and the positional door), shrink-only. pins: ice-rdf-sort-parse-1/C-004
-IPI-51 PR4 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1449 → 1446 (the Hive `ADD PARTITION` residual answers through `catalog_ops::partition_management_unsupported`), shrink-only, with the CAP-1 mirror. pins: ice-error-conditions-1/C-011
-ICE-CATALOG-SESSION-1 S7 (2026-09-20): `check_rust_file_size.py` ratchets `repark-core/src/catalog_config.rs` 1028 → 1007 (the kind-fn extraction); `check_lib_rs.py` gains the `repark-core` 155 row for `mod catalog_kind;`.
-
-ICE-CATALOG-SESSION-1 S6 (2026-09-20): `check_lib_py.py` moves `spark/session/session_core.py` 2335 → 2346 (the USE/SET engine-sync after `inner.sql` plus `_sync_catalog_state_from_engine`) — exact-baseline hold, not a ratchet.
-
-ICE-CATALOG-SESSION-1 S5 (2026-09-20): `check_lib_py.py` moves `spark/session/session_core.py` 2327 → 2335 (the cache-door import, the rewrite-loop arm, and the entry-point docstring) — exact-baseline hold, not a ratchet.
-
-ICE-CATALOG-SESSION-1 S4 (2026-09-20): `check_lib_py.py` moves `spark/session/session_core.py` 2287 → 2327 (the DESCRIBE expansion arm, its dispatch line, and the entry-point docstrings) — exact-baseline hold, not a ratchet.
-
-ICE-CATALOG-SESSION-1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1444 → 1439 (short-name completion and the source-anchored RENAME dest move to `use_ddl.rs`; the stale resolver doc and the premature token-gate go with them), shrink-only. pins: ice-catalog-session-1/C-022
-
-ICE-WRITER-METRICS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1761 → 1756 (the name-matched Parquet builder, now carrying the table's metrics config, moves to `write/writer_props::name_matched_parquet_builder`), shrink-only. pins: ice-writer-metrics-1/C-001
-ICE-SESSION-WRITE-CONF-1 round 6 (2026-09-20): the two rows above ratchet the same file from the same base, so the merge takes the LOWER of them — `write/merge/mod.rs` lands at 1701, not 1756. Both splits are in the merged file: MERGE staging lives in `session_staging.rs` and the name-matched Parquet builder lives in `writer_props::name_matched_parquet_builder`. The CAP-1 mirror carries 1701 too.
-
-ICE-REPLACE-COLUMNS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1813 → 1449 (the REPLACE COLUMNS parser, planner and identity-trap gate move to `replace_columns.rs`) and `repark-spark/src/tests/alter.rs` 1379 → 1184 (the two identity-trap tests move to `tests/replace_columns.rs`), both shrink-only. pins: ice-replace-columns-1/C-009
-ICE-MERGE-APPEND-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/append.rs` 1819 → 1816 (the module banner and the `commit_append` summary doc line are deleted rather than reworded when the site routes to `merge_append`; their contract moves to `write/map.md`), shrink-only. pins: ice-merge-append-1/C-001
-ICE-OVERWRITE-MODE-1 (2026-09-19): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1095 → 1093 → 1091 (the verification fix drops the `_dynamic_partition_sql` import) (`overwritePartitions` hands its SQL to `writer_layout.run_overwrite_partitions`), shrink-only. pins: ice-overwrite-mode-1/C-007
-ICE-DROP-NS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-sql/src/tests.rs` 1520 → 1513 (the native `CASCADE` refusal pin and its doc line left the file; its replacement pins live in `schema_ddl/tests.rs`). pins: ice-drop-ns-1/C-011
-
-CAST-MAP-SPELL-1 (2026-09-19): `check_lib_py.py` ratchets `spark/column.py` 1532 → 1529 (unknown cast names forward to the native map-type token) and `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1127 → 1126 (SQL prep moves to `session_runtime.rs`), both shrink-only. pins: cast-map-spell-1/C-004, C-005
-
-ICE-TT-RESOLVE-1 round 2 (2026-09-19): ceilings down — `session.rs` 1135 → 1123, `session_core.py` 2297 → 2287, `guards/tests.rs` 1213 → 1207, `tests.rs` 1530 → 1520, the `repark-core` lib row removed (lib.rs ≤ 150). pins: ice-tt-resolve-1/C-011, C-012 Merged with main at RP-34: `repark-python/src/session.rs` ceiling 1122 (the merged file).
-
-ICE-WRITE-OPTIONS-1 (2026-09-17): `check_lib_py.py` sets `dataframe/core.py` 4015 → 3991 (the WriterV2 option warning machinery leaves) and `dataframe/writer_readwriter.py` 1101 → 1114 (options slots, storage, clause rendering). pins: ice-write-options-1/C-001, C-005
-
-ICE-WRITE-OPTIONS-1 round 2 (2026-09-17): `check_lib_py.py` sets `dataframe/writer_readwriter.py` 1114 → 1099 (dedup moves to `writer_layout.store_writer_option`, head-prefix rendering; ruff format collapses one call). pins: ice-write-options-1/C-001, C-005
-
-ICE-WRITE-OPTIONS-1 round 3 (2026-09-17): `check_lib_py.py` sets `dataframe/writer_readwriter.py` 1099 → 1093 (both temp-view funnels share `writer_layout.run_through_temp_view`); `check_rust_file_size.py` sets `write/append.rs` 1882 → 1819 (serial fanout splits to `append_fanout_serial.rs`). pins: ice-write-options-1/C-001, C-005
-
-ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `check_lib_py.py` ratchets `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024
-ICE-DYN-OVERWRITE-1 round 2, ruling Q-20a-6 (2026-09-17): `check_lib_py.py` sets `writer_readwriter.py` 1101 → 1109 (the `static_overwrite` flag threading; `session_core.py` holds 2290) with the CAP-1 mirror. pins: ice-dyn-overwrite-1/L-001
-ICE-MIXED-CASE-1 (2026-09-17): `check_rust_file_size.py` ratchets six baselines down for the case-insensitive scope work, all shrink-only: `write/merge/mod.rs` 1792 → 1782, `write/merge/tests/merge.rs` 1065 → 1032, `write/merge/tests/streaming_scan.rs` 3028 → 3020, `write/predicate_dml.rs` 1142 → 1141, `write/predicate_dml/tests/predicate_dml.rs` 1442 → 1440, `repark-sql/tests/cross_door.rs` 1258 → 1254. pins: ice-mixed-case-1/C-012 Run 22b rebase onto main (after #682 / #687 / #692 / #678): `write/merge/mod.rs` lands at 1761 and the ceiling ratchets to 1761.
-
-ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): two more shrink-only ratchets behind the shared write-column helper — `write/merge/mod.rs` 1782 → 1780, `write/predicate_dml.rs` 1141 → 1139 — with the CAP-1 mirror. pins: ice-mixed-case-1/C-012
-
-ICE-WRITE-OPTIONS-1 run 22b rebase over #682 / #687 / #678 (2026-09-18): `check_lib_py.py` sets `writer_readwriter.py` 1102 → 1095 (main's column-list and `static_overwrite` writer merged with this unit's options funnel; the static flag rides the options native, Q-22b-WO-1) with the CAP-1 mirror; the mirror keeps this unit's `append.rs` 1819 and main's `merge/mod.rs` 1773. pins: ice-write-options-1/C-014
-
-FNP-MATH-1 step 5 (2026-09-16, run 18a): `check_lib_py.py` ratchets
-`functions_expr.py` 2195 → 2192 (the `format_number` destub is net-negative)
-with the CAP-1 mirror. pins: fnp-math-1/C-001, C-002, C-003
-FNP-MATH-1 step 6 (2026-09-16, run 18a): `check_lib_py.py` ratchets
-`functions_expr.py` 2192 → 2193 (the `split` destub) with the CAP-1 mirror.
-pins: fnp-math-1/C-001, C-008
-FNP-MATH-1 step 4 (2026-09-16, run 18a): `check_lib_py.py` ratchets
-`functions_expr.py` 2198 → 2195 (the `hash` destub is net-negative) with the
-CAP-1 mirror. pins: fnp-math-1/C-001, C-005
-FNP-AGG-1 slice (d) (2026-09-21): `check_lib_py.py` sets `functions.py` 1983 → 1984 (the installer import) with the CAP-1 mirror; `check_example_coverage.py` registers `functions_agg_1.py` / `FNPAGG1_EXPORTS`, pays its two registry lines by compacting docstring prose, and `BACKLOG_BASELINE` lands at 111 after the rebase (main's rows; grouping_id was never backlogged). pins: fnp-agg-1/C-007
-FNP-AGG-1 slice (d) (2026-09-21): `check_lib_rs.py` sets `repark-functions` 182 → 184 (the `mod grouping;` decl plus the re-export); the rebase keep-both with main's `FNP-MATH-1` raise lands the ceiling at 186 (measured `lib.rs` 185); `check_rust_file_size.py` ratchets `column/mod.rs` 1013 → 1012 (the n-ary widening is net-negative) with the CAP-1 mirror. pins: fnp-agg-1/C-007
-
-SET-ANSI-RUNTIME-1 (2026-09-15): `check_lib_py.py` ratchets `tests/test_session_timezone_parity.py` 1328 → 1318 (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005
-FNP-11B remediation round 1 (2026-09-16, run 17a): `check_lib_py.py` sets `functions_expr.py` 2237 → 2220 (the `make_timestamp` forwarder becomes a direct re-export) with the CAP-1 mirror; `build_api_freeze.py` follows module-level `from`-import aliases when reading required params (`aliased_function_signatures`) and carries the alias targets in `source_paths` so scratch trees resolve them — the regenerated register keeps `F.make_timestamp` at `[]` and corrects `F.udtf` from `null` to `[]`. pins: fnp-11b/C-007, C-008
-
-FNP-11B step 6 (2026-09-15, run 17a): `check_lib_py.py` sets `functions.py` 1960 → 1984 (the `lit` decimal arm) and `functions_expr.py` 2235 → 2237 (the `make_timestamp` widening, ruff-format ratchets two lines back) with the CAP-1 mirror; the duplicate table in `test_cap_1_source_file_line_cap.py` moves with it. pins: fnp-11b/C-001, C-005
-
-DF-RUST-3 (2026-09-16, rebase onto main after BL-11): `check_example_coverage.py` `BACKLOG_BASELINE` 111 → 110 —
-main had independently ratcheted 112 → 111 for another unit, and both removals apply on the merged tree, so the measured
-count is 110. Before the rebase this row read 112 → 111.
-DF-RUST-3 (2026-09-15): `check_example_coverage.py` `BACKLOG_BASELINE` 112 → 111 —
-`DataFrameStatFunctions.freqItems` leaves the backlog for the new
-`docs/examples/dataframe/freq_items_transpose.py` (which also covers the new
-`DataFrame.freqItems` and `DataFrame.transpose` inventory rows).
-pins: df-rust-3/C-005
-
-FNP-GEN-1 step 2 (2026-09-16, run 18a): `check_lib_py.py` sets `functions.py`
-1984 → 1983 (the `json_tuple` import joins the `posexplode` line) and
-`functions_expr.py` 2198 → 2178 (the `json_tuple` stub leaves for
-`functions_generators.py`) with the CAP-1 mirror.
-pins: fnp-gen-1/C-002, C-003
-FNP-GEN-1 step 3 (2026-09-16, run 18a): `check_lib_py.py` sets
-`functions_expr.py` 2178 → 2175 (the `from_csv` stub becomes a thin wrapper)
-with the CAP-1 mirror.
-pins: fnp-gen-1/C-003, C-004
-FNP-GEN-1 step 4b (2026-09-16, run 18a): `check_lib_py.py` sets
-`functions_expr.py` 2175 → 2177 (the `schema_of_csv` stub becomes a thin wrapper)
-with the CAP-1 mirror.
-pins: fnp-gen-1/C-004
-FNP-GEN-1 step 7 (2026-09-16, run 18a): `check_lib_py.py` sets
-`functions_expr.py` 2177 → 2178 (the `from_csv` facade checks its schema argument
-with the conditioned `NOT_COLUMN_OR_STR` bar) with the CAP-1 mirror.
-pins: fnp-gen-1/C-006
-
-FNP-GEN-1 step 2 (2026-09-16): `check_example_coverage.py` walks `functions_generators.py`
-and its `GENERATOR_NAMES` export tuple (the binding set was resorted while it was edited);
-`build_api_freeze.py` reads `functions_generators.py` as a def source so the four generator
-signatures — including the D-13 `column` → `col` rename — reach the freeze register;
-`check_lib_py.py` ratchets `functions_expr.py` 2235 → 2213 and `test_explode_rewrite.py`
-1135 → 1133; `check_example_coverage.py` crossed the default and was compacted back to it
-(orchestrator fix-up below — no exception row on a gate script). The CAP-1 parity mirror
-rows moved with them; python_approved stays 32.
-pins: fnp-gen-1/C-001, C-006
-DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto main after #610/#612): `check_lib_py.py` sets `dataframe/core.py` 4014 → 4015 with the CAP-1 mirror — the wrapped `repark.spark.dataframe` import gains `replace_expr` from #610; still below main's 4027. pins: df-plan-introspect-1/C-004
-DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): `check_lib_py.py`
-`dataframe/core.py` 4027 → 4014 (the `sameSemantics` body moves to
-`dataframe/plan_introspect.py` behind a one-line class binding, which pays for
-the wrapped import). A ratchet DOWN; the duplicate table in
-`test_cap_1_source_file_line_cap.py` moved with it.
-pins: df-plan-introspect-1/C-012
-
-DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py` **SESSION-SURFACE-1 (2026-09-15, rebase onto #602):** `spark/session/session_core.py` row 2291 → 2290; EX-0 counts recounted after the Catalog merge. pins: session-surface-1/C-001 **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
-IO-TEXT-1 (2026-09-15, rebase onto IO-DECLARED-1): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1104 → 1101 with the CAP-1 mirror (the text binding and format route are net-negative after the shared-mode-tuple merge). pins: io-text-1/C-004
-IO-DECLARED-1 (2026-09-14): `check_lib_py.py` ratchets
-`dataframe/writer_readwriter.py` 1111 → 1110, and 1105 → 1104 on the 2026-09-15 rebase onto #604/#605 (the orc/xml/jdbc bindings and the
-save() fallback delegation in `io_declared.py` are line-neutral against the
-merge of the duplicate `_VALID_MODES`/`_PATH_MODES` tuple) and retires the
-`session/reader.py` exception (1022 → 954, under the default);
-`check_example_coverage.py` `EXCEPTIONS_BASELINE` ratchets 2 → 1
-(`DataFrameReader.jdbc` is covered by the declared-refusal example). The CAP-1
-parity mirror rows moved with them.
-pins: io-declared-1/C-005, C-006
-FNP-11A (2026-09-15, orchestrator): `check_lib_py.py` `spark/functions_expr.py` 2247 → 2245 — the
-destubbed `make_timestamp` forwarder keeps the frozen 1.0 signature (ruling D-10), dropping its `date` / `time`
-parameters; the CAP-1 mirror row moves in the same commit.
-pins: fnp-11a/C-001
-FNP-11A (2026-09-15, orchestrator): `check_example_coverage.py` walks `functions_temporal.py` and its
-`FNP11A_EXPORTS` export tuple, so the eleven temporal names that module installs at import are in
-the AST walk, not only in the live `__all__`.
-FNP-11A rebase (2026-09-15, run 16a): `check_example_coverage.py` stays at the default line ceiling
-— two docstring lines reflowed after the rebase, no exception row (owner ruling Q-15c-4).
-FNP-WIN-1 (2026-09-15, run 16a-2): `check_example_coverage.py` walks `functions_window.py` and its
-`INSTALL_NAMES` export tuple, so the three window names that module installs at import are in
-the AST walk, not only in the live `__all__`. The added source line is paid by a `COVERS`-paragraph
-reflow, so the script stays at the default line ceiling — no exception row (owner ruling Q-15c-4).
-FNP-11B step 3 (2026-09-15, run 16a): `BACKLOG_BASELINE` 112 → 111
-(`F.try_to_timestamp` covered); the file sits exactly on the default line ceiling, so the step-3
-names ride the existing `FNP11A_EXPORTS` binding — see the ledger (D-12).
-DF-SURFACE-A-1 critic round 1 (2026-09-14): `check_lib_py.py`
-`dataframe/core.py` 4041 → 4035 (ruling R-5 removes the `inputFiles` and
-`semanticHash` bindings; ruling R-6 removes the `_schema_override` slot,
-init line, and schema check). The CAP-1 parity mirror row moved with it.
-pins: df-surface-a-1/C-008
-**IO-TEXT-1 (2026-09-14):** `check_lib_py.py` + the CAP-1 mirror:
-`spark/dataframe/writer_readwriter.py` row 1111 → 1109 (the five text-binding lines
-funded by the class-docstring and CSV-docstring joins). pins: io-text-1/C-003
-DF-SURFACE-A-1 step 1 (2026-09-14): `check_lib_py.py` `dataframe/core.py`
-4044 → 4041 (the `localCheckpoint` body moved to `dataframe/surface_a.py`
-beside its `checkpoint` sibling; the nine surface-a bindings are one line
-each). The CAP-1 parity mirror row moved with it.
-pins: df-surface-a-1/C-006
-FNP-MISC-1 (2026-09-15, orchestrator): `check_example_coverage.py` walks `functions_byname.py`
-and `functions_arrow_udf.py` and their `BYNAME_NAMES` / `ARROW_EXPORTS` export tuples, so the
-four names those modules install at import are in the AST walk, not only in the live `__all__`.
-IO-BUCKET-CLUSTER-1 (2026-09-14): `check_lib_py.py` `writer_readwriter.py`
-1111 → 1105 (ratchet DOWN — the bucketBy/sortBy/clusterBy bindings and
-check-call growth was paid by moving the five write helpers to the new
-`dataframe/writer_layout.py`). The CAP-1 parity mirror row moved with it.
-pins: io-bucket-cluster-1/C-003, C-004
-DF-SURFACE-B-1 (2026-09-14): `check_lib_py.py` `dataframe/core.py` 4044 → 4043
-(down-only; `foreach` / `foreachPartition` / `observe` bind from `surface_b.py`
-and the `_oos` table is gone). `check_example_coverage.py` CLASS_SURFACES gains
-`Observation`; enumerator 948 → 952.
-pins: df-surface-b-1/C-005, C-006
-GROUPED-SURFACE-1 step 1 (2026-09-14): `check_lib_py.py`
-`dataframe/joins_columns.py` 1238 → 1169 (decrease — the Arrow-batch apply
-bridge `_apply_in_pandas_arrow_batches` moved byte-identical into the new
-`dataframe/grouped_arrow.py`; the six grouped-surface names bind on
-`GroupedData` as one-line aliases and the module still holds its row).
-The CAP-1 parity mirror row moves in the same commit.
-pins: grouped-surface-1/C-007
-COLUMN-PARITY-1 critic round (2026-09-14): `check_lib_py.py` `spark/column.py`
-1548 → 1532, `dataframe/core.py` 4044 → 4040 and `dataframe/plan_collapse.py`
-1057 → 1054 (the deferred struct-edit machinery is deleted for the native
-`update_fields` design; struct field access gains a join-ON bracket fragment), the
-CAP-1 mirror rows move with them; `build_api_freeze.py` follows `alias =
-_module.func` class bindings to the defining module so the sanctioned
-`column_fields` split keeps the frozen param pins exact.
-pins: column-parity-1/C-007, C-008
-FACADE-4 step-1 remediation round 4 (2026-09-14, L-007..L-009):
-`check_lib_py.py` `spark/types.py` 1772 → 1793 (increase — base's container
-`simpleString`/`_engine_type`/`jsonValue` dispatch bodies and the
-`_SIMPLE_STRING_FAST` table came back for byte-identical MRO/override
-answers; still below main's 1834 ceiling). The CAP-1 parity mirror row moved
-with it.
-pins: facade-4/C-029, C-031
-FACADE-4 step-1 remediation round 3 (2026-09-14, ruling R14b-D-2):
-`check_lib_py.py` `spark/types.py` 1610 → 1772 (increase — the per-class
-literal `simpleString`/`_engine_type` methods came back for the `dtypes`
-surface bar; still below main's 1834 ceiling).
-pins: facade-4/C-016
-FACADE-4 step-1 remediation round 2 (2026-09-14): `check_lib_py.py`
-`spark/types.py` 1639 → 1610 (the parse residue and conversion fallbacks
-moved to `spark/_type_table.py`).
-pins: facade-4/C-020
-FACADE-4 step-1 remediation (2026-09-14): `check_lib_py.py` `spark/types.py`
-1833 → 1639 (the descriptor bridge — encode/decode, tree walks, token
-fallbacks, and the atomic answer table — moved to `spark/_type_table.py` for
-P1-DTYPES).
-pins: facade-4/C-016
-TYPES-BASES-1 step 1 (2026-09-14): `check_lib_py.py`
-`spark/types.py` 1793 → 1739 on the post-FACADE-4 tree (the Spark abstract
-bases, `DataType`, spatial types, `UserDefinedType`, and the spatial JSON
-token helpers live in the new `spark/types_bases.py`). The CAP-1 parity
-mirror row moves in the same commit. Follow-up: 1739 → 1770 after critic
-round 1 added the `_merge_type` spatial arms and the `StructField` /
-`StructType` conversion delegates (bodies in `types_bases.py`; main's
-baseline 1792 was never crossed).
-pins: types-bases-1/C-001, C-006
-
-FNP-ALIAS-1 (2026-09-15, orchestrator): `check_example_coverage.py` walks `functions_agg.py`,
-`functions_bitwise.py` and `functions_math.py` and their `INSTALL_NAMES` export tuples, so the
-six alias names those modules install at import are in the AST walk, not only in the live `__all__`.
-FNP-ALIAS-1 (2026-09-15): `check_lib_py.py` `spark/functions_expr.py` 2247 → 2237
-(`degrees`/`radians` move to `functions_math.py`, so functions_expr shrinks) and
-`spark/functions.py` 1962 → 1960 (the two re-export entries move between the import
-blocks, the tail gains a third module-handle line for the new `install_into` modules,
-and one narration comment line goes — the owner comment ban pays the tail). The CAP-1
-mirror rows move in the same commit.
-pins: fnp-alias-1/C-001, C-004, C-006
-CATALOG-SURFACE-1 (2026-09-14): `check_lib_py.py`
-`spark/session/session_core.py` 2304 → 2291 (`table()` delegates to
-`catalog_surface.session_table` for the catalog-cache overlay, and the
-now-unused `_sql_table_ref_resolved` helper went with it). The CAP-1 parity
-mirror row moves in the same commit.
-pins: catalog-surface-1/C-004
-CATALOG-SURFACE-1 critic round 1 (2026-09-14): `check_lib_py.py`
-`spark/dataframe/core.py` 4044 → 4043 (`create_or_replace_temp_view` delegates
-registration to `catalog_surface._register_temp_view`; the frame-token note
-lives in `cache_handle.bind_registered_view`). The CAP-1 parity mirror row
-moves in the same commit.
-pins: catalog-surface-1/C-009
-FNP-4B (2026-09-15): `check_rust_file_size.py` `merge/tests/merge.rs` 1068 → 1065,
-`column/mod.rs` 1052 → 1040, `dataframe.rs` 1084 → 1082; `check_lib_py.py`
-`_live_parity.py` 1778 → 1763 (backtick-disclosure retire). The CAP-1 mirror rows
-moved with them.
-pins: fnp-4b/C-009, C-010
-REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
-`dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
-sites so `replace` binds duplicate-name equi-join output by relation qualifier
-— P2-3; the join-side aliasing, qualifier assignment, and plan-metadata
-propagation live in `dataframe/replace_expr.py`). The CAP-1 parity mirror row
-moved with it.
-DOOR-CONVERGE-2 C-001 (2026-09-15): `check_rust_file_size.py`
-`repark-python/src/column/mod.rs` 1052 → 1036 (the facade `concat` CASE-guard body
-deleted for the door-converged kernel embed).
-pins: door-converge-2/C-001
-FNP-4B round 8 (2026-09-15): `check_rust_file_size.py`
-`repark-python/src/column/mod.rs` 1022 → 1014 (`F.expr` per-call context build,
-rule appends, and runtime move into the shared expr path).
-DOOR-CONVERGE-2 C-005/C-006 (2026-09-15, G-2 Q1 one-time grant R-1 under Q-15c-4):
-`check_rust_file_size.py` `repark-functions/src/analyzer.rs` 1142 → 1150 (the
-`array_concat` → `concat` analyzer arm for Q12-16 outer nullability).
-pins: door-converge-2/C-001
-pins: replace-linear-1/C-004
-FNP-11B step 4 (2026-09-15): `check_rust_file_size.py`
-`repark-functions/src/datetime.rs` 1700 → 1699 (the hour/minute/second TIME
-refusal rewrite of the superseded answering pin, net −1 line).
-pins: fnp-11b/C-005
-UNRESOLVED-ROUTINE-1 (2026-09-16): `check_rust_file_size.py`
-`repark-python/src/column/mod.rs` 1014 → 1013 (the `SELECT (…) AS _repark_expr`
-wrapper moved into `plan_expr_column`, net −1 line).
-pins: unresolved-routine-1/C-003
-ICE-COLUMN-REORDER-1 (2026-09-17): `check_rust_file_size.py`
-`repark-iceberg/src/write/alter.rs` 1630 → 1607, `repark-spark/src/alter.rs`
-1821 → 1813, `repark-spark/src/tests/alter.rs` 1397 → 1379 (the column-move check
-plus pins move to sibling `column_move` modules; the partition-spec family moves
-to `partition_spec.rs` behaviour-identical; the CAP-1 mirror rows move with them).
-pins: ice-column-reorder-1/C-013
-ICE-OCC-SCOPED-1 (2026-09-17): `check_rust_file_size.py`
-`repark-iceberg/src/write/merge/mod.rs` 1792 → 1773 (`residual_join_key_filter` moves
-verbatim to `merge/target_scan.rs`, beside the scan it filters, which pays for the MERGE's
-conflict filter on `MergeTarget`; `write/predicate_dml.rs` holds its 1142 exactly). The CAP-1
-mirror row in `test_cap_1_source_file_line_cap.py` moves with it.
-pins: ice-occ-scoped-1/C-005
-REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
-`dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
-key-family filtering, and the flat searched-CASE build — moved to the new
-`dataframe/replace_expr.py`). The `python/` map rows and ledger move in the
-same commit.
-pins: replace-linear-1/C-001, C-002
-FACADE-4 step 1 (2026-09-14): `check_lib_py.py` `spark/types.py` 1834 → 1833
-(the conversion functions thin to checks plus one native call over the shared
-Rust table; ~280 lines of per-class `simpleString`/`_engine_type` overrides and
-the Python DDL parser came out, descriptor helpers and residue paths went in);
-`check_rust_file_size.py` `repark-python/src/dataframe.rs` 1084 → 1019
-(`arrow_type_key` delegates to `repark_spark::type_table::logical_type_key`).
-pins: facade-4/C-014
-EAGER-BUDGET-1 step 2 (2026-09-13): `check_lib_py.py`
-`dataframe/core.py` 4094 → 4089 (the cache-budget resolver consolidated to
-`eager.py`'s shared parser and the `cache()`/`persist()` docstrings trimmed).
-The CAP-1 mirror row moves in the same commit; `repark-python/src/session.rs`
-holds its 1128 baseline (the budgets tuple is one argument).
-pins: eager-budget-1/C-005
-ABS-EXPR-1 (2026-09-13): `check_lib_py.py` `spark/functions.py` 1985 → 1962 and
-`spark/functions_expr.py` 2255 → 2247 (the facade `when(...)` bodies deleted for native
-`abs`/`cbrt`/`nullif`). The CAP-1 mirror rows move in the same commit.
-pins: abs-expr-1/C-005
-EAGER-OWN-1 step 1 (2026-09-13): `check_lib_py.py` `dataframe/core.py` 4117 → 4094
-(the cache-ownership handle and the cosmetic-warning helper moved to the new
-`dataframe/cache_handle.py`). The CAP-1 mirror row moves in the same commit.
-pins: eager-own-1/C-002
-COMMENT-CORE-1 (2026-09-13): `check_lib_py.py` `dataframe/core.py` 4468 → 4117
-(comments removed, no code change). The CAP-1 mirror row moves in the same commit.
-pins: comment-core-1/C-004
-FACADE-2 step 2b (2026-09-12): `check_lib_py.py` `spark/column.py` 1549 → 1548
-(the `alias` `sql_expr` arg dropped for a passthrough). The CAP-1 mirror row
-moves in the same commit. pins: facade-2/C-013
-FACADE-2 step 2 (2026-09-12): `check_lib_py.py` `spark/column.py` 1589 → 1549
-(Group-2 display assembly moved to Rust). The CAP-1 mirror row moves in the
-same commit. pins: facade-2/C-008, C-009
-PERF-UNPIVOT-1 (2026-09-12): `check_lib_py.py` `dataframe/core.py` 4485 → 4483;
-`check_example_coverage.py` installer sources gain `functions_stack.py` / `STACK_NAMES`;
-inventory 927 → 928 (`F.stack`). pins: perf-unpivot-1/C-004
-CSV-INFER-PERF-1 (2026-09-06): `check_rust_file_size.py` `repark-core/src/session.rs`
-1002 → 988 — `read_csv` body moved to `read_options.rs`; the CAP-1 exception row
-retired (file under the default ceiling). `test_cap_1_source_file_line_cap.py` dropped
-the matching `_RUST_BASELINES` row in the same commit. Round 2: `check_lib_py.py`
-`reader.py` 1026 → 1022 (path argument, no stored `path` option).
-pins: csv-infer-perf-1/C-006
-EX-31 inventory plumbing (2026-09-12): `check_example_coverage.py` gains the
-named exclusion list `INVENTORY_EXCLUSIONS` — the six `Column.*`
-select-boundary helpers plus `F.PythonUDFColumn`, each row carrying its
-measured PySpark-absence reason, no pattern — and `example_inventory` applies
-it to the snapshot, coverage and live `__all__` legs while the raw
-`enumerate_public_surface` walk still reports the seven (they stay callable,
-so the API-freeze register keeps them frozen). `BACKLOG_BASELINE` 119 → 112;
-`inventory.txt` regenerated by `--write-inventory` (927 → 920 rows). Red-first:
-the pin failed on the base tree (no `INVENTORY_EXCLUSIONS`), and a scratch
-copy excluding the real name `F.abs` red the gate
-(`COVERS names F.abs, which is not in the inventory`; exit 1).
-pins: ex-31-inventory-plumbing/C-001, C-002, C-003, C-004, C-005, C-006
-
-EX-30 functions remainder (2026-09-11): `check_example_coverage.py`
-`BACKLOG_BASELINE` 128 → 119 — nine of the 99 `F.*` remainder roster names,
-taught by two new `docs/examples/functions/` scripts (`bitmap.py`, `udf.py`).
-Every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC, zulu-17).
-Eighty-nine roster names stay on the backlog with existing EX-FN / BL-17 /
-FNP-9 / FNP-15 / FNP-16 rows plus new `EX-FN-22` (`from_xml` / `schema_of_xml`
-E1 stubs) and `EX-FN-23` (the `udf` / `pandas_udf` factory return-type arm,
-BACKLOG ARM on covered names); `F.PythonUDFColumn` stays pending an owner
-ruling on inventory narrowing. Pins in
-`python/repark/tests/parity/test_examples_functions_b.py`. Red-first: the nine covered
-names deleted from `backlog.txt` with `COVERS` stripped red the static gate
-with nine findings (exit 1), and a wrong-bytes control in `bitmap.py` failed
-the execute leg by name (exit 1).
-pins: ex-30-functions-remainder/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-
-EX-29 class remainder (2026-09-11): `check_example_coverage.py` ran unchanged —
-`BACKLOG_BASELINE` holds at 128 because none of the 29 non-`F.*` roster names has an
-arm where the engines agree that a prior batch had not already taught; every stayed name
-re-measured against live PySpark 4.1.2 (ANSI on, UTC, zulu-17) keeps its §7 row
-(EX-DF-1/2/3/4/7/8/17/19, EX-CAT-1/2, EX-W2-1, EX-IO-7). The six `Column.*` plumbing
-names are `__getattr__` fabrications on PySpark, not members — reported for an owner
-ruling on inventory narrowing. Pin gaps filled in `test_examples_window_catalog.py`
-(snake legs) and `test_examples_dataframe_d.py` (describe string-column raise, colRegex
-multi-match). Red-first: a stayed name deleted from `backlog.txt` reds the static gate
-naming it (exit 1), and a wrong-bytes control in `catalog/list_names.py` failed the
-execute leg by name (exit 1).
-pins: ex-29-class-remainder/C-001, C-005, C-006
-
-DF-COLREGEX-1 (2026-09-11): `check_example_coverage.py` ran unchanged —
-`BACKLOG_BASELINE` holds at 128; no example names `DataFrame.colRegex` /
-`col_regex`, so the names stay on the backlog and the `--require-execute` leg is
-the clause's proof (exit 0 on the shipped tree: 927 names, 797 covered, 212
-examples). The fix lives in `python/repark/src/repark/spark/dataframe/colregex.py`.
-pins: df-colregex-1/C-004
-
-EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
-`BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster
-names, taught by extending `docs/examples/functions/{utf8,dates_more,session_misc}.py`.
-Every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC). Twenty-seven
-roster names stay on the backlog with existing EX-FN / BL-17 / FNP-15 / FNP-16
-rows; two new §7 rows (EX-FN-20 `try_to_timestamp`, EX-FN-21 `unix_timestamp`
-format arm) are pinned by `python/repark/tests/parity/test_examples_functions_b.py`.
-Red-first: 7 has-no-example findings with the new COVERS names stripped
-(exit 1), and a wrong-epoch control in `dates_more.py` failed the execute
-leg by name (exit 1).
-pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
-
-EX-27 ml (2026-09-05, round 2 2026-09-06): `check_example_coverage.py`
-`BACKLOG_BASELINE` 164 → 136 — the 28 `ml.*` roster names, taught by five
-examples under `docs/examples/ml/`. Round 2 re-measured every oracle cell on
-live PySpark 4.1.2 (ANSI on, UTC), including session-level OLS / Pipeline /
-CrossValidator / persistence / UnaryTransformer. Nine §7 rows (EX-ML-1..9) pin
-the diverged arms of covered names, with nine tests in
-`python/repark/tests/parity/test_examples_ml.py`. Mixins are taught only through
-concrete stages; UnaryTransformer is plan-built `_transform`; persistence is
-the repark-ml round-trip.
-pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-
-EX-26 io-session (2026-09-06): `check_example_coverage.py` `BACKLOG_BASELINE` 193 → 164 —
-the 29 covered names of the 50-name reader/writer/session/DataFrame roster, taught by
-twelve new examples under `docs/examples/{io,session,dataframe}/`, every asserted value
-measured on live PySpark 4.1.2 (ANSI on, UTC) or — for the repark-only names — on repark's
-documented answer. Seventeen roster names keep their prior stays rows
-(EX-DF/EX-CAT/EX-W2/EX-DF-19); the four excel names stay with the new §7 EX-IO-7 row, and
-eleven new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
-tests in `python/repark/tests/parity/test_examples_io_session.py`. Red-first: 29 has-no-example
-findings with the files held out (exit 1), and a wrong-bytes control in `writer_csv.py`
-failed the execute leg by name (exit 1).
-pins: ex-26-io-session/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
-
-EX-25 functions-a (2026-09-05): `check_example_coverage.py` `BACKLOG_BASELINE` 213 → 193 —
-the 20 plainly supported names of the 45-name `F.*` long-tail (a) roster, covered by five
-new examples under `docs/examples/functions/` plus the `F.hours` arm in
-`partition_transforms.py`, every asserted value measured on live PySpark 4.1.2 (ANSI on,
-UTC). The other 25 roster names stay on the backlog with nineteen new §7 rows (EX-FN-1..19;
-`F.base64` keeps its BL-17 row), pinned by twenty tests in
-`python/repark/tests/parity/test_examples_functions_a.py`. No `csv_json.py`: all four CSV/JSON
-names refuse. Red-first: 20 has-no-example findings with the files held out (exit 1), and
-a wrong-median control in `stats.py` failed the execute leg by name (exit 1).
-pins: ex-25-functions-a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-EX-24 ta-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 258 → 213 — the remaining 45
-`ta.*` roster names covered by twelve new examples under `docs/examples/ta/`, measured against the
-recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (the family's oracle; the same `.bin`
-files `test_ta.py` / `test_ta_volume.py` pin bit-identically). All 45 measured bit-identical to
-their goldens (the composition helpers through the fused `over_columns` / `with_indicators`
-examples whose every produced column is asserted bit-exact), so none stayed on the backlog, no §7
-row was filed, and no pin file was created. Red-first: 45 has-no-example findings with the files
-held out (exit 1), and the bit-exact control named the kernel, row and both values on a bulk
-overwrite (exit 1).
-pins: ex-24-ta-b/C-001, C-002, C-003, C-004
-EX-23 ta-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 298 → 258 shipped (340 → 300 at the dispatch base `671a7144`) — the first
-40 `ta.*` roster names covered by eight new examples under `docs/examples/ta/`, measured
-against the recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (Spark has no TA
-kernels; the goldens are the family's oracle, the same `.bin` files `test_ta.py` /
-`test_ta_volume.py` pin bit-identically). All 40 measured bit-identical to their goldens, so
-none stayed on the backlog and no §7 row was filed; no pin file was created.
-pins: ex-23-ta-a/C-001, C-002, C-003, C-004
-EX-21 catalog-session (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 374 → 340
-shipped (411 → 377 at the dispatch base, before the EX-20 merge) — 34 roster names (9
-`Catalog.*`, all 25 `SparkSession`) covered by sixteen new examples under
-`docs/examples/catalog/` and `docs/examples/session/`; `list_databases` stays on the backlog
-(the same function object as the divergent `listDatabases`, §7 `EX-CAT-2`), the
-`registerFunction` return and `newSession` promotion arms are §7 `EX-SES-1`/`EX-SES-2`, pins in
-`python/repark/tests/parity/test_examples_window_catalog.py`. pins: ex-21-catalog-session/C-001
-EX-22 types-writerv2 (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 340 → 298
-shipped (374 → 332 at the dispatch base 671a714's predecessor, before the EX-21 merge) —
-42 roster names (all 28 `types.*`, 14 of 15 `DataFrameWriterV2.*`) covered by eleven new examples
-under `docs/examples/types/` and `docs/examples/io/`; the flagged `VariantType`/`TimeType`/
-`CharType`/`VarcharType` measured Spark-equal, the Arrow helpers and the snake_case spellings are
-covered as repark extensions (`hasattr` False on live PySpark 4.1.2); `DataFrameWriterV2.overwrite`
-stays on the backlog (§7 `EX-W2-1`), the empty-source `overwritePartitions` arm is §7 `EX-W2-2`,
-and the `option`/`options` branch-tag arm is §7 `EX-W2-3`, pins in
-`python/repark/tests/parity/test_examples_window_catalog.py`.
-pins: ex-22-types-writerv2/C-001, C-002, C-004
-
-EX-20 window-catalog (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 411 → 374
-shipped (449 → 412 at the dispatch base, before the EX-19 merge) —
-37 roster names (all 22 `Window`/`WindowSpec`, 15 of the first 18 `Catalog.*`) covered by eight
-new examples under `docs/examples/window/` and `docs/examples/catalog/`; `getDatabase`/
-`get_database` and `listDatabases` stay on the backlog (§7 `EX-CAT-1`/`EX-CAT-2`), the
-`functionExists(name, dbName)` arm is §7 `EX-CAT-3`, and the DataFrame-door tied-key default
-frame is §7 `EX-WIN-1`, pins in `python/repark/tests/parity/test_examples_window_catalog.py`.
-pins: ex-20-window-catalog/C-001
-EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 515 at
-dispatch (518 → 483 through the EX-16 merge, 484 → 449 through the EX-17 merge) —
-35 `DataFrame.*` names covered by eleven new examples under `docs/examples/dataframe/`; `toJSON`
-refuses (R-DF-BATCH2) and stays a backlog row, registry §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/parity/test_examples_dataframe_c.py`. pins: ex-18-dataframe-c/C-001
-EX-19 DataFrame-d (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 449 → 411
-shipped (518 → 480 at the dispatch base, before the EX-17/EX-18 merges) —
-38 roster names covered by ten new examples under `docs/examples/dataframe/`
-(`set_ops.py`, `frame_shape.py`, `rename_columns.py`, `unpivot_rows.py`,
-`cache_write.py`, `na_surface.py`, `stat_helpers.py`, `grouped_agg.py`,
-`grouped_pivot.py`, `row_dicts.py`); `stat.freqItems` stays on the backlog
-(§7 `EX-DF-19`), the `withColumnsRenamed` duplicate-final-name arm is §7 `EX-DF-18`
-and the struct-`Row` field arm is §7 `EX-ROW-1`, with pins in
-`python/repark/tests/parity/test_examples_dataframe_d.py`. `Row.as_dict`, `Row.from_mapping`,
-and `Row.from_ordered_fields` are documented as repark extensions (`hasattr` False on
-live PySpark 4.1.2).
-pins: ex-19-dataframe-d-window/C-001
-
-EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 518 —
-32 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
-(`first_head.py`, `group_by.py`, `joins_hints.py`, `rows_nulls.py`, `state_cache.py`,
-`bridges.py`, `print_schema.py`, `random_split.py`; round 3 moved `mergeInto`/`merge_into`
-into `joins_hints.py` after the Iceberg-oracle re-measure); `intersectAll`/`intersect_all` and
-`groupingSets`/`grouping_sets` stay on the backlog (§7 `EX-DF-7`/`EX-DF-8`), and the narrow
-`mergeInto` bare-key/qualifier arm (§7 `EX-DF-9`) and `printSchema` stdout tail (§7 `EX-DF-10`)
-are recorded with pins in `python/repark/tests/parity/test_examples_dataframe_b.py`.
-pins: ex-16-dataframe-b/C-001
-EX-17 Column-a (2026-09-04, r2): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 516 at base `e3600a1` (484 after the EX-16 merge) —
-34 `Column.*` names covered by ten new examples under `docs/examples/column/`
-(`naming.py`, `predicates.py`, `strings.py`, `bitwise_cast.py`, `when_chains.py`,
-`order_markers.py`, `window_over.py`, `accessors.py`, `round_ext.py`,
-`accessor_namespaces.py`); the 6 engine-plumbing rows stay on the backlog
-(`for_select`/`join_sql_part`/`spark_display_part`/`spark_wrap_display_part`/
-`sql_expr_part`/`sql_expr_without_alias` select-boundary plumbing — no PySpark
-analog; the `dt`/`str` Polars-style accessor namespaces landed in round 2 as
-repark extensions documented beside their PySpark-spelled twins); the two measured
-divergent bare-name arms are registry §7 `EX-COL-1`/`EX-COL-2` (`F.col`-receiver
-`cast` select name, unaliased `getField` select name), pins in
-`python/repark/tests/parity/test_examples_column_a.py`.
-pins: ex-17-column-a/C-001
-
-EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
-28 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
-(`agg_stats.py`, `cube.py`, `views.py`, `cross_join.py`, `dedup_nulls.py`,
-`declare_sorted.py`, `inspect_cache.py`, `describe_ingest.py`); the 8 names the live oracle
-measured divergent stay on the backlog (`colRegex`/`col_regex` opposite-spelling regex,
-the three global-temp-view spellings refused, `exceptAll`/`except_all` refused,
-`describe` row order), registry §7 `EX-DF-1`…`EX-DF-6`, pins in
-`python/repark/tests/parity/test_examples_dataframe_a.py`.
-pins: ex-15-dataframe-a/C-001
-
-EX-4-functions-strings-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
-632 → 605 as merged (844 → 817 at dispatch) — 27 `F.*` string-basics names covered
-by eight examples; seven names stay on the backlog (`F.base64` BL-17, `F.encode` /
-`F.decode` charset, `F.format_number` loud unsupported, plus critic-round `F.initcap`
-FN-INITCAP-1, `F.chr`/`F.char` FN-CHR-1). `F.trim` two-arg is FN-TRIM-CHARS-1 (loud).
-pins: ex-4-functions-strings-a/C-001
-
-EX-5 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 605 → 578 (844 → 817 at dispatch) — 27 `F.*`
-string-search, slicing, UTF-8 and regex names covered by eight new examples; `F.split`,
-`F.regexp_extract` and `F.sentences` are refused by the engine (disclosed gaps
-R-FN-BATCH1/R-FN-BATCH2), `F.elt` answers NULL where Spark raises INVALID_ARRAY_INDEX,
-`F.validate_utf8` raises INVALID_UTF8_STRING on invalid input on both engines but with a
-different Python error surface than Spark's, and `F.replace` has no spelling that runs on both
-engines (repark takes a literal `search`, PySpark reads a bare string as a column name);
-all six stay on the backlog.
-pins: ex-5-functions-strings-b-regex/C-001
-
-EX-13 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 654 → 632 (777 → 755 at dispatch) — twenty-two
-`F.*` aggregate (b) and statistics names covered by four new examples (`dispersion.py`,
-`covariance.py`, `regression.py`, `bit_aggregates.py`); the two names the engine refuses
-(`F.skewness`, `F.kurtosis`, `UnsupportedOperationException`, R-FN-BATCH4) stay backlog rows,
-both values recorded in the family ledger. pins: ex-13-functions-aggregates-b-stats/C-001
-
-EX-14 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 696 → 687 (777 → 768 at dispatch) — nine `F.*` window names
-(`row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`, `ntile`, `lag`, `lead`, `nth_value`)
-covered by four new examples (`window_ranking.py`, `window_position.py`, `window_offset.py`,
-`window_nth_value.py`); the live oracle measured all nine Spark-equal, none dropped.
-pins: ex-14-functions-window/C-001
-
-EX-12 batch (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 723 → 696 as merged
-(842 → 815 at dispatch) — 27 `F.*` aggregate names covered by eight new examples; `F.mode`
-(engine refuses), `F.approx_percentile` and `F.percentile_approx` stayed on the
-backlog at dispatch (Spark discrete bigint vs interpolated double). **FN-FIX-1 (2026-09-03)**
-closed that interpolation; names wait for the next EX batch (not re-added here).
-pins: ex-12-functions-aggregates-a/C-001
-pins: fn-fix-1-registry-rows/C-004
-
-EX-9 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 809 → 797 — twelve
-`F.*` map and struct names covered by four new examples (`map_parts.py`, `map_shapes.py`,
-`map_higher_order.py`, `structs.py`); the batch's other 24 roster names (json_tuple, csv,
-xml, xpath, variant) are measured on the live oracle and stay backlog rows — the engine
-refuses each (E1-disclosed deferrals). pins: ex-9-functions-maps-structs-json/C-001
-
-EX-10 (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE` 842 → 809 —
-33 `F.*` null-handling, conditional, ordering, bit and session names covered by
-seven new examples; the 12 names the live oracle measured divergent or refused
-stay on the backlog, both values recorded in the family ledger.
-pins: ex-10-functions-null-cond-misc/C-001
-
-LOG1P-1 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 844 → 842 —
-`F.log1p` and `F.expm1` leave the backlog for `docs/examples/functions/logs.py`.
-pins: log1p-1-precise-kernels/C-003
-
-EX-6 batch datetime-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
-687 → 654 after the EX-9…EX-14 merges (written 842 → 809 at the dispatch
-base 84c1801) — 33 `F.*` datetime arithmetic and parts names covered by seven new
-examples; `F.add_months` (Spark `2023-07-29` versus repark `2023-07-31` on
-`2024-02-29` minus 7 months, pinned as FN-ADDMONTHS-1) and `F.months_between`
-(refused, engine gap R-FN-BATCH1) were measured against the live oracle and stay
-on the backlog.
-pins: ex-6-functions-datetime-a/C-001
-API-FREEZE (2026-09-02): `build_api_freeze.py` is new — it reads the answered API-review packet
-and the tree (the `check_example_coverage.py` enumerator for public Python names and their
-required parameters, `repark_common::surfaces::ALL` plus both door matrices, the conf-key
-constants, `repark.errors.__all__`, the two `pyproject.toml`/`Cargo.toml` packaging facts) and
-writes `docs/design/v1-0-api-freeze.json`, the frozen-surface register. `--write` regenerates;
-bare invocation checks the tree against the checked-in file. The register is pinned by
-`python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
-same commit as any intended additive change. pins: api-freeze/C-003
-
-TYPES-1 round 4 (2026-09-05): `check_rust_file_size.py`
-`repark-functions/src/datetime.rs` 1704→1709 (INCREASE — the Java-pattern year-sign arm;
-absorption proven impossible, owner approval at merge); mirrored in
-`test_cap_1_source_file_line_cap.py`. pins: types-1/C-006
-TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709→1700 — the year arm moves to
-`src/spark_year_pad.rs`; mirrored in `test_cap_1_source_file_line_cap.py`.
-pins: types-1/C-006
-
-H3-SPILL-RESIDUE-1 (2026-09-06): `check_rust_file_size.py` `repark-python/src/dataframe.rs`
-1127→1126 — arming the Arrow reader's pool-refusal containment is one builder call
-(`.with_refusals(...)`) rather than a fourth constructor argument, and the lookup itself
-(`refusal_log`) lives in `arrow_export.rs`, so the binding surface came out a line shorter than
-it went in. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
-with it in the same commit. pins: h3-spill-residue-1/C-002
-
-WRITE-DISTRIBUTION-2 (2026-09-06): `check_rust_file_size.py` `write/append.rs`
-1884→1883 — the round-robin dispatcher index is gone with the routed send, so the funnel came
-out a line shorter than it went in. A ratchet DOWN; the duplicate table in
-`test_cap_1_source_file_line_cap.py` moved with it in the same commit.
-pins: write-distribution-2/C-001
-
-WRITE-ORDER-DIST-1 (2026-09-06): `check_rust_file_size.py` `repark-spark/src/alter.rs`
-1830→1821 (the WRITE ORDERED/DISTRIBUTED refusal leaves for the new `alter_write_order.rs`
-module, which `alter.rs`'s exact ceiling required), `repark-iceberg/src/write/append.rs`
-1884→1883 and `write/merge/mod.rs` 1795→1792 (the funnel entries delegate to the
-distribution module's sorted drivers). All three ratchet DOWN; the duplicate table in
-`test_cap_1_source_file_line_cap.py` moves with them in the same commit.
-
-ICE-COMMIT-UNKNOWN-1 (2026-09-14): `check_rust_file_size.py`
-`repark-core/src/session/tests/session.rs` 1412→1407 — the ambiguous-commit classification
-pins moved to the new `commit_unknown.rs` module. A ratchet DOWN; the duplicate table in
-`test_cap_1_source_file_line_cap.py` moved with it in the same commit.
-pins: ice-commit-unknown-1/C-001
-`repark-spark/src/tests/alter.rs` 1436→1397 — the `WRITE ORDERED BY` /
-`WRITE DISTRIBUTED BY` refusal blocks leave `alter_unsupported_forms_refuse_loud`;
-the forms now execute and their pins live in `tests/alter_write_order.rs`.
-pins: write-order-dist-1/C-012
-
-WRITE-ORDER-DIST-1 merge with `origin/main` (2026-09-06): both units took one line out of
-`write/append.rs` on disjoint hunks, so the merged file is 1882, one below either side's
-1883 — the merge ratchets the exact ceiling 1883→1882 in both tables in the merge commit.
-
-PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
-1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
-the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing
-responsibility when a charter already changes that region"). A ratchet DOWN; the duplicate
-table in `test_cap_1_source_file_line_cap.py` moved with it in the same commit.
-pins: perf-ice-catalog-io-1/C-004
-
-WIN-SLIDE-1 (2026-09-04): `check_rust_file_size.py` `repark-python/src/column/mod.rs`
-1102→1053 — `Column.over`'s body moved to `column/window.rs`, which is that row's own recorded
-split seam ("extract the remaining date or window method family"). A ratchet DOWN, not a
-baseline increase; the duplicate table in `test_cap_1_source_file_line_cap.py` moved with it.
-pins: win-slide-1/C-002
-
-PERF-APPROXPCT-1 (2026-09-05): `check_rust_file_size.py` `repark-python/src/column/mod.rs`
-1053→1052 — the accuracy threading (optional third arg, scalar-helper import) is paid for by
-collapsing the list call construction and folding the percentage validation into a named
-closure. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
-with it in the same commit. pins: perf-approxpct-1/C-007
-
-FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.rs`
-1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
-pins: fn-fix-2-string-rows/C-002
-
-SQL-DESCRIBE-1 (2026-09-09): `check_rust_file_size.py`
-`repark-python/src/dataframe.rs` 1126→1084 — the DDL element spelling moved to
-`repark-spark/src/spark_type_names.rs` (owner ruling R-9), so the nested
-`simpleString` helper leaves the binding with its call sites. A ratchet DOWN; the
-duplicate table in `test_cap_1_source_file_line_cap.py` moves with it in the same
-commit. pins: sql-describe-1/C-003
-
-CUTOVER-SCHEMA-1 (2026-09-04): `check_rust_file_size.py`
-`repark-core/src/session.rs` 1040→1039 and `repark-python/src/dataframe.rs` 1171→1127 —
-reader-relax and export-boundary extraction; both ratchet DOWN.
-pins: cutover-schema-1/C-001
-
-CFG-1 step 3 (2026-09-09): `check_lib_py.py` `session_core.py` 2411→2306 — the SAF-006
-resolvers move to `session_configuration.py` along the row's own split seam; a ratchet
-DOWN. `check_rust_file_size.py` `repark-python/src/session.rs` 1177→1128 — the ruled
-`config_path` argument plus the `config_file_pairs` static are paid for by moving
-`drain_arrow_c_stream` (with its capsule-name constant and imports) to `arrow_export.rs`;
-a ratchet DOWN, no approval needed. The duplicate table in
-`test_cap_1_source_file_line_cap.py` moves with both in the same commit.
-pins: cfg-1/C-026, C-027
-
-MAINT-POLICY-1 audit fix (2026-09-10): `check_lib_py.py` `session_core.py`
-2305→2304 — `_temp_view_home_ref` moves to `catalog_resolution.py` to pay for
-the `run_maintenance` class-body declaration; a ratchet DOWN. The duplicate
-table in `test_cap_1_source_file_line_cap.py` moves with it in the same commit.
-
-REVIEW-FIX-5 D-5 (2026-09-10): `check_rust_file_size.py`
-`repark-core/src/catalog_config.rs` 1044→1028 — the D-4 `pub` widening plus its
-`#[must_use]` are paid for by moving seventeen `//` lines to the core map; a ratchet
-DOWN, no approval needed. pins: review-fix-5/C-005
-pins: maint-policy-1/C-030
-
-REVIEW-FIX-6 D-2 (2026-09-10): `check_lib_py.py` `dataframe/core.py`
-4487→4486 — the four-line both-set guard is paid for by moving five `#` lines to
-the dataframe map; a ratchet DOWN, no approval needed. The duplicate table in
-`test_cap_1_source_file_line_cap.py` moves with it in the same commit.
-pins: review-fix-6/C-004
-
-NIGHTLY-LIVE-1 (2026-09-11): `check_lib_py.py` `test_ml_boost_oracle.py`
-2244→2241 — the PySpark teardown `try/finally` retires under the one-context rule;
-a ratchet DOWN. The duplicate table in `test_cap_1_source_file_line_cap.py` moves
-with it in the same commit.
-pins: nightly-live-1/C-003
-
-EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
-37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
-`F.log1p` was then still divergent at `x = 1e-10` / `x = 1e-13`. pins: ex-2-functions-math-bitwise/C-002
-V3-11 (2026-09-02): `check_rust_file_size.py` `repark-iceberg/src/write/append.rs` 1886→1884,
-after its concurrent fanout path stopped sorting twice; mirrored in
-`python/repark-parity/tests/test_cap_1_source_file_line_cap.py`.
-pins: v3-11-row-id-determinism/C-003
-
-RP-7 (2026-09-02): `check_rust_file_size.py` `write/merge/mod.rs` 1889→1795, behind the
-`merge/target_scan.rs` extraction, and `write/predicate_dml.rs` 1164→1142, behind
-`predicate_dml/residual.rs` plus the batch helper moving to `predicate_dml/lineage.rs`. Both
-ratchet DOWN; no baseline was raised. pins: rp-7-f18-repin/C-005
-
-V3-10 (2026-09-02): `check_rust_file_size.py` `repark-spark/src/alter.rs` 1831→1830 — the
-`SET TBLPROPERTIES` arm delegates to `repark-spark/src/format_version.rs` — and
-`repark-iceberg/src/write/alter.rs` 1641→1630, where the caller-less `alter_table_properties`
-folded into `write/format_version.rs`.
-pins: v3-10-upgrade-v2-to-v3/C-003
-
-DF-PRINTSCHEMA-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6371→6368 — the
-`printSchema` strip arm is gone.
-pins: df-printschema-1-trailing-newline/C-004
-
-PERF-FACADE-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6368→6303 — the Arrow row
-converter and its two type predicates move to `dataframe/rows_export.py`; `core.py` keeps
-three delegations. Ratchets DOWN.
-pins: perf-facade-1/C-001, C-005
-
-NULLABILITY-2 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6302 — the
-`schema` property routes `timestamp`/`timestamp_ntz` through `fromDDL`, so the
-`TimestampType` import is gone (mirrored in the CAP-1 test).
-pins: nullability-2/C-006
-
-NULLABILITY-2 (2026-09-05): `check_lib_py.py` `tests/_live_parity.py` 1877→1778 — the
-three converged nullability disclosures and their six check functions are gone
-(mirrored in the CAP-1 test).
-pins: nullability-2/C-007
-TYPES-1 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6305 (INCREASE — the
-two `__repark_rn` BIGINT casts; owner approval requested at merge) and
-`test_window_parity.py` 1481→1422 (ratchets DOWN — converged tiers and the dead
-`TYPE_DISC` lead-in deleted).
-pins: types-1/C-008
-TYPES-1 round 4 (2026-09-05): `dataframe/core.py` 6305→6303 — one import joined absorbs
-the INCREASE; the ceiling ratchets DOWN again, no approval needed.
-pins: types-1/C-008
-
-FNP-9/10 (2026-09-06): `check_lib_py.py` `functions_expr.py` 2259→2256, then 2255 once merged over PERF-APPROXPCT-1 (its own one-line cut) — `arrays_zip` and
-`schema_of_json` trade a multi-line refusal each for a one-line real wrapper; ratchets DOWN.
-The unit's new facade surface lands in `functions_json.py` and `functions_collections.py`
-instead of growing `functions.py`, which stays at its exact 1985.
-`check_example_coverage.py` gains `functions_json.py` as a fourth installer source and
-`FNP9_NAMES` as an export binding, so the eight new `F.*` names enter the walk; both new
-example scripts cover them and `BACKLOG_BASELINE` ratchets 164→163 as `F.schema_of_json`
-leaves the backlog. `F.arrays_zip` stays on it — the kernel answers, but its struct field
-names diverge (§7 FNP9-ARRAYS-ZIP-NAMES-1).
-pins: fnp-9-collections-json/C-001
-
-DFCORE-1 (2026-09-07): `check_lib_py.py` `dataframe/core.py` 6302→5954 — the leaf
-helpers above the class move to `rows_export.py` and three new leaf modules — and
-`dataframe/joins_columns.py` 1239→1238 — the moved helpers arrive via direct leaf
-imports (mirrored in the CAP-1 test). Ratchets DOWN.
-pins: dfcore-1/C-007
-
-DFCORE-2 (2026-09-07): `check_lib_py.py` `dataframe/core.py` 5954→5263 — the four
-UDF select rewrites move to `udf_projection.py` and `udf_window_projection.py`,
-which carry no row (mirrored in the CAP-1 test). Ratchets DOWN.
-pins: dfcore-2/C-006
-
-DFCORE-3 (2026-09-07): `check_lib_py.py` `dataframe/core.py` 5263→5060 and
-`dataframe/writer_readwriter.py` 1113→1111 — the seven statistics bodies move to
-`statistics.py`, which carries no row (mirrored in the CAP-1 test). Ratchets DOWN.
-pins: dfcore-3/C-006
-
-DFCORE-4a (2026-09-07): `check_lib_py.py` `dataframe/core.py` 5060→4819 — the five
-sampling bodies move to `sampling.py`, which carries no row (mirrored in the
-CAP-1 test). Ratchets DOWN.
-pins: dfcore-4a/C-005
-
-DFCORE-4b (2026-09-07): `check_lib_py.py` `dataframe/core.py` 4819→4539 — the ten
-display bodies move to `display.py`, which carries no row (mirrored in the
-CAP-1 test). Ratchets DOWN.
-pins: dfcore-4b/C-005
-
-DF-EXPLAIN-1 (2026-09-08): `check_lib_py.py` `dataframe/core.py` 4539→4536 — the
-explain rendering support (the section headers, the codegen note, the mode map and
-`_render_explain_sections`) moves to `explain.py`, which carries no row, while `explain` and
-the new `_explain_text` stay on the class (mirrored in the CAP-1 test). Ratchets DOWN.
-pins: df-explain-1/C-003
-
-DF-EAGER-1 step 2 (2026-09-09): `check_lib_py.py` `dataframe/core.py` 4525→4487 —
-the cache-guard trio moves to `eager.py`, which carries no row, while `eager` / `lazy`
-stay on the class as one-line wrappers with the `compute` alias. Ratchets DOWN.
-pins: df-eager-1/C-001, C-002, C-003
-
-DISPLAY-LAZY-1 step 2 (2026-09-10, rebased 2026-09-11): `check_lib_py.py`
-`dataframe/core.py` — the checkpoint-arm `_eager_shape` record adds two lines (no new
-slot, so the CAP-1 `dir()` freeze is untouched). Close-out round: **no increase** — the
-two lines are funded by deleting the three-line cache-pinned early-return rationale in
-the same seat, so the row ratchets DOWN, and the fact lives on the dataframe map. On the
-rebased tree, where REVIEW-FIX-6 (#487) had already taken the row to 4486 by the same
-method, the measured landing number is **4486→4485**. Ratchets DOWN.
-pins: display-lazy-1/C-007
-
-FACADE-1 (2026-09-12): `check_lib_py.py` `dataframe/core.py` 4485→4473→4470 — mapInArrow
-construction and `to_polars` ride the capsule helper; `to_polars` drops the pyarrow
-Table wrap. Ratchets DOWN.
-pins: facade-1/C-001, C-002, C-006
-
-DISPLAY-POLARS-1 step 3 (2026-09-09): `check_lib_py.py` `dataframe/core.py` 4536→4525 —
-the `__repr__` / `_repr_html_` wrapper docstrings condense to one line under the comment
-ban (the behaviour contract moved to `dataframe/map.md`). Ratchets DOWN.
-pins: display-polars-1/C-004
-
-DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `check_lib_py.py`
-`dataframe/plan_collapse.py` 1168→1057 and `session/session_core.py`
-2411→2410 — the polars spellers move to the new `dataframe/polars_cells.py`
-(325 lines, no row needed) and the display-key plumbing moves to
-`session/session_configuration.py` beside `default_display_style()`; both
-callers keep one-line calls plus import-backs. Ratchets DOWN; both mirrored in
-the CAP-1 test.
-pins: display-polars-1/C-005
-
-B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
-1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
-pins: b-mor-3-rewrite-position-deletes-v3/C-002
-
-V3-8 (2026-09-02): `check_rust_file_size.py` `write/predicate_dml.rs` 1226→1164 (the
-lineage projection helpers move to `write/predicate_dml/lineage.rs`).
-pins: v3-8-subquery-where-lineage/C-002
-
-V3-7 (2026-09-02): `check_rust_file_size.py` `write/merge/mod.rs` 1892→1889 and
-`write/merge/tests/merge.rs` 1091→1068 (lineage SQL extracted; test helper).
-pins: v3-7-merge-lineage/C-001
-
-RP-6 (2026-09-01): `check_rust_file_size.py` `write/merge/mod.rs` 1894→1892 and
-`write/predicate_dml.rs` 1227→1226 (comment-only drop on the V3-COW-1 seats).
-pins: rp-6-fork-repin/C-002
-
-REF (2026-09-01): `check_rust_file_size.py` — the `repark-spark/src/ref_ddl.rs` EXCEPTIONS row
-is gone. The file's inline `mod tests` moved to a file-backed `ref_ddl/tests.rs` (move-only,
-identity `--list`), taking it from 1028 to 772 lines, under the default ceiling.
-
-RP-5 (2026-09-01): `check_rust_file_size.py` `write/merge/mod.rs` 2086→1896 (commit path
-extracted to `snapshot_commit.rs`) then 1896→1894 (scratch register helper);
-`overwrite.rs` 1070→1053; `session/tests/session.rs`
-1415→1414. The comment re-home ratchets `session/tests/session.rs` 1414 → 1412.
-pins: rp-5-fork-repin/C-004
-
-V3-6 (2026-09-01): `check_rust_file_size.py` `write/append.rs` 1950→1886 — the conform
-step moved to a file-backed `write/conform.rs` (V3-6 C-005); one import shed in the same
-pass.
-
-DFP-1 (2026-08-31): `dynamic_flatten/tests.rs` 1443→1442 after preserve-null pins moved to a
-file-backed module.
-
-DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249→1233;
-`check_lib_py.py` `writer_readwriter.py` 1117→1113.
-  FN-REGEXP-EXTRACT-1 (2026-09-04): `functions_expr.py` ceiling 2261 → 2259 (ratchet down).
-  PERF-APPROXPCT-1 round 2 (2026-09-06): `functions_expr.py` ceiling 2259 → 2258
-  (accuracy check out to `_integral.py`, one shared Column return).
-
-CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
-(pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;
-dynamic_flatten/tests.rs 1469→1443; declared_sorted.rs 1381→1348.
-
-CC-3 (2026-08-30): comments condensed to one line; banners removed. Size-gate rows ratcheted with each slice, including the Python binding files. D-001 catalog.rs 1845→1843; TA kernels 2284→2098 / 1676→1578 / 1873→1821. Spark size-gate rows ratcheted; session_timezone.rs retired at 891. AGENTS.md compaction ceiling restored to 32000 (pins: cc-3-comment-condensation/C-006).
-
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+`build_api_freeze.py` writes the frozen-surface register (API-FREEZE). It reads the answered API-review packet and the tree (the `check_example_coverage.py` enumerator for public Python names and their required parameters, `repark_common::surfaces::ALL` plus both door matrices, the conf-key constants, `repark.errors.__all__`, the two `pyproject.toml`/`Cargo.toml` packaging facts) and writes `docs/design/v1-0-api-freeze.json`. `--write` regenerates; bare invocation checks the tree against the checked-in file. The register is pinned by `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the same commit as any intended additive change.
 
 ## Purpose
 
@@ -946,7 +10,6 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
 `check_lib_py.py` EXCEPTIONS paths moved under `python/repark/src/repark/spark/`.
 
 CC-2 audits the tracked Python helper scripts after all crate and package slices finish.
-pins: comment-condensation-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011.
 
 CC-2 scripts slice: every tracked `scripts/*.py` audited; gate-rule statements and constant
 tables kept, narration and dated history removed. The same unit ratcheted 17
@@ -973,7 +36,6 @@ repark-parity slice.
   `<warehouse>/testing_repark_acceptance/`; S3 Tables tables go one by one in the scratch namespace. Dry run
   unless `--execute`. `boto3` is imported inside `boto3_client` only, because `uv.lock` carries no `boto3`; each job
   installs it at an exact version (ledger C-014), and `main(argv, clients)` takes a client factory for tests. Wired into `aws-acceptance.yml`: each leg job runs it last with `--run-prefix`, and the `backstop` job runs it with `--older-than-hours 24`. Tests: `python/repark-parity/tests/test_aws_acceptance_cleanup.py`.
-  pins: aws-ephemeral-runs-1/C-004, C-005, C-006, C-007, C-008, C-011, C-020, C-021, C-022
 - `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
   assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
   first) and a JSON sidecar; `check` validates the schema, every stable-prefix
@@ -987,14 +49,12 @@ repark-parity slice.
   `python/repark-parity/tests/fixtures/sepmo_packets/`. Not a CI gate.
   Invocation: `python3 scripts/sepmo_packet.py build …` or
   `make sepmo-packet ARGS='check <packet>'`.
-  pins: sepmo-e2/C-002, C-003, C-004, C-008
 - `sepmo_packet_extract.py` — **SEPMO-E2 (2026-09-06, round 3):** brief field
   extractors for the packet assembler: fenced/inline gate commands, writable /
   closed / never-touch lists, a PATH_TOKEN plus bare-directory scan of boundary
   spans that fails `build` when a path is not captured, brief-declared
   hand-back keys, trailer and prefix-negation scans. Loaded as a sibling of
   `sepmo_packet.py`.
-  pins: sepmo-e2/C-002
 - `sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** local-only usage collector.
   `collect <run-dir>` emits one normalized JSON record; `index <dir>` writes the inventory
   table (or `--jsonl`). Muse tokens come from the session store via `runs.tsv` column 6
@@ -1006,27 +66,13 @@ repark-parity slice.
   on the raw path. Null, never zero, when an adapter does not report a field. No network.
   Invocation: `python3 scripts/sepmo_usage.py collect <run-dir>` or
   `make sepmo-usage ARGS='collect <run-dir>'` (not a CI gate).
-  pins: sepmo-e0-e1/C-004, C-005, C-006
 - `bump_fork_pin.sh` — bumps the iceberg-rust fork `[patch.crates-io]` pin: rewrites all five
   `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
   contract in [../docs/fork-sync.md](../docs/fork-sync.md).
-- `check_map_md.sh` — the map.md lockstep guard. MAP-PR-GATE-1 (2026-09-20): the unit of
-  "same change" is now the pull request, not the commit. `--base <ref>` is the branch mode the
-  gate runs: the code list is `git diff --name-only --diff-filter=d <ref>...HEAD` and the map
-  list is `git diff --name-only <ref>...HEAD`, so a map that lands in ANY commit of the branch
-  satisfies it, and it exits 1 on a violation. Bare (staged) mode keeps reading
-  `git diff --cached` but downgrades every finding to a `WARNING:` line and exits 0, followed
-  by one line naming ci.yml's `map.md guard` step as the check that holds the rule — a local
-  commit can no longer be blocked mid-rebase, and the PR still cannot merge a missing map.
-  Same rule in both modes: `.rs`/`.py`/`Cargo.toml`/`pyproject.toml` changes (lockfiles
-  excluded; root-level manifests map to `map.md`, not `./map.md`) require the directory's
-  `map.md`. Bare mode is invoked by `.pre-commit-config.yaml` and the hook installed by
-  `make install-hooks`; branch mode is invoked by `make check-map-md` (`BASE ?= origin/main`)
-  and ci.yml's `map.md guard` step on pull requests.
-  pins: map-pr-gate-1/C-009, C-010, C-011, C-012
+- `check_map_md.sh` — the map.md **lockstep** advisory (MAP-PR-GATE-1; a warning since MAP-GOVERNANCE-1). Bare mode reads `git diff --cached`; `--base <ref>` reads `<ref>...HEAD`, so a map that lands in any commit of the branch satisfies it. A `.rs`, `.py`, `Cargo.toml` or `pyproject.toml` change (lockfiles excluded; root-level manifests map to `map.md`) that does not change its directory's `map.md` in the same diff prints a `WARNING:` line. Both modes exit 0: lockstep is review, not a gate, and the map gates are `check_map_size.py` and `sync_map_md.py --check`. Invoked by `.pre-commit-config.yaml`, the hook `make install-hooks` writes, `make check-map-md` and ci.yml's `map.md guard` step. Proofs: `python/repark-parity/tests/test_map_pr_gate_1.py`, `test_map_governance_1.py`.
 - `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one
-  requires the map to change in the same pull request; this one checks what the map actually
+  prints a warning when code changes without its map; this one checks what the map actually
   says) and the SSOT for its rules.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
   (1) **link validity** — every relative markdown link resolves to an existing file or directory
@@ -1059,40 +105,11 @@ repark-parity slice.
   (`map-sync-guard`) and the hook `make install-hooks` writes — measured n=5 **median 0.08 s**
   over 143 maps, well inside the sub-second hook budget. Wired at every path
   `check_map_md.sh` uses, including ci.yml's guards job (owner-granted wiring, 2026-08-23). The
-  document-lifecycle rules it serves are
-  [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
-- `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2, 2026-08-23), over the live
-  bins `task/ledgers/staging/` and `completed/` (a ledger retires into `completed/` in its own
-  departure commit, so CI meets it there; the archive is immutable and read for citations only). Three
-  rules, shape only — the meanings stay in `.agents/skills/sepmo/`: **(A)** every clause row (`| C-NNN |`)
-  has a unique id, exactly one verdict cell (`PROVEN` / `OPEN` / `REJECTED`, bold or a
-  parenthetical allowed — measured: 12 of 32 live verdict cells are annotated) and an evidence
-  cell, and a governed ledger carries a clause table at all; **(B)** a test cites a clause with
-  `pins: <unit>/C-NNN[, C-MMM]` (`<unit>` = the ledger filename without `-ledger.md` and, in the
-  archive, without its date prefix), read from every tracked file under `crates/`, `python/`,
-  `scripts/` — every `PROVEN` clause in staging must be cited, every citation must resolve to a
-  clause in any bin (staging, completed, the archive); a staging ledger whose first 40 lines
-  carry the READING value of the `Path` header field is a reading unit and its clauses are
-  exempt from rule B while rules A and C stay armed (LEDGER-READING-1, 2026-09-09).
-  REVIEW-FIX-10 (2026-09-10) parses the field: the marker matches anywhere in the window
-  except inside a backtick code span, the value is the leading identifier run compared to
-  `READING` exactly, so a prose quote and `READING-FOO` fire rule B while a mid-line
-  `READING.` field stays exempt.
-  pins: review-fix-10/C-001
-  **(C)** the `COVERAGE_ATTESTATION:` block (ref 05's shape) is
-  checked — `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification,
-  `complete:` consistent — and required once a governed ledger has no `OPEN` clause (it is the
-  Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
-  pre-rule floor per ledger, ratchets down only, and a row naming a ledger in no
-  live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a `?`;
-  a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
-  0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
-  grammar guard` step (dual-wired, 2026-08-23). Proofs:
-  `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
-  `EXCEPTIONS` dropped the `sem-0-charter-ledger.md` row on 2026-09-07 when the archive step
-  filed that ledger.
-  TEST-HYGIENE-1 (2026-09-18): the staging ledger map it reads carries each ledger entry once — the three `array-null-1` blocks and the second `fnp-11b` line were deduplicated by a block-identity scan.
-  pins: test-hygiene-1/C-005
+  document-lifecycle rules it serves are [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
+- `check_map_size.py` — the **size ratchet** (MAP-GOVERNANCE-1): a tracked `map.md` stays within 200 lines and 16 KiB. An over-ceiling map is an exact-baseline row in `EXCEPTIONS`: the check holds an excepted map to its row alone (growth or unlowered shrinkage fails); `--update-baselines` lowers rows, raises one only by main's growth since the row was committed (never above the merge-base size), and refuses other growth and new violators. On a push to `main` only the update's merge base is HEAD; the check reds on any run. `EXEMPT` and `EXEMPT_PATTERNS` name lifecycle inventories. Gated in `make ci` and ci.yml. Proofs: `python/repark-parity/tests/test_map_governance_1.py`, `test_map_governance_1_lifecycle.py`.
+- `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2; pin binding moved to sidecars by MAP-GOVERNANCE-1), over the live bins `task/ledgers/staging/` and `completed/`; the archive is read for clause ids and its sidecars for bindings. Three rules, shape only (the meanings stay in `.agents/skills/sepmo/`). **(A)** every clause row (`| C-NNN |`) has a unique id, exactly one verdict cell (`PROVEN` / `OPEN` / `REJECTED`) and an evidence cell. **(B)** a clause is bound by its unit's sidecar `task/ledgers/<bin>/<unit>-pins.md`, which counts only beside its own `<unit>-ledger.md`: one line `C-NNN: <path>[::<name>], ...`, or `C-NNN: none (records)`, which the gate counts and lists. A path is a tracked test file or a file under `scripts/`; a `::name` is a fn, type, module, constant or class that file defines, so a renamed or deleted test goes red. A `pins: <unit>/C-NNN` citation in a source file under `crates/`, `python/` or `scripts/` still binds; one in a `map.md` does not. Every `PROVEN` clause of a staging or completed ledger must be bound at least once; the measured floor per ledger is in `EXCEPTIONS` and ratchets down only. A staging or completed ledger whose first 40 lines carry `**Path:**` valued `READING` outside a code span is a reading unit: rule B does not apply to it. **(C)** the `COVERAGE_ATTESTATION:` block lists `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification, and is required once a governed ledger has no `OPEN` clause; `FINDING:` records carry the ref 05 fields. Two sub-rules were measured and declined (an `OPEN` row carries a `?`; a quantified clause names its enumeration). Exit 0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger grammar guard` step. Proofs: `python/repark-parity/tests/test_dl_2_ledger_grammar.py`, `test_map_governance_1.py`.
+- `migrate_pins_to_sidecars.py` — the one-time, idempotent mover (MAP-GOVERNANCE-1) of `pins:` citations out of maps into each ledger's sidecar `task/ledgers/<bin>/<unit>-pins.md`. A clause binds the union of its citing entries' bindable files and the files its own row names; a row-named test binds by name, and a name that two files define is a hand candidate. `--report hand-candidates` lists the rest; `--check` writes nothing. Proofs: `python/repark-parity/tests/test_map_governance_1.py`, `test_map_governance_1_union.py`.
+- `migrate_pins_text.py` — the map-text half of the migration (MAP-GOVERNANCE-1, split out in fix round 11 for the size ceiling): a map's entries, the cut of a `pins:` citation with its separators, and the disclaimer sentences. Imported by the migration; not run on its own.
 - `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25;
   `history=` must name one bin under `docs/history/`):
   HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the
@@ -1173,41 +190,7 @@ repark-parity slice.
   `make ci` runs it — the DOCS-LINKS-1 card's Home named the Makefile only, which is why the
   ci.yml half arrived later as an orchestrator step. Not wired to the pre-commit hook. Proofs:
   `python/repark-parity/tests/test_dl_6_docs_links.py`.
-- `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
-  its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
-  and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files
-  `completed/` (or the paths given) under a date read from `main`'s first-parent history — never
-  the clock, so any machine produces the same name; a ledger not yet on `main` (the current unit's
-  own, retired in its departure commit) is left for the next pickup when unnamed and refused when
-  named (found by the first real pickup, DL-2); since DL-4, `archive` and a `move` to
-  `completed/` end by running `compact` — merged units leave the slate and closed campaigns
-  leave STATUS for `docs/history/<campaign>/status-record.md` (bin and map created, map rows
-  appended in place — `append_row`, never the archive maps' sort — links rewritten, refused on
-  a dangling one);
-  `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions
-  (`mid-term` / `epic-term`; `archive` is not a `move` target); `check` is the gate. The rewrite
-  is resolution-based — a link changes only if it *resolved* to the moved file — and covers the
-  moved file's own outgoing links and its `map.md` row — the bullet plus every indented line
-  under it, wrapped text and sub-lists alike — which travels to the destination map with its
-  description. Rows travel **whole into the live bins**; into an **archive month map** they are
-  condensed to one line, link plus first sentence (DL-3, owner ruling 2026-08-23 — the record is
-  the ledger, git history keeps the long row, and the month maps say so in their Purpose).
-  Nothing is written unless every rewritten link resolves, and the result is staged
-  as one change. Prose mentions in code spans are not links and are left alone (the basename
-  survives the move, so they still find the file). `check` fails on a `*-ledger.md` under `task/` outside the bins, an
-  archive name whose date prefix disagrees with its month directory, a dead `-ledger.md` link in
-  **any** tracked markdown (`sync_map_md.py` covers maps only), and a `completed/` or `archive/`
-  file changed since the base commit beyond a link repair or a prepended errata note (the frozen
-  and immutable rules; no rename heuristics — a vanished `completed/` ledger must have its dated
-  twin by name; a target carrying whitespace is prose, not a path, and stays in the comparison).
-  Refuses to pass closed when no base commit resolves (`--base`, else the merge-base with
-  `origin/main` / `main`). Reuses `sync_map_md.py`'s link parser. Exit 0 / 1 findings or
-  refused / 2 usage. Reviewed adversarially before its first real run (2026-08-23): the
-  blocker it caught — a map row wrapped onto a line starting with `+ ` read as a nested bullet
-  and split — is pinned in the tests. Wired as `make check-ledgers` (in the `make ci` chain since
-  the DL-1 backfill, the commit that made the tree pass it; and as ci.yml's `ledger lifecycle guard`
-  step with `fetch-depth: 0`, dual-wired 2026-08-23) and `make ledger-archive`. Proofs:
-  `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`.
+- `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1): a ledger's state is its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`), and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files `completed/` (or the paths given) under a date read from `main`'s first-parent history, never the clock; a ledger not yet on `main` is left for the next pickup when unnamed and refused when named. `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions (`mid-term`, `epic-term`). Both `move` and `archive` carry the unit's `<unit>-pins.md` sidecar with its ledger (no map row is made for a sidecar; `archive` files it under the ledger's own date and month), and they move each excepted `check_map_size.py` row by exactly the link growth or shrinkage the plan causes. Both also run `compact`, which takes merged units off the slate and closed campaigns out of STATUS into `docs/history/`. The rewrite is resolution-based: a link changes only if it resolved to the moved file, and the moved file's map row travels whole into a live bin's map or condensed to one line in an archive month map. Nothing is written unless every rewritten link resolves, and the result is staged as one change. `check` is the gate: an out-of-bin `*-ledger.md`, an archive name whose prefix disagrees with its month directory, a dead `-ledger.md` link in any tracked markdown, and a `completed/` or `archive/` file other than a map or a `-pins.md` sidecar changed since the base beyond a link repair or a prepended errata (the frozen and immutable rules). It refuses to pass closed without a base commit. Exit 0 / 1 / 2. Wired as `make check-ledgers` (in `make ci`), ci.yml's `ledger lifecycle guard` step and `make ledger-archive`. Proofs: `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`, `test_map_governance_1_lifecycle.py`.
 - `check_workflows_parse.py` — every GitHub Actions workflow must be parseable YAML. zizmor
   SKIPS files it cannot parse (exits 0 with "no auditable inputs"), so a broken workflow would
   pass the blocking lint gate while GitHub silently never runs it. Wired as a prerequisite of
@@ -1251,10 +234,9 @@ repark-parity slice.
   "PRE-DECLARED for release 1.6 (crate-layout-1-8-2026-10-01.md): Session registers the
   configured database sources in the one federated namespace, the way it registers Iceberg
   catalogs today") in the change that adds the dependency and mounts the providers.
-  pins: c-1/C-001
   **C-2d (2026-10-07):** the row is restored, `normal`, with that reason verbatim, in the
   change that adds `repark-core`'s `repark-connect` dependency and mounts the providers; the
-  gate reads the edge as real. pins: c-2/C-096
+  gate reads the edge as real.
   Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the
@@ -1418,8 +400,6 @@ repark-parity slice.
   `__all__` is cross-checked on the execute leg, so a dynamic export table
   cannot hide the way `install_into` did.
   Proofs: `python/repark-parity/tests/test_ex_0_example_coverage.py`.
-  pins: ex-0-example-drift-gate/C-001, C-003, C-004, C-005, C-007, C-009
-  pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
   (G-8 companion to `check_lib_rs`). DML-A (2026-08-30): `merge/mod.rs` 2131 → 2086.
@@ -1466,13 +446,13 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 - `check_lib_py.py` — **CATALOG-1 (2026-09-26):** exact baselines ratchet down:
   `python/repark/src/repark/spark/session/session_core.py` 2325 → 2293 and
   `python/repark/src/repark/spark/dataframe/writer_readwriter.py` 1029 → 1023 (the facade
-  auto-flip and alias removal). pins: catalog-1/C-011
+  auto-flip and alias removal).
 
 ## I want to...
 
 | I want to... | go to |
 |---|---|
-| Understand why a commit was blocked on map.md | `check_map_md.sh` |
+| Read why a branch was warned about map.md lockstep (a warning, never a block) | `check_map_md.sh` |
 | Find map.md links that no longer resolve | `make check-map-sync` (`sync_map_md.py`) |
 | See which files their directory's map never mentions | `python3 scripts/sync_map_md.py --check --strict` (not armed — measured 24 at 2026-08-22) |
 | Change or inspect the crate tier map | `check_crate_dag.py` (`TIERS` — the SSOT) |
@@ -1563,55 +543,50 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
   (window rules, kernels, and their tests); `check_lib_py.py` records
   `test_fnp_win_1.py` 1209 (critic pins). The CAP-1 mirror rows and counts
   (38/32) move with them. `datetime.rs` keeps 1700 (audit S-2; the month
-  helper lives in `spark_session_window.rs`). pins: fnp-win-1/C-008
+  helper lives in `spark_session_window.rs`).
 - **FNP-WIN-1 (2026-09-15, verification round 2, L-002/L-003):**
   `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1268 → 1338
   (the running-end chaining test); `check_lib_py.py` moves
   `test_fnp_win_1.py` 1209 → 1314 (the `C2-L002`/`C2-L003` pins). No new
   exception row; the CAP-1 mirror rows move with them, counts still 38/32.
-  pins: fnp-win-1/C-004
 - **FNP-WIN-1 (2026-09-15, verification round 2, L-001):**
   `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1338 → 1416
   (provenance recursion plus rule tests); `check_lib_py.py` moves
   `test_fnp_win_1.py` 1314 → 1415 (the `C2-L001` pins). Ratchets only.
-  pins: fnp-win-1/C-003
 - **FNP-WIN-1 (2026-09-15, verification round 2, L-004):**
   `repark-python/src/dataframe.rs` 1019 → 1021 (the two-spec pre-check
   call); `check_lib_py.py` moves `test_fnp_win_1.py` 1415 → 1454 (the
-  `C2-L004` pin). Ratchets only. pins: fnp-win-1/C-004
+  `C2-L004` pin). Ratchets only.
 FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/functions/test_fnp_win_1.py` down 1454 → 1449.
-- **FNP-11B step-4 orchestrator fix-up (2026-09-15, run 17a):** the step-3 row's numeral phrase is reworded to "sits exactly on the default line ceiling". CAP-1's prose pin forbids the literal old default in any carrier `map.md`, so the numeral reds `test_cap_1_prose_and_navigation_name_the_generalized_gate`; the fact is unchanged. pins: fnp-11b/C-007
+- **FNP-11B step-4 orchestrator fix-up (2026-09-15, run 17a):** the step-3 row's numeral phrase is reworded to "sits exactly on the default line ceiling". CAP-1's prose pin forbids the literal old default in any carrier `map.md`, so the numeral reds `test_cap_1_prose_and_navigation_name_the_generalized_gate`; the fact is unchanged.
 - **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** the round added a `check_lib_py`
   EXCEPTIONS row for `check_example_coverage.py` at 1002 lines when the generator names pushed it
   two lines past the default ceiling. Size ceilings only move down (owner ruling Q-15c-4), and a
   new exception row on a **gate script** is ratchet erosion, so the module docstring's EX-1
   closed-set paragraph was reflowed instead: the file is back at the default ceiling and the
-  row is gone. Compact before you except. pins: fnp-gen-1/C-007
+  row is gone. Compact before you except.
 - **FNP-GEN-1 rebase onto #640 (2026-09-16, run 17a):** `check_example_coverage.py`'s
   `BACKLOG_BASELINE` is set to the count the script itself reports (108), not to an arithmetic
   combination of the two sides' values. Both sides of the rebase had moved it; a measured count is
-  exact where an arithmetic one is only usually right. pins: fnp-gen-1/C-007
+  exact where an arithmetic one is only usually right.
 - **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** `check_lib_py.py` ratchets
   `dataframe/writer_readwriter.py` 1101 → 1095 (the by-name projection returns the
   target column list and stops refusing missing frame columns).
-  pins: ice-v3-write-default-1/C-006
   Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
   same column list into its `INSERT OVERWRITE` in two lines instead of three.
-  pins: ice-v3-write-default-1/C-020
 
 IPI-19 + IPI-37 (2026-09-20): `check_lib_py.py` ratchets
 `dataframe/writer_readwriter.py` 1091 → 1077 (both `_by_name_projection`
 bodies collapse into `dataframe/writer_schema.py`), shrink-only.
-pins: ipi-19-56-37-schema-evolution-write/C-001
 
-U11-EDGE-1 round 2 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1017 → 1016 and `check_lib_py.py` ratchets `dataframe/core.py` 3991 → 3981 (the join projection and the unionByName match move into `repark_core::frame_names`), both shrink-only; the CAP-1 mirror moves with them. pins: u11-edge-1/C-019, C-020
+U11-EDGE-1 round 2 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1017 → 1016 and `check_lib_py.py` ratchets `dataframe/core.py` 3991 → 3981 (the join projection and the unionByName match move into `repark_core::frame_names`), both shrink-only; the CAP-1 mirror moves with them.
 
-U11-EDGE-1 round 4 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1016 → 1005 (the `drop` method moves to the new `dataframe_names.rs` binding), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-022
+U11-EDGE-1 round 4 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1016 → 1005 (the `drop` method moves to the new `dataframe_names.rs` binding), shrink-only; the CAP-1 mirror moves with it.
 
-U11-EDGE-1 round 4, V-002 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3981 → 3979 (the join's ambiguity check and requalification paid for by the compressed `drop` bookkeeping), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-023
+U11-EDGE-1 round 4, V-002 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3981 → 3979 (the join's ambiguity check and requalification paid for by the compressed `drop` bookkeeping), shrink-only; the CAP-1 mirror moves with it.
 
-U11-EDGE-1 round 5 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3979 → 3976 (the `select("*")` expansion folds into `_iter_bound_columns`), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-024
+U11-EDGE-1 round 5 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3979 → 3976 (the `select("*")` expansion folds into `_iter_bound_columns`), shrink-only; the CAP-1 mirror moves with it.
 
-U11-EDGE-1 round 6 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3976 → 3973 (two docstrings condensed pay for the attribute-copy route), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-027
+U11-EDGE-1 round 6 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3976 → 3973 (two docstrings condensed pay for the attribute-copy route), shrink-only; the CAP-1 mirror moves with it.
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `check_rust_file_size.py` lowers the `crates/repark-iceberg/src/write/append.rs` exception from 1737 to 1736 lines. The bound's call sites in that file net one line fewer; no ceiling rises.

@@ -49,7 +49,7 @@ The stable prefix states these constraints, verbatim:
 - size ceilings (ratchet down; new Python under 1000 lines; cap-table mirror
   in `test_cap_1_source_file_line_cap.py`)
 - do not change what any gate requires
-- `map.md` lockstep; no amends
+- `map.md` size and sync gates hold (lockstep warns); no amends
 - frozen ledgers in `completed/` and `archive/`
 
 The adapter-specific Authored-By trailer lives in the dynamic identity block so

@@ -26,7 +26,6 @@ every pin is file-backed in `tests.rs`.
   unjudge. DataFusion 54 carries `Plan` and `Diagnostic` errors as strings,
   so the classifier matches RePark's tags and that fixed prefix list on
   text; RePark emits no error prefix of its own, hence the start anchor.
-  pins: store-ts-doors-2/C-001, C-003
 - `tests.rs` — the moved judge and classifier pins plus the fold-6 pins:
   one real-planner pin per DataFusion prefix (each plans failing SQL through
   `plan_statement_with_column_repair` and asserts the classification, so a
@@ -34,7 +33,6 @@ every pin is file-backed in `tests.rs`.
   `table function … not found` Failed / `table … not found` Unresolved
   boundary, mid-string tag negatives pinning the anchors, and the demoted
   nullary arm typing as its STRING column.
-  pins: store-ts-doors-2/C-001, C-003
 
 ## Pointers
 

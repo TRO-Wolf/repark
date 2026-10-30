@@ -29,7 +29,6 @@ disk-verified overwrite-vs-concurrent-append interleaves. One JSON document, rea
   carries `mode`, `setup`, `statement`, `rows` and `snapshot_operations` (the dynamic
   empty cell records no new snapshot). Read by
   `python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py`, which replays every cell.
-  pins: ice-dyn-overwrite-1/C-019.
 
 ## Pointers
 

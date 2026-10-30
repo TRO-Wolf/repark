@@ -23,7 +23,8 @@ On any conflict the home wins, and above every home is
 - Exit green: **R2** in [SKILL.md](SKILL.md) and [references/04-actor.md](references/04-actor.md);
   the [`green_commands`](binding-manifest.md) row names the gates.
 - Pin **every** clause the unit touches: [docs/testing.md](../../../docs/testing.md) "Pinning a
-  charter clause" — the clause table and the `pins: <unit>/C-NNN` citation are rules A and B of
+  charter clause" — the clause table and the unit's pin sidecar
+  (`task/ledgers/<bin>/<unit>-pins.md`) are rules A and B of
   [`check_ledger_grammar.py`](../../../scripts/check_ledger_grammar.py) (`make check-ledger-grammar`).
 - Log a Self Logic Review before each state-changing step:
   [references/03-self-logic-review.md](references/03-self-logic-review.md) (D3).
@@ -38,7 +39,8 @@ On any conflict the home wins, and above every home is
 
 ## 5. Ledger, pins, attestation
 
-- The clause table (rule A), the `pins:` citations (rule B) and the `COVERAGE_ATTESTATION` (rule
+- The clause table (rule A), the pin bindings (rule B: the sidecar, or a `pins:` citation in
+  test or script source) and the `COVERAGE_ATTESTATION` (rule
   C — the Critic's artifact, due once no clause is `OPEN`) are all shaped by
   [`check_ledger_grammar.py`](../../../scripts/check_ledger_grammar.py); the meanings live in
   [references/05-critic.md](references/05-critic.md). The ledger bins are

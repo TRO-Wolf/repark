@@ -22,7 +22,7 @@ fold moves elsewhere.
   `refuse_unwritten_star_columns` reads a derived source's written select-list names (DataFusion
   folds an unquoted alias, so its schema cannot tell `ID` from `id`) and refuses Spark's
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the suggestions sorted by name, then by the
-  case-insensitive edit distance (fix round 5, V-002). pins: u8-write-sql/C-030, C-033
+  case-insensitive edit distance (fix round 5, V-002).
 - `render.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `cannot_find_data` and `extra_struct_fields` moved to the seam
   (`struct_pairing.rs`), their one home.
 - `render.rs` — the Spark text of every refusal the fold raises, and Spark's two renderings
@@ -38,10 +38,9 @@ fold moves elsewhere.
   the pretty values, the struct-by-name leaf rules, the fold of several assignments into one
   rebuild, the combined refusal text, and a top-level struct value folded through the
   by-name check (missing, extra, deep missing, reordered), and fix round 4's exact-case refusal
-  and the `NOT NULL` rebuild. pins: u8-write-sql/C-027, C-028, C-029, C-030, C-032, C-033
+  and the `NOT NULL` rebuild.
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** doubled-quote and
   backslash-quote rerender pins plus the doubled refusal-text pins.
-  pins: string-literal-escape-1/C-012
 
 ## Pointers
 

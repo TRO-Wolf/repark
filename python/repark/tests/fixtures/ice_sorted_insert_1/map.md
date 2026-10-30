@@ -7,7 +7,7 @@ canonical `/tmp/repark-ice-sorted-insert-1/wh` path (`.crc` sidecars skipped).
 The pin test copies the warehouse back to its canonical path before
 `CALL system.register_table`, so the absolute file URIs in the manifests stay
 valid. The recorder replaces only the table directory on `--rewrite` and
-keeps this map. pins: ice-sorted-insert-1/C-003, C-004
+keeps this map.
 
 ## Contents
 

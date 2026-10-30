@@ -2,7 +2,7 @@
 
 ICE-CATALOG-SESSION-1 S9 (2026-09-20): the identity collectors' scratch ref and `survivor_sql`'s rewrite ref quote through the split-aware scratch quoter — a 3-part MERGE scratch name renders as three segments, never one dotted identifier (fixes the count_fold reds).
 
-ICE-MIXED-CASE-1 (2026-09-17): predicate DML delegates column resolution to the shared scope helpers so UPDATE/DELETE WHERE folds case exactly like the SELECT door. pins: ice-mixed-case-1/C-003
+ICE-MIXED-CASE-1 (2026-09-17): predicate DML delegates column resolution to the shared scope helpers so UPDATE/DELETE WHERE folds case exactly like the SELECT door.
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
 
@@ -38,21 +38,19 @@ works, so the attribute is gone rather than documented.
   values. Before, the raw nanosecond value reached U-3's guard (`store of column v would
   coarsen a timestamp … outside the narrowing kernel`) while the same SET without `WHERE`,
   and with a written `CAST(… AS TIMESTAMP)`, stored the floor. U-3's guard stays.
-  pins: ice-tsns-type-planner-1/C-019
 - `lineage.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `update_projection_sql` wraps an
   assigned value whose target is `Timestamp(µs, None)` in the `ntz_store` wall-cast UDF
   call, so an identity UPDATE stores the session-zone wall; every other target keeps
-  the raw projection. pins: ntz-1/C-006
+  the raw projection.
 - `lineage.rs` — **ICE-TSTZNS-WALL-1 (2026-10-10):** `update_projection_sql` asks
   `ntz_store::store_kernel_sql`, so an assigned value whose target is `timestamptz_ns` goes
   through the zoned kernel in both row-level modes. Reason and scope: the `ntz_store.rs` row
-  of the parent directory map. pins: ice-tstzns-wall-1/C-003
+  of the parent directory map.
 - `lineage.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):** `update_projection_sql` asks
   `ntz_store::wall_cast_sql` for the wrap, so an assigned value whose target is
   `Timestamp(ns, None)` goes through the nanosecond wall kernel as a microsecond one goes
   through the NTZ kernel. Before, an identity UPDATE of a `TIMESTAMP` into a `timestamp_ns`
   column stored the instant's UTC wall. Reason and scope: the `ntz_store.rs` row of the parent directory map.
-  pins: ice-tsns-merge-wall-1/C-004
 - `residual.rs` — **RP-7 (2026-09-02):** `identity_scan_residual`, the key-bounds residual the
   identity DML scratch scan carries. Re-parses `selection_sql` (the spec carries SQL, not an AST)
   and matches only a POSITIVE uncorrelated `IN` or a positive `EXISTS` whose correlation is one
@@ -63,7 +61,6 @@ works, so the attribute is gone rather than documented.
   shadowed `s.id = s.id` is uncorrelated and deletes everything. Bounds come from `scan_prune::residual_bounds_predicate`, the same helper PERF-04
   gave MERGE. Extracted so `predicate_dml.rs` stays under its exact size baseline, which
   ratcheted 1164 → 1142 in the same change.
-  pins: rp-7-f18-repin/C-005
 - `plain.rs` — **RP-9 r2 (2026-09-03):** `try_allowed_plain_identity` takes a three-part
   Iceberg `DELETE` whose `WHERE` is a scalar comparison (not an `IN` list, not a
   subquery, not a branch selector `catalog.ns.table.branch_*`), so the Spark and ANSI
@@ -73,7 +70,7 @@ works, so the attribute is gone rather than documented.
   four-part `table.branch_*` names, and names whose catalog is not in the session
   registry (Spark rewrites a branch DELETE onto `datafusion.public.<temp>`) stay on
   the fork `TableProvider`.
-  pins: rp-9-repin-f23/C-005 (`plain.rs::try_allowed_plain_identity` refuses with a plan error on an invalid target namespace; its `# Errors` doc is the one line the clippy `missing_errors_doc` gate forces on a `pub fn` returning `Result`)
+  (`plain.rs::try_allowed_plain_identity` refuses with a plan error on an invalid target namespace; its `# Errors` doc is the one line the clippy `missing_errors_doc` gate forces on a `pub fn` returning `Result`)
   **ICE-LIST-NULL-2 (2026-09-19):** `selection_refs_non_primitive` parses the claimed
   selection and resolves every bare or target-qualified column against the table's
   Iceberg schema through the shared `conflict_filter::top_level_field` rule; any
@@ -81,7 +78,6 @@ works, so the attribute is gone rather than documented.
   is the shared async seat both doors call after loading the target (a failed load
   answers false, so the statement keeps the old loud path). Primitive-only
   selections stay on the identity path with no behaviour or performance change.
-  pins: ice-list-null-2/C-001, C-003
 - `subquery_where.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling
   106 (a)):** the one home of the G3-E8 refusal for the ANSI door and `repark.sql()`.
   `refuse_dml_subquery_predicate(statement, identity_forms_execute)` refuses a `DELETE` or
@@ -93,25 +89,20 @@ works, so the attribute is gone rather than documented.
   its comments; it reuses this module's subquery probe (`expression_contains_subquery`)
   where the guard had its own. The Spark SQL door keeps its copy in
   `repark-spark/src/normalize.rs` (ruling Q7 of round 2; a later tidy unit folds it).
-  pins: repark-sql-update-subquery-where-1/C-007
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 - `plain.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `selection_refs_non_primitive` becomes
   `selection_refs_needs_fork`: a `uuid` column in the `WHERE` joins the non-primitive ones on
   the fork path, and `plain_identity_needs_fork` also sends an UPDATE that assigns a `uuid`
   column there, so uuid text parses through the fork's uuid-as-string DML.
-  pins: u9-types-1/C-010
   **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `carries_uuid` looks through struct, list and
   map children, so an UPDATE assigning a `STRUCT<u: uuid>` column (whole or one field) takes
   the fork path too, where it was planned as a UNION of stored bytes and presented text.
-  pins: u9-types-1/C-016
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** selections render
   through `sql_text::render_for_reparse` so string values re-parse exactly.
-  pins: string-literal-escape-1/C-010
 - `plain.rs` (branch) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `split_branch_parts`
   reads a four-part `<catalog>.<ns>.<table>.branch_<name>` DML target into the table plus the
   ref, which lands on `PredicateDmlSpec.branch`; the executor scans that ref's snapshot and
   commits `to_branch`, so an owned identity DELETE / UPDATE can serve a branch.
-  pins: ice-session-write-conf-1/C-038
 - `plain.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the UPDATE allow-list moves
   here from `predicate_dml.rs` (which re-exports both entry points, so no caller moves) and
   (the moved bodies shed their doc comments per the owner ban and carry
@@ -120,7 +111,6 @@ works, so the attribute is gone rather than documented.
   `try_allowed_plain_update` is `try_allowed_update_in` with the plain scalar-comparison
   predicate instead of the uncorrelated `IN` hole (`allowed_update_with` is the shared body),
   so an owned identity UPDATE can serve a plain `UPDATE … WHERE col = v`.
-  pins: ice-session-write-conf-1/C-038
 - `plain.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
   `try_allowed_plain_identity_or_update` is the ONE rule both doors ask — plain identity
   DELETE first, then the plain UPDATE allow-list. It exists because the two doors had drifted:
@@ -128,20 +118,17 @@ works, so the attribute is gone rather than documented.
   codec-only conf could change a plain UPDATE's committed file count), and the native door
   never consulted it at all (so `repark.sql`'s UPDATE committed unstamped where the facade
   stamped). Neither door reads the session conf to decide ownership now.
-  pins: ice-session-write-conf-1/C-045, C-046
 - `cow_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
   `commit_identity_update_cow` drives ONE rolling writer. Its rewrite stream is
   `survivors UNION ALL new-values`, and the parallel driver opens a file per sink that
   receives a batch, so the plan's batch count — not the data — was choosing the committed
   layout: two data files where Spark and the unowned route both write one. The rolling writer
   still splits on the target file size, so only the plan-shaped fan-out is gone.
-  pins: ice-session-write-conf-1/C-045
 - `mor_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the merge-on-read
   arms of the identity DELETE and UPDATE (`commit_identity_delete_mor` /
   `commit_identity_update_mor`), split out of `predicate_dml.rs` along its declared seam
   (operation-specific execution) when the round threaded the resolved staging to the
   row-delta commit; the file-size baseline ratchets down with the split.
-  pins: ice-session-write-conf-1/C-040
 - `cow_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):**
   `commit_identity_cow` / `commit_identity_update_cow`, split out of
   `predicate_dml.rs` so the parent stays under its exact size baseline; the COW
@@ -154,7 +141,7 @@ works, so the attribute is gone rather than documented.
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `cow_commit.rs` line 64 builds its `WriteConcurrency` from the session (`concurrency_from_ctx(ctx).with_max_concurrent_files(1)`), so the copy-on-write UPDATE and MERGE writers keep the ordered-input bound (PP-01). The bare `UPDATE t SET ...` with no `WHERE` takes the fork's plain path (`plain_identity_needs_fork`), whose sort is charged to the pool and never reaches the PP-01 seam; `UPDATE ... WHERE` takes the RePark-owned identity path and does reach it.
 
-**RP-POSDEL-BATCH-2 (2026-10-28, PR #1203):** `cow_commit.rs` — `commit_identity_update_cow` and `commit_identity_cow` read `position_delete_batch_rows(table.metadata().properties())` as their first fallible step and pass the bound to `register_identity_table`, so a table carrying `0` refuses the copy-on-write identity `DELETE` and `UPDATE` before any scratch table is registered. The fork's copy-on-write path does not read the property; this is a recorded behaviour change. The `DELETE` refusal is door-pinned; the `UPDATE` refusal is measured through the door at the head and not pinned (ledger C-015). pins: rp-posdel-batch-2/C-011
+**RP-POSDEL-BATCH-2 (2026-10-28, PR #1203):** `cow_commit.rs` — `commit_identity_update_cow` and `commit_identity_cow` read `position_delete_batch_rows(table.metadata().properties())` as their first fallible step and pass the bound to `register_identity_table`, so a table carrying `0` refuses the copy-on-write identity `DELETE` and `UPDATE` before any scratch table is registered. The fork's copy-on-write path does not read the property; this is a recorded behaviour change. The `DELETE` refusal is door-pinned; the `UPDATE` refusal is measured through the door at the head and not pinned (ledger C-015).
 
 ## Pointers
 

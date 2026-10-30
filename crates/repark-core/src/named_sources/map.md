@@ -19,11 +19,10 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   registered over a source name refuses as a duplicate; an unknown handle refuses naming
   the declared sources. Config fixtures are forced temp files, so no pin reads the
   ambient environment.
-  pins: cfg-2/C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
 
   **SOURCE-URL-REDACT-1 (2026-10-06):** `sources_listing_masks_a_password_inside_a_url_shaped_value`: a source's
   `url` and keyword `dsn` list with the password masked and the host and user kept, and the
-  `SourceSpec` `Debug` carries no password. pins: source-url-redact-1/C-007
+  `SourceSpec` `Debug` carries no password.
   **C-2d (2026-10-07):** the three CFG-2 Postgres refusal pins are retired by name and
   replaced by mount pins: `configured_source_select_refuses_with_connector_message` (C-003)
   by `configured_source_select_resolves_through_the_postgres_mount` (a source without `user`
@@ -33,10 +32,9 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   `CONNECT-DECL-pg-ddl`; a SQL Server source keeps `1.10`); `source_ping_refuses_until_connector`
   (C-005) by `source_ping_resolves_through_the_mount` (mounted and unmounted sources). New:
   `mounted_postgres_sources_are_read_only_catalogs`. Every other CFG-2 assertion is unchanged.
-  pins: c-2/C-097, C-099, C-101, C-104
   **Fold 1, N2:** `configured_source_ddl_refuses_as_read_only` adds `CREATE SCHEMA`,
   `CREATE SCHEMA IF NOT EXISTS` and `CREATE DATABASE`, each `IF NOT EXISTS` or not, naming
-  `company_db.fresh`. pins: c-2/C-112
+  `company_db.fresh`.
   **Residual of N2:** three pins, `bare_create_schema_if_not_exists_refuses_under_a_mounted_default_catalog`,
   `bare_create_schema_refuses_under_a_mounted_default_catalog` and
   `bare_drop_schema_refuses_under_a_mounted_default_catalog`, run a bare name after
@@ -46,17 +44,17 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   holds `CREATE SCHEMA datafusion.x`. The control
   `bare_schema_ddl_succeeds_under_the_ordinary_default_catalog` keeps the ordinary default
   creating and dropping a schema. Corrected 2026-10-07: the round-1 text refused bare
-  `CREATE DATABASE`, which the verifier measured as wrong. pins: c-2/C-118
+  `CREATE DATABASE`, which the verifier measured as wrong.
   **Fold 1, N6:** three pins for the verifier's surviving mutations.
   `a_source_named_like_an_engine_catalog_refuses_as_duplicate` covers a catalog registered on
   the `SessionContext` alone (V1). `a_mounted_schema_refuses_table_registration_as_read_only`
   covers `register_table` and `deregister_table` on a mounted schema (V3).
   `sources_listing_masks_a_percent_encoded_url_password_key` covers a userinfo token and a
-  `pass%77ord` query key, which only `redact_source_prop` decodes (V4). pins: c-2/C-113
+  `pass%77ord` query key, which only `redact_source_prop` decodes (V4).
   **Fold 1, N5:** `catalog_apis_resolve_a_mounted_source_instead_of_an_unknown_catalog`:
   `table_exists("company_db.public.t")` resolves through the mount (a source without `user`
   answers its settings refusal), and `list_iceberg_table_names` under the source refuses with
-  the read-only text, never `unknown catalog`. pins: c-2/C-115
+  the read-only text, never `unknown catalog`.
 ## Pointers
 
 - Up: [../map.md](../map.md)

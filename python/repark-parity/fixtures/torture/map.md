@@ -89,7 +89,7 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
   real-looking key-id shape (`AKIA[0-9A-Z]{16}` is forbidden); `session_token` is the one
   nullable credential column (every 7th row null). `id` is int64, the rest string, so
   Parquet and CSV share one declared schema (measured: repark's CSV inference answers
-  `id`→int64, all text→string, all-nullable). pins: torture-1/C-017
+  `id`→int64, all text→string, all-nullable).
 - `v3_dv.py` — the `v3_dv` family (D-2, D-5, step 4): a **live-Spark-only** generator —
   `generate` refuses loud naming `REPARK_PARITY_LIVE` unless it is `1`, because only Spark
   writes the Puffin deletion vectors the family exists to exercise. It builds (or adopts)
@@ -103,7 +103,6 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
   `V3DvResult`, not a `FamilyOutput`, and stays OUT of `FAMILIES`: it produces an Iceberg
   table, not a Parquet+CSV pair, and Spark's UUID file names and timestamps are not
   byte-deterministic, so the determinism pins stay scoped to the file families.
-  pins: torture-1/C-024, C-029
 - `data/` — the committed-data exceptions: the ≤ 1 MB checked-in `v3_dv` table
   instance (D-5) the JVM-free cells read, and ICE-SPARK-TABLE-1's 36.6 KB
   Spark-written v2 copy-on-write table the facade adoption cells read. See

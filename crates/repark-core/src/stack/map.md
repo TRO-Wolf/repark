@@ -35,16 +35,12 @@ This file closes when PERF-UNPIVOT-1 merges.
   polls the input stream batch-by-batch (no partition `collect`). Labeled mode
   gathers each cell by its `cells` index map and coerces to Utf8 with the
   engine's own cast options; `exec::labeled` is the string-identity pin.
-  pins: perf-unpivot-1/C-006, C-007
-  pins: perf-unpivot-1/C-014, C-017
 - `planner.rs` — `StackQueryPlanner` + extension planner.
 - `rewrite.rs` — `StackRewrite` analyzer: `stack(...)` projection → Unpivot.
 - `udf.rs` — marker `stack` ScalarUDF (never executed). IPI-51 PR2: the
   `WRONG_NUM_ARGS` / `DATATYPE_MISMATCH` texts render through
   `repark_common::spark_error`, byte-identical.
 - `tests.rs` — reshape, pad, passthrough, type-mismatch pins.
-
-pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
 ## Pointers
 

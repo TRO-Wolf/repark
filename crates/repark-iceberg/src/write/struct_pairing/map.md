@@ -21,20 +21,17 @@ ICE-STRUCT-PAIRING-1 (2026-10-14, parity row R-016).
   `the_positional_overwrite_cast_s2_refuses_an_unpaired_struct_with_hint_h1` drives
   `positional_map_overwrite_batch` (S2) with and without a column list. S3 is pinned at the
   Spark door by `repark-spark/tests/struct_pairing_doors.rs`.
-  pins: ice-struct-pairing-1/C-001, C-002, C-003, C-006, C-007, C-009, C-010, C-013
   **Build round 3 (2026-10-14, ruling 56(a)):** `every_paired_leaf_is_judged_as_a_flat_column_is`
   holds the guard and the leaf judge to Spark's text: an in-order STRING leaf into BIGINT, an INT
   into a STRUCT two deep (`"STRUCT<A:INT,B:INT>"`) on both batch entries and inside a list, a
   widened leaf passing, and a surplus field answering `EXTRA_STRUCT_FIELDS` by position.
-  pins: ice-struct-pairing-1/C-024, C-026
   **Build round 3 (2026-10-14, ruling 55(a) F-03):**
   `case_insensitive_names_match_as_java_equals_ignore_case` pins É/é, ẞ/ß both ways, İ/i, ᾀ/ᾈ and
   ſ/s matching and ß/SS, é/e and ſ/ss not, then pairs É into é by name and refuses ß from SS with
-  `CANNOT_FIND_DATA`. pins: ice-struct-pairing-1/C-028
+  `CANNOT_FIND_DATA`.
   **Build round 3 (2026-10-14, ruling 55(a) F-07):**
   `case_twins_are_ambiguous_by_name_unless_the_session_is_case_sensitive` pins
   `AMBIGUOUS_COLUMN_NAME` for case twins by name and `EXTRA_STRUCT_FIELDS` for the same twins
   case-sensitively (kills verifier 1's mutant O1, the ambiguity check off).
-  pins: ice-struct-pairing-1/C-032
 
 Up: [../map.md](../map.md).

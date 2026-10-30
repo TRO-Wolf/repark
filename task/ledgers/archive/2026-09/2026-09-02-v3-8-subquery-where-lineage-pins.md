@@ -1,0 +1,5 @@
+# v3-8-subquery-where-lineage pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: python/repark/tests/iceberg/test_v3_live_oracle.py
+C-002: crates/repark-spark/src/tests/v3_cow.rs, crates/repark-spark/src/tests/v3_subquery_dml.rs::V3_8_UPDATE_FILES, crates/repark-spark/src/tests/v3_subquery_dml.rs::assert_adopted, crates/repark-spark/src/tests/v3_subquery_dml.rs::assert_created, python/repark/tests/iceberg/test_v3_cow_dml.py, python/repark/tests/iceberg/test_v3_live_oracle.py, scripts/check_rust_file_size.py
+C-003: python/repark-parity/tests/test_plan_1_northstar_fnp_sequence.py, python/repark-parity/tests/test_v3r_1_rulings.py, python/repark/tests/iceberg/test_v3_live_oracle.py

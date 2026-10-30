@@ -3,7 +3,6 @@
 ## Purpose
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 The Spark-compatible function registry **and the Spark expression-semantics layer** (crate-DAG
 tier 3, a capability leaf with no internal deps — the doors consume it, never the reverse): wire
@@ -28,7 +27,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `group_avg_decimal64_stays_decimal_14_6_i64`,
   `group_avg_decimal256_stays_decimal_14_6_i256`.
   FN-FIX-1 unit test: `percentile_approx_sql_aliases_resolve` pins Spark SQL aliases
-  on the discrete UDAF. pins: fn-fix-1-registry-rows/C-002
+  on the discrete UDAF.
   **PERF-AGG-AVG-1 (2026-09-05):** the UDAF now also serves grouped aggregation
   through `src/avg_groups.rs` (`groups_accumulator_supported` /
   `create_groups_accumulator` over Float64 and Decimal32/64/128/256, `try_avg`
@@ -36,7 +35,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   BACKLOG `AVG-DEC-SUMWRAP-1`); the `Accumulator` retract arms are untouched for
   window frames. The 300 ms isolated cost on `avg(l_quantity) GROUP BY l_partkey` (200 k
   groups) was one boxed accumulator per group; the groups path keeps one sum and one
-  count vector. pins: perf-agg-avg-1/C-001, C-002
+  count vector.
 
 - `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`
   + `iceberg` (**ICE-SYSTEM-FUNCTIONS-1**, 2026-09-20: the external fork crate for the
@@ -44,7 +43,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   DataFusion-native: speaks `datafusion::error::Result`, so **no** `repark-core` dep.
   **C-2d fold 1 (2026-10-07):** one internal dep, `repark-common` (`normal`), for
   `zone_horizon::proxy_year`, which the string → `TIMESTAMP` literal shares with the engine's
-  Postgres wall-clock placement. pins: c-2/C-109
+  Postgres wall-clock placement.
   **r24 G10 / PERF-10:** crate-level `criterion` 0.8 dev-dep + `[[bench]] ratio_string_datetime`
   (never `[workspace.dependencies]`). See [benches/map.md](benches/map.md).
 - `benches/` — PERF-10 ratio micro-benches (`date_format`/`to_char`, `substring`/`upper`).
@@ -55,10 +54,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `task/fn-gt1-ledger.md`.
 - `src/spark_log.rs` — **SEM-1 (2026-08-31):** Spark-door `log` (natural / `log(base, expr)`,
   null-guard both arities). Overwrites DataFusion base-10 from `register_all`.
-  pins: sem-1-spark-answer-parity/C-004
 - `src/spark_log1p.rs` — **LOG1P-1 (2026-09-02):** `log1p` / `expm1` (`unary` +
   `ln_1p` / `exp_m1`; `log1p` `nullif` on `x <= -1`) on both SQL doors.
-  pins: log1p-1-precise-kernels/C-002
 - `src/spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (NULL-in NULL-out INT; idx ignore-value; UTF-16 start;
   Java find-loop for empty-after-non-empty; positional mid-surrogate probe
@@ -71,8 +68,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/bitmap_agg.rs` (+ `src/bitmap_agg/`) — **FNP-6D (2026-09-15, round 2):** Spark
   bitmap aggregate UDAFs. `[u8; 4096]` plus grouped `Vec<u8>` of `n * 4096`. Or/and
   accept any-length BINARY (and Utf8 bytes from `concat`) zero-padded or truncated
-  to 4096. Sliding frames use WIN-SLIDE-1 rescan. pins: fnp-6d/C-001, C-006, C-011,
-  C-015, C-016, C-017
+  to 4096. Sliding frames use WIN-SLIDE-1 rescan.
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **FN-FIX-1** `percentile_approx` / `approx_percentile` discrete UDAF
   (`percentile_approx_udaf` with alias); `approx_percentile_cont` stays the t-digest name for ML +
@@ -84,14 +80,13 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   on every context via the Spark door's `SessionExtension` in `repark-spark`) + DEC-8
   `register_spark_decimal_planner` from `register_all` + the shared `shim_udf_boilerplate!`
   macro. Error conversion from `DataFusionError` happens one layer up in `repark-core` (this
-  crate stays DataFusion-native). pins: types-1/C-007
+  crate stays DataFusion-native).
 - `src/lambda_rebind.rs` — **FNP-8 (2026-09-07):**
   `analyzer_rules_with_higher_order_preparation` inserts the scoped HOF rule immediately before
   the first default `type_coercion` rule and refuses a vector without that insertion point.
-  pins: fnp-8/C-003, C-004
   **FNP-8-REVIEW round 2 (2026-09-07):** both HOF lineage walks resolve through every
   plan node a literal reaches; detail lives with the module in
-  [`src/map.md`](src/map.md). pins: fnp-8-review/C-009, C-010
+  [`src/map.md`](src/map.md).
 - `src/generator.rs` — **FNP-GEN-1 step 2 (2026-09-16):** the `posexplode` /
   `posexplode_outer` / `inline` / `inline_outer` placeholder UDFs plus the `GeneratorRewrite`
   analyzer rule that turns a `Projection` carrying them into `Unnest`-based plans
@@ -99,7 +94,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   the values, struct fields via the null-propagating `__repark_gen_field` UDF, outer
   variants via a CASE + `preserve_nulls` one-NULL guard, select-list position and
   one-generator/alias-arity/aggregate-input refusals enforced in the rule); registered
-  in `analyzer_rules()` after the closing `TypeCoercion`. pins: fnp-gen-1/C-001, C-002
+  in `analyzer_rules()` after the closing `TypeCoercion`.
 - `src/decimal_precision.rs` — **V-2 / DEC U3+U4a:** Spark `DecimalPrecision` rule (integer-literal
   min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` formula and DEC-8
   plan-refuse live in `decimal_spark.rs`. Ledger: `task/v2-dec-u3u4-ledger.md`.
@@ -112,7 +107,6 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   Planner rewrite requires a typed Int32/Int64 operand (column or CAST); pure-literal
   arithmetic stays Int64. Planned UDF calls alias to the original BinaryExpr name.
   `install_integer_overflow` is the ANSI-door hook.
-  pins: f-y10-1-int-overflow/C-001, C-002, C-003
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
   (`allowLocalFilesystemDDL` for SEC-02); analyzer rule `ArrayCardinalityCeiling`.
@@ -134,7 +128,6 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   overwrite; both share `datetime::invoke_local_dates`. **DATE-FN-1 (2026-09-04):**
   registered `date` and `unix_timestamp`. Ledgers:
   `task/tz5-cast-seconds-ledger.md`, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
-  pins: date-fn-1-spark-date-spelling/C-002
 - `src/timestamp_type.rs` — **Q10:** `spark.sql.timestampType` ConfigExtension
   (default `TIMESTAMP_LTZ`) + parse/from-map/from-options. Sibling of
   `SparkAnsiConfig`. Invalid value names both legal tokens.
@@ -145,7 +138,6 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `spark.sql.caseSensitive` ConfigExtension (default FALSE) + builder/runtime
   parsers + `with_spark_case_sensitive_config` + the options accessor the
   BY NAME resolver reads. Sibling of `src/ansi.rs`.
-  pins: ice-rtas-byname-1/C-010
 - `src/analyzer.rs` — `SparkExprSemantics`: int `/` → double, div/mod-by-zero follows
   `spark.sql.ansi.enabled` (raise when TRUE, `nullif` NULL when false), 0-based `[]` array
   subscript, the planner-embedded-`substr` swap, and **TZ-5**
@@ -166,7 +158,6 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   beside `shuffle.rs`, `map_from_entries.rs`, and `url/java_uri.rs`.
 - `src/try_invert/` — FNP-7a/7b scalar `try_*` kernels. `try_element_at` aliases `element_at`.
   `try_avg` is a distinct UDAF (not an `avg` alias). INTERVAL `try_avg` refuses `[FNP-11]`.
-  pins: fnp-7-try-inversions/C-001, C-013, C-018
 - `src/collection.rs` — Spark `element_at` (arrays + maps) + the embedded `__repark_array_get__`
   subscript UDF + **`spark_get_item_udf` / `__repark_get_item__`** (polymorphic array 0-based or
   map-by-key for facade `Column.__getitem__` non-int/non-str keys).
@@ -179,12 +170,11 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   zoneless values localize in the session zone, while zone-suffixed values remain instants.
   **Q10:** NTZ opt-in arm of the CAST/literal rewrite.
   `to_timestamp` is `Stable` (Spark answers it, so time travel plans it).
-  pins: ice-tt-resolve-1/C-003
 - `src/spark_string_timestamp.rs` (+ `src/spark_string_timestamp/`) — **CAST-TS-STRING-1
   (2026-09-19):** Spark's `stringToTimestamp` kernel behind every string → `TIMESTAMP` (LTZ)
   site: `CAST`, `TRY_CAST`, `Column.cast`, one-argument `to_timestamp` / `to_timestamp_ltz` /
   `try_to_timestamp`, and time travel (which evaluates `CAST`). `to_timestamp_ntz` keeps
-  DataFusion's parse. Tests in `src/tests/`. pins: cast-ts-string-1/C-001
+  DataFusion's parse. Tests in `src/tests/`.
 - `src/datetime.rs` — the Spark calendar date shim: extractors `year`/`month`/`dayofmonth`/`day`/
   `dayofyear`/`quarter`/`weekofyear`/`yearofweek`/`dayofweek`/`weekday`, **hour/minute/second**
   (Time+Timestamp; X1-octo C3), `make_date`, and the WG2 calendar-math shims `add_months`
@@ -205,7 +195,6 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **Round 5 (2026-09-05):** negative years pad digits after the sign (`-0499`, `-0002`),
   `yy` is `abs(year) % 100` (`-499` → `99`); the arm moves to `src/spark_year_pad.rs` and
   `datetime.rs` ratchets 1709→1700.
-  pins: types-1/C-006
 - `src/expr_fn.rs` — logical-`Expr` builders for date functions, including `weekday`, that embed
   UDF instances for facade columns; `date_add`/`last_day` and the regexp/split builders share the
   same kernels registered by the SQL door.

@@ -13,12 +13,12 @@ pins.
 - [test_acceptance_commit_resolver.py](test_acceptance_commit_resolver.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): leg U's resolver, AWS-free on every pull request: two agreeing reads resolve, a late landing is waited for, a failed read is "unresolved" (never "not committed"), reads that never agree are unresolved at the deadline, the held metadata file names exactly one attempt, and a missing status-check property is named.
 - [test_acceptance_cross_read_local.py](test_acceptance_cross_read_local.py) — Local cross-read leg: live Spark reads RePark-written acceptance tables.
 - [test_acceptance_helpers.py](test_acceptance_helpers.py) — AWS-free unit tests for the acceptance-harness helpers — these run EVERYWHERE (no gate).
-- [test_acceptance_ephemeral_runs.py](test_acceptance_ephemeral_runs.py) — AWS-EPHEMERAL-RUNS-1 (2026-10-24): AWS-free pins for the run-and-leg-owned table prefix `testing_r<run_id>a<attempt>_<leg>_` (and the S3 path-write object stem) and the source guard over every leg, and (step 4) the Spark REST catalog block for S3 Tables. an AST walk that fails on any non-docstring string constant starting `test` (a bare `"test"` only as a list element) and on any `+` with a string-constant operand in a leg file, the run-attempt variable, and the REST block's partition refusal. The literal guard catches a string constant starting `test` and any `+` with a string-constant operand; it does not catch `join`, `%`, nested f-string expressions, slicing or run-time composition, which the `run_table_prefix()` presence check and review hold. A static check that the S3 Tables cross-read gives Spark the REST block and RePark its own. pins: aws-ephemeral-runs-1/C-001, C-002, C-003, C-010, C-019, C-023, C-026
-- [test_acceptance_cross_read_types.py](test_acceptance_cross_read_types.py) — Pure pins for the nanosecond check over nested Iceberg type nodes: a dict `type` value is searched, not hashed (2026-10-24, found by the first dispatched run). pins: aws-ephemeral-runs-1/C-031
+- [test_acceptance_ephemeral_runs.py](test_acceptance_ephemeral_runs.py) — AWS-EPHEMERAL-RUNS-1 (2026-10-24): AWS-free pins for the run-and-leg-owned table prefix `testing_r<run_id>a<attempt>_<leg>_` (and the S3 path-write object stem) and the source guard over every leg, and (step 4) the Spark REST catalog block for S3 Tables. an AST walk that fails on any non-docstring string constant starting `test` (a bare `"test"` only as a list element) and on any `+` with a string-constant operand in a leg file, the run-attempt variable, and the REST block's partition refusal. The literal guard catches a string constant starting `test` and any `+` with a string-constant operand; it does not catch `join`, `%`, nested f-string expressions, slicing or run-time composition, which the `run_table_prefix()` presence check and review hold. A static check that the S3 Tables cross-read gives Spark the REST block and RePark its own.
+- [test_acceptance_cross_read_types.py](test_acceptance_cross_read_types.py) — Pure pins for the nanosecond check over nested Iceberg type nodes: a dict `type` value is searched, not hashed (2026-10-24, found by the first dispatched run).
 - [test_acceptance_replace_offline.py](test_acceptance_replace_offline.py) — Offline pin for the CREATE OR REPLACE twice acceptance helper on a memory catalog.
 - [test_acceptance_v3_helpers.py](test_acceptance_v3_helpers.py) — AWS-free structural pins for the LIVE-v3 leg body and its two live legs.
 - [test_aws_acceptance.py](test_aws_acceptance.py) — Env-gated real-AWS acceptance harness — the source publish job's path against Glue.
-- [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) — AWS cross-read leg: live Spark reads the AWS acceptance tables. Flushed progress names the discovered count, each table's metadata and engine-pair phases, and its returned status with monotonic elapsed seconds (2026-10-23). Live: Spark read leg X's 20 S3 Tables tables through the REST catalog, EQUAL (run 40130862019; pins: aws-ephemeral-runs-1/C-030). Discovery keeps only the run-and-leg prefix `testing_r<run_id>a<attempt>_<leg>_`, and the S3 Tables Spark session takes the REST catalog block (2026-10-24). pins: aws-ephemeral-runs-1/C-009. Live (run 40143628929, main `0b09276f`, 2026-10-24): every leg's Glue and S3 Tables cross-read answered EQUAL on every table, with no access denial in any leg. pins: aws-ephemeral-runs-1/C-017, C-032
+- [test_aws_acceptance_cross_read.py](test_aws_acceptance_cross_read.py) — AWS cross-read leg: live Spark reads the AWS acceptance tables. Flushed progress names the discovered count, each table's metadata and engine-pair phases, and its returned status with monotonic elapsed seconds (2026-10-23). Live: Spark read leg X's 20 S3 Tables tables through the REST catalog, EQUAL (run 40130862019). Discovery keeps only the run-and-leg prefix `testing_r<run_id>a<attempt>_<leg>_`, and the S3 Tables Spark session takes the REST catalog block (2026-10-24). Live (run 40143628929, main `0b09276f`, 2026-10-24): every leg's Glue and S3 Tables cross-read answered EQUAL on every table, with no access denial in any leg.
 - [test_acceptance_commit_gate.py](test_acceptance_commit_gate.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): the commit gate and its SigV4 signer, AWS-free on every pull request: the 26 published AWS vectors, the regional allow list, commit recognition on both catalogs, the scratch-namespace refusal, every script against a loopback fake endpoint, the second signature, no header logged, and one RePark session reaching Glue through the gate.
 - [test_aws_acceptance_commit_unknown.py](test_aws_acceptance_commit_unknown.py) — ICE-INTEGRITY-PINS-1 leg U (2026-10-22): 96 live statements, U-1 to U-5, U-5r, U-C0 and U-C1 × three doors × v2 and v3 × Glue and S3 Tables, through the commit gate. Skipped without `REPARK_AWS_ACCEPTANCE=1`; the S3 Tables cells skip without `TABLE_BUCKET_ARN`.
 - [test_aws_acceptance_cross_release.py](test_aws_acceptance_cross_release.py) — ICE-INTEGRITY-PINS-1 leg X (2026-10-22): 40 live cells, the hash-pinned 1.5.5 and the head reading each other's tables on Glue and S3 Tables. Skipped without `REPARK_AWS_ACCEPTANCE=1`; it fails, never skips, when `REPARK_PREVIOUS_RELEASE_PYTHON` is unset with the gate on.
@@ -60,36 +60,33 @@ after the sketch named `python/repark/tests/`). Data files:
 - [sigv4_v4_vectors.json](sigv4_v4_vectors.json) — 28 header-mode vectors of the published AWS SigV4 suite (aws-c-auth v0.9.0 `aws-signing-test-suite/v4`, Apache-2.0, as vendored in the `aws-sigv4` 1.5.1 crate): request, context, canonical request, string to sign and signature; `double-encode-path` carries the canonical request only. The two `x-www-form-urlencoded` vectors are the only ones with a body, so they hold the payload hash the gate takes on every commit; their `X-Amz-Content-Sha256` is given as an input header, as the suite's context signs it (fix round 1, 2026-10-22: the earlier text left them out with a wrong reason). `get-space-normalized` is left out because it hides no gate path: the SDK sends percent-encoded paths, and the gate's double encoding is pinned by `double-encode-path`.
 - [previous_release_requirements.txt](previous_release_requirements.txt) — the previous release for leg X, compiled with `uv pip compile --generate-hashes --only-binary :all:` from `repark==1.5.5`. Its five wheel hashes equal PyPI's for 1.5.5. The workflow installs it with `--require-hashes` into `.venv-previous` before any credential exists. One release-checklist line moves it to the newest previous release at each tag (ruling 81).
 
-The gate's unit test, the vectors and the botocore cross-check (once, in a throwaway moto 5.2.3 venv built offline from the uv cache; recorded in the ledger) pins: ice-integrity-pins-1/C-032, C-033. The requirements file pins: ice-integrity-pins-1/C-034
+The gate's unit test, the vectors and the botocore cross-check (once, in a throwaway moto 5.2.3 venv built offline from the uv cache; recorded in the ledger). The requirements file
 
 Leg U and leg X were built on 2026-10-22; their first live run is after the owner wires #1070.
 Locally, X-L read 20 of 20 cells equal both ways, X-C0 and X-C1 held, the two live modules collect
 136 tests that skip without the gate, and leg X fails without the previous interpreter.
-pins: ice-integrity-pins-1/C-035, C-036, C-039
 
 The resolver's unit test and X's type-aware comparison (`test_x_compare_*`), red under the step-4 mutants:
-pins: ice-integrity-pins-1/C-040, C-041
 
 Fix round 1 (2026-10-22, verifier round 1 S1-1): the gate's deny list became an allow list. `test_glue_refuses_every_request_the_drills_do_not_send` and `test_s3tables_refuses_every_request_the_drills_do_not_send` carry each request the verifier got forwarded, red on `c6d74054` (14 cells), and the `forwards_the_operations_the_drills_send` tests keep the drill operations open.
-pins: ice-integrity-pins-1/C-042
 
-Fix round 1 (2026-10-22, verifier round 1 S1-2): the vector set grows to 28 with the two body vectors, so a signer that hashes an empty payload reds them. pins: ice-integrity-pins-1/C-043
+Fix round 1 (2026-10-22, verifier round 1 S1-2): the vector set grows to 28 with the two body vectors, so a signer that hashes an empty payload reds them.
 
-Fix round 1 (2026-10-22, verifier round 1 S1-4): the status-check test now gives a wrong value (`num-retries = 3`) and requires it named, and `test_x_compare_sees_a_string_read_as_a_large_string` is the X cell where `compare_schemas` is silent and only the exact Arrow type check fires. pins: ice-integrity-pins-1/C-045
+Fix round 1 (2026-10-22, verifier round 1 S1-4): the status-check test now gives a wrong value (`num-retries = 3`) and requires it named, and `test_x_compare_sees_a_string_read_as_a_large_string` is the X cell where `compare_schemas` is silent and only the exact Arrow type check fires.
 
-Fix round 2 (2026-10-23, first live run F1): the gate forwards read-only Glue operations for any database while `CreateTable` and `UpdateTable` still name the scratch namespace; the twin's moved and added cells hold both sides. pins: ice-integrity-pins-1/C-046
+Fix round 2 (2026-10-23, first live run F1): the gate forwards read-only Glue operations for any database while `CreateTable` and `UpdateTable` still name the scratch namespace; the twin's moved and added cells hold both sides.
 
-Fix round 2 (2026-10-23, first live run F2): the legs' MERGE and INSERT source is the `(SELECT * FROM VALUES … AS v(id, name)) AS s` form, and `test_the_leg_source_resolves_on_the_local_catalog` runs both doors against the local catalog; the short form, which Spark refuses at parse and RePark fails at resolution, is carded as VALUES-ALIAS-COLUMNS-1. pins: ice-integrity-pins-1/C-047 Fourth live run (2026-10-23, run 40025222296): leg U holds live, 96 of 96 cells on Glue and S3 Tables with the gate armed. pins: ice-integrity-pins-1/C-058
+Fix round 2 (2026-10-23, first live run F2): the legs' MERGE and INSERT source is the `(SELECT * FROM VALUES … AS v(id, name)) AS s` form, and `test_the_leg_source_resolves_on_the_local_catalog` runs both doors against the local catalog; the short form, which Spark refuses at parse and RePark fails at resolution, is carded as VALUES-ALIAS-COLUMNS-1. Fourth live run (2026-10-23, run 40025222296): leg U holds live, 96 of 96 cells on Glue and S3 Tables with the gate armed.
 
-Fix round 2 (2026-10-23, first live run F3): the cross-release runner is cut off at 300 s, and `test_a_cut_off_runner_reports_its_stderr` pins the exit-124 report with the stderr tail. pins: ice-integrity-pins-1/C-048
+Fix round 2 (2026-10-23, first live run F3): the cross-release runner is cut off at 300 s, and `test_a_cut_off_runner_reports_its_stderr` pins the exit-124 report with the stderr tail.
 
-Fix round 3 (2026-10-23, second live run G1): a gate refusal of a request with no X-Amz-Target names the method, path and lower-cased sorted header names, and every refusal is recorded as an exchange; the live leg's refusal message lists the exchanges too. pins: ice-integrity-pins-1/C-050
+Fix round 3 (2026-10-23, second live run G1): a gate refusal of a request with no X-Amz-Target names the method, path and lower-cased sorted header names, and every refusal is recorded as an exchange; the live leg's refusal message lists the exchanges too.
 
-Fix round 3 (2026-10-23, second live run G2): the partitioned cross-release table is `months(ts), bucket(4, id)`, and the pin reads the head-written table's file count (at most 160) and its spec back. pins: ice-integrity-pins-1/C-051
+Fix round 3 (2026-10-23, second live run G2): the partitioned cross-release table is `months(ts), bucket(4, id)`, and the pin reads the head-written table's file count (at most 160) and its spec back.
 
-Fix round 3 (2026-10-23, second live run G3): the cross-read step reads a metadata location through the filesystem its URI names, so `s3://` locations no longer collapse to `s3:/`. pins: ice-integrity-pins-1/C-052
+Fix round 3 (2026-10-23, second live run G3): the cross-read step reads a metadata location through the filesystem its URI names, so `s3://` locations no longer collapse to `s3:/`.
 
-Fix round 4 (2026-10-23, third live run H1): the gated Glue session names its S3 endpoint, so the fork's Glue catalog file I/O no longer reaches the gate; the two `gate_session_extra` cells in `test_acceptance_commit_resolver.py` pin the Glue pair and the S3 Tables single key. Leg X holds live at 40 of 40. pins: ice-integrity-pins-1/C-054, C-055
+Fix round 4 (2026-10-23, third live run H1): the gated Glue session names its S3 endpoint, so the fork's Glue catalog file I/O no longer reaches the gate; the two `gate_session_extra` cells in `test_acceptance_commit_resolver.py` pin the Glue pair and the S3 Tables single key. Leg X holds live at 40 of 40.
 
 ## Path expressions
 
@@ -107,9 +104,9 @@ path expression repointed in the same unit and no other line changed:
 
 - Up: [../map.md](../map.md)
 
-The AWS namespace progress loop preserves every discovered comparison and its final assertion. pins: ice-integrity-pins-1/C-064
+The AWS namespace progress loop preserves every discovered comparison and its final assertion.
 
 ICE-INTEGRITY-PINS-1 immediate details (2026-10-24): the AWS cross-read leg flushes the existing
 one-outcome table after each completed status line, including EQUAL. The complete final report
 and assertion remain. Local pins live in the parity harness tests; hosted Spark error causes
-and C-060 completion remain unmeasured. pins: ice-integrity-pins-1/C-065
+and C-060 completion remain unmeasured.

@@ -41,5 +41,3 @@ never updates.
 - Up: [../map.md](../map.md)
 - Cells: [../../../../../repark/tests/test_ice_spark_table_1.py](../../../../../repark/tests/writes/test_ice_spark_table_1.py)
 - Ledger: `task/ledgers/staging/ice-spark-table-1-ledger.md`
-
-pins: ice-spark-table-1/C-008

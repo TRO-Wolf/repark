@@ -19,7 +19,6 @@ mapping of the SAME target type (design §6 R3).
 - `nmbs_tests.rs` — DML-A ANSI-door `WHEN NOT MATCHED BY SOURCE` execute pins (COW+MOR
   DELETE, UPDATE, three arms, source-empty wipe/UPDATE, MATCHED-predicate miss, cardinality;
   Arrow types on every content pin).
-  pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005, C-006
 
 ## Pointers
 
@@ -34,4 +33,4 @@ mapping of the SAME target type (design §6 R3).
 
 First checks: `cargo test -p repark-sql merge::`. Escalate to: [../map.md#debug](../map.md).
 
-**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`. pins: ice-tt-resolve-1/C-003
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`.

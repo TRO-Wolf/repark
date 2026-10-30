@@ -31,9 +31,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   statement is a `Dml` `Update` the fork provider runs (`record_planned_update`, called by
   `spark_ast.rs` after planning; an `UPDATE` with no `WHERE` takes it); D7, D8 and D9 in `../merge/nested_assign.rs`. A
   `CALL` procedure that runs SQL through `router::execute` clears and records as its own
-  statement. Pins: `../../tests/write_door_record.rs`. pins: write-spine-1/C-011
+  statement. Pins: `../../tests/write_door_record.rs`.
 
-- `delete_update.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), delete-format check reverted by RP-61 (2026-10-28):** `execute_delete` and `execute_update` no longer run a delete-format check: `refuse_unreadable_delete_format`, `repark_writer_takes` and the fork-parse arm are removed, and the file is the pre-guard state on `3d24ad40`. The target resolution stays, because the encryption guard in `catalog_ops.rs` and the BUG-001 valve use it. An inherited or explicit Avro or ORC delete format now writes its position-delete files in that format on the RePark route and on the fork route, and the fork reads them back. The native door (`repark.sql()`) is a separate path, carded as NATIVE-DOOR-DELETE-FORMAT-1. pins: rp-61-posdel-format-repin-1/C-003, C-004
+- `delete_update.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), delete-format check reverted by RP-61 (2026-10-28):** `execute_delete` and `execute_update` no longer run a delete-format check: `refuse_unreadable_delete_format`, `repark_writer_takes` and the fork-parse arm are removed, and the file is the pre-guard state on `3d24ad40`. The target resolution stays, because the encryption guard in `catalog_ops.rs` and the BUG-001 valve use it. An inherited or explicit Avro or ORC delete format now writes its position-delete files in that format on the RePark route and on the fork route, and the fork reads them back. The native door (`repark.sql()`) is a separate path, carded as NATIVE-DOOR-DELETE-FORMAT-1.
 - `delete_update.rs` — **ENC-1 round 2 (2026-10-09):** the DELETE/UPDATE doors moved out
   of `../router.rs` (pure move; it sat at its 1000-line ceiling) so the encrypted-write
   refusal fits: each door runs the house valves first, then refuses a target carrying
@@ -54,7 +54,6 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   column, a cast of one, or an alias), because the expansion's names are unknown before
   planning; a `SELECT *, CAST(id AS STRING)` no longer leaks DataFusion's `Projections require
   unique expression names`. Its two children are in [insert_positional/](insert_positional/map.md).
-  pins: u8-write-sql/C-011, C-023
   **C-4 fold 3 item 3 (2026-10-11):** `alias_source_positionally`, beside the shared
   rewrite and used only by the Postgres route: it aliases every UNNAMED projection
   item by position (two different expressions can share one display name, which no
@@ -64,9 +63,9 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   it runs `void_type::refuse_insert_source_types` on the prepared statement, so every
   positional INSERT door — append, owned append, OVERWRITE and VALUES — refuses a `-NULL`
   into a DATE, BOOLEAN or timestamp column and a STRING into FLOAT/DOUBLE with Spark's text.
-  `router.rs` stays at its 1000-line ceiling. pins: store-ts-to-numeric-1/C-002, C-003
+  `router.rs` stays at its 1000-line ceiling.
   **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the gate judges `-NULL` only; STRING sources store
-  as on base. pins: store-ts-to-numeric-1/C-006
+  as on base.
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
   **MW-6:** the CALL dispatch covers all supported procedures, including `register_table`.
@@ -118,11 +117,10 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `execute_insert_routed`; the guard still sees every Iceberg target.
   **C-4 fold 3 item 3 (2026-10-11):** the route calls `alias_source_positionally`,
   so `SELECT 1, '1'` and its siblings plan instead of colliding on one display
-  name. pins: c-4/C-013
+  name.
   **C-4 fold 2 item 5 (2026-10-10):** the source passes through the Iceberg route's
   `deduplicate_source_names` before planning, so a positional INSERT never depends on
   the SELECT's output names.
-  pins: c-4/C-013, C-014
 - `nested_ns.rs` — **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):**
   `refuse_nested_supply` is the one call that hands an `INSERT` (plain, `OVERWRITE`,
   `BY NAME`, `REPLACE WHERE`), `UPDATE` or `MERGE` statement and its Iceberg target to
@@ -164,13 +162,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   refuses (`NestedWrite::Unreadable`). The cost: a malformed write aimed at such a table
   reports the nested refusal, not the parser's error.
   A target that is not an Iceberg table passes through to the door, which answers as before.
-  pins: ice-tsns-merge-wall-1/C-040, C-050, C-053
   **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, owner ruling 135 (a) (2026-10-17):** the walk over the
   parsed statement, `executed_writes`, moved unchanged to
   `repark_iceberg::write::statement_writes`, which `repark.sql()` also calls; this file calls it
   from there. The moved walk also answers a `DELETE`, which this file's match ignores, and the
   statement itself still comes first, so the `BY NAME` index and every answer stay as they were.
-  pins: repark-sql-update-subquery-where-1/C-021
   **ICE-NTZ-NESTED-REFUSE-1 (2026-10-20, parity row R-011, ruling T-3):** after R-015's call on
   the same loaded table, `refuse_zoned_micros` refuses a value for a column with a nested
   microsecond `TIMESTAMP_NTZ` leaf when the session zone is not UTC (canonical id `UTC`,
@@ -260,7 +256,6 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   `only_a_pure_utc_alias_counts_as_utc`) are removed; each test's reason and its `pins:` citation
   are in the paragraphs above (the fail-closed read of an unresolved column, the two fail-closed
   arms of the lateral walk, the alias set).
-  pins: ice-ntz-nested-refuse-1/C-001, C-002, C-004, C-005, C-015, C-016, C-017, C-018, C-022, C-023, C-024, C-033, C-042, C-047
   **ZONE-SEAM-1 step 3c (2026-10-22, ruling ZS-9, an over-refusal by design until
   WRITE-NTZ-TO-LTZ-NESTED-1):** outside UTC (the same zone flag as R-011, `PREPARE` included),
   `refuse_naive_into_instant` refuses a write whose value carries a nested `TIMESTAMP_NTZ` leaf
@@ -274,17 +269,16 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   session zone and store as before; a plain `UPDATE` value whose lineage holds a
   `TIMESTAMP_NTZ` cast (`shifts_in_an_update`) stores as before too. The value's type is planned
   as R-011 plans it (`column_type` for an `INSERT` source or a MERGE `*`, one projection for
-  assignments); a feed the router cannot type is not refused. pins: zone-seam-1/C-015
+  assignments); a feed the router cannot type is not refused.
   **ZONE-SEAM-1 fix round 1 (2026-10-22, verifier round 1, S1-1):** `refuse_insert` hands the
   INSERT's `PARTITION` clause itself to the gate (`InsertSupply.partition`), not a flag, so the
   gate resolves the static columns against the loaded table and names the source position; the
   type read then picks that column on `INSERT OVERWRITE … PARTITION (…)` in every spelling (a
   `SELECT`, `VALUES`, a column list, the `TABLE` keyword, a dynamic `PARTITION (k)`), and the
   refusal fires there as on the unpartitioned doors. `REPLACE WHERE` passes no clause.
-  pins: zone-seam-1/C-016
   *Fix round 1, S3-1:* on the U-8 matrix the refusal holds 134 `ltz_nested` cells per zone (New
   York, Kolkata), on main 37 Spark-equal, 79 DIFFERENT and 18 engine errors, as R-011's line now
-  counts them. pins: zone-seam-1/C-019
+  counts them.
   **ZONE-SEAM-1 fix round 3 (2026-10-23, item A, found by the calibration verifier):** the plain
   `UPDATE` exemption from the ZS-9 refusal was read from the whole value's lineage (any
   `TIMESTAMP_NTZ` cast anywhere), while the plain-UPDATE door shifts only that cast's own leaf; a
@@ -295,34 +289,33 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   arguments, every sub-value whose type holds a naive timestamp must be the `TIMESTAMP_NTZ` cast
   call itself; anything else holding one (an extract, a literal, a column, a `CASE`, an array)
   makes the statement refuse, as the MERGE twin already does. A struct whose only naive leaf is
-  the cast still stores Spark's instant; UTC is untouched. pins: zone-seam-1/C-024
+  the cast still stores Spark's instant; UTC is untouched.
   The file's four unit tests moved unchanged to [nested_ns/tests.rs](nested_ns/map.md) to keep
-  the file under the 1000-line ceiling. pins: zone-seam-1/C-024
+  the file under the 1000-line ceiling.
   After both fix-round-3 items the corpus, the U-8 matrix and the partitioned census answer as
-  before them and the seven timed statements stay within 1.05x of main. pins: zone-seam-1/C-025
+  before them and the seven timed statements stay within 1.05x of main.
   *Fix round 1, cost:* the refusal's extra plan of a MERGE into a nested `TIMESTAMP` target in New
-  York times at 0.922x main, the six U-8 statements within 1.05x. pins: zone-seam-1/C-020
+  York times at 0.922x main, the six U-8 statements within 1.05x.
   *Fix round 2 (2026-10-23), the records:* R-011 counts the partitioned over-refusal of
   Spark-equal-on-main cells beside the matrix's 37 (21, 68 of 354, 24 of 231 per zone, one per
   named census, the ZS-9 class until GATE-RETIRE-1); R-015's line states the measured change on a
   nanosecond leaf (13 bare-`NULL` cells per zone) and that it awaits the owner's ruling. The
-  partition-column-first pins are in `tests/ntz_into_ltz_nested.rs`. pins: zone-seam-1/C-022
+  partition-column-first pins are in `tests/ntz_into_ltz_nested.rs`.
   *Fold 4 (2026-10-23, verifier round 3, owner ruling "count it"):* R-011 lists the plain-`UPDATE`
   shapes Spark-equal on main that refuse on the head (the Muse twelve and the Opus ten per zone,
   four in both, and the two calibration cells) and the London-winter `ltz_nested` split (134
   refused, 116 Spark-equal on main, 18 engine errors) as ZS-9 over-refusal until GATE-RETIRE-1.
-  pins: zone-seam-1/C-026, C-027
   *Fold 4 item 3 (2026-10-23, verifier round 3 S2-1):* the offset-text `UPDATE` wall is carded as
   NTZ-CAST-OFFSET-TEXT-UPDATE-1 (a `TIMESTAMP_NTZ` cast of `+05:00` text stores `1767305045123456`
   and of `Z` text `1767323045123456` on main, `05e6b32a` and the head, in UTC too; `INSERT` and
   `SELECT` agree with Spark; not a seam regression; no fix proposed), and C-024's cast-leaf claim
-  holds for text without an offset only. pins: zone-seam-1/C-029
+  holds for text without an offset only.
 
   **GATE-RETIRE-1 (2026-10-25, GR-9, ledger C-005):** the container-cast arm is retained. The seam
   rewrites only same-position container casts, so an arity mismatch or a cross-position whole-struct
   cast reaches this file as a native cast, and the arm refuses it in New York. The arm is read twice:
   `proven_naive` (the supply walk, the UPDATE and MERGE value path) and `naive_columns` (the two INSERT
-  pins fail without it). The arm's retirement folds into WRITE-SPINE-1 step 4. pins: gate-retire-1/C-005
+  pins fail without it). The arm's retirement folds into WRITE-SPINE-1 step 4.
 ## Pointers
 
 - Up: [../map.md](../map.md)

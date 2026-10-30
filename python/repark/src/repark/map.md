@@ -19,42 +19,39 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   the three database spellings, dotted-name / empty-block / cross-family-collision refusals,
   booleans refused in every table — and renders dotted conf keys bare so the loader's
   flattening reads them back. Never the parser: no discovery, profile merge, interpolation,
-  or source translation lives here. pins: cfg-1/C-028, C-029
+  or source translation lives here.
   **REVIEW-FIX-7 step 1 (2026-09-10):** header-injection close — profile, catalog and
   source names carrying `]`, `.`, a quote or a newline refuse at construction, and every
   rendered header segment is quoted with `_toml_text`, so a hostile profile name cannot
-  open a second table. pins: review-fix-7/C-001
+  open a second table.
   **REVIEW-FIX-1 (2026-09-10):** loader-agreement close — session knobs take `int`
   (never `bool`) or ASCII digit strings after `strip()` and refuse anything else as
   `ValidationError`; duplicate names refuse across every catalog and every database
   source together, naming both key paths; `to_toml()` emits `[<profile>]` for every
-  profile so an empty overlay round-trips. pins: review-fix-1/C-001, C-002, C-003
+  profile so an empty overlay round-trips.
   **CFG-2 step 2 (2026-09-13):** `DatabaseSource.auto_register` is a typed
   `StrictBool | None` field (not an extra): a non-bool value refuses as
   `ValidationError`, `true`/`false` renders only when set, and every other property
-  stays a string extra. pins: cfg-2/C-018
+  stays a string extra.
   **WO CATALOG-1 C-010 (2026-09-26):** `SessionConfig` gains `default_catalog`
-  (`StrictStr | None`), rendered only when set. pins: catalog-1/C-010
+  (`StrictStr | None`), rendered only when set.
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
   **ICE-ERROR-CONDITIONS-1 (2026-09-20):** the native classes' `getCondition` /
   `getErrorClass` / `getSqlState` parse a Spark-shaped message — at most one known
   engine prefix, a column-0 `[CONDITION]` token, the last `SQLSTATE: XXXXX` in the
-  text; `attach_error_condition` instance binds still win. pins: ice-error-conditions-1/C-001
+  text; `attach_error_condition` instance binds still win.
   **U7 PR1 round 2 (2026-09-24):** re-exports the native `NumberFormatException`
   (`IllegalArgumentException` leaf); a native instance's `getCondition` /
   `getMessageParameters` return the `_spark_error_class` / `_spark_message_parameters` a Rust
   binding attached (the writer's `_LEGACY_ERROR_TEMP_3060`) before parsing the message.
-  pins: u7-write-df/C-011, C-015
   **WO-C2 (2026-09-23):** after an `SQL error: ` prefix, the parser-error wrapper is
   removed before reading a leading condition. Native `SHOW CREATE TABLE` parse refusals now
   expose `INVALID_STATEMENT_OR_CLAUSE` through the same API as planning refusals.
-  pins: wo-c2/C-005
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** re-exports `CommitStateUnknownException`
   (`PySparkException` subclass, `operation_id` attribute) for the ambiguous-commit alert
-  class. pins: ice-commit-unknown-1/C-002
+  class.
   **FNP-MATH-1 WO-6b R3 (2026-09-21):** re-exports `ArithmeticException`
   (`PySparkException` subclass) with the same structured-error shims.
-  pins: fnp-math-1/C-004
 - `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).
 - `py.typed` — PEP 561 marker.

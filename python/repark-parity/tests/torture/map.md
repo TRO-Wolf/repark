@@ -26,24 +26,20 @@ The suite needs the native module (the doors are repark's), so run it through
   declared-schema equality on both doors for Parquet, the JSON-text CSV leg's
   completes-or-refuses-loud plus row count, and the `--depth`/`--width` scaling cell
   (D-6) reading a depth-2/width-1 generate against that scale's declared schema.
-  pins: torture-1/C-002, C-004
 - `test_torture_inference.py` — the inference cells: protocol conformance, row counts on
   both doors, the per-column declared-type cells on both doors (the `boolish` column is
   `xfail(strict=True, reason="CSV-INFER-INT32-WIDTH")` — repark answers `int64` where
   Spark narrows to `int`), and the resolved-type Parquet schema cells.
-  pins: torture-1/C-003, C-004, C-006
 - `test_torture_extreme_types.py` — the extreme_types cells (step 2): protocol
   conformance, row counts and declared-schema equality on both doors for Parquet
   (`decimal(38,18)`, `decimal(38,0)`, three string columns), CSV row counts on both doors,
   and the per-column CSV type cells (`big38` is `xfail(strict=True,
   reason="CSV-INFER-20DIGIT")`; the three string columns are live green pins).
-  pins: torture-1/C-010, C-011, C-013
 - `test_torture_smartcsv.py` — the smartcsv cells (step 2): protocol conformance, Parquet
   row counts and declared-schema equality on both doors (capitalised and space-bearing
   names kept verbatim), the capitalised-header CSV leg's completes-or-refuses-loud cell
   (green through the measured loud refusal on both doors), and the CSV schema cell
   `xfail(strict=True, reason="CSV-INFER-HEADER-CASE")`.
-  pins: torture-1/C-010, C-011, C-013
 - `test_torture_temporal.py` — the temporal cells (step 2): protocol conformance, Parquet
   row counts and the full declared schema (epoch-edge and i64-bound timestamps, the
   whole-day-edge days, `duration[us]`, the MonthDayNano decomposition) on both doors, CSV
@@ -51,7 +47,6 @@ The suite needs the native module (the doors are repark's), so run it through
   citing `CSV-INFER-INT32-WIDTH`), the `try_add(day, INTERVAL 0 HOUR)` promotion cell
   (`xfail(strict=True, reason="BL-14")`), and the `day + INTERVAL 1 DAY` whole-day-edge
   cell (`xfail(strict=True, reason="DATE-INTERVAL-NSBOUND-1")`).
-  pins: torture-1/C-010, C-011, C-013
 - `test_torture_decimal_overflow.py` — the decimal_overflow cells (step 2): protocol
   conformance, Parquet row counts and the `decimal(38,0)` schema on both doors, CSV row
   counts, the per-column CSV type cells (both strict xfails citing
@@ -59,11 +54,10 @@ The suite needs the native module (the doors are repark's), so run it through
   (`xfail(strict=True, reason="SUM-DEC-I128WRAP-1")` — repark answers the wrapped i128
   value today), and the `AVG` overflow cell green on the measured loud refusal of both
   doors.
-  pins: torture-1/C-010, C-011, C-013
 - `test_torture_secrets.py` — the secrets cells (step 3): protocol conformance and the
   needle-set membership pin (every `FLAGGED_COLUMN_NAMES` entry redacts through
   `_native.redact_property_value`, the live Rust key rule; every ordinary name does not —
-  D-4a; SOURCE-URL-REDACT-1 fold 2 retired the Python mirror it used to call; pins: source-url-redact-1/C-032), row counts and the shared
+  D-4a; SOURCE-URL-REDACT-1 fold 2 retired the Python mirror it used to call), row counts and the shared
   declared schema on both doors for Parquet and CSV, `test_secret_flag_off_warn_refuse`
   parametrized over both doors (`off` reads clean; `warn` emits exactly one
   `WARNING: flag_secret_columns=warn` stderr line naming every flagged column and no
@@ -71,7 +65,6 @@ The suite needs the native module (the doors are repark's), so run it through
   temp view is registered from the flagged read itself), the bad-value refusal naming
   the option and its three values, the option refused loud on readers without the csv/json
   option map (parquet direct and `format('parquet').load`), and the JSON-door refuse.
-  pins: torture-1/C-017, C-018, C-019
 - `test_torture_v3_dv.py` — the v3_dv cells (step 4): the module contract, the loud
   refusal naming `REPARK_PARITY_LIVE` on the direct call and the committed CLI, the
   committed fixture's truth-record self-consistency, the `delete_files` metadata-table
@@ -84,50 +77,41 @@ The suite needs the native module (the doors are repark's), so run it through
   registered via `CALL <catalog>.system.register_table`; `test_v3_dv_live_generate_and_read`
   is the live-only cell (skips unless `REPARK_PARITY_LIVE=1`) that generates a fresh
   table in a pytest temp dir and reads it back on both doors.
-  pins: torture-1/C-024, C-025, C-026, C-027, C-029
   **TEST-HYGIENE-1 (2026-09-18):** the Avro manifest lists and manifests carry absolute
   paths in deflate blocks, so the table cannot relocate to a temp dir without editing
   Avro bytes; the module-scoped fixture instead holds an exclusive `fcntl.flock` beside
   the canonical path while the copy is materialized AND read, so a second process waits
   instead of clobbering; the fixture yields (`Iterator[str]`) so the lock spans the module.
-  pins: test-hygiene-1/C-002.
 - `test_generate_is_deterministic.py` — byte-identical same-seed CLI runs per family,
   different-seed bytes, the unknown-family and bad-rows refusals, the repository-internal
   output refusal, and the manifest reuse rule (matching rows+seed reuses, a mismatch
   regenerates). These pins iterate `FAMILIES` — the file families only; `v3_dv` stays out
   of that registry because Spark's output bytes (UUID file names, metadata timestamps)
   are not deterministic, so byte-identity pins could never cover it.
-  pins: torture-1/C-001
 - `test_ci_tier_under_60s.py` — the CI-tier workload pins: both step-1 families, the
   four step-2 families and the step-3 secrets family each generate and read on both doors
   inside the 60-second budget, at the CI row budget regardless of the active tier.
-  pins: torture-1/C-001, C-014, C-022
 - `map.md` — this file.
 - The step's process clauses are recorded in the ledger this map cites: the red-first run
   (the suite failed with `ModuleNotFoundError` before the package existed), the tiered
   `make py-test-torture` target that is deliberately absent from `preflight`, the map
   lockstep for every new directory, and the green gate runs.
-  pins: torture-1/C-005, C-007, C-008, C-009
 - The step-2 process clauses (the four families' red-first run, the filed registry rows,
   the honest no-live-Spark labeling, and the gate runs) are in the same ledger under
   C-010 onward.
-  pins: torture-1/C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - The step-3 process clauses (the family's red-first `ModuleNotFoundError` run, the flag
   cells' red run against the unimplemented option, the Rust parser red, D-4a recorded,
   and the gate runs) are in the same ledger under C-017 onward.
-  pins: torture-1/C-021, C-023
 - The step-4 process clauses (the v3_dv red-first collection failure, the measured
   relocation contract, the live-JVM rules, the ≤ 1 MB fixture, and the gate runs —
   including the co-collected live run after `test_parity_live.py`) are in the same
   ledger under C-024 onward.
-  pins: torture-1/C-024, C-028, C-030
 - The step-5 process clauses (the release build and its `__debug_assertions__`
   proof, the full-tier 1M-row run with per-door wall timings, the live v3_dv
   full-tier generation and JVM lifecycle, the dated `docs/perf/` results document,
   the `docs/testing.md` paragraph, and the gate runs) are in the same ledger under
   C-031 onward; the S2-12 retirement measurement is pinned from
   [../../datasets/map.md](../../datasets/map.md).
-  pins: torture-1/C-031, C-032, C-033, C-034, C-035, C-037
 
 ## Pointers
 

@@ -162,7 +162,6 @@ conftest guard.
   `OPENBLAS_NUM_THREADS=1` also passed that golden (2/2, 44.5 s) by
   shrinking post-cap buffers; the worker keeps pre-import so the cap
   arithmetic describes a process that already holds the libraries.
-  pins: facade-1/C-002
 - `matrix_run.py` — the full-tier driver (step 2): `run_rep` runs every
   `FULL_CELLS` cell once per rep in a worker subprocess and appends each
   `CellRecord` as a JSONL line to the results file (so a run is resumable
@@ -200,8 +199,6 @@ The step's pins: `test_classifier_three_outcomes_only`,
 `test_memory_limit_string_matches_the_engine_capacity_parser`,
 `test_ci_tier_sort_cell_end_to_end`, `test_ci_tier_matches_golden`, and
 `test_full_matrix_csv_has_27_cells`.
-pins: neveroom-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-pins: neveroom-1/C-008, C-009, C-010
 
 The Makefile target `py-test-spill-matrix` is deliberately absent from
 `preflight`.

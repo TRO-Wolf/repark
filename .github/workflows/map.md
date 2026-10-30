@@ -87,7 +87,7 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 | `cargo test` link failure in CI | `--workspace` must be used, never the all-features spelling (PyO3 extension-module; applies from phase 3, banned from day one) |
 | taplo/typos red | `make toml-check` / `make spell-check` — same pinned tool as CI |
 | cargo-deny / cargo-audit red | `make audit` locally — usually a newly published advisory, not the diff |
-| map.md guard red | `make check-map-md` (`BASE ?= origin/main`) — a touched directory's `map.md` lags the change anywhere on the branch; pull requests only, skipped on a push to main |
+| map.md guard warns | `make check-map-md` — a touched directory's `map.md` lags; warns since MAP-GOVERNANCE-1; the gates are `make check-map-sync` and `make check-map-size`; PRs only |
 | crate-DAG guard red | `make check-crate-dag` — the named edge is undeclared, carries a kind the policy forbids, points up a tier, or a new crate is unclassified (SSOT: `scripts/check_crate_dag.py`) |
 | repo-manifest guard red | `make check-manifest` — `repo-manifest.toml` disagrees with the workspace, a declared doc, a make target, STATUS.md, or a crate-root `map.md` (SSOT: `repo-manifest.toml` + `scripts/check_manifest.py`) |
 | lib.rs thinness guard red | `make check-lib-rs` — inline test module or a root over its ceiling (SSOT: `scripts/check_lib_rs.py`) |

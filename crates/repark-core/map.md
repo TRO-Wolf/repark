@@ -1,7 +1,6 @@
 # map — repark-core
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
 
@@ -24,7 +23,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `Cargo.toml` — **C-2d (2026-10-07):** depends on `repark-connect` (normal; the restored
   `ALLOWED_EDGES` row) and declares `[features] default = ["postgres"]`, `postgres =
   ["repark-connect/postgres"]` (CC-5); `repark-python` enables it explicitly, because the
-  workspace entry is `default-features = false`. pins: c-2/C-096
+  workspace entry is `default-features = false`.
 - `Cargo.toml` — depends on `repark-common` (error seed), `repark-iceberg` (catalog builders +
   write knob installers), `datafusion`, `arrow` (with the **`chrono-tz` feature declared here**,
   not inherited: `src/session_time_zone.rs` validates IANA zone ids through `arrow`'s `Tz`, which
@@ -49,13 +48,12 @@ honestly"). SQL routing and session-build registration are seam-inverted
   driver's stop and done channels and its trigger timer, `src/microbatch/`), `serde_json`
   (workspace) renders the progress JSON (`src/microbatch/progress.rs`), and `uuid` (workspace)
   joins the dev-dependencies for the progress pins; all three are already locked, so the lock
-  gains only the edges. pins: mb-3/C-004, C-006
+  gains only the edges.
 - `src/microbatch/` + [src/microbatch/](src/microbatch/map.md) — the Session-owned micro-batch
-  driver (MB-3, 1.7). pins: mb-3/C-003
+  driver (MB-3, 1.7).
 - `src/silver.rs` + [src/silver/](src/silver/map.md) — typed `SilverPlan` (SILVER-S1):
   strict TOML parse, closed enums, canonical identity, deterministic explain. Public from
   this crate, not wired to Python. Unstable until SIL-1..SIL-10.
-  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `src/config_file.rs` + [src/config_file/](src/config_file/map.md) — the `repark.toml` loader
   (CFG-1, seed 2026-09-09): `ConfigFile`, the ruled `load()` entry, and the `toml` reader. The
   crate's dependency list gains `serde` (derive) and `toml` in the same commit — the workspace's
@@ -86,8 +84,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
   only, never values); S3 Tables ARN shape check; `CatalogSpec` hand-written `Debug` redacts
   secret-like prop values. Parsed at `build()`, registered by `register_configured_catalogs`.
 - `src/read_options.rs` — CSV/JSON Spark option-map helpers; `read_csv_path` (nullValue
-  Utf8 scan; `utf8_columns` timestamp re-read). pins: nullability-2/C-006
-  pins: csv-infer-perf-1/C-002, C-006
+  Utf8 scan; `utf8_columns` timestamp re-read).
 - `src/text_scan.rs` — text read: `TableProvider` over local files, plain dirs
   (hidden skipped, `key=value` dirs descended iteratively, partitioned leaves
   win over root files), and Hadoop globs (bare globs discover nothing, `basePath`
@@ -114,18 +111,14 @@ honestly"). SQL routing and session-build registration are seam-inverted
   crossing, char-aware) with no new dependency; unmatched globs answer
   `PATH_NOT_FOUND` from the scan. pins: io-text-1/T-5
   **IO-ORC-1 (2026-09-16):** adds `match_file_name_glob` for `pathGlobFilter`.
-  pins: io-orc-1/C-006
 - `src/orc_scan.rs` — **IO-ORC-1 (2026-09-16):** the read-only ORC scan
   (`OrcReadOptions`, `ProjectionMask` projection, recursive conversion with
   writer-zone undo). Schema inference and the user overlay live in
   `src/orc_schema.rs` (split at the 1000-line ceiling).
-  pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `src/orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the
   scan (attribute mapping, merge union, user-schema select).
-  pins: io-orc-1/C-002, C-006, C-007
 - `src/orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the footer attributes orc-rust
   drops (`spark.sql.catalyst.type` per column, uniform stripe writer timezone).
-  pins: io-orc-1/C-002
 - `src/text_io.rs` — streaming text part-file writer (`execute_stream` batches
   to sequential `part-*.txt`, empty frame keeps one empty part); offender-first
   schema check, Spark-verbatim 1290 count text, empty-`lineSep` refusal.
@@ -152,12 +145,10 @@ honestly"). SQL routing and session-build registration are seam-inverted
   and `UNRESOLVABLE_TABLE_VALUED_FUNCTION`, with name case and `line L pos P`
   recovered from the caller SQL text; 14 in-module tests incl. the blanket
   arbitrary-name case. The BL-19 registry row carries these pins.
-  pins: unresolved-routine-1/C-001, C-002, C-004, C-005, C-007
   **Remediation round 1 (2026-09-16):** call sites match on sqlparser word
   tokens (strings/comments never match; the error text is only a flattened
   lookup key, structure comes from the SQL idents), so decoys, quoted
   multi-part names and nesting render Spark-shaped; 26 in-module tests.
-  pins: unresolved-routine-1/C-001, C-002
 - `src/namespace_create.rs` — G-6 Q1 location-conflict predicate shared by Session
   `create_namespace` and both SQL doors' `IF NOT EXISTS` paths.
 - `src/idents.rs` — table-identifier segment parse + path-escape refuse (delegates to
@@ -178,7 +169,6 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/stack/` — **PERF-UNPIVOT-1:** Spark `stack(n, expr…)` as `UnpivotExec`, linear in
   columns. `apply_stack` is the DataFrame entry; SQL rewrite is the Spark-door
   `StackRewrite`. Step-1 remediation: `interleave` + streaming poll.
-  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `src/freq_items.rs` / `src/transpose.rs` — **DF-RUST-3 (2026-09-15):** Spark's
   `FreqItemCounter` as a DataFusion UDAF and the `ResolveTranspose` algorithm as an
   eager `transpose_frame` kernel; both bound in repark-python for the facade's
@@ -186,7 +176,6 @@ honestly"). SQL routing and session-build registration are seam-inverted
   float keys IEEE `==`, non-null map keys identity (never equal; NULL maps dedupe
   like every other NULL), and binary index names decode with lossy UTF-8 (U+FFFD
   per invalid byte).
-  pins: df-rust-3/C-001, C-003, C-007, C-008, C-010, C-011
 - `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
 - `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
   default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,
@@ -195,12 +184,11 @@ honestly"). SQL routing and session-build registration are seam-inverted
   delegates when empty); `Session::sql_with_write_options` is the entry.
 - `src/catalog_state.rs` — the hoisted `CatalogRegistry` + `LocationPolicy` (E-4 temp-root
   resolution at registration). **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `catalog_names`
-  (sorted, deduped) feeds `SHOW CATALOGS`. pins: ice-catalog-session-1/C-015
+  (sorted, deduped) feeds `SHOW CATALOGS`.
 - `src/lineage_columns.rs` — **V3-4:** rewrite `SELECT _row_id` / `_last_updated_sequence_number`
   onto a `LineageColumnsTableProvider` temp view for format-v3 Iceberg tables (single-table
   only; JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`); v1/v2 stay unresolved. Both SQL
   doors call `prepare_lineage_sql`.
-  pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
 - `src/time_travel.rs` — the hoisted `TimeTravelSpec` parsers + `read_table_at`
   (snapshot-pinned static provider).
 - `src/map.md` — the per-file source inventory (authoritative detail for everything above, plus

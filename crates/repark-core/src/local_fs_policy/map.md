@@ -36,7 +36,6 @@ refusing everything.
   writes), and `the_judgment_plan_and_the_inner_plan_see_the_same_session_state` (the guard's
   plan and the inner plan both type `TIMESTAMP` with the inner dialect's planner, and its
   analyzer rule is in the state).
-  pins: pa-local-fs-policy-1/C-011, C-012, C-014, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029, C-030, C-031
 
 ## Pointers
 

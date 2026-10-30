@@ -98,41 +98,30 @@ v1 crate-root re-export lists.
     Pins live in `src/catalog/tests/namespace_scoped.rs`. **Repin duty:**
     re-enumerate the fork trait surface; a method that newly gains a real override
     (no longer a pure composition default) becomes an explicit forward.
-    pins: rp-1-fork-repin/C-001, C-002, C-003
-    pins: rp-3-fork-repin/C-001, C-002
-    pins: rp-4-fork-repin/C-001, C-002
-    pins: rp-5-fork-repin/C-001, C-002
-    pins: rp-6-fork-repin/C-001, C-002, C-006
     **RP-7 (2026-09-02):** the family is frozen at `ff4764d3` (fork PR `#260`, F-18). The one
     public break absorbed is `DvContainerClose` — `removed` now carries only the touched blobs
     and `retained_references` is new; RePark reads both only through `referenced_data_files()`.
-    pins: rp-7-f18-repin/C-001
     **RP-8 (2026-09-03):** the family is frozen at `c1d6c9de` (fork PRs `#261` F-19/F-20,
     `#262` F-21, `#263` F-22). THREE public breaks absorbed, all on the DV close:
     `retained_references` is deleted again, `added` is `Vec<DataFile>` (`StampedDeleteFile`
     collapsed), and `close_touched_dv_containers_with_partitions` takes a fifth
     `Option<&ManifestList>`. `make verify` on the bare repin is exit 2 with exactly those five
     errors, all in `write/merge/dv_close.rs` — the measured blast radius of the break.
-    pins: rp-8-repin-f21-f22/C-001
     **RP-9 (2026-09-03):** the family is frozen at `594bdbe5` (fork F-23). No public break:
     the close signature is unchanged. Bare-repin compiles; one pin reds
     (`a_supplied_partition_map_still_walks_the_data_manifests_for_sequence_numbers`) because a
     complete map now skips the data-manifest walk.
-    pins: rp-9-repin-f23/C-001
     **RP-10 (2026-09-04):** the family is frozen at `85a4aaf0` (fork F-25 `#265`). No public
     break: the close signature is unchanged. Bare-repin compiles. `validate_fresh_dvs_only`
     stops once every `added_dvs` key is found.
-    pins: rp-10-repin-f25/C-001
     **RP-11 (2026-09-04):** the family is frozen at `189a73ed` (fork F-24 `#266`). No public
     break. Bare-repin compiles; three below-floor conversion pins red (3 of 3).
-    pins: rp-11-repin-f24/C-001
   - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
     fork's metadata-table `scan` honors `projection` (empty projection included) and
     `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine
     `catalog/metadata_projection.rs` is deleted. Pins
     `crates/repark-spark/src/tests/metadata_tables.rs::metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door`
     and `::metadata_table_projection_honor_all_types` now pin the fork.
-    pins: rp-5-fork-repin/C-003
   - **`IcebergSchemaProvider` name-directory population is still lazy at pin `fb0cacfa`
     (RP-6 re-verified 2026-09-01; first measured at `5e7b2e4`).** `try_new`
     no longer `list_tables`; first `table` / `table_names` / `table_exist` lists live and
@@ -145,23 +134,19 @@ v1 crate-root re-export lists.
     `rebuild_same_catalog_heals_oob_and_stays_repark_provider`.
     **Repin duty:** if a future rev lists at construction again the freeze is a no-op; if a
     rev lists on every access (never freezes) those four pins fail-closed.
-    pins: rp-1-fork-repin/C-011
   - **R91 unknown-on-write (RP-5 C-006, flipped by RP-51).** Fork `#246` falsified
     the V3-6 pin that a Null `unknown` column commits then fails at scan, and the pin
     asserted the parquet write refusal until RP-51: fork `#356` writes the file without
     the column, so the pin now asserts the append commits and the column scans NULL
     (`fork_unknown_write_omits_the_column_and_reads_null`). CREATE refusal stands
     until U9 PR2. No new surface.
-    pins: rp-5-fork-repin/C-006
   - **RP-5 document lockstep (C-008).** Pin history, registry REF-1 FIXED / REF-3 BACKLOG /
     RDF-1 BACKLOG, and handoff F-6b/F-6c/F-8/F-16r/F-0 consumed notes match the pins.
-    pins: rp-5-fork-repin/C-008
   - **RDF-1 document lockstep (C-004).** Registry `RDF-1` FIXED with the measured bounds and
     counts on both engines; the guide's "What the cycle cannot reclaim" now states what IS
     reclaimed and names the residue; north star §3b errata and `docs/design/map.md`; handoff
     F-16 residue 2 re-homed (the bounds half was RePark's, refuted fork-side in `#259`);
     `task/roadmap/mid-term/map.md`. STATUS.md does not name `RDF-1` and is untouched.
-    pins: rdf-1-position-delete-bounds/C-004
 
 ## Pointers
 

@@ -20,12 +20,10 @@ row.
   for the largest requested size of each shape. Prints per-cell medians and
   the log-log exponent fit across the requested sizes. Step 2 drove it
   per-cell on the release module so each cell's box-idle wait could run.
-  pins: perf-cast-1/C-001, C-005
 - [measure.py](measure.py) — session + source view, `session.sql` (plan) then
   `EXPLAIN ANALYZE` (execute, output discarded so a 2500-column projection is
   not copied into Python), CSV writer, exponent fit. The pin imports
   `measure_one_cell`.
-  pins: perf-cast-1/C-001, C-004
 - [shapes.py](shapes.py) — SQL builders. `standalone` is `CAST((id + i) AS
   VARCHAR)` over the source; `over_aggregate` is `CAST(sum(id + i) AS
   VARCHAR)` in one aggregate; `projection_over_aggregate` is the same CAST
@@ -38,7 +36,6 @@ row.
   ANALYZE` plus `elapsed_compute`, `datafusion.optimizer.max_passes` 0/1/3,
   EXPLAIN VERBOSE rule names, optional `REPARK_LOG=info` `py.entry` span
   close times.
-  pins: perf-cast-1/C-002, C-003
 - `map.md` — this file.
 
 ## Reproduce

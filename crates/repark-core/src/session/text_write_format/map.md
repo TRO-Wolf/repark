@@ -65,7 +65,7 @@ unformatted, as the UDF left them unwrapped.
   pairs to the format OPTIONS clause the builders validate first, so eager
   refusal order never changed.
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the legacy-policy fallback reads the session's raw conf rows
-  (`&self.conf_dump`), never the display-redacted `conf_dump()`. pins: source-url-redact-1/C-031
+  (`&self.conf_dump`), never the display-redacted `conf_dump()`.
   **FA-5 (2026-10-08, fold 1):** a csv write whose source schema carries
   recorded display names (`df_guards/duplicate_names.rs`,
   `recorded_display_names`) resolves the sink format and adds the list to the
@@ -74,7 +74,7 @@ unformatted, as the UDF left them unwrapped.
   temporal columns. json never sets it: Spark refuses json over duplicate
   names, and the facade refuses before this builder runs. A schema without
   the record builds the same parts as before, whatever its columns are
-  called. pins: fa-5-6/C-002, C-004
+  called.
 - `spec.rs` — `TextWriteSpec`: the session zone text with its canonical and
   Java display ids plus the three compiled format specs, built once per COPY
   in the factory's `create`. `from_format_options` strips the `repark.text.*`
@@ -87,7 +87,7 @@ unformatted, as the UDF left them unwrapped.
   collector per running s3a text write, keyed by the `repark.text.write_id`
   OPTION the commit appends; the map inside is `Arc`-shared so every plan
   clone of the session sees it, and the entry is removed when the write
-  settles. pins: text-write-timestamp-zone-1/C-009
+  settles.
 - `serializer.rs` — `ReparkTextSerializer`: maps every temporal-bearing column
   (the same `contains_temporal` predicate as `select.rs`) through
   `format_batch_for_sink`, skipping top-level partition columns by lowercased
@@ -103,7 +103,7 @@ unformatted, as the UDF left them unwrapped.
   keyed by name because the demux strips partition columns before the
   serializer runs. Arrow batches allow a repeated field name; the logical
   plan and the demux never see one. Without a list the serializer does what
-  it did. pins: fa-5-6/C-002
+  it did.
 - `sink.rs` — `ReparkTextSink`: mirrors `CsvSink` / `JsonSink` (`config`,
   `write_all` via `FileSink::write_all`, inner serializer built exactly as
   DataFusion builds it, then wrapped). The demux strips partition columns
@@ -116,7 +116,7 @@ unformatted, as the UDF left them unwrapped.
   registry holds for this COPY's write id (a miss gets a private one
   nobody reads), and the s3a commit takes the same collector to delete
   exactly what this write created on failure. Sharing stays inside one
-  write: never a process-global list. pins: text-write-timestamp-zone-1/C-009
+  write: never a process-global list.
 - `file_format.rs` — `ReparkTextFormat`, which delegates every method to the
   inner `CsvFormat` / `JsonFormat` except `create_writer_physical_plan`
   (same header, newlines-in-values and compression handling, over
@@ -126,7 +126,7 @@ unformatted, as the UDF left them unwrapped.
   their extension. **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold
   (2026-09-30):** the writer plan resolves this COPY's recorded-path
   collector from the session registry by the spec's write id and injects
-  it into the sink. pins: text-write-timestamp-zone-1/C-009
+  it into the sink.
 
 ## Debug
 

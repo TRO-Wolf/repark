@@ -15,11 +15,11 @@ wire up (with `extension.rs` itself) when the session module wires.
   `spark.sql.session.timeZone` beside the raw conf map, and the test sets a PADDED value so a
   door that re-parsed the map instead of taking the resolved one would be visible.
   **FNP-8 (2026-09-07):** the no-extension pin compares the installed analyzer names with the
-  core guarded baseline, including the sliding-frame rescan rule. pins: fnp-8/C-003
+  core guarded baseline, including the sliding-frame rescan rule.
 
 `SessionExtension::configure_analyzer_rules` returns a DataFusion error when a door cannot place
 its required analyzer rule in the core-owned vector. Session construction maps that error through
-the engine error boundary and stops before `SessionState` is built. pins: fnp-8/C-003
+the engine error boundary and stops before `SessionState` is built.
 
 ## Pointers
 

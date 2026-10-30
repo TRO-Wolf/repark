@@ -27,10 +27,8 @@ Rust file-size default ceiling. Dirty-list-under-null-parent CASE pin
 
   Mutations: drop the `has_struct_columns` walk → walks 10 → 6, depth-three pin reds (1 of 2);
   route `dynamic_flatten` back through the stats entry → the no-plan-walk pin reds (1 of 1).
-  pins: perf-dynflatten-1-measure/C-002
 - `preserve_nulls.rs` — DFP-1 plan-shape and value/type matrix for preserve-null Unnest across
   List, LargeList, FixedSizeList, and Dictionary<List>; keeps sequential Cartesian expansion.
-  pins: dfp-1-preserve-null-unnest/C-001, C-002, C-003, C-004, C-005, C-006
 
   **PERF-DYNFLATTEN-2** joins it because the plan-shape assertion it already owns —
   how many `CASE WHEN` projections a rewrite emits — is the assertion the extractor moves.
@@ -44,7 +42,6 @@ Rust file-size default ceiling. Dirty-list-under-null-parent CASE pin
 
   Mutation: route plain structs back through `null_safe_field` (`null_mask_extractable` → `false`)
   → the extractor pin reds and the dictionary pin stays green, **1 red of 2**.
-  pins: perf-dynflatten-2-null-mask/C-003
 
 ## Pointers
 

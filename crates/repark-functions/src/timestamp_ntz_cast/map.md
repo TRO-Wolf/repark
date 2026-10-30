@@ -20,14 +20,13 @@ parameter here would be a second nanosecond conversion beside that one.
   UTC and New York, malformed strings raising `CAST_INVALID_INPUT` under ANSI and NULL under
   try_cast, numeric sources refusing with Spark's `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`
   class and names, and the literal answering a naive wall named `TIMESTAMP_NTZ '<wall>'`.
-  pins: ntz-1/C-001, C-002
   **WO NTZ-1 re-verify fold (2026-09-28):** the store-wrap idempotence pin
   (an already-wrapped expression keeps a single wrap; `wrap_bare=false`
-  leaves the expression alone). pins: ntz-1/C-006
+  leaves the expression alone).
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
 - **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the SQL test sessions here are built by
   `spark_type_planner::planned_context`, so `TIMESTAMP` is typed by the planner as on
-  every door; no assertion moved. pins: ice-tsns-type-planner-1/C-013
+  every door; no assertion moved.

@@ -1,7 +1,6 @@
 # map — repark-iceberg/src/write/meta_delete
 
 ICE-META-DELETE-1 (2026-09-19): the pins of Spark's metadata-delete decision.
-pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
 ## Purpose
 

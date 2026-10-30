@@ -16,7 +16,7 @@ name parts. The end-to-end (session) rows live in `../tests.rs`.
   expressions plus a `FOR VERSION AS OF` control, each pinning the first of two
   snapshots. Breaking `evaluate_sql_timestamp_asof` turns exactly the three
   expression tests red (probed 2026-09-19, probe removed); the version control
-  stays green. pins: ice-tt-resolve-1/C-002
+  stays green.
 
 ## Pointers
 
@@ -34,6 +34,6 @@ name parts. The end-to-end (session) rows live in `../tests.rs`.
 First checks: `cargo test -p repark-sql time_travel::`. Escalate to: [../map.md#debug](../map.md).
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream so
-the shared evaluator receives parseable SQL. pins: ice-tt-resolve-1/C-003
+the shared evaluator receives parseable SQL.
 **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** imports resolve behind
-`repark_core::time_travel`. pins: ice-tt-resolve-1/C-010
+`repark_core::time_travel`.

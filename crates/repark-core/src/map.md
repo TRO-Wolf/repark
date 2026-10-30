@@ -1,14 +1,13 @@
 # map — repark-core/src
 
-U1-MEM-LAYOUT-1 (2026-09-23): session memory-catalog registration records the warehouse layout root; see the test pins in `session/tests/map.md`. pins: u1-mem-layout-1/C-001
+U1-MEM-LAYOUT-1 (2026-09-23): session memory-catalog registration records the warehouse layout root; see the test pins in `session/tests/map.md`.
 
-U7 PR1 (2026-09-24): `session.rs` declares `session/writer_layout.rs` (the DataFrameWriter layout and `save()` target methods); see `session/map.md`. pins: u7-write-df/C-005, C-009
+U7 PR1 (2026-09-24): `session.rs` declares `session/writer_layout.rs` (the DataFrameWriter layout and `save()` target methods); see `session/map.md`.
 
-ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both. pins: ice-mixed-case-1/C-004
-ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level. pins: ice-mixed-case-1/C-009
+ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both.
+ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level.
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-(pins: cc-3-comment-condensation/C-009).
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002). Clippy doc_markdown backticks added.
 
@@ -58,16 +57,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   native door uses it. Its refusal says `repark.sql() does not allow local-file DDL` and that the
   entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci`
   from here; its private copy is deleted.
-  pins: pa-local-fs-policy-1/C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-026, C-027, C-028, C-029, C-030, C-031
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
-  `pub mod microbatch;` line in `lib.rs`. pins: mb-3/C-003
+  `pub mod microbatch;` line in `lib.rs`.
 - `silver.rs` + [silver/](silver/map.md) — typed `SilverPlan` (SILVER-S1, 2026-09-12): TOML
   parse with key-path refusals, closed operation enums, parse-time structural validation,
   canonical identity bytes, deterministic `explain()`. `pub` from this crate, not bound
   into Python, unstable until SIL-1..SIL-10. No data execution.
-  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `config_file.rs` + [config_file/](config_file/map.md) — the `repark.toml` loader (CFG-1,
   steps 1–2 landed 2026-09-09). The module owns `ConfigFile` (`profiles: BTreeMap<String,
   Profile>` over the D-1 tables), the public `load()` entry (discovery, then the file read,
@@ -88,28 +85,24 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `[<profile>.maintenance]` policy: `MaintenancePolicy` + `TablePolicy`, the D-2
   duration parser, key-by-key table resolution, `adaptive_partitioning` reserved) and
   the raw `maintenance` slot on `Profile`.
-  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014,
-  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025, C-026, C-027
-  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
   **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
   `message()` plus the locally computed line and column, never the echoed source line.
-  pins: review-fix-7/C-002
 - `session.rs` — **C-2d fold 1 (2026-10-07), N5:** `table_exists` asks `source_table_exists` first, so a
   three-part name under a mounted source resolves through the source. Three comment lines
-  were shed to pay for the three new lines; the file holds 999 of 1000. pins: c-2/C-115
+  were shed to pay for the three new lines; the file holds 999 of 1000.
   **C-4 step 2 (2026-10-09):** the builder installs the last-Postgres-write-report carrier;
   the install line is paid for by one shed comment, so the file holds 1000 of 1000.
   `build` carries `#[allow(clippy::too_many_lines)]` (one config line per wired product),
-  paid for by a second shed comment. pins: c-4/C-013
+  paid for by a second shed comment.
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
   `register_catalog_spec` builds Glue and S3 Tables catalogs through
   `glue_catalog_counted` / `s3tables_catalog_counted` with the session's I/O counters
-  (see `session/map.md`). pins: ice-read-perf-0/C-003 **ICE-CATALOG-CACHE-1 (2026-09-19):**
+  (see `session/map.md`). **ICE-CATALOG-CACHE-1 (2026-09-19):**
   both now receive the whole `CatalogCaches` (`iceberg_caches::caches_of`), so configured and
   late-configured Glue and S3 Tables catalogs get the session's metadata and manifest caches.
-  pins: ice-catalog-cache-1/C-002 **ICE-WRITE-OPTIONS-1
+  **ICE-WRITE-OPTIONS-1
   round 3 (2026-09-17):** `sql_with_write_options` runs the session dialect's
   `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
   Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,
@@ -117,14 +110,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   funnel. **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `sql_built` /
   `sql_built_with_write_options` carry facade-built SQL with `verbatim_override: Some(false)`;
   `sql_with` passes `None` (user text follows the session flag).
-  pins: string-literal-escape-1/C-011 **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
   overwrite_intent)` fills `EngineContext::overwrite_intent` (`Session` / `Static` for
   `saveAsTable` / `Dynamic` for `writeTo.overwritePartitions`), and `sql_with` calls it with an
   empty map and `Session`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014;
   ice-overwrite-mode-1/C-007 **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** a fourth argument
   `source_by_name` fills `EngineContext::source_by_name`, the V2 DataFrame writer's by-name
   source binding (`Column`-named source columns resolve against the table by name, as
-  Spark's `OverwriteByExpression.byName`); `sql_with` passes `false`. pins: u7-write-df-2/C-013
+  Spark's `OverwriteByExpression.byName`); `sql_with` passes `false`.
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the builder folds the
   `spark.sql.iceberg.*` write confs from its config map into the session
   (`with_session_write_conf`), so the funnel's `from_ctx` read answers them. Builder collects
@@ -157,8 +150,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   conf key > default; CFG-1 step 3: `from_config_file(path?)` forces a file (`None` keeps
   automatic discovery), `build()` resolves the file first and merges its pairs UNDER the
   builder map (builder wins per key) with the file's `session` knobs as typed fallbacks,
-  printing the file's discovery warnings (REVIEW-FIX-7 step 1, 2026-09-10:
-  pins: review-fix-7/C-003),
+  printing the file's discovery warnings (REVIEW-FIX-7 step 1, 2026-09-10:),
   and the session keeps the redacted `(key, value, source)` `conf_dump()`), attaches the
   write/scan knobs as
   DataFusion `ConfigExtension`s via `repark_iceberg::write::*` (`with_merge_session_knobs`,
@@ -197,36 +189,29 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `with_session_owner` with the owner snapshotted from the process environment at build;
   the query path never reads the environment. `catalogs_snapshot` is `pub` so doors
   outside this crate can route over the session's registry.
-  pins: review-fix-5/C-006
   **EAGER-BUDGET-1 step 1 (2026-09-13):** the file gained one `mod cache_budget;` line —
   the D-2 retained-bytes accounting (`retained_cache_bytes` /
   `distinct_buffer_bytes`) lives in `session/cache_budget.rs`, keeping this file under
   the default ceiling at 988.
-  pins: eager-budget-1/C-002
   **EAGER-BUDGET-1 step 2 (2026-09-13):** the D-1/D-3 incremental admission loop and the
   live-buffer seed (`live_cache_buffer_set`) live in `session/temp_views.rs` and
   `session/cache_budget.rs` — this file is unchanged.
-  pins: eager-budget-1/C-005, C-007
   **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_json` resolves the S3 prefix
   once per call through `object_store_s3` (parquet and csv resolve inside their
   reader bodies, so this file grows by one line and stays under its ceiling).
-  pins: s3-path-write-1/C-013
   **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** re-exports
   `repark_common::java_case::{fold_a_equal, fold_b_equal}` for the binding
   (the Python crate reaches the tier-0 folds only through here).
-  pins: attr-id-1/C-032
   **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** `fold_a_equal` is
   `string_lower_equal` (length plus `String.toLowerCase`).
-  pins: attr-id-1/C-037
   **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares
   `session/text_write_format.rs` and registers its UDF at session build.
-  pins: text-write-timestamp-zone-1/C-001
   **SOURCE-URL-REDACT-1 (2026-10-06):** the session stores the raw conf rows (`raw_conf_dump_rows`) so S3 endpoint
   resolution reads the configured endpoint, and `conf_dump()` returns them through
-  `redact_dump_rows`. pins: source-url-redact-1/C-008
+  `redact_dump_rows`.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the DataFusion conf refusal moved to `df_guards::invalid_datafusion_config`,
-  which masks the echoed value. pins: source-url-redact-1/C-017
-  **SOURCE-URL-REDACT-2 (2026-10-06):** `build()` registers every config-map value (builder pairs plus the merged `repark.toml` pairs) before validation, in one line (the file sits at the 1000-line ceiling). pins: source-url-redact-1/C-058
+  which masks the echoed value.
+  **SOURCE-URL-REDACT-2 (2026-10-06):** `build()` registers every config-map value (builder pairs plus the merged `repark.toml` pairs) before validation, in one line (the file sits at the 1000-line ceiling).
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -234,11 +219,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   Spark door (R5-C) because only this crate builds the session; the Spark door imports
   the type and the test session build reuses the snapshot. No `//` comments; the reasons
   live on this row.
-  pins: review-fix-5/C-002, C-006
 - `stack.rs` (+ [stack/](stack/map.md)) — **PERF-UNPIVOT-1:** `Unpivot` logical node,
   `UnpivotExec`, `apply_stack`, the labeled describe door `apply_labeled_stack` /
   `StackLabels`, marker `stack` UDF, Spark-door `StackRewrite`.
-  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `freq_items.rs` — **DF-RUST-3 (2026-09-15):** Spark's `FreqItemCounter` as a
   DataFusion `AggregateUDFImpl` + `Accumulator` over `HashMap<FreqKey, i64>` —
   capacity `floor(1/support)`, the KSP add/merge (negative-remainder branch keeps
@@ -250,7 +233,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   like Spark's boxed `equals` (round-2 R-9, round-3 R-13, round-4 R-14).
   `freq_items` runs one aggregate over the named columns
   and answers the `<name>_freqItems` projection.
-  pins: df-rust-3/C-001, C-002, C-007, C-010, C-011
 - `na_fill.rs` (+ [na_fill/](na_fill/map.md)) — **LOGICAL-WIDTH-1 (2026-09-16, round 2,
   R-12):** `na_fill_expr` builds the `na.fill` replacement in Rust — the fill literal is
   cast to the target column's own Arrow type for every integer/uint/float width (Spark's
@@ -258,7 +240,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `coalesce`d under the bound expression. The column type is read from the plan schema
   (engine name, display-name fallback, last duplicate wins); a miss leaves the literal
   uncast. File-backed pins: `na_fill/tests.rs`.
-  pins: logical-width-1/C-012
 - `transpose.rs` — **DF-RUST-3 (2026-09-15):** the `ResolveTranspose` algorithm as an
   eager kernel (`transpose_frame`): filter null index rows, enforce
   `spark.sql.transposeMaxValues`, collect once, stable-sort ascending on the raw index
@@ -268,7 +249,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   Conditioned errors
   (`TRANSPOSE_INVALID_INDEX_COLUMN`, `TRANSPOSE_NO_LEAST_COMMON_TYPE`,
   `TRANSPOSE_EXCEED_ROW_LIMIT`) carry `[CONDITION] … SQLSTATE:` in the message.
-  pins: df-rust-3/C-003, C-004, C-008
 - `update_fields.rs` (+ [update_fields/](update_fields/map.md)) — **COLUMN-PARITY-1
   (2026-09-14, critic round):** Spark `UpdateFields` as the `update_fields` scalar UDF
   plus `update_fields_call` / `register_update_fields`, registered on the session in
@@ -276,14 +256,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   parent-validity masking so NULL structs stay NULL through field extraction.
   Re-check round 2 (2026-09-15): the mask ANDs validity bitmaps onto shared value
   buffers; `spark_sql_type` is shared `pub(crate)` for the `isnan` refusal below.
-  pins: column-parity-1/C-008, C-009
 - `isnan.rs` (+ [isnan/](isnan/map.md)) — **COLUMN-PARITY-1 (2026-09-14, critic round):**
   the `repark_isnan` scalar UDF plus `repark_isnan_call` / `register_repark_isnan`,
   registered on the session in `session/df_guards.rs`. Float/string test the DOUBLE
   value (strict cast, malformed errors). Re-check round 2 (2026-09-15): struct, array
   and map refuse at plan time with `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`; all
   other non-float types answer false.
-  pins: column-parity-1/C-008, C-009
 - [dynamic_flatten.rs](dynamic_flatten.rs) (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
   function over a DataFusion `DataFrame` (no frame newtype). Structs first (null-safe
   `get_field` Project, never DF struct `unnest_columns`), then lists one-at-a-time in
@@ -305,7 +283,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   parent — one scalar UDF that unions the parent's validity into the child array — and the
   CASE only for a `Dictionary(_, Struct)` parent. Same row set, same Arrow types; the
   null-parent cost stops being proportional to rows.
-  pins: perf-dynflatten-2-null-mask/C-002
   **PERF-DYNFLATTEN-1:** the rewrite is generic over a `StatsSink`. The product entry
   `dynamic_flatten` instantiates the ZST `NoStats`, so every counter call and the
   `count_plan_kinds` plan walk compile away — the measurement adds NO work to the product path,
@@ -316,13 +293,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `list_explodes`, `plan_nodes`, `unnest_nodes`, `projection_nodes`); product
   `dynamic_flatten` is the same rewrite. Depth-3 pin: 4 passes, 10 walks, 3
   expansions, 20 fields visited.
-  pins: perf-dynflatten-1-measure/C-002
 - `lib.rs` — **IPI-40 PR6 (2026-09-24):** re-exports `TempViewSession` beside
-  `EngineContext` / `SqlDialect`. pins: ice-views-1/C-018
+  `EngineContext` / `SqlDialect`.
   **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` returns
   `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
   false, so an H-3 number can never come from a debug build.
-  pins: perf-dynflatten-1-measure/C-002
   **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list at
   the exact 155-line baseline; the stale half-comment above the `error_map` re-export
   (its note is already carried by `session.rs`'s own line) was the line shed for it.
@@ -332,7 +307,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `string_lower_equal` (the `Session` alias merged into the list: still 155
   lines).
   **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the
-  binding's path to the redactor (no new crate edge). pins: source-url-redact-1/C-014
+  binding's path to the redactor (no new crate edge).
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
@@ -358,10 +333,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the read-only static table feeds `IcebergStaticTableProvider::try_new_from_table`, and
   the provider goes straight to `SessionContext::read_table` — no registration is left
   behind and no time-travel or incremental option reaches the path route.
-  pins: dfload-1/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010
   **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the static provider sets the fork's `with_uuid_as_string(true)`
   (RP-52 `b61c82b8`), so a path read presents `uuid` as text like the catalog path.
-  pins: u9-types-1/C-010
 - `plan_canonical.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-15, round 4):** the
   expression-canonicalization half of the hash, split out when the expression
   family outgrew `plan_introspect.rs`. `RelTable` numbers scans and subquery
@@ -372,7 +345,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   column-side cast beside a bare literal whose value fits the native leaf type
   blocks, coercion still strips); binary comparisons canonicalize operand
   order with operator flips and `AND`/`OR` chains flatten and sort.
-  pins: df-plan-introspect-1/C-013, C-015
 - `plan_introspect.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-14; follow-ups 2026-09-15,
   rounds 1–4):** three plan-introspection kernels over a `DataFrame`'s plan.
   `input_files` walks the built (never executed) physical plan and collects every
@@ -405,7 +377,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   int. Depth-200 chained-filter hash medians 0.0060s on the always-analyze build
   (2026-09-15, release module, round 4). The Iceberg scan exec exposes table and snapshot
   only, never materialized data files, so Iceberg frames answer empty.
-  pins: df-plan-introspect-1/C-001, C-002, C-006, C-007, C-008, C-009, C-010, C-011, C-013, C-014
   **S3-PATH-WRITE-1 re-verify (2026-09-28):** `plan_reads_s3_prefix` walks with
   `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
   `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
@@ -413,25 +384,24 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `error_map.rs` — **C-4 step 2 (2026-10-09):** the `Connect` fold keeps
   `Error::CommitStateUnknown` (operation id through), so a Postgres commit whose outcome the
   driver could not prove surfaces as `CommitStateUnknownException`, matching the
-  `source_error` fold. No other producer wraps `ConnectError::CommitUnknown`. pins: c-4/C-013
+  `source_error` fold. No other producer wraps `ConnectError::CommitUnknown`.
 - `error_map.rs` — **ENC-1 fold 1 (2026-10-09):** `engine_err` first asks
   `repark_iceberg::write::EncryptedTableRefusal::find` for the keyed-table refusal. The
   catalog guard raises it from inside a writer or a commit, wrapped by whatever layer was
   writing; without this step the class and the text would depend on that layer. With it
   every door maps to `NotImplemented` (`UnsupportedOperationException`) with the one text.
-  pins: enc-1/C-008
 - `error_map.rs` — **C-2d (2026-10-07):** `classify_external_tail` downcasts
   `repark_connect::ConnectError` to `EngineErrorKind::Connect`; `engine_err` takes the class from
   `From<ConnectError>` (`Config`, `NotImplemented`, else `DataFusion`) and flattens the
   `Context` chain into one line (`database source `<name>`: <error>`), so a Python message
-  carries the cause. pins: c-2/C-102
+  carries the cause.
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
   stamp (→ `Error::CommitStateUnknown` with the minted `engine.operation-id`, ICE-COMMIT-UNKNOWN-1),
   then to `IllegalArgumentMarker` (defined in repark-iceberg's `write/illegal_argument.rs` since ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19) and re-exported here unchanged; the `IllegalArgumentMarked` arm → `Error::IllegalArgument`, so the CALL options
   validation raises `IllegalArgumentException` — **ICE-RDF-OPTIONS-1 round 1, 2026-09-17**),
-  then (in `classify_external_tail`) to `NumberFormatMarker` (**U7 PR1 round 2, 2026-09-24:** the `NumberFormatMarked` arm → `Error::NumberFormat`, a non-integer `output-spec-id`; pins: u7-write-df/C-011),
+  then (in `classify_external_tail`) to `NumberFormatMarker` (**U7 PR1 round 2, 2026-09-24:** the `NumberFormatMarked` arm → `Error::NumberFormat`, a non-integer `output-spec-id`),
   then to `UnsupportedMarker` (**ICE-VIEWS-1 R2, 2026-09-21:** the `UnsupportedMarked` arm → `Error::NotImplemented` verbatim, so a viewless CREATE/REPLACE refuses with Spark's exact bytes),
   then to a live `iceberg::Error` → classified by its
   structured `ErrorKind` (`classify_iceberg_error`, the ONE iceberg kind→class mapping — also
@@ -444,7 +414,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   override; identical values collapse, different values fail loud naming both keys).
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `engine_err_for_sql` reshapes unknown-routine
   texts before classification (never for `Parse`), so `sql_with` answers Spark's shape
-  on every dialect. pins: unresolved-routine-1/C-001
+  on every dialect.
   (ORCH-001 remediation: the constructor sits above `engine_err`'s doc comment.)
   **IPI-51 PR2 (2026-09-20):** the hand-formatted `[CONDITION]` strings in
   `text_scan.rs`, `orc_scan.rs`, `time_travel.rs`, `column_resolution.rs`,
@@ -454,7 +424,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `[ARITHMETIC_OVERFLOW]` routes to `Error::Arithmetic` carrying the inner message
   verbatim (never the `Execution error: ` display); `Analysis` peels DataFusion's
   `user-defined coercion failed with: ` wrap to the `[CONDITION] … SQLSTATE: XXXXX`
-  refusal payload when one is present, else keeps the full display. pins: fnp-math-1/C-004
+  refusal payload when one is present, else keeps the full display.
   **WO-A4 (2026-09-23):** a bracketed `ParserError::ParserError` payload stays a `Parse` error
   and renders verbatim; unbracketed payloads and other parser variants keep the DataFusion display.
   **CAST-OVERFLOW-INSERT-1 (2026-09-29):** an `Execution` message headed
@@ -463,11 +433,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09):** `join_refusal_message` peels the
   `join_condition_refusals` rule wrap to the bare `[CONDITION] … SQLSTATE: 42K0E` payload, gated
   on the rule name and the two join heads, so the facade accessors answer Spark's condition;
-  foreign rule wraps and bare heads keep the full display. pins: cross-join-condition-1/C-008
+  foreign rule wraps and bare heads keep the full display.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see
-  [../map.md](../map.md)). pins: unresolved-routine-1/C-001, C-002
+  [../map.md](../map.md)).
 - `pool_refusals.rs` — **H3-SPILL-RESIDUE-1 (2026-09-06):** `PoolRefusalLog` (a refusal counter
   plus the engine's own last refusal text), `RefusalRecordingPool` (a `MemoryPool` decorator that
   delegates every method to the inner `FairSpillPool` — name, `Display`, `memory_limit`, both
@@ -479,7 +449,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `expect("partition not used yet")`. repark cannot patch the dependency, so it reports the
   refusal that caused the panic instead of a bug report. The decorator is the only way to see a
   refusal from outside DataFusion — the pool trait has no hook.
-  pins: h3-spill-residue-1/C-002, C-003
   **NEVER-OOM-PANIC-1 (2026-09-16):** `nlj_build_reset.rs` now removes the nested-loop-join
   double-execute at the root, so this path spills (or refuses typed) and no longer reaches
   the containment; the log stays as the tightness proof and the containment stays for the
@@ -497,7 +466,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `metrics` is `None` (per-execute clones own theirs). A child count other than one is an
   `Internal` error, pinned. Wired in
   `session/df_guards.rs::context_with_df_54_1_rule_guards`.
-  pins: never-oom-panic-1/C-004, C-005, C-006
   **Round 2 (2026-09-16):** the wrapper carries a `BuildSidePolicy` the rule reads off the
   join (`NljBuildSideExec` counts its executes; only the first is the in-memory load, the
   second is always the fallback re-execute). `BuildSidePolicy::for_join` refuses the
@@ -510,7 +478,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   execute counter is an `AcqRel` atomic with no lock (the two executes are sequential: the
   fallback runs only after the load resolves); `for_join` takes the one-byte `JoinType` by
   value and the test-only `policy()` getter is `#[cfg(test)]`.
-  pins: never-oom-panic-1/C-011, C-012, C-013
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
@@ -530,11 +497,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the old both-keys rule. The touched inline tests share an `entry` helper and class-name
   consts; the parse pins live in
   [catalog_config/refusal_tests.rs](catalog_config/map.md); the file drops 1006 → 965 and
-  its size row retires. pins: catalog-1/C-006, C-007, C-008
+  its size row retires.
   **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** `kind_from_type` + `kind_from_catalog_impl`
   move to `catalog_kind.rs` (1028 → 1007, ratcheted); the accepted sets gain `hadoop` and
   `InMemoryCatalog` (both → `Memory`), with the refusal texts updated.
-  pins: ice-catalog-session-1/C-025, C-026, C-030
   **PR-B hadoop naming (2026-09-24):** the `type` arm records a trimmed, case-insensitive
   `hadoop` value on the block. `into_spec` then adds `metadata-naming=hadoop` to the spec props
   through `catalog_kind::with_type_naming`, unless the user set `metadata-naming` explicitly.
@@ -545,7 +511,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   [catalog_config/hadoop_naming_tests.rs](catalog_config/map.md).
   **REVIEW-FIX-5 (2026-09-10):** `prop_key_is_secret` is `pub` (re-exported at the crate
   root) so `DESCRIBE TABLE EXTENDED` redacts through the same predicate; no second
-  predicate exists. pins: review-fix-5/C-004
+  predicate exists.
   **REVIEW-FIX-5 D-5 (2026-09-10):** the file carries no `//` comments; the moved reasons
   live here. `prop_key_is_secret` folds hyphens and dots to underscores so dotted and
   hyphenated keys share needles, then strips underscores so camelCase and one-word keys
@@ -565,7 +531,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **SOURCE-URL-REDACT-1 (2026-10-06):** `prop_key_is_secret` moved to `repark-common::redaction` and is re-exported
   here unchanged; the `CatalogSpec` `Debug` masks through `redact_value`, so a password inside
   a `uri` / `url` value is masked too, and the `type` / `catalog-impl` unrecognized-value
-  refusal echoes the value through `mask_value_credentials`. pins: source-url-redact-1/C-006, C-009
+  refusal echoes the value through `mask_value_credentials`.
 - `read_options.rs` — CSV/JSON Spark option-map helpers, `read_csv_path` (nullValue
   all-Utf8 scan; `utf8_columns` re-read so timestamp CAST sees raw offset text), and the
   local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body here so
@@ -585,17 +551,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `refuse` raises `Error::Analysis` naming them — `prop_key_is_secret` on each schema
   name verbatim, no nested walk, no value inspection. Readers without the csv/json
   option map (parquet, table) never see the key; the facade refuses it loud there.
-  pins: nullability-2/C-006
-  pins: csv-infer-perf-1/C-002, C-005
-  pins: torture-1/C-018, C-020
   **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_csv_path` resolves the S3
   prefix once per call through `object_store_s3`, so both the first read and
   the `utf8_columns` re-read share the directory spelling.
-  pins: s3-path-write-1/C-013
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `flag_secret_columns` flag reads
   `repark_common::redaction::column_name_is_secret_shaped`, the pre-widening rule, so the
   widened display key rule changes no column decision; the flag, boolean and single-character
-  option refusals echo the value masked. pins: source-url-redact-1/C-027, C-036
+  option refusals echo the value masked.
 - `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
@@ -628,7 +590,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   segment names a directory lists one leaf level through an iterative walk.
   pins: io-text-1/T-5, U-5, U-6
   **IO-ORC-1 (2026-09-16):** adds `match_file_name_glob` (one-segment match for the
-  ORC `pathGlobFilter`); the matcher itself is unchanged. pins: io-orc-1/C-006
+  ORC `pathGlobFilter`); the matcher itself is unchanged.
 - `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` writer.
   **Follow-up (2026-09-15):** the writer streams `execute_stream` batches into
   sequential `part-*.txt` (NULL rows write empty lines, every row terminated; an empty
@@ -638,7 +600,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   class; the partitioned writer already refused so). Rust tests cover the error texts
   and the round trip. Partitioned fan-out lives in `text_partition.rs`.
   pins: io-text-1/C-002, T-2, T-4, T-7, U-9
-  pins: io-text-1/C-001, C-002
 - `partition_discovery.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-3):** Hive
   partition discovery plus the shared batch materialization IO-ORC-1 reuses:
   `discover_partitions` takes leaf files under a root and returns the
@@ -690,10 +651,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   plus the build-map installer and the `SessionContext` reader. **ICE-OVERWRITE-MODE-1
   (2026-09-19):** re-exports `repark_iceberg::write::OverwriteIntent` as
   `repark_core::OverwriteIntent`, so the binding (no `repark-iceberg` edge) names the typed
-  per-write intent. pins: ice-overwrite-mode-1/C-007
-  pins: ice-dyn-overwrite-1/C-007, C-010, C-014
+  per-write intent.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the refusals here echo a rejected config value through
-  `mask_value_credentials`. pins: source-url-redact-1/C-017
+  `mask_value_credentials`.
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key
@@ -748,14 +708,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   re-reads with the relaxed schema as the DataFusion schema override — the plan keeps
   a single TableScan, so EXPLAIN output is unchanged. The double infer costs one extra
   listing plus footer reads; S3 registration still happens first in `session.rs`.
-  pins: cutover-schema-1/C-001, C-002
   **NULLABILITY-2 (2026-09-05):** the relax walk is iterative (explicit pre-order stack,
   bottom-up rebuild — no depth bound, no recursion blow-up) with identical type
   coverage: struct/list/map relax, map keys and the entries flag pass through, unknown
   shapes keep their type. Structural pins at depth 40 and 200, 600-deep all-nullable;
   the facade pins depth 40 end to end and documents Arrow's own footer-depth ceiling
   past it. Registry `CUTOVER-NULLDEPTH-1`.
-  pins: nullability-2/C-005
   **DYNFLATTEN-LISTNULL-1 (2026-09-06):** after the nullability relax, `promote_parquet_null_types`
   maps Arrow `Null` (parquet physical INT32 + Null logical type) to `Int32`, recursive over
   its own struct/list/map walk, depth-bound 32 (`MAX_NESTED_TYPE_DEPTH` now serves only this
@@ -766,11 +724,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (DYNFLATTEN-LISTNULL-1 critic F2). CTAS still uses `relax_schema_to_nullable` only, so an actual SQL `VOID`
   column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
   that never went through this reader.
-  pins: dynflatten-listnull-1/C-002, C-006
   **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_parquet_nullable` resolves
   the S3 prefix once per call through `object_store_s3`, so the infer read and
   the relaxed-schema re-read share the directory spelling.
-  pins: s3-path-write-1/C-013
 - `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
   case-insensitive column fold with normalization ON
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed
@@ -829,9 +785,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   guard (`refuse_star_twins` / `scan_twin_keys`) moves to
   `column_resolution/star_twins.rs` under the file-size gate, a pure move. See
   [column_resolution/map.md](column_resolution/map.md).
-  pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
-  pins: ice-error-conditions-1/C-011
-  pins: rp-56/C-001
   **WO CASESENS-1 slice 1 (2026-09-27):** `finish_with_display` respells the
   folded statement's inner scopes (`column_resolution/inner_scopes.rs`) and
   re-plans once on change, falling back to the pre-respell plan when the
@@ -839,7 +792,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
   `rewrite_fragment_case` re-renders through
   `repark_iceberg::write::sql_text::render_for_reparse` so string values
-  re-parse exactly. pins: string-literal-escape-1/C-010
+  re-parse exactly.
   **WO CASESENS-1 slice 2 (2026-09-27):** `plan_case_sensitive` plans on a
   cloned state with identifier normalization off (the guard stays first), and
   `stamp_unresolved_column` renders a missing column DataFusion reports with a
@@ -850,25 +803,20 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** re-exports
   `stack::remaining_stack` so the binding's small-stack backstop reads the
   calling thread's remaining bytes.
-  pins: deep-filter-chain-crash-1/C-008
-  pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
-  pins: casesens-1/C-005, C-006, C-007, C-008
-  pins: ice-error-conditions-1/C-011
-  pins: casesens-1/C-001, C-002
 - `column_resolution/stack.rs` — run 22b: `stack_bytes_for` (a `Visit` walk: open
   queries + their set-operation height + open expressions + open table factors, times
   32 KiB, plus 256 KiB) and `GrownStack`, a future whose every poll runs under
-  `stacker::maybe_grow`. pins: ice-mixed-case-1/C-022
+  `stacker::maybe_grow`.
   **IPI-40 PR6 (2026-09-24):** `on_grown_stack_with(red_zone, segment, future)` takes the
   red zone and the segment size apart (`on_grown_stack` passes one value for both) and is
   public through `column_resolution`, for repark-spark's re-planning temp-view scan (a
-  `lib.rs` re-export would pass its 155-line ceiling). pins: ice-views-1/C-018
+  `lib.rs` re-export would pass its 155-line ceiling).
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.
 - `column_resolution.rs` — **U11-EDGE-1 round 6 (2026-09-26, V-001):** the SQL audit's
   ambiguity candidates drop a scratch relation (`frame_names::is_scratch_relation`), so a
-  `_repark_h1_sel_*` view renders its candidates unqualified. pins: u11-edge-1/C-027
+  `_repark_h1_sel_*` view renders its candidates unqualified.
   **Round 7 (2026-09-26, V-001):** `audit_plan_for_ambiguity` does not descend into a view
   the statement names: `written_references` collects the named table factors that are not a
   CTE of the statement (`WrittenRefs::views`, the alias when one is written), and the walk
@@ -876,24 +824,24 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   references belonged to the view body before, so `SELECT id, Data FROM v` over a temp view of
   `jn.select(a['ID'].alias('id'), …)` refused `[`sc`.`ns`.`t`.`id`, `id`]` — the by-name write
   binding of `writeTo(t).append()` and `INSERT INTO t SELECT id, Data FROM v` both plan through
-  it. CTE bodies and derived tables are still audited. pins: u11-edge-1/C-028
+  it. CTE bodies and derived tables are still audited.
   **Round 7 (V-002):** `stamp_unresolved_column` leaves every `_repark_*` / `__repark_*` field
   out of the `UNRESOLVED_COLUMN.WITH_SUGGESTION` list (the round-2 relation rule extended to
   field names; a list left empty keeps DataFusion's error), so a twin-join frame's attribute
   copies and join scratch names never reach a suggestion. A user field spelled with that prefix
-  is left out too. pins: u11-edge-1/C-029
+  is left out too.
 - `column_resolution/display.rs` — **U11-EDGE-1 (2026-09-26):** output columns keep the
   query's spelling; `plan_with_repair` hands every successful insensitive plan to
   `finish_with_display` (boxed through `boxed_finish`, so the repair future stays small for
   the nested-view and deep-union stacks) and plans `caseSensitive=true` in its own boxed
-  `plan_case_sensitive`, which runs `strict_case_guard` first. Row in `column_resolution/map.md`. pins: u11-edge-1/C-001, C-007
+  `plan_case_sensitive`, which runs `strict_case_guard` first. Row in `column_resolution/map.md`.
   Round 2 (2026-09-26): `finish_with_display` also runs `display::keep_ref_qualifiers`, and
   `lib.rs` re-exports the DataFrame door's binder as `frame_names` (row in
-  `session/df_guards/map.md`). pins: u11-edge-1/C-018
+  `session/df_guards/map.md`).
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles). **FNP-4B (2026-09-15):** segment unescaping generalized to the quote
-  character (embedded backticks double). pins: fnp-4b/C-002
+  character (embedded backticks double).
 - `namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** the shared
   `refuse_contradictory_namespace_location` predicate (and its message helper)
   used by `session.rs` `create_namespace` and both SQL doors' `IF NOT EXISTS`
@@ -909,28 +857,25 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (`fs.s3a.endpoint`, `fs.s3a.path.style.access`, `fs.s3a.connection.ssl.enabled`,
   spark and repark spellings, dual keys must agree) resolve from the session config dump
   at store-build time on the read and write side; absent keys leave the builder untouched.
-  pins: s3-path-write-1/C-010, C-012
   **S3-PATH-WRITE-1 round 2 (2026-09-28):** `resolve_s3_prefix_for_read` — a
   slashless `s3://` / `s3a://` path that names no exact object but has objects
   under `<path>/` reads as a directory prefix (the Spark and local-door rule);
   exact keys keep single-file reads, and missing keys, sibling prefixes and
   lookup failures keep the original spelling so downstream errors are unchanged.
   Wired once per call into `read_parquet` / `read_csv` / `read_json`.
-  pins: s3-path-write-1/C-013
   **S3-PATH-WRITE-1 re-verify (2026-09-28):** the trailing-slash and
   exact-object branches encode through `split_s3_url_raw` +
   `encode_s3_key_for_url` like the slashless branch, so `#` / `?` / `%`
   keys read under every spelling.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the refusals here echo a rejected config value through
-  `mask_value_credentials`. pins: source-url-redact-1/C-017
+  `mask_value_credentials`.
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `an_invalid_endpoint_refusal_masks_its_userinfo` pins the masked endpoint
-  refusal. pins: source-url-redact-1/C-030
+  refusal.
 - `orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the ORC footer attributes orc-rust drops:
   tail/postscript parse, block-framed decompress in all five codecs, and a minimal
   protobuf field walk returning per-column `spark.sql.catalyst.type` values plus the
   uniform stripe writer timezone (mixed zones read as absent). Best-effort: any decode
   failure yields an empty map and the normal footer validation errors surface.
-  pins: io-orc-1/C-002
 - `orc_scan.rs` — **IO-ORC-1 (2026-09-16):** the read-only ORC scan over orc-rust 0.8.0
   (owner ruling Q-15B-1). `OrcReadOptions` carries mergeSchema, pathGlobFilter,
   recursiveFileLookup, modifiedBefore/After, basePath, ignoreCorruptFiles, and the user
@@ -945,7 +890,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   footer-checks). **Round 3:** the filter is reverted (R-18b-12 — the scan reads
   every match, hidden names only); `OrcPartition::execute` streams batches from
   the ArrowReader through `OrcBatchStream` (R-18b-14, text_scan pattern), never
-  a collected Vec. pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  a collected Vec.
 - `parallel_window/` — **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `ParallelWindowRule` +
   `ParallelWindowExec`, a parallel stand-in for a one-partition, empty-`PARTITION BY`
   `WindowAggExec` with at least two argument groups; and the `repark.parallel` carrier the rule
@@ -959,10 +904,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   requirements still hold (multi-batch sources keep their fan-out), and a one-partition
   projection with at least two non-column expressions evaluates them in parallel; never on a
   volatile expression. See [parallel_window/map.md](parallel_window/map.md).
-  pins: ta-series-s3/C-001, C-002, C-004, C-007, C-012
   **S2a (2026-10-05):** `ParallelWindowExec` gains the `InputOrder::PartitionIndex` arm: an
   unordered, unpartitioned window of window-UDF expressions over `CoalescePartitionsExec` drops
-  the coalesce and reads its input's partitions in index order. pins: ta-series-s2a/C-004
+  the coalesce and reads its input's partitions in index order.
 - `series_order.rs` (+ [series_order/](series_order/map.md)) — **TA-SINGLE-SERIES-PARALLEL-1 S2a
   (2026-10-05):** the generic order resolver behind the bare `ta.*` series (no TA knowledge).
   `resolve_series_order(plan, schema)` returns the frame's declared order (a `Sort`, or a
@@ -971,14 +915,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   NULLS FIRST, else no keys (the current row order). `SeriesOrderNotice` is the once-per-session
   warning flag, a `repark.series` carrier that `session.rs` attaches at build (one line beside
   the `repark.parallel` carrier); `lib.rs` declares `pub mod series_order;`.
-  pins: ta-series-s2a/C-002, C-003
   session that did not (verifier V-1). See
   [parallel_window/map.md](parallel_window/map.md).
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
   footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,
   local-tz-kind→naive, recursive through struct/list/map), schema union by name under
   mergeSchema, and the user-schema select (case-insensitive names, missing→NULL,
-  int→string arm, other mismatches loud). pins: io-orc-1/C-002, C-006, C-007
+  int→string arm, other mismatches loud).
 - `backend.rs` — the `ExecutionBackend` seam + `SingleNodeBackend`, its only implementation. One
   method, returning the concrete DataFusion `SessionContext`: the **trait boundary** is the
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
@@ -1003,7 +946,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   rules in the analyzer list after the extension has. Core names no planner: the crate
   sits below `repark-functions`, so each door hands its own in (the Spark extension, the
   ANSI dialect, the Python native door's extension). `build()` now resolves the dialect
-  before the context is assembled. pins: ice-tsns-type-planner-1/C-011
+  before the context is assembled.
   **ICE-STRUCT-PAIRING-1 exception round (2026-10-15, owner ruling 90(a)):** `guard` also
   runs `refuse_update_from_subquery`. An `UPDATE` plan whose input projection assigns a scalar
   subquery (under an alias, a cast, `arrow_cast` or one of RePark's `__repark_*` store kernels,
@@ -1023,7 +966,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2; **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**
-  `source_by_name: bool`, `false` in `new`, pins: u7-write-df-2/C-013) + `SqlDialect` +
+  `source_by_name: bool`, `false` in `new`) + `SqlDialect` +
   `DataFusionDialect` (the phase-1 default: DataFusion semantics — round 5 Z-2 routes its
   `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
   door is guarded like the two SQL doors). `SqlDialect::on_session_built` (default no-op)
@@ -1033,7 +976,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names`, `drop_temp_view`) is
   the session's temp-view seam; `EngineContext::temp_views` carries it (None from `new`, set by
   the session's statement funnel), so a dialect can register, list and drop session temp views
-  without owning the session. pins: ice-views-1/C-018
+  without owning the session.
   `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
   **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner ruling 106 (a), the stopgap):**
@@ -1049,7 +992,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   path, while the ANSI router calls the same function with the exemption. A plan error still
   comes first, so a statement that does not plan keeps its text. `PreExecute::run` keeps its
   contract and its tests; this door no longer calls it. Routing `repark.sql()` through the ANSI
-  door stays on the card. pins: repark-sql-update-subquery-where-1/C-005
+  door stays on the card.
   **Owner ruling 131 (b), 2026-10-16:** `refuse_dml_subquery_where` unwraps `EXPLAIN` and
   `EXPLAIN ANALYZE`, with or without `VERBOSE` or `FORMAT`, at any depth (`explained_statement`
   recurses over DataFusion's `DFStatement::Explain`, bounded by the parser's recursion limit)
@@ -1059,7 +1002,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   door. A plain `EXPLAIN` of a DML without a subquery predicate still behaves as on main (card
   EXPLAIN-DML-WRITE-1). The ANSI door and the shared function are unchanged. *(Superseded
   2026-10-17 by ruling 135, below: a plain `EXPLAIN` is no longer refused.)*
-  pins: repark-sql-update-subquery-where-1/C-012, C-013
   **Owner ruling 135 (a), 2026-10-17:** `refuse_dml_subquery_where` runs the shared refusal,
   with no exemption, on every statement that
   `repark_iceberg::write::statement_writes::executed_writes` answers, the walk the Spark SQL
@@ -1072,13 +1014,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   around `EXPLAIN ANALYZE`; a plain `EXPLAIN` of a subquery-predicate `DELETE` or `UPDATE`
   answers its plan again, as on main, and leaves an Iceberg table unchanged (on an in-memory
   table, reading it writes, as on main). The parse still uses the session's dialect.
-  pins: repark-sql-update-subquery-where-1/C-017, C-020, C-021
   **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):** `refuse_dml_subquery_where`
   calls `repark_iceberg::write::statement_writes::refuse_wrapped_write` on the statement it
   parsed, before 106's walk: on `repark.sql()` an `EXPLAIN ANALYZE` or a `PREPARE` of any write
   refuses with the ruled text, after planning, so a wrapped statement that does not plan (a
   `MERGE`, which DataFusion does not plan) keeps its plan error and writes nothing.
-  pins: explain-dml-write-1/C-001, C-002, C-007
 - `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1
   (2026-09-18, round 1):** `SparkRangeFunc`, RePark's `range` table function —
   non-nullable `id: Int64` column, 1–4 literal arguments (the 4th is
@@ -1088,7 +1028,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `ReparkSessionBuilder::build` registers it over the built-in `range` after
   extension `register`, so the facade door and the native door share the one
   registration; `generate_series` keeps its `value` column.
-  pins: range-tvf-id-1/C-001, C-002, C-003
   **RANGE-TVF-ID-2 (2026-09-19, round 1):** NULL bounds refuse as a planning
   error carrying `UNEXPECTED_INPUT_TYPE`; every Spark-accepted width coerces
   to `i64` (narrow and unsigned ints, decimal and float truncated toward
@@ -1100,7 +1039,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   and the scan limit thread through, and the step-direction ordering stays;
   the 4th argument coerces to `i32` and a non-empty range with a non-positive
   partition count refuses with `IllegalArgumentException`.
-  pins: range-tvf-id-2/C-001, C-002, C-003, C-004
 - `runtime.rs` (+ `runtime/tests.rs`) — **`EngineRuntime`** (phase-3 PR-3, EC-5 / design §4 Q7):
   the name the engine gives the **embedding's** Tokio runtime — a cloneable `Arc<Runtime>` handle
   with `runtime()` and `block_on`. ADDITIVE and tier-legal: core constructs no runtime, has no
@@ -1125,29 +1063,28 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   "resolved once, at construction" literally true rather than approximately true.
   **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
-  first default type-coercion pass. pins: fnp-8/C-003, C-004
+  first default type-coercion pass.
 - `catalog_kind.rs` — **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** short-form kind
   resolution, moved out of `catalog_config.rs` (`kind_from_type` with the `hadoop` →
   `Memory` arm, `kind_from_catalog_impl` with the `InMemoryCatalog` → `Memory` arm,
   plus the two alias unit pins).
-  pins: ice-catalog-session-1/C-025, C-026
   **PR-B hadoop naming (2026-09-24):** also holds `kind_from_bare_catalog_value` (moved from
   `catalog_config.rs`), `is_hadoop_type`, and `with_type_naming`. `with_type_naming` inserts
   the fork's `metadata-naming` key with `hadoop` only when the key is absent.
 - `catalog_state.rs` — **C-4 step 2 (2026-10-09):** `CatalogRegistry::database_source_kind`
   reports a mount's `SourceKind`, so the SQL doors route a Postgres target to the sink while
-  a SQL Server or Trino mount falls through to today's behavior. pins: c-4/C-013
+  a SQL Server or Trino mount falls through to today's behavior.
 - `catalog_state.rs` — **C-2d fold 1 (2026-10-07), N5:** `CatalogRegistry::is_database_source(name)` and
   `source_read_only_message(name)` (the `read_only_ddl` text for a Postgres source), so the
   Spark door's catalog lookups answer a mounted source by its own rows instead of the P11
-  Iceberg direction note. pins: c-2/C-115
+  Iceberg direction note.
 - `catalog_state.rs` — **C-2d (2026-10-07):** `SourceMount { specs, zone }` implements
   `SessionExtension`: `register(ctx)` registers one catalog per auto-registered source —
   `repark_connect::PostgresSource::mount(identity, props, localiser)` for Postgres (pure, no
   I/O, no validation; FL-1) and `RefusingSourceCatalogProvider` for SQL Server and Trino. It is
   not installed in the builder's single extension slot: `register_configured_sources` calls it
   after build, so H-EXT did not fire. `mounts_postgres(spec)` is the one test of "this name is a
-  Postgres mount". pins: c-2/C-097
+  Postgres mount".
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once
@@ -1157,16 +1094,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   from the v1 SQL crate. **PERF-ICE-CATALOG-IO-1:** the registry also carries this session's
   `CatalogCaches` (`with_cache_settings`, resolved once in `build()` from the conf map), so every
   catalog the session builds shares one metadata-location cache and one retained-entry bound.
-  pins: perf-ice-catalog-io-1/C-002, C-004
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `catalog_names` lists every registered
   name (entries + database sources + read-only catalogs, sorted, deduped) for
   `SHOW CATALOGS`.
-  pins: ice-catalog-session-1/C-015
   **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** entries carry the `table-default.*` /
   `table-override.*` / `warehouse` side map (`merge_table_props`,
   populated at register and by later runtime sets); `table_creation_properties`
   merges override > user > default at CREATE.
-  pins: ice-catalog-session-1/C-024, C-027
   **ICE-CATALOG-SESSION-1 R6 (2026-09-20):** the registry carries the
   session-defaults box (`current_defaults` / `set_defaults`, `Arc`-shared across the
   per-statement clones, seeded `spark_catalog` / `default`): the Spark door's `USE` /
@@ -1188,14 +1122,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `database_source(name)`, the `pub(crate)` lookup `refuse_source_ddl` uses to rebuild
   the D-1 refusal for a DDL plan naming a source.
   **C-1 (2026-10-05):** the key is `spec.identity.name` (the CC-2 identity now lives in
-  `repark-common`); keys and behavior unchanged. pins: c-1/C-002
-  pins: cfg-2/C-012
+  `repark-common`); keys and behavior unchanged.
   **ICE-VIEWS-1 (2026-09-20):** view lookup beside table lookup (`is_view`),
   the installed-wrapper directory (`view_wrapper_for` / `note_view_wrapper`)
   and the nesting counter behind `view_expansion_guard`.
   **R2 (2026-09-21):** `is_view` returns a `Result` — genuine catalog errors
   propagate (fail-closed); `FeatureUnsupported`/`NamespaceNotFound` stay false.
-  pins: ice-views-1/C-006, C-007, C-012
 - `named_sources.rs` — **C-2d (2026-10-07):** `register_configured_sources()` (still the
   one entry point CFG-2 D-4 named) checks every auto-registered name for a duplicate under the
   registry lock, runs `SourceMount::register` (`catalog_state.rs`), records the specs, and adds
@@ -1207,28 +1139,26 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   through `repark_connect::redact_source_prop`. `NamedSource::ping()` is `async`: a Postgres
   source pings the mounted `PostgresSource` (the context's `PostgresCatalog`, downcast) or, when
   not auto-registered, one built for the call; a failure names the key path
-  (`session::read_postgres::source_error`). pins: c-2/C-097, C-099, C-101, C-102
+  (`session::read_postgres::source_error`).
   **Fold 1, N2:** `refuse_source_ddl` claims `CreateCatalogSchema` by the head of its dotted
   name, the catalog DataFusion would create the schema in, and `CreateCatalog` by its name or
   that head, so `CREATE SCHEMA [IF NOT EXISTS] pg.x` and `CREATE DATABASE pg.x` refuse as
   read-only. The sweep of `DdlStatement`'s eleven variants leaves only `CreateFunction` and
   `DropFunction` unclaimed: functions are session-scoped and never name a catalog.
-  pins: c-2/C-112
   **Residual of N2:** `refuse_source_ddl` takes the `SessionContext` and, once the plan is a
   `Ddl`, reads the default catalog through `copied_config()` (no state clone, nothing new for a
   non-DDL statement). A bare name in `CreateCatalogSchema` or `DropCatalogSchema` resolves against
   it and refuses as read-only when it is a mounted source. `CreateCatalog` is unchanged: a bare
   `CREATE DATABASE x` registers a new catalog and never writes to the default one. Corrected
-  2026-10-07 after the verifier's measurement. pins: c-2/C-118
+  2026-10-07 after the verifier's measurement.
   **Fold 1, N5:** `source_catalog_refusal(name)` answers a mounted source's name with
   `read_only_ddl(<key path>)` (Postgres) or the pending text (SQL Server, Trino);
   `check_catalog_refusal` asks it first, so every Iceberg-handle operation against the name
   (`writeTo`, `saveAsTable`, a listing of Iceberg names) refuses instead of answering `unknown
   catalog`. `source_table_exists` resolves `catalog.schema.table` through the mounted provider.
-  pins: c-2/C-115
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **C-1 (2026-10-05):** reads
   the source name and kind through `SourceSpec.identity` (CC-2; `SourceKind` now imported from
-  `repark-common`); every message, row and handle is unchanged. pins: c-1/C-002
+  `repark-common`); every message, row and handle is unchanged.
   **CFG-2 step 1
   (2026-09-13):** named database sources. `register_configured_sources()` (called wherever
   `register_configured_catalogs` runs) installs one `RefusingSourceCatalogProvider` per
@@ -1246,7 +1176,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the only seam that can carry D-1 through DROP, since `SessionContext::drop_table`
   discards provider errors, and the only thing stopping SQL `CREATE CATALOG` from
   silently replacing the source's provider.
-  pins: cfg-2/C-001, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
 - `time_travel/incremental.rs` (+ `time_travel/incremental/tests.rs`) — **ICE-CHANGELOG-1
   (2026-09-20):** the Iceberg
   incremental-read door. `IncrementalWindow::from_options` parses the four reader-option
@@ -1263,14 +1192,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `t.changes` read, resolved against the table's metadata at provider-build time because Java's
   timestamp rule needs the ancestry (`oldestAncestorAfter`), and `read_incremental` routes an
   identifier whose last part is `changes` onto it.
-  pins: ice-changelog-1/C-001, C-002, C-004, C-005, C-006, C-009, C-010
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,
   schema-order `*` expand). JOIN / CTE / subquery / time-travel naming a lineage column
   refuse `[V3-ROWID-2]`. v1/v2 stay unresolved (`No field named _row_id`). Both SQL doors
   call it.
-  pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `prepare_metadata_column_sql`
   rewrites queries that name `_file` / `_pos` / `_spec_id` / `_partition` / `_deleted` onto a `MetadataColumnsTableProvider` temp
   view (qualified/aliased FROM, unquoted case-fold, schema-order `*` expand serves user
@@ -1363,14 +1290,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (class and full `[UNRESOLVED_ROUTINE]` text, residue `R-MC-IFN-COMMA-JOIN`) is pinned at
   the Spark door by `input_file_name_over_a_v3_comma_join_is_an_unresolved_routine`
   (`crates/repark-spark/src/tests/input_file_name.rs`).
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
-  C-018, C-019, C-020, C-021, C-022
-  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
-  C-012, C-013
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved
@@ -1392,25 +1311,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   name to `time_travel/metadata_at.rs` before the three-part loader, and the un-pinned
   `read_iceberg_table` arm quotes the same shape so it rides the router path; `session.rs`
   holds its 1000-line ceiling.
-  pins: ipi-23-mt-reader-1/C-001, C-002, C-004, C-005
-  pins: ice-tt-resolve-1/C-010
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** every string resolves through the
   engine `CAST(... AS TIMESTAMP)` in the session zone; the hand parser and the AST leaf
   rewrite are gone and `resolve_reader_spec` is async over the session context.
-  pins: ice-tt-resolve-1/C-002
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `RefSelector` names the fourth-segment
   ref (`Branch` / `Tag` / `None`); a built-in beside a selector refuses with Spark's
-  text before resolving. pins: ice-tt-resolve-1/C-002
+  text before resolving.
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
-  `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
+  `time_travel` module; the stale root re-exports are gone.
   **ICE-CHANGELOG-1 round 1 (2026-09-20):** `read_table_at`'s Incremental arm re-raises a
   `DataInvalid`-kind fork refusal through `illegal_argument_error`, so a bad window raises
   `IllegalArgumentException` as Spark's does; the global `DataInvalid` mapping is untouched.
-  pins: ice-changelog-1/C-007
   **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the root block narrows to the six
-  externally used names; `lib.rs` sits at the 150 default ceiling. pins: ice-tt-resolve-1/C-012
+  externally used names; `lib.rs` sits at the 150 default ceiling.
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** `EngineContext::new` is 3-arg again (zone
-  defaults); `new_with_time_zone` carries an explicit zone. pins: ice-tt-resolve-1/C-003
+  defaults); `new_with_time_zone` carries an explicit zone.
   **Documented residual (H-1b, 2026-08-11):** `read_table_at` registers a `__repark_tt_<n>` temp
   view and never deregisters it. For its own caller — the reader-options path in `session.rs`
   (`spark.read.option("snapshot-id" | "as-of-timestamp" | "branch" | "tag", …)`) — that is
@@ -1436,18 +1351,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   through the fork's `try_new_from_table_ref` (current schema for a branch, snapshot schema
   for a tag) after `resolve_snapshot_id`, so the reader-options branch read tracks the live
   schema and unknown refs keep the pinned refusal.
-  pins: ipi-07-branch-read-schema-1/C-002, C-006
   **WO U9-TYPES-1 round-2 fixer (2026-09-26):** both pinned `IcebergStaticTableProvider` builds in
   `read_table_at` (ref and snapshot) set `with_uuid_as_string(true)` (RP-52 `b61c82b8`), so a
   reader-option snapshot, tag or branch read presents `uuid` as text and filters on it.
-  pins: u9-types-1/C-010
   **MB-1 round 3 (2026-10-07):** `time_travel/microbatch_source.rs` is the
   Session-bound micro-batch source over `repark-iceberg`'s window planner
   (the sketch's §3.5): `SourceOptions::from_options` (the Spark reader keys,
   the two skip refusals, unknown prefixed keys refused, other keys passed)
   and `MicroBatchSource::{open, initial_offset, next_batch}` (three-part
   tables only; frames read exactly the planned files). `session.rs` untouched.
-  pins: mb-1/C-014, C-015, C-016
 - `sorted_view.rs` — SE-1 declared-sorted temp views: `verify_batches_sorted` (the O(n)
   adjacent-pair lexicographic check, ASC NULLS LAST, cross-batch) + `declared_sort_order`
   (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class)
@@ -1514,15 +1426,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   past ±18:00 that Java refuses; refusals carry Spark's `INVALID_CONF_VALUE.TIME_ZONE` as
   `Error::IllegalArgument`). **R-17c-4:** `canonical_session_zone_id` (the companion every
   value consumer parses; the snapshot keeps the raw echo) and the seconds-form refusal;
-  `text_scan.rs` reads the canonical id. pins: set-ansi-runtime-1/C-002
+  `text_scan.rs` reads the canonical id.
   **R-17c-6 (batch-17 oracle):** `ZoneId` matching is case-sensitive, padded input refuses
   with the raw text echoed, zero-seconds forms canonicalise to `±HH:MM`, nonzero-seconds
   stays refused (divergence SET-ANSI-RUNTIME-4); the shared table lives beside the parser.
-  pins: set-ansi-runtime-1/C-002
   and `ReparkSession::set_runtime_zone` (the live zone behind `RwLock<Arc<_>>`, shared by
   clones; `session_time_zone` now returns the snapshot `Arc`). Pedantic-clean (nested
   or-patterns, method-ref digit checks).
-  pins: set-ansi-runtime-1/C-002
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** `java_display_zone_id`
   (`ZoneId.of(raw, SHORT_IDS).getId()` semantics for `VV`, jshell-verified) and the
   `spark.sql.legacy.timeParserPolicy` carrier (`TimeParserPolicyConfig`, lazily
@@ -1530,7 +1440,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `lib.rs` holds its ceiling; builder-seeded values are read back from the conf
   dump).
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the refusals here echo a rejected config value through
-  `mask_value_credentials`. pins: source-url-redact-1/C-017
+  `mask_value_credentials`.
 - `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
   `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
   once), `build_temp_view_home` (the one `build()`-time capture, moved here from `session.rs`
@@ -1550,7 +1460,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   Parsing is DataFusion's own `TableReference::parse_str` — identifier normalization is
   unchanged from BASE.
   **CASESENS-1 S3 (2026-09-27):** plus `temp_view_ref_from_segment_exact` (no fold;
-  the exact session probe builds through it). pins: casesens-1/C-007
+  the exact session probe builds through it).
   **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `legacy_temp_view_segment` is the rule-free segment `temp_view_target_ref` uses: a quoted name verbatim with `""` unescaped, an unquoted name lower-cased with Unicode `to_lowercase` (fix round 2; ASCII-only before).
 - `session/` — `temp_views.rs` (the temp-view family: register / replace / materialize / cache /
   declare-sorted / drop, all through `temp_view_ref`; split out of `session.rs` in round 6) and
@@ -1579,15 +1489,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `__repark_any_row` sibling UDAF (a correlated `LIMIT` is stripped before
   wrapping) and made the hoist preserve a `SubqueryAlias` qualifier on lifted
   outputs. `session.rs` re-exports the resolvers for the Python bindings.
-  pins: df-subquery-1/C-001, C-002, C-003, C-004, C-008, C-009
 - **CATALOG-1 (2026-09-26):** `catalog_state.rs` holds the current catalog as
   `session_catalog::CurrentCatalog` (catalog, namespace, pinned); `catalog_state/session_catalog.rs`
   owns `with_session_catalogs` (the build-time `spark.sql.defaultCatalog`), `apply_default_catalog`
   (moves an unpinned current catalog), `set_defaults` (pins), `current_catalog_error` (Spark's
   `CATALOG_NOT_FOUND` text) and `default_namespace_for`. `session.rs` builds the registry with it and
-  declares `session/session_catalog.rs`. pins: catalog-1/C-001, C-003, C-004
+  declares `session/session_catalog.rs`.
   **CATALOG-1 fold V-007 (2026-09-26):** `refused_catalog_names` lists the refused-kind
-  placeholder names beside `registered_catalog_names`. pins: catalog-1/C-014
+  placeholder names beside `registered_catalog_names`.
 
 - **ZONE-HORIZON-RENDER-1 (2026-10-08):** three files read the zone through
   `repark_common::zone_horizon` instead of chrono-tz directly, so a value after 2099 follows
@@ -1596,7 +1505,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (`offsets_at_wall`; `zoned_wall_micros` is gone, its one caller builds the instant from
   the offset) and `text_partition.rs::timestamp_partition_text` (`wall_at_instant`). Each
   carries one pin at 2099 and 2100 in its own test module.
-  pins: zone-horizon-render-1/C-011
   **Fold 1 Item A (2026-10-08):** `writer_wall_to_utc` is the shared
   `wall_to_micros_earlier` (tabulated: main's `from_local_datetime`);
   `parse_timestamp_micros_zone` restores `zoned_wall_micros` and runs main's
@@ -1628,7 +1536,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 | A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
 | `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Since H-1a split B it DOES, on a Spark-extended session. On a session built without `SparkExtension` it does not, because stock DataFusion's `date_part` reads the array's own zone — the zone reaches the extractors through `SparkExtension::configure`. Pins: `crates/repark-spark/tests/session_timezone.rs`, `crates/repark-sql/tests/session_timezone_ansi_door.rs`. |
 | A session refuses to build naming `spark.sql.session.timeZone` | The zone is validated at construction (`session_time_zone.rs`): it must be an IANA id (`America/New_York`) or a fixed offset (`+05:00`). A differently-cased lookalike key is not this knob — there is exactly one spelling. |
-| `$`-suffixed metadata tables do NOT show up in `SHOW TABLES` | Fork F-8 (RP-5): `table_names` lists catalog entries only. Pins: `information_schema_hides_the_dollar_metadata_tables_on_the_bare_session` + `a_hidden_metadata_table_is_still_queryable_on_the_bare_session`. pins: rp-5-fork-repin/C-003 |
+| `$`-suffixed metadata tables do NOT show up in `SHOW TABLES` | Fork F-8 (RP-5): `table_names` lists catalog entries only. Pins: `information_schema_hides_the_dollar_metadata_tables_on_the_bare_session` + `a_hidden_metadata_table_is_still_queryable_on_the_bare_session`. |
 | `SELECT * … JOIN … _row_id` returns shuffled user columns | Intended refuse `[V3-ROWID-2]` — the rewrite is single-table only (`lineage_columns.rs`). A successful HashMap-ordered projection is the L-001 defect. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).

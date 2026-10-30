@@ -31,10 +31,8 @@ of the rule. Closes when the Spark grammar changes (a Spark bump re-records the 
   i64 range edge outside chrono's calendar still resolves. **C-2d fold 1 (2026-10-07):** the
   horizon (`LAST_TABULATED_YEAR`, `proxy_year` and the calendar helpers) lives in
   `repark_common::zone_horizon`, shared with the engine's Postgres wall-clock placement.
-  pins: c-2/C-109
 
 Tests: [`../tests/spark_string_timestamp.rs`](../tests/map.md).
-pins: cast-ts-string-1/C-001, C-002, C-003, C-008
 - **ZONE-HORIZON-RENDER-1 (2026-10-08):** `instant.rs::today_in` takes today's date from
   `zone_horizon::offset_at_instant`, so a time-only string after 2099 lands on the right day
   (`../tests/zone_horizon_render.rs::a_time_only_string_takes_today_from_the_final_rule`).

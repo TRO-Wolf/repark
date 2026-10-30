@@ -10,12 +10,10 @@ cells carry Spark's exception class plus error-class token.
 
 - [range_tvf_id_1_spark_oracle.json](range_tvf_id_1_spark_oracle.json) — the 16
   recorded cells (13 SQL cells plus 3 `spark.range` DataFrame-door cells).
-  pins: range-tvf-id-1/C-001, C-002, C-003, C-004
 - [range_tvf_id_2_spark_oracle.json](range_tvf_id_2_spark_oracle.json) — the 19
   RANGE-TVF-ID-2 edge-case cells (NULL bounds, narrow widths, decimal and float
   bounds, overflow bounds, the near-max count, numPartitions refusals) in the
   compact shape (schema and rows, or exception class and first error line).
-  pins: range-tvf-id-2/C-001, C-002, C-003, C-004, C-005, C-006
 
 ## Provenance
 

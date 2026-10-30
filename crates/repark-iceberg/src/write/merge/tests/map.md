@@ -28,23 +28,20 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   key is found — commit-phase opens = 1). Hiding that last manifest too refuses.
   `execute_predicate_dml` on the same fixture deletes the newest id. Close-phase
   opens stay 0 (RP-9 hide pin). Scan stays 3×N (`PERF-SCAN-3PASS-1`).
-  pins: rp-10-repin-f25/C-002
 - `merge.rs` — primary unit battery. **FNP-4B (2026-09-15):** MERGE internal-SQL
   expectations in backtick form (user names via `quote_ident`, fixed engine names bare).
-  pins: fnp-4b/C-002
   **IPI-51 PR6 slice 2 (2026-09-21):**
   `expand_star_clauses_errors_on_missing_source_column` requires
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`, `SQLSTATE: 42703` and `` `name` ``; the
-  case-ambiguous near-miss keeps the custom text. pins: ice-error-conditions-1/C-011
+  case-ambiguous near-miss keeps the custom text.
 - `merge_dialect.rs` — **FNP-4B round 6 (2026-09-15):** the four MERGE internal
   statements carry no double-quoted identifier and parse under the Spark Databricks
-  dialect. pins: fnp-4b/C-024
+  dialect.
 - `helpers.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** the shared MERGE-test
   constructors (`spec`, `update`, `delete`) used by `merge.rs`, `lineage.rs`,
   `merge_dialect.rs`, and `nmbs.rs`.
 - `lineage.rs` — V3-7 rewrite-projection and scratch-schema pins for carried `_row_id`.
-  pins: v3-7-merge-lineage/C-001
-  **FNP-4B (2026-09-15):** projection expectations in backtick form. pins: fnp-4b/C-002
+  **FNP-4B (2026-09-15):** projection expectations in backtick form.
 - `lineage_stream.rs` — **ICE-SORTED-INSERT-1 round 4 (2026-09-17):** drives
   `row_lineage::write_partitioned_lineage_files` on a v3 identity-partitioned memory-catalog
   table with a probe stream that counts the parquet files under the warehouse just before it
@@ -54,21 +51,16 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   exists before the stream ends (drain, sort, then write), files stamp 1, and the id order
   carries the lineage columns with it. Mutations: the unsorted arm draining first reds the
   unsorted pin; the declared arm skipping the sort reds the ordered pin.
-  pins: ice-sorted-insert-1/C-006, C-010
 - `nmbs.rs` — DML-A `WHEN NOT MATCHED BY SOURCE` SQL-fragment pins and skip_cardinality
   with an NMBS clause present.
-  pins: dml-a-merge-not-matched-by-source/C-002, C-003, C-004, C-005
 - `occ_conflict.rs` — OCC-2 M19/M20 batteries B/C/E/F/G/H/I.
   `id_batch` and `path_exists` are `pub(super)` for `commit_unknown.rs`'s
   keep-set pins (M14 `write_data_files` pattern).
-  pins: ice-commit-unknown-1/C-003
 - `occ.rs` — OCC / commit conflict pins + M13 isolation parse + M19-A split.
   RP-5 C-007: snapshot isolation still commits through a concurrent append.
-  pins: rp-5-fork-repin/C-007
 - `occ_branch.rs` — RP-5 critic OCC-on-branch: concurrent branch append is
   `DataInvalid` / not retryable / `Found conflicting files…`; concurrent main append
   does not fail the branch commit.
-  pins: rp-5-fork-repin/C-004
 - `parallel_write.rs` — concurrent file write pins.
 - `evolved_scan.rs` — **ICE-EVO-DML-1 (2026-09-17):** a table evolved by `ADD COLUMN`,
   `RENAME COLUMN`, a key rename or a name swap after its only write, scanned by
@@ -81,7 +73,6 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   refuses and never prunes by another field's bounds;
   `target_scan_residual_on_an_unchanged_column_still_prunes_after_add_column` holds the kept
   arm on a two-file table.
-  pins: ice-evo-dml-1/C-004, C-005, C-010, C-011
 - `promoted_scan.rs` — **ICE-PROMOTE-READ-1 (2026-09-16):** after a legal type
   promotion with no write since, the DML target scan pins the pre-promotion snapshot and
   reads `Int32` / `Float32` / `Decimal128(9,2)`; the scratch schema is built from the
@@ -89,7 +80,6 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `target_scan_over_a_single_era_promoted_table_yields_the_current_types` hold the widened
   values and types; `conform_scan_batch_still_refuses_an_illegal_narrowing` keeps every
   non-promotion mismatch loud.
-  pins: ice-promote-read-1/C-006, C-011
 - `partition_sink.rs` — **RP-7 (2026-09-02):** the identity/MERGE target scan records each
   planned `FileScanTask`'s `(spec_id, partition)`, so the v3 DV close never re-walks the data
   manifests it just read. The pin compares the drained sink to the manifest truth on a
@@ -104,9 +94,6 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `StreamingTable` executes together and requires one `plan_files` (hardening; mutation
   skip-cache 1 red of 1, got 3). Production-path `plan_files==1` pins were deleted: the
   identity DELETE / matched-delete MERGE call `execute` once, so those pins cannot go red.
-  pins: rp-7-f18-repin/C-002
-  pins: rp-9-repin-f23/C-005
-  pins: perf-scan-1-plan-once/C-001, C-002
 - `occ_scoped.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the fault-injected race pins, one per
   measured Spark 4.1.2 shape, each over v2 AND v3 and (where the oracle has both) merge-on-read
   AND copy-on-write. `RaceCatalog` delegates to a memory catalog and, on the victim's FIRST
@@ -136,7 +123,6 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   < 8` vs `(-4, 'a')`, each v2/v3 × MoR/COW) must abort under serializable, naming the scoped
   filter. An extra conjunct smuggled into the filter (mutation M11 conjoins `id = 0`) excludes
   the new row, the victim commits, and all three pins red.
-  pins: ice-occ-scoped-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-019
 - `occ_scoped_insert.rs` — **ICE-OCC-SCOPED-1 round 2 (2026-09-18, review L-02):** a MERGE with
   `WHEN NOT MATCHED THEN INSERT *`, scoped by `ON t.k = 'a' AND t.k = s.k AND t.id = s.id`,
   racing one append through `occ_scoped.rs`'s `RaceCatalog` (its harness items are
@@ -145,15 +131,13 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   row count — is read from Spark's deterministic recording `spark_occ_oracle3.json` under
   `python/repark-parity/fixtures/torture/data/ice_occ_scoped_1/`, and the pin first checks that
   its statement and append still match the recorded SQL.
-  pins: ice-occ-scoped-1/C-020
 - `insert_fill.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** in-memory `Table`
   builder plus the write-default fill pins: `insert_projection_with_defaults` fills an
   omitted defaulted column and still refuses a missing required one, and `insert_sql`
   carries the fill into the NOT MATCHED text. `column_defaults_ignores_struct_default`
   pins the DECLARED boundary: only primitive literals fill.
-  pins: ice-v3-write-default-1/C-003, C-005, C-009
   Round 5 (2026-09-17): `target_schema()` hands the Arrow write schema to
-  `insert_sql` (R-03). pins: ice-v3-write-default-1/C-019
+  `insert_sql` (R-03).
   ICE-MIXED-CASE-1 rebase (2026-09-18, run 22b): the local `insert_projection` helper
   takes the case-insensitive flag and `spec` comes from `helpers.rs`.
 - `dv_commit_opens.rs`, `occ_branch.rs`, `occ_partitions.rs` —
@@ -171,7 +155,6 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   battery builds it with `CommitScope::unscoped` and lends it twice (as do `occ_conflict.rs`,
   `dv_commit_opens.rs` and `../dv_close.rs`'s seam tests — line-neutral, baselines held);
   `occ_branch.rs` passes `&Predicate::AlwaysTrue` to `commit_on_ref`.
-  pins: rp-7-f18-repin/C-002
 - `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** a delegating catalog returns
   `ErrorKind::CommitStateUnknown` from `update_table` after capturing the stamped
   `engine.operation-id`; the surfaced `CommitStateUnknownError` carries exactly that id, and
@@ -180,7 +163,6 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `*_leaves_written_files_on_disk` pins stage REAL Parquet files via `write_data_files`
   and assert `path_exists` after the unknown — the `abort.rs` keep-set, mutation-proven
   (deleting the carve-out reds both).
-  pins: ice-commit-unknown-1/C-003, C-007
 - `streaming_scan.rs` — streaming target-scan pins + PERF-04 residual-push + MG-1.
 - `streaming.rs` — stream write interleaving pins.
 - `writer_metrics.rs` + `writer_metrics_truth.json` — **ICE-WRITER-METRICS-1 (2026-09-20):**
@@ -195,17 +177,11 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `file_path` bounds, which is what the v2 delete reader routes on. The
   path pins cover `write_options.rs`, `append_fanout_serial.rs`, `merge/mod.rs` and
   `merge/row_lineage.rs` builders respectively.
-  pins: ice-writer-metrics-1/C-001
-  pins: ice-writer-metrics-1/C-002
-  pins: ice-writer-metrics-1/C-003
-  pins: ice-writer-metrics-1/C-004
-  pins: ice-writer-metrics-1/C-005
 
 ## IPI-19 (2026-09-20)
 
 - `helpers.rs`, `occ_scoped.rs` — the shared spec builders name the new
   `schema_evolution: false` field, so the plain-MERGE batteries keep their shape.
-  pins: ipi-19-56-37-schema-evolution-write/C-007
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `lineage_stream.rs` and `writer_metrics.rs` pass the new lineage-writer bounds parameter as call sites of the changed signature. They hold no refusal pin; the refusal pins are in `crates/repark-spark/src/tests/resource_bound.rs`.
 

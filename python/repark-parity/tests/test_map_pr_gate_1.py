@@ -82,26 +82,24 @@ def test_branch_mode_passes_when_code_and_map_change(repo: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
-def test_branch_mode_fails_when_only_code_changes(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-002."""
+def test_branch_mode_warns_when_only_code_changes(repo: Path) -> None:
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "pkg" / "mod.rs").write_text("fn b() {}\n", encoding="utf-8")
     _commit(repo, "work")
     result = _guard(repo, "--base", base)
-    assert result.returncode == 1
-    assert "pkg/map.md" in result.stderr
-    assert "ERROR" in result.stderr
+    assert result.returncode == 0
+    assert "WARNING: pkg/map.md was not updated on this branch" in result.stderr
+    assert "ERROR" not in result.stderr
 
 
-def test_branch_mode_fails_for_a_new_directory_without_map(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-003."""
+def test_branch_mode_warns_for_a_new_directory_without_map(repo: Path) -> None:
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "newdir").mkdir()
     (repo / "newdir" / "x.rs").write_text("fn x() {}\n", encoding="utf-8")
     _commit(repo, "work")
     result = _guard(repo, "--base", base)
-    assert result.returncode == 1
-    assert "newdir has changed code but no map.md" in result.stderr
+    assert result.returncode == 0
+    assert "WARNING: newdir has changed code but no map.md" in result.stderr
 
 
 def test_branch_mode_ignores_deletion_only_changes(repo: Path) -> None:
@@ -118,18 +116,17 @@ def test_branch_mode_handles_a_root_level_file(repo: Path) -> None:
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "top.rs").write_text("fn t() {}\n", encoding="utf-8")
     _commit(repo, "work")
-    failed = _guard(repo, "--base", base)
-    assert failed.returncode == 1
-    assert "map.md was not updated on this branch" in failed.stderr
+    warned = _guard(repo, "--base", base)
+    assert warned.returncode == 0
+    assert "WARNING: map.md was not updated on this branch" in warned.stderr
     (repo / "map.md").write_text("# root\n\n- [top.rs](top.rs)\n", encoding="utf-8")
     _commit(repo, "map")
     passed = _guard(repo, "--base", base)
     assert passed.returncode == 0, passed.stderr
+    assert passed.stderr == ""
 
 
 def test_branch_mode_diffs_from_the_merge_base(tmp_path: Path) -> None:
-    """pins: map-pr-gate-1/C-002 — `base...HEAD` reads the merge-base; a main-side
-    code-only change sits outside the pull-request diff even across a merge."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-b", "main")
@@ -158,45 +155,45 @@ def test_branch_mode_diffs_from_the_merge_base(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
-def test_branch_mode_fails_on_py_change_without_map(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-002 — `*.py` is inside the suffix filter."""
+def test_branch_mode_warns_on_py_change_without_map(repo: Path) -> None:
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "pkg" / "tool.py").write_text("x = 1\n", encoding="utf-8")
     _commit(repo, "work")
-    failed = _guard(repo, "--base", base)
-    assert failed.returncode == 1
-    assert "pkg/map.md" in failed.stderr
+    warned = _guard(repo, "--base", base)
+    assert warned.returncode == 0
+    assert "WARNING: pkg/map.md" in warned.stderr
     (repo / "pkg" / "map.md").write_text(
         "# pkg\n\n- [mod.rs](mod.rs)\n- [tool.py](tool.py)\n", encoding="utf-8"
     )
     _commit(repo, "map")
     passed = _guard(repo, "--base", base)
     assert passed.returncode == 0, passed.stderr
+    assert passed.stderr == ""
 
 
 def test_branch_mode_manifest_changes_and_unlisted_files(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-002 — `Cargo.toml` is inside the filter; an unlisted
-    suffix is ignored entirely."""
     base = _git(repo, "rev-parse", "HEAD").strip()
     (repo / "pkg" / "Cargo.toml").write_text('[package]\nname = "pkg"\n', encoding="utf-8")
     _commit(repo, "manifest")
-    failed = _guard(repo, "--base", base)
-    assert failed.returncode == 1
-    assert "pkg/map.md" in failed.stderr
+    warned = _guard(repo, "--base", base)
+    assert warned.returncode == 0
+    assert "WARNING: pkg/map.md" in warned.stderr
     (repo / "pkg" / "map.md").write_text(
         "# pkg\n\n- [mod.rs](mod.rs)\n- [Cargo.toml](Cargo.toml)\n", encoding="utf-8"
     )
     _commit(repo, "map")
     passed = _guard(repo, "--base", base)
     assert passed.returncode == 0, passed.stderr
+    assert passed.stderr == ""
     (repo / "pkg" / "notes.txt").write_text("notes\n", encoding="utf-8")
     _commit(repo, "unlisted file")
     ignored = _guard(repo, "--base", base)
     assert ignored.returncode == 0, ignored.stderr
+    assert ignored.stderr == ""
 
 
 def test_staged_mode_warns_and_exits_zero(repo: Path) -> None:
-    """pins: map-pr-gate-1/C-006 — the hook warns; ci.yml's map.md guard holds the rule."""
+    """pins: map-pr-gate-1/C-006 — the hook warns."""
     (repo / "pkg" / "mod.rs").write_text("fn b() {}\n", encoding="utf-8")
     _git(repo, "add", "pkg/mod.rs")
     result = _guard(repo)
@@ -204,7 +201,7 @@ def test_staged_mode_warns_and_exits_zero(repo: Path) -> None:
     assert "ERROR" not in result.stderr
     stderr_lines = result.stderr.splitlines()
     assert stderr_lines[-1].startswith("note:")
-    assert "map.md guard" in stderr_lines[-1]
+    assert "lockstep is advisory" in stderr_lines[-1]
     assert stderr_lines[:-1]
     assert all(line.startswith("WARNING:") for line in stderr_lines[:-1])
 

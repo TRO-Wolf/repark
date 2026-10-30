@@ -12,14 +12,11 @@ the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-06.md) §3.
 Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md). The round's gates,
 the crash gate's 3 passed and 2 ignored included, are recorded there (round 1's count; since
 the append fence merged, 2026-10-08, the crash gate reads 5 passed and 0 ignored).
-pins: mb-3/C-009
-Fold 1's gates (2026-10-07) are recorded there too. pins: mb-3/C-019
-Round 2's gates (2026-10-08) likewise. pins: mb-3/C-023
-Fold 2's gates (2026-10-08) likewise. pins: mb-3/C-029
+Fold 1's gates (2026-10-07) are recorded there too.
+Round 2's gates (2026-10-08) likewise.
+Fold 2's gates (2026-10-08) likewise.
 Round 3's gates (2026-10-08, on the tree merged with the append fence) likewise.
-pins: mb-3/C-031
 MB-FENCE-BODY-FLAKE-1's gates (2026-10-18) are recorded in its ledger.
-pins: mb-fence-body-flake-1/C-007
 
 ## What each door guarantees (round 3, 2026-10-08, ledger C-002 and D-19)
 
@@ -54,7 +51,6 @@ pins: mb-fence-body-flake-1/C-007
   async because the identity needs the sink's uuid, a dated difference from the sketch's
   synchronous signature (ledger D-1). `RecordedLocation` has no accessor that returns its text,
   and its `Debug` prints `RecordedLocation(<redacted>)`.
-  pins: mb-3/C-003
   **Slice 2 (2026-10-07):** the lifecycle. `start` refuses a sink on a local filesystem catalog
   (`LocationPolicy::TempFallbackAllowed`, MBE-8), a second start and a second active query with
   the same id, then spawns the query's one tracked task (`#[expect(clippy::disallowed_methods)]`
@@ -64,7 +60,6 @@ pins: mb-fence-body-flake-1/C-007
   the sink and yields `RecoveryRequired(StopTimeout)` (CC-1 rules 2 and 3). Dropping a handle
   never stops the query (rule 4): the manager keeps it until it terminates. Every lock is a
   `std::sync::Mutex` held for one read or write, never across an await.
-  pins: mb-3/C-004, C-005
   **Fold 1 (2026-10-07):**
   - *One lifecycle lock.* The not-yet-started work (`Pending`) lives inside `Lifecycle`, so
     `start` (take the work, admit, set `Running`, spawn, keep the `AbortHandle`) and `stop` on a
@@ -73,18 +68,16 @@ pins: mb-fence-body-flake-1/C-007
     order: the query's own lifecycle, then the manager's registry, then the lifecycle of a
     query already in the registry. `start` holds its own lifecycle while it is admitted, and
     a query is in the registry only after that, so no path takes the registry while it holds
-    the lifecycle of a registered query. pins: mb-3/C-012
+    the lifecycle of a registered query.
   - *A panic ends the query `Failed`.* `Run::drive` catches an unwind of the whole trigger
     loop (`catch_unwind` around the loop's future, not around one call), and
     `QueryShared::panicked` turns the payload into `DriverPanicked { epoch, message }` (its own
     variant since round 2, 2026-10-08; the message is the panic's, credential-masked) with the
     in-flight epoch, or the next one when the panic came before a batch began. The outcome,
     the done signal and the freed query id then follow the body-error path.
-    pins: mb-3/C-011, C-020
   - *One active query per sink per session.* `admit` refuses `SinkBusy` at start when an
     active query of this session already targets the sink's table uuid (registry row
     `MB-3-SINK-BUSY-1`); the refused query keeps its work and can start later.
-    pins: mb-3/C-016
   - *The session's end stops its queries.* An explicit session stop is
     `StreamingQueryManager::stop_all`, which stops each active query and waits for it as
     `stop` does. A session dropped without a stop drops its state, the state drops the
@@ -100,7 +93,7 @@ pins: mb-fence-body-flake-1/C-007
     state is gone. A registered, never started handle whose manager is gone concludes
     `Stopped` when it is awaited (`orphaned`, the same one-second watch), so
     `await_termination` on it returns. A handle the caller still holds keeps the sink's
-    catalog handle until it is dropped. pins: mb-3/C-013, C-021, C-028
+    catalog handle until it is dropped.
   - *A stop from inside a body never waits on itself* (fold 2, 2026-10-08, ledger D-17). The
     driver task runs inside the task-local `DRIVING`, a `Weak` to its own query. `stop` always
     sends the signal first. Called from a driver task, it records a wait edge from that task's
@@ -111,19 +104,18 @@ pins: mb-fence-body-flake-1/C-007
     `stop` does, which is how `stop_all` from a body waits for the other queries and not for
     itself. `await_termination` on the caller's own query refuses `AwaitFromDriver`, Spark's
     answer. A body that stops its query from another task or thread must run that call inside
-    the driver's task-local scope; MB-4 owns that for the Python body. pins: mb-3/C-024
+    the driver's task-local scope; MB-4 owns that for the Python body.
   - *Every catalog call is bounded* (round 2, 2026-10-08, ledger C-010). `StreamSpec` carries
     `catalog_timeout` (`DEFAULT_CATALOG_TIMEOUT`, 60 s; MB-4 maps `repark.cdc.catalog-timeout`
     onto it). `bounded` wraps one call and fails `CatalogTimeout { call, waited }`. `register`
     bounds the sink load and the source open and hands the limit to the source
     (`with_catalog_timeout`, fold 2), and `stop` bounds its re-read of the sink after a
-    stop timeout, falling back to the durable record it knows. pins: mb-3/C-010
+    stop timeout, falling back to the durable record it knows.
 - `run.rs`, ENC-1 fold 1 (2026-10-09): `engine_error` maps the keyed-table refusal to
   `MicroBatchError::EncryptedSinkRefused` (the verifier saw `Catalog("External error: …")`).
   The table sink staged Parquet before the commit refused; the catalog guard now refuses the
   first file, so no orphan is left under the sink.
-  pins: enc-1/C-007, C-008
-- `run.rs`, `run_tests.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** D21's `append` conforms its frame through `conform_table_frame` (site MicroBatchAppend) before `stage_overwrite_files_with`. `run_tests.rs` holds the two D21 driver pins: the public `start` refuses a local catalog (`driver.rs:760`), so only a crate test runs the driver on a memory catalog. Pins: `the_micro_batch_sink_passes_the_stage`, `a_bare_session_micro_batch_refuses_a_conversion_without_its_kernel`, `the_sink_guard_never_fires_on_a_routed_door`. pins: write-spine-1/C-017, C-018
+- `run.rs`, `run_tests.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** D21's `append` conforms its frame through `conform_table_frame` (site MicroBatchAppend) before `stage_overwrite_files_with`. `run_tests.rs` holds the two D21 driver pins: the public `start` refuses a local catalog (`driver.rs:760`), so only a crate test runs the driver on a memory catalog. Pins: `the_micro_batch_sink_passes_the_stage`, `a_bare_session_micro_batch_refuses_a_conversion_without_its_kernel`, `the_sink_guard_never_fires_on_a_routed_door`.
 - `run.rs` — the driver task. It resumes from the sink alone (`read_resume_point`: the next epoch,
   the recorded offset and generation; another recorded input refuses `InputsChanged`), then runs
   one batch in flight per trigger: `availableNow` fixes its end with the uncapped walk at start and
@@ -136,23 +128,21 @@ pins: mb-fence-body-flake-1/C-007
   `spark.sql.iceberg.snapshot-property.repark.cdc.scope-token` (MB-2a D-10, ledger D-3), and an
   unknown commit outcome goes to `resolve_unknown_outcome`. The `foreachBatch` door runs the body on
   the user's session without the token, then stamps once through `commit_stamp_only` (ledger D-2).
-  pins: mb-3/C-004, C-005
   **Fold 1 (2026-10-07):**
   - *The schedule.* With an interval the next trigger starts at the next wall-clock multiple
     of the interval after the trigger began (`until_next_trigger`, Spark's
     `ProcessingTimeExecutor.nextBatchTime`: `now / interval * interval + interval`, in epoch
     milliseconds); a batch that overruns the boundary is followed at once by the next
-    trigger. pins: mb-3/C-017
+    trigger.
   - *Stop between planning and the body.* The loop reads the stop flag again after
     `next_batch`, so a stop that arrives while a trigger plans never starts that batch's body.
-    pins: mb-3/C-018
   - *The scope wait.* `enter_scope` loads the sink and enters the `BatchScope`; when another
     query in the process holds the sink's scope (two sessions on one sink), it waits
     `pollingDelay`, reloads the sink and tries again, up to `catalog_timeout`, and only then
     fails `SinkBusy` naming the sink's table, as the refusal at start does (fold 2). The sink is
     loaded again after each wait because the other query's
     commit moved it, and the resume-point check runs after the scope is held. A stop or a
-    dropped session ends the wait with no batch run. pins: mb-3/C-016
+    dropped session ends the wait with no batch run.
   - *The load under the scope* (MB-FENCE-BODY-FLAKE-1, 2026-10-18). `enter_scope` enters the
     scope first, under the sink uuid that `register` read, and loads the sink only while it
     holds the scope. Before this unit it loaded first and entered after, so another query in
@@ -165,15 +155,14 @@ pins: mb-fence-body-flake-1/C-007
     the table main's order took the batch to. It enters again only if the sink is replaced
     again between its scope entry and its load.
     The load count per batch is unchanged (`reload_tests.rs`).
-    pins: mb-fence-body-flake-1/C-001, C-002, C-003, C-004
   - *The replay window is not durable.* A restart plans the failed batch's window again
-    (registry row `MB-3-REPLAY-WINDOW-1`). pins: mb-3/C-014
+    (registry row `MB-3-REPLAY-WINDOW-1`).
   - *An unstamped batch.* The `NotCommitted` check after the door is reachable when the sink
     table is replaced under a `foreachBatch` body: the trailing stamp lands on the new table,
     outside the batch's scope, and the query ends `RecoveryRequired(UnstampedSinkCommit)`.
     Since fold 2 (2026-10-08) each door hands back the snapshot its commit produced, and the
     check names that snapshot without another catalog call, so a stalled catalog cannot turn
-    this ending into a retryable error. pins: mb-3/C-018, C-026
+    this ending into a retryable error.
   **Round 2 (2026-10-08):**
   - *The bounded calls.* Each catalog call of the task runs under `catalog_timeout`: the sink
     load (`load_sink`: at start, at each batch's scope and after a `foreachBatch` body) and
@@ -184,21 +173,19 @@ pins: mb-fence-body-flake-1/C-007
     (the trailing stamp, the `toTable` append) is an unknown outcome: it goes to
     `resolve_unknown_outcome` with no operation id, which finds the landed commit by its
     record or ends `RecoveryRequired(CommitOutcomeUnknown)`; the walk is bounded too
-    (ledger D-16). pins: mb-3/C-010, C-025, C-027
+    (ledger D-16).
   - *A fresh sink for every batch.* `enter_scope` loads the sink for each batch, the `toTable`
     door stages and commits on that handle, and the `foreachBatch` door loads it again after
     the body before the trailing stamp. No handle is kept across batches, so an epoch never
     commits from a handle older than the run's previous commit (the append fence's rule,
-    PR #996). pins: mb-3/C-022
+    PR #996).
 - `progress.rs` — the `StreamingQuery` progress surface (sketch §3.6, MB0-T3):
   `StreamingQueryProgress`, `DurationMs`, `SourceProgress`, `SinkProgress`, `QueryStatus` and
   `StatusMessage`, serialised with T3's camelCase names, and the crate-private `ProgressLog` (the
   `recentProgress` ring, the status, and Spark's `ProgressReporter` rates and idle-progress
   throttle). The driver records one report per trigger; a draining trigger reports no trailing
   idle progress after a batch (MB0b-R14, R15).
-  pins: mb-3/C-006
 - `progress_tests.rs` — the progress pins (`#[cfg(test)] #[path]` from `progress.rs`).
-  pins: mb-3/C-006
 - `relation.rs` — the streaming frame and the plan template (sketch §3.5, Q3, MBE-6):
   `streaming_frame` returns a frame over a `StreamingRelation` placeholder whose scan refuses a
   batch action; `PlanTemplate::from_frame` refuses a stateful operator above the stream
@@ -206,7 +193,6 @@ pins: mb-fence-body-flake-1/C-007
   accepts a static side; `bind` swaps each batch's provider in for the placeholder;
   `check_output_mode` refuses `complete` and `update`; `explain` renders the source, its reader
   options and the plan.
-  pins: mb-3/C-008
   **Fold 1 (2026-10-07):** the template runs once per batch, so a shape whose output keeps
   rows of a static frame would land them again on every batch. `static_side_operator` refuses
   what Spark's `UnsupportedOperationChecker` refuses (cell MB3-J1): a union of the stream and a
@@ -214,16 +200,12 @@ pins: mb-fence-body-flake-1/C-007
   a semi or anti join whose output side is the static frame (DataFusion's `LeftMark` and
   `RightMark` follow the semi rule). A streaming frame inside a subquery expression refuses
   too (unmeasured). Registry row `MB-3-STATIC-SIDE-1`.
-  pins: mb-3/C-015
 - `relation_tests.rs` — the template pins (`#[cfg(test)] #[path]` from `relation.rs`).
-  pins: mb-3/C-008
 - `driver_tests.rs` — the driver's pins (`#[cfg(test)] #[path]` from `driver.rs`).
 - `run_tests.rs` — the trigger-loop and lifecycle pins (`#[cfg(test)] #[path]` from `run.rs`).
   ENC-1 fold 1 (2026-10-09) adds `a_keyed_sink_refuses_the_batch_and_stages_no_file`: a
   sink carrying `encryption.key-id` ends the query with `EncryptedSinkRefused` and no file
   appears under the warehouse.
-  pins: enc-1/C-007
-  pins: mb-3/C-004
 - `fence_tests.rs` — the racing-driver pins (round 3, 2026-10-08), on both doors: two drivers
   of one query in two sessions over twenty rounds (each epoch stamped once, the rows once, no
   fenced body run, the fenced driver's restart adds nothing); a commit that lands between the
@@ -232,7 +214,6 @@ pins: mb-fence-body-flake-1/C-007
   `AlreadyCommitted` for the run's own re-delivery, `RecoveryRequired` when the refreshed sink
   needs recovery); and a driver that resumed before another run committed. The restart of the
   refused query continues at the next epoch each time.
-  pins: mb-3/C-002, C-030
   MB-FENCE-BODY-FLAKE-1 (2026-10-18) adds two pins. The winner pin holds open the window the
   two-driver pin hit by chance on CI: the second driver's batch load is parked by
   `FaultCatalog::after_load` after the catalog answered, and if the sink's scope is free at that
@@ -241,10 +222,8 @@ pins: mb-fence-body-flake-1/C-007
   two batches of a `ProcessingTime(0)` query; the second batch lands on the new table under
   its own scope. The unit's replays of the two-driver pin, and its second failure on a slow
   disk (the 10 s bound of `ended`, the PA-15 family), are recorded in its ledger.
-  pins: mb-fence-body-flake-1/C-001, C-002, C-003, C-005, C-006
 - `foreach_tests.rs` — the `foreachBatch` door and shutdown pins, with a Rust `BatchBody` that
   writes the sink through the session's resolved write options.
-  pins: mb-3/C-005
 - `lifecycle_tests.rs` — the fold-1 pins (2026-10-07): a panic in the body, in plan execution
   and during planning; `start` racing `stop` (300 rounds, the task count and a later source
   append); the session dropped and the session stopped; two queries on one sink in one
@@ -258,7 +237,6 @@ pins: mb-fence-body-flake-1/C-007
   must end within 25 ms of the session's drop, which a 100 ms poll cannot do. Fold 2
   (2026-10-08) adds the scope wait that outlives the timeout, the session gone behind a live
   frame (a waiting query and a busy one), and the registered handle whose session is gone.
-  pins: mb-3/C-011, C-012, C-013, C-014, C-016, C-017, C-018, C-020, C-021, C-027, C-028
 - `timeout_tests.rs` — the catalog-timeout pins (round 2, 2026-10-08), one per call site over
   `FaultCatalog`'s load hook and its two stalling commit modes, with a 100 ms bound: `register`,
   the six read sites of the task, the reload after a body, a stalled commit on both doors
@@ -267,19 +245,16 @@ pins: mb-fence-body-flake-1/C-007
   of it, so the pin scales with the machine; the stamp runs under the same timeout, so the
   pin asserts the planned batch and accepts a drained or an unknown-outcome ending), the unstamped batch over a stalled catalog, and a
   stalled unknown-outcome walk after a stalled commit.
-  pins: mb-3/C-010, C-025, C-026, C-027
 - `self_stop_tests.rs` — the self-stop pins (fold 2, 2026-10-08), with a body that holds its
   own query handle: `stop` and `stop_all` from the body under the default `stopTimeout`,
   `stop_all` from a body with another query running, two bodies stopping each other, and
   `await_termination` on the body's own query.
-  pins: mb-3/C-024
 - `reload_tests.rs` — the fresh-sink pin (round 2, 2026-10-08): `FaultCatalog`'s event log
   counts the sink loads before each commit over three batches, on both doors. One load per
   commit is the fork's own refresh inside the commit (`FORK_REFRESH`, measured 2026-10-08), so
   a fork repin that changes it shows here. Re-measured after the append fence merged
   (2026-10-08): unchanged, because the fence reads `TableCommit::base_table` and loads nothing
   on the driver's paths.
-  pins: mb-3/C-022
 - `table_door_tests.rs` — the `toTable` door pins: the stamped append with the Spark keys, the
   start check on a shared catalog, the unknown-outcome reconcile and walk over a fault-injecting
   catalog wrapper (`FaultCatalog`, the `crash_tests.rs` shape), and fencing by another run of the
@@ -290,6 +265,5 @@ pins: mb-fence-body-flake-1/C-007
   park a load after the catalog answered. The door's exactly-once guarantee against a racing driver is
   claimed since the append fence merged (round 3, 2026-10-08, ledger C-002) and pinned in
   `fence_tests.rs`.
-  pins: mb-3/C-007
 - `testing.rs` — the test fixture: a session over a memory catalog with the `sales.orders`
   source, the `sales.silver` sink and a spare `sales.other` table.

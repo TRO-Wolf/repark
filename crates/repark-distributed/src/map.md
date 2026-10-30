@@ -1,7 +1,7 @@
 # map — repark-distributed/src
 
-**SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** audit finding — `iceberg_provider.rs` reads a session catalog provider's `Debug` text functionally (`catalog_spec_from_debug`). pins: source-url-redact-1/C-020
-**SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `debug_quoted_values` refusal names the session catalog and the byte offset and no longer echoes the props slice; the inline `tests` module pins it under `--features cluster` (no CI target builds that feature). pins: source-url-redact-1/C-033
+**SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** audit finding — `iceberg_provider.rs` reads a session catalog provider's `Debug` text functionally (`catalog_spec_from_debug`).
+**SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `debug_quoted_values` refusal names the session catalog and the byte offset and no longer echoes the props slice; the inline `tests` module pins it under `--features cluster` (no CI target builds that feature).
 
 ## Purpose
 
@@ -22,7 +22,6 @@ BALLISTA-M2-B adds `predicate_expr.rs` (typed `Predicate` → `Expr`) behind tha
 - `local.rs` — D-4: `LocalDataFusionExecutor` runs a plan on the session `SessionContext`
   in-process; `status` is `Completed { stages: [], retried_stages: 0 }` / `Failed` after
   the stream drains; `cancel` sets `Cancelled` and stops the stream.
-  pins: ballista-m1-a/C-002, C-003
 - `cluster.rs` (`cluster` feature) — D-1: `ReparkClusterExecutor` starts one in-process
   scheduler and N executors on ephemeral ports; `execute` submits a physical plan; `status`
   walks Queued → Running → `Completed { stages, retried_stages }` (per-stage rows, shuffle
@@ -36,12 +35,10 @@ BALLISTA-M2-B adds `predicate_expr.rs` (typed `Predicate` → `Expr`) behind tha
   every executor `SessionState` from a RePark session (catalog, UDFs, analyzer rules). The
   two-executor pin registers in-memory table `t` here; the UDF pin registers `repark_times_ten`
   on that same session so the executor registry has it.
-  pins: ballista-m1-b/C-002, C-003
   **TA-SINGLE-SERIES-PARALLEL-1 S2b, verifier V-1 (2026-10-04):** `from_session` /
   `from_context` now return `Result` and refuse a session with single-partition parallelism on
   (the `parallel_window` rule installed and the `repark.parallel` carrier on), naming
   `ReparkSessionBuilder::parallel_single_partition(false)`. See `../map.md`.
-  pins: ta-series-s2b/C-014
 - `codec.rs` (`cluster` feature) — BALLISTA-M2-B D-1/D-3: `ReparkPhysicalExtensionCodec`
   still delegates every unowned node to `BallistaPhysicalExtensionCodec`. Encode of
   `IcebergTableScan` downcasts the node (`node.as_any` / `downcast_ref`) and reads the
@@ -61,7 +58,7 @@ BALLISTA-M2-B adds `predicate_expr.rs` (typed `Predicate` → `Expr`) behind tha
   inexpressible shape (AlwaysTrue/AlwaysFalse, AboveMax/BelowMin, Unknown, a StartsWith
   prefix carrying LIKE wildcards or the LIKE escape `\`) refuses loud naming the shape.
   Timestamptz datums use `iceberg::arrow::UTC_TIME_ZONE` (`"UTC"`). The Expr travels as
-  `datafusion-proto` bytes. pins: ballista-m2-b/C-002
+  `datafusion-proto` bytes.
 - `iceberg_provider.rs` (`cluster` feature) — BALLISTA-M1-D D-1 plus M2-B: `IcebergScanSpec`
   serialises catalog config, table identifier, snapshot id, projection, and filters as
   `RPIC` v2. Each filter item on the wire carries an explicit tag byte (0 = SQL text,

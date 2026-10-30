@@ -18,8 +18,7 @@ per-statement snapshots) shares one current catalog. See [../map.md](../map.md).
   an unpinned name that is neither `spark_catalog` nor registered; `USE` validates what it pins).
   The registry also holds the refused-kind placeholders (`insert_refusal` / `refusal` /
   `has_refusals` on `../catalog_state.rs`; a real `insert` clears the refusal; a refusal wins
-  over `CATALOG_NOT_FOUND` in `current_catalog_error`). pins: catalog-1/C-001, C-003, C-004,
-  C-006, C-007, C-008
+  over `CATALOG_NOT_FOUND` in `current_catalog_error`).
 
 ## Pointers
 

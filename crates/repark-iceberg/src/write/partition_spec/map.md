@@ -13,21 +13,21 @@ file-size ceiling, so new partition-spec pins land in this file.
   list, map, struct, timestamp_ntz, binary, float, double, date, boolean, with Java's field ids)
   through `java_struct_text` and asserts the exact text Spark printed:
   `struct<1: id: required long (the key), 2: d: optional decimal(10, 2), …>`
-  (`target/probe-u11-edge-1/vx3-spark.json`, `add`). V-005. pins: u11-edge-1/C-021
+  (`target/probe-u11-edge-1/vx3-spark.json`, `add`). V-005.
   `replace_field_wrong_case_source_refuses_like_spark` and
   `replace_by_transform_wrong_case_source_refuses_like_spark` pin the `ReplaceField` and
   `ReplaceFieldByTransform` arms of the partition-source check: on a table partitioned by
   identity `cat`, a replacement whose source is `CAT` refuses the measured
   `Cannot find field 'CAT' in struct: struct<1: id: optional int, 2: cat: optional string>`
   and the default spec keeps `cat` (mutation: dropping either arm from `bound_source` turns
-  both red). V-012. pins: u11-edge-1/C-012
+  both red). V-012.
   **WO CASESENS-1 slice 5 (2026-09-27):** `drop_and_replace_by_name_are_exact` pins
   the exact field-name check (`CAT` against `cat`, `kat` against `Kat` refuse
   `Cannot find partition field to remove: <written>` with the spec unchanged; the exact
   names drop and replace) and `transform_sources_are_exact_on_drop_and_replace` pins the
   exact transform-source check (`bucket(4, ID)` refuses Java's `ValidationException`
   with the full struct text on DROP and REPLACE with the spec unchanged; the exact
-  source drops). pins: casesens-1/C-013, C-014
+  source drops).
 - `map.md` — this file.
 
 ## Pointers

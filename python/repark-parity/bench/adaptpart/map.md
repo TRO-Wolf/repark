@@ -28,8 +28,6 @@ makes never is — beds live under the `--scratch` root the caller names.
   `CALL ap.system.plan_partitioning(table => 'ns.<bed>', target_file_size_bytes => …)` on
   each bed after scoring and prints every frame row field by field (the procedure's own
   `notes` carry the measured `byte_ratio` and its `footers|fallback` source).
-  pins: ap-0/C-001, C-002, C-003, C-004
-  pins: ap-1/C-012, C-013
   **AP-1 RP-16 re-measure (2026-09-11):** the same `--plan` command against a
   fresh `/tmp/ap1r-bed` on the release module at pin `090bc821`. INSERT files on
   the synthetic beds now read zstd. Numbers:
@@ -38,14 +36,12 @@ makes never is — beds live under the `--scratch` root the caller names.
   `ADD PARTITION FIELD identity(grp)` plus `rewrite_data_files` on fresh copies
   and compared the projection to those live actuals (7 928 680 / 7 672 169,
   UNCOMPRESSED).
-  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
   **AP-1 RP-17 re-measure (2026-09-12):** the same `--plan` command and the same
   rewrite driver against fresh `/tmp/ap1r-bed` / `/tmp/ap1r-orun` on the release
   module at pin `41e25ba2` (fork `#278` F-WRITE-COMPRESS-2). The rewrite writers
   now honour the table's codec, so the projection and the actual sit under one
   codec. Numbers:
   [docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md](../../../../docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md).
-  pins: rp-17/C-001, C-002, C-003, C-004
   **AP-1 RP-18 re-measure (2026-09-12):** the same `--plan` command and the same
   rewrite driver against fresh `/tmp/ap1r-bed` / `/tmp/ap1r-orun` on the release
   module at pin `9e3522e3` (fork `#280` F-REWRITE-SIZE-1 step 2). The rewrite
@@ -53,13 +49,11 @@ makes never is — beds live under the `--scratch` root the caller names.
   projection (uncompressed sum × `byte_ratio`, compression counted once) and the
   actual sit under one codec and one compression pass. Numbers:
   [docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md](../../../../docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md).
-  pins: rp-18/C-001, C-002, C-003, C-004
   **AP-1-CLOSE-1 (2026-09-12):** the same `--plan` frame backs the closure pin —
   `projected_files_at_target` × target is an upper bound over the live actual on
   the three beds (a same-codec rewrite into fewer, larger files does not compress
   worse); the pin reproduces the bed shapes in Rust and asserts bound ≥ actual ≤
   2× plus the RP-18 ranking verbatim. No script change.
-  pins: ap-1-close-1/C-001, C-002, C-003, C-004, C-005
 - `map.md` — this file.
 
 ## I want to…

@@ -1,3 +1,5 @@
+**Errata (2026-10-29, clerk).** Clause C-006's "map.md lockstep" invariant, one of the enumerated KEEP invariants above, is superseded by the scoped map rule of MAP-GOVERNANCE-1 under the owner ruling of 2026-10-29: a `map.md` lives where the architecture needs one, and lockstep is a warning (`scripts/check_map_md.sh`), not a gate. The pin `test_agents_md_keeps_the_universal_invariants` now asserts the boundary clause of the AGENTS.md map bullet ("A `map.md` sits at a repository root, crate, package or complex") in place of the retired "`map.md` in every directory" text. The counts are unchanged, and C-006 stays PROVEN by that pin. No row is touched.
+
 # Charter ledger — DL-5 · compact the live STATUS remainder and the contributor contract
 
 **Date:** 2026-08-25 · **Branch:** `feat/dl-5-contract-compaction` · **Base:** `b33d2cd`

@@ -15,6 +15,5 @@ The test half of [`../store_overflow.rs`](../map.md), moved out by ICE-STRUCT-PA
   struct by position (Spark's `INSERT` rule), and one carrying `source_by_name` stores it by
   name. It is the cell that kills mutant 8 of the sketch's §9 (the default of
   `WriteOp::Insert` turned by name), which no other test reached.
-  pins: ice-struct-pairing-1/C-012
 
 Up: [../map.md](../map.md).

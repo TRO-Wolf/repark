@@ -33,7 +33,8 @@ single home for what it covers; none of them restates another.
 5. **[AGENTS.md](AGENTS.md)** — the authoritative contract every change obeys, and the rest of the
    read order from there (starting with [docs/testing.md](docs/testing.md)).
 
-Then the `map.md` in each directory your change touches; every directory has one.
+Then the `map.md` in each directory your change touches, where that directory has one (a new
+directory needs none; see [docs/maps-policy.md](docs/maps-policy.md)).
 
 Using repark rather than working on it? The user-facing guides live in
 [docs/guide/](docs/guide/map.md) — install, session + conf, the DataFrame API, the two SQL doors.

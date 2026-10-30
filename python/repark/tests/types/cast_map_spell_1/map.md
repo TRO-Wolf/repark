@@ -5,24 +5,20 @@
 Recorded Spark 4.1.2 oracle for CAST-MAP-SPELL-1: every `CAST(… AS MAP<…>)` and
 `.cast(MapType)` cell answers with schema string, per-field nullability and rows,
 and the two refusal cells carry Spark's exception class plus error-class token.
-pins: cast-map-spell-1/C-001, C-002
 
 ## Contents
 
 - [cast_map_spell_1_spark_oracle.json](cast_map_spell_1_spark_oracle.json) — the 21
   recorded cells (17 SQL cells plus the ANSI-off legacy twin, the `UNION ALL` typed-NULL
   cell, and 3 DataFrame-door `.cast` cells).
-  pins: cast-map-spell-1/C-001, C-002, C-003, C-004
 - [cast_map_spell_1_round4_spark_oracle.json](cast_map_spell_1_round4_spark_oracle.json) —
   the orchestrator's 12 round-4 cells (ANSI in each key's suffix): DEL, tab and U+0085
   prefixes before `INT` / `BOOLEAN` leaves, the `128` to `TINYINT` overflow message, and
   `try_cast` of an overflowing key (Spark stores a NULL key; `keys`/`values` recorded).
-  pins: cast-map-spell-1/C-013, C-015, C-016
 - [cast_map_spell_1_round3_spark_oracle.json](cast_map_spell_1_round3_spark_oracle.json) —
   the 17 round-3 cells, each with its own `ansi` flag: colliding keys after a key cast
   (and their stored order through `map_keys`), `try_cast` / legacy key legality, leaf
   overflow, whitespace and fractional-text leaves, and a `/*! … */` comment hint.
-  pins: cast-map-spell-1/C-011, C-012, C-013, C-014
 
 ## Provenance
 

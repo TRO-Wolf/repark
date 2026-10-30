@@ -61,8 +61,6 @@ configurations re-record through its parameters). Raw-recording SHA-256:
 - Row ids stay spec-correct on both engines either way: contiguous, unique, every
   file's `first_row_id` the running sum of the files before it.
 
-pins: ice-rowid-order-1/C-001, C-002, C-007
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

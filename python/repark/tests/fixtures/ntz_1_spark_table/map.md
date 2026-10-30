@@ -8,7 +8,7 @@ The pin test copies the table back to its canonical path before
 `CALL system.register_table`, so the absolute file URIs in the manifests stay
 valid. The recorder replaces only the `metadata/` and `data/` directories on
 `--rewrite` and keeps this map. Spark's read answers live beside the probes
-(`ntz-xc-spark.json`), not here. pins: ntz-1/C-008
+(`ntz-xc-spark.json`), not here.
 
 ## Contents
 

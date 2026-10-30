@@ -17,7 +17,6 @@ lowering it calls first.
   token layer into the cast of its text. Nested targets (`ARRAY`, `STRUCT`, `MAP`) stay
   untouched for the R4 refusal. Reached from `lower_expression`,
   `TimestampNsCastLower::post_visit_expr` and `TimestampNsCastProbe`.
-  pins: ntz-1/C-002, C-004, C-005
 - `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
   RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
   `CAST` / `::` to `TIMESTAMP` (or `TIMESTAMP_LTZ`), through parentheses, in one more
@@ -30,7 +29,6 @@ lowering it calls first.
   expression are untouched. `KeywordLower` and `TimestampNsCastLower` call it from
   `post_visit_query`; `has_values_timestamp_cast` lets the MERGE probe lower a source
   that needs it. 3 in-module tests.
-  pins: ntz-store-doors-1/C-008
 
 ## Pointers
 

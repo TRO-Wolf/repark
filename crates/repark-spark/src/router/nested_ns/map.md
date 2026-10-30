@@ -17,7 +17,7 @@ parent past the 1000-line ceiling; the parent's prose stays in [../map.md](../ma
   two discriminating walker tests are `a_column_that_resolves_in_no_input_reads_every_input_whole` and
   `an_unmodelled_node_that_refers_out_reads_the_other_side_whole`; the third,
   `an_outer_reference_no_enclosing_join_resolves_fails_closed`, passes with any predicate and pins
-  nothing about the arm. pins: gate-retire-1/C-003
+  nothing about the arm.
 
 ## Pointers
 

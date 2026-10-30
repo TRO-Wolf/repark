@@ -1,8 +1,8 @@
 # map — repark-spark/src/call
 
-U1-MEM-LAYOUT-1 (2026-09-23): `remove_orphan_files.rs` adds fail-closed refusals, on a `TempFallbackAllowed` catalog only, for foreign metadata and for a scan path that equals or contains another registered table's location, lies inside another table's location and outside the swept table's own, or lies inside the own location when another table's location equals it; a table located inside another table's location is not refused for that containment alone: a scan path inside its own location passes unless another refusal applies (a table sharing the own location, or foreign metadata under the scan path or in an ancestor's `metadata/`). pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
+U1-MEM-LAYOUT-1 (2026-09-23): `remove_orphan_files.rs` adds fail-closed refusals, on a `TempFallbackAllowed` catalog only, for foreign metadata and for a scan path that equals or contains another registered table's location, lies inside another table's location and outside the swept table's own, or lies inside the own location when another table's location equals it; a table located inside another table's location is not refused for that containment alone: a scan path inside its own location passes unless another refusal applies (a table sharing the own location, or foreign metadata under the scan path or in an ancestor's `metadata/`).
 
-U1-MEM-LAYOUT-1 layout-r8 (2026-09-23): on a `TempFallbackAllowed` catalog only, `refuse_scan_over_foreign_metadata` also reads `<A>/metadata/` for each ancestor `A` of the scan path in order, stopping at the first refusal, from its parent up to the storage root when the scan lies outside the swept table's own location, or up to and including that location when the scan lies strictly inside it; a scan equal to the own location reads no ancestor (`metadata_probe_ancestors`). `orphan_file_list.rs::location_path_start` becomes `pub(super)` so the walk keeps the scan's spelling. pins: u1-mem-layout-1/C-011, C-029, C-030, C-031
+U1-MEM-LAYOUT-1 layout-r8 (2026-09-23): on a `TempFallbackAllowed` catalog only, `refuse_scan_over_foreign_metadata` also reads `<A>/metadata/` for each ancestor `A` of the scan path in order, stopping at the first refusal, from its parent up to the storage root when the scan lies outside the swept table's own location, or up to and including that location when the scan lies strictly inside it; a scan equal to the own location reads no ancestor (`metadata_probe_ancestors`). `orphan_file_list.rs::location_path_start` becomes `pub(super)` so the walk keeps the scan's spelling.
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
 
@@ -28,7 +28,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   **RP-34 (2026-09-19):** the rewrite step and each `run_step` call are boxed (`Box::pin`), as
   `clippy::large_futures` flags them at fork `43fcd243`; the same boxing holds for
   `run_maintenance_apply.rs`'s `run_step`.
-  pins: rp-34-fork-pin/C-003
   `dry_run` defaults true (nothing commits; every row `status` `dry_run`). `dry_run => false`
   runs each `ALTER TABLE … ADD PARTITION FIELD …` from the matching plan row (one commit
   each; the `unpartitioned` candidate has no DDL step), then `rewrite_data_files`,
@@ -45,13 +44,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
   integer). When present the lookup re-plans at that target so a two-field `plan_id` is
   found; when absent the lookup stays at target 1 and a miss tells the caller to pass
   the planning target. Guide: `docs/guide/maintenance-policy.md`.
-  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `create_changelog_view.rs` — **ICE-CHANGELOG-1 (2026-09-20):** the procedure. Java's
   parameter list verbatim (`table`, `changelog_view`, `options`, `compute_updates`,
   `identifier_columns`, `net_changes`) — `remove_carryovers` is NOT an argument in Iceberg
   1.11, so it is behaviour here and not an argument either. The default view name is
   `` `<table>_changes` `` WITH backticks in the returned row and without them in the registered
-  name, which is what `QC-DEFAULT-NAME` records. pins: ice-changelog-1/C-014
+  name, which is what `QC-DEFAULT-NAME` records.
 - `changelog.rs` (+ `changelog/`) — **ICE-CHANGELOG-1 (2026-09-20):** the row transforms
   `create_changelog_view` applies to the raw changelog relation, ported from Iceberg 1.11's
   `ChangelogIterator` family (read off the runtime jar's bytecode, not from docs) and held here
@@ -65,13 +63,11 @@ and measured-parity contract would grow `call.rs` beyond its exact
   restarts the group at a zero crossing — which is what yields the recorded LAST-touching
   ordinal). Sorting and equality both go through one Arrow `RowConverter`, whose default
   ascending / nulls-first order is Spark's `sortWithinPartitions`.
-  pins: ice-changelog-1/C-011, C-012, C-013
 - `rewrite_data_files.rs`, `rewrite_manifests.rs`, `../call.rs` (`execute_rewrite_position_delete_files`),
   `add_files.rs`, `branch_ops.rs` (`execute_publish_changes`) — **ENC-1 round 2 (2026-10-09):**
   each file-writing procedure refuses a target carrying `encryption.key-id` right after loading
   it, before any rewrite stages or commits. Expiry, orphan sweep, ref moves and dry-run
   planning are untouched and run. Pinned in `../tests/enc_1.rs`.
-  pins: enc-1/C-005
 - `run_maintenance_apply.rs`, `branch_ops.rs` (`cherrypick_snapshot`), `compute_table_stats.rs`,
   `compute_partition_stats.rs`, `rewrite_table_path.rs` — **ENC-1 fold 1 (2026-10-09):**
   `apply_steps` refuses a keyed target before the first step when the plan holds a rewrite
@@ -82,7 +78,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `rewrite_table_path` carry no check of their own: each opens a file through the table
   handle and the catalog guard refuses it there (`repark-iceberg` `catalog/map.md`). The
   fast-forward cherry-pick is a ref move and runs. Pinned in `../tests/enc_1_fold.rs`.
-  pins: enc-1/C-007, C-008
 - `branch_ops.rs` — **IPI-05 (2026-09-21):** `execute_publish_changes` publishes a staged WAP
   snapshot: it looks the snapshot up with the fork's `staged_snapshot_for_wap_id`, re-raising that
   error's **bare message** (never `to_string()`, which would prefix the error kind and diverge from
@@ -107,12 +102,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
   validation WAP-first; FIXED residue `ICE-BRANCH-OPS-1-R-001` beside registry REF-6).
   **WO-A5 (2026-09-23):** the `INVALID_TYPED_LITERAL` producer has a direct `engine_err`
   pin for its complete bracketed parse message.
-  pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
-  pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
   **WO RP50-A (2026-09-26):** the round-2 v1 refusal calls are removed from
   `execute_fast_forward` and from `rewrite_data_files.rs`, so a fast-forward that creates a
   non-main ref on a format v1 table commits, as does a rewrite on a v1 branch.
-  pins: ice-nested-evo-1/C-053, C-060
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
   `binpack` runs. Unknown
@@ -135,10 +127,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   the branch name; the `run_maintenance` caller passes `None`); both CALL arms
   dispatch behind `Box::pin` (the options state would push the router future past the
   16 KiB `large_futures` lint otherwise — same remedy as the `run_maintenance` plan path).
-  pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-  pins: rp-4-fork-repin/C-003
-  pins: v3-5-dv-compaction/C-002, C-004
-  pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-011
   **ICE-RDF-SORT-PARSE-1 (2026-09-20):** `strategy` / `sort_order` route onto the fork's
   `RewriteStrategy`, retiring registry `RDF-SORT-1`. `resolve_strategy` is a transcription of
   Java `RewriteDataFilesProcedure.checkAndApplyStrategy` read from the 1.11.0 bytecode, and
@@ -165,8 +153,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   fork text verbatim, so the door reports Java's class as well as Java's text. Round 3
   (2026-09-20, V-001): the remap reads `error.message()`, not `error.to_string()` — the
   latter renders the `DataInvalid => ` kind prefix Java never sends.
-  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009
-  pins: ice-procedures-1/C-021
 - `rewrite_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(k, v, …)`
   extraction and validation for both rewrite procedures. String/number/boolean/NULL scalar
   rendering, duplicate-key `[DUPLICATED_MAP_KEY]`, unknown-key listing in map order named for
@@ -185,13 +171,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   names the key and the registry row. A present NULL `remove-dangling-deletes` map key
   wins over the legacy top-level flag (Java's default, false). Errors return the
   `IllegalArgument` marker so Python raises `IllegalArgumentException`.
-  pins: ice-rdf-options-1/C-001, C-002, C-005
-  pins: ice-rdf-sort-parse-1/C-009
 
 - `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.
-  pins: maint-rewrite-data-files-options/C-007
   **RP-56 verifier fold (2026-09-28):** column resolution tries the exact name first, and under
   `false` a collided schema refuses with the fork's collision text ahead of the parse wrapper
   (p9 `f_rewrite`, `t_rewrite_tw2_b`).
@@ -206,12 +189,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   catalog still refuses before any IO. Without `file_list_view` the fork's
   `DeleteOrphanFiles` lists and deletes; with it, `orphan_file_list.rs` answers and the
   same partial-delete refusal applies. Registry row ORPHAN-3.
-  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-008, C-010, C-016
-  U1-MEM-LAYOUT-1 (2026-09-23): fail-closed foreign-metadata and co-tenancy refusals, on a `TempFallbackAllowed` catalog only: in the catalog walk, a scan path inside another table's location refuses when it lies outside the swept table's own location, or when another table's location equals the own location; the foreign-metadata and ancestor probes can refuse it as well (for example a table nested inside the own location above the scan path). pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
+  U1-MEM-LAYOUT-1 (2026-09-23): fail-closed foreign-metadata and co-tenancy refusals, on a `TempFallbackAllowed` catalog only: in the catalog walk, a scan path inside another table's location refuses when it lies outside the swept table's own location, or when another table's location equals the own location; the foreign-metadata and ancestor probes can refuse it as well (for example a table nested inside the own location above the scan path).
   Layout-r7 (2026-09-23): on a `TempFallbackAllowed` catalog only, a scan strictly inside the swept table's own location also reads
   `<own location>/metadata/` for another table's metadata files, and the catalog walk refuses a
   scan inside the own location when another table's location equals it.
-  pins: u1-mem-layout-1/C-023, C-024, C-025
   R5 (2026-09-24): the listing branch prints each orphan through `qualify_local_path`, which
   prefixes `file:` to a string that starts with `/` and returns every other string unchanged,
   as Java's Hadoop listing prints a local file; it runs after `DeleteOrphanFiles` has deleted,
@@ -233,7 +214,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   false` refuses with the fork's text. An ERROR-mode prefix conflict builds the fork's
   `prefix_conflict_error` pairs and text and goes through the same `iceberg_err`, so both
   paths fail with one string; the `gc.enabled` refusals are built the same way.
-  pins: ipi-30-orphan-guard-narrow-1/C-005, C-006, C-007, C-011, C-012, C-013, C-014, C-015
 - `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `CALL
   <catalog>.system.run_maintenance(table => … [, dry_run => …] [, <D-1 key> => …])`.
   Inline keys overlay the stamped file policy (per-table entry, then profile) through
@@ -254,10 +234,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   D-4 ordinal but is marked skipped with the service's `unreferencedFileRemoval` remedy as
   the reason — table buckets answer `ListObjectsV2` 405 — so the dry-run frame shows
   `skipped`, never `planned`.
-  pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
-  pins: orphan-s3tables-1/C-003
   **FNP-4B (2026-09-15):** the local `quote_ident` emits backticks (embedded doubled);
-  fixed engine-internal names in the metadata reads stay bare. pins: fnp-4b/C-002
+  fixed engine-internal names in the metadata reads stay bare.
   (slice-3: needless raw-string-hash lint only, no behavior change).
 - `rewrite_data_files.rs` / `run_maintenance_apply.rs` — **ICE-FOOTER-CACHE-1 (2026-09-19):**
   both calls to `run_rewrite` are behind `Box::pin`. At fork PR #316's pin the fork `Table` the
@@ -282,14 +260,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `skip_reason` is set never reaches `run_step` — its row is `skipped` with the reason and
   the chain continues (a service-managed orphan sweep on `s3tables`), unlike a
   chain-stopped `skipped` row, which carries an empty result.
-  pins: maint-policy-1/C-013, C-014, C-015, C-016, C-017
 - `ancestors_of.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
   <catalog>.system.ancestors_of(table [, snapshot_id])` walks the snapshot
   parent chain newest-first, answering `snapshot_id bigint, timestamp bigint`
   (the snapshot's own timestamp-ms). No current snapshot refuses `Cannot find
   snapshot: -1`; an unknown id refuses `Cannot find snapshot: <id>` — both as
   `IllegalArgumentException`, matching Spark's procedure-layer class.
-  pins: ice-procs-route-1/C-004, C-005
 - `compute_table_stats.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
   <catalog>.system.compute_table_stats(table [, snapshot_id] [, columns])`
   over the fork's `ComputeTableStats`, answering the single `statistics_file`
@@ -306,7 +282,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   no nested scan projection yet (fork ask R-005 in the unit ledger), so they
   fail loud instead of collapsing to empty stats. The `columns` argument
   parses both `array(…)` call and `ARRAY[…]` literal spellings.
-  pins: ice-procs-route-1/C-006, C-007, C-008, C-009, C-010
   Round 3 (2026-09-19, run 25c) measured the refusal texts, the nested field
   id, the dedup, and the caller-order blobs on live Spark 4.1.2.
 - `compute_partition_stats.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
@@ -314,7 +289,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   fork's `ComputePartitionStats`, answering the single
   `partition_statistics_file` string column. An unpartitioned default spec
   refuses `Table must be partitioned` as `IllegalArgumentException`.
-  pins: ice-procs-route-1/C-011, C-012
 - `rewrite_table_path.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
   <catalog>.system.rewrite_table_path(table, source_prefix, target_prefix [,
   staging_location] [, create_file_list] [, start_version] [, end_version])`
@@ -331,7 +305,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   carries staged metadata files), written through
   `repark_iceberg::catalog::write_text_file`, the one fork-`Bytes` call this
   door needs.
-  pins: ice-procs-route-1/C-013, C-014, C-015, C-016
 - `rewrite_manifests.rs` — **MW-6**: `CALL <catalog>.system.rewrite_manifests(table => …)` over
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no
   counts, so Spark's two columns are read from the new snapshot's summary
@@ -352,8 +325,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   instead of the single-key `cluster_by`; a missing or NULL list keeps the legacy
   path. The empty-list and non-partition-column refusals surface the fork text
   bare through `illegal_argument_error`.
-  pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
-  pins: ice-procedures-1/C-022
 - `plan_partitioning.rs` (+ `plan_partitioning/`) — **AP-1 step 1 (2026-09-10):** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
   target positive). Statistics come from one `files WHERE content = 0` read
@@ -390,11 +361,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   live actual and at or below 2× it, and the candidate ranking equals RP-18's exactly.
   The `mod tests` block moved to `plan_partitioning/tests.rs` in this change so the file
   stays under its size ceiling.
-  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
-  pins: ap-3/C-001, C-006
-  pins: ap-1-close-1/C-001, C-002
   **FNP-4B (2026-09-15):** the local `quote_ident` emits backticks (embedded doubled);
-  fixed engine-internal names in the metadata reads stay bare. pins: fnp-4b/C-002
+  fixed engine-internal names in the metadata reads stay bare.
 - `plan_partitioning_bytes.rs` — **AP-1 step 2 (2026-09-11):** the `byte_ratio` measurement
   behind the step-2 byte model. For every live data file's `file_path` it opens the table's
   own `FileIO`, takes the file size from `metadata()`, and range-reads only the parquet tail
@@ -410,8 +378,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   by default); measured on the AP-0 beds in
   `docs/perf/adapt-part-ap1-2026-09-11.md` and re-measured in
   `docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md`.
-  pins: ap-1/C-010, C-011
-  pins: ap-3/C-002
 - `plan_partitioning_score.rs` — the pure P-2/P-3 engine behind the procedure above:
   the civil calendar, the grains, the Spark DDL labels, the 1/k byte spread, the band
   penalty, the single/pair scoring and the best-first ranking, plus the in-module unit tests
@@ -421,8 +387,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   the item byte basis is `f64` and carries the footers' uncompressed sum per file (so the
   fallback's `stored / 0.55` estimate stays exact); `score` bands that uncompressed share
   against the target and `projected_partitions` stays a pure value count.
-  pins: ap-1/C-001, C-009, C-010
-  pins: ap-3/C-003
 - `params.rs` — **ICE-PROCEDURES-1 (2026-09-20):** the per-procedure declared
   parameter lists `bind` in `../call_args.rs` binds against — name, jar type
   and required flag transcribed from `procedure-params.txt` (`javap`-derived
@@ -436,7 +400,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   keeps it named-only. **PR2a (2026-09-21):** the RDF list gains `branch`
   sixth/last (StringType, optional), closing the second gap; the binder's
   unknown-argument refusal now names the six-name list.
-  pins: ice-procedures-1/C-001, C-002, C-005, C-011, C-021
 - `add_files.rs` — **ICE-PROCEDURES-1 PR1b (2026-09-21):** `CALL
   <catalog>.system.add_files(table => …, source_table => … [, partition_filter] [,
   check_duplicate_files] [, parallelism])` over the fork's `AddFiles` action.
@@ -451,7 +414,6 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `changed_partition_count` on every import; the fork's merge-append writes a
   `changed-partition-count` summary key Java's add_files path does not, so `md.snapshots`
   stays a fork residue (ledger C-015).
-  pins: ice-procedures-1/C-015, C-016, C-017, C-018, C-019
 
 ## Pointers
 

@@ -46,8 +46,6 @@ live PySpark to re-record. Raw-recording SHA-256: `spark_rp_oracle.json`
   one table. The pinned fields (commit plus the two summary values) agree cell for
   cell with the probe's `RESULT` line of 2026-09-18 (run 22b).
 
-pins: ice-write-options-rp-1/C-001, C-002
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

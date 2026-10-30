@@ -14,8 +14,6 @@ See [../map.md](../map.md).
 - `measure.rs` — `#[ignore]`d 50/500-column `canonical()` / `explain()` wall and size
   printer (C-009).
 
-pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010
-
 ## Pointers
 
 - Up: [../map.md](../map.md)

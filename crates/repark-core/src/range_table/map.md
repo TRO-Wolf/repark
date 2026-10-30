@@ -10,8 +10,6 @@ the overflow-safe row stream.
 
 - `tests.rs` — provider pins over a default `ReparkSession`
   (`#[cfg(test)] mod tests;` in `../range_table.rs`).
-  pins: range-tvf-id-1/C-001, C-002, C-003
-  pins: range-tvf-id-2/C-001, C-002, C-003, C-004
 - `../range_table.rs` — `SparkRangeFunc` (RePark's `range`, column `id`) plus
   `register_spark_range`, wired once in `ReparkSessionBuilder::build` so the
   facade door and the native door share the registration. NULL bounds refuse

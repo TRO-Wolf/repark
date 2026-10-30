@@ -1,7 +1,6 @@
 # map — repark-iceberg/src/write/overwrite_filter
 
 U8 WRITE-SQL PR1 (2026-09-24): the pins of Spark's overwrite-by-filter kernel.
-pins: u8-write-sql/C-003, C-004, C-013, C-015, C-017, C-019, C-020
 
 ## Purpose
 
@@ -27,10 +26,9 @@ Tests for [`overwrite_filter.rs`](../overwrite_filter.rs), which declares `#[cfg
   V-001, V-002): `a_decimal_literal_on_an_int_column_follows_spark_unwrap_rules` — a decimal
   literal outside the INT range folds to the out-of-range texts, never a constant, and a `.0`
   literal at the INT boundary follows Spark's boundary rules; BIGINT keeps its constants.
-  pins: u8-write-sql/C-022
   two-element list), and the out-of-range integer folds.
 - U7 PR2 (2026-09-24): the commit helper passes `FilterValidation::default()` (no writer
-  options) where it passed `None`. pins: u7-write-df-2/C-009
+  options) where it passed `None`.
 
 ## Pointers
 

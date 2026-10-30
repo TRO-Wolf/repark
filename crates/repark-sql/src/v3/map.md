@@ -12,19 +12,16 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   `AnsiDialect::on_session_built`, then an `UPDATE`, a MERGE update and a MERGE insert of a
   `TIMESTAMP` literal into a `timestamptz_ns` column: three rows of `1767323045123456000`,
   the column still zoned nanoseconds. Red without the registration in `dialect.rs`.
-  pins: ice-tstzns-wall-1/C-009
 - `create.rs` — **ICE-TSNS-MERGE-WALL-1 (2026-10-09):**
   `update_and_merge_into_timestamp_ns_store_the_wall` runs `AnsiDialect::on_session_built` on
   the door, then an `UPDATE`, a MERGE update and a MERGE insert of a naive `TIMESTAMP`
   literal into a `timestamp_ns` column: three rows of `1767323045123456000`, the column still
   `Timestamp(ns)`. Red without the kernel's registration in `dialect.rs`.
-  pins: ice-tsns-merge-wall-1/C-009
 - `create.rs` — **V3-2:** ANSI CREATE/CTAS `format_version = 3` opt-in pins
   (`Model: Grok 4.6 xHigh` on the module's functions). **V3-6 C-003:** opt-in CREATE
   `timestamp_ns` / `timestamptz_ns` stores the Iceberg primitives; `timestamp_ns`
-  SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
+  SELECT round-trips ns values and Arrow types.
   **V3-9:** the opt-in refusal must not claim merge-on-read is unserved
-  (pins: v3-9-mor-predicate-dml-dv/C-006).
   **WO U5 PR2b (2026-09-24):** `format_version_one_creates_v1_and_deletes_copy_on_write` is the
   ANSI-door D-CREATE-V1 row: a v1 column-def table seeds, deletes copy-on-write (no delete
   files) and keeps sequence number 0; a v1 CTAS writes v1.
@@ -44,13 +41,11 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   no new metadata file, the `extra_properties` map spelling driving the same resolver, and the
   downgrade / `'1'` / `'-1'` / `'4'` / `'x'` / `'3.0'` refusals; the `extra_properties` map
   spelling of the reserved key keeps steering to the curated `format_version`
-  (pins: v3-10-upgrade-v2-to-v3/C-003, C-004).
   **WO U5 PR2b round 2 (2026-09-25), superseded by RP50-A (2026-09-26):** the ANSI-door pin is
   now `ref_ddl_on_a_v1_table_commits_like_spark`: `CREATE BRANCH audit` and `CREATE TAG t1` on a
   seeded v1 table commit and both refs resolve to the current snapshot, as Spark 4.1.2 measured
   on 2026-09-26 (the fork keeps v1 `refs` since F-V1-REFS-1); red on a tree that still refuses
   v1 ref writes.
-  pins: ice-nested-evo-1/C-052, C-060
 - `cow.rs` — **V3-COW-1 (V3-7 MERGE lift):** adopted and created v3 UPDATE and MERGE
   keep `_row_id`; The module doc no longer carries a pins line; citations live here.
   sequential COW DELETE keeps the survivor id at next-row-id 6; **V3-8:** subquery-`WHERE`
@@ -71,29 +66,25 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   Hash-pinned by `v3_lineage.rs::cow_keep_refusal_files_are_byte_untouched`.
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);
   reuses `cow.rs`'s `Door`. **V3-6 C-004:** the `UNKNOWN` column refuses naming the
-  type, no table left (pins: v3-6-v3-types/C-004).
+  type, no table left.
   **IPI-51 PR8 (2026-09-21):** the type pin splits — `GEOMETRY` / `GEOGRAPHY` and
   the inventory `GEOMETRY(4326)` spelling require
   `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]` / `SQLSTATE: 0A000`; `VARIANT` still
   names `VARIANT`; all leave no table behind. `cow.rs` `Door::ok` turns `pub(crate)`
   so the new `v3_type_column_named_geometry_with_int_succeeds` pins a column NAMED
   `geometry` with `INT` succeeding (cell `TY-GEOMETRY`).
-  pins: ice-error-conditions-1/C-011
 - `branch_tag_time_travel.rs` — ANSI branch/tag + `FOR VERSION AS OF` over the partitioned
   v3 DV fixture; RP-3 shared-Puffin DELETE keeps the untouched sibling
-  (pins: rp-3-fork-repin/C-004).
 - `partitioned_equality_deletes.rs` — ANSI live-row twins of the Spark-written partitioned
   DV and equality-delete + DV fixtures, plus `$delete_files` content 1/2, cross-partition DV
   DELETE, live-DV UPDATE Spark-equal lineage (`Model: Grok 4.6 xHigh`; rp-6-fork-repin/C-003),
   and C-007 ANSI CALL / fork no-op of `rewrite_position_delete_files`
-  (pins: rp-3-fork-repin/C-007). **V3-4:** ANSI `_row_id` / `_last_updated_sequence_number`
+  **V3-4:** ANSI `_row_id` / `_last_updated_sequence_number`
   on both fixtures, `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`FOR VERSION AS OF` refuse `V3-ROWID-2`, v2 unresolved
   as `No field named _row_id`.
-  pins: v3-4-serve-lineage-columns/C-003, C-005, C-007, C-008, C-011, C-012, C-013, C-014,
-  C-015, C-016, C-018, C-020
 
-**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`. pins: ice-tt-resolve-1/C-003
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`.
 
 ## Pointers
 

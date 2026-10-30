@@ -102,8 +102,6 @@ Why the shape it has:
   RSS field: `RUSAGE_CHILDREN` reads 0 on this launch path, and a zero is not a measurement.
 - `map.md` — this file.
 
-pins: h3-spill-1/C-001, C-002, C-003, C-007
-
 ## I want to…
 
 | I want to… | Go to |
@@ -120,7 +118,6 @@ identical cell for cell, `nested_loop_join` `internal_error` → `clean_error`) 
 `nested_loop_join` 64 MiB / 1e7 cell at `--repeats 3` (`internal_error` ×3 → `clean_error` ×3).
 Nothing in the harness changed; the narrowed commands are in the baseline's §8, and the fixed
 outcomes are in its §6.
-pins: h3-spill-residue-1/C-005
 
 ## Debug
 

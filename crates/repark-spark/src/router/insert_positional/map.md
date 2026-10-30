@@ -24,8 +24,7 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   `repark_iceberg::write::spark_overwrite_filter`, stages, and commits
   `commit_overwrite_by_filter_with_summary` (U7 PR2, 2026-09-24: with the statement's
   `isolation-level` and `validate-from-snapshot-id` as `FilterValidation`; the DataFrame
-  writer's `overwrite(condition)` reaches this door through its generated statement,
-  pins: u7-write-df-2/C-006, C-009); a literal `false` commits an append, as Spark's
+  writer's `overwrite(condition)` reaches this door through its generated statement,); a literal `false` commits an append, as Spark's
   optimizer does. A missing target answers `TABLE_OR_VIEW_NOT_FOUND`, also when its namespace
   does not exist (round 2, 2026-09-25). The width check plans the deduplicated source, so a
   source whose output names repeat writes (critic r1 V-003); the refusal names the columns
@@ -44,7 +43,6 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   **STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30):** the
   volatility probe renders the predicate through `render_for_reparse`, so a
   `\'` value parses instead of refusing unterminated.
-  pins: string-literal-escape-1/C-011
   pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021, C-024;
   u7-write-df-2/C-013
   **Fold 2026-09-29 (verifier VT-2):** `execute_replace_where` calls the shared
@@ -52,14 +50,12 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   `writeTo().overwrite(condition)` refuses STRING into FLOAT/DOUBLE and `-NULL`
   into DATE/BOOLEAN with Spark's text like every other INSERT door.
   **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** through the narrowed gate this door refuses only
-  the `-NULL` cells; a STRING source stores as on base. pins: store-ts-to-numeric-1/C-006
+  the `-NULL` cells; a STRING source stores as on base.
   **ENC-1 round 2 (2026-10-09):** `execute_replace_where` refuses a target carrying
   `encryption.key-id` after the width check, before staging. Pinned in `../../tests/enc_1.rs`.
-  pins: enc-1/C-005
   **ICE-TSNS-MERGE-WALL-1, the split (2026-10-09):** `ReplaceWhere::table()` and `source()`
   expose the parsed target and source query to `../nested_ns.rs`, which must read them before
   the statement runs. Nothing else changed.
-  pins: ice-tsns-merge-wall-1/C-040
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),
@@ -77,7 +73,6 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   `spark_names::expression_name` for the rest); a source whose leftmost `SELECT` has a `*` falls
   back to the planned names, with each `__repark_col_<n>` mapped back to raw item `n` by
   `named_back`.
-  pins: u8-write-sql/C-006, C-007, C-008, C-009, C-023
 
 ## Pointers
 

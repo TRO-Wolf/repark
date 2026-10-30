@@ -26,14 +26,12 @@ Source comments retain only API and safety contracts; implementation narration i
   **ICE-VIEWS-1 (2026-09-20):** a non-empty `list_views` also refuses
   (`Contains N view(s).`), so a view-only namespace cannot drop; viewless
   catalogs report empty.
-  pins: ice-views-1/C-013
   Module decls + the public re-export list (names unchanged from v1).
-  pins: ice-drop-ns-1/C-007
   `schema_not_found_on_drop` is Spark's three-sentence `[SCHEMA_NOT_FOUND]` for a drop, shared
-  by both doors (verification critic 2026-09-19). pins: ice-drop-ns-1/C-011
+  by both doors (verification critic 2026-09-19).
   **WO U5 PR1 round 2 (2026-09-24):** the text is built by `schema_not_found(<quoted name>)`.
   The drop form passes `` `catalog`.`ns` `` and ALTER NAMESPACE passes Spark's single-part
-  `` `ns` ``. pins: ice-nested-evo-1/C-030
+  `` `ns` ``.
 - `catalog_ops.rs` — `reregister_catalog_provider(ctx, catalog, name)`: the session
   `refresh_catalog_provider` escape hatch's engine-side adapter (full O(databases) rebuild via
   `rebuild_catalog_provider`). Hoisted MOVE-ONLY from v1 `repark-sql/src/catalog_ops.rs`; the
@@ -47,13 +45,13 @@ Source comments retain only API and safety contracts; implementation narration i
   `FileIO`; prop helpers + the `iceberg_to_datafusion` error map (`External(iceberg::Error)`
   so `classify_datafusion_error` still peels Iceberg). Hadoop `vN.metadata.json` writes now
   bump to `v(N+1).metadata.json` (registry `V3-ADOPT-1` FIXED, RP-3 / fork #235). S3 Tables
-  `register_table` still refuses naming fork row R126 (pins: rp-3-fork-repin/C-008).
+  `register_table` still refuses naming fork row R126.
   Catalog-edge spans record **prop key names only**, never values.
   **ICE-READ-PERF-0:** `memory_catalog_cached` wraps `storage_factory_for_location(warehouse)` in
   a `CountingStorageFactory` over `caches.io_counters()`; `glue_catalog_counted(props, counters)`
   and `s3tables_catalog_counted(props, counters)` pass `with_storage_factory(<counting wrapper
   over the fork default>)`; the unsuffixed `glue_catalog` / `s3tables_catalog` call them with a
-  fresh counter set. pins: ice-read-perf-0/C-003, C-004
+  fresh counter set.
   **ICE-CATALOG-CACHE-1 (2026-09-19):** the counted AWS builders now take `caches:
   &CatalogCaches` (its `io_counters()` replace the former `counters` argument) and, like
   `memory_catalog_cached`, run the builder through `cache_wiring.rs::wire_caches`, so Glue and
@@ -61,14 +59,13 @@ Source comments retain only API and safety contracts; implementation narration i
   The unsuffixed `glue_catalog` / `s3tables_catalog` pass `CatalogCaches::disabled()` (no
   handles, as before). `memory_catalog_cached` delegates to the crate-private
   `memory_catalog_wired(warehouse, caches, props)`, whose extra props are the offline stand-in
-  the scope pins drive. pins: ice-catalog-cache-1/C-001, C-002
+  the scope pins drive.
   **ICE-FOOTER-CACHE-1 (2026-09-19):** the same `wire_caches` call now also hands all three
   builders the session's footer cache; `memory_catalog_cached`'s span records `footer_cache`
-  (on/off). pins: ice-footer-cache-1/C-002
+  (on/off).
   No product behaviour changes: the wrapper only delegates and counts.
-  pins: ice-read-perf-0/C-010
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the three `catalog.memory_catalog*` spans record `warehouse` through
-  `repark_common::redaction::mask_value_credentials` (the edge exists). pins: source-url-redact-1/C-018
+  `repark_common::redaction::mask_value_credentials` (the edge exists).
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the Iceberg I/O counters. `IcebergIoCounters`
   holds one pair of relaxed `AtomicU64` (requests, bytes) per operation kind (`IcebergIoOp`:
   exists, metadata/HEAD, whole read, ranged read, footer read, write, delete, list) and per file class
@@ -81,12 +78,11 @@ Source comments retain only API and safety contracts; implementation narration i
   file unless the name marks deletes (`pos-del*` — RePark's position-delete writer —, `eq-del*`,
   `dv-*` — the fork's DV writer —, or Spark's `*-deletes.*`); a `.puffin` outside `metadata/` or
   with a delete name is a delete file; everything else (`version-hint.text`, a stats puffin) is
-  `other`. pins: ice-read-perf-0/C-001, C-002
+  `other`.
   The classifier matches on the lower-cased extension after the `*.metadata.json[.gz]` check;
   `by_op` / `by_class` / `total` saturate instead of wrapping.
   **Round 2 (2026-09-19):** each cell is `#[repr(align(64))]` so no two cells share a cache line
   (8 × 6 cells × 64 B = 3 KiB per session; the concurrent bench mode hammers the data-file cell).
-  pins: ice-read-perf-0/C-012
   **Footer vs page** (`ranged_read_op`): a ranged read on a data or delete file whose returned
   bytes END with the Parquet tail magic `PAR1` or the Puffin tail magic `PFA1` is a
   `footer_read`; every other ranged read is a `ranged_read` (on data files: column pages, and a
@@ -101,7 +97,7 @@ Source comments retain only API and safety contracts; implementation narration i
   range that happens to end on those four bytes counts as a footer (a 2⁻³² event on compressed
   pages; the bed's string columns are lower-case hex and `cat_<n>`, which cannot spell `PAR1`);
   a failed read counts as `ranged_read` with 0 bytes; ORC and Avro data files have no tail magic,
-  so all their reads stay `ranged_read`. pins: ice-read-perf-0/C-011
+  so all their reads stay `ranged_read`.
 - `counting_storage.rs` — **ICE-READ-PERF-0 (2026-09-19):** `CountingStorageFactory` wraps any
   fork `StorageFactory`; the `Storage` it builds (`CountingStorage`) delegates every call to the
   inner storage and records it. One request per `exists` / `metadata` / `read` / `write` /
@@ -119,7 +115,6 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3tables_default_storage_factory()` (`s3`) restate the fork defaults
   (`catalog/glue/src/catalog.rs:253`, `catalog/s3tables/src/catalog.rs:235` at fork `43fcd243`) so
   the wrapped factory is byte-identical to today's. A fork repin re-reads those two lines.
-  pins: ice-read-perf-0/C-001, C-004
 - `no_overwrite_storage.rs` — **AWS-ACCEPT-REPLACE-1 (2026-09-27):** `NoOverwriteStorageFactory`
   wraps any fork `StorageFactory`; the `Storage` it builds (`NoOverwriteStorage`) delegates every
   call to the inner storage except `write` and `writer`, which refuse with `Unexpected` when the
@@ -127,7 +122,6 @@ Source comments retain only API and safety contracts; implementation narration i
   S3 table buckets refuse an in-place metadata rewrite with 412 while local stores accept
   it, so the wrapper reproduces the table-bucket contract on `LocalFs` and the Spark-door OR
   REPLACE pin commits through it. Test-only: no product path builds it.
-  pins: aws-accept-replace-1/C-001
 - `encryption_guard.rs` — **ENC-1 fold 1 (2026-10-09):** the two places every Iceberg write
   passes, guarded by construction. `EncryptionGuardCatalog::install(inner)` wraps a catalog;
   the three builders in `builders.rs` return through it, so every catalog a session holds is
@@ -169,7 +163,6 @@ Source comments retain only API and safety contracts; implementation narration i
   creation that carries the key gets the guarded `FileIO`, so a CTAS with the key writes no
   data file even without its entry check.
   The refusal is `write::encryption::EncryptedTableRefusal`: one text, built in one function.
-  pins: enc-1/C-008
   **Fold 2 (2026-10-09), after the re-verify.** Four changes, each with its reason:
   1. **`Debug` is transparent.** The guard renders exactly what the wrapped catalog renders.
      `repark-distributed` (`iceberg_provider.rs::catalog_spec_from_debug`) reads the catalog
@@ -221,13 +214,11 @@ Source comments retain only API and safety contracts; implementation narration i
      AWS here.
   `base_is_keyed` holds the "no base table on the commit" branch (it loads from the
   wrapped catalog) so that a pin can reach it: the fork never builds such a commit.
-  pins: enc-1/C-010
 - `files.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `write_text_file(file_io, path,
   contents)` writes one small text object through the table's fork `FileIO`
   (the Spark `rewrite_table_path` copy-plan file list). The helper lives here,
   not in the Spark door, because this crate already carries the buffer-type
   dependency and the door must not gain one for a single write.
-  pins: ice-procs-route-1/C-013
 - `cache_wiring.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the one place a builder receives the
   session's caches. `CacheWiredBuilder` (crate-private) maps three calls onto the fork's
   inherent methods of `MemoryCatalogBuilder`, `GlueCatalogBuilder` and `S3TablesCatalogBuilder`
@@ -240,18 +231,18 @@ Source comments retain only API and safety contracts; implementation narration i
   the fork's per-instance scope for an injected factory. Why RePark may name the context although
   it injects a factory: its counting factory wraps the fork's own default S3 factory with no
   credential loader, so credentials come from the props alone — the ruling and its evidence are in
-  the unit ledger. pins: ice-catalog-cache-1/C-001, C-003, C-010
+  the unit ledger.
   **ICE-FOOTER-CACHE-1 (2026-09-19):** a fourth call, `wire_footer_cache` →
   `with_shared_footer_cache(Arc<ParquetFooterCache>)` (fork PR #316), passed whenever the
   session's footer cache is on. The credential context is now named when EITHER scoped cache
   (metadata or footer) is on: the fork keys a footer by `CacheScope` + data-file path +
   `file_size_in_bytes`, the same scope the metadata cache uses, so a footer-only session must
   separate credential contexts exactly as a metadata session does. The manifest cache stays
-  unscoped (one `ObjectCache` per catalog instance). pins: ice-footer-cache-1/C-002
+  unscoped (one `ObjectCache` per catalog instance).
 - `caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session-scoped Iceberg cache handles
   and their knobs. **ICE-READ-PERF-0:** `CatalogCaches` also owns the session's
   `Arc<IcebergIoCounters>` (one set per session, cumulative, shared by clones) with
-  `io_counters()`, `io_stats()` and `reset_io_stats()`. pins: ice-read-perf-0/C-003
+  `io_counters()`, `io_stats()` and `reset_io_stats()`.
   `IcebergCacheSettings::from_config_map` reads
   `repark.iceberg.metadataCache` (default **true**) and `repark.iceberg.metadataCacheEntries`
   (default 512), both with an underscore alias; a bad value fails loud naming BOTH the key the
@@ -274,10 +265,10 @@ Source comments retain only API and safety contracts; implementation narration i
   document bytes whenever moka's maintenance runs, within a statement too, and makes evictions observable
   (`metadata_stats().evictions`, advisory until moka's pending tasks run). The door `trim` below
   still runs; a trim is an explicit clear, not an eviction. `TableMetadataCacheStats` is
-  re-exported from `mod.rs` for the session report. pins: ice-catalog-cache-1/C-006, C-007
+  re-exported from `mod.rs` for the session report.
   `settle()` runs the cache's pending tasks; `settled_metadata_len()` is the accurate count;
   `trim()` is async — it settles, counts, and after a clear settles again — because moka's
-  entry count lags its writes. `metadata_len()` stays sync and approximate. pins: ice-catalog-cache-1/C-012
+  entry count lags its writes. `metadata_len()` stays sync and approximate.
   **ICE-FOOTER-CACHE-1 (2026-09-19):** `IcebergCacheSettings::footer_cache_bytes` reads
   `repark.iceberg.footerCacheBytes` (alias `repark.iceberg.footer_cache_bytes`, default
   `67108864` = 64 MiB, `0` disables), parsed and failing loud exactly like `manifestCacheBytes`.
@@ -289,7 +280,7 @@ Source comments retain only API and safety contracts; implementation narration i
   files while staying a small share of the default memory pool. The budget is moka weight over
   each footer's `ParquetMetaData::memory_size()`, not a resident-bytes ceiling. The user-facing
   row and paragraph live beside `manifestCacheBytes` in `docs/guide/session-and-conf.md`
-  ("Iceberg catalog caches"). pins: ice-footer-cache-1/C-001, C-006, C-009
+  ("Iceberg catalog caches").
   **The bound's scope is the statement door, not the load.** Before ICE-CATALOG-CACHE-1 the fork's
   cache was an unbounded `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
   session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session
@@ -359,7 +350,6 @@ Source comments retain only API and safety contracts; implementation narration i
   un-shares the cache, and the delete-manifest pins in the Spark tests map are the detector;
   re-check the key — a fork key that carries the assignment input, with the four
   upgrade-lineage tests green knob-on, is what the default-ON flip unit waits for.
-  pins: perf-ice-catalog-io-2/C-001, C-002, C-005, C-007
 
   **PERF-ICE-CATALOG-IO-3 (2026-09-05):** the default-ON flip IO-2's round-2 ruling named
   as the follow-up. `DEFAULT_MANIFEST_CACHE_BYTES` is `33554432` (32 MiB): every default
@@ -405,15 +395,12 @@ Source comments retain only API and safety contracts; implementation narration i
   fixture. The commit-path bypass persists at the new pin (`transaction/` still loads
   straight from `FileIO`), so `PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT` stays open
   and DML still saves read-side repeats only.
-  pins: perf-ice-catalog-io-3/C-001, C-005, C-007
-  pins: rp-16/C-001, C-003
 
   **Glue and S3 Tables: wired, unmeasured.** At IO-1 (pin `189a73ed`) the AWS builders took no
   cache and every number in that unit is the memory catalog. Since ICE-CATALOG-CACHE-1
   (2026-09-19, fork `#311` at `27e0d5fa`) `glue_catalog_counted` / `s3tables_catalog_counted`
   receive the session `CatalogCaches` through `cache_wiring.rs::wire_caches`; the AWS effect is
   unmeasured (the AWS bench is blocked on an IAM grant). Registry row `PERF-CATALOG-AWS-CACHE-1`.
-  pins: ice-catalog-cache-1/C-013
 
   **Creation is not cacheable.** `CREATE TABLE` and CTAS read back the metadata document they just
   wrote (the catalog proves reachability before claiming the pointer), so their census is 1
@@ -421,7 +408,6 @@ Source comments retain only API and safety contracts; implementation narration i
 
   Every reason for this module is written here rather than in the code, and the maps this unit
   touched move in the commits that touched their directories.
-  pins: perf-ice-catalog-io-1/C-002, C-003, C-004, C-007
 - `location.rs` — namespace-location key identity (`NAMESPACE_LOCATION_PROPERTY` `"location"` /
   `NAMESPACE_LOCATION_URI_PROPERTY` `"location_uri"`; `resolve_namespace_location` read
   precedence + `mirror_namespace_location_keys` unidirectional non-clobbering dual-write) and
@@ -437,18 +423,17 @@ Source comments retain only API and safety contracts; implementation narration i
   `create_changelog_view`, never to the relation (Java's `SparkChangelogTable` is the same
   shape). `ChangelogWindow.empty` carries Java's two empty-scan short-circuits
   (`noSnapshotsAfter` / `noSnapshotsBetween`). A range holding delete manifests is refused by
-  the planner, not here. pins: ice-changelog-1/C-009, C-010, C-015
+  the planner, not here.
   **ICE-CHANGELOG-1 round 1 (2026-09-20):** `scan` probes the fork's `plan_files` first and
   surfaces ONLY a `FeatureUnsupported` refusal at plan time, so the view read raises
   `UnsupportedOperationException` through the existing classifier instead of a mid-stream
   `PySparkException`; every other probe failure stays mid-stream exactly as before, and an
-  empty window skips the probe. pins: ice-changelog-1/C-015
+  empty window skips the probe.
 - `changelog_view.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `ChangelogViewProvider`, the LAZY view
   `create_changelog_view` registers: it scans its source provider unprojected, applies one
   row transform (passed in as `ChangelogRowTransform` so the Spark-engine semantics stay in
   `repark-spark`), then projects. Lazy because Spark's view is: `QC-MOR` records the CALL
   returning the view name and the delete-file refusal arriving only when the view is READ.
-  pins: ice-changelog-1/C-014, C-015
 - `incremental_append.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `IncrementalAppendTableProvider`
   serves `format('iceberg').option('start-snapshot-id', …).load(t)`. It calls the fork's
   `Table::incremental_append_scan` directly (never `iceberg-datafusion`), mirroring
@@ -457,16 +442,15 @@ Source comments retain only API and safety contracts; implementation narration i
   load, and takes the arrow schema from the `to` snapshot — the schema Spark reads a
   mid-range `ADD COLUMN` with. `AppendWindow.from_exclusive` is Java's exclusive `from`.
   Non-append snapshots inside the range are skipped by the planner, never refused.
-  pins: ice-changelog-1/C-001, C-002, C-003, C-007, C-008
 - `scan_batches.rs` — **ICE-CHANGELOG-1 (2026-09-20):** the batch plumbing every
   reserved-column provider shares, lifted out of `lineage_columns.rs` so the incremental and
   changelog providers reuse one copy: `conform_batch` / `resolve_projection` (project the
   reader's batch onto the declared schema, cast unsafely-lossless, cache the projection per
   batch schema) and `iceberg_predicate_from_filters` (the equality filters worth pushing into
-  the Iceberg scan). pins: ice-changelog-1/C-008
+  the Iceberg scan).
   **MB-1 round 2 (2026-10-07):** the module widened to `pub(crate)` so the
   micro-batch provider reads through the same `conform_batch`; no signature
-  or behaviour changed. pins: mb-1/C-013
+  or behaviour changed.
   **EMPTY-PROJECTION-COUNT-1 step 1 (2026-10-09):** the caller audit (four
   `conform_batch` readers: changelog, incremental, lineage, micro-batch; the
   metadata-columns copy is separate and already serves empty projections) and
@@ -477,14 +461,12 @@ Source comments retain only API and safety contracts; implementation narration i
   `RecordBatch::try_new_with_options` with the incoming batch's row count, so
   all four readers answer the empty projection; non-empty projections read
   unchanged.
-  pins: empty-projection-count-1/C-001, C-002, C-003, C-004, C-006
 - `lineage_columns.rs` — **ICE-EVO-DML-1 (2026-09-17):** `scan_lineage_batches` plans the current
   snapshot with the fork's `project_current_schema()` and reads the tasks with
   `ArrowReaderBuilder`, so a `_row_id` read after `ADD COLUMN` / `RENAME COLUMN` with no write
   since answers instead of refusing, and a swapped name reads its own field. Round 2 removed the
   local `current_schema_scan.rs` re-point helper: fork F-EVO-SCAN-1 (#289) owns the semantics now,
   and `write::merge::target_scan` plans its pinned DML scans the same way.
-  pins: ice-evo-dml-1/C-010, C-011, C-016
   **V3-COV (2026-09-03):** the scan resolves its field→column projection
   once per batch schema (cached on `Arc::ptr_eq`) instead of a name scan per field per batch, and
   `conform_batch` strict-casts a scanned column
@@ -492,7 +474,6 @@ Source comments retain only API and safety contracts; implementation narration i
   `ALTER COLUMN … TYPE` returns rows instead of raising
   `lineage scan could not rebuild batch`; the ordinary read path already promoted, so the same
   table answered one query and failed its sibling. Registry `V3-COV-2` FIXED.
-  pins: v3-cov-statement-coverage/C-004
   **V3-4:** `LineageColumnsTableProvider` serves `_row_id` and
   `_last_updated_sequence_number` on format-v3 **current-snapshot** reads (stored value
   else `first_row_id +` position / file sequence). Simple `col = lit` filters pass through
@@ -500,7 +481,7 @@ Source comments retain only API and safety contracts; implementation narration i
   applies). Time-travel plus lineage is `V3-ROWID-2` at the SQL rewrite; snapshot-pinned
   scan is the follow-up. `SELECT *` stays user columns because the SQL doors only register
   this provider when a query names the columns.
-  pins: v3-4-serve-lineage-columns/C-002, C-017, C-019, C-020 V3-COV pins in this file: a scan column left behind by a widening ALTER promotes instead of failing (V3-COV-2); the projection is resolved once per scan schema and reused for every batch; a scan that lost a lineage column names it rather than rebuilding a short batch.
+  V3-COV pins in this file: a scan column left behind by a widening ALTER promotes instead of failing (V3-COV-2); the projection is resolved once per scan schema and reused for every batch; a scan that lost a lineage column names it rather than rebuilding a short batch.
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `MetadataColumnsTableProvider`
   serves `_file` (Utf8), `_pos` (Int64), `_spec_id` (Int32), `_partition` (the NULLABLE
   union struct) and `_deleted` (non-null Boolean) on current-snapshot reads by handing the
@@ -535,10 +516,6 @@ Source comments retain only API and safety contracts; implementation narration i
   columns.` (`refuse_reserved_name_collision`, moved here from `repark-core`). This
   is Spark's read-schema rule (`SparkScan` → `validateMetadataColumnReferences`), so
   a reserved word that is not a read of the user column answers.
-  pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005
-  pins: u10-mc-deleted-1/C-001, C-004, C-005, C-009, C-010, C-011, C-014, C-015, C-016,
-  C-017
 - `snapshot_metadata_table.rs` — **xo55-mt R1 (2026-09-22):** `SnapshotMetadataTableProvider`
   serves `VERSION/TIMESTAMP AS OF` on a metadata table from the fork's public snapshot-scoped
   `iceberg::inspect` constructors. `metadata_asof_mode` is the per-type ruling both Spark-door
@@ -548,11 +525,9 @@ Source comments retain only API and safety contracts; implementation narration i
   The Arrow schema mirrors the fork `IcebergMetadataTableProvider::try_new` sources, so a
   scoped read and an un-pinned read agree column for column; the scan streams one
   `PartitionStream` and projects each batch, so `count(*)` and partial projections hold.
-  pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005
 - `metadata_projection.rs` — **retired at RP-5** (fork F-8 / R169 / R170). The fork honors
   metadata-table `projection` and lists catalog entries only. Pins remain in
   `crates/repark-spark/src/tests/metadata_tables.rs`.
-  pins: rp-5-fork-repin/C-003
 - `uuid_presentation.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the one place that
   turns an Iceberg schema into the presented Arrow schema. `presented_arrow_schema` is the
   fork's `schema_to_arrow_schema` with every `uuid` field (found by its field id, at any
@@ -567,13 +542,12 @@ Source comments retain only API and safety contracts; implementation narration i
   OVERWRITE` (`write/overwrite.rs`, `write/partition_overwrite.rs`), `metadata_columns.rs`,
   `scan_batches.rs` (`lineage_columns.rs`, `changelog.rs`, `incremental_append.rs`,
   `microbatch/provider.rs`), and
-  repark-spark `describe_column.rs` / `show_table_extended.rs`. pins: u9-types-1/C-013
+  repark-spark `describe_column.rs` / `show_table_extended.rs`.
   **WO U9-TYPES-1 round-3 fixer (2026-09-26):** a `Binary` / `LargeBinary` / `BinaryView`
   source into a `uuid` column is decoded as UTF-8 text (invalid sequences become U+FFFD, as
   Java's `new String(bytes, UTF_8)` does) and parsed like `Utf8`, never reinterpreted as the 16
   bytes: sixteen raw bytes refuse `Invalid UUID string: <decoded text>`, a 36-byte canonical
-  text stores the uuid, as Spark measured. pins: u9-types-1/C-016
-  pins: u9-types-1/C-010
+  text stores the uuid, as Spark measured.
 - `provider.rs` — `ReparkCatalogProvider` (mutable namespace→schema map) +
   `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` /
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate
@@ -590,8 +564,7 @@ Source comments retain only API and safety contracts; implementation narration i
   every resolved `IcebergTableProvider` presents `uuid` as `Utf8` on the current-snapshot scan,
   `INSERT INTO` and the fork-path identity DELETE / UPDATE; the `UuidTextSchemaProvider` shim
   (`uuid_text_schema.rs`) is deleted, its F-UUID-CATALOG-OPTION-1 removal condition met.
-  pins: u9-types-1/C-010
-- `provider.rs` — **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** `invalidate_catalog_namespaces_after_commit` runs the normal invalidation after a catalog commit. A failed refresh installs an unlisted namespace provider for each named namespace (`unlisted_namespace_schema`, built through `NamespaceScopedCatalog`, so no catalog call) and logs a warning. It returns an error that begins `committed:` only when no deferred provider can be installed. `catalog_ops.rs` is the only caller. pins: ice-post-publish-outcome-1/C-004
+- `provider.rs` — **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** `invalidate_catalog_namespaces_after_commit` runs the normal invalidation after a catalog commit. A failed refresh installs an unlisted namespace provider for each named namespace (`unlisted_namespace_schema`, built through `NamespaceScopedCatalog`, so no catalog call) and logs a warning. It returns an error that begins `committed:` only when no deferred provider can be installed. `catalog_ops.rs` is the only caller.
 - **PERF-ICE-SCAN-1 (2026-09-05):** `count(*)` folds and small tables scan in parallel,
   both fork-side (F-27) and consumed here through the unchanged `IcebergTableScan` path — no
   code in this directory changed. The fork reads row counts through an empty projection mask,
@@ -601,7 +574,6 @@ Source comments retain only API and safety contracts; implementation narration i
   `_pos`/`_row_id`/empty projections and file-prune-only scans never re-split. The RePark
   pins skip until the RP-14 pin bump carries F-27; the bump is the orchestrator's step, not
   this unit's.
-  pins: perf-ice-scan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010
 - [tests/](tests/map.md) — G17 wrapper pins and the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder
   validation + namespace construction, live-list staleness pins, O(1) invalidation pins,
   scheme-selection + key-identity partitions, span secret-hygiene pins, the fork-patch
@@ -661,5 +633,3 @@ First checks: `cargo test -p repark-iceberg catalog::`. Escalate to: [../../map.
   (fixtures and their oracles changed together); enumerated in docs/history/port-v2/p3e-facade-ledger.md.
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `changelog_view.rs` — `ChangelogViewPartition::execute` drains `execute_stream` of the source plan through `drain_changelog_source` in place of `collect`. Each source batch is charged to the budget as it arrives, so the read refuses above `repark.changelog.max-source-fraction` times the live pool (`ctx.memory_pool()`), before the whole window is held. The key comes from `ReparkWriteConfig` on the session config. Nothing is staged: the changelog read writes no file. A `LIMIT` and a narrow projection do not reduce the charge, because the bound covers the source window, not the result.
-
-pins: ice-resource-bound-1/C-003

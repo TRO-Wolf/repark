@@ -13,7 +13,6 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   stream export.
   **STAMP-2-R5P6-2 (2026-10-07):** `join_type_from_str` widens to `pub(crate)`: the
   native join door in `../frame_lineage.rs` maps the facade's join type through it.
-  pins: stamp-2-r5p6-2/C-002
   **STAMP-2-R5P6-2 step 3 (2026-10-07):** `PyDataFrame` reads its name rule once per
   handle (`rule()`, a `OnceLock<NameRule>`) and passes it to `bound_column` and
   `bound_projection`. Why: `dataframe_names::frame_rule` reads the rule through
@@ -27,7 +26,7 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   a clone of the parent through the DataFrame API, which keeps the parent's state.
   `inherit_rule` asserts in debug builds that the inherited rule is the child's own. A
   frame from another state (`sql`, `sql_built`, the native join) starts unread. Measured:
-  a three-column native `select` 51.3 → 22.3 µs. pins: stamp-2-r5p6-2/C-010
+  a three-column native `select` 51.3 → 22.3 µs.
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** the inline test
   module moved here to `tests.rs` untouched (the file would otherwise pass its
   ceiling); terminals and `analyzed_arrow_schema_native` drive through
@@ -41,7 +40,6 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   **Limits fold (2026-09-29):** `filter_sql` keeps only the 4 KiB growth gate
   (the text refusal is gone); terminals count non-`Union` nodes toward the
   8192 plan cap, so union spines answer past it and filter-led plans refuse.
-  pins: deep-filter-chain-crash-1/C-001, C-010
   **Re-verify fold (2026-09-30, C-013..C-018, CI perf):** `PyDataFrame` caches
   its `PlanDepths`: `new` surveys once, single-node builders compose O(1)
   through `new_with_depths`, conditional-shape builders re-survey. Terminals
@@ -62,11 +60,10 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   frame), while `ManuallyDrop::drop` costs nothing. The one `unsafe` call runs
   at most once per handle because `Drop::drop` runs at most once and
   `ManuallyDrop`'s own drop is a no-op, so no double-drop exists; the binding
-  crate already allows `unsafe` for PyO3 macros. pins: deep-filter-chain-crash-1/C-013, C-016
+  crate already allows `unsafe` for PyO3 macros.
   **CAST-OVERFLOW-INSERT-1 re-verify VO2-2 (2026-09-29):** `limit_with_skip`
   takes an optional fetch, so DataFrame `.offset` plans a fetch-less `Limit`
   matching Spark's pure Offset; the facade's large-fetch encoding is retired.
-  pins: cast-overflow-insert-1/C-001
   **Merge-main fold (2026-10-01, PR #883):** `filter` / `select` route through
   `is_duplicated::filter_frame` / `select_frame` inside the `drive_columns`
   closure, so a marker rewrite runs on the grown stack under the same verdict
@@ -94,20 +91,18 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   `display_names` vector alongside `requested_schema` (protocol-compatible:
   consumers pass at most one argument); a length-matched vector renames the
   export schema and batches, anything else keeps engine names.
-  pins: attr-id-1/C-062
 - [`tests.rs`](tests.rs) — **STAMP-2-R5P6-2 step 3 (2026-10-07):**
   `name_rule_is_read_once_per_handle_and_children_inherit_their_parents` holds the rule
   cache: a handle starts unread, a frame made before and one made after a
   `spark.sql.caseSensitive` change each keep their own rule, their `select` and
   `filter_sql` children inherit it without a read, and a child of an unread parent starts
-  unread. pins: stamp-2-r5p6-2/C-010
+  unread.
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).
   **Re-verify fold (2026-09-30):** plus the frame exactness battery (every O(1)
   builder rule asserts cached levels equal a fresh `plan_depths`; the
   subquery-carrying shapes pin in `subquery.rs`, next to the constructors).
-  pins: deep-filter-chain-crash-1/C-013
   **Stack merge of main d0c50405+ (2026-10-04):** the battery's
   `join_on_names` arm stamps both sides and passes their root nodes through
   `key_join`, since the join door now requires lineage nodes.

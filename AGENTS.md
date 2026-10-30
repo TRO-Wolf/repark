@@ -14,9 +14,9 @@
 
 *Adjustment (owner, 2026-08-26, same day):* the ban is on comments **in code** — Rust, Python, shell,
 TOML, YAML and every other source file. **Markdown files may carry comments and explanatory prose**;
-that is where a reason, a design note or a `pins: <unit>/C-NNN` citation now lives — the
-directory's `map.md` (the ledger-grammar gate reads every tracked file under `crates/`,
-`python/`, `scripts/`, so a citation in a `map.md` there counts). Condensation is held by review,
+that is where a reason or a design note now lives — the directory's `map.md`; a
+`pins: <unit>/C-NNN` binding lives in `task/ledgers/<bin>/<unit>-pins.md`, read by the
+ledger-grammar gate (amended by the owner 2026-10-30). Condensation is held by review,
 not by a gate: the `check-comment-density` ratchet was dropped before #247 merged; the file-size
 ratchets are the mechanical gates, and a new file carries no comments.
 
@@ -50,7 +50,7 @@ do not read. Adapters point here and add no second roster.
 | Role | Load, in order | Explicitly NOT required |
 |---|---|---|
 | Orchestrator / governing session | [README.md](README.md) → [STATUS.md](STATUS.md) → this contract → [ARCHITECTURE.md](ARCHITECTURE.md) → the SEPMO `## Procedure` section → [task/lessons.md](task/lessons.md) in full | [DEVELOPMENT.md](DEVELOPMENT.md), [docs/testing.md](docs/testing.md), skill `## Reference` sections, critic-critic-critic |
-| Executor (a unit or work order) | This contract's "Hard rules" + "Verify before done" → the work order → the `map.md` of every directory touched → [docs/testing.md](docs/testing.md) → the engineering-method `## Procedure` section → the lessons entries for subsystems you touch (`grep -n <subsystem> task/lessons.md`) | [STATUS.md](STATUS.md) beyond the order's base, [PROJECT.md](PROJECT.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) unless setup blocks you, SEPMO, critic-critic-critic, lessons in full |
+| Executor (a unit or work order) | This contract's "Hard rules" + "Verify before done" → the work order → the `map.md` of each touched directory that has one → [docs/testing.md](docs/testing.md) → the engineering-method `## Procedure` section → the lessons entries for subsystems you touch (`grep -n <subsystem> task/lessons.md`) | [STATUS.md](STATUS.md) beyond the order's base, [PROJECT.md](PROJECT.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) unless setup blocks you, SEPMO, critic-critic-critic, lessons in full |
 | Critic / reviewer | This contract's "Hard rules" → the critic-critic-critic `## Procedure` section → the evidence packet | Everything else |
 | Lookup / status question | [STATUS.md](STATUS.md) only | Everything else |
 
@@ -107,13 +107,13 @@ DataFusion remains the engine under everything. Layout of record:
 
 ## Verify before "done"
 
-`make verify` — a change is not done until lint, format, clippy, **Rust** tests, and the touched
-directories' `map.md` files are all current. `verify` is Rust-only on purpose (inner-loop speed);
-it does **not** build the native module. See [docs/testing.md](docs/testing.md). Before opening a
-PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which carries
-the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the canonical
-fast gate. Tool versions are pinned identically in the Makefile and the workflows, and CI-enforced
-tools never silently skip locally (uvx provisions the pinned tool on demand).
+`make verify` — a change is not done until lint, format, clippy, **Rust** tests, and each touched
+directory's `map.md`, where one exists, is current. `verify` is Rust-only on purpose (inner-loop
+speed); it does **not** build the native module. See [docs/testing.md](docs/testing.md). Before
+opening a PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which
+carries the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the
+canonical fast gate. Tool versions are pinned identically in the Makefile and the workflows, and
+CI-enforced tools never silently skip locally (uvx provisions the pinned tool on demand).
 
 ## Hard rules (non-negotiable)
 
@@ -135,9 +135,8 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   ANSI SQL / Spark facade) is the testing structure. A divergence-class claim pins *every* class it
   names, per entry point, on the Arrow path (`collect`/`to_arrow`, value AND type — never only
   `show`). Full contract: [docs/testing.md](docs/testing.md).
-- **`map.md` in every directory, updated in the same change** (`scripts/check_map_md.sh`; the hook
-  warns). New directory → new `map.md`, no judgment call. Maps are **hand-written**: no generator
-  exists, and the one piece of `map.md` automation only *checks* — it never writes one.
+- **Maps are architecture-scoped** (policy: [docs/maps-policy.md](docs/maps-policy.md)); pin
+  bindings live in `task/ledgers/<bin>/<unit>-pins.md`, read by the ledger-grammar gate.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -172,6 +171,8 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     the workflow compared on load-bearing tokens; fail-closed on a parse miss.
   - *`map.md` content* (`scripts/sync_map_md.py`) — link validity armed (`make check-map-sync`);
     coverage behind `--strict`. Policy: ["Markdown document lifecycle"](#markdown-document-lifecycle).
+  - *Map size* (`scripts/check_map_size.py`, `make check-map-size`) — exact-baseline rows ratchet
+    DOWN only; the ceilings live in the script.
   - v1 helper scripts not yet re-homed: [scripts/map.md](scripts/map.md) "Not re-homed". Each
     returns only with a concrete driver named there.
 - **Rust module layout is the default one** — `mod foo;` resolved by `foo.rs`, `foo/mod.rs`, or
@@ -258,7 +259,7 @@ amended, what retires it, and where its record goes afterwards.
 |---|---|---|
 | **contract** | [AGENTS.md](AGENTS.md), [docs/testing.md](docs/testing.md), [PROJECT.md](PROJECT.md) | permanent; amended deliberately, never as a passenger |
 | **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so no changelog section |
-| **navigation** | every `map.md` | lockstep with the directory's content, in the same commit |
+| **navigation**|a `map.md` where the architecture needs one|the sync and size gates, not lockstep |
 | **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) at close |
 | **ledger** | [task/ledgers/](task/ledgers/map.md): `staging/<unit>-ledger.md` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<unit>-ledger.md` | the directory is the status. Append-only in `staging/`; `move`d to `completed/` in the unit's last commit and frozen; filed to `archive/` by `make ledger-archive` at the next pickup, immutable. A campaign's `docs/history/` folder links to its ledgers in the monthly archive; pre-2026-08-23 folders keep theirs |
 | **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a measured-and-**declined** rule is written down so nobody re-litigates it |

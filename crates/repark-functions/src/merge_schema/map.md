@@ -19,4 +19,3 @@ one `ConfigExtension`.
   the user-facing key; and only the hyphenated Iceberg spelling is a session key
   (the camel-case `mergeSchema` spelling is a **write option**, parsed in
   `repark-spark`'s `write_options.rs`, not a conf).
-  pins: ipi-19-56-37-schema-evolution-write/C-004, C-012

@@ -61,10 +61,8 @@ here is collected by pytest, and no RePark code runs.
   `answer` and `field`. The preamble names the versions and the catalog (`hadoop`).
 - `mb0_streaming_oracle.sha256` holds `sha256sum` of the JSON. Check it with
   `sha256sum -c` from this directory.
-  pins: mb-1/C-025
 - MB0b-R18 is the processing-time look-ahead cell (MB-1 fold-2 Q1): R17's shape under
   `trigger(processingTime="0 seconds")`, measured before MB-3 built its capped trigger.
-  pins: mb-3/C-001
 - `mb3_fold_oracle.py` is the MB-3 fold-1 recorder (2026-10-07). It records four cells on
   the same bench (`mb0_bench.py`, and `fresh_dir`, `preamble` and `scrub` from the MB-0
   recorder), into its own JSON so the MB-0 recording stays byte-identical: `MB3-J1` (fourteen
@@ -76,7 +74,6 @@ here is collected by pytest, and no RePark code runs.
   and `MB0_CHECKPOINTS` pointing at empty private directories; `MB0_OUT` redirects the JSON.
   `MB3-P1` records wall-clock timestamps, so a re-run compares its
   `millis_past_interval_boundary` values, not its bytes.
-  pins: mb-3/C-014, C-015, C-017, C-018
 - `mb3_fold_oracle.json` is that recording: the MB-0 preamble shape and the four cells.
 - `mb3_fold_oracle.sha256` holds `sha256sum` of the JSON. Check it with `sha256sum -c` from
   this directory.
@@ -99,7 +96,7 @@ here is collected by pytest, and no RePark code runs.
   the three actions and `record_all` prints each entry as one JSON line. Run it
   through the managed interpreter only; `FW1_WAREHOUSE` points at an empty private
   directory and `FW1_OUT` redirects the JSON for a re-run comparison. Missing
-  `pyspark` prints `SKIP` and exits 0. pins: foreach-wrap-1/C-004
+  `pyspark` prints `SKIP` and exits 0.
 - `fw1_callback_oracle.json` is the recording: the Spark, master and date
   preamble plus the three cells, pretty-printed with sorted keys. Each `error`
   carries `class`, `mro`, `error_class` (the `getErrorClass` / `getCondition`
@@ -129,7 +126,7 @@ here is collected by pytest, and no RePark code runs.
   read) or `lower upper count refused`. `crates/repark-connect/tests/it/partition.rs` reads
   this file, so the Rust arithmetic is compared with Spark's own numbers.
 - `c3_partition_oracle.sha256` holds `sha256sum` of both files. Check it with `sha256sum -c`
-  from this directory. pins: c-3/C-001
+  from this directory.
 - `enc1_encryption_oracle.py` is the ENC-1 recorder. `record_all` runs the 23 cells in order,
   each on a fresh table, and records the outcome (rows or the error's condition, exception,
   SQLSTATE, JVM cause chain and full text) plus the table state after (properties, snapshots,
@@ -139,7 +136,7 @@ here is collected by pytest, and no RePark code runs.
 - `enc1_encryption_oracle.json` is that recording: the Spark, jar, catalog, master and KMS
   preamble plus the 23 cells in recorder order, pretty-printed with sorted keys.
 - `enc1_encryption_oracle.sha256` holds `sha256sum` of the JSON. Check it with `sha256sum -c`
-  from this directory. pins: enc-1/C-006
+  from this directory.
 
 ## C-3 fold 1 cells (2026-10-08)
 
@@ -155,7 +152,6 @@ byte. Two more tables: `c3o.mx` (one column `"Mixed"`) and `c3o.twins` (`"Mixed"
   `Int`). `C3-N08`: `2147483647` over a span of 3 shrinks to three strides. `C3-N09`: a padded
   `" 4"` is `NumberFormatException`.
 - `C3-T11`: a `timestamp` column partitions with date text as bounds.
-  pins: c-3/C-001
 
 ## C-3 measured notes (2026-10-07, read from the recording)
 

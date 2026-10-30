@@ -17,12 +17,10 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   field `[UNSUPPORTED_DATATYPE]`, non-string option `[INVALID_OPTIONS.NON_STRING_TYPE]`,
   non-map options `[INVALID_OPTIONS.NON_MAP_FUNCTION]`; the struct answers NULL for
   a NULL document and carries the input nullability.
-  pins: fnp-gen-1/C-002, C-003, C-004
 - `fold.rs` — the `CsvFold` analyzer rule, registered before `TypeCoercion` so a
   `map('sep', 1)`-style literal still carries its declared types. It refuses a
   `DROPMALFORMED` mode on a readable literal options map with
   `[PARSE_MODE_UNSUPPORTED]`; every other check is type-based in the kernels.
-  pins: fnp-gen-1/C-003
 - `fold.rs` — **Step 4b (run 18a):** the rule also folds a literal
   `schema_of_csv` call into its DDL string, aliased `schema_of_csv(<csv text>)`.
   It peels the `__repark_spark_nonnull__` shim `SparkNullability` wraps around a
@@ -37,11 +35,9 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   `[DATATYPE_MISMATCH.UNEXPECTED_NULL]`, a non-string literal
   `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`, and an empty document the
   `[INTERNAL_ERROR]` defect.
-  pins: fnp-gen-1/C-004
 - `from_csv.rs` — **Step 7 (run 18a):** gate pass only — the token arms parse
   straight into their target width and the null-mark shares one helper; answers
   are unchanged.
-  pins: fnp-gen-1/C-006
 - `from_csv.rs` — **Remediation (run 18a):** tokens map onto the data fields only
   (the corrupt-record column takes no token slot); a row is malformed when the
   token count differs from the data-field count or a field conversion fails, and
@@ -80,7 +76,6 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   `Null`-typed first argument through so the fold rule raises
   `[DATATYPE_MISMATCH.UNEXPECTED_NULL]`; the fold rule (step 4b) folds a literal
   call at analysis time.
-  pins: fnp-gen-1/C-004
 
 ## Pointers
 
