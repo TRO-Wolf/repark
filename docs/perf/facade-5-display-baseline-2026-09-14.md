@@ -221,7 +221,7 @@ byte-identical, behind the same door structure:
 
 The renderer x truncation-rule census, the bound/unbound pair tables, and the
 eager-preview scan-count assertions live in
-[task/ledgers/staging/facade-5-ledger.md](../../task/ledgers/staging/facade-5-ledger.md)
+[task/ledgers/staging/facade-5-ledger.md](../../task/ledgers/completed/facade-5-ledger.md)
 (C-003); the 30 unbound pairs each carry a golden in
 `python/repark/tests/dataframe/facade_5_display_goldens.json` (C-004) with one-line
 mutation proofs recorded in the ledger (C-005).

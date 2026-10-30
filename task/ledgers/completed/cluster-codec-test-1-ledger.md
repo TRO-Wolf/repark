@@ -81,3 +81,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-distributed/tests/codec.rs]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `53851112` (2026-10-10); clauses as written.

@@ -301,3 +301,5 @@ rust-panic-ban` green.
   `scripts/check_example_coverage.py` measured two lines over the default ceiling.
   The orchestrator reflowed two lines of its module docstring instead of adding an
   exception row, so no baseline moved up.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `aae8db51` (2026-09-15, PR #606); clauses as written.

@@ -138,3 +138,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-functions/src/timestamp_ltz_ntz.rs, python/repark/tests/iceberg/test_ice_tt_resolve_1.py]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `103150d9` (2026-09-19); clauses as written.

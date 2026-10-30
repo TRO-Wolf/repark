@@ -802,3 +802,5 @@ COVERAGE_ATTESTATION:
       evidence: Red-first held — the depth-40 pin crossed its bound at level 15 on the base tree (131 014 656 B), the door pins would have failed on base (NULL array → [4]; Spark-spelled prepend refused outright), the run-14b L-2 pins ran red on the pre-fix tree (42 failed cells: silent recasts of array<string>+int/double, generic refusal text, date+ts refusal), and the round-4 pins ran red on the release native of ead1f60e (96 failed cells: float+int widening to double, UTC-midnight dates, ns wraps, missing recursion, substring tokens); the bound-exit branch has a named input (the base tree at level 15), so no dead branch ships.
       artifacts: [python/repark/tests/functions/test_array_null_1.py, task/ledgers/staging/array-null-1-ledger.md]
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `44ca3aea` (2026-09-14); clauses as written.

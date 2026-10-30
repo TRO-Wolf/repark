@@ -206,7 +206,9 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](map.md)
+- Up: [map.md](../staging/map.md)
 - Fix: [../../../python/repark/src/repark/spark/dataframe/statistics.py](../../../python/repark/src/repark/spark/dataframe/statistics.py)
 - Pins: [../../../python/repark/tests/parity/test_examples_dataframe_d.py](../../../python/repark/tests/parity/test_examples_dataframe_d.py), [../../../python/repark/tests/parity/test_examples_dataframe_a.py](../../../python/repark/tests/parity/test_examples_dataframe_a.py), [../../../python/repark/tests/parity/test_examples_dataframe_c.py](../../../python/repark/tests/parity/test_examples_dataframe_c.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 EX-DF-4, EX-DF-15
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `2d8a42f9` (2026-09-11, PR #518); clauses as written.

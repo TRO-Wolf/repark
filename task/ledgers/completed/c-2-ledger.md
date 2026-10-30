@@ -1651,3 +1651,5 @@ at the end.
 | `cargo deny check 2>&1 \| tail -3` | 0 | `advisories ok, bans ok, licenses ok, sources ok` |
 | `ruff check` / `ruff format --check` over the three live-cell files | 0 | clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc2b origin/main HEAD` | 0 | `comment-ban hits=0` |
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `d3f4fc16` (2026-10-08); clauses as written.

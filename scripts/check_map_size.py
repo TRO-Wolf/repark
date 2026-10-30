@@ -63,7 +63,7 @@ EXEMPT_PATTERNS: dict[str, str] = {
 EXCEPTIONS: dict[str, tuple[int, int]] = {
     ".github/workflows/map.md": (109, 37120),
     "crates/repark-common/src/map.md": (249, 20712),
-    "crates/repark-connect/src/map.md": (426, 35712),
+    "crates/repark-connect/src/map.md": (426, 35714),
     "crates/repark-connect/tests/it/map.md": (468, 38148),
     "crates/repark-core/map.md": (266, 19890),
     "crates/repark-core/src/column_resolution/map.md": (209, 15902),
@@ -96,7 +96,7 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "docs/guide/map.md": (243, 18311),
     "docs/map.md": (374, 31179),
     "docs/perf/map.md": (478, 35483),
-    "map.md": (304, 43694),
+    "map.md": (304, 43696),
     "python/repark-parity/tests/live_spark/map.md": (304, 20290),
     "python/repark-parity/tests/map.md": (1141, 123350),
     "python/repark-parity/tests/spill/map.md": (212, 13184),

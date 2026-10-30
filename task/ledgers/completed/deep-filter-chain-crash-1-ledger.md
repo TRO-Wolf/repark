@@ -714,3 +714,5 @@ rust-file-size, lib-py, develop, the 5-file deep pytest step
 (62 passed, 818 s),
 ruff check, ruff format, parity harness (785 passed, 795 s),
 ledger-grammar, docs-links, map-sync — GATE GREEN (2026-10-01).
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `daf9bbaa` (2026-10-01); clauses as written.

@@ -176,3 +176,5 @@ order; the `Option` wrapping and the serialized `0` are NS-14 and the R-12 amend
 | `python3 scripts/check_docs_links.py` | 0 | clean |
 | `python3 scripts/sync_map_md.py --check` | 0 | maps clean |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc1b origin/main HEAD` | 0 | `hits=0` |
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `043b7441` (2026-10-06); clauses as written.

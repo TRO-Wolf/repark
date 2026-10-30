@@ -203,3 +203,5 @@ COVERAGE_ATTESTATION:
   reattested: []
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `1a219450` (2026-09-26); clauses as written.

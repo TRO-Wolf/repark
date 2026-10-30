@@ -97,3 +97,5 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/io/test_facade_1_arrow_c_stream.py]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `d41803d4` (2026-09-12, PR #536); clauses as written.

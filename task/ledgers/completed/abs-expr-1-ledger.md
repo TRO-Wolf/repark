@@ -239,3 +239,5 @@ FINDING:
   evidence: EXPECTED_DIVERGENCES 'abs' reason row; measured on typed columns — spark.sql 'SELECT abs(x) FROM v' returns the input minimum unchanged on tinyint/smallint/int/bigint and abs(CAST(-2147483648 AS INT)) -> -2147483648
   disposition: REMEDIATED (the reason restates the typed-column measurements, and test_abs_door_parity_integer_min in python/repark/tests/functions/test_abs_expr_1.py value-pins both doors — facade raises PySparkException overflow, door returns the wrapped minimum)
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `f0951855` (2026-09-13); clauses as written.

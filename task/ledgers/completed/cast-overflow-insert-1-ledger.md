@@ -6,7 +6,7 @@
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
-**Why now.** [R-INTDIV-9](intdiv-1-ledger.md) holds that an out-of-range DOUBLE,
+**Why now.** [R-INTDIV-9](../staging/intdiv-1-ledger.md) holds that an out-of-range DOUBLE,
 NaN or Infinity stored into an integer column refuses on both engines but with different
 text: Spark answers `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003, source type, target
 type and column named) while RePark answers `Optimizer rule 'simplify_expressions'
@@ -155,3 +155,5 @@ COVERAGE_ATTESTATION:
 | VO4-PRE-6 | Dated 2026-09-30 (Opus re-verify round 3, pre-existing, 2288b139 equals base): UNION sources with a type-incompatible arm give `spark_expr_semantics` on both engines; Spark gives INCOMPATIBLE_COLUMN_TYPE. |
 | VO4-PRE-7 | Dated 2026-09-30 (Opus re-verify round 3, pre-existing, 2288b139 equals base): the earlier out-of-scope items are unchanged: '- -1' parse on BY NAME/OVERWRITE/MERGE, .limit(6).offset(2).orderBy() row count, -NULL through static-partition OVERWRITE (#894), and static-PARTITION OVERWRITE with the overflow first giving a raw Arrow cast error. |
 | VO4-1-PROOF | Dated 2026-09-30 (this round, head 80825fd3): gate.sh 14/14 green; the four suites (test_cast_overflow_insert_1, test_store_ts_to_numeric_1, test_ntz_store_doors_1, test_insert_store_assign) 185 passed. Mutation: removing the count check reds the 3 OVERWRITE-door pin tests and nothing else; reverted with a clean tree and 5/5 green. Replay of reverify3-ovf on the fixed build (/tmp/vo4replay, tag head4): probes 1-7 (2217 cells) differ from recorded 2288b139 only in 28 out7 unordered-read cells, all 28 varying across the verifier's own recorded runs and across two same-build reruns (row-order flakiness); probe9 (61 cells) differs only in the 13 VO4-1 cells, all now byte-identical to base with Spark's INSERT_COLUMN_ARITY_MISMATCH kind; probe8/8b (2445 cells) 0 diffs. 0 message changes except the VO4-1 cells; 0 cells away from Spark. |
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `458d30fd` (2026-09-30); clauses as written.

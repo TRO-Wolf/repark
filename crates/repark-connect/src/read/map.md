@@ -68,7 +68,7 @@ feature. See [../map.md](../map.md).
   checks out, opens `BEGIN READ ONLY` when a value or a query source needs it, and `finish`
   commits and releases.
 - `postgres_lanes.rs` — **C-3 (2026-10-07)**, the connections of one partitioned scan
-  ([c-3-ledger.md](../../../../task/ledgers/staging/c-3-ledger.md) §0.2, §0.3).
+  ([c-3-ledger.md](../../../../task/ledgers/completed/c-3-ledger.md) §0.2, §0.3).
   `scan_lanes(pool, strides, max_lanes, options, meter)` prepares every stride, takes between
   one and `min(max_lanes, strides)` connections (`checkout_up_to`), puts all of them on one
   snapshot, and returns one `LaneStream` per connection.

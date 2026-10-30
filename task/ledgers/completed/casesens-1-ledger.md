@@ -627,3 +627,5 @@ COVERAGE_ATTESTATION:
       evidence: Red-first held — every new pin fails with the behavior removed (M1-M18) and the pre-change answers are recorded in the after-s4 probe diffs; no dead branch ships (each new arm has a named pin).
       artifacts: [task/ledgers/staging/casesens-1-ledger.md, target/casesens-1/after-s5-diff-p2.txt]
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `f8f1d252` (2026-10-13); clauses as written.

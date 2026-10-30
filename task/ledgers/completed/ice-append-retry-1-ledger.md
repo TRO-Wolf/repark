@@ -155,3 +155,5 @@ COVERAGE_ATTESTATION:
 
 `Model: muse-spark-1.3-contributor`. `risk_tier: standard`. Round 1 CONCLUDED with all
 five clauses PROVEN and the gates green.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `7667190e` (2026-09-18); clauses as written.

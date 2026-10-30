@@ -113,3 +113,5 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/call/plan_partitioning.rs, task/ledgers/completed/ap-1-ledger.md]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `d85883fd` (2026-09-12, PR #532); clauses as written.

@@ -621,3 +621,5 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/c-3-ledger.md, python/repark-parity/tests/live_spark/c3_stride_grid.txt]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `1f536dfb` (2026-10-08); clauses as written.

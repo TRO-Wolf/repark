@@ -139,3 +139,5 @@ COVERAGE_ATTESTATION:
 ## Perf review (S2-21, Grok, read-only, 2026-09-12)
 
 No P1, no P2: footer I/O stays one pass per file; the 5,000-file scoring shows no measurable regression against the copied base; `u64` → `f64` is exact below 2^53. One P3 recorded, not remediated: `files.sizes: Vec<u64>` stays live beside the new `uncompressed: Vec<f64>` through scoring (8 N B, 40 KB at 5,000 files) — the fallback is the only remaining reader of stored bytes; reuse or drop it if the walk is ever tightened. Report: the orchestrator's review log for this unit.
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `01d11e96` (2026-09-12, PR #526); clauses as written.

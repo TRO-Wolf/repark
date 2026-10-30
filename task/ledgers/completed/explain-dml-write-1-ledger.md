@@ -473,3 +473,5 @@ would move 16 refusal texts and no write; unscheduled".
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-016 | Fix round 1, S2-2 (2026-10-21; C-005 stays as written): on `repark.sql()` a CTE-carried wrapped write, and every other wrapped write DataFusion cannot plan, refuses with DataFusion's plan error, not the ruled text, because that door plans before the refusal runs (106's AT-3 order, ruled to hold); nothing is written; the other three doors give the ruled text. | The `repark.sql()` census cells `explain_analyze_cte_delete`, `prepare_cte_delete`, `explain_analyze_merge`, `prepare_merge`; the `MERGE` cells of `dialect/tests.rs` and `test_explain_dml_write_1.py`. | **PROVEN** | §3, §6, §9.4; the verifier's 16 cells. |
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `18626942` (2026-10-21, PR #1138); clauses as written.

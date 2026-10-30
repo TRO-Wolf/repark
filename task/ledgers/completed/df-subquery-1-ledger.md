@@ -412,3 +412,5 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/dataframe/test_df_subquery_1.py, crates/repark-core/src/session/tests/subquery.rs]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `39f49fb3` (2026-09-16, PR #647); clauses as written.

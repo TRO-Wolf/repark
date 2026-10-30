@@ -396,3 +396,5 @@ xfailed** in 566.01s. Facade suite not re-run — the Rust diff touches only
 `call_scalar` and its private helpers (`str_list`, `wrap_call`), inside the brief's
 scope for the focused set.
 pins: facade-2/C-020, C-021
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `37541c1a` (2026-09-13, PR #557); clauses as written.

@@ -231,3 +231,5 @@ COVERAGE_ATTESTATION:
       evidence: Spark literals on both routes (stronger than the #997 differential); M1/M2/M3/M4 each red the legs they target; branch liveness: the remap arm changes output exactly for cross-with-condition (M1/M2), and its None guard is load-bearing (M3).
       artifacts: [python/repark/tests/dataframe/test_cross_join_condition_1.py, task/ledgers/staging/cross-join-condition-1-ledger.md]
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `153b6cb5` (2026-10-09); clauses as written.

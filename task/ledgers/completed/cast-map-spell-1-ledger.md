@@ -140,3 +140,5 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/functions/test_fnp8_oracle_matrix.py, python/repark/tests/writes/test_ice_list_null_1.py]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `b0fb6feb` (2026-09-19); clauses as written.

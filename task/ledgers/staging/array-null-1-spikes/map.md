@@ -17,4 +17,4 @@ pins: array-null-1/C-002
 
 ## Pointers
 - Up: [../map.md](../map.md)
-- Ledger: [../array-null-1-ledger.md](../array-null-1-ledger.md)
+- Ledger: [../array-null-1-ledger.md](../../completed/array-null-1-ledger.md)

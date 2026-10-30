@@ -414,3 +414,5 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/dataframe/test_facade_5_display_goldens.py, python/repark/tests/dataframe/facade_5_display_goldens.json, task/ledgers/staging/facade-5-ledger.md]
   complete: true
 ```
+
+Moved to completed on 2026-10-30 by the staging-ledger lifecycle round (governance step 5): the unit merged on main as `e5cc10e1` (2026-09-14, PR #583); clauses as written.

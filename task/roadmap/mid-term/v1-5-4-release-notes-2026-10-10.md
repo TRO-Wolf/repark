@@ -20,7 +20,7 @@ The tag target is the release commit `f4e424c1`; the last product commit is `e84
   NULL condition, for every join type, with Spark's error class, condition and text:
   `INVALID_NON_DETERMINISTIC_EXPRESSIONS` for the first, `JOIN_CONDITION_IS_NOT_BOOLEAN_TYPE`
   for the second. The DataFrame door and the SQL door both refuse.
-- Ledger: [cross-join-condition-1-ledger.md](../../ledgers/staging/cross-join-condition-1-ledger.md)
+- Ledger: [cross-join-condition-1-ledger.md](../../ledgers/completed/cross-join-condition-1-ledger.md)
   (C-001, C-004, C-008).
 
 ## Dependency floor (#1015, `4224aeee`)

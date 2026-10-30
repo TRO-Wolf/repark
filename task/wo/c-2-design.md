@@ -9,7 +9,7 @@ list, §2's files, §4 step 1, §5's subset table) · **Card:** 1.6 of
 [the North Star](../roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md) (NS-1…NS-19).
 
 **H-C1 is clear.** C-1's H-GEN is ruled (R-12 as amended, then the C-1b `Generation` newtype under NS-14) and
-H-AUTH is ruled (R-13); both are on `main` ([c-1-ledger.md](../ledgers/staging/c-1-ledger.md) C-002, C-012).
+H-AUTH is ruled (R-13); both are on `main` ([c-1-ledger.md](../ledgers/completed/c-1-ledger.md) C-002, C-012).
 
 **Citations.** "docs §N" means the PostgreSQL 16 manual, the version the C-0 container runs. Sections that
 move between versions are cited by name.
@@ -1001,7 +1001,7 @@ zone artefacts, not values. RePark keeps refusing per value, and the dated row q
 
 - Up: [map.md](map.md)
 - The order: [c-2-postgres-read.md](c-2-postgres-read.md) · C-1: [c-1-connect-skeleton.md](c-1-connect-skeleton.md),
-  [c-1-ledger.md](../ledgers/staging/c-1-ledger.md) · C-0: [c-0-postgres-harness.md](c-0-postgres-harness.md)
+  [c-1-ledger.md](../ledgers/completed/c-1-ledger.md) · C-0: [c-0-postgres-harness.md](c-0-postgres-harness.md)
 - The crate: [crates/repark-connect/map.md](../../crates/repark-connect/map.md) · the identity:
   [source.rs](../../crates/repark-common/src/source.rs)
 - Rules: [the North Star](../roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md),
