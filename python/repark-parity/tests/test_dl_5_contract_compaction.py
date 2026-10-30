@@ -96,7 +96,7 @@ def test_agents_md_keeps_the_universal_invariants() -> None:
         "never vendored",
         "Two honest SQL doors",
         "Tests in the same commit as code",
-        "A `map.md` sits at a repository root, crate, package or complex",
+        "Maps are architecture-scoped",
         'unsafe_code = "forbid"',
         "cargo test --workspace",
         "Never drop or delete a Glue table",
