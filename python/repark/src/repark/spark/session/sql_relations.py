@@ -938,7 +938,7 @@ def _expand_truncate_target_sql(query: str, resolve: Callable[..., str]) -> str 
         return query
 
     try:
-        resolved = resolve(raw_name.strip(), prefer_temp_view=False)
+        resolved = resolve(raw_name.strip(), prefer_temp_view=True)
     except Exception:
         return query
 

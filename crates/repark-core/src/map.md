@@ -971,6 +971,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
   door is guarded like the two SQL doors). `SqlDialect::on_session_built` (default no-op)
   runs from `ReparkSessionBuilder::build` after extension `register` (F-Y10-1).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `SqlDialect::temp_view_name_rule` (default `None`, so the ANSI and DataFusion doors keep their behaviour) answers the temporary-view name rule from the session options, and `TempViewSession::temp_view_target_ref` (default: the home plus the legacy segment) names the reference a CREATE registers under. Case folding is the rule's job: `IgnoreCase` folds the key at creation and at lookup (fix round 2 removed the round-1 twin fallback; C-019, C-020), `Exact` is verbatim (C-011).
   **IPI-40 PR6 (2026-09-24):** `TempViewSession` (`create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names`, `drop_temp_view`) is
   the session's temp-view seam; `EngineContext::temp_views` carries it (None from `new`, set by
@@ -1460,6 +1461,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   unchanged from BASE.
   **CASESENS-1 S3 (2026-09-27):** plus `temp_view_ref_from_segment_exact` (no fold;
   the exact session probe builds through it).
+  the exact session probe builds through it). pins: casesens-1/C-007
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `legacy_temp_view_segment` is the rule-free segment `temp_view_target_ref` uses: a quoted name verbatim with `""` unescaped, an unquoted name lower-cased with Unicode `to_lowercase` (fix round 2; ASCII-only before).
 - `session/` — `temp_views.rs` (the temp-view family: register / replace / materialize / cache /
   declare-sorted / drop, all through `temp_view_ref`; split out of `session.rs` in round 6) and
   `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production

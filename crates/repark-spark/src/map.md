@@ -1802,6 +1802,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   into the positional `router::execute_in_session` call, passing `cx.temp_views` through since
   IPI-40 PR6; `#[async_trait(?Send)]` matches the
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `temp_view_name_rule` answers `NameRule::from_case_sensitive` of `spark.sql.caseSensitive` (read through `spark_door_case_insensitive`), so the core's temp-view lookups fold as Spark folds (C-011).
   `execute_with_write_options` copies `cx.force_static_overwrite` onto the validated
   options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18).
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** it also copies `cx.source_by_name` onto

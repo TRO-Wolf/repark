@@ -61,6 +61,15 @@ impl SqlDialect for SparkDialect {
         )
         .await
     }
+
+    fn temp_view_name_rule(
+        &self,
+        options: &datafusion::common::config::ConfigOptions,
+    ) -> Option<repark_common::names::NameRule> {
+        Some(repark_common::names::NameRule::from_case_sensitive(
+            !crate::spark_door_case_insensitive(options),
+        ))
+    }
 }
 
 #[cfg(test)]

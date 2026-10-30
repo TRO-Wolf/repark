@@ -185,6 +185,8 @@ class Catalog:
         * two-part ``namespace.table`` → resolved under :meth:`currentCatalog`
         * one-part name → temp view first, else ``currentCatalog.currentDatabase.name``
         """
+        from repark.spark.session.catalog_resolution import _quoted_segment
+
         inner = self._session._ensure_alive()
         table_name = _require_str(table_name, "tableName")
         parts = _split_identifier(table_name)
@@ -198,7 +200,8 @@ class Catalog:
             return bool(inner.table_exists(qualified))
         if len(parts) == 1:
             # Temp view (native one-part) first — live Spark checks temps before current db.
-            if inner.table_exists(parts[0]):
+            quoted = table_name.strip().startswith(("`", '"'))
+            if inner.table_exists(_quoted_segment(parts[0]) if quoted else parts[0]):
                 return True
             database = self.current_database()
             qualified = _multipart([current_catalog, database, parts[0]])
@@ -216,7 +219,9 @@ class Catalog:
 
     def drop_temp_view(self, view_name: str) -> bool:
         """Drop a temp view; returns whether it existed (PySpark ``dropTempView``)."""
-        return bool(self._session._ensure_alive().drop_temp_view(view_name))
+        from repark.spark.session.catalog_resolution import _quoted_segment
+
+        return bool(self._session._ensure_alive().drop_temp_view(_quoted_segment(view_name)))
 
     dropTempView = drop_temp_view  # noqa: N815
 
