@@ -626,6 +626,8 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   the `dbt gold acceptance` step in `aws-acceptance.yml` after the silver module.
   `risk_tier: standard`. Branch `chore/repin-rp-20`.
   pins: ice-gold-twice-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ice-hadoop-gzip-metadata-1-ledger.md](ice-hadoop-gzip-metadata-1-ledger.md) — **ICE-HADOOP-GZIP-METADATA-1 (2026-10-29, AUD-007 Critical, AUD-010 Medium; merged 2026-10-29 as PR #1218 at `f5a0cf88`), completed:** the `type=hadoop` path read's hinted version, hint walk and no-hint listing see Java's compressed metadata names (`v<N>.gz.metadata.json` and `v<N>.metadata.json.gz`) in Java's order, so a stale hint after a committed delete reads the surviving rows and a gzip-named current file reads. A readable hint naming a missing version keeps Java's refusal (the cleanup shape was a probe artefact). 9 of 12 clauses PROVEN (C-001 to C-009); C-010 and C-011 (the owner's leads) and C-012 (the codec-by-bytes lead) are OPEN. Grade A. Branch `fix/ice-hadoop-gzip-metadata-1`.
+  pins: ice-hadoop-gzip-metadata-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ice-hadoop-hint-window-1-ledger.md](ice-hadoop-hint-window-1-ledger.md) — **ICE-HADOOP-HINT-WINDOW-1
   (2026-10-28, PR #1205):** on `type=hadoop` the path read walks past `version-hint.text` to the
   newest existing metadata file, as Java's `HadoopTableOperations.refresh` does; the walk stops at
@@ -745,6 +747,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   twelve clauses to `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
   pins: ledger-reading-1/C-001, C-002, C-003, C-004
 - [maint-policy-1-ledger.md](maint-policy-1-ledger.md) — Unit ledger — MAINT-POLICY-1 step 1 · typed `[<profile>.maintenance]` policy
+- [map-governance-1-ledger.md](map-governance-1-ledger.md) — **MAP-GOVERNANCE-1 (2026-10-29, merged 2026-10-30 as PR #1221 at `7882504c`), completed:** pin bindings move from the maps to the `<unit>-pins.md` sidecars; map lockstep becomes a warning in both modes; `check_map_size.py` ratchets map size (200 lines or 16 KiB); the lifecycle carries sidecars. 38 clauses PROVEN in their rows; C-010 and C-044 PROVEN by the merge (rows unchanged); C-045 and C-046 stay OPEN as leads for a later unit. Grade A. Branch `feat/map-governance-1`; card [../../roadmap/mid-term/map-governance-1-card-2026-10-29.md](../../roadmap/mid-term/map-governance-1-card-2026-10-29.md).
 - [mb-1-ledger.md](mb-1-ledger.md) — Unit ledger — MB-1 · the batch source over the incremental append scan
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 steps 1–3 (2026-09-10/11), in flight:** the spill-coverage matrix
@@ -980,8 +983,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   pins: rp-61-posdel-format-repin-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-018
 - [rp-62-eqdel-repin-1-ledger.md](rp-62-eqdel-repin-1-ledger.md) — **RP-62-EQDEL-REPIN-1 (2026-10-29, merged 2026-10-29 as PR #1213 at `df43dca5`), completed:** the fork repinned to `935cc55c` (F-EQDEL-DROPPED-KEY-1, fork PR `#377`), with the lock moved by hand. The audit's dropped-key sequence is pinned through both doors: Parquet data reads the survivors, and Avro and ORC data stay loud-or-correct (F-EQDEL-DROPPED-KEY-2, OPEN). The native door's DELETE, UPDATE and MERGE delete-format shapes are pinned (NATIVE-DOOR-DELETE-FORMAT-1). 11 of 13 clauses PROVEN; C-006 and C-007 (the Avro and ORC residue) are OPEN.
   pins: rp-62-eqdel-repin-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
-- [ice-hadoop-gzip-metadata-1-ledger.md](ice-hadoop-gzip-metadata-1-ledger.md) — **ICE-HADOOP-GZIP-METADATA-1 (2026-10-29, AUD-007 Critical, AUD-010 Medium; merged 2026-10-29 as PR #1218 at `f5a0cf88`), completed:** the `type=hadoop` path read's hinted version, hint walk and no-hint listing see Java's compressed metadata names (`v<N>.gz.metadata.json` and `v<N>.metadata.json.gz`) in Java's order, so a stale hint after a committed delete reads the surviving rows and a gzip-named current file reads. A readable hint naming a missing version keeps Java's refusal (the cleanup shape was a probe artefact). 9 of 12 clauses PROVEN (C-001 to C-009); C-010 and C-011 (the owner's leads) and C-012 (the codec-by-bytes lead) are OPEN. Grade A. Branch `fix/ice-hadoop-gzip-metadata-1`.
-  pins: ice-hadoop-gzip-metadata-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [session-surface-1-ledger.md](session-surface-1-ledger.md) —
   **SESSION-SURFACE-1 step 1 (2026-09-14), in flight:** the 19-name SparkSession
   surface card — job tags, the interrupt trio, the five Connect-only names,
@@ -996,6 +997,10 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   Iceberg-table listing with Spark metadata text, property redaction, and schema tree output.
   **WO-A5 (2026-09-23):** the recorded Spark deep-schema tree now has an exact Rust pin.
   `risk_tier: standard`. Branch `xd/show-tblprops`.
+- [spark-door-temp-view-target-1-ledger.md](spark-door-temp-view-target-1-ledger.md) — **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29, AUD-006, Critical; merged 2026-10-30 as PR #1219 at `58e8b2a3`), completed:** a one-part write target that names a temporary view refuses on the Spark door as Spark 4.1.2 does, and the same-named table is unchanged, on all six write routes and on the facade and the Rust door alike. 16 of 31 clauses PROVEN (C-001 to C-008, C-011 to C-014, C-019 to C-021, C-025); the carded leads stay OPEN. `Path: STANDARD`. Grade A. Branch `fix/spark-door-temp-view-target-1`.
+  pins: spark-door-temp-view-target-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: spark-door-temp-view-target-1/C-011, C-012, C-013, C-014, C-019, C-020, C-021
+  pins: spark-door-temp-view-target-1/C-007, C-025
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
 - [sql-harden-2-cow-shapes-ledger.md](sql-harden-2-cow-shapes-ledger.md) — Unit ledger — SQL-HARDEN-2 · copy-on-write cutover shapes

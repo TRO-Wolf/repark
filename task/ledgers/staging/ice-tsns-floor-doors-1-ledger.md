@@ -5,7 +5,7 @@
 lane A · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.** Target: the next bug release (1.5.6).
 
-**Order:** [../../../task/wo/ice-tsns-floor-doors-1.md](../../../task/wo/ice-tsns-floor-doors-1.md)
+**Order:** [../../../task/wo/ice-tsns-floor-doors-1.md](../../wo/ice-tsns-floor-doors-1.md)
 (U-3, R-009) from registry row ICE-TSNS-SQL-1-R-009 and ledger question Q2 of
 `ice-tsns-merge-wall-1-ledger.md` (claim C-014). **This ledger closes when the unit's pull request merges.**
 Step 0 changed no product file. The build (2026-10-14) runs on main by the owner's rulings

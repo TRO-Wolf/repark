@@ -8,7 +8,7 @@ kill-mid-write pin, ICE-COMMIT-UNKNOWN-1 never live, no cross-release pin"). **R
 closes:** row K3 of
 [the production status](../../../docs/cutover/production-iceberg-status-2026-09-14.md) ("PROVEN
 offline; no live drill"), the BL-5 named residual ("an injection test for that path") and the
-live half of [ICE-COMMIT-UNKNOWN-1](../../../task/ledgers/completed/ice-commit-unknown-1-ledger.md).
+live half of [ICE-COMMIT-UNKNOWN-1](../../ledgers/completed/ice-commit-unknown-1-ledger.md).
 **Base:** main `37d60eaf`; fork rev `076d5f98` (`Cargo.lock`). Every `path:line` below is on
 those two revs. A fork path carries the prefix `fork:`; it was checked in the cargo checkout of
 that rev. **Target:** 1.5.6, with U-11 after it (§0).
