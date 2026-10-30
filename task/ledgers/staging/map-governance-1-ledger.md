@@ -1,9 +1,9 @@
 # Unit ledger — MAP-GOVERNANCE-1 · the pin binding leaves the maps for ledger sidecars; map lockstep warns; a map size ratchet
 
-**Date:** 2026-10-29 · **Branch:** `feat/map-governance-1` · **Base:** `f5a0cf88` (`main`, the branch point) · **Product head:** `acaec00b` (PR #1221; `main` merged as `f2df6de8`) · **Model:** builder `claude-opus-5-5` (commits `04f262ce` to `acaec00b`); clerk `claude-haiku-5-5` (records round 1, after the builder's hand-back)
+**Date:** 2026-10-29 · **Branch:** `feat/map-governance-1` · **Base:** `f5a0cf88` (`main`, the branch point) · **Product head:** `8a1bc185` (PR #1221; `main` merged as `f2df6de8`) · **Model:** builder `claude-opus-5-5` (commits `04f262ce` to `acaec00b`); clerk `claude-haiku-5-5` (records round 1, after the builder's hand-back)
 **Path:** STANDARD. **Grade:** A (Opus 5.5 build, two verifiers, merge gated on the union of their verdicts). Card: [task/roadmap/mid-term/map-governance-1-card-2026-10-29.md](../../roadmap/mid-term/map-governance-1-card-2026-10-29.md).
 
-**Status (2026-10-30, clerk, records round 3):** head `8aefc5eb` (fix round 7). Verification round 2 FAIL from both verifiers, fixed in fix rounds 6 and 7; verification round 3 OPEN (C-019). Not verified in this round and not merged.
+**Status (2026-10-30, clerk, records round 5):** head `8a1bc185` (fix round 9). Verification round 3 FAIL from the Opus 5.5 verifier (one S1) and PASS from the Muse MAX second verifier; fixed in fix rounds 8 and 9. Verification round 4 OPEN (C-022). Not verified in this round and not merged.
 
 **Why now.** The owner adopted the map policy evaluation on 2026-10-29 ("go with your recommendations across the board"). Its measured facts (the orchestrator's evaluation of 2026-10-29, held outside the repository; 5,395 reconciles as 4,914 under the citation roots plus 481 in 34 maps outside them): 5,395 pin citations in 268 maps (4,914 under the grammar gate's roots by line, 481 in the 34 maps outside them) were the only legal home for a ledger clause's pin, so every unit that pinned a clause edited a map; reading the maps a single unit needs cost 105k tokens of mandatory map reads. The builder re-measured at `f5a0cf88`: 57 maps over the 200-line or 16 KiB ceilings that this unit sets (49 over 200 lines, and 8 over 16 KiB only), 444 tracked `map.md` files, 5,610,633 bytes and 67,086 lines. The brief's "102 maps over 200 lines" does not match the tree: 103 files are over 100 lines, and 49 are over 200.
 
@@ -49,10 +49,15 @@
 | C-017 | Records sticky and disclaimed citations: an on-disk `C-NNN: none (records)` line is never replaced by a rerun, and a map citation whose own text disclaims the file (grammar gate counts, pins none, pins nothing, not a test pin) binds nothing. | The pin `test_migration_keeps_a_records_line_and_honours_a_disclaimer` on this clause's line in the sidecar. | PROVEN | Red against the `a661a696` gate (the verifier's S2-1 reproduction: a rerun replaced gzip C-009 with a test path); green at `bab0cfe3`, and `--check` exits 0 after the rerun. |
 | C-018 | Balanced cut: the migration's cut keeps every parenthesis balanced; a citation that opens its line, followed by a `)` that closes an earlier parenthesis, joins that `)` to the line above. | The pin `test_migration_cut_keeps_a_parenthesis_balanced` on this clause's line in the sidecar. | PROVEN | Red against the `a661a696` gate (the verifier's S3-2: three lost parentheses); green at `bab0cfe3`; the regeneration repaired 11 lines in 5 maps. |
 | C-019 | Re-verification round 3 on the head after fix round 7 (`8aefc5eb`): the Opus 5.5 verifier and the standing Muse MAX second verifier each return PASS, and the merge is gated on the union of the two verdicts. | The two verifier verdicts, recorded in a Verification round 3 section of this ledger. | OPEN | Not yet run. The clerk ran no verifier in records round 3. |
+| C-020 | Disclaimer scope, test-placed helpers and definitions (fix round 8): a disclaiming clause unbinds the clause ids its sentence names, else the previous clause's ids, else its sentence's citations, else its own line's; a test-placed file binds only when it carries a test; a shell definition in a heredoc or a quoted string, and a Python subscript or attribute target, define nothing. | The three pins on this clause's line in the sidecar, in `test_map_governance_1.py`. | PROVEN | Red against the `456eb186` scripts (the three pins); green at `8a1bc185`. Mutants L1, L3 and L4 exit 0 at `456eb186` and 1 at `8a1bc185`. |
+| C-021 | A shared citation binds each clause by its own ledger row (fix round 9): where a clause's row names code files other than the citation's, the clause binds the bindable ones among them with the row's defined names, or records. | The pin `test_a_shared_citation_binds_each_clause_by_its_own_row` on this clause's line in the sidecar, in `test_map_governance_1.py`. | PROVEN | Red against the `a9fc0167` scripts; green at `8a1bc185`. The 363 rebindings and the 124 records are measured in the Fix rounds 8 and 9 section. |
+| C-022 | Re-verification round 4 on the head after fix rounds 8 and 9 (`8a1bc185`): the Opus 5.5 verifier and the standing Muse MAX second verifier each return PASS, and the merge is gated on the union of the two verdicts. | The two verifier verdicts, recorded in a Verification round 4 section of this ledger. | OPEN | Not yet run. The clerk ran no verifier in records round 5. |
 
 VERDICT (2026-10-29, clerk, records round 1, after the builder's hand-back): 13 clauses. 8 PROVEN (C-001 to C-008: the sidecar format, losslessness, misbinding, lockstep, ratchet, lifecycle, CI and hygiene, all measured by the builder at `acaec00b`), 5 OPEN (C-009 re-verification, C-010 merge, C-011 the owner-ruling amendment, C-012 the inert prose, C-013 the records gap). The unit is built and not yet verified or merged.
 
 VERDICT (2026-10-30, clerk, records round 3, after fix round 7 at `8aefc5eb`): 19 clauses. 13 PROVEN (C-001 to C-008 and C-014 to C-018), 6 OPEN (C-009 to C-013 and C-019). The unit is built and rebuilt through fix round 7; verification round 3 is open and the unit is not merged.
+
+VERDICT (2026-10-30, clerk, records round 5, after fix round 9 at `8a1bc185`): 22 clauses. 15 PROVEN (C-001 to C-008, C-014 to C-018, C-020 and C-021), 7 OPEN (C-009 to C-013, C-019 and C-022). The unit is built and rebuilt through fix round 9; verification round 4 is open and the unit is not merged.
 
 ## Verification round 2 (2026-10-29)
 
@@ -69,6 +74,112 @@ Two verifiers ran on the head `a661a696` (base `aa52b585`, branch point `f5a0cf8
 - **Counts at `8aefc5eb`** (the builder's regeneration, before this round's clerk edits): 450 sidecars; 4,651 sidecar lines; 3,210 path-only entries; 5,266 named entries; 1,232 `none (records)` lines; 760,738 sidecar bytes; 0 unplaceable citations.
 - **Records round 3 edits to the sidecars** (see Corrections): the sql-epoch-constructors-1 C-001 line is a hand path line, and four rp-posdel-batch-2 clauses are records.
 
+## Verification round 3 (2026-10-30)
+
+Two verifiers ran on the head `456eb186` (base `aa52b585`, branch point `f5a0cf88`). The Opus 5.5 verifier returned FAIL with one S1, no S2 and five S3. The standing Muse MAX second verifier returned PASS with zero findings; all of its scratch mutants behaved, including the string-literal case.
+
+- **Opus 5.5 verifier: FAIL (one S1, five S3).**
+  - *Fixed at that head:* every round-2 finding, and the Muse round-2 S1 (a definition-shaped string literal) for Python and Rust.
+  - *Losslessness held at the set level:* 0 pairs lost against `f5a0cf88` and `aa52b585`; 4,643 pairs at `aa52b585` and 4,656 at `456eb186`; 36 grammar mutants red.
+  - **S1-1. The disclaimer rule disclaimed the wrong citation.** Fix round 6 applied a disclaimer sentence to whichever citation came next in its entry, not to the clause the sentence names. Seven real pins became `none (records)`: rp-60-posdel-repin-1 C-003 and C-004 (disclaimed by the rp-posdel-batch-2 sentence that names C-015, C-016, C-020 and C-021), and rp-61-posdel-format-repin-1 C-004, C-005, C-007, C-008 and C-009 (disclaimed by the entry's sentence about the reverted ICE-DELETE-FORMAT-GUARD-1 tests). Two disclaimed clauses stayed bound: ice-integrity-pins-1 C-072 (`hint_walk_tests.rs`) and ice-delete-format-guard-1 C-010 (`delete_format_guard.rs`). Mutants L1, L3 and L4 exited 0 at the head; each should exit 1. The migration test had no case of a disclaimer next to two citations.
+  - **S3-1. Recorders not named `_record*` still bound.** foreach-wrap-1 C-004 (`live_spark/fw1_callback_oracle.py`), mb-3 C-015 (`live_spark/mb3_fold_oracle.py`) and ice-tsns-coercion-1 C-003 and C-004 (`_summarize_ice_tsns_coercion_1.py` and `_time_ice_tsns_coercion_1.py`) bound to scripts that write a fixture or a summary, with no `test_` function. The docstring, C-015 and the PR body said recorders never bind; that held only for the `_record*` spelling.
+  - **S3-2. Definition-shaped text still defined.** A shell `phantom_sh()` inside a heredoc or a double-quoted string satisfied the shell check, and `REGISTRY[phantom] = 1` and `os.x = 1` defined `phantom` and `os`. No live line was affected. C-014 overclaimed for shell.
+  - **S3-3. Contract documents.** The AGENTS.md compaction had deleted eight normative sentences that are not about maps: "a unit may narrow them, never relax them"; "it may narrow those, never relax them"; "Ledger presence is a gate item."; "cedes every engineering decision to this contract"; "Style `D` declined" (twice); "never start the command hoping it fits"; and "Work out the reader's needs privately". The lifecycle sentence was false: `ledger_lifecycle.py` also regenerates `task/ledgers/archive/map.md`, creates `docs/history/<dir>/map.md` with a parent row in `compact`, and moves rows between the staging and completed bin maps.
+  - **S3-4. Records and counts stale.** The recorder statement of fix round 7; C-013's 1,144 (the head had 1,236); the Status and header heads; the ledger's round numbering against the commit titles; the PR body's counts.
+  - **S3-5. Minor, unchanged or by design.** M3b (a file deleted on disk but still in the index passes; it cannot be committed, and M3 is red); a rerun onto a records line cuts a new citation silently (S2-1b, the ruled "never replaces" rule); three rejoined parentheses, balanced, cosmetic.
+  - *Round-2 findings re-attacked at `456eb186`:* FIXED, except S1-1 (the mechanism over-reached) and S3-4 (the generator sentence was inexact).
+- **Muse MAX second verifier: PASS, zero findings.**
+
+Verification round 4 on `8a1bc185` is OPEN (clause C-022).
+
+## Fix rounds 8 and 9 (2026-10-30)
+
+Commits on top of `456eb186`, nothing amended, each Authored by `claude-opus-5-5`:
+- `0a590053` fix 11: verifier rulings 1 to 3 and the regeneration.
+- `a9fc0167` fix 12: gate performance. The test-content rule had made the gate take 58 s; caching and a one-regex Rust stripper bring it to about 3 s. The stripper gives identical definitions and test detection on all 1,261 tracked `.rs` files.
+- `8a1bc185` fix 13: round 9, a shared citation binds each clause by its own ledger row.
+
+### Round 8 rules (`0a590053`)
+
+1. **Disclaimer scope.** `disclaimers()` works per entry. A sentence ends at a full stop followed by whitespace; a `pins:` line is a sentence of its own; a `;` separates clauses. A disclaiming clause unbinds the citations of the clause ids it names, by the first rule that applies:
+   - the clause ids the clause names;
+   - else the ids of the previous clause in the same sentence;
+   - else the citations inside its own sentence;
+   - else the citation on its own line.
+
+   A named id lands on the first citation after the clause that cites that id, else on the last one before. A same-numbered id of another unit is untouched. A citation with some ids disclaimed splits; the other ids keep their binding.
+2. **Ledger-row names.** A binding's names also come from the clause's own ledger row: backticked identifiers that the bound file defines. Without this, rp-61 C-004 was path-only and L4 could not go red.
+3. **Helpers are not tests.** `bindable(path, text)`:
+   - a file under `scripts/` binds;
+   - a test-placed file (a `tests/` directory, `tests.rs`, `*_tests.rs`, `test_*.py`, `*_test.py`) binds only when it carries a test: a module- or class-level `test_*` function, or a decorator naming `fixture` or `parametrize` in Python; `#[test]`, `#[tokio::test]` or `#[rstest]` outside comments and literals in Rust;
+   - `_record*` stays excluded by name.
+
+   `fixture_reader` also matches a `.py` helper's module name as a token. The fixtures in `test_map_governance_1.py` and `test_dl_2_ledger_grammar.py` gained `#[test]` on their Rust files; the DL-2 edits change fixture text only.
+4. **Definitions.** Shell: heredoc bodies, quoted strings and comment lines are blanked before `function NAME` and `NAME()` are matched. Python: an assignment binds only Name targets, through Tuple, List and Starred; `X[name] = 1` and `os.attr = 1` bind nothing.
+
+Results of round 8:
+- The seven pins came back from the maps, not by hand:
+  - rp-60-posdel-repin-1 C-003 and C-004 bind `posdel_batch_door.rs`, named, including `bulk_mor_delete_past_one_batch_completes_and_survivors_match` and `whole_partition_delete_still_takes_the_metadata_door`;
+  - rp-61-posdel-format-repin-1 C-004, C-005, C-007, C-008 and C-009 bind `delete_format_guard.rs`; C-004 names `::inherited_avro_or_orc_repark_route_dml_writes_a_delete_in_the_data_format`.
+- ice-integrity-pins-1 C-072 records, through the hint-window sentence that names it.
+- ice-delete-format-guard-1 C-010 records, as a hand line (ruled): its sentence names no id and its line carries no citation, so the rule alone would leave it bound.
+- Kept: the hand lines, the clerk's sidecar edits (ice-delete-format-guard-1 C-007; rp-posdel-batch-2 C-015, C-016, C-020 and C-021 as records; sql-epoch-constructors-1 C-001 on its test) and the unit sidecar. Seven clerk-edited maps were restored from `HEAD` after the regeneration, each byte-identical to its pre-clerk regeneration.
+- Mutants at `0a590053`, all exit 1: L1 (rename `bulk_mor_delete_past_one_batch_completes_and_survivors_match`) reds four sidecar lines; L3 (rename `whole_partition_delete_still_takes_the_metadata_door`) reds rp-60 C-003, C-004 and C-009 and rp-posdel-batch-2 C-017; L4 (delete `inherited_avro_or_orc_repark_route_dml_writes_a_delete_in_the_data_format`) reds rp-61 C-004.
+
+### Round 9 rule (`8a1bc185`)
+
+- **When it applies:** a map citation carries more than one clause id, and a clause's own ledger row names `.rs`, `.py` or `.sh` files (`row_code_files`), none of which is the citation's file.
+- **What binds then:** only the bindable files among them, each with the row's backticked names that the file defines.
+- **When nothing binds:** a production source never binds. If no bindable file remains, the clause gets no entry, and `none (records)` if nothing else binds it.
+- **How the row's files resolve:** explicit paths first (whole, or by a unique path suffix, including path tokens inside a multi-word code span such as a `git diff` command); then bare names, which take an explicit path of the same name from the row, else the one tracked file of that name.
+
+The scan rebound 363 clauses. For 124 of them nothing bindable remains, so they became records unless another citation binds them. Most of the 124 belong to the example units (ex-22 to ex-26), whose rows name `docs/examples/*.py` deliverables while the citation named `scripts/check_example_coverage.py`; the rest are rows that name only production modules. Rows that name the citation's own file are untouched (rp-60 C-003 and C-004; rp-61 C-004 to C-009).
+
+- **rp-61-posdel-format-repin-1 C-010** now binds `crates/repark-spark/src/tests/enc_1.rs::encrypted_table_case_variant_namespace_delete_refuses` and `crates/repark-spark/src/tests/write_to_branch.rs::a_branch_write_with_an_unclassified_head_refuses`. Its row names `crates/repark-spark/src/tests/write_to_branch.rs` explicitly: the test file under `src/tests/`, which carries tests, not the production `write_to_branch.rs`.
+- **rp-61-posdel-format-repin-1 C-006** is unchanged. Its row names its target as `delete_format_guard`, without an extension, so it names no code file, and it keeps `delete_format_guard.rs` plus its `test_ice_orc_avro_1.py` entries.
+
+**Counts at `8a1bc185`:**
+
+| count | value |
+|---|---|
+| sidecars | 450 |
+| sidecar lines | 4,656 |
+| path-only entries | 1,955 |
+| named entries | 7,148 |
+| `none (records)` | 1,296 |
+| sidecar bytes | 898,958 |
+| pinned clause ids | 4,656 |
+| unplaceable citations | 0 |
+
+Records round 5 adds the sidecar lines of C-020 and C-021 and seven named entries (C-014, C-015, C-017, C-020 and C-021). The gate then reads 4,658 pinned clause ids and sidecar lines, 7,155 named entries and 899,720 sidecar bytes; the path-only count (1,955) and the records count (1,296) are unchanged.
+
+**Misbinding checks, all 0 at `8a1bc185`:** names not defined by the bound file; recorders; non-code files; test-placed files with no test; bindings to `test_map_column_panic_1.py`. The inherited-without-a-name and disclaimed-clause checks hold by construction, so seven checks are zero. Mutants L1, L3 and L4 exit 1 each at `8a1bc185`.
+
+**New pins.**
+- Red against the `456eb186` scripts (round 8):
+  - `test_a_disclaimer_unbinds_only_the_clauses_it_names`: two citations after a disclaimer that names one id, and a parenthetical disclaimer on its own `pins:` line;
+  - `test_a_test_placed_helper_without_tests_never_binds`: a Python and a Rust helper are refused; a `conftest.py` fixture binds;
+  - `test_shell_and_python_definitions_need_a_real_binding`: heredoc, quoted-string, subscript and attribute targets are refused; tuple and starred targets bind.
+  - `test_migration_keeps_a_records_line_and_honours_a_disclaimer` is kept; its disclaimer now names C-002.
+- Red against the `a9fc0167` scripts (round 9): `test_a_shared_citation_binds_each_clause_by_its_own_row`.
+
+Sidecar lines (`map-governance-1-pins.md`): the round-8 pins sit on the C-014 line (shell and Python definitions), the C-015 line (test-placed helpers) and the C-017 line (disclaimer scope), and on the new clauses C-020 (all three) and C-021 (the round-9 pin). The round-9 pin is not on C-003, whose statement is the misbinding scan, not the shared-citation rule.
+
+**Round numbering.** The ledger's "fix round N" headings and the commit titles "fix M" differ; this table maps them.
+
+| ledger round | commit title |
+|---|---|
+| 1 (rulings before verification) | fix 1 to fix 4 |
+| 3 | fix 5 |
+| 4 | fix 6 |
+| 5 (DL-5) | fix 8 |
+| 6 | fix 9 |
+| 7 | fix 10 |
+| 8 | fix 11 and fix 12 |
+| 9 | fix 13 |
+
+Fix 7 is the warning wording (`7f10903e`).
+
 ## Corrections (2026-10-30, clerk)
 
 Dated rows that correct earlier statements in this ledger. The earlier rows are left as written.
@@ -79,6 +190,12 @@ Dated rows that correct earlier statements in this ledger. The earlier rows are 
 | 2026-10-30 | C-003 | "The misbinding scan is zero" counted cross-entry and inherited bindings only. It missed 18 clauses bound path-only to test files whose own map line disclaims them (S2-1). Those are records from `bab0cfe3`. Records round 3 found a further four that the same rule catches: rp-posdel-batch-2 C-015, C-016, C-020 and C-021, bound to `posdel_batch_door.rs` by a citation list whose map sentence says the file pins none of them. The clerk set them to `none (records)` in that unit's sidecar, as its ledger row states. |
 | 2026-10-30 | Clerk repairs and Gates, gzip C-009 | The gzip C-009 line was written by the migration rerun, not by hand: it bound to `hint_walk_tests.rs` (S2-1). It is `none (records)` now, as a disclaimed-citation record of fix round 6, and the gzip unit's ledger is unchanged. The Gates paragraph's 1,145 records is the count at records round 1, not the count now. |
 | 2026-10-30 | Fix round 7, sql-epoch-constructors-1 C-001 | "As ruled" was the builder's reading; no records ruling on C-001 is on record. The records-round-3 ruling binds the test that reads the fixture. No map cites C-001, so the migration cannot bind it: the sidecar line is hand-written, `C-001: python/repark/tests/timestamps/test_sql_epoch_constructors_1.py`, and the hand records line is gone. |
+| 2026-10-30 (records round 5) | C-003 | "The misbinding scan is zero" is true only since `8a1bc185` (fix round 9), and only as the seven checks it names: inherited bindings without a defined name; named entries the file does not define; bindings to `test_map_column_panic_1.py`; bindings to recorders; bindings to non-code files; disclaimed clause ids bound to a path; sidecar entries whose test-placed file carries no test. Before fix round 8 the scan missed the seven pins lost to S1-1 and the two disclaimed clauses still bound (verification round 3). |
+| 2026-10-30 (records round 5) | C-013 | The counts at `8a1bc185`: 1,296 `none (records)` lines, 7,148 named entries, 1,955 path-only entries, 898,958 sidecar bytes, 4,656 pinned clause ids. Records round 5 adds the sidecar lines of C-020 and C-021, so the gate reads 4,658 pinned clause ids, 7,155 named entries and 899,720 sidecar bytes; the records and path-only counts are unchanged. The 1,144 figure (at `acaec00b`) and the 1,236 figure (at `8aefc5eb`) are superseded. |
+| 2026-10-30 (records round 5) | C-017 | "A map citation whose own text disclaims the file binds nothing" is false as built since fix round 8 (`0a590053`). A disclaiming clause unbinds the clause ids its sentence names, each at its nearest citation; else the previous clause's ids in its sentence; else the citations in its sentence; else the citation on its own line. A citation with some ids disclaimed splits. The seven pins that the earlier rule lost were restored from the maps in fix round 8. |
+| 2026-10-30 (records round 5) | C-019 | Verification round 3 ran on `456eb186`: the Opus 5.5 verifier returned FAIL (one S1); the Muse MAX second verifier returned PASS. The clause stays OPEN; round 4 is C-022. |
+| 2026-10-30 (records round 5) | Fix round 7 recorder statement | "Three hand lines that named only a recorder became `none (records)`: ice-page-prune-1 C-001, ice-session-write-conf-1 C-036 and ice-sorted-insert-1 C-004" is true of ice-page-prune-1 C-001 only. ice-session-write-conf-1 C-036 binds `test_ice_session_write_conf_1_paths.py`, and ice-sorted-insert-1 C-004 binds its test. |
+| 2026-10-30 (records round 5) | Round numbering | The ledger's "fix round N" headings and the commit titles "fix M" differ. The table in Fix rounds 8 and 9 maps them. |
 
 
 ## Gates
@@ -90,6 +207,8 @@ Clerk run at the records-round head, on the staged tree (exit codes): `make chec
 The clerk ran no cargo and no pytest. The pin counts above are the builder's runs at `acaec00b`, plus the sidecar and record changes of this round.
 
 **Records round 3 (2026-10-30, clerk, on `8aefc5eb` plus the round-3 commit; exit codes):** `make check-ledgers`, `make check-ledger-grammar` (369 live ledgers clean; 4,656 pinned clause ids; 1,235 clauses bound to `none (records)`), `make check-map-sync`, `make check-map-size` (444 maps; 52 exceptions, 5 exempt; the shrunk rows lowered by `--update-baselines`), `make check-docs-links`, `make check-docs-compaction` (AGENTS.md 28,577 B against 28,600 B), `make check-owner-ruling`, `make check-model-ban`, `make spell-check`, `python3 scripts/sync_map_md.py --check`, `python3 scripts/migrate_pins_to_sidecars.py --check` (sidecar bytes 762,389; path-only entries 3,207; named entries 5,282), `bash scripts/check_map_md.sh --base origin/main` (no warnings) and `make py-test` (974 passed, 17 skipped). The clerk ran no verifier. A later records-round-3 change, ice-delete-format-guard-1 C-007 set to `none (records)` because its superseding dated row retired the pin, moves the count to 1,236 records, 3,206 path-only entries, 762,354 sidecar bytes; the gates above were re-run after it and exit 0.
+
+**Records round 5 (2026-10-30, clerk, on `8a1bc185` plus the round-5 commit; exit codes):** `make check-ledgers`, `make check-ledger-grammar` (369 live ledgers clean; 4,295 clauses; 4,658 pinned clause ids; 1,296 clauses bound to `none (records)`), `make check-map-sync`, `make check-map-size` (444 maps; 52 exceptions, 5 exempt), `make check-docs-links`, `make check-docs-compaction` (AGENTS.md 28,574 B against 28,600 B), `make check-owner-ruling`, `make check-model-ban`, `make spell-check`, `python3 scripts/sync_map_md.py --check`, `python3 scripts/migrate_pins_to_sidecars.py --check` (450 sidecars; 4,658 sidecar lines; 1,955 path-only entries; 7,155 named entries; 899,720 sidecar bytes; 0 written), `bash scripts/check_map_md.sh --base origin/main` (no warnings) and `make py-test` (978 passed, 17 skipped). One `make py-test` run failed on the DL-5 pin `test_agents_md_keeps_the_universal_invariants`, which needs the phrase "A `map.md` sits at a repository root, crate, package or complex"; the phrase is restored in AGENTS.md and the pin passes. The clerk ran no verifier.
 
 ## Rules applied
 
