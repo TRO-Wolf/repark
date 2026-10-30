@@ -303,7 +303,7 @@ def _note_view_registered(inner: Any, token: dict[str, Any], name: str, registra
     registrations[_join_table_identifier_segments(list(home))] = registration
 
 
-def _refuse_unparseable_view_name(name: str) -> None:
+def _refuse_unparsable_view_name(name: str) -> None:
     stripped = name.strip()
     if stripped.startswith(("`", '"')) or "." in stripped:
         return
@@ -320,7 +320,7 @@ def _register_temp_view(frame: DataFrame, name: str, *, rename_fields: bool = Tr
     """Register a temp view and note its object identity. pins: catalog-surface-1/C-009"""
     from repark.spark.dataframe.writer_layout import _rename_to_unique_display_names
 
-    _refuse_unparseable_view_name(name)
+    _refuse_unparsable_view_name(name)
 
     registration = frame._native_for_registration()
     if rename_fields:
