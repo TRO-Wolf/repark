@@ -2,5 +2,5 @@
 
 C-001: python/repark/tests/timestamps/test_ice_tsns_coercion_1.py
 C-002: python/repark/tests/timestamps/test_ice_tsns_coercion_1.py
-C-003: python/repark/tests/timestamps/_summarize_ice_tsns_coercion_1.py
-C-004: python/repark/tests/timestamps/_time_ice_tsns_coercion_1.py
+C-003: none (records)
+C-004: none (records)

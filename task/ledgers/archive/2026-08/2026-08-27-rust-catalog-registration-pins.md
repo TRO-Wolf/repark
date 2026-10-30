@@ -2,5 +2,5 @@
 
 C-001: crates/repark-core/src/session/tests/session/catalog_registration.rs
 C-002: crates/repark-core/src/session/tests/session/catalog_registration.rs
-C-003: crates/repark-core/src/session/tests/session/catalog_registration.rs
+C-003: crates/repark-core/src/session/tests/session/catalog_registration.rs::register_iceberg_catalog_rejects_duplicate_name
 C-004: crates/repark-core/src/session/tests/session/catalog_registration.rs

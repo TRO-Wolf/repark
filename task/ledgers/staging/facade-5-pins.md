@@ -3,7 +3,7 @@
 C-001: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap
 C-002: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap
 C-003: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap
-C-004: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap
+C-004: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap, python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_record_mode_fails_when_ci_is_set
 C-005: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap
 C-006: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap
 C-007: python/repark/tests/dataframe/test_facade_5_display_goldens.py::test_html_row_count_matches_min_size_cap

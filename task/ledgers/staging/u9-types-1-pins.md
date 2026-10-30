@@ -1,18 +1,18 @@
 # u9-types-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-spark/src/tests/u9_timestamp_ltz.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-002: crates/repark-spark/src/tests/u9_timestamp_ltz.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-003: crates/repark-spark/src/tests/u9_timestamp_ltz.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-004: crates/repark-sql/tests/ansi_door_u9_types.rs
-C-005: python/repark/tests/timestamps/test_u9_types_1.py
-C-006: crates/repark-spark/src/tests/u9_map.rs, python/repark/tests/timestamps/test_u9_types_1.py
+C-001: crates/repark-spark/src/tests/u9_timestamp_ltz.rs::a_timestamp_ltz_column_is_an_iceberg_timestamptz_on_v2_and_v3, python/repark/tests/timestamps/test_u9_types_1.py
+C-002: crates/repark-spark/src/tests/u9_timestamp_ltz.rs::a_double_quoted_timestamp_ltz_literal_is_the_same_instant, crates/repark-spark/src/tests/u9_timestamp_ltz.rs::a_timestamp_ltz_typed_literal_is_a_session_zone_instant, crates/repark-spark/src/tests/u9_timestamp_ltz.rs::a_timestamp_ltz_word_that_is_not_a_typed_literal_keeps_its_meaning, python/repark/tests/timestamps/test_u9_types_1.py
+C-003: crates/repark-spark/src/tests/u9_timestamp_ltz.rs::a_timestamp_ltz_column_writes_reads_and_partitions_by_day, python/repark/tests/timestamps/test_u9_types_1.py
+C-004: crates/repark-sql/tests/ansi_door_u9_types.rs::the_spark_timestamp_ltz_spelling_refuses_on_the_ansi_door
+C-005: python/repark/tests/timestamps/test_u9_types_1.py::test_every_residue_names_a_ledger_residue_and_differs_from_spark
+C-006: crates/repark-spark/src/tests/u9_map.rs::a_back_quoted_empty_map_call_is_an_empty_map_of_void, crates/repark-spark/src/tests/u9_map.rs::a_map_column_takes_literals_the_empty_map_and_null, crates/repark-spark/src/tests/u9_map.rs::an_empty_map_call_is_an_empty_map_of_void, crates/repark-spark/src/tests/u9_map.rs::update_and_every_merge_clause_assign_the_empty_map, python/repark/tests/timestamps/test_u9_types_1.py
 C-007: python/repark/tests/timestamps/test_u9_types_1.py
-C-008: crates/repark-sql/tests/ansi_door_u9_types.rs, python/repark/tests/timestamps/test_u9_types_1.py
+C-008: crates/repark-sql/tests/ansi_door_u9_types.rs::the_ansi_empty_map_is_map_of_two_empty_arrays_and_the_spark_spelling_refuses, python/repark/tests/timestamps/test_u9_types_1.py
 C-009: crates/repark-spark/src/tests/u9_void_uuid.rs
 C-010: crates/repark-spark/src/tests/u9_uuid_void_writes.rs::snapshot_pinned_reads_present_uuid_text_and_filter_on_it, crates/repark-spark/src/tests/u9_void_uuid.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/timestamps/test_u9_types_1.py::add_bucket_uuid_table, python/repark/tests/timestamps/test_u9_types_1.py::option_read, python/repark/tests/timestamps/test_u9_types_1.py::resolve_snapshots, scripts/check_rust_file_size.py
-C-011: crates/repark-spark/src/tests/u9_map.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-012: crates/repark-spark/src/tests/u9_map.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-013: crates/repark-iceberg/src/catalog/tests/uuid_presentation.rs::the_parser_is_java_uuid_from_string, crates/repark-spark/src/tests/u9_uuid_void_writes.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/timestamps/test_u9_types_1.py::run_step, python/repark/tests/timestamps/test_u9_types_1.py::write_dataframe, scripts/check_rust_file_size.py
+C-011: crates/repark-spark/src/tests/u9_map.rs::update_and_merge_refuse_a_map_key_or_value_that_cannot_store_assign, python/repark/tests/timestamps/test_u9_types_1.py
+C-012: crates/repark-spark/src/tests/u9_map.rs::a_map_operand_refuses_comparison_ordering_and_distinct_as_spark_does, python/repark/tests/timestamps/test_u9_types_1.py
+C-013: crates/repark-iceberg/src/catalog/tests/uuid_presentation.rs::the_parser_is_java_uuid_from_string, crates/repark-spark/src/tests/u9_uuid_void_writes.rs::insert_overwrite_both_forms_store_uuid_text_lower_case, crates/repark-spark/src/tests/u9_uuid_void_writes.rs::merge_joins_inserts_and_updates_through_uuid_text, crates/repark-spark/src/tests/u9_uuid_void_writes.rs::metadata_column_projection_presents_uuid_text, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/timestamps/test_u9_types_1.py::run_step, python/repark/tests/timestamps/test_u9_types_1.py::write_dataframe, scripts/check_rust_file_size.py
 C-014: crates/repark-spark/src/tests/u9_uuid_void_writes.rs, python/repark/tests/timestamps/test_u9_types_1.py
-C-015: crates/repark-spark/src/tests/u9_uuid_void_writes.rs, python/repark/tests/timestamps/test_u9_types_1.py
+C-015: crates/repark-spark/src/tests/u9_uuid_void_writes.rs::ctas_of_a_null_column_is_unknown_on_v3_and_refuses_on_v2, python/repark/tests/timestamps/test_u9_types_1.py
 C-016: crates/repark-iceberg/src/catalog/tests/uuid_presentation.rs::a_binary_source_is_decoded_text_like_spark, crates/repark-spark/src/tests/u9_uuid_void_writes.rs::a_binary_source_into_uuid_is_decoded_text_like_spark, crates/repark-spark/src/tests/u9_uuid_void_writes.rs::nested_uuid_assignments_type_as_text_like_spark, python/repark/tests/timestamps/test_u9_types_1.py::decode, python/repark/tests/timestamps/test_u9_types_1.py::write_dataframe

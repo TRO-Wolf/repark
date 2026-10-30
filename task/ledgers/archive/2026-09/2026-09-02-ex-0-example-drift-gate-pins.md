@@ -4,8 +4,8 @@ C-001: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_e
 C-002: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
 C-003: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
 C-004: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
-C-005: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
-C-006: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
+C-005: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-006: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py::EXCEPTIONS_BASELINE
 C-007: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
 C-008: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py
 C-009: python/repark-parity/tests/test_ex_0_example_coverage.py, scripts/check_example_coverage.py

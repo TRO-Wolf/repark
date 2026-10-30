@@ -15,4 +15,4 @@ C-012: python/repark/tests/io/test_s3_path_write_1.py
 C-013: crates/repark-core/src/session/tests/s3_prefix_read.rs, python/repark/tests/io/test_s3_path_write_1.py
 C-014: none (records)
 C-015: crates/repark-core/src/session/tests/path_write.rs
-C-016: python/repark/tests/parity/test_aws_acceptance.py
+C-016: python/repark/tests/parity/test_aws_acceptance.py::test_u12_s3_path_write_against_scratch_prefix

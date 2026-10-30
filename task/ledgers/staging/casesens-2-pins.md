@@ -1,10 +1,10 @@
 # casesens-2 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/resolution/test_casesens_2.py
-C-002: python/repark/tests/resolution/test_casesens_2.py
+C-001: python/repark/tests/resolution/test_casesens_2.py::test_s1_true_door_refuses_bare_names
+C-002: python/repark/tests/resolution/test_casesens_2.py::test_s3_drop_duplicates_follows_the_rule, python/repark/tests/resolution/test_casesens_2.py::test_s3_dropna_follows_the_rule, python/repark/tests/resolution/test_casesens_2.py::test_s3_fillna_follows_the_rule
 C-003: python/repark/tests/resolution/test_casesens_2.py::test_s1_qualified_strings_bind, python/repark/tests/resolution/test_casesens_2.py::test_s4_selfjoin_answers_as_spark
-C-004: python/repark/tests/resolution/test_casesens_2.py
-C-005: python/repark/tests/resolution/test_casesens_2.py
+C-004: python/repark/tests/resolution/test_casesens_2.py::test_s2_folded_keys_refuse, python/repark/tests/resolution/test_casesens_2.py::test_s2_renamed_follows_the_rule, python/repark/tests/resolution/test_casesens_2.py::test_s2_withcolumn_follows_the_rule
+C-005: python/repark/tests/resolution/test_casesens_2.py::test_s3_drop_duplicates_follows_the_rule, python/repark/tests/resolution/test_casesens_2.py::test_s3_dropna_follows_the_rule, python/repark/tests/resolution/test_casesens_2.py::test_s3_fillna_follows_the_rule
 C-006: python/repark/tests/resolution/test_casesens_2.py::test_s1_false_door_byte_identical, python/repark/tests/resolution/test_casesens_2.py::test_s2_overlay_replace_unchanged
 C-007: none (records)
 C-008: python/repark/tests/resolution/test_casesens_2.py

@@ -1,6 +1,6 @@
 # row-tuple-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/dataframe/test_row_tuple_1.py
-C-002: python/repark/tests/dataframe/test_row_tuple_1.py
-C-003: python/repark/tests/dataframe/test_row_tuple_1.py
-C-004: python/repark/tests/dataframe/test_row_tuple_1.py
+C-001: python/repark/tests/dataframe/test_row_tuple_1.py::test_count_reproduces_row_count, python/repark/tests/dataframe/test_row_tuple_1.py::test_count_reproduces_row_count_factory, python/repark/tests/dataframe/test_row_tuple_1.py::test_count_reproduces_row_count_missing, python/repark/tests/dataframe/test_row_tuple_1.py::test_count_reproduces_row_count_nan, python/repark/tests/dataframe/test_row_tuple_1.py::test_count_reproduces_row_positional_count
+C-002: python/repark/tests/dataframe/test_row_tuple_1.py::test_index_reproduces_row_index, python/repark/tests/dataframe/test_row_tuple_1.py::test_index_reproduces_row_index_factory, python/repark/tests/dataframe/test_row_tuple_1.py::test_index_reproduces_row_index_missing, python/repark/tests/dataframe/test_row_tuple_1.py::test_index_reproduces_row_index_start
+C-003: python/repark/tests/dataframe/test_row_tuple_1.py::test_oracle_fixture_carries_the_row_cells
+C-004: python/repark/tests/dataframe/test_row_tuple_1.py::test_collected_count_column_method_wins_and_item_answers, python/repark/tests/dataframe/test_row_tuple_1.py::test_collected_nested_struct_counts_as_dict_not_row, python/repark/tests/dataframe/test_row_tuple_1.py::test_index_and_count_reject_keyword_arguments, python/repark/tests/dataframe/test_row_tuple_1.py::test_index_stop_and_negative_start_match_tuple, python/repark/tests/dataframe/test_row_tuple_1.py::test_method_wins_attribute_access_item_answers_the_field, python/repark/tests/dataframe/test_row_tuple_1.py::test_names_and_values_are_never_searched_together

@@ -1,14 +1,14 @@
 # dfload-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-002: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-003: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-004: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-005: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-001: python/repark/tests/iceberg/test_iceberg_load_path.py::_assert_current, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_table_location_reads_current_rows, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_table_location_trailing_slash
+C-002: python/repark/tests/iceberg/test_iceberg_load_path.py::_assert_current, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_latest_metadata_file_reads_current_rows, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_older_metadata_file_reads_that_version
+C-003: python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_hinted_missing_metadata_names_the_path
+C-004: python/repark/tests/iceberg/test_iceberg_load_path.py::PATH_REFUSED_OPTIONS, python/repark/tests/iceberg/test_iceberg_load_path.py::_assert_current, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_path_ignores_an_unrelated_option, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_path_option_refuses_before_resolution, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_path_semantic_gate_refuses_first, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_path_with_travel_or_incremental_option_refuses, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_path_with_two_refused_options_names_them_sorted
+C-005: python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_empty_metadata_dir_names_the_path, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_missing_location_names_the_path
 C-006: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-007: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-008: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-009: python/repark/tests/iceberg/test_iceberg_load_path.py
-C-010: python/repark/tests/iceberg/test_iceberg_load_path.py
+C-007: python/repark/tests/iceberg/test_iceberg_load_path.py::_assert_current, python/repark/tests/iceberg/test_iceberg_load_path.py::_registration_inventory, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_path_registers_no_catalog_table
+C-008: python/repark/tests/iceberg/test_iceberg_load_path.py::_assert_current, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_authority_location_refuses_wrong_fs, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_authority_metadata_file_refuses_wrong_fs, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_scheme_latest_metadata_file_reads_current_rows, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_scheme_location_reads_current_rows
+C-009: python/repark/tests/iceberg/test_iceberg_load_path.py::_assert_current, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_four_slash_location_reads_current_rows, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_relative_location_refuses_uri_syntax, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_relative_location_two_trailing_slashes_keeps_one, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_single_slash_latest_metadata_file_reads_current_rows, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_file_single_slash_location_reads_current_rows
+C-010: python/repark/tests/iceberg/test_iceberg_load_path.py::_assert_current, python/repark/tests/iceberg/test_iceberg_load_path.py::test_load_v_form_beyond_java_int_is_not_a_candidate
 C-012: none (records)
 C-013: none (records)

@@ -1,8 +1,8 @@
 # facade-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/io/test_facade_1_arrow_c_stream.py, scripts/check_lib_py.py
-C-002: python/repark-parity/tests/spill/matrix_worker.py::load_spill_worker_libraries, python/repark/tests/io/test_facade_1_arrow_c_stream.py, scripts/check_lib_py.py
+C-001: python/repark/tests/io/test_facade_1_arrow_c_stream.py::test_create_dataframe_ipc_fallback_stays_when_capsule_hidden, scripts/check_lib_py.py
+C-002: python/repark/tests/io/test_facade_1_arrow_c_stream.py::test_package_imports_with_pyarrow_hidden, python/repark/tests/io/test_facade_1_arrow_c_stream.py::test_polars_and_pandas_consume_arrow_c_stream_with_pyarrow_hidden, python/repark/tests/io/test_facade_1_arrow_c_stream.py::test_to_arrow_names_pyarrow_extra_when_hidden, scripts/check_lib_py.py
 C-003: python/repark/tests/io/test_facade_1_arrow_c_stream.py
 C-004: python/repark/tests/io/test_facade_1_arrow_c_stream.py
-C-005: python/repark/tests/io/test_facade_1_arrow_c_stream.py
-C-006: python/repark/tests/io/test_facade_1_arrow_c_stream.py, scripts/check_lib_py.py
+C-005: python/repark/tests/io/test_facade_1_arrow_c_stream.py::test_to_arrow_to_pandas_collect_signatures_unchanged
+C-006: python/repark/tests/io/test_facade_1_arrow_c_stream.py::test_to_polars_does_not_call_to_arrow, scripts/check_lib_py.py

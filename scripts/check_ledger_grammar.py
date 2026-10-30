@@ -16,13 +16,16 @@ B. **Pin binding.** A clause is bound by a line `C-NNN: <entry>[, <entry>...]` i
    sidecar `<unit>-pins.md`, which counts only beside its own ledger (same bin, same name; in
    the archive with the ledger's `yyyy-mm-dd-` prefix). `<unit>` is the ledger's filename
    without `-ledger.md` and without the archive prefix. An entry is `<path>` or
-   `<path>::<name>`: the path is a tracked `.rs`, `.py` or `.sh` file that is a test (under a
-   `tests/` directory, `tests.rs`, `*_tests.rs`, `test_*.py`, `*_test.py`) or a script under
-   `scripts/`, never a fixture, a recorder that writes one (`_record*`), a map, a ledger, a
+   `<path>::<name>`: the path is a tracked `.rs`, `.py` or `.sh` file that is a script under
+   `scripts/` or a test by place or name (under a `tests/` directory, `tests.rs`, `*_tests.rs`,
+   `test_*.py`, `*_test.py`) that carries a test (a Python `test_*` function, fixture or
+   parametrize; a Rust `#[test]`, `#[tokio::test]` or `#[rstest]`), never a fixture, a helper,
+   oracle or recorder (`_record*`, or a test-placed file with no test), a map, a ledger, a
    sidecar, a licence or a readme; the name is a definition the file makes, read by parsing
-   (Python: module- and class-level functions, classes and assigned names; Rust: line-start fn,
-   struct, enum, trait, type, const, static, mod, union and macro_rules with comments and
-   literals blanked; shell: functions). The line `C-NNN: none (records)` binds a clause that no
+   (Python: module- and class-level functions, classes and the names an assignment binds, never
+   a subscript or attribute target; Rust: line-start fn, struct, enum, trait, type, const,
+   static, mod, union and macro_rules with comments and literals blanked; shell: functions
+   outside heredocs and quoted strings). The line `C-NNN: none (records)` binds a clause that no
    test pins; the gate counts and lists those clauses. A `pins: <unit>/C-NNN[, C-MMM...]`
    citation also binds when it sits in a tracked test file or script under CITATION_ROOTS; one
    in a map or in production source does not. Every `PROVEN` clause in a staging or completed
@@ -76,7 +79,12 @@ SHELL_DEFINITION = re.compile(
     r"^[ \t]*function[ \t]+([A-Za-z_][A-Za-z0-9_-]*)|^[ \t]*([A-Za-z_][A-Za-z0-9_-]*)[ \t]*\(\)",
     re.MULTILINE,
 )
+SHELL_HEREDOC = re.compile(r"<<-?[ \t]*[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?")
+SHELL_QUOTED = re.compile(r"'[^']*'|\"(?:\\.|[^\"\\])*\"")
+RUST_TEST_ATTRIBUTE = re.compile(r"#\[(?:test|tokio::test|rstest)\b")
+PYTHON_TEST_MARKERS = ("fixture", "parametrize")
 _DEFINITIONS: dict[tuple[str, int], frozenset[str]] = {}
+_TEXTS: dict[str, str] = {}
 UNBINDABLE = re.compile(
     r"^(?:map\.md|.+-ledger\.md|.+-pins\.md|LICEN[CS]E.*|README.*|_record.*)$", re.IGNORECASE
 )
@@ -187,11 +195,13 @@ def citations(repo: Path, tracked: list[str]) -> dict[tuple[str, str], list[str]
     CITATION_ROOTS (see `bindable`); a map or a production source never counts."""
     found: dict[tuple[str, str], list[str]] = {}
     for path in tracked:
-        if not path.startswith(CITATION_ROOTS) or not bindable(path):
+        if not path.startswith(CITATION_ROOTS):
             continue
         try:
             text = (repo / path).read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
+            continue
+        if not bindable(path, text):
             continue
         for match in CITATION.finditer(text):
             unit = match.group(1)
@@ -263,6 +273,38 @@ def strip_rust(text: str) -> str:
     return "".join(out)
 
 
+def _bound_names(target: ast.expr) -> set[str]:
+    """The names an assignment target binds: a Name, or the Names inside a Tuple, List or
+    Starred; a subscript or attribute target binds none."""
+    if isinstance(target, ast.Name):
+        return {target.id}
+    if isinstance(target, ast.Starred):
+        return _bound_names(target.value)
+    if isinstance(target, (ast.Tuple, ast.List)):
+        return {name for element in target.elts for name in _bound_names(element)}
+    return set()
+
+
+def strip_shell(text: str) -> str:
+    """Shell source with heredoc bodies, quoted strings and comment lines blanked."""
+    out: list[str] = []
+    closing: str | None = None
+    for line in text.split("\n"):
+        if closing is not None:
+            out.append("")
+            if line.lstrip("\t") == closing:
+                closing = None
+            continue
+        if line.lstrip().startswith("#"):
+            out.append("")
+            continue
+        heredoc = SHELL_HEREDOC.search(line)
+        if heredoc is not None:
+            closing = heredoc.group(1)
+        out.append(SHELL_QUOTED.sub("''", line))
+    return "\n".join(out)
+
+
 def _python_definitions(text: str) -> set[str]:
     """Module-level and class-level functions, classes and assigned names of a Python file."""
     try:
@@ -277,12 +319,8 @@ def _python_definitions(text: str) -> set[str]:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 names.add(node.name)
             elif isinstance(node, ast.Assign):
-                names.update(
-                    target.id
-                    for assigned in node.targets
-                    for target in ast.walk(assigned)
-                    if isinstance(target, ast.Name)
-                )
+                for assigned in node.targets:
+                    names.update(_bound_names(assigned))
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 names.add(node.target.id)
     return names
@@ -303,7 +341,10 @@ def definitions(path: str, text: str) -> frozenset[str]:
             match.group(1) or match.group(2) for match in RUST_DEFINITION.finditer(strip_rust(text))
         }
     elif path.endswith(".sh"):
-        names = {match.group(1) or match.group(2) for match in SHELL_DEFINITION.finditer(text)}
+        names = {
+            match.group(1) or match.group(2)
+            for match in SHELL_DEFINITION.finditer(strip_shell(text))
+        }
     result = frozenset(names)
     _DEFINITIONS[key] = result
     return result
@@ -314,16 +355,53 @@ def defines(path: str, text: str, name: str) -> bool:
     return name in definitions(path, text)
 
 
-def bindable(path: str) -> bool:
-    """Whether a sidecar entry may name `path`: a `.rs`, `.py` or `.sh` test file or script."""
+def carries_tests(path: str, text: str) -> bool:
+    """Whether a test-located source holds a test: a Python `test_*` function at module or class
+    level, or a pytest fixture or parametrize; a Rust `#[test]`, `#[tokio::test]` or
+    `#[rstest]` outside comments and literals. A shell file counts as it stands."""
+    if path.endswith(".rs"):
+        return RUST_TEST_ATTRIBUTE.search(strip_rust(text)) is not None
+    if not path.endswith(".py"):
+        return True
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return False
+    bodies = [tree.body]
+    bodies.extend(node.body for node in tree.body if isinstance(node, ast.ClassDef))
+    for body in bodies:
+        for node in body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if node.name.startswith("test_"):
+                return True
+            decorators = " ".join(ast.unparse(decorator) for decorator in node.decorator_list)
+            if any(marker in decorators for marker in PYTHON_TEST_MARKERS):
+                return True
+    return False
+
+
+def bindable(path: str, text: str) -> bool:
+    """Whether a sidecar entry may name `path`: a `.rs`, `.py` or `.sh` script under `scripts/`,
+    or a test file (by place or name) that carries a test (`carries_tests`)."""
     name = Path(path).name
     if UNBINDABLE.match(name) or Path(path).suffix not in CODE_SUFFIXES:
         return False
-    return (
-        path.startswith("scripts/")
-        or "tests" in Path(path).parts[:-1]
-        or TEST_NAMES.match(name) is not None
-    )
+    if path.startswith("scripts/"):
+        return True
+    located = "tests" in Path(path).parts[:-1] or TEST_NAMES.match(name) is not None
+    return located and carries_tests(path, text)
+
+
+def read_tracked(repo: Path, path: str) -> str:
+    """A tracked file's text, cached for the run; an unreadable file reads as empty."""
+    key = f"{repo}/{path}"
+    if key not in _TEXTS:
+        try:
+            _TEXTS[key] = (repo / path).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            _TEXTS[key] = ""
+    return _TEXTS[key]
 
 
 def _entry_findings(
@@ -331,7 +409,6 @@ def _entry_findings(
 ) -> list[str]:
     """Every defect of one binding line's entries: shape, kind, tracked path, defined name."""
     findings: list[str] = []
-    texts: dict[str, str] = {}
     if RECORDS in entries and len(entries) > 1:
         findings.append(f"{where}: {clause_id} `{RECORDS}` must be the only entry")
     if len(set(entries)) != len(entries):
@@ -347,19 +424,15 @@ def _entry_findings(
         if path not in tracked:
             findings.append(f"{where}: {clause_id} binds {path}, which is not a tracked file")
             continue
-        if not bindable(path):
+        text = read_tracked(repo, path)
+        if not bindable(path, text):
             findings.append(
                 f"{where}: {clause_id} binds {path}, which is not a test file or a script"
             )
             continue
         if name is None:
             continue
-        if path not in texts:
-            try:
-                texts[path] = (repo / path).read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                texts[path] = ""
-        if not defines(path, texts[path], name):
+        if not defines(path, text, name):
             findings.append(f"{where}: {clause_id} names `{name}`, which {path} does not define")
     return findings
 

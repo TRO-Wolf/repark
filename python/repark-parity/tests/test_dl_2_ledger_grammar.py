@@ -98,7 +98,7 @@ def repo(tmp_path: Path) -> Path:
         rows = "".join(f"| C-{n:03d} | legacy | — | PROVEN | x |\n" for n in range(1, ceiling + 1))
         _write(tmp_path, f"{_STAGING}/{name}", "# legacy\n\n" + rows)
     _write(tmp_path, _LEDGER, _ROWS)
-    _write(tmp_path, _TEST, f"// pins: {_UNIT}/C-001, C-002\nfn demo() {{}}\n")
+    _write(tmp_path, _TEST, f"// pins: {_UNIT}/C-001, C-002\n#[test]\nfn demo() {{}}\n")
     return tmp_path
 
 
@@ -136,7 +136,7 @@ def test_row_without_evidence_goes_red(repo: Path) -> None:
 
 def test_unpinned_proven_clause_and_dead_citation_go_red(repo: Path) -> None:
     # pins: dl-2-ledger-grammar-charter/C-003
-    _write(repo, _TEST, f"// pins: {_UNIT}/C-001, C-099\n")
+    _write(repo, _TEST, f"// pins: {_UNIT}/C-001, C-099\n#[test]\nfn demo() {{}}\n")
     result = _run(repo)
     assert result.returncode == 1
     assert f"`pins: {_UNIT}/C-099` names no clause in any ledger" in result.stderr
@@ -207,7 +207,10 @@ def test_archived_and_completed_clauses_can_be_cited(repo: Path) -> None:
     )
     old, done = "old-unit", "done-unit"  # built, not literal: the real tree must not see these
     _write(
-        repo, _TEST, f"// pins: {_UNIT}/C-001, C-002\n// pins: {old}/C-001\n// pins: {done}/C-001\n"
+        repo,
+        _TEST,
+        f"// pins: {_UNIT}/C-001, C-002\n// pins: {old}/C-001\n// pins: {done}/C-001\n"
+        "#[test]\nfn demo() {}\n",
     )
     assert _run(repo).returncode == 0
 
@@ -215,7 +218,7 @@ def test_archived_and_completed_clauses_can_be_cited(repo: Path) -> None:
 def test_attestation_required_once_no_clause_is_open(repo: Path) -> None:
     # pins: dl-2-ledger-grammar-charter/C-004
     converged = _ROWS.replace("| OPEN | waiting on the ceiling |", "| PROVEN | `pins.rs` |")
-    _write(repo, _TEST, f"// pins: {_UNIT}/C-001, C-002, C-003\n")
+    _write(repo, _TEST, f"// pins: {_UNIT}/C-001, C-002, C-003\n#[test]\nfn demo() {{}}\n")
     _write(repo, _LEDGER, converged)
     result = _run(repo)
     assert result.returncode == 1

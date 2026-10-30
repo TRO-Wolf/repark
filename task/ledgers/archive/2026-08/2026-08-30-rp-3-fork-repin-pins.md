@@ -7,7 +7,7 @@ C-004: crates/repark-spark/src/tests/v3_cow.rs, crates/repark-spark/src/tests/v3
 C-005: crates/repark-spark/src/tests/call_v3.rs
 C-006: python/repark/tests/perf/test_mw7_scale_smoke.py
 C-007: crates/repark-spark/src/tests/call_register.rs, crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/iceberg/test_v3e3_fixtures.py
-C-008: crates/repark-spark/src/tests/call_register.rs
-C-009: python/repark/tests/iceberg/test_rp3_c009_write_default.py
+C-008: crates/repark-spark/src/tests/call_register.rs::call_register_table_of_hadoop_named_metadata_writes_name_the_convention, crates/repark-spark/src/tests/call_register.rs::call_register_table_on_s3_tables_names_the_dated_service_gap
+C-009: python/repark/tests/iceberg/test_rp3_c009_write_default.py::test_checked_in_spark_fixtures_are_byte_flat, python/repark/tests/iceberg/test_rp3_c009_write_default.py::test_engine_sources_do_not_set_write_default
 C-010: python/repark/tests/iceberg/test_rp3_c009_write_default.py
 C-011: crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/iceberg/test_rp3_c009_write_default.py, python/repark/tests/iceberg/test_v3_live_oracle.py, python/repark/tests/iceberg/test_v3e3_fixtures.py, python/repark/tests/iceberg/test_v3e4_refs_time_travel.py

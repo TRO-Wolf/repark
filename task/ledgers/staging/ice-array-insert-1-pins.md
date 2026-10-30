@@ -2,11 +2,11 @@
 
 C-001: python/repark/tests/writes/test_ice_array_insert_1.py
 C-002: python/repark/tests/writes/test_ice_array_insert_1.py
-C-003: python/repark/tests/writes/test_ice_array_insert_1.py
+C-003: python/repark/tests/writes/test_ice_array_insert_1.py::test_cell_matches_spark
 C-004: python/repark/tests/writes/test_ice_array_insert_1.py
 C-005: python/repark/tests/writes/test_ice_array_insert_1.py
 C-006: python/repark/tests/writes/test_ice_array_insert_1.py
-C-007: python/repark/tests/writes/test_ice_array_insert_1.py
+C-007: python/repark/tests/writes/test_ice_array_insert_1.py::test_live_spark_reads_repark_table
 C-008: python/repark/tests/writes/test_ice_array_insert_1.py
 C-009: none (records)
 C-010: none (records)

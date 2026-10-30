@@ -1,32 +1,32 @@
 # ice-catalog-session-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-002: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-003: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
+C-001: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_two_part_sets_catalog_and_namespace
+C-002: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_catalog_only_clears_v2_namespace_to_empty, crates/repark-spark/src/tests/use_ddl.rs::use_catalog_onto_session_catalog_restores_default, crates/repark-spark/src/tests/use_ddl.rs::use_self_catalog_keeps_namespace
+C-003: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_one_part_namespace_in_current_catalog, crates/repark-spark/src/tests/use_ddl.rs::use_one_part_prefers_catalog_over_namespace
 C-004: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-005: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-006: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-007: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-008: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-009: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-010: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-011: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE
+C-005: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_two_part_missing_namespace_names_both_parts, crates/repark-spark/src/tests/use_ddl.rs::use_two_part_unknown_first_names_current_and_both
+C-006: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_database_spelling_is_namespace_only
+C-007: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_catalog_spelling_is_a_parse_refusal
+C-008: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_returns_no_rows
+C-009: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::use_default_reaches_the_use_arm
+C-010: crates/repark-spark/src/tests/use_ddl.rs::complete_name_bare_table_under_empty_namespace_is_not_found, crates/repark-spark/src/tests/use_ddl.rs::complete_name_expands_one_and_two_part_names, crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
+C-011: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE, python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_answer
 C-012: none (records)
 C-013: none (records)
 C-014: none (records)
-C-015: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-016: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, python/repark/tests/session/test_catalog_surface.py
-C-017: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
-C-018: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, python/repark/tests/session/test_show_namespaces.py
-C-019: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
+C-015: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::show_catalogs_like_filters, crates/repark-spark/src/tests/use_ddl.rs::show_catalogs_lists_registered_sorted_with_session_catalog
+C-016: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::show_tables_empty_ambient_scope_is_empty, crates/repark-spark/src/tests/use_ddl.rs::show_tables_like_and_in_forms, crates/repark-spark/src/tests/use_ddl.rs::show_tables_lists_current_namespace_after_use, crates/repark-spark/src/tests/use_ddl.rs::show_tables_missing_explicit_namespace_refuses, python/repark/tests/session/test_catalog_surface.py
+C-017: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::show_columns_answers_declaration_order, crates/repark-spark/src/tests/use_ddl.rs::show_columns_like_is_a_parse_refusal, crates/repark-spark/src/tests/use_ddl.rs::show_columns_missing_table_is_not_found
+C-018: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::show_namespaces_bare_lists_current_catalog, python/repark/tests/session/test_show_namespaces.py
+C-019: crates/repark-spark/src/tests/use_ddl.rs::refresh_missing_table_is_not_found, crates/repark-spark/src/tests/use_ddl.rs::refresh_parse_accepts_table_and_path_forms_only, crates/repark-spark/src/tests/use_ddl.rs::refresh_path_is_ok, crates/repark-spark/src/tests/use_ddl.rs::refresh_table_rebuilds_provider_and_answers_empty, crates/repark-spark/src/tests/use_ddl.rs::refresh_table_without_table_keyword_ok, crates/repark-spark/src/tests/use_ddl.rs::refresh_temp_view_is_ok, crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
 C-020: none (records)
 C-021: none (records)
-C-022: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, scripts/check_rust_file_size.py
-C-023: crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
+C-022: crates/repark-spark/src/tests/use_ddl.rs::alter_source_and_rename_dest_complete_short_names, crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace, crates/repark-spark/src/tests/use_ddl.rs::rename_two_part_dest_anchors_on_the_source_catalog, scripts/check_rust_file_size.py
+C-023: crates/repark-spark/src/tests/use_ddl.rs::call_two_part_resolves_current_catalog, crates/repark-spark/src/tests/use_ddl.rs::rename_three_part_dest_reads_the_catalog_as_a_namespace
 C-024: none (records)
 C-025: none (records)
 C-026: none (records)
 C-027: none (records)
 C-028: none (records)
-C-029: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE
+C-029: python/repark/tests/sql/test_spark_sql_grammar_1.py::Q14_REFUSING_BARE, python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_answer, python/repark/tests/sql/test_spark_sql_grammar_1.py::test_q14_session_names_sql_divergence
 C-030: python/repark-parity/tests/test_cap_1_source_file_line_cap.py

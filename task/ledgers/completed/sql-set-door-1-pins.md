@@ -4,7 +4,7 @@ C-001: none (records)
 C-002: none (records)
 C-003: none (records)
 C-004: none (records)
-C-005: python/dbt-repark/tests/test_statement_surface.py
+C-005: python/dbt-repark/tests/test_statement_surface.py::_refused, python/dbt-repark/tests/test_statement_surface.py::_served
 C-006: none (records)
 C-007: none (records)
 C-008: none (records)

@@ -1,25 +1,25 @@
 # u11-edge-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-002: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-003: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-004: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-005: crates/repark-spark/src/tests/metadata_columns_reserved.rs::every_served_metadata_name_collision_refuses, crates/repark-spark/src/tests/metadata_columns_reserved.rs::parquet_files_under, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_name_collision_in_a_join, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_name_near_misses_still_answer, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_word_outside_a_user_column_read_answers, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_word_positions_follow_spark, crates/repark-spark/src/tests/metadata_columns_reserved.rs::user_deleted_column_collision_refuses_like_spark, python/repark/tests/resolution/test_u11_edge_case_select.py
-C-006: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-007: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-008: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-009: python/repark/tests/iceberg/test_u11_edge_partition_field.py
-C-010: python/repark/tests/iceberg/test_u11_edge_partition_field.py
-C-011: python/repark/tests/iceberg/test_u11_edge_partition_field.py
-C-012: crates/repark-iceberg/src/write/partition_spec/tests.rs::replace_by_transform_wrong_case_source_refuses_like_spark, crates/repark-iceberg/src/write/partition_spec/tests.rs::replace_field_wrong_case_source_refuses_like_spark, python/repark/tests/iceberg/test_u11_edge_partition_field.py
-C-013: python/repark/tests/iceberg/test_u11_edge_partition_field.py
-C-014: python/repark/tests/iceberg/test_u11_edge_partition_field.py
-C-015: python/repark/tests/resolution/test_u11_edge_case_select.py
+C-001: python/repark/tests/resolution/test_u11_edge_case_select.py::test_select_keeps_written_spelling
+C-002: python/repark/tests/resolution/test_u11_edge_case_select.py::test_select_mixed_case_single_column
+C-003: python/repark/tests/resolution/test_u11_edge_case_select.py::test_select_alias_wins
+C-004: python/repark/tests/resolution/test_u11_edge_case_select.py::test_select_star_keeps_stored_names
+C-005: crates/repark-spark/src/tests/metadata_columns_reserved.rs::every_served_metadata_name_collision_refuses, crates/repark-spark/src/tests/metadata_columns_reserved.rs::parquet_files_under, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_name_collision_in_a_join, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_name_near_misses_still_answer, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_word_outside_a_user_column_read_answers, crates/repark-spark/src/tests/metadata_columns_reserved.rs::reserved_word_positions_follow_spark, crates/repark-spark/src/tests/metadata_columns_reserved.rs::user_deleted_column_collision_refuses_like_spark, python/repark/tests/resolution/test_u11_edge_case_select.py::test_select_qualified_and_struct_field
+C-006: python/repark/tests/resolution/test_u11_edge_case_select.py::test_select_group_by_and_union
+C-007: python/repark/tests/resolution/test_u11_edge_case_select.py::test_case_sensitive_select_refuses
+C-008: python/repark/tests/resolution/test_u11_edge_case_select.py::test_dataframe_select_keeps_spelling
+C-009: python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_add_partition_field_wrong_case_refuses
+C-010: python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_add_partition_field_bucket_wrong_case_refuses
+C-011: python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_drop_partition_field_missing_refuses
+C-012: crates/repark-iceberg/src/write/partition_spec/tests.rs::replace_by_transform_wrong_case_source_refuses_like_spark, crates/repark-iceberg/src/write/partition_spec/tests.rs::replace_field_wrong_case_source_refuses_like_spark, python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_replace_partition_field_wrong_case_refuses
+C-013: python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_partition_field_case_rules_ignore_case_sensitive_conf
+C-014: python/repark/tests/iceberg/test_u11_edge_partition_field.py::test_write_ordered_by_accepts_any_case
+C-015: python/repark/tests/resolution/test_u11_edge_case_select.py::test_dataframe_door_binds_spelled_sql_columns
 C-016: none (records)
-C-017: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-018: python/repark/tests/resolution/test_u11_edge_case_select.py
-C-019: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_u11_edge_case_select.py, scripts/check_rust_file_size.py
-C-020: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_u11_edge_case_select.py, scripts/check_rust_file_size.py
+C-017: python/repark/tests/resolution/test_u11_edge_case_select.py::test_drop_binds_spelled_names
+C-018: python/repark/tests/resolution/test_u11_edge_case_select.py::test_qualified_references_bind_spelled_names
+C-019: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_u11_edge_case_select.py::test_join_on_a_spelled_key, scripts/check_rust_file_size.py
+C-020: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/resolution/test_u11_edge_case_select.py::test_union_by_name_matches_names_case_insensitively, scripts/check_rust_file_size.py
 C-021: crates/repark-iceberg/src/write/partition_spec/tests.rs::struct_text_renders_docs_and_decimal_like_java
 C-022: python/repark/tests/resolution/test_u11_edge_case_select.py::test_qualified_drop_binds_through_its_relation, scripts/check_rust_file_size.py
 C-023: python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_column_entry_point_refuses_the_ambiguity_like_spark, python/repark/tests/resolution/test_u11_edge_case_select.py::test_bare_reference_matching_two_fields_is_ambiguous, scripts/check_lib_py.py

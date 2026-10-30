@@ -9,14 +9,14 @@ C-006: crates/repark-spark/src/tests/spark_dialect.rs, python/repark/tests/funct
 C-007: crates/repark-spark/src/tests/spark_dialect.rs
 C-008: none (records)
 C-009: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_rust_file_size.py
-C-010: crates/repark-spark/src/tests/spark_dialect.rs, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_rust_file_size.py
-C-011: crates/repark-spark/src/tests/spark_dialect.rs
-C-012: crates/repark-spark/src/tests/spark_dialect.rs
+C-010: crates/repark-spark/src/tests/spark_dialect.rs::d_suffix_is_double, python/repark-parity/tests/test_cap_1_source_file_line_cap.py, scripts/check_rust_file_size.py
+C-011: crates/repark-spark/src/tests/spark_dialect.rs::bd_literals_take_precision_from_digits
+C-012: crates/repark-spark/src/tests/spark_dialect.rs::typed_numeric_literals_are_non_null
 C-013: crates/repark-spark/src/tests/spark_dialect.rs
 C-014: crates/repark-spark/src/tests/spark_dialect.rs
 C-015: crates/repark-spark/src/tests/spark_dialect.rs
-C-016: crates/repark-spark/src/tests/spark_dialect.rs
-C-017: crates/repark-spark/src/tests/common.rs::setup, crates/repark-spark/src/tests/common.rs::setup_v3_at, crates/repark-spark/src/tests/lambda_door.rs
+C-016: crates/repark-spark/src/tests/spark_dialect.rs::chained_struct_field_access_on_call_result
+C-017: crates/repark-spark/src/tests/lambda_door.rs::hof_ctx
 C-018: python/repark/tests/dataframe/test_filter_predicate_rewrite.py::test_explicitly_double_quoted_span_is_a_string_literal
 C-019: none (records)
 C-020: none (records)

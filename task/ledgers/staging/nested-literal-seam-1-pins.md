@@ -7,7 +7,7 @@ C-004: crates/repark-functions/src/tests/zone_seam_pairs.rs::a_container_cast_of
 C-005: none (records)
 C-006: none (records)
 C-007: none (records)
-C-008: python/repark/tests/timestamps/test_write_spine_1_doors.py::test_fixture_cells_are_the_census, python/repark/tests/timestamps/test_write_spine_1_doors.py::test_head_replay_moves_exactly_the_nested_literal_seam_1_cells, python/repark/tests/timestamps/test_write_spine_1_enumeration.py::test_the_spelling_table_is_exactly_the_forty_three_ruled_names
+C-008: python/repark/tests/timestamps/test_write_spine_1_doors.py::cells, python/repark/tests/timestamps/test_write_spine_1_doors.py::test_fixture_cells_are_the_census, python/repark/tests/timestamps/test_write_spine_1_doors.py::test_head_replay_moves_exactly_the_nested_literal_seam_1_cells, python/repark/tests/timestamps/test_write_spine_1_enumeration.py::test_the_spelling_table_is_exactly_the_forty_three_ruled_names
 C-009: python/repark/tests/timestamps/test_write_spine_1_doors.py::test_fixture_cells_are_the_census, python/repark/tests/timestamps/test_write_spine_1_doors.py::test_head_replay_moves_exactly_the_nested_literal_seam_1_cells
 C-010: python/repark/tests/timestamps/test_write_spine_1_doors.py::test_fixture_cells_are_the_census, python/repark/tests/timestamps/test_write_spine_1_doors.py::test_head_replay_moves_exactly_the_nested_literal_seam_1_cells
 C-011: none (records)

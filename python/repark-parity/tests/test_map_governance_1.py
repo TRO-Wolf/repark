@@ -66,7 +66,7 @@ def repo(tmp_path: Path) -> Path:
         rows = "".join(f"| C-{n:03d} | legacy | x | PROVEN | x |\n" for n in range(1, ceiling + 1))
         _write(tmp_path, f"{_STAGING}/{name}", "# legacy\n\n" + rows)
     _write(tmp_path, _LEDGER, _ROWS)
-    _write(tmp_path, _TEST, "fn demo_holds() {}\nfn other_holds() {}\n")
+    _write(tmp_path, _TEST, "#[test]\nfn demo_holds() {}\nfn other_holds() {}\n")
     _write(tmp_path, _SIDECAR, _SIDECAR_TEXT)
     return tmp_path
 
@@ -91,7 +91,7 @@ def test_unbound_proven_clause_goes_red(repo: Path) -> None:
 
 
 def test_name_missing_from_the_file_goes_red(repo: Path) -> None:
-    _write(repo, _TEST, "fn demo_holds() {}\nfn other_holds_renamed() {}\n")
+    _write(repo, _TEST, "#[test]\nfn demo_holds() {}\nfn other_holds_renamed() {}\n")
     result = _grammar(repo)
     assert result.returncode == 1
     assert f"{_SIDECAR}:4: C-002 names `other_holds`, which {_TEST} does not define" in (
@@ -250,7 +250,7 @@ def test_floor_keeps_its_meaning(repo: Path) -> None:
 
 def test_a_citation_in_source_still_counts(repo: Path) -> None:
     _write(repo, _SIDECAR, _HEADER + f"C-001: {_TEST}::demo_holds\n")
-    _write(repo, _TEST, f"// pins: {_UNIT}/C-002\nfn demo_holds() {{}}\n")
+    _write(repo, _TEST, f"// pins: {_UNIT}/C-002\n#[test]\nfn demo_holds() {{}}\n")
     result = _grammar(repo)
     assert result.returncode == 0, result.stderr
 
@@ -301,7 +301,7 @@ def _migrate(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
 @pytest.fixture
 def mapped(repo: Path) -> Path:
     (repo / _SIDECAR).unlink()
-    _write(repo, "crates/demo/tests/other.rs", "fn other_holds() {}\n")
+    _write(repo, "crates/demo/tests/other.rs", "#[test]\nfn other_holds() {}\n")
     _write(repo, _MAP, _MAP_TEXT)
     return repo
 
@@ -369,7 +369,7 @@ def test_migration_refuses_an_unplaceable_citation(mapped: Path) -> None:
 
 def test_migration_binds_a_source_citation_and_leaves_it(mapped: Path) -> None:
     (mapped / _MAP).unlink()
-    _write(mapped, _TEST, f"// pins: {_UNIT}/C-001, C-002\nfn demo_holds() {{}}\n")
+    _write(mapped, _TEST, f"// pins: {_UNIT}/C-001, C-002\n#[test]\nfn demo_holds() {{}}\n")
     assert _migrate(mapped).returncode == 0
     assert (mapped / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
         f"C-001: {_TEST}",
@@ -538,7 +538,7 @@ def test_lockstep_branch_mode_warns_with_the_advisory_note(tmp_path: Path) -> No
 def test_migration_binds_a_defined_name_and_leaves_a_self_bound_map_path_only(
     mapped: Path,
 ) -> None:
-    _write(mapped, _TEST, "fn demo_holds() {}\nfn other_holds() { helper_call(); }\n")
+    _write(mapped, _TEST, "#[test]\nfn demo_holds() {}\nfn other_holds() { helper_call(); }\n")
     _write(
         mapped,
         _MAP,
@@ -603,7 +603,9 @@ def test_migration_never_crosses_an_entry_into_a_neighbour(tmp_path: Path) -> No
             "",
         ]
     )
-    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn a() {}\n", moved: "fn b() {}\n"})
+    repo = _scratch_map_repo(
+        tmp_path, text, {_TEST: "#[test]\nfn a() {}\n", moved: "#[test]\nfn b() {}\n"}
+    )
     result = _migrate(repo)
     assert result.returncode == 0, result.stderr
     assert "map citations resolved by basename: 1" in result.stdout
@@ -615,7 +617,7 @@ def test_migration_never_crosses_an_entry_into_a_neighbour(tmp_path: Path) -> No
 
 def test_migration_stops_on_an_unresolvable_basename_until_bound_by_hand(tmp_path: Path) -> None:
     text = f"# map\n\nGAMMA-1 (2026-10-03): `ghost_test.rs` pins it. pins: {_UNIT}/C-001\n"
-    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn demo_holds() {}\n"})
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "#[test]\nfn demo_holds() {}\n"})
     stopped = _migrate(repo)
     assert stopped.returncode == 1
     assert f"{_MAP}:3: pins: {_UNIT}/C-001 names ghost_test.rs (0 matches here)" in stopped.stderr
@@ -653,7 +655,7 @@ def test_migration_cut_keeps_indentation_and_drops_stray_punctuation(tmp_path: P
             "",
         ]
     )
-    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn a() {}\n"})
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "#[test]\nfn a() {}\n"})
     assert _migrate(repo).returncode == 0
     lines = (repo / _MAP).read_text(encoding="utf-8").splitlines()
     assert lines[3] == "  a literal follows."
@@ -715,7 +717,9 @@ def test_migration_keeps_an_indented_dated_paragraph_with_its_item_only_by_a_def
             "",
         ]
     )
-    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn demo_holds() {}\nfn other_holds() {}\n"})
+    repo = _scratch_map_repo(
+        tmp_path, text, {_TEST: "#[test]\nfn demo_holds() {}\nfn other_holds() {}\n"}
+    )
     result = _migrate(repo)
     assert result.returncode == 0, result.stderr
     assert "map citations in an indented dated paragraph: 2" in result.stdout
@@ -730,7 +734,11 @@ def test_a_definition_inside_a_string_or_comment_does_not_count(repo: Path) -> N
     script = "crates/demo/tests/test_kinds.py"
     _write(repo, script, 'MESSAGE = "class Column is missing"\n\n\ndef test_real():\n    pass\n')
     rust = "crates/demo/tests/strings.rs"
-    _write(repo, rust, 'const S: &str = "fn ghost() {}";\n// fn commented() {}\nfn real() {}\n')
+    _write(
+        repo,
+        rust,
+        'const S: &str = "#[test]\nfn ghost() {}";\n// fn commented() {}\n#[test]\nfn real() {}\n',
+    )
     for path, name in ((script, "Column"), (rust, "ghost"), (rust, "commented")):
         _write(repo, _SIDECAR, _HEADER + f"C-001: {path}::{name}\nC-002: {_TEST}\n")
         result = _grammar(repo)
@@ -769,7 +777,7 @@ def test_migration_binds_the_test_that_reads_a_fixture_else_records(tmp_path: Pa
             "",
         ]
     )
-    files = {fixture: "{}\n", reader: 'fn load() { include_str!("oracle.json"); }\n'}
+    files = {fixture: "{}\n", reader: '#[test]\nfn load() { include_str!("oracle.json"); }\n'}
     repo = _scratch_map_repo(tmp_path, text, files)
     assert _migrate(repo).returncode == 0
     assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
@@ -785,12 +793,12 @@ def test_migration_keeps_a_records_line_and_honours_a_disclaimer(tmp_path: Path)
             "",
             "- `pins.rs` — the battery.",
             f"  pins: {_UNIT}/C-001",
-            "  The merge is cited here so the grammar gate counts it; this file pins none.",
+            "  The merge (C-002) is cited here so the grammar gate counts it; this file pins none.",
             f"  pins: {_UNIT}/C-002",
             "",
         ]
     )
-    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn a() {}\n"})
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "#[test]\nfn a() {}\n"})
     _write(repo, _SIDECAR, _HEADER + "C-001: none (records)\n")
     result = _migrate(repo)
     assert result.returncode == 0, result.stderr
@@ -813,7 +821,7 @@ def test_migration_cut_keeps_a_parenthesis_balanced(tmp_path: Path) -> None:
             "",
         ]
     )
-    repo = _scratch_map_repo(tmp_path, text, {_TEST: "fn a() {}\n"})
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "#[test]\nfn a() {}\n"})
     assert _migrate(repo).returncode == 0
     lines = (repo / _MAP).read_text(encoding="utf-8").splitlines()
     assert lines[3] == "  which runs on), `next` follows."
@@ -846,3 +854,74 @@ def test_migration_binds_nothing_to_a_fixture_whose_entry_names_only_its_recorde
     assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
         "C-001: none (records)"
     ]
+
+
+def test_a_disclaimer_unbinds_only_the_clauses_it_names(tmp_path: Path) -> None:
+    text = "\n".join(
+        [
+            "# map",
+            "",
+            "- `pins.rs` — the battery. This file proves C-001 and C-002 only; C-003 is the merge,"
+            " cited here so the grammar gate counts it.",
+            f"  pins: {_UNIT}/C-001, C-002, C-003",
+            f"  pins: {_UNIT}/C-004 (the verification, cited here so the grammar gate counts it)",
+            f"  pins: {_UNIT}/C-005",
+            "",
+        ]
+    )
+    rows = _ROWS + "".join(f"| C-00{n} | More. | A pin. | PROVEN | x |\n" for n in range(4, 6))
+    repo = _scratch_map_repo(tmp_path, text, {_TEST: "#[test]\nfn demo_holds() {}\n"})
+    _write(repo, _LEDGER, rows)
+    result = _migrate(repo)
+    assert result.returncode == 0, result.stderr
+    assert "map citations whose own text disclaims a pin: 2" in result.stdout
+    assert (repo / _SIDECAR).read_text(encoding="utf-8").splitlines()[2:] == [
+        f"C-001: {_TEST}",
+        f"C-002: {_TEST}",
+        "C-003: none (records)",
+        "C-004: none (records)",
+        f"C-005: {_TEST}",
+    ]
+
+
+def test_a_test_placed_helper_without_tests_never_binds(repo: Path) -> None:
+    helper = "crates/demo/tests/oracle_writer.py"
+    _write(repo, helper, "def write():\n    pass\n")
+    rust_helper = "crates/demo/tests/common.rs"
+    _write(repo, rust_helper, "pub fn setup() {}\n")
+    for path, name in ((helper, "write"), (rust_helper, "setup")):
+        _write(repo, _SIDECAR, _HEADER + f"C-001: {path}::{name}\nC-002: {_TEST}\n")
+        result = _grammar(repo)
+        assert result.returncode == 1, path
+        assert f"C-001 binds {path}, which is not a test file or a script" in result.stderr
+    fixture = "crates/demo/tests/conftest.py"
+    _write(repo, fixture, "import pytest\n\n\n@pytest.fixture\ndef table():\n    return 1\n")
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {fixture}::table\nC-002: {_TEST}\n")
+    assert _grammar(repo).returncode == 0
+
+
+def test_shell_and_python_definitions_need_a_real_binding(repo: Path) -> None:
+    script = "scripts/check_demo.sh"
+    body = 'cat <<EOF\nphantom_heredoc() {\nEOF\necho "phantom_quoted() {"\nreal_fn() {\n  :\n}\n'
+    _write(repo, script, body)
+    module = "scripts/demo_registry.py"
+    _write(
+        repo,
+        module,
+        "import os\nREGISTRY = {}\nREGISTRY['phantom'] = 1\nos.x = 1\na, (b, *c) = 1, (2, 3)\n",
+    )
+    cases = (
+        (script, "phantom_heredoc"),
+        (script, "phantom_quoted"),
+        (module, "phantom"),
+        (module, "os"),
+    )
+    for path, name in cases:
+        _write(repo, _SIDECAR, _HEADER + f"C-001: {path}::{name}\nC-002: {_TEST}\n")
+        result = _grammar(repo)
+        assert result.returncode == 1, name
+        assert f"C-001 names `{name}`, which {path} does not define" in result.stderr
+    good = f"{script}::real_fn, {module}::REGISTRY, {module}::a, {module}::b, {module}::c"
+    _write(repo, _SIDECAR, _HEADER + f"C-001: {good}\nC-002: {_TEST}\n")
+    result = _grammar(repo)
+    assert result.returncode == 0, result.stderr

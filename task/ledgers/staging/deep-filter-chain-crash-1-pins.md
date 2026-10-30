@@ -1,10 +1,10 @@
 # deep-filter-chain-crash-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/sql/test_deep_filter_chain_crash_1.py
+C-001: python/repark/tests/sql/test_deep_filter_chain_crash_1.py::test_thousand_filter_chain_answers_on_dataframe_door
 C-002: none (records)
 C-003: none (records)
 C-004: none (records)
-C-005: python/repark/tests/sql/test_deep_subquery_expression_1.py
+C-005: python/repark/tests/sql/test_deep_subquery_expression_1.py::test_thousand_filter_chain_answers_under_subqueries
 C-006: none (records)
 C-007: none (records)
 C-008: none (records)

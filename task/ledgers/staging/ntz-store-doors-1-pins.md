@@ -1,6 +1,6 @@
 # ntz-store-doors-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-spark/src/tests/ntz_store.rs::date_stores_the_session_midnight_through_every_door
+C-001: crates/repark-spark/src/tests/ntz_store.rs::by_name_stores_the_ltz_session_wall, crates/repark-spark/src/tests/ntz_store.rs::column_list_overwrite_stores_the_ltz_session_wall, crates/repark-spark/src/tests/ntz_store.rs::date_stores_the_session_midnight_through_every_door, crates/repark-spark/src/tests/ntz_store.rs::dynamic_overwrite_stores_the_ltz_session_wall, crates/repark-spark/src/tests/ntz_store.rs::overwrite_by_name_stores_the_ltz_session_wall, crates/repark-spark/src/tests/ntz_store.rs::overwrite_partition_stores_the_ltz_session_wall, crates/repark-spark/src/tests/ntz_store.rs::overwrite_stores_the_ltz_session_wall
 C-002: crates/repark-spark/src/tests/ntz_store.rs::date_stores_the_session_midnight_through_every_door
 C-003: crates/repark-spark/src/tests/ntz_store.rs::date_stores_the_session_midnight_through_every_door, crates/repark-sql/tests/ansi_ntz_wall_cast.rs::ansi_merge_into_an_instant_column_keeps_the_utc_reading
 C-004: crates/repark-spark/src/tests/ntz_store.rs::date_stores_the_session_midnight_through_every_door

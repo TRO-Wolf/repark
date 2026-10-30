@@ -1,17 +1,17 @@
 # ice-tsns-frame-door-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
 C-001: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-002: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-003: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-004: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-005: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-006: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-007: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-008: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-009: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-010: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
-C-011: python/repark/tests/io/test_boundary_shapes_parity.py, python/repark/tests/session/test_production_file_size.py, python/repark/tests/timestamps/_ice_tsns_merge_wall_1_doors.py::frame_of, python/repark/tests/timestamps/test_ice_tsns_sql_1.py::write_control
-C-012: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
+C-002: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_nanosecond_column_equals_its_microsecond_twin
+C-003: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_aware_nanosecond_values_equal_the_spark_oracle
+C-004: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_pre_epoch_nanoseconds_floor_as_spark_floors
+C-005: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_declared_timestamp_ntz_over_nanoseconds_answers_microseconds
+C-006: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_declared_timestamp_over_nanoseconds_is_unchanged
+C-007: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_columns_that_are_not_nanosecond_timestamps_are_untouched, python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_nested_arrowdtype_nanoseconds_are_still_carried
+C-008: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_no_warning_is_raised_for_a_nanosecond_frame
+C-009: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_pandas_frame_create_doors_make_microsecond_tables
+C-010: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_polars_nanosecond_column_arrives_as_microseconds
+C-011: python/repark/tests/io/test_boundary_shapes_parity.py, python/repark/tests/session/test_production_file_size.py, python/repark/tests/timestamps/test_ice_tsns_sql_1.py::write_control
+C-012: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py::test_declared_timestamp_over_an_aware_microsecond_column_answers_utc
 C-013: none (records)
 C-014: python/repark/tests/timestamps/test_ice_tsns_frame_door_1.py
 C-015: none (records)

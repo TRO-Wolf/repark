@@ -4,6 +4,6 @@ C-001: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-002: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-003: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-004: scripts/check_example_coverage.py::BACKLOG_BASELINE
-C-005: python/repark/tests/parity/test_examples_functions_b.py, scripts/check_example_coverage.py::BACKLOG_BASELINE
+C-005: python/repark/tests/parity/test_examples_functions_b.py::test_from_xml_refuses, python/repark/tests/parity/test_examples_functions_b.py::test_schema_of_xml_refuses, python/repark/tests/parity/test_examples_functions_b.py::test_udf_factories_answer_typed_wrappers, scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-006: scripts/check_example_coverage.py::BACKLOG_BASELINE
 C-007: scripts/check_example_coverage.py::BACKLOG_BASELINE

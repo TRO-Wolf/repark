@@ -13,7 +13,7 @@ C-010: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-011: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-012: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-013: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
-C-014: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
+C-014: python/repark/tests/writes/test_ice_dyn_overwrite_1.py::dynamic
 C-015: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-016: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-017: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
@@ -21,5 +21,5 @@ C-018: python/repark/tests/writes/test_ice_dyn_overwrite_1.py
 C-019: python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py
 C-020: none (records)
 C-021: none (records)
-C-022: python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py
+C-022: python/repark/tests/writes/test_ice_dyn_overwrite_1_by_name.py::test_unset_restores_static_on_the_live_session
 C-023: none (records)

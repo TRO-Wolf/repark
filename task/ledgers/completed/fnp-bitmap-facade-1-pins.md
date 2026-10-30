@@ -1,20 +1,20 @@
 # fnp-bitmap-facade-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
+C-001: python/repark/tests/functions/test_fnp_bitmap_facade_1.py::test_names_present_with_pyspark_signature
 C-002: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
-C-003: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
+C-003: python/repark/tests/functions/test_fnp_bitmap_facade_1.py::test_out_of_range_positions_raise_invalid_bitmap_position
 C-004: none (records)
-C-005: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
-C-006: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
-C-007: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
+C-005: python/repark/tests/functions/test_fnp_bitmap_facade_1.py::test_or_and_agg_refuse_non_binary_columns
+C-006: python/repark/tests/functions/test_fnp_bitmap_facade_1.py::test_call_function_construct_over_bit_position_matches_fixture
+C-007: python/repark/tests/functions/test_fnp_bitmap_facade_1.py::test_construct_agg_malformed_string_raises_cast_invalid_input
 C-008: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
-C-009: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
-C-010: python/repark/tests/functions/test_functions_split_identity.py
+C-009: python/repark/tests/functions/test_fnp_bitmap_facade_1.py::test_default_name_matches_fixture_schema
+C-010: python/repark/tests/functions/test_functions_split_identity.py::test_every_all_name_resolves
 C-011: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
-C-012: python/repark/tests/functions/test_fnp_degrees_rust_1.py
-C-013: python/repark/tests/functions/test_fnp_degrees_rust_1.py
-C-014: python/repark/tests/functions/test_fnp_degrees_rust_1.py
+C-012: python/repark/tests/functions/test_fnp_degrees_rust_1.py::test_answer_matches_oracle
+C-013: python/repark/tests/functions/test_fnp_degrees_rust_1.py::test_refusal_matches_oracle
+C-014: python/repark/tests/functions/test_fnp_degrees_rust_1.py::test_malformed_string_raises_cast_invalid_input
 C-015: python/repark/tests/functions/test_fnp_bitmap_facade_1.py
-C-016: python/repark/tests/functions/test_fnp_degrees_rust_1.py
-C-017: python/repark/tests/functions/test_fnp_degrees_rust_1.py
+C-016: python/repark/tests/functions/test_fnp_degrees_rust_1.py::test_wrapper_builds_without_cast_node
+C-017: python/repark/tests/functions/test_fnp_degrees_rust_1.py::test_degi_matches_oracle
 C-018: python/repark/tests/functions/test_fnp_degrees_rust_1.py

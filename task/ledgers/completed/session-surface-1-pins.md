@@ -4,9 +4,9 @@ C-001: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/rep
 C-002: python/repark/tests/session/test_session_surface_1.py
 C-003: python/repark/tests/session/test_session_surface_1.py
 C-004: python/repark/tests/session/test_session_surface_1.py
-C-005: python/repark/tests/session/test_session_surface_1.py
+C-005: python/repark/tests/session/test_session_surface_1.py::test_add_artifact_pyfile_lands_on_sys_path
 C-006: python/repark/tests/session/test_session_surface_1.py
 C-007: python/repark/tests/session/test_session_surface_1.py::test_tvf_json_tuple_answers_today
 C-008: python/repark/tests/session/test_session_surface_1.py
 C-009: python/repark/tests/session/test_session_surface_1.py
-C-010: python/repark/tests/session/test_session_surface_1.py::test_tvf_json_tuple_answers_today
+C-010: python/repark/tests/session/test_session_surface_1.py::test_add_artifact_pyfile_without_path_raises_type_error, python/repark/tests/session/test_session_surface_1.py::test_artifact_dir_dies_with_the_session, python/repark/tests/session/test_session_surface_1.py::test_interrupt_operation_java_long_validation, python/repark/tests/session/test_session_surface_1.py::test_interrupt_operation_non_str, python/repark/tests/session/test_session_surface_1.py::test_profile_render_type_check_precedes_the_refusal, python/repark/tests/session/test_session_surface_1.py::test_tvf_json_tuple_answers_today, python/repark/tests/session/test_session_surface_1.py::test_tvf_json_tuple_field_columns

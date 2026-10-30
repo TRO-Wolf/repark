@@ -7,7 +7,7 @@ C-004: python/repark/tests/iceberg/test_ice_branch_ops_1.py
 C-005: python/repark/tests/iceberg/test_ice_branch_ops_1.py
 C-006: python/repark/tests/iceberg/test_ice_branch_ops_1.py
 C-007: python/repark/tests/iceberg/test_ice_branch_ops_1.py
-C-008: python/repark/tests/iceberg/test_ice_branch_ops_1.py
+C-008: python/repark/tests/iceberg/test_ice_branch_ops_1.py::test_live_branch_ops_cross_reads
 C-009: none (records)
 C-010: none (records)
 C-011: none (records)

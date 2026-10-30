@@ -1,5 +1,5 @@
 # rp-56 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: crates/repark-spark/src/tests/case_twin_columns.rs
-C-002: python/repark/tests/iceberg/test_ice_case_twin_1.py
-C-003: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/iceberg/test_ice_case_twin_1.py
+C-001: crates/repark-spark/src/tests/case_twin_columns.rs::case_twin_bare_name_select_refuses_under_case_sensitive_false, crates/repark-spark/src/tests/case_twin_columns.rs::case_twin_create_reads_both_columns_under_case_sensitive_true, crates/repark-spark/src/tests/case_twin_columns.rs::case_twin_ctas_reads_both_values_under_case_sensitive_true
+C-002: python/repark/tests/iceberg/test_ice_case_twin_1.py::test_branch_read_refuses_and_time_travel_answers, python/repark/tests/iceberg/test_ice_case_twin_1.py::test_derived_cte_and_join_twin_stars_answer, python/repark/tests/iceberg/test_ice_case_twin_1.py::test_exists_star_refuses_on_twin_table, python/repark/tests/iceberg/test_ice_case_twin_1.py::test_group_by_window_refuses_on_twin_table
+C-003: python/repark-parity/tests/test_cap_1_source_file_line_cap.py, python/repark/tests/iceberg/test_ice_case_twin_1.py::test_nested_drop_if_exists_drops_and_add_answers_under_true, python/repark/tests/iceberg/test_ice_case_twin_1.py::test_rewrite_where_refuses_under_false_and_answers_under_true

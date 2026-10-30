@@ -1,7 +1,7 @@
 # cross-read-gate-class-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
 
-C-001: python/repark-parity/tests/test_cross_read_gate.py
-C-002: python/repark-parity/tests/test_cross_read_gate.py
-C-003: python/repark-parity/tests/test_cross_read_gate.py
+C-001: python/repark-parity/tests/test_cross_read_gate.py::test_condition_only_on_the_second_line_is_rejected, python/repark-parity/tests/test_cross_read_gate.py::test_multiline_message_matching_on_its_first_line_is_accepted, python/repark-parity/tests/test_cross_read_gate.py::test_timestamp_ns_condition_on_a_nanosecond_table_is_accepted, python/repark-parity/tests/test_cross_read_gate.py::test_timestamptz_ns_condition_on_a_nanosecond_table_is_accepted, python/repark-parity/tests/test_cross_read_gate.py::test_variant_condition_on_a_nanosecond_table_is_rejected
+C-002: python/repark-parity/tests/test_cross_read_gate.py::test_authorization_failure_on_a_nanosecond_table_is_rejected, python/repark-parity/tests/test_cross_read_gate.py::test_connection_failure_on_a_microsecond_table_is_rejected, python/repark-parity/tests/test_cross_read_gate.py::test_connection_failure_on_a_nanosecond_table_is_rejected, python/repark-parity/tests/test_cross_read_gate.py::test_unsupported_condition_text_on_a_microsecond_table_is_rejected
+C-003: python/repark-parity/tests/test_cross_read_gate.py::test_different_pair_is_rejected, python/repark-parity/tests/test_cross_read_gate.py::test_equal_pair_is_accepted
 C-004: python/repark-parity/tests/test_cross_read_gate.py
 C-005: python/repark-parity/tests/test_cross_read_gate.py
