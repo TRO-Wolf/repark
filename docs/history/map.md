@@ -34,6 +34,7 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 - [dl/](dl/map.md) — **Document lifecycle (DL)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
 - [sem/](sem/map.md) — **The Spark semantics fixes (SEM)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
 - [dml/](dml/map.md) — **Iceberg DML remainder (v0.6)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
+- [facade-tests/](facade-tests/map.md) — **facade-tests map pilot**: `python/repark/tests/map.md` as it stood at main `7882504c`, archived 2026-10-30 when MAP-TESTS-PILOT-1 rewrote it as a file index.
 
 ## I want to...
 

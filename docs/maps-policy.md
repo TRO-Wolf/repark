@@ -63,3 +63,4 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 - The owner-ruling adjustment names the pin sidecar as the binding's home. The owner amended it on 2026-10-30, and the orchestrator committed the amendment in `AGENTS.md`, `CLAUDE.md` and `scripts/check_owner_ruling.py` together as `279bddb6` (ledger C-011).
 - Citation text left in map prose is inert (ledger C-012). The gate no longer reads it; each such citation binds through its sidecar.
+- Pilot (2026-10-30, MAP-TESTS-PILOT-1): `python/repark/tests/map.md` from 10,116 lines / 883,657 bytes to 103 lines / 8,808 bytes; its history at `docs/history/facade-tests/`; 0 files whose only route was the root map.
