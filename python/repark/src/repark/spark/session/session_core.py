@@ -12,7 +12,7 @@ import repark.spark.session.sql_run as _sql_run
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
-from repark.spark.session.catalog_resolution import _refused_spelling, _temp_view_home_ref
+from repark.spark.session.catalog_resolution import _refused_spelling, _segment_temp_view_home_ref
 from repark.spark.session.session_configuration import (
     fold_config_file_into_builder,
     resolve_batch_size,
@@ -195,7 +195,7 @@ class ReparkSession:
         """
         state = self._catalog_state()
         inner = self._ensure_alive()
-        probe = functools.partial(_temp_view_home_ref, inner) if prefer_temp_view else None
+        probe = functools.partial(_segment_temp_view_home_ref, inner) if prefer_temp_view else None
 
         return resolve_table_name(
             table_name,
@@ -429,7 +429,7 @@ class ReparkSession:
             return None
         head = raw_table.split(".", 1)[0].strip()
         if head.upper() in {"NAMESPACE", "DATABASE", "SCHEMA"} and (
-            "." in raw_table or _temp_view_home_ref(self._ensure_alive(), head) is None
+            "." in raw_table or _segment_temp_view_home_ref(self._ensure_alive(), head) is None
         ):
             return None
         try:

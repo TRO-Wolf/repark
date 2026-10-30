@@ -35,6 +35,7 @@ from repark.spark.catalog import (
 )
 from repark.spark.session.catalog_resolution import (
     _join_table_identifier_segments,
+    _quoted_segment,
     _temp_view_home_ref,
 )
 from repark.spark.session.sql_relations import _sql_table_ref
@@ -100,12 +101,8 @@ def _raise_table_or_view_already_exists(resolved: str) -> NoReturn:
 def _resolve_table_identity(session: ReparkSession, table_name: str) -> tuple[str, str]:
     resolved = session.resolve_table_name(table_name, prefer_temp_view=True)
     parts = _split_identifier(table_name)
-    if len(parts) == 1:
-        if table_name.strip().startswith(("`", '"')):
-            if parts[0] in set(session.list_temp_view_names()):
-                return resolved, "view"
-        elif _temp_view_home_ref(session._ensure_alive(), parts[0]) is not None:
-            return resolved, "view"
+    if len(parts) == 1 and _temp_view_home_ref(session._ensure_alive(), _quoted_segment(parts[0])):
+        return resolved, "view"
     return resolved, "table"
 
 
@@ -306,9 +303,24 @@ def _note_view_registered(inner: Any, token: dict[str, Any], name: str, registra
     registrations[_join_table_identifier_segments(list(home))] = registration
 
 
+def _refuse_unparseable_view_name(name: str) -> None:
+    stripped = name.strip()
+    if stripped.startswith(("`", '"')) or "." in stripped:
+        return
+    if re.fullmatch(r"[A-Za-z0-9_]+", stripped) is not None:
+        return
+    _raise_analysis(
+        f"Invalid view name: {name}.",
+        "_LEGACY_ERROR_TEMP_1321",
+        message_parameters={"viewName": name},
+    )
+
+
 def _register_temp_view(frame: DataFrame, name: str, *, rename_fields: bool = True) -> None:
     """Register a temp view and note its object identity. pins: catalog-surface-1/C-009"""
     from repark.spark.dataframe.writer_layout import _rename_to_unique_display_names
+
+    _refuse_unparseable_view_name(name)
 
     registration = frame._native_for_registration()
     if rename_fields:

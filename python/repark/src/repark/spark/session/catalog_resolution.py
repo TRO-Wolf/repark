@@ -64,6 +64,14 @@ def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
         return None
 
 
+def _quoted_segment(segment: str) -> str:
+    return '"' + segment.replace('"', '""') + '"'
+
+
+def _segment_temp_view_home_ref(inner: Any, segment: str) -> list[str] | None:
+    return _temp_view_home_ref(inner, _quoted_segment(segment))
+
+
 def _refused_spelling(inner: Any, name: str) -> str | None:
     """Registered spelling of refused catalog ``name`` (exact match), else ``None``."""
     names = _native.session_refused_catalog_names(inner)
