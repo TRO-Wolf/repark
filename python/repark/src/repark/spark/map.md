@@ -146,7 +146,6 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   / LIKE scans run through `_sql_built`.
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `getDatabase` reads the stored comment and location through
   `_native.namespace_metadata` instead of parsing the display-masked `DESCRIBE NAMESPACE`.
-  pins: source-url-redact-1/C-040
   **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** `tableExists` quotes a one-part name only when the caller quoted it (an unquoted non-ASCII name stays an error, as in Spark), and `dropTempView` passes the literal name, quoted, so it matches only the folded literal as Spark does (C-021).
 - `catalog_surface.py` — **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
   half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` /
@@ -197,7 +196,6 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   the `createTable` DDL run through the built door; the DDL-defs fragment splices
   raw because DDL positions always take default treatment (C-005), which the
   forced-default parse applies.
-  forced-default parse applies. pins: string-literal-escape-1/C-011
   **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** `_resolve_table_identity` (`spark.table`, `read.table`) probes a one-part name with its quoted segment, so a backticked non-ASCII view is classified as a view (C-021). `_register_temp_view` refuses an unquoted, undotted name outside `[A-Za-z0-9_]+` with `_LEGACY_ERROR_TEMP_1321` (`Invalid view name`); quoted and dotted names keep their paths, because internal scratch names are home-qualified and quoted.
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
