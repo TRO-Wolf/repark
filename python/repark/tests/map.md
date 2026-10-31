@@ -11,7 +11,7 @@ root; basenames stay unique across the whole tree.
 
 | directory | test files | charter |
 |---|---|---:|
-| [iceberg/](iceberg/map.md) | 76 | Iceberg table format: catalogs and namespaces, DDL and schema evolution, metadata tables and columns, time travel, branches and tags, maintenance procedures, views, scans and pruning, and format v3 (deletion vectors, row lineage, upgrade). |
+| [iceberg/](iceberg/map.md) | 77 | Iceberg table format: catalogs and namespaces, DDL and schema evolution, metadata tables and columns, time travel, branches and tags, maintenance procedures, views, scans and pruning, and format v3 (deletion vectors, row lineage, upgrade). |
 | [writes/](writes/map.md) | 62 | The Iceberg write path: INSERT, INSERT OVERWRITE, CTAS/RTAS, MERGE, UPDATE and DELETE on both SQL doors, the DataFrame writers (`write`, `writeTo`), write options and session write confs, distribution and ordering, store assignment, and concurrent commits. |
 | [timestamps/](timestamps/map.md) | 29 | Timestamp semantics across every door: TIMESTAMP_LTZ / TIMESTAMP_NTZ, `timestamp_ns` / `timestamptz_ns`, session time zones and zone spellings, timestamp casts and store assignment, epoch constructors and wall-clock rendering. |
 | [types/](types/map.md) | 27 | Data types and casts: the `types` module and DDL type strings, cast vocabulary and cast failures, decimal / integer / floating-point arithmetic semantics, literal typing, nullability, nested containers and logical widths. |

@@ -112,6 +112,8 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **RePark reads a dropped equality-delete key on Parquet data files (RP-62, fork F-EQDEL-DROPPED-KEY-1 `#377`).** An equality delete whose key column a later `ALTER TABLE … DROP COLUMN` removed used to fail the read with `field not found`; on Parquet data files the surviving rows now read back through the Spark door and the native door, including after the column is re-added. Avro and ORC data files still refuse the read with an error that names the data file (F-EQDEL-DROPPED-KEY-2). The fork pin moves to `935cc55c`.
 
+- **RePark reads a struct that a column drop emptied, with no panic (RP-63, fork F-STRUCT-EMPTY-CHILD-PANIC-1 `#378`).** A struct whose every field an `ALTER TABLE … DROP COLUMN` removed used to fail the read with an internal error (AUD-008). Now the Spark door answers it, and the emptied struct's validity is read per row: a non-null row reads a non-null empty struct, and a NULL row reads NULL. Spark decides per data file, so on a data file that holds a NULL struct row Spark reads NULL on every row; RePark keeps the per-row answer, a recorded divergence by owner ruling of 2026-10-31. Two id-less Parquet file shapes and a map-key drop stay open (F-IDLESS-STRUCT-CHILD-REMAP-1, F-MAP-KEY-DROP-ALTER-1). The fork pin moves to `14a93602`.
+
 - **The hadoop path read answers the newest committed metadata file past a stale
   `version-hint.text` (ICE-HADOOP-HINT-WINDOW-1, PR #1205).** It answered the hinted version, so a
   row a committed `DELETE` had removed could read back; a walk past 10,000 metadata files refuses

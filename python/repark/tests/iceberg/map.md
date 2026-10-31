@@ -44,6 +44,7 @@ pins.
 - [test_ice_replace_columns_1.py](test_ice_replace_columns_1.py) — ICE-REPLACE-COLUMNS-1 — ``ALTER TABLE … REPLACE COLUMNS`` drops and re-adds every column.
 - [test_ice_rm_deletes_1.py](test_ice_rm_deletes_1.py) — ICE-RM-DELETES-1 rewrite_manifests pins against the recorded Spark oracle.
 - [test_ice_small_parser_1.py](test_ice_small_parser_1.py) — IPI-21 + IPI-25 + IPI-42 — the three small parser shapes over finished behaviour.
+- [test_ice_struct_empty_child_1.py](test_ice_struct_empty_child_1.py) — ICE-NESTED-DDL-1 / RP-63 — a struct emptied by column drops reads per row through the Spark door, with no panic (AUD-008), against Spark 4.1.2.
 - [test_ice_system_functions_1.py](test_ice_system_functions_1.py) — IPI-29 system functions rounds 1-3 — the catalog-qualified system-function pins.
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) — ICE-TT-RESOLVE-1 — Spark's time-travel resolution on every door.
 - [test_ice_tt_resolve_1_tt2.py](test_ice_tt_resolve_1_tt2.py) — ICE-TT-RESOLVE-1 TT2 critic cells — offline pins on the two-snapshot shape.
@@ -64,8 +65,7 @@ pins.
   `DELETE` on a `type=hadoop` table whose newer metadata file is gzip-named
   (`v<N>.gz.metadata.json`) reads `[2, 3]` on the path door, not the deleted row. It is red on
   the test commit before the fix (`assert [1, 2, 3] == [2, 3]`).
-  The facade pin is also cited as the merge fact that closes dfload-1 C-011 (dfload-1 C-012, 2026-10-28, merge `9ab67d7d`); the merge fact is not a pin of this file.
-  The merge fact is dated 2026-10-28 by its correction dfload-1 C-013, a records entry in dfload-1's sidecar; the merge fact itself is not a test pin of this file.
+  The merge facts of dfload-1 C-011 to C-013 (2026-10-28) are in dfload-1's sidecar, not pinned in the file.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
