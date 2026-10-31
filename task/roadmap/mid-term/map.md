@@ -296,17 +296,9 @@ declines it (a dated ruling in the intake, then the archive).
 - [overnight-report-2026-09-15-15c.md](overnight-report-2026-09-15-15c.md) — run 15c (2026-09-15, the 1.5 Spark-parity campaign, SQL door + registry BACKLOG; Muse, Devin, Grok actors, Grok reviewers): SQL-SET-DOOR-1 #601 and FNP-6D #609 merged; DOOR-CONVERGE-1 #616, JAVA-DOUBLE-STR-1 #612 and FNP-4B #611 left as PRs for the owner; eleven live-Spark oracle batches; rulings R-15c-1..14; owner questions Q-15c-1..8.
 - [overnight-report-2026-09-12-run9.md](overnight-report-2026-09-12-run9.md) — run 9 (2026-09-12, the v1.5 track; Grok before 20:40, Devin after): FACADE-2 complete (#544, #549, #557), Silver S-0 and S-1 (#543, #546), PERF-UNPIVOT-1 and PERF-CAST-1 complete (#553, #550 → apache/datafusion#25248), FACADE-3 steps 1–2 merged (#555, #559); findings: nesting `F.abs` is exponential in native memory (P1, a global OOM kill), SIL-4 needs armed conflict validation, SIL-1..10 recommendations for the owner.
 - [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
-  05:21–13:20 local, **orchestrator A**; the Grok/Ballista and facade lanes were orchestrator B's
-  from 05:45 and are not in it): seven merged (DISPLAY-BRIDGE-1's rebase, AP-0 with its O-run,
-  MAINT-POLICY-1 end to end, TORTURE-1 steps 1 and 2, PROFILES-1 step 1, AP-1 step 1) and one
-  parked green as a draft (NEVEROOM-1 step 1, on two D-2 ruling questions).
-  **DISPLAY-BRIDGE-1, AP-0 and MAINT-POLICY-1 complete.** Two measurements changed a decision:
-  AP-0's O-run refutes P-3's byte model (76–88 % high, partition count exact), and a live-Spark
-  run narrows TORTURE-1's `DATE-INTERVAL-NSBOUND-1` (Spark keeps `date` width; the fix is day
-  width, not microsecond). Two audit findings fixed rather than shipped — a public name that had
-  escaped the example-coverage AST walk, and a refactor that moved an error's precedence. Runbook
-  corrections: run the **whole** parity suite before pushing, a native-needing test directory
-  guards its own `conftest.py`, and one clone per live lane.
+  orchestrator A): seven units merged and one parked green as a draft (NEVEROOM-1 step 1). AP-0's
+  O-run refuted P-3's byte model; a live-Spark run narrowed TORTURE-1's `DATE-INTERVAL-NSBOUND-1`
+  to a day width. The runbook corrections are in the report.
 - [overnight-report-2026-09-09-run4.md](overnight-report-2026-09-09-run4.md) — run 4 (2026-09-09,
   14:29–22:29 local): seven merged (CFG-1 steps 1b, 2, 3 and 4; DISPLAY-POLARS-1 steps 4 and 5;
   DF-EAGER-1 steps 2 and 3), one parked green (DISPLAY-BRIDGE-1 #454, a semantic merge conflict
@@ -1117,3 +1109,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [writer-path-temp-view-target-1-card-2026-10-29.md](writer-path-temp-view-target-1-card-2026-10-29.md) — **card WRITER-PATH-TEMP-VIEW-TARGET-1 (filed 2026-10-29, grade C, not dispatched; narrowed 2026-10-29):** `writeTo` is fixed by SPARK-DOOR-TEMP-VIEW-TARGET-1's fix round; `insertInto`, `saveAsTable` and `createOrReplace` already write the table on Spark and on RePark (measured), so the card narrows to the Rust door's bare names, which do not follow `USE` (a loud refusal on the write side, no silent write). Leaves when the Rust door's bare names match Spark under `USE` and under `caseSensitive`.
 - [merge-schema-evolution-spelling-1-card-2026-10-29.md](merge-schema-evolution-spelling-1-card-2026-10-29.md) — **card MERGE-SCHEMA-EVOLUTION-SPELLING-1 (filed 2026-10-29, grade C, open, awaiting the owner's charter):** `MERGE WITH SCHEMA EVOLUTION INTO ns.t` (a two-part name, no view involved) executes on Spark and refuses on RePark with the three-part-name text, the table unchanged, because the facade's MERGE target expansion does not recognise the spelling. Leaves when the two-part spelling executes and matches Spark on the facade.
 - [cross-read-sampling-flake-1-card-2026-10-30.md](cross-read-sampling-flake-1-card-2026-10-30.md) — **card CROSS-READ-SAMPLING-FLAKE-1 (filed 2026-10-30, grade C, open, awaiting the owner's charter):** the cross-read sampling test drops a phase under host load (1 of 18 cells failed where the branch did not touch the file; 1 to 2 of 39 per run at load 45; 60 idle runs clean). Wall-clock only. Leaves when the sampler is deterministic under load, or the charter declines it.
+- [map-ratchet-1-card-2026-10-31.md](map-ratchet-1-card-2026-10-31.md) — **card MAP-RATCHET-1
+  (filed 2026-10-31, grade C, queued near-term by the owner):** the 51 excepted maps come under
+  the 200-line / 16 KiB ceilings, three or four per round, the top 20 by bytes first. Leaves when
+  `EXCEPTIONS` in `scripts/check_map_size.py` is empty and the maps-policy Open bullet records the date.
