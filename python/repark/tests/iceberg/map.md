@@ -5,8 +5,7 @@
 Iceberg table format: catalogs and namespaces, DDL and schema evolution, metadata tables and columns, time travel, branches and tags, maintenance procedures, views, scans and pruning, and format v3 (deletion vectors, row lineage, upgrade).
 
 Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live in
-[../map.md](../map.md) "Layout". A new test goes in the directory of the subsystem it
-pins.
+[../map.md](../map.md) "Layout".
 
 ## Contents
 
@@ -44,7 +43,7 @@ pins.
 - [test_ice_replace_columns_1.py](test_ice_replace_columns_1.py) — ICE-REPLACE-COLUMNS-1 — ``ALTER TABLE … REPLACE COLUMNS`` drops and re-adds every column.
 - [test_ice_rm_deletes_1.py](test_ice_rm_deletes_1.py) — ICE-RM-DELETES-1 rewrite_manifests pins against the recorded Spark oracle.
 - [test_ice_small_parser_1.py](test_ice_small_parser_1.py) — IPI-21 + IPI-25 + IPI-42 — the three small parser shapes over finished behaviour.
-- [test_ice_struct_empty_child_1.py](test_ice_struct_empty_child_1.py) — ICE-NESTED-DDL-1 / RP-63 — a struct emptied by column drops reads per row through the Spark door, with no panic (AUD-008), against Spark 4.1.2.
+- [test_ice_struct_empty_child_1.py](test_ice_struct_empty_child_1.py) — ICE-NESTED-DDL-1 / RP-63 — a struct emptied by column drops reads per row through the Spark door, no panic (AUD-008); pins c and f assert RePark's per-row value, Spark's answers in the registry (S-13).
 - [test_ice_system_functions_1.py](test_ice_system_functions_1.py) — IPI-29 system functions rounds 1-3 — the catalog-qualified system-function pins.
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) — ICE-TT-RESOLVE-1 — Spark's time-travel resolution on every door.
 - [test_ice_tt_resolve_1_tt2.py](test_ice_tt_resolve_1_tt2.py) — ICE-TT-RESOLVE-1 TT2 critic cells — offline pins on the two-snapshot shape.
