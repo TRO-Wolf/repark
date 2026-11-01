@@ -26,7 +26,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) — ICE-ERROR-CONDITIONS-1: the `[CONDITION]` and SQLSTATE parsers that attach Spark error conditions to engine errors.
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — ICE-HADOOP-VN-1 — a stale Hadoop `vN` writer raises loud and loses nothing.
 - [test_ice_idless_struct_1.py](test_ice_idless_struct_1.py) — ICE-NESTED-DDL-1 / RP-64 — an id-less Parquet file reads its struct children by id (shapes a to i, two filter pins); red on `14a93602`, green on `ee592dcf`.
-- [test_ice_idless_late_file_1.py](test_ice_idless_late_file_1.py) — ICE-NESTED-DDL-1 / RP-64 round 1 — a late id-less file reads its values (pins j to o, control n); red on `ee592dcf`, green on `56ff5545`.
+- [test_ice_idless_late_file_1.py](test_ice_idless_late_file_1.py) — ICE-NESTED-DDL-1 / RP-64 fix round 1 — a late id-less file reads values (pins j to o, control n); red on `ee592dcf`, green on `56ff5545`.
 - [test_ice_metadata_cols_1.py](test_ice_metadata_cols_1.py) — IPI-20 PR-1 — the Spark door serves the metadata columns ``_file`` … ``_deleted``.
 - [test_ice_mixed_case_1.py](test_ice_mixed_case_1.py) — ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 - [test_ice_mt_as_of_1.py](test_ice_mt_as_of_1.py) — xo55-mt R1 — the Spark door serves ``VERSION AS OF`` on Iceberg metadata tables.

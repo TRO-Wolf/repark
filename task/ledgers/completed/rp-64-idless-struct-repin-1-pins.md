@@ -26,3 +26,4 @@ C-023: python/repark/tests/iceberg/test_ice_idless_late_file_1.py::test_promotio
 C-024: none (records)
 C-025: none (records)
 C-026: none (records)
+C-027: none (records)
