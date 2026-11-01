@@ -20,3 +20,9 @@ C-017: none (records)
 C-018: none (records)
 C-019: none (records)
 C-020: none (records)
+C-021: none (records)
+C-022: python/repark/tests/iceberg/test_ice_idless_late_file_1.py::test_late_idless_file_reads_its_values
+C-023: python/repark/tests/iceberg/test_ice_idless_late_file_1.py::test_promotion_and_move_leave_the_mapping_and_the_reads_unchanged
+C-024: none (records)
+C-025: none (records)
+C-026: none (records)
