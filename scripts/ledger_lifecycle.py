@@ -282,6 +282,24 @@ def cut_row(text: str, map_dir: str, path: str) -> tuple[str, str | None]:
             remaining = lines[:row_start] + lines[row_end:]
             width = row_end - row_start
             return "".join(_collapse_blanks(remaining, start, end - width)), row
+    for row_start, row_end in _row_spans(lines, 0, len(lines)):
+        if start <= row_start < end:
+            continue
+        target = _first_link(lines[row_start])
+        if target is None or resolve(map_dir, target) != path:
+            continue
+        row = "".join(lines[row_start:row_end])
+        if not row.endswith("\n"):
+            row += "\n"
+        remaining = lines[:row_start] + lines[row_end:]
+        if (
+            row_start > 0
+            and row_end < len(lines)
+            and not lines[row_start - 1].strip()
+            and not lines[row_end].strip()
+        ):
+            remaining = remaining[: row_start - 1] + remaining[row_start:]
+        return "".join(remaining), row
     return text, None
 
 
