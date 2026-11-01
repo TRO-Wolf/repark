@@ -1,3 +1,7 @@
+# Erratum — C-013 CLOSED (2026-11-01, RP-64-IDLESS-STRUCT-REPIN-1)
+
+C-013 (the id-less Parquet file shapes of fork S-11 and S-16) is closed by citation: the fork fixed them in fork PR `#379`, squash `ee592dcf`, and RePark repinned to it by RP-64 on branch `chore/rp-64-idless-struct-repin` (not yet merged); the pins are `python/repark/tests/iceberg/test_ice_idless_struct_1.py`, bound in the RP-64 sidecar. Two fork residues stay open as cards, F-IDLESS-TOPLEVEL-POSITIONAL-1 and F-NESTED-TYPE-MISMATCH-EMBEDDED-IDS-1. C-013 keeps its text below.
+
 # Unit ledger — RP-63-STRUCT-EMPTY-REPIN-1 · repin the fork to the struct-emptied-by-drop fix, with the AUD-008 shapes pinned through the Spark door
 
 **Date:** 2026-10-31 · **Branch:** `chore/rp-63-struct-empty-repin` · **Base:** `6e3fcc06` (`main` after the RP-62 records and MAP-RATCHET-1's queue) · **Model:** builder `claude-opus-5-5` (commits `d2d69b61` and `ef0368df`); clerk `claude-haiku-5-5` (the records commit; fix round 1's records commit) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
