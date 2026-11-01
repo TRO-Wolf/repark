@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-31. **Filed by:** `claude-haiku-5-5` for the orchestrator, from the RP-63 records round, from the fork ledger of F-STRUCT-EMPTY-CHILD-PANIC-1 (clauses S-11 and S-16) and the orchestrator's probe. **Re-graded 2026-10-31 (RP-63 fix round 1):** from grade B, P2 to grade A, P1, with the RePark route and shape (iii) added, from the RP-63 Opus 5.5 verifier's findings F1 and F3.
 
-**Status:** filed, not dispatched. Grade A, P1 (was B, P2). This is the owner's fork work; RePark takes it by an ordinary pin bump afterwards. The orchestrator holds the probe (two failing Rust tests) and attaches it when the unit is chartered; no file path is named here.
+**Status:** filed; dispatched 2026-11-01 on the fork (Opus 5.5 builder), not merged. Grade A, P1 (was B, P2). This is the owner's fork work; RePark takes it by an ordinary pin bump afterwards. The orchestrator holds the probe (two failing Rust tests) and attaches it when the unit is chartered; no file path is named here.
 
 **Why:** On a Parquet data file without embedded field ids (the fallback-id path, with or without a name mapping), a struct whose task-schema children are all absent from the file reads wrong values or refuses. The fork's name mapping and fallback-id stamping cover top-level fields only, so a nested struct gets no ids. Three shapes are wrong, all before RP-63:
 
@@ -22,6 +22,6 @@
 
 **Retires:** the card when shapes (i) and (ii) read NULL per row with the batch type equal to the schema type, shape (iii) reads the file's `d` values with `k` NULL per row, the pins are green on both doors, and the fork ledger's S-11 and S-16 close by citation; label clause C-077 and unit clause C-013 then close by citation.
 
-**Relation:** [F-STRUCT-EMPTY-CHILD-PANIC-1](f-struct-empty-child-panic-1-card-2026-10-29.md) (the parent fork card; its clauses S-11 and S-16); RP-63 (the pins of `python/repark/tests/iceberg/test_ice_struct_empty_child_1.py` cover embedded-id files only; unit clause C-013 in [the unit ledger](../../ledgers/staging/rp-63-struct-empty-repin-1-ledger.md)); the registry line ICE-NESTED-DDL-1 dated 2026-10-31; label clause C-077 in [the label ledger](../../ledgers/staging/ice-v2-label-1-ledger.md). The fork ledger's S-13 carries the per-file wording, which is corrected to the Spark NULL-collapse rule here; the fork-side erratum travels with the next fork round, and the fork is not edited from RePark.
+**Relation:** [F-STRUCT-EMPTY-CHILD-PANIC-1](f-struct-empty-child-panic-1-card-2026-10-29.md) (the parent fork card; its clauses S-11 and S-16); RP-63 (the pins of `python/repark/tests/iceberg/test_ice_struct_empty_child_1.py` cover embedded-id files only; unit clause C-013 in [the unit ledger](../../ledgers/completed/rp-63-struct-empty-repin-1-ledger.md)); the registry line ICE-NESTED-DDL-1 dated 2026-10-31; label clause C-077 in [the label ledger](../../ledgers/staging/ice-v2-label-1-ledger.md). The fork ledger's S-13 carries the per-file wording, which is corrected to the Spark NULL-collapse rule here; the fork-side erratum travels with the next fork round, and the fork is not edited from RePark.
 
 Up: [map.md](map.md).

@@ -784,7 +784,6 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
 
-- [rp-63-struct-empty-repin-1-ledger.md](rp-63-struct-empty-repin-1-ledger.md) — **RP-63-STRUCT-EMPTY-REPIN-1 (2026-10-31, branch `chore/rp-63-struct-empty-repin`, not merged):** the fork repinned to `14a93602` (F-STRUCT-EMPTY-CHILD-PANIC-1, fork `#378`), with the lock moved by hand. The AUD-008 shapes are pinned through the Spark door, red on `935cc55c` and green on the new pin; the Spark NULL-collapse divergence is recorded (S-13, owner ruling 2026-10-31). The id-less file shapes (F-IDLESS-STRUCT-CHILD-REMAP-1, grade A) and the map-key drop are carded and OPEN. 12 of 16 clauses PROVEN; verifier round 1 FAIL (Opus 5.5) and Muse MAX PASS; fix round 1 is records only, re-verify pending. `risk_tier: standard`.
 
 ## Pointers
 - Up: [../map.md](../map.md)

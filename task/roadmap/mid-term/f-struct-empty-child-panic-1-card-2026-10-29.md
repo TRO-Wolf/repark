@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-29. **Filed by:** the second-audit records round (`claude-haiku-5-5`), from the second independent audit of the format-v2 label, finding AUD-008 ([the report](../../../docs/audits/iceberg-v2-label-independent-reaudit-2026-10-29.md), section 3). This card is the RePark card that the fork ledger's row F2-6 names as "Carded on the RePark side"; before this round no such card existed.
 
-**Status:** closed 2026-10-31: fork #378 merged as `14a93602`; RePark repinned by RP-63 on branch `chore/rp-63-struct-empty-repin`, awaiting verification and merge. The closure cites the owner ruling of 2026-10-31 (per row; fork ledger S-13), not "Spark-equal on every shape".
+**Status:** closed 2026-10-31: fork #378 merged as `14a93602`; RePark repinned by RP-63, merged 2026-11-01 as `235f5740` (PR #1226). The closure cites the owner ruling of 2026-10-31 (per row; fork ledger S-13), not "Spark-equal on every shape".
 
 **Why:** Dropping the only field of a struct column, then reading the table with `SELECT *`, panics in the fork's reader. The panic is caught at the facade boundary, so the process survives, but the statement fails with a repark internal error where Spark answers a row with an empty struct. The production definition lists panics in library code as a disqualifier, and the fork's current pin is the one RePark reads, so the panic is reachable by ordinary schema evolution. The same panic follows from dropping both fields of a two-field struct, one at a time.
 
