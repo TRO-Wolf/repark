@@ -291,3 +291,113 @@ def test_a_move_to_a_live_bin_still_carries_the_whole_row(repo: Path) -> None:
     assert _run(repo, "move", "task/ledgers/staging/z3-live-ledger.md", "completed").returncode == 0
     completed_map = (repo / "task/ledgers/completed/map.md").read_text()
     assert "— first. Second\n  sentence, wrapped.\n" in completed_map
+
+
+def _tail_repo(repo: Path, row: str, ledger: str, ledger_text: str) -> None:
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        "- [zzz-old-ledger.md](../completed/zzz-old-ledger.md) — **ZZZ-OLD:** filed.\n" + row,
+    )
+    _write(repo, ledger, ledger_text)
+    _write(
+        repo,
+        "task/ledgers/completed/map.md",
+        "# map\n\n## Contents\n- [aaa-old-ledger.md](aaa-old-ledger.md) — **AAA-OLD:** first.\n"
+        "- [zzz-old-ledger.md](zzz-old-ledger.md) — **ZZZ-OLD:** last.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _write(repo, "task/ledgers/completed/zzz-old-ledger.md", "# Ledger — ZZZ-OLD\n")
+    _commit(repo, "ledger with a row past the Pointers section")
+
+
+def test_move_cuts_a_tail_row_with_pins_and_pastes_it_in_order(repo: Path) -> None:
+    _tail_repo(
+        repo,
+        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the demo unit, wrapped\n"
+        "  over two lines with detail.\n"
+        "  pins: m1-demo/C-001, C-002\n",
+        "task/ledgers/staging/m1-demo-ledger.md",
+        "# Ledger — M1\n",
+    )
+    assert (
+        _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode
+        == 0
+    )
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert "m1-demo-ledger" not in staging
+    assert (
+        "- [zzz-old-ledger.md](../completed/zzz-old-ledger.md) — **ZZZ-OLD:** filed.\n" in staging
+    )
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the demo unit, wrapped\n  over two lines with detail.\n" in completed
+    assert "  pins: m1-demo/C-001, C-002\n" in completed
+    assert "Ledger — M1" not in completed
+    assert completed.index("aaa-old-ledger") < completed.index("m1-demo-ledger")
+    assert completed.index("m1-demo-ledger") < completed.index("zzz-old-ledger")
+
+
+def test_move_cuts_a_tail_one_line_row(repo: Path) -> None:
+    _tail_repo(
+        repo,
+        "- [m2-demo-ledger.md](m2-demo-ledger.md) — **M2:** one line, like rp-64.\n",
+        "task/ledgers/staging/m2-demo-ledger.md",
+        "# Ledger — M2-DEMO\n",
+    )
+    assert (
+        _run(repo, "move", "task/ledgers/staging/m2-demo-ledger.md", "completed").returncode
+        == 0
+    )
+    assert "m2-demo-ledger" not in (repo / "task/ledgers/staging/map.md").read_text()
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m2-demo-ledger.md") == 2
+    assert "— **M2:** one line, like rp-64.\n" in completed
+    assert "M2-DEMO" not in completed
+    assert completed.index("aaa-old-ledger") < completed.index("m2-demo-ledger")
+    assert completed.index("m2-demo-ledger") < completed.index("zzz-old-ledger")
+
+
+def test_move_carries_the_sidecar_without_a_row(repo: Path) -> None:
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Contents\n"
+        "- [m3-demo-ledger.md](m3-demo-ledger.md) — **M3:** the demo unit.\n"
+        "  pins: m3-demo/C-001\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _write(repo, "task/ledgers/staging/m3-demo-ledger.md", "# Ledger — M3\n")
+    _write(repo, "task/ledgers/staging/m3-demo-pins.md", "C-001: none (records)\n")
+    _commit(repo, "m3 with a sidecar")
+    assert (
+        _run(repo, "move", "task/ledgers/staging/m3-demo-ledger.md", "completed").returncode
+        == 0
+    )
+    assert (repo / "task/ledgers/completed/m3-demo-pins.md").is_file()
+    assert not (repo / "task/ledgers/staging/m3-demo-pins.md").exists()
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert "m3-demo-pins" not in completed
+    assert completed.count("m3-demo-ledger.md") == 2
+
+
+def test_move_without_a_source_row_synthesises_exactly_one_row(repo: Path) -> None:
+    _write(repo, "task/ledgers/staging/m4-demo-ledger.md", "# Ledger — M4-DEMO\n")
+    _write(
+        repo,
+        "task/ledgers/completed/map.md",
+        "# map\n\n## Contents\n- [aaa-old-ledger.md](aaa-old-ledger.md) — **AAA-OLD:** first.\n"
+        "- [zzz-old-ledger.md](zzz-old-ledger.md) — **ZZZ-OLD:** last.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _commit(repo, "m4 with no map row")
+    assert (
+        _run(repo, "move", "task/ledgers/staging/m4-demo-ledger.md", "completed").returncode
+        == 0
+    )
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert "[m4-demo-ledger.md](m4-demo-ledger.md) — Ledger — M4-DEMO\n" in completed
+    assert completed.count("m4-demo-ledger.md") == 2
