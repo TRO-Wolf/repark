@@ -26,6 +26,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_drop_ns_1.py](test_ice_drop_ns_1.py) — ICE-DROP-NS-1 — ``DROP NAMESPACE`` on a non-empty namespace refuses like Spark.
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) — ICE-ERROR-CONDITIONS-1: the `[CONDITION]` and SQLSTATE parsers that attach Spark error conditions to engine errors.
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — ICE-HADOOP-VN-1 — a stale Hadoop `vN` writer raises loud and loses nothing.
+- [test_ice_idless_struct_1.py](test_ice_idless_struct_1.py) — ICE-NESTED-DDL-1 / RP-64 — an id-less Parquet file admitted by `add_files` reads its struct children by id through the Spark door (shapes a to i, two filter pins); red on `14a93602`, green on `ee592dcf`.
 - [test_ice_metadata_cols_1.py](test_ice_metadata_cols_1.py) — IPI-20 PR-1 — the Spark door serves the metadata columns ``_file`` … ``_deleted``.
 - [test_ice_mixed_case_1.py](test_ice_mixed_case_1.py) — ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 - [test_ice_mt_as_of_1.py](test_ice_mt_as_of_1.py) — xo55-mt R1 — the Spark door serves ``VERSION AS OF`` on Iceberg metadata tables.
@@ -43,7 +44,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_replace_columns_1.py](test_ice_replace_columns_1.py) — ICE-REPLACE-COLUMNS-1 — ``ALTER TABLE … REPLACE COLUMNS`` drops and re-adds every column.
 - [test_ice_rm_deletes_1.py](test_ice_rm_deletes_1.py) — ICE-RM-DELETES-1 rewrite_manifests pins against the recorded Spark oracle.
 - [test_ice_small_parser_1.py](test_ice_small_parser_1.py) — IPI-21 + IPI-25 + IPI-42 — the three small parser shapes over finished behaviour.
-- [test_ice_struct_empty_child_1.py](test_ice_struct_empty_child_1.py) — ICE-NESTED-DDL-1 / RP-63 — a struct emptied by column drops reads per row through the Spark door, no panic (AUD-008); pins c and f assert RePark's per-row value, Spark's answers in the registry (S-13).
+- [test_ice_struct_empty_child_1.py](test_ice_struct_empty_child_1.py) — ICE-NESTED-DDL-1 / RP-63 — a struct emptied by column drops reads per row through the Spark door, no panic (AUD-008); pins c and f assert RePark's per-row value; Spark's answers are in the registry.
 - [test_ice_system_functions_1.py](test_ice_system_functions_1.py) — IPI-29 system functions rounds 1-3 — the catalog-qualified system-function pins.
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) — ICE-TT-RESOLVE-1 — Spark's time-travel resolution on every door.
 - [test_ice_tt_resolve_1_tt2.py](test_ice_tt_resolve_1_tt2.py) — ICE-TT-RESOLVE-1 TT2 critic cells — offline pins on the two-snapshot shape.
@@ -57,14 +58,10 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal with its complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
 - [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads.
-  The stale-hint pin (2026-10-28, ICE-HADOOP-HINT-WINDOW-1): a hint left one version behind a
-  committed `DELETE` on a `type=hadoop` table reads the newest committed file on the path door
-  and matches the catalog; it is red with the walk reverted.
-  The gzip-named stale-hint pin (2026-10-29, ICE-HADOOP-GZIP-METADATA-1): the same committed
-  `DELETE` on a `type=hadoop` table whose newer metadata file is gzip-named
-  (`v<N>.gz.metadata.json`) reads `[2, 3]` on the path door, not the deleted row. It is red on
-  the test commit before the fix (`assert [1, 2, 3] == [2, 3]`).
-  The merge facts of dfload-1 C-011 to C-013 (2026-10-28) are in dfload-1's sidecar, not pinned in the file.
+  The hadoop hint pins (2026-10-28 and 2026-10-29, ICE-HADOOP-HINT-WINDOW-1 and ICE-HADOOP-GZIP-METADATA-1): a stale
+  `version-hint.text`, or a gzip-named newer metadata file, after a committed `DELETE` on a `type=hadoop` table, reads the
+  newest committed rows on the path door; each is red with its fix reverted (`assert [1, 2, 3] == [2, 3]`).
+  The dfload-1 C-011 to C-013 merge facts are in its sidecar.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
