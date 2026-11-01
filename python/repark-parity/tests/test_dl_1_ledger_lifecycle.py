@@ -375,6 +375,67 @@ def test_move_carries_the_sidecar_without_a_row(repo: Path) -> None:
     assert completed.count("m3-demo-ledger.md") == 2
 
 
+def test_move_leaves_a_history_file_frozen_and_names_it(repo: Path) -> None:
+    history = "docs/history/facade/file.md"
+    _write(repo, "task/ledgers/staging/m5-demo-ledger.md", "# Ledger — M5\n")
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Contents\n- [m5-demo-ledger.md](m5-demo-ledger.md) — **M5:** the demo.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _write(repo, "notes.md", "[m5](task/ledgers/staging/m5-demo-ledger.md)\n")
+    _write(
+        repo,
+        history,
+        "# frozen\n\nSee [m5](../../../task/ledgers/staging/m5-demo-ledger.md).\n",
+    )
+    _commit(repo, "m5 with a history link")
+    before = (repo / history).read_text()
+    result = _run(repo, "move", "task/ledgers/staging/m5-demo-ledger.md", "completed")
+    assert result.returncode == 0, result.stderr
+    assert (repo / history).read_text() == before
+    assert "(task/ledgers/completed/m5-demo-ledger.md)" in (repo / "notes.md").read_text()
+    assert f"{history} left frozen (1 link(s) to moved files)" in result.stdout
+
+
+def test_archive_leaves_a_history_file_frozen(repo: Path) -> None:
+    history = "docs/history/facade/file.md"
+    _write(repo, "task/ledgers/completed/m6-demo-ledger.md", "# Ledger — M6\n")
+    _write(
+        repo,
+        "task/ledgers/completed/map.md",
+        "# map\n\n## Contents\n- [m6-demo-ledger.md](m6-demo-ledger.md) — **M6:** the demo.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _write(
+        repo,
+        history,
+        "# frozen\n\nSee [m6](../../../task/ledgers/completed/m6-demo-ledger.md).\n",
+    )
+    _commit(repo, "m6 with a history link")
+    before = (repo / history).read_text()
+    result = _run(repo, "archive", "task/ledgers/completed/m6-demo-ledger.md")
+    assert result.returncode == 0, result.stderr
+    assert (repo / history).read_text() == before
+    assert f"{history} left frozen (1 link(s) to moved files)" in result.stdout
+
+
+def test_check_ignores_a_dead_ledger_link_in_history_only(repo: Path) -> None:
+    _write(
+        repo,
+        "docs/history/facade/file.md",
+        "# frozen\n\nSee [gone](../../../task/ledgers/staging/gone-ledger.md).\n",
+    )
+    _commit(repo, "stale history link")
+    assert _run(repo, "check").returncode == 0
+    _write(repo, "notes.md", "[gone](task/ledgers/staging/gone-ledger.md)\n")
+    _commit(repo, "same dead link in a live file")
+    result = _run(repo, "check")
+    assert result.returncode == 1
+    assert "notes.md: dead ledger link `task/ledgers/staging/gone-ledger.md`" in result.stderr
+
+
 def test_move_without_a_source_row_synthesises_exactly_one_row(repo: Path) -> None:
     _write(repo, "task/ledgers/staging/m4-demo-ledger.md", "# Ledger — M4-DEMO\n")
     _write(
