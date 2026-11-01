@@ -15,11 +15,11 @@
 
 **Site:** the fork's no-mapping fallback route for id-less files, the top-level name-and-position rule with its `position + 1` fallback. The fork ledger names the functions.
 
-**Fix (proposed):** on the no-mapping route, a file column whose type is not promotable to the positional field's type is refused, as Spark does, and a top-level column is read by name only; a re-added field reads NULL or refuses, and never the values of the field it replaces, and a partial mapping reads NULL for every field the file does not name, as Spark does. The positional read and the same-type reorder follow Java's rule and are Spark-equal, as measured.
+**Fix (proposed):** the no-mapping route refuses a file column whose type is not promotable to the positional field's type, as Spark does, and otherwise answers as Spark's positional fallback does, including NULL for the re-added-name and the partial-mapping shapes where the fork today reads the old values by name. The positional read and the same-type reorder follow Java's rule and are Spark-equal, as measured.
 
 **Measured:** fork ledger S-20 and S-26 (the probes of the fork's round-3 verifier, V3-F2, and the fork's own builder), at `14a93602` or earlier; the RP-64 Opus 5.5 verifier's F2 oracle of 2026-11-01 (its shapes f1, f3, f4 and f5, on both pins, with Spark's answers); and its round-2 oracle of the same date (F7 and F9: shapes f2, f4b, f4b2, f4c, f4d and f4e, with Spark's answers; the F7 shapes on `14a93602`, `ee592dcf` and `56ff5545`). The nested reorder (shape f2, `s<d, e>` over the file `s<e, d>` on the UNSET route) reads `{d: 1, e: 10}` on RePark, by name and right against the data, where Spark reads `s` NULL (`[(1, None), (2, None)]`); that is a divergence in RePark's favour, kept, not a defect.
 
-**Retires:** the card when a type-changing positional reorder refuses as Spark does, and a re-added field and a partial mapping read NULL for every field the file does not name, as Spark does, with fork S-26 and the partial-mapping shape closing by citation. The positional read and the same-type reorder stay recorded as Java's rule.
+**Retires:** the card leaves when the unpromotable-type read refuses with a message naming the column and both types, and the re-added-name and partial-mapping shapes read NULL as Spark does, with fork ledger S-20 and S-26 closing by citation.
 
 **Relation:** [F-IDLESS-STRUCT-CHILD-REMAP-1](f-idless-struct-child-remap-1-card-2026-10-31.md) (closed 2026-11-01 by fork #379, fork #380 and RP-64; this is its fallback-route residue); [F-NESTED-TYPE-MISMATCH-EMBEDDED-IDS-1](f-nested-type-mismatch-embedded-ids-1-card-2026-11-01.md) (the other carded residue); RP-64 (the records are in its unit ledger, clause C-017).
 
