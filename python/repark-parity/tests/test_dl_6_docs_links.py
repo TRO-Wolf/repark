@@ -230,8 +230,7 @@ def test_history_file_with_a_missing_docs_target_still_reds(repo: Path) -> None:
     result = _run(repo)
     assert result.returncode == 1
     assert (
-        "docs/history/facade/file.md:3: ../../guide-missing.md -> does not exist"
-        in result.stderr
+        "docs/history/facade/file.md:3: ../../guide-missing.md -> does not exist" in result.stderr
     )
 
 
@@ -239,6 +238,4 @@ def test_live_file_with_a_missing_task_target_still_reds(repo: Path) -> None:
     _write(repo, "README.md", _README + "[gone](task/ledgers/staging/gone-ledger.md)\n")
     result = _run(repo)
     assert result.returncode == 1
-    assert (
-        "README.md:11: task/ledgers/staging/gone-ledger.md -> does not exist" in result.stderr
-    )
+    assert "README.md:11: task/ledgers/staging/gone-ledger.md -> does not exist" in result.stderr

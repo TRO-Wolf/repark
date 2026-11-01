@@ -383,9 +383,18 @@ def _purpose_for(directory: str) -> str:
     return PURPOSE.get(directory, "Ledgers filed by the lifecycle script.")
 
 
+def _moved_link_count(text: str, base_dir: str, moves: dict[str, str]) -> int:
+    count = 0
+    for _line, masked in _masked_lines(text):
+        for match in MAPS.LINK_PATTERN.finditer(masked):
+            if resolve(base_dir, match.group(1)) in moves:
+                count += 1
+    return count
+
+
 def plan(
     repo: Path, tracked: list[str], moves: dict[str, str], promised: set[str]
-) -> tuple[dict[str, str], int, list[str]]:
+) -> tuple[dict[str, str], int, list[str], list[tuple[str, int]]]:
     """Every markdown file's new text keyed by its new path, the link count, and new dangling links.
 
     `promised` names files the caller will write after the plan (the regenerated
@@ -398,10 +407,16 @@ def plan(
     texts: dict[str, str] = {}
     originals: dict[str, str] = {}
     rewritten = 0
+    frozen: list[tuple[str, int]] = []
     for path in tracked:
         if not path.endswith(".md") or not (repo / path).is_file():
             continue
         text = (repo / path).read_text(encoding="utf-8")
+        if path.startswith(HISTORY_DIR + "/"):
+            count = _moved_link_count(text, posixpath.dirname(path), moves)
+            if count:
+                frozen.append((path, count))
+            continue
         new_path = moves.get(path, path)
         originals[new_path] = text
         new_text, count = rewrite_links(
@@ -441,7 +456,7 @@ def plan(
         for target in dangling(texts[path], base, known_after):
             if target not in before:
                 broken.append(f"{path}: `{target}` would not resolve")
-    return texts, rewritten, broken
+    return texts, rewritten, broken, frozen
 
 
 def apply(repo: Path, moves: dict[str, str], texts: dict[str, str]) -> int:
@@ -536,7 +551,7 @@ def execute(
     repo: Path, tracked: list[str], moves: dict[str, str], verb: str, promised: set[str]
 ) -> int:
     """Plan, verify, apply; the shared tail of `archive` and `move`."""
-    texts, rewritten, broken = plan(repo, tracked, moves, promised)
+    texts, rewritten, broken, frozen = plan(repo, tracked, moves, promised)
     if broken:
         for line in broken:
             print(line, file=sys.stderr)
@@ -560,6 +575,8 @@ def execute(
         f"rewrote {rewritten} link(s), wrote {written} file(s), "
         f"moved {followed} map-size baseline row(s)"
     )
+    for path, count in frozen:
+        print(f"ledger-lifecycle: {path} left frozen ({count} link(s) to moved files)")
     return 0
 
 
@@ -859,6 +876,8 @@ def run_check(repo: Path, base: str | None) -> int:
     links = 0
     for path in tracked:
         if not path.endswith(".md") or not (repo / path).is_file():
+            continue
+        if path.startswith(HISTORY_DIR + "/"):
             continue
         base_dir = posixpath.dirname(path)
         text = (repo / path).read_text(encoding="utf-8")
