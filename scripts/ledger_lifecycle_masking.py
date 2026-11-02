@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-
 FENCE_PATTERN = re.compile(r"^ {0,3}(?:```|~~~)")
 
 
