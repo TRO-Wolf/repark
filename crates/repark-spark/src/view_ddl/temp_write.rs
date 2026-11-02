@@ -93,14 +93,14 @@ fn refusal_text(route: WriteRoute, name: &ObjectName, view: &str) -> String {
     }
 }
 
-fn written_leaf(name: &ObjectName, view: &str) -> String {
+pub(crate) fn written_leaf(name: &ObjectName, view: &str) -> String {
     name.0
         .last()
         .and_then(|part| part.as_ident())
         .map_or_else(|| view.to_string(), |ident| ident.value.clone())
 }
 
-fn quoted(name: &str) -> String {
+pub(crate) fn quoted(name: &str) -> String {
     format!("`{}`", name.replace('`', "``"))
 }
 

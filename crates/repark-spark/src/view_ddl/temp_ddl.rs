@@ -17,6 +17,7 @@ use crate::view_ddl::execute::{
     execute_show_views_with, route_create_temp_view, temp_view_err, temp_view_name_arg,
 };
 use crate::view_ddl::parse::try_parse_show_views;
+use crate::view_ddl::temp_alter::route_temp_view_alter;
 use crate::view_ddl::temp_parse::try_parse_create_temp_view;
 use crate::view_ddl::temp_view::temp_view_column_comments;
 use crate::view_ddl::temp_write::refuse_temp_view_write_target;
@@ -41,6 +42,12 @@ pub(crate) async fn route_temp_view_statement(
         && let Some(refusal) = refuse_temp_view_write_target(&head, sql, temp_views)
     {
         return Some(Err(refusal));
+    }
+    if write_options.is_empty()
+        && head.eq_ignore_ascii_case("ALTER")
+        && let Some(outcome) = route_temp_view_alter(ctx, sql, temp_views).await
+    {
+        return Some(outcome);
     }
     if head.eq_ignore_ascii_case("DROP") {
         return try_drop_temp_view(ctx, sql, write_options, temp_views);

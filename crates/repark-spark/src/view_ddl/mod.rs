@@ -4,6 +4,7 @@ pub(crate) mod parse;
 pub(crate) mod read;
 pub(crate) mod show_create;
 pub(crate) mod show_tblproperties;
+pub(crate) mod temp_alter;
 pub(crate) mod temp_ddl;
 pub(crate) mod temp_parse;
 pub(crate) mod temp_view;
