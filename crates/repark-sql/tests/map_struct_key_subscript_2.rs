@@ -5,6 +5,7 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::DataType;
 use repark_core::{ReparkSession, SqlDialect};
 use repark_functions::ansi::SparkAnsiConfig;
+use repark_functions::case_sensitive::SparkCaseSensitiveConfig;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
 
@@ -624,4 +625,149 @@ async fn with_ansi_on_in_the_builder_a_struct_key_is_cast_by_position() {
     )
     .await;
     expect_ansi_on(&door).await;
+}
+
+const CASE_TABLES: [&str; 4] = [
+    "CREATE TABLE ice.ns.c (id INT, m MAP<STRUCT<k: INT, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.c VALUES (1, map(named_struct('k', 1, 'j', 2), 7, named_struct('k', 3, 'j', 2), 8)), (2, map(named_struct('k', 1, 'j', 5), 9))",
+    "CREATE TABLE ice.ns.sas (id INT, m MAP<STRUCT<a: INT, arr: ARRAY<STRUCT<x: STRING, y: INT>>>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.sas VALUES (1, map(named_struct('a', 1, 'arr', array(named_struct('x', 'p', 'y', 2))), 7)), (2, map(named_struct('a', 2, 'arr', array(named_struct('x', 'q', 'y', 3), named_struct('x', 'r', 'y', 4))), 9))",
+];
+
+const CASE_UPPER: &str = "SELECT id, m[named_struct('K', 1, 'J', 2)] FROM ice.ns.c ORDER BY id";
+const CASE_UPPER_LITERAL: &str =
+    "SELECT map(named_struct('k', 1, 'j', 2), 7)[named_struct('K', 1, 'J', 2)]";
+
+const CASE_ANSWERS: [(&str, &[&str]); 6] = [
+    (CASE_UPPER, &["1|7", "2|NULL"]),
+    (
+        "SELECT id, m[named_struct('K', 1, 'j', 2)] FROM ice.ns.c ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (CASE_UPPER_LITERAL, &["7"]),
+    (
+        "SELECT map(array(named_struct('k', 1)), 7)[array(named_struct('K', 1))]",
+        &["7"],
+    ),
+    (
+        "SELECT id, m[named_struct('a', 1, 'arr', array(named_struct('X', 'p', 'Y', 2)))] FROM ice.ns.sas ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (
+        "SELECT map(named_struct('k', 1, 'K', 2), 7)[named_struct('k', 1, 'K', 2)]",
+        &["7"],
+    ),
+];
+
+const CASE_ANSI_ON_ANSWERS: [(&str, &[&str]); 4] = [
+    CASE_ANSWERS[0],
+    CASE_ANSWERS[1],
+    CASE_ANSWERS[2],
+    CASE_ANSWERS[4],
+];
+
+const CASE_SENSITIVE_REFUSALS: [(&str, &str); 2] = [
+    (
+        CASE_UPPER,
+        "The second parameter requires the \"STRUCT<k: INT, j: INT>\" type, however the key has the type \"STRUCT<K: INT, J: INT>\". SQLSTATE: 42K09",
+    ),
+    (
+        CASE_UPPER_LITERAL,
+        "however the key has the type \"STRUCT<K: INT, J: INT>\". SQLSTATE: 42K09",
+    ),
+];
+
+const CASE_EXACT: &str = "SELECT id, m[named_struct('k', 1, 'j', 2)] FROM ice.ns.c ORDER BY id";
+
+fn set_case_sensitive(door: &Door, enabled: bool) {
+    let state = door.session.context().state_ref();
+    let mut state = state.write();
+    state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<SparkCaseSensitiveConfig>()
+        .expect("the Spark door carries the case-sensitivity setting")
+        .enabled = enabled;
+}
+
+async fn expect_case_insensitive(door: &Door) {
+    for (sql, answered) in CASE_ANSWERS {
+        expect(door, sql, answered).await;
+    }
+}
+
+async fn expect_case_sensitive_refusals(door: &Door) {
+    for (sql, text) in CASE_SENSITIVE_REFUSALS {
+        let error = answer(&door.session, sql)
+            .await
+            .expect_err("a case-sensitive session refuses a key in another case like Spark");
+        for fragment in [
+            "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve the map subscript due to data type mismatch: The second parameter requires the \"STRUCT<k: INT",
+            text,
+        ] {
+            assert!(error.contains(fragment), "{sql}: {fragment} not in {error}");
+        }
+    }
+    expect(door, CASE_EXACT, &["1|7", "2|NULL"]).await;
+}
+
+#[tokio::test]
+async fn with_ansi_off_struct_key_field_names_match_ignoring_case_like_spark() {
+    let door = spark_door_with(
+        &[
+            ("spark.sql.session.timeZone", UTC),
+            ("spark.sql.ansi.enabled", "false"),
+        ],
+        &[&CASE_TABLES],
+    )
+    .await;
+    expect_case_insensitive(&door).await;
+}
+
+#[tokio::test]
+async fn with_ansi_off_a_case_sensitive_session_refuses_a_key_in_another_case_like_spark() {
+    let door = spark_door_with(
+        &[
+            ("spark.sql.session.timeZone", UTC),
+            ("spark.sql.ansi.enabled", "false"),
+            ("spark.sql.caseSensitive", "true"),
+        ],
+        &[&CASE_TABLES],
+    )
+    .await;
+    expect_case_sensitive_refusals(&door).await;
+}
+
+#[tokio::test]
+async fn case_sensitivity_set_inside_a_session_gates_the_field_name_match_both_ways() {
+    let door = spark_door_with(
+        &[
+            ("spark.sql.session.timeZone", UTC),
+            ("spark.sql.ansi.enabled", "false"),
+        ],
+        &[&CASE_TABLES],
+    )
+    .await;
+    set_case_sensitive(&door, true);
+    expect_case_sensitive_refusals(&door).await;
+    set_case_sensitive(&door, false);
+    expect_case_insensitive(&door).await;
+}
+
+#[tokio::test]
+async fn with_ansi_on_a_key_in_another_case_is_cast_by_position_under_either_case_setting() {
+    let door = spark_door_with(
+        &[
+            ("spark.sql.session.timeZone", UTC),
+            ("spark.sql.ansi.enabled", "true"),
+        ],
+        &[&CASE_TABLES],
+    )
+    .await;
+    for (sql, answered) in CASE_ANSI_ON_ANSWERS {
+        expect(&door, sql, answered).await;
+    }
+    set_case_sensitive(&door, true);
+    expect(&door, CASE_UPPER, &["1|7", "2|NULL"]).await;
 }
