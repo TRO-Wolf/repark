@@ -160,6 +160,8 @@ When a defect is a bypass (an input reached a protected operation, or a guard wa
 
 ## Regression-Proof Protocol (R5)
 
+For a clause stated as a domain table, the regression proof is one table-driven test per public door that reads the table and asserts every cell against the oracle's recorded answer: red before the fix on the failing cells, green on the whole table after. Hand-picked example pins are controls, not the proof. A verifier's probe matrix is promoted into that test rather than discarded.
+
 R5 governs how a finding becomes `REMEDIATED`. For every accepted finding whose defect is expressible
 as a test, the Actor:
 
