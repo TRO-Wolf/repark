@@ -12,8 +12,8 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   way renames the view. Verifier round 1 FAIL (F1, S1); round 2 FAIL (F5 and F6, S1) with the Muse critic PASS;
   round 3 FAIL on `90c2cc0d` (F10, S1; F11, S3) with the Muse critic PASS (R3F1, R3F2); round 4 FAIL on
   `d35a792b` (F12, S1; F13 to F15, S3; F16, S3 records) and the Muse critic FAIL (R4F1, S1; R4F2, S3).
-  Fix round 4 at `7331ce45`; round 5 owed. 38 of 40 clauses PROVEN (C-017, the verification, and C-040,
-  the R4F1 Spark answer, are OPEN). `Path: STANDARD`.
+  Fix round 4 at `7331ce45`; round 5 FAIL on `618df399` (F17, S2, carded as QUOTED-TARGET-NO-VIEW-1; F18 to F20, L13 and L14 recorded or carded),
+  the Muse MAX second verifier's round 5 pending on the records head. 39 of 40 clauses PROVEN (C-017, the verification, is OPEN). `Path: STANDARD`.
   Branch `fix/spark-door-temp-view-ddl-1`, not pushed.
   pins: spark-door-temp-view-ddl-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-038, C-039, C-040
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
