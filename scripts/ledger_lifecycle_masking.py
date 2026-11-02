@@ -27,8 +27,8 @@ def _find_run(line: str, size: int, start: int) -> int:
     return -1
 
 
-def _blank_spans(line: str) -> str:
-    chars = list(line)
+def _blank_multiline_spans(text: str) -> str:
+    chars = list(text)
     index = 0
     while index < len(chars):
         if chars[index] != "`":
@@ -37,22 +37,25 @@ def _blank_spans(line: str) -> str:
         size = 1
         while index + size < len(chars) and chars[index + size] == "`":
             size += 1
-        closer = _find_run(line, size, index + size)
+        closer = _find_run(text, size, index + size)
         if closer == -1:
             index += size
             continue
         for blank in range(index, closer + size):
-            chars[blank] = " "
+            if chars[blank] not in "\r\n":
+                chars[blank] = " "
         index = closer + size
     return "".join(chars)
 
 
 def _masked_lines(text: str) -> list[tuple[str, str]]:
     """Each line paired with a copy whose code spans are blanked, fenced blocks blanked whole."""
+    raw_lines = text.splitlines(keepends=True)
+    span_lines = _blank_multiline_spans(text).splitlines(keepends=True)
     pairs: list[tuple[str, str]] = []
     fence: tuple[str, int] | None = None
     in_comment = False
-    for line in text.splitlines(keepends=True):
+    for line, cleaned in zip(raw_lines, span_lines, strict=True):
         mark = None if in_comment else _fence_mark(line)
         if fence is None and mark is not None:
             fence = (mark[0], mark[1])
@@ -63,7 +66,6 @@ def _masked_lines(text: str) -> list[tuple[str, str]]:
                 fence = None
             pairs.append((line, " " * len(line)))
             continue
-        cleaned = _blank_spans(line)
         pieces: list[str] = []
         cursor = 0
         while True:
