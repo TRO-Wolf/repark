@@ -825,7 +825,10 @@ def test_indented_marker_is_text_and_row_moves(repo: Path) -> None:
 
 
 def test_indented_marker_inside_a_fence_is_text(repo: Path) -> None:
-    fence = "```md\n    ```\n- [m1-demo-ledger.md](../completed/m1-demo-ledger.md) — **M1:** filed.\n```\n"
+    fence = (
+        "```md\n    ```\n- [m1-demo-ledger.md](../completed/m1-demo-ledger.md)"
+        " — **M1:** filed.\n```\n"
+    )
     _indented_repo(repo, fence)
     _moved_indented_row(repo, fence)
     assert "filed" not in (repo / "task/ledgers/completed/map.md").read_text()
