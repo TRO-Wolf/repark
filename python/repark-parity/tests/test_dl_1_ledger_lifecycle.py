@@ -903,17 +903,6 @@ def test_multiline_span_hides_the_opener_and_row_moves(repo: Path) -> None:
     _moved_multiline_row(repo, head)
 
 
-def test_multiline_span_hides_a_row_bullet_and_real_row_moves(repo: Path) -> None:
-    head = (
-        "`span opens\n"
-        "- [m1-demo-ledger.md](../completed/m1-demo-ledger.md) — **M1:** filed.\n"
-        "close ` here\n"
-    )
-    _indented_repo(repo, head)
-    _moved_multiline_row(repo, head)
-    assert "filed" not in (repo / "task/ledgers/completed/map.md").read_text()
-
-
 def test_double_span_across_lines_hides_the_opener(repo: Path) -> None:
     head = "`` opens ` single <!--\nstill open `` tail\n"
     _indented_repo(repo, head)
@@ -937,3 +926,40 @@ def test_masked_lines_multiline_keep_every_position() -> None:
     )
     for line, masked in module._masked_lines(text):
         assert len(masked) == len(line)
+
+
+def _moved_split_row(repo: Path, head: str, tail: str) -> None:
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        + head
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
+        + tail,
+    )
+    _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
+    _commit(repo, "m1 under a lone tick across a block boundary")
+    result = _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed")
+    assert result.returncode == 0, result.stderr
+    assert "rewrote 1 link(s)" in result.stdout
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert head in staging
+    assert tail in staging
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the real row.\n" in completed
+
+
+def test_lone_tick_before_a_blank_line_leaves_the_row_visible(repo: Path) -> None:
+    _moved_split_row(repo, "prose `lone\n\n", "trailing ` closer\n")
+
+
+def test_lone_tick_in_a_bullet_leaves_the_next_row_visible(repo: Path) -> None:
+    _moved_split_row(repo, "- See also `lone.\n", "trailing ` closer\n")
+
+
+def test_lone_tick_before_a_heading_leaves_the_row_visible(repo: Path) -> None:
+    _moved_split_row(repo, "prose `lone\n## Notes\n", "trailing ` closer\n")
