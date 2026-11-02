@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iceberg Closeout Status</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --fg:#15202B; --muted:#5A6B78; --line:#CBD6DE; --card:#FFFFFF;
+  --accent:#0E6C88; --accent-ink:#FFFFFF;
+  --ok:#1E7F4F; --ok-bg:#DDF2E5; --wait:#8A6300; --wait-bg:#FBF0CF; --run:#0E6C88; --run-bg:#D8EEF5; --hold:#7A2E2E; --hold-bg:#F6DADA;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --fg:#E6ECF0; --muted:#9AAAB6; --line:#2A3942; --card:#162027;
+  --accent:#4DB1CF; --accent-ink:#0E1418;
+  --ok:#7DD4A3; --ok-bg:#153626; --wait:#F0C86A; --wait-bg:#3A2E0E; --run:#4DB1CF; --run-bg:#0F2E39; --hold:#F0A0A0; --hold-bg:#3E1C1C;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --fg:#E6ECF0; --muted:#9AAAB6; --line:#2A3942; --card:#162027;
+  --accent:#4DB1CF; --accent-ink:#0E1418;
+  --ok:#7DD4A3; --ok-bg:#153626; --wait:#F0C86A; --wait-bg:#3A2E0E; --run:#4DB1CF; --run-bg:#0F2E39; --hold:#F0A0A0; --hold-bg:#3E1C1C;
+  color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:28px 56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2rem;font-weight:600;line-height:1.1}
+h2{font-size:1.25rem;font-weight:600;margin-block:36px 12px;padding-bottom:6px;border-bottom:2px solid var(--accent)}
+h3{font-size:1.05rem;font-weight:600}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted);max-width:68ch;margin-top:8px}
+code,.sha{font-family:var(--mono);font-size:.86em}
+.sha{color:var(--accent)}
+.chip{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}
+.chip.wait{background:var(--wait-bg);color:var(--wait)}
+.chip.run{background:var(--run-bg);color:var(--run)}
+.chip.hold{background:var(--hold-bg);color:var(--hold)}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:24px}
+.tile{background:var(--card);border:1px solid var(--line);padding:12px 14px;min-width:0}
+.tile .n{font-family:var(--display);font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .l{font-size:.82rem;color:var(--muted);margin-top:2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.card .head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.card p{margin:0}
+.card ul{margin:0;padding-left:18px}
+.card li{margin-block:2px}
+.kv{font-size:.86rem;color:var(--muted)}
+.kv b{color:var(--fg);font-weight:500}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.next{padding-left:20px;max-width:70ch}
+ol.next li{margin-block:6px}
+.note{border-left:3px solid var(--accent);padding:8px 12px;background:var(--card);max-width:70ch}
+.src{font-size:.8rem;color:var(--muted);margin-top:40px;max-width:70ch}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="eyebrow">RePark · Iceberg closeout · audit-3 blockers</div>
+  <h1>Iceberg Closeout Status</h1>
+  <p class="lede">State as of 2026-11-02 10:32 UTC. Four product units are built and in verification or awaiting your merge word. Two Opus 5.5 agents and two Muse MAX critics are running. The v2 label re-date follows the re-audit of AUD-015 and AUD-016.</p>
+
+  <div class="strip">
+    <div class="tile"><div class="n">2</div><div class="l">PRs awaiting your merge word (#1230, #1231)</div></div>
+    <div class="tile"><div class="n">2</div><div class="l">RePark PRs in verification (#1232, #1233)</div></div>
+    <div class="tile"><div class="n">1</div><div class="l">fork PR in build round 4 (#381)</div></div>
+    <div class="tile"><div class="n">4</div><div class="l">agents running (2 Opus 5.5, 2 Muse MAX)</div></div>
+    <div class="tile"><div class="n">282 G</div><div class="l">disk free on the NVMe (84 % used)</div></div>
+  </div>
+
+  <h2>Awaiting your merge word</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="head"><h3>PR #1230 · audit-3 records</h3><span class="chip ok">CI green · ready</span></div>
+      <p class="kv">branch <b>docs/audit3-records</b> · head <span class="sha">02f610a2</span> · docs only</p>
+      <p>Files the third audit: cards AUD-015 to AUD-019, the label ledger rows, and the AUD-020 corrections. Nothing else moves until it lands, because the two fix PRs below will conflict with it in the mid-term map and the ELEMENT-AT-ALIAS-1 registry section; I merge main into their lanes right after.</p>
+    </div>
+    <div class="card">
+      <div class="head"><h3>PR #1231 · LEDGER-LIFECYCLE-MOVE-1</h3><span class="chip ok">CI 26/26 · Muse r6 PASS</span></div>
+      <p class="kv">branch <b>fix/ledger-lifecycle-move-1</b> · head <span class="sha">cbaa772b</span> · 26 commits · six critic rounds</p>
+      <p>A ledger move now cuts the source map row wherever it sits (Contents first, then the rest), re-sorts the destination, and never rewrites <code>docs/history/</code> (history is left frozen and skipped by the dead-link scan, per your ruling). Markdown masking moved to a sibling module to stay under the file ceiling. Post-merge records owed: K1 wording, the J1 to J7 limits, C-014 close, V-002 note.</p>
+    </div>
+  </div>
+
+  <h2>Built and in verification</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="head"><h3>PR #1232 · MAP-STRUCT-KEY-SUBSCRIPT-1 (AUD-016)</h3><span class="chip run">round 5 verifying</span></div>
+      <p class="kv">branch <b>fix/map-struct-key-subscript-1</b> · head <span class="sha">3ca849c5</span> · CI r5 26/26 green · four fix rounds</p>
+      <p>A map subscript with a struct key is answered by RePark's own kernel, never DataFusion's <code>get_field</code>. The analyzer rule sits before type coercion on the Spark, ANSI and native doors and under <code>F.expr</code>.</p>
+      <ul>
+        <li>Each key leaf is planned as a user CAST through the door's own analyzer chain, so zones and NTZ follow the session.</li>
+        <li>Positional rebuild through struct, list family and map; floating leaves normalised (signed zero, NaN) on both sides.</li>
+        <li>ANSI off: the key must match exactly at every struct or map node, as Spark refuses. Shape mismatch refuses in Spark's type notation.</li>
+        <li>First native-door pin lands (C-019 closed). Eleven adjacent engine divergences carded, not fixed here.</li>
+      </ul>
+      <p class="kv">Muse r4 <b>PASS</b> · Muse r5 <b>running</b> · Opus r5 <b>queued</b> on an Opus slot (the JVM is free)</p>
+    </div>
+    <div class="card">
+      <div class="head"><h3>PR #1233 · SPARK-DOOR-TEMP-VIEW-DDL-1 (AUD-015)</h3><span class="chip run">round 4 verifying</span></div>
+      <p class="kv">branch <b>fix/spark-door-temp-view-ddl-1</b> · head <span class="sha">d35a792b</span> · CI r4 green · three fix rounds</p>
+      <p>ALTER TABLE through a temporary view's name refuses with Spark's exact texts; RENAME TO renames the view; DROP TABLE through a view drops the view, as Spark does.</p>
+      <ul>
+        <li>Leading whitespace, comments and semicolons normalised; any leading <code>;</code> statement refuses with Spark's parse error on every Spark-door statement.</li>
+        <li>The core resolver never fails open: a digit-leading or unparsable name is looked up raw or refused.</li>
+        <li>Fail-closed prefixes (ONLY, IF EXISTS ONLY, ON CLUSTER, ALTER ICEBERG TABLE); quoted targets refuse. Python facade aligned. Seven cards filed.</li>
+      </ul>
+      <p class="kv">Muse r3 <b>PASS</b> · Muse r4 <b>running</b> · Opus r4 <b>running</b> (Spark phase done, Rust and facade suites running)</p>
+    </div>
+    <div class="card">
+      <div class="head"><h3>fork #381 · F-IDLESS-TOPLEVEL-POSITIONAL-1</h3><span class="chip run">build round 4</span></div>
+      <p class="kv">branch <b>fix/idless-toplevel-positional-1</b> · pushed head <span class="sha">40fc776b</span> (fork CI all green) · two unpushed round-4 commits at the gates</p>
+      <p>The no-mapping fallback route reads top-level columns by position (id = position + 1, Java's <code>addFallbackIds</code>) and refuses a type- or nesting-kind-changing positional read. Readable set: STRING and BINARY, equal-scale DECIMAL, INT96 over BIGINT.</p>
+      <ul>
+        <li>Round 4 (Opus r2 F9 to F12): filters on readable pairs follow Spark's matrix, an overflowing narrowed decimal stays loud under a filter, a string read as binary keeps its raw bytes.</li>
+        <li>Spark facts measured on the oracle; top-level only by charter. Timestamp residue chartered as F-TIMESTAMP-FAMILY-READ-1 (brief drafted).</li>
+      </ul>
+      <p class="kv">Muse r2 <b>PASS</b> · Opus r2 <b>FAIL → round 4</b> · next: records clerk, push, fork CI, verifiers r3, then RePark repin RP-65</p>
+    </div>
+  </div>
+
+  <h2>Running now</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>lane</th><th>model</th><th>work</th><th>state</th><th>blocks on</th></tr></thead>
+      <tbody>
+        <tr><td>fork builder r4</td><td><code>claude-opus-5-5</code></td><td>F-IDLESS-TOPLEVEL-POSITIONAL-1 round 4 (fix3 brief)</td><td><span class="chip run">at final gates</span> clippy, tests, doc all exit 0; hand-back next</td><td>holds Opus slot 1</td></tr>
+        <tr><td>AUD-015 Opus verifier r4</td><td><code>claude-opus-5-5</code></td><td>PR #1233 at d35a792b; R3F1 spellings and R3F2 measured on Spark</td><td><span class="chip run">cargo + pytest</span> catalog comparison done</td><td>holds Opus slot 2</td></tr>
+        <tr><td>AUD-015 Muse critic r4</td><td>Muse MAX</td><td>PR #1233 at d35a792b</td><td><span class="chip run">running</span> run 20261102T091156Z</td><td>hand-back waiter armed</td></tr>
+        <tr><td>AUD-016 Muse critic r5</td><td>Muse MAX</td><td>PR #1232 at 3ca849c5</td><td><span class="chip run">running</span> run 20261102T100543Z</td><td>hand-back waiter armed</td></tr>
+        <tr><td>AUD-016 Opus verifier r5</td><td><code>claude-opus-5-5</code></td><td>PR #1232 at 3ca849c5 (clone and brief ready)</td><td><span class="chip wait">queued</span></td><td>an Opus slot (two-lane cap); JVM free</td></tr>
+        <tr><td>fork verifiers r3</td><td>Opus 5.5 + Muse MAX</td><td>fork #381 after the round-4 push</td><td><span class="chip wait">staged</span></td><td>round-4 records, push, fork CI green</td></tr>
+        <tr><td>Spark JVM</td><td></td><td>oracle for Opus verifiers</td><td><span class="chip ok">free</span> 0 running</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Next, in order</h2>
+  <ol class="next">
+    <li>Your merge words for <b>#1230</b> and <b>#1231</b>. After #1230: merge main into the AUD-015 and AUD-016 lanes, then their card closures and label clauses C-079/C-080. After #1231: the post-merge records round.</li>
+    <li>AUD-015 round 4 and AUD-016 round 5: union of PASS from Opus and Muse, else one more reproduce-then-fix round. Then your words for #1233 and #1232.</li>
+    <li>Fork #381: round-4 hand-back, hygiene and model check, records clerk, push, fork CI, verifiers r3, your word. Then RP-65 repin on RePark and the new fork unit F-TIMESTAMP-FAMILY-READ-1.</li>
+    <li>Scoped re-audit of AUD-015 and AUD-016 after merge, then the U-13 v2 label re-date clerk round on your word.</li>
+    <li>Held until after the re-date: Dependabot #1214 and #1215, MAP-RATCHET-1, the remaining staging ledger moves, the v3 track.</li>
+  </ol>
+
+  <h2>Watch items</h2>
+  <div class="note">
+    <p><b>Disk</b> is at 282 G free with four verify clones and their work directories live; each finished clone is deleted at hand-back.</p>
+    <p><b>Fork lane</b> carries a stray untracked <code>crates/iceberg/s3:/</code> directory from a round-4 test run; it is checked and removed before the records commit, never committed.</p>
+    <p><b>Engine-wide divergences</b> surfaced by the AUD-016 verifiers (double-to-decimal cast rounding, Infinity-to-decimal, map-constructor float duplicate keys, F.expr aggregate contexts) are carded for later units, not fixed in #1232.</p>
+  </div>
+
+  <p class="src">Sources: GitHub state of TRO-Wolf/repark PRs #1230 to #1233 and TRO-Wolf/iceberg-rust PR #381; the CI watcher logs for each run; the unit ledgers and verifier verdicts of each round; the lane process table on the build box.</p>
+</div>
+</body>
+</html>
