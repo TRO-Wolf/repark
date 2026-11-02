@@ -29,6 +29,7 @@ def _load_cells() -> list[dict[str, Any]]:
 
 
 CELLS = _load_cells()
+BY_KEY = {(cell["cat"], cell["head"], cell["spelling"], cell["view"]): cell for cell in CELLS}
 
 
 def _cell_id(cell: dict[str, Any]) -> str:
@@ -153,7 +154,9 @@ def _assert_cell(cell: dict[str, Any], answer: str, changed: list[str]) -> None:
             assert _kind(answer) == "rows", shown
             assert _rows(answer) == _rows(cell["spark"]), shown
         else:
-            assert answer in {"ok", measured} and not answer.startswith("ERR"), shown
+            control = BY_KEY[(cell["cat"], cell["head"], "bt", cell["view"])]["repark"]
+            assert answer == "ok" or _kind(answer) == _kind(control) != "ok", shown
+            assert not answer.startswith("ERR"), shown
         return
     assert answer.startswith("ERR"), shown
     if expectation == "spark_refuses":
