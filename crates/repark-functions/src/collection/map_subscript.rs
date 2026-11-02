@@ -104,7 +104,10 @@ fn rewrite_expr(
         return internal_err!("a map subscript takes a map and one key");
     };
     let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
-    if !accepts(&lookup_type, &key_type) || (!ansi && !legacy_accepts(&lookup_type, &key_type)) {
+    let names = FieldNames::from_options(config);
+    if !accepts(&lookup_type, &key_type)
+        || (!ansi && !legacy_accepts(&lookup_type, &key_type, names))
+    {
         return plan_err!(
             "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve the map subscript due to data \
              type mismatch: The second parameter requires the \"{}\" type, however the key has the \
@@ -273,21 +276,44 @@ fn accepts(from: &DataType, to: &DataType) -> bool {
     }
 }
 
-fn legacy_accepts(from: &DataType, to: &DataType) -> bool {
+#[derive(Debug, Clone, Copy)]
+enum FieldNames {
+    Exact,
+    IgnoreCase,
+}
+
+impl FieldNames {
+    fn from_options(config: &ConfigOptions) -> Self {
+        if crate::case_sensitive::spark_case_sensitive_from_options(config) {
+            Self::Exact
+        } else {
+            Self::IgnoreCase
+        }
+    }
+
+    fn same(self, from: &str, to: &str) -> bool {
+        match self {
+            Self::Exact => from == to,
+            Self::IgnoreCase => repark_common::java_case::fold_b_equal(from, to),
+        }
+    }
+}
+
+fn legacy_accepts(from: &DataType, to: &DataType, names: FieldNames) -> bool {
     match (from, to) {
         (DataType::Null, _) => true,
         (DataType::Struct(_) | DataType::Map(..), _)
-        | (_, DataType::Struct(_) | DataType::Map(..)) => same_spark_type(from, to),
+        | (_, DataType::Struct(_) | DataType::Map(..)) => same_spark_type(from, to, names),
         _ => match (list_element(from), list_element(to)) {
             (Some(from_element), Some(to_element)) => {
-                legacy_accepts(from_element.data_type(), to_element.data_type())
+                legacy_accepts(from_element.data_type(), to_element.data_type(), names)
             }
             _ => true,
         },
     }
 }
 
-fn same_spark_type(from: &DataType, to: &DataType) -> bool {
+fn same_spark_type(from: &DataType, to: &DataType, names: FieldNames) -> bool {
     match (from, to) {
         (DataType::Struct(from_fields), DataType::Struct(to_fields)) => {
             from_fields.len() == to_fields.len()
@@ -295,16 +321,16 @@ fn same_spark_type(from: &DataType, to: &DataType) -> bool {
                     .iter()
                     .zip(to_fields.iter())
                     .all(|(from_field, to_field)| {
-                        from_field.name() == to_field.name()
-                            && same_spark_type(from_field.data_type(), to_field.data_type())
+                        names.same(from_field.name(), to_field.name())
+                            && same_spark_type(from_field.data_type(), to_field.data_type(), names)
                     })
         }
         (DataType::Map(from_entries, _), DataType::Map(to_entries, _)) => {
-            same_spark_type(from_entries.data_type(), to_entries.data_type())
+            same_spark_type(from_entries.data_type(), to_entries.data_type(), names)
         }
         _ => match (list_element(from), list_element(to)) {
             (Some(from_element), Some(to_element)) => {
-                same_spark_type(from_element.data_type(), to_element.data_type())
+                same_spark_type(from_element.data_type(), to_element.data_type(), names)
             }
             (None, None) => {
                 from == to
