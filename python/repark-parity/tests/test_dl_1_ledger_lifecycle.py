@@ -24,6 +24,7 @@ _ENV = {
 
 _LEDGER = "task/ledgers/completed/x1-demo-ledger.md"
 _ARCHIVED = "task/ledgers/archive/2026-08/2026-08-20-x1-demo-ledger.md"
+PINS_LABEL = "pins:"
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -319,7 +320,7 @@ def test_move_cuts_a_tail_row_with_pins_and_pastes_it_in_order(repo: Path) -> No
         repo,
         "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the demo unit, wrapped\n"
         "  over two lines with detail.\n"
-        "  pins: m1-demo/C-001, C-002\n",
+        "  " + PINS_LABEL + " m1-demo/C-001, C-002\n",
         "task/ledgers/staging/m1-demo-ledger.md",
         "# Ledger — M1\n",
     )
@@ -332,7 +333,7 @@ def test_move_cuts_a_tail_row_with_pins_and_pastes_it_in_order(repo: Path) -> No
     completed = (repo / "task/ledgers/completed/map.md").read_text()
     assert completed.count("m1-demo-ledger.md") == 2
     assert "— **M1:** the demo unit, wrapped\n  over two lines with detail.\n" in completed
-    assert "  pins: m1-demo/C-001, C-002\n" in completed
+    assert "  " + PINS_LABEL + " m1-demo/C-001, C-002\n" in completed
     assert "Ledger — M1" not in completed
     assert completed.index("aaa-old-ledger") < completed.index("m1-demo-ledger")
     assert completed.index("m1-demo-ledger") < completed.index("zzz-old-ledger")
@@ -361,7 +362,7 @@ def test_move_carries_the_sidecar_without_a_row(repo: Path) -> None:
         "task/ledgers/staging/map.md",
         "# map\n\n## Contents\n"
         "- [m3-demo-ledger.md](m3-demo-ledger.md) — **M3:** the demo unit.\n"
-        "  pins: m3-demo/C-001\n"
+        "  " + PINS_LABEL + " m3-demo/C-001\n"
         "\n## Pointers\n- Up: [../map.md](../map.md)\n",
     )
     _write(repo, "task/ledgers/staging/m3-demo-ledger.md", "# Ledger — M3\n")
