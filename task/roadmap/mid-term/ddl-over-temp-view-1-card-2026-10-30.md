@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-30. **Filed by:** the SPARK-DOOR-TEMP-VIEW-TARGET-1 records round 3 (`claude-haiku-5-5`), from the Muse MAX second verifier's round-3 leads on `bfce6032`.
 
-**Status:** open. Grade C. Not built; not dispatched; awaiting the owner's charter. Spark's answer was unmeasured when this card was filed. The third audit measured both shapes Spark-equal on 2026-11-01 (audit item 4); retirement is the post-merge round's call.
+**Status:** open. Grade C. Not built; not dispatched; awaiting the owner's charter. Spark's answer is unmeasured: measure before any build. Dated 2026-11-01 (the third audit, section 3): both shapes were measured on RePark `d0562058` and are Spark-equal. `DROP TABLE t` and `DROP TABLE IF EXISTS t` drop the view on both engines and leave the table; `CREATE OR REPLACE TABLE t AS SELECT 70` and `REPLACE TABLE t AS SELECT 70` replace the table on both engines, and `t` still reads the view. That measurement supersedes the 'unmeasured' sentence above; the pins, or the charter's decline, are still owed.
 
 **Why:** Muse MAX found two statements, with a temporary view `t` in scope and a table `t` in the current namespace, that the write-target refusal of [SPARK-DOOR-TEMP-VIEW-TARGET-1](spark-door-temp-view-target-1-card-2026-10-29.md) does not reach, because neither is one of its six write routes. Both are pre-existing, and no Spark answer was recorded:
 
