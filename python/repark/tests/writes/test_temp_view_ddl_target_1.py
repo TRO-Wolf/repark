@@ -793,6 +793,8 @@ def test_a_double_quoted_target_naming_a_view_refuses_and_never_renames(
     assert _state(session, catalog) == state
     assert _files(tmp_path, catalog) == files
     assert _ids(session, "SELECT id FROM t") == [99]
+    session.stop()
+    assert _reopened_state(tmp_path, catalog) == state
 
 
 @pytest.mark.parametrize("catalog", CATALOGS)
