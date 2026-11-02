@@ -934,7 +934,7 @@ def _expand_truncate_target_sql(query: str, resolve: Callable[..., str]) -> str 
 
     rest = query[name_end:]
 
-    if rest.strip().rstrip(";").strip():
+    if rest.strip().rstrip(";").strip() or raw_name.strip().startswith('"'):
         return query
 
     try:
@@ -981,6 +981,8 @@ def _expand_drop_table_or_view_sql(query: str, resolve: Callable[..., str]) -> s
     if not names_blob:
         return query
 
+    if any(raw.strip().startswith('"') for raw in _split_sql_table_name_list(names_blob)):
+        return query
     qualified: list[str] = []
 
     for raw_name in _split_sql_table_name_list(names_blob):

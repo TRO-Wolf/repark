@@ -321,26 +321,20 @@ impl ReparkSession {
     /// # Errors
     /// Fails with [`Error::Analysis`] when a catalog has replaced this session's temp-view home.
     pub fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
-        let Ok(parts) = crate::parse_table_identifier_segments(name) else {
-            return Ok(None);
-        };
-        let [view] = parts.as_slice() else {
+        let Some(view) = single_temp_view_segment(name)? else {
             return Ok(None);
         };
         let quoted = name.trim().starts_with(['"', '`']);
-        let reference = self.temp_view_ref_from_segment(view, quoted)?;
+        let reference = self.temp_view_ref_from_segment(&view, quoted)?;
         self.home_ref_if_exists(&reference)
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn resolve_temp_view_home_ref_exact(&self, name: &str) -> Result<Option<Vec<String>>> {
-        let Ok(parts) = crate::parse_table_identifier_segments(name) else {
+        let Some(view) = single_temp_view_segment(name)? else {
             return Ok(None);
         };
-        let [view] = parts.as_slice() else {
-            return Ok(None);
-        };
-        let reference = self.temp_view_ref_from_segment_exact(view)?;
+        let reference = self.temp_view_ref_from_segment_exact(&view)?;
         self.home_ref_if_exists(&reference)
     }
 
@@ -418,6 +412,31 @@ impl crate::dialect::TempViewSession for ReparkSession {
     fn drop_temp_view(&self, name: &str) -> Result<bool> {
         ReparkSession::drop_temp_view(self, name)
     }
+}
+
+fn single_temp_view_segment(name: &str) -> Result<Option<String>> {
+    let raw = name.trim();
+    if raw.is_empty() {
+        return Ok(None);
+    }
+    let parts = match crate::parse_table_identifier_segments(raw) {
+        Ok(parts) => parts,
+        Err(_) if raw_temp_view_token(raw) => vec![raw.to_string()],
+        Err(error) => {
+            return Err(Error::Analysis(format!(
+                "cannot resolve the temporary view name {raw:?}: {error}"
+            )));
+        }
+    };
+    let [view] = parts.as_slice() else {
+        return Ok(None);
+    };
+    Ok(Some(view.clone()))
+}
+
+fn raw_temp_view_token(raw: &str) -> bool {
+    !raw.chars()
+        .any(|char| matches!(char, '.' | '`' | '"') || char.is_whitespace())
 }
 
 fn temp_view_key(segment: &str, rule: NameRule) -> String {

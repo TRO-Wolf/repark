@@ -21,7 +21,7 @@ use crate::view_ddl::parse::try_parse_show_views;
 use crate::view_ddl::temp_alter::route_temp_view_alter;
 use crate::view_ddl::temp_parse::{spark_parse_error, try_parse_create_temp_view};
 use crate::view_ddl::temp_view::temp_view_column_comments;
-use crate::view_ddl::temp_write::refuse_temp_view_write_target;
+use crate::view_ddl::temp_write::{double_quoted_target_refusal, refuse_temp_view_write_target};
 use crate::write_options::StatementWriteOptions;
 
 #[allow(clippy::missing_errors_doc)]
@@ -130,6 +130,9 @@ fn try_drop_temp_view(
         Ok(target) => target?,
         Err(error) => return Some(Err(error)),
     };
+    if let Some(refusal) = double_quoted_target_refusal(name) {
+        return Some(Err(refusal));
+    }
     Some(
         write_options
             .refuse_if_non_empty(context)

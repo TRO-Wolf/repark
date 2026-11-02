@@ -38,7 +38,10 @@ pub(crate) async fn route_temp_view_alter(
     temp_views: &dyn TempViewSession,
 ) -> Option<Result<DataFrame>> {
     let (name, prefixed, route) = alter_target(sql)?;
-    let home = temp_view_home_segments(&name, temp_views).ok()??;
+    let home = match temp_view_home_segments(&name, temp_views) {
+        Ok(home) => home?,
+        Err(error) => return Some(Err(error)),
+    };
     let view = home.last()?;
     let source = written_leaf(&name, view);
     let refused = |operation: &str, alternative| {

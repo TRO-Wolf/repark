@@ -384,8 +384,8 @@ async fn an_undecided_view_lookup_refuses_every_head_that_consults_it() {
 #[tokio::test]
 async fn a_double_quoted_drop_or_truncate_target_naming_a_view_refuses() {
     for (sql, near) in [
-        ("DROP TABLE \"t\"", "'\"t\"'"),
-        ("TRUNCATE TABLE \"t\"", "'\"t\"'"),
+        ("DROP TABLE \"t\"", "'\\\"t\\\"'"),
+        ("TRUNCATE TABLE \"t\"", "'\\\"t\\\"'"),
     ] {
         let outcome = outcome(&view_t(), sql).await;
         assert!(
