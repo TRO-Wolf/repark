@@ -156,7 +156,11 @@ any clause the fix touched, log a Self Logic Review, conclude with an ACTOR_BUIL
 the fix. The Actor is not required to know, and the summary does not need to record, where a
 defect-fix slice originated — only what was wrong and what changed.
 
+When a defect is a bypass (an input reached a protected operation, or a guard was circumvented), the slice names the violated invariant and enumerates the sibling input classes that can reach the same operation through the public entry points. For SQL targets that means statement prefixes, statement separators, identifier quoting and escaping, literal tokens and multiple targets; for type matching it means nesting, name matching, numeric edge values, ANSI modes and time zones. Each class gets a pin shown red before the fix and green after it, and a repair of the invariant is preferred to a list of spellings. The Critic keeps its freedom to probe classes the slice did not name.
+
 ## Regression-Proof Protocol (R5)
+
+For a clause stated as a domain table, the regression proof is one table-driven test per public door that reads the table and asserts every cell against the oracle's recorded answer: red before the fix on the failing cells, green on the whole table after. Hand-picked example pins are controls, not the proof. A verifier's probe matrix is promoted into that test rather than discarded.
 
 R5 governs how a finding becomes `REMEDIATED`. For every accepted finding whose defect is expressible
 as a test, the Actor:
