@@ -54,8 +54,8 @@ const ANSI_TABLES: [&str; 12] = [
     "INSERT INTO ice.ns.r3sa VALUES (1, map(named_struct('a', 1, 'arr', array('x')), 7)), (2, map(named_struct('a', 2, 'arr', array('y')), 9))",
     "CREATE TABLE ice.ns.r3as (id INT, m MAP<ARRAY<STRING>, INT>) USING iceberg",
     "INSERT INTO ice.ns.r3as VALUES (1, map(array('a', 'b'), 7, array('1.5'), 8)), (2, map(array('c'), 9))",
-    "CREATE TABLE ice.ns.r4adn (id INT, m MAP<ARRAY<DOUBLE>, INT>) USING iceberg",
-    "INSERT INTO ice.ns.r4adn VALUES (1, map(array(CAST(0 AS DOUBLE), CAST('NaN' AS DOUBLE)), 7, array(CAST(1 AS DOUBLE), CAST(0 AS DOUBLE)), 8)), (2, map(array(CAST('NaN' AS DOUBLE)), 9))",
+    "CREATE TABLE ice.ns.r4_elems (id INT, m MAP<ARRAY<DOUBLE>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.r4_elems VALUES (1, map(array(CAST(0 AS DOUBLE), CAST('NaN' AS DOUBLE)), 7, array(CAST(1 AS DOUBLE), CAST(0 AS DOUBLE)), 8)), (2, map(array(CAST('NaN' AS DOUBLE)), 9))",
 ];
 
 const ANSI_OFF_REFUSALS: [(&str, &str); 10] = [
@@ -148,11 +148,11 @@ const ANSI_OFF_ANSWERS: [(&str, &[&str]); 14] = [
         &["1|8", "2|NULL"],
     ),
     (
-        "SELECT id, m[array(CAST(-0.0D AS FLOAT), CAST('NaN' AS FLOAT))] FROM ice.ns.r4adn ORDER BY id",
+        "SELECT id, m[array(CAST(-0.0D AS FLOAT), CAST('NaN' AS FLOAT))] FROM ice.ns.r4_elems ORDER BY id",
         &["1|7", "2|NULL"],
     ),
     (
-        "SELECT id, m[array(1, 0)] FROM ice.ns.r4adn ORDER BY id",
+        "SELECT id, m[array(1, 0)] FROM ice.ns.r4_elems ORDER BY id",
         &["1|8", "2|NULL"],
     ),
 ];
