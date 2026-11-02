@@ -121,6 +121,7 @@ def _load_doc_blocks() -> ModuleType:
 BLOCKS = _load_doc_blocks()
 HISTORY_DIR = "docs/history"
 STATUS_RECORD = "status-record.md"
+FENCE_PATTERN = re.compile(r"^ {0,3}(?:```|~~~)")
 
 
 def git(repo: Path, *arguments: str) -> str:
@@ -144,12 +145,45 @@ def known_paths(tracked: list[str]) -> set[str]:
 
 
 def _fence_mark(line: str) -> tuple[str, int, bool] | None:
-    if MAPS.FENCE_PATTERN.match(line) is None:
+    if FENCE_PATTERN.match(line) is None:
         return None
     stripped = line.lstrip()
     char = stripped[0]
     length = len(stripped) - len(stripped.lstrip(char))
+    if char == "`" and "`" in stripped[length:]:
+        return None
     return char, length, not stripped[length:].strip()
+
+
+def _find_run(line: str, size: int, start: int) -> int:
+    index = line.find("`" * size, start)
+    while index != -1:
+        if (index == 0 or line[index - 1] != "`") and (
+            index + size >= len(line) or line[index + size] != "`"
+        ):
+            return index
+        index = line.find("`" * size, index + 1)
+    return -1
+
+
+def _blank_spans(line: str) -> str:
+    chars = list(line)
+    index = 0
+    while index < len(chars):
+        if chars[index] != "`":
+            index += 1
+            continue
+        size = 1
+        while index + size < len(chars) and chars[index + size] == "`":
+            size += 1
+        closer = _find_run(line, size, index + size)
+        if closer == -1:
+            index += size
+            continue
+        for blank in range(index, closer + size):
+            chars[blank] = " "
+        index = closer + size
+    return "".join(chars)
 
 
 def _masked_lines(text: str) -> list[tuple[str, str]]:
@@ -168,7 +202,7 @@ def _masked_lines(text: str) -> list[tuple[str, str]]:
                 fence = None
             pairs.append((line, " " * len(line)))
             continue
-        cleaned = MAPS.CODE_SPAN_PATTERN.sub(_blank, line)
+        cleaned = _blank_spans(line)
         pieces: list[str] = []
         cursor = 0
         while True:
@@ -190,11 +224,6 @@ def _masked_lines(text: str) -> list[tuple[str, str]]:
                 cursor = start + 4
         pairs.append((line, "".join(pieces)))
     return pairs
-
-
-def _blank(match: re.Match[str]) -> str:
-    """Same-length whitespace, so positions survive masking."""
-    return " " * len(match.group(0))
 
 
 def resolve(base_dir: str, target: str) -> str | None:
