@@ -92,5 +92,6 @@ work" is the neutral rule):
   decision. Every tier reads the same engineering method.
 - **Do not spawn Opus sub-agents without a direct, explicit request naming Opus.**
 - Single agent in the main thread is the default; do not fan out unless the user asks.
+- **Subagent prompt-cache TTL is one hour** (`subagentPromptCacheTtl: "1h"` in the user settings; owner, 2026-11-02). On the default five-minute TTL every tool call longer than five minutes made the next turn rewrite the whole context; that was 37 % of the Opus spend of the 48 h to 2026-11-02. Verify from any subagent transcript: `ephemeral_1h_input_tokens` above zero.
 
 Relax this section by editing it and noting the change in [task/lessons.md](task/lessons.md).
