@@ -4,6 +4,8 @@
 
 **Status:** open. Grade C (clerk). Target: the owned `iceberg-rust` fork, reached through RePark's maintenance procedures. Not dispatched; no build is owed until the owner charters it.
 
+**Label scope:** excluded from the v2 label by owner ruling 2026-11-02; immediate follow-up after the label.
+
 **Why:** On Avro and ORC merge-on-read tables, the fork's `rewrite_data_files` leaves a delete file that Spark removes, and `rewrite_position_delete_files` skips Avro and ORC position deletes altogether. The second is the carded F-EQDEL-CONVERT-BATCH-1 second item, and the audit's measurement matches that card. Rows are correct on both engines, so the residue is maintenance divergence, not a wrong answer. Since #1209 RePark writes Avro and ORC delete files again, so both residues are reachable from ordinary RePark tables.
 
 **Site:** the fork's `crates/iceberg/src/maintenance/rewrite_position_delete_files.rs`, where the position-delete planner skips Avro and ORC files (about line 565), and the delete-file retention of `rewrite_data_files`, whose line the audit did not locate. The charter names the second site from the code.

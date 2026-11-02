@@ -4,6 +4,8 @@
 
 **Status:** dispatched 2026-10-28 on an Opus 5.5 builder lane, the same lane as ICE-POST-PUBLISH-OUTCOME-1. Open until the merge. Registry row: [ICE-DELETE-FORMAT-GUARD-1](../../../docs/spark-sql-iceberg-parity.md).
 
+**Label scope:** excluded from the v2 label this round (owner ruling 2026-11-02): the label does not claim Avro or ORC delete files, which RePark writes and reads back since RP-61; their coverage and AUD-013 are the immediate follow-up after the label.
+
 **Status update, 2026-10-28:** built as PR #1206, awaiting verification. Fix round 1 at `a8ab9364` (the pre-passthrough guards resolve the DML target as the planner does and fail closed); the verifier's findings and the pins are in the ledger.
 
 **Status update, 2026-10-28:** fix round 2 at `1c6e730b` (the branch path classifies the statement from its tokenised head and fails closed; the checks run before a session WAP branch is created; the tag path reads the tokenised head; a missing namespace keeps the planner's not-found text; 21 pins in the guard file). The round-2 verifier's findings and the pins are in the ledger; the card awaits the next verification.

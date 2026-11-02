@@ -96,7 +96,7 @@ Tables already written keep the values they hold; this release ships no migratio
   (ICE-V2-LABEL-1).** Three carve-outs stay named on the label: ENC-1 items 1 and 5 (ruling 121 (b))
   and ENC-CTAS-REPLACE-1 (ruling 98 (a)); the text-leaf row NESTED-TEXT-LEAF-STORE-1 is carried by
   owner ruling 2026-10-26 and fixed in 1.5.7. The label itself changes no stored value; the stored-
-  value changes of this release are the bullets above.
+  value changes of this release are the bullets above. The format-v3 label moves to a later release (owner ruling 2026-11-02).
 
 - **A bulk merge-on-read `DELETE` that panicked past one position-delete batch now completes (RP-60, fork F-POSDEL-BATCH-1 `#374`).**
   A `DELETE` on a format-v2 merge-on-read table whose matched rows held more than 2 GiB of data-file path text in one partition
@@ -151,6 +151,8 @@ Tables already written keep the values they hold; this release ships no migratio
   pinned. No stored value changes.
 
 ## Known issues
+
+- **Avro and ORC delete files are excluded from the format-v2 label this round (owner ruling 2026-11-02).** Maintenance on an Avro or ORC merge-on-read table leaves delete files that Spark removes (AUD-013, card [F-MAINT-AVRO-ORC-DELETE-RESIDUE-1](f-maint-avro-orc-delete-residue-1-card-2026-10-29.md)); the AUD-003 write side and that residue are the immediate follow-up units after the label.
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-17):** `repark.sql()` refuses
   every `UPDATE` and `DELETE` whose `WHERE` holds a subquery, including the `IN`, `NOT IN` and
