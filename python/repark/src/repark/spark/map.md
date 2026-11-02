@@ -86,7 +86,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   non-printable text keeps the Python residue path byte-for-byte.
   pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033; types-geo-ddl-1/C-002
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
-  escaping. Callers must use these helpers for embedded user names and values.
+  escaping. Callers must use these helpers for embedded user names and values. **IDENT-DIALECT-1 (2026-11-02):** the head target's grammar check is here.
   **FNP-4B (2026-09-15):** identifier quoting is backticks (both doors read them as
   identifiers; the Spark door reads double quotes as strings).
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
@@ -1152,7 +1152,6 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - Design: [../../../../../docs/design/python-facade.md](../../../../../docs/design/python-facade.md)
 - **FNP-MISC-1 (2026-09-15, on #597):** `functions_byname.py` classifies #597's camel-case aliases against PySpark 4.1.2 `call_function`: `shiftLeft` / `shiftRight` / `shiftRightUnsigned` resolve through Spark's case-insensitive builtin lookup (facade-only routine rows), while `approxCountDistinct` / `toDegrees` / `toRadians` raise `UNRESOLVED_ROUTINE` (non-routine rows).
 - **FNP-MISC-1 (2026-09-15, on ARRAY-NULL-1):** `array_append` / `array_prepend` leave `FACADE_ONLY_ROUTINE_NAMES`: since ARRAY-NULL-1 the engine resolves both names itself, so `call_function` reaches them through `_scalar` like any builtin.
-- **FNP-11A (2026-09-15, on 440b2773):** `FNP11A_EXPORTS` lists the eleven names new to `__all__`. `make_timestamp` and `months_between` were already exported through the `functions_expr.py` forwarders, and re-installing them duplicated both names in `__all__` and in `catalog.listFunctions()`. `functions_byname.py` follows the measured PySpark 4.1.2 `call_function` answers: `make_timestamp` / `months_between` resolve in the engine, while `timestamp_add` / `timestamp_diff` raise `UNRESOLVED_ROUTINE`.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES` drops `split`: the facade dispatch now resolves `split` on the Spark kernel, so it is no longer a measured engine gap (`test_fnp_misc_1_byname_allowlist_covers_facade`; ruling R-16c-11, run 16a told). `F.split` itself stays run 16a's hand-off.
 - **FNP-MATH-1 step 6 (2026-09-16, run 18a, D-8):** `F.split` binds the kernel
   (`str`/`pattern`/`limit`, `str` patterns arrive as `lit` so the display reads

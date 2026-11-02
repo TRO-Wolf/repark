@@ -1,0 +1,13 @@
+# ident-dialect-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table, python/repark/tests/sql/test_ident_dialect_1.py::test_the_table_covers_every_unit_spelling_on_every_head_and_catalog
+C-002: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table, crates/repark-spark/src/tests/ident_dialect.rs::every_head_reads_a_table_identifier_with_spark_grammar
+C-003: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table, crates/repark-spark/src/tests/ident_dialect.rs::every_head_reads_a_table_identifier_with_spark_grammar
+C-004: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table, crates/repark-spark/src/tests/ident_dialect.rs::every_head_reads_a_table_identifier_with_spark_grammar
+C-005: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table, crates/repark-spark/src/tests/ident_dialect.rs::the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_target
+C-006: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table
+C-007: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table, crates/repark-spark/src/tests/ident_dialect.rs::every_head_reads_a_table_identifier_with_spark_grammar
+C-008: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table, crates/repark-spark/src/tests/ident_dialect.rs::the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_target
+C-009: python/repark/tests/sql/test_ident_dialect_1.py::test_identifier_cell_answers_like_the_measured_table
+C-010: crates/repark-spark/src/tests/temp_view_alter.rs::a_bare_identifier_word_after_drop_is_a_column_and_a_double_quoted_target_refuses, crates/repark-spark/src/tests/dml.rs::g3e8_delete_in_subquery_quoted_and_temp_view_source_execute, crates/repark-spark/src/tests/dml.rs::g3e8_delete_not_in_quoted_and_fromless_execute, crates/repark-spark/src/tests/metadata_tables.rs::metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door, python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_double_quoted_target_naming_a_view_refuses_and_never_renames
+C-011: python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_double_quoted_target_naming_a_view_refuses_and_never_renames, crates/repark-spark/src/tests/ident_dialect.rs::the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_target

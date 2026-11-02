@@ -152,7 +152,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   failing `table_exists`, `view_exists`, `rename_view` and `update_view`, and a failing
   `namespace_exists` for the bare SHOW VIEWS probe in `temp_view_errors.rs`.
 - `alter_view_routing.rs` — ALTER VIEW pins viewless catalog refusals, error propagation, and property update counts. `alter_view_bare_name_uses_session_defaults_and_commits_once` pins one bare SET commit after USE; `view_create_drop_and_write_guard_complete_bare_names_from_use` pins CREATE, DROP, and the exact Plan variant and text of the write guard after USE. The four write-route tests pin bare and two-part view refusals against the same three-part Plan text, with bare table controls and committed rows. The empty-namespace test pins the bare ALTER VIEW Plan text, unchanged properties, and the write guard's `Ok(())` fallthrough. **r2b (2026-09-23):** every error pin compares the variant and the full text with `==`; branch pins cover unknown catalogs and four-part names, an empty namespace, the SQL-reachable commit error, failing `update_view` and `rename_view`, and UNSET's refusals.
-- `temp_view_alter.rs` — **SPARK-DOOR-TEMP-VIEW-DDL-1 (AUD-015; fix round 3):** ALTER TABLE pins on a stub session: operation words and Spark texts, Iceberg extension heads, a no-view control, RENAME TO destinations, RePark-only prefixes, unknown heads (`every_prefix_and_unknown_head_through_a_view_name_refuses`), the leading `;` (`a_leading_semicolon_refuses_before_every_temp_view_check`), the bare `identifier` word and a double-quoted target (`a_bare_identifier_word_after_drop_is_a_column_and_a_double_quoted_target_refuses`), a double-quoted DROP or TRUNCATE target (`a_double_quoted_drop_or_truncate_target_naming_a_view_refuses`) and a failing lookup (`an_undecided_view_lookup_refuses_every_head_that_consults_it`).
+- `temp_view_alter.rs` — **SPARK-DOOR-TEMP-VIEW-DDL-1 (AUD-015; fix round 3):** ALTER TABLE pins on a stub session: a no-view control, RENAME TO destinations, RePark-only prefixes, unknown heads, the leading `;` (`a_leading_semicolon_refuses_before_every_temp_view_check`), the bare `identifier` word and a double-quoted target, a double-quoted DROP or TRUNCATE target and a failing lookup.
+- `ident_dialect.rs` — IDENT-DIALECT-1 (2026-11-02): table identifiers read with Spark's grammar on the DROP, TRUNCATE, DELETE and SELECT heads, and the refusals on INSERT, UPDATE, ALTER and MERGE (`every_head_reads_a_table_identifier_with_spark_grammar`, `the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_target`).
 - `temp_view_attr_ids.rs` — **ATTR-VIEW-SEMANTICS-1 (2026-10-05):** the producer pin over a stub `TempViewSession`: a SQL temp view over a stamped `tv` registers a frame whose scan and provider schemas carry no attribute ids, and each read mints fresh ids through the facade stamp. See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
 - `temp_view_errors.rs` — **IPI-40 PR6b3b (2026-09-24):** end-to-end pins over a
   ctx-backed `TempViewSession` (`CtxTempViews`) for every `view_ddl/temp_view.rs` refusal with
@@ -1846,8 +1847,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   | `a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
 
 - `dml.rs` pins the `g3e8_*` subquery-predicate valve: the refuse family for both verbs and
-  adjacent negatives that prove the valve did
-  not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,
+  adjacent negatives that prove the valve did not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,
   `UPDATE … SET col = (SELECT …)` with and without a `WHERE`), the guard-ORDER pin against the
   BUG-001 valve, the **FROM-less** `DELETE <table> WHERE …` family + its negative (the panel's
   live bypass — that spelling fails the router's Databricks parse and reaches the executor
