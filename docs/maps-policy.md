@@ -21,7 +21,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 ## Ownership
 
-- `scripts/ledger_lifecycle.py` creates and edits the bin maps (`task/ledgers/staging/map.md`, `completed/map.md`), the archive maps (`archive/map.md` and the month maps), and `docs/history/<dir>/map.md` in `compact`. It moves rows between the staging and completed bin maps, and moves each excepted size row when it rewrites links.
+- `scripts/ledger_lifecycle.py` creates and edits the bin maps (`task/ledgers/staging/map.md`, `completed/map.md`), the archive maps (`archive/map.md` and the month maps), and `docs/history/<dir>/map.md` in `compact`. It moves rows between the staging and completed bin maps, and moves each excepted size row when it rewrites links. Outside `compact` it never writes a file under `docs/history/`: a move or archive leaves every file there byte-identical (the 2026-11-01 ruling).
 - A unit's sidecar moves with its ledger on `move` and `archive`. The archive sidecar takes its ledger's `yyyy-mm-dd-` prefix. A sidecar in `completed/` or the archive is not frozen; a ledger row is.
 
 ## Verification
