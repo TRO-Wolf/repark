@@ -2,31 +2,146 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, ListArray, MapArray, StructArray, new_null_array,
+    Array, ArrayRef, AsArray, ListArray, MapArray, RecordBatch, StructArray, new_null_array,
 };
 use datafusion::arrow::compute::{cast, cast_with_options};
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
-use datafusion::common::format::DEFAULT_CAST_OPTIONS;
-use datafusion::common::{Result, ScalarValue, exec_datafusion_err, exec_err, plan_err};
-use datafusion::logical_expr::{
-    ColumnarValue, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+use datafusion::arrow::datatypes::{
+    DataType, Field, FieldRef, Fields, Float32Type, Float64Type, Schema,
 };
+use datafusion::common::config::ConfigOptions;
+use datafusion::common::format::DEFAULT_CAST_OPTIONS;
+use datafusion::common::{
+    DFSchema, Result, ScalarValue, exec_datafusion_err, exec_err, internal_err, plan_err,
+};
+use datafusion::logical_expr::execution_props::ExecutionProps;
+use datafusion::logical_expr::{
+    ColumnarValue, EmptyRelation, Expr, LogicalPlan, Projection, ScalarFunctionArgs, ScalarUDF,
+    ScalarUDFImpl, Signature, Volatility, col,
+};
+use datafusion::optimizer::{Analyzer, AnalyzerRule};
+use datafusion::physical_expr::create_physical_expr;
+
+const LEAF: &str = "__repark_key_leaf__";
+const LEAF_CAST: &str = "__repark_key_leaf_cast__";
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum KeyPlan {
+    Keep,
+    Null,
+    Leaf(Option<Expr>),
+    Struct(Vec<KeyPlan>),
+    List(Box<KeyPlan>),
+    Map(Box<KeyPlan>),
+}
+
+pub(crate) struct LeafCaster {
+    rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    config: ConfigOptions,
+}
+
+impl LeafCaster {
+    pub(crate) fn new(config: &ConfigOptions) -> Result<Self> {
+        let mut rules = crate::analyzer_rules_with_higher_order_preparation(Analyzer::new().rules)?;
+        rules.extend(crate::analyzer_rules());
+        Ok(Self {
+            rules,
+            config: config.clone(),
+        })
+    }
+
+    pub(crate) fn plan(&self, from: &DataType, to: &DataType, normalise: bool) -> Result<KeyPlan> {
+        if from == to && !(normalise && has_float(to)) {
+            return Ok(KeyPlan::Keep);
+        }
+        match (from, to) {
+            (DataType::Null, _) => Ok(KeyPlan::Null),
+            (DataType::Struct(from_fields), DataType::Struct(to_fields)) => {
+                if from_fields.len() != to_fields.len() {
+                    return plan_err!("a struct key must have as many fields as the map key");
+                }
+                Ok(KeyPlan::Struct(
+                    from_fields
+                        .iter()
+                        .zip(to_fields.iter())
+                        .map(|(from_field, to_field)| {
+                            self.plan(from_field.data_type(), to_field.data_type(), normalise)
+                        })
+                        .collect::<Result<Vec<_>>>()?,
+                ))
+            }
+            (DataType::Map(from_entries, _), DataType::Map(to_entries, _)) => Ok(KeyPlan::Map(
+                Box::new(self.plan(from_entries.data_type(), to_entries.data_type(), normalise)?),
+            )),
+            _ => {
+                match (list_element(from), list_element(to)) {
+                    (Some(from_element), Some(to_element)) => Ok(KeyPlan::List(Box::new(
+                        self.plan(from_element.data_type(), to_element.data_type(), normalise)?,
+                    ))),
+                    (None, None) if from == to => Ok(KeyPlan::Leaf(None)),
+                    (None, None) => Ok(KeyPlan::Leaf(Some(self.door_cast(from, to)?))),
+                    _ => plan_err!("a map key and its lookup must nest the same way"),
+                }
+            }
+        }
+    }
+
+    fn door_cast(&self, from: &DataType, to: &DataType) -> Result<Expr> {
+        let leaf = col(LEAF);
+        let written = if matches!(to, DataType::Timestamp(_, None)) {
+            crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(leaf, false)
+        } else {
+            Expr::Cast(datafusion::logical_expr::Cast::new(
+                Box::new(leaf),
+                to.clone(),
+            ))
+        };
+        let schema = DFSchema::try_from(Schema::new(vec![Field::new(LEAF, from.clone(), true)]))?;
+        let mut plan = LogicalPlan::Projection(Projection::try_new(
+            vec![written.alias(LEAF_CAST)],
+            Arc::new(LogicalPlan::EmptyRelation(EmptyRelation {
+                produce_one_row: false,
+                schema: Arc::new(schema),
+            })),
+        )?);
+        for rule in &self.rules {
+            plan = rule.analyze(plan, &self.config)?;
+        }
+        let LogicalPlan::Projection(projection) = plan else {
+            return internal_err!("a key leaf cast must plan to one projection");
+        };
+        let Some(planned) = projection.expr.into_iter().next() else {
+            return internal_err!("a key leaf cast must plan to one expression");
+        };
+        Ok(planned.unalias())
+    }
+}
+
+fn has_float(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Float32 | DataType::Float64 => true,
+        DataType::Struct(fields) => fields.iter().any(|field| has_float(field.data_type())),
+        DataType::Map(entries, _) => has_float(entries.data_type()),
+        other => list_element(other).is_some_and(|element| has_float(element.data_type())),
+    }
+}
 
 #[must_use]
-pub(crate) fn key_by_position_udf() -> Arc<ScalarUDF> {
+pub(crate) fn key_by_position_udf(plan: KeyPlan) -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(KeyByPosition {
         signature: Signature::any(2, Volatility::Immutable),
+        plan,
     }))
 }
 
 #[derive(Debug)]
 struct KeyByPosition {
     signature: Signature,
+    plan: KeyPlan,
 }
 
 impl PartialEq for KeyByPosition {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.plan == other.plan
     }
 }
 
@@ -35,6 +150,7 @@ impl Eq for KeyByPosition {}
 impl Hash for KeyByPosition {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name().hash(state);
+        self.plan.hash(state);
     }
 }
 
@@ -53,14 +169,18 @@ impl ScalarUDFImpl for KeyByPosition {
             return exec_err!("__repark_key_by_position__ takes a key and a typed target");
         };
         let target = args.return_field.data_type();
+        let mut props = ExecutionProps::new();
+        props.config_options = Some(Arc::clone(&args.config_options));
         match key {
             ColumnarValue::Scalar(value) => {
-                let rebuilt = by_position(&value.to_array_of_size(1)?, target)?;
+                let rebuilt = apply(&value.to_array_of_size(1)?, target, &self.plan, &props)?;
                 Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
                     &rebuilt, 0,
                 )?))
             }
-            ColumnarValue::Array(array) => Ok(ColumnarValue::Array(by_position(array, target)?)),
+            ColumnarValue::Array(array) => Ok(ColumnarValue::Array(apply(
+                array, target, &self.plan, &props,
+            )?)),
         }
     }
 }
@@ -74,35 +194,94 @@ fn list_element(data_type: &DataType) -> Option<&FieldRef> {
     }
 }
 
-fn by_position(array: &ArrayRef, to: &DataType) -> Result<ArrayRef> {
-    if array.data_type() == to {
-        return Ok(Arc::clone(array));
-    }
-    match (array.data_type(), to) {
-        (DataType::Null, _) => Ok(new_null_array(to, array.len())),
-        (DataType::Struct(_), DataType::Struct(fields)) => struct_by_position(array, fields),
-        (DataType::Map(..), DataType::Map(entries, sorted)) => {
-            map_by_position(array, entries, *sorted)
+fn apply(
+    array: &ArrayRef,
+    to: &DataType,
+    plan: &KeyPlan,
+    props: &ExecutionProps,
+) -> Result<ArrayRef> {
+    match (plan, to) {
+        (KeyPlan::Keep, _) => conform_leaf(Arc::clone(array), to),
+        (KeyPlan::Null, _) => Ok(new_null_array(to, array.len())),
+        (KeyPlan::Struct(plans), DataType::Struct(fields)) => {
+            struct_by_position(array, fields, plans, props)
         }
-        (source, DataType::List(field)) if list_element(source).is_some() => {
-            list_by_position(array, field)
+        (KeyPlan::List(plan), DataType::List(field)) => list_by_position(array, field, plan, props),
+        (KeyPlan::Map(plan), DataType::Map(entries, sorted)) => {
+            map_by_position(array, entries, *sorted, plan, props)
         }
-        _ => Ok(cast_with_options(array, to, &DEFAULT_CAST_OPTIONS)?),
+        (KeyPlan::Leaf(cast_expr), _) => {
+            let casted = match cast_expr {
+                Some(expr) => evaluate_leaf(array, expr, props)?,
+                None => Arc::clone(array),
+            };
+            Ok(normalise_float(conform_leaf(casted, to)?))
+        }
+        _ => internal_err!("a key plan must follow the shape of its target type"),
     }
 }
 
-fn struct_by_position(array: &ArrayRef, fields: &Fields) -> Result<ArrayRef> {
+fn conform_leaf(array: ArrayRef, to: &DataType) -> Result<ArrayRef> {
+    if array.data_type() == to {
+        return Ok(array);
+    }
+    Ok(cast_with_options(&array, to, &DEFAULT_CAST_OPTIONS)?)
+}
+
+fn evaluate_leaf(array: &ArrayRef, expr: &Expr, props: &ExecutionProps) -> Result<ArrayRef> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        LEAF,
+        array.data_type().clone(),
+        true,
+    )]));
+    let df_schema = DFSchema::try_from(Arc::clone(&schema))?;
+    let physical = create_physical_expr(expr, &df_schema, props)?;
+    let batch = RecordBatch::try_new(schema, vec![Arc::clone(array)])?;
+    physical.evaluate(&batch)?.into_array(array.len())
+}
+
+fn normalise_float(array: ArrayRef) -> ArrayRef {
+    match array.data_type() {
+        DataType::Float64 => Arc::new(array.as_primitive::<Float64Type>().unary::<_, Float64Type>(
+            |value| {
+                if value.is_nan() {
+                    f64::NAN
+                } else {
+                    value + 0.0
+                }
+            },
+        )),
+        DataType::Float32 => Arc::new(array.as_primitive::<Float32Type>().unary::<_, Float32Type>(
+            |value| {
+                if value.is_nan() {
+                    f32::NAN
+                } else {
+                    value + 0.0
+                }
+            },
+        )),
+        _ => array,
+    }
+}
+
+fn struct_by_position(
+    array: &ArrayRef,
+    fields: &Fields,
+    plans: &[KeyPlan],
+    props: &ExecutionProps,
+) -> Result<ArrayRef> {
     let source = array
         .as_struct_opt()
         .ok_or_else(|| exec_datafusion_err!("a struct key must be a struct array"))?;
-    if source.num_columns() != fields.len() {
+    if source.num_columns() != fields.len() || plans.len() != fields.len() {
         return exec_err!("a struct key must have as many fields as the map key");
     }
     let columns = source
         .columns()
         .iter()
         .zip(fields.iter())
-        .map(|(column, field)| by_position(column, field.data_type()))
+        .zip(plans)
+        .map(|((column, field), plan)| apply(column, field.data_type(), plan, props))
         .collect::<Result<Vec<_>>>()?;
     Ok(Arc::new(StructArray::try_new(
         fields.clone(),
@@ -111,7 +290,12 @@ fn struct_by_position(array: &ArrayRef, fields: &Fields) -> Result<ArrayRef> {
     )?))
 }
 
-fn list_by_position(array: &ArrayRef, field: &FieldRef) -> Result<ArrayRef> {
+fn list_by_position(
+    array: &ArrayRef,
+    field: &FieldRef,
+    plan: &KeyPlan,
+    props: &ExecutionProps,
+) -> Result<ArrayRef> {
     let as_list = match array.data_type() {
         DataType::LargeList(element) | DataType::FixedSizeList(element, _) => cast(
             array,
@@ -125,7 +309,7 @@ fn list_by_position(array: &ArrayRef, field: &FieldRef) -> Result<ArrayRef> {
     let source = as_list
         .as_list_opt::<i32>()
         .ok_or_else(|| exec_datafusion_err!("an array key must be a list array"))?;
-    let values = by_position(source.values(), field.data_type())?;
+    let values = apply(source.values(), field.data_type(), plan, props)?;
     Ok(Arc::new(ListArray::try_new(
         Arc::clone(field),
         source.offsets().clone(),
@@ -134,13 +318,21 @@ fn list_by_position(array: &ArrayRef, field: &FieldRef) -> Result<ArrayRef> {
     )?))
 }
 
-fn map_by_position(array: &ArrayRef, entries: &FieldRef, sorted: bool) -> Result<ArrayRef> {
+fn map_by_position(
+    array: &ArrayRef,
+    entries: &FieldRef,
+    sorted: bool,
+    plan: &KeyPlan,
+    props: &ExecutionProps,
+) -> Result<ArrayRef> {
     let source = array
         .as_map_opt()
         .ok_or_else(|| exec_datafusion_err!("a map key must be a map array"))?;
-    let rebuilt = by_position(
+    let rebuilt = apply(
         &(Arc::new(source.entries().clone()) as ArrayRef),
         entries.data_type(),
+        plan,
+        props,
     )?;
     let rebuilt = rebuilt
         .as_struct_opt()

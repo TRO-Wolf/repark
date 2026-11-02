@@ -1,17 +1,15 @@
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFSchema, Result, ScalarValue, internal_err, plan_err};
-use datafusion::functions::core::expr_fn::{get_field, named_struct};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{Cast, Expr, ExprSchemable, LogicalPlan, lit, when};
+use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan, lit};
 use datafusion::optimizer::AnalyzerRule;
 
-use super::key_by_position::key_by_position_udf;
+use super::key_by_position::{KeyPlan, LeafCaster, key_by_position_udf};
 use super::{element_at_udf, spark_type_name};
 
 const SUBSCRIPT_FUNCTIONS: [&str; 3] = ["get_field", "array_element", "__repark_get_item__"];
@@ -21,8 +19,7 @@ pub struct SparkMapSubscript;
 
 impl AnalyzerRule for SparkMapSubscript {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
-        let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
-        plan.transform_up_with_subqueries(|node| rewrite_plan(node, ansi))
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, config))
             .data()
     }
 
@@ -72,7 +69,7 @@ pub fn map_array_subscripts_as_lookups(expr: Expr, schema: &DFSchema) -> Result<
     .data()
 }
 
-fn rewrite_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(plan: LogicalPlan, config: &ConfigOptions) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -80,13 +77,17 @@ fn rewrite_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<LogicalPlan
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema, ansi))?;
+        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema, config))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
-fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
+fn rewrite_expr(
+    expr: Expr,
+    schema: &DFSchema,
+    config: &ConfigOptions,
+) -> Result<Transformed<Expr>> {
     let Some((map_type, lookup_type)) = nested_key_subscript(&expr, schema) else {
         return Ok(Transformed::no(expr));
     };
@@ -112,31 +113,34 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Transformed
         );
     }
     let target = shape(&key_type, &key_type);
-    let map = if target == key_type {
+    let caster = LeafCaster::new(config)?;
+    let map = if target == key_type && !key_plan_normalises(&caster, &key_type)? {
         map
     } else {
         let normal_map = DataType::Map(normal_entries(entries, &target)?, *sorted);
-        by_position_call(map, &normal_map)?
+        let plan = KeyPlan::Map(Box::new(KeyPlan::Struct(vec![
+            caster.plan(&key_type, &target, true)?,
+            KeyPlan::Keep,
+        ])));
+        by_position_call(map, &normal_map, plan)?
     };
-    let key = if lookup_type == target {
+    let plan = caster.plan(&lookup_type, &target, true)?;
+    let key = if plan == KeyPlan::Keep {
         lookup
     } else {
-        let renamed_type = shape(&lookup_type, &key_type);
-        let renamed = if lookup_type == renamed_type {
-            lookup
-        } else {
-            by_position_call(lookup, &renamed_type)?
-        };
-        let conformed = conform(renamed, &renamed_type, &target, schema, ansi)?;
-        by_position_call(conformed, &target)?
+        by_position_call(lookup, &target, plan)?
     };
     Ok(Transformed::yes(Expr::ScalarFunction(
         ScalarFunction::new_udf(element_at_udf(), vec![map, key]),
     )))
 }
 
-fn by_position_call(expr: Expr, target: &DataType) -> Result<Expr> {
-    Ok(key_by_position_udf().call(vec![expr, lit(ScalarValue::try_from(target)?)]))
+fn key_plan_normalises(caster: &LeafCaster, key_type: &DataType) -> Result<bool> {
+    Ok(caster.plan(key_type, key_type, true)? != KeyPlan::Keep)
+}
+
+fn by_position_call(expr: Expr, target: &DataType, plan: KeyPlan) -> Result<Expr> {
+    Ok(key_by_position_udf(plan).call(vec![expr, lit(ScalarValue::try_from(target)?)]))
 }
 
 fn map_key_type(entries: &DataType) -> Option<&DataType> {
@@ -239,91 +243,6 @@ fn shape(from: &DataType, to: &DataType) -> DataType {
                 )))
             }
             _ => from.clone(),
-        },
-    }
-}
-
-fn conform(
-    expr: Expr,
-    from: &DataType,
-    to: &DataType,
-    schema: &DFSchema,
-    ansi: bool,
-) -> Result<Expr> {
-    if from == to {
-        return Ok(expr);
-    }
-    match (from, to) {
-        (DataType::Struct(from_fields), DataType::Struct(to_fields))
-            if from_fields.len() == to_fields.len() && unique_names(to_fields) =>
-        {
-            let mut parts = Vec::with_capacity(to_fields.len() * 2);
-            for (from_field, to_field) in from_fields.iter().zip(to_fields.iter()) {
-                parts.push(lit(to_field.name().as_str()));
-                parts.push(conform(
-                    get_field(expr.clone(), to_field.name().as_str()),
-                    from_field.data_type(),
-                    to_field.data_type(),
-                    schema,
-                    ansi,
-                )?);
-            }
-            when(expr.is_not_null(), named_struct(parts)).end()
-        }
-        _ if from.is_nested() || to.is_nested() => {
-            if !arrow_exact(from, to) {
-                return plan_err!(
-                    "[UNSUPPORTED_FEATURE] a map key whose array or map elements need a cast from \
-                     \"{}\" to \"{}\" is not supported",
-                    spark_type_text(from),
-                    spark_type_text(to)
-                );
-            }
-            Ok(Expr::Cast(Cast::new(Box::new(expr), to.clone())))
-        }
-        _ => spark_cast(expr, to, schema, ansi),
-    }
-}
-
-fn spark_cast(expr: Expr, to: &DataType, schema: &DFSchema, ansi: bool) -> Result<Expr> {
-    let floated = crate::java_double::rewrite_float_cast(
-        Cast::new(Box::new(expr), to.clone()),
-        schema,
-        ansi,
-    )?
-    .data;
-    if !matches!(floated, Expr::Cast(_)) {
-        return Ok(floated);
-    }
-    Ok(crate::analyzer::rewrite_timestamp_casts(floated, schema)?.data)
-}
-
-fn unique_names(fields: &Fields) -> bool {
-    let mut seen = HashSet::with_capacity(fields.len());
-    fields.iter().all(|field| seen.insert(field.name()))
-}
-
-fn arrow_exact(from: &DataType, to: &DataType) -> bool {
-    match (from, to) {
-        (DataType::Null, _) => true,
-        (DataType::Struct(from_fields), DataType::Struct(to_fields)) => {
-            from_fields.len() == to_fields.len()
-                && from_fields
-                    .iter()
-                    .zip(to_fields.iter())
-                    .all(|(from_field, to_field)| {
-                        arrow_exact(from_field.data_type(), to_field.data_type())
-                    })
-        }
-        (DataType::Map(from_entries, _), DataType::Map(to_entries, _)) => {
-            arrow_exact(from_entries.data_type(), to_entries.data_type())
-        }
-        _ => match (list_element(from), list_element(to)) {
-            (Some(from_element), Some(to_element)) => {
-                arrow_exact(from_element.data_type(), to_element.data_type())
-            }
-            (None, None) => from == to || (from.is_numeric() && to.is_numeric()),
-            _ => false,
         },
     }
 }
