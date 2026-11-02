@@ -335,6 +335,62 @@ fn relation_refusal(lexemes: &[Lexeme]) -> Option<String> {
                 {
                     return Some(message);
                 }
+                if word_is(Some(lexeme), "FROM")
+                    && let Some(message) = comma_relation_refusal(lexemes, index + 1)
+                {
+                    return Some(message);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+const FROM_CLAUSE_ENDS: [&str; 18] = [
+    "WHERE",
+    "GROUP",
+    "HAVING",
+    "ORDER",
+    "LIMIT",
+    "OFFSET",
+    "WINDOW",
+    "QUALIFY",
+    "UNION",
+    "INTERSECT",
+    "EXCEPT",
+    "MINUS",
+    "SORT",
+    "CLUSTER",
+    "DISTRIBUTE",
+    "LATERAL",
+    "PIVOT",
+    "UNPIVOT",
+];
+
+fn comma_relation_refusal(lexemes: &[Lexeme], start: usize) -> Option<String> {
+    if word_is(lexemes.get(start), "VALUES") {
+        return None;
+    }
+    let mut depth = 0usize;
+    for (index, lexeme) in lexemes.iter().enumerate().skip(start) {
+        match lexeme {
+            Lexeme::Punct('(') => depth += 1,
+            Lexeme::Punct(')' | ';') if depth == 0 => return None,
+            Lexeme::Punct(')') => depth -= 1,
+            Lexeme::Punct(',') if depth == 0 => {
+                if let Err(message) = read_identifier(lexemes, index + 1, QuotedAfterDot::AtSegment)
+                {
+                    return Some(message);
+                }
+            }
+            Lexeme::Word(_)
+                if depth == 0
+                    && FROM_CLAUSE_ENDS
+                        .iter()
+                        .any(|keyword| word_is(Some(lexeme), keyword)) =>
+            {
+                return None;
             }
             _ => {}
         }
