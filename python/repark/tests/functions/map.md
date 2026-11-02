@@ -84,8 +84,8 @@ pins.
 - [test_lrs6_regexp_divergences.py](test_lrs6_regexp_divergences.py) — LRS-6 — RE-2 divergence pins, measured but not closed (BACKLOG row).
 - [test_lrs7_unordered_window.py](test_lrs7_unordered_window.py) — LRS-7 — a window with no ORDER BY frames the whole partition, as Spark documents.
 - [test_map_column_panic_1.py](test_map_column_panic_1.py) — MAP-COLUMN-PANIC-1 — `map(<key>, <non-literal value>)` equals Spark 4.1.2 on `sql`, `selectExpr`, `expr`, a string `filter` and INSERT, UPDATE and MERGE, in rows, type and nullability; Spark's duplicate-key, NULL-key and odd-arity errors; two divergences pinned (no condition on runtime errors, DataFusion's odd-arity text through `expr`).
-- [test_map_column_panic_native_door_1.py](test_map_column_panic_native_door_1.py) — MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21) — the native `repark.sql()` door answers `map(<key>, <column>)`: 16 Spark cells equal Spark's rows, the repeated and NULL key cells raise Spark's `[DUPLICATED_MAP_KEY]` and `[NULL_MAP_KEY]` text, and the literal control keeps its rows; reads `map_column_panic_1_spark_oracle.json`.
-- [test_map_struct_key_subscript_1.py](test_map_struct_key_subscript_1.py) — MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016) — nine cells (three frame cells) equal Spark 4.1.2's rows, in the writing session and a fresh one reopened by `register_table`; 18 tests.
+- [test_map_column_panic_native_door_1.py](test_map_column_panic_native_door_1.py) — MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21) — the native door answers `map(<key>, <column>)`: 16 Spark cells equal Spark's rows; the repeated and NULL key cells raise Spark's `[DUPLICATED_MAP_KEY]` and `[NULL_MAP_KEY]` text; the literal control keeps its rows; reads `map_column_panic_1_spark_oracle.json`.
+- [test_map_struct_key_subscript_1.py](test_map_struct_key_subscript_1.py) and [test_map_struct_key_subscript_2.py](test_map_struct_key_subscript_2.py) — MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016; round 2 2026-11-02) — the `_1` cells (three frame cells) equal Spark 4.1.2's rows in the writing session and a fresh one reopened by `register_table` (18 tests); the `_2` file adds the `F.expr` select cells and the list-family keys over a pyarrow Parquet file (13 tests, 8 red at `50410c16`).
 - [test_sem1_extract_all_group_default.py](test_sem1_extract_all_group_default.py) — SEM-1 — the two-argument ``regexp_extract_all`` defaults to capture group 1, as Spark does.
 - [test_sem1_spark_log.py](test_sem1_spark_log.py) — SEM-1 LOG-1 — Spark-door ``log`` is the natural log, dual-arity, null-guarded.
 - [test_sem3_string_idx.py](test_sem3_string_idx.py) — SEM-3 — ``regexp_extract_all`` accepts a string ``idx``, as every other door already does.
@@ -137,16 +137,8 @@ path expression repointed in the same unit and no other line changed:
 
 | file | change |
 |---|---|
-| `_record_float_agg_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_window_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `test_float_agg_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `test_fnp15_16_declared_refuse.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_functions_gt1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_log1p_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ta.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ta_volume.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ta_with_indicators.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_window_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_float_agg_goldens.py`, `_record_window_goldens.py`, `test_float_agg_parity.py`, `test_window_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `test_fnp15_16_declared_refuse.py`, `test_functions_gt1.py`, `test_log1p_1.py`, `test_ta.py`, `test_ta_volume.py`, `test_ta_with_indicators.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 
 ## Pointers
 

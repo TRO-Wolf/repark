@@ -1,6 +1,6 @@
 # map — repark-functions/src
 
-**WRITE-SPINE-1 step 1a (2026-10-24):** `timestamp_ntz_cast.rs`, `timestamp_ns_cast.rs`, `cast_map.rs` and `zone_seam.rs` re-export their UDF names from `repark_common::udf_names` under the same identifiers, so `repark-iceberg` and this crate compile against one constant; no call site changed. Details in [../../repark-common/src/map.md](../../repark-common/src/map.md).
+**WRITE-SPINE-1 step 1a (2026-10-24):** `timestamp_ntz_cast.rs`, `timestamp_ns_cast.rs`, `cast_map.rs` and `zone_seam.rs` re-export their UDF names from `repark_common::udf_names` under the same identifiers. Details in [../../repark-common/src/map.md](../../repark-common/src/map.md).
 
 **MAP-COLUMN-PANIC-1 (2026-10-20) and MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016):** `collection.rs` registers `create_map::sql_map_udf()` (the internal name `__repark_create_map__`, so `create_map` stays unregistered on the SQL door) and re-exports `SQL_MAP_NAME`, `SparkMapRewrite` and `SparkMapSubscript`; `registration.rs` appends `SparkMapRewrite`, then `SparkMapSubscript`, to `analyzer_rules()` after the second `LambdaRebind`. Details in [collection/map.md](collection/map.md).
 
@@ -981,7 +981,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   rewrite is idempotent. Set-operation schemas may require repeated analysis to reach a fixpoint;
   single-analyze schema consumers must perform that analysis. Integer division rewrites only when
   both operands are integers; decimal division remains decimal when no operand is float. A parent
-  operator may retain an incompatible type after a pre-rewrite integer division.
+  operator may retain an incompatible type after a pre-rewrite integer division. Round 2 (2026-11-02): `rewrite_timestamp_casts` is `pub(crate)`, reused by `collection/map_subscript.rs`.
 - **r24 A3 PERF-02:** `datetime.rs` `date_format` compiles the Java pattern once per
   invocation (`compile_java_pattern` + per-row `format_compiled_java_pattern`; scalar pattern
   cache). Zero behavior change; `date_format_matches_spark_on_the_dim_dates_patterns` is the net.
@@ -1032,7 +1032,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   exempts `CAST(__repark_suffix_literal__(…) AS FLOAT|DOUBLE)` from the
   non-literal parse-kernel route so the door's `FoldSparkNumericCasts` still
   folds it to a non-null literal; `SUFFIX_LITERAL_NAME` is the `pub` single
-  source here that repark-spark re-exports.
+  source here that repark-spark re-exports. Round 2 (2026-11-02): `rewrite_float_cast` is `pub(crate)`, reused by `collection/map_subscript.rs`.
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts
   from the end, the window clips (never errors), negative len → `''`, NULL args → NULL.
@@ -1523,7 +1523,7 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
 - **DOOR-CONVERGE-1 rebase (2026-09-15):** `collection.rs` keeps main's `array_append` / `array_prepend` shims (ARRAY-NULL-1) beside this unit's `array_contains` / `size` modules; the round-2 `make_array` shim stays removed (R-10).
 - **FNP-11A R3 (2026-09-15):** `expr_fn::datediff` is the Spark `datediff` spelling. The function door routes two arguments to `date_diff` and three to `timestampdiff` through `temporal_ctor::date_alias`.
-- **FNP-6D-FOLLOWUP-1 rebase (2026-09-15, run 16a):** after #612 moved the Java text helpers into `java_double.rs`, `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`; `json.rs` keeps `mod reader;` private as on main.
+- **FNP-6D-FOLLOWUP-1 rebase (2026-09-15):** `bitmap_agg.rs` imports `java_double_text` / `java_float_text` from `crate::java_double`.
 - **FNP-WIN-1 squash onto 4bd43fc8 (2026-09-15, run 16a):** `lib.rs` drops its `use std::sync::Arc;` — `analyzer_rules()` and its `Arc<dyn AnalyzerRule>` list now live in `registration.rs`, so the crate root no longer names `Arc` (clippy `-D warnings`).
 - **FNP-GEN-1 verification-critic fix-up (2026-09-16, run 17a):** `generator.rs::ordinality` packed
   positions densely from 0 but **cloned the input's offset buffer**. Arrow's `ListArray::slice`
