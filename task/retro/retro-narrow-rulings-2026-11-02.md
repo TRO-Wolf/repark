@@ -1,6 +1,6 @@
 # Retrospective: why rulings kept being narrower than the measured surface, and how to get to one round
 
-Date: 2026-11-03. Scope: the three audit-3 closeout units run 2026-10-31 to 2026-11-03 (AUD-015 SPARK-DOOR-TEMP-VIEW-DDL-1, AUD-016 MAP-STRUCT-KEY-SUBSCRIPT-1, fork F-IDLESS-TOPLEVEL-POSITIONAL-1). Written by the orchestrator at the owner's request after the second halt. Owner usage: 41 % of the week on 2026-11-02 morning, 48 % by the halt.
+Date: 2026-11-02. Scope: the three audit-3 closeout units run 2026-10-31 to 2026-11-02 (AUD-015 SPARK-DOOR-TEMP-VIEW-DDL-1, AUD-016 MAP-STRUCT-KEY-SUBSCRIPT-1, fork F-IDLESS-TOPLEVEL-POSITIONAL-1). Written by the orchestrator at the owner's request after the second halt. Owner usage: 41 % of the week on 2026-11-02 morning, 48 % by the halt.
 
 ## The record
 
@@ -55,3 +55,5 @@ Per unit, the table costs one measurement session before the build and one table
 ## What happens to the three open units
 
 AUD-015 and AUD-016 should each get one measured table before anything else moves: the DDL-target table and the ANSI-off cast table, both already half measured in the verdict files. If the owner restarts them, the next round is a table-driven pin round, not another spelling fix. The fork unit is merged; its matrix test already exists in Muse's probe and should become a pin in the repin unit rather than a new fork round.
+
+Filed on 2026-11-02; first filed under the date 2026-11-03 by an orchestrator clock misread, corrected the same day.
