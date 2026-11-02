@@ -9691,6 +9691,7 @@ the pin rather than obeying it.
   No live divergence today; the hazard resurfaces with DOOR-CONVERGE-2's
   registry-wide work, which must rebind each function under its exact registry key
   without propagating aliases.
+- **Dated 2026-11-02, MAP-STRUCT-KEY-SUBSCRIPT-1 (AUD-016, third audit; High, a library panic; FIXED at `4f0bef97` on branch `fix/map-struct-key-subscript-1`, merge pending; ledger [map-struct-key-subscript-1-ledger.md](../task/ledgers/staging/map-struct-key-subscript-1-ledger.md)):** `m[k]` over a map whose key type is nested (struct, array or map) is planned through RePark's `element_at` kernel by the `SparkMapSubscript` analyzer rule on the Spark door, the ANSI door and the native door. The key is cast to the map's key type by position, as Spark does (`named_struct('j', 2, 'k', 1)` reads as `{k: 2, j: 1}`); a struct key of another field count refuses with `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`. DataFusion's `get_field` is never reached for nested keys; scalar-key subscripts are unchanged.
 
 ### ARRAY-LITERAL-CONTAINSNULL-1 — literal array constructors declare a nullable element
 
