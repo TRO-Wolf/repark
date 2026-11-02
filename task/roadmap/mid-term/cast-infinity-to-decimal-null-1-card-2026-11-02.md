@@ -21,7 +21,7 @@ A finite overflow (`1e10D` to DECIMAL(5,2)) is not this case: Spark raises `NUME
 
 **Fix (proposed):** a non-finite DOUBLE or FLOAT cast to DECIMAL gives NULL in both ANSI modes, as Spark's CAST does, so the subscript answers as Spark does without change; the cells above are the pins. Finite overflow keeps its refusal.
 
-**Retires:** the card when the four CAST rows and the two subscript rows answer as Spark does, pinned.
+**Retires:** the card when the three CAST rows and the two subscript rows answer as Spark does, pinned.
 
 **Relation:** [MAP-STRUCT-KEY-SUBSCRIPT-1](../../ledgers/staging/map-struct-key-subscript-1-ledger.md) clause C-051. The same engine cast family as [CAST-DOUBLE-TO-DECIMAL-ROUNDING-1](cast-double-to-decimal-rounding-1-card-2026-11-02.md) (C-044), which is a rounding divergence, not a refusal; this card is the non-finite refusal.
 
