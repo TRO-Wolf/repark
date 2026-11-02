@@ -787,6 +787,68 @@ def test_code_span_opener_leaves_the_row_visible(repo: Path) -> None:
     assert "— **M1:** the real row.\n" in completed
 
 
+def _indented_repo(repo: Path, tail: str) -> None:
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        + tail
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n",
+    )
+    _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
+    _write(
+        repo,
+        "task/ledgers/completed/map.md",
+        "# map\n\n## Contents\n- [aaa-old-ledger.md](aaa-old-ledger.md) — **AAA-OLD:** first.\n"
+        "- [zzz-old-ledger.md](zzz-old-ledger.md) — **ZZZ-OLD:** last.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _write(repo, "task/ledgers/completed/zzz-old-ledger.md", "# Ledger — ZZZ-OLD\n")
+    _commit(repo, "m1 under an indented marker")
+
+
+def _moved_indented_row(repo: Path, head: str) -> None:
+    assert _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode == 0
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert head in staging
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the real row.\n" in completed
+
+
+def test_indented_marker_is_text_and_row_moves(repo: Path) -> None:
+    _indented_repo(repo, "    ```\n")
+    _moved_indented_row(repo, "    ```\n")
+
+
+def test_indented_marker_inside_a_fence_is_text(repo: Path) -> None:
+    fence = "```md\n    ```\n- [m1-demo-ledger.md](../completed/m1-demo-ledger.md) — **M1:** filed.\n```\n"
+    _indented_repo(repo, fence)
+    _moved_indented_row(repo, fence)
+    assert "filed" not in (repo / "task/ledgers/completed/map.md").read_text()
+
+
+def test_triple_span_hides_the_opener_and_row_moves(repo: Path) -> None:
+    line = "```<!--``` tail.\n"
+    _indented_repo(repo, line)
+    _moved_indented_row(repo, line)
+
+
+def test_double_span_hides_the_opener_and_row_moves(repo: Path) -> None:
+    line = "``` `` `<!--` `` tail.\n"
+    _indented_repo(repo, line)
+    _moved_indented_row(repo, line)
+
+
+def test_info_backtick_line_is_text_and_row_moves(repo: Path) -> None:
+    line = "```a`b\n"
+    _indented_repo(repo, line)
+    _moved_indented_row(repo, line)
+
+
 def test_masked_lines_keep_every_position() -> None:
     module = _load_lifecycle()
     text = (
@@ -807,6 +869,13 @@ def test_masked_lines_keep_every_position() -> None:
         "~~~~\n"
         "`<!--` code span opener [l](m)\n"
         "trailing `code` span [n](o)\n"
+        "    ``` four-space marker [p](q)\n"
+        "```a`b info backtick [r](s)\n"
+        "```<!--``` span fence [t](u)\n"
+        "``` `` `<!--` `` span parts [v](w)\n"
+        "~~~~\n"
+        "tilde content [x](y)\n"
+        "~~~~\n"
     )
     for line, masked in module._masked_lines(text):
         assert len(masked) == len(line)
