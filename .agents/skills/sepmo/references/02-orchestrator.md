@@ -98,9 +98,9 @@ independent readiness auditor.
 
 Per unit, the Orchestrator dispatches the stage sequence — ACTOR_BUILD, SELF_LOGIC_REVIEW, CONTEXT_BREAK,
 CRITIC_REVIEW — and, on open findings, ACTOR_REMEDIATE back into the top of that sequence (R1, R4).
-**Cycle cap: 2–3 rounds.** If findings at/above the floor persist past the cap, the Orchestrator stops
+**Cycle cap: one build, one critique, one delta fix, one delta re-check, then park.** If findings at/above the floor persist past the cap, the Orchestrator stops
 cycling and escalates rather than grinding — interactive: to the user, with the open findings; delegated:
-flagged in the final report, unit held open. The cycle count is per unit and lives in the unit ledger; starting a fresh Actor or Critic session, or resuming one, never resets it. A remediation round whose diff changes only prose, ledgers, maps or recorded evidence runs the mechanical gates plus a clerk-tier review of the changed claims and references, once the Orchestrator has confirmed the diff changes no executable behaviour and no acceptance obligation (no clause text, pin or attestation); it does not consume a frontier Critic pass. **Remediation mediation:** findings routed back to the Actor
+flagged in the final report, unit held open. The cycle count is per unit and lives in the unit ledger; starting a fresh Actor or Critic session, or resuming one, never resets it. A second critique that finds a class outside the clause's domain table is evidence the table was wrong: the orchestrator records and cards it and parks the unit; it never opens a third round. Owner ruling 2026-11-03. A remediation round whose diff changes only prose, ledgers, maps or recorded evidence runs the mechanical gates plus a clerk-tier review of the changed claims and references, once the Orchestrator has confirmed the diff changes no executable behaviour and no acceptance obligation (no clause text, pin or attestation); it does not consume a frontier Critic pass. **Remediation mediation:** findings routed back to the Actor
 are reframed as a plain defect-fix slice — the record never says "the Critic found this," it says what is
 wrong and where, preserving the Actor's build-phase blindness (home: `04-actor.md`). **Convergence is the
 Critic's call, never the Orchestrator's and never the Actor's** (R4); the Orchestrator's job is to audit

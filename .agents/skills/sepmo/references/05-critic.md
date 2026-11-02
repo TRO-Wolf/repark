@@ -95,6 +95,8 @@ is checked.
 
 After remediation the Orchestrator hands the re-review Critic, a fresh session, a packet: the head previously reviewed, the current head, the full intervening diff, the findings addressed with their reproduction commands, the regression evidence, and the clauses and attack categories the fix claims to touch. The Critic verifies that claimed boundary against the diff rather than trusting it, and widens the attack whenever the fix touches shared parsing, resolution, coercion, dependencies, security boundaries or write behaviour. Every touched category is re-attested. A PASS recorded against an earlier head is never combined with a later head's evidence.
 
+On a unit whose clause is a domain table, both bound verifiers run one pass in parallel on the same head and the same table: each confirms the table through the public door and attacks only outside it; findings are merged by class before anything returns to the Actor. A finding inside the table is a builder defect and goes to the one delta fix; a finding outside the table is carded by rule with its measured answer and opens no round.
+
 ## Coverage attestation format
 
 R4 defines convergence as attestation, not a findings count: every applicable category `ATTACKED`
