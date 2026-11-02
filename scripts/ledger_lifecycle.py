@@ -143,40 +143,52 @@ def known_paths(tracked: list[str]) -> set[str]:
     return known
 
 
+def _fence_mark(line: str) -> tuple[str, int, bool] | None:
+    if MAPS.FENCE_PATTERN.match(line) is None:
+        return None
+    stripped = line.lstrip()
+    char = stripped[0]
+    length = len(stripped) - len(stripped.lstrip(char))
+    return char, length, not stripped[length:].strip()
+
+
 def _masked_lines(text: str) -> list[tuple[str, str]]:
     """Each line paired with a copy whose code spans are blanked, fenced blocks blanked whole."""
     pairs: list[tuple[str, str]] = []
-    in_fence = False
+    fence: tuple[str, int] | None = None
     in_comment = False
     for line in text.splitlines(keepends=True):
-        if not in_comment and MAPS.FENCE_PATTERN.match(line):
-            in_fence = not in_fence
+        mark = None if in_comment else _fence_mark(line)
+        if fence is None and mark is not None:
+            fence = (mark[0], mark[1])
             pairs.append((line, " " * len(line)))
             continue
-        if in_fence:
+        if fence is not None:
+            if mark is not None and mark[0] == fence[0] and mark[1] >= fence[1] and mark[2]:
+                fence = None
             pairs.append((line, " " * len(line)))
             continue
-        visible: list[str] = []
+        cleaned = MAPS.CODE_SPAN_PATTERN.sub(_blank, line)
+        pieces: list[str] = []
         cursor = 0
         while True:
             if in_comment:
-                end = line.find("-->", cursor)
+                end = cleaned.find("-->", cursor)
                 if end == -1:
-                    visible.append(" " * (len(line) - cursor))
+                    pieces.append(" " * (len(cleaned) - cursor))
                     break
-                visible.append(" " * (end + 3 - cursor))
+                pieces.append(" " * (end + 3 - cursor))
                 in_comment = False
                 cursor = end + 3
             else:
-                start = line.find("<!--", cursor)
+                start = cleaned.find("<!--", cursor)
                 if start == -1:
-                    visible.append(line[cursor:])
+                    pieces.append(cleaned[cursor:])
                     break
-                visible.append(line[cursor:start])
+                pieces.append(cleaned[cursor:start] + "    ")
                 in_comment = True
                 cursor = start + 4
-        masked = MAPS.CODE_SPAN_PATTERN.sub(_blank, "".join(visible))
-        pairs.append((line, masked))
+        pairs.append((line, "".join(pieces)))
     return pairs
 
 
