@@ -1,12 +1,14 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFSchema, Result, ScalarValue, internal_err, plan_err};
+use datafusion::functions::core::expr_fn::{get_field, named_struct};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan, lit};
+use datafusion::logical_expr::{Cast, Expr, ExprSchemable, LogicalPlan, lit, when};
 use datafusion::optimizer::AnalyzerRule;
 
 use super::key_by_position::key_by_position_udf;
@@ -18,8 +20,10 @@ const SUBSCRIPT_FUNCTIONS: [&str; 3] = ["get_field", "array_element", "__repark_
 pub struct SparkMapSubscript;
 
 impl AnalyzerRule for SparkMapSubscript {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_plan).data()
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, ansi))
+            .data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)]
@@ -41,7 +45,34 @@ pub fn insert_map_subscript_before_coercion(
     Ok(rules)
 }
 
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+#[allow(clippy::missing_errors_doc)]
+pub fn map_array_subscripts_as_lookups(expr: Expr, schema: &DFSchema) -> Result<Expr> {
+    expr.transform_up(|node| {
+        let Expr::ScalarFunction(function) = &node else {
+            return Ok(Transformed::no(node));
+        };
+        let [map, key] = function.args.as_slice() else {
+            return Ok(Transformed::no(node));
+        };
+        if function.func.name() != "array_element" {
+            return Ok(Transformed::no(node));
+        }
+        let Ok(DataType::Map(entries, _)) = map.get_type(schema) else {
+            return Ok(Transformed::no(node));
+        };
+        let nested = map_key_type(entries.data_type()).is_some_and(DataType::is_nested);
+        let args = vec![map.clone(), key.clone()];
+        let rewritten = if nested {
+            datafusion::functions::core::get_field().call(args)
+        } else {
+            Expr::ScalarFunction(ScalarFunction::new_udf(element_at_udf(), args))
+        };
+        Ok(Transformed::yes(rewritten))
+    })
+    .data()
+}
+
+fn rewrite_plan(plan: LogicalPlan, ansi: bool) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -49,14 +80,20 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema))?;
+        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema, ansi))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
-fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
-    let Some((key_type, lookup_type)) = nested_key_subscript(&expr, schema) else {
+fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
+    let Some((map_type, lookup_type)) = nested_key_subscript(&expr, schema) else {
+        return Ok(Transformed::no(expr));
+    };
+    let DataType::Map(entries, sorted) = &map_type else {
+        return Ok(Transformed::no(expr));
+    };
+    let Some(key_type) = map_key_type(entries.data_type()).cloned() else {
         return Ok(Transformed::no(expr));
     };
     let Expr::ScalarFunction(function) = expr else {
@@ -74,13 +111,56 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
             spark_type_text(&lookup_type)
         );
     }
-    let key = if lookup_type == key_type {
+    let target = shape(&key_type, &key_type);
+    let map = if target == key_type {
+        map
+    } else {
+        let normal_map = DataType::Map(normal_entries(entries, &target)?, *sorted);
+        by_position_call(map, &normal_map)?
+    };
+    let key = if lookup_type == target {
         lookup
     } else {
-        key_by_position_udf().call(vec![lookup, lit(ScalarValue::try_from(&key_type)?)])
+        let renamed_type = shape(&lookup_type, &key_type);
+        let renamed = if lookup_type == renamed_type {
+            lookup
+        } else {
+            by_position_call(lookup, &renamed_type)?
+        };
+        let conformed = conform(renamed, &renamed_type, &target, schema, ansi)?;
+        by_position_call(conformed, &target)?
     };
     Ok(Transformed::yes(Expr::ScalarFunction(
         ScalarFunction::new_udf(element_at_udf(), vec![map, key]),
+    )))
+}
+
+fn by_position_call(expr: Expr, target: &DataType) -> Result<Expr> {
+    Ok(key_by_position_udf().call(vec![expr, lit(ScalarValue::try_from(target)?)]))
+}
+
+fn map_key_type(entries: &DataType) -> Option<&DataType> {
+    let DataType::Struct(fields) = entries else {
+        return None;
+    };
+    fields.first().map(|field| field.data_type())
+}
+
+fn normal_entries(entries: &FieldRef, key: &DataType) -> Result<FieldRef> {
+    let DataType::Struct(fields) = entries.data_type() else {
+        return internal_err!("map entries must be a struct");
+    };
+    let [key_field, value_field] = fields.iter().collect::<Vec<_>>()[..] else {
+        return internal_err!("map entries must hold a key and a value");
+    };
+    let entry_fields = Fields::from(vec![
+        Arc::new(Field::new(key_field.name(), key.clone(), false)),
+        Arc::clone(value_field),
+    ]);
+    Ok(Arc::new(Field::new(
+        entries.name(),
+        DataType::Struct(entry_fields),
+        false,
     )))
 }
 
@@ -94,17 +174,158 @@ fn nested_key_subscript(expr: &Expr, schema: &DFSchema) -> Option<(DataType, Dat
     if !SUBSCRIPT_FUNCTIONS.contains(&function.func.name()) {
         return None;
     }
-    let DataType::Map(entries, _) = map.get_type(schema).ok()? else {
+    let map_type = map.get_type(schema).ok()?;
+    let DataType::Map(entries, _) = &map_type else {
         return None;
     };
-    let DataType::Struct(fields) = entries.data_type() else {
-        return None;
-    };
-    let key_type = fields.first()?.data_type().clone();
-    if !key_type.is_nested() {
+    if !map_key_type(entries.data_type())?.is_nested() {
         return None;
     }
-    Some((key_type, lookup.get_type(schema).ok()?))
+    Some((map_type, lookup.get_type(schema).ok()?))
+}
+
+fn list_element(data_type: &DataType) -> Option<&FieldRef> {
+    match data_type {
+        DataType::List(element)
+        | DataType::LargeList(element)
+        | DataType::FixedSizeList(element, _) => Some(element),
+        _ => None,
+    }
+}
+
+fn shape(from: &DataType, to: &DataType) -> DataType {
+    match (from, to) {
+        (DataType::Struct(from_fields), DataType::Struct(to_fields))
+            if from_fields.len() == to_fields.len() =>
+        {
+            DataType::Struct(
+                from_fields
+                    .iter()
+                    .zip(to_fields.iter())
+                    .map(|(from_field, to_field)| {
+                        Field::new(
+                            to_field.name(),
+                            shape(from_field.data_type(), to_field.data_type()),
+                            true,
+                        )
+                    })
+                    .collect(),
+            )
+        }
+        (DataType::Map(from_entries, _), DataType::Map(to_entries, sorted)) => {
+            let shaped = shape(from_entries.data_type(), to_entries.data_type());
+            let DataType::Struct(fields) = &shaped else {
+                return from.clone();
+            };
+            let entry_fields: Fields = fields
+                .iter()
+                .enumerate()
+                .map(|(index, field)| Arc::new(field.as_ref().clone().with_nullable(index != 0)))
+                .collect();
+            DataType::Map(
+                Arc::new(Field::new(
+                    to_entries.name(),
+                    DataType::Struct(entry_fields),
+                    false,
+                )),
+                *sorted,
+            )
+        }
+        _ => match (list_element(from), list_element(to)) {
+            (Some(from_element), Some(to_element)) => {
+                DataType::List(Arc::new(Field::new_list_field(
+                    shape(from_element.data_type(), to_element.data_type()),
+                    true,
+                )))
+            }
+            _ => from.clone(),
+        },
+    }
+}
+
+fn conform(
+    expr: Expr,
+    from: &DataType,
+    to: &DataType,
+    schema: &DFSchema,
+    ansi: bool,
+) -> Result<Expr> {
+    if from == to {
+        return Ok(expr);
+    }
+    match (from, to) {
+        (DataType::Struct(from_fields), DataType::Struct(to_fields))
+            if from_fields.len() == to_fields.len() && unique_names(to_fields) =>
+        {
+            let mut parts = Vec::with_capacity(to_fields.len() * 2);
+            for (from_field, to_field) in from_fields.iter().zip(to_fields.iter()) {
+                parts.push(lit(to_field.name().as_str()));
+                parts.push(conform(
+                    get_field(expr.clone(), to_field.name().as_str()),
+                    from_field.data_type(),
+                    to_field.data_type(),
+                    schema,
+                    ansi,
+                )?);
+            }
+            when(expr.is_not_null(), named_struct(parts)).end()
+        }
+        _ if from.is_nested() || to.is_nested() => {
+            if !arrow_exact(from, to) {
+                return plan_err!(
+                    "[UNSUPPORTED_FEATURE] a map key whose array or map elements need a cast from \
+                     \"{}\" to \"{}\" is not supported",
+                    spark_type_text(from),
+                    spark_type_text(to)
+                );
+            }
+            Ok(Expr::Cast(Cast::new(Box::new(expr), to.clone())))
+        }
+        _ => spark_cast(expr, to, schema, ansi),
+    }
+}
+
+fn spark_cast(expr: Expr, to: &DataType, schema: &DFSchema, ansi: bool) -> Result<Expr> {
+    let floated = crate::java_double::rewrite_float_cast(
+        Cast::new(Box::new(expr), to.clone()),
+        schema,
+        ansi,
+    )?
+    .data;
+    if !matches!(floated, Expr::Cast(_)) {
+        return Ok(floated);
+    }
+    Ok(crate::analyzer::rewrite_timestamp_casts(floated, schema)?.data)
+}
+
+fn unique_names(fields: &Fields) -> bool {
+    let mut seen = HashSet::with_capacity(fields.len());
+    fields.iter().all(|field| seen.insert(field.name()))
+}
+
+fn arrow_exact(from: &DataType, to: &DataType) -> bool {
+    match (from, to) {
+        (DataType::Null, _) => true,
+        (DataType::Struct(from_fields), DataType::Struct(to_fields)) => {
+            from_fields.len() == to_fields.len()
+                && from_fields
+                    .iter()
+                    .zip(to_fields.iter())
+                    .all(|(from_field, to_field)| {
+                        arrow_exact(from_field.data_type(), to_field.data_type())
+                    })
+        }
+        (DataType::Map(from_entries, _), DataType::Map(to_entries, _)) => {
+            arrow_exact(from_entries.data_type(), to_entries.data_type())
+        }
+        _ => match (list_element(from), list_element(to)) {
+            (Some(from_element), Some(to_element)) => {
+                arrow_exact(from_element.data_type(), to_element.data_type())
+            }
+            (None, None) => from == to || (from.is_numeric() && to.is_numeric()),
+            _ => false,
+        },
+    }
 }
 
 fn accepts(from: &DataType, to: &DataType) -> bool {
@@ -119,28 +340,48 @@ fn accepts(from: &DataType, to: &DataType) -> bool {
                         accepts(from_field.data_type(), to_field.data_type())
                     })
         }
-        (
-            DataType::List(from_field)
-            | DataType::LargeList(from_field)
-            | DataType::FixedSizeList(from_field, _),
-            DataType::List(to_field) | DataType::LargeList(to_field),
-        ) => accepts(from_field.data_type(), to_field.data_type()),
         (DataType::Map(from_entries, _), DataType::Map(to_entries, _)) => {
             accepts(from_entries.data_type(), to_entries.data_type())
         }
-        _ if from.is_nested() || to.is_nested() => false,
-        _ => {
-            from == to
-                || (is_string(from) && is_string(to))
-                || (from.is_numeric() && (to.is_numeric() || is_string(to)))
-        }
+        _ => match (list_element(from), list_element(to)) {
+            (Some(from_element), Some(to_element)) => {
+                accepts(from_element.data_type(), to_element.data_type())
+            }
+            (None, None) if !from.is_nested() && !to.is_nested() => leaf_accepts(from, to),
+            _ => false,
+        },
     }
+}
+
+fn leaf_accepts(from: &DataType, to: &DataType) -> bool {
+    from == to
+        || is_string(to)
+        || (from.is_numeric() && to.is_numeric())
+        || (is_datetime(from) && is_datetime(to))
+        || (is_binary(from) && is_binary(to))
 }
 
 fn is_string(data_type: &DataType) -> bool {
     matches!(
         data_type,
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn is_datetime(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(..)
+    )
+}
+
+fn is_binary(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Binary
+            | DataType::LargeBinary
+            | DataType::BinaryView
+            | DataType::FixedSizeBinary(_)
     )
 }
 

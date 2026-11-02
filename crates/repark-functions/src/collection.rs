@@ -143,7 +143,9 @@ pub fn create_map_udf() -> Arc<ScalarUDF> {
 
 pub use create_map::SQL_MAP_NAME;
 pub use map_rewrite::SparkMapRewrite;
-pub use map_subscript::{SparkMapSubscript, insert_map_subscript_before_coercion};
+pub use map_subscript::{
+    SparkMapSubscript, insert_map_subscript_before_coercion, map_array_subscripts_as_lookups,
+};
 
 #[must_use]
 pub fn array_contains_udf() -> Arc<ScalarUDF> {

@@ -98,7 +98,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
 /// Dispatch a `CAST` through legality, numeric, string, and date rewrites.
 /// # Errors
 /// Returns a plan error for Spark-illegal DATE↔integer pairs.
-fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+pub(crate) fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     if let Expr::Cast(cast) = &expr
         && let Ok(source_type) = cast.expr.get_type(schema)
     {

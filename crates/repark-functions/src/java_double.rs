@@ -292,7 +292,11 @@ fn is_suffix_literal_call(expr: &Expr) -> bool {
     )
 }
 
-fn rewrite_float_cast(cast: Cast, schema: &DFSchema, ansi: bool) -> Result<Transformed<Expr>> {
+pub(crate) fn rewrite_float_cast(
+    cast: Cast,
+    schema: &DFSchema,
+    ansi: bool,
+) -> Result<Transformed<Expr>> {
     let Ok(source_type) = cast.expr.get_type(schema) else {
         return Ok(Transformed::no(Expr::Cast(cast)));
     };

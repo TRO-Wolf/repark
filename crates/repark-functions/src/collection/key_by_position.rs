@@ -65,6 +65,15 @@ impl ScalarUDFImpl for KeyByPosition {
     }
 }
 
+fn list_element(data_type: &DataType) -> Option<&FieldRef> {
+    match data_type {
+        DataType::List(element)
+        | DataType::LargeList(element)
+        | DataType::FixedSizeList(element, _) => Some(element),
+        _ => None,
+    }
+}
+
 fn by_position(array: &ArrayRef, to: &DataType) -> Result<ArrayRef> {
     if array.data_type() == to {
         return Ok(Arc::clone(array));
@@ -72,12 +81,11 @@ fn by_position(array: &ArrayRef, to: &DataType) -> Result<ArrayRef> {
     match (array.data_type(), to) {
         (DataType::Null, _) => Ok(new_null_array(to, array.len())),
         (DataType::Struct(_), DataType::Struct(fields)) => struct_by_position(array, fields),
-        (
-            DataType::List(_) | DataType::LargeList(_) | DataType::FixedSizeList(..),
-            DataType::List(field),
-        ) => list_by_position(array, field),
         (DataType::Map(..), DataType::Map(entries, sorted)) => {
             map_by_position(array, entries, *sorted)
+        }
+        (source, DataType::List(field)) if list_element(source).is_some() => {
+            list_by_position(array, field)
         }
         _ => Ok(cast_with_options(array, to, &DEFAULT_CAST_OPTIONS)?),
     }
