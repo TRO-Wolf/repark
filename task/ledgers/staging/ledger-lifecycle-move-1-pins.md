@@ -20,3 +20,7 @@ C-017: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_move_skips
 C-018: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_move_skips_a_fenced_bullet_and_cuts_the_real_row
 C-019: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_move_and_archive_refuse_a_history_source
 C-020: none (records)
+C-021: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_contents_prose_bullet_stays_and_real_row_moves
+C-022: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_contents_commented_bullet_stays_and_real_row_moves, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_contents_fenced_bullet_stays_and_real_row_moves
+C-023: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_comment_holding_a_fence_line_leaves_the_row_visible, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_fence_holding_a_comment_opener_leaves_the_row_visible
+C-024: none (records)
