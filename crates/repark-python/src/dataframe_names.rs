@@ -94,6 +94,9 @@ pub(crate) fn bound_projection(
         .and_then(|expr| {
             repark_core::frame_names::bind_projection_expr(expr.data, frame.schema(), rule)
         })
+        .and_then(|expr| {
+            repark_functions::collection::map_array_subscripts_as_lookups(expr, frame.schema())
+        })
         .map_err(datafusion_to_py_err)?;
     let bound = crate::column::series::bind_series(frame, bound)?;
     let depth = crate::deep_stack::expression_depth(&bound);
