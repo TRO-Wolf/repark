@@ -342,7 +342,10 @@ def test_drop_view_one_part_round_trips_current_namespace(spark: ReparkSession) 
     spark.sql("DROP VIEW dropme")
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns LIKE 'dropme'")) == []
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns LIKE 'keepme'")) == [["ns", "keepme", False]]
-    spark.sql("DROP VIEW IF EXISTS dropme, keepme")
+    with pytest.raises(Exception, match=r"PARSE_SYNTAX_ERROR\] Syntax error at or near ','"):
+        spark.sql("DROP VIEW IF EXISTS dropme, keepme").collect()
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == [["ns", "keepme", False]]
+    spark.sql("DROP VIEW IF EXISTS keepme")
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == []
     spark.sql("DROP VIEW IF EXISTS dropme")
 

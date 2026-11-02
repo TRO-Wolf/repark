@@ -96,6 +96,9 @@ pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
 ) -> Result<DataFrame> {
     door_tag::clear(ctx);
     crate::normalize::refuse_unclosed_bracketed_comment(sql)?;
+    if let Some(refusal) = crate::view_ddl::temp_ddl::refuse_unparsable_target(sql) {
+        return Err(refusal);
+    }
     if crate::show_create::starts_with_show_create_table(sql)
         && let Some(Err(error)) = crate::show_create::try_parse_show_create(sql)
     {

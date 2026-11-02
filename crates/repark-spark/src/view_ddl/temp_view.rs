@@ -244,6 +244,42 @@ pub(crate) fn temp_view_column_comments(
     Ok(any.downcast_ref::<ReplanningTempView>().map(comments))
 }
 
+pub(crate) fn renamed_temp_view(
+    provider: &Arc<dyn TableProvider>,
+    home: Vec<String>,
+    display: String,
+) -> Result<Option<Arc<dyn TableProvider>>> {
+    let inner = match provider.get_logical_plan() {
+        Some(plan) => match temp_view_scan(plan.as_ref()) {
+            Some(scan) => source_as_provider(&scan.source)?,
+            None => Arc::clone(provider),
+        },
+        None => Arc::clone(provider),
+    };
+    let any: &dyn Any = inner.as_ref();
+    let Some(view) = any.downcast_ref::<ReplanningTempView>() else {
+        return Ok(None);
+    };
+    let definition = TempViewDefinition {
+        home,
+        display,
+        sql: view.definition.sql.clone(),
+        catalog: view.definition.catalog.clone(),
+        namespace: view.definition.namespace.clone(),
+        aliases: view.definition.aliases.clone(),
+    };
+    Ok(Some(Arc::new(ReplanningTempView {
+        ctx: view.ctx.clone(),
+        catalogs: view.catalogs.clone(),
+        definition,
+        temp_homes: view.temp_homes.clone(),
+        references: view.references.clone(),
+        dependencies: view.dependencies.clone(),
+        schema: Arc::clone(&view.schema),
+        definition_plan: view.definition_plan.clone(),
+    })))
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn refuse_recursive_temp_view(
     ctx: &SessionContext,
