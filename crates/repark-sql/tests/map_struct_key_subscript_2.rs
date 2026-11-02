@@ -42,21 +42,159 @@ const M_DN: &str = "map(named_struct('k', CAST('-0.0' AS DOUBLE), 'j', 2), 1, na
 const M_F: &str = "map(named_struct('k', CAST(1.1 AS FLOAT), 'j', 2), 1, named_struct('k', CAST('NaN' AS FLOAT), 'j', 2), 2, named_struct('k', CAST(0 AS FLOAT), 'j', 2), 3)";
 const M_AS: &str = "map(array('1.5'), 7, array('1.0E20'), 8, array('NaN'), 9, array('1'), 10, array('2024-01-01'), 11, array('1.50'), 12, array('true'), 13, array('-0.0'), 14, array('2024-01-01 00:00:00'), 15)";
 
+const ANSI_TABLES: [&str; 12] = [
+    "CREATE TABLE ice.ns.c (id INT, m MAP<STRUCT<k: INT, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.c VALUES (1, map(named_struct('k', 1, 'j', 2), 7, named_struct('k', 3, 'j', 2), 8)), (2, map(named_struct('k', 1, 'j', 5), 9))",
+    "CREATE TABLE ice.ns.r4fd (id INT, m MAP<STRUCT<k: DOUBLE, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.r4fd VALUES (1, map(named_struct('k', CAST(0 AS DOUBLE), 'j', 2), 7, named_struct('k', CAST('NaN' AS DOUBLE), 'j', 2), 8, named_struct('k', CAST('Infinity' AS DOUBLE), 'j', 2), 9, named_struct('k', CAST('-Infinity' AS DOUBLE), 'j', 2), 10, named_struct('k', 1.1D, 'j', 2), 11, named_struct('k', CAST(CAST(1.1 AS FLOAT) AS DOUBLE), 'j', 2), 12)), (2, map(named_struct('k', CAST(1 AS DOUBLE), 'j', 2), 13))",
+    "CREATE TABLE ice.ns.r3ast (id INT, m MAP<ARRAY<STRUCT<k: STRING, j: INT>>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.r3ast VALUES (1, map(array(named_struct('k', 'a', 'j', 2)), 7)), (2, map(array(named_struct('k', 'b', 'j', 2)), 9))",
+    "CREATE TABLE ice.ns.r3sa (id INT, m MAP<STRUCT<a: INT, arr: ARRAY<STRING>>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.r3sa VALUES (1, map(named_struct('a', 1, 'arr', array('x')), 7)), (2, map(named_struct('a', 2, 'arr', array('y')), 9))",
+    "CREATE TABLE ice.ns.r3as (id INT, m MAP<ARRAY<STRING>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.r3as VALUES (1, map(array('a', 'b'), 7, array('1.5'), 8)), (2, map(array('c'), 9))",
+    "CREATE TABLE ice.ns.r4adn (id INT, m MAP<ARRAY<DOUBLE>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.r4adn VALUES (1, map(array(CAST(0 AS DOUBLE), CAST('NaN' AS DOUBLE)), 7, array(CAST(1 AS DOUBLE), CAST(0 AS DOUBLE)), 8)), (2, map(array(CAST('NaN' AS DOUBLE)), 9))",
+];
+
+const ANSI_OFF_REFUSALS: [(&str, &str); 10] = [
+    (
+        "SELECT id, m[named_struct('j', 1, 'k', 2)] FROM ice.ns.c ORDER BY id",
+        "\"STRUCT<j: INT",
+    ),
+    (
+        "SELECT id, m[named_struct('k', CAST(1 AS BIGINT), 'j', 2)] FROM ice.ns.c ORDER BY id",
+        "\"STRUCT<k: BIGINT",
+    ),
+    (
+        "SELECT id, m[named_struct('x', id, 'y', 2)] FROM ice.ns.c ORDER BY id",
+        "\"STRUCT<x: INT",
+    ),
+    (
+        "SELECT map(named_struct('k', 1, 'j', 2), 7)[named_struct('j', 1, 'k', 2)]",
+        "\"STRUCT<j: INT",
+    ),
+    (
+        "SELECT id, m[named_struct('k', 1, 'j', 2)] FROM ice.ns.r4fd ORDER BY id",
+        "\"STRUCT<k: INT",
+    ),
+    (
+        "SELECT id, m[named_struct('k', CAST('NaN' AS FLOAT), 'j', 2)] FROM ice.ns.r4fd ORDER BY id",
+        "\"STRUCT<k: FLOAT",
+    ),
+    (
+        "SELECT id, m[array(named_struct('x', 'a', 'y', 2))] FROM ice.ns.r3ast ORDER BY id",
+        "\"ARRAY<STRUCT<x: STRING",
+    ),
+    (
+        "SELECT id, m[array(named_struct('k', 'a', 'j', CAST(2 AS BIGINT)))] FROM ice.ns.r3ast ORDER BY id",
+        "\"ARRAY<STRUCT<k: STRING",
+    ),
+    (
+        "SELECT id, m[named_struct('b', CAST(2 AS BIGINT), 'c', array('y'))] FROM ice.ns.r3sa ORDER BY id",
+        "\"STRUCT<b: BIGINT",
+    ),
+    (
+        "SELECT map(named_struct('k', 0.0D), 7)[named_struct('k', CAST(-0.0D AS FLOAT))]",
+        "\"STRUCT<k: FLOAT",
+    ),
+];
+
+const ANSI_OFF_ANSWERS: [(&str, &[&str]); 14] = [
+    (
+        "SELECT id, m[named_struct('k', 1, 'j', 2)] FROM ice.ns.c ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (
+        "SELECT id, m[named_struct('k', CAST('Infinity' AS DOUBLE), 'j', 2)] FROM ice.ns.r4fd ORDER BY id",
+        &["1|9", "2|NULL"],
+    ),
+    (
+        "SELECT id, m[named_struct('k', -exp(1000D), 'j', 2)] FROM ice.ns.r4fd ORDER BY id",
+        &["1|10", "2|NULL"],
+    ),
+    (
+        "SELECT id, m[named_struct('a', 1, 'arr', array('x'))] FROM ice.ns.r3sa ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (
+        "SELECT map(named_struct('a', 1, 'arr', array(named_struct('x', '1.5'))), 7)[named_struct('a', 1, 'arr', array(named_struct('x', '1.5')))]",
+        &["7"],
+    ),
+    (
+        "SELECT map(named_struct('a', array(named_struct('b', array(0.0D)))), 7)[named_struct('a', array(named_struct('b', array(-0.0D))))]",
+        &["7"],
+    ),
+    (
+        "SELECT map(named_struct('k', CAST(0 AS FLOAT)), 7)[named_struct('k', CAST(-0.0D AS FLOAT))]",
+        &["7"],
+    ),
+    ("SELECT map(array(1), 7)[array(CAST(1 AS BIGINT))]", &["7"]),
+    (
+        "SELECT map(array(CAST(0 AS DOUBLE)), 1, array(CAST('NaN' AS DOUBLE)), 2)[array(0)]",
+        &["1"],
+    ),
+    (
+        "SELECT map(array('1.5'), 7, array('1'), 10)[array(1)]",
+        &["10"],
+    ),
+    (
+        "SELECT map(array(TIMESTAMP '2024-01-01 00:00:00'), 7)[array(DATE '2024-01-01')]",
+        &["7"],
+    ),
+    (
+        "SELECT id, m[array(CAST('1.5' AS DOUBLE))] FROM ice.ns.r3as ORDER BY id",
+        &["1|8", "2|NULL"],
+    ),
+    (
+        "SELECT id, m[array(CAST(-0.0D AS FLOAT), CAST('NaN' AS FLOAT))] FROM ice.ns.r4adn ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (
+        "SELECT id, m[array(1, 0)] FROM ice.ns.r4adn ORDER BY id",
+        &["1|8", "2|NULL"],
+    ),
+];
+
+const ANSI_ON_ANSWERS: [(&str, &[&str]); 4] = [
+    (
+        "SELECT id, m[named_struct('j', 1, 'k', 2)] FROM ice.ns.c ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (
+        "SELECT id, m[named_struct('k', CAST(1 AS BIGINT), 'j', 2)] FROM ice.ns.c ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (
+        "SELECT id, m[named_struct('x', id, 'y', 2)] FROM ice.ns.c ORDER BY id",
+        &["1|7", "2|NULL"],
+    ),
+    (
+        "SELECT map(named_struct('k', 1, 'j', 2), 7)[named_struct('j', 1, 'k', 2)]",
+        &["7"],
+    ),
+];
+
 struct Door {
     session: ReparkSession,
     _dir: TempDir,
 }
 
 async fn spark_door(zone: &str, tables: &[&[&str]]) -> Door {
+    spark_door_with(&[("spark.sql.session.timeZone", zone)], tables).await
+}
+
+async fn spark_door_with(settings: &[(&str, &str)], tables: &[&[&str]]) -> Door {
     let dir = TempDir::new().expect("warehouse");
     let warehouse = dir.path().to_str().expect("utf8").to_string();
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
-    let session = ReparkSession::builder()
+    let mut builder = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))
-        .with_sql_dialect(dialect)
-        .config("spark.sql.session.timeZone", zone)
-        .build()
-        .expect("spark session");
+        .with_sql_dialect(dialect);
+    for (key, value) in settings {
+        builder = builder.config(*key, *value);
+    }
+    let session = builder.build().expect("spark session");
     session
         .register_memory_catalog("ice", &warehouse)
         .await
@@ -412,4 +550,65 @@ async fn a_datetime_element_and_a_nested_array_of_structs_are_cast_like_spark() 
         )
         .await;
     }
+}
+
+async fn expect_ansi_off(door: &Door) {
+    for (sql, given) in ANSI_OFF_REFUSALS {
+        let error = answer(&door.session, sql)
+            .await
+            .expect_err("with ANSI off a key of another type refuses like Spark");
+        for fragment in [
+            "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]",
+            "The second parameter requires the",
+            given,
+            "SQLSTATE: 42K09",
+        ] {
+            assert!(error.contains(fragment), "{sql}: {fragment} not in {error}");
+        }
+    }
+    for (sql, answered) in ANSI_OFF_ANSWERS {
+        expect(door, sql, answered).await;
+    }
+}
+
+async fn expect_ansi_on(door: &Door) {
+    for (sql, answered) in ANSI_ON_ANSWERS {
+        expect(door, sql, answered).await;
+    }
+}
+
+#[tokio::test]
+async fn with_ansi_off_in_the_builder_a_struct_key_of_another_type_refuses_like_spark() {
+    let door = spark_door_with(
+        &[
+            ("spark.sql.session.timeZone", UTC),
+            ("spark.sql.ansi.enabled", "false"),
+        ],
+        &[&ANSI_TABLES],
+    )
+    .await;
+    expect_ansi_off(&door).await;
+}
+
+#[tokio::test]
+async fn ansi_set_inside_a_session_gates_the_struct_key_cast_both_ways() {
+    let door = spark_door(UTC, &[&ANSI_TABLES]).await;
+    expect_ansi_on(&door).await;
+    run(&door.session, "SET spark.sql.ansi.enabled = false").await;
+    expect_ansi_off(&door).await;
+    run(&door.session, "SET spark.sql.ansi.enabled = true").await;
+    expect_ansi_on(&door).await;
+}
+
+#[tokio::test]
+async fn with_ansi_on_in_the_builder_a_struct_key_is_cast_by_position() {
+    let door = spark_door_with(
+        &[
+            ("spark.sql.session.timeZone", UTC),
+            ("spark.sql.ansi.enabled", "true"),
+        ],
+        &[&ANSI_TABLES],
+    )
+    .await;
+    expect_ansi_on(&door).await;
 }
