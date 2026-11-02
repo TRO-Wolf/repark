@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -72,6 +73,32 @@ def _segment_temp_view_home_ref(inner: Any, segment: str) -> list[str] | None:
     return _temp_view_home_ref(inner, _quoted_segment(segment))
 
 
+_SPARK_NUMERIC_LITERAL = re.compile(r"[0-9]+(?:[LSY]|(?:E[0-9]+)?(?:D|F|BD)?)", re.IGNORECASE)
+
+
+def _spark_unparsable_target(raw: str) -> bool:
+    token = raw.strip()
+    if token[:1] in {'"', "'"}:
+        return True
+    if not token or any(char in ".`" or char.isspace() for char in token):
+        return False
+    if _SPARK_NUMERIC_LITERAL.fullmatch(token) is not None:
+        return True
+    return not all(char.isalnum() or char == "_" for char in token)
+
+
+def _raw_temp_view_home(
+    stripped: str, prefer_temp_view: bool, probe: Callable[[str], Any] | None
+) -> list[str] | None:
+    if not prefer_temp_view or probe is None or not stripped:
+        return None
+    if any(char in '.`"' or char.isspace() for char in stripped):
+        return None
+    if _spark_unparsable_target(stripped):
+        return None
+    return probe(stripped)
+
+
 def _refused_spelling(inner: Any, name: str) -> str | None:
     """Registered spelling of refused catalog ``name`` (exact match), else ``None``."""
     names = _native.session_refused_catalog_names(inner)
@@ -125,6 +152,10 @@ def resolve_table_name(
     except ValueError as error:
         # Match `_sql_table_ref` surface: invalid / SQL-fragment identifiers raise
         # AnalysisException (writer / table injection gate).
+
+        home = _raw_temp_view_home(stripped, prefer_temp_view, temp_view_home_ref)
+        if home:
+            return _join_table_identifier_segments(list(home))
 
         from repark.errors import AnalysisException
 

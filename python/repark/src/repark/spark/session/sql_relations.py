@@ -10,6 +10,7 @@ from repark.spark._idents import is_plain_ident as _is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident
 
 from repark.spark._idents import reject_path_escape_segment as _reject_path_escape_segment
+from repark.spark.session.catalog_resolution import _spark_unparsable_target
 
 from repark.errors import PySparkValueError
 
@@ -600,7 +601,7 @@ def _scan_sql_table_identifier_end(query: str, start: int) -> int | None:
                 current = query[index]
 
                 if current == quote:
-                    if quote == '"' and index + 1 < length and query[index + 1] == '"':
+                    if index + 1 < length and query[index + 1] == quote:
                         index += 2
 
                         continue
@@ -665,7 +666,7 @@ def _split_sql_table_name_list(names_blob: str) -> list[str]:
             buf.append(character)
 
             if character == quote:
-                if quote == '"' and index + 1 < len(names_blob) and names_blob[index + 1] == '"':
+                if index + 1 < len(names_blob) and names_blob[index + 1] == quote:
                     buf.append(names_blob[index + 1])
 
                     index += 2
@@ -748,8 +749,8 @@ def _parse_table_identifier_segments(name: str) -> list[str]:
                 current = name[index]
 
                 if current == quote:
-                    if quote == '"' and index + 1 < length and name[index + 1] == '"':
-                        buffer.append('"')
+                    if index + 1 < length and name[index + 1] == quote:
+                        buffer.append(quote)
 
                         index += 2
 
@@ -934,7 +935,7 @@ def _expand_truncate_target_sql(query: str, resolve: Callable[..., str]) -> str 
 
     rest = query[name_end:]
 
-    if rest.strip().rstrip(";").strip():
+    if rest.strip().rstrip(";").strip() or raw_name.strip().startswith('"'):
         return query
 
     try:
@@ -981,11 +982,14 @@ def _expand_drop_table_or_view_sql(query: str, resolve: Callable[..., str]) -> s
     if not names_blob:
         return query
 
-    qualified: list[str] = []
-
-    for raw_name in _split_sql_table_name_list(names_blob):
-        resolved = resolve(raw_name, prefer_temp_view=True)
-
-        qualified.append(_sql_table_ref(resolved))
+    raw_names = _split_sql_table_name_list(names_blob)
+    if any(_spark_unparsable_target(raw) for raw in raw_names):
+        return query
+    try:
+        qualified = [_sql_table_ref(resolve(raw, prefer_temp_view=True)) for raw in raw_names]
+    except Exception:
+        if len(raw_names) > 1:
+            return query
+        raise
 
     return f"DROP {verb} {if_exists}{', '.join(qualified)}{purge}"

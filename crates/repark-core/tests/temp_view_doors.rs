@@ -435,3 +435,43 @@ async fn a_catalog_over_the_home_refuses_the_read_spelling_too() {
         );
     }
 }
+
+#[tokio::test]
+async fn a_digit_leading_temp_view_name_resolves_unquoted_and_an_undecidable_name_refuses() {
+    let session = ReparkSession::new().unwrap();
+    assert_eq!(session.resolve_temp_view_home_ref("1t").unwrap(), None);
+    session
+        .create_or_replace_temp_view("`1t`", vec![rows()])
+        .unwrap();
+    let home = session.resolve_temp_view_home_ref("`1t`").unwrap();
+    assert!(home.is_some());
+    assert_eq!(session.resolve_temp_view_home_ref("1t").unwrap(), home);
+    assert!(session.resolve_temp_view_home_ref("1t`x").is_err());
+}
+
+#[tokio::test]
+async fn a_token_spark_cannot_parse_never_reaches_the_temp_view_registry() {
+    let session = ReparkSession::new().unwrap();
+    for name in ["123", "1d", "1L", "1e5", "1Y", "1S", "1BD", "1t$"] {
+        session
+            .create_or_replace_temp_view(&format!("`{name}`"), vec![rows()])
+            .unwrap();
+        assert!(
+            session
+                .resolve_temp_view_home_ref(&format!("`{name}`"))
+                .unwrap()
+                .is_some(),
+            "{name}"
+        );
+        assert!(session.resolve_temp_view_home_ref(name).is_err(), "{name}");
+    }
+    for name in ["1t", "0x1", "1_t", "1e"] {
+        session
+            .create_or_replace_temp_view(&format!("`{name}`"), vec![rows()])
+            .unwrap();
+        assert!(
+            session.resolve_temp_view_home_ref(name).unwrap().is_some(),
+            "{name}"
+        );
+    }
+}

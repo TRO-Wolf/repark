@@ -115,3 +115,4 @@ spelling the session hands back under that `SET` plus the round-trip through
 `create_or_replace_temp_view("datafusion.public.v2")` / `drop_temp_view`. That test's scope is
 narrowed in prose: it is the RAW SQL body that still follows the live default; the product read
 paths follow the home.
+**SPARK-DOOR-TEMP-VIEW-DDL-1 fix round 3 (2026-11-02):** `temp_view_doors.rs` gains `a_digit_leading_temp_view_name_resolves_unquoted_and_an_undecidable_name_refuses`: a digit-leading name is looked up as its raw token, and an unparsable name that is not a plain token refuses (C-031, C-032, C-036).

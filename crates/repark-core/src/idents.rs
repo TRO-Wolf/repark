@@ -92,3 +92,18 @@ pub(crate) fn parse_table_identifier_segments(
     }
     Ok(segments)
 }
+
+#[must_use]
+pub fn spark_numeric_literal(word: &str) -> bool {
+    let digits = word.bytes().take_while(u8::is_ascii_digit).count();
+    if digits == 0 {
+        return false;
+    }
+    let rest = word[digits..].to_ascii_uppercase();
+    if let Some(exponent) = rest.strip_prefix('E') {
+        let exponent_digits = exponent.bytes().take_while(u8::is_ascii_digit).count();
+        return exponent_digits > 0
+            && matches!(&exponent[exponent_digits..], "" | "D" | "F" | "BD");
+    }
+    matches!(rest.as_str(), "" | "L" | "S" | "Y" | "D" | "F" | "BD")
+}

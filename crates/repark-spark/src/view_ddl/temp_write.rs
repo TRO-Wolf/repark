@@ -4,10 +4,12 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::Tokenizer;
+use repark_common::spark_error;
 use repark_core::TempViewSession;
 
 use crate::namespace_ddl::consume_word;
 use crate::view_ddl::temp_ddl::temp_view_home_segments;
+use crate::view_ddl::temp_parse::spark_parse_error;
 
 const WRITE_HEADS: [&str; 5] = ["DELETE", "UPDATE", "MERGE", "INSERT", "TRUNCATE"];
 
@@ -32,9 +34,28 @@ pub(crate) fn refuse_temp_view_write_target(
         return None;
     }
     let (route, name) = write_target(sql)?;
-    let home = temp_view_home_segments(&name, temp_views).ok()??;
+    let home = match temp_view_home_segments(&name, temp_views) {
+        Ok(home) => home?,
+        Err(error) => return Some(error),
+    };
     let view = home.last()?;
+    if matches!(route, WriteRoute::Truncate)
+        && let Some(refusal) = double_quoted_target_refusal(&name)
+    {
+        return Some(refusal);
+    }
     Some(DataFusionError::Plan(refusal_text(route, &name, view)))
+}
+
+pub(crate) fn double_quoted_target_refusal(name: &ObjectName) -> Option<DataFusionError> {
+    let ident = name.0.last()?.as_ident()?;
+    (ident.quote_style == Some('"')).then(|| {
+        let near = format!("'\"{}\"'", ident.value.replace('"', "\"\""));
+        spark_parse_error(spark_error::message(
+            spark_error::PARSE_SYNTAX_ERROR,
+            &[("near", near.as_str())],
+        ))
+    })
 }
 
 fn write_target(sql: &str) -> Option<(WriteRoute, ObjectName)> {
@@ -93,14 +114,14 @@ fn refusal_text(route: WriteRoute, name: &ObjectName, view: &str) -> String {
     }
 }
 
-fn written_leaf(name: &ObjectName, view: &str) -> String {
+pub(crate) fn written_leaf(name: &ObjectName, view: &str) -> String {
     name.0
         .last()
         .and_then(|part| part.as_ident())
         .map_or_else(|| view.to_string(), |ident| ident.value.clone())
 }
 
-fn quoted(name: &str) -> String {
+pub(crate) fn quoted(name: &str) -> String {
     format!("`{}`", name.replace('`', "``"))
 }
 
