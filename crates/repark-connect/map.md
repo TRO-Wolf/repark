@@ -98,7 +98,7 @@ protocol and the typed destination, and replaces ConnectorX's per-row parse thro
 keeps the ten C-1 rows; for `numeric`, `interval` and `uuid`, ADBC's documented Arrow types
 (string, month-day-nano, fixed-size binary) give way to the types Spark's dialect surfaces,
 because Spark governs the surface (North Star §2). Both bars are documents, not runs; the full
-citations are in the [C-2 ledger](../../task/ledgers/staging/c-2-ledger.md) §4.
+citations are in the [C-2 ledger](../../task/ledgers/completed/c-2-ledger.md) §4.
 
 **C-4 step 1.** ADBC is the bar for the write: append into an existing table as one COPY
 statement, a typed refusal when a batch does not fit the table, and one type table for the bulk
@@ -166,8 +166,8 @@ in the write direction. Both are documents, not runs; the citations are in the
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Ledgers: [c-1-ledger.md](../../task/ledgers/staging/c-1-ledger.md),
-  [c-2-ledger.md](../../task/ledgers/staging/c-2-ledger.md),
+- Ledgers: [c-1-ledger.md](../../task/ledgers/completed/c-1-ledger.md),
+  [c-2-ledger.md](../../task/ledgers/completed/c-2-ledger.md),
   [c-4-ledger.md](../../task/ledgers/staging/c-4-ledger.md)
 - Registry rows: [docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md) §5,
   the `CONNECT-DECL-*` family beside `SES-DECL`.

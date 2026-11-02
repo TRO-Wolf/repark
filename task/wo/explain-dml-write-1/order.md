@@ -5,7 +5,7 @@ Written by Claude (claude-opus-5-5), clerk, on 2026-10-20, from card
 [EXPLAIN-DML-WRITE-1](../../roadmap/mid-term/explain-dml-write-1-card-2026-10-16.md) (rulings
 136, 138 and 139 and its measured table) and from how #1090 (REPARK-SQL-UPDATE-SUBQUERY-WHERE-1,
 "106") built the walk-level refusal: ledger
-[repark-sql-update-subquery-where-1](../../ledgers/staging/repark-sql-update-subquery-where-1-ledger.md)
+[repark-sql-update-subquery-where-1](../../ledgers/completed/repark-sql-update-subquery-where-1-ledger.md)
 §12 and §13, P2 report
 [p2-report-repark-sql-update-subquery-where-1-2026-10-17](../../../docs/cutover/p2-report-repark-sql-update-subquery-where-1-2026-10-17.md).
 Every path and line below was read on main `085d77e8` (main has since taken only the docs merges #1044 and #1067); nothing was run. The 2026-10-20 plan puts

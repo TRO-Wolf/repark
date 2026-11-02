@@ -105,7 +105,7 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   column refuses a bound that is not an `i64`. `PartitionOptions::of` builds the options from
   a door's integer arguments.
 - `partition.rs` — **C-3 (2026-10-07), the planning slice**, no feature gate and no I/O
-  ([c-3-ledger.md](../../../task/ledgers/staging/c-3-ledger.md) §0.1). Spark's JDBC range
+  ([c-3-ledger.md](../../../task/ledgers/completed/c-3-ledger.md) §0.1). Spark's JDBC range
   partitioning as numbers.
   - **`PartitionOptions`** holds the four values a door was handed (`column`, `lower_bound`,
     `upper_bound`, `num_partitions`). `with_props(&mut props)` lifts the four Spark spellings

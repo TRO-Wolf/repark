@@ -1,6 +1,6 @@
 # ICE-RESOURCE-BOUND-1 — the measured and ruled resource bound (2026-10-26)
 
-Unit ICE-RESOURCE-BOUND-1 (U-11, release 1.5.6). Order: [order](../../task/wo/ice-resource-bound-1/order.md). Ledger: [ice-resource-bound-1-ledger](../../task/ledgers/staging/ice-resource-bound-1-ledger.md). Step-0 measurement: [step-0-bound-table-2026-10-26.md](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md), 261 cells on format v2 and v3 (the JSON sits beside it).
+Unit ICE-RESOURCE-BOUND-1 (U-11, release 1.5.6). Order: [order](../../task/wo/ice-resource-bound-1/order.md). Ledger: [ice-resource-bound-1-ledger](../../task/ledgers/completed/ice-resource-bound-1-ledger.md). Step-0 measurement: [step-0-bound-table-2026-10-26.md](../../task/wo/ice-resource-bound-1/evidence/step-0-bound-table-2026-10-26.md), 261 cells on format v2 and v3 (the JSON sits beside it).
 
 **Status, 2026-10-26.** Step 0 measured; the owner ruled Q1 to Q5 the same day; the sketch and the orchestrator rulings O-1 to O-13 and Q-B1 and Q-B2 are in the order. Steps 1 to 5 built the bound, the refusals, the detector walk and the pins on format v2 and v3. This file records the outcome. The scoped verifier rounds passed on head `76bd5891` (ledger C-013 closes C-012); the findings and their dispositions are in the verification section below.
 
@@ -197,5 +197,5 @@ Rulings: Q-V1 (accept fractions above 1); Q-V2 (the probe re-spelled through D2;
 ## Pointers
 
 - The census of the doors that reach each path, and the D10 spellings: the order, step 6.
-- The ledger: [ice-resource-bound-1-ledger](../../task/ledgers/staging/ice-resource-bound-1-ledger.md).
+- The ledger: [ice-resource-bound-1-ledger](../../task/ledgers/completed/ice-resource-bound-1-ledger.md).
 - Up: [map](map.md).

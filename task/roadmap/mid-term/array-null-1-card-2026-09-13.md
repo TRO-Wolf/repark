@@ -1,7 +1,7 @@
 # Card ARRAY-NULL-1 — null-preserving `array_append` / `array_prepend` with a linear plan
 
 **Date:** 2026-09-13 · **Authored by:** run 12b under G-5 · **Source:** ABS-EXPR-1's C-004 audit residue
-([abs-expr-1-ledger.md](../../ledgers/staging/abs-expr-1-ledger.md), row "`F.array_append` / `F.array_prepend`").
+([abs-expr-1-ledger.md](../../ledgers/completed/abs-expr-1-ledger.md), row "`F.array_append` / `F.array_prepend`").
 
 ## Why
 

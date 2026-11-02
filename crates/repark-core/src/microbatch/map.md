@@ -9,7 +9,7 @@ shutdown rules and the `StreamingQuery` progress surface, over MB-1's
 `repark-iceberg`. Owned by the [MB-3 order](../../../../task/wo/microbatch/mb-3-driver.md) under
 the [design sketch](../../../../task/wo/microbatch/mb-design-2026-10-06.md) §3.5 and §3.6 and the
 [North Star](../../../../task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
-Progress: the [MB-3 ledger](../../../../task/ledgers/staging/mb-3-ledger.md). The round's gates,
+Progress: the [MB-3 ledger](../../../../task/ledgers/completed/mb-3-ledger.md). The round's gates,
 the crash gate's 3 passed and 2 ignored included, are recorded there (round 1's count; since
 the append fence merged, 2026-10-08, the crash gate reads 5 passed and 0 ignored).
 Fold 1's gates (2026-10-07) are recorded there too.

@@ -1,7 +1,7 @@
 # Card ANSI-DOOR-1 — the SQL door honours `spark.sql.ansi.enabled`
 
 **Date:** 2026-09-13 · **Filed by:** run 12b (card only, no implementation) · **Source:** ABS-EXPR-1's door-parity
-finding ([abs-expr-1-ledger.md](../../ledgers/staging/abs-expr-1-ledger.md), C-001 evidence "Door-parity finding") and
+finding ([abs-expr-1-ledger.md](../../ledgers/completed/abs-expr-1-ledger.md), C-001 evidence "Door-parity finding") and
 the `("abs", Kernel(1), …)` row of `EXPECTED_DIVERGENCES` in `crates/repark-python/src/column/door_parity_tests.rs`.
 
 ## Why

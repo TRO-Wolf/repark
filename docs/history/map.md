@@ -9,6 +9,8 @@ work in this repository.
 
 Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../AGENTS.md).
 
+Links from these frozen copies to ledgers or cards that later moved are left as written, by the 2026-11-01 ruling, and the link gates accept them.
+
 ## Contents
 
 - [port-v2/](port-v2/map.md) — the v1 → v2 port (2026-08-06 → 2026-08-08, closed at milestone one):
@@ -34,6 +36,7 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 - [dl/](dl/map.md) — **Document lifecycle (DL)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
 - [sem/](sem/map.md) — **The Spark semantics fixes (SEM)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
 - [dml/](dml/map.md) — **Iceberg DML remainder (v0.6)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
+- [facade-tests/](facade-tests/map.md) — **facade-tests map pilot**: `python/repark/tests/map.md` as it stood at main `7882504c`, archived 2026-10-30 when MAP-TESTS-PILOT-1 rewrote it as a file index.
 
 ## I want to...
 

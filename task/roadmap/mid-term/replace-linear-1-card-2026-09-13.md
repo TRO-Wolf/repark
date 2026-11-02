@@ -1,7 +1,7 @@
 # Card REPLACE-LINEAR-1 — `DataFrame.replace` builds one searched CASE per column
 
 **Date:** 2026-09-13 · **Authored by:** run 12b under G-5 · **Source:** ABS-EXPR-1's C-004 audit residue
-([abs-expr-1-ledger.md](../../ledgers/staging/abs-expr-1-ledger.md), row "`DataFrame.replace` dict loop").
+([abs-expr-1-ledger.md](../../ledgers/completed/abs-expr-1-ledger.md), row "`DataFrame.replace` dict loop").
 
 ## Why
 

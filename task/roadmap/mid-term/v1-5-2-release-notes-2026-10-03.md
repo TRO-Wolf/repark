@@ -17,7 +17,7 @@ the Python `ta.*` door. An interior NaN still propagates exactly as in C TA-Lib,
 kernel layer (`repark_ta::ema` and the other kernels) is unchanged. With `null_lookback=True`,
 the facade still NULLs exactly the first `lookback` rows by row position; a skipped run in
 front of those rows stays NaN. Ledger:
-[ta-chain-1-ledger.md](../../ledgers/staging/ta-chain-1-ledger.md).
+[ta-chain-1-ledger.md](../../ledgers/completed/ta-chain-1-ledger.md).
 
 ## Column.is_duplicated() (POLARS-IS-DUPLICATED-1, #883, 5d8ee78b)
 

@@ -1,7 +1,7 @@
 # task/wo/explain-dml-write-1/evidence/ — the never-worse census of EXPLAIN-DML-WRITE-1
 
 Step 6 of [the order](../order.md), recorded 2026-10-21. Data only; the reading is in the unit
-ledger's §6 ([../../../ledgers/staging/explain-dml-write-1-ledger.md](../../../ledgers/staging/explain-dml-write-1-ledger.md)).
+ledger's §6 ([../../../ledgers/staging/explain-dml-write-1-ledger.md](../../../ledgers/completed/explain-dml-write-1-ledger.md)).
 
 - [census-cells.txt](census-cells.txt) — the 106 cells, one block each: the cell id, then its
   statements in order. Eleven predicates (subquery `IN`, `NOT IN`, `EXISTS`, correlated

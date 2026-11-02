@@ -10,4 +10,4 @@
 
 **Retires:** a kill-mid-write cell that holds the native door's replace publish on format v2 and v3, and asserts the post-kill reading that RKD-1 (a) fixes for the Spark door. The registry row ICE-LOCAL-COMMIT-POINT-1 then names the cell.
 
-**Relation:** the unit ledger [ICE-REPLACE-KILL-DOORS-1](../../ledgers/staging/ice-replace-kill-doors-1-ledger.md) (its C-012 cites this card) and [ICE-INTEGRITY-PINS-1 C-024](../../ledgers/staging/ice-integrity-pins-1-ledger.md), which named the replace doors unpinned. C-024's native-door half stays open until this card retires. Registry row: [ICE-LOCAL-COMMIT-POINT-1](../../../docs/spark-sql-iceberg-parity.md).
+**Relation:** the unit ledger [ICE-REPLACE-KILL-DOORS-1](../../ledgers/completed/ice-replace-kill-doors-1-ledger.md) (its C-012 cites this card) and [ICE-INTEGRITY-PINS-1 C-024](../../ledgers/staging/ice-integrity-pins-1-ledger.md), which named the replace doors unpinned. C-024's native-door half stays open until this card retires. Registry row: [ICE-LOCAL-COMMIT-POINT-1](../../../docs/spark-sql-iceberg-parity.md).

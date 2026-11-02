@@ -14,4 +14,4 @@
 
 **Retires:** the card when a DELETE through a view over a table matches Spark on both table kinds, for a matching and a non-matching predicate, each case pinned, and the parent's DELETE refusal still holds for a view over a literal.
 
-**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) (its lead paragraph is resolved there); [SPARK-DOOR-TEMP-VIEW-TARGET-1 ledger](../../ledgers/staging/spark-door-temp-view-target-1-ledger.md), clause C-009.
+**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) (its lead paragraph is resolved there); [SPARK-DOOR-TEMP-VIEW-TARGET-1 ledger](../../ledgers/completed/spark-door-temp-view-target-1-ledger.md), clause C-009.

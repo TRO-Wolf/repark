@@ -24,7 +24,7 @@ at N=16, death at N=40 on the base tree) sits far above it.
 The evidence is in [evidence/](evidence/map.md): the eight-row runner table and its raw lines, the ten local deltas for
 both modes with and without the warm-up (the mutation check, not committed), the pin file ten times, the dataframe
 directory once under `-n 8`, and the runner read of the final head. The unit's ledger is
-[../../ledgers/staging/replace-linear-pin-1-ledger.md](../../ledgers/staging/replace-linear-pin-1-ledger.md). The
+[../../ledgers/staging/replace-linear-pin-1-ledger.md](../../ledgers/completed/replace-linear-pin-1-ledger.md). The
 completed REPLACE-LINEAR-1 ledger is not edited.
 
 Up: [../map.md](../map.md).

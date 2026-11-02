@@ -56,7 +56,7 @@ every door.
 
   The full census (106 cells on each of four doors, main and branch) is in
   [the unit's evidence](../../wo/explain-dml-write-1/evidence/map.md) and its reading in the
-  [unit ledger](../../ledgers/staging/explain-dml-write-1-ledger.md) §6.
+  [unit ledger](../../ledgers/completed/explain-dml-write-1-ledger.md) §6.
 
 ## 2026-10-17: owner rulings 136, 138 and 139, and the measured table
 

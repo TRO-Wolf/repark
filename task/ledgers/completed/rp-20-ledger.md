@@ -4,7 +4,7 @@
 **Model:** swe-2-high · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
-[rp-19-ledger.md](../staging/rp-19-ledger.md) — repin consumer with a registry-truth clause.
+[rp-19-ledger.md](rp-19-ledger.md) — repin consumer with a registry-truth clause.
 
 **Retires:** the orchestrator moves this ledger to `../completed/` after the post-merge
 live run; per the unit brief it stays in `staging/` until then.

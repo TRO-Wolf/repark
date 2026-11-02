@@ -43,7 +43,7 @@ The 1.5.6 note names it until routing lands.
   `repark_iceberg::write::predicate_dml::subquery_where`: the ANSI router calls it with the
   identity exemption, `DataFusionDialect` (the `repark.sql()` door) without, so there is no third
   guard copy. Ledger:
-  [repark-sql-update-subquery-where-1](../../ledgers/staging/repark-sql-update-subquery-where-1-ledger.md).
+  [repark-sql-update-subquery-where-1](../../ledgers/completed/repark-sql-update-subquery-where-1-ledger.md).
 - **Routing stays this card.** Routing `repark.sql()` through the ANSI door needs the owner's
   rulings on its mechanism and on the never-worse items N1 to N7 of the sketch (Q2 and Q3, with
   the owner). When it lands, `repark.sql()` answers the five identity forms with Spark's rows.

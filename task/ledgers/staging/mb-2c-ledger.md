@@ -23,7 +23,7 @@ Fold 1 K2 (2026-10-07, ruling Q3) adds, on the local branch `wip/mb-2c-k2-mbe15`
 `crates/repark-iceberg/src/write/{merge/snapshot_commit.rs, predicate_dml.rs,
 sink_offsets_isolation_tests.rs, merge/map.md}`, `crates/repark-iceberg/src/microbatch/error.rs`,
 and the MB-2a pin `sink_offsets_probe_tests.rs::three_racing_appends_still_stamp_exactly_once_on_every_arm`
-with its [ledger](mb-2a-ledger.md) C-019 (D-14, D-15).
+with its [ledger](../completed/mb-2a-ledger.md) C-019 (D-14, D-15).
 
 **Closing slice (2026-10-07, branch `feat/mb-2c-append-fence`, cut from `origin/main`).** The
 owner ruled at about 20:55 EDT that `F-APPEND-PIN-BASE-1` is not built in the fork now and that

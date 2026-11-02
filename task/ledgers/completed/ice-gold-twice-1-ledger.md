@@ -4,7 +4,7 @@
 **Model:** swe-2-high · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Tier-2 CI never runs against unmerged code".
 **Path:** STANDARD. **Proven pattern:**
-[rp-19-ledger.md](../staging/rp-19-ledger.md) (pin consumer) and
+[rp-19-ledger.md](rp-19-ledger.md) (pin consumer) and
 [../archive/2026-09/2026-09-02-live-v3-aws-legs-ledger.md](../archive/2026-09/2026-09-02-live-v3-aws-legs-ledger.md)
 (env-gated AWS legs over a shared helper).
 

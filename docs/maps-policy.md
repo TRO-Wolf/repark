@@ -1,6 +1,6 @@
 # Architecture-scoped maps
 
-**Class:** contract (AGENTS.md "Markdown document lifecycle"); amended deliberately. **Adopted:** 2026-10-29, by the owner's word on the map policy evaluation. **Built by:** MAP-GOVERNANCE-1 (card [task/roadmap/mid-term/map-governance-1-card-2026-10-29.md](../task/roadmap/mid-term/map-governance-1-card-2026-10-29.md); ledger [task/ledgers/staging/map-governance-1-ledger.md](../task/ledgers/staging/map-governance-1-ledger.md)).
+**Class:** contract (AGENTS.md "Markdown document lifecycle"); amended deliberately. **Adopted:** 2026-10-29, by the owner's word on the map policy evaluation. **Built by:** MAP-GOVERNANCE-1 (card [task/roadmap/mid-term/map-governance-1-card-2026-10-29.md](../task/roadmap/mid-term/map-governance-1-card-2026-10-29.md); ledger [task/ledgers/staging/map-governance-1-ledger.md](../task/ledgers/completed/map-governance-1-ledger.md)).
 
 ## Purpose
 
@@ -21,7 +21,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 ## Ownership
 
-- `scripts/ledger_lifecycle.py` creates and edits the bin maps (`task/ledgers/staging/map.md`, `completed/map.md`), the archive maps (`archive/map.md` and the month maps), and `docs/history/<dir>/map.md` in `compact`. It moves rows between the staging and completed bin maps, and moves each excepted size row when it rewrites links.
+- `scripts/ledger_lifecycle.py` creates and edits the bin maps (`task/ledgers/staging/map.md`, `completed/map.md`), the archive maps (`archive/map.md` and the month maps), and `docs/history/<dir>/map.md` in `compact`. It moves rows between the staging and completed bin maps, and moves each excepted size row when it rewrites links. Outside `compact` it never writes a file under `docs/history/`: a move or archive leaves every file there byte-identical (the 2026-11-01 ruling).
 - A unit's sidecar moves with its ledger on `move` and `archive`. The archive sidecar takes its ledger's `yyyy-mm-dd-` prefix. A sidecar in `completed/` or the archive is not frozen; a ledger row is.
 
 ## Verification
@@ -63,3 +63,5 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 - The owner-ruling adjustment names the pin sidecar as the binding's home. The owner amended it on 2026-10-30, and the orchestrator committed the amendment in `AGENTS.md`, `CLAUDE.md` and `scripts/check_owner_ruling.py` together as `279bddb6` (ledger C-011).
 - Citation text left in map prose is inert (ledger C-012). The gate no longer reads it; each such citation binds through its sidecar.
+- Pilot (2026-10-30, MAP-TESTS-PILOT-1): `python/repark/tests/map.md` from 10,116 lines / 883,657 bytes to 103 lines / 8,808 bytes; its history at `docs/history/facade-tests/`; 0 files whose only route was the root map.
+- **2026-10-31.** Queued: MAP-RATCHET-1 (card [map-ratchet-1-card-2026-10-31.md](../task/roadmap/mid-term/map-ratchet-1-card-2026-10-31.md)), the owner's near-term queue for the 51 excepted maps, three or four per round; the top 20 by bytes first.

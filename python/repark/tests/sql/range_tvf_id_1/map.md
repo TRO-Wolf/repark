@@ -43,4 +43,4 @@ SHA-256 of the ID-2 fixture file:
 
 - Up: [../map.md](../map.md)
 - Pins: [../test_range_tvf_id_1.py](../test_range_tvf_id_1.py)
-- Ledger: [../../../../../task/ledgers/staging/range-tvf-id-1-ledger.md](../../../../../task/ledgers/staging/range-tvf-id-1-ledger.md)
+- Ledger: [../../../../../task/ledgers/staging/range-tvf-id-1-ledger.md](../../../../../task/ledgers/completed/range-tvf-id-1-ledger.md)

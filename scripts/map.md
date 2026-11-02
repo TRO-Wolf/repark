@@ -106,7 +106,7 @@ repark-parity slice.
   over 143 maps, well inside the sub-second hook budget. Wired at every path
   `check_map_md.sh` uses, including ci.yml's guards job (owner-granted wiring, 2026-08-23). The
   document-lifecycle rules it serves are [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
-- `check_map_size.py` — the **size ratchet** (MAP-GOVERNANCE-1): a tracked `map.md` stays within 200 lines and 16 KiB. An over-ceiling map is an exact-baseline row in `EXCEPTIONS`: the check holds an excepted map to its row alone (growth or unlowered shrinkage fails); `--update-baselines` lowers rows, raises one only by main's growth since the row was committed (never above the merge-base size), and refuses other growth and new violators. On a push to `main` only the update's merge base is HEAD; the check reds on any run. `EXEMPT` and `EXEMPT_PATTERNS` name lifecycle inventories. Gated in `make ci` and ci.yml. Proofs: `python/repark-parity/tests/test_map_governance_1.py`, `test_map_governance_1_lifecycle.py`.
+- `check_map_size.py` — the **size ratchet** (MAP-GOVERNANCE-1): a tracked `map.md` stays within 200 lines and 16 KiB. An over-ceiling map is an exact-baseline row in `EXCEPTIONS`: an excepted map must match its row (growth or unlowered shrinkage fails); `--update-baselines` lowers rows, raises one only by main's growth since the row was set (never above the merge-base size), and refuses other growth and new violators. On `main` the check reds on any run. `EXEMPT` and `EXEMPT_PATTERNS` name lifecycle inventories. RP-64 (2026-11-01) lowered the rows through `--update-baselines`. Gated in `make ci`. Proofs: `python/repark-parity/tests/test_map_governance_1.py`, `test_map_governance_1_lifecycle.py`.
 - `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2; pin binding moved to sidecars by MAP-GOVERNANCE-1), over the live bins `task/ledgers/staging/` and `completed/`; the archive is read for clause ids and its sidecars for bindings. Three rules, shape only (the meanings stay in `.agents/skills/sepmo/`). **(A)** every clause row (`| C-NNN |`) has a unique id, exactly one verdict cell (`PROVEN` / `OPEN` / `REJECTED`) and an evidence cell. **(B)** a clause is bound by its unit's sidecar `task/ledgers/<bin>/<unit>-pins.md`, which counts only beside its own `<unit>-ledger.md`: one line `C-NNN: <path>[::<name>], ...`, or `C-NNN: none (records)`, which the gate counts and lists. A path is a tracked test file or a file under `scripts/`; a `::name` is a fn, type, module, constant or class that file defines, so a renamed or deleted test goes red. A `pins: <unit>/C-NNN` citation in a source file under `crates/`, `python/` or `scripts/` still binds; one in a `map.md` does not. Every `PROVEN` clause of a staging or completed ledger must be bound at least once; the measured floor per ledger is in `EXCEPTIONS` and ratchets down only. A staging or completed ledger whose first 40 lines carry `**Path:**` valued `READING` outside a code span is a reading unit: rule B does not apply to it. **(C)** the `COVERAGE_ATTESTATION:` block lists `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification, and is required once a governed ledger has no `OPEN` clause; `FINDING:` records carry the ref 05 fields. Two sub-rules were measured and declined (an `OPEN` row carries a `?`; a quantified clause names its enumeration). Exit 0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger grammar guard` step. Proofs: `python/repark-parity/tests/test_dl_2_ledger_grammar.py`, `test_map_governance_1.py`.
 - `migrate_pins_to_sidecars.py` — the one-time, idempotent mover (MAP-GOVERNANCE-1) of `pins:` citations out of maps into each ledger's sidecar `task/ledgers/<bin>/<unit>-pins.md`. A clause binds the union of its citing entries' bindable files and the files its own row names; a row-named test binds by name, and a name that two files define is a hand candidate. `--report hand-candidates` lists the rest; `--check` writes nothing. Proofs: `python/repark-parity/tests/test_map_governance_1.py`, `test_map_governance_1_union.py`.
 - `migrate_pins_text.py` — the map-text half of the migration (MAP-GOVERNANCE-1, split out in fix round 11 for the size ceiling): a map's entries, the cut of a `pins:` citation with its separators, and the disclaimer sentences. Imported by the migration; not run on its own.
@@ -167,30 +167,19 @@ repark-parity slice.
   is its own finding; (3) `docs:` evidence cells under `task/ledgers/**` follow the same
   rule with repo-root-relative paths, table cells only, never prose. One line per broken
   link `path:line: <link> -> <reason>`, exit 1; the counts of files and links checked print
-  on exit 0. Whole-tree run measured 0.82 s (692 files, 4478 links; 0.83/0.81 s on repeats,
-  2026-09-09; 736 files, 4772 links on 2026-09-10 after same-file anchors started counting).
-  REVIEW-FIX-12 (2026-09-10) closed the REVIEW-1 rounds Q-35, Q-36, Q-37, Q-38, Q-46, Q-47:
-  rendered-text slugs, final-slug duplicates, table-cell-only `docs:` cells, the unclosed-
-  fence finding, the absolute-target skip, same-file anchors — which caught one genuinely
-  stale same-file fragment (`docs/spark-sql-iceberg-parity.md:3053`, repaired in the same
-  commit) — and the three-space fence rule. The D-3 baseline seeded
-  `scripts/docs_links_allowlist.txt` with the 10
-  pre-existing broken links (6 missing targets, 5 of them in immutable archive ledgers, and
-  4 stale anchors into the divergence registry) — one `path:link` entry per line (D-9, audit
-  round 2, 2026-09-09: the line number is not part of the key, so an unrelated edit that
-  shifts lines never reds the gate, and two identical broken links in one file collapse to
-  one entry), a `#`-prefixed header tolerated, a malformed entry fails closed (exit 2), and
-  the list ratchets down under the gate (D-8, audit round 1, 2026-09-09): an entry that
-  matched no finding in the run is itself a failure (`stale entry … — the link is no longer
-  broken; remove this row`), so a fixed link takes its row away under gate pressure. The
-  baseline was re-measured on the merged tree at the D-9 reseed: the same 10 links, 9
-  entries after the collapse. **Dual-wired since RF-8 (O-1,
+  on exit 0. The rules above are the REVIEW-1 rules (2026-09-10). The allowlist `scripts/docs_links_allowlist.txt` holds one `path:link` entry per line, keyed without the line number so an unrelated edit never reds the gate; a `#` header is tolerated, a malformed entry fails closed (exit 2), and the list ratchets down: an entry that matched no finding is itself a failure. **Dual-wired since RF-8 (O-1,
   2026-09-10):** `make check-docs-links` in `make ci` AND the `docs link guard
   (check_docs_links)` step in ci.yml's `guards` job, seated after `check_docs_compaction` the way
   `make ci` runs it — the DOCS-LINKS-1 card's Home named the Makefile only, which is why the
-  ci.yml half arrived later as an orchestrator step. Not wired to the pre-commit hook. Proofs:
+  ci.yml half arrived later as an orchestrator step. Not wired to the pre-commit hook. History exemption (LEDGER-LIFECYCLE-MOVE-1, 2026-11-01): a `does not exist` finding in a file under `docs/history/` is dropped when its target is under `task/ledgers/` or `task/roadmap/`, the two trees `move` and `archive` relocate; every other finding in history still reds. Proofs:
   `python/repark-parity/tests/test_dl_6_docs_links.py`.
-- `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1): a ledger's state is its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`), and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files `completed/` (or the paths given) under a date read from `main`'s first-parent history, never the clock; a ledger not yet on `main` is left for the next pickup when unnamed and refused when named. `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions (`mid-term`, `epic-term`). Both `move` and `archive` carry the unit's `<unit>-pins.md` sidecar with its ledger (no map row is made for a sidecar; `archive` files it under the ledger's own date and month), and they move each excepted `check_map_size.py` row by exactly the link growth or shrinkage the plan causes. Both also run `compact`, which takes merged units off the slate and closed campaigns out of STATUS into `docs/history/`. The rewrite is resolution-based: a link changes only if it resolved to the moved file, and the moved file's map row travels whole into a live bin's map or condensed to one line in an archive month map. Nothing is written unless every rewritten link resolves, and the result is staged as one change. `check` is the gate: an out-of-bin `*-ledger.md`, an archive name whose prefix disagrees with its month directory, a dead `-ledger.md` link in any tracked markdown, and a `completed/` or `archive/` file other than a map or a `-pins.md` sidecar changed since the base beyond a link repair or a prepended errata (the frozen and immutable rules). It refuses to pass closed without a base commit. Exit 0 / 1 / 2. Wired as `make check-ledgers` (in `make ci`), ci.yml's `ledger lifecycle guard` step and `make ledger-archive`. Proofs: `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`, `test_map_governance_1_lifecycle.py`.
+- `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1): a ledger's state is its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`), and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files `completed/` (or the paths given) under a date read from `main`'s first-parent history, never the clock; a ledger not yet on `main` is left for the next pickup when unnamed and refused when named. `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions (`mid-term`, `epic-term`). Both `move` and `archive` carry the unit's `<unit>-pins.md` sidecar with its ledger (no map row is made for a sidecar; `archive` files it under the ledger's own date and month), and they move each excepted `check_map_size.py` row by exactly the link growth or shrinkage the plan causes. Both also run `compact`, which takes merged units off the slate and closed campaigns out of STATUS into `docs/history/`. The rewrite is resolution-based: a link changes only if it resolved to the moved file, and the moved file's map row travels whole into a live bin's map or condensed to one line in an archive month map. The source row is cut wherever it sits in the bin map, past `## Pointers` included, and pasted in order; one masked row-form scan (`- [<basename>](`, outside fences and HTML comments) serves the `## Contents` section and then the tail, and a rowless source gets one synthesised row. The masking lives in the sibling `ledger_lifecycle_masking.py`: it blanks code spans first (backtick runs, CommonMark), then fences (the three-space rule `check_docs_links.py` shares, by marker character and length; a backtick fence whose info string holds a backtick is no fence) and HTML comments (a fence inside a comment is comment text), and keeps every character position, so each masked line keeps its length and the splices land exactly. `docs/history/` is never rewritten: each frozen file that links to a moved file is named `left frozen` with its link count, and a `move` or `archive` of a source under it is refused (exit 2, nothing written) (LEDGER-LIFECYCLE-MOVE-1, 2026-11-01; merged 2026-11-02 (PR #1231)). Nothing is written unless every rewritten link resolves, and the result is staged as one change. `check` is the gate: an out-of-bin `*-ledger.md`, an archive name whose prefix disagrees with its month directory, a dead `-ledger.md` link in any tracked markdown outside `docs/history/`, and a `completed/` or `archive/` file other than a map or a `-pins.md` sidecar changed since the base beyond a link repair or a prepended errata (the frozen and immutable rules). It refuses to pass closed without a base commit. Exit 0 / 1 / 2. Wired as `make check-ledgers` (in `make ci`), ci.yml's `ledger lifecycle guard` step and `make ledger-archive`. Proofs: `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`, `test_map_governance_1_lifecycle.py`.
+- `ledger_lifecycle_masking.py` — the **markdown masking** of `ledger_lifecycle.py` (LEDGER-LIFECYCLE-MOVE-1,
+  fix rounds 4 and 5, 2026-11-02): the code-span, fence and HTML-comment masking that the move's row scan and link
+  rewrite read, split out as a sibling so `ledger_lifecycle.py` stays under the line ceiling of
+  `check_lib_py.py`. The parent loads it by path, as it loads `sync_map_md` and `doc_blocks`, so the script
+  runs from any directory. Every masked line keeps its length. A code span may cross a newline within one paragraph; an open run ends as literal text at a blank line, at a block opener (a fence, an ATX heading, a top-level list item at column 0 to 3, a column-0 comment opener) and at the end of the file. Proofs:
+  `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`.
 - `check_workflows_parse.py` — every GitHub Actions workflow must be parseable YAML. zizmor
   SKIPS files it cannot parse (exits 0 with "no auditable inputs"), so a broken workflow would
   pass the blocking lint gate while GitHub silently never runs it. Wired as a prerequisite of
@@ -228,15 +217,9 @@ repark-parity slice.
   asks for an undeclared one. A declared row is a different matter once BOTH of its crates are
   workspace members: the drift rule then reports it as a stale policy row if no dependency
   backs it, because the table describes the workspace.
-  **C-1 (2026-10-05, ruling R-14):** `repark-connect` became a member with C-1, and nothing
-  calls it yet, so the pre-declared `repark-core → repark-connect` row left `ALLOWED_EDGES`.
-  `repark-connect`'s `TIERS` and `ROLES` entries stay. C-2 restores the row (`normal`, reason
-  "PRE-DECLARED for release 1.6 (crate-layout-1-8-2026-10-01.md): Session registers the
-  configured database sources in the one federated namespace, the way it registers Iceberg
-  catalogs today") in the change that adds the dependency and mounts the providers.
-  **C-2d (2026-10-07):** the row is restored, `normal`, with that reason verbatim, in the
-  change that adds `repark-core`'s `repark-connect` dependency and mounts the providers; the
-  gate reads the edge as real.
+  **C-1 (2026-10-05, ruling R-14) and C-2d (2026-10-07):** `repark-connect` left `ALLOWED_EDGES` at C-1, while nothing
+  called it (its `TIERS` and `ROLES` entries stayed); C-2d restored the `repark-core → repark-connect` row
+  (`normal`, reason as in the source) with the dependency, and the gate reads the edge as real.
   Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the
@@ -340,14 +323,13 @@ repark-parity slice.
   controlled diagnostic, including valid expressions that exhaust AST construction. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review
-  duty. Seeded from the measured tree (2026-08-21): 66 nested
-  defs in 21 files, 23 files importing `dataclasses`. **PYC-1** deleted the `core.py` (23) and
-  `plan_collapse.py` (12) nested-def rows. **PYC-2** deleted the remaining ten
-  shipped-package nested-def rows (12 lifts + 2 pragmas). **PYC-3** deleted the two
-  shipped-package dataclass rows (`merge.py`, `_csv_smart.py`). **PYC-4** emptied
-  `NESTED_DEF_EXCEPTIONS` (lifts + pragmas in the harness; dual-wire `field` is a
-  pragma) and converted the 20 parity dataclass files; remaining dataclass row is
-  `scripts/check_parity_live_dual_wire.py` (runs as bare `python3`, no venv pydantic).
+  duty. Seeded 2026-08-21: 66 nested defs in 21 files, 23 files importing `dataclasses`.
+  **PYC-1** deleted the `core.py` (23) and `plan_collapse.py` (12) nested-def rows; **PYC-2** the
+  remaining ten shipped-package nested-def rows (12 lifts + 2 pragmas); **PYC-3** the two
+  shipped-package dataclass rows (`merge.py`, `_csv_smart.py`); **PYC-4** emptied
+  `NESTED_DEF_EXCEPTIONS` (lifts + pragmas in the harness; dual-wire `field` is a pragma) and
+  converted the 20 parity dataclass files, leaving `scripts/check_parity_live_dual_wire.py`
+  (bare `python3`, no venv pydantic) as the one dataclass row.
   Fail-closed on an unreadable file, a parse
   failure, an empty scan set, or a stale `EXCEPTIONS` key. **PYC-5:** re-measured n=5
   median **0.996 s** (max 1.011 s) over 164 files — at the sub-second budget line, with
@@ -536,57 +518,15 @@ First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --
 `bash scripts/check_parity_live_dual_wire.sh`, `bash scripts/check_matrix_test_liveness.sh`,
 `make workflows-parse`. Escalate to:
 [../map.md#debug](../map.md).
-- **FNP-11A (2026-09-15, on 440b2773):** `check_lib_py.py` ratchets `functions_expr.py` to 2235 lines, the FNP-11A forwarder trim landing on top of main's baseline.
+- **FNP-11A (2026-09-15, on 440b2773):** `check_lib_py.py` ratchets `functions_expr.py` to 2235 lines (the forwarder trim on main's baseline).
 - **FNP-4B remediation (2026-09-15):** size ceilings set to the real line counts (`check_rust_file_size.py`: `column/mod.rs` 1038, `cross_door.rs` 1258; `check_lib_py.py`: `_live_parity.py` 1753).
-- **FNP-WIN-1 (2026-09-15, remediation round 16a):** `check_rust_file_size.py`
-  records `analyzer/time_window/mod.rs` 1268 and `spark_time_window.rs` 1125
-  (window rules, kernels, and their tests); `check_lib_py.py` records
-  `test_fnp_win_1.py` 1209 (critic pins). The CAP-1 mirror rows and counts
-  (38/32) move with them. `datetime.rs` keeps 1700 (audit S-2; the month
-  helper lives in `spark_session_window.rs`).
-- **FNP-WIN-1 (2026-09-15, verification round 2, L-002/L-003):**
-  `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1268 → 1338
-  (the running-end chaining test); `check_lib_py.py` moves
-  `test_fnp_win_1.py` 1209 → 1314 (the `C2-L002`/`C2-L003` pins). No new
-  exception row; the CAP-1 mirror rows move with them, counts still 38/32.
-- **FNP-WIN-1 (2026-09-15, verification round 2, L-001):**
-  `check_rust_file_size.py` moves `analyzer/time_window/mod.rs` 1338 → 1416
-  (provenance recursion plus rule tests); `check_lib_py.py` moves
-  `test_fnp_win_1.py` 1314 → 1415 (the `C2-L001` pins). Ratchets only.
-- **FNP-WIN-1 (2026-09-15, verification round 2, L-004):**
-  `repark-python/src/dataframe.rs` 1019 → 1021 (the two-spec pre-check
-  call); `check_lib_py.py` moves `test_fnp_win_1.py` 1415 → 1454 (the
-  `C2-L004` pin). Ratchets only.
-FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` puts `crates/repark-python/src/dataframe.rs` back at 1019 after the round-2 binding pre-check was reverted (owner ruling Q-15c-4); `check_lib_py.py` ratchets `python/repark/tests/functions/test_fnp_win_1.py` down 1454 → 1449.
-- **FNP-11B step-4 orchestrator fix-up (2026-09-15, run 17a):** the step-3 row's numeral phrase is reworded to "sits exactly on the default line ceiling". CAP-1's prose pin forbids the literal old default in any carrier `map.md`, so the numeral reds `test_cap_1_prose_and_navigation_name_the_generalized_gate`; the fact is unchanged.
-- **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** the round added a `check_lib_py`
-  EXCEPTIONS row for `check_example_coverage.py` at 1002 lines when the generator names pushed it
-  two lines past the default ceiling. Size ceilings only move down (owner ruling Q-15c-4), and a
-  new exception row on a **gate script** is ratchet erosion, so the module docstring's EX-1
-  closed-set paragraph was reflowed instead: the file is back at the default ceiling and the
-  row is gone. Compact before you except.
-- **FNP-GEN-1 rebase onto #640 (2026-09-16, run 17a):** `check_example_coverage.py`'s
-  `BACKLOG_BASELINE` is set to the count the script itself reports (108), not to an arithmetic
-  combination of the two sides' values. Both sides of the rebase had moved it; a measured count is
-  exact where an arithmetic one is only usually right.
-- **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** `check_lib_py.py` ratchets
-  `dataframe/writer_readwriter.py` 1101 → 1095 (the by-name projection returns the
-  target column list and stops refusing missing frame columns).
-  Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
-  same column list into its `INSERT OVERWRITE` in two lines instead of three.
+- **FNP-WIN-1 (2026-09-15, round 16a, verification round 2, L-001 to L-004):** `check_rust_file_size.py` records `analyzer/time_window/mod.rs` 1268 (round 2: → 1416), `spark_time_window.rs` 1125 and `repark-python/src/dataframe.rs` 1019 (round 2: → 1021; the fix-up returns it to 1019, owner ruling Q-15c-4); `check_lib_py.py` records `test_fnp_win_1.py` 1209 (round 2: → 1454; the fix-up: → 1449). The CAP-1 mirror rows and counts (38/32) move with them; `datetime.rs` keeps 1700 (audit S-2).
+- **FNP-11B step-4 fix-up (2026-09-15):** the step-3 row's numeral reads "sits exactly on the default line ceiling" (CAP-1's prose pin forbids the literal default in a map).
+- **FNP-GEN-1 (2026-09-16):** a `check_lib_py` row for `check_example_coverage.py` at 1002 lines was refused (ceilings only move down, Q-15c-4); the EX-1 docstring was reflowed; `BACKLOG_BASELINE` takes the script's reported count (108).
+- **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1101 → 1095 (the by-name projection returns the target column list); run 21b round 2 (2026-09-18): → 1094 (`overwritePartitions()` joins its `INSERT OVERWRITE` column list).
 
-IPI-19 + IPI-37 (2026-09-20): `check_lib_py.py` ratchets
-`dataframe/writer_readwriter.py` 1091 → 1077 (both `_by_name_projection`
-bodies collapse into `dataframe/writer_schema.py`), shrink-only.
+IPI-19 + IPI-37 (2026-09-20): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1091 → 1077 (both `_by_name_projection` bodies collapse into `dataframe/writer_schema.py`), shrink-only.
 
-U11-EDGE-1 round 2 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1017 → 1016 and `check_lib_py.py` ratchets `dataframe/core.py` 3991 → 3981 (the join projection and the unionByName match move into `repark_core::frame_names`), both shrink-only; the CAP-1 mirror moves with them.
+U11-EDGE-1 rounds 2 to 6 (2026-09-26), shrink-only with the CAP-1 mirror: `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1017 → 1016 (round 2) → 1005 (round 4); `check_lib_py.py` ratchets `dataframe/core.py` 3991 → 3981 (round 2) → 3979 (round 4) → 3976 (round 5) → 3973 (round 6).
 
-U11-EDGE-1 round 4 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1016 → 1005 (the `drop` method moves to the new `dataframe_names.rs` binding), shrink-only; the CAP-1 mirror moves with it.
-
-U11-EDGE-1 round 4, V-002 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3981 → 3979 (the join's ambiguity check and requalification paid for by the compressed `drop` bookkeeping), shrink-only; the CAP-1 mirror moves with it.
-
-U11-EDGE-1 round 5 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3979 → 3976 (the `select("*")` expansion folds into `_iter_bound_columns`), shrink-only; the CAP-1 mirror moves with it.
-
-U11-EDGE-1 round 6 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3976 → 3973 (two docstrings condensed pay for the attribute-copy route), shrink-only; the CAP-1 mirror moves with it.
-
-**ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `check_rust_file_size.py` lowers the `crates/repark-iceberg/src/write/append.rs` exception from 1737 to 1736 lines. The bound's call sites in that file net one line fewer; no ceiling rises.
+**ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26):** `check_rust_file_size.py` lowers the `crates/repark-iceberg/src/write/append.rs` exception from 1737 to 1736 lines. Its call sites net one line fewer; no ceiling rises.

@@ -25,4 +25,4 @@ Separately, `tableExists`, `table`, `read.table`, `getTable` and `listColumns` o
 
 **Retires:** the card when each item matches Spark 4.1.2's parser on the probe and is pinned, or the charter declines an item (then the item closes as declined in this card).
 
-**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) and its [unit ledger](../../ledgers/staging/spark-door-temp-view-target-1-ledger.md), clauses C-026 and C-027; [TEMP-VIEW-SURFACE-LEADS-1](temp-view-surface-leads-1-card-2026-10-29.md), whose Lead 2 and Lead 3 touch the same name check and the same unquoted grammar.
+**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) and its [unit ledger](../../ledgers/completed/spark-door-temp-view-target-1-ledger.md), clauses C-026 and C-027; [TEMP-VIEW-SURFACE-LEADS-1](temp-view-surface-leads-1-card-2026-10-29.md), whose Lead 2 and Lead 3 touch the same name check and the same unquoted grammar.

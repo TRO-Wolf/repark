@@ -57,4 +57,4 @@ Iceberg-Java surface instead of the fork.
 
 - Up: [map.md](map.md) · Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
 - Pins: [../../../python/repark/tests/iceberg/test_v3_multiarg_1.py](../../../python/repark/tests/iceberg/test_v3_multiarg_1.py) ·
-  Ledger: [../../ledgers/staging/v3-multiarg-1-ledger.md](../../ledgers/staging/v3-multiarg-1-ledger.md)
+  Ledger: [../../ledgers/staging/v3-multiarg-1-ledger.md](../../ledgers/completed/v3-multiarg-1-ledger.md)

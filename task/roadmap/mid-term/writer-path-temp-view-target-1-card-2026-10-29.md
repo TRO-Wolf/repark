@@ -16,4 +16,4 @@
 
 **Retires:** the card when the Rust door's bare-name reads and writes either match the facade's resolution (pinned per route) or are recorded as out of the Spark claim, with the reason. The `writeTo`, `insertInto` and `saveAsTable` measurement is done (C-012) and needs no further work.
 
-**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md); [SPARK-DOOR-TEMP-VIEW-TARGET-1 ledger](../../ledgers/staging/spark-door-temp-view-target-1-ledger.md), clause C-010.
+**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md); [SPARK-DOOR-TEMP-VIEW-TARGET-1 ledger](../../ledgers/completed/spark-door-temp-view-target-1-ledger.md), clause C-010.

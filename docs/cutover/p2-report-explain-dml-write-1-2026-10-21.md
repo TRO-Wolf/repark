@@ -2,7 +2,7 @@
 
 Sources: the builder's step-0, phase-B and fix-round hand-backs, the verifier's round-1 and
 round-2 hand-backs, the unit ledger
-([explain-dml-write-1-ledger](../../task/ledgers/staging/explain-dml-write-1-ledger.md)), the card
+([explain-dml-write-1-ledger](../../task/ledgers/completed/explain-dml-write-1-ledger.md)), the card
 ([EXPLAIN-DML-WRITE-1](../../task/roadmap/mid-term/explain-dml-write-1-card-2026-10-16.md)) and
 the unit's work order and evidence under `task/wo/explain-dml-write-1/`. Where a source does not
 carry a number, this report says "not recorded".

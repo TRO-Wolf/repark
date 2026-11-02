@@ -81,7 +81,7 @@ and table providers and the scan's execution plan, which `../provider.rs` declar
 - `table.rs` — **C-3 fold 1 (2026-10-08):** `partitioned` judges the column's type first and
   parses the bounds second (`PartitionSpec::bounds`), then plans the cuts.
 - `table.rs` — **C-3 (2026-10-07):** `PostgresTable::partitioned(&PartitionSpec)` plans a
-  partitioned read ([c-3-ledger.md](../../../../task/ledgers/staging/c-3-ledger.md) §0.1). It
+  partitioned read ([c-3-ledger.md](../../../../task/ledgers/completed/c-3-ledger.md) §0.1). It
   resolves the column as Spark does (the exact name, else the one case-insensitive match; a
   double-quoted name matches exactly; two case-insensitive matches with no exact one refuse as
   ambiguous), verifies its type before anything else (`int2`, `int4`, `int8` partition;
