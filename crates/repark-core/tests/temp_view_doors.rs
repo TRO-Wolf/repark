@@ -435,3 +435,16 @@ async fn a_catalog_over_the_home_refuses_the_read_spelling_too() {
         );
     }
 }
+
+#[tokio::test]
+async fn a_digit_leading_temp_view_name_resolves_unquoted_and_an_undecidable_name_refuses() {
+    let session = ReparkSession::new().unwrap();
+    assert_eq!(session.resolve_temp_view_home_ref("1t").unwrap(), None);
+    session
+        .create_or_replace_temp_view("`1t`", vec![rows()])
+        .unwrap();
+    let home = session.resolve_temp_view_home_ref("`1t`").unwrap();
+    assert!(home.is_some());
+    assert_eq!(session.resolve_temp_view_home_ref("1t").unwrap(), home);
+    assert!(session.resolve_temp_view_home_ref("1t`x").is_err());
+}

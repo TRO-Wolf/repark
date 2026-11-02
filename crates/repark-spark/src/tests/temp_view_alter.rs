@@ -108,7 +108,7 @@ const EXTENSIONS: [&str; 12] = [
     "ALTER TABLE t DROP TAG g1",
 ];
 
-async fn outcome(views: &NamedViews, sql: &str) -> String {
+async fn outcome(views: &dyn repark_core::TempViewSession, sql: &str) -> String {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, catalogs) = setup(&warehouse).await;
     match crate::router::execute_in_session(
@@ -326,6 +326,73 @@ async fn a_bare_identifier_word_after_drop_is_a_column_and_a_double_quoted_targe
                  {operation}' expects a table but `t` is a view.  SQLSTATE: 42809"
             ),
             "{sql}"
+        );
+    }
+}
+
+const UNDECIDED: &str = "the temporary view lookup cannot decide this name";
+
+struct UndecidedViews;
+
+impl repark_core::TempViewSession for UndecidedViews {
+    fn create_or_replace_temp_view_from(
+        &self,
+        _name: &str,
+        _frame: &DataFrame,
+    ) -> repark_common::Result<()> {
+        Ok(())
+    }
+
+    fn resolve_temp_view_home_ref(
+        &self,
+        _name: &str,
+    ) -> repark_common::Result<Option<Vec<String>>> {
+        Err(repark_common::Error::Analysis(UNDECIDED.to_string()))
+    }
+
+    fn temp_view_home(&self) -> repark_common::Result<Vec<String>> {
+        Ok(vec!["datafusion".to_string(), "public".to_string()])
+    }
+
+    fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>> {
+        Ok(Vec::new())
+    }
+
+    fn drop_temp_view(&self, _name: &str) -> repark_common::Result<bool> {
+        Ok(false)
+    }
+}
+
+#[tokio::test]
+async fn an_undecided_view_lookup_refuses_every_head_that_consults_it() {
+    for sql in [
+        "ALTER TABLE t DROP COLUMN v",
+        "ALTER TABLE 1t RENAME TO t2",
+        "INSERT INTO t VALUES (1)",
+        "DELETE FROM t WHERE id = 1",
+        "TRUNCATE TABLE t",
+        "DROP TABLE t",
+    ] {
+        assert_eq!(
+            outcome(&UndecidedViews, sql).await,
+            format!("Error during planning: {UNDECIDED}"),
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_double_quoted_drop_or_truncate_target_naming_a_view_refuses() {
+    for (sql, near) in [
+        ("DROP TABLE \"t\"", "'\"t\"'"),
+        ("TRUNCATE TABLE \"t\"", "'\"t\"'"),
+    ] {
+        let outcome = outcome(&view_t(), sql).await;
+        assert!(
+            outcome.contains(&format!(
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601"
+            )),
+            "{sql}: {outcome}"
         );
     }
 }

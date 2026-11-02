@@ -208,17 +208,17 @@ def _rows(spark: ReparkSession, query: str) -> list[str]:
     return sorted(repr(row) for row in spark.sql(query).to_arrow().to_pylist())
 
 
-def _state(spark: ReparkSession, catalog: str) -> TableState:
-    table = f"{catalog}.ns.t"
+def _state(spark: ReparkSession, catalog: str, table: str = "t") -> TableState:
+    qualified = f"{catalog}.ns.`{table}`"
     return TableState(
-        describe=spark.sql(f"DESCRIBE TABLE {table}").to_arrow().to_pylist(),
-        rows=_rows(spark, f"SELECT * FROM {table}"),
-        properties=spark.sql(f"SHOW TBLPROPERTIES {table}").to_arrow().to_pylist(),
+        describe=spark.sql(f"DESCRIBE TABLE {qualified}").to_arrow().to_pylist(),
+        rows=_rows(spark, f"SELECT * FROM {qualified}"),
+        properties=spark.sql(f"SHOW TBLPROPERTIES {qualified}").to_arrow().to_pylist(),
     )
 
 
-def _files(warehouse: Path, catalog: str) -> dict[str, bytes]:
-    root = warehouse / catalog / "ns" / "t"
+def _files(warehouse: Path, catalog: str, table: str = "t") -> dict[str, bytes]:
+    root = warehouse / catalog / "ns" / table
     return {
         str(path.relative_to(root)): path.read_bytes()
         for path in sorted(root.rglob("*"))
@@ -231,18 +231,19 @@ def _metadata_version(path: Path) -> int:
     return int(match.group(1)) if match is not None else -1
 
 
-def _reopened_state(warehouse: Path, catalog: str) -> TableState:
+def _reopened_state(warehouse: Path, catalog: str, table: str = "t") -> TableState:
     metadata = max(
-        (warehouse / catalog / "ns" / "t" / "metadata").glob("*.metadata.json"),
+        (warehouse / catalog / "ns" / table / "metadata").glob("*.metadata.json"),
         key=_metadata_version,
     )
     fresh = _open(warehouse)
     try:
         fresh.sql(f"CREATE NAMESPACE {catalog}.ns").collect()
         fresh.sql(
-            f"CALL {catalog}.system.register_table(table => 'ns.t', metadata_file => '{metadata}')"
+            f"CALL {catalog}.system.register_table("
+            f"table => 'ns.{table}', metadata_file => '{metadata}')"
         ).collect()
-        return _state(fresh, catalog)
+        return _state(fresh, catalog, table)
     finally:
         fresh.stop()
 
@@ -803,3 +804,153 @@ def test_drop_table_through_a_view_name_drops_the_view_then_drop_if_exists_drops
     session.sql("DROP TABLE IF EXISTS t").collect()
     tables = session.sql(f"SHOW TABLES IN {catalog}.ns").to_arrow().to_pylist()
     assert tables == []
+
+
+DIGIT_NAMES = ["1t", "9x_1"]
+DIGIT_ALTERS = [
+    ("DROP COLUMN v", "DROP COLUMNS", NO_ALTERNATIVE),
+    ("ADD COLUMN z INT", "ADD COLUMN", NO_ALTERNATIVE),
+    ("ADD COLUMNS (z INT)", "ADD COLUMNS", NO_ALTERNATIVE),
+    ("DROP COLUMNS (v)", "DROP COLUMNS", NO_ALTERNATIVE),
+    ("ALTER COLUMN id TYPE BIGINT", "ALTER COLUMN", NO_ALTERNATIVE),
+    ("RENAME COLUMN v TO v2", "RENAME COLUMN", NO_ALTERNATIVE),
+    ("SET TBLPROPERTIES ('k1'='x')", "SET TBLPROPERTIES", USE_ALTER_VIEW),
+    ("UNSET TBLPROPERTIES ('k0')", "UNSET TBLPROPERTIES", USE_ALTER_VIEW),
+]
+DIGIT_ALTER_IDS = [
+    "drop-column",
+    "add-column",
+    "add-columns",
+    "drop-columns",
+    "alter-column-type",
+    "rename-column",
+    "set-tblproperties",
+    "unset-tblproperties",
+]
+DIGIT_WRITES = [
+    ("INSERT INTO {} VALUES (7, 'q')", "'INSERT' expects a table but `{}` is a view"),
+    ("DELETE FROM {} WHERE id = 1", "'DELETE' expects a table but `{}` is a view"),
+    ("UPDATE {} SET v = 'z'", "does not support UPDATE TABLE"),
+    (
+        "MERGE INTO {} AS x USING (SELECT 1 AS id) AS s ON x.id = s.id WHEN MATCHED THEN DELETE",
+        "does not support MERGE INTO TABLE",
+    ),
+]
+DIGIT_WRITE_IDS = ["insert", "delete", "update", "merge"]
+
+
+def _seed_named(spark: ReparkSession, catalog: str, name: str) -> None:
+    statements = [
+        f"CREATE NAMESPACE {catalog}.ns",
+        f"CREATE TABLE {catalog}.ns.`{name}` (id INT, v STRING) USING iceberg "
+        "TBLPROPERTIES ('format-version'='2', 'k0'='x')",
+        f"INSERT INTO {catalog}.ns.`{name}` VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+        f"USE {catalog}.ns",
+        f"CREATE OR REPLACE TEMPORARY VIEW `{name}` AS SELECT 99 AS id",
+    ]
+    for statement in statements:
+        spark.sql(statement).collect()
+
+
+def _assert_named_refusal_holds(
+    spark: ReparkSession, warehouse: Path, catalog: str, name: str, statement: str, expected: str
+) -> None:
+    state = _state(spark, catalog, name)
+    files = _files(warehouse, catalog, name)
+    with pytest.raises(Exception) as raised:
+        spark.sql(statement).collect()
+    assert expected in str(raised.value)
+    assert _state(spark, catalog, name) == state
+    assert _files(warehouse, catalog, name) == files
+    assert _ids(spark, f"SELECT id FROM `{name}`") == [99]
+    spark.stop()
+    assert _reopened_state(warehouse, catalog, name) == state
+
+
+@pytest.mark.parametrize(("head", "operation", "alternative"), DIGIT_ALTERS, ids=DIGIT_ALTER_IDS)
+@pytest.mark.parametrize("quoted", [False, True], ids=["unquoted", "backquoted"])
+@pytest.mark.parametrize("name", DIGIT_NAMES)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_digit_leading_view_name_refuses_every_alter_head_and_holds_the_table(
+    session: ReparkSession,
+    tmp_path: Path,
+    catalog: str,
+    name: str,
+    quoted: bool,
+    head: str,
+    operation: str,
+    alternative: str,
+) -> None:
+    _seed_named(session, catalog, name)
+    written = f"`{name}`" if quoted else name
+    expected = _refusal(operation, alternative, name)
+    statement = f"ALTER TABLE {written} {head}"
+    _assert_named_refusal_holds(session, tmp_path, catalog, name, statement, expected)
+
+
+@pytest.mark.parametrize("name", DIGIT_NAMES)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_digit_leading_view_name_behind_only_refuses(
+    session: ReparkSession, tmp_path: Path, catalog: str, name: str
+) -> None:
+    _seed_named(session, catalog, name)
+    expected = _refusal("DROP COLUMNS", NO_ALTERNATIVE, name)
+    statement = f"ALTER TABLE ONLY {name} DROP COLUMN v"
+    _assert_named_refusal_holds(session, tmp_path, catalog, name, statement, expected)
+
+
+@pytest.mark.parametrize(("template", "shape"), DIGIT_WRITES, ids=DIGIT_WRITE_IDS)
+@pytest.mark.parametrize("name", DIGIT_NAMES)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_digit_leading_view_name_refuses_every_write_head(
+    session: ReparkSession, tmp_path: Path, catalog: str, name: str, template: str, shape: str
+) -> None:
+    _seed_named(session, catalog, name)
+    statement = template.format(name)
+    _assert_named_refusal_holds(session, tmp_path, catalog, name, statement, shape.format(name))
+
+
+@pytest.mark.parametrize("name", DIGIT_NAMES)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_rename_to_through_a_digit_leading_view_name_renames_the_view(
+    session: ReparkSession, tmp_path: Path, catalog: str, name: str
+) -> None:
+    _seed_named(session, catalog, name)
+    state = _state(session, catalog, name)
+    files = _files(tmp_path, catalog, name)
+    session.sql(f"ALTER TABLE {name} RENAME TO t2").collect()
+    assert _ids(session, "SELECT id FROM t2") == [99]
+    assert _views(session) == ["t2"]
+    assert _state(session, catalog, name) == state
+    assert _files(tmp_path, catalog, name) == files
+    session.stop()
+    assert _reopened_state(tmp_path, catalog, name) == state
+
+
+@pytest.mark.parametrize("name", DIGIT_NAMES)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_drop_table_through_a_digit_leading_view_name_drops_the_view(
+    session: ReparkSession, tmp_path: Path, catalog: str, name: str
+) -> None:
+    _seed_named(session, catalog, name)
+    state = _state(session, catalog, name)
+    files = _files(tmp_path, catalog, name)
+    session.sql(f"DROP TABLE {name}").collect()
+    assert _views(session) == []
+    assert _rows(session, f"SELECT * FROM `{name}`") == SEED_ROWS
+    assert _state(session, catalog, name) == state
+    assert _files(tmp_path, catalog, name) == files
+
+
+@pytest.mark.parametrize(
+    ("statement", "near"),
+    [('DROP TABLE "t"', "'\"t\"'"), ('TRUNCATE TABLE "t"', "'\"t\"'")],
+    ids=["drop-table", "truncate-table"],
+)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_double_quoted_drop_or_truncate_target_refuses_and_holds_both(
+    session: ReparkSession, tmp_path: Path, catalog: str, statement: str, near: str
+) -> None:
+    _seed(session, catalog, "t")
+    expected = f"[PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601"
+    _assert_named_refusal_holds(session, tmp_path, catalog, "t", statement, expected)
