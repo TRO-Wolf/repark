@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -666,3 +668,145 @@ def test_fence_holding_a_comment_opener_leaves_the_row_visible(repo: Path) -> No
     assert "**M1:** the real row." not in staging
     completed = (repo / "task/ledgers/completed/map.md").read_text()
     assert "— **M1:** the real row.\n" in completed
+
+
+def _load_lifecycle() -> ModuleType:
+    specification = importlib.util.spec_from_file_location("ledger_lifecycle", _SCRIPT)
+    if specification is None or specification.loader is None:
+        raise RuntimeError("cannot load the lifecycle script")
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = module
+    specification.loader.exec_module(module)
+    return module
+
+
+def test_commented_links_rewrite_without_shifting_positions(repo: Path) -> None:
+    _write(repo, "task/ledgers/staging/x9-demo-ledger.md", "# Ledger — X9\n")
+    _write(repo, "task/ledgers/staging/y9-demo-ledger.md", "# Ledger — Y9\n")
+    _write(
+        repo,
+        "notes.md",
+        "<!-- note --> - [x9-demo-ledger.md](task/ledgers/staging/x9-demo-ledger.md)\n"
+        "<!-- a --> <!-- b --> - [y9-demo-ledger.md](task/ledgers/staging/y9-demo-ledger.md)\n",
+    )
+    _commit(repo, "x9 y9 with commented links")
+    assert _run(repo, "move", "task/ledgers/staging/x9-demo-ledger.md", "completed").returncode == 0
+    assert _run(repo, "move", "task/ledgers/staging/y9-demo-ledger.md", "completed").returncode == 0
+    lines = (repo / "notes.md").read_text().splitlines()
+    assert (
+        lines[0] == "<!-- note --> - [x9-demo-ledger.md](task/ledgers/completed/x9-demo-ledger.md)"
+    )
+    assert (
+        lines[1]
+        == "<!-- a --> <!-- b --> - [y9-demo-ledger.md](task/ledgers/completed/y9-demo-ledger.md)"
+    )
+
+
+def test_links_around_a_comment_both_rewrite_exactly(repo: Path) -> None:
+    _write(repo, "task/ledgers/staging/x9-demo-ledger.md", "# Ledger — X9\n")
+    _write(repo, "task/ledgers/staging/y9-demo-ledger.md", "# Ledger — Y9\n")
+    _write(
+        repo,
+        "notes.md",
+        "- [x9-demo-ledger.md](task/ledgers/staging/x9-demo-ledger.md) <!-- note -->"
+        " - [y9-demo-ledger.md](task/ledgers/staging/y9-demo-ledger.md)\n",
+    )
+    _commit(repo, "x9 y9 around a comment")
+    assert _run(repo, "move", "task/ledgers/staging/x9-demo-ledger.md", "completed").returncode == 0
+    assert _run(repo, "move", "task/ledgers/staging/y9-demo-ledger.md", "completed").returncode == 0
+    assert (repo / "notes.md").read_text() == (
+        "- [x9-demo-ledger.md](task/ledgers/completed/x9-demo-ledger.md) <!-- note -->"
+        " - [y9-demo-ledger.md](task/ledgers/completed/y9-demo-ledger.md)\n"
+    )
+
+
+def _fenced_decoy_repo(repo: Path, fence: str) -> None:
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        + fence
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n",
+    )
+    _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
+    _commit(repo, "m1 under a long fence")
+
+
+def _moved_fenced_row(repo: Path, fence: str) -> None:
+    result = _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed")
+    assert result.returncode == 0, result.stderr
+    assert "rewrote 1 link(s)" in result.stdout
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert fence in staging
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the real row.\n" in completed
+    assert "filed" not in completed
+
+
+def test_long_fence_hides_inner_marker_and_decoy(repo: Path) -> None:
+    fence = (
+        "````\n```\n- [m1-demo-ledger.md](../completed/m1-demo-ledger.md) — **M1:** filed.\n````\n"
+    )
+    _fenced_decoy_repo(repo, fence)
+    _moved_fenced_row(repo, fence)
+
+
+def test_tilde_fence_hides_inner_marker_and_decoy(repo: Path) -> None:
+    fence = (
+        "~~~~\n```\n- [m1-demo-ledger.md](../completed/m1-demo-ledger.md) — **M1:** filed.\n~~~~\n"
+    )
+    _fenced_decoy_repo(repo, fence)
+    _moved_fenced_row(repo, fence)
+
+
+def test_code_span_opener_leaves_the_row_visible(repo: Path) -> None:
+    line = "`<!--` opens nothing, see [m1-demo-ledger.md](m1-demo-ledger.md).\n"
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        + line
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n",
+    )
+    _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
+    _commit(repo, "m1 under a code span opener")
+    assert _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode == 0
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert (
+        "`<!--` opens nothing, see [m1-demo-ledger.md](../completed/m1-demo-ledger.md).\n"
+        in staging
+    )
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert "— **M1:** the real row.\n" in completed
+
+
+def test_masked_lines_keep_every_position() -> None:
+    module = _load_lifecycle()
+    text = (
+        "plain line with [a](b) link\n"
+        "<!-- same-line comment --> after [c](d)\n"
+        "<!-- open\n"
+        "still comment [e](f)\n"
+        "--> closed [g](h)\n"
+        "```md\n"
+        "fenced [i](j)\n"
+        "```\n"
+        "````\n"
+        "``` inner\n"
+        "- [k](../completed/k) decoy\n"
+        "````\n"
+        "~~~~\n"
+        "``` tilde inner\n"
+        "~~~~\n"
+        "`<!--` code span opener [l](m)\n"
+        "trailing `code` span [n](o)\n"
+    )
+    for line, masked in module._masked_lines(text):
+        assert len(masked) == len(line)
