@@ -263,7 +263,7 @@ def test_drop_table_on_a_token_spark_cannot_parse_refuses_and_holds_both(
     _assert_refused(session, f"DROP TABLE {token}", _parse_refusal(near))
     assert _snapshot(session, tmp_path, catalog, [token]) == held
     if view:
-        assert _views(session) == [token]
+        assert _views(session) == [token.lower()]
         assert _ids(session, f"SELECT id FROM {_ref(token)}") == [99]
 
 

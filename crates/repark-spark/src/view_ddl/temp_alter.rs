@@ -268,6 +268,9 @@ async fn rename_temp_view(
     destination: &ObjectName,
     next: &Token,
 ) -> Result<DataFrame> {
+    if let Some(refusal) = quoted_destination_refusal(destination) {
+        return Err(refusal);
+    }
     if !matches!(next, Token::EOF | Token::SemiColon) {
         let near = format!("'{next}'");
         return Err(spark_parse_error(spark_error::message(
@@ -308,6 +311,34 @@ async fn rename_temp_view(
     ctx.register_table(new_reference, renamed)?;
     ctx.deregister_table(old_reference)?;
     ctx.read_empty()
+}
+
+pub(crate) fn refuse_quoted_view_rename(parser: &mut Parser<'_>) -> Option<DataFusionError> {
+    if !parser.parse_keywords(&[Keyword::ALTER, Keyword::VIEW]) {
+        return None;
+    }
+    parser.parse_object_name(false).ok()?;
+    if !parser.parse_keywords(&[Keyword::RENAME, Keyword::TO]) {
+        return None;
+    }
+    quoted_destination_refusal(&parser.parse_object_name(false).ok()?)
+}
+
+fn quoted_destination_refusal(destination: &ObjectName) -> Option<DataFusionError> {
+    let (ident, quote) = destination
+        .0
+        .iter()
+        .filter_map(|part| part.as_ident())
+        .find_map(|ident| match ident.quote_style {
+            Some(quote @ ('"' | '\'')) => Some((ident, quote)),
+            _ => None,
+        })?;
+    let doubled = format!("{quote}{quote}");
+    let near = format!("'{quote}{}{quote}'", ident.value.replace(quote, &doubled));
+    Some(spark_parse_error(spark_error::message(
+        spark_error::PARSE_SYNTAX_ERROR,
+        &[("near", near.as_str())],
+    )))
 }
 
 fn rename_destination<'a>(

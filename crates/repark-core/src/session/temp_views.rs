@@ -435,8 +435,9 @@ fn single_temp_view_segment(name: &str) -> Result<Option<String>> {
 }
 
 fn raw_temp_view_token(raw: &str) -> bool {
-    !raw.chars()
-        .any(|char| matches!(char, '.' | '`' | '"') || char.is_whitespace())
+    raw.chars()
+        .all(|char| char.is_alphanumeric() || char == '_')
+        && !crate::spark_numeric_literal(raw)
 }
 
 fn temp_view_key(segment: &str, rule: NameRule) -> String {
