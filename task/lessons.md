@@ -527,7 +527,7 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO record per-agent usage (model id, turns, peak context, cache-read, cache-write and output tokens), and keep API-price estimates apart from the subscription meter.** *Why:* the 48 h tally is at API list prices, and the subscription meter's weighting is not documented, so the two numbers must not be summed or compared as one.
 - **DO read the executor tier policy from the dated rulings, not from a single sentence.** *Why:* the 2026-09-20 "no Sonnet or Haiku in any role" sentence was superseded on 2026-10-07 and 2026-10-24, yet thirty-seven Haiku 5.5 clerks ran in the window under the 2026-10-24 ruling while the binding manifest still carried the old sentence.
 
-## 2026-11-03 — one round: the domain table before the ruling
+## 2026-11-02 — one round: the domain table before the ruling
 
 - **DO measure the oracle over the whole input domain before a fix is ruled or briefed.** *Why:* AUD-015 took five build and five verification rounds, AUD-016 five and five, and the fork's F-IDLESS unit six and four; each later round found a cell the ruling had inferred from the cells a verifier happened to find.
 - **DO state a quantified clause as its domain table, and card every class outside the table at scoping time with its measured answer.** *Why:* "every spelling Spark refuses, RePark refuses" is a dialect property, not a property of one temp-view DML unit; as a universal it invited one new counterexample per round.

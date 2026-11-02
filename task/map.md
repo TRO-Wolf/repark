@@ -21,7 +21,7 @@ not this directory.
   `epic-term/` (north-star tracks). Short-term stays [../briefs/next-sequence.md](../briefs/next-sequence.md).
 
 - [handoff-frontier-2026-10-23.md](handoff-frontier-2026-10-23.md) — frontier handoff updated after run 4 (2026-10-23): U/X proof, distinct cross-read timeout sites, bounded diagnostic plan, ordered queue, standing rules and lane mechanics.
-- [retro/](retro/map.md) — **process retrospectives:** the 2026-11-03 audit-3 closeout record and the one-round rules it drove.
+- [retro/](retro/map.md) — **process retrospectives:** the 2026-11-02 audit-3 closeout record and the one-round rules it drove.
 - [lrs-z-retrospective.md](lrs-z-retrospective.md) — **LRS close-out (2026-08-20):** seven units,
   the invariant held, and the two findings that matter most were both found while doing something
   else — `RE-1` and `LOG-1`, silently wrong answers on common functions. Also: the live Spark
