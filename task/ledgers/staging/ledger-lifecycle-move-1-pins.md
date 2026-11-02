@@ -24,3 +24,7 @@ C-021: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_contents_p
 C-022: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_contents_commented_bullet_stays_and_real_row_moves, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_contents_fenced_bullet_stays_and_real_row_moves
 C-023: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_comment_holding_a_fence_line_leaves_the_row_visible, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_fence_holding_a_comment_opener_leaves_the_row_visible
 C-024: none (records)
+C-025: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_commented_links_rewrite_without_shifting_positions, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_links_around_a_comment_both_rewrite_exactly, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_masked_lines_keep_every_position
+C-026: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_long_fence_hides_inner_marker_and_decoy, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_tilde_fence_hides_inner_marker_and_decoy
+C-027: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_code_span_opener_leaves_the_row_visible
+C-028: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_masked_lines_keep_every_position, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_code_span_opener_leaves_the_row_visible

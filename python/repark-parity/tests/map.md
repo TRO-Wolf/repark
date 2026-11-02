@@ -206,19 +206,7 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   family moves to `column_render.py`) and `dataframe/core.py` 3652 → 3595
   (the unemitted-id family moves to `unemitted_ids.py`) with the script
   baseline. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 V-4 (2026-10-02):**
-  mirror row ratchets `dataframe/core.py` 3653 → 3652 with the script baseline
-  (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`).
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3e (2026-10-01):**
-  mirror row ratchets `dataframe/core.py` 3803 → 3800 with the script baseline
-  (the `selectExpr` body moves out and the select star arms fold into one
-  delegate).
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3d (2026-10-01):**
-  mirror row ratchets `dataframe/core.py` 3836 → 3803 with the script baseline
-  (the `drop`/`dropDuplicates` binding moves to `spark/subset_resolve.py`).
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c (2026-10-01):**
-  mirror row ratchets `dataframe/core.py` 3846 → 3836 with the script baseline
-  (the lifted duplicate-finals refusal and its docstring).
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c, S3d, S3e and V-4 (2026-10-01/02):** the mirror rows ratchet `dataframe/core.py` 3846 → 3836 (S3c, the lifted duplicate-finals refusal), 3836 → 3803 (S3d, the `drop`/`dropDuplicates` binding moves to `spark/subset_resolve.py`), 3803 → 3800 (S3e, the `selectExpr` body moves out) and 3653 → 3652 (V-4, the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`), each with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** the mirror
   rows ratchet `repark-ta/src/udf/mod.rs` 1801 → 1791 and `python/repark/src/repark/spark/ta.py`
   1818 → 1795 with the script baselines.
@@ -809,7 +797,7 @@ both tables with the script baselines (backtick-disclosure retire).
   month, a dead ledger link in a non-map document, and the frozen rule (link
   repair and a prepended errata pass; a prose edit and a deletion fail). LEDGER-LIFECYCLE-MOVE-1 (2026-11-01; fix round 1, 2026-11-02): `test_move_cuts_a_tail_row_with_pins_and_pastes_it_in_order`, `test_move_cuts_a_tail_one_line_row`, `test_move_without_a_source_row_synthesises_exactly_one_row`, `test_move_carries_the_sidecar_without_a_row`, `test_move_leaves_a_history_file_frozen_and_names_it`, `test_archive_leaves_a_history_file_frozen`, `test_check_ignores_a_dead_ledger_link_in_history_only`, `test_move_skips_a_commented_bullet_and_cuts_the_real_row`,
   `test_move_with_only_a_commented_bullet_synthesises`, `test_move_skips_a_prose_bullet_and_cuts_the_real_row`,
-  `test_move_skips_a_fenced_bullet_and_cuts_the_real_row` and `test_move_and_archive_refuse_a_history_source`; fix round 2 (2026-11-02) adds `test_contents_prose_bullet_stays_and_real_row_moves`, `test_contents_commented_bullet_stays_and_real_row_moves`, `test_contents_fenced_bullet_stays_and_real_row_moves`, `test_comment_holding_a_fence_line_leaves_the_row_visible` and `test_fence_holding_a_comment_opener_leaves_the_row_visible`.
+  `test_move_skips_a_fenced_bullet_and_cuts_the_real_row` and `test_move_and_archive_refuse_a_history_source`; fix round 2 (2026-11-02) adds `test_contents_prose_bullet_stays_and_real_row_moves`, `test_contents_commented_bullet_stays_and_real_row_moves`, `test_contents_fenced_bullet_stays_and_real_row_moves`, `test_comment_holding_a_fence_line_leaves_the_row_visible` and `test_fence_holding_a_comment_opener_leaves_the_row_visible`. Fix round 3 (2026-11-02) adds `test_commented_links_rewrite_without_shifting_positions`, `test_links_around_a_comment_both_rewrite_exactly`, `test_long_fence_hides_inner_marker_and_decoy`, `test_tilde_fence_hides_inner_marker_and_decoy`, `test_code_span_opener_leaves_the_row_visible` and `test_masked_lines_keep_every_position`.
 - `test_map_governance_1.py` — **MAP-GOVERNANCE-1 (2026-10-29):** the sidecar the grammar gate reads (`task/ledgers/<bin>/<unit>-pins.md`): a path binds only if tracked and bindable, a `::name` only if its file defines it, `none (records)` counts and is listed, and a sidecar counts only beside its own ledger. The migration binds, cuts citation text only, keeps hand edits and is idempotent. The size ratchet: 200 lines and 16 KiB, exact-baseline rows that fail on growth and on unlowered shrinkage, `--update-baselines` that only lowers, and the `make ci` and ci.yml wiring.
 - `test_map_governance_1_lifecycle.py` — **MAP-GOVERNANCE-1:** `ledger_lifecycle.py` carries a unit's sidecar with its ledger on `move` and `archive`, with no map row; `archive` files it under the ledger's own date; a sidecar in a frozen bin may be edited and a ledger row may not; a move followed by the size ratchet stays green; `archive` moves an excepted map's ratchet row by exactly its link growth.
 - `test_map_governance_1_union.py` — **MAP-GOVERNANCE-1 (2026-10-30, round 10):** the union binding model (a clause binds its citing entries' bindable files and its ledger row's bindable files; an id-less disclaimer keeps the binding and is reported); a row-named test file is added beside the citation's file; a sidecar in another bin does not satisfy the floor; shell heredocs, multi-line quoted strings, `$((...))`, nested Rust block comments and strict pytest decorators define nothing.
