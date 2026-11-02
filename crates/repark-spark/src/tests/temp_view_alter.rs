@@ -286,3 +286,46 @@ async fn a_prefixed_alter_with_no_view_of_that_name_passes_the_view_check() {
         );
     }
 }
+
+#[tokio::test]
+async fn a_leading_semicolon_refuses_before_every_temp_view_check() {
+    for sql in [
+        ";ALTER TABLE t DROP COLUMN v",
+        "; ALTER TABLE t RENAME TO t2",
+        ";;ALTER ICEBERG TABLE t DROP COLUMN v",
+        ";\nALTER TABLE ONLY t ADD COLUMN z INT",
+        "/* c */;ALTER TABLE t SET TBLPROPERTIES ('k1'='x')",
+        "-- c\n;ALTER TABLE t DROP COLUMN v",
+        ";DROP TABLE t",
+        ";INSERT INTO t VALUES (1)",
+        ";TRUNCATE TABLE t",
+    ] {
+        let outcome = outcome(&view_t(), sql).await;
+        assert!(
+            outcome.contains("[PARSE_SYNTAX_ERROR] Syntax error at or near ';'. SQLSTATE: 42601"),
+            "{sql}: {outcome}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_bare_identifier_word_after_drop_is_a_column_and_a_double_quoted_target_refuses() {
+    for (sql, operation) in [
+        ("ALTER TABLE t DROP identifier", "DROP COLUMNS"),
+        ("ALTER TABLE t DROP `IDENTIFIER`", "DROP COLUMNS"),
+        ("ALTER TABLE t DROP tag, v", "DROP COLUMNS"),
+        ("ALTER TABLE t DROP `branch`", "DROP COLUMNS"),
+        ("ALTER TABLE t SET identifier", "SET"),
+        ("ALTER TABLE \"t\" RENAME TO t2", "RENAME"),
+        ("ALTER TABLE \"t\" WRITE ORDERED BY id", "WRITE"),
+    ] {
+        assert_eq!(
+            outcome(&view_t(), sql).await,
+            format!(
+                "Error during planning: [EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] 'ALTER TABLE ... \
+                 {operation}' expects a table but `t` is a view.  SQLSTATE: 42809"
+            ),
+            "{sql}"
+        );
+    }
+}

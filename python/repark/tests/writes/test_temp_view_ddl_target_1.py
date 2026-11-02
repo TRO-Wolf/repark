@@ -656,3 +656,150 @@ def test_a_quoted_only_names_a_table_and_never_reaches_the_view_named_table(
     assert _state(session, catalog) == state
     assert _files(tmp_path, catalog) == files
     assert _ids(session, "SELECT id FROM t") == [99]
+
+
+LEADING_SEMICOLON = "[PARSE_SYNTAX_ERROR] Syntax error at or near ';'. SQLSTATE: 42601"
+LEADS = [";", "; ", ";;", ";\n", "/* c */;", "-- c\n;"]
+LEAD_IDS = ["semicolon", "semicolon-space", "two-semicolons", "semicolon-newline", "block", "line"]
+LED_ALTERS = [
+    "ALTER TABLE t DROP COLUMN v",
+    "ALTER TABLE t ADD COLUMN z INT",
+    "ALTER TABLE t ALTER COLUMN id TYPE BIGINT",
+    "ALTER TABLE t RENAME COLUMN v TO v2",
+    "ALTER TABLE t SET TBLPROPERTIES ('k1'='x')",
+    "ALTER TABLE t RENAME TO t2",
+    "ALTER TABLE ONLY t DROP COLUMN v",
+    "ALTER ICEBERG TABLE t DROP COLUMN v",
+]
+LED_ALTER_IDS = [
+    "drop-column",
+    "add-column",
+    "alter-column-type",
+    "rename-column",
+    "set-tblproperties",
+    "rename-to",
+    "only-drop-column",
+    "iceberg-drop-column",
+]
+LED_WRITES = [
+    "INSERT INTO t VALUES (3, 'c')",
+    "MERGE INTO t AS x USING (SELECT 1 AS id) AS s ON x.id = s.id WHEN MATCHED THEN DELETE",
+    "DELETE FROM t WHERE id = 1",
+    "UPDATE t SET id = 5 WHERE id = 1",
+    "DROP TABLE t",
+    "TRUNCATE TABLE t",
+]
+LED_WRITE_IDS = ["insert", "merge", "delete", "update", "drop-table", "truncate"]
+IDENTIFIER_COLUMN_DROPS = [
+    "ALTER TABLE t DROP identifier",
+    "ALTER TABLE t DROP IDENTIFIER",
+    "ALTER TABLE t DROP `identifier`",
+    "/* c */ ALTER TABLE t DROP identifier",
+    "ALTER TABLE t DROP tag, v",
+]
+IDENTIFIER_COLUMN_IDS = ["lower", "upper", "backquoted", "after-comment", "tag-column-list"]
+
+
+def _assert_parse_refused_and_held(
+    spark: ReparkSession, warehouse: Path, catalog: str, statement: str
+) -> None:
+    state = _state(spark, catalog)
+    files = _files(warehouse, catalog)
+    with pytest.raises(Exception, match=r"PARSE_SYNTAX_ERROR") as raised:
+        spark.sql(statement).collect()
+    assert LEADING_SEMICOLON in str(raised.value)
+    assert _state(spark, catalog) == state
+    assert _files(warehouse, catalog) == files
+    assert _ids(spark, "SELECT id FROM t") == [99]
+    assert _views(spark) == ["t"]
+    spark.stop()
+    assert _reopened_state(warehouse, catalog) == state
+
+
+@pytest.mark.parametrize("statement", LED_ALTERS, ids=LED_ALTER_IDS)
+@pytest.mark.parametrize("lead", LEADS, ids=LEAD_IDS)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_leading_semicolon_alter_through_a_view_name_refuses_and_holds_the_table(
+    session: ReparkSession, tmp_path: Path, catalog: str, lead: str, statement: str
+) -> None:
+    _seed(session, catalog, "t")
+    _assert_parse_refused_and_held(session, tmp_path, catalog, f"{lead}{statement}")
+
+
+@pytest.mark.parametrize("statement", LED_WRITES, ids=LED_WRITE_IDS)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_leading_semicolon_write_or_drop_through_a_view_name_refuses_and_holds_both(
+    session: ReparkSession, tmp_path: Path, catalog: str, statement: str
+) -> None:
+    _seed(session, catalog, "t")
+    _assert_parse_refused_and_held(session, tmp_path, catalog, f";{statement}")
+
+
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_leading_semicolon_alter_through_a_data_frame_view_refuses(
+    session: ReparkSession, tmp_path: Path, catalog: str
+) -> None:
+    _seed(session, catalog, None)
+    session.createDataFrame([(99,)], "id INT").createOrReplaceTempView("t")
+    _assert_parse_refused_and_held(session, tmp_path, catalog, ";ALTER TABLE t DROP COLUMN v")
+
+
+@pytest.mark.parametrize("statement", IDENTIFIER_COLUMN_DROPS, ids=IDENTIFIER_COLUMN_IDS)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_bare_identifier_word_after_drop_is_a_column_and_refuses_through_a_view_name(
+    session: ReparkSession, tmp_path: Path, catalog: str, statement: str
+) -> None:
+    _seed(session, catalog, None)
+    session.sql(f"ALTER TABLE {catalog}.ns.t ADD COLUMN identifier STRING").collect()
+    session.sql(f"ALTER TABLE {catalog}.ns.t ADD COLUMN tag STRING").collect()
+    session.sql("CREATE OR REPLACE TEMPORARY VIEW t AS SELECT 99 AS id").collect()
+    expected = _refusal("DROP COLUMNS", NO_ALTERNATIVE, "t")
+    _assert_refused_and_held(session, tmp_path, catalog, "t", statement, expected)
+
+
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_bare_identifier_word_through_a_data_frame_view_refuses(
+    session: ReparkSession, tmp_path: Path, catalog: str
+) -> None:
+    _seed(session, catalog, None)
+    session.sql(f"ALTER TABLE {catalog}.ns.t ADD COLUMN identifier STRING").collect()
+    session.createDataFrame([(99,)], "id INT").createOrReplaceTempView("t")
+    expected = _refusal("DROP COLUMNS", NO_ALTERNATIVE, "t")
+    _assert_refused_and_held(
+        session, tmp_path, catalog, "t", "ALTER TABLE t DROP identifier", expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("statement", "operation"),
+    [
+        ('ALTER TABLE "t" RENAME TO t2', "RENAME"),
+        ('ALTER TABLE "t" DROP COLUMN v', "DROP COLUMNS"),
+        ('ALTER TABLE "t" ADD PARTITION FIELD id', "ADD"),
+    ],
+    ids=["rename-to", "drop-column", "add-partition-field"],
+)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_double_quoted_target_naming_a_view_refuses_and_never_renames(
+    session: ReparkSession, tmp_path: Path, catalog: str, statement: str, operation: str
+) -> None:
+    _seed(session, catalog, "t")
+    expected = _refusal(operation, NO_ALTERNATIVE, "t")
+    _assert_refused_and_held(session, tmp_path, catalog, "t", statement, expected)
+
+
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_drop_table_through_a_view_name_drops_the_view_then_drop_if_exists_drops_the_table(
+    session: ReparkSession, tmp_path: Path, catalog: str
+) -> None:
+    _seed(session, catalog, "t")
+    state = _state(session, catalog)
+    files = _files(tmp_path, catalog)
+    session.sql("DROP TABLE t").collect()
+    assert _views(session) == []
+    assert _rows(session, "SELECT * FROM t") == SEED_ROWS
+    assert _state(session, catalog) == state
+    assert _files(tmp_path, catalog) == files
+    session.sql("DROP TABLE IF EXISTS t").collect()
+    tables = session.sql(f"SHOW TABLES IN {catalog}.ns").to_arrow().to_pylist()
+    assert tables == []
