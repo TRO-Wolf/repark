@@ -6,14 +6,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <path>[::<name>], ...` line per clause, or `C-NNN: none (records)`), read by `scripts/check_ledger_grammar.py` rule B; it moves with its ledger and gets no row here.
 ## Contents
 - [map-struct-key-subscript-1-ledger.md](map-struct-key-subscript-1-ledger.md) — **MAP-STRUCT-KEY-SUBSCRIPT-1
-  (2026-11-01, AUD-016, branch `fix/map-struct-key-subscript-1`, head `b5adf5f6`, merge pending):** a map subscript whose key is a
+  (2026-11-01, AUD-016, branch `fix/map-struct-key-subscript-1`, head `2550e150`, merge pending):** a map subscript whose key is a
   struct, array or map is planned through RePark's `element_at` kernel by `SparkMapSubscript` on the Spark, ANSI and
-  native doors and the DataFrame expression context; DataFusion's `get_field` is never reached for nested keys. Round 1
-  fixed the round-0 verifier's F1 to F4 and F7. Round 2 fixed the round-2 verifier's F1 to F6 (each leaf cast with the
-  Spark door's own cast, the list family one kind at every depth, a NULL leaf matching nothing, `F.expr` select subscripts
-  planned as lookups) and corrected its F7 in the records. Round 3 fixed the round-3 verifier's F1, F3 and F4 (C-041 to C-043), and carries F2, F5 and the scalar-float gap as carded divergences (C-044 to C-046). 40 of 46 clauses PROVEN (C-019 the native-door pin, C-025
-  verification (round 4 owed), C-040 the residue and C-044 to C-046 OPEN). `risk_tier: standard`.
-  pins: map-struct-key-subscript-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040, C-041, C-042, C-043, C-044, C-045, C-046
+  native doors and the DataFrame expression context; DataFusion's `get_field` is never reached for nested keys. Rounds 1 to 3
+  fixed the verifiers' findings (C-033 to C-043, the signed-zero and session-zone cells included). Round 4 fixed the round-4
+  verifier's F1: with `spark.sql.ansi.enabled=false` a struct key of another type refuses as Spark does, and carded the F2
+  non-finite-to-DECIMAL cast and the F3 constructor float duplicates (C-051, C-052). 45 of 52 clauses PROVEN (C-025
+  verification, round 5 owed, and C-040, C-044 to C-046, C-051 and C-052 OPEN). `risk_tier: standard`.
+  pins: map-struct-key-subscript-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040, C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048, C-049, C-050, C-051, C-052
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of

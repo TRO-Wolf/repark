@@ -18,7 +18,7 @@ C-015: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_with_an
 C-016: crates/repark-sql/tests/map_struct_key_subscript.rs::element_at_and_a_scalar_key_subscript_stay_sparks_values
 C-017: crates/repark-sql/tests/map_struct_key_subscript.rs::the_ansi_door_answers_a_struct_key_subscript_over_a_literal_map
 C-018: crates/repark-sql/tests/map_struct_key_subscript.rs
-C-019: none (records)
+C-019: python/repark/tests/functions/test_map_struct_key_subscript_4.py::test_the_native_door_keeps_its_ansi_default_and_casts_by_position
 C-020: python/repark/tests/functions/test_map_struct_key_subscript_1.py::test_a_struct_key_subscript_answers_spark_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_1.py::test_a_struct_key_subscript_answers_spark_in_a_fresh_session
 C-021: python/repark/tests/functions/test_map_struct_key_subscript_1.py
 C-022: none (records)
@@ -46,3 +46,9 @@ C-043: crates/repark-sql/tests/map_struct_key_subscript_2.rs::an_array_element_l
 C-044: none (records)
 C-045: none (records)
 C-046: none (records)
+C-047: crates/repark-sql/tests/map_struct_key_subscript_2.rs::with_ansi_off_in_the_builder_a_struct_key_of_another_type_refuses_like_spark, crates/repark-sql/tests/map_struct_key_subscript_2.rs::ansi_set_inside_a_session_gates_the_struct_key_cast_both_ways, crates/repark-sql/tests/map_struct_key_subscript_2.rs::with_ansi_on_in_the_builder_a_struct_key_is_cast_by_position, python/repark/tests/functions/test_map_struct_key_subscript_4.py::test_ansi_off_in_the_builder_refuses_an_inexact_struct_key_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_4.py::test_ansi_off_in_the_builder_refuses_an_inexact_struct_key_in_a_fresh_session, python/repark/tests/functions/test_map_struct_key_subscript_4.py::test_conf_set_gates_the_struct_key_cast_both_ways_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_4.py::test_conf_set_gates_the_struct_key_cast_both_ways_in_a_fresh_session
+C-048: crates/repark-sql/tests/map_struct_key_subscript_2.rs::with_ansi_off_in_the_builder_a_struct_key_of_another_type_refuses_like_spark
+C-049: none (records)
+C-050: none (records)
+C-051: none (records)
+C-052: none (records)
