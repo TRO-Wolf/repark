@@ -18,6 +18,16 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   pins: spark-door-temp-view-ddl-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-038, C-039, C-040
 - [spark-door-temp-view-ddl-1-domain-table.md](spark-door-temp-view-ddl-1-domain-table.md) — the AUD-015 domain table: 13 heads, 22 target spellings, view present or absent, catalogs `mem` and `hd`, Spark 4.1.2 and RePark at `4fd5c6c1`; readings 1 to 5 and the class counts.
 - [spark-door-temp-view-ddl-1-domain-cells.jsonl](spark-door-temp-view-ddl-1-domain-cells.jsonl) — the 1144 cells of that table, one JSON object each (catalog, head, spelling, view, statement, class, both answers, both state changes).
+- [map-struct-key-subscript-1-ledger.md](map-struct-key-subscript-1-ledger.md) — **MAP-STRUCT-KEY-SUBSCRIPT-1
+  (2026-11-01, AUD-016, branch `fix/map-struct-key-subscript-1`, head `44bcf4e1`, merge pending):** a map subscript whose key is a
+  struct, array or map is planned through RePark's `element_at` kernel by `SparkMapSubscript` on the Spark, ANSI and
+  native doors and the DataFrame expression context; DataFusion's `get_field` is never reached for nested keys. Rounds 1 to 3
+  fixed the verifiers' findings (C-033 to C-043, the signed-zero and session-zone cells included). Round 4 fixed the round-4
+  verifier's F1: with `spark.sql.ansi.enabled=false` a struct key of another type refuses as Spark does, and carded the F2
+  non-finite-to-DECIMAL cast and the F3 constructor float duplicates (C-051, C-052). Round 5 (2026-11-02) fixed the round-5 verifier's F1 (C-053: field names match case-insensitively under ANSI off unless `spark.sql.caseSensitive` is true) and closes the unit on its measured domain table (C-054); the ANSI-off array-element cells are carded (C-048, C-055). 46 of 55 clauses PROVEN (C-025 verification and C-040, C-044 to C-046, C-048, C-051, C-052 and C-055 OPEN). `risk_tier: standard`.
+  pins: map-struct-key-subscript-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040, C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048, C-049, C-050, C-051, C-052, C-053, C-054, C-055
+- [map-struct-key-subscript-1-domain-table.md](map-struct-key-subscript-1-domain-table.md) — the AUD-016 domain table of 2026-11-02 at `44bcf4e1` (Spark 4.1.2 against RePark): the summary, the four classes and the three readings, unchanged.
+- [map-struct-key-subscript-1-domain-cells.jsonl](map-struct-key-subscript-1-domain-cells.jsonl) — the 440 cells of that table, one JSON object per cell, verbatim.
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of

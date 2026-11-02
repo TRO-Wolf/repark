@@ -42,11 +42,13 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
     assert_eq!(configured_names[position + 2], "spark_decimal_precision");
     assert_eq!(configured_names[position + 3], "spark_integral_literal");
     assert_eq!(configured_names[position + 4], "join_condition_refusals");
-    assert_eq!(configured_names[position + 5], "type_coercion");
+    assert_eq!(configured_names[position + 5], "spark_map_subscript");
+    assert_eq!(configured_names[position + 6], "type_coercion");
     let without_insertions: Vec<String> = configured_names
         .into_iter()
         .filter(|name| {
             name != "join_condition_refusals"
+                && name != "spark_map_subscript"
                 && name != "higher_order_preparation"
                 && name != "spark_fractional_division"
                 && name != "spark_float_stringify"
