@@ -17,6 +17,18 @@ STRICT_SPELLINGS = frozenset(
 )
 OVER_REFUSAL_SPELLINGS = frozenset({"digit", "trail_comment", "block_comment"})
 UNIT_SPELLINGS = STRICT_SPELLINGS | OVER_REFUSAL_SPELLINGS
+DELTA_HEADS = frozenset(
+    {
+        "insert_ow_comma",
+        "insert_ow_comma2",
+        "insert_ow_join",
+        "select_comma",
+        "select_join",
+        "delete_subq_comma",
+        "update_subq_comma",
+        "merge_subq_comma",
+    }
+)
 GRAMMAR_CONDITIONS = frozenset({"PARSE_SYNTAX_ERROR", "INVALID_IDENTIFIER"})
 NAMES = ("t", "a", "`a``b`", "`1t`", "`ü1`", "`\uff54`")
 VIEW_NAMES = ("t", "`a``b`", "`1t`", "`ü1`", "`\uff54`")
@@ -129,6 +141,8 @@ def _run(spark: ReparkSession, statement: str) -> str:
 
 
 def _expectation(cell: dict[str, Any]) -> str:
+    if cell["head"] in DELTA_HEADS:
+        return "spark_acts" if cell["spark_kind"] in {"ok", "rows"} else "spark_refuses"
     if cell["spelling"] not in UNIT_SPELLINGS or cell["spark_kind"] == CAPABILITY_REFUSAL:
         return "measured"
     if cell["spark_kind"] == "ok":
@@ -179,8 +193,11 @@ def test_identifier_cell_answers_like_the_measured_table(
 
 def test_the_table_covers_every_unit_spelling_on_every_head_and_catalog() -> None:
     keys = {(cell["cat"], cell["head"], cell["spelling"], cell["view"]) for cell in CELLS}
-    assert len(keys) == len(CELLS) == 1144
-    unit = [cell for cell in CELLS if cell["spelling"] in UNIT_SPELLINGS]
+    assert len(keys) == len(CELLS) == 1172
+    delta = [cell for cell in CELLS if cell["head"] in DELTA_HEADS]
+    assert len(delta) == 28
+    assert {cell["cat"] for cell in delta} == {"mem", "hd"}
+    unit = [cell for cell in CELLS if cell["spelling"] in UNIT_SPELLINGS and cell not in delta]
     assert len(unit) == 624
     assert {cell["spark_kind"] for cell in unit if cell["spelling"] in STRICT_SPELLINGS} <= (
         GRAMMAR_CONDITIONS | {"ok"}

@@ -161,6 +161,32 @@ async fn the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_ta
         ("MERGE INTO a, t USING s ON a.id = s.id", "','"),
         ("INSERT INTO ice.ns.'t' VALUES (1)", "''t''"),
         ("UPDATE ice.ns.'t' SET v = 'u'", "'.'"),
+        ("SELECT * FROM a JOIN \"t\" ON 1 = 1", "'\"t\"'"),
+        (
+            "INSERT OVERWRITE t SELECT a.id, 'z' FROM a JOIN \"a\" x ON 1 = 1",
+            "'\"a\"'",
+        ),
+        ("SELECT * FROM a, \"t\"", "'\"t\"'"),
+        (
+            "INSERT OVERWRITE t SELECT id, 'z' FROM (SELECT 1 AS k) q, \"a\"",
+            "'\"a\"'",
+        ),
+        (
+            "INSERT OVERWRITE t SELECT id, 'z' FROM (SELECT 1 AS k) q, 'a'",
+            "''a''",
+        ),
+        (
+            "DELETE FROM t WHERE id IN (SELECT 1 FROM a, \"a\")",
+            "'\"a\"'",
+        ),
+        (
+            "UPDATE t SET v = 'u' WHERE id IN (SELECT 1 FROM a, \"a\")",
+            "'\"a\"'",
+        ),
+        (
+            "MERGE INTO t USING (SELECT a.id FROM a, \"a\" x) s ON t.id = s.id WHEN MATCHED THEN DELETE",
+            "'\"a\"'",
+        ),
     ] {
         let outcome = outcome(&views, sql).await;
         assert!(outcome.contains(&parse_refusal(near)), "{sql}: {outcome}");
@@ -171,10 +197,19 @@ async fn the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_ta
         "SELECT EXTRACT(YEAR FROM '2020-01-01')",
         "SELECT * FROM range(3)",
         "DELETE FROM t -- c WHERE id = 1",
+        "SELECT t.id FROM a, `t`",
+        "SELECT q.k FROM (SELECT 1 AS k) q, 1t",
+        "SELECT t.id FROM a JOIN `t` ON a.id = t.id",
     ] {
         let outcome = outcome(&views, sql).await;
         for refused in ["PARSE_SYNTAX_ERROR", "INVALID_IDENTIFIER"] {
             assert!(!outcome.contains(refused), "{sql}: {outcome}");
         }
     }
+    let unicode = "INSERT OVERWRITE t SELECT q.k, 'z' FROM (SELECT 1 AS k) q, ü1";
+    let outcome = outcome(&views, unicode).await;
+    assert!(
+        outcome.contains(&invalid_identifier("ü1")),
+        "{unicode}: {outcome}"
+    );
 }
