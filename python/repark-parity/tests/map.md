@@ -249,12 +249,8 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
 - `test_cap_1_source_file_line_cap.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):**
   the `writer_readwriter.py` mirror row leaves with the script row (1093 → 996, under
   the default); python_approved 32 → 31.
-- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):**
-  mirror row ratchets `functions_expr.py` 2198 → 2195 with the script baseline.
-- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 5 (2026-09-16, run 18a):**
-  mirror row ratchets `functions_expr.py` 2195 → 2192 with the script baseline.
-- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 6 (2026-09-16, run 18a):**
-  mirror row ratchets `functions_expr.py` 2192 → 2193 with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 steps 4 to 6 (2026-09-16, run 18a):**
+  mirror row ratchets `functions_expr.py` 2198 → 2195 → 2192 → 2193 with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16):**
   mirror rows ratchet `functions_expr.py` 2235 → 2213 and
   `test_explode_rewrite.py` 1135 → 1133; a short-lived
@@ -288,10 +284,8 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   ceiling), `write/merge/tests/streaming_scan.rs` 3020 → 3018 and
   `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435 (the identity spec builder becomes
   `PredicateDmlSpec::identity`).
-  **Round 2 (2026-09-19):** dropping that exception row also drops the Rust exception
-  COUNT, 38 → 37, which round 1 left at its old literal — the gate itself reported 37 and
-  only this mirror still said 38, so `test_cap_1_exception_tables_equal_the_measured_debt`
-  was red. The count now matches the gate.
+  **Round 2 (2026-09-19):** the exception COUNT follows the dropped row, 38 → 37, to match
+  the gate (`test_cap_1_exception_tables_equal_the_measured_debt`).
 - `test_cap_1_source_file_line_cap.py` — **ICE-CATALOG-SESSION-1 round 3 rebase (2026-09-20, run 27):**
   mirror rows follow the measured debt after the IPI-29 rebase: `catalog_config.rs`
   1028 → 1007 and `repark-spark/src/alter.rs` 1444 → 1439 with
@@ -334,14 +328,9 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   round 16a):** mirror rows for `time_window/mod.rs` 1268,
   `spark_time_window.rs` 1125, `test_fnp_win_1.py` 1209, counts 38/32
   (`datetime.rs` keeps 1700 per audit S-2).
-  **FNP-WIN-1 (2026-09-15, verification round 2, L-002/L-003):** mirror rows
-  move to `time_window/mod.rs` 1338, `test_fnp_win_1.py` 1314, counts still
-  38/32 (ratchets only, no new row).
-  **FNP-WIN-1 (2026-09-15, verification round 2, L-001):** mirror rows move
-  to `time_window/mod.rs` 1416, `test_fnp_win_1.py` 1415, counts still
-  38/32.
-  **FNP-WIN-1 (2026-09-15, verification round 2, L-004):** mirror rows move
-  to `dataframe.rs` 1021, `test_fnp_win_1.py` 1454, counts still 38/32.
+  **FNP-WIN-1 (2026-09-15, verification round 2, L-001 to L-004):** mirror rows
+  move to `time_window/mod.rs` 1338 then 1416, `test_fnp_win_1.py` 1314, 1415 then
+  1454, and `dataframe.rs` 1021; counts still 38/32 (ratchets only, no new row).
   default).
 - `test_cap_1_source_file_line_cap.py` — **FNP-11B step 6 (2026-09-15):**
   `functions.py` mirror row 1960 → 1984 and `functions_expr.py` 2235 → 2237
@@ -818,7 +807,9 @@ both tables with the script baselines (backtick-disclosure retire).
   `completed`; `archive` is not a `move` target. The provocation proofs of
   `check`: a ledger outside the bins, an archive prefix disagreeing with its
   month, a dead ledger link in a non-map document, and the frozen rule (link
-  repair and a prepended errata pass; a prose edit and a deletion fail). LEDGER-LIFECYCLE-MOVE-1 (2026-11-01): `test_move_cuts_a_tail_row_with_pins_and_pastes_it_in_order`, `test_move_cuts_a_tail_one_line_row`, `test_move_without_a_source_row_synthesises_exactly_one_row`, `test_move_carries_the_sidecar_without_a_row`, `test_move_leaves_a_history_file_frozen_and_names_it`, `test_archive_leaves_a_history_file_frozen`, `test_check_ignores_a_dead_ledger_link_in_history_only`.
+  repair and a prepended errata pass; a prose edit and a deletion fail). LEDGER-LIFECYCLE-MOVE-1 (2026-11-01; fix round 1, 2026-11-02): `test_move_cuts_a_tail_row_with_pins_and_pastes_it_in_order`, `test_move_cuts_a_tail_one_line_row`, `test_move_without_a_source_row_synthesises_exactly_one_row`, `test_move_carries_the_sidecar_without_a_row`, `test_move_leaves_a_history_file_frozen_and_names_it`, `test_archive_leaves_a_history_file_frozen`, `test_check_ignores_a_dead_ledger_link_in_history_only`, `test_move_skips_a_commented_bullet_and_cuts_the_real_row`,
+  `test_move_with_only_a_commented_bullet_synthesises`, `test_move_skips_a_prose_bullet_and_cuts_the_real_row`,
+  `test_move_skips_a_fenced_bullet_and_cuts_the_real_row` and `test_move_and_archive_refuse_a_history_source`.
 - `test_map_governance_1.py` — **MAP-GOVERNANCE-1 (2026-10-29):** the sidecar the grammar gate reads (`task/ledgers/<bin>/<unit>-pins.md`): a path binds only if tracked and bindable, a `::name` only if its file defines it, `none (records)` counts and is listed, and a sidecar counts only beside its own ledger. The migration binds, cuts citation text only, keeps hand edits and is idempotent. The size ratchet: 200 lines and 16 KiB, exact-baseline rows that fail on growth and on unlowered shrinkage, `--update-baselines` that only lowers, and the `make ci` and ci.yml wiring.
 - `test_map_governance_1_lifecycle.py` — **MAP-GOVERNANCE-1:** `ledger_lifecycle.py` carries a unit's sidecar with its ledger on `move` and `archive`, with no map row; `archive` files it under the ledger's own date; a sidecar in a frozen bin may be edited and a ledger row may not; a move followed by the size ratchet stays green; `archive` moves an excepted map's ratchet row by exactly its link growth.
 - `test_map_governance_1_union.py` — **MAP-GOVERNANCE-1 (2026-10-30, round 10):** the union binding model (a clause binds its citing entries' bindable files and its ledger row's bindable files; an id-less disclaimer keeps the binding and is reported); a row-named test file is added beside the citation's file; a sidecar in another bin does not satisfy the floor; shell heredocs, multi-line quoted strings, `$((...))`, nested Rust block comments and strict pytest decorators define nothing.
