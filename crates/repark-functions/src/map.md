@@ -981,7 +981,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   rewrite is idempotent. Set-operation schemas may require repeated analysis to reach a fixpoint;
   single-analyze schema consumers must perform that analysis. Integer division rewrites only when
   both operands are integers; decimal division remains decimal when no operand is float. A parent
-  operator may retain an incompatible type after a pre-rewrite integer division. Round 2 (2026-11-02): `rewrite_timestamp_casts` is `pub(crate)`, reused by `collection/map_subscript.rs`.
+  operator may retain an incompatible type after a pre-rewrite integer division. Round 2 made `rewrite_timestamp_casts` `pub(crate)`; round 3 (2026-11-02) reverted it.
 - **r24 A3 PERF-02:** `datetime.rs` `date_format` compiles the Java pattern once per
   invocation (`compile_java_pattern` + per-row `format_compiled_java_pattern`; scalar pattern
   cache). Zero behavior change; `date_format_matches_spark_on_the_dim_dates_patterns` is the net.
@@ -1032,7 +1032,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   exempts `CAST(__repark_suffix_literal__(…) AS FLOAT|DOUBLE)` from the
   non-literal parse-kernel route so the door's `FoldSparkNumericCasts` still
   folds it to a non-null literal; `SUFFIX_LITERAL_NAME` is the `pub` single
-  source here that repark-spark re-exports. Round 2 (2026-11-02): `rewrite_float_cast` is `pub(crate)`, reused by `collection/map_subscript.rs`.
+  source here that repark-spark re-exports. Round 2 made `rewrite_float_cast` `pub(crate)`; round 3 (2026-11-02) reverted it.
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts
   from the end, the window clips (never errors), negative len → `''`, NULL args → NULL.

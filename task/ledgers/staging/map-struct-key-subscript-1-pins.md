@@ -40,3 +40,9 @@ C-037: python/repark/tests/functions/test_map_struct_key_subscript_2.py::test_a_
 C-038: python/repark/tests/functions/test_map_struct_key_subscript_2.py::test_an_expr_map_subscript_in_a_select_answers_spark_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_2.py::test_an_expr_map_subscript_in_a_select_answers_spark_in_a_fresh_session
 C-039: none (records)
 C-040: none (records)
+C-041: crates/repark-sql/tests/map_struct_key_subscript_2.rs::a_signed_zero_or_nan_leaf_matches_the_entry_spark_matches_in_a_table, crates/repark-sql/tests/map_struct_key_subscript_2.rs::a_signed_zero_or_nan_on_either_side_of_a_literal_lookup_matches_like_spark, python/repark/tests/functions/test_map_struct_key_subscript_3.py::test_a_float_or_zoned_struct_key_answers_spark_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_3.py::test_a_float_or_zoned_struct_key_answers_spark_in_a_fresh_session
+C-042: crates/repark-sql/tests/map_struct_key_subscript_2.rs::a_timestamp_leaf_against_a_timestamp_ntz_field_takes_the_session_zone, crates/repark-sql/tests/map_struct_key_subscript_2.rs::a_timestamp_leaf_against_a_timestamp_ntz_field_in_utc_stays_sparks_value, python/repark/tests/functions/test_map_struct_key_subscript_3.py::test_a_float_or_zoned_struct_key_answers_spark_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_3.py::test_a_float_or_zoned_struct_key_answers_spark_in_a_fresh_session
+C-043: crates/repark-sql/tests/map_struct_key_subscript_2.rs::an_array_element_leaf_is_cast_like_sparks_cast, crates/repark-sql/tests/map_struct_key_subscript_2.rs::a_datetime_element_and_a_nested_array_of_structs_are_cast_like_spark
+C-044: none (records)
+C-045: none (records)
+C-046: none (records)
