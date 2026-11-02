@@ -38,6 +38,7 @@ mod map_concat;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
 mod map_from_entries;
 mod map_rewrite;
+mod map_subscript;
 mod size;
 
 /// The collection shims registered after DataFusion's defaults.
@@ -141,6 +142,7 @@ pub fn create_map_udf() -> Arc<ScalarUDF> {
 
 pub use create_map::SQL_MAP_NAME;
 pub use map_rewrite::SparkMapRewrite;
+pub use map_subscript::SparkMapSubscript;
 
 #[must_use]
 pub fn array_contains_udf() -> Arc<ScalarUDF> {

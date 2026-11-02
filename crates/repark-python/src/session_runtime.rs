@@ -412,6 +412,9 @@ impl repark_core::SessionExtension for NativeDoorTypes {
         rules.push(std::sync::Arc::new(
             repark_functions::collection::SparkMapRewrite,
         ));
+        rules.push(std::sync::Arc::new(
+            repark_functions::collection::SparkMapSubscript,
+        ));
         Ok(rules)
     }
 }

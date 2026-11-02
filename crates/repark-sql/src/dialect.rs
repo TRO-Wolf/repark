@@ -24,6 +24,7 @@ impl SqlDialect for AnsiDialect {
     ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
         let mut rules = repark_functions::analyzer_rules_with_timestamp_unit_widen(rules)?;
         rules.push(Arc::new(repark_functions::collection::SparkMapRewrite));
+        rules.push(Arc::new(repark_functions::collection::SparkMapSubscript));
         Ok(rules)
     }
 

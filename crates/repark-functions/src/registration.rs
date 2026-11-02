@@ -44,6 +44,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     rules.push(Arc::new(TypeCoercion::new()));
     rules.push(Arc::new(crate::lambda_rebind::LambdaRebind));
     rules.push(Arc::new(crate::collection::SparkMapRewrite));
+    rules.push(Arc::new(crate::collection::SparkMapSubscript));
     rules.push(Arc::new(crate::analyzer::time_window::SparkTimeWindow));
     rules.push(Arc::new(
         crate::analyzer::time_window::SparkWindowTimeGrouping,
