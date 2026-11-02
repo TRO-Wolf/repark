@@ -396,3 +396,89 @@ async fn a_double_quoted_drop_or_truncate_target_naming_a_view_refuses() {
         );
     }
 }
+
+fn parse_refusal(near: &str) -> String {
+    let message = format!("[PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601");
+    format!("{message:?}").trim_matches('"').to_string()
+}
+
+fn no_view() -> NamedViews {
+    NamedViews { names: Vec::new() }
+}
+
+#[tokio::test]
+async fn a_drop_or_truncate_target_spark_cannot_parse_refuses_with_its_parse_error() {
+    for (sql, near) in [
+        ("DROP TABLE 't'", "''t''"),
+        ("DROP VIEW 't'", "''t''"),
+        ("DROP TABLE IF EXISTS 't'", "''t''"),
+        ("DROP VIEW IF EXISTS 't'", "''t''"),
+        ("TRUNCATE TABLE 't'", "''t''"),
+        ("DROP TABLE \"t\"", "'\"t\"'"),
+        ("DROP TABLE IF EXISTS \"t\"", "'\"t\"'"),
+        ("DROP VIEW \"t\"", "'\"t\"'"),
+        ("DROP VIEW IF EXISTS \"t\"", "'\"t\"'"),
+        ("TRUNCATE TABLE \"t\"", "'\"t\"'"),
+        ("DROP TABLE \"t\"\"x\"", "'\"t\"\"x\"'"),
+        ("/* c */ DROP TABLE \"t\";", "'\"t\"'"),
+        ("DROP TABLE 123", "'123'"),
+        ("DROP TABLE 1d", "'1d'"),
+        ("DROP TABLE 1L", "'1L'"),
+        ("DROP TABLE 1e5", "'1e5'"),
+        ("DROP TABLE 1Y", "'1Y'"),
+        ("DROP TABLE 1S", "'1S'"),
+        ("DROP TABLE 1BD", "'1BD'"),
+        ("DROP TABLE 1t$", "'$': extra input '$'"),
+        ("DROP TABLE a, \"t\"", "','"),
+        ("DROP TABLE IF EXISTS a,\"t\"", "','"),
+        ("DROP TABLE t, t", "','"),
+        ("DROP VIEW t, a", "','"),
+        ("DROP TABLE \"t\",a", "'\"t\"'"),
+    ] {
+        for views in [view_t(), no_view()] {
+            let outcome = outcome(&views, sql).await;
+            assert!(outcome.contains(&parse_refusal(near)), "{sql}: {outcome}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_drop_target_spark_parses_passes_the_parse_check() {
+    for sql in [
+        "DROP TABLE t",
+        "DROP TABLE `t`",
+        "DROP TABLE 1t",
+        "DROP TABLE 0x1",
+        "DROP TABLE 1_t",
+        "DROP TABLE `a``b`",
+        "DROP TABLE t PURGE",
+        "DROP TABLE IF EXISTS t;",
+        "TRUNCATE TABLE t",
+    ] {
+        let outcome = outcome(&view_t(), sql).await;
+        assert!(!outcome.contains("PARSE_SYNTAX_ERROR"), "{sql}: {outcome}");
+    }
+}
+
+#[tokio::test]
+async fn a_quoted_rename_destination_refuses_with_the_parse_error() {
+    for (sql, near) in [
+        ("ALTER TABLE t RENAME TO \"t2\"", "'\"t2\"'"),
+        ("ALTER TABLE t RENAME TO 't2'", "''t2''"),
+        ("ALTER TABLE t RENAME TO \"t2\";", "'\"t2\"'"),
+        ("ALTER TABLE `t` RENAME TO \"t2\"", "'\"t2\"'"),
+        ("ALTER TABLE t RENAME TO ns.\"t2\"", "'\"t2\"'"),
+        ("ALTER VIEW t RENAME TO \"t2\"", "'\"t2\"'"),
+        ("ALTER VIEW t RENAME TO 't2'", "''t2''"),
+    ] {
+        let outcome = outcome(&view_t(), sql).await;
+        assert!(outcome.contains(&parse_refusal(near)), "{sql}: {outcome}");
+    }
+    for (sql, near) in [
+        ("ALTER VIEW t RENAME TO \"t2\"", "'\"t2\"'"),
+        ("ALTER VIEW t RENAME TO 't2'", "''t2''"),
+    ] {
+        let outcome = outcome(&no_view(), sql).await;
+        assert!(outcome.contains(&parse_refusal(near)), "{sql}: {outcome}");
+    }
+}
