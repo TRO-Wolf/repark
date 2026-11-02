@@ -32,6 +32,17 @@ const SCALAR_KEY_TABLE: [&str; 3] = [
     "INSERT INTO ice.ns.e VALUES (2, map('c', 9))",
 ];
 
+const STRING_FIELD_KEY_TABLE: [&str; 3] = [
+    "CREATE TABLE ice.ns.s (id INT, m MAP<STRUCT<k: STRING, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.s VALUES (1, map(named_struct('k', 'a', 'j', 2), 7, named_struct('k', 'b', 'j', 2), 8))",
+    "INSERT INTO ice.ns.s VALUES (2, map(named_struct('k', 'a', 'j', 5), 9))",
+];
+
+const ARRAY_OF_STRUCT_LITERAL: &str = "SELECT map(array(named_struct('k', 1, 'j', 2)), 7)";
+
+const STRUCT_OF_ARRAY_LITERAL: &str =
+    "SELECT map(named_struct('a', array(named_struct('x', 1, 'y', 2))), 7)";
+
 const TWO_ENTRY_LITERAL: &str =
     "SELECT map(named_struct('k', 1, 'j', 2), 7, named_struct('k', 3, 'j', 2), 8) AS m";
 
@@ -140,6 +151,21 @@ async fn expect(door: &Door, sql: &str, expected: &[&str]) {
         .await
         .unwrap_or_else(|error| panic!("`{sql}` must answer Spark's values: {error}"));
     assert_eq!(answered, expected, "{sql}");
+}
+
+async fn expect_refusal(door: &Door, sql: &str, fragments: &[&str]) {
+    let error = answer(&door.session, sql)
+        .await
+        .expect_err("the key refuses like Spark");
+    for fragment in [
+        "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]",
+        "SQLSTATE: 42K09",
+    ]
+    .iter()
+    .chain(fragments)
+    {
+        assert!(error.contains(fragment), "{sql}: {fragment} not in {error}");
+    }
 }
 
 async fn expect_sorted(door: &Door, sql: &str, expected: &[&str]) {
@@ -444,6 +470,186 @@ async fn the_ansi_door_answers_a_struct_key_subscript_over_a_literal_map() {
         &door,
         "SELECT m[named_struct('k', 1, 'j', 2)] FROM (SELECT map(named_struct('k', 1, 'j', 2), 7) AS m)",
         &["7"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_struct_inside_an_array_key_is_cast_by_position() {
+    let door = spark_door(&[]).await;
+    expect(
+        &door,
+        &format!("{ARRAY_OF_STRUCT_LITERAL}[array(named_struct('j', 1, 'k', 2))]"),
+        &["7"],
+    )
+    .await;
+    expect(
+        &door,
+        &format!("{ARRAY_OF_STRUCT_LITERAL}[array(named_struct('j', 2, 'k', 1))]"),
+        &["NULL"],
+    )
+    .await;
+    expect(
+        &door,
+        &format!("{ARRAY_OF_STRUCT_LITERAL}[array(named_struct('k', 1L, 'j', 2L))]"),
+        &["7"],
+    )
+    .await;
+    expect(
+        &door,
+        &format!(
+            "{ARRAY_OF_STRUCT_LITERAL}[array(named_struct('k', 1, 'j', 2), named_struct('k', 3, 'j', 4))]"
+        ),
+        &["NULL"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_struct_inside_an_array_inside_a_struct_key_is_cast_by_position() {
+    let door = spark_door(&[]).await;
+    expect(
+        &door,
+        &format!(
+            "{STRUCT_OF_ARRAY_LITERAL}[named_struct('a', array(named_struct('y', 1, 'x', 2)))]"
+        ),
+        &["7"],
+    )
+    .await;
+    expect(
+        &door,
+        &format!(
+            "{STRUCT_OF_ARRAY_LITERAL}[named_struct('a', array(named_struct('y', 2, 'x', 1)))]"
+        ),
+        &["NULL"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_struct_key_leaf_of_another_kind_refuses_like_spark() {
+    let door = spark_door(&[&PAIR_KEY_TABLE]).await;
+    for (key, given) in [
+        ("named_struct('k', '1', 'j', 2)", "\"STRUCT<k: STRING"),
+        (
+            "named_struct('k', DATE'2024-01-01', 'j', 2)",
+            "\"STRUCT<k: DATE",
+        ),
+        ("named_struct('k', true, 'j', 2)", "\"STRUCT<k: BOOLEAN"),
+    ] {
+        expect_refusal(
+            &door,
+            &format!("SELECT id, m[{key}] FROM ice.ns.c ORDER BY id"),
+            &[
+                "The second parameter requires the \"STRUCT<k: INT, j: INT>\" type",
+                given,
+            ],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn a_numeric_or_null_struct_key_leaf_is_cast_like_spark() {
+    let door = spark_door(&[&PAIR_KEY_TABLE]).await;
+    for key in [
+        "named_struct('k', CAST(1 AS DECIMAL(5,2)), 'j', 2)",
+        "named_struct('k', 1.0, 'j', 2)",
+        "named_struct('k', CAST(1 AS DOUBLE), 'j', 2)",
+        "named_struct('k', CAST(1 AS TINYINT), 'j', 2)",
+    ] {
+        expect(
+            &door,
+            &format!("SELECT id, m[{key}] FROM ice.ns.c ORDER BY id"),
+            &["1|7", "2|NULL"],
+        )
+        .await;
+    }
+    expect(
+        &door,
+        "SELECT id, m[named_struct('k', NULL, 'j', 2)] FROM ice.ns.c ORDER BY id",
+        &["1|NULL", "2|NULL"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_string_struct_key_leaf_answers_like_spark() {
+    let door = spark_door(&[&STRING_FIELD_KEY_TABLE]).await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('k', 'a', 'j', 2)] FROM ice.ns.s ORDER BY id",
+        &["1|7", "2|NULL"],
+    )
+    .await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('x', 'a', 'y', 5)] FROM ice.ns.s ORDER BY id",
+        &["1|NULL", "2|9"],
+    )
+    .await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('k', 1, 'j', 2)] FROM ice.ns.s ORDER BY id",
+        &["1|NULL", "2|NULL"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_nested_key_refusal_names_the_types_in_spark_notation() {
+    let door = spark_door(&[]).await;
+    expect_refusal(
+        &door,
+        &format!("{ARRAY_OF_STRUCT_LITERAL}[array(named_struct('k', 1))]"),
+        &[
+            "The second parameter requires the \"ARRAY<STRUCT<k: INT",
+            "\"ARRAY<STRUCT<k: INT",
+        ],
+    )
+    .await;
+    expect_refusal(
+        &door,
+        &format!("{ARRAY_OF_STRUCT_LITERAL}[array(named_struct('k', '1', 'j', 2))]"),
+        &[
+            "The second parameter requires the \"ARRAY<STRUCT<k: INT",
+            "\"ARRAY<STRUCT<k: STRING",
+        ],
+    )
+    .await;
+    expect_refusal(
+        &door,
+        &format!(
+            "{STRUCT_OF_ARRAY_LITERAL}[named_struct('a', array(named_struct('x', '1', 'y', 2)))]"
+        ),
+        &[
+            "The second parameter requires the \"STRUCT<a: ARRAY<STRUCT<x: INT",
+            "\"STRUCT<a: ARRAY<STRUCT<x: STRING",
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn the_ansi_door_casts_a_struct_inside_an_array_key_by_position() {
+    let door = ansi_door();
+    let literal = "SELECT map(make_array(named_struct('k', 1, 'j', 2)), 7)";
+    expect(
+        &door,
+        &format!("{literal}[make_array(named_struct('j', 1, 'k', 2))]"),
+        &["7"],
+    )
+    .await;
+    expect(
+        &door,
+        &format!("{literal}[make_array(named_struct('j', 2, 'k', 1))]"),
+        &["NULL"],
+    )
+    .await;
+    expect_refusal(
+        &door,
+        &format!("SELECT m[named_struct('k', '1', 'j', 2)] FROM ({TWO_ENTRY_LITERAL})"),
+        &["\"STRUCT<k: STRING"],
     )
     .await;
 }

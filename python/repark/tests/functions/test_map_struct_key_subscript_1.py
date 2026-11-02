@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from repark import ReparkSession
+from repark.spark import functions as spark_functions
 
 _SEED = [
     "CREATE TABLE mem.ns.c (id INT, m MAP<STRUCT<k: INT, j: INT>, INT>) USING iceberg "
@@ -40,6 +41,32 @@ _SPARK_ANSWERS: list[tuple[str, list[list[Any]]]] = [
 ]
 
 _PANIC_MARKER = "repark internal error"
+
+
+def _renamed_key() -> Any:
+    return spark_functions.struct(
+        spark_functions.lit(1).alias("j"), spark_functions.lit(2).alias("k")
+    )
+
+
+_FRAME_ANSWERS: dict[str, tuple[Callable[[Any], Any], list[list[Any]]]] = {
+    "getitem_renamed_struct_key": (
+        lambda frame: frame.select("id", spark_functions.col("m")[_renamed_key()]).orderBy("id"),
+        [[1, 7], [2, None]],
+    ),
+    "getItem_renamed_struct_key": (
+        lambda frame: frame.select("id", spark_functions.col("m").getItem(_renamed_key())).orderBy(
+            "id"
+        ),
+        [[1, 7], [2, None]],
+    ),
+    "expr_filter_struct_key": (
+        lambda frame: frame.filter(
+            spark_functions.expr("m[named_struct('k', 3, 'j', 2)] = 8")
+        ).select("id"),
+        [[1]],
+    ),
+}
 
 
 def _open(warehouse: Path) -> ReparkSession:
@@ -106,5 +133,39 @@ def test_a_struct_key_subscript_answers_spark_in_a_fresh_session(
     session = _reopen(seeded)
     try:
         assert _rows(session, sql) == expected, sql
+    finally:
+        session.stop()
+
+
+def _frame_rows(session: ReparkSession, cell: str) -> list[list[Any]]:
+    build, _ = _FRAME_ANSWERS[cell]
+    try:
+        table = build(session.table("mem.ns.c")).to_arrow()
+    except Exception as error:
+        assert _PANIC_MARKER not in str(error), str(error)
+        raise
+    return [list(row.values()) for row in table.to_pylist()]
+
+
+@pytest.mark.parametrize("cell", sorted(_FRAME_ANSWERS))
+def test_a_frame_struct_key_lookup_answers_spark_in_the_writing_session(
+    tmp_path: Path, cell: str
+) -> None:
+    session = _open(tmp_path)
+    try:
+        for statement in _SEED:
+            session.sql(statement).collect()
+        assert _frame_rows(session, cell) == _FRAME_ANSWERS[cell][1], cell
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("cell", sorted(_FRAME_ANSWERS))
+def test_a_frame_struct_key_lookup_answers_spark_in_a_fresh_session(
+    seeded: Path, cell: str
+) -> None:
+    session = _reopen(seeded)
+    try:
+        assert _frame_rows(session, cell) == _FRAME_ANSWERS[cell][1], cell
     finally:
         session.stop()
