@@ -312,12 +312,7 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
 - `test_cap_1_source_file_line_cap.py` — **U11-EDGE-1 round 2 (2026-09-26):** mirror rows
   ratchet `crates/repark-python/src/dataframe.rs` 1017 → 1016 and `dataframe/core.py`
   3991 → 3981 with `scripts/check_rust_file_size.py` / `scripts/check_lib_py.py`.
-  Round 4 (2026-09-26): the `dataframe.rs` row ratchets 1016 → 1005 with
-  `scripts/check_rust_file_size.py`.
-  Round 4, V-002: the `dataframe/core.py` row ratchets 3981 → 3979 with
-  `scripts/check_lib_py.py`.
-  Round 5: the `dataframe/core.py` row ratchets 3979 → 3976 with `scripts/check_lib_py.py`.
-  Round 6: the `dataframe/core.py` row ratchets 3976 → 3973 with `scripts/check_lib_py.py`.
+  Rounds 4 to 6 (2026-09-26) ratchet `dataframe.rs` to 1005 and `dataframe/core.py` to 3973.
   **ATTR-ID-1 S3a (2026-09-30):** the `dataframe/core.py` row ratchets 3973 → 3921 with
   `scripts/check_lib_py.py`.
 - `test_cap_1_source_file_line_cap.py` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
@@ -774,15 +769,7 @@ both tables with the script baselines (backtick-disclosure retire).
   (keyed `path:link` per D-9, so a line shift never reds the gate) drops exactly its own
   finding while a stranger link stays red and a malformed entry fails closed (exit 2); a
   stale allowlist entry that matched no finding reds the gate with its own line (D-8, audit
-  round 1); the real tree runs green under the seeded allowlist. **REVIEW-FIX-12
-  (2026-09-10):** eight red-first pins for the REVIEW-1 rounds Q-35, Q-36, Q-37, Q-38, Q-46,
-  Q-47 — a heading that is a link slugs its rendered text (and the raw-markdown anchor is
-  rejected), `Foo` / `Foo` / `Foo-1` anchor `foo` / `foo-1` / `foo-1-1`, a `docs:` token in
-  ledger prose is no evidence cell, an unclosed fence is its own finding, an absolute
-  target is skipped, a same-file anchor that does not resolve reds, a four-space-indented
-  fence hides nothing (while a two-space-indented opener still does, as a guard). The
-  clean fixture's same-file fragment now points at its target file, so the count is six
-  links. The tests carry no inline pins, so both units' clauses are cited on this line.
+  round 1); the real tree runs green under the seeded allowlist. **REVIEW-FIX-12 (2026-09-10):** eight red-first pins for the REVIEW-1 rounds (rendered-text slugs, duplicate-slug suffixes, `docs:` tokens in prose, the unclosed fence, the absolute target, same-file anchors, the indented fence); the clean fixture's same-file fragment points at its target file, so the count is six links. LEDGER-LIFECYCLE-MOVE-1 (2026-11-01): the history exemption is pinned by `test_history_file_with_missing_task_targets_is_clean` (red before it), `test_history_file_with_a_missing_docs_target_still_reds` and `test_live_file_with_a_missing_task_target_still_reds` (green throughout).
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
@@ -831,19 +818,17 @@ both tables with the script baselines (backtick-disclosure retire).
   `completed`; `archive` is not a `move` target. The provocation proofs of
   `check`: a ledger outside the bins, an archive prefix disagreeing with its
   month, a dead ledger link in a non-map document, and the frozen rule (link
-  repair and a prepended errata pass; a prose edit and a deletion fail).
+  repair and a prepended errata pass; a prose edit and a deletion fail). LEDGER-LIFECYCLE-MOVE-1 (2026-11-01): `test_move_cuts_a_tail_row_with_pins_and_pastes_it_in_order`, `test_move_cuts_a_tail_one_line_row`, `test_move_without_a_source_row_synthesises_exactly_one_row`, `test_move_carries_the_sidecar_without_a_row`, `test_move_leaves_a_history_file_frozen_and_names_it`, `test_archive_leaves_a_history_file_frozen`, `test_check_ignores_a_dead_ledger_link_in_history_only`.
 - `test_map_governance_1.py` — **MAP-GOVERNANCE-1 (2026-10-29):** the sidecar the grammar gate reads (`task/ledgers/<bin>/<unit>-pins.md`): a path binds only if tracked and bindable, a `::name` only if its file defines it, `none (records)` counts and is listed, and a sidecar counts only beside its own ledger. The migration binds, cuts citation text only, keeps hand edits and is idempotent. The size ratchet: 200 lines and 16 KiB, exact-baseline rows that fail on growth and on unlowered shrinkage, `--update-baselines` that only lowers, and the `make ci` and ci.yml wiring.
 - `test_map_governance_1_lifecycle.py` — **MAP-GOVERNANCE-1:** `ledger_lifecycle.py` carries a unit's sidecar with its ledger on `move` and `archive`, with no map row; `archive` files it under the ledger's own date; a sidecar in a frozen bin may be edited and a ledger row may not; a move followed by the size ratchet stays green; `archive` moves an excepted map's ratchet row by exactly its link growth.
 - `test_map_governance_1_union.py` — **MAP-GOVERNANCE-1 (2026-10-30, round 10):** the union binding model (a clause binds its citing entries' bindable files and its ledger row's bindable files; an id-less disclaimer keeps the binding and is reported); a row-named test file is added beside the citation's file; a sidecar in another bin does not satisfy the floor; shell heredocs, multi-line quoted strings, `$((...))`, nested Rust block comments and strict pytest decorators define nothing.
-- `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22; the prose-homes pin retargeted to PYC's
-  history record by DL-4, 2026-08-25):** five presence
+- `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22):** five presence
   rules only; style `D` not in py-lint select; tests keep the `D` per-file
   ignore; EXCEPTIONS is 39 keys summing to 136, no `/tests/` path, sorted;
   Ruff pin matches the Makefile; dual-wired `make ci` + ci.yml; on the
   pre-commit hook (conventions stays off).
 - `test_map_pr_gate_1.py` — **MAP-PR-GATE-1:** the map.md lockstep is a warning in both modes (MAP-GOVERNANCE-1). Branch-mode fixtures (`--base <ref>`) over scratch repos: code and map together pass; code-only, a new directory without a map, and a `.py` change without its map each print `WARNING:` and exit 0; deletion-only is quiet; a root-level file maps to `map.md`; a diff is taken from the merge base. Staged mode exits 0 with `WARNING:`. The `sync_map_md.py` duplicate-row rule fires on a two-row fixture, survives `--fix` and stays quiet on a single row naming a file twice. C-011 pins ci.yml's guard step as PR-only with the base ref taken into `env` as `BASE_REF` and expanded as `${BASE_REF}` in both run lines (no `${{ }}` inside the run block).
-- `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
-  record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
+- `test_pyc_5_close.py` — **PYC-5 (2026-08-22):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;
   conventions guard is not on the pre-commit hook and stays in `make ci` +
   ci.yml.
@@ -856,7 +841,6 @@ both tables with the script baselines (backtick-disclosure retire).
   `test_id` refuse; recorded-denominator dummy ids are strings; `repark-parity`
   declares `pydantic>=2.10,<3`; isolated `make py-test` / ci.yml `--with pydantic`
   (C1-Q-001); root Ruff ANN ignores split so parity tests see ANN201/ANN202.
-  **PYC-5:** facade ANN201 pin retargeted (ignore dropped).
   Behaviour stays on `test_compare_reports.py` / `test_compat_harness.py`.
 - `test_datasets_secrets.py` — **DS-3** secrets fixture: A9 defaults, table-identity
   determinism, manifest class→column coverage in schema order, the needle labels
