@@ -84,8 +84,8 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "crates/repark-spark/src/call/map.md": (444, 36836),
     "crates/repark-spark/src/map.md": (2525, 211771),
     "crates/repark-spark/src/router/map.md": (332, 27642),
-    "crates/repark-spark/src/tests/map.md": (2806, 237256),
-    "crates/repark-spark/src/view_ddl/map.md": (220, 17091),
+    "crates/repark-spark/src/tests/map.md": (2806, 237254),
+    "crates/repark-spark/src/view_ddl/map.md": (220, 17086),
     "crates/repark-spark/src/void_type/map.md": (245, 17027),
     "crates/repark-spark/tests/map.md": (602, 57869),
     "crates/repark-sql/src/map.md": (491, 41036),
@@ -107,10 +107,10 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "python/repark/tests/iceberg/map.md": (168, 22361),
     "python/repark/tests/parity/map.md": (112, 16602),
     "python/repark/tests/timestamps/map.md": (221, 39702),
-    "python/repark/tests/writes/map.md": (213, 32421),
+    "python/repark/tests/writes/map.md": (213, 32411),
     "scripts/map.md": (592, 58716),
     "task/map.md": (228, 24697),
-    "task/roadmap/mid-term/map.md": (1110, 156225),
+    "task/roadmap/mid-term/map.md": (1110, 156208),
     "task/wo/map.md": (62, 17390),
 }
 
